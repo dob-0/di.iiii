@@ -1,0 +1,32 @@
+{
+ "what": "MOXIR 40 W lasers: the two swap places — U2.137 (rig-laser-41) hangs right of centre over the entrance, U2.169 (rig-laser-42) left. Whole transforms swap (each place keeps its aim); addresses unchanged.",
+ "source": "owner at the venue 2026-10-17 ~09:2x, with U2.137 lit red and U2.169 green (static dots), after 'nobody in front': 'swap with places'.",
+ "moves": [
+  {
+   "id": "rig-laser-41",
+   "position": [
+    3.906,
+    6.399,
+    53.543
+   ],
+   "rotation": [
+    1.6896,
+    0,
+    -0.2455
+   ]
+  },
+  {
+   "id": "rig-laser-42",
+   "position": [
+    -4.096,
+    6.4,
+    53.536
+   ],
+   "rotation": [
+    1.6894,
+    0,
+    0.112
+   ]
+  }
+ ]
+}

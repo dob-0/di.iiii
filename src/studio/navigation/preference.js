@@ -3,10 +3,18 @@
 // private window or blocked storage must still give the default.
 import { useCallback, useEffect, useState } from 'react'
 import { DEFAULT_NAVIGATION_PRESET, normalizeNavigationPreset } from './mappings.js'
+import { DEFAULT_TURN, normalizeSpeedSetting, normalizeTurnSetting } from './freeMove.js'
+import { DEFAULT_MOVE_ID, normalizeMoveId } from './moves.js'
 
 export const NAVIGATION_STORAGE_KEY = 'di.studio.navigation'
 export const ORBIT_SELECTION_STORAGE_KEY = 'di.studio.navigation.orbitSelection'
 export const NAVIGATION_CHANGE_EVENT = 'di:studio-navigation-change'
+// The standard move's settings (freeMove.js): speed ('auto' or metres per wheel notch) and turning ('place', the default, or 'point').
+export const SPEED_STORAGE_KEY = 'di.studio.navigation.speed'
+export const TURN_STORAGE_KEY = 'di.studio.navigation.turn'
+// Which named move (moves.js) this device uses; Move 1 until it chooses. With one move the engine does not read it
+// (useCameraNavigation has only Move 1's branch); the day a second move exists, the engine branches on it.
+export const MOVE_STORAGE_KEY = 'di.studio.navigation.move'
 
 function storage() {
     try {
@@ -53,6 +61,69 @@ export function setNavigationPreference(value) {
     return next
 }
 
+export function getSpeedPreference() {
+    try {
+        return normalizeSpeedSetting(storage()?.getItem(SPEED_STORAGE_KEY))
+    } catch {
+        return 'auto'
+    }
+}
+
+export function getTurnPreference() {
+    try {
+        return normalizeTurnSetting(storage()?.getItem(TURN_STORAGE_KEY))
+    } catch {
+        return DEFAULT_TURN
+    }
+}
+
+export function getMovePreference() {
+    try {
+        return normalizeMoveId(storage()?.getItem(MOVE_STORAGE_KEY))
+    } catch {
+        return DEFAULT_MOVE_ID
+    }
+}
+
+// Returns the value actually in effect (junk -> the default move).
+export function setMovePreference(value) {
+    const next = normalizeMoveId(value)
+    try {
+        storage()?.setItem(MOVE_STORAGE_KEY, next)
+    } catch {
+        // storage blocked — the choice holds for this page only
+    }
+    memory.move = next
+    announce()
+    return next
+}
+
+// Returns the value actually in effect (junk -> 'auto').
+export function setSpeedPreference(value) {
+    const next = normalizeSpeedSetting(value)
+    try {
+        storage()?.setItem(SPEED_STORAGE_KEY, String(next))
+    } catch {
+        // storage blocked — the choice holds for this page only
+    }
+    memory.speed = next
+    announce()
+    return next
+}
+
+// Returns the value actually in effect (junk -> DEFAULT_TURN, 'place').
+export function setTurnPreference(value) {
+    const next = normalizeTurnSetting(value)
+    try {
+        storage()?.setItem(TURN_STORAGE_KEY, next)
+    } catch {
+        // storage blocked — the choice holds for this page only
+    }
+    memory.turn = next
+    announce()
+    return next
+}
+
 export function setOrbitSelectionPreference(on) {
     const next = Boolean(on)
     try {
@@ -67,12 +138,15 @@ export function setOrbitSelectionPreference(on) {
 
 // When storage throws, a choice made on this page still has to stick for the
 // rest of the visit; this is that page-lifetime copy.
-const memory = { preset: null, orbitSelection: null }
+const memory = { preset: null, orbitSelection: null, speed: null, turn: null, move: null }
 
 function read() {
     return {
         preset: memory.preset ?? getNavigationPreference(),
         orbitSelection: memory.orbitSelection ?? getOrbitSelectionPreference(),
+        speed: memory.speed ?? getSpeedPreference(),
+        turn: memory.turn ?? getTurnPreference(),
+        move: memory.move ?? getMovePreference(),
     }
 }
 
@@ -80,6 +154,9 @@ function read() {
 export function resetNavigationPreferenceMemory() {
     memory.preset = null
     memory.orbitSelection = null
+    memory.speed = null
+    memory.turn = null
+    memory.move = null
 }
 
 export function useNavigationPreference() {
@@ -100,5 +177,8 @@ export function useNavigationPreference() {
     }, [])
     const setPreset = useCallback((value) => setNavigationPreference(value), [])
     const setOrbitSelection = useCallback((on) => setOrbitSelectionPreference(on), [])
-    return { ...state, setPreset, setOrbitSelection }
+    const setSpeed = useCallback((value) => setSpeedPreference(value), [])
+    const setTurn = useCallback((value) => setTurnPreference(value), [])
+    const setMove = useCallback((value) => setMovePreference(value), [])
+    return { ...state, setPreset, setOrbitSelection, setSpeed, setTurn, setMove }
 }

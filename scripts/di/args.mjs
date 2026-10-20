@@ -32,6 +32,8 @@ export const parseArgs = (argv) => {
         if (name === 'name') { args.flags.name = argv[++i]; continue }
         // `di ndi scan --url http://localhost:4390` — a di.iiii other than this install.
         if (name === 'url') { args.flags.url = argv[++i]; continue }
+        // `di login --tier dev --label "my laptop"`, `di mcp --tier dev --base URL`
+        if (name === 'tier' || name === 'label' || name === 'base') { args.flags[name] = argv[++i]; continue }
         // `di open file.diiii --force --accept-loss 76` — the exact number of
         // media items a forced replace removes, passed to space-bundle.mjs.
         if (name === 'accept-loss') { args.flags['accept-loss'] = argv[++i]; continue }

@@ -28,9 +28,9 @@ export const cueClockWords = (desk) => {
     if (!desk) return ''
     const parts = []
     if (desk.running && desk.nextInMs != null) parts.push(`next in ${Math.ceil(desk.nextInMs / 1000)} s`)
-    else if (desk.running) parts.push('waits for GO')
+    else if (desk.running) parts.push('holds')
     else parts.push('stopped')
-    if (desk.loop) parts.push('loop')
+    if (desk.loop && desk.autoplay) parts.push('loop')
     if (desk.missing?.length) parts.push(`${desk.missing.length} look${desk.missing.length === 1 ? '' : 's'} not on the desk`)
     return parts.join(' · ')
 }

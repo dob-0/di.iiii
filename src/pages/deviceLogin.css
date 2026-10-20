@@ -1,0 +1,319 @@
+/* /device — the browser half of `di login` (docs/architecture/CLI_LOGIN.md).
+   The shell is /terms' (legal.css). This file is only what a form needs on top of
+   it: a code field, honest buttons, a list of terminals. It is on the spine from
+   its first line: tokens only, corners 0 to 2 px, spacing from the rhythm ladder.
+   Phone first — the code is read off a terminal and typed on whatever is at hand. */
+
+/* The nav links on /terms are bare text; here they sit above a form, so they get a
+   touch-sized target. */
+.device-root .legal-nav-logo,
+.device-root .legal-nav-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--di-touch-target);
+}
+
+.device-main {
+    display: grid;
+    gap: var(--di-space-6);
+    min-width: 0;
+}
+
+.device-flow {
+    display: grid;
+    gap: var(--di-space-4);
+    min-width: 0;
+}
+
+.device-lead {
+    margin: 0;
+    color: var(--di-text);
+    line-height: 1.5;
+}
+
+.device-note {
+    margin: 0;
+    color: var(--di-text-muted);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.device-note code,
+.device-problem code {
+    font-family: var(--di-mono);
+    font-size: inherit;
+    color: var(--di-text);
+}
+
+/* The live region is always in the page, empty until there is something to say. */
+.device-status {
+    margin: 0;
+    padding: var(--di-space-3) var(--di-space-4);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
+    color: var(--di-text);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.device-status:empty {
+    padding: 0;
+    border: 0;
+}
+
+/* ── the code form ── */
+
+.device-form {
+    display: grid;
+    gap: var(--di-space-3);
+    min-width: 0;
+}
+
+.device-field-label {
+    color: var(--di-text);
+    font-size: var(--di-text-4);
+}
+
+.device-hint {
+    margin: 0;
+    color: var(--di-text-muted);
+    font-size: var(--di-text-3);
+    line-height: 1.5;
+}
+
+.device-code {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 20rem;
+    min-height: var(--di-touch-target);
+    padding: var(--di-space-3) var(--di-space-4);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
+    background: var(--di-black);
+    color: var(--di-text);
+    font-family: var(--di-mono);
+    /* 16 px or more, or a phone zooms the page the moment the field is focused. */
+    font-size: var(--di-text-6);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+.device-code[aria-invalid='true'] {
+    border-color: var(--di-danger);
+}
+
+/* ── buttons ── */
+
+.device-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-3);
+}
+
+.device-btn {
+    box-sizing: border-box;
+    min-width: var(--di-touch-target);
+    min-height: var(--di-touch-target);
+    padding: var(--di-space-2) var(--di-space-4);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
+    background: transparent;
+    color: var(--di-text);
+    font-family: var(--di-sans);
+    font-size: var(--di-text-4);
+    cursor: pointer;
+    transition: border-color var(--di-motion-fast), color var(--di-motion-fast);
+}
+
+.device-btn:hover {
+    border-color: var(--di-cyan);
+}
+
+.device-btn-primary {
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.device-btn-danger {
+    border-color: var(--di-danger);
+    color: var(--di-danger);
+}
+
+.device-btn[aria-busy='true'] {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+/* One focus ring for everything that can take focus here, headings included
+   (they take it when the screen changes). */
+.device-code:focus-visible,
+.device-btn:focus-visible,
+.device-card-title:focus-visible,
+.device-root .legal-nav-logo:focus-visible,
+.device-root .legal-nav-link:focus-visible {
+    outline: 2px solid var(--di-cyan);
+    outline-offset: 2px;
+}
+
+/* ── a card: the question, the list ── */
+
+.device-card {
+    box-sizing: border-box;
+    min-width: 0;
+    padding: var(--di-space-5);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
+    background: var(--di-surface);
+}
+
+.device-card-title {
+    margin: 0 0 var(--di-space-4);
+    font-size: var(--di-text-6);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--di-text);
+}
+
+.device-facts {
+    display: grid;
+    grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+    gap: var(--di-space-2) var(--di-space-5);
+    margin: 0 0 var(--di-space-4);
+}
+
+.device-facts dt {
+    color: var(--di-text-muted);
+    font-size: var(--di-text-3);
+    letter-spacing: var(--di-label-tracking);
+}
+
+.device-facts dd {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* What the terminal called itself: set apart, in the code face, so it never reads
+   as part of this page's own words. */
+.device-asked {
+    font-family: var(--di-mono);
+    unicode-bidi: isolate;
+}
+
+.device-muted {
+    color: var(--di-text-muted);
+}
+
+.device-warning {
+    margin: 0 0 var(--di-space-4);
+    color: var(--di-text);
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+/* ── the terminals already signed in ── */
+
+.device-status-list {
+    margin-bottom: var(--di-space-3);
+}
+
+.device-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--di-space-3);
+}
+
+.device-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-3);
+    padding: var(--di-space-3) var(--di-space-4);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+}
+
+.device-row-main {
+    flex: 1 1 14rem;
+    min-width: 0;
+}
+
+.device-row-name {
+    display: block;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.device-row-meta {
+    display: block;
+    color: var(--di-text-muted);
+    font-size: var(--di-text-3);
+    line-height: 1.5;
+}
+
+.device-row-actions {
+    min-width: 0;
+}
+
+.device-confirm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-3);
+}
+
+.device-confirm-text {
+    font-size: var(--di-text-4);
+}
+
+/* ── something went wrong: say what, and offer the way on ── */
+
+.device-problem {
+    display: grid;
+    justify-items: start;
+    gap: var(--di-space-3);
+    padding: var(--di-space-3) var(--di-space-4);
+    border: 1px solid var(--di-danger);
+    border-radius: var(--di-radius);
+    background: rgba(var(--di-danger-rgb), 0.08);
+    color: var(--di-text);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.device-problem p {
+    margin: 0;
+}
+
+.device-row-problem {
+    flex-basis: 100%;
+}
+
+@media (max-width: 520px) {
+    .device-facts {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--di-space-1);
+    }
+
+    .device-facts dd {
+        margin-bottom: var(--di-space-3);
+    }
+
+    .device-card {
+        padding: var(--di-space-4);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .device-btn {
+        transition: none;
+    }
+}

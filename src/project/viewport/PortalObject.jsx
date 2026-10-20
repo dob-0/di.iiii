@@ -321,6 +321,8 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
             const s = THREE.MathUtils.damp(ringRef.current.scale.x, hovered ? 1.07 : 1, 8, delta)
             ringRef.current.scale.setScalar(s)
         }
+        // On-demand loop: keep drawing until the reveal has caught up with its target.
+        if (Math.abs(next - target) > 0.01) state.invalidate()
         // A frame cannot answer a hover with a brighter glow, so it answers
         // with a slightly stronger flat fill in the opening — the brand's own
         // hover-fill move, and the same damp curve as the ring's.

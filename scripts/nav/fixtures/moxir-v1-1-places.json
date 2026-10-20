@@ -1,0 +1,29 @@
+{
+  "fixture": "moxir-v1-1-places",
+  "fits": "The Studio project moxir-v1-1 in the space moxir (the MOXIR hall, scene metres, y up, floor y = 0). Another project needs its own file; scripts/nav/discover-places.cjs prints what to base one on and, with NAV_PLACES, checks a file against the scene it is meant for.",
+  "provenance": {
+    "source": "Camera coordinates read from the scene by the free-move speed work (probe-constant-speed.cjs places table; break/kit.cjs poses), 2026-10-13. Numbers only, no scene content.",
+    "date": "2026-10-13",
+    "licence": "Same as the repository."
+  },
+  "places": [
+    { "id": "P01", "name": "open air, mid-hall (the opening view)", "pos": [-5.95, 1.6, 19.99], "at": [-5.2, 4.84, -6.82] },
+    { "id": "P02", "name": "1 m from a truss", "pos": [-9.6, 3.4, 1.2], "at": [-9.6, 3.4, 0.15] },
+    { "id": "P03", "name": "1 m from a floor lamp", "pos": [-8.0, 0.9, -17.0], "at": [-8.0, 0.3, -18.0] },
+    { "id": "P04", "name": "near the floor, looking down", "pos": [-6.0, 0.7, 12.0], "at": [-6.0, 0.0, 11.4] },
+    { "id": "P05", "name": "inside the rig", "pos": [-5.2, 4.8, 0.55], "at": [-9.5, 4.5, 0.15] },
+    { "id": "P06", "name": "far end, looking out at nothing", "pos": [-6.0, 1.7, 50.0], "at": [-6.0, 4.0, 60.0] },
+    { "id": "P07", "name": "high under the roof", "pos": [-6.0, 9.0, 10.0], "at": [-6.0, 7.0, -10.0] },
+    { "id": "P08", "name": "against the wall (0.85 m)", "pos": [-11.0, 1.7, 20.0], "at": [-12.5, 1.7, 20.0] },
+    { "id": "P09", "name": "at the DJ deck, looking down the floor", "pos": [-5.2, 1.9, 4.6], "at": [-5.2, 1.7, 14.0] },
+    { "id": "P10", "name": "among the machines (east side)", "pos": [6.0, 1.8, 15.0], "at": [7.0, 2.5, 21.0] },
+    { "id": "P11", "name": "outside the hall, 100 m up", "pos": [12.0, 60.0, 90.0], "at": [0.0, 0.0, 0.0] },
+    { "id": "P12", "name": "down the whole hall (85 m)", "pos": [-6.0, 2.5, 45.0], "at": [-6.0, 3.0, -40.0] }
+  ],
+  "poses": {
+    "A": { "name": "the opening view (= P01)", "pose": [-5.95, 1.6, 19.99, -5.2, 4.84, -6.82] },
+    "B": { "name": "open hall, aim 22 m ahead (the calibration pose of the break probes and the pose of probe-standard-move.cjs)", "pose": [-5.2, 3, 12, -5.2, 2.5, -10] },
+    "B2": { "name": "the same place as B, aim only about 5 m ahead (so an unplaced turning point shows)", "pose": [-5.2, 3, 12, -5.2, 2.5, 7] },
+    "C": { "name": "near the floor, looking down (= P04)", "pose": [-6.0, 0.7, 12.0, -6.0, 0.0, 11.4] }
+  }
+}

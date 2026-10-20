@@ -298,13 +298,31 @@ describe('the six views', () => {
             { id: 'nonsense', position: [0, 0, 0], target: [1, 1, 1] },
             { id: 'dj', position: [0, 'x', 0], target: [0, 0, 0] }
         ])
-        expect(authored.map((a) => a.id)).toEqual(['floor'])
+        expect(authored.map((a) => a.id)).toEqual(['floor', 'nonsense'])
         const withOwn = computeViewPresets(frame, { rigBox: RIG_BOX, opening: OPENING, authored })
         const floor = withOwn.find((p) => p.id === 'floor')
         expect(floor.position).toEqual([0, 1.7, 20.3])
         expect(floor.label).toBe('Floor 15 m')
         expect(floor.authored).toBe(true)
         expect(withOwn.find((p) => p.id === 'dj').authored).toBe(false)
+    })
+    it('any named camera is a button after the six; a bad id still drops', () => {
+        const authored = sanitizeViewPresets([
+            { id: 'entrance', position: [0, 1.7, 50], target: [0, 2, 0], label: 'Entrance' },
+            { id: 'outside', position: [30, 5, 80], target: [0, 4, 40], fov: 45, label: 'A label longer than sixteen' },
+            { id: 'Bad Id!', position: [0, 0, 0], target: [1, 1, 1] }
+        ])
+        expect(authored.map((a) => a.id)).toEqual(['entrance', 'outside'])
+        expect(authored[1].label).toHaveLength(16)
+        const all = computeViewPresets(frame, { rigBox: RIG_BOX, opening: OPENING, authored })
+        expect(all.map((p) => p.id)).toEqual([...VIEW_PRESET_IDS, 'entrance', 'outside'])
+        expect(all.slice(0, 6).map((p) => p.key)).toEqual(['1', '2', '3', '4', '5', '6'])
+        const out = all.find((p) => p.id === 'outside')
+        expect(out).toMatchObject({ key: '', label: 'A label longer t', authored: true, fov: 45, interior: false })
+        expect(all.find((p) => p.id === 'entrance').fov).toBe(50)
+        expect(parseViewHash('#view-outside')).toBe('outside')
+        expect(viewHash('entrance')).toBe('#view-entrance')
+        expect(viewHash('Bad Id')).toBe('')
     })
     it('no building, no views', () => {
         expect(computeViewPresets(null)).toEqual([])
@@ -314,7 +332,7 @@ describe('the six views', () => {
 describe('keys and links', () => {
     it('#view-top opens on the top plan, and the hash round-trips', () => {
         expect(parseViewHash('#view-top')).toBe('top')
-        expect(parseViewHash('#view-nope')).toBe(null)
+        expect(parseViewHash('#view-Nope!')).toBe(null)
         expect(parseViewHash('')).toBe(null)
         expect(parseViewHash(viewHash('crane'))).toBe('crane')
     })

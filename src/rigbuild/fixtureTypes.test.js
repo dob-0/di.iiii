@@ -59,7 +59,7 @@ describe('the MOXIR type library', () => {
         // A tested unit's list says so, with no url to invent; a mode nobody charted stays null.
         const beam = modeOf(typeById(committed, 'UP-B380F'))
         expect(beam.channels).toHaveLength(16)
-        expect(beam.channelsSource).toMatchObject({ basis: 'TESTED', url: null })
+        expect(beam.channelsSource).toMatchObject({ basis: 'APPROVED' })
         expect(new Set(beam.channels.map((c) => c.role)).size).toBe(16)
         expect(modeOf(typeById(committed, 'UP-250BSW')).channels).toBe(null)
     })
@@ -74,7 +74,8 @@ describe('the MOXIR type library', () => {
         expect(co2.identified).toBe('EQUIVALENT')
         expect(co2.maker).toBe(null)
         expect(co2.modelledOn).toMatch(/MagicFX/)
-        expect(powerOf(typeById(committed, 'UP-PL5403'))).toBe(162)
+        expect(typeById(committed, 'UP-PL5403').power_w.value).toBe(162) // the rating, kept as published
+        expect(powerOf(typeById(committed, 'UP-PL5403'))).toBe(200) // what it draws: the stated supply (audit A-05)
         expect(typeById(committed, 'UP-PL5403').power_w).toMatchObject({ basis: 'EXACT', src: 'D-CN' })
     })
 })
@@ -95,5 +96,17 @@ describe('typesFromManifest', () => {
     it('refuses a kind with no code, and ids are the lowercased code', () => {
         expect(() => typesFromManifest({ kinds: { x: { code: '' } } })).toThrow(/no usable code/)
         expect(typeIdOf(' UP-B380F ')).toBe('up-b380f')
+    })
+})
+
+import { TESTED_CHANNEL_LISTS as LISTS_FOR_REST } from './fixtureTypes.js'
+describe('a DMX laser rests dark (MOXIR 2026-10-17)', () => {
+    it('declares 0 as the resting value of its output channel in every mode', () => {
+        const modes = LISTS_FOR_REST['UP-LA40WF'].modes
+        for (const [name, channels] of Object.entries(modes)) {
+            const out = channels.find((c) => c.role === 'dimmer')
+            expect(out, `mode ${name} has an output channel`).toBeTruthy()
+            expect(out.default, `mode ${name}: a cleared desk must leave the laser dark`).toBe(0)
+        }
     })
 })

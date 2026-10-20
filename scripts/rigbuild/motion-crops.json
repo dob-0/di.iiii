@@ -1,0 +1,23 @@
+{
+  "_what": "Named surface crops of the room's 'Floor z 20' view at 1280x720, as fractions x0,y0,x1,y1 of the frame, and the surface each scene must read on (chosen from the scene's design before the numbers were looked at).",
+  "view": "Floor z 20",
+  "crops": {
+    "truss": [0.34, 0.38, 0.71, 0.58],
+    "floor": [0.12, 0.70, 0.88, 0.86],
+    "walls": [0.0, 0.08, 0.30, 0.78],
+    "press": [0.60, 0.55, 0.80, 0.75],
+    "dj": [0.30, 0.56, 0.70, 0.72]
+  },
+  "scenes": {
+    "ember-chase": "truss",
+    "white-comet": "walls",
+    "slow-breathe": "dj",
+    "pump-beat": "truss",
+    "ring-out": "floor",
+    "ping-pong": "truss",
+    "blocks": "walls",
+    "floor-pulse": "floor",
+    "sparkle-b380f": "truss",
+    "dawn-rise": "dj"
+  }
+}

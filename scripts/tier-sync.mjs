@@ -218,8 +218,8 @@ export const baselineFromAgreement = ({ source, destination, sourceTier, destina
  */
 export const planRebuildBaseline = ({ source, destination, sourceTier, destinationTier }) => {
     const agreed = baselineFromAgreement({ source, destination, sourceTier, destinationTier })
-    const { missing, extra, differs } = planAudit({ source, destination })
-    return { agreed, differs, onlyOneSide: missing.length + extra.length }
+    const { missing, extra, differs, unreadable } = planAudit({ source, destination })
+    return { agreed, differs, onlyOneSide: missing.length + extra.length, unreadable }
 }
 
 // The baseline lives beside the data it describes, keyed by destination so a
@@ -365,6 +365,7 @@ export const planAudit = ({ source, destination }) => {
     const extra = []
     const differs = []
     const readdressed = []
+    const unreadable = []
     const spaces = [...new Set([...Object.keys(source), ...Object.keys(destination)])].sort()
     for (const spaceId of spaces) {
         const from = source[spaceId] ?? {}
@@ -372,7 +373,16 @@ export const planAudit = ({ source, destination }) => {
         for (const projectId of [...new Set([...Object.keys(from), ...Object.keys(to)])].sort()) {
             const a = from[projectId]
             const b = to[projectId]
-            if (a && !b) missing.push({ spaceId, projectId, source: a })
+            if (a?.unreadable || b?.unreadable) {
+                const side = a?.unreadable && b?.unreadable ? 'both' : a?.unreadable ? 'source' : 'destination'
+                unreadable.push({ spaceId, projectId, side, status: a?.unreadable || b?.unreadable })
+            // Private work, and the other side was read without its token: that
+            // side could not have shown it, so its absence proves nothing.
+            } else if (a && !b && a.isPrivate && destination[PARTIAL_VIEW]) {
+                unreadable.push({ spaceId, projectId, side: 'destination', status: 'private' })
+            } else if (!a && b && b.isPrivate && source[PARTIAL_VIEW]) {
+                unreadable.push({ spaceId, projectId, side: 'source', status: 'private' })
+            } else if (a && !b) missing.push({ spaceId, projectId, source: a })
             else if (!a && b) extra.push({ spaceId, projectId, destination: b })
             else if (signaturesMatch(a, b)) continue
             // Same work, different asset addresses. Reported, but not drift to
@@ -382,7 +392,7 @@ export const planAudit = ({ source, destination }) => {
             else differs.push({ spaceId, projectId, source: a, destination: b })
         }
     }
-    return { missing, extra, differs, readdressed }
+    return { missing, extra, differs, readdressed, unreadable }
 }
 
 // What has to move for `to` to hold everything `from` holds. Pure, so the plan
@@ -479,6 +489,39 @@ export const call = async (tier, pathname, options = {}, timeout = TIMEOUT_MS) =
     signal: AbortSignal.timeout(timeout)
 })
 
+// A tier behind a rate limiter answers 429 — dev.diiii.xyz did for 47 of 74
+// br-id-ge documents on 2026-10-08, and readSignatures skipped every one, so
+// the audit reported 47 projects "only on local" that dev holds — and a
+// restarting tier answers 502/503. Neither means "not there". Reads wait and
+// try again (Retry-After when the tier sends it, doubling otherwise), and a
+// read that never succeeds is reported by its caller, never read as empty.
+const RETRYABLE = new Set([429, 502, 503, 504])
+const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+export const retryPolicy = { attempts: 6, maxWaitMs: 30000, sleep: defaultSleep, defaultSleep }
+export const retryAfterMs = (value, now = Date.now()) => {
+    if (value == null || value === '') return null
+    const seconds = Number(value)
+    if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000)
+    const at = Date.parse(value)
+    return Number.isFinite(at) ? Math.max(0, at - now) : null
+}
+export const callRead = async (tier, pathname, timeout = TIMEOUT_MS) => {
+    for (let attempt = 1; ; attempt += 1) {
+        const res = await call(tier, pathname, {}, timeout)
+        if (!RETRYABLE.has(res.status) || attempt >= retryPolicy.attempts) return res
+        const wait = retryAfterMs(res.headers.get('retry-after')) ?? 1000 * 2 ** (attempt - 1)
+        await retryPolicy.sleep(Math.min(wait, retryPolicy.maxWaitMs))
+    }
+}
+// A project list that never came back is not an empty space: say so. A 404
+// (the tier has no such space) still reads as empty — planSync creates it.
+const projectListOrThrow = async (tier, spaceId) => {
+    const res = await callRead(tier, `/api/spaces/${spaceId}/projects`)
+    if (RETRYABLE.has(res.status)) throw new Error(`${tier.base} /api/spaces/${spaceId}/projects → HTTP ${res.status} after ${retryPolicy.attempts} tries`)
+    if (!res.ok) return null
+    return res.json()
+}
+
 // The shape the destination KEPT after a write. Falls back to the shape sent
 // only when the read fails, and says so, so the next run can still decide.
 export const readBackShape = async ({ call, tier, projectId, sent }) => {
@@ -495,17 +538,39 @@ export const readBackShape = async ({ call, tier, projectId, sent }) => {
     return documentSignature(sent).shape
 }
 
-export const listSpaces = async (tier) => {
-    const res = await call(tier, '/api/spaces')
+const readSpaces = async (tier) => {
+    const res = await callRead(tier, '/api/spaces')
     if (!res.ok) throw new Error(`${tier.base} /api/spaces → HTTP ${res.status}`)
     const body = await res.json()
-    return (body.spaces || body || []).map((s) => s.id)
+    return body.spaces || body || []
 }
 
+export const listSpaces = async (tier) => (await readSpaces(tier)).map((s) => s.id)
+
+// A remote tier read without its token is a PARTIAL view. dev.diiii.xyz shows an
+// anonymous reader its public spaces only (14 on 2026-10-09) and only the public
+// projects inside them, and answers a private project's document with 404 — the
+// same answer as a project that does not exist (measured 2026-10-09: moxir-hall,
+// brand-directions and a made-up id all 404). On that side "not there" cannot be
+// told from "not shown", so the audit never calls private work missing from it.
+// That day an anonymous run called 96 projects "only on local": 69 sat in private
+// spaces dev does not list, 25 were private projects in public spaces, and 2 were
+// in a space dev does not have. A loopback read (*.localhost, RFC 6761) of the
+// installed di is answered in full: it listed all 25 private moxir projects.
+export const PARTIAL_VIEW = Symbol('partial view')
+const isLoopback = (base) => {
+    try {
+        const host = new URL(base).hostname
+        return host === 'localhost' || host.endsWith('.localhost') || host === '127.0.0.1' || host === '[::1]'
+    } catch {
+        return false
+    }
+}
+export const readsPartially = (tier) => !tier.token && !isLoopback(tier.base)
+
 export const listProjects = async (tier, spaceId) => {
-    const res = await call(tier, `/api/spaces/${spaceId}/projects`)
-    if (!res.ok) return []
-    const body = await res.json()
+    const body = await projectListOrThrow(tier, spaceId)
+    if (!body) return []
     return (body.projects || body || []).map((p) => p.id)
 }
 
@@ -518,13 +583,13 @@ export const listProjects = async (tier, spaceId) => {
 // its everyday path and only reaches for `readSignatures` (below) when it
 // truly needs to compare content, not just detect motion.
 export const listProjectMetas = async (tier, spaceId) => {
-    const res = await call(tier, `/api/spaces/${spaceId}/projects`)
-    if (!res.ok) return []
-    const body = await res.json()
+    const body = await projectListOrThrow(tier, spaceId)
+    if (!body) return []
     return (body.projects || body || []).map((p) => ({
         id: p.id,
         documentVersion: Number.isFinite(Number(p.documentVersion)) ? Number(p.documentVersion) : 0,
-        updatedAt: Number.isFinite(Number(p.updatedAt)) ? Number(p.updatedAt) : 0
+        updatedAt: Number.isFinite(Number(p.updatedAt)) ? Number(p.updatedAt) : 0,
+        ...(p.visibility ? { visibility: p.visibility } : {})
     }))
 }
 
@@ -543,17 +608,28 @@ export const readInventory = async (tier, only) => {
 // scripts/start-check.mjs's space check calls this directly to compare this
 // box's held spaces against the dev tier.
 export const readSignatures = async (tier, only) => {
-    const spaces = (await listSpaces(tier)).filter((id) => !only || id === only)
+    const spaces = (await readSpaces(tier)).filter((s) => !only || s.id === only)
     const inventory = {}
-    for (const spaceId of spaces) {
+    // Beside the inventory, not in it: Object.keys(inventory) stays the spaces.
+    Object.defineProperty(inventory, PARTIAL_VIEW, { value: readsPartially(tier) })
+    for (const { id: spaceId, isPublic, visibility: spaceVisibility } of spaces) {
+        const privateSpace = isPublic === false || spaceVisibility === 'private'
         inventory[spaceId] = {}
         // Versions ride along from the same list response, so a baseline built
         // from these signatures can record where each tier was when it agreed.
-        for (const { id: projectId, documentVersion, updatedAt } of await listProjectMetas(tier, spaceId)) {
-            const res = await call(tier, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
-            if (!res.ok) continue
+        for (const { id: projectId, documentVersion, updatedAt, visibility } of await listProjectMetas(tier, spaceId)) {
+            const isPrivate = privateSpace || visibility === 'private'
+            const res = await callRead(tier, `/api/projects/${projectId}/document`, TRANSFER_TIMEOUT_MS)
+            // Listed but unreadable is not absent: planAudit keeps it out of
+            // missing/extra/differs and the audit says it is incomplete.
+            if (!res.ok) {
+                inventory[spaceId][projectId] = { unreadable: res.status }
+                continue
+            }
             const body = await res.json()
-            inventory[spaceId][projectId] = { ...documentSignature(body.document || body), documentVersion, updatedAt }
+            inventory[spaceId][projectId] = {
+                ...documentSignature(body.document || body), documentVersion, updatedAt, ...(isPrivate ? { isPrivate } : {})
+            }
         }
     }
     return inventory
@@ -617,7 +693,7 @@ export const main = async () => {
     if (args.audit) {
         console.log(`tier-sync audit  ${args.from} ↔ ${args.to}  (reading every document — this takes a minute)`)
         const [a, b] = [await readSignatures(from, args.space), await readSignatures(to, args.space)]
-        const { missing, extra, differs, readdressed } = planAudit({ source: a, destination: b })
+        const { missing, extra, differs, readdressed, unreadable } = planAudit({ source: a, destination: b })
 
         const shape = (s) => s ? `${s.entities}e ${s.nodes}n ${s.assets}a ${s.page}p` : '—'
         const report = (title, rows, render) => {
@@ -632,12 +708,24 @@ export const main = async () => {
         report(`same work, assets re-addressed on arrival (${readdressed.length}) — not drift to fix`,
             readdressed, (r) => shape(r.source))
 
+        const sideName = (r) => r.side === 'both' ? 'both tiers' : r.side === 'source' ? args.from : args.to
+        report(`could NOT be read (${unreadable.length}) — not counted as drift`, unreadable,
+            (r) => r.status === 'private' ? `private — ${sideName(r)} was read without its token` : `HTTP ${r.status} on ${sideName(r)}`)
+
         const total = missing.length + extra.length + differs.length
         console.log(total
             ? `\n${total} difference(s). e=entities n=nodes a=assets p=published page, in characters.`
-            : '\nthe two tiers hold the same work.')
+            : unreadable.length ? '\nno difference among the documents that could be read.' : '\nthe two tiers hold the same work.')
         if (readdressed.length && !total) {
             console.log(`${readdressed.length} project(s) hold the same assets under different ids — see above.`)
+        }
+        if (unreadable.length) {
+            const hidden = unreadable.filter((r) => r.status === 'private').length
+            const keys = [from, to].filter(readsPartially).map((tier) => tier.tokenKey).join(' and ')
+            console.log(`the audit is INCOMPLETE: ${unreadable.length} document(s) could not be read`
+                + (hidden ? ` — ${hidden} private, needing ${keys} in serverXR/.env.local` : '')
+                + (unreadable.length > hidden ? ' — run it again for the rest.' : '.'))
+            process.exitCode = 2
         }
         if (total) process.exitCode = 1
         return

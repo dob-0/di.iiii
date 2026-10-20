@@ -86,7 +86,7 @@
                 "u_m": 6.25,
                 "side": 1,
                 "y_m": "end",
-                "what": "house-right (LOW) end to the nave column at x +11.6 (inner face) on grid line z 6.0, at the end's own height — runs about 2 m under the crane cab (cab bottom ≈ 5.75 m); same strap or steel. Mirrored 2026-10-07 from the 09-29 cut's house-left tie."
+                "what": "house-right (LOW) end to the nave column at x +11.6 (inner face) on grid line z 6.0, at the end's own height — passes under the crane cab (cab bottom 5.85 m at girder 7.95, the far crane's photo-measured cab; the build records the gap as under_cab_m); same strap or steel. Mirrored 2026-10-07 from the 09-29 cut's house-left tie. PR #772's 4.6 m anchor (A-02) belongs to the UNflipped cut's house-right HIGH end only; here the house-right end is the LOW end, which ties level at its own height, so no lower anchor is needed."
             }
         ],
         "tieoffs_why": "mirrored 2026-10-07: the HIGH end (now house left) ties down to 5.5 m under the runway beam; the LOW end (now house right, the cab's side) ties level at its own height, well under the cab. CHECK ON SITE 10-08. Before: the V bridles hold the line across the bridge; ALONG the line (x) each V still swings from its leg tops, and slings on a sloped chord want to creep downhill. Two opposed tie-offs, tensioned against each other (hand-tight, ~50 daN, ESTIMATE), hold it along x; each sling is choked against a node (a vertical brace) so it cannot slide down the slope (Prolyte user manual: loads applied at the nodes).",
@@ -94,7 +94,7 @@
         "truss_kg_per_m_source": "Prolyte H30V standard lengths table: H30V-L300 3.00 m 18.90 kg (https://www.prolyte.com/products/aluminium-truss/square-truss/h30v-l100-square-30-length-100-cm, read 2026-09-29) → 6.3 kg/m",
         "extras_fraction": 0.1,
         "extras_basis": "clamps, safety bonds and the cable loom along the line: +10 % of the lamps — ESTIMATE",
-        "crane": "the nave's entry-end bridge crane, rolled along its runway to park over the DJ (bridge centre line z 4.8, girder bottom 8.15 m — ESTIMATED; rail 7.6 m, range 6.6–8.4)",
+        "crane": "the nave's entry-end bridge crane, rolled along its runway to park over the DJ (bridge centre line z 4.8; girder bottom 7.95 m — ASSUMED the same type as the FAR crane, measured there by photo 007 on 2026-09-29, range 7.7–8.25; the near crane itself is unmeasured; rail 8.1 m, range 7.8–8.4 — PR #772, merged into the flip 2026-10-07)",
         "signoff": "rigging sign-off owed (crane rated load, lock-out, hoists + safety steels): the crane's rated load, a check of the old runway, rails and brakes; the crane locked in place and its power isolated for the whole event; bridle, tie-offs and safety steels to a rigger's plan with point loads, signed by a structural or rigging engineer; load cells on the three hoists at trim (a 3-point line is statically indeterminate: the middle pick's share moves with the chains' lengths). This file draws it; they approve it."
     },
     "clearance": {

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>di.iiii harness: beams stop at the roof</title>
+    <!-- A test page served by the dev server only (vite root is src/). A closed test hall, lamps inside aimed at the
+         roof and the walls with a stored 120 m throw, seen from OUTSIDE and above: no beam may show (beamReach.js).
+         scripts/measure/beams-roof-shot.cjs shoots it and counts the beam's green pixels. -->
+    <style>html, body, #root { margin: 0; height: 100%; background: #000; }</style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="./beams-roof.jsx"></script>
+</body>
+</html>
