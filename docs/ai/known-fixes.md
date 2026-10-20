@@ -21,6 +21,10 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## A "two requests at once" test failed under load: `Promise.all` is not an overlap (2026-10-20)
+
+Cause: `syncKeyMoveRace.test.js` sent two key moves with `Promise.all`; under CPU load the second started after the first had finished and was refused at the scope gate (403) instead of reaching the in-lock re-read (409). Fix: a race test makes the overlap a fact with the test-only rendezvous `serverXR/src/testBarrier.js` (`X-Test-Barrier: name:n`, inert unless `NODE_ENV=test`), never with sleeps or luck. Check a race test by disabling the guard it proves: it must fail every run. Note: `docs/ai/sessions/fix-sync-key-race-test-deterministic-2026-10-20.md`.
+
 ## A test server died with "EADDRINUSE" on a port the test had just picked (serverXR tests, 2026-10-20)
 
 Symptom: `followIntegration.test.js` failed 1 run in 10 with `Server exited early ... listen EADDRINUSE: address already in use 0.0.0.0:42421`.

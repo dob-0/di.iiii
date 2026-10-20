@@ -39,7 +39,7 @@ const ownerCookie = `dii_serverxr_session=${createAuthSessionValue({
     session: { subject: 'owner-under-test', label: 'Owner', role: 'admin', spaces: [], tokenVersion: 0, via: 'signin' }
 }).value}`
 
-const call = async (route, { method = 'GET', body = null, token = null, cookie = null, also = null, from = null } = {}) => {
+const call = async (route, { method = 'GET', body = null, token = null, cookie = null, also = null, from = null, barrier = null } = {}) => {
     // The second key of a move rides in the body (review L4), never a header.
     const sent = also ? { ...(body || {}), alsoSyncKey: also } : body
     const response = await fetch(`${server.baseUrl}${route}`, {
@@ -50,7 +50,9 @@ const call = async (route, { method = 'GET', body = null, token = null, cookie =
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
             ...(cookie ? { Cookie: cookie } : {}),
             // The host's per-address limits key on this (rateLimit.js clientKey).
-            ...(from ? { 'X-Forwarded-For': from } : {})
+            ...(from ? { 'X-Forwarded-For': from } : {}),
+            // Test-only rendezvous (testBarrier.js): the server holds this request until `barrier`'s partners are past their gates too.
+            ...(barrier ? { 'X-Test-Barrier': barrier } : {})
         },
         ...(sent ? { body: JSON.stringify(sent) } : {})
     })
@@ -136,9 +138,13 @@ describe('sync key move race and error text (#811 r3 L1, L2)', () => {
         const kd = tokenOf(await mint('r3-d', { manage: true, from: F(22) }))
         for (let i = 0; i < 6; i++) {
             const p = await makeProject('r3-a', `r3-race-${i}`)
+            // The barrier makes the overlap a fact, not a hope: neither move reaches the key lock
+            // until BOTH have passed every gate, so the loser can only be stopped by the re-read
+            // inside the lock (409 project_moved) -- never by arriving after the winner finished.
+            const barrier = `race-${i}:2`
             const [one, two] = await Promise.all([
-                call(`/api/projects/${p.id}/move`, { method: 'POST', token: ka, body: { toSpace: 'r3-b' }, also: kb }),
-                call(`/api/projects/${p.id}/move`, { method: 'POST', token: ka, body: { toSpace: 'r3-d' }, also: kd })
+                call(`/api/projects/${p.id}/move`, { method: 'POST', token: ka, body: { toSpace: 'r3-b' }, also: kb, barrier }),
+                call(`/api/projects/${p.id}/move`, { method: 'POST', token: ka, body: { toSpace: 'r3-d' }, also: kd, barrier })
             ])
             const statuses = [one.status, two.status].sort()
             expect(statuses, JSON.stringify([one.payload, two.payload])).toEqual([200, 409])
