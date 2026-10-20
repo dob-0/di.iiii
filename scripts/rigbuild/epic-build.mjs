@@ -62,7 +62,7 @@ import { runnerList } from './show-loop.mjs'
 import { atmosphereOfRig } from '../place/rig-lib.mjs'
 import { laserColourFlux, driveOfHex, laserOf, CUBE_NM } from '../../src/objectComponents/laserLine.js'
 import { laserFramesOf, MATRIX_N, FAN_DEG, FAN_PERIOD_S, FAN_STEPS } from './laser-frames.mjs'
-import { HALL_FILE, hallDimsOf, lampFirstHit, shellOf } from './hall-reach.mjs'
+import { HALL_FILE, hallDimsOf, lampFirstHit, lampFirstSurface, shellOf } from './hall-reach.mjs'
 import { MIN_REACH, MISS_REACH_CAP } from '../../src/objectComponents/beamReach.js'
 import { isSteelEntity, OCCLUDER_COMPONENT, STEEL_KIND } from '../../src/objectComponents/steelOccluder.js'
 
@@ -89,9 +89,13 @@ const DIST = { 'up-pl5403': 24, 'up-b380f': 40, 'up-hk1915': 18, 'up-250bsw': 30
  * the building at run time: src/objectComponents/beamReach.js). With the hall's dims: the first hall surface along the lamp's
  * rest axis (hall-reach.mjs), PHYSICS FIRST (owner 2026-10-13). Without: the rig file's own cast throw (`throw_m`, MOXIR v2
  * occlusion_sky.py), else the type's reach. Never more than MISS_REACH_CAP: the old 120 m for a lamp with no throw
- * (`throw_m: null`, "open to the far end") is what stood over the roof in the owner's screenshot. Pure. */
+ * (`throw_m: null`, "open to the far end") is what stood over the roof in the owner's screenshot.
+ * A first hit of 0 m (a lamp inside a slab, or on the floor aiming down) is a RESULT, 0: the lamp has no air to throw into, and the type's
+ * throw would be a beam drawn through the slab or the floor (2026-10-20 review). v1Entities draws no beam for it and reports it; the lamp
+ * has to be moved, as physics_check.py's inside_slab / on_floor rows say. Pure. */
 export const reachOf = (f, dims = null) => {
     const hit = dims ? lampFirstHit(f, dims) : null
+    if (hit === 0) return 0
     if (hit != null && hit > 0) return r3(Math.min(Math.max(hit, MIN_REACH), MISS_REACH_CAP))
     if (Number(f.throw_m) > 0) return r3(Math.min(Math.max(Number(f.throw_m), 1), MISS_REACH_CAP))
     return DIST[f.type] || 24
@@ -301,8 +305,20 @@ export const patchOps = (doc, rig) => {
     return { ops, absent: [...absent] }
 }
 
-/** v1.0's entities from the rig file. Pure. */
-export const v1Entities = (rig, { hall = null } = {}) => {
+/** A lamp's beam component: drawn to its reach, or, for a first hit of 0 m (reachOf), not drawn and without a stored length (a length is
+ * never written for it: the schema drops 0, and the room would then draw its 60 m default). Reported into `report` as { id, why, surface }
+ * with why = inside_slab | on_floor (physics_check.py's words). Pure but for the report. */
+const beamOf = (f, hall, report) => {
+    const length = reachOf(f, hall)
+    const haze = HAZE[f.type] ?? 0.35
+    if (length !== 0) return { visible: true, haze, length }
+    const at = lampFirstSurface(f, hall)
+    report?.push({ id: f.id, why: at.why, surface: at.name })
+    return { visible: false, haze }
+}
+
+/** v1.0's entities from the rig file. `report` (an array) collects the lamps whose first hit is 0 m. Pure. */
+export const v1Entities = (rig, { hall = null, report = null } = {}) => {
     const out = []
     for (const f of rig.fixtures) {
         if (isLaserType(f.type)) {
@@ -338,7 +354,7 @@ export const v1Entities = (rig, { hall = null } = {}) => {
                 // NO CUTOFF (sim-physics, 2026-10-09; rig-lib lightDistance): distance 0 is pure inverse square; the drawn beam
                 // keeps its own length (beam.length), the cast throw to the first thing it meets (reachOf)
                 light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: 0, angle: f.angle_rad, penumbra: PENUMBRA[f.type] ?? 0.4, decay: 2 },
-                beam: { visible: true, haze: HAZE[f.type] ?? 0.35, length: reachOf(f, hall) },
+                beam: beamOf(f, hall, report),
                 animation: { mode: 'static', speed: 1, amplitude: 1 },
                 fixture
             } })
@@ -688,7 +704,10 @@ const main = async () => {
     const hall = hallArg === 'none' ? null : hallDimsOf(hallArg, REPO_ROOT)
     if (hallArg !== 'none' && !hall) die(`no hall record at ${hallArg} (--hall none to write the types' reaches)`)
     if (hall) { try { shellOf(hall) } catch (e) { die(`${hallArg}: ${e.message}`) } } // a hall without dims.shell is refused, never cast against copied planes
-    const ents = v1Entities(rig, { hall })
+    const zeroReach = []
+    const ents = v1Entities(rig, { hall, report: zeroReach })
+    // a lamp in a slab or on the floor aiming down has no beam to draw (reachOf = 0): said here, the lamp has to be moved (the build never moves it)
+    for (const z of zeroReach) console.error(`0 m: ${z.id} ${z.why} (${z.surface}): its beam is not drawn; move the lamp`)
     const looks = v1Looks(rig, ents, ctx, String(args.rig || RIG_FILE))
     const cues = cuesOf(rig)
     // --looks-only (2026-10-13): the looks and the cue list from the rig file, NOTHING else — no unit deleted or

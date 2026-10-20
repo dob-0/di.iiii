@@ -5,9 +5,11 @@
 import { describe, it, expect } from 'vitest'
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { HALL_FILE, hallDimsOf, hallFirstHit, lampFirstHit, shellOf } from './hall-reach.mjs'
+import { HALL_FILE, hallDimsOf, hallFirstHit, hallFirstSurface, lampFirstHit, lampFirstSurface, shellOf } from './hall-reach.mjs'
+import { reachOf, v1Entities } from './epic-build.mjs'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const hasPython = spawnSync('python3', ['--version'], { encoding: 'utf8' }).status === 0
@@ -19,6 +21,10 @@ const FIXTURE = { shell: [
     slab('deck-1', 'deck', [-10, -2], [10, 10.1], [-10, 10]), slab('deck-2', 'deck', [2, 10], [10, 10.1], [-10, 10]),
     slab('deck-3', 'deck', [-2, 2], [10, 10.1], [2, 10]), slab('deck-4', 'deck', [-2, 2], [10, 10.1], [-10, -2]),
     slab('lantern-roof', 'lantern roof', [-2.3, 2.3], [14, 14.2], [-2.3, 2.3])] }
+// the same room with a gate in the north wall: x -1..1, y 0..3 (physics_check_test.py GATED)
+const GATED = { shell: [...FIXTURE.shell.filter((m) => m.id !== 'wall-n'),
+    slab('wall-n-1', 'end wall', [-10.3, -1], [0, 14], [10, 10.3]), slab('wall-n-2', 'end wall', [1, 10.3], [0, 14], [10, 10.3]),
+    slab('wall-n-3', 'end wall', [-1, 1], [3, 14], [10, 10.3])] }
 const UP = [0, 1, 0]
 const DOWN = [0, -1, 0]
 const EAST = [1, 0, 0]
@@ -52,6 +58,20 @@ describe('hall-reach.mjs reads dims.shell', () => {
         expect(lampFirstHit({ p: [0, 9, 0], r: [0, 0, 0] }, FIXTURE)).toBeCloseTo(9, 9)
         expect(lampFirstHit({}, FIXTURE)).toBeNull()
     })
+    it('the floor is the hall footprint, the ground outside stops a ray that left by a gate and fell (never underground, never open sky); only a ray not going down is open sky', () => {
+        const unit = (v) => { const n = Math.hypot(...v); return v.map((c) => c / n) }
+        const s = (p, d) => { const r = hallFirstSurface(p, d, GATED); return [r.t, r.name] }
+        const g = s([0, 2, 0], unit([0, -0.1, 1])) // y = 1 at the gate, y = 0 at z = 20 outside the footprint: the ground stops it (review of #1050: it was open sky, drawn underground)
+        expect(g[0]).toBeCloseTo(20 * Math.sqrt(1.01), 9); expect(g[1]).toBe('ground outside (through wall-n opening)')
+        expect(s([0, 1, 0], [0, 0, 1])).toEqual([Infinity, 'open sky (through wall-n opening)'])
+        expect(hallFirstHit([0, 2, 0], unit([0, -0.1, 1]), GATED)).toBeCloseTo(20 * Math.sqrt(1.01), 9)
+        expect(s([0, 3, 0], unit([0, -1, 1]))[1]).toBe('floor') // lands at z = 3, inside
+        expect(s([0, 1, 9], unit([0, -1, 0.5]))[1]).toBe('floor') // z = 9.5, inside
+        expect(s([20, 1, 0], DOWN)).toEqual([1, 'ground outside']) // a lamp outside aiming at the ground outside
+        expect(s([0, 2, 20], unit([0, -0.1, -1]))[1]).toBe('floor') // in at the gate, floor inside
+        const noRoof = { shell: GATED.shell.filter((m) => !['deck', 'lantern roof'].includes(m.surface)) }
+        expect(hallFirstSurface([0, 1, 0], UP, noRoof).name).toBe('open sky (through the roof)')
+    })
     it('REFUSES a hall with no dims.shell and a slab with no extent (no copied planes)', () => {
         for (const dims of [{}, { shell: [] }, { truss_top_h_m: 13.3, ridge_h_m: 16.5, lantern_w_m: 12 }]) {
             expect(() => hallFirstHit([0, 1, 0], UP, dims)).toThrow(/no dims\.shell/)
@@ -69,16 +89,80 @@ describe('hall-reach.mjs reads dims.shell', () => {
     })
 })
 
+describe('epic-build reachOf: a lamp aimed out of a gate and down ends on the ground outside, not 16 m under it (review of #1050)', () => {
+    // the real v13 hall: a lamp at (0, 4, 50) tilted -60 deg about x aims (0, -0.5, 0.866); the entry gate (|x| < 3, y < 6, z 53.8) lets it out, y = 0 is 8 m on
+    const dims = hallDimsOf(HALL_FILE, repo)
+    it('reachOf is the 8 m to the ground, not the type\'s 40 m or 24 m (a beam that ended 16 m / 8 m underground)', () => {
+        const at = { p: [0, 4, 50], r: [-Math.PI / 3, 0, 0] }
+        expect(lampFirstSurface(at, dims).name).toMatch(/^ground outside \(through end-wall-entry/)
+        expect(reachOf({ type: 'up-b380f', ...at }, dims)).toBeCloseTo(8, 2)
+        expect(reachOf({ type: 'up-pl5403', ...at }, dims)).toBeCloseTo(8, 2)
+    })
+})
+
+describe('epic-build reachOf: a first hit of 0 m is a result, never the type\'s throw', () => {
+    const inSlab = { type: 'up-b380f', p: [-5, 10.05, 0], r: [0, 0, 0], throw_m: 30 } // inside deck-1 (y 10..10.1)
+    const onFloor = { type: 'up-b380f', p: [0, 0, 0], r: [0, 0, 0], throw_m: 30 } // at floor level aiming down
+    const fine = { type: 'up-b380f', p: [5, 1, 0], r: [Math.PI, 0, 0], throw_m: 30 } // under the deck, 9 m
+    it('reachOf is 0 for a lamp in a slab and for a lamp on the floor aiming down (it was 30 m: throw_m, or the type\'s 40 m)', () => {
+        expect(reachOf(inSlab, FIXTURE)).toBe(0)
+        expect(reachOf(onFloor, FIXTURE)).toBe(0)
+        expect(reachOf({ ...inSlab, throw_m: null }, FIXTURE)).toBe(0)
+        expect(reachOf({ ...onFloor, throw_m: undefined }, FIXTURE)).toBe(0)
+        expect(reachOf(fine, FIXTURE)).toBeCloseTo(9, 3)
+    })
+    it('lampFirstSurface says why: inside_slab with the slab, or on_floor', () => {
+        expect(lampFirstSurface(inSlab, FIXTURE)).toMatchObject({ t: 0, why: 'inside_slab' })
+        expect(lampFirstSurface(inSlab, FIXTURE).name).toContain('deck-1')
+        expect(lampFirstSurface(onFloor, FIXTURE)).toMatchObject({ t: 0, name: 'floor', why: 'on_floor' })
+        expect(lampFirstSurface(fine, FIXTURE).why).toBeUndefined()
+    })
+    const rigOf = (...lamps) => ({ solids: [], fixtures: lamps.map((l, i) => ({ id: `lamp-${i}`, part: 'wash', status: 'new', colour: '#ffffff', angle_rad: 0.2, circuit: '', ...l })) })
+    it('v1Entities writes no beam length for such a lamp (it draws none), reports it, and writes the others as before', () => {
+        const report = []
+        const ents = v1Entities(rigOf(inSlab, onFloor, fine), { hall: FIXTURE, report })
+        const beam = (i) => ents.find((e) => e.id === `lamp-${i}`).components.beam
+        expect(beam(0)).toMatchObject({ visible: false }); expect(beam(0).length).toBeUndefined()
+        expect(beam(1)).toMatchObject({ visible: false }); expect(beam(1).length).toBeUndefined()
+        expect(beam(2)).toMatchObject({ visible: true }); expect(beam(2).length).toBeCloseTo(9, 3)
+        expect(report).toEqual([{ id: 'lamp-0', why: 'inside_slab', surface: expect.stringContaining('deck-1') }, { id: 'lamp-1', why: 'on_floor', surface: 'floor' }])
+    })
+})
+
+describe.skipIf(!hasPython)('epic-build -> physics_check: a lamp epic-build could not give a beam is still a row (review of #1050)', () => {
+    const dims = hallDimsOf(HALL_FILE, repo)
+    it('a lamp inside the entry wall and one on the floor aiming down are written as hidden 0 m beams, and physics_check says inside_slab / on_floor, exit 1', () => {
+        const rig = { solids: [], fixtures: [
+            { id: 'inwall', type: 'up-b380f', part: 'wash', status: 'new', colour: '#ffffff', angle_rad: 0.2, circuit: '', p: [10, 3, 53.95], r: [0, 0, 0] },
+            { id: 'onfloor', type: 'up-b380f', part: 'wash', status: 'new', colour: '#ffffff', angle_rad: 0.2, circuit: '', p: [10, 0, 20], r: [0, 0, 0] }] }
+        const ents = v1Entities(rig, { hall: dims })
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'physics-lows-'))
+        try {
+            fs.mkdirSync(path.join(dir, 'api/projects/p'), { recursive: true })
+            fs.writeFileSync(path.join(dir, 'api/projects/p/document'), JSON.stringify({ version: 1, document: { entities: ents.map((e) => ({ id: e.id, type: e.type, components: e.components })) } }))
+            const r = spawnSync('python3', ['-I', path.join(repo, 'scripts/place/physics_check.py'), '--api', `file://${dir}`, '--project', 'p', '--hall', path.join(repo, HALL_FILE)], { encoding: 'utf8' })
+            expect(r.status, r.stdout + r.stderr).toBe(1)
+            const rows = r.stdout.trim().split('\n').slice(1).map((l) => JSON.parse(l))
+            expect(rows.map((x) => x.id).sort()).toEqual(['inwall', 'onfloor'])
+            expect(rows.find((x) => x.id === 'inwall').inside_slab).toBe(true)
+            expect(rows.find((x) => x.id === 'onfloor').on_floor).toBe(true)
+        } finally { fs.rmSync(dir, { recursive: true, force: true }) }
+    })
+})
+
 describe.skipIf(!hasPython)('parity with physics_check.py on the real shell', () => {
-    it('600 deterministic rays from inside, the roof, the floor and outside: same distance and same slab', () => {
+    it('600 distinct rays from all 280 origins: same distance, same surface (slab id / label)', () => {
         const dims = hallDimsOf(HALL_FILE, repo)
-        // a fixed lattice of origins and directions (no random: the run is the same every time)
+        // a fixed lattice of origins and directions (no random: the run is the same every time); a ray k is origin k mod 280, direction k * 11 + k div 280 (mod 48)
         const origins = []
         for (const x of [-30, -6, 0, 6.5, 24, 45, 60.4, 70]) for (const y of [0, 1, 7, 12, 13.3, 15, 17]) for (const z of [-60, -5.5, 0, 20, 53.8]) origins.push([x, y, z])
         const dirs = []
         for (let i = 0; i < 12; i += 1) for (const el of [-0.9, 0, 0.6, 1.4]) dirs.push([Math.cos(el) * Math.cos(i * 0.5236 + 0.1), Math.sin(el), Math.cos(el) * Math.sin(i * 0.5236 + 0.1)])
         const rays = []
-        for (let k = 0; k < 600; k += 1) rays.push([origins[(k * 7) % origins.length], dirs[(k * 11) % dirs.length]])
+        for (let k = 0; k < 600; k += 1) rays.push([origins[k % origins.length], dirs[(k * 11 + Math.floor(k / origins.length)) % dirs.length]])
+        expect(origins.length).toBe(280)
+        expect(new Set(rays.map((r) => JSON.stringify(r))).size).toBe(600) // 600 rays, all different
+        expect(new Set(rays.map((r) => JSON.stringify(r[0]))).size).toBe(280) // from every origin
         const py = `
 import importlib.util, json, math, sys
 spec = importlib.util.spec_from_file_location('pc', sys.argv[1]); pc = importlib.util.module_from_spec(spec); spec.loader.exec_module(pc)
@@ -91,15 +175,17 @@ print(json.dumps(out))`
         const r = spawnSync('python3', ['-I', '-c', py, path.join(repo, 'scripts/place/physics_check.py'), path.join(repo, HALL_FILE)], { input: JSON.stringify(rays), encoding: 'utf8' })
         expect(r.status, r.stderr).toBe(0)
         const want = JSON.parse(r.stdout)
-        let hits = 0
-        let floor = 0
+        const kinds = { slab: 0, floor: 0, sky: 0, through: 0 }
         rays.forEach(([p, d], k) => {
-            const got = hallFirstHit(p, d, dims)
+            const got = hallFirstSurface(p, d, dims)
             const [t, name] = want[k]
-            if (t == null) expect(got, `ray ${k}`).toBeNull()
-            else { expect(got, `ray ${k}`).toBeCloseTo(t, 9); hits += 1; if (name === 'floor') floor += 1 }
+            expect(got.name, `ray ${k}`).toBe(name) // the slab id and label, the floor, or the open-sky words: equal
+            if (t == null) { expect(got.t, `ray ${k}`).toBe(Infinity); expect(hallFirstHit(p, d, dims), `ray ${k}`).toBeNull(); kinds.sky += 1; if (name.includes('through')) kinds.through += 1 }
+            else { expect(got.t, `ray ${k}`).toBeCloseTo(t, 9); expect(hallFirstHit(p, d, dims), `ray ${k}`).toBeCloseTo(t, 9); if (name === 'floor') kinds.floor += 1; else kinds.slab += 1 }
         })
-        expect(hits).toBeGreaterThan(300) // the lattice meets something most of the time (it is a test of agreement, not of emptiness)
-        expect(floor).toBeGreaterThan(20)
+        // the lattice meets every kind of end (it is a test of agreement, not of emptiness); the floor is bounded to the footprint, so some rays are open sky
+        expect(kinds.slab).toBeGreaterThan(150)
+        expect(kinds.floor).toBeGreaterThan(20)
+        expect(kinds.sky).toBeGreaterThan(20)
     })
 })
