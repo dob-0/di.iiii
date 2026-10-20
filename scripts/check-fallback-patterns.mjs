@@ -37,7 +37,15 @@ const ALLOWLIST = [
   // 'bundle' is the fixed name of the open-a-file route (POST /api/spaces/bundle),
   // matched so the route is NOT read as a space id — a route name, not a
   // fallback standing in for a real space. The scope check runs for all else.
-  ['index.js', "req.params.spaceId === 'bundle'"]
+  ['index.js', "req.params.spaceId === 'bundle'"],
+  // A sync key's scope is a two-value enum ('edit' | 'manage',
+  // SPEC_space_sync_keys.md §13). These compare against the enum's privileged
+  // value, so anything unknown or missing falls to the LESS powerful 'edit' —
+  // fail closed, the opposite of the bug class (a default granting access).
+  ['follow/follower.js', "keyScope = answer.payload.key.scope === 'manage' ? 'manage' : 'edit'"],
+  ['index.js', "manageSpaces: sk.scope === 'manage' ? [sk.spaceId] : []"],
+  ['index.js', "limits: scope === 'manage' ? syncKeyActions.LIMITS : null"],
+  ['routes/projectRoutes.js', "also.scope === 'manage' && also.spaceId === toMeta.id"]
 ]
 
 const FALLBACK_PATTERN = /\b(spaceId|scope|tenant|projectId)\b\s*(\|\||\?\?)\s*['"]/
