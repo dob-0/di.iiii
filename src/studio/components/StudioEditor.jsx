@@ -10,7 +10,7 @@ import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { isTypingTarget, lockFromKey, undoRedoFromKey } from '../utils/editKeys.js'
 import { unitMembersOf } from '../utils/laserTest.js'
 import { clearFromKey, clearTransformOps } from '../utils/clearTransform.js'
-import { hallEntityIds, lockOps } from '../utils/selectionTools.js'
+import { hallEntityIds, lockOps, movableEntities, selectionWithout } from '../utils/selectionTools.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { isPreviewRequest } from '../../utils/previewMode.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
@@ -737,6 +737,12 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             type: 'updateComponent',
             payload: { entityId, component: 'runtime', patch: { locked: nextLocked } }
         }, { activityMessage: `${nextLocked ? 'Locked' : 'Unlocked'} ${entity.name}.` })
+        // A locked object leaves the selection — from the outliner's padlock as from L and
+        // the Inspector's button (N581: the padlock kept it selected, and X on that selection
+        // armed a transform nothing could run).
+        if (nextLocked && selectedEntityIds.includes(entityId)) {
+            dispatch({ type: 'select-entities', entityIds: selectionWithout(selectedEntityIds, [entityId]) })
+        }
     }
 
     // Lock / unlock several at once (the Inspector's toggle, "Lock the hall", "Unlock all"):
@@ -1127,7 +1133,16 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         if (ops.length) applyLocalOps(ops)
     }, [applyLocalOps])
 
+    // The operator is armed only while something can move. StudioSceneContent mounts
+    // ModalTransform for the movable part of the selection and nothing else cancels the
+    // op, so an op armed for a selection that cannot move (every object locked) stayed set
+    // for the rest of the page: the keyboard handler above returned on transformOpRef, the
+    // gizmo stayed hidden, Escape could not deselect (N581, 2026-10-15).
+    const selectedEntitiesRef = useRef(selectedEntities)
+    useEffect(() => { selectedEntitiesRef.current = selectedEntities })
     const handleStartTransform = useCallback((mode, axis = null) => {
+        const movable = movableEntities(selectedEntitiesRef.current, selectedEntitiesRef.current.map((entity) => entity.id))
+        if (!movable.length) return
         setTransformOp({ mode, axis, seq: Date.now() })
     }, [])
 
