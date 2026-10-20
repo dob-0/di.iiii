@@ -43,4 +43,14 @@ describe('wiki.css', () => {
     it('rings the search field when it has keyboard focus', () => {
         expect(rule('.wiki-search:focus-visible')).toMatch(/outline:\s*2px solid var\(--di-cyan\)/)
     })
+
+    // Audit 2026-10-21 W6, measured in Chromium at 1440x900: 25 % of the screen
+    // (the margins beside the text) is the background canvas, and a wheel there
+    // moved the page 0 px. Same cause as the landing's (landing.css, L6): a fixed
+    // layer whose canvas turns pointer events back on, inline.
+    it('lets the background canvas take no pointer events, so a wheel anywhere scrolls', () => {
+        const at = wiki.indexOf('.wiki-root .grid-floor-background *')
+        expect(at).toBeGreaterThanOrEqual(0)
+        expect(wiki.slice(at, wiki.indexOf('}', at))).toMatch(/pointer-events:\s*none\s*!important/)
+    })
 })
