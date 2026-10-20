@@ -1711,9 +1711,14 @@ export default function RawGraphSurface({
         <div
             className="raw-graph-surface"
             ref={containerRef}
-            role="button"
+            // A group, not a button: a button's children are presentational,
+            // so every card inside it vanished for a screen reader (audit
+            // 2026-10-21 NR-02). Focusable for the canvas keys; Enter on it
+            // still creates a node.
+            role="group"
             tabIndex={0}
-            aria-label="Create a graph node"
+            aria-label="Node canvas"
+            aria-keyshortcuts="Enter"
             style={{
                 top: `${topInset}px`,
                 // Published so on-canvas controls can sit clear of whatever is

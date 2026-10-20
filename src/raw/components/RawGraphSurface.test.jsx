@@ -1268,3 +1268,24 @@ describe('RawGraphSurface zoom strip (audit row 6, §3.8)', () => {
         expect(strip.querySelector('.raw-graph-zoom-value').textContent).toBe('100%')
     })
 })
+
+describe('the canvas in the accessibility tree', () => {
+    // The canvas was role="button" ("Create a graph node") around every card.
+    // A button's children are presentational, so a screen reader flattened
+    // the whole graph into one button; axe in Chromium: nested-interactive,
+    // serious (audit 2026-10-21 NR-02). It is a named group now, still
+    // focusable, and Enter on it still creates a node.
+    it('is a focusable named group, not a button holding the cards (axe nested-interactive)', async () => {
+        const axe = (await import('axe-core')).default
+        const onDoubleClick = vi.fn()
+        const { container } = render(<RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} initialZoom={1} onDoubleClick={onDoubleClick} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        expect(surface.getAttribute('role')).toBe('group')
+        expect(surface.getAttribute('aria-label')).toMatch(/node canvas/i)
+        expect(surface.tabIndex).toBe(0)
+        const result = await axe.run(container, { runOnly: ['nested-interactive', 'aria-allowed-role', 'aria-prohibited-attr'] })
+        expect(result.violations.map((v) => v.id)).toEqual([])
+        fireEvent.keyDown(surface, { key: 'Enter' })
+        expect(onDoubleClick).toHaveBeenCalledTimes(1)
+    })
+})
