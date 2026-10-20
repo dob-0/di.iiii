@@ -59,7 +59,7 @@ export const must = (result, what) => {
 export const uploadAsset = async (client, projectId, file, options = {}) => {
     const form = new FormData()
     const bytes = fs.readFileSync(file)
-    form.append('asset', new Blob([bytes], { type: mimeFor(file) }), path.basename(file))
+    form.append('asset', new Blob([bytes], { type: options.mimeType || mimeFor(file) }), options.name || path.basename(file))
     const result = await client.post(`/api/projects/${projectId}/assets`, form)
     // A source file the server will not take (413 too large, 415 an image it
     // cannot scrub) is one picture missing from a wall, not a reason to throw
@@ -68,14 +68,14 @@ export const uploadAsset = async (client, projectId, file, options = {}) => {
     if (options.skippable && !result.ok) {
         warn(`    left out, the server refused it (${result.status}): ${path.basename(file)}`)
         // add-sources.mjs reports every refusal by name, size and reason at the end.
-        options.onRefused?.({ name: path.basename(file), size: bytes.length, status: result.status, reason: result.text.slice(0, 160) })
+        options.onRefused?.({ name: options.name || path.basename(file), size: bytes.length, status: result.status, reason: result.text.slice(0, 160) })
         return null
     }
     const asset = must(result, `uploading ${path.basename(file)}`).asset
     return {
         id: asset.id,
-        name: asset.name || path.basename(file),
-        mimeType: asset.mimeType || mimeFor(file),
+        name: asset.name || options.name || path.basename(file),
+        mimeType: asset.mimeType || options.mimeType || mimeFor(file),
         size: asset.size || bytes.length,
         url: asset.url,
         source: 'server',
