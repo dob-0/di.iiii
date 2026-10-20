@@ -1,0 +1,284 @@
+{
+ "kind": "led250-head",
+ "maker": "unknown (cover photo owed)",
+ "model": "unknown",
+ "status": "PHOTO (owner's photos of the paper manual, 2026-10-16)",
+ "power_w": 280,
+ "source": "250 W LED, 8300 K",
+ "modes": {
+  "30ch": [
+   {
+    "ch": 1,
+    "name": "pan",
+    "ranges": null
+   },
+   {
+    "ch": 2,
+    "name": "panFine",
+    "ranges": null
+   },
+   {
+    "ch": 3,
+    "name": "tilt",
+    "ranges": null
+   },
+   {
+    "ch": 4,
+    "name": "tiltFine",
+    "ranges": null
+   },
+   {
+    "ch": 5,
+    "name": "speed",
+    "ranges": "fast to slow"
+   },
+   {
+    "ch": 6,
+    "name": "dimmer",
+    "ranges": null
+   },
+   {
+    "ch": 7,
+    "name": "dimmerFine",
+    "ranges": null
+   },
+   {
+    "ch": 8,
+    "name": "strobe",
+    "ranges": "unlabelled 9 bands: 0-5,6-37,38-69,70-101,102-133,134-165,166-197,198-229,230-255"
+   },
+   {
+    "ch": 9,
+    "name": "colourWheel",
+    "ranges": "0-5 white,6-16 c1,17-27 c2,28-38 c3,39-49 c4,50-60 c5,61-71 c6,72-82 c7,83-93 c8,94-192 any,193-223 cw,224 stop,225-255 ccw"
+   },
+   {
+    "ch": 10,
+    "name": "colourWheelFine",
+    "ranges": null
+   },
+   {
+    "ch": 11,
+    "name": "rotGobo",
+    "ranges": "0-5 open,6-15 g1,16-25 g2,26-35 g3,36-45 g4,46-55 g5,56-65 g6,66-75 g7,76-80 open,81-192 shake g1-g7 (16-wide),193-223 cw,224 stop,225-255 ccw"
+   },
+   {
+    "ch": 12,
+    "name": "goboRotation",
+    "ranges": "0-5 0deg,6-128 position,129-191 cw,192 stop,193-255 ccw"
+   },
+   {
+    "ch": 13,
+    "name": "goboRotationFine",
+    "ranges": null
+   },
+   {
+    "ch": 14,
+    "name": "fixedGobo",
+    "ranges": "0-5 open,6-10 g1,11-15 g2,16-20 g3,21-25 g4,26-30 g5,31-35 g6,36-40 g7,41-45 g8,46-48 g9,49-192 shake g1-g9 (16-wide),193-223 cw,224 stop,225-255 ccw"
+   },
+   {
+    "ch": 15,
+    "name": "prism",
+    "ranges": "0-5 none,6-255 in"
+   },
+   {
+    "ch": 16,
+    "name": "prismRotation",
+    "ranges": "0-5 0deg,6-128 position,129-191 cw,192 stop,193-255 ccw"
+   },
+   {
+    "ch": 17,
+    "name": "prismRotationFine",
+    "ranges": null
+   },
+   {
+    "ch": 18,
+    "name": "focus",
+    "ranges": "near to far"
+   },
+   {
+    "ch": 19,
+    "name": "focusFine",
+    "ranges": null
+   },
+   {
+    "ch": 20,
+    "name": "zoom",
+    "ranges": "near to far"
+   },
+   {
+    "ch": 21,
+    "name": "zoomFine",
+    "ranges": null
+   },
+   {
+    "ch": 22,
+    "name": "frost",
+    "ranges": "shallow to deep"
+   },
+   {
+    "ch": 23,
+    "name": "glowMaster",
+    "ranges": null
+   },
+   {
+    "ch": 24,
+    "name": "glowRed",
+    "ranges": null
+   },
+   {
+    "ch": 25,
+    "name": "glowGreen",
+    "ranges": null
+   },
+   {
+    "ch": 26,
+    "name": "glowBlue",
+    "ranges": null
+   },
+   {
+    "ch": 27,
+    "name": "glowEffect",
+    "ranges": null
+   },
+   {
+    "ch": 28,
+    "name": "effectSpeed",
+    "ranges": null
+   },
+   {
+    "ch": 29,
+    "name": "effectFade",
+    "ranges": null
+   },
+   {
+    "ch": 30,
+    "name": "function",
+    "ranges": "0-25 none,26-76 all reset 5s,77-127 XY reset 5s,128-178 head reset 5s,179-254 none"
+   }
+  ],
+  "24ch": [
+   {
+    "ch": 1,
+    "name": "pan",
+    "ranges": null
+   },
+   {
+    "ch": 2,
+    "name": "panFine",
+    "ranges": null
+   },
+   {
+    "ch": 3,
+    "name": "tilt",
+    "ranges": null
+   },
+   {
+    "ch": 4,
+    "name": "tiltFine",
+    "ranges": null
+   },
+   {
+    "ch": 5,
+    "name": "speed",
+    "ranges": "fast to slow"
+   },
+   {
+    "ch": 6,
+    "name": "dimmer",
+    "ranges": null
+   },
+   {
+    "ch": 7,
+    "name": "strobe",
+    "ranges": "unlabelled 9 bands: 0-5,6-37,38-69,70-101,102-133,134-165,166-197,198-229,230-255"
+   },
+   {
+    "ch": 8,
+    "name": "colourWheel",
+    "ranges": "0-5 white,6-16 c1,17-27 c2,28-38 c3,39-49 c4,50-60 c5,61-71 c6,72-82 c7,83-93 c8,94-192 any,193-223 cw,224 stop,225-255 ccw"
+   },
+   {
+    "ch": 9,
+    "name": "rotGobo",
+    "ranges": "0-5 open,6-15 g1,16-25 g2,26-35 g3,36-45 g4,46-55 g5,56-65 g6,66-75 g7,76-80 open,81-192 shake g1-g7 (16-wide),193-223 cw,224 stop,225-255 ccw"
+   },
+   {
+    "ch": 10,
+    "name": "goboRotation",
+    "ranges": "0-5 0deg,6-128 position,129-191 cw,192 stop,193-255 ccw"
+   },
+   {
+    "ch": 11,
+    "name": "fixedGobo",
+    "ranges": "0-5 open,6-10 g1,11-15 g2,16-20 g3,21-25 g4,26-30 g5,31-35 g6,36-40 g7,41-45 g8,46-48 g9,49-192 shake g1-g9 (16-wide),193-223 cw,224 stop,225-255 ccw"
+   },
+   {
+    "ch": 12,
+    "name": "prism",
+    "ranges": "0-5 none,6-255 in"
+   },
+   {
+    "ch": 13,
+    "name": "prismRotation",
+    "ranges": "0-5 0deg,6-128 position,129-191 cw,192 stop,193-255 ccw"
+   },
+   {
+    "ch": 14,
+    "name": "focus",
+    "ranges": "near to far"
+   },
+   {
+    "ch": 15,
+    "name": "zoom",
+    "ranges": "near to far"
+   },
+   {
+    "ch": 16,
+    "name": "frost",
+    "ranges": "shallow to deep"
+   },
+   {
+    "ch": 17,
+    "name": "glowMaster",
+    "ranges": null
+   },
+   {
+    "ch": 18,
+    "name": "glowRed",
+    "ranges": null
+   },
+   {
+    "ch": 19,
+    "name": "glowGreen",
+    "ranges": null
+   },
+   {
+    "ch": 20,
+    "name": "glowBlue",
+    "ranges": null
+   },
+   {
+    "ch": 21,
+    "name": "glowEffect",
+    "ranges": null
+   },
+   {
+    "ch": 22,
+    "name": "effectSpeed",
+    "ranges": null
+   },
+   {
+    "ch": 23,
+    "name": "effectFade",
+    "ranges": null
+   },
+   {
+    "ch": 24,
+    "name": "function",
+    "ranges": "0-25 none,26-76 all reset 5s,77-127 XY reset 5s,128-178 head reset 5s,179-254 none"
+   }
+  ]
+ }
+}

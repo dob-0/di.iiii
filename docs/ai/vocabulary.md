@@ -34,9 +34,15 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **work** | What the public meets: a title, an author, an address. The same object a **project** names backstage. |
 | **Nodes** | The node canvas: the tool where a project's nodes are wired together. Opens at `/{space}/raw/projects/{project}` — the route stays `raw`, the word a person reads is Nodes. Added 2026-09-23. |
 | **Projection** | The tool that puts a project on a wall: drag its surfaces onto the shapes there. Opens at `/{space}/map/{project}` — the route stays `map`, the word a person reads is Projection. |
-| **Light** | The lighting desk: patch, scenes, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The lamp you place in a scene still reads Light too, until the owner settles its own word (Lamp is the recommendation). |
+| **Light** | The lighting desk: patch, scenes, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The capital is the tool; a light in a scene and a stage fixture have their own words, **light** and **lamp** below (settled 2026-10-13). |
+| **lamp** | A stage fixture: the real device on the rig (a moving head, a par, a strip). In a scene it is a light that carries a fixture: a typed one from the rig builder, or a join to a fixture of the lighting desk. A project's card counts these: "74 lamps". Owner, 2026-10-13: *"lamp" = a stage fixture.* Added 2026-10-13. |
+| **light** | A 3D scene light: the sun, a point, a spot, an ambient light, joined to nothing on the rig. Written with a small l; the lighting desk is **Light** with a capital. A project's card counts these: "2 lights". Owner, 2026-10-13: *"light" = a 3D scene light (sun, point…).* Added 2026-10-13. |
 | **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
 | **team** | The members of a space, said as one word where a page has to name them to a guest — the show page's "who may choose: team". Not a role and not a new group: exactly the people the space's scope already lets edit. Added 2026-10-08. |
+| **view** | A named camera a project keeps — a button that takes you there. A **live** view is one visitors get; a **work** view stays in the Studio. A project that is a version of a **production** shares its views with every other version. Added 2026-10-13 (decisions 1–3, `docs/ai/decisions/2026-10-13-views-library-words-workflow.md`). |
+| **quality** | The room's one render setting, with two values: **Low** (beams and haze, light enough for a phone) and **High** (the work renderer: shadows, bloom, every lamp a real light). The button shows the quality now in use; its title says what a tap switches to. `?quality=low\|high` in an address. Why these words: the field names a renderer's two presets Low / High (quality presets in games, video players, Blender's render presets); HD / HQ name video formats, not a renderer setting. Owner 2026-10-15 ("Full and Lite do not suit"). Stored values and old links `lite` / `full` are read as `low` / `high`. |
+| **render** | What a room is drawn FOR, three values: **Studio** (the building view, every tool — where you make it), **Tech** (the crew's schematic in the live show: only the rig as plain shapes, the floor and the hall outline; no air, no glow, no other objects) and **Show** (the room as the audience and a client see it — the public link, the Studio's Preview, the room page's default). Display → Tech \| Show on the room page; `?render=tech\|show` in an address. Separate from **quality** (what the device can carry). Why these words: the owner's own (2026-10-15 07:0x–07:2x: "Studio work when we create", "the light show" → Tech, "the showcase" → Show); previz and CAD keep a drawing view apart from a rendered view. **Show** here is a way of drawing, not the **show** of a production (the cues in order) — the button sits under Display, never alone. Decision: docs/ai/decisions/2026-10-15-studio-tech-show-render.md. |
+
 | **master clock** | The one loop of beats a project keeps running; every LFO follows it unless it picks another clock. Added 2026-10-14. |
 | **clock** | A loop that counts beats at a tempo. A project has one master clock and may add more; the `/light` desk's clock and tap are an optional source for it, not its leader. Added 2026-10-14. |
 | **cube group** | A named set of LaserCubes (for example "left", "right") that a graph can address as one. Lives in the project, not in `laser.json`. Added 2026-10-14. |
@@ -64,6 +70,7 @@ used consistently, and every node tool a visitor might arrive from uses one or t
 | `linked space` · `code space` | Implementation notes. A visitor sees a space. | **space** |
 | `Universe` | Promised a world, delivered a toolbar switch. | **Kiosk** (see below) |
 | `di.i` *(inside the product)* | The studio's signature, not the product's name. Correct on a byline, a deck, thedi.studio; a slip in product copy, which names the product. | **di.iiii** |
+| `Lite` · `Full` *(as the room's render quality)* | Two words that did not say what they measure; `Full` also read as "complete". Retired 2026-10-15. The keys `lite` / `full` and old `?quality=lite\|full` links still open, as aliases. | **Low** · **High** (the setting is **Quality**) |
 
 `raw` in its ordinary English sense (*unparsed, unformatted*) is fine in code, but never in a
 user-visible string where it can be mistaken for the lane — rewrite those.
@@ -364,9 +371,10 @@ projection". Routes, keys and folders stay: `/raw`, `/map`, `/light`, `src/raw/`
 (`src/copyVocabulary.test.js`) now also reads `src/kit/KitPage.jsx` and
 `src/landing/LocalHome.jsx`, so "Raw" as a name there fails the build.
 
-Not settled here: Studio's "Lights" button and the lamp you place still say Light. That word
-waits on the owner (desk keeps Light, the object becomes Lamp, the rig button becomes Rig — the
-recommendation, not yet his yes), and the guard does not police it until then.
+Settled since, on 2026-10-13 (see "Amended 2026-10-13" below): the light you place in a scene
+stays a light, and **lamp** is the stage fixture. The recommendation written here, that the
+object becomes Lamp, was not taken. Studio's "Lights" button and the rig button were not changed
+by that amendment, and the guard does not police them.
 
 ## Amended 2026-09-22 — `scan`, and the one thing it must never say
 
@@ -402,6 +410,68 @@ the two existing ones are both on the card. Code: `getNodeCardTitle` (`src/proje
 Still open for the owner (no word is settled here, so nothing changed): the family tag **the scene**
 sits on Kiosk, Studio, In and Out as well as on the scene's own cards; and **kiosk** names both the
 node and the projector appliance in the wiki. The questions are in PR "Nodes: names".
+
+## Amended 2026-10-14 — the laser nodes (Phase 1 of the laser workflow)
+
+Design: the raw laser workflow decision of 2026-10-14 (lands in docs/ai/decisions with docs PR #933). The rows for **master clock**, **clock**, **cube group**,
+**draw mode** and **point budget** live in the dictionary above (docs PR #933); these are the words Phase 1 adds.
+
+| Word | Its one job |
+|---|---|
+| **Laser Trace** | The node that turns a shape (any geometry wire: a Cube, a Geo, a Merge, an Array) into laser paths, so the laser draws what the viewport shows. Its draw modes: **Outline** (default), **Edges**, **Wireframe**, **Points**. Its views: **Front** and **From a point**. Two words, no parenthesis; "trace" is `laserFrame.cjs`'s own word ("a list of points the scanner traces"). |
+| **Laser Merge** | The node that joins two sets of laser paths into one, as Merge joins shapes. Chain it for more. Not "Merge": that card joins shapes. |
+| **Laser** (port type) | The wire type laser nodes speak: a set of paths (below). Green on the canvas. Not to be confused with the **Laser** node (`laser.shape`), which keeps its name. |
+| **path** (laser) | One unbroken stroke the beam draws, lit all along. A **path set** (frame v2 in code) is what flows between laser nodes; Laser Out turns it into the wire's points, putting the dark moves between paths. Developer word; the card says "Frame". |
+| **Auto** (Laser Out's budget) | The point budget sized from the drawn length instead of a number. The checkbox beside Laser Out's Points slider; 0 on the Budget port means the same. |
+
+## Proposed 2026-10-13 — a lighting look, and the Dilijan words (owner's pick, nothing renamed)
+
+The owner, 2026-10-13: the looks (*"the wall"*, *"peak"*) and the Dilijan things get Studio words; he did not pick
+them. These are proposals. No string or identifier changes until he does. Plan:
+`docs/ai/plans/2026-10-13-connected-workflow-words-versions.md` (b).
+
+**A lighting look — proposed: look.** What the rig shows at one moment: each group's level, colour and aim
+(`components.rigLooks.looks[]`). "The wall", "peak", "white cathedral" are looks. A **cue** plays a look, with a fade
+and a hold; the **show** is the cues in order.
+
+| Proposed word | Means, and only this | Why |
+| --- | --- | --- |
+| **look** | One state of the rig, named for what it does to the room. | Already the word on the Cards page, the room's SHOW chip and the Light desk, which has looks as its own content model. |
+| **cue** | One step of the show: a look, its fade, its hold. | Already the word of the cue list and of the desk's runner. |
+| **show** | The cues in order, played on a clock or a desk. | Already the show page `/{space}/show/…` and the SHOW chip. |
+
+Measured against this (a rough grep count of quoted strings, may include a few identifiers): the Studio's scene
+picker says *scene* in 9 strings and *look* in 0, the Scenes deck 21 to 1, the room's cue list 3 to 0, the show page
+3 to 0; the Cards page says *look* in 13 and *scene* in 0, the room's look follower 7 and 0. So today the same thing
+is a **scene** in the Studio and a **look** on the Cards page and in Light. *Scene* already has one job here — the 3D
+place — and a second inside Light (one step of values, beside looks). If the owner keeps *scene* for a look, the
+dictionary row for **scene** must change with it, and Light's own *scene* needs another word.
+
+**The Dilijan things — which ones is not settled; two readings, a word for each.** UNVERIFIED which the owner meant.
+
+| Reading | Today | Proposed |
+| --- | --- | --- |
+| The channel maps the studio's own desk ran on the UPlight rental units at the Sevan festival (Dilijan camp), now in `TESTED_CHANNEL_LISTS` (`src/rigbuild/fixtureTypes.js`, source `SEVAN`) | "TESTED", "the rental unit itself (Sevan festival rig, Dilijan camp, 2026)" | **tested on the unit** — a provenance label, beside *assumed* and *from the datasheet*; never the festival's or the camp's name in a label a visitor of another production reads. |
+| The camp's rooms, `/dilijan/team-1` … | the room's own title "TEAM 1" — data in the space, not code (PROGRESS.md) | Not **team**: the dictionary gives *team* one job (a space's members, 2026-10-08). The children's groups want their own word — **crew** is taken by the rig tools (`/{space}/crew/…`); **group** is the plain candidate. |
+
+## Amended 2026-10-13 — lamp and light, one word for each thing
+
+The question (the "one place for a space" program, ledger N585, phase P1): what does a project's
+holds line call the fixture placed in a scene, "lamp" or "light"? The owner's answer on
+2026-10-13: both words stay, each for its own thing. *"light" = a 3D scene light (sun, point…),
+"lamp" = a stage fixture.*
+
+- **lamp**: a stage fixture. In a scene it is a light that carries a fixture: a typed one from
+  the rig builder (`components.fixture.type`), or a join to a fixture of the lighting desk
+  (`components.fixture.index`).
+- **light**: a 3D scene light. In a scene it is a sun, a point, a spot or an ambient light that
+  carries no fixture.
+- **Light**, with a capital, stays the tool: the lighting desk at `/light/`.
+
+The holds line follows it (`describeProjectLayers`, `src/project/layers.js`): a light that
+carries a fixture counts as a lamp, any other light as a light, and an object is neither. Other strings that
+name a placed light (Studio's Lights row, the `light.point` row of the node table above) were
+not touched by this amendment; a later pass lines them up with these two rows.
 
 ## The rule for anything new
 

@@ -117,8 +117,9 @@ function registerProjectRoutes(router, {
 
   // ── what each project holds, for the card's one line ─────────────────────
   //
-  // "3 things · 2 wires · 1 surface · 1 lamp", or "empty" (the layers
-  // decision, 2026-09-23, unit 1). Read from the document by the same rule the
+  // "3 objects · 2 wires · 1 surface · 1 lamp · 4 files · 6.1 MB", or "empty"
+  // (the layers decision, 2026-09-23, unit 1; files, media, cues and the page
+  // since 2026-10-13). Read from the document by the same rule the
   // editor runs (shared/layers.cjs, the twin of src/project/layers.js), never
   // stored: the counts are a view of what the project holds, and a stored count
   // is a claim the data cannot keep — the same reason no "kind" is stored

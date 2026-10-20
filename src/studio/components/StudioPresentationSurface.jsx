@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import StudioViewport from './StudioViewport.jsx'
 import { buildPresentationPreviewDocument } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
@@ -67,7 +68,13 @@ export default function StudioPresentationSurface({
     rigMirror = false,
     // What Nodes made, for the room (StudioGraphNodes.jsx) — passed through.
     graphRoom = null,
+    onSceneOps = null,
+    onPlayScene = null,
 }) {
+    // The scene the Studio shows while editing (ScenePicker.jsx): undefined = follow the show clock,
+    // '' = work light (no look), an id = that look.
+    const [rigLook, setRigLook] = useState(undefined)
+    const [laserTest, setLaserTest] = useState(false)
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
     const isFixedCamera = previewMode === 'fixed-camera'
@@ -158,6 +165,12 @@ export default function StudioPresentationSurface({
     return (
         <StudioViewport
             document={document}
+            rigLook={rigLook}
+            onRigLook={setRigLook}
+            onSceneOps={onSceneOps}
+            onPlayScene={onPlayScene}
+            laserTest={laserTest}
+            onLaserTest={setLaserTest}
             selectedEntityId={selectedEntityId}
             selectedEntityIds={selectedEntityIds}
             onSelectEntity={onSelectEntity}
@@ -178,6 +191,12 @@ export default function StudioPresentationSurface({
             gizmoVisible={gizmoVisible}
             transformOp={transformOp}
             setEditMode={setEditMode}
+            // No view bar on the Studio surface (brief 2026-10-13 item 2): each pane already has the
+            // axis widget (top-right: Front/Back/Left/Right/Top/Bottom) and the keys run the same
+            // commands (Numpad or Shift+1/3/7, F, Home — studioGuide.js, View rows). A third way to the same
+            // six views, as 44 px buttons over the bottom of every pane, is a new shape on the
+            // owner's screen; the bar stays for a surface without that widget.
+            viewBar={false}
             setGizmoMode={setGizmoMode}
             onTransformCommit={onTransformCommit}
             onTransformCommitMany={onTransformCommitMany}

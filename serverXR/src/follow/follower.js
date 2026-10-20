@@ -302,7 +302,13 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         const key = JSON.stringify(snapshot.cursors) + seen.size + snapshot.seeded.join()
         if (key === lastSaved) return
         lastSaved = key
-        Promise.resolve(onSave(snapshot)).catch((error) => log.warn?.(`[follow] ${local.spaceId}: could not save where it got to (${error?.message || error})`))
+        // A save that failed is owed again on the next tick, changed or not: left
+        // marked as saved, the cursors lived only in this process until the next
+        // edit moved them — and a restart in between resumed from an older file.
+        Promise.resolve().then(() => onSave(snapshot)).catch((error) => {
+            if (lastSaved === key) lastSaved = null
+            log.warn?.(`[follow] ${local.spaceId}: could not save where it got to (${error?.message || error})`)
+        })
     }
 
     // Woken by this install's own writes, so an edit made here leaves at once
@@ -511,14 +517,15 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             request(remote.url(stream.documentPath), { token: remote.token, servername: remote.servername, address: remote.address })
         ])
         if (!here.ok || !there.ok) return null
-        return planConverge({
+        const localVersion = Number.isFinite(here.payload?.version) ? here.payload.version : null
+        return { localVersion, ...planConverge({
             kind: stream.kind,
             projectId: stream.projectId || null,
             local: readDocument(stream.kind, here.payload),
             remote: readDocument(stream.kind, there.payload),
             direction,
             seedHost
-        })
+        }) }
     }
 
     /**
@@ -527,9 +534,15 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
      * own write route — same version check, same restore point, same broadcast.
      * A 409 means someone here just edited: leave it for the next quiet pass.
      */
-    const converge = async (stream) => {
+    const converge = async (stream, { readThrough = null } = {}) => {
         const plan = await compare(stream, activeDirection, { seedHost: seeded.has(stream.key) })
         if (!plan) return { done: false }
+        // This copy moved after its log was read: an edit made here between the
+        // two reads is in the document and not yet carried. Writing the host's
+        // copy over it would erase it here while the next tick carried it there
+        // — two copies that differ and, with the flags spent, are never compared
+        // again (audit F12). Not done: the edit is carried first, then compared.
+        if (plan.target !== 'remote' && Number.isFinite(readThrough) && plan.localVersion !== readThrough) return { done: false }
         // Once the host's copy is no longer the empty one this follow made, the
         // ordinary rules apply to it.
         if (!plan.seeded && !plan.refused?.includes('no version')) seeded.delete(stream.key)
@@ -620,6 +633,13 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         })
         const abandoned = Boolean(parking?.signal.aborted)
         parking = null
+        // Stopped while the read was out: write nothing. A read parked on the
+        // other machine outlives stop() by up to WAIT_SECONDS, and the edit that
+        // ends it would otherwise be carried by a follow that no longer exists
+        // (2026-10-13, the 409 in followIntegration "same field at the same
+        // moment": the stopped follow wrote the host's edit into this install
+        // between someone's read of its version and their write).
+        if (stopped) return { moved: false, skipped: true }
         // Only the stream that parks reads the mark: it is the whole space's.
         // An answer without one (an older server) leaves the last one standing.
         const markBefore = spaceMark
@@ -670,9 +690,15 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // forever, which is exactly what happened when the cursor only followed
         // what a write had carried.
         const more = moreToCarry(theirs.ops, seen) || moreToCarry(ours.ops, seen)
+        //
+        // An EMPTY read never moves a cursor that has a place: the ops route reads
+        // the ops and then the version, so a write landing between the two makes
+        // `latestVersion` name an op the read never returned — and jumping to it
+        // skipped that edit on both machines for good (audit F9). The next read
+        // from the same place returns it.
         cursors.set(stream.key, {
-            localVersion: accountedThrough(ours.ops, seen, ours.latestVersion) ?? cursor.localVersion,
-            remoteVersion: accountedThrough(theirs.ops, seen, theirs.latestVersion) ?? cursor.remoteVersion
+            localVersion: accountedThrough(ours.ops, seen, cursor.localVersion) ?? cursor.localVersion,
+            remoteVersion: accountedThrough(theirs.ops, seen, cursor.remoteVersion) ?? cursor.remoteVersion
         })
 
         // A whole-work op was left where it is. If the copies already agree
@@ -694,7 +720,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             && !unseen(theirs.ops, seen).length && !unseen(ours.ops, seen).length
         let agreed = null
         if (quiet && flags.in && flags.out && stream.documentPath) {
-            agreed = await converge(stream)
+            agreed = await converge(stream, { readThrough: ours.latestVersion })
             if (agreed.done) { flags.in = false; flags.out = false; directionDone.add(stream.key) }
         }
 
@@ -846,7 +872,13 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
 
     loop()
     return {
-        stop() { stopped = true; chase.stop() },
+        stop() {
+            stopped = true
+            // A stopped follow holds nothing open on the other machine.
+            parking?.abort()
+            wakeNow?.()
+            chase.stop()
+        },
         wake() {
             interval = FLOOR_MS
             woken = true

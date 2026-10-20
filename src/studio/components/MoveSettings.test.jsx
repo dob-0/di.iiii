@@ -19,11 +19,11 @@ const turnSelect = () => screen.getByLabelText('Turn')
 const type = (text) => fireEvent.change(speedField(), { target: { value: text } })
 
 describe('the Move block (Scene window)', () => {
-    it('starts on Auto and turning around a point ahead', () => {
+    it('starts on Auto and turning where you stand (the default since 2026-10-16)', () => {
         render(<MoveSettings />)
         expect(speedField().value).toBe('')
         expect(autoButton().getAttribute('aria-pressed')).toBe('true')
-        expect(turnSelect().value).toBe('point')
+        expect(turnSelect().value).toBe('place')
         expect(screen.getByRole('option', { name: 'Around a point ahead' })).toBeTruthy()
         expect(screen.getByRole('option', { name: 'Where you stand' })).toBeTruthy()
     })

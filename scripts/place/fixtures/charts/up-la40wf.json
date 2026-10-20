@@ -1,0 +1,1051 @@
+{
+ "kind": "laser",
+ "code": "UP-LA40WF",
+ "maker": "U-Plus Lighting",
+ "model": "IP-LL40 (manual IP-LL30)",
+ "manual": {
+  "url": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+  "product_page": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+  "date": "PDF created 2023-06-20 (the IP-LL30 manual, which covers the 40 W column; no upload date known)",
+  "file": "~/Downloads/moxir/devices/IP-LL30.pdf",
+  "read": "2026-10-15, pdftotext, \"DMX-512 Channel function\"",
+  "basis": "APPROVED",
+  "printed": {
+   "what": "the PRINTED manual shipped with the unit: \"DMX-512 Channel function\" 19CH mode and 32CH mode tables, and \"LCD Menu and function introduction\" (menu rows 1-24)",
+   "photos": [
+    "docs/moxir/devices/photos/la40wf-manual-19ch-ch1-7.jpg",
+    "docs/moxir/devices/photos/la40wf-manual-19ch-ch8-19.jpg",
+    "docs/moxir/devices/photos/la40wf-manual-32ch-ch20-24.jpg",
+    "docs/moxir/devices/photos/la40wf-manual-32ch-ch25-32.jpg",
+    "docs/moxir/devices/photos/la40wf-manual-lcd-menu-1-9.jpg",
+    "docs/moxir/devices/photos/la40wf-manual-lcd-menu-10-23.jpg"
+   ],
+   "date": "photographed 2026-10-16 16:22",
+   "read": "photographed by the owner 2026-10-16 16:22 (di.bo inbox 2026-10-16, photo-1093…1101), read 2026-10-16 16:3x, values verbatim",
+   "agrees": "row for row with the IP-LL30 PDF chart in this file (19 ch and 32 ch); the LCD menu matches the sheet",
+   "misprints": [
+    "ch 2 (mode): the print reads \"250-255 built-in graphics\" and lists nothing for 200-249; the PDF reads 200-255. Both hold 250-255, so the static beam sends 250 (was 200)",
+    "ch 25 (32 ch, zoom): the print repeats \"11-87\" where the 19-ch table (ch 8) reads \"88-150 zoom\"; kept 88-150"
+   ],
+   "lcd_menu": [
+    "1 DMX Address 1-512",
+    "2 Show Mode: ILD / PRG / Auto / Sound (switches to DMX by itself when DMX is connected)",
+    "3 Program: Progr 0-4 (1-3 edited on the console and imported)",
+    "4 SD File: folder name",
+    "5 SizeX -100..100",
+    "6 SizeY -100..100 (built-in program phase)",
+    "7 Speed 8-40 (set by the galvanometer)",
+    "8 DMX State without signal: Show / Black",
+    "9 Master-slave: Slave / Master",
+    "10 Y Phasic: positive / reverse",
+    "11 X Phasic: positive / reverse",
+    "12 Color Mode: RGB / White",
+    "13 Laser Lock ON/OFF (closes when the laser angle is too small)",
+    "14 Sound sense 0-100",
+    "15 SD Sound ON/OFF",
+    "16 Highlight 0-100 (at the colour junction)",
+    "17 ILDA Lock 0-100 / OFF (locks to the ILDA input on the RJ45)",
+    "18 Load Flash ON/OFF (ILD programs from the SD card LOAD folder)",
+    "19 Update Prog: OFF / Progr1-4 / all (show1.yuq-show4.yuq)",
+    "20 Red dimmer 0-255",
+    "21 Green dimmer 0-255",
+    "22 Blue dimmer 0-255 (20-22 valid in Auto/DMX, not ILDA)",
+    "23 DMX mode: 6ch/19ch/32ch/29ch/52ch — note \"19CH/32CH available\"",
+    "24 Language"
+   ]
+  }
+ },
+ "howToRead": "value ranges are [from, to, meaning]; every mode carries its status (APPROVED = owner's eye and word 2026-10-15; ASSUMED = no source; TESTED lives in src/rigbuild/fixtureTypes.js)",
+ "modes": {
+  "19": {
+   "status": "APPROVED",
+   "note": "manual: 19ch and 32ch available only (6 / 29 / 52 are listed but not available)",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Dimmer",
+     "ranges": [
+      [
+       0,
+       255,
+       "dark to bright"
+      ]
+     ]
+    },
+    {
+     "ch": 2,
+     "function": "Mode selection",
+     "ranges": [
+      [
+       0,
+       49,
+       "auto"
+      ],
+      [
+       50,
+       99,
+       "voice control"
+      ],
+      [
+       100,
+       149,
+       "PRG file sequential playback"
+      ],
+      [
+       150,
+       199,
+       "ILD file loop playback"
+      ],
+      [
+       200,
+       255,
+       "built-in graphics"
+      ]
+     ]
+    },
+    {
+     "ch": 3,
+     "function": "Graphics selection",
+     "ranges": [
+      [
+       0,
+       255,
+       "one graphic for every two values (the manual lists no graphic names)"
+      ]
+     ]
+    },
+    {
+     "ch": 4,
+     "function": "Display mode",
+     "ranges": [
+      [
+       0,
+       63,
+       "normal"
+      ],
+      [
+       64,
+       127,
+       "highlight display"
+      ],
+      [
+       128,
+       191,
+       "segmented display"
+      ],
+      [
+       192,
+       255,
+       "point display"
+      ]
+     ]
+    },
+    {
+     "ch": 5,
+     "function": "Colour selection",
+     "ranges": [
+      [
+       0,
+       16,
+       "white"
+      ],
+      [
+       17,
+       33,
+       "red"
+      ],
+      [
+       34,
+       50,
+       "green"
+      ],
+      [
+       51,
+       67,
+       "blue"
+      ],
+      [
+       68,
+       84,
+       "yellow"
+      ],
+      [
+       85,
+       101,
+       "purple"
+      ],
+      [
+       102,
+       118,
+       "cyan"
+      ],
+      [
+       119,
+       135,
+       "white, red, green, blue colour segments"
+      ],
+      [
+       136,
+       152,
+       "blue, yellow, purple, cyan colour segments"
+      ],
+      [
+       153,
+       169,
+       "white red green blue yellow purple cyan colour segmentation"
+      ],
+      [
+       170,
+       186,
+       "white, red, green, blue colours flowing"
+      ],
+      [
+       187,
+       203,
+       "blue, yellow, purple, cyan colours flow"
+      ],
+      [
+       204,
+       220,
+       "white red green blue yellow purple cyan colour flow"
+      ],
+      [
+       221,
+       237,
+       "colour breaks at graphic breakpoints"
+      ],
+      [
+       238,
+       255,
+       "voice-controlled colour change"
+      ]
+     ]
+    },
+    {
+     "ch": 6,
+     "function": "X move",
+     "ranges": [
+      [
+       0,
+       125,
+       "position by hand"
+      ],
+      [
+       126,
+       175,
+       "auto left-right circular motion"
+      ],
+      [
+       176,
+       225,
+       "auto left-right jump"
+      ],
+      [
+       226,
+       245,
+       "auto irregular jumping"
+      ],
+      [
+       246,
+       255,
+       "voice-controlled irregular jump"
+      ]
+     ]
+    },
+    {
+     "ch": 7,
+     "function": "Y move",
+     "ranges": [
+      [
+       0,
+       125,
+       "position by hand"
+      ],
+      [
+       126,
+       175,
+       "auto up-down cycle motion"
+      ],
+      [
+       176,
+       225,
+       "auto up-down jump"
+      ],
+      [
+       226,
+       245,
+       "auto irregular jumping"
+      ],
+      [
+       246,
+       255,
+       "voice-controlled irregular jump"
+      ]
+     ]
+    },
+    {
+     "ch": 8,
+     "function": "Zoom",
+     "ranges": [
+      [
+       0,
+       10,
+       "no scaling"
+      ],
+      [
+       11,
+       87,
+       "resize by hand"
+      ],
+      [
+       88,
+       150,
+       "zoom"
+      ],
+      [
+       151,
+       200,
+       "zoom out"
+      ],
+      [
+       201,
+       255,
+       "loop zoom"
+      ]
+     ]
+    },
+    {
+     "ch": 9,
+     "function": "X rotation",
+     "ranges": [
+      [
+       0,
+       0,
+       "no rotation"
+      ],
+      [
+       1,
+       128,
+       "manual adjustment"
+      ],
+      [
+       129,
+       255,
+       "automatic rotation"
+      ]
+     ]
+    },
+    {
+     "ch": 10,
+     "function": "Y rotation",
+     "ranges": [
+      [
+       0,
+       0,
+       "no rotation"
+      ],
+      [
+       1,
+       128,
+       "manual adjustment"
+      ],
+      [
+       129,
+       255,
+       "automatic rotation"
+      ]
+     ]
+    },
+    {
+     "ch": 11,
+     "function": "Centre rotation",
+     "ranges": [
+      [
+       0,
+       0,
+       "no rotation"
+      ],
+      [
+       1,
+       128,
+       "manual adjustment"
+      ],
+      [
+       129,
+       192,
+       "automatic clockwise"
+      ],
+      [
+       193,
+       255,
+       "automatic counter-clockwise"
+      ]
+     ]
+    },
+    {
+     "ch": 12,
+     "function": "Gradual painting",
+     "ranges": [
+      [
+       0,
+       10,
+       "no fade"
+      ],
+      [
+       10,
+       74,
+       "fader by hand"
+      ],
+      [
+       75,
+       104,
+       "auto grading (increase)"
+      ],
+      [
+       105,
+       144,
+       "auto fade (decrease)"
+      ],
+      [
+       145,
+       184,
+       "auto loop fade"
+      ],
+      [
+       185,
+       224,
+       "end-to-end loop drawing (increase)"
+      ],
+      [
+       225,
+       255,
+       "end-to-end loop drawing (decrease)"
+      ]
+     ]
+    },
+    {
+     "ch": 13,
+     "function": "X wave",
+     "ranges": [
+      [
+       0,
+       9,
+       "no waves"
+      ],
+      [
+       10,
+       69,
+       "small amplitude"
+      ],
+      [
+       70,
+       129,
+       "medium amplitude"
+      ],
+      [
+       130,
+       189,
+       "large"
+      ],
+      [
+       190,
+       255,
+       "maximum amplitude"
+      ]
+     ]
+    },
+    {
+     "ch": 14,
+     "function": "Y wave",
+     "ranges": [
+      [
+       0,
+       9,
+       "no waves"
+      ],
+      [
+       10,
+       69,
+       "small amplitude"
+      ],
+      [
+       70,
+       129,
+       "medium amplitude"
+      ],
+      [
+       130,
+       189,
+       "large"
+      ],
+      [
+       190,
+       255,
+       "maximum amplitude"
+      ]
+     ]
+    },
+    {
+     "ch": 15,
+     "function": "Strobe",
+     "ranges": [
+      [
+       0,
+       10,
+       "no strobe"
+      ],
+      [
+       11,
+       199,
+       "auto strobe slow to fast"
+      ],
+      [
+       200,
+       255,
+       "strobe by voice"
+      ]
+     ]
+    },
+    {
+     "ch": 16,
+     "function": "Red modulation",
+     "ranges": [
+      [
+       0,
+       255,
+       "red from brightest to dark (0 = brightest)"
+      ]
+     ]
+    },
+    {
+     "ch": 17,
+     "function": "Green modulation",
+     "ranges": [
+      [
+       0,
+       255,
+       "green from brightest to dark (0 = brightest)"
+      ]
+     ]
+    },
+    {
+     "ch": 18,
+     "function": "Blue modulation",
+     "ranges": [
+      [
+       0,
+       255,
+       "blue from brightest to dark (0 = brightest)"
+      ]
+     ]
+    },
+    {
+     "ch": 19,
+     "function": "Movement out-of-bounds effect",
+     "ranges": [
+      [
+       0,
+       49,
+       "out-of-bounds rebound"
+      ],
+      [
+       50,
+       99,
+       "out-of-bounds to a line"
+      ],
+      [
+       100,
+       149,
+       "out-of-bounds blanking"
+      ],
+      [
+       150,
+       255,
+       "out-of-bounds pass through"
+      ]
+     ]
+    }
+   ]
+  },
+  "32": {
+   "status": "APPROVED",
+   "note": "ch 1-19 as the 19-ch chart; ch 20-32 draw a second graphic at the same time (mirror of ch 3-14, then out-of-bounds). The tested Sevan map (SEVAN, TESTED) agrees: colour 8 white / 25 red / 76 yellow / 93 purple / 110 cyan, X/Y centre 64, centre rotation 150, mode 250",
+   "same_as": "19",
+   "channels": [
+    {
+     "ch": 20,
+     "function": "Graphics selection (2nd graphic)",
+     "ranges": [
+      [
+       0,
+       255,
+       "one graphic for every two values"
+      ]
+     ]
+    },
+    {
+     "ch": 21,
+     "function": "Display mode (2nd)",
+     "ranges": [
+      [
+       0,
+       63,
+       "normal"
+      ],
+      [
+       64,
+       127,
+       "highlight display"
+      ],
+      [
+       128,
+       191,
+       "segmented display"
+      ],
+      [
+       192,
+       255,
+       "point display"
+      ]
+     ]
+    },
+    {
+     "ch": 22,
+     "function": "Colour selection (2nd)",
+     "ranges": [
+      [
+       0,
+       16,
+       "white"
+      ],
+      [
+       17,
+       33,
+       "red"
+      ],
+      [
+       34,
+       50,
+       "green"
+      ],
+      [
+       51,
+       67,
+       "blue"
+      ],
+      [
+       68,
+       84,
+       "yellow"
+      ],
+      [
+       85,
+       101,
+       "purple"
+      ],
+      [
+       102,
+       118,
+       "cyan"
+      ],
+      [
+       119,
+       135,
+       "white, red, green, blue colour segments"
+      ],
+      [
+       136,
+       152,
+       "blue, yellow, purple, cyan colour segments"
+      ],
+      [
+       153,
+       169,
+       "white red green blue yellow purple cyan colour segmentation"
+      ],
+      [
+       170,
+       186,
+       "white, red, green, blue colours flowing"
+      ],
+      [
+       187,
+       203,
+       "blue, yellow, purple, cyan colours flow"
+      ],
+      [
+       204,
+       220,
+       "white red green blue yellow purple cyan colour flow"
+      ],
+      [
+       221,
+       237,
+       "colour breaks at graphic breakpoints"
+      ],
+      [
+       238,
+       255,
+       "voice-controlled colour change"
+      ]
+     ]
+    },
+    {
+     "ch": 23,
+     "function": "X move (2nd)",
+     "ranges": [
+      [
+       0,
+       125,
+       "position by hand"
+      ],
+      [
+       126,
+       175,
+       "auto left-right circular motion"
+      ],
+      [
+       176,
+       225,
+       "auto left-right jump"
+      ],
+      [
+       226,
+       245,
+       "auto irregular jumping"
+      ],
+      [
+       246,
+       255,
+       "voice-controlled irregular jump"
+      ]
+     ]
+    },
+    {
+     "ch": 24,
+     "function": "Y move (2nd)",
+     "ranges": [
+      [
+       0,
+       125,
+       "position by hand"
+      ],
+      [
+       126,
+       175,
+       "auto up-down cycle motion"
+      ],
+      [
+       176,
+       225,
+       "auto up-down jump"
+      ],
+      [
+       226,
+       245,
+       "auto irregular jumping"
+      ],
+      [
+       246,
+       255,
+       "voice-controlled irregular jump"
+      ]
+     ]
+    },
+    {
+     "ch": 25,
+     "function": "Zoom (2nd)",
+     "ranges": [
+      [
+       0,
+       10,
+       "no scaling"
+      ],
+      [
+       11,
+       87,
+       "resize by hand"
+      ],
+      [
+       88,
+       150,
+       "zoom"
+      ],
+      [
+       151,
+       200,
+       "zoom out"
+      ],
+      [
+       201,
+       255,
+       "loop zoom"
+      ]
+     ]
+    },
+    {
+     "ch": 26,
+     "function": "X rotation (2nd)",
+     "ranges": [
+      [
+       0,
+       0,
+       "no rotation"
+      ],
+      [
+       1,
+       128,
+       "manual adjustment"
+      ],
+      [
+       129,
+       255,
+       "automatic rotation"
+      ]
+     ]
+    },
+    {
+     "ch": 27,
+     "function": "Y rotation (2nd)",
+     "ranges": [
+      [
+       0,
+       0,
+       "no rotation"
+      ],
+      [
+       1,
+       128,
+       "manual adjustment"
+      ],
+      [
+       129,
+       255,
+       "automatic rotation"
+      ]
+     ]
+    },
+    {
+     "ch": 28,
+     "function": "Centre rotation (2nd)",
+     "ranges": [
+      [
+       0,
+       0,
+       "no rotation"
+      ],
+      [
+       1,
+       128,
+       "manual adjustment"
+      ],
+      [
+       129,
+       192,
+       "automatic clockwise"
+      ],
+      [
+       193,
+       255,
+       "automatic counter-clockwise"
+      ]
+     ]
+    },
+    {
+     "ch": 29,
+     "function": "Gradual painting (2nd)",
+     "ranges": [
+      [
+       0,
+       10,
+       "no fade"
+      ],
+      [
+       10,
+       74,
+       "fader by hand"
+      ],
+      [
+       75,
+       104,
+       "auto grading (increase)"
+      ],
+      [
+       105,
+       144,
+       "auto fade (decrease)"
+      ],
+      [
+       145,
+       184,
+       "auto loop fade"
+      ],
+      [
+       185,
+       224,
+       "end-to-end loop drawing (increase)"
+      ],
+      [
+       225,
+       255,
+       "end-to-end loop drawing (decrease)"
+      ]
+     ]
+    },
+    {
+     "ch": 30,
+     "function": "X wave (2nd)",
+     "ranges": [
+      [
+       0,
+       9,
+       "no waves"
+      ],
+      [
+       10,
+       69,
+       "small amplitude"
+      ],
+      [
+       70,
+       129,
+       "medium amplitude"
+      ],
+      [
+       130,
+       189,
+       "large"
+      ],
+      [
+       190,
+       255,
+       "maximum amplitude"
+      ]
+     ]
+    },
+    {
+     "ch": 31,
+     "function": "Y wave (2nd)",
+     "ranges": [
+      [
+       0,
+       9,
+       "no waves"
+      ],
+      [
+       10,
+       69,
+       "small amplitude"
+      ],
+      [
+       70,
+       129,
+       "medium amplitude"
+      ],
+      [
+       130,
+       189,
+       "large"
+      ],
+      [
+       190,
+       255,
+       "maximum amplitude"
+      ]
+     ]
+    },
+    {
+     "ch": 32,
+     "function": "Movement out-of-bounds effect (2nd)",
+     "ranges": [
+      [
+       0,
+       49,
+       "out-of-bounds rebound"
+      ],
+      [
+       50,
+       99,
+       "out-of-bounds to a line"
+      ],
+      [
+       100,
+       149,
+       "out-of-bounds blanking"
+      ],
+      [
+       150,
+       255,
+       "out-of-bounds pass through"
+      ]
+     ]
+    }
+   ]
+  }
+ },
+ "graphics": {
+  "what": "UP-LA40WF built-in graphics on ch 3 (and ch 20, the second graphic in 32 ch) — the same on both units: U2.137 ch 139/156, U2.169 ch 171/188.",
+  "source": "owner 2026-10-17: 'i don like heart one … and also the numberes and arrows, so dont use that values … you can make it approx'. Values read from his 86 s sweep video (di.bo video-1490) with the desk's wire log under every frame (sheets la40wf-shapes-by-value-1..3). Then 11:5x: 'in 40w i told what values is bad to not use … dont make it aprox other is ok' — only the exact values he named are banned; no approximate extras.",
+  "testPattern": {
+   "value": 24,
+   "shape": "square",
+   "basis": "the square shows from 23 to 25 in the video; the owner's photo at the same value agrees"
+  },
+  "neverUse": {
+   "heart": {
+    "values": [
+     78,
+     79,
+     166,
+     167
+    ]
+   },
+   "arrow": {
+    "values": [
+     74,
+     75
+    ]
+   },
+   "number": {
+    "values": [
+     246,
+     247,
+     248,
+     249,
+     250,
+     251,
+     252,
+     253
+    ]
+   }
+  },
+  "neverUseValues": [
+   74,
+   75,
+   78,
+   79,
+   166,
+   167,
+   246,
+   247,
+   248,
+   249,
+   250,
+   251,
+   252,
+   253
+  ],
+  "safety": {
+   "points": "single dots and blobs (about 146-165, 185-187): all 40 W in one spot — never toward people; only for an aim test on a surface",
+   "basis": "physics, not the owner's list"
+  },
+  "useTheRest": "every other value 1-255 is usable (owner 11:5x: 'other is ok'), one shape about every two values (sheets).",
+  "limit": "exact by the owner's word: only the values he named are banned; nothing around them is added.",
+  "sheets": [
+   "docs/moxir/devices/photos/la40wf-shapes-by-value-1-2026-10-17.jpg",
+   "docs/moxir/devices/photos/la40wf-shapes-by-value-2-2026-10-17.jpg",
+   "docs/moxir/devices/photos/la40wf-shapes-by-value-3-2026-10-17.jpg"
+  ],
+  "date": "2026-10-17"
+ }
+}

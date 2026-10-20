@@ -1,0 +1,41 @@
+{
+ "what": "two UP-B380F beams leave the side lines (one left, one right) and hang under the sloped truss, one at each end: 5 left, 5 right, 6 behind the DJ, 2 on the truss; they hang (fixture.hung) so every look's vertical rule points them DOWN",
+ "source": "owner, chat 2026-10-16 17:3x + his marked screenshot ~/Pictures/Screenshots/Screenshot_20261016_173106.png (pink marks at the truss's two ends); the ESP wiring of 04:xx (truss: beam \u00b7 10 wash \u00b7 beam); owner 17:4x \"they look to down\" (A: shine down)",
+ "basis": "the two side beams nearest the truss (z 9.27, 5.96 m from it) were picked by the agent; hung plumb, head down, 0.515 m below the truss axis (bottom chord 0.145 + tilt axis 0.370)",
+ "moves": [
+  {
+   "id": "rig-beam-planes-10",
+   "from": "side line left, z 9.27",
+   "position": [
+    -10.55,
+    2.686,
+    3.3118
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "fixture": {
+    "hung": true
+   }
+  },
+  {
+   "id": "rig-beam-planes-07",
+   "from": "side line right, z 9.27",
+   "position": [
+    0.0,
+    5.515,
+    3.3118
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "fixture": {
+    "hung": true
+   }
+  }
+ ]
+}
