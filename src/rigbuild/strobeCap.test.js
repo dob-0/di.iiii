@@ -7,7 +7,7 @@ vi.mock('./looks.js', async (orig) => {
 })
 
 import { TYPE_LIBRARY } from './types/index.js'
-import TYPES from './types/moxir.json'
+import { TYPE_LIBRARY as TYPES } from './types/index.js'
 import { MAX_STROBE_HZ, capStrobeHz, lookStrobeHz } from './strobeCap.js'
 import { deskLooksWithValues } from './deskLookValues.js'
 import { decodeDmx, encodeDmx } from './dmxDecode.js'

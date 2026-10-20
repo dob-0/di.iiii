@@ -16,7 +16,8 @@ register('data:text/javascript,' + encodeURIComponent(`export async function loa
 }`))
 const { headPlan, headFrame, withHeads } = await import('../../src/rigbuild/headMotion.js')
 const { spotAimDirection } = await import('../../src/project/viewport/spotLightAim.js')
-const { TYPE_LIBRARY } = await import('../../src/rigbuild/types/index.js')
+const { loadLibrary } = await import('../rigbuild/library.mjs')
+const TYPE_LIBRARY = loadLibrary() // node reads the library from disk; types/index.js is the bundler's glob
 const { libraryWithShow } = await import('../../src/rigbuild/rental.js')
 
 const args = process.argv.slice(2)
