@@ -470,18 +470,35 @@ export default function RawGraphSurface({
 
     // Publish the viewport whenever it moves — through applyViewport OR the
     // pan drag, which writes the ref directly; both end in these three state
-    // values, so keying on them catches every path. Resize republishes the
-    // origin, which is the only part that can change without a pan.
+    // values, so keying on them catches every path. The ORIGIN is the surface's
+    // own top-left on screen and can change with no pan at all: the empty-canvas
+    // hint leaves and the top bar settles when the first node lands. A stale
+    // origin put every world window ~57 px off its card — a new Laser Out's
+    // window opened over its own node (2026-10-20) — so a resize, the surface
+    // itself changing size, and one frame after a pan re-measure it; an
+    // unchanged measurement is not republished.
     useEffect(() => {
         if (!onViewportChange) return undefined
+        let last = null
         const publish = () => {
             const rect = containerRef.current?.getBoundingClientRect?.() || { left: 0, top: 0 }
             const vp = viewportRef.current
-            onViewportChange({ panX: vp.panX, panY: vp.panY, zoom: vp.zoom, originLeft: rect.left, originTop: rect.top })
+            const next = { panX: vp.panX, panY: vp.panY, zoom: vp.zoom, originLeft: rect.left, originTop: rect.top }
+            if (last && Object.keys(next).every((key) => last[key] === next[key])) return
+            last = next
+            onViewportChange(next)
         }
         publish()
         window.addEventListener('resize', publish)
-        return () => window.removeEventListener('resize', publish)
+        const element = containerRef.current
+        const observer = element && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(publish) : null
+        if (observer) observer.observe(element)
+        const frame = typeof requestAnimationFrame === 'function' ? requestAnimationFrame(publish) : null
+        return () => {
+            window.removeEventListener('resize', publish)
+            if (observer) observer.disconnect()
+            if (frame !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(frame)
+        }
     }, [onViewportChange, panX, panY, zoom])
 
     const updateZoom = (nextZoom) => {
