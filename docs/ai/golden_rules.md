@@ -754,10 +754,10 @@ If the doc doesn't exist yet, create it. Never add a shortcut to only one place.
 **Rule:** Every visual element in the studio belongs to one of two families. Copy values from `docs/ai/ui-system.md`. Never derive a new rgba value — map to the nearest existing one.
 
 **Panel family** (floating panels, cluster, dialogs):
-- Background: `rgba(4, 6, 9, 0.92)` · Blur: `blur(16px)` · Radius: `6–7px` · Shadow: `0 12px 40px rgba(0,0,0,0.55)`
+- Background: `rgba(4, 6, 9, 0.92)` · Blur: `blur(16px)` · Radius: `0` (`var(--di-radius)`) · Shadow: `0 12px 40px rgba(0,0,0,0.55)`
 
 **Viewport button family** (`?`, fullscreen, account, pane controls):
-- Background: `rgba(15, 23, 34, 0.55)` · Blur: `blur(6px)` · Radius: `6px` · Size: `30×30px`
+- Background: `rgba(15, 23, 34, 0.55)` · Blur: `blur(6px)` · Radius: `0` · Size: `30×30px`
 - Hover: bg `rgba(15,23,34,0.82)` · border `rgba(255,255,255,0.35)` · color `#fff`
 
 **Why:** Mixing the two families was the source of every "looks off" report in studio UI sessions. The panel family is opaque/anchored; the button family is translucent/embedded-in-scene. They serve different purposes and must not share values.
@@ -1195,7 +1195,7 @@ The same trap has a sibling already in this file: a published page's DOM lives i
 
 ### Controls are rectangles — no pills, no circles, no rounded chrome
 
-**Rule:** In this product's UI, buttons, switches, tabs, chips, segmented bars and their containers are rectangles with a corner radius of 0 px. No pill (`border-radius: 999px`, `var(--di-radius-pill)`) and no circle (`50%`) on a control or on the bar that holds controls. The current state of a control is shown by fill and contrast, never by shape. Status dots that are not controls (a recording light) are the only round marks allowed. *(That sentence is the agent's wording, not the owner's — open owner question Q4.)*
+**Rule:** In this product's UI, buttons, switches, tabs, chips, segmented bars and their containers are rectangles with a corner radius of 0 px. No pill (`border-radius: 999px`, `var(--di-radius-pill)`) and no circle (`50%`) on a control or on the bar that holds controls. The current state of a control is shown by fill and contrast, never by shape. Status dots that are not controls (a recording light) are the only round marks allowed — the owner's decision, relayed 2026-10-21: corners 0 px for every control, status dots stay round.
 
 **Why:** The owner, 2026-09-30, pointing at the MOXIR room's version switch and its Floor/DJ/Top view bar: "in design we not use the round things". The house look is flat, mono and rectangular (the rig pages, the desk and the visualiser already use 2 px); pills were the one place it broke. Those words are why the corner is 0 and not 2 px: brand spec v2, row M17 (2026-10-21) set `--di-radius` to `0` in `src/styles/base.css`, and its users followed.
 

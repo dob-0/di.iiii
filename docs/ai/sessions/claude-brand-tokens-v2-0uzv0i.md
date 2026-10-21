@@ -11,3 +11,31 @@
 - Not in this job: `--di-faint`, the scrim, the landing hover (Q1), the tagline (Q2), recording-light dots (Q4).
 - `src/studio/components/ScenePicker.test.jsx` read the token only as `<n>px`, so the unitless `0` gave NaN. The unit is now optional; the test still holds the corner at ≤ 2.
 - Full `npm test`: 11873 pass. The 4 failures left are in `scripts/di/oneAddressPrinted.test.js` (the `di` CLI's address lines), and they fail identically on an untouched origin/dev checkout in this container, so they are not this branch's.
+
+## 2026-10-21 — addendum: one radius rule, native controls on dark, the ladder in --ui-*, palette provenance
+
+Rows relayed by a peer session from two audits. The owner's decision, as relayed: corners are 0 px for every control and status dots stay round. Q4 is closed and golden_rules.md now says it as his decision.
+- **One radius rule:**
+  - `docs/ai/ui-system.md`'s radius table (6, 7, 4, 3, 2 px, "map to the nearest entry") is now one rule: `0`, status dots round.
+  - `golden_rules.md`'s two panel/button radii (`6–7px`, `6px`) are now `0`.
+- **Native controls:** `:root` gets `color-scheme: dark` and `accent-color: var(--di-cyan)`. Measured in Chromium:
+  - /perform's "Follow Light" checkbox went from `normal`/`auto` (UA blue) to `dark`/`rgb(77,249,255)`.
+  - In the Studio inspector, all 10 native controls (color, range, checkbox, select) now compute dark/cyan. The visible pixels did not change (0 %), because the inspector draws its own controls.
+  - **Guard a:** `html.dii-embed { color-scheme: normal }`, and `colorScheme: 'normal'` on both code-view iframes in `PublicProjectViewer.jsx`.
+    - The viewer embedded in an ordinary host is 99.6 % transparent with the guard and **0 %** (an opaque box) with only the guard removed.
+    - A transparent code page in an iframe inside the dark document is 2.3 % transparent without the guard and 99.9 % with it.
+  - **Guard b:** `.rigplot, .rigsheet { color-scheme: light; accent-color: var(--di-accent-on-light) }`, placed in base.css because the patch sheet does not load plot.css. The equipment order's two date fields compute `light` and `rgb(0,151,163)`, with 0 % pixel change.
+  - **Guard c:** `--di-radius-pill` stays `999px`, and the test pins it.
+- **The ground ladder:**
+  - `--ui-surface-raised` and `-muted` changed from `#111` to `var(--di-surface-2)` (#111114).
+  - `--ui-surface-highlight` is now `var(--di-cyan-wash)`.
+  - One comment names the ladder.
+  - `--axis-*` is marked as a quotation of Blender's axis colours; its values are unchanged.
+- **Palette provenance:** dracula-theme's LICENSE was read 2026-10-21: MIT, © 2023 Dracula Theme.
+  - nodeRegistry's header now names the 7 values that are Dracula's. The other values in those tables are not Dracula's, and the comment says so.
+  - The values themselves are unchanged.
+  - **RawViewport.jsx:183/218 was NOT annotated:** its `#5fa8ff` is not a Dracula colour, so labelling it as one would be false.
+- **Test:** `src/styles/brandTokens.test.js` grows to 11 cases.
+  - Before the addendum: 6 of the 7 new cases failed. Guard c passed already; it pins a value against a future shortcut.
+  - After: 11/11 pass.
+- **Pictures:** `pair-perform-*`, `pair-studio-inspector-*` and `pair-equipment-order-*`, plus `addendum-{before,after}.json` and `embed-*.json`. For /perform, `/light/api/clock` was stubbed to `up:true` in the browser, since no light desk runs in this stack.

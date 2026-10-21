@@ -75,3 +75,67 @@ describe('brand tokens v2', () => {
         expect(line).toContain("quotation of Dracula's green (SYSTEM rule 8)")
     })
 })
+
+// Addendum (2026-10-21): the owner's decision relayed — 0 px corners on every
+// control, status dots stay round — and the native-control / ground-ladder /
+// palette-provenance rows that follow from it.
+const repo = (rel) => readFileSync(resolve(HERE, '../..', rel), 'utf8')
+
+describe('brand tokens v2 addendum', () => {
+    it('one radius rule in the docs: ui-system.md has no px radius row, golden_rules has no 6–7 px panel radius', () => {
+        const ui = repo('docs/ai/ui-system.md')
+        const section = ui.slice(ui.indexOf('### Radius'), ui.indexOf('###', ui.indexOf('### Radius') + 4))
+        expect(section).toMatch(/\b0\b/)
+        expect(section).not.toMatch(/\|\s*`?\d+px`?\s*\|/)
+        const rules = repo('docs/ai/golden_rules.md')
+        expect(rules).not.toMatch(/Radius: `6–7px`/)
+        expect(rules).not.toMatch(/Radius: `6px`/)
+        expect(rules).not.toMatch(/agent's wording/)
+    })
+
+    it('native controls: the root is dark-scheme with the cyan accent', () => {
+        const root = rule(':root')
+        expect(root).toMatch(/color-scheme\s*:\s*dark/)
+        expect(root).toMatch(/accent-color\s*:\s*var\(--di-cyan\)/)
+    })
+
+    it('guard a: an embedded page and the code-view iframes keep the normal scheme, so no opaque Canvas', () => {
+        expect(rule('html.dii-embed')).toMatch(/color-scheme\s*:\s*normal/)
+        const viewer = repo('src/project/components/PublicProjectViewer.jsx')
+        const frames = [...viewer.matchAll(/^\s*<iframe\s*$[\s\S]*?\/>/gm)].map((m) => m[0])
+        const codeFrames = frames.filter((f) => /codeUrl|previewDocument/.test(f))
+        expect(codeFrames.length).toBe(2)
+        for (const f of codeFrames) expect(f).toMatch(/colorScheme:\s*'normal'/)
+    })
+
+    it('guard b: paper views keep light pickers with the on-light accent', () => {
+        const paper = rule('.rigplot,\n.rigsheet') || rule('.rigplot, .rigsheet')
+        expect(paper).toMatch(/color-scheme\s*:\s*light/)
+        expect(paper).toMatch(/accent-color\s*:\s*var\(--di-accent-on-light\)/)
+    })
+
+    it('guard c: the pill token is not zeroed as a shortcut', () => {
+        expect(token('--di-radius-pill')).toBe('999px')
+    })
+
+    it('--ui-* surfaces read the ladder; the axis colours are marked as a quotation', () => {
+        expect(token('--ui-surface-raised')).toBe('var(--di-surface-2)')
+        expect(token('--ui-surface-muted')).toBe('var(--di-surface-2)')
+        expect(token('--ui-surface-highlight')).toBe('var(--di-cyan-wash)')
+        expect(token('--axis-z')).toBe('#4db2ff')
+        const at = css.indexOf('--axis-x')
+        expect(css.slice(at - 300, at)).toContain("quotation of Blender's axis colours (SYSTEM rule 8)")
+    })
+
+    it("palette provenance: nodeRegistry's header names Dracula, its licence and date; every Dracula value it names is one", () => {
+        const reg = repo('src/project/nodeRegistry.js')
+        const header = reg.slice(0, reg.indexOf('export const PORT_TYPES'))
+        expect(header).toMatch(/github\.com\/dracula\/dracula-theme/)
+        expect(header).toMatch(/MIT/)
+        expect(header).toMatch(/2026-10-21/)
+        const DRACULA = ['#282a36', '#f8f8f2', '#6272a4', '#8be9fd', '#50fa7b', '#ffb86c', '#ff79c6', '#bd93f9', '#ff5555', '#f1fa8c']
+        const named = header.match(/#[0-9a-f]{6}/gi) || []
+        expect(named.length).toBeGreaterThan(0)
+        for (const hex of named) expect(DRACULA).toContain(hex.toLowerCase())
+    })
+})

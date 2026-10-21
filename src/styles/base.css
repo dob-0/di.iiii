@@ -19,6 +19,14 @@
 }
 
 :root {
+    /* Native controls (checkbox, range, date, select, scrollbars) draw for a
+       dark ground and take the house accent, not the browser's blue on white:
+       /perform's "Follow Light" was a UA-blue box on black. Two places must
+       NOT inherit this — an embedded page (html.dii-embed, below) and the
+       paper views (.rigplot, .rigsheet, below). */
+    color-scheme: dark;
+    accent-color: var(--di-cyan);
+
     /* ── canonical design tokens ── */
     --di-cyan: #4df9ff;
     --di-cyan-dim: rgba(77, 249, 255, 0.1);
@@ -82,7 +90,11 @@
 
     /* The surface ladder. Four steps from the ground up, so a panel inside a
        panel inside a modal stays legible without anyone inventing a fifth grey.
-       Each surface used to carry its own copy of this ladder in hex. */
+       Each surface used to carry its own copy of this ladder in hex.
+       The ground ladder, bottom to top: --di-black #000 (the ground, --di-bg)
+       → --di-surface #0a0a0a → --di-surface-2 #111114 → --di-surface-3 #17171b
+       → --di-surface-4 #1c1c21. The --ui-* aliases below read these steps;
+       a new grey is a new step here, never a literal in a surface. */
     --di-surface-2: #111114;
     --di-surface-3: #17171b;
     --di-surface-4: #1c1c21;
@@ -202,9 +214,9 @@
        transparent and borrowed whatever was behind them. */
     --ui-bg: var(--di-black);
     --ui-surface: var(--di-surface);
-    --ui-surface-raised: #111;
-    --ui-surface-muted: #111;
-    --ui-surface-highlight: rgba(77, 249, 255, 0.06);
+    --ui-surface-raised: var(--di-surface-2);
+    --ui-surface-muted: var(--di-surface-2);
+    --ui-surface-highlight: var(--di-cyan-wash);
     --ui-border: var(--di-cyan-border);
     --ui-border-strong: var(--di-cyan);
     --ui-divider: var(--di-cyan-border);
@@ -221,6 +233,9 @@
     --panel-gap: 4px;
     --panel-radius: 0;
     --panel-control-height: 24px;
+    /* quotation of Blender's axis colours (SYSTEM rule 8): x red, y green,
+       z blue, as a 3D person already reads them. Kept as quoted, not
+       re-derived from the house palette. */
     --axis-x: #ff6b6b;
     --axis-y: #4ae3a5;
     --axis-z: #4db2ff;
@@ -363,6 +378,24 @@ html.dii-embed,
 html.dii-embed body,
 html.dii-embed #root {
     background: transparent;
+}
+
+/* …and it must not be dark-scheme either. When the scheme of an iframe element
+   and of the document inside it differ, the browser paints an opaque Canvas
+   behind the frame (CSS Color Adjust 1, §2.4), so :root's `color-scheme: dark`
+   would put an embedded page — br_id_ge's rite, ?embed=1 — back in a box on an
+   ordinary host page. `normal` matches the host. The code-view iframes in
+   PublicProjectViewer.jsx carry the same guard from the other side. */
+html.dii-embed {
+    color-scheme: normal;
+}
+
+/* Paper views — the plot and the patch sheet are drawn as white sheets — keep
+   light pickers (date, select, checkbox) and the accent that reads on paper. */
+.rigplot,
+.rigsheet {
+    color-scheme: light;
+    accent-color: var(--di-accent-on-light);
 }
 
 /* The account button keeps clear of a docked right column (Nodes' settings
