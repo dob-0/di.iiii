@@ -411,6 +411,25 @@ const config = {
       actTokenAdminIds: require('./actTokenTier').parseTelegramIds(process.env.ACT_TOKEN_ADMIN_TELEGRAM_IDS)
     }
   },
+  // The share door (docs/ai/publishing.md): channels a post can be sent to.
+  // Tokens come ONLY from the environment — never the database, never a
+  // response. Unset = that channel reads "missing" in /api/share/channels.
+  share: {
+    telegram: {
+      botToken: (process.env.SHARE_TELEGRAM_BOT_TOKEN || '').trim(),
+      chat: (process.env.SHARE_TELEGRAM_CHAT || '').trim(),
+      apiBase: (process.env.SHARE_TELEGRAM_API || 'https://api.telegram.org').replace(/\/+$/, '')
+    },
+    bluesky: {
+      handle: (process.env.SHARE_BLUESKY_HANDLE || '').trim().replace(/^@/, ''),
+      appPassword: (process.env.SHARE_BLUESKY_APP_PASSWORD || '').trim(),
+      pds: (process.env.SHARE_BLUESKY_PDS || 'https://bsky.social').replace(/\/+$/, '')
+    },
+    mastodon: {
+      url: (process.env.SHARE_MASTODON_URL || '').trim().replace(/\/+$/, ''),
+      token: (process.env.SHARE_MASTODON_TOKEN || '').trim()
+    }
+  },
   // Human-approval gate for admin-level writes (see approvalGate.js). Unset
   // secret/botUrl = disabled: gated routes apply immediately, exactly as
   // before this feature existed. Never fail open when explicitly enabled —

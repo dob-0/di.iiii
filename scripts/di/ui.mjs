@@ -577,7 +577,8 @@ export const ui = {
         '                  localhost, .local, LAN and Tailscale addresses needs no flag)',
         '',
         style.dim(`  ${CMD} follows          what this install is following`),
-        style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`)
+        style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`),
+        style.dim(`  ${CMD} post draft|show|send|channels   share a post to Telegram, Bluesky, Mastodon`),
     ].join('\n'),
 
     // `di mcp --help` and `di help mcp`. Printed instead of starting the
