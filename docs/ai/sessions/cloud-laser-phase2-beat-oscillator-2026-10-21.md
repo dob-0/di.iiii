@@ -7,3 +7,11 @@
 - Counted: 31 new vitest tests (17 red on dev with only the new standalone modules added); full suite dev 11 770 passed / 4 failed → branch 11 801 passed / the same 4 failed (`scripts/di/oneAddressPrinted.test.js`, a real install's :80, fails in a cloud container on dev too). Desk suites (tests/test.js 139 ok, test-tap, test-wiring) green and unchanged.
 - `scripts/laser/fake-cube-rehearsal.mjs` does not run to the end, on dev 55a5d96 as on this branch: TypeError at line 153, `engine.state().cubes[0].info` is null 1.2 s after the disarm. Pre-existing; this branch touches no laser engine file. Owed to whoever owns the rehearsal.
 - Not done / owed: the agent-screen browser check and the real-wall look (two LaserCubes on aylmo, armed by the owner). Reset on an Oscillator is per window (frameMemory). A Beat's Clock role is read from node.values, not from a wire.
+
+## 2026-10-21 — review of #1073: Beat's Clock/Tempo from are settings, one firing rule for Reset, no tap epoch before the clock stamp
+
+- Beat's `role` (Clock) and `source` (Tempo from) moved from ports to `configInputs`: everything that reads them reads `node.values`, so a wire there was taken and ignored. The inspector still shows both as select fields; defaults `master` / `own` live in `defaultValues`.
+- `src/project/nodes/edge.js` gains `signalFired` / `firedEdge` (truthy, or a change while truthy). Oscillator Reset and BeatFeed's Tap/Reset both use it, so a Counter wired into Reset restarts an Oscillator on every count, as it does a Beat.
+- BeatFeed holds a tap or Reset made before `showState.clockEpoch` is stamped (wall-clock ms) and writes it once the stamp arrives, so no window-local `performance.timeOrigin` epoch reaches the op log.
+- Tests: 7 cases fail with the source reverted (4 new, 3 BeatFeed cases rewritten to put Tempo from on the node); all pass with it.
+- Not done: the browser check (desktop and phone) of a Beat and an Oscillator card in Raw is still owed; the never-use LA40WF bytes reachable through DMX Out are a desk-side task, not this PR's.

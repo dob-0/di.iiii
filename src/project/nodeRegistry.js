@@ -2257,14 +2257,6 @@ export const NODE_TYPES = {
             { id: 'bpm',    type: 'number', label: 'BPM',    default: 120 },
             // Ramp, Pulse and Count run over this many beats (fractions allowed).
             { id: 'period', type: 'number', label: 'Period', default: 1 },
-            { id: 'role',   type: 'string', label: 'Clock',  default: 'master', options: [
-                { value: 'master', label: 'Master' },
-                { value: 'extra',  label: 'Extra' },
-            ] },
-            { id: 'source', type: 'string', label: 'Tempo from', default: 'own', options: [
-                { value: 'own',   label: 'This node' },
-                { value: 'light', label: 'Light desk' },
-            ] },
             { id: 'tap',    type: 'signal', label: 'Tap'   },
             { id: 'reset',  type: 'signal', label: 'Reset' },
         ],
@@ -2280,7 +2272,21 @@ export const NODE_TYPES = {
             { id: 'status',  type: 'string',  label: 'Status'   },
         ],
         // Beat 0 on the document clock; a tap or Reset moves it (BeatFeed).
-        defaultValues: { epoch: 0 },
+        defaultValues: { epoch: 0, role: 'master', source: 'own' },
+        // Settings, not ports: which clock leads the project, and whether the
+        // Light desk is asked at all, are read from node.values (the master
+        // lookup and RawEditor's desk poll), so a wire into them would
+        // silently do nothing. DMX Out's Rig is the same case.
+        configInputs: [
+            { id: 'role',   type: 'string', label: 'Clock', options: [
+                { value: 'master', label: 'Master' },
+                { value: 'extra',  label: 'Extra' },
+            ] },
+            { id: 'source', type: 'string', label: 'Tempo from', options: [
+                { value: 'own',   label: 'This node' },
+                { value: 'light', label: 'Light desk' },
+            ] },
+        ],
         render: 'hidden',
     },
 
