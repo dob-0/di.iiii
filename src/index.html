@@ -8,7 +8,10 @@
          existing studio-mobile.css safe-area rules on notched phones. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>di.iiii — public spaces on the open web</title>
-    <meta name="description" content="Make a space, hand out the address — a link while it runs, a file when it ends. A space is an address with a guest list, and what you build in it is exactly what a visitor opens. No app, no store, nothing to install.">
+    <!-- The same line as og:description and serverXR's FRONT_DOOR card, and
+         under the ~160 characters a search snippet shows (audit G05). For any
+         other address serverXR's page route writes that page's own line here. -->
+    <meta name="description" content="Make a space, hand out the address — a link while it runs, a file when it ends. No app, no store, nothing to install; it opens in a browser, or in a headset.">
     <meta name="theme-color" content="#000000">
 
     <!-- Every page of this site rendered BLACK on any Chrome older than 122,
@@ -66,6 +69,9 @@
       // that do not run scripts already receive the absolute, host-derived
       // card from serverXR's /og route, which nginx forks them to.
       (function () {
+        // serverXR's page route has already written the absolute canonical
+        // for this address (routes/ogRoutes.js): never a second one.
+        if (document.querySelector('link[rel="canonical"]')) return
         var l = document.createElement('link')
         l.rel = 'canonical'
         l.href = location.origin + location.pathname
@@ -76,12 +82,17 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="di.iiii — public spaces on the open web">
     <meta property="og:description" content="Make a space, hand out the address — a link while it runs, a file when it ends. No app, no store, nothing to install; it opens in a browser, or in a headset.">
+    <meta property="og:locale" content="en_US">
     <meta property="og:image" content="/suite/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="The di.iiii mark and wordmark on black.">
     <meta property="og:url" content="/">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="di.iiii — public spaces on the open web">
     <meta name="twitter:description" content="Make a space, hand out the address — a link while it runs, a file when it ends. No app, no store, nothing to install; it opens in a browser, or in a headset.">
     <meta name="twitter:image" content="/suite/og-image.png">
+    <meta name="twitter:image:alt" content="The di.iiii mark and wordmark on black.">
 </head>
 <body>
     <div id="root"></div>
