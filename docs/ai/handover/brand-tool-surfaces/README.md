@@ -1,38 +1,57 @@
 # brand-tool-surfaces — pictures, before and after (2026-10-21)
 
-Taken on a local stack (`npm run dev`, scratch data), signed in as a throwaway admin, with the
-`open` space's one project (`open-jam`) open. Laptop 1440×900 at DPR 2 and phone 390×844 at DPR 3,
-each with `prefers-color-scheme` light and dark. Stored at half size, JPEG q72.
-`before/` = dev's stylesheets; `after/` = this branch.
+These were taken on a local stack (`npm run dev`, scratch data), signed in as a throwaway admin, with the
+`open` space's one project (`open-jam`) open:
+- laptop 1440×900 at DPR 2, and phone 390×844 at DPR 3;
+- each with `prefers-color-scheme` light and dark;
+- stored at half size, JPEG q72.
+
+`before/` is dev's stylesheets; `after/` is this branch, including the addendum (the owner's rule:
+controls square, status dots and drawings round). The `after/` pictures of preferences, raw, jam, scan,
+perform, live-project and loading were retaken after the addendum. Workspace, make, space-contents and
+webgl-guard were taken before it; the addendum changes nothing those pictures show.
 
 ## Counts (from the stylesheets)
 
 | surface | round before → after | % square before → after | 800 weight | 1.5px | box-shadow |
 |---|---|---|---|---|---|
-| preferences | 1 → 0 | 97.0% → 100.0% (33/33) | 0 → 0 | 0 → 0 | 19 → 12 |
-| workspace + panels + inspector | 18 → 0 | 71.2% → 96.1% (74/77) | 0 → 0 | 0 → 0 | 36 → 32 |
-| controls + menu (+ base.css) | 2 → 0 | 66.7% → 100.0% (9/9) | 0 → 0 | 0 → 0 | 6 → 6 |
+| preferences | 1 → 1 | 97.0% → 97.0% (32/33) | 0 → 0 | 0 → 0 | 19 → 12 |
+| workspace + panels + inspector | 18 → 2 | 71.2% → 93.5% (72/77) | 0 → 0 | 0 → 0 | 36 → 32 |
+| controls + menu (+ base.css) | 2 → 1 | 66.7% → 88.9% (8/9) | 0 → 0 | 0 → 0 | 6 → 6 |
 | raw + mobile shell | 1 → 0 | 99.1% → 100.0% (109/109) | 2 → 0 | 1 → 0 | 12 → 12 |
-| jam | 2 → 0 | 80.0% → 93.3% (14/15) | 0 → 0 | 0 → 0 | 4 → 4 |
-| scan, make, perform + live-project chrome | 17 → 2 | 39.0% → 64.4% (38/59) | 0 → 0 | 5 → 0 | 14 → 14 |
-| loading screen + WebGL guard | 2 → 0 | 0.0% → 100.0% (2/2) | 0 → 0 | 0 → 0 | 0 → 0 |
+| jam | 2 → 1 | 80.0% → 86.7% (13/15) | 0 → 0 | 0 → 0 | 4 → 4 |
+| scan, make, perform + live-project chrome | 17 → 4 | 39.0% → 61.0% (36/59) | 0 → 0 | 5 → 0 | 14 → 14 |
+| loading screen + WebGL guard | 2 → 1 | 0.0% → 50.0% (1/2) | 0 → 0 | 0 → 0 | 0 → 0 |
 
-"% square" = border-radius declarations that are 0 or `var(--di-radius)`, out of all of them in those files.
-The 2 round sites left are the recording light (Q4). The rest that is not square is makeSurface.css's
-19 hand-set radii (2–26px), outside this brief's rows.
+The 10 round sites left are exactly the allowlist in `src/styles/squareCorners.test.js`: seven status dots
+and three drawings, each marked "not a control" in its stylesheet. No control is round.
+
+"% square" counts only single values of `0` or `var(--di-radius)`. Per-corner forms such as
+`0 var(--di-radius) 0 0` are square too but are not counted. The scan/make/perform remainder is mostly
+makeSurface.css's 19 hand-set radii (2–26px), outside this brief's rows.
 
 ## What the pictures show, measured
 
-Mean absolute pixel difference, before vs after, dark scheme, 0–255 scale:
-scan 2.22 (laptop) / 3.85 (phone); preferences 0.48 / 0.00; perform 0.03 / 0.39; loading 0.02 / 0.08;
-every other surface 0.00–0.01. So in the state these pages open in, most of what changed is **not on
-screen**: the jam presence dot, the badges, the status chips, the sliders and the collaboration cursor
-appear only with a second person, a selection or an open panel, and none of those states was driven here.
+Mean absolute pixel difference, dev vs this branch, dark scheme, on a 0–255 scale:
 
-- Light vs dark: the largest mean difference between the two schemes is 3.3/255 (animation and 3D frame
-  timing). These surfaces declare one colour scheme, so the two sets are the same page.
-- workspace: the legacy editor at `/main` opened with no panels, in navigate and in edit mode; its panels
-  and inspector are not in the pictures.
-- webgl-guard: forcing a context loss from the page did not bring the guard up; its picture is the
-  live-project page, not the guard.
-- scan: the recording light (Q4) is round in both sets, as asked.
+| page | laptop | phone |
+|---|---|---|
+| scan | 1.56 | 4.66 |
+| preferences | 0.62 | 0.01 |
+| perform | 0.07 | 0.46 |
+| raw | 0.00 | 0.09 |
+| loading | 0.01 | 0.01 |
+| every other page | 0.00 | 0.00 |
+
+Most of what changed is **not on screen** in the state these pages open in. These appear only with a second
+person, a selection, an open panel or a touch, and none of those states was driven here:
+- the joystick, the Fly and altitude buttons, the exit hover;
+- the presence dot, the badges, the sliders, the cursor;
+- raw's focus outline.
+
+Other notes:
+- **Light vs dark:** the largest mean difference between the two schemes is 3.3/255, which is animation and
+  3D frame timing. These surfaces have one colour scheme.
+- **Workspace:** the legacy editor at `/main` opened with no panels, so its panels and inspector are not pictured.
+- **WebGL guard:** forcing a context loss did not bring up the guard, so that picture is not of the guard.
+- **Scan:** the shutter is square and its red mark is round (a status dot).
