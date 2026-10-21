@@ -9,3 +9,5 @@
   - Studio controls at 2 px went from 56 to 2 (laptop) and from 11 to 2 (phone).
   - The viewer's 5 overlay buttons and the rig plot's 11 controls did NOT change. They write `2px` literally (`publicViewerStyles.js`, `src/rigbuild/build.css`); 27 files in src/ do. Changing them is a separate, per-surface job.
 - Not in this job: `--di-faint`, the scrim, the landing hover (Q1), the tagline (Q2), recording-light dots (Q4).
+- `src/studio/components/ScenePicker.test.jsx` read the token only as `<n>px`, so the unitless `0` gave NaN. The unit is now optional; the test still holds the corner at ≤ 2.
+- Full `npm test`: 11873 pass. The 4 failures left are in `scripts/di/oneAddressPrinted.test.js` (the `di` CLI's address lines), and they fail identically on an untouched origin/dev checkout in this container, so they are not this branch's.
