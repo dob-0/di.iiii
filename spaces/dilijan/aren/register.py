@@ -28,7 +28,9 @@ def main():
             r = tf.pose_by_uv(frag, part)
             if r['matched'] >= 0.4 and r.get('photo_r', 0) >= 0.8 and (best is None or r['median'] < best[1]['median']): best = (pn, r)
         if not best:
-            rows.append(f'{fn:10s} shares no atlas with the yard (it is not in the yard scan): shown only in the wall'); continue
+            # 2026-10-21 (N1145): the cabin shares no atlas because it was scanned apart, at 1.19x: it IS wall_mid (the yard's
+            # back wall); elevation.py registers it by its facade (scale 0.84). It still stays out of Բակը (wall_mid is there).
+            rows.append(f'{fn:10s} shares no atlas with the yard (scanned apart: elevation.py registers it by its facade); shown only in the wall'); continue
         pn, r = best
         poses[fn] = {'q': [round(float(x), 6) for x in r['q']], 't': [round(float(x), 4) for x in r['t']]}
         rows.append(f"{fn:10s} = yard {pn:10s} matched {r['matched']*100:.0f}% photo r {r['photo_r']:.2f}; residual median {r['median']*100:.2f} cm, "

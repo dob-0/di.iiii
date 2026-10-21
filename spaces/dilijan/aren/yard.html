@@ -7,7 +7,8 @@
 <!-- Aren's yard and wall as ONE view (owner 2026-10-21, N1123). Բակը is the yard page's own texturing: its scan and its
      photos, drawn as photographed, under its measured cloud and its tour; only the wall wears the wall page's sharper
      photo, at the exact place it was scanned (N1131, measured: spaces/dilijan/aren/README.md). Պատը: the wall steps out
-     and stands in a row with the cabin beside the courtyard, the way the wall page laid them out. One canvas, one
+     and the pieces stand as one building, an elevation (N1145): facades parallel, level, on one ground line, in the
+     order of the building (spaces/dilijan/aren/elevation.py). One canvas, one
      renderer: one 3D view live. Source: spaces/dilijan/aren/yard.html in di.iiii; the originals are kept (the-yard's
      page as yard-original, elevation). -->
 <style>
@@ -59,8 +60,18 @@ const PACK=fetchAsset('/serverXR/api/projects/the-yard/assets/e30e26445e9f25c62e
 // share their photo atlases with the yard's parts wall_right and main, so the same UV is the same surface point: the pose
 // is a rigid fit through those UVs (spaces/dilijan/aren/register.py; residual median 0.01 and 0.03 cm). The wall leans
 // 4.3 degrees in the yard and the wall page stood it upright, so a turn about the vertical alone left it up to 8 cm off.
-// The cabin is NOT in the yard's scan (it shares no atlas and matches no shape: README): it shows only in the wall.
+// The cabin shares no atlas: it is the yard's back wall (wall_mid) scanned apart at 1.19x (elevation.py registers it by
+// its facade, N1145). wall_mid stands for it in Բակը, so it shows only in the wall.
 const IN_YARD={"wall":{"q":[0.02826,-0.907906,0.024653,0.417493],"t":[4.5231,0.8936,0.4268]},"courtyard":{"q":[0,0,0,1],"t":[0.0019,0.8435,-0.002]}};
+// Պատը as one building, an elevation (owner 2026-10-21, N1145: "look walls parallel, windows parallel it the one
+// building"). Each fragment is turned so its photographed facade lies on the courtyard's facade plane, levelled (the
+// projection-profile roll of its edges), its foot on the courtyard's ground line, in the order of the building with the
+// gaps measured in the yard scan (round the corner, along the wall). s: the cabin is the yard's back wall (wall_mid)
+// scanned apart at 1.19x its size; its scale brings it to the yard's. The courtyard stays where it is. These two lines
+// are written by spaces/dilijan/aren/elevation.py --write; WALL_VIEW faces the courtyard's facade (theta, radians) and
+// frames everything drawn (its width spans every vertex along the level line, tent and divider included).
+const IN_WALL={"wall":{"s":1.0,"q":[0.020382,0.008144,-0.003976,0.999751],"t":[-10.1419,0.8735,2.447],"face":[0.0444,0.04049,0.99819]},"cabin":{"s":0.84026,"q":[0.004066,0.00663,-0.014395,0.999866],"t":[-6.7832,0.5851,2.0466],"face":[0.04746,0.00905,0.99883]},"courtyard":{"s":1.0,"q":[0.0,0.0,0.0,1.0],"t":[0.0019,0.8435,-0.002],"face":[0.06082,-0.00063,0.99815]}};
+const WALL_VIEW={"theta":0.06086,"centre":[-3.582,0.755,1.914],"width":17.458,"height":1.219};
 // The yard's own surfaces (the yard page's mesh and photos), shown in Բակը as the yard page showed them. 'main' is the
 // same surface as the wall page's courtyard (same atlas, same UVs) with its full geometry (98 % of it within 3 cm of the
 // cloud, the courtyard 93 %), so in the yard it stands in for the courtyard, which shows only in Պատը. wall_right is not
@@ -240,10 +251,12 @@ function buildFragment(m,img,only,opts){
   fill.visible=wire.visible=false;
   const group=new THREE.Group(); group.add(solid,fill,wire);
   const y=only==='yard'?{q:[0,0,0,1],t:[0,0,0]}:IN_YARD[m.name]||{q:[0,0,0,1],t:m.center};
+  const w=only==='yard'?null:IN_WALL[m.name];        // Պատը: the elevation's pose (and the scale of a piece scanned apart)
   // stay: never moves (shown in one arrangement only); swap: the same surface as another part, so it changes at once
   group.userData={solid,fill,wire,points:null,tex,model:m,op,only,stay:!!opts.stay,swap:!!opts.swap,fade:only==='wall'?0:1,
     yard:{p:new THREE.Vector3().fromArray(y.t),q:y.q?new THREE.Quaternion().fromArray(y.q):new THREE.Quaternion().setFromAxisAngle(V(0,1,0),(y.yaw||0)*Math.PI/180)},
-    wall:{p:new THREE.Vector3().fromArray(m.center).add(OFF),q:new THREE.Quaternion()}};
+    wall:w?{p:new THREE.Vector3().fromArray(w.t),q:new THREE.Quaternion().fromArray(w.q)}:{p:new THREE.Vector3().fromArray(m.center).add(OFF),q:new THREE.Quaternion()}};
+  if(w&&w.s) group.scale.setScalar(w.s);
   group.position.copy(group.userData.yard.p); group.quaternion.copy(group.userData.yard.q);
   scene.add(group);
   return group;
@@ -279,21 +292,33 @@ function samplePoints(m,count){
   g.setAttribute('uv',new THREE.BufferAttribute(uv,2));
   return g;
 }
+// The wall page baked one contact shadow under its row. Each fragment takes the part under it (cut halfway between
+// neighbours) and carries it as a child, so the shadow stays under its piece wherever the elevation stands it (physics
+// first: no shadow where nothing stands). A part lies at its fragment's own lowest point.
 function buildShadow(img,manifest){
   const s=manifest.shadow, tex=makeTexture(img,false); tex.anisotropy=1;
   shadowMat=new THREE.MeshBasicMaterial({color:0x141414,alphaMap:tex,transparent:true,opacity:0,depthWrite:false});
-  const plane=new THREE.Mesh(new THREE.PlaneGeometry(s.x1-s.x0,s.z1-s.z0),shadowMat);
-  plane.rotation.x=-Math.PI/2;
-  plane.position.set((s.x0+s.x1)/2,manifest.bmin[1]-0.004,(s.z0+s.z1)/2).add(OFF);
-  scene.add(plane);
+  const parts=fragments.filter(g=>manifest.models.includes(g.userData.model))
+    .map(g=>{const m=g.userData.model;return {g,m,x0:m.center[0]+m.qmin[0],x1:m.center[0]+m.qmax[0]};}).sort((a,b)=>a.x0-b.x0);
+  parts.forEach((p,i)=>{
+    const xa=i?(parts[i-1].x1+p.x0)/2:s.x0, xb=i<parts.length-1?(p.x1+parts[i+1].x0)/2:s.x1;
+    if(xb<=xa) return;
+    const geo=new THREE.PlaneGeometry(xb-xa,s.z1-s.z0), uv=geo.attributes.uv;
+    for(let k=0;k<uv.count;k++) uv.setX(k,(xa+(xb-xa)*uv.getX(k)-s.x0)/(s.x1-s.x0));
+    const plane=new THREE.Mesh(geo,shadowMat); plane.rotation.x=-Math.PI/2;
+    // in the fragment's own frame: the wall page stood it at its centre, upright, at its own size
+    plane.position.set((xa+xb)/2-p.m.center[0],p.m.qmin[1]-0.004,(s.z0+s.z1)/2-p.m.center[2]);
+    p.g.add(plane);
+  });
 }
 async function buildFragments(){
   const manifest=unpack(await PACK);
   const court=manifest.models.find(m=>m.name==='courtyard');
   // the courtyard stands in the same place in both arrangements, so the wall page's frame is put on it
   if(court&&IN_YARD.courtyard) OFF.fromArray(IN_YARD.courtyard.t).sub(new THREE.Vector3().fromArray(court.center));
-  const bmin=new THREE.Vector3().fromArray(manifest.bmin).add(OFF), bmax=new THREE.Vector3().fromArray(manifest.bmax).add(OFF);
-  row={centre:bmin.clone().add(bmax).multiplyScalar(0.5).setY(0.55),width:bmax.x-bmin.x,height:bmax.y-bmin.y,x0:bmin.x-0.8,x1:bmax.x+0.8};
+  // the elevation's frame (every drawn vertex along the level line, from elevation.py): the camera's target, the fit, the scan line's range
+  const wc=new THREE.Vector3().fromArray(WALL_VIEW.centre);
+  row={centre:wc,width:WALL_VIEW.width,height:WALL_VIEW.height,x0:wc.x-WALL_VIEW.width/2-0.8,x1:wc.x+WALL_VIEW.width/2+0.8};
   const imgs=await Promise.all(manifest.models.map(m=>loadImage(m.texBytes)).concat([loadImage(manifest.shadowBytes)]));
   // a fragment that a yard part stands in for shows only in Պատը, and stays where it is (the courtyard)
   const shownByYard=new Set(YARD_PARTS.map(p=>p.standsFor).filter(Boolean));
@@ -353,7 +378,8 @@ function pickLook(i){look=(i+LOOKS.length)%LOOKS.length;picked=true;}
 // camera: a target and a position; drag turns around the target, pinch / wheel come closer (the wall page's hands)
 const tgt=tgtCurve.getPoint(0).clone(); camera.position.copy(camCurve.getPoint(0));
 let manual=false,lastTouch=-99,blend=1,frozen=0,vTheta=0,vPhi=0,fitD=20;
-let wallOrbit={theta:-0.42,phi:0.30,dist:20};
+const WALL_PHI=0.10;   // an elevation: facing the facades, a little above the eaves' line
+let wallOrbit={theta:WALL_VIEW.theta,phi:WALL_PHI,dist:20};
 function sphOf(p,c){const o=p.clone().sub(c),d=Math.max(1e-6,o.length());return {theta:Math.atan2(o.x,o.z),phi:Math.asin(clamp(o.y/d,-1,1)),dist:d};}
 function fromSph(c,s){const cp=Math.cos(s.phi);return new THREE.Vector3(cp*Math.sin(s.theta),Math.sin(s.phi),cp*Math.cos(s.theta)).multiplyScalar(s.dist).add(c);}
 function orbitBy(dt,dp){const s=sphOf(camera.position,tgt);s.theta+=dt;s.phi=clamp(s.phi+dp,where?0.02:0.12,where?1.35:1.32);camera.position.copy(fromSph(tgt,s));}
@@ -366,7 +392,7 @@ function fitDistance(){
 }
 function wallPose(o){return {cam:fromSph(row.centre,o),tgt:row.centre.clone(),fov:30};}
 function endPose(i){
-  if(i===1) return wallPose({theta:-0.42,phi:0.30,dist:fitD});
+  if(i===1) return wallPose({theta:WALL_VIEW.theta,phi:WALL_PHI,dist:fitD});
   const [cp,tp]=pose(reduced?0:HOLD_AT); return {cam:cp.clone(),tgt:tp.clone(),fov:yardFov()};
 }
 function go(i){
@@ -379,7 +405,7 @@ function go(i){
 }
 function resetView(){
   picked=false; look=where?0:-1; manual=false; blend=1; vTheta=vPhi=0; lastTouch=-99;
-  if(where===0) frozen=0; else wallOrbit={theta:-0.42,phi:0.30,dist:fitD};
+  if(where===0) frozen=0; else wallOrbit={theta:WALL_VIEW.theta,phi:WALL_PHI,dist:fitD};
 }
 
 // hands
@@ -457,10 +483,11 @@ function frame(){
     let A;
     if(where===0){const p=pose(reduced?0:frozen%CYCLE);A={cam:p[0],tgt:p[1]};}
     else{
-      // idle drift, kept to the front arc (the wall page)
-      if(!reduced&&!manual&&wallOrbit.theta>-0.95&&wallOrbit.theta<0.45){
-        if(wallOrbit.theta>0.42) wallOrbit.dir=-1; else if(wallOrbit.theta<-0.92) wallOrbit.dir=1;
-        wallOrbit.theta+=0.03*(wallOrbit.dir||1)*dt;
+      // idle drift (the wall page's), kept within 7 degrees of facing the facades, so it stays an elevation
+      const th0=WALL_VIEW.theta;
+      if(!reduced&&!manual&&Math.abs(wallOrbit.theta-th0)<0.15){
+        if(wallOrbit.theta>th0+0.12) wallOrbit.dir=-1; else if(wallOrbit.theta<th0-0.12) wallOrbit.dir=1;
+        wallOrbit.theta+=0.012*(wallOrbit.dir||1)*dt;
       }
       A=wallPose(wallOrbit);
     }

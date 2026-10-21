@@ -23,7 +23,7 @@ describe.skipIf(!hasPython)('texfit.py (the photo checks and the UV pose)', () =
 
 describe('yard.html keeps the yard as photographed', () => {
   const inYard = JSON.parse(/const IN_YARD=(\{.*?\});/.exec(page)[1])
-  it('every pose is a unit quaternion and a position; the cabin has none (not in the yard scan)', () => {
+  it('every pose is a unit quaternion and a position; the cabin has none (it stays out of Բակը, where wall_mid is its surface)', () => {
     for (const [name, p] of Object.entries(inYard)) {
       expect(p.q, name).toHaveLength(4)
       expect(Math.hypot(...p.q)).toBeCloseTo(1, 4)
