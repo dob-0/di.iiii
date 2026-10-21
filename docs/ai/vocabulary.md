@@ -476,6 +476,22 @@ carries a fixture counts as a lamp, any other light as a light, and an object is
 name a placed light (Studio's Lights row, the `light.point` row of the node table above) were
 not touched by this amendment; a later pass lines them up with these two rows.
 
+## Amended 2026-10-22 — the rules the copy guard enforces
+
+`src/copyVocabulary.test.js` calls these "the dictionary's other rules". Until today the
+dictionary held none of them. Each row carries its source.
+
+- **Case** (adopted 2026-10-21, part 2 of spec v2, `one-way-to-show-v2.md:293`; that file lives
+  outside the repo, so the rule is copied here): *headlines are lowercase; labels and body text
+  are in sentence case; eyebrows are uppercase, drawn by CSS (`text-transform`), never typed in
+  capitals in the source.* Names keep their own case (di.iiii, Studio, Art-Net).
+- **No exclamation marks** outside the jam (2026-10-21, same brand-words pass, PR #1104).
+- **attributes** (2026-10-21): what a look records on the Light desk — everything, intensity,
+  colour, position, beam. Not *lane* (banned above).
+
+Not added: **conversation** for a space's chat thread. It needs the owner's yes and has not had
+it, so the chat strings ("rooms") stay as they were in `dev` until it does.
+
 ## The rule for anything new
 
 Before adding a word to the product, check it here. If it is not in the dictionary and not

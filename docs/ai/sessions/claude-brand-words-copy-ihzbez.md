@@ -5,3 +5,5 @@
 - Found, not fixed (parked in INBOX as copy-guard-blind-spots): the banned-word scan's comment stripper reads `accept="image/*"` as a comment, so 394 lines of SpaceHub.jsx are never scanned, and JSX text on its own line is never extracted. RETIRED_COPY matches plain file text so it has neither hole.
 - Not changed, owner's call: Studio vs Editor; the name "iiii"; `scripts/rigbuild/patch-sheet.mjs` still writes `entity` in its crew CSV header; vocabulary.md has no row for a chat "conversation".
 - Not seen in a browser: the Spaces panel (needs an admin session), "Optimize this asset" (needs a media asset in the project), the scene deck's play row (needs scenes), the live-sync button (feature flag), the chat's signed-out subtitle.
+
+- Fixed after review (2026-10-22): "Ambient colour"/"Sun colour"; the Spaces panel's labels and buttons all in sentence case; the Patch CSV id column is `object` from both producers, with a header test for each; the vocabulary now holds the case, no-exclamation and *attributes* rows the copy guard cites. The chat strings are back to `dev`'s: *conversation* has no owner yes yet.

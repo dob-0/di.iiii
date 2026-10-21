@@ -167,7 +167,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
             </div>
 
             <div className="prop-row">
-                <label htmlFor={`${fieldPrefix}-ambient-color`}>Ambient color</label>
+                <label htmlFor={`${fieldPrefix}-ambient-color`}>Ambient colour</label>
                 <input
                     id={`${fieldPrefix}-ambient-color`}
                     type="color"
@@ -189,7 +189,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
             </div>
 
             <div className="prop-row">
-                <label htmlFor={`${fieldPrefix}-sun-color`}>Sun color</label>
+                <label htmlFor={`${fieldPrefix}-sun-color`}>Sun colour</label>
                 <input
                     id={`${fieldPrefix}-sun-color`}
                     type="color"

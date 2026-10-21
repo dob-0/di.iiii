@@ -191,11 +191,9 @@ const COPY_FILES = [
     'src/kit/kitStack.js',
     'src/utils/presentationTemplates.js',
     // Added 2026-10-21 with the brand-words pass, which fixed copy in each of them.
-    'public/chat-app/manifest.webmanifest',
     'serverXR/src/lighting/ui/index.html',
     'src/AssetPanel.jsx',
     'src/WorldPanel.jsx',
-    'src/chat/ChatHomeSurface.jsx',
     'src/hooks/useSceneArchiveIO.js',
     'src/rigbuild/ScenesDeck.jsx',
     'src/rigbuild/sheet.js'
@@ -402,7 +400,8 @@ describe('the product says only the words the contract sanctions', () => {
 // --- retired strings --------------------------------------------------------
 //
 // The banned words above catch a noun wherever it lands. What they cannot catch
-// is a sentence that breaks the dictionary's other rules: Title Case on a label,
+// is a sentence that breaks the dictionary's other rules (the 2026-10-21 rows of
+// docs/ai/vocabulary.md): Title Case on a label,
 // capitals typed into the source, an exclamation mark outside the jam, a
 // lowercase "rooms" (the hole the Room rule states), a metaphor the dictionary
 // says to replace with the true thing, a headline capitalised in the source.
@@ -440,10 +439,17 @@ const RETIRED_COPY = [
     { file: 'src/pages/DeviceLoginPage.jsx', string: 'Sign a terminal in' },
     { file: 'src/studio/components/StudioCodeSpaceDirector.jsx', string: 'No director here' },
     { file: 'src/studio/components/StudioHub.jsx', string: '>Projects</h1>' },
-    // The chat's "rooms" are the conversations of a space.
-    { file: 'src/chat/ChatHomeSurface.jsx', string: 'your rooms' },
-    { file: 'src/chat/ChatHomeSurface.jsx', string: 'No rooms yet' },
-    { file: 'public/chat-app/manifest.webmanifest', string: 'Your rooms' }
+    // British spelling (docs/ai/vocabulary.md, Spelling): the label a person reads.
+    { file: 'src/WorldPanel.jsx', string: 'Ambient color' },
+    { file: 'src/WorldPanel.jsx', string: 'Sun color' },
+    // One row, one casing: the Spaces panel's buttons and labels.
+    { file: 'src/SpacesPanel.jsx', string: 'Space Name' },
+    { file: 'src/SpacesPanel.jsx', string: 'Permanent Space' },
+    { file: 'src/SpacesPanel.jsx', string: 'View Live' },
+    { file: 'src/SpacesPanel.jsx', string: 'Make Temp' },
+    { file: 'src/SpacesPanel.jsx', string: 'Keep Forever' },
+    { file: 'src/SpacesPanel.jsx', string: 'Make Private' },
+    { file: 'src/SpacesPanel.jsx', string: 'Make Public' }
 ]
 
 describe('retired strings stay retired', () => {

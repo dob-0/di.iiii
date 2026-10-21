@@ -132,7 +132,7 @@ export default function ChatHomeSurface() {
         ;(async () => {
             try {
                 const answer = await fetch('/serverXR/api/chat/rooms', { credentials: 'include' })
-                if (!answer.ok) throw new Error(answer.status === 401 ? 'Sign in to see your conversations.' : `HTTP ${answer.status}`)
+                if (!answer.ok) throw new Error(answer.status === 401 ? 'Sign in to see your rooms.' : `HTTP ${answer.status}`)
                 const body = await answer.json()
                 if (!cancelled) setRooms(Array.isArray(body.rooms) ? body.rooms : [])
             } catch (error) {
@@ -198,7 +198,7 @@ export default function ChatHomeSurface() {
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography sx={{ fontWeight: 700, fontSize: 16, letterSpacing: '-0.01em' }}>iiii</Typography>
                         <Typography sx={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
-                            {session.label ? `signed in as ${session.label}` : 'your conversations'}
+                            {session.label ? `signed in as ${session.label}` : 'your rooms and conversations'}
                         </Typography>
                     </Box>
                     <Tooltip title="Start a private conversation">
@@ -232,7 +232,7 @@ export default function ChatHomeSurface() {
                     {!loading && !problem && rooms.length === 0 && conversations.length === 0 && (
                         <Box sx={{ px: 3, py: 6, textAlign: 'center' }}>
                             <Typography sx={{ fontSize: 13, color: 'var(--ui-text-muted)', mb: 1 }}>
-                                No conversations yet — you are not in a space that has one.
+                                No rooms yet — you are not in a space that has one.
                             </Typography>
                             <Typography sx={{ fontSize: 12, color: 'var(--ui-text-muted)', opacity: 0.8 }}>
                                 Ask whoever runs a space to let you in, and it appears here.
