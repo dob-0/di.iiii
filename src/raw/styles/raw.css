@@ -4346,12 +4346,14 @@
 .raw-surface-wordmark {
     position: fixed;
     /* 24px of target (WCAG 2.5.8): the bare text was 33x17, measured at
-       820x1180 (audit 2026-10-21 NR-04). 14px + the 3.5px the extra height
-       centres around keeps the letters where they sat at bottom 18px. */
-    bottom: 14px;
+       820x1180 (audit 2026-10-21 NR-04). The line box is pinned at the 17px
+       Chromium measured for it, so 14.5px + (24 - 17) / 2 puts the letters
+       exactly where they sat at bottom 18px; at 14px they moved 0.5px down. */
+    bottom: 14.5px;
     display: inline-flex;
     align-items: center;
     min-height: 24px;
+    line-height: 17px;
     /* Bottom-left, beside the zoom cluster. At bottom-centre it was drawn over
        the cards (Bar, Studio, owner 2026-10-05); under them it vanished behind
        the opaque canvas. The corner is the one place no fit puts a card. */

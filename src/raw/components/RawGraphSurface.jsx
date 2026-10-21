@@ -899,12 +899,16 @@ export default function RawGraphSurface({
             const vp = viewportRef.current
             // A touchpad's two-finger swipe carries deltaX: it pans, so a
             // sideways swipe moves the desk sideways (audit 2026-10-21 NR-01).
-            // A pinch's deltaX is not a pan, it zooms only.
-            const panX = vp.panX - (event.ctrlKey || event.metaKey ? 0 : event.deltaX * unit)
-            if (!event.deltaY) {
-                applyViewport(panX, vp.panY, vp.zoom)
+            // A pinch's deltaX is not a pan, it zooms only. One axis per
+            // event, the larger one: a vertical swipe that drifts a little
+            // sideways zooms and nothing else, so the desk never creeps
+            // sideways while it zooms (review of NR-01).
+            const pinch = event.ctrlKey || event.metaKey
+            if (!pinch && Math.abs(event.deltaX || 0) > Math.abs(event.deltaY || 0)) {
+                applyViewport(vp.panX - event.deltaX * unit, vp.panY, vp.zoom)
                 return
             }
+            if (!event.deltaY) return
             const magnitude = clamp(Math.abs(event.deltaY) * unit, 1, 120)
             const factor = Math.exp((event.deltaY < 0 ? 1 : -1) * magnitude * 0.0016)
             const rect = container.getBoundingClientRect()
@@ -912,7 +916,7 @@ export default function RawGraphSurface({
             const my = event.clientY - rect.top
             const nextZoom = clamp(vp.zoom * factor, GRAPH_MIN_ZOOM, GRAPH_MAX_ZOOM)
             const scale = nextZoom / vp.zoom
-            applyViewport(mx - (mx - panX) * scale, my - (my - vp.panY) * scale, nextZoom)
+            applyViewport(mx - (mx - vp.panX) * scale, my - (my - vp.panY) * scale, nextZoom)
         }
         container.addEventListener('wheel', handleWheel, { passive: false })
         return () => container.removeEventListener('wheel', handleWheel)
@@ -1746,7 +1750,9 @@ export default function RawGraphSurface({
             // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the canvas keys (H, F, 1, arrows) act only while it has focus (WCAG 2.1.4)
             tabIndex={0}
             aria-label="Node canvas"
-            aria-keyshortcuts="Enter"
+            // Only where Enter does something: Studio's read-only preview
+            // passes no onDoubleClick, and a key that does nothing is not announced.
+            aria-keyshortcuts={onDoubleClick ? 'Enter' : undefined}
             style={{
                 top: `${topInset}px`,
                 // Published so on-canvas controls can sit clear of whatever is

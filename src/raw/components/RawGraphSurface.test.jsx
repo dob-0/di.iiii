@@ -1085,6 +1085,28 @@ describe('wheel policy', () => {
         expect(z2).toBeGreaterThan(z1)
         expect(x2).not.toBeCloseTo(x1 - 30, 1)
     })
+
+    // A vertical swipe drifts sideways a little. With both deltas applied the
+    // desk crept sideways while it zoomed (review of NR-01): one axis per
+    // event, the larger one.
+    it('a diagonal swipe moves one axis only: the larger delta wins', () => {
+        const { container } = render(<RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} initialZoom={1} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        const stage = () => /translate\(([-\d.]+)px,([-\d.]+)px\) scale\(([-\d.]+)\)/.exec(container.querySelector('.raw-graph-stage').style.transform).slice(1).map(Number)
+        const [x0, y0, z0] = stage()
+        // Mostly vertical: zoom about the cursor, exactly as a pure vertical wheel would.
+        fireEvent.wheel(surface, { deltaX: 6, deltaY: -40, deltaMode: 0, clientX: 0, clientY: 0 })
+        const [x1, y1, z1] = stage()
+        expect(z1).toBeGreaterThan(z0)
+        expect(x1).toBeCloseTo(x0 * (z1 / z0), 5)
+        expect(y1).toBeCloseTo(y0 * (z1 / z0), 5)
+        // Mostly sideways: pan by deltaX, no zoom.
+        fireEvent.wheel(surface, { deltaX: 40, deltaY: 6, deltaMode: 0 })
+        const [x2, y2, z2] = stage()
+        expect(z2).toBe(z1)
+        expect(y2).toBe(y1)
+        expect(x2).toBeCloseTo(x1 - 40, 5)
+    })
 })
 
 describe('RawGraphSurface wires follow portScopeNodes', () => {
@@ -1287,6 +1309,14 @@ describe('the canvas in the accessibility tree', () => {
         expect(result.violations.map((v) => v.id)).toEqual([])
         fireEvent.keyDown(surface, { key: 'Enter' })
         expect(onDoubleClick).toHaveBeenCalledTimes(1)
+        expect(surface.getAttribute('aria-keyshortcuts')).toBe('Enter')
+    })
+
+    // Studio's read-only StudioGraphSurface passes no onDoubleClick, so Enter
+    // does nothing there; announcing it promised a key that did nothing.
+    it('announces Enter only when Enter creates a node', () => {
+        const { container } = render(<RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} initialZoom={1} />)
+        expect(container.querySelector('.raw-graph-surface').hasAttribute('aria-keyshortcuts')).toBe(false)
     })
 })
 

@@ -118,4 +118,14 @@ describe('the corner wordmark is a real target (audit 2026-10-21 NR-04)', () => 
         expect(base).toMatch(/min-height: 24px;/)
         expect(base).toMatch(/display: inline-flex;/)
     })
+
+    // The taller target must not move the letters: they sat at bottom 18px
+    // with a 17px line box (measured in Chromium). bottom 14px put them 0.5px
+    // lower (865 -> 865.5 at 1440x900), against its own comment.
+    it('keeps the letters at bottom 18px: bottom + (min-height - line-height) / 2', () => {
+        const base = raw.match(/\n\.raw-surface-wordmark \{([^}]*)\}/)[1]
+        const px = (prop) => Number(base.match(new RegExp(`\\n\\s*${prop}: ([\\d.]+)px;`))?.[1])
+        expect(px('line-height')).toBe(17)
+        expect(px('bottom') + (px('min-height') - px('line-height')) / 2).toBe(18)
+    })
 })

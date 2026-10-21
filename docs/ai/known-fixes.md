@@ -45,7 +45,7 @@ Cause: the only way to place a card was a pointer drag; no key and no single poi
 
 ## The node canvas's corner wordmark was a 33x17 px link (Raw, 2026-10-21)
 
-Cause: `.raw-surface-wordmark` (the way home in the canvas corner) was bare text above 640 px wide; axe `target-size` in Chromium at 820x1180 (a tablet, touch) measured 33x17, under WCAG 2.5.8's 24 px. The phone rule already gave it 44. Fix: the base rule is `inline-flex`, `min-height: 24px`, `bottom` 18 → 14 px so the letters stay put. Guard: `src/raw/rawChrome.test.js` "the corner wordmark is a real target". Audit NR-04.
+Cause: `.raw-surface-wordmark` (the way home in the canvas corner) was bare text above 640 px wide; axe `target-size` in Chromium at 820x1180 (a tablet, touch) measured 33x17, under WCAG 2.5.8's 24 px. The phone rule already gave it 44. Fix: the base rule is `inline-flex`, `min-height: 24px`, `bottom` 18 → 14 px so the letters stay put. Guard: `src/raw/rawChrome.test.js` "the corner wordmark is a real target". Audit NR-04. Review follow-up: at `bottom: 14px` the letters moved 0.5 px down (Chromium, text top 865 → 865.5); now `bottom: 14.5px` with `line-height: 17px`, back at 865 (guard: "keeps the letters at bottom 18px").
 
 ## A sideways touchpad swipe stepped a focused number field down (Raw, 2026-10-21)
 
@@ -53,11 +53,11 @@ Cause: `ScrubNumberInput`'s wheel handler took `deltaY < 0 ? up : down`, so a wh
 
 ## The node canvas was one button with every card inside it (Raw, 2026-10-21)
 
-Cause: `.raw-graph-surface` carried `role="button"` and `aria-label="Create a graph node"` (for Enter-creates-a-node). A button's children are presentational, so a screen reader could flatten the whole graph, cards and their controls, into one button; axe in Chromium reported `nested-interactive` (serious). Fix: the canvas is `role="group"`, named "Node canvas", still `tabIndex=0`, Enter still creates a node (`aria-keyshortcuts="Enter"`). Guard: `RawGraphSurface.test.jsx` "is a focusable named group" (runs axe-core in jsdom). Audit NR-02.
+Cause: `.raw-graph-surface` carried `role="button"` and `aria-label="Create a graph node"` (for Enter-creates-a-node). A button's children are presentational, so a screen reader could flatten the whole graph, cards and their controls, into one button; axe in Chromium reported `nested-interactive` (serious). Fix: the canvas is `role="group"`, named "Node canvas", still `tabIndex=0`, Enter still creates a node (`aria-keyshortcuts="Enter"`). Guard: `RawGraphSurface.test.jsx` "is a focusable named group" (runs axe-core in jsdom). Audit NR-02. Review follow-up: `aria-keyshortcuts` is set only when `onDoubleClick` is passed, so Studio's read-only `StudioGraphSurface` no longer announces a key that does nothing (guard: "announces Enter only when Enter creates a node").
 
 ## A sideways touchpad swipe zoomed the node canvas out (Raw, 2026-10-21)
 
-Cause: `RawGraphSurface`'s wheel handler read `deltaY` only and clamped the zoom step to at least 1, so a two-finger swipe with `deltaY: 0` zoomed out (measured 1 → 0.984 for ten events in Chromium) and its `deltaX` was dropped. Fix: a wheel's `deltaX` pans the canvas (not under Ctrl/⌘, where it is a pinch), and a wheel with no `deltaY` never zooms. The vertical wheel still zooms, as documented. Guard: `RawGraphSurface.test.jsx` "a touchpad swipe pans by its deltaX". Audit: `docs/ai/audits/2026-10-21-nodes-raw.md` NR-01.
+Cause: `RawGraphSurface`'s wheel handler read `deltaY` only and clamped the zoom step to at least 1, so a two-finger swipe with `deltaY: 0` zoomed out (measured 1 → 0.984 for ten events in Chromium) and its `deltaX` was dropped. Fix: a wheel's `deltaX` pans the canvas (not under Ctrl/⌘, where it is a pinch), and a wheel with no `deltaY` never zooms. The vertical wheel still zooms, as documented. Guard: `RawGraphSurface.test.jsx` "a touchpad swipe pans by its deltaX". Audit: `docs/ai/audits/2026-10-21-nodes-raw.md` NR-01. Review follow-up: with both deltas applied, a vertical swipe that drifted sideways crept the desk sideways while it zoomed; now one axis per event, the larger delta (guard: "a diagonal swipe moves one axis only").
 
 ## A new node's card window opened over its own node (Raw, 2026-10-20)
 
