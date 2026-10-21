@@ -816,6 +816,7 @@ export const WIKI_ARTICLES = [
             'A few spaces share their address with a piece that is part of diiii.xyz itself — /wcc is the WCC exhibition’s own landing page, and the wcc SPACE, with its eleven artist projects, lives one step deeper. Where that happens, the space card no longer points at the piece: its picture, its live frame and its Live link all open the space’s published project, so the card is always a door to the space it names. The piece keeps its own address; nothing about /wcc itself changed. On an offline copy of di.iiii, where those pieces are left out to keep the download small, such a card used to say “not in this copy” even though every project it holds was sitting on the machine — now it opens them.',
             'Live space cards on the Spaces page also show a live preview — a real miniature of the published project, streamed from the live route and always up to date. Previews only load while their card is on screen, so a long spaces list stays fast.',
             'Owners manage the card preview from the Preview button on the card: keep the live miniature or upload a custom cover image (Replace image / Use live preview to switch back anytime). A cover image also works on spaces that aren’t public yet.',
+            'One line for visitors (Manage on the card): say in one line, up to 160 characters, what is in the space. It shows under the space’s name on its card, and it is what a link to the space says when it is shared in a chat or found by a search engine. Empty clears it.',
             'The editor’s Spaces panel has the same self-serve Make Public / Make Private toggle as the Spaces page.',
             'Publishing (which project is live) and visibility (Public/Private) are independent choices — linking a project does not automatically make the space public.',
             'A public space also shares every project individually at /<space>/p/<project-id> — the same no-login viewer as the live route, without touching the published pointer. Handy for one-pagers, drafts, and projects that live next to the main one. Like the live route, these carry no toolbar of ours — nothing floats over your design; hop between a space’s projects from the Studio Projects window.',
@@ -829,7 +830,7 @@ export const WIKI_ARTICLES = [
             'Add ?embed=1 to any published link and the viewer becomes glass: no dark shell of its own, no “Made with di.iiii” badge, no Walk/Fly button, no loading screen. Use it when the page is a window inside another page rather than somewhere you send people — put it in an iframe and whatever your host page draws shows through behind it. Your page keeps its own background, so make that transparent too if you want the host to show through.'
         ],
         tags: ['publish', 'public', 'sharing', 'owner', 'live link', 'slug', 'custom link', 'camera', 'device access', 'query', 'url parameters', 'embed', 'iframe', 'transparent', 'storage', 'localstorage', 'space card', 'wcc'],
-        updated: '2026-09-10'
+        updated: '2026-10-21'
     },
     {
         id: 'invite-links',

@@ -7,6 +7,7 @@ import './wiki.css'
 import SurfaceBar from '../components/SurfaceBar.jsx'
 import { isEmbedRequest } from '../utils/previewMode.js'
 import useLocalInstall from '../hooks/useLocalInstall.js'
+import { buildWikiArticlePath, buildWikiPath } from '../utils/spaceRouting.js'
 
 // Lazy, not static — same fix as LandingPage.jsx: a plain import ships the
 // three.js vendor chunk (1.47 MB) to every wiki reader, phones included,
@@ -26,7 +27,29 @@ function ArticleBody({ body }) {
     })
 }
 
-export default function WikiPage() {
+// The page's meta description, for a reader that runs scripts (a crawler that
+// does not gets serverXR's og card, which says the same thing). Put back on
+// leaving, like useDocumentTitle puts back the title.
+function useMetaDescription(text) {
+    useEffect(() => {
+        if (!text || typeof document === 'undefined') return undefined
+        let tag = document.querySelector('meta[name="description"]')
+        const created = !tag
+        if (created) {
+            tag = document.createElement('meta')
+            tag.setAttribute('name', 'description')
+            document.head.appendChild(tag)
+        }
+        const previous = tag.getAttribute('content')
+        tag.setAttribute('content', text)
+        return () => {
+            if (created) tag.remove()
+            else if (previous != null) tag.setAttribute('content', previous)
+        }
+    }, [text])
+}
+
+export default function WikiPage({ articleId = null }) {
     const [query, setQuery] = useState('')
     // Same admin gate as StudioHub. While auth resolves, role is null
     // and the link stays hidden — anonymous readers never see a dead end.
@@ -39,17 +62,19 @@ export default function WikiPage() {
     const localInstall = useLocalInstall()
     const isEmbed = isEmbedRequest()
 
-    // /wiki is one long scroller, not per-article routes, so the article that
-    // opened it — /wiki#the-front-door — is the only "current article" this
-    // page can honestly name. Read once, on arrival, the same way the
-    // deep-link scroll below reads it once — not a scroll-spy that renames
-    // the tab as you read past each section.
+    // Every article has its own address, /wiki/{id} (2026-10-21, G25); the
+    // page is still one long scroller, and the single page stays the index.
+    // The article the address names — or, for a link made before, the old
+    // /wiki#{id} — is the only "current article" this page can honestly name.
+    // Read once, on arrival, the same way the deep-link scroll below reads it
+    // once — not a scroll-spy that renames the tab as you read past each section.
     const openedOnArticle = useMemo(() => {
         if (typeof window === 'undefined') return null
-        const id = window.location.hash.replace('#', '')
+        const id = articleId || window.location.hash.replace('#', '')
         return id ? WIKI_ARTICLES.find((a) => a.id === id) || null : null
-    }, [])
+    }, [articleId])
     useDocumentTitle(openedOnArticle ? `${openedOnArticle.title} — Wiki — di.iiii` : 'Wiki — di.iiii')
+    useMetaDescription(openedOnArticle ? openedOnArticle.summary : null)
 
     useEffect(() => {
         document.body.classList.add('is-landing')
@@ -68,13 +93,15 @@ export default function WikiPage() {
         const el = document.getElementById(id)
         if (!el) return
         el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' })
-        if (window.history?.replaceState) window.history.replaceState(null, '', `#${id}`)
+        if (window.history?.replaceState) window.history.replaceState(null, '', buildWikiArticlePath(id))
     }
 
     useEffect(() => {
-        const id = window.location.hash.replace('#', '')
-        if (id) requestAnimationFrame(() => scrollToArticle(id, false))
-    }, [])
+        if (openedOnArticle) requestAnimationFrame(() => scrollToArticle(openedOnArticle.id, false))
+        // An id the wiki does not have: the index, at the index's address,
+        // rather than a page whose address names something it does not show.
+        else if (articleId && window.history?.replaceState) window.history.replaceState(null, '', buildWikiPath())
+    }, [articleId, openedOnArticle])
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase()
@@ -129,7 +156,7 @@ export default function WikiPage() {
                             {group.items.map((a) => (
                                 <a
                                     key={a.id}
-                                    href={`#${a.id}`}
+                                    href={buildWikiArticlePath(a.id)}
                                     className="wiki-sidebar-link"
                                     onClick={(e) => { e.preventDefault(); scrollToArticle(a.id) }}
                                 >
