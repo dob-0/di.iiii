@@ -244,6 +244,22 @@ const SCHEMA = `
     PRIMARY KEY (user_id, provider)
   );
 
+  CREATE TABLE IF NOT EXISTS share_posts (
+    id TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    text TEXT NOT NULL DEFAULT '',
+    link TEXT NOT NULL DEFAULT '',
+    media TEXT NOT NULL DEFAULT '[]',
+    channels TEXT NOT NULL DEFAULT '[]',
+    results TEXT NOT NULL DEFAULT '{}',
+    created_by TEXT,
+    approved_by TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    approved_at INTEGER,
+    sent_at INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS ai_chats (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,

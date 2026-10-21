@@ -123,6 +123,51 @@ module.exports = [
     note: "names real machine addresses. 404 when ESTATE_MAP_PATH is unset (nothing is committed here), 404 when set but the file was never placed on this host."
   },
   {
+    route: "GET /api/share/channels",
+    summary: "the share channels (Telegram, Bluesky, Mastodon): connected or missing, and what each can carry",
+    reach: "read",
+    role: "admin",
+    agent: false,
+    note: "never returns a token; tokens come from SHARE_* environment variables only."
+  },
+  {
+    route: "GET /api/share/posts",
+    summary: "drafted and sent posts of the share door, newest first",
+    reach: "read",
+    role: "admin",
+    agent: false
+  },
+  {
+    route: "GET /api/share/posts/:id",
+    summary: "one share-door post with its per-channel results and preview address",
+    reach: "read",
+    role: "admin",
+    agent: false
+  },
+  {
+    route: "GET /share/posts/:id/preview",
+    summary: "HTML page: a post as each chosen channel will show it (length against the limit, media, link)",
+    reach: "read",
+    role: "admin",
+    agent: false,
+    note: "a page, not JSON; admin only because a draft is private."
+  },
+  {
+    route: "POST /api/share/posts",
+    summary: "draft a post { text, link, media[], channels[] } for the share door; nothing is sent",
+    reach: "private",
+    role: "admin",
+    agent: false
+  },
+  {
+    route: "POST /api/share/posts/:id/send",
+    summary: "approve a draft and send it to its channels; a channel that already posted is skipped",
+    reach: "public",
+    role: "admin",
+    agent: false,
+    note: "outward and cannot be unsent: only after the owner's word on the preview."
+  },
+  {
     route: "GET /api/events",
     summary: "the server's recent internal event log",
     reach: "read",
