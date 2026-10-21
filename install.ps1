@@ -8,6 +8,12 @@
 # serving different bodies from one path by User-Agent breaks every cache.
 #
 # Nothing is written outside the user profile. Nothing needs administrator.
+#
+# This file stays ASCII, so it writes " - " and "..." where install.sh writes
+# an em dash and an ellipsis. Windows PowerShell 5.1 reads a script that has no
+# byte-order mark in the legacy code page, and get.ps1 is served without a
+# charset (nginx.conf, location = /get.ps1), so one non-ASCII byte comes out as
+# a different character. Guard: scripts/di/installPs1.test.js.
 
 $ErrorActionPreference = 'Stop'
 
@@ -65,16 +71,16 @@ if (Test-NodeOk $VendoredNode) {
     try {
         Invoke-WebRequest -Uri $NodeUrl -OutFile "$tmpNode\node.zip" -UseBasicParsing
     } catch {
+        # One way out, not two: the di command itself runs on node, so every
+        # install needs one, whichever way di.iiii then runs (install.sh says
+        # the same).
         Die @"
 di.iiii could not start on this machine.
 
   node.js     not found, and nodejs.org could not be reached
 
-You need one of these. Pick whichever sounds easier:
-
-  Docker Desktop   https://docker.com/products/docker-desktop
-                   install it, open it once, then run this line again
-  Node.js 22       https://nodejs.org  - the big green LTS button
+Install Node.js 22.15 or newer from https://nodejs.org (the LTS button),
+then run this line again.
 
 Nothing was installed.
 "@
