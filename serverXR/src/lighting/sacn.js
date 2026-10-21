@@ -103,7 +103,7 @@ class SACN {
     this.lastFrame = new Map();
     if (this.offline) return;
     this.socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
-    this.socket.on('error', (e) => { this.lastError = e.message; });
+    this.socket.on('error', (e) => { this.lastError = e.message; this.lastErrorAt = Date.now(); });
     this.socket.bind(opts.bindPort == null ? 0 : opts.bindPort, () => {
       try {
         // 1 keeps the traffic on this subnet, which is where the rig is. A higher TTL
@@ -113,7 +113,7 @@ class SACN {
         // machine is a normal setup, and switching it off makes the desk invisible to
         // everything local — including anyone trying to prove it is transmitting.
         this.socket.setMulticastLoopback(opts.loopback !== false);
-      } catch (e) { this.lastError = e.message; }
+      } catch (e) { this.lastError = e.message; this.lastErrorAt = Date.now(); }
       this.ready = true;
     });
   }

@@ -139,6 +139,17 @@ check('leaving a show for another backs it up first', async () => {
   d.stop();
 });
 
+check('every UDP driver error is stamped, so a red can clear', () => {
+  for (const f of ['artnet.js', 'sacn.js']) {
+    const src = fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+    for (const line of src.split('\n')) {
+      if (/this\.lastError = [^n]/.test(line) && !/lastErrorAt/.test(line)) assert.fail(f + ': unstamped: ' + line.trim());
+    }
+  }
+  const r = routeStatus({ driver: 'artnet', enabled: true, ready: true, lastError: 'poll 10.9.9.9: ENETUNREACH', lastErrorAt: NOW - ERROR_FRESH_MS - 1 }, [], NOW);
+  assert.notStrictEqual(r.status, 'unreachable');
+});
+
 (async () => {
   for (const t of tests) {
     try { await t.fn(); console.log('  ok  ' + t.name); }
