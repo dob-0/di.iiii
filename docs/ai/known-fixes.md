@@ -27,6 +27,9 @@ Symptom: six headings fused a word onto the platform name (`di.iiii Control Serv
 Cause: copy rots silently — nothing read these files against NAMING.md (spec v2 §1, "nothing appended") or `docs/ai/vocabulary.md`.
 Fix: headings keep their meaning without the name; serverXR names the editors that exist (Studio, the node editor, V1 for compatibility); the SDK table shows `./sdk/index.js`, the import its own "Using it" section and `sdk/index.js` already use.
 Guard: `scripts/brandReadmes.test.js` — 10 cases, all 10 fail on the old text. Note: `docs/ai/sessions/claude-brand-readmes-it2292.md`.
+## Windows installer and `di doctor` offered Docker Desktop when nodejs.org could not be reached (2026-10-21)
+
+Symptom: `install.ps1` (and `di doctor`'s no-runtime screen, `ui.noRuntime`) told a person with no node and no route to nodejs.org to "pick whichever sounds easier", Docker Desktop first. The di command itself runs on node, so after installing Docker the same line hit the same wall. `install.sh` was fixed 2026-09-27 and the Windows copy was not, because `installLines.test.js` read only `install.sh`. Fix: both say "Install Node.js 22.15 or newer from https://nodejs.org (the LTS button), then run this line again" (`di up` in the CLI), and nothing about Docker; `install.ps1`'s header says why it stays ASCII. Guard: `scripts/di/installLines.test.js` (3 new cases: no `docker` anywhere in install.ps1, the ASCII note, `ui.noRuntime` names no docker). Same change: "room" for a space in five di lines and the kit's help line (`scripts/di/spaceWords.test.js`), and the three account mails end "Not you? Ignore this. Nothing has changed." (`passwordAuthRoutes.test.js`).
 
 ## `di follow` again without `--key` wrote `"token": null` and the host refused every edit (2026-10-20)
 
