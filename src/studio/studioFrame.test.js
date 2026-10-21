@@ -39,10 +39,17 @@ export const retiredIn = (file, text) => text.split('\n').flatMap((line, i) =>
 const STUDIO_CSS = ['studio.css', 'studio-help.css', 'studio-mobile.css', 'space-constellation.css']
     .map((f) => `studio/styles/${f}`)
 
-// Round marks that are not controls: status lights. The owner keeps the recording light
-// as it is (question Q4, 2026-10-21); none of the four files draws one, and the one
-// light they do draw — the sync status dot — is kept round with it until he answers.
-export const ROUND_ALLOWED = ['.scc-sync-dot']
+// Round marks that are not controls: the two status dots (owner, 2026-10-21). Each one
+// says so in its rule, so a control cannot slip in under the same exception.
+export const ROUND_ALLOWED = ['.scc-sync-dot', '.scc-presence-dot']
+
+// The body of the first rule whose selector list is exactly `sel`, comments kept.
+export const ruleOf = (css, sel) => {
+    const at = css.search(new RegExp(`(^|[}\\n])\\s*${sel.replace(/[.*+?^${}()|[\]\\:]/g, '\\$&')}\\s*\\{`))
+    if (at < 0) return ''
+    const open = css.indexOf('{', at)
+    return css.slice(open + 1, css.indexOf('}', open))
+}
 
 const ROUND = /border-radius:\s*(var\(--di-radius-pill[^)]*\)|999px|50%)/
 export const roundSelectors = (css) => [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
@@ -83,6 +90,62 @@ describe('the Studio frame is di.iiii\'s', () => {
     it('draws no pill or circle in the four Studio stylesheets but the status light', () => {
         const found = STUDIO_CSS.flatMap((f) => roundSelectors(read(f)).map((s) => `${f} ${s}`))
         expect(found).toEqual(ROUND_ALLOWED.map((s) => `studio/styles/studio.css ${s}`))
+        for (const sel of ROUND_ALLOWED) expect(ruleOf(read('studio/styles/studio.css'), sel)).toContain('status dot, not a control')
+    })
+
+    it('gives every control 0 px corners, switch and slider thumbs included (owner, 2026-10-21)', () => {
+        const controls = {
+            'studio/styles/studio.css': ['.insp-slider::-webkit-slider-thumb', '.insp-slider::-moz-range-thumb', '.insp-slider::-moz-range-track',
+                '.insp-slider::-moz-range-progress', '.insp-toggle-track', '.insp-toggle-thumb', '.spp-badge'],
+            'studio/styles/studio-help.css': ['.sh-help-section-tabs button', '.sh-help-link-pill'],
+            'studio/styles/studio-mobile.css': ['.smb-top-btn']
+        }
+        for (const [file, sels] of Object.entries(controls)) {
+            for (const sel of sels) expect(ruleOf(read(file), sel), `${file} ${sel}`).toMatch(/border-radius:\s*0;/)
+        }
+    })
+
+    it('makes the slider input a 24 px tall target (WCAG 2.2 SC 2.5.8)', () => {
+        const rule = ruleOf(read('studio/styles/studio.css'), '.insp-slider')
+        expect(rule).toMatch(/height:\s*24px;/)
+    })
+
+    it('takes the cyan wash from the ladder where it has the step', () => {
+        const css = read('studio/styles/space-constellation.css')
+        expect(css).not.toMatch(/color-mix\(in srgb, var\(--di-cyan\) (6|10|30|35)%/)
+        expect(ruleOf(css, '.scon-prow--live')).toContain('var(--di-cyan-wash)')
+    })
+
+    it('moves the constellation by named properties, in 0.2 s or less', () => {
+        const css = read('studio/styles/space-constellation.css').replace(/\/\*[\s\S]*?\*\//g, '')
+        const transitions = [...css.matchAll(/transition:\s*([^;]+);/g)].map((m) => m[1])
+        expect(transitions.length).toBeGreaterThan(3)
+        for (const t of transitions) {
+            for (const part of t.split(',')) {
+                expect(part.trim(), t).toMatch(/^[a-z-]+\s+\d/)
+                expect(parseFloat(part.trim().split(/\s+/)[1]), t).toBeLessThanOrEqual(0.2)
+            }
+        }
+        for (const m of css.matchAll(/animation:\s*[\w-]+\s+([\d.]+)s/g)) expect(parseFloat(m[1])).toBeLessThanOrEqual(0.2)
+        expect(ruleOf(read('studio/styles/space-constellation.css'), '.scon-sat-label')).toMatch(/\/\*[\s\S]*shadow[\s\S]*\*\/\s*text-shadow/)
+    })
+
+    it('prints an address muted and lays the space card on the cyan wash', () => {
+        const css = read('studio/styles/studio-space-hub.css')
+        expect(ruleOf(css, '.ssh-live-url')).toMatch(/color:\s*var\(--di-text-muted\)/)
+        expect(ruleOf(css, '.ssh-badge-live')).toMatch(/color:\s*var\(--di-success\)/)
+        // two rules carry this selector; the one with the fill is the one that counts
+        const fills = [...css.matchAll(/\.ssh-space-card\s*\{([^}]*)\}/g)].map((m) => m[1]).filter((b) => /background:/.test(b))
+        expect(fills).toHaveLength(1)
+        expect(fills[0]).toMatch(/background:\s*var\(--di-cyan-wash\)/)
+        expect(ruleOf(css, '.ssh-space-card:hover,\n.ssh-space-card:focus-visible')).toMatch(/background:\s*var\(--di-cyan-dim\)/)
+    })
+
+    it('squares the Code view\'s cards and drops the warm shadow', () => {
+        expect(read('studio/components/StudioPresentationSurface.jsx')).not.toMatch(/borderRadius:\s*'(1\d|[3-9]\d?)px'/)
+        const canvas = read('PresentationCanvas.css')
+        expect(canvas).not.toMatch(/border-radius:\s*(2[0-9]|[3-9]\d)px/)
+        expect(canvas).not.toMatch(/rgba\(52,\s*39,\s*16/)
     })
 
     it('catches what it is for', () => {

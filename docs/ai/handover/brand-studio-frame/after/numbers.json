@@ -2,10 +2,11 @@
   "laptop-dark": {
     "editor": {
       "total": 133,
-      "round": 1,
-      "square": 99.2,
+      "round": 2,
+      "square": 98.5,
       "sites": [
-        "scc-sync-dot"
+        "scc-sync-dot",
+        "scc-presence-dot"
       ]
     },
     "controls": {
@@ -423,10 +424,11 @@
   "laptop-light": {
     "editor": {
       "total": 133,
-      "round": 1,
-      "square": 99.2,
+      "round": 2,
+      "square": 98.5,
       "sites": [
-        "scc-sync-dot"
+        "scc-sync-dot",
+        "scc-presence-dot"
       ]
     },
     "controls": {

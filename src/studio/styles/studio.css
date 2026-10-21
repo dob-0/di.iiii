@@ -326,6 +326,7 @@
 .scc-sync-dot {
     width: 6px;
     height: 6px;
+    /* status dot, not a control */
     border-radius: 50%;
     flex-shrink: 0;
     background: rgba(255, 255, 255, 0.25);
@@ -449,7 +450,8 @@
     justify-content: center;
     width: 22px;
     height: 22px;
-    border-radius: var(--di-radius);
+    /* status dot, not a control */
+    border-radius: 50%;
     background: rgba(var(--di-cyan-rgb), 0.2);
     border: 1px solid var(--di-cyan-line);
     color: var(--di-cyan);
@@ -1146,13 +1148,14 @@
     ) center / 100% 4px no-repeat;
 }
 
-/* The thumb's dark rim keeps it apart from the filled cyan line (SC 1.4.11). */
+/* The thumb's dark rim keeps it apart from the filled cyan line (SC 1.4.11).
+   Controls have 0 px corners (owner, 2026-10-21). */
 .insp-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 8px;
     height: 18px;
-    border-radius: var(--di-radius);
+    border-radius: 0;
     background: var(--di-cyan);
     border: 2px solid var(--di-scrim-strong);
     box-shadow: 0 0 0 1px rgba(var(--di-cyan-rgb), 0.4);
@@ -1162,7 +1165,7 @@
 .insp-slider::-moz-range-thumb {
     width: 8px;
     height: 18px;
-    border-radius: var(--di-radius);
+    border-radius: 0;
     background: var(--di-cyan);
     border: 2px solid var(--di-scrim-strong);
     box-shadow: 0 0 0 1px rgba(var(--di-cyan-rgb), 0.4);
@@ -1171,13 +1174,13 @@
 
 .insp-slider::-moz-range-track {
     height: 4px;
-    border-radius: var(--di-radius);
+    border-radius: 0;
     background: rgba(255, 255, 255, 0.1);
 }
 
 .insp-slider::-moz-range-progress {
     height: 4px;
-    border-radius: var(--di-radius);
+    border-radius: 0;
     background: var(--di-cyan);
 }
 
@@ -1251,7 +1254,7 @@
     height: 16px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: var(--di-radius);
+    border-radius: 0;
     flex-shrink: 0;
     transition: background 0.15s, border-color 0.15s;
 }
@@ -1263,7 +1266,7 @@
     width: 10px;
     height: 10px;
     background: rgba(255, 255, 255, 0.45);
-    border-radius: var(--di-radius);
+    border-radius: 0;
     transition: transform 0.15s, background 0.15s;
 }
 
@@ -1598,7 +1601,7 @@
     text-transform: uppercase;
     color: var(--di-cyan);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.4);
-    border-radius: var(--di-radius);
+    border-radius: 0;
     padding: var(--di-space-1) var(--di-space-2);
 }
 .spp-actions {

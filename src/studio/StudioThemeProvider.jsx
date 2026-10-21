@@ -12,6 +12,8 @@ import './styles/studio.css'
  *
  * The frame is di.iiii's (2026-10-21): the house tokens of base.css and square
  * corners. A project's scene keeps its own colours; nothing here reaches it.
+ * The palette takes hex values (MUI's colour helpers, emphasize() among them,
+ * throw on `var(--…)`); GlobalStyles can read the token itself.
  * Exported for src/studio/studioFrame.test.js.
  */
 export const studioThemeOptions = {
@@ -66,9 +68,9 @@ export default function StudioThemeProvider({ children }) {
         <ThemeProvider theme={studioTheme}>
             <CssBaseline />
             <GlobalStyles styles={{
-                html: { backgroundColor: DI_SURFACE, height: '100%' },
-                body: { backgroundColor: DI_SURFACE, height: '100%' },
-                '#root': { backgroundColor: DI_SURFACE, height: '100%' }
+                html: { backgroundColor: 'var(--di-surface)', height: '100%' },
+                body: { backgroundColor: 'var(--di-surface)', height: '100%' },
+                '#root': { backgroundColor: 'var(--di-surface)', height: '100%' }
             }}
             />
             {children}

@@ -23,29 +23,31 @@ and how many have any corner above 2 px):
 
 | view | before | after |
 |---|---|---|
-| laptop editor | 6 of 133 round, 95.5 % square (switch track, switch thumb, presence dot, sync dot) | 1 of 133, 99.2 % square (the sync status light, kept) |
+| laptop editor | 6 of 133 round, 95.5 % square (switch track, switch thumb, presence dot, sync dot) | 2 of 133, 98.5 % square (the two status dots, kept by the owner's decision) |
 | phone editor | 3 of 26, 88.5 % square (the three top buttons) | 0 of 26, 100 % |
 | constellation (laptop and phone) | 5 of 19, 73.7 % square (the legend marks) | 0 of 19, 100 % |
 
 **In the source:** round radii in `studio.css`, `studio-help.css`, `studio-mobile.css`,
-`space-constellation.css`: 15 → 1 (`.scc-sync-dot`). Lines holding a retired colour
+`space-constellation.css`: 15 → 2 (`.scc-sync-dot`, `.scc-presence-dot`, each marked "status dot, not a control"). Controls now have 0 px corners; non-control marks (help diagrams, legend keys) take `var(--di-radius)`. Lines holding a retired colour
 (`#4fd6ff`, `#7fc4e8`, `#53d79b`, `#0a1118`, `#0f1722`, hex or rgb) under `src/studio` and
 `src/project/viewport`: 31 → 0. `!important` in `studio.css`: 18 → 8.
 
 **The scene is unchanged:** a viewport region no panel covers (laptop 410×790 CSS px, phone
 390×500), before vs after: 0.000 % of channels differ by more than 8, largest difference 0,
-on all four (laptop/phone × dark/light).
+on all four (laptop/phone × dark/light). Measured on uncompressed shots, re-taken after the
+addendum; the committed PNGs are palette-compressed, which alone puts 0.1–1.4 % dithering
+noise on gradients, so do not re-measure from them.
 
 **Slider** (WCAG 2.2 SC 2.5.8, 1.4.11), measured on the pictures:
 
 | | before | after |
 |---|---|---|
 | hit box (the input element) | 274 × 4 px — fails 24 × 24 | 274 × 24 px |
-| thumb | 13 × 13 circle | 8 × 18 rectangle, 2 px dark rim |
+| thumb | 13 × 13 circle | 8 × 18 rectangle, 0 px corners, 2 px dark rim |
 | thumb edge vs the filled cyan line | 1.82 : 1 — fails 3 : 1 | 13.28 : 1 |
 | thumb vs the empty line / the ground | 12.77 / 15.71 : 1 | 12.77 / 15.71 : 1 |
 
-**Switch:** hit box (the label) 274 × 24.2 px before and after. Thumb 10 × 10, circle → square.
+**Switch:** hit box (the label) 274 × 24.2 px before and after. Thumb 10 × 10 and track, circle and pill → 0 px corners.
 Off: thumb vs track 4.35 : 1, vs ground 5.35 : 1. On: 9.92 : 1 and 15.71 : 1 (before 9.93 / 15.71).
 
 **M29, the constellation's view toggle:** the lit button's fill measured
@@ -80,7 +82,36 @@ editor, code window and close-up; 0.04–0.24 % on the constellation, which is i
 - The dev tier (dev.diiii.xyz) did not answer from this sandbox; nothing here is from it.
 - The scene's floating name label ("Torus") draws over the Objects panel on the laptop, before
   and after — not this change; not fixed.
-- The recording light: none of the four files draws one. The sync status dot is kept round with
-  it until the owner answers Q4.
+- The recording light: none of the four files draws one. Owner's decision (relayed 2026-10-21): the two status dots stay round.
 - Not touched: `src/algoVrithm`, the constellation's own scene background `#05080d`,
   the landing hover (Q1), the tagline (Q2).
+
+## Addendum (two audits + owner decisions, relayed 2026-10-21)
+
+Pictures: `before-2/` (`dev`, true before) and `after-2/`: `/spaces` grid, list with a
+keyboard-focused row, map; the Studio's Code view with no code; the controls close-up.
+Numbers in their `numbers.json`.
+
+| | before (`dev`) | after |
+|---|---|---|
+| switch thumb / track corners | 50 % / 999 px | 0 / 0 |
+| presence dot, sync dot | round | round (status dots, not controls) |
+| list row, keyboard focus fill | cyan α 0.0005 (none) | cyan α 0.05 |
+| `.scon-prow--live` fill | `color-mix 0.06%` | `var(--di-cyan-wash)` (the ladder's 0.06 step) |
+| space card rest fill | white 0.03 | `var(--di-cyan-wash)` (cyan 0.06) |
+| space card hover / focus fill | cyan 4 % | `var(--di-cyan-dim)` (0.10), so hover stays above rest |
+| live address `.ssh-live-url` | `--di-success` green `rgb(77,249,192)` | `--di-text-muted` (white 0.5); the LIVE badge stays green |
+| view toggle transition | `all 0.18s` | `background-color, color 0.18s` |
+| map label fade, panel slide | 0.25 s, 0.22 s | 0.2 s, 0.2 s |
+| Studio Code view message card | 18 px corners | 2 px (`var(--di-radius)`) |
+
+- `.scon-sat-label`'s black text-shadow stays, with its reason in a comment.
+- `PresentationCanvas.css` (V1 editor's Code View empty card): 24 px / 20 px → `var(--di-radius)`,
+  warm drop shadow removed. Not seen on screen: it lives in the V1 editor, which I did not route to.
+  Its white card `rgba(255,255,255,0.84)` and brown ink `#23180a`, `#8a6a2b`, `#5f4930` are off
+  the ladder: listed, not changed.
+- `src/utils/presentationTemplates.js:547` (`.card` 28 px): inside a starter template's HTML,
+  i.e. the artist's content, not the frame. Listed, not changed.
+- `StudioViewport.jsx` still draws the project's default ground `#0a1118`; it reads it from
+  `defaultWorldState` (a hex in the shared schema), not a `var()`, so `THREE.Color` gets the hex.
+- Not mine (per the audit): navy glass, glows, low-contrast text.

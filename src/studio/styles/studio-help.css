@@ -91,7 +91,7 @@
     appearance: none;
     background: none;
     border: 1px solid rgba(var(--di-cyan-rgb), 0.2);
-    border-radius: var(--di-radius);
+    border-radius: 0;
     color: rgba(255, 255, 255, 0.55);
     font-size: var(--di-text-2);
     letter-spacing: 0.08em;
@@ -261,7 +261,7 @@
     bottom: 12px;
     padding: var(--di-space-1) var(--di-space-3);
     border: 1px solid var(--di-cyan);
-    border-radius: var(--di-radius);
+    border-radius: 0;
     color: var(--di-cyan);
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
