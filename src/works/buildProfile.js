@@ -4,7 +4,7 @@
  * Three artifacts come out of this repo, and they differ by exactly one thing —
  * whether the works (src/works/works.js) are in them:
  *
- *   hosted        di-studio.xyz. Everything, plus the hosting furniture that
+ *   hosted        diiii.xyz. Everything, plus the hosting furniture that
  *                 only means something on that domain. ~128 MB of dist.
  *   local         DI_PROFILE=local — an artist's own machine. The program and
  *                 the works, without the furniture.
@@ -54,7 +54,7 @@ export const PROGRAM_PUBLIC_DIRS = ['fonts', 'draco', 'basis', 'suite', 'unicode
 export const resolveBuildProfile = (env = {}) => {
     const local = env.DI_PROFILE === 'local'
     // Slim is only a thing a local build can be. `DI_LOCAL_SLIM=1` on a hosted
-    // build would be a request to ship di-studio.xyz without its exhibitions,
+    // build would be a request to ship diiii.xyz without its exhibitions,
     // which is not a shape anyone wants and not one this returns.
     const slim = local && env.DI_LOCAL_SLIM === '1'
     return {

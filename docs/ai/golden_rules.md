@@ -110,7 +110,7 @@ filter you remember to update.
 **How:**
 1. **Inspect first** — parse the GLB header (JSON chunk at byte 20) for triangle/texture counts, and render preview screenshots headlessly (three.js viewer + playwright; `preserveDrawingBuffer: true` or screenshots come back blank) so you know what the model *is* before deciding placement.
 2. **Crush:** `npx @gltf-transform/cli optimize in.glb out.glb --compress draco --texture-compress webp --texture-size 1024`. Expect 10–100× reduction on scan/AI meshes.
-3. **Serve, don't inline:** put the file in the repo's `public/` with a unique basename and reference it by that literal basename string in code — `scripts/sync-space.mjs` uploads it as a project asset and rewrites the basename to the asset URL in the built HTML. Works in dev (Vite serves `public/` at root) and on di-studio.xyz.
+3. **Serve, don't inline:** put the file in the repo's `public/` with a unique basename and reference it by that literal basename string in code — `scripts/sync-space.mjs` uploads it as a project asset and rewrites the basename to the asset URL in the built HTML. Works in dev (Vite serves `public/` at root) and on diiii.xyz.
 4. **Fallback:** wrap the Canvas in Suspense + an error boundary with a static image fallback — WebGL loss or fetch failure must degrade to the flat asset, never to a hole.
 5. **Verify live, in the iframe:** sandboxed space iframes have origin `null`; `fetch()`-based loaders (GLTF/Draco) need the serverXR permissive-CORS shim for asset reads (in place since `7bfb260`). Media tags dodge CORS; fetch does not. Screenshot the deployed page, not just the local build.
 
@@ -506,7 +506,7 @@ Audit it from outside, against the deployed host, rather than trusting the local
 a space row can exist on one tier and not the other, which is how this one hid:
 
 ```bash
-curl -s https://di-studio.xyz/serverXR/api/spaces | python3 -c "
+curl -s https://diiii.xyz/serverXR/api/spaces | python3 -c "
 import json,sys
 for s in json.load(sys.stdin)['spaces']:
     auto = s['isPublic'] and bool(s['publishedProjectId'])
@@ -1000,7 +1000,7 @@ This does **not** fully solve node-to-node label collision (two labels can still
 
 ### A dev-server endpoint is not a save — if the surface ships, its writes have to ship with it
 
-**Rule:** When an authoring surface is reachable from a deployed build, the thing it writes to must be reachable from a deployed build too. A Vite `configureServer` middleware, a `vite.config.js` plugin with `apply: 'serve'`, an `import.meta.env.DEV` branch — these are correct for writing *source files* and are never a save path for anyone but the person running the dev server. If the panel can be opened on di-studio.xyz, the panel needs somewhere on the server to put an edit.
+**Rule:** When an authoring surface is reachable from a deployed build, the thing it writes to must be reachable from a deployed build too. A Vite `configureServer` middleware, a `vite.config.js` plugin with `apply: 'serve'`, an `import.meta.env.DEV` branch — these are correct for writing *source files* and are never a save path for anyone but the person running the dev server. If the panel can be opened on diiii.xyz, the panel needs somewhere on the server to put an edit.
 
 **Why:** algovrithm's Director shipped exactly this way. It is a full timeline — clips, trims, worlds, lights — reachable from Studio's Spaces list on the live site, and its only "Save to source" POSTed `/__algovrithm/edit-list`, a dev-server middleware that patches `src/algoVrithm/sequences/index.js` in place. On the deployed site the button was there, it was pressable, and it wrote nothing: a collaborator could retime the whole piece and lose it on reload. It failed the way the worst defects fail — no error, no missing control, just work that quietly did not exist afterwards. The hole under it was structural, not specific: a **code space** (one whose scene is React in `src/` rather than a project document) had no server-side home for anything its author tunes, so every knob such a piece grows would land in the same trap.
 

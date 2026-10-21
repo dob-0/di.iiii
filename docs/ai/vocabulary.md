@@ -209,21 +209,23 @@ answering forever like any printed link.
 **The world is `diiii.xyz`.** MANIFESTO's three distances named thedi.studio as the public
 distance. The public distance is the platform, and the platform's address is now `diiii.xyz`
 (live 2026-09-11). `thedi.studio` is the studio's own address on it — one space, eventually
-served under its own domain. `di-studio.xyz` keeps serving, unchanged and forever: it is the
-name printed on the QR in the room and on the workshop handouts, and its job is never to mean
-anything new again.
+served under its own domain. `diiii.xyz` is the one public address (owner, 2026-10-21:
+"diiii.xyz main public"): every new link, default and page names it. `di-studio.xyz` is the old
+address and is to forward to `diiii.xyz`; it is the name printed on the QR in the room and on
+the workshop handouts, so it keeps answering, and its job is never to mean anything new again.
+`scripts/oldAddress.test.js` fails when new code names it outside its allowlist.
 
 ## One open product call
 
 **The creator host must not be named `studio.`** The URL spec (DRAFT, unsigned) proposes
-`studio.di-studio.xyz` for the authoring host. That would make Studio the name of the entire
+`studio.diiii.xyz` for the authoring host. That would make Studio the name of the entire
 authoring side of di.iiii — which is the exact one-word-two-sizes disease this file exists
 to cure, and a hostname in every creator's URL bar teaches it harder than any copy can undo.
 
 The ratified direction is the opposite: MANIFESTO §6 states that "Studio's own role is being
 drawn into Raw's node model as a container node — one palette entry you enter to find its
 subgraph." Ratified beats unsigned, so **Studio is one place inside the product, not the product**. If Stage 0 of the URL spec ever
-ships, give the host a name that is not a product noun — `edit.di-studio.xyz` — or reopen this.
+ships, give the host a name that is not a product noun — `edit.diiii.xyz` — or reopen this.
 
 ## Spelling
 

@@ -105,7 +105,7 @@ const isStart = (r) => r.path.endsWith('/device/start')
 const isPoll = (r) => r.path.endsWith('/device/token')
 const mode = (target) => fs.statSync(target).mode & 0o777
 // The three hosts the tiers name are answered by the stub; the URL asked for is still recorded as asked.
-const rewrite = (url) => String(url).replace(/^(https:\/\/(dev\.diiii\.xyz|di-studio\.xyz)|http:\/\/localhost:4000)/, ORIGIN)
+const rewrite = (url) => String(url).replace(/^(https:\/\/(dev\.diiii\.xyz|diiii\.xyz|di-studio\.xyz)|http:\/\/localhost:4000)/, ORIGIN)
 
 /** One command, in process: real HTTP to the stub, everything else fake. */
 const run = async (command, argv, { env = { DISPLAY: ':0' }, platform = 'linux', fetchImpl = null, signal = null, onSleep = null, hostname = 'taron-laptop', version = '0.4.17' } = {}) => {
@@ -385,13 +385,20 @@ describe('di login — who it signs in as, and what it keeps', () => {
 
         S.pollIndex = 0
         const prod = await run(cmdLogin, ['login', '--no-open', '--tier', 'prod'])
-        expect(prod.requested[0]).toBe('POST https://di-studio.xyz/serverXR/api/auth/device/start')
+        expect(prod.requested[0]).toBe('POST https://diiii.xyz/serverXR/api/auth/device/start')
         expect(Object.keys(JSON.parse(fs.readFileSync(credentialsFile(home), 'utf8'))).sort()).toEqual(['dev', 'prod'])
 
         // --to a tier's own address is that tier
         S.pollIndex = 0
-        const same = await run(cmdLogin, ['login', '--no-open', '--to', 'https://di-studio.xyz/', '--force'])
+        const same = await run(cmdLogin, ['login', '--no-open', '--to', 'https://diiii.xyz/', '--force'])
         expect(same.code).toBe(0)
+        expect(Object.keys(JSON.parse(fs.readFileSync(credentialsFile(home), 'utf8'))).sort()).toEqual(['dev', 'prod'])
+
+        // the old prod address is still prod, and is asked at the address given
+        S.pollIndex = 0
+        const old = await run(cmdLogin, ['login', '--no-open', '--to', 'https://di-studio.xyz/', '--force'])
+        expect(old.code).toBe(0)
+        expect(old.requested[0]).toBe('POST https://di-studio.xyz/serverXR/api/auth/device/start')
         expect(Object.keys(JSON.parse(fs.readFileSync(credentialsFile(home), 'utf8'))).sort()).toEqual(['dev', 'prod'])
     })
 
@@ -518,7 +525,7 @@ describe('di whoami', () => {
         expect(r.out).toContain('not signed in to dev.diiii.xyz — di login')
         expect(r.requested).toEqual([])
         const prod = await run(cmdWhoami, ['whoami', '--tier', 'prod'])
-        expect(prod.out).toContain('not signed in to di-studio.xyz — di login --tier prod')
+        expect(prod.out).toContain('not signed in to diiii.xyz — di login --tier prod')
     })
 
     it('with DI_TOKEN set: says it wins and that the stored login is not the one in use — and still asks about the stored one', async () => {
@@ -546,7 +553,7 @@ describe('di whoami', () => {
         writeLogin({ home, key: 'prod', entry: { token: TOKEN } })
         const r = await run(cmdWhoami, ['whoami', '--tier', 'prod'])
         expect(r.code).toBe(0)
-        expect(r.requested).toEqual(['GET https://di-studio.xyz/serverXR/api/auth/cli/whoami'])
+        expect(r.requested).toEqual(['GET https://diiii.xyz/serverXR/api/auth/cli/whoami'])
     })
 })
 

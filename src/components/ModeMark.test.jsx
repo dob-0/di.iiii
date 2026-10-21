@@ -41,10 +41,11 @@ describe('ModeMark', () => {
         expect(container.querySelector('.mode-mark').getAttribute('style')).toContain('#ffb347')
     })
 
-    // The whole point of the hosted branch: an audience on di-studio.xyz sees
+    // The whole point of the hosted branch: an audience on diiii.xyz sees
     // precisely what it saw before this component existed.
-    it('renders nothing at all on the live site', async () => {
-        atHost('di-studio.xyz')
+    // The old address forwards to the live site; until it does, it serves it.
+    it.each(['diiii.xyz', 'di-studio.xyz'])('renders nothing at all on the live site (%s)', async (host) => {
+        atHost(host)
         const { container } = render(<ModeMark />)
         await waitFor(() => expect(getServerConfigMock).toHaveBeenCalled())
         expect(container.firstChild).toBeNull()
