@@ -1,5 +1,5 @@
 {
-  "note": "One entry per person in the network — all 65 who make di.iiii, not only the ones with rooms yet. `works` (shape: {url,title,line,space,project}) are addresses on di.iiii where their work already stands; `elsewhere` is the handle the roster used to point at. Generated from network-directions/data/inventory.json (52-person roster) via the MIX build's lib/data.mjs, then committed here as static data. build.mjs turns this into pages/<slug>.html and one di-space.<slug>.json each, via room-template.mjs's renderRoom(). Two works (azd and br_id_ge) are shared by more than one person, which is what draws the lines in a room's field. When a person takes their room over in Studio, remove their manifest from di-space.space.json `projects` — the engine never deletes, and a declared page would overwrite what they make.",
+  "note": "One entry per person in the network — all 95 who make di.iiii, not only the ones with rooms yet. `works` (shape: {url,title,line,space,project}) are addresses on di.iiii where their work already stands; `elsewhere` is the handle the roster used to point at. Generated from network-directions/data/inventory.json (52-person roster) via the MIX build's lib/data.mjs, then committed here as static data. build.mjs turns this into pages/<slug>.html and one di-space.<slug>.json each, via room-template.mjs's renderRoom(). Two works (azd and br_id_ge) are shared by more than one person, which is what draws the lines in a room's field. When a person takes their room over in Studio, remove their manifest from di-space.space.json `projects` — the engine never deletes, and a declared page would overwrite what they make. 2026-10-21 (ledger N1138): thirty people were added from public credits only, with no yes on file: the Notations #2 programme record (br_id_ge docs/notations/programme.json, an esora export) and the hosq.co team and projects page for the Video Art artists and the hosq team; the Beyond Form exhibition page (beyond_form src/App.jsx at 3b1b72a); the RecordAR artists list and the WCC works page on di.iiii (di-spaces backup, prod pull 2026-10-21). Start the next sweep from those four places. Partner organisations are not in here: the network is people only until the owner says otherwise.",
   "people": [
     {
       "slug": "gevorg-grigoryan",
@@ -4804,6 +4804,1128 @@
       "discipline": "curator",
       "num": "065",
       "order": 65
+    },
+    {
+      "slug": "inna-ghazaryan",
+      "name": "Inna Ghazaryan",
+      "role": "video artist",
+      "discipline": "video artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "Andastan",
+          "line": "Notations #2, Video Art, Library room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-andastan"
+        },
+        {
+          "url": null,
+          "title": "Urartu",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-01",
+          "space": "br-id-ge",
+          "project": "n2-urartu"
+        },
+        {
+          "url": null,
+          "title": "the body",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-01",
+          "space": "br-id-ge",
+          "project": "n2-the-body"
+        },
+        {
+          "url": null,
+          "title": "between silence and motion",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
+          "space": "br-id-ge",
+          "project": "n2-between-silence-and-motion"
+        }
+      ],
+      "elsewhere": [],
+      "num": "066",
+      "order": 66,
+      "resume": null,
+      "sources": [
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        }
+      ]
+    },
+    {
+      "slug": "vladlena-stoyakina",
+      "name": "Vladlena Stoyakina",
+      "role": "video artist",
+      "discipline": "video artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "A Quiet Dialogue",
+          "line": "Notations #2, Video Art, Library room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-a-quiet-dialogue"
+        },
+        {
+          "url": null,
+          "title": "TV Set",
+          "line": "Notations #2, RA dressing room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-tv-set"
+        }
+      ],
+      "elsewhere": [],
+      "num": "067",
+      "order": 67,
+      "resume": null,
+      "sources": [
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        }
+      ]
+    },
+    {
+      "slug": "kinto-minami",
+      "name": "KINTO Minami",
+      "role": "video artist",
+      "discipline": "video artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "A Quiet Dialogue",
+          "line": "Notations #2, Video Art, Library room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-a-quiet-dialogue"
+        },
+        {
+          "url": null,
+          "title": "Practice of Saying \"Help\"",
+          "line": "Notations #2, National Gallery of Armenia, 2026-08-02",
+          "space": "br-id-ge",
+          "project": "n2-practice-of-saying-help"
+        }
+      ],
+      "elsewhere": [],
+      "num": "068",
+      "order": 68,
+      "resume": null,
+      "sources": [
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        }
+      ]
+    },
+    {
+      "slug": "black-babette",
+      "name": "Black Babette",
+      "role": "video artist",
+      "discipline": "video artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "A Quiet Dialogue",
+          "line": "Notations #2, Video Art, Library room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-a-quiet-dialogue"
+        },
+        {
+          "url": null,
+          "title": "HYDRIA",
+          "line": "Notations #2, Video Art, Library room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-hydria"
+        },
+        {
+          "url": null,
+          "title": "Reverse Tower Ritual",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-01",
+          "space": "br-id-ge",
+          "project": "n2-reverse-tower-ritual"
+        },
+        {
+          "url": null,
+          "title": "Music Production Performances",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
+          "space": "br-id-ge",
+          "project": "n2-music-production-performances"
+        }
+      ],
+      "elsewhere": [],
+      "num": "069",
+      "order": 69,
+      "resume": null,
+      "sources": [
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        }
+      ]
+    },
+    {
+      "slug": "jaxton-su",
+      "name": "Jaxton Su",
+      "role": "video artist",
+      "discipline": "video artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "The World keeps turning",
+          "line": "Notations #2, Video Art, Library room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-the-world-keeps-turning"
+        },
+        {
+          "url": null,
+          "title": "lullabies",
+          "line": "Notations #2, KHOSROVAYN room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-lullabies"
+        }
+      ],
+      "elsewhere": [],
+      "num": "070",
+      "order": 70,
+      "resume": null,
+      "sources": [
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        }
+      ]
+    },
+    {
+      "slug": "lubomir-andrei",
+      "name": "Lubomir Andrei",
+      "role": "video artist",
+      "discipline": "video artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "HYDRIA",
+          "line": "Notations #2, Video Art, Library room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-hydria"
+        },
+        {
+          "url": null,
+          "title": "Reverse Tower Ritual",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-01",
+          "space": "br-id-ge",
+          "project": "n2-reverse-tower-ritual"
+        },
+        {
+          "url": null,
+          "title": "the body",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-01",
+          "space": "br-id-ge",
+          "project": "n2-the-body"
+        },
+        {
+          "url": null,
+          "title": "Meta-Ritual",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
+          "space": "br-id-ge",
+          "project": "n2-meta-ritual"
+        },
+        {
+          "url": null,
+          "title": "Like strawberries",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
+          "space": "br-id-ge",
+          "project": "n2-like-strawberries"
+        }
+      ],
+      "elsewhere": [],
+      "num": "071",
+      "order": 71,
+      "resume": null,
+      "sources": [
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        }
+      ]
+    },
+    {
+      "slug": "artem-semenov",
+      "name": "Artem Semenov",
+      "role": "video artist, curator",
+      "discipline": "video artist, curator",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "HYDRIA",
+          "line": "Notations #2, Video Art, Library room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-hydria"
+        },
+        {
+          "url": null,
+          "title": "GUTS",
+          "line": "Notations #2, TSNKNER room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-guts"
+        },
+        {
+          "url": null,
+          "title": "TV Set",
+          "line": "Notations #2, RA dressing room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-tv-set"
+        },
+        {
+          "url": null,
+          "title": "“Echo” tracing sounds",
+          "line": "Notations #2, ZOOYGKET room, 2nd floor, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-echo-tracing-sounds"
+        },
+        {
+          "url": null,
+          "title": "Documental Art",
+          "line": "Notations #2, curator — hosq",
+          "space": null,
+          "project": null
+        }
+      ],
+      "elsewhere": [],
+      "num": "072",
+      "order": 72,
+      "resume": null,
+      "sources": [
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        },
+        {
+          "label": "hosq team and projects, Notations #2 open call",
+          "href": "https://hosq.co/notations-2-open-call"
+        }
+      ]
+    },
+    {
+      "slug": "anika-krbetschek",
+      "name": "Anika Krbetschek",
+      "role": "video artist",
+      "discipline": "video artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "A Song is a Loom is a Home",
+          "line": "Notations #2, Video Art, Library room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-a-song-is-a-loom-is-a-home"
+        },
+        {
+          "url": null,
+          "title": "Surb (Holy)",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-01",
+          "space": "br-id-ge",
+          "project": "n2-surb-holy"
+        },
+        {
+          "url": null,
+          "title": "The archive of the Lost Rituals Clinics",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
+          "space": "br-id-ge",
+          "project": "n2-the-archive-of-the-lost-rituals-clinics"
+        },
+        {
+          "url": null,
+          "title": "Sound Wall",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
+          "space": "br-id-ge",
+          "project": "n2-sound-wall"
+        }
+      ],
+      "elsewhere": [],
+      "num": "073",
+      "order": 73,
+      "resume": null,
+      "sources": [
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        }
+      ]
+    },
+    {
+      "slug": "juliette-martirosyan",
+      "name": "Juliette Martirosyan",
+      "role": "video artist",
+      "discipline": "video artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "A Song is a Loom is a Home",
+          "line": "Notations #2, Video Art, Library room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-a-song-is-a-loom-is-a-home"
+        },
+        {
+          "url": null,
+          "title": "mom tapel",
+          "line": "Notations #2, ZOOYGKET room, 2nd floor, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-mom-tapel"
+        },
+        {
+          "url": null,
+          "title": "“Echo” tracing sounds",
+          "line": "Notations #2, ZOOYGKET room, 2nd floor, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-echo-tracing-sounds"
+        }
+      ],
+      "elsewhere": [],
+      "num": "074",
+      "order": 74,
+      "resume": null,
+      "sources": [
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        }
+      ]
+    },
+    {
+      "slug": "mariam-gevorgyan",
+      "name": "Mariam Gevorgyan",
+      "role": "video artist",
+      "discipline": "video artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "A Song is a Loom is a Home",
+          "line": "Notations #2, Video Art, Library room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-a-song-is-a-loom-is-a-home"
+        },
+        {
+          "url": null,
+          "title": "emotions",
+          "line": "Notations #2, EKORJ room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-emotions"
+        },
+        {
+          "url": null,
+          "title": "“Echo” tracing sounds",
+          "line": "Notations #2, ZOOYGKET room, 2nd floor, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-echo-tracing-sounds"
+        },
+        {
+          "url": null,
+          "title": "\"micro-macro\"",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
+          "space": "br-id-ge",
+          "project": "n2-micro-macro"
+        }
+      ],
+      "elsewhere": [],
+      "num": "075",
+      "order": 75,
+      "resume": null,
+      "sources": [
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        }
+      ]
+    },
+    {
+      "slug": "andriesh-gandrabur",
+      "name": "Andriesh Gandrabur",
+      "role": "visionary and lead curator, hosq",
+      "discipline": "visionary and lead curator, hosq",
+      "team": false,
+      "section": "curators",
+      "sectionLabel": "curators",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "Reverse Tower Ritual",
+          "line": "Notations #2, curator — State Philharmonia of Armenia, 2026-08-01",
+          "space": "br-id-ge",
+          "project": "n2-reverse-tower-ritual"
+        },
+        {
+          "url": null,
+          "title": "between silence and motion",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
+          "space": "br-id-ge",
+          "project": "n2-between-silence-and-motion"
+        },
+        {
+          "url": null,
+          "title": "It's mi",
+          "line": "Notations #2, curator — State Philharmonia of Armenia, 2026-08-02",
+          "space": null,
+          "project": null
+        }
+      ],
+      "elsewhere": [],
+      "num": "076",
+      "order": 76,
+      "resume": null,
+      "sources": [
+        {
+          "label": "hosq team and projects, Notations #2 open call",
+          "href": "https://hosq.co/notations-2-open-call"
+        },
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        }
+      ]
+    },
+    {
+      "slug": "sonya-ovchinnikova",
+      "name": "Sonya Ovchinnikova",
+      "role": "co-curator, hosq",
+      "discipline": "co-curator, hosq",
+      "team": false,
+      "section": "curators",
+      "sectionLabel": "curators",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "Short Songs",
+          "line": "Notations #2, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-short-songs"
+        }
+      ],
+      "elsewhere": [],
+      "num": "077",
+      "order": 77,
+      "resume": null,
+      "sources": [
+        {
+          "label": "hosq team and projects, Notations #2 open call",
+          "href": "https://hosq.co/notations-2-open-call"
+        },
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        }
+      ]
+    },
+    {
+      "slug": "uliana-pyadushkina",
+      "name": "Uliana Pyadushkina",
+      "role": "co-curator, hosq",
+      "discipline": "co-curator, hosq",
+      "team": false,
+      "section": "curators",
+      "sectionLabel": "curators",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "Short Songs",
+          "line": "Notations #2, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-short-songs"
+        },
+        {
+          "url": null,
+          "title": "artists mapping & archive",
+          "line": "Notations #2, VERNAKHAGH room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-artists-mapping-archive"
+        },
+        {
+          "url": null,
+          "title": "what is hosq",
+          "line": "Notations #2, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-what-is-hosq"
+        },
+        {
+          "url": null,
+          "title": "Objects and Meanings",
+          "line": "Notations #2, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-objects-and-meanings"
+        },
+        {
+          "url": null,
+          "title": "Sound Wall",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
+          "space": "br-id-ge",
+          "project": "n2-sound-wall"
+        },
+        {
+          "url": null,
+          "title": "It's mi",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
+          "space": null,
+          "project": null
+        }
+      ],
+      "elsewhere": [],
+      "num": "078",
+      "order": 78,
+      "resume": null,
+      "sources": [
+        {
+          "label": "hosq team and projects, Notations #2 open call",
+          "href": "https://hosq.co/notations-2-open-call"
+        },
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        }
+      ]
+    },
+    {
+      "slug": "arthur-atayan",
+      "name": "Arthur Atayan",
+      "role": "co-curator, hosq",
+      "discipline": "co-curator, hosq",
+      "team": false,
+      "section": "curators",
+      "sectionLabel": "curators",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "079",
+      "order": 79,
+      "resume": null,
+      "sources": [
+        {
+          "label": "hosq team and projects, Notations #2 open call",
+          "href": "https://hosq.co/notations-2-open-call"
+        }
+      ]
+    },
+    {
+      "slug": "dima-ustinov",
+      "name": "Dima Ustinov",
+      "role": "curator facilitator",
+      "discipline": "curator facilitator",
+      "team": false,
+      "section": "curators",
+      "sectionLabel": "curators",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "Sound Bath",
+          "line": "Notations #2, curator — National Gallery of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-sound-bath"
+        }
+      ],
+      "elsewhere": [],
+      "num": "080",
+      "order": 80,
+      "resume": null,
+      "sources": [
+        {
+          "label": "hosq team and projects, Notations #2 open call",
+          "href": "https://hosq.co/notations-2-open-call"
+        },
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        }
+      ]
+    },
+    {
+      "slug": "arthur-steiner",
+      "name": "Arthur Steiner",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/beyond-form",
+          "title": "Beyond Form",
+          "line": "Gyumri exhibition, 7-20 Aug 2026, part 1",
+          "space": "beyond-form",
+          "project": "open-call"
+        }
+      ],
+      "elsewhere": [],
+      "num": "081",
+      "order": 81,
+      "resume": null,
+      "sources": [
+        {
+          "label": "Beyond Form exhibition, Gyumri, 7-20 Aug 2026 (name printed Արթուր Շտայներ)",
+          "href": "https://diiii.xyz/beyond-form"
+        }
+      ]
+    },
+    {
+      "slug": "daria-daka-vasiuta",
+      "name": "Daria Daka Vasiuta",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/beyond-form",
+          "title": "Beyond Form",
+          "line": "Gyumri exhibition, 7-20 Aug 2026, part 1, “AVGYR: Gyumri” — my personal mythology, brought here",
+          "space": "beyond-form",
+          "project": "open-call"
+        }
+      ],
+      "elsewhere": [],
+      "num": "082",
+      "order": 82,
+      "resume": null,
+      "sources": [
+        {
+          "label": "Beyond Form exhibition, Gyumri, 7-20 Aug 2026 (name printed Դարիա Դակա Վասիուտա)",
+          "href": "https://diiii.xyz/beyond-form"
+        }
+      ]
+    },
+    {
+      "slug": "kristine-sargsyan",
+      "name": "Kristine Sargsyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/beyond-form",
+          "title": "Beyond Form",
+          "line": "Gyumri exhibition, 7-20 Aug 2026, part 1",
+          "space": "beyond-form",
+          "project": "open-call"
+        }
+      ],
+      "elsewhere": [],
+      "num": "083",
+      "order": 83,
+      "resume": null,
+      "sources": [
+        {
+          "label": "Beyond Form exhibition, Gyumri, 7-20 Aug 2026 (name printed Քրիստինե Սարգսյան)",
+          "href": "https://diiii.xyz/beyond-form"
+        }
+      ]
+    },
+    {
+      "slug": "milena-mkrtichyan",
+      "name": "Milena Mkrtichyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/beyond-form",
+          "title": "Beyond Form",
+          "line": "Gyumri exhibition, 7-20 Aug 2026, part 1, “Domik”",
+          "space": "beyond-form",
+          "project": "open-call"
+        }
+      ],
+      "elsewhere": [],
+      "num": "084",
+      "order": 84,
+      "resume": null,
+      "sources": [
+        {
+          "label": "Beyond Form exhibition, Gyumri, 7-20 Aug 2026 (name printed Միլենա Մկրտիչյան)",
+          "href": "https://diiii.xyz/beyond-form"
+        }
+      ]
+    },
+    {
+      "slug": "levon-hakobyan",
+      "name": "Levon Hakobyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/beyond-form",
+          "title": "Beyond Form",
+          "line": "Gyumri exhibition, 7-20 Aug 2026, part 2",
+          "space": "beyond-form",
+          "project": "open-call"
+        }
+      ],
+      "elsewhere": [],
+      "num": "085",
+      "order": 85,
+      "resume": null,
+      "sources": [
+        {
+          "label": "Beyond Form exhibition, Gyumri, 7-20 Aug 2026 (name printed Լևոն Հակոբյան)",
+          "href": "https://diiii.xyz/beyond-form"
+        }
+      ]
+    },
+    {
+      "slug": "ani-hovhannisyan",
+      "name": "Ani Hovhannisyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/beyond-form",
+          "title": "Beyond Form",
+          "line": "Gyumri exhibition, 7-20 Aug 2026, part 2, “Trices of time”",
+          "space": "beyond-form",
+          "project": "open-call"
+        }
+      ],
+      "elsewhere": [],
+      "num": "086",
+      "order": 86,
+      "resume": null,
+      "sources": [
+        {
+          "label": "Beyond Form exhibition, Gyumri, 7-20 Aug 2026 (name printed Անի Հովհաննիսյան)",
+          "href": "https://diiii.xyz/beyond-form"
+        }
+      ]
+    },
+    {
+      "slug": "vova-simonyan",
+      "name": "Vova Simonyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/beyond-form",
+          "title": "Beyond Form",
+          "line": "Gyumri exhibition, 7-20 Aug 2026, part 2",
+          "space": "beyond-form",
+          "project": "open-call"
+        }
+      ],
+      "elsewhere": [],
+      "num": "087",
+      "order": 87,
+      "resume": null,
+      "sources": [
+        {
+          "label": "Beyond Form exhibition, Gyumri, 7-20 Aug 2026 (name printed Վովա Սիմոնյան)",
+          "href": "https://diiii.xyz/beyond-form"
+        }
+      ]
+    },
+    {
+      "slug": "ine-sergeyan",
+      "name": "Ine Sergeyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/beyond-form",
+          "title": "Beyond Form",
+          "line": "Gyumri exhibition, 7-20 Aug 2026, part 3, “Palimpsest: The Reincarnation of the City”",
+          "space": "beyond-form",
+          "project": "open-call"
+        }
+      ],
+      "elsewhere": [],
+      "num": "088",
+      "order": 88,
+      "resume": null,
+      "sources": [
+        {
+          "label": "Beyond Form exhibition, Gyumri, 7-20 Aug 2026 (name printed Ինե Սերգեյան)",
+          "href": "https://diiii.xyz/beyond-form"
+        }
+      ]
+    },
+    {
+      "slug": "ani-petrosyan",
+      "name": "Ani Petrosyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/beyond-form",
+          "title": "Beyond Form",
+          "line": "Gyumri exhibition, 7-20 Aug 2026, part 3, “The Rift of Time”",
+          "space": "beyond-form",
+          "project": "open-call"
+        }
+      ],
+      "elsewhere": [],
+      "num": "089",
+      "order": 89,
+      "resume": null,
+      "sources": [
+        {
+          "label": "Beyond Form exhibition, Gyumri, 7-20 Aug 2026 (name printed Անի Պետրոսյան)",
+          "href": "https://diiii.xyz/beyond-form"
+        }
+      ]
+    },
+    {
+      "slug": "shushan-vardanyan",
+      "name": "Shushan Vardanyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/beyond-form",
+          "title": "Beyond Form",
+          "line": "Gyumri exhibition, 7-20 Aug 2026, part 3",
+          "space": "beyond-form",
+          "project": "open-call"
+        }
+      ],
+      "elsewhere": [],
+      "num": "090",
+      "order": 90,
+      "resume": null,
+      "sources": [
+        {
+          "label": "Beyond Form exhibition, Gyumri, 7-20 Aug 2026 (name printed Շուշան Վարդանյան)",
+          "href": "https://diiii.xyz/beyond-form"
+        }
+      ]
+    },
+    {
+      "slug": "john-avalencher",
+      "name": "John Avalencher",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "a.001 — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": "platform-recordar-dii-project"
+        }
+      ],
+      "elsewhere": [],
+      "num": "091",
+      "order": 91,
+      "resume": null,
+      "sources": [
+        {
+          "label": "RecordAR on di.iiii, the artists list",
+          "href": "https://diiii.xyz/platform-recordar"
+        }
+      ]
+    },
+    {
+      "slug": "daniel-ndayishimiye",
+      "name": "Daniel Ndayishimiye",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "a.003, stone prints — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": "platform-recordar-dii-project"
+        }
+      ],
+      "elsewhere": [],
+      "num": "092",
+      "order": 92,
+      "resume": null,
+      "sources": [
+        {
+          "label": "RecordAR on di.iiii, the artists list",
+          "href": "https://diiii.xyz/platform-recordar"
+        }
+      ]
+    },
+    {
+      "slug": "ibrahim-hatahet",
+      "name": "Ibrahim Hatahet",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "a.007 — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": "platform-recordar-dii-project"
+        }
+      ],
+      "elsewhere": [],
+      "num": "093",
+      "order": 93,
+      "resume": null,
+      "sources": [
+        {
+          "label": "RecordAR on di.iiii, the artists list",
+          "href": "https://diiii.xyz/platform-recordar"
+        }
+      ]
+    },
+    {
+      "slug": "veronika-balakirieva",
+      "name": "Veronika Balakirieva",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "a.008, stone prints — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": "platform-recordar-dii-project"
+        }
+      ],
+      "elsewhere": [],
+      "num": "094",
+      "order": 94,
+      "resume": null,
+      "sources": [
+        {
+          "label": "RecordAR on di.iiii, the artists list",
+          "href": "https://diiii.xyz/platform-recordar"
+        }
+      ]
+    },
+    {
+      "slug": "sanjay-j-choudari",
+      "name": "Sanjay J Choudari",
+      "role": "poet",
+      "discipline": "poet",
+      "team": false,
+      "section": "production",
+      "sectionLabel": "writing · production",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/wcc/sanjay-j-choudari",
+          "title": "WCC Exhibition",
+          "line": "“What My Mother Carried” — poetry, Women Creating Change, Gyumri, 2026",
+          "space": "wcc",
+          "project": "sanjay-j-choudari"
+        }
+      ],
+      "elsewhere": [],
+      "num": "095",
+      "order": 95,
+      "resume": null,
+      "sources": [
+        {
+          "label": "the WCC exhibition on di.iiii, the works page",
+          "href": "https://diiii.xyz/wcc"
+        }
+      ]
     }
   ]
 }

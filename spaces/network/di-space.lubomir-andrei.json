@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-lubomir-andrei",
+  "slug": "lubomir-andrei",
+  "label": "Lubomir Andrei",
+  "mode": "code",
+  "entry": "spaces/network/pages/lubomir-andrei.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

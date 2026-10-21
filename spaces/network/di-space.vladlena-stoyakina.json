@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-vladlena-stoyakina",
+  "slug": "vladlena-stoyakina",
+  "label": "Vladlena Stoyakina",
+  "mode": "code",
+  "entry": "spaces/network/pages/vladlena-stoyakina.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

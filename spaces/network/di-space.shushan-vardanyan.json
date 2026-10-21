@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-shushan-vardanyan",
+  "slug": "shushan-vardanyan",
+  "label": "Shushan Vardanyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/shushan-vardanyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

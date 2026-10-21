@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-ani-petrosyan",
+  "slug": "ani-petrosyan",
+  "label": "Ani Petrosyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/ani-petrosyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

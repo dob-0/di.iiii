@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-milena-mkrtichyan",
+  "slug": "milena-mkrtichyan",
+  "label": "Milena Mkrtichyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/milena-mkrtichyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}
