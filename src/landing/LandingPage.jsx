@@ -98,7 +98,7 @@ const LOCAL_STEP_OPEN = { n: '01', title: 'Open a space', body: 'Click "Step ins
 // row was hidden here too; it is filtered per chip now — see
 // featuredSpacesFor above.) Same one boolean, no second mode.
 const LOCAL_TAGLINE = 'Running on your own machine. Offline, no account, and the work stays in your home folder.'
-const LOCAL_CTA_SUB = 'no account, no quota. Studio is a room on the same desk.'
+const LOCAL_CTA_SUB = 'no account, no quota. Studio runs here too, on this machine.'
 const LOCAL_FEATURE_SPACES = { icon: '✦', title: 'Your machine, your spaces', desc: 'This di.iiii runs locally. Create as many spaces as you like — no sign-in, no quota, and your work stays in your own home folder.' }
 
 // Step 04's promise reaches further than a local install goes: `di up` binds
@@ -630,7 +630,7 @@ function LandingPageInner() {
             <Box className="lp-section" component="section" id="who">
                 <Box className="lp-section-inner">
                     <Typography className="lp-section-eyebrow">Audience</Typography>
-                    <Typography className="lp-section-title" component="h2">Made for everyone</Typography>
+                    <Typography className="lp-section-title" component="h2">Who uses it, and for what</Typography>
                     <Typography className="lp-section-body">
                         di.iiii works for artists, developers, organizers, and automated systems alike.
                     </Typography>

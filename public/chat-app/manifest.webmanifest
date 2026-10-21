@@ -2,7 +2,7 @@
     "id": "/chat",
     "name": "iiii",
     "short_name": "iiii",
-    "description": "Your rooms and your private conversations, in one place.",
+    "description": "Your spaces' conversations and your private ones, in one place.",
     "start_url": "/chat",
     "scope": "/chat",
     "display": "standalone",

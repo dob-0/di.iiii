@@ -189,7 +189,7 @@ describe('SpaceHub', () => {
     it('names /spaces itself in the tab, not the platform', async () => {
         listServerSpaces.mockResolvedValue([])
         render(<SpaceHub />)
-        await screen.findByText('Spaces')
+        await screen.findByRole('heading', { name: 'spaces' })
         expect(document.title).toBe('Spaces — di.iiii')
     })
 

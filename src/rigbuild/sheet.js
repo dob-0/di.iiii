@@ -367,7 +367,7 @@ export const PATCH_COLUMNS = [
     { label: 'watts', value: (r) => r.watts ?? '' },
     { label: 'watts basis', value: (r) => r.wattsBasis || '' },
     { label: 'flags', value: flagText },
-    { label: 'entity', value: (r) => r.id }
+    { label: 'object', value: (r) => r.id }
 ]
 
 export const POWER_COLUMNS = [

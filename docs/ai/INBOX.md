@@ -6,6 +6,20 @@ session end; picked items become normal scoped tasks. Newest on top.
 
 ---
 
+## 2026-10-21 · copy-guard-blind-spots
+**raw:** found while adding the brand-words guard, not an owner ask.
+**translation:** `src/copyVocabulary.test.js`'s banned-word scan has two blind spots.
+(1) `stripComments` reads the `/*` inside a string (`accept="image/*"`, SpaceHub.jsx:1014)
+as a comment opening and drops everything up to the next `*/`: 394 lines of SpaceHub.jsx,
+the page's whole header included, are never scanned (measured over all 89 guarded files:
+that is the only such hole today, and those lines hold no banned word now). (2) JSX text
+that wraps onto its own line (`<p>\n  No rooms yet …\n</p>`) is not extracted at all.
+The brand-words pass works around both by matching retired strings against the plain file
+text. Fix: strip comments with a tokenizer that knows string literals, and read multi-line
+JSX text; then re-run the scan and fix what it finds.
+**route:** QA · **size:** S
+**status:** parked.
+
 ## 2026-09-28 · first-run-owner-and-send-work
 **raw:** "yes and also what i tought we need to admin or 1st usage pswd where when you
 install it will create psd if you work local and want to keep files and workflow and after

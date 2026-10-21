@@ -41,7 +41,7 @@ export default function StudioCodeSpaceDirector({ spaceId }) {
             <div className="studio-shell-root scsd-root">
                 <div className="scsd-head">
                     <p className="sh-space-context">Space: {spaceId}</p>
-                    <h1 className="sh-title">No director here</h1>
+                    <h1 className="sh-title">no director here</h1>
                 </div>
                 <div className="scsd-empty">
                     <p>

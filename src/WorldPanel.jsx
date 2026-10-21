@@ -40,7 +40,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
 
     return (
         <PanelShell
-            title="World Settings"
+            title="World settings"
             onClose={closePanel}
             surfaceMode={surfaceMode}
             initialPosition={{ x: 704, y: 120 }}
@@ -63,7 +63,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
                     onClick={resetToDefaults}
                     title="Reset all world settings to defaults"
                 >
-                    Reset to Defaults
+                    Reset to defaults
                 </button>
             </div>
             <div className="prop-row">
@@ -76,7 +76,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
                 />
             </div>
             <div className="prop-row">
-                <label htmlFor={`${fieldPrefix}-grid-size`}>Grid Size</label>
+                <label htmlFor={`${fieldPrefix}-grid-size`}>Grid size</label>
                 <input 
                     id={`${fieldPrefix}-grid-size`}
                     type="number"
@@ -88,7 +88,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
             </div>
 
             <div className="prop-row two-column">
-                <label htmlFor={`${fieldPrefix}-grid-cell-size`}>Grid Cell Size</label>
+                <label htmlFor={`${fieldPrefix}-grid-cell-size`}>Grid cell size</label>
                 <input
                     id={`${fieldPrefix}-grid-cell-size`}
                     type="number"
@@ -99,7 +99,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
                 />
             </div>
             <div className="prop-row two-column">
-                <label htmlFor={`${fieldPrefix}-grid-thickness`}>Grid Thickness</label>
+                <label htmlFor={`${fieldPrefix}-grid-thickness`}>Grid thickness</label>
                 <input
                     id={`${fieldPrefix}-grid-thickness`}
                     type="number"
@@ -110,7 +110,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
                 />
             </div>
             <div className="prop-row two-column">
-                <label htmlFor={`${fieldPrefix}-grid-section-size`}>Grid Section Size</label>
+                <label htmlFor={`${fieldPrefix}-grid-section-size`}>Grid section size</label>
                 <input
                     id={`${fieldPrefix}-grid-section-size`}
                     type="number"
@@ -121,7 +121,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
                 />
             </div>
             <div className="prop-row two-column">
-                <label htmlFor={`${fieldPrefix}-section-thickness`}>Section Thickness</label>
+                <label htmlFor={`${fieldPrefix}-section-thickness`}>Section thickness</label>
                 <input
                     id={`${fieldPrefix}-section-thickness`}
                     type="number"
@@ -132,7 +132,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
                 />
             </div>
             <div className="prop-row two-column">
-                <label htmlFor={`${fieldPrefix}-grid-fade-distance`}>Grid Fade Distance</label>
+                <label htmlFor={`${fieldPrefix}-grid-fade-distance`}>Grid fade distance</label>
                 <input
                     id={`${fieldPrefix}-grid-fade-distance`}
                     type="number"
@@ -143,7 +143,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
                 />
             </div>
             <div className="prop-row two-column">
-                <label htmlFor={`${fieldPrefix}-grid-fade-strength`}>Grid Fade Strength</label>
+                <label htmlFor={`${fieldPrefix}-grid-fade-strength`}>Grid fade strength</label>
                 <input
                     id={`${fieldPrefix}-grid-fade-strength`}
                     type="number"
@@ -155,7 +155,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
                 />
             </div>
             <div className="prop-row two-column">
-                <label htmlFor={`${fieldPrefix}-grid-offset`}>Grid Offset</label>
+                <label htmlFor={`${fieldPrefix}-grid-offset`}>Grid offset</label>
                 <input
                     id={`${fieldPrefix}-grid-offset`}
                     type="number"
@@ -167,7 +167,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
             </div>
 
             <div className="prop-row">
-                <label htmlFor={`${fieldPrefix}-ambient-color`}>Ambient Color</label>
+                <label htmlFor={`${fieldPrefix}-ambient-color`}>Ambient color</label>
                 <input
                     id={`${fieldPrefix}-ambient-color`}
                     type="color"
@@ -176,7 +176,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
                 />
             </div>
             <div className="prop-row">
-                <label htmlFor={`${fieldPrefix}-ambient-intensity`}>Ambient Intensity</label>
+                <label htmlFor={`${fieldPrefix}-ambient-intensity`}>Ambient intensity</label>
                 <input
                     id={`${fieldPrefix}-ambient-intensity`}
                     type="range"
@@ -189,7 +189,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
             </div>
 
             <div className="prop-row">
-                <label htmlFor={`${fieldPrefix}-sun-color`}>Sun Color</label>
+                <label htmlFor={`${fieldPrefix}-sun-color`}>Sun color</label>
                 <input
                     id={`${fieldPrefix}-sun-color`}
                     type="color"
@@ -198,7 +198,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
                 />
             </div>
             <div className="prop-row">
-                <label htmlFor={`${fieldPrefix}-sun-intensity`}>Sun Intensity</label>
+                <label htmlFor={`${fieldPrefix}-sun-intensity`}>Sun intensity</label>
                 <input
                     id={`${fieldPrefix}-sun-intensity`}
                     type="range"
@@ -210,7 +210,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
                 />
             </div>
             <div className="prop-row">
-                <label htmlFor={`${fieldPrefix}-sun-height`}>Sun Height</label>
+                <label htmlFor={`${fieldPrefix}-sun-height`}>Sun height</label>
                 <input
                     id={`${fieldPrefix}-sun-height`}
                     type="range"
@@ -225,7 +225,7 @@ export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
                 />
             </div>
             <div className="prop-row">
-                <label htmlFor={`${fieldPrefix}-sun-offset`}>Sun Offset</label>
+                <label htmlFor={`${fieldPrefix}-sun-offset`}>Sun offset</label>
                 <input
                     id={`${fieldPrefix}-sun-offset`}
                     type="range"

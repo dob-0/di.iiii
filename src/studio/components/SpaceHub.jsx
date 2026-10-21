@@ -1259,7 +1259,7 @@ export default function SpaceHub() {
                 <div className="ssh-top-row">
                     <div>
                         <p className="ssh-eyebrow">di.iiii</p>
-                        <h1 className="ssh-title">Spaces</h1>
+                        <h1 className="ssh-title">spaces</h1>
                     </div>
                     <div className="ssh-actions">
                         {spaces.length > 0 && (

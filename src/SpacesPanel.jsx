@@ -99,7 +99,7 @@ export default function SpacesPanel({
                     )}
                 </div>
                 <div className="space-name-field">
-                    <label htmlFor="space-open-target-input">Open After Create</label>
+                    <label htmlFor="space-open-target-input">Open after create</label>
                     <select
                         id="space-open-target-input"
                         value={openAfterCreateTarget}
@@ -118,7 +118,7 @@ export default function SpacesPanel({
                         onClick={onCreateSpace}
                         disabled={!canCreateSpace}
                     >
-                        {isCreatingSpace ? 'Creating...' : 'New Temp Space'}
+                        {isCreatingSpace ? 'Creating...' : 'New temp space'}
                     </button>
                     <button
                         type="button"
@@ -184,7 +184,7 @@ export default function SpacesPanel({
                                         {isLive ? 'View Live' : 'Open'}
                                     </button>
                                     <button type="button" onClick={() => handleCopy(space.id)}>
-                                        {copiedId === space.id ? 'Copied!' : (isLive ? 'Copy Live Link' : 'Copy Link')}
+                                        {copiedId === space.id ? 'Copied' : (isLive ? 'Copy live link' : 'Copy link')}
                                     </button>
                                     {isOwned && (
                                         <>

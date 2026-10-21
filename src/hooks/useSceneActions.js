@@ -138,7 +138,7 @@ export function useSceneActions({
         }
         if (persistSceneDataWithStatus?.(sceneData, 'Saved view locally')) {
             updateSceneSignature?.(sceneData)
-            alert('View saved! It will now load on refresh.')
+            alert('View saved. It loads when you refresh.')
         }
     }, [getBaseSceneData, getSavedViewData, persistSceneDataWithStatus, setDefault3DView, updateSceneSignature])
 
