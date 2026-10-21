@@ -46,6 +46,21 @@ export const resolveVanityProjectLink = async (spaceSegment, projectSegment) => 
     }
 }
 
+// The bare /{space} address. The server answers { movedTo } when the space's
+// front door left it in a recorded move and no front door was set since, and
+// only when this caller could open where it leads (serverXR/src/index.js
+// GET /api/resolve/:spaceSegment). null on a 404 — there is nothing to
+// forward and the space opens as it always did.
+export const resolveSpaceRoot = async (spaceSegment) => {
+    try {
+        const data = await apiFetch(`/api/resolve/${encodeURIComponent(spaceSegment)}`)
+        return { movedTo: data.movedTo || null }
+    } catch (error) {
+        if (error?.status === 404) return null
+        throw error
+    }
+}
+
 export const createServerSpace = async ({ label, slug, isPermanent = false } = {}) => {
     const data = await apiFetch('/api/spaces', {
         method: 'POST',
