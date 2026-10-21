@@ -112,6 +112,13 @@ describe('repointAssets', () => {
     const other = `/serverXR/api/projects/orange-room/assets/${H1}`
     expect(repointAssets(`x ${other} y`, 'elevation', 'the-yard')).toEqual({ html: `x ${other} y`, hashes: [] })
   })
+  it('sees every asset the repo page spaces/dilijan/aren/yard.html names, so a combine copies them all', () => {
+    // An asset URL built as PREFIX + hash is invisible to repointAssets: the combine would neither check nor copy it.
+    const html = fs.readFileSync(path.join(here, '../../spaces/dilijan/aren/yard.html'), 'utf8')
+    const named = new Set(html.match(/[0-9a-f]{64}/g))
+    expect(named.size).toBe(4) // cloud, fragment pack, yard mesh, wall_mid photo
+    expect(repointAssets(html, 'the-yard', 'the-yard').hashes.sort()).toEqual([...named].sort())
+  })
 })
 
 describe('buildCombinedPage', () => {

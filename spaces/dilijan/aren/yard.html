@@ -47,20 +47,20 @@
 <script>window.THREE||document.write('<script src="/vendor/three@0.128.0/three.min.js"><\/script>')</script>
 <script>
 // ---------- data: both live in the project's own assets ----------
-const ASSET='/serverXR/api/projects/the-yard/assets/';
-const fetchAsset=(hash,what)=>fetch(ASSET+hash,{mode:'cors'}).then(r=>{if(!r.ok)throw new Error(what+' '+r.status);return r.arrayBuffer();});
+// Each URL is written whole, so scripts/space/combine-pages.mjs sees it (and copies the asset into the target project).
+const fetchAsset=(url,what)=>fetch(url,{mode:'cors'}).then(r=>{if(!r.ok)throw new Error(what+' '+r.status);return r.arrayBuffer();});
 // the yard's measured cloud: 89 999 points, quantised position + colour, deflate-raw (from the yard page)
 const PMETA={"n": 89999, "min": [-5.02, 0.0, -3.38], "range": [11.11, 1.75, 6.76]};
-const CLOUD=fetchAsset('a20d668825b2a369fc0eb2dbeb8c437c0ecbe38e302805795e7726da145463e9','cloud');
+const CLOUD=fetchAsset('/serverXR/api/projects/the-yard/assets/a20d668825b2a369fc0eb2dbeb8c437c0ecbe38e302805795e7726da145463e9','cloud');
 // the wall page's pack: three fragments (wall, cabin, courtyard), photos 2048/2048/1024 px, and a contact shadow
-const PACK=fetchAsset('e30e26445e9f25c62e5c21aa14d65941d7b1f102adf4ac20ae5b5416d197e5e8','fragments');
+const PACK=fetchAsset('/serverXR/api/projects/the-yard/assets/e30e26445e9f25c62e5c21aa14d65941d7b1f102adf4ac20ae5b5416d197e5e8','fragments');
 // Where each fragment stands in the yard: yaw about the vertical (degrees) and position (metres), found by registering
 // it on the yard's own scan (spaces/dilijan/aren/register.py, trimmed ICP; residuals in spaces/dilijan/aren/README.md).
 // The cabin is NOT in the yard's scan (no pose matches its shape or its photo: README), so it has no place here: it is
 // shown only in the wall, arriving the way the wall page brings it in. The yard's own part it seemed to stand on,
 // wall_mid, comes from the yard page's mesh, so the yard stays whole.
 const IN_YARD={"wall":{"yaw":229.769,"t":[4.5694,0.8666,0.4348]},"courtyard":{"yaw":0,"t":[0.0004,0.844,-0.0022]}};
-const YARD_MESH='8bf0c55fa6878b14d42a64de7a4aaaafd2cc0bac928763080422860e94e5f4a0', WALL_MID_PHOTO='5f72ae52da1f59fcf0d39f2f4afe7f6a684420b18ae916f0a2b8f34fc23f83d9';
+const YARD_MESH='/serverXR/api/projects/the-yard/assets/8bf0c55fa6878b14d42a64de7a4aaaafd2cc0bac928763080422860e94e5f4a0', WALL_MID_PHOTO='/serverXR/api/projects/the-yard/assets/5f72ae52da1f59fcf0d39f2f4afe7f6a684420b18ae916f0a2b8f34fc23f83d9';
 const WALL_MID={gmin:[-5.02,0.0,-3.38],grng:[11.11,1.75,6.76],nv:29189,nf:49999,off:987056};
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const mark=document.getElementById('mark');
@@ -292,7 +292,7 @@ async function buildFragments(){
   const P=new Uint16Array(mb.buffer,off,nv*3), U=new Uint16Array(mb.buffer,off+nv*6,nv*2), I=new Uint16Array(mb.buffer,off+nv*10,nf*3);
   const pos=new Float32Array(nv*3), uv=new Float32Array(nv*2);
   for(let i=0;i<nv;i++){for(let k=0;k<3;k++)pos[i*3+k]=gmin[k]+P[i*3+k]/65535*grng[k];uv[i*2]=U[i*2]/65535;uv[i*2+1]=U[i*2+1]/65535;}
-  fragments.push(buildFragment({name:'wall_mid',positions:pos,uvs:uv,indices:new Uint16Array(I),nf,area:0,center:[0,0,0]},await loadImage(ASSET+WALL_MID_PHOTO),'yard'));
+  fragments.push(buildFragment({name:'wall_mid',positions:pos,uvs:uv,indices:new Uint16Array(I),nf,area:0,center:[0,0,0]},await loadImage(WALL_MID_PHOTO),'yard'));
   placeFragments(now());
 }
 
