@@ -476,6 +476,23 @@ carries a fixture counts as a lamp, any other light as a light, and an object is
 name a placed light (Studio's Lights row, the `light.point` row of the node table above) were
 not touched by this amendment; a later pass lines them up with these two rows.
 
+## Amended 2026-10-21 — app, game, software
+
+di.g_apptune (`dob-0/di.g_apptune`, the tuner for the apps and games on a machine) needed one word for "the things it
+tunes". Owner's words: *"look what is the game, it soft or app, what the difference — lets make it professional that
+in future people can use that."*
+
+| Word | Means | Not |
+|---|---|---|
+| **app** | Any program a person installs and runs on a machine: a game, Blender, TouchDesigner, a browser. The overall word — Steam names every item an app (its *appid*), the Linux desktop names every launcher entry an application (freedesktop Desktop Entry, `Type=Application`, games under `Categories=Game`). | not a di.iiii **tool** (Studio · Nodes · Projection · Light are tools *inside* di.iiii) |
+| **game** | An app made to be played. A *type* of app, never a separate thing. | not "software", not "title" in copy |
+| **creative app** | An app made to create with: Blender, TouchDesigner, a DAW, an editor. | not "creative tool" — **tool** is taken by di.iiii's own tools |
+| **software** | Not used in product copy. It means any code at all (drivers, libraries, firmware), wider than what a person runs. | — |
+| **settings set** | The values di.g_apptune writes into an app's own settings for one goal (Recommended, Performance, Quality, Yours). | not "profile" (a person has a profile), not "preset" (a game's own word for its menu presets) |
+
+Where it lives in code: di.g_apptune `apps/<source>-<id>.toml` with `type = "game" | "creative" | "app"`
+(described in the di.g_apptune repo, dob-0/di.g_apptune, file APP_FILE.md).
+
 ## The rule for anything new
 
 Before adding a word to the product, check it here. If it is not in the dictionary and not
