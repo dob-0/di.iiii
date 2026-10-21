@@ -1057,10 +1057,61 @@ function buildStages() {
       node.innerHTML = `<div class="fx-body">${f.index}</div><div class="fx-label">${esc(f.name)}</div>`;
       inner.appendChild(node);
     }
+    for (const st of S.strips || []) inner.appendChild(stripNode(st, 'px-strip'));
   }
-  $$('.stage-empty').forEach((p) => { p.hidden = S.fixtures.length > 0; });
+  $$('.stage-empty').forEach((p) => { p.hidden = S.fixtures.length > 0 || (S.strips || []).length > 0; });
+  buildTouchStrips();
   placeStages();
   paintStage();
+}
+
+/* =============== pixel strips: a line of pixels on the stage, a tile on Touch =============== */
+// The page draws a strip from the DMX it already holds: the plan the desk sent (which universe, which
+// channels) says where each pixel lives, the colour order says which channel is which. At most
+// STRIP_DOTS dots are drawn along the line, each standing for the pixels it covers (the first of them).
+const STRIP_DOTS = 64;
+function stripNode(st, cls) {
+  const node = document.createElement('div');
+  node.className = cls;
+  node.dataset.strip = st.id;
+  const n = Math.max(1, Math.min(STRIP_DOTS, st.pixels));
+  node.innerHTML = `<span class="px-dots">${'<i></i>'.repeat(n)}</span><span class="px-label">${esc(st.name)} · ${st.pixels} px${st.plan ? ` · U${st.startUniverse + 1}.${st.startAddress}` : ''}</span>`;
+  return node;
+}
+
+function buildTouchStrips() {
+  const sec = $('#touchStrips');
+  if (!sec) return;
+  const list = S.strips || [];
+  sec.hidden = list.length === 0;
+  const grid = $('#touchStripGrid');
+  grid.innerHTML = '';
+  for (const st of list) grid.appendChild(stripNode(st, 'pxtile'));
+}
+
+function stripPixelRgb(st, i) {
+  const plan = st.plan;
+  if (!plan) return null;
+  const sp = plan.spans.find((x) => i >= x.first && i < x.first + x.count);
+  if (!sp) return null;
+  const buf = DMX[sp.universe] || [];
+  const base = sp.address - 1 + (i - sp.first) * plan.channelsPerPixel;
+  const at = (c) => { const k = plan.order.indexOf(c); return k < 0 ? 0 : (buf[base + k] || 0); };
+  const w = at('W');
+  return [Math.min(255, at('R') + w), Math.min(255, at('G') + w), Math.min(255, at('B') + w)];
+}
+
+function paintStrips() {
+  if (!S || !S.strips || !S.strips.length) return;
+  for (const node of $$('[data-strip]')) {
+    const st = S.strips.find((x) => x.id === node.dataset.strip);
+    if (!st) continue;
+    const dots = node.querySelectorAll('.px-dots i');
+    dots.forEach((dot, k) => {
+      const c = stripPixelRgb(st, Math.floor((k * st.pixels) / dots.length));
+      dot.style.background = !c || (c[0] + c[1] + c[2]) < 8 ? '#1d1d20' : `rgb(${c[0]},${c[1]},${c[2]})`;
+    });
+  }
 }
 
 // One UNIFORM scale for both axes, letterboxed to the pane and inset so a tile at the
@@ -1096,6 +1147,17 @@ function placeStages() {
     // label, and all of them when the view is too small or zoomed-out to read the text.
     const { W, H } = sizes[paneIdx];
     const { sc, ox, oy } = stageMap(W, H);
+    // A strip is a line from (x1,y1) to (x2,y2) in the same stage coordinates as a lamp.
+    for (const node of $$('.px-strip', inner)) {
+      const st = (S.strips || []).find((x) => x.id === node.dataset.strip);
+      if (!st) continue;
+      const { x1, y1, x2, y2 } = st.layout;
+      const dx = (x2 - x1) * sc, dy = (y2 - y1) * sc;
+      node.style.left = (ox + x1 * sc) + 'px';
+      node.style.top = (oy + y1 * sc) + 'px';
+      node.style.width = Math.max(8, Math.hypot(dx, dy)) + 'px';
+      node.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
+    }
     const tiny = zoom < 0.5 || W < 360;
     const shown = [];                    // fixtures whose labels stay visible
     for (const node of $$('.fx-node', inner)) {
@@ -1119,6 +1181,7 @@ function placeStages() {
 
 function paintStage() {
   if (!S) return;
+  paintStrips();
   for (const node of $$('.fx-node')) {
     const f = fxById(node.dataset.id);
     if (!f) continue;
@@ -4327,7 +4390,8 @@ function renderAll(busy) {
   }
 
   const nextSig = S.fixtures.map((f) => `${f.id}${f.profile}${f.name}${f.universe}${f.address}${f.index}`).join('|')
-    + '#' + S.groups.map((g) => g.id + g.name).join('|');
+    + '#' + S.groups.map((g) => g.id + g.name).join('|')
+    + '#' + (S.strips || []).map((t) => `${t.id}${t.name}${t.pixels}${t.order}${t.startUniverse}${t.startAddress}${t.pixelsPerUniverse}${JSON.stringify(t.layout)}`).join('|');
   const structural = nextSig !== structSig;
   if (structural) { structSig = nextSig; safeBuild('buildStages', buildStages); safeBuild('buildGroups', buildGroups); attrSig = ''; }
 

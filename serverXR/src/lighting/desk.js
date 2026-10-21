@@ -34,6 +34,7 @@ const {
   KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, SPATIAL: LOOK_SPATIAL, kindAllows,
 } = require('./looks');
 const { createCueRunner, sanitizeCues } = require('./cuerun');
+const strips = require('./pixelstrip');
 const { createDmxStream } = require('./dmxstream');
 const holds = require('./holds');
 
@@ -79,6 +80,8 @@ function createDesk(opts = {}) {
     master: 255,
     blackout: false,
     fixtures: [],
+    // Pixel strips (pixelstrip.js): a line of N pixels patched as one lamp over several universes.
+    strips: [],
     groups: [],
     raw: {},
     // Who holds each manual channel, keyed like raw (holds.js).
@@ -289,6 +292,7 @@ function createDesk(opts = {}) {
       s.looks = sanitizeLooks(disk.looks) || [];
       s.layers = sanitizeLayers(disk.layers) || [];
       s.cues = sanitizeCues(disk.cues);
+      s.strips = strips.sanitizeStrips(disk.strips);
 
       // Custom profiles MUST be registered before the fixtures are built. makeFixture falls
       // back to `rgb` for a profile it does not know, so loading them in the other order
@@ -559,7 +563,7 @@ function createDesk(opts = {}) {
 
   // Anything holding a device for a send that is gone or switched off lets it go.
   function pruneExtra() {
-    const live = new Set((state.output.extra || []).filter((s) => s.enabled).map((s) => s.id));
+    const live = new Set(allExtras().filter((s) => s.enabled).map((s) => s.id));
     for (const id of [...extraDrivers.keys()]) if (!live.has(id)) closeExtra(id);
   }
 
@@ -718,6 +722,42 @@ function createDesk(opts = {}) {
   // right values (2026-09-24). Measured on an ENTTEC DMX USB PRO with full frames: 34
   // frames/s, 4.5ms average write. See docs/ai/known-fixes.md.
   const FULL_FRAME = 512;
+  // The channels the strips take in one universe, shaped like a fixture so the patch checks can name them.
+  function stripOccupants(universe) {
+    const out = [];
+    for (const st of state.strips) {
+      const p = strips.planStrip(st);
+      if (!p.ok) continue;
+      for (const r of strips.claimedRanges(p.plan)) {
+        if (r.universe === universe) out.push({ from: r.from, to: r.to, as: { id: st.id, index: 'strip', profile: st.name, address: r.from } });
+      }
+    }
+    return out;
+  }
+
+  // A strip that names its own receiver (artnet|sacn + IPv4) is one more send beside the desk's: its universes, that
+  // address. It rides the same extra-device machinery, so one route exists, not two. Built each frame from the strips.
+  function stripSends() {
+    const out = [];
+    for (const st of state.strips) {
+      if (!st.output || !st.output.driver || !st.on) continue;
+      const p = strips.planStrip(st);
+      if (!p.ok) continue;
+      out.push({ id: 'strip:' + st.id, driver: st.output.driver, targets: [st.output.host], universes: p.plan.universes, serialPort: null, priority: state.output.priority != null ? state.output.priority : 100, enabled: true });
+    }
+    return out;
+  }
+  const allExtras = () => (state.output.extra || []).concat(stripSends());
+  // Universes that only a strip with its own receiver uses: they do not also go out of the desk's main output.
+  function ownRoute() {
+    const own = new Set();
+    for (const send of stripSends()) for (const u of send.universes) own.add(u);
+    for (const f of state.fixtures) own.delete(f.universe);
+    for (const k of Object.keys(state.raw)) own.delete(Number(k.split(':')[0]));
+    for (const st of state.strips) if (!st.output || !st.output.driver) { const p = strips.planStrip(st); if (p.ok) for (const u of p.plan.universes) own.delete(u); }
+    return own;
+  }
+
   function footprints() {
     const out = new Map();
     const bump = (u, ch) => { if (ch > (out.get(u) || 0)) out.set(u, ch); };
@@ -758,7 +798,8 @@ function createDesk(opts = {}) {
       // is no footprint to trim and no empty-desk special case — the universe goes out,
       // zeros and all, which is what stops a node's own timeout firing and its fixtures
       // falling into their built-in programs.
-      for (const [universe, buf] of frames) if (!echoBlocked('sacn', universe)) stream.send(universe, buf);
+      const own = ownRoute();
+      for (const [universe, buf] of frames) if (!own.has(universe) && !echoBlocked('sacn', universe)) stream.send(universe, buf);
       if (!frames.size) stream.send(0, Buffer.alloc(512));
       sendExtras(frames, fp);
       stats.lastSend = Date.now();
@@ -785,8 +826,9 @@ function createDesk(opts = {}) {
       if (!frames.has(wire.universe)) wire.send(wire.universe, Buffer.alloc(FULL_FRAME));
     } else {
       const targets = targetsFor();
+      const own = ownRoute();
       for (const [universe, buf] of frames) {
-        if (echoBlocked('artnet', universe)) continue;
+        if (own.has(universe) || echoBlocked('artnet', universe)) continue;
         for (const t of targets) artnet.send(t, universe, buf.subarray(0, fp.get(universe) || FULL_FRAME));
       }
     }
@@ -798,7 +840,7 @@ function createDesk(opts = {}) {
   // universes it was told to carry — empty means all of them, which is right for a second
   // node mirroring the rig and wrong for a widget, which is one DMX line.
   function sendExtras(frames, fp) {
-    const list = state.output.extra || [];
+    const list = allExtras();
     if (!list.length) { if (extraDrivers.size) pruneExtra(); return; }
     pruneExtra();
     for (const send of list) {
@@ -1039,6 +1081,7 @@ function createDesk(opts = {}) {
       fx: { mode: state.fx.mode, bpm: state.fx.bpm, depth: state.fx.depth, enabled: !!state.fx.enabled },
       chase: { enabled: !!state.chase.enabled, index: engine.chase.index, count: state.chase.sceneIds.length },
       fixtures: state.fixtures.length,
+      strips: state.strips.length,
       scenes: state.scenes.length,
       looks: state.looks.length,
       layers: state.layers.map((l) => ({ id: l.id, name: l.name, on: l.on, level: l.level, lookId: l.lookId })),
@@ -1126,6 +1169,8 @@ function createDesk(opts = {}) {
       // `custom` tells the interface which ones can be edited or deleted; the built-ins
       // cannot be, so the library can hide those controls rather than offering them and
       // then refusing.
+      // The strips with their plan (which universes, which channels) so the page can draw them from the live DMX it already holds.
+      strips: state.strips.map(strips.describe),
       profiles: Object.fromEntries(Object.entries(PROFILES).map(([k, v]) =>
         [k, { label: v.label, channels: v.channels, cat: v.cat, custom: !!v.custom, labels: v.labels }])),
       // What each channel role IS, so the interface can ask rather than keep its own copy.
@@ -1682,6 +1727,68 @@ function createDesk(opts = {}) {
       json(res, { fixtures: rigList({ state, PROFILES }, project) });
     },
 
+    // ---- pixel strips (pixelstrip.js) ----------------------------------------------------------
+    'GET /api/strips': (req, res) => json(res, { strips: state.strips.map(strips.describe), type: strips.PIXEL_STRIP_TYPE }),
+
+    'POST /api/strips/add': (req, res, body) => {
+      if (state.strips.length >= 64) return json(res, { error: 'a show holds at most 64 strips' }, 400);
+      const made = strips.makeStrip(body || {});
+      if (!made.ok) return json(res, { error: made.error }, 400);
+      const clash = strips.findConflict(made.plan, { fixtures: state.fixtures, widthOf: (f) => (PROFILES[f.profile] || PROFILES.rgb).channels.length, strips: state.strips });
+      if (clash && !(body && body.force)) return json(res, { error: clash }, 409);
+      state.strips.push(made.strip);
+      save(); pushFrame();
+      json(res, { ok: true, strip: strips.describe(made.strip) });
+    },
+
+    'POST /api/strips/update': (req, res, body) => {
+      const cur = state.strips.find((x) => x.id === (body && body.id));
+      if (!cur) return json(res, { error: 'no such strip: ' + (body && body.id) }, 404);
+      const patch = { ...body };
+      delete patch.id;
+      const made = strips.makeStrip({ ...patch, id: cur.id }, cur);
+      if (!made.ok) return json(res, { error: made.error }, 400);
+      const clash = strips.findConflict(made.plan, { fixtures: state.fixtures, widthOf: (f) => (PROFILES[f.profile] || PROFILES.rgb).channels.length, strips: state.strips, ignoreId: cur.id });
+      if (clash && !body.force) return json(res, { error: clash }, 409);
+      state.strips[state.strips.indexOf(cur)] = made.strip;
+      save(); pushFrame();
+      json(res, { ok: true, strip: strips.describe(made.strip) });
+    },
+
+    'POST /api/strips/remove': (req, res, body) => {
+      const cur = state.strips.find((x) => x.id === (body && body.id));
+      if (!cur) return json(res, { error: 'no such strip: ' + (body && body.id) }, 404);
+      state.strips = state.strips.filter((x) => x !== cur);
+      engine.dropStripFrame(cur.id);
+      engine.cancelFade(); save(); pushFrame();
+      json(res, { ok: true });
+    },
+
+    // A live frame for one strip: `pixels` as [[r,g,b(,w)], ...] or `data` as base64 of r,g,b,w per pixel.
+    // Fewer pixels than the strip leaves the rest dark; more are refused.
+    'POST /api/strips/pixels': (req, res, body) => {
+      const cur = state.strips.find((x) => x.id === (body && body.id));
+      if (!cur) return json(res, { error: 'no such strip: ' + (body && body.id) }, 404);
+      let data;
+      if (typeof body.data === 'string') {
+        const raw = Buffer.from(body.data, 'base64');
+        const per = body.channels === 4 ? 4 : 3;
+        if (raw.length % per) return json(res, { error: `data holds ${raw.length} bytes, not a whole number of ${per}-channel pixels` }, 400);
+        const n = raw.length / per;
+        if (n > cur.pixels) return json(res, { error: `${n} pixels sent to a strip of ${cur.pixels}` }, 400);
+        data = new Uint8Array(cur.pixels * 4);
+        for (let i = 0; i < n; i++) for (let c = 0; c < per; c++) data[i * 4 + c] = raw[i * per + c];
+      } else if (Array.isArray(body.pixels)) {
+        if (body.pixels.length > cur.pixels) return json(res, { error: `${body.pixels.length} pixels sent to a strip of ${cur.pixels}` }, 400);
+        data = new Uint8Array(cur.pixels * 4);
+        body.pixels.forEach((px, i) => { for (let c = 0; c < 4; c++) data[i * 4 + c] = Math.max(0, Math.min(255, Math.round(+(Array.isArray(px) ? px[c] : 0) || 0))); });
+      } else {
+        return json(res, { error: 'send pixels as a list of [r,g,b] or data as base64' }, 400);
+      }
+      engine.setStripFrame(cur.id, data);
+      json(res, { ok: true, pixels: cur.pixels });
+    },
+
     'POST /api/fixtures/add': (req, res, body) => {
       const count = Math.max(1, Math.min(128, body.count || 1));
       const profile = PROFILES[body.profile] ? body.profile : 'rgb';
@@ -1701,6 +1808,7 @@ function createDesk(opts = {}) {
           const w = (PROFILES[f.profile] || PROFILES.rgb).channels.length;
           for (let c = f.address; c < f.address + w && c <= 512; c++) occupied.set(c, f);
         }
+        for (const hit of stripOccupants(universe)) for (let c = hit.from; c <= hit.to; c++) occupied.set(c, hit.as);
         for (let i = 0; i < count; i++) {
           const start = addr + i * width;
           if (start + width - 1 > 512) break;
@@ -1771,6 +1879,13 @@ function createDesk(opts = {}) {
         for (const f of state.fixtures) {
           if (moving.has(f.id)) continue;
           for (let c = f.address; c < f.address + widthOf(f) && c <= 512; c++) occupied.set(f.universe + ':' + c, f);
+        }
+        for (const st of state.strips) {
+          const p = strips.planStrip(st);
+          if (!p.ok) continue;
+          for (const r of strips.claimedRanges(p.plan)) {
+            for (let c = r.from; c <= r.to; c++) occupied.set(r.universe + ':' + c, { id: st.id, index: 'strip', profile: st.name, address: r.from });
+          }
         }
         const claimed = new Map();
         const blockers = new Map();
