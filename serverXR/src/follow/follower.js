@@ -20,7 +20,7 @@
 
 const { httpRequest } = require('../httpClient')
 const { accountedThrough, moreToCarry, unseen, planDirection, planAfterConflict, nextInterval, refusedWholeWork, WHOLE_WORK_OPS, failureDelay, isStuckRefusal, describeWriteFailure } = require('./followPlan')
-const { projectIdsFrom, sceneStream, streamsFor } = require('./streams')
+const { MAX_FOLLOWED_PROJECTS, projectIdsFrom, sceneStream, streamsFor } = require('./streams')
 const { createAssetChase } = require('./assets')
 const { CONVERGE_CLIENT, DIRECTIONS, describeCounts, planConverge, readDocument } = require('./followConverge')
 const { planSettings, readSettings } = require('./followSettings')
@@ -277,6 +277,10 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     let departed = resume?.departed && typeof resume.departed === 'object' ? resume.departed : {}
     let projectNotes = []
     let projectsCarried = 0
+    // Ids the other side listed that this follow would not carry, last pass
+    // (follow audit F18): 'bad id' — not an id this server would make, so never
+    // a path here; 'over cap' — past MAX_FOLLOWED_PROJECTS in one list.
+    let refusedIds = { 'bad id': 0, 'over cap': 0 }
     // What this follow's key may do on the host (SPEC_space_sync_keys.md §13):
     // 'manage' carries a trash, restore, making private and a move made here;
     // 'edit' (and a host too old to say: 404) does not. Asked at the start and
@@ -435,6 +439,9 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
         const trashPath = `/api/trash?space=${encodeURIComponent(local.spaceId)}`
         const askedAt = Date.now()
+        // Every id dropped this pass, once each however many lists named it.
+        const dropped = { 'bad id': new Set(), 'over cap': new Set() }
+        const onDrop = (reason, id) => dropped[reason]?.add(id)
         const readHere = () => Promise.all([
             request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
             request(local.url(trashPath), { token: local.token, servername: local.servername, address: local.address })
@@ -455,11 +462,11 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // A project's trash, restore, rename and visibility (followProjects.js).
         // Guard 2: only when all four lists answered as lists — a list that could
         // not be read is never taken for an empty one.
-        if (await carryProjectLife({ here, hereTrash, there, thereTrash })) {
+        if (await carryProjectLife({ here, hereTrash, there, thereTrash, onDrop })) {
             [here, hereTrash] = await readHere()
         }
-        const localProjects = projectIdsFrom(here.payload)
-        const remoteProjects = projectIdsFrom(there.payload)
+        const localProjects = projectIdsFrom(here.payload, onDrop)
+        const remoteProjects = projectIdsFrom(there.payload, onDrop)
         if (fromNow && fromNowPending === null && here.ok && there.ok) {
             fromNowPending = new Set([sceneStream(local.spaceId).key, ...localProjects.filter(id => remoteProjects.includes(id)).map(id => `project:${id}`)])
         }
@@ -486,7 +493,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 }
                 return
             }
-            const trashed = new Set(projectIdsFrom(toTrash.payload))
+            const trashed = new Set(projectIdsFrom(toTrash.payload, onDrop))
             const rows = Array.isArray(from.payload?.projects) ? from.payload.projects : []
             for (const projectId of projectIdsFrom(from.payload)) {
                 if (toProjects.includes(projectId)) continue
@@ -544,6 +551,12 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // follow on every pass.
         const kept = (id) => !departed[id]
         streams = streamsFor({ spaceId: local.spaceId, localProjects: localProjects.filter(kept), remoteProjects: remoteProjects.filter(kept) })
+        refusedIds = { 'bad id': dropped['bad id'].size, 'over cap': dropped['over cap'].size }
+        // Once per pass, never per id: a list of 10 000 is one line.
+        if (refusedIds['bad id'] || refusedIds['over cap']) {
+            const sample = [...dropped['bad id']].slice(0, 3).map(id => JSON.stringify(id.slice(0, 40))).join(', ')
+            log.warn?.(`[follow] ${local.spaceId}: ids not carried this pass — ${refusedIds['bad id']} bad id${sample ? ` (${sample})` : ''}, ${refusedIds['over cap']} over the cap of ${MAX_FOLLOWED_PROJECTS}`)
+        }
     }
 
     /** Said once per distinct thing, in the log; `di follows` carries the current notes. */
@@ -560,7 +573,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
      * through the receiving install's own route. Returns true when this install
      * changed, so the caller reads its lists again.
      */
-    const carryProjectLife = async ({ here, hereTrash, there, thereTrash }) => {
+    const carryProjectLife = async ({ here, hereTrash, there, thereTrash, onDrop = null }) => {
         const lists = { hereLive: listOf(here), hereTrash: listOf(hereTrash), thereLive: listOf(there), thereTrash: listOf(thereTrash) }
         // A stopped follow changes nothing more, even in the middle of a pass.
         if (stopped || Object.values(lists).some(list => list === null)) return false
@@ -575,7 +588,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             departed,
             here: { live: lists.hereLive, trash: lists.hereTrash },
             there: { live: lists.thereLive, trash: lists.thereTrash },
-            manageThere
+            manageThere,
+            onDrop
         })
         const nextBase = plan.base
         let changedHere = false
@@ -1133,7 +1147,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 lastAnswerAt: hostDown || answered.down ? started.lastAnswerAt : Date.now(),
                 latencyMs: answered.latencyMs,
                 settings: { carried: settingsCarried, notes: settingsNotes },
-                projects: { carried: projectsCarried, notes: projectNotes, paired: Object.keys(projectBase || {}).sort() },
+                projects: { carried: projectsCarried, notes: projectNotes, paired: Object.keys(projectBase || {}).sort(), refusedIds },
                 slugs: { carried: slugsCarried, notes: slugNotes },
                 key: {
                     scope: keyScope,

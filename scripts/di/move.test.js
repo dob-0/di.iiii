@@ -2,6 +2,7 @@
 import http from 'node:http'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { COMMANDS, parseArgs } from './cli.mjs'
+import { DI_USER_AGENT } from './userAgent.mjs'
 
 // `di move PROJECT --to SPACE` talks to the server's own route; it never
 // touches a database. A tiny server stands in for the other di.iiii.
@@ -21,7 +22,7 @@ describe('di move', () => {
             let body = ''
             req.on('data', (c) => { body += c })
             req.on('end', () => {
-                seen = { method: req.method, url: req.url, auth: req.headers.authorization, body: JSON.parse(body) }
+                seen = { method: req.method, url: req.url, auth: req.headers.authorization, ua: req.headers['user-agent'], body: JSON.parse(body) }
                 res.setHeader('Content-Type', 'application/json')
                 res.end(JSON.stringify({ ok: true, projectId: 'drive-decisions', fromSpaceId: 'decisions', toSpaceId: 'what-we-have', stableLink: '/what-we-have/p/drive-decisions' }))
             })
@@ -32,6 +33,8 @@ describe('di move', () => {
         await COMMANDS.move(parseArgs(['move', 'drive-decisions', '--to', 'what-we-have', '--from', url, '--unpublish']))
         expect(seen).toEqual({
             method: 'POST', url: '/serverXR/api/projects/drive-decisions/move', auth: 'Bearer secret-token',
+            // another di.iiii counts it as an identified app, not as `node`
+            ua: DI_USER_AGENT,
             body: { toSpace: 'what-we-have', unpublish: true, dryRun: false }
         })
         expect(out.join('\n')).toContain('/what-we-have/p/drive-decisions')
