@@ -48,6 +48,15 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/suite/favicon-32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/suite/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/suite/icon-512.png" />
+    <!-- The same mark as the PNGs above, drawn as a vector: cyan on black.
+         NOT /suite/mark.svg — that one is currentColor on transparent, a black
+         mark that a browser preferring the SVG would put on a dark tab strip. -->
+    <link rel="icon" type="image/svg+xml" href="/suite/icon.svg" />
+    <!-- di.iiii's own install card. A chat page swaps it for /chat-app/'s while
+         it is open (src/chat/claimManifest.js): a browser reads the FIRST
+         manifest link, so two at once would install the platform under the
+         room's door. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
 
     <!-- Host-relative on purpose. This shell is served from every address the
          platform answers on — diiii.xyz, di-studio.xyz, dev.diiii.xyz, a `di`
