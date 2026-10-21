@@ -12,8 +12,6 @@
 :root{
   --room:#1B1BCB; --room-deep:#0B0B6E; --night:#05052A;
   --cyan:#4FD6FF; --ink:#F4F5FA; --dim:#A9B0D6; --line:rgba(255,255,255,.14);
-  /* The platform corner (src/styles/base.css --di-radius), copied: this page fetches nothing. */
-  --di-radius:2px;
   --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
 }
@@ -57,7 +55,7 @@ h1.mark{
 }
 /* The dot of the name is the one cyan in the wordmark: the platform cyan
    (src/styles/base.css --di-cyan), written out because this page reads no
-   stylesheet of the platform. Not var(--cyan): that is the retired Studio cyan. */
+   stylesheet of the platform. Not var(--cyan): that is the page's own cyan (#4FD6FF), not the platform's. */
 .dot{color:#4df9ff}
 .tagline{font-size:clamp(17px,2.3vw,23px);color:var(--dim);margin:0 auto 34px;max-width:26ch}
 .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:20px}
@@ -98,7 +96,7 @@ h2{
 .card p{margin:0;color:var(--dim);font-size:14.5px}
 .step{display:flex;gap:14px;align-items:flex-start}
 .step .n{
-  flex:none;width:26px;height:26px;border-radius:var(--di-radius);border:1px solid var(--cyan);
+  flex:none;width:26px;height:26px;border-radius:0;border:1px solid var(--cyan);
   color:var(--cyan);font:600 12px/24px var(--mono);text-align:center
 }
 .readmore{display:block;text-decoration:none;color:inherit}

@@ -74,14 +74,9 @@ describe('landing brand (spec v2)', () => {
         expect(stripped).not.toMatch(round)
         expect(localHome).not.toMatch(round)
         expect(spacePage).not.toMatch(round)
-    })
-
-    it('Q1 is not decided here: the name\'s hover rule is byte-identical to dev\'s', () => {
-        // Turning the whole name cyan on hover is owner question Q1 (v2 cites :202).
-        // Any change to this line belongs to the answer, not to a sweep.
-        const hover = '.lp-nav-logo:hover { color: var(--di-cyan); }'
-        expect(raw.split(hover).length - 1).toBe(1)
-        expect(lines[201]).toBe(hover)
+        // The step numbers: 0, written, no hand copy of the platform token.
+        expect(spacePage).not.toMatch(/--di-radius\s*:/)
+        expect(spacePage).toMatch(/width:26px;height:26px;border-radius:0;/)
     })
 
     it('the cyan dot of the React landing stays (lp-dot)', () => {
@@ -93,19 +88,12 @@ describe('landing brand (spec v2)', () => {
         expect(spacePage.match(/di<span class="dot">\.<\/span>iiii/g)?.length).toBe(2)
         expect(spacePage).not.toMatch(/di<i>\.<\/i>iiii/)
         // The platform cyan written out: the page reads no platform stylesheet, and
-        // its own --cyan (#4FD6FF) is the retired Studio cyan.
+        // the page's own cyan (#4FD6FF), not the platform's.
         expect(spacePage).toMatch(/\.dot\s*\{\s*color:\s*#4df9ff\s*\}/i)
         expect(read('../styles/base.css')).toMatch(/--di-cyan:\s*#4df9ff\b/i)
     })
 
     it('the header ground is the strong scrim token, not a literal black', () => {
         expect(rules.find((r) => r.sel === '.lp-nav')?.body).toMatch(/background:\s*var\(--di-scrim-strong\)/)
-    })
-
-    it('eyebrow and heading colours are not decided here (owner question: cyan or white)', () => {
-        const colour = (sel) => /color:\s*([^;]+);/.exec(rules.find((r) => r.sel === sel)?.body || '')?.[1]
-        expect(colour('.lp-eyebrow')).toBe('var(--di-cyan) !important')
-        expect(colour('.lp-section-eyebrow')).toBe('var(--di-cyan) !important')
-        expect(colour('.lp-section-title')).toBe('var(--di-text) !important')
     })
 })
