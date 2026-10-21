@@ -4,10 +4,14 @@
 // the cue list plays every look, and the rotation maths gives the beam direction moxir_v1.py aimed.
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
+import http from 'node:http'
+import os from 'node:os'
+import { spawn } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isSteelEntity } from '../../src/objectComponents/steelOccluder.js'
-import { RIG_FILE, isSteelSolid, steelTagOps, dirOfRotation, v1Entities, v1Looks, v1Cues, v1Views, v1RenderOps, dmxOf, patchOps } from './epic-build.mjs'
+import { RIG_FILE, isSteelSolid, steelTagOps, dirOfRotation, v1Entities, v1Looks, v1Cues, v1Views, v1RenderOps, dmxOf, patchOps,
+    NARROW_MODES, narrowModeOf, defaultModeRefusal, rebuildAllRefusal } from './epic-build.mjs'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const rig = JSON.parse(fs.readFileSync(path.join(repo, RIG_FILE), 'utf8'))
@@ -273,4 +277,114 @@ describe('the rig file\'s planned addresses (2026-10-15, laser-40w N852)', () =>
         expect(absent).toEqual([])
         expect(ops).toEqual([{ type: 'updateComponent', payload: { entityId: 'rig-laser-41', component: 'fixture', patch: { universe: 1, address: 401, mode: '32ch', dmx: null } } }])
     })
+})
+
+describe('epic-build: the default mode is refused on a project that holds rig units (N767, N803, 2026-10-21)', () => {
+    const lasers = v1Entities(rig).filter((e) => e.id.startsWith('rig-laser-'))
+    const units = (framed) => ({ entities: [
+        { id: 'place-hall', type: 'model' },
+        { id: 'rig-show', type: 'group', components: { rigVariant: { set: 'scratch-set' } } },
+        { id: 'rig-par-cut-01', type: 'spotLight', components: {} },
+        { id: lasers[0].id, type: 'spotLight', components: { beam: { laser: { frames: framed ? [{ t: 0 }, { t: 1 }] : undefined } } } },
+        { id: lasers[1].id, type: 'spotLight', components: { beam: { laser: { frames: framed ? [{ t: 0 }] : undefined } } } }
+    ] })
+
+    it('a first build (no rig unit in the project) is not refused', () => {
+        expect(defaultModeRefusal({ entities: [] }, rig)).toBeNull()
+        expect(defaultModeRefusal({ entities: [{ id: 'place-hall', type: 'model' }, { id: 'rig-crowd-barrier', type: 'box' }] }, rig)).toBeNull()
+    })
+
+    it('names the units deleted and created, the ones carrying laser frames, and every narrow mode', () => {
+        const created = v1Entities(rig).length
+        const withFrames = defaultModeRefusal(units(true), rig)
+        expect(withFrames).toContain(`delete 3 units the project holds and create ${created} from the rig file`)
+        expect(withFrames).toContain('(2 of them carry beam.laser.frames')
+        for (const m of NARROW_MODES) expect(withFrames).toContain(`--${m}`)
+        expect(defaultModeRefusal(units(false), rig)).toContain('(0 of them carry beam.laser.frames')
+    })
+
+    it('the narrow-mode list is exactly what main() dispatches on', () => {
+        const src = fs.readFileSync(path.join(repo, 'scripts/rigbuild/epic-build.mjs'), 'utf8')
+        const main = src.slice(src.indexOf('const main = async'))
+        const dispatched = new Set([...main.matchAll(/mode === '([a-z-]+)'/g)].map((m) => m[1]))
+        expect([...dispatched].sort()).toEqual([...NARROW_MODES].sort())
+        expect(main.match(/args\['[a-z-]+-only'\]/g)).toBeNull()      // no mode read around the list
+        expect(narrowModeOf({ 'looks-only': true, apply: true })).toBe('looks-only')
+        expect(narrowModeOf({ apply: true, out: 'x' })).toBeNull()
+    })
+
+    it('--rebuild-all --apply without --out is refused; with --out, or in dry run, it is not', () => {
+        expect(rebuildAllRefusal({ 'rebuild-all': true, apply: true })).toMatch(/needs --out/)
+        expect(rebuildAllRefusal({ 'rebuild-all': true, apply: true, out: '/tmp/x' })).toBeNull()
+        expect(rebuildAllRefusal({ 'rebuild-all': true })).toBeNull()
+    })
+
+    // the CLI against a stub serverXR on 127.0.0.1: what it actually sends
+    const runCli = async (doc, extra, onPost = () => {}) => {
+        const seen = []
+        const server = http.createServer((req, res) => {
+            req.resume()
+            req.on('end', () => {
+                seen.push(`${req.method} ${req.url}`)
+                res.setHeader('Content-Type', 'application/json')
+                // the version list the default path titles before its first build op (dev wrote it before any check)
+                if (req.method === 'GET' && req.url.endsWith('/scratch-set-versions/document')) return res.end(JSON.stringify({ version: 3, document: { entities: [
+                    { id: 'v-1', components: { productionVersion: { projectId: 'scratch-copy', title: 'an old title' } } }] } }))
+                if (req.method === 'GET' && req.url.endsWith('/document')) return res.end(JSON.stringify({ document: doc, version: 7 }))
+                if (req.method === 'POST' && req.url.endsWith('/ops')) onPost(req.url)
+                if (req.method === 'POST' && req.url.endsWith('/ops')) return res.end(JSON.stringify({ newVersion: 8 }))
+                res.statusCode = 404; res.end('{}')
+            })
+        })
+        await new Promise((ok) => server.listen(0, '127.0.0.1', ok))
+        const api = `http://127.0.0.1:${server.address().port}/serverXR`
+        try {
+            const child = spawn(process.execPath, [path.join(repo, 'scripts/rigbuild/epic-build.mjs'), '--api', api, '--project', 'scratch-copy', ...extra], { cwd: repo })
+            let out = ''
+            child.stdout.on('data', (c) => { out += c })
+            child.stderr.on('data', (c) => { out += c })
+            const code = await new Promise((ok) => child.on('close', ok))
+            return { code, out, seen, posts: seen.filter((s) => s.startsWith('POST ') && s.endsWith('/ops')) }
+        } finally { server.close() }
+    }
+
+    it('the CLI refuses the default mode, dry run and --apply, before any POST to …/ops', async () => {
+        for (const extra of [['--apply'], []]) {
+            const r = await runCli(units(true), extra)
+            expect(r.posts, extra.join(' ')).toEqual([])
+            expect(r.code, r.out).toBe(1)
+            expect(r.out).toContain('refused: the default mode would delete 3 units')
+            expect(r.seen).toEqual(['GET /serverXR/api/projects/scratch-copy/document'])
+        }
+        const noOut = await runCli(units(true), ['--rebuild-all', '--apply'])
+        expect(noOut.code).toBe(1)
+        expect(noOut.out).toContain('needs --out')
+        expect(noOut.posts).toEqual([])
+    }, 30000)
+
+    it('--rebuild-all --apply --out writes the document before to --out before the first op', async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'epic-build-'))
+        const doc = units(true)
+        const file = path.join(dir, 'epic-build-scratch-copy-before.json')
+        const backedUp = []
+        const r = await runCli(doc, ['--rebuild-all', '--apply', '--out', dir], () => backedUp.push(fs.existsSync(file)))
+        const backup = JSON.parse(fs.readFileSync(file, 'utf8'))
+        expect(backup).toEqual({ document: doc, version: 7 })
+        // the first op is the version list's title; the backup was on disk before it. This fixture has no stage frame, so the
+        // build stops there and no build op reaches the project itself.
+        expect(r.posts).toEqual(['POST /serverXR/api/projects/scratch-set-versions/ops'])
+        expect(backedUp).toEqual([true])
+        expect(r.code, r.out).toBe(1)
+    }, 30000)
+
+    it('--lasers-only prints its count and sends nothing without --apply; with --apply it sends one ops call', async () => {
+        const dry = await runCli(units(false), ['--lasers-only'])
+        expect(dry.posts).toEqual([])
+        expect(dry.code, dry.out).toBe(0)
+        expect(dry.out).toContain('lasers only — 2 beams')
+        expect(dry.out).toContain('dry run: nothing written')
+        const wet = await runCli(units(false), ['--lasers-only', '--apply'])
+        expect(wet.code, wet.out).toBe(0)
+        expect(wet.posts).toEqual(['POST /serverXR/api/projects/scratch-copy/ops'])
+    }, 30000)
 })
