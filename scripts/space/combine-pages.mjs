@@ -15,7 +15,8 @@
 //   relink: { "/old": "/new" } } (the Dilijan one: spaces/dilijan/combine-aren.json). Flags override the spec.
 //   `file` is read relative to the spec; `assetsOf` names the project whose assets the file's URLs name (default: into).
 // --assets-from: read a page's assets from ANOTHER api when this one does not have them yet (e.g. a scratch stack
-//   that holds the originals, while --api is the server being changed).
+//   that holds the originals, while --api is the server being changed). DI_TOKEN goes to --api only, and to
+//   --assets-from only when it is the same server; another one gets DI_ASSETS_TOKEN, or no token.
 // --keep-as ID: before the replace, the target's own page becomes project ID in the same space, born private, its assets
 //   copied and its links repointed: when the target's page is not one of the tabs, it is kept as a project, not only in a
 //   backup. An ID that already holds a page is refused, never overwritten.
@@ -33,7 +34,12 @@ const apply = args.includes('--apply')
 const api = (flag('--api') || '').replace(/\/$/, '')
 if (!api) { console.error('--api URL is required (e.g. http://<tree>.diiii.localhost/serverXR)'); process.exit(2) }
 const assetsApi = (flag('--assets-from') || api).replace(/\/$/, '')
-const auth = process.env.DI_TOKEN ? { authorization: `Bearer ${process.env.DI_TOKEN}` } : {}
+const bearer = (token) => (token ? { authorization: `Bearer ${token}` } : {})
+const auth = bearer(process.env.DI_TOKEN)
+// DI_TOKEN is the --api server's token: it goes to --assets-from only when that is the same server. Another server gets
+// DI_ASSETS_TOKEN, or no token at all (2026-10-21: it was sent the target's token).
+const assetsAuth = process.env.DI_ASSETS_TOKEN ? bearer(process.env.DI_ASSETS_TOKEN)
+  : new URL(assetsApi).origin === new URL(api).origin ? auth : {}
 const ua = { 'user-agent': userAgent('di-combine-pages') }
 
 async function call(method, route, body) {
@@ -53,7 +59,7 @@ async function ensureAsset(from, into, hash) {
   if (await hasAsset(api, into, hash)) return hash
   say(`copy asset ${hash.slice(0, 12)}… from ${from} into ${into}`)
   if (!apply) return hash
-  const res = await fetch(`${assetsApi}/api/projects/${from}/assets/${hash}`, { headers: { ...ua, ...auth } })
+  const res = await fetch(`${assetsApi}/api/projects/${from}/assets/${hash}`, { headers: { ...ua, ...assetsAuth } })
   if (!res.ok) throw new Error(`asset ${hash.slice(0, 12)}… is not on ${assetsApi} for ${from} (${res.status}); restore it there first, or pass --assets-from with a server that has it`)
   const form = new FormData()
   form.append('assetId', hash)
@@ -149,20 +155,23 @@ async function keepOwnPage() {
   for (let i = 0; i < 8 && !doc; i++) { try { doc = await getDoc(keepAs) } catch { await new Promise((r) => setTimeout(r, 800)) } }
   if (!doc) throw new Error(`${keepAs} was made but its document does not answer`)
   const { mode, entryView, codeSourceType, fixedCamera, deviceAccess } = ps
+  // Recorded before the write, so a run that stops after it still leaves a backup whose --undo empties the kept page.
+  kept = { id: keepAs, sha256: sha256(html) }
+  writeBackup()
   await call('PUT', `/api/projects/${keepAs}/document`, { ...doc, presentationState: { ...doc.presentationState, mode, entryView, codeSourceType, fixedCamera, deviceAccess, codeUrl: '', codeHtml: html } })
   const back = (await getDoc(keepAs)).presentationState?.codeHtml
-  if (back !== html) throw new Error(`${keepAs}: the kept page did not read back`)
-  kept = { id: keepAs, sha256: sha256(html) }
+  if (back !== html) throw new Error(`${keepAs}: the kept page did not read back; --undo ${backupPath} empties it`)
 }
 let kept = null
+const backupPath = apply ? flag('--backup') || path.join(os.tmpdir(), `${into}-before-combine-${new Date().toISOString().slice(0, 19).replace(/:/g, '')}.json`) : null
+const writeBackup = () => fs.writeFileSync(backupPath, JSON.stringify({ into, api, at: new Date().toISOString(), document: target, ...(kept ? { kept } : {}) }, null, 2))
 if (keepAs) await keepOwnPage()
 
 const combined = buildCombinedPage({ title, pages, links, start })
 say(`replace ${into}'s page with ${pages.length} tabs (${pages.map((p) => p.label).join(' | ')})${links.length ? ` + ${links.length} link(s)` : ''}, ${Math.round(combined.length / 1024)} kB`)
 if (apply) {
-  const backup = flag('--backup') || path.join(os.tmpdir(), `${into}-before-combine-${new Date().toISOString().slice(0, 19).replace(/:/g, '')}.json`)
-  fs.writeFileSync(backup, JSON.stringify({ into, api, at: new Date().toISOString(), document: target, ...(kept ? { kept } : {}) }, null, 2))
-  console.log(`backup: ${backup}`)
+  writeBackup()
+  console.log(`backup: ${backupPath}`)
   await call('PUT', `/api/projects/${into}/document`, { ...target, presentationState: { ...ps, codeHtml: combined } })
 }
 console.log(apply ? 'done' : 'dry run; add --apply')

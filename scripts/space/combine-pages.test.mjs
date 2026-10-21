@@ -27,7 +27,7 @@ const airHtml = '<html><body>air canvas</body></html>'
 const docOf = (html) => ({ version: 1, projectMeta: { spaceId: 'dilijan' }, nodes: [{ id: 'keep-me' }], presentationState: { mode: 'code', entryView: 'code', codeHtml: html } })
 
 // A fake serverXR: documents, assets, and the unidentified-program refusal.
-function fakeApi({ docs, assets = {} }) {
+function fakeApi({ docs, assets = {}, lostPut = {} }) {
   const log = []
   const created = []
   const server = http.createServer((req, res) => {
@@ -36,13 +36,17 @@ function fakeApi({ docs, assets = {} }) {
     req.on('end', () => {
       const body = Buffer.concat(chunks)
       const kind = classifyUserAgent(req.headers['user-agent']).kind
-      log.push({ method: req.method, url: req.url, kind })
+      log.push({ method: req.method, url: req.url, kind, auth: req.headers.authorization })
       const send = (code, data, type = 'application/json') => { res.writeHead(code, { 'content-type': type }); res.end(type === 'application/json' ? JSON.stringify(data) : data) }
       if (kind === 'anonymous') return send(429, { error: 'Too many requests from this address by an unidentified program — retry in 28s.' })
       let m
       if ((m = req.url.match(/^\/api\/projects\/([^/]+)\/document$/))) {
         if (req.method === 'GET') return docs[m[1]] ? send(200, { document: docs[m[1]] }) : send(404, { error: 'Project not found.' })
-        if (req.method === 'PUT') { docs[m[1]] = JSON.parse(body.toString()); return send(200, { ok: true }) }
+        if (req.method === 'PUT') {
+          docs[m[1]] = JSON.parse(body.toString())
+          // the write lands but its answer is lost: the run stops right after it
+          return lostPut[m[1]] ? send(502, { error: 'Bad gateway.' }) : send(200, { ok: true })
+        }
       }
       if ((m = req.url.match(/^\/api\/projects\/([^/]+)\/assets\/([0-9a-f]{64})(\/meta)?$/)) && req.method === 'GET') {
         const bytes = assets[`${m[1]}/${m[2]}`]
@@ -67,10 +71,10 @@ function fakeApi({ docs, assets = {} }) {
       return send(404, { error: `no route ${req.method} ${req.url}` })
     })
   })
-  return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({ server, log, docs, assets, created, url: `http://127.0.0.1:${server.address().port}` })))
+  return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({ server, log, docs, assets, created, lostPut, url: `http://127.0.0.1:${server.address().port}` })))
 }
 
-const run = (argv) => new Promise((resolve) => execFile(process.execPath, [COMBINE, ...argv], { timeout: 20000 }, (error, stdout, stderr) => resolve({ code: error ? error.code : 0, stdout, stderr })))
+const run = (argv, env = {}) => new Promise((resolve) => execFile(process.execPath, [COMBINE, ...argv], { timeout: 20000, env: { ...process.env, DI_TOKEN: '', DI_ASSETS_TOKEN: '', ...env } }, (error, stdout, stderr) => resolve({ code: error ? error.code : 0, stdout, stderr })))
 const pagesIn = (html) => JSON.parse(/const PAGES=(\[.*?\]),ALLOW=/s.exec(html)[1])
 
 describe('the program says who it is', () => {
@@ -232,6 +236,29 @@ describe('combine-pages.mjs against a fake serverXR', () => {
     } finally { source.server.close() }
   })
 
+  it('--assets-from on another server never gets the target\'s token; DI_ASSETS_TOKEN is the one it gets', async () => {
+    const source = await fakeApi({ docs: {}, assets: { [`elevation/${H2}`]: Buffer.from('wall') } })
+    try {
+      for (const [env, expected] of [[{ DI_TOKEN: 'target-secret' }, undefined], [{ DI_TOKEN: 'target-secret', DI_ASSETS_TOKEN: 'source-token' }, 'Bearer source-token']]) {
+        delete api.assets[`elevation/${H2}`]; delete api.assets[`the-yard/${H2}`]
+        api.docs['the-yard'] = docOf(yardHtml); source.log.length = 0; api.log.length = 0
+        const r = await run(argv(['--apply', '--backup', path.join(tmp, 'b.json'), '--assets-from', source.url]), env)
+        expect(r.code).toBe(0)
+        expect(source.log.length).toBeGreaterThan(0)
+        expect(source.log.map((l) => l.auth)).toEqual(source.log.map(() => expected))
+        expect(api.log.every((l) => l.auth === 'Bearer target-secret')).toBe(true) // the target still gets its own
+      }
+    } finally { source.server.close() }
+  })
+
+  it('--assets-from naming the --api server itself still sends its token', async () => {
+    delete api.assets[`elevation/${H2}`]
+    api.assets[`elevation/${H2}`] = Buffer.from('wall')
+    const r = await run(argv(['--apply', '--backup', path.join(tmp, 'b.json'), '--assets-from', `${api.url}/`]), { DI_TOKEN: 'target-secret' })
+    expect(r.code).toBe(0)
+    expect(api.log.filter((l) => l.url === `/api/projects/elevation/assets/${H2}`).map((l) => l.auth)).toEqual(['Bearer target-secret'])
+  })
+
   it('a tab can be a page kept in the repo: read relative to the spec, its assets checked on the target, its links repointed', async () => {
     const one = `<html><body>${back('/dilijan/worlds')}<script>fetch("/serverXR/api/projects/the-yard/assets/${H1}")</script>one view</body></html>`
     fs.mkdirSync(path.join(tmp, 'aren'))
@@ -291,5 +318,22 @@ describe('combine-pages.mjs against a fake serverXR', () => {
     expect(again.code).toBe(1)
     expect(again.stderr).toMatch(/yard-original already holds a page/)
     expect(JSON.stringify(api.docs)).toBe(before)
+  })
+
+  it('--keep-as: a run that stops after writing the kept page still leaves a backup, and its --undo empties the page', async () => {
+    api.lostPut['yard-original'] = true
+    fs.writeFileSync(path.join(tmp, 'one.html'), '<html>one</html>')
+    const args = ['--api', api.url, '--into', 'the-yard', '--tab', 'AirCanvas=aircanvas', '--tab', `One=file:${path.join(tmp, 'one.html')}`, '--keep-as', 'yard-original']
+    const backup = path.join(tmp, 'b.json')
+    const r = await run([...args, '--apply', '--backup', backup])
+    expect(r.code).not.toBe(0)
+    expect(api.docs['yard-original'].presentationState.codeHtml).toContain('/serverXR/api/projects/yard-original/assets/') // the page was written
+    expect(isCombined(api.docs['the-yard'].presentationState.codeHtml)).toBe(false) // the target was not
+    expect(JSON.parse(fs.readFileSync(backup, 'utf8')).kept.id).toBe('yard-original')
+    delete api.lostPut['yard-original']
+    expect((await run(['--api', api.url, '--undo', backup, '--apply'])).code).toBe(0)
+    expect(api.docs['yard-original'].presentationState.codeHtml).toBe('')
+    expect(api.docs['the-yard'].presentationState.codeHtml).toBe(yardHtml)
+    expect((await run([...args, '--apply', '--backup', path.join(tmp, 'b2.json')])).code).toBe(0) // and it can run again
   })
 })

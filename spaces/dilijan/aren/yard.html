@@ -208,7 +208,8 @@ const SHADOW_OPACITY=0.15;
 // flipY: the scans' UVs expect the photo the usual way up. Measured 2026-10-21 against the cloud's own colours: with
 // flipY=true the photos land right (courtyard r 0.89, wall r 0.65, the yard's parts 0.71-0.84); with flipY=false, the
 // wall page's setting, r was about 0 and every face showed another part of the photo (the owner: "all textures in not
-// the right place"). spaces/dilijan/aren/texcheck.py. The shadow keeps the wall page's setting (not measured).
+// the right place"). The script that measured this was never committed, so these numbers cannot be re-run from the
+// repo; spaces/dilijan/aren/yard.test.mjs holds the setting. The shadow keeps the wall page's setting (not measured).
 function makeTexture(img,flipY=true){
   const tex=new THREE.Texture(img); tex.flipY=flipY; tex.needsUpdate=true;
   tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());

@@ -71,4 +71,8 @@ node scripts/space/apply-structure.mjs spaces/dilijan/structure.json --api http:
 node scripts/space/combine-pages.mjs --api … --undo BACKUP.json --apply    # back; empties yard-original if unchanged
 ```
 
+The target's token (`DI_TOKEN`) never goes to an `--assets-from` server on another host; give that one its own
+`DI_ASSETS_TOKEN` if it needs one. A run that stops after keeping `yard-original` still leaves its backup, so `--undo`
+empties it.
+
 Data: the assets of `the-yard` (scans of the Dilijan camp yard, Aren, August 2026, from the camp's own pages); no new media.
