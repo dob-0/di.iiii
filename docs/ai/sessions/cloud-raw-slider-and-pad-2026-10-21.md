@@ -1,0 +1,8 @@
+## 2026-10-21 — Slider and Pad: a fader and a stick for the thumb, in Raw and Perform
+
+- Two new nodes in **bring in**, next to Button: `view.slider` (Slider — Value between Min and Max, Held; Direction Vertical/Horizontal) and `view.pad` (Pad — X and Y in -1..1, Held; Spring back on by default). Both are panel windows (`SliderPanelWindow.jsx`, `PadPanelWindow.jsx`) with a branch in `renderViewNodeContent`, so they work in the editor and in Perform (which renders through the same function).
+- Button's split, kept: the authored level lives in `node.values` and is written by ONE op when the finger lifts; while this window's finger is down, `liveOutputs` carries `<id>:value` (or `:x`/`:y`) and `<id>:held`, and the runtime prefers the finger only while Held is true. A stale live value without Held is ignored (tested).
+- Pointer math is pure in `src/raw/components/touchControls.js` (vertical: top is Max; pad: right and up positive, pinned to the edge).
+- Tests: 6 runtime tests in `nodeRuntimes.test.js`, 9 in `touchControls.test.js`, 5 Slider panel, 4 Pad panel. With the implementation stashed: 4 files, 6 tests red; with it: 54 affected files, 1074 tests green.
+- Real browser: a harness page (both panels + base.css + raw.css, bundled with esbuild) driven by CDP touch events in Chromium at 390×844, DPR 3. Slider dragged to 0.80 and committed once on release; Pad followed to X 0.80 · Y 0.80 and sprang back to 0,0 with no op; page scroll stayed 0 during the drag; no page errors. Screenshot looked at.
+- NOT done: no check inside the full Raw editor or Perform on a real phone (no serverXR/di-dev in the cloud session); other windows see the new level on release only, not during the drag; no Mesh Out wiring (Mesh Out is not on dev yet).
