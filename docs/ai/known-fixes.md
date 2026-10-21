@@ -1116,3 +1116,15 @@ The health read's own name from #1053 (`di/<installed version>`) is now `di.iiii
 - Also: `--lasers-only` posted its ops with no `--apply` check; the "dry run" line next to it belonged to `--tag-steel-only`.
 - Fix: `NARROW_MODES` is the one list `main()` dispatches on (`narrowModeOf`). With none of them, `defaultModeRefusal(doc, rig)` runs right after the read and before the first write (the version-list title is one): null on a first build (no `oldEntities`), else exit 1 with the units deleted / created, how many carry laser frames, and the narrow modes. `--rebuild-all` lets it through; with `--apply` it needs `--out <dir>` and writes `epic-build-<project>-before.json` there before the first op. `--lasers-only` prints its count and stops unless `--apply`.
 - Guard: `scripts/rigbuild/epic-build.test.js` "the default mode is refused…" (7 tests; 7 red on dev 55a5d963, two of them because dev POSTs: the version-list write on a default `--apply`, and `--lasers-only` without `--apply`), including the CLI against a stub serverXR on 127.0.0.1 counting POSTs to `…/ops`.
+## footprints.mjs gave a lamp standing outside the hall a 0.2 m throw (N525, 2026-10-21)
+
+Symptom: `makeBuilding().inside` is true for every point outside the hall's open volume (beyond a wall, above the roof, at or under the floor), so `castRay`
+for a lamp standing outside the hall met "solid" at its first 0.3 m step and bisected to about 0.2 m, whatever it was aimed at (on the v13 hall record:
+a lamp at (0, 5, 70) aimed down reported a 'wall' at about 0.2 m; hall-reach says the ground outside at 5 m).
+Fix: an origin outside the open volume takes the building hit from `hall-reach.mjs` `hallFirstSurface` (the record's dims.shell, the floor, the ground
+beyond the footprint): no new march, no copied planes; the hall solids are still met as before and the result has the same shape. A record without
+dims.shell is refused for an outside lamp with hall-reach's reason. Inside origins run the same march as before. Not modelled: a ray from outside that
+enters the hall through an opening. Review of #1059: `inside` is also true ON a face (y = 0, a wall's inner face), so a floor lamp aimed up refused the
+run on the crane-dj record every shipped rig uses (no dims.shell); "outside" now also needs the point 1 mm along the ray outside (hall-reach's flush rule).
+Guard: `scripts/rigbuild/footprints.test.js` "a lamp outside the hall" (7 cases on the v13 record: ground, end wall outer face, deck from above,
+open air, a nearer solid, the refusal), each throw equal to hall-reach's. Session note: `docs/ai/sessions/cloud-footprints-outside-lamps-2026-10-21.md`.
