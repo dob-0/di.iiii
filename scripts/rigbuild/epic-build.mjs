@@ -25,7 +25,8 @@
  * The default mode (no narrow flag, NARROW_MODES) deletes and re-creates every unit, so it runs only on a FIRST build (the project
  * holds no rig unit). On any other project it exits 1 before its first write, in dry run too (defaultModeRefusal; lesson N767, the
  * 10-15 run that moved all 102 units, N803). --rebuild-all lets it through on purpose; with --apply it also needs --out <dir>, where
- * the document before is written before the first op. --lasers-only is a dry run unless --apply, like the other narrow modes.
+ * the document before is written before the first op. --lasers-only is a dry run unless --apply. Two narrow modes still write
+ * without --apply: --render-only (its render ops) and --mark-only (the version-list title).
  *
  * --tag-steel-only (2026-10-14): the project's existing steel (matched to the rig file's solids; steelTagOps) gets `occluder {kind:'steel'}`
  * so a beam stops at it. updateComponent only, nothing created/moved/deleted; dry run unless --apply; new builds set the flag themselves.
