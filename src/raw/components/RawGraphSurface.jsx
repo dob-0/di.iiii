@@ -1704,7 +1704,8 @@ export default function RawGraphSurface({
             const arrow = CARD_NUDGE[event.key]
             const focusedId = event.target?.closest?.('[data-card-id]')?.getAttribute('data-card-id')
             const moving = focusedId && nodeById.has(focusedId) ? focusedId : selected
-            if (arrow && moving && onMoveNode && !event.metaKey && !event.ctrlKey && !event.altKey) {
+            // An open context menu owns the arrows; ← and → reached the card behind it.
+            if (arrow && moving && onMoveNode && !contextMenu && !event.metaKey && !event.ctrlKey && !event.altKey) {
                 const node = nodeById.get(moving)
                 const by = event.shiftKey ? 50 : 10
                 return act(() => onMoveNode(moving, (Number(node.graphX) || 0) + arrow[0] * by, (Number(node.graphY) || 0) + arrow[1] * by))

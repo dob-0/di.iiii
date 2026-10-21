@@ -1320,6 +1320,20 @@ describe('moving a card without dragging (WCAG 2.1.1, 2.5.7)', () => {
         fireEvent.keyDown(container.querySelector('[data-card-id="b"]'), { key: 'ArrowDown' })
         expect(onMoveNode).toHaveBeenLastCalledWith('b', 300, 10)
     })
+
+    // The context menu stops ↑ and ↓ but lets ← and → through when no
+    // submenu is open; they moved the card the menu was opened on.
+    it('arrow keys inside an open context menu never move the card behind it', () => {
+        const onMoveNode = vi.fn()
+        const card = makeNode('value.color', { id: 'c', graphX: 100, graphY: 40 })
+        const { container } = render(<RawGraphSurface nodes={[card]} edges={[]} initialZoom={1} onMoveNode={onMoveNode} selectedNodeId="c" onSelectNode={() => {}} onDuplicateNode={() => {}} />)
+        fireEvent.contextMenu(container.querySelector('[data-card-id="c"]'), { clientX: 400, clientY: 200 })
+        const row = document.querySelector('[role="menuitem"]')
+        fireEvent.keyDown(row, { key: 'ArrowRight' })
+        fireEvent.keyDown(row, { key: 'ArrowLeft' })
+        fireEvent.keyDown(container.querySelector('[data-card-id="c"]'), { key: 'ArrowRight' })
+        expect(onMoveNode).not.toHaveBeenCalled()
+    })
 })
 
 describe('a pinch never selects (audit 2026-10-21 NR-08)', () => {
