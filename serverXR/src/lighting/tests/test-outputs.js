@@ -150,6 +150,16 @@ check('every UDP driver error is stamped, so a red can clear', () => {
   assert.notStrictEqual(r.status, 'unreachable');
 });
 
+check('a pixel strip with its own receiver gets its own line on the bus', async () => {
+  const d = await deskOn();
+  await d.call('POST', '/api/output', { enabled: true, driver: 'artnet' });
+  const add = await d.call('POST', '/api/strips/add', { name: 'roof', pixels: 60, startUniverse: 1, output: { driver: 'sacn', host: '10.0.0.7' } });
+  assert.ok(add.status < 300, JSON.stringify(add.body));
+  const bus = (await d.call('GET', '/api/state')).body.status.bus;
+  assert.ok(bus.routes.some((r) => /^strip:/.test(r.id)), 'strip route missing: ' + JSON.stringify(bus.routes.map((r) => r.id)));
+  d.stop();
+});
+
 (async () => {
   for (const t of tests) {
     try { await t.fn(); console.log('  ok  ' + t.name); }

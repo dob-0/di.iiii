@@ -1056,7 +1056,7 @@ function createDesk(opts = {}) {
       : o.driver === 'sacn' ? { ready: offline || !!(sacn && sacn.ready), lastError: sacn && sacn.lastError, lastErrorAt: sacn && sacn.lastErrorAt, targets: o.targets }
       : { ready: offline || !!artnet.ready, lastError: artnet.lastError, lastErrorAt: artnet.lastErrorAt, targets: o.mode === 'unicast' ? o.targets : [] };
     const routes = [{ id: 'main', name: 'Output', driver: o.driver, enabled: !!o.enabled, ...main }];
-    for (const s of o.extra || []) {
+    for (const s of allExtras()) {
       const held = extraDrivers.get(s.id);
       const d = held ? held.drv : null;
       const st = d && d.status ? d.status() : null;
