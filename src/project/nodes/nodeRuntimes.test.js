@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { cwd } from 'node:process'
 import { describe, expect, it } from 'vitest'
 import { NODE_RUNTIMES } from './index.js'
+import { changeTimes, worstFlashesPerSecond } from './flashRule.js'
 import { createEdge, createNode, getNodeType, isNodeTypeImplemented } from '../nodeRegistry.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeOutput } from '../graph/nodeGraphRuntime.js'
 
@@ -214,6 +215,99 @@ describe('signal.lag', () => {
         const later = at(2000)
         expect(later).toBeLessThan(10 * Math.exp(-2))
         expect(later).toBeGreaterThan(0)
+    })
+})
+
+describe('signal.flash (Flash Guard, WCAG 2.2 SC 2.3.1)', () => {
+    // Drives one guard frame by frame at 60 fps with a square wave of
+    // `perSecond` flashes, and measures what it SENDS with the same count the
+    // offline checks use.
+    const drive = (perSecond, { seconds = 4, low = 0, high = 1, values = {}, wired = false } = {}) => {
+        const memory = createFrameMemory()
+        const src = node('v', 'value.number', { value: low })
+        const guard = node('g', 'signal.flash', values)
+        const nodes = wired ? [src, guard] : [guard]
+        const edges = wired ? [edge('v', 'out', 'g', 'value')] : []
+        const frames = []
+        for (let i = 0; i * 1000 / 60 < seconds * 1000; i++) {
+            const now = i * 1000 / 60
+            const v = perSecond ? (Math.floor(now / 1000 * perSecond * 2) % 2 ? high : low) : high
+            if (wired) src.values = { value: v }
+            else guard.values = { ...guard.values, value: v }
+            const context = createNodeGraphContext({ nodes, edges }, { now, frameMemory: memory })
+            frames.push({ at: now, in: v, out: evaluateNodeOutput(guard, 'out', context),
+                rate: evaluateNodeOutput(guard, 'rate', context), limited: evaluateNodeOutput(guard, 'limited', context) })
+        }
+        const full = values.full || 1
+        const sent = worstFlashesPerSecond(changeTimes(frames.map((f) => ({ at: f.at, value: f.out / full }))))
+        return { frames, sent, memory, guard, nodes, edges }
+    }
+
+    it('bare: passes its value, rate 0, not limited', () => {
+        const doc = { nodes: [node('g', 'signal.flash', { value: 0.4 })], edges: [] }
+        expect(evalPort(doc, 'g', 'out')).toBe(0.4)
+        expect(evalPort(doc, 'g', 'rate')).toBe(0)
+        expect(evalPort(doc, 'g', 'limited')).toBe(false)
+    })
+
+    it('2 flashes a second pass untouched', () => {
+        const { frames, sent } = drive(2)
+        expect(frames.every((f) => f.out === f.in)).toBe(true)
+        expect(frames.some((f) => f.limited)).toBe(false)
+        expect(sent).toBe(2)
+        expect(frames.at(-1).rate).toBe(2)
+    })
+
+    it('a 10-a-second strobe leaves it at no more than 3, and says so', () => {
+        const { frames, sent } = drive(10, { wired: true })
+        expect(sent).toBeLessThanOrEqual(3)
+        expect(sent).toBeGreaterThan(0)
+        expect(frames.at(-1).rate).toBe(10)
+        expect(frames.at(-1).limited).toBe(true)
+        // it holds about a third of the frames (78 of 240 measured): 7 changes
+        // a second still pass, which is 3 flashes
+        expect(frames.filter((f) => f.out !== f.in).length).toBeGreaterThan(frames.length / 4)
+    })
+
+    it('4 a second is limited; a 9 % swing at 10 a second is not a flash', () => {
+        const four = drive(4)
+        expect(four.sent).toBeLessThanOrEqual(3)
+        expect(four.frames.some((f) => f.limited)).toBe(true)
+        const small = drive(10, { low: 0.5, high: 0.59 })
+        expect(small.frames.every((f) => f.out === f.in)).toBe(true)
+        expect(small.frames.at(-1).rate).toBe(0)
+        expect(small.frames.some((f) => f.limited)).toBe(false)
+    })
+
+    it('the limit cannot be switched off: 0, empty, nonsense or 100 still mean 3', () => {
+        for (const limit of [0, '', 'off', 100, -5]) {
+            expect(drive(10, { values: { limit } }).sent, String(limit)).toBeLessThanOrEqual(3)
+        }
+        expect(drive(10, { values: { limit: 1 } }).sent).toBeLessThanOrEqual(1)
+    })
+
+    it('Full 255: guards a byte wire on the same 10 % of full', () => {
+        const { frames, sent } = drive(10, { high: 255, values: { full: 255 } })
+        expect(sent).toBeLessThanOrEqual(3)
+        expect(Math.max(...frames.map((f) => f.out))).toBe(255)
+    })
+
+    it('one frame read on every port counts that frame once', () => {
+        const { frames } = drive(2, { seconds: 2 })
+        // 2 a second = 4 changes in the last second; counted per port it would read 6.
+        expect(frames.at(-1).rate).toBe(2)
+    })
+
+    it('lets go when the strobe stops: Limited clears, the light reaches its value', () => {
+        const { memory, guard, nodes, edges } = drive(10, { seconds: 2 })
+        guard.values = { ...guard.values, value: 1 }
+        let last
+        for (let now = 2000; now <= 3500; now += 1000 / 60) {
+            const context = createNodeGraphContext({ nodes, edges }, { now, frameMemory: memory })
+            last = { out: evaluateNodeOutput(guard, 'out', context), limited: evaluateNodeOutput(guard, 'limited', context) }
+        }
+        expect(last.out).toBe(1)
+        expect(last.limited).toBe(false)
     })
 })
 
