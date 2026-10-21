@@ -96,6 +96,8 @@ export const FAMILY_BY_TYPE = {
     'laser.merge': 'make',
     // laser Phase 2 (a clock; numbers, beside Oscillator)
     'signal.beat': 'numbers',
+    // music to wires: a baked beat analysis read at a time (beside Beat)
+    'signal.beatgrid': 'numbers',
     'geom.sphere': 'make',
     'geom.plane': 'make',
     'shape.merge': 'make',
@@ -2281,6 +2283,42 @@ export const NODE_TYPES = {
         ],
         // Beat 0 on the document clock; a tap or Reset moves it (BeatFeed).
         defaultValues: { epoch: 0 },
+        render: 'hidden',
+    },
+
+    // Music to wires (owner 2026-10-21): beats, bars and three bands read
+    // from a BAKED analysis at a time in the track, never a live analyser, so
+    // a piece built on it can be seeked. Format and bake method:
+    // docs/ai/decisions/2026-10-21-beat-bake-method.md.
+    'signal.beatgrid': {
+        id: 'signal.beatgrid',
+        label: 'Beat Grid',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['beat', 'grid', 'music', 'song', 'track', 'bar', 'downbeat', 'bands', 'bass', 'low', 'mid', 'high', 'analysis', 'seek', 'tempo', 'bpm'],
+        inputs: [
+            // The baked analysis as JSON text (paste it, or wire a Text in).
+            { id: 'analysis', type: 'string', label: 'Analysis', default: '' },
+            // Seconds into the track. Unwired: the document clock.
+            { id: 'time',     type: 'number', label: 'Time' },
+        ],
+        outputs: [
+            { id: 'beat',   type: 'number',  label: 'Beat'   },
+            { id: 'phase',  type: 'number',  label: 'Phase'  },
+            { id: 'age',    type: 'number',  label: 'Age'    },
+            { id: 'bar',    type: 'number',  label: 'Bar'    },
+            { id: 'count',  type: 'number',  label: 'Count'  },
+            { id: 'pulse',  type: 'boolean', label: 'Pulse'  },
+            { id: 'strong', type: 'boolean', label: 'Strong' },
+            { id: 'low',    type: 'number',  label: 'Low'    },
+            { id: 'mid',    type: 'number',  label: 'Mid'    },
+            { id: 'high',   type: 'number',  label: 'High'   },
+            { id: 'bpm',    type: 'number',  label: 'BPM'    },
+            { id: 'clock',  type: 'clock',   label: 'Clock'  },
+            { id: 'status', type: 'string',  label: 'Status' },
+        ],
+        defaultValues: {},
         render: 'hidden',
     },
 

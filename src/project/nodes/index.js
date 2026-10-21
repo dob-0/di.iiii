@@ -11,6 +11,7 @@ import { computeOutput as laserShape } from './laser.shape/runtime.js'
 import { computeOutput as laserTrace } from './laser.trace/runtime.js'
 import { computeOutput as laserMerge } from './laser.merge/runtime.js'
 import { computeOutput as signalBeat } from './signal.beat/runtime.js'
+import { computeOutput as signalBeatGrid } from './signal.beatgrid/runtime.js'
 import { computeOutput as deviceMidiOut } from './device.midi.out/runtime.js'
 import { computeOutput as geomArray } from './geom.array/runtime.js'
 import { computeOutput as geomCone } from './geom.cone/runtime.js'
@@ -78,6 +79,7 @@ export const NODE_RUNTIMES = new Map([
     ['laser.trace', laserTrace],
     ['laser.merge', laserMerge],
     ['signal.beat', signalBeat],
+    ['signal.beatgrid', signalBeatGrid],
     ['device.midi.out', deviceMidiOut],
     ['geom.array', geomArray],
     ['geom.cone', geomCone],
