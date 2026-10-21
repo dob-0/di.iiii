@@ -1948,3 +1948,107 @@ describe('a host that only says it trashed a project never undoes this install\'
         expect(await live(hosting, 'lie-a')).toBeTruthy()
     })
 })
+
+/**
+ * An HTTP proxy to `target` that writes down every request, and can rewrite a
+ * JSON answer on its way back. The follow cannot tell it from the server.
+ */
+const startRecordingProxy = async (target, rewrite = null) => {
+    const seen = []
+    const upstream = new URL(target.baseUrl)
+    const server = http.createServer((req, res) => {
+        const chunks = []
+        req.on('data', chunk => chunks.push(chunk))
+        req.on('end', () => {
+            const body = Buffer.concat(chunks)
+            seen.push({ method: req.method, url: req.url, body: body.toString('utf8') })
+            const forward = http.request({ host: upstream.hostname, port: upstream.port, path: req.url, method: req.method, headers: req.headers }, (answer) => {
+                const change = rewrite && req.method === 'GET' ? rewrite(req.url) : null
+                if (!change || answer.statusCode !== 200) {
+                    res.writeHead(answer.statusCode, answer.headers)
+                    answer.pipe(res)
+                    return
+                }
+                const parts = []
+                answer.on('data', chunk => parts.push(chunk))
+                answer.on('end', () => {
+                    const changed = Buffer.from(JSON.stringify(change(JSON.parse(Buffer.concat(parts).toString('utf8')))))
+                    const headers = { ...answer.headers, 'content-length': String(changed.length) }
+                    delete headers.etag
+                    res.writeHead(200, headers)
+                    res.end(changed)
+                })
+            })
+            forward.on('error', () => { res.destroy() })
+            forward.end(body)
+        })
+    })
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+    return {
+        baseUrl: `http://127.0.0.1:${server.address().port}${upstream.pathname}`,
+        seen,
+        stop: () => new Promise(resolve => { server.closeAllConnections?.(); server.close(() => resolve()) })
+    }
+}
+
+// Follow audit F18: an id the host lists becomes a path on both machines.
+// '..' survives encodeURIComponent and new URL dot-normalises it, so
+// /api/projects/../ops is /api/ops. A host that lists one makes no request.
+describe('a project id the host lists that this server would never make', () => {
+    const ROOM = 'dots-room'
+    let hosting = null
+    let following = null
+    let hostProxy = null
+    let hereProxy = null
+    let follower = null
+    const warned = []
+    const dotRow = { id: '..', spaceId: ROOM, title: 'Dots', slug: null, visibility: 'public' }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, ROOM)
+        await createSpace(following, ROOM)
+        const made = await fetch(`${hosting.baseUrl}/api/spaces/${ROOM}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: 'real-piece', title: 'Real' })
+        })
+        expect(made.status).toBe(201)
+        // The host lists '..' live AND in its trash, every time it is asked.
+        hostProxy = await startRecordingProxy(hosting, (url) => {
+            if (url.startsWith(`/serverXR/api/spaces/${ROOM}/projects`) || url.startsWith('/serverXR/api/trash')) {
+                return (payload) => ({ ...payload, projects: [...(payload.projects || []), dotRow] })
+            }
+            return null
+        })
+        hereProxy = await startRecordingProxy(following)
+        follower = startFollowing({
+            local: side({ base: hereProxy.baseUrl, spaceId: ROOM, token: API_TOKEN }),
+            remote: side({ base: hostProxy.baseUrl, spaceId: ROOM, token: API_TOKEN }),
+            log: { warn: message => warned.push(message), info: () => {} }
+        })
+        await settle('the real project reaching the follower', async () => (await fetch(`${following.baseUrl}/api/projects/real-piece/ops`, { headers: authHeaders })).status === 200)
+        // Two more passes, each of which reads both lists again.
+        follower.wake(); await wait(1500)
+        follower.wake(); await wait(1500)
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hostProxy?.stop(), hereProxy?.stop()])
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('sends no request for it, on either machine, and counts it as refused', () => {
+        const all = [...hostProxy.seen, ...hereProxy.seen]
+        // The paths '..' turns into once new URL has read them, and the id itself.
+        const forDots = all.filter(({ url, body }) => /\/api\/(ops|document|restore)(\?|$)/.test(url)
+            || /\/api\/projects\/(\.\.|%2e%2e)/i.test(url)
+            || /\/api\/projects(\?|$)/.test(url)
+            || /"slug":"\.\."/.test(body))
+        expect(forDots.map(({ method, url }) => `${method} ${url}`)).toEqual([])
+        // The real project was carried, so the follow did run.
+        expect(all.some(({ url }) => url.includes('/api/projects/real-piece/ops'))).toBe(true)
+        expect(follower.state.projects.refusedIds['bad id']).toBe(1)
+        expect(warned.some(line => /1 bad id/.test(line))).toBe(true)
+    })
+})

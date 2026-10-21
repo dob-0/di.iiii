@@ -49,10 +49,14 @@ before it (`copy_project.mjs`), never as an edit of it.
 ## 2. Traps already paid for (each cost an evening or more)
 
 - **epic-build's default mode (no `--…-only` flag) deletes and re-creates every unit** from the rig file: hand moves are lost and
-  `beam.laser.frames` dropped. Use it only for the FIRST build of a project. After that: `--looks-only`, `--laser-frames`,
-  `--laser-lines-only`, `--tag-steel-only`. Written as a lesson at 06:02 on 10-15 (N767); a default-mode run at 06:3x still
-  moved all 102 units (found 14:07, N803; restored from the backup). The guard belongs in the tool (row below).
-- **`--lasers-only` writes even without `--apply`.** Back up first.
+  `beam.laser.frames` dropped. Written as a lesson at 06:02 on 10-15 (N767); a default-mode run at 06:3x still moved all 102
+  units (found 14:07, N803; restored from the backup). Since 2026-10-21 the tool holds the line itself: on a project that already
+  holds rig units the default mode exits 1 before its first write, dry run and `--apply` alike, naming how many units it would
+  delete and create, how many carry laser frames, and the narrow modes (`NARROW_MODES`: `--looks-only`, `--laser-frames`,
+  `--laser-lines-only`, `--tag-steel-only`, `--patch-only`, `--lasers-only`, `--render-only`, `--desk-only`, `--mark-only`). A first
+  build (no rig unit) runs as before. A rebuild on purpose is `--rebuild-all`, and with `--apply` it also needs `--out <dir>`, where
+  the document before is written ahead of the first op.
+- **`--lasers-only` is a dry run unless `--apply`** (since 2026-10-21; before, it wrote without it).
 - Units are aimed **by the look** (`rigLooks.looks[].aims`), not by their transform: after moving units, re-run `--looks-only`.
 - `load-version` builds from its `--from` project's HALL: a rebuild from an archived project brings an old hall back.
 - Confirm a geometric change on **his** picture from the audience before building ("house left" in words flipped the cut, 10-07).
@@ -84,11 +88,13 @@ hand-overs in one day.
 The scenes design tools (`scenes50.py`, `palette.py`, `laser_design.py`, `outside_rule.py`, `sheet.py`, `laser_sheet.py`) and the
 read-back (`readback.py`) live in `~/work/agent-reports-2026-10-15/moxir-50/` · the light-environment table tools
 (`light-env-data/table.py`, `analyze.py`) · a per-version builder script for each version instead of one generator from the
-scenes file and a layout file · the epic-build default-mode guard (N767) · one project, several scene sets ("stories", N717) ·
+scenes file and a layout file · one project, several scene sets ("stories", N717) ·
 the lines of light as THE look (N808/N810). Rows: N811.1 scenes50 · N811.2 palette audit · N811.3 outside rule · N811.4 laser
 design · N811.5 scenes sheet · N811.6 laser sheet · N811.7 energy data · N811.8 light-environment table · N811.9 outside/floor
-views · N811.10 one generator · N800.1 read-back · N767 guard · N717 stories (N811.11: the scenes file, moved in this job). close a row by moving the thing into
+views · N811.10 one generator · N800.1 read-back · N717 stories (N811.11: the scenes file, moved in this job). close a row by moving the thing into
 `scripts/place` with a test and fixing this table.
+
+Closed (cloud/epic-build-default-guard-2026-10-21): N767 guard → `epic-build.mjs` `defaultModeRefusal` + `--rebuild-all`; test `scripts/rigbuild/epic-build.test.js`.
 
 Migrated (feat/migrate-scenes-2026-10-15): N811.1 `scenes50.py` → `scripts/place/scenes_build.py` (spec → scenes file + check; the colour audit stays with N811.2) · N811.3 → `scenes_outside_rule.py` · N811.4 → `laser_design.py` + `rigs/moxir-laser-design-2026-10-15.json`; test `scripts/place/scenes-tools.test.js`.
 
