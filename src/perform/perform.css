@@ -303,7 +303,7 @@
     width: 14px;
     height: 14px;
     border: 1px solid var(--di-dim);
-    border-radius: 50%;
+    border-radius: var(--di-radius);
 }
 
 .perform-beat.is-on {

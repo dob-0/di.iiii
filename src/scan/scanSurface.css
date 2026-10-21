@@ -79,7 +79,7 @@
     justify-content: center;
     min-width: 44px;
     min-height: 44px;
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     background: var(--di-scrim);
     color: var(--di-ink);
     text-decoration: none;
@@ -187,7 +187,7 @@
     height: var(--scan-ring-size);
     flex: 0 0 auto;
     align-self: center;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     border: 1px solid var(--di-line);
 }
 
@@ -307,7 +307,9 @@
 
 /* The one control that must never be mistaken for anything else, and the only
    one that takes `touch-action: none` — pressing it must not scroll the page,
-   and nothing else here may steal a scroll from somebody in gloves. */
+   and nothing else here may steal a scroll from somebody in gloves.
+   Q4: the recording light keeps its circle — an open owner question
+   (brand-tool-surfaces, 2026-10-21); every other corner here is square. */
 .scan-record {
     flex: 0 0 auto;
     display: flex;
@@ -323,6 +325,7 @@
     touch-action: none;
 }
 
+/* Q4: the red mark of the recording light, round at rest, square while recording. */
 .scan-record-mark {
     width: 52px;
     height: 52px;
