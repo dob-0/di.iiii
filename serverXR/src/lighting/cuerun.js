@@ -15,6 +15,10 @@
 // A cue fires a LOOK the desk already holds, on the cue layer, through the same path
 // POST /api/looks/fire takes. A cue whose look is not on the desk is noted in `missing`
 // and its hold still runs: one absent look must not stall a looping show.
+// The arithmetic — which cue GO fires next, how far into its fade and hold a cue is — is the shared
+// cue clock's (shared/cueClock.cjs), the same lines the show's clock and the Cue node run.
+
+const { nextCueIndex, cueProgressAt } = require('../../../shared/cueClock.cjs');
 
 const MAX_CUES = 200;
 const STR = 60;
@@ -99,11 +103,8 @@ function createCueRunner(desk) {
     timer = null;
     const c = desk.cues();
     if (!c.running || !c.list.length) return;
-    let i = c.index + 1;
-    if (i >= c.list.length) {
-      if (!c.loop) { c.running = false; c.nextAt = null; desk.save(); return; }
-      i = 0;
-    }
+    const i = nextCueIndex(c.index, c.list.length, c.loop);
+    if (i < 0) { c.running = false; c.nextAt = null; desk.save(); return; }
     fireAt(i);
   }
 
@@ -117,11 +118,8 @@ function createCueRunner(desk) {
       // Any press of a named scene turns "play in order" off.
       c.autoplay = false;
     } else {
-      i = c.index + 1;
-      if (i >= c.list.length) {
-        if (!c.loop) { stop(); return { ok: true, ended: true }; }
-        i = 0;
-      }
+      i = nextCueIndex(c.index, c.list.length, c.loop);
+      if (i < 0) { stop(); return { ok: true, ended: true }; }
     }
     fireAt(i);
     return { ok: true };
@@ -199,6 +197,11 @@ function createCueRunner(desk) {
     const c = desk.cues();
     if (!c.list.length) return null;
     const cue = c.list[c.index] || null;
+    // How far into its fade and hold the cue on the desk is, by the shared clock: the Cue node
+    // and the show's clock read the same two numbers.
+    const at = cue && c.running && Number.isFinite(c.firedAt)
+      ? cueProgressAt({ fadeMs: cue.fade * 1000, holdMs: cue.hold * 1000 }, c.firedAt, now())
+      : { progress: 0, fading: false };
     return {
       project: c.project,
       index: c.index,
@@ -209,6 +212,8 @@ function createCueRunner(desk) {
       running: c.running,
       nextInMs: c.running && c.nextAt != null ? Math.max(0, c.nextAt - now()) : null,
       firedAt: Number.isFinite(c.firedAt) ? c.firedAt : null,
+      progress: at.progress,
+      fading: at.fading,
       missing: c.missing,
     };
   }

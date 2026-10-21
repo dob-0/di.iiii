@@ -179,6 +179,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('hold', 'signal.hold', { label: 'Hold', col: 0, row: 12 })
     add('delay', 'signal.delay', { label: 'Delay', col: 0, row: 13 })
     add('timer', 'signal.timer', { label: 'Timer', col: 0, row: 14 })
+    add('cue', 'signal.cue', { label: 'Cue', col: 0, row: 18 })
     add('trigger', 'signal.trigger', { label: 'Trigger', col: 0, row: 15 })
     add('speed', 'signal.speed', { label: 'Speed', col: 0, row: 16 })
     add('toggle', 'logic.toggle', { label: 'Toggle', col: 0, row: 17 })

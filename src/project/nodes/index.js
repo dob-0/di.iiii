@@ -30,6 +30,7 @@ import { computeOutput as logicToggle } from './logic.toggle/runtime.js'
 import { computeOutput as mediaAudioLevels } from './media.audio/runtime.js'
 import { computeOutput as mediaVideoFrame } from './media.video/runtime.js'
 import { computeOutput as signalCounter } from './signal.counter/runtime.js'
+import { computeOutput as signalCue } from './signal.cue/runtime.js'
 import { computeOutput as signalDelay } from './signal.delay/runtime.js'
 import { computeOutput as signalEase } from './signal.ease/runtime.js'
 import { computeOutput as signalHold } from './signal.hold/runtime.js'
@@ -96,6 +97,7 @@ export const NODE_RUNTIMES = new Map([
     ['media.audio', mediaAudioLevels],
     ['media.video', mediaVideoFrame],
     ['signal.counter', signalCounter],
+    ['signal.cue', signalCue],
     ['signal.delay', signalDelay],
     ['signal.ease', signalEase],
     ['signal.hold', signalHold],

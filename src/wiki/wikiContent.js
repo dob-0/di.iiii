@@ -1870,6 +1870,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-14'
     },
     {
+        id: 'cue-node',
+        category: 'Editing',
+        title: 'Cue — the cue list on a wire',
+        summary: 'The Cue node reads the project\'s cue list: which cue is on, its name and look, how far into its fade and hold it is. Go, Back and Jump move it.',
+        body: [
+            'A project\'s cue list is the one the Projection desk, the Perform window\'s Cues and the cards page edit: each cue has a name, a fade, a hold and, if it lights the rig, a look. The Cue node puts that list on wires. Index is the cue that is on, counted from 0 (-1 before the first cue). Name and Look are its name and its look. Progress runs from 0 to 1 over the cue\'s hold, or over its fade when the fade is longer. Fading is on while the fade runs. Fired changes each time a cue fires.',
+            'The timing is the desk\'s: a cue fades in from the moment it fires, its hold counts from the same moment, and when the hold is served the next cue fires. A hold of 0 waits for Go. Loop takes the list from its last cue back to the first; unwired, it follows the cue list\'s own loop switch.',
+            'When the project has a show started on the show clock, the node reads the cue every room is on. Wire a Button\'s Presses, a Keyboard or Time\'s Beat into Go to move to the next cue, the same into Back for the one before, and a number into Jump to fire that cue. A cue you move to this way is fired as the Perform window fires it: its surfaces change and its look is called up on the Light desk when one is running here.',
+            'Presses are counted in the window you press them in. A window opened later starts from the cue list as it finds it. Two editors open on one project both fire the cue a press moves to.'
+        ],
+        tags: ['raw', 'nodes', 'cue', 'cue list', 'show', 'go', 'fade', 'hold', 'look', 'perform'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'build-zones',
         category: 'Editing',
         title: 'A room that arranges itself',
