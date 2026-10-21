@@ -22,6 +22,12 @@
  * and no cube connected, not an emission sign-off. `laserSignedOff` is NOT written.
  * Scratch only: refuses any host but localhost / 127.0.0.1. Reads the document right before writing and sends against its version.
  *
+ * The default mode (no narrow flag, NARROW_MODES) deletes and re-creates every unit, so it runs only on a FIRST build (the project
+ * holds no rig unit). On any other project it exits 1 before its first write, in dry run too (defaultModeRefusal; lesson N767, the
+ * 10-15 run that moved all 102 units, N803). --rebuild-all lets it through on purpose; with --apply it also needs --out <dir>, where
+ * the document before is written before the first op. --lasers-only is a dry run unless --apply. Two narrow modes still write
+ * without --apply: --render-only (its render ops) and --mark-only (the version-list title).
+ *
  * --tag-steel-only (2026-10-14): the project's existing steel (matched to the rig file's solids; steelTagOps) gets `occluder {kind:'steel'}`
  * so a beam stops at it. updateComponent only, nothing created/moved/deleted; dry run unless --apply; new builds set the flag themselves.
  *
@@ -552,6 +558,29 @@ export const v1RentalItems = (rental, rig) => {
     return items
 }
 
+/** The narrow modes, in the order main() dispatches on them: each touches only what its name says, never deletes a unit.
+ * `looks-only` runs the default code path with its deletes and creates left out. `--laser-frames` with no --api only prints. */
+export const NARROW_MODES = Object.freeze(['render-only', 'lasers-only', 'tag-steel-only', 'laser-lines-only', 'patch-only', 'laser-frames', 'mark-only', 'desk-only', 'looks-only'])
+/** The first narrow mode the arguments name, else null (the default mode: delete every rig unit, create every unit of the rig file). */
+export const narrowModeOf = (args) => NARROW_MODES.find((m) => Boolean(args?.[m])) || null
+/** Why the default mode is refused on this document, or null. A first build (the project holds no rig unit, oldEntities) is not
+ * refused. Otherwise the default mode deletes and re-creates every unit: hand moves are lost and `beam.laser.frames` dropped
+ * (lesson N767; on 10-15 a default-mode run moved all 102 units, put back by hand from a backup, N803). Pure. */
+export const defaultModeRefusal = (doc, rig) => {
+    const old = oldEntities(doc || {})
+    if (!old.length) return null
+    const framed = old.filter((e) => Array.isArray(e.components?.beam?.laser?.frames) && e.components.beam.laser.frames.length).length
+    const created = v1Entities(rig).length
+    return `refused: the default mode would delete ${old.length} units the project holds and create ${created} from the rig file ` +
+        `(${framed} of them carry beam.laser.frames, which would be dropped; every hand move would be lost). ` +
+        `Use a narrow mode instead: ${NARROW_MODES.map((m) => `--${m}`).join(', ')}. ` +
+        'To rebuild every unit on purpose: --rebuild-all, which with --apply also needs --out <dir> (the document before is written there first).'
+}
+/** --rebuild-all with --apply writes only with a backup: --out <dir>. The refusal, or null. Pure. */
+export const rebuildAllRefusal = (args) => (args?.['rebuild-all'] && args?.apply && !args?.out
+    ? 'refused: --rebuild-all --apply needs --out <dir>: the document before is written there before the first op'
+    : null)
+
 const main = async () => {
     const args = parseArgs(process.argv.slice(2))
     const api = String(args.api || '').replace(/\/+$/, '')
@@ -571,21 +600,34 @@ const main = async () => {
     const got = await client.get(`/api/projects/${project}/document`)
     if (!got.ok) die(`reading ${project}: ${got.status}`)
     const doc = got.body.document
-    if (args['render-only']) {
+    const mode = narrowModeOf(args)
+    if (!mode) {
+        // the default mode: refused before its first write (the version-list title below is one) unless it is a first build or --rebuild-all
+        const refusal = args['rebuild-all'] ? rebuildAllRefusal(args) : defaultModeRefusal(doc, rig)
+        if (refusal) die(refusal)
+        if (args['rebuild-all'] && args.apply) {
+            fs.mkdirSync(String(args.out), { recursive: true })
+            fs.writeFileSync(path.join(String(args.out), `epic-build-${project}-before.json`), JSON.stringify(got.body))
+            say(`backup: ${path.join(String(args.out), `epic-build-${project}-before.json`)} (v${got.body.version}, ${doc.entities?.length ?? 0} entities)`)
+        }
+    }
+    if (mode === 'render-only') {
         const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT), atmosphere: rig.atmosphere || null }).map((op, j) => ({ ...op, opId: `epic-render-${Date.now()}-${j}`, clientId: 'epic-build' })) })
         if (!out.ok) die(`render ops: ${out.status} ${out.text.slice(0, 300)}`)
         say(`render: haze ${rig.atmosphere ? `the rig's own (${rig.atmosphere.haze?.model || 'uniform'})` : `sigma ${V1_HAZE_SIGMA}/m uniform`}, ambient ${Number(args.ambient ?? V1_AMBIENT)} → version ${out.body.newVersion}`)
         return
     }
-    if (args['lasers-only']) {
+    if (mode === 'lasers-only') {
         const ops = v1Entities(rig).filter((e) => e.id.startsWith('rig-laser-') && doc.entities.some((d) => d.id === e.id))
             .flatMap((e) => ['light', 'beam'].map((component) => ({ type: 'updateComponent', payload: { entityId: e.id, component, patch: e.components[component] } })))
+        say(`${project} @ v${got.body.version}: lasers only — ${ops.length / 2} beams get light + beam from the rig file (${ops.length} updateComponent ops)`)
+        if (!args.apply) { say('dry run: nothing written (--apply to write; back the document up first)'); return }
         const out = await client.post(`/api/projects/${project}/ops`, { baseVersion: got.body.version, ops: ops.map((op, j) => ({ ...op, opId: `epic-lasers-${Date.now()}-${j}`, clientId: 'epic-build' })) })
         if (!out.ok) die(`laser ops: ${out.status} ${out.text.slice(0, 300)}`)
         say(`lasers: ${ops.length / 2} beams at ${laserIntensity('#e8e4dc')} (ash) / ${laserIntensity('#ff3a12')} (ember), half-angle ${LASER_ANGLE} rad → version ${out.body.newVersion}`)
         return
     }
-    if (args['tag-steel-only']) {
+    if (mode === 'tag-steel-only') {
         // 2026-10-14: the steel flag on a project that was built before it (beams stop at the rig's steel, steelOccluder.js).
         // updateComponent only, on entities the project already has: nothing created, moved or deleted. Dry run unless --apply.
         const { ops, already, absent } = steelTagOps(doc, rig)
@@ -608,7 +650,7 @@ const main = async () => {
         if (tagged !== ops.length || back.body.document.entities.length !== doc.entities.length) die('read back: not every steel entity carries the flag, or the entity count moved')
         return
     }
-    if (args['laser-lines-only']) {
+    if (mode === 'laser-lines-only') {
         const { ops, unmatched, absent } = laserLineOps(doc, rig)
         say(`${project} @ v${got.body.version}: laser lines only — ${ops.length} beams get beam.laser (updateComponent beam {laser}); ` +
             `in the project, not in the rig file: ${unmatched.length}${unmatched.length ? ` (${unmatched.slice(0, 5).join(', ')})` : ''}; in the rig file, not in the project: ${absent.length}`)
@@ -637,7 +679,7 @@ const main = async () => {
         if (d2.entities.length !== doc.entities.length || drawn !== lz.length) die('read back: not every laser beam carries beam.laser, or the entity count moved')
         return
     }
-    if (args['patch-only']) {
+    if (mode === 'patch-only') {
         const { ops, absent } = patchOps(doc, rig)
         say(`${project} @ v${got.body.version}: patch — ${ops.length} units get the rig file's address (updateComponent fixture); in the rig file, not in the project: ${absent.length}${absent.length ? ` (${absent.join(', ')})` : ''}`)
         for (const op of ops) say(`  ${op.payload.entityId}: ${JSON.stringify(op.payload.patch)}`)
@@ -651,7 +693,7 @@ const main = async () => {
         if (left) die('read back: not every unit is at its address')
         return
     }
-    if (args['laser-frames']) {
+    if (mode === 'laser-frames') {
         const plan = laserFrameOps(doc, rig, frameOpts)
         const { ops, unmatched, absent } = plan
         say(`${project} @ v${got.body.version}: laser frames — ${ops.length} beams get beam.laser with frames (updateComponent beam {laser}); ` +
@@ -674,7 +716,7 @@ const main = async () => {
         if (timed !== lz.length) die('read back: not every laser beam carries its frames')
         return
     }
-    if (args['mark-only'] || args.apply) {
+    if (mode === 'mark-only' || args.apply) {
         // The version row's chip reads the production's VERSION LIST (`<set>-versions`), not this document: the copy's entry
         // was still titled with the beta's long name ("Known · full · the cut, movers on the ground · PONYO 10-04"). Its title
         // becomes "MOXIR v1.0"; its status is not changed (promoting a version is the owner's call).
@@ -688,9 +730,9 @@ const main = async () => {
             if (!out.ok) die(`the version list ${listId}: ${out.status} ${out.text.slice(0, 200)}`)
             say(`version list ${listId}: ${entry.id} titled "${title}" (was "${entry.components.productionVersion.title}")`)
         } else say(`version list: ${entry ? 'already titled' : 'no entry for ' + project}`)
-        if (args['mark-only']) return
+        if (mode === 'mark-only') return
     }
-    if (args['desk-only']) {
+    if (mode === 'desk-only') {
         await deskStep({ api, project, document: doc, cues: doc.mappingState?.cues || [], loop: doc.mappingState?.loop === true })
         return
     }
@@ -712,7 +754,7 @@ const main = async () => {
     const cues = cuesOf(rig)
     // --looks-only (2026-10-13): the looks and the cue list from the rig file, NOTHING else — no unit deleted or
     // re-created, so lamps the owner moved by hand in the Studio stay where he put them.
-    const looksOnly = Boolean(args['looks-only'])
+    const looksOnly = mode === 'looks-only'
     const ops = looksOnly ? [] : [...booth.ops]
     if (!looksOnly) for (const e of old) ops.push({ type: 'deleteEntity', payload: { entityId: e.id } })
     if (!looksOnly) for (const e of ents) ops.push({ type: 'createEntity', payload: { entity: e } })
