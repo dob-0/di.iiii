@@ -53,8 +53,9 @@
 .legal-eyebrow {
     margin: 0 0 var(--di-space-2);
     color: var(--di-cyan);
+    font-family: var(--di-mono);
     font-size: var(--di-text-3);
-    letter-spacing: 0.2em;
+    letter-spacing: var(--di-label-tracking);
     text-transform: uppercase;
 }
 
@@ -120,7 +121,7 @@
     font-family: var(--di-mono);
     font-size: 0.85em;
     color: var(--di-text);
-    background: rgba(var(--di-cyan-rgb), 0.08);
+    background: var(--di-cyan-dim);
     padding: var(--di-space-1) var(--di-space-1);
 }
 
