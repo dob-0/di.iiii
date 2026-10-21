@@ -251,7 +251,7 @@ describe('useLiveSync', () => {
 
         const replacementScene = {
             ...createScene(),
-            assetsBaseUrl: 'https://di-studio.xyz/serverXR/api/spaces/main/assets',
+            assetsBaseUrl: 'https://diiii.xyz/serverXR/api/spaces/main/assets',
             assets: [{ id: 'asset-remote', mimeType: 'image/png', name: 'poster.png' }]
         }
 

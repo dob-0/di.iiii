@@ -15,7 +15,7 @@
  * token (or PAT) passed as --gh-token.
  */
 
-const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
+const DEFAULT_LIVE_URL = 'https://diiii.xyz/serverXR'
 const GH = 'https://api.github.com'
 
 const parseArgs = (argv) => {

@@ -8,7 +8,7 @@
 // it would refuse the exact case this exists to serve — an artist's own machine.
 //
 // The rule instead: a local runtime is a server that KNOWS it is local
-// (DI_LOCAL=1), or a developer's non-production box. A hosted di-studio.xyz is
+// (DI_LOCAL=1), or a developer's non-production box. A hosted diiii.xyz is
 // neither, and gets 404 — not 403, because a deployed server should not even
 // admit the route is a thing.
 const os = require('os')

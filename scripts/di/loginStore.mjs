@@ -33,7 +33,14 @@ import path from 'node:path'
 export const SITES = {
     local: 'http://localhost:4000',
     dev: 'https://dev.diiii.xyz',
-    prod: 'https://di-studio.xyz'
+    prod: 'https://diiii.xyz'
+}
+
+// `SITE_ALIASES` of sdk/credentials.js, copied the same way: an old address
+// that still reaches a tier files its login under that tier.
+export const SITE_ALIASES = {
+    'https://di-studio.xyz': 'prod',
+    'https://www.di-studio.xyz': 'prod'
 }
 
 export const credentialsFile = (home = os.homedir()) => path.join(home, '.config', 'di', 'credentials.json')
@@ -49,7 +56,7 @@ export const originOf = (url) => {
 }
 
 /** The tier whose site is exactly this origin, or null. */
-export const tierOfOrigin = (origin) => Object.keys(SITES).find((tier) => SITES[tier] === origin) || null
+export const tierOfOrigin = (origin) => Object.keys(SITES).find((tier) => SITES[tier] === origin) || SITE_ALIASES[origin] || null
 
 /**
  * Where a login is filed. A tier names its own key; `--to URL` names the tier

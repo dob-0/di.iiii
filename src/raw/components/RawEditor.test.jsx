@@ -1200,7 +1200,7 @@ describe('RawEditor view.browser panel', () => {
             BROWSER_STORAGE_KEY,
             makeWorkspaceDoc(
                 [
-                    { id: 'url-1', typeId: 'value.string', label: 'URL', parentId: null, values: { value: 'https://di-studio.xyz' } },
+                    { id: 'url-1', typeId: 'value.string', label: 'URL', parentId: null, values: { value: 'https://diiii.xyz' } },
                     { id: 'browser-1', typeId: 'view.browser', label: 'Browser', parentId: null, values: {} }
                 ]
             ).replace('"edges":[]', '"edges":[{"id":"e1","fromNodeId":"url-1","fromPort":"out","toNodeId":"browser-1","toPort":"url"}]')
@@ -1209,7 +1209,7 @@ describe('RawEditor view.browser panel', () => {
 
         const iframe = document.querySelector('iframe')
         expect(iframe).toBeTruthy()
-        expect(iframe.getAttribute('src')).toBe('https://di-studio.xyz')
+        expect(iframe.getAttribute('src')).toBe('https://diiii.xyz')
         expect(screen.queryByText('This panel is ready for authored UI.')).toBeNull()
     })
 })

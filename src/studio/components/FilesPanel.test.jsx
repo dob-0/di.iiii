@@ -82,8 +82,8 @@ describe('FilesPanel', () => {
 
         fireEvent.click(screen.getByRole('button', { name: /Embed external URL/ }))
         const urlInput = screen.getByPlaceholderText('https://example.com')
-        fireEvent.change(urlInput, { target: { value: 'https://di-studio.xyz' } })
+        fireEvent.change(urlInput, { target: { value: 'https://diiii.xyz' } })
         fireEvent.click(screen.getByRole('button', { name: 'Use URL' }))
-        expect(onPresentationPatch).toHaveBeenCalledWith({ codeUrl: 'https://di-studio.xyz', codeSourceType: 'url' })
+        expect(onPresentationPatch).toHaveBeenCalledWith({ codeUrl: 'https://diiii.xyz', codeSourceType: 'url' })
     })
 })

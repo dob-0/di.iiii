@@ -10,7 +10,7 @@ describe('isContentAddressedAssetUrl', () => {
 
     it('recognizes a sha256 id as the last path segment of a full URL', () => {
         expect(isContentAddressedAssetUrl(`/api/spaces/main/assets/${sha256}`)).toBe(true)
-        expect(isContentAddressedAssetUrl(`https://di-studio.xyz/api/projects/p1/assets/${sha256}?w=480`)).toBe(true)
+        expect(isContentAddressedAssetUrl(`https://diiii.xyz/api/projects/p1/assets/${sha256}?w=480`)).toBe(true)
     })
 
     it('rejects a legacy (non-sha256) asset id', () => {
