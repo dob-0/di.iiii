@@ -8,3 +8,9 @@
 - Measured: `network-pages.test.js` 17/17 (no e-mail, phone, Drive link or script on any page). Constellation centre labels that overlap in pairs: 5 with 11 labels before, 36 with 23 after (bounding boxes, 1200x1200, agent screen). Label placement in `constellation-template.mjs` needs a collision rule; not changed, the ask was people.
 - A merge republishes the roster on the dev tier (the code deploy action runs on `spaces/*/code/**`); the 30 pages and the constellation go out only through `space-sync`.
 - Owed: the entries came from a one-off script kept in the session scratchpad; a repo script that rebuilds them from the four sources, with no machine paths, replaces it. Ages of the RecordAR and Beyond Form artists are not on record: drop any under 18 before merge.
+
+## 2026-10-22 — fixed after review: owner's answers on the network people
+
+- Merged `origin/dev` (no conflicts). Arthur Steiner is one entry with Beyond Form and RecordAR (our RecordAR space prints "Arthur Stainer"). Davit Nersisyan added (credit line of The Light Put Back, public README). `organisations` array added to `people.json`, with a page and a roster section each: hosq, G.URBAN, fachbetrieb rita grechen — only those whose own site is linked and whose joint work is on a public page already in the repo.
+- Not done, because no public page could be read from this session (outbound requests were refused, status 403): the crew of our nights (Kiara, Dima Fironov, Eter, Kariné, Merouj) with night and date; Mixtinct in Cascade Club; Jam Discipline #4 and its curator Davit Melkonyan; WCC's Arthur; Green Rock Foundation, ICA Yerevan, the Gyumri Academy branch, NOPA, MOCT. Search snippets are not a page read and no fact was taken from them. Each needs a public page URL that says it.
+- Measured: `npx vitest run spaces/network src/copyVocabulary.test.js`: 34 of 34 (network pages 23: 17 before, 6 added).

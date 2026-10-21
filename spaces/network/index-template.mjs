@@ -68,7 +68,7 @@ function rowHTML(p) {
     + `<span class="role">${esc(p.role)}${made}</span></a></li>`;
 }
 
-export function renderIndex(people) {
+export function renderIndex(people, organisations = []) {
   const groups = grouped(people);
   const team = people.filter((p) => p.team).length;
   const rest = people.length - team;
@@ -116,7 +116,11 @@ ${groups.map((g) => `  <h2 class="group"><span class="g-name">${esc(g.label)}</s
   <ul class="catalogue">
 ${g.people.map((p) => '    ' + rowHTML(p)).join('\n')}
   </ul>`).join('\n')}
-</main>
+${organisations.length ? `  <h2 class="group"><span class="g-name">organisations</span><span class="g-rule"></span><span class="g-count">${organisations.length}</span></h2>
+  <ul class="catalogue">
+${organisations.map((o) => `    <li><a class="row" href="/network/${esc(o.slug)}" target="_top"><span class="name">${esc(o.name)}</span><span class="role">${esc(o.role)}</span></a></li>`).join('\n')}
+  </ul>
+` : ''}</main>
 
 <footer class="indexFoot">
   <p>The field beside this page is the same ${words(people.length)}, held apart in depth — the ${words(team)} who run it in the middle, everyone else around them. Turn it with a drag. A line between two of them means they made the same thing — ${sharedLine}.</p>
