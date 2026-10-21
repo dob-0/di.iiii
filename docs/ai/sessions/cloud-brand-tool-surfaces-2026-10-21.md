@@ -1,0 +1,10 @@
+## 2026-10-21 — tool surfaces: square corners and house type (brand-tool-surfaces)
+
+- Every `border-radius` of 50%, 999px or `var(--di-radius-pill)` in the tool-surface stylesheets is `var(--di-radius)` now: preferences; workspace, panels, inspector; controls, menu, base.css (the scrollbar thumb, 5px → the house corner); raw and the mobile shell; jam; scan, make, perform, the live-project chrome and space contents; the loading screen and the WebGL guard. Round sites in these files: 43 → 2.
+- The 2 left are the scan surface's recording light (`.scan-record`, `.scan-record-mark`), kept round and marked Q4 in the stylesheet: an open owner question.
+- The two styled sliders (floating panels, gizmo controls) have a 10×20 rectangle thumb in `--di-text` on a 24px-tall input: WCAG 2.2 SC 2.5.8 hit box; thumb contrast 13.4:1 against the track's brightest end and 19.8:1 against the panel ground (SC 1.4.11 asks 3:1), computed in the test. No switch knob exists in these files.
+- preferences.css: 19 box-shadows → 12; the three 6px glows on the architecture dots are gone; every one left has a comment on the line before (resets, inset 1–2px lines that take no layout, the scene map's selection ring). Its one 1.5 stroke → 1. No 1.5px line is left in the scanned files (5 in liveProjectScene, 1 in raw.css → 1px). font-weight 800 → 700 in mobile-shell.css and raw.css.
+- Raw's wordmark: `di<span className="dot">.</span>iiii`, styled by `.raw-surface-wordmark .dot`.
+- Guard: `src/styles/squareCorners.test.js` (16 tests; 15 fail on dev's CSS). `squareControls.test.js` now expects the jam surface to have no round mark.
+- Not done, said plainly: `--di-radius-pill` stays, because src/studio still reads it 5 times (studio has its own job). makeSurface.css keeps 19 hand-set radii (2–26px): the brief's rows name only circles and pills. Native range inputs in raw and perform (no styled thumb) are still drawn by the browser. The surfaces have one colour scheme, so the light and dark pictures are the same page.
+- One branch and one PR for all seven surfaces (one commit each), not seven PRs: this session could push one branch.
