@@ -1870,6 +1870,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-14'
     },
     {
+        id: 'qr-code-node',
+        category: 'Editing',
+        title: 'QR Code — a live code phones can scan',
+        summary: 'QR Code draws an address as a code people scan with a phone. Left empty, it shows this tier\u2019s own address, so it never goes stale.',
+        body: [
+            'Add a QR Code and wire its Picture into a Plane\u2019s Texture, an Image panel or Picture Out. Phones in the room scan it and open the address it holds.',
+            'Text is the address. Left empty, it is this tier\u2019s own address, read again every time the graph runs: move the project to another tier and the code changes with it, instead of pointing at a host that is gone. Type an address into Text, or wire in a String, to send phones to one page.',
+            'Correction says how much of the code can be covered or worn and still read: L about 7 %, M 15 % (the default), Q 25 %, H 30 %. A higher level makes a denser code for the same address, so keep M for a screen and use H for a print that people will lean on.',
+            'The code is redrawn only when the address or the level changes. An address longer than a QR code can hold (about 2,900 characters at L, 1,270 at H) draws nothing rather than a broken picture.'
+        ],
+        tags: ['raw', 'nodes', 'qr', 'qrcode', 'scan', 'phone', 'address', 'link', 'picture', 'texture'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'build-zones',
         category: 'Editing',
         title: 'A room that arranges itself',

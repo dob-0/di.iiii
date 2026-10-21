@@ -1,8 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { cwd } from 'node:process'
-import { describe, expect, it } from 'vitest'
+import jsQR from 'jsqr'
+import { afterEach, describe, expect, it } from 'vitest'
 import { NODE_RUNTIMES } from './index.js'
+import { encodeQr, rasterQr } from './view.qrcode/qrCode.js'
 import { createEdge, createNode, getNodeType, isNodeTypeImplemented } from '../nodeRegistry.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeOutput } from '../graph/nodeGraphRuntime.js'
 
@@ -855,6 +857,81 @@ describe('view.list — rows and count, in reading order', () => {
         const doc = { nodes: [node('l', 'view.list')], edges: [] }
         expect(evalPort(doc, 'l', 'text')).toBe('')
         expect(evalPort(doc, 'l', 'count')).toBe(0)
+    })
+})
+
+describe('view.qrcode — a live code for an address', () => {
+    // The texture as a plane shows it: DataTexture rows run bottom-up.
+    const read = (texture) => {
+        const { data, width, height } = texture.image
+        const row = width * 4
+        const shown = new Uint8ClampedArray(data.length)
+        for (let y = 0; y < height; y += 1) shown.set(data.subarray(y * row, (y + 1) * row), (height - 1 - y) * row)
+        return jsQR(shown, width, height)?.data ?? null
+    }
+    const sameBytes = (a, b) => a.length === b.length && a.every((value, i) => value === b[i])
+    afterEach(() => { delete globalThis.diiPageOrigin })
+
+    it('bare, it encodes this tier\'s own address, as a texture a plane takes', () => {
+        const doc = { nodes: [node('q', 'view.qrcode')], edges: [] }
+        const texture = evalPort(doc, 'q', 'picture')
+        expect(texture.isTexture).toBe(true)
+        expect(read(texture)).toBe(window.location.origin)
+    })
+
+    it('lays its rows bottom-up, so the code stands upright on a plane', () => {
+        const doc = { nodes: [node('q1', 'view.qrcode', { text: 'https://example.org', level: 'Q' })], edges: [] }
+        const { data, width } = evalPort(doc, 'q1', 'picture').image
+        const upright = rasterQr(encodeQr('https://example.org', 'Q')).data
+        const row = width * 4
+        // Row y of the texture is row (height - 1 - y) of the upright picture.
+        const flipped = new Uint8Array(data.length)
+        for (let y = 0; y < width; y += 1) flipped.set(data.subarray(y * row, (y + 1) * row), (width - 1 - y) * row)
+        expect(sameBytes(flipped, upright)).toBe(true)
+        expect(sameBytes(data, upright)).toBe(false)
+    })
+
+    it('a page\'s diiPageOrigin is the address it encodes when Text is empty', () => {
+        globalThis.diiPageOrigin = 'https://tier.example'
+        const doc = { nodes: [node('q2', 'view.qrcode')], edges: [] }
+        expect(read(evalPort(doc, 'q2', 'picture'))).toBe('https://tier.example')
+    })
+
+    it('a wired Text wins, and the code redraws when it changes', () => {
+        const doc = (address) => ({
+            nodes: [node('s', 'value.string', { value: address }), node('q3', 'view.qrcode'), node('p', 'geom.plane')],
+            edges: [edge('s', 'out', 'q3', 'text'), edge('q3', 'picture', 'p', 'texture')]
+        })
+        const first = evalPort(doc('https://one.example/open/jam'), 'q3', 'picture')
+        expect(read(first)).toBe('https://one.example/open/jam')
+        // Same text, same texture: nothing re-uploads every frame.
+        expect(evalPort(doc('https://one.example/open/jam'), 'q3', 'picture')).toBe(first)
+        let disposed = false
+        first.addEventListener('dispose', () => { disposed = true })
+        const moved = evalPort(doc('https://two.example/open/jam'), 'q3', 'picture')
+        expect(moved).not.toBe(first)
+        expect(disposed).toBe(true)
+        expect(read(moved)).toBe('https://two.example/open/jam')
+        // The wire reaches the plane's texture input as the same object.
+        const context = createNodeGraphContext(doc('https://two.example/open/jam'))
+        expect(evaluateNodeOutput(context.nodesById.get('q3'), 'picture', context)).toBe(moved)
+    })
+
+    it('the level reaches the code: H draws more modules than L', () => {
+        const at = (level) => evalPort({ nodes: [node(`q-${level}`, 'view.qrcode', { text: 'https://example.org/open/jam?seat=12', level })], edges: [] }, `q-${level}`, 'picture')
+        const low = at('L')
+        const high = at('H')
+        expect(low.userData.qr.level).toBe('L')
+        expect(high.userData.qr.level).toBe('H')
+        expect(read(low)).toBe('https://example.org/open/jam?seat=12')
+        expect(read(high)).toBe('https://example.org/open/jam?seat=12')
+        // The texture is the module count plus the border, times whole pixels.
+        expect(low.image.width).not.toBe(high.image.width)
+    })
+
+    it('text too long for any QR code carries nothing, not a broken picture', () => {
+        const doc = { nodes: [node('q4', 'view.qrcode', { text: 'x'.repeat(3000) })], edges: [] }
+        expect(evalPort(doc, 'q4', 'picture')).toBeNull()
     })
 })
 
