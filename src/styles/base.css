@@ -74,9 +74,10 @@
     --di-line: rgba(77, 249, 255, 0.12);
     --di-bg: var(--di-black);
 
-    /* Corners: two values, not the nine that were live. Near-square for the
-       room itself, a full pill for a thing you press. Nothing in between. */
-    --di-radius: 2px;
+    /* Corners: square. The owner, 2026-09-30: "in design we not use the round
+       things" (brand spec v2, row M17). The pill stays only until its last
+       user is gone (docs/ai/golden_rules.md, "Controls are rectangles"). */
+    --di-radius: 0;
     --di-radius-pill: 999px;
 
     /* The surface ladder. Four steps from the ground up, so a panel inside a
@@ -108,6 +109,13 @@
        see. Written out by hand as rgba(77, 249, 255, …) in five stylesheets. */
     --di-cyan-wash: rgba(77, 249, 255, 0.06);
     --di-cyan-line: rgba(77, 249, 255, 0.35);
+    /* The accent on white or paper, where the cyan itself measures 1.3:1.
+       on-light: a mark — the wordmark's dot, a UI mark — 3.5:1 on #fff, 3.3:1
+       on #f7f7f5 (≥ 3:1, non-text). ink-on-light: accent TEXT, 5.4:1 / 5.1:1
+       (≥ 4.5:1). Brand spec v2, row M13; src/styles/brandTokens.test.js
+       measures both. */
+    --di-accent-on-light: #0097a3;
+    --di-accent-ink-on-light: #00757f;
 
     /* The brand colours as channel triples, so a surface can pick its own alpha
        without writing the colour's numbers out by hand. Seventeen different
@@ -121,7 +129,7 @@
     --di-warning-rgb: 255, 179, 71;
     /* The spring green the Desk uses to mark "this machine is me" and Raw
        uses for a picture operator's primary action. */
-    --di-live-rgb: 80, 250, 123;
+    --di-live-rgb: 80, 250, 123; /* quotation of Dracula's green (SYSTEM rule 8) */
 
     /* A scrim: the dark veil laid over a live room or a 3D background so text
        on top of it stays readable whatever moves underneath. Two weights, and
@@ -290,6 +298,25 @@ select,
 textarea
 {
     font-family: inherit;
+}
+
+/* The wordmark — di.iiii — set the same way wherever it appears, so a footer
+   can carry it on a page that has no header. `.name` holds the word as typed
+   (never upper-cased by a surrounding rule), `.dot` is the wordmark's dot,
+   `.di-name` the set word itself. Every `.dot` in src/ and spaces/ was the
+   wordmark's dot when this was written (brand spec v2, row M37). */
+.name {
+    text-transform: none;
+}
+
+.dot {
+    color: var(--di-cyan);
+}
+
+.di-name {
+    font-family: var(--di-sans);
+    font-weight: 700;
+    letter-spacing: -0.02em;
 }
 
 /* Keyboard focus. A ring that is visible on every ground the platform has, on
