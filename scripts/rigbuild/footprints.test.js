@@ -286,6 +286,16 @@ describe('a lamp outside the hall: the building hit is hall-reach\'s', () => {
         expect(inner).toMatchObject({ hit: 'wall', detail: 'side wall', normal: [-1, 0, 0] })
         expect(inner.throw).toBeCloseTo(20, 6)
     })
+
+    it('a lamp ON the floor or a wall face, aimed into the hall, is not outside: the march casts it, no dims.shell needed', () => {
+        expect(building.inside([0, 0, 5])).toBe(true) // y = 0 counts as skin
+        const up = castRay([0, 0, 5], [0, 1, 0], { building, solids: [], maxReach: 60 })
+        expect(up).toMatchObject({ hit: 'roof', detail: 'roof deck', normal: [0, -1, 0] })
+        expect(up.throw).toBeCloseTo(12, 6)
+        const flush = castRay([20, 5, 5], [-1, 0, 0], { building, solids: [], maxReach: 60 })
+        expect(flush).toMatchObject({ hit: 'wall', detail: 'side wall', normal: [1, 0, 0] })
+        expect(flush.throw).toBeCloseTo(40, 6)
+    })
 })
 
 describe('review B4: near field, borrowed words', () => {

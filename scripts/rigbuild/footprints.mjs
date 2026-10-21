@@ -259,7 +259,9 @@ export const rigSolids = (entities) => entities.filter((e) => e.type === 'box' &
 export const castRay = (from, dir, { building, solids = [], maxReach = 80 }) => {
     const d = unit(dir)
     const at = (t) => [from[0] + d[0] * t, from[1] + d[1] * t, from[2] + d[2] * t]
-    const outside = building.inside(from)
+    // a lamp ON a face (the floor y = 0, a wall's inner face) aimed into the hall is not outside: 1 mm along the ray is open volume,
+    // and the march below has always cast it (hall-reach's flush rule; a record without dims.shell must not refuse it)
+    const outside = building.inside(from) && building.inside(at(1e-3))
     let best = outside ? building.outsideHit(from, d, maxReach) : null
     let lo = START_M - STEP_M
     for (let k = Math.round(START_M / STEP_M); !outside && k * STEP_M <= maxReach + 1e-9; k += 1) {

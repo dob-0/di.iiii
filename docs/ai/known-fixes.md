@@ -1076,6 +1076,7 @@ a lamp at (0, 5, 70) aimed down reported a 'wall' at about 0.2 m; hall-reach say
 Fix: an origin outside the open volume takes the building hit from `hall-reach.mjs` `hallFirstSurface` (the record's dims.shell, the floor, the ground
 beyond the footprint): no new march, no copied planes; the hall solids are still met as before and the result has the same shape. A record without
 dims.shell is refused for an outside lamp with hall-reach's reason. Inside origins run the same march as before. Not modelled: a ray from outside that
-enters the hall through an opening.
-Guard: `scripts/rigbuild/footprints.test.js` "a lamp outside the hall" (6 cases on the v13 record: ground, end wall outer face, deck from above,
+enters the hall through an opening. Review of #1059: `inside` is also true ON a face (y = 0, a wall's inner face), so a floor lamp aimed up refused the
+run on the crane-dj record every shipped rig uses (no dims.shell); "outside" now also needs the point 1 mm along the ray outside (hall-reach's flush rule).
+Guard: `scripts/rigbuild/footprints.test.js` "a lamp outside the hall" (7 cases on the v13 record: ground, end wall outer face, deck from above,
 open air, a nearer solid, the refusal), each throw equal to hall-reach's. Session note: `docs/ai/sessions/cloud-footprints-outside-lamps-2026-10-21.md`.
