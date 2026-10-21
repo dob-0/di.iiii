@@ -55,8 +55,10 @@ h1.mark{
   font-size:clamp(58px,13vw,150px);line-height:.86;font-weight:800;letter-spacing:-.05em;
   margin:0 0 26px
 }
-/* The dot of the name is the one cyan in the wordmark. */
-.dot{color:var(--cyan)}
+/* The dot of the name is the one cyan in the wordmark: the platform cyan
+   (src/styles/base.css --di-cyan), written out because this page reads no
+   stylesheet of the platform. Not var(--cyan): that is the retired Studio cyan. */
+.dot{color:#4df9ff}
 .tagline{font-size:clamp(17px,2.3vw,23px);color:var(--dim);margin:0 auto 34px;max-width:26ch}
 .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:20px}
 .btn{

@@ -92,6 +92,20 @@ describe('landing brand (spec v2)', () => {
     it('M11: the landing page\'s wordmark is di<span class=dot>.</span>iiii, the dot cyan', () => {
         expect(spacePage.match(/di<span class="dot">\.<\/span>iiii/g)?.length).toBe(2)
         expect(spacePage).not.toMatch(/di<i>\.<\/i>iiii/)
-        expect(spacePage).toMatch(/\.dot\s*\{\s*color:\s*var\(--cyan\)\s*\}/)
+        // The platform cyan written out: the page reads no platform stylesheet, and
+        // its own --cyan (#4FD6FF) is the retired Studio cyan.
+        expect(spacePage).toMatch(/\.dot\s*\{\s*color:\s*#4df9ff\s*\}/i)
+        expect(read('../styles/base.css')).toMatch(/--di-cyan:\s*#4df9ff\b/i)
+    })
+
+    it('the header ground is the strong scrim token, not a literal black', () => {
+        expect(rules.find((r) => r.sel === '.lp-nav')?.body).toMatch(/background:\s*var\(--di-scrim-strong\)/)
+    })
+
+    it('eyebrow and heading colours are not decided here (owner question: cyan or white)', () => {
+        const colour = (sel) => /color:\s*([^;]+);/.exec(rules.find((r) => r.sel === sel)?.body || '')?.[1]
+        expect(colour('.lp-eyebrow')).toBe('var(--di-cyan) !important')
+        expect(colour('.lp-section-eyebrow')).toBe('var(--di-cyan) !important')
+        expect(colour('.lp-section-title')).toBe('var(--di-text) !important')
     })
 })
