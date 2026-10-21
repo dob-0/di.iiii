@@ -1,5 +1,6 @@
 import { CssBaseline, GlobalStyles, ThemeProvider, createTheme } from '@mui/material'
 import { DI_FONT_FAMILY } from '../styles/muiTheme.js'
+import { DI_CYAN, DI_SUCCESS, DI_SURFACE, DI_SURFACE_2 } from '../styles/brandColors.js'
 import './styles/studio.css'
 
 /**
@@ -8,24 +9,28 @@ import './styles/studio.css'
  * Extracted when the local home began mounting SpaceHub outside StudioApp:
  * a second copy of these values would have drifted, and the first sign of it
  * would have been one surface quietly a different blue from the other.
+ *
+ * The frame is di.iiii's (2026-10-21): the house tokens of base.css and square
+ * corners. A project's scene keeps its own colours; nothing here reaches it.
+ * Exported for src/studio/studioFrame.test.js.
  */
-const studioTheme = createTheme({
+export const studioThemeOptions = {
     palette: {
         mode: 'dark',
         primary: {
-            main: '#4fd6ff'
+            main: DI_CYAN
         },
         secondary: {
-            main: '#53d79b'
+            main: DI_SUCCESS
         },
         background: {
-            default: '#0a1118',
-            paper: '#0f1722'
+            default: DI_SURFACE,
+            paper: DI_SURFACE_2
         },
         divider: 'rgba(255,255,255,0.08)'
     },
     shape: {
-        borderRadius: 8
+        borderRadius: 0
     },
     typography: {
         fontFamily: DI_FONT_FAMILY,
@@ -45,13 +50,15 @@ const studioTheme = createTheme({
         MuiDrawer: {
             styleOverrides: {
                 paper: {
-                    backgroundColor: '#0f1722',
+                    backgroundColor: DI_SURFACE_2,
                     backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%)'
                 }
             }
         }
     }
-})
+}
+
+const studioTheme = createTheme(studioThemeOptions)
 
 
 export default function StudioThemeProvider({ children }) {
@@ -59,9 +66,9 @@ export default function StudioThemeProvider({ children }) {
         <ThemeProvider theme={studioTheme}>
             <CssBaseline />
             <GlobalStyles styles={{
-                html: { backgroundColor: '#0a1118', height: '100%' },
-                body: { backgroundColor: '#0a1118', height: '100%' },
-                '#root': { backgroundColor: '#0a1118', height: '100%' }
+                html: { backgroundColor: DI_SURFACE, height: '100%' },
+                body: { backgroundColor: DI_SURFACE, height: '100%' },
+                '#root': { backgroundColor: DI_SURFACE, height: '100%' }
             }}
             />
             {children}

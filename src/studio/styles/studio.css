@@ -449,7 +449,7 @@
     justify-content: center;
     width: 22px;
     height: 22px;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     background: rgba(var(--di-cyan-rgb), 0.2);
     border: 1px solid var(--di-cyan-line);
     color: var(--di-cyan);
@@ -795,27 +795,30 @@
     border-radius: var(--di-radius);
     min-width: 0;
     letter-spacing: 0;
-    box-shadow: none !important;
+    box-shadow: none;
 }
 
 .sfp-content .MuiButton-outlined {
-    border-color: rgba(255, 255, 255, 0.12) !important;
-    color: rgba(255, 255, 255, 0.75) !important;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.75);
 }
 
 .sfp-content .MuiButton-outlined:hover {
-    background: rgba(255, 255, 255, 0.06) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
+/* These rules outrank MUI by specificity; their !important was dropped on
+   2026-10-21 after measuring each one changed nothing on screen. The border
+   keeps it: without it the contained button loses its border (solid -> none). */
 .sfp-content .MuiButton-contained {
-    background: var(--di-line) !important;
+    background: var(--di-line);
     border: 1px solid var(--di-cyan-border) !important;
-    color: var(--di-cyan) !important;
+    color: var(--di-cyan);
 }
 
 .sfp-content .MuiButton-contained:hover {
-    background: rgba(var(--di-cyan-rgb), 0.2) !important;
+    background: rgba(var(--di-cyan-rgb), 0.2);
 }
 
 .sfp-content .MuiOutlinedInput-root {
@@ -831,8 +834,8 @@
 
 .sfp-content .MuiPaper-outlined,
 .sfp-content .MuiCard-root {
-    border-color: rgba(255, 255, 255, 0.08) !important;
-    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .sfp-content .MuiSelect-select,
@@ -1128,9 +1131,10 @@
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
-    height: 4px;
-    border-radius: var(--di-radius);
-    margin: var(--di-space-2) 0 var(--di-space-1);
+    /* The input is the hit box: 24 px tall (WCAG 2.2 SC 2.5.8). The 4 px line is
+       its background, drawn in the middle; the thumb is a rectangle. */
+    height: 24px;
+    margin: 0;
     cursor: pointer;
     /* Set inline by InspSlider/SliderField; declared here so the gradient never
        has to read the token with a hardcoded fallback. */
@@ -1139,15 +1143,16 @@
         to right,
         var(--di-cyan) var(--insp-slider-fill),
         rgba(255, 255, 255, 0.1) var(--insp-slider-fill)
-    );
+    ) center / 100% 4px no-repeat;
 }
 
+/* The thumb's dark rim keeps it apart from the filled cyan line (SC 1.4.11). */
 .insp-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
+    width: 8px;
+    height: 18px;
+    border-radius: var(--di-radius);
     background: var(--di-cyan);
     border: 2px solid var(--di-scrim-strong);
     box-shadow: 0 0 0 1px rgba(var(--di-cyan-rgb), 0.4);
@@ -1155,9 +1160,9 @@
 }
 
 .insp-slider::-moz-range-thumb {
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
+    width: 8px;
+    height: 18px;
+    border-radius: var(--di-radius);
     background: var(--di-cyan);
     border: 2px solid var(--di-scrim-strong);
     box-shadow: 0 0 0 1px rgba(var(--di-cyan-rgb), 0.4);
@@ -1246,7 +1251,7 @@
     height: 16px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     flex-shrink: 0;
     transition: background 0.15s, border-color 0.15s;
 }
@@ -1258,7 +1263,7 @@
     width: 10px;
     height: 10px;
     background: rgba(255, 255, 255, 0.45);
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     transition: transform 0.15s, background 0.15s;
 }
 
@@ -1593,7 +1598,7 @@
     text-transform: uppercase;
     color: var(--di-cyan);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.4);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     padding: var(--di-space-1) var(--di-space-2);
 }
 .spp-actions {

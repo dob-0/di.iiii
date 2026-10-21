@@ -1,0 +1,536 @@
+{
+  "laptop-dark": {
+    "editor": {
+      "total": 133,
+      "round": 1,
+      "square": 99.2,
+      "sites": [
+        "scc-sync-dot"
+      ]
+    },
+    "controls": {
+      "sliderHitBox": "274x24.0",
+      "sliderThumbCss": {
+        "w": "274px",
+        "h": "24px",
+        "radius": "0px"
+      },
+      "toggleHitBox": "274x24.2",
+      "toggleThumb": "10x10",
+      "px": {
+        "ground": [
+          4,
+          6,
+          15
+        ],
+        "thumb": [
+          77,
+          249,
+          255
+        ],
+        "trackEmpty": [
+          29,
+          31,
+          39
+        ],
+        "trackFull": [
+          77,
+          249,
+          255
+        ],
+        "tOffThumb": [
+          130,
+          131,
+          136
+        ],
+        "tOffTrack": [
+          29,
+          31,
+          39
+        ],
+        "tOnThumb": [
+          77,
+          249,
+          255
+        ],
+        "tOnTrack": [
+          19,
+          55,
+          62
+        ]
+      },
+      "contrast": {
+        "sliderThumbEdgeLeftVsFilledTrack": 13.28,
+        "sliderThumbHalfWidthPx": 2,
+        "sliderThumbVsEmptyTrack": 12.77,
+        "sliderThumbVsGround": 15.71,
+        "sliderThumbVsFilledTrack": 1,
+        "switchOffThumbVsTrack": 4.35,
+        "switchOffThumbVsGround": 5.35,
+        "switchOnThumbVsTrack": 9.92,
+        "switchOnThumbVsGround": 15.71
+      }
+    },
+    "constellation": {
+      "total": 19,
+      "round": 0,
+      "square": 100,
+      "sites": []
+    },
+    "viewToggleOn": "color(srgb 0.301961 0.976471 1 / 0.14)",
+    "errors": []
+  },
+  "important": [
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-top-color",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-top-style",
+      "matched": 1,
+      "changed": 1,
+      "sample": "solid -> none"
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-top-width",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-right-color",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-right-style",
+      "matched": 1,
+      "changed": 1,
+      "sample": "solid -> none"
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-right-width",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-bottom-color",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-bottom-style",
+      "matched": 1,
+      "changed": 1,
+      "sample": "solid -> none"
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-bottom-width",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-left-color",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-left-style",
+      "matched": 1,
+      "changed": 1,
+      "sample": "solid -> none"
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-left-width",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-image-source",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-image-slice",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-image-width",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-image-outset",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".sfp-content .MuiButton-contained",
+      "prop": "border-image-repeat",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn",
+      "prop": "color",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn",
+      "prop": "border-top-color",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn",
+      "prop": "border-right-color",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn",
+      "prop": "border-bottom-color",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn",
+      "prop": "border-left-color",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "border-top-color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "border-right-color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "border-bottom-color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "border-left-color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "background-image",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "background-position-x",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "background-position-y",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "background-size",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "background-repeat",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "background-attachment",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "background-origin",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "background-clip",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "background-color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:disabled",
+      "prop": "color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:disabled",
+      "prop": "border-top-color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:disabled",
+      "prop": "border-right-color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:disabled",
+      "prop": "border-bottom-color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:disabled",
+      "prop": "border-left-color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    }
+  ],
+  "importantHover": [
+    {
+      "sel": ".insp-delete-btn",
+      "prop": "color",
+      "matched": 1,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:hover:not(:disabled)",
+      "prop": "color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:disabled",
+      "prop": "color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:disabled",
+      "prop": "border-top-color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:disabled",
+      "prop": "border-right-color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:disabled",
+      "prop": "border-bottom-color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    },
+    {
+      "sel": ".insp-delete-btn:disabled",
+      "prop": "border-left-color",
+      "matched": 0,
+      "changed": 0,
+      "sample": ""
+    }
+  ],
+  "laptop-light": {
+    "editor": {
+      "total": 133,
+      "round": 1,
+      "square": 99.2,
+      "sites": [
+        "scc-sync-dot"
+      ]
+    },
+    "controls": {
+      "sliderHitBox": "274x24.0",
+      "sliderThumbCss": {
+        "w": "274px",
+        "h": "24px",
+        "radius": "0px"
+      },
+      "toggleHitBox": "274x24.2",
+      "toggleThumb": "10x10",
+      "px": {
+        "ground": [
+          4,
+          6,
+          15
+        ],
+        "thumb": [
+          77,
+          249,
+          255
+        ],
+        "trackEmpty": [
+          29,
+          31,
+          39
+        ],
+        "trackFull": [
+          77,
+          249,
+          255
+        ],
+        "tOffThumb": [
+          130,
+          131,
+          136
+        ],
+        "tOffTrack": [
+          29,
+          31,
+          39
+        ],
+        "tOnThumb": [
+          77,
+          249,
+          255
+        ],
+        "tOnTrack": [
+          19,
+          55,
+          62
+        ]
+      },
+      "contrast": {
+        "sliderThumbEdgeLeftVsFilledTrack": 13.28,
+        "sliderThumbHalfWidthPx": 2,
+        "sliderThumbVsEmptyTrack": 12.77,
+        "sliderThumbVsGround": 15.71,
+        "sliderThumbVsFilledTrack": 1,
+        "switchOffThumbVsTrack": 4.35,
+        "switchOffThumbVsGround": 5.35,
+        "switchOnThumbVsTrack": 9.92,
+        "switchOnThumbVsGround": 15.71
+      }
+    },
+    "constellation": {
+      "total": 19,
+      "round": 0,
+      "square": 100,
+      "sites": []
+    },
+    "viewToggleOn": "color(srgb 0.301961 0.976471 1 / 0.14)",
+    "errors": []
+  },
+  "phone-dark": {
+    "editor": {
+      "total": 26,
+      "round": 0,
+      "square": 100,
+      "sites": []
+    },
+    "constellation": {
+      "total": 19,
+      "round": 0,
+      "square": 100,
+      "sites": []
+    },
+    "viewToggleOn": "color(srgb 0.301961 0.976471 1 / 0.14)",
+    "errors": []
+  },
+  "phone-light": {
+    "editor": {
+      "total": 26,
+      "round": 0,
+      "square": 100,
+      "sites": []
+    },
+    "constellation": {
+      "total": 19,
+      "round": 0,
+      "square": 100,
+      "sites": []
+    },
+    "viewToggleOn": "color(srgb 0.301961 0.976471 1 / 0.14)",
+    "errors": []
+  }
+}

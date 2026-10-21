@@ -102,7 +102,7 @@
    which the legend never mentioned while both dominated the screen. */
 .scon-legend-note { color: var(--di-faint); }
 .scon-legend-note::before { content: "—"; margin-right: var(--di-space-1); opacity: 0.6; }
-.scon-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.scon-legend i { width: 8px; height: 8px; border-radius: var(--di-radius); display: inline-block; }
 
 .scon-hint {
     position: absolute;
@@ -200,7 +200,7 @@
 }
 .scon-btn:hover { border-color: var(--di-cyan); color: var(--di-ink); }
 .scon-btn--go { border-color: var(--di-cyan); color: var(--di-cyan); }
-.scon-btn--go:hover { background: color-mix(in srgb, var(--di-cyan) 0.12%, transparent); }
+.scon-btn--go:hover { background: color-mix(in srgb, var(--di-cyan) 12%, transparent); }
 .scon-btn--danger:hover { border-color: var(--di-danger); color: var(--di-danger); }
 
 .scon-projects {
@@ -227,7 +227,7 @@
     border-radius: var(--di-radius);
 }
 .scon-prow:hover { background: rgba(255, 255, 255, 0.03); }
-.scon-prow--live { background: color-mix(in srgb, var(--di-cyan) 0.06%, transparent); }
+.scon-prow--live { background: color-mix(in srgb, var(--di-cyan) 6%, transparent); }
 .scon-prow-name {
     flex: 1;
     text-align: left;
@@ -281,7 +281,7 @@
     cursor: pointer;
     transition: 0.18s;
 }
-.ssh-view-toggle button.on { background: color-mix(in srgb, var(--di-cyan) 0.14%, transparent); color: var(--di-cyan); }
+.ssh-view-toggle button.on { background: color-mix(in srgb, var(--di-cyan) 14%, transparent); color: var(--di-cyan); }
 
 @media (prefers-reduced-motion: reduce) {
     .scon-panel { animation: none; }
@@ -330,8 +330,8 @@
     border-color: var(--di-line);
 }
 .ssh-arrange button.on, .ssh-filter button.on {
-    background: color-mix(in srgb, var(--di-cyan) 0.14%, transparent);
-    border-color: color-mix(in srgb, var(--di-cyan) 0.4%, transparent);
+    background: color-mix(in srgb, var(--di-cyan) 14%, transparent);
+    border-color: color-mix(in srgb, var(--di-cyan) 40%, transparent);
     color: var(--di-cyan);
 }
 .ssh-filter button:disabled { opacity: 0.35; cursor: default; }
@@ -388,7 +388,7 @@
     transition: background 0.18s;
 }
 .ssh-list-row:last-child { border-bottom: none; }
-.ssh-list-row:hover, .ssh-list-row:focus-visible { background: color-mix(in srgb, var(--di-cyan) 0.05%, transparent); }
+.ssh-list-row:hover, .ssh-list-row:focus-visible { background: color-mix(in srgb, var(--di-cyan) 5%, transparent); }
 .ssh-list-name b { display: block; font-size: var(--di-text-4); font-weight: 600; line-height: 1.35; }
 .ssh-list-id, .ssh-list-project, .ssh-list-state {
     font-family: var(--di-mono);
