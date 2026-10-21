@@ -8,7 +8,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
 import IosShareIcon from '@mui/icons-material/IosShare'
 import PushPinIcon from '@mui/icons-material/PushPin'
-import { diFontTheme } from '../styles/muiTheme.js'
+import { diTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useSpaceChat from './useSpaceChat.js'
 import { buildChatHomePath, buildChatPath, buildPrivateChatPath } from './chatRouting.js'
@@ -340,7 +340,7 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
     const typing = typingLine(typingNames)
 
     return (
-        <ThemeProvider theme={diFontTheme}>
+        <ThemeProvider theme={diTheme}>
             <Box sx={{
                 position: 'fixed',
                 inset: 0,

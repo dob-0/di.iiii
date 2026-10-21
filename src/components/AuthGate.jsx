@@ -1,6 +1,6 @@
 import { Box, Button, CircularProgress, Divider, Link, Stack, TextField, ThemeProvider, Typography } from '@mui/material'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { diFontTheme } from '../styles/muiTheme.js'
+import { diTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import useSpacePublicFlag from '../hooks/useSpacePublicFlag.js'
@@ -411,12 +411,12 @@ function AuthGateInner({
             // has to offer the retry.
             <div className="loading-screen">
                 <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, alignItems: 'flex-start' }}>
-                    <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, letterSpacing: '-0.02em' }}>
+                    <Typography variant="h6" sx={{ color: 'var(--di-text)', fontWeight: 700, letterSpacing: '-0.02em' }}>
                         di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
                     </Typography>
                     {/* One plain sentence and a next step. The raw error stays one
                         hover away (title) and in the console, not as the message. */}
-                    <Typography variant="body2" role="alert" title={String(error)} sx={{ color: 'rgba(255, 255, 255, 0.62)' }}>
+                    <Typography variant="body2" role="alert" title={String(error)} sx={{ color: 'var(--di-text-muted)' }}>
                         We can&apos;t reach the server right now. Nothing is lost — check your connection, then try again.
                     </Typography>
                     <Button
@@ -425,8 +425,8 @@ function AuthGateInner({
                         onClick={refresh}
                         sx={{
                             textTransform: 'none',
-                            borderColor: 'rgba(255, 255, 255, 0.24)',
-                            color: 'rgba(255, 255, 255, 0.92)'
+                            borderColor: 'var(--di-text-muted)',
+                            color: 'var(--di-text)'
                         }}
                     >
                         Retry
@@ -602,13 +602,13 @@ function AuthGateInner({
                     disabled={!token.trim() || submitting}
                     sx={{
                         background: 'var(--ui-accent)',
-                        color: '#07111b',
+                        color: 'var(--di-black)',
                         fontWeight: 700,
                         textTransform: 'none',
                         '&:hover': { background: 'var(--ui-accent-strong)' }
                     }}
                 >
-                    {submitting ? <CircularProgress size={18} sx={{ color: '#07111b' }} /> : 'Sign in'}
+                    {submitting ? <CircularProgress size={18} sx={{ color: 'var(--di-black)' }} /> : 'Sign in'}
                 </Button>
                     </>
                 ) : (providers?.github || providers?.google) ? (
@@ -707,7 +707,7 @@ function SignInSurfaceInner({ onSignedIn = null }) {
 
 export function SignInSurface({ onSignedIn = null }) {
     return (
-        <ThemeProvider theme={diFontTheme}>
+        <ThemeProvider theme={diTheme}>
             <SignInSurfaceInner onSignedIn={onSignedIn} />
         </ThemeProvider>
     )
@@ -719,7 +719,7 @@ export function SignInSurface({ onSignedIn = null }) {
 // it eagerly. Studio nests its own theme inside this one and still wins.
 export default function AuthGate(props) {
     return (
-        <ThemeProvider theme={diFontTheme}>
+        <ThemeProvider theme={diTheme}>
             <AuthGateInner {...props} />
         </ThemeProvider>
     )
