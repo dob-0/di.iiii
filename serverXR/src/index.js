@@ -129,6 +129,7 @@ const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { registerLaserRoutes } = require('./routes/laserRoutes')
+const { registerOscRoutes } = require('./routes/oscRoutes')
 const { registerNdiRoutes, scanAtBootFrom } = require('./routes/ndiRoutes')
 const { hasLocalRuntime } = require('./localRuntimeGuard')
 const { registerPlaceRoutes } = require('./routes/placeRoutes')
@@ -562,6 +563,14 @@ const lasers = registerLaserRoutes(app, {
     return project ? readProjectDocument(SPACES_DIR, project.spaceId, project.projectId) : null
   }
 })
+
+// OSC (serverXR/src/osc) at /osc — the OSC In and OSC Out nodes' UDP, which a page cannot
+// open: the lasers' twin in shape (built on first use, local-only, 404 hosted).
+const osc = registerOscRoutes(app, {
+  mountPaths: [...new Set(['/osc', `${config.mountPath || ''}/osc`.replace(/\/+/g, '/')])],
+  log: logger
+})
+process.once('exit', () => { try { osc.close() } catch { /* going down anyway */ } })
 
 // NDI® in (serverXR/src/ndi) at /ndi — the lighting desk's twin: a local-runtime lane,
 // built on first use, 404 on a hosted server. Nothing native loads here or at boot: the

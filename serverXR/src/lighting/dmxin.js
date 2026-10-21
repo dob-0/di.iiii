@@ -560,6 +560,24 @@ class InputMerger {
   }
 }
 
+// What a reader outside the desk (the Nodes editor's DMX In) may know of one universe: its
+// state in one word, and its 512 levels (0..255) when there are any. 'held' is the desk's own
+// hold (Setup → Input → on loss: hold); with 'release' a silent universe reads 'lost' and no
+// levels, and the reader keeps its own last value.
+//   off          the desk's input is switched off
+//   not-listened the desk does not listen to this universe (add it under Setup → Input)
+//   waiting      listened to, nothing has arrived yet
+//   live | held | lost
+function inputLevels(merger, universe, now) {
+  const u = Number(universe);
+  if (!merger.config.enabled) return { universe: u, state: 'off', levels: null };
+  if (!Number.isInteger(u) || !merger.lines.has(u)) return { universe: u, state: 'not-listened', levels: null };
+  const U = merger.u.get(u);
+  const f = U ? merger.frame(u, now) : null;
+  if (f) return { universe: u, state: f.state, levels: Array.from(f.data), ageMs: U.lastAt != null ? now - U.lastAt : null };
+  return { universe: u, state: U && U.lastAt != null ? 'lost' : 'waiting', levels: null, ageMs: U && U.lastAt != null ? now - U.lastAt : null };
+}
+
 module.exports = {
   // Art-Net
   ARTNET_PORT, OP_POLL, OP_POLL_REPLY, OP_DMX, POLL_REPLY_LENGTH, ST_VISUAL,
@@ -569,5 +587,5 @@ module.exports = {
   SACN_PORT, NETWORK_DATA_LOSS_MS, parseE131, buildE131, sacnMulticast, cidString, OPT_PREVIEW, OPT_TERMINATED,
   // shared
   sequenceAccept, deskFromArtNet, deskFromSacn, artNetFromDesk, sacnFromDesk,
-  LOSS_MS, MAX_SOURCES, MERGES, WITH_DESK, LOSS_POLICIES, sanitizeInputConfig, InputMerger,
+  LOSS_MS, MAX_SOURCES, MERGES, WITH_DESK, LOSS_POLICIES, sanitizeInputConfig, InputMerger, inputLevels,
 };

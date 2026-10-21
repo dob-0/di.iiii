@@ -9,6 +9,7 @@ const entries = {
   integrations: require("./integrations"),
   laser: require("./laser"),
   ndi: require("./ndi"),
+  osc: require("./osc"),
   place: require("./place"),
   platform: require("./platform"),
   projects: require("./projects"),
