@@ -15,7 +15,8 @@ vi.mock('./services/serverSpaces.js', () => ({
     getServerConfig: () => Promise.resolve({ local: false }),
     listServerSpaces: () => Promise.resolve([]),
     getServerSpace: (spaceId) => Promise.resolve({ id: spaceId, isPublic: spaceId === 'pub' }),
-    resolveVanityProjectLink: () => Promise.resolve(null)
+    resolveVanityProjectLink: () => Promise.resolve(null),
+    resolveSpaceRoot: () => Promise.resolve(null)
 }))
 
 vi.mock('./components/AuthGate.jsx', () => ({

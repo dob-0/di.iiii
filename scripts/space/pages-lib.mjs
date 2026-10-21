@@ -45,6 +45,23 @@ export const ALLOW = 'camera; microphone; fullscreen; xr-spatial-tracking; accel
 const LINE_SEPARATORS = new RegExp('[\\u2028\\u2029]', 'g')
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
+// The viewer hands a code page its own origin and query (window.diiPageOrigin, diiPageQuery, diiPageParams;
+// src/utils/presentationPreviewDocument.js injectBootstrap), because a srcdoc page has no URL to read them from. It
+// hands them to the TOP page only: a tab's srcdoc frame got none, so AirCanvas fell back to its hard-coded prod host and
+// on the dev tier joined prod's mesh room. The combined page passes on what it was given, the same way: a script right
+// after the tab page's <head>, before any of the page's own scripts. Only values the combined page has are passed on.
+// Kept as plain JS text (it runs inside the combined page); `<` is escaped so a value cannot close the script.
+const HAND_ON = String.raw`function handOn(h){
+  const W=window,v=(s)=>JSON.stringify(s).replace(/</g,'\\u003c');let js='';
+  if(typeof W.diiPageOrigin==='string')js+='window.diiPageOrigin='+v(W.diiPageOrigin)+';';
+  if(typeof W.diiPageQuery==='string')js+='window.diiPageQuery='+v(W.diiPageQuery)+';try{window.diiPageParams=new URLSearchParams(window.diiPageQuery)}catch(e){window.diiPageParams=new URLSearchParams()}';
+  if(!js)return h;
+  const tag='<script>'+js+'<\/script>',head=/<head(\s[^>]*)?>/i,root=/<html(\s[^>]*)?>/i;
+  if(head.test(h))return h.replace(head,(m)=>m+tag);
+  if(root.test(h))return h.replace(root,(m)=>m+'<head>'+tag+'</head>');
+  return tag+h;
+}`
+
 // One page, a tab per source page. Only the open tab's page is loaded: a tab switch replaces the frame, so the old
 // page (its 3D view, its camera) is unloaded before the next one starts. The strip sits ABOVE the frame, never on top
 // of it, so it covers none of a page's own controls at any width.
@@ -74,8 +91,9 @@ nav button:focus-visible,nav a:focus-visible{outline:2px solid var(--ink);outlin
 <script>
 const PAGES=${json},ALLOW=${JSON.stringify(allow)};
 const btn=[...document.querySelectorAll('nav button')];let view=document.getElementById('view');
+${HAND_ON}
 function show(i){
-  const f=document.createElement('iframe');f.id='view';f.title=btn[i].textContent;f.allow=ALLOW;f.srcdoc=PAGES[i];
+  const f=document.createElement('iframe');f.id='view';f.title=btn[i].textContent;f.allow=ALLOW;f.srcdoc=handOn(PAGES[i]);
   view.replaceWith(f);view=f; // the old frame goes with its page: one 3D view live at a time, its camera off
   btn.forEach((b,j)=>b.setAttribute('aria-pressed',String(j===i)));
 }

@@ -15,8 +15,8 @@
 //   relink: { "/old": "/new" } } (the Dilijan one: spaces/dilijan/combine-aren.json). Flags override the spec.
 //   `file` is read relative to the spec; `assetsOf` names the project whose assets the file's URLs name (default: into).
 // --assets-from: read a page's assets from ANOTHER api when this one does not have them yet (e.g. a scratch stack
-//   that holds the originals, while --api is the server being changed). DI_TOKEN goes to --api only, and to
-//   --assets-from only when it is the same server; another one gets DI_ASSETS_TOKEN, or no token.
+//   that holds the originals, while --api is the server being changed). DI_TOKEN is the bearer for --api and goes
+//   to the --assets-from host only when it IS --api; another host gets DI_ASSETS_TOKEN, or no token at all.
 // --keep-as ID: before the replace, the target's own page becomes project ID in the same space, born private, its assets
 //   copied and its links repointed: when the target's page is not one of the tabs, it is kept as a project, not only in a
 //   backup. An ID that already holds a page is refused, never overwritten.
@@ -36,10 +36,8 @@ if (!api) { console.error('--api URL is required (e.g. http://<tree>.diiii.local
 const assetsApi = (flag('--assets-from') || api).replace(/\/$/, '')
 const bearer = (token) => (token ? { authorization: `Bearer ${token}` } : {})
 const auth = bearer(process.env.DI_TOKEN)
-// DI_TOKEN is the --api server's token: it goes to --assets-from only when that is the same server. Another server gets
-// DI_ASSETS_TOKEN, or no token at all (2026-10-21: it was sent the target's token).
-const assetsAuth = process.env.DI_ASSETS_TOKEN ? bearer(process.env.DI_ASSETS_TOKEN)
-  : new URL(assetsApi).origin === new URL(api).origin ? auth : {}
+// A token for one server must not reach another (2026-10-21 review: DI_TOKEN went to the --assets-from host too).
+const assetsAuth = process.env.DI_ASSETS_TOKEN ? bearer(process.env.DI_ASSETS_TOKEN) : (assetsApi === api ? auth : {})
 const ua = { 'user-agent': userAgent('di-combine-pages') }
 
 async function call(method, route, body) {

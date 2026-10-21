@@ -4,9 +4,8 @@
 // Unit tests run against an in-memory install (a fake API: nothing real is called). The last block starts a
 // throwaway server process in a temp folder, the way serverXR's own contract tests do, to prove the routes
 // the script relies on answer as the fake assumes.
-import { spawn, execFileSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -16,6 +15,7 @@ import { fakeInstall } from './production/fakeInstall.testlib.mjs'
 import { putNewEntries, readList, setStatus } from './production/versionList.mjs'
 import { makeClient } from './place/api.mjs'
 import { CLEANUP_PLAN, parseCliArgs, repoMentions, run } from './space-cleanup.mjs'
+import { spawnServerUntilReady } from '../serverXR/src/testSupport/spawnServer.mjs'
 
 vi.setConfig({ testTimeout: 30_000, hookTimeout: 45_000 })
 
@@ -534,11 +534,6 @@ describe('repoMentions (the real git grep)', () => {
 const SERVER_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'serverXR')
 const ADMIN = 'sc-admin-token'
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-const freePort = () => new Promise((resolve, reject) => {
-    const server = net.createServer()
-    server.on('error', reject)
-    server.listen(0, '127.0.0.1', () => { const { port } = server.address(); server.close((error) => (error ? reject(error) : resolve(port))) })
-})
 
 describe('against a real server process (a throwaway one in a temp folder)', () => {
     let server = null
@@ -555,23 +550,16 @@ describe('against a real server process (a throwaway one in a temp folder)', () 
     beforeAll(async () => {
         cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-cwd-'))
         dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-data-'))
-        const port = await freePort()
-        child = spawn(process.execPath, [path.join(SERVER_ROOT, 'src/index.js')], {
+        // Ready = this child's own listen line, a lost port race retried on a new port (testSupport/spawnServer.mjs).
+        // A probe-then-spawn here raced sibling files for the number (known-fixes, EADDRINUSE 2026-10-20).
+        const started = await spawnServerUntilReady({
+            entry: path.join(SERVER_ROOT, 'src/index.js'),
             cwd,
-            env: { ...process.env, PORT: String(port), NODE_ENV: 'production', APP_BASE_PATH: '/serverXR', DATA_ROOT: dataRoot, API_TOKEN: ADMIN, REQUIRE_AUTH: 'true', CORS_ORIGINS: '*', AUTH_SESSION_SECRET: 'sc-session-secret', AUTH_SESSION_COOKIE_SECURE: 'false', AUTH_HUB_URL: 'off' },
-            stdio: ['ignore', 'pipe', 'pipe']
+            env: { ...process.env, NODE_ENV: 'production', APP_BASE_PATH: '/serverXR', DATA_ROOT: dataRoot, API_TOKEN: ADMIN, REQUIRE_AUTH: 'true', CORS_ORIGINS: '*', AUTH_SESSION_SECRET: 'sc-session-secret', AUTH_SESSION_COOKIE_SECURE: 'false', AUTH_HUB_URL: 'off' },
+            readyTimeoutMs: 20000
         })
-        let logs = ''
-        child.stdout.on('data', (chunk) => { logs += chunk })
-        child.stderr.on('data', (chunk) => { logs += chunk })
-        server = `http://127.0.0.1:${port}/serverXR`
-        const deadline = Date.now() + 20000
-        for (;;) {
-            if (child.exitCode !== null) throw new Error(`server exited early\n${logs}`)
-            try { if ((await fetch(`${server}/api/health`)).ok) break } catch { /* booting */ }
-            if (Date.now() > deadline) throw new Error(`server did not start\n${logs}`)
-            await wait(200)
-        }
+        child = started.child
+        server = `http://127.0.0.1:${started.port}/serverXR`
         for (const slug of NAMES) expect((await send('POST', '/api/spaces', { label: slug, slug })).status).toBe(201)
         for (const [slug, title] of [['moxir-hall', 'MOXIR — the hall'], ['moxir-truss', 'Truss over the DJ'], ['moxir-hall-known-full', 'Known · full']]) {
             expect((await send('POST', '/api/spaces/moxir/projects', { slug, title })).status).toBe(201)
