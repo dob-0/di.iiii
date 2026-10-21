@@ -151,11 +151,11 @@ describe('di names itself to the hub, so the bouncer counts it as an identified 
         const seen = []
         const fetchImpl = async (url, init) => { seen.push(init.headers['User-Agent']); return { ok: true, status: 200, json: async () => ({ release: { gitCommit: SHA_A } }) } }
         await devRelease({ hub: 'https://h', installed: `0.4.16-dev.${'a'.repeat(8)}`, fetchImpl })
-        expect(seen).toEqual(['di/0.4.16-dev.aaaaaaaa (+https://diiii.xyz/for-apps)'])
+        expect(seen).toEqual(['di.iiii/0.4.16-dev.aaaaaaaa (+https://diiii.xyz/for-apps)'])
     })
     it('is classified as an app by serverXR, where Node\'s default is anonymous', () => {
-        expect(classifyUserAgent(userAgent('0.4.16'))).toMatchObject({ kind: 'app', name: 'di', contact: 'https://diiii.xyz/for-apps' })
-        expect(classifyUserAgent(userAgent(null))).toMatchObject({ kind: 'app', name: 'di' })
+        expect(classifyUserAgent(userAgent('0.4.16'))).toMatchObject({ kind: 'app', name: 'di.iiii', contact: 'https://diiii.xyz/for-apps' })
+        expect(classifyUserAgent(userAgent(null))).toMatchObject({ kind: 'app', name: 'di.iiii' })
         expect(classifyUserAgent('node').kind).toBe('anonymous')
     })
 })
