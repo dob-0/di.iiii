@@ -19,10 +19,11 @@
     z-index: 9999;
 }
 
+/* a drawing, not a control: stays round (owner, 2026-10-21). */
 .loading-screen-spinner {
     width: 34px;
     height: 34px;
-    border-radius: var(--di-radius);
+    border-radius: 50%;
     /* One bright arc on a faint ring — legible as motion on black without
        being a lit object in its own right. */
     border: 2px solid rgba(255, 255, 255, 0.14);

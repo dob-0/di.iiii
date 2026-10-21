@@ -27,14 +27,14 @@
     padding: var(--di-space-2) var(--di-space-4);
     border-radius: var(--di-radius);
     cursor: pointer;
-    transition: background-color 220ms ease, border-color 220ms ease;
+    transition: background-color var(--di-motion-base) ease, border-color var(--di-motion-base) ease;
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
 }
 
 .live-scene-exit:hover {
-    background: var(--di-danger);
-    border-color: var(--di-danger);
+    background: var(--di-cyan-dim);
+    border-color: var(--di-cyan-line);
 }
 
 /* The room's own right-hand corner: the sound switch, then the badge. The
@@ -105,7 +105,7 @@
     text-align: center;
     color: var(--di-text);
     white-space: nowrap;
-    transition: opacity 0.3s;
+    transition: opacity var(--di-motion-base);
 }
 
 .live-scene-hint--lock {
@@ -151,15 +151,16 @@
     justify-content: center;
     background: var(--di-surface);
     z-index: 20;
-    transition: opacity 0.55s ease;
+    transition: opacity var(--di-motion-base) ease;
 }
 
+/* a drawing, not a control: stays round (owner, 2026-10-21). */
 .live-scene-loading-ring {
     width: 36px;
     height: 36px;
-    border-radius: var(--di-radius);
-    border: 2px solid rgba(var(--di-danger-rgb), 0.18);
-    border-top-color: var(--di-danger);
+    border-radius: 50%;
+    border: 2px solid rgba(var(--di-cyan-rgb), 0.18);
+    border-top-color: var(--di-cyan);
     animation: ring-spin 0.75s linear infinite;
 }
 
@@ -195,7 +196,7 @@
     width: 90px;
     height: 90px;
     border-radius: var(--di-radius);
-    border: 1px solid rgba(var(--di-danger-rgb), 0.45);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.45);
     background: rgba(0, 0, 0, 0.28);
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
@@ -210,14 +211,14 @@
     left: 52px;
     bottom: 124px;
     opacity: 0.35;
-    transition: opacity 0.12s ease;
+    transition: opacity var(--di-motion-fast) ease;
 }
 
 .live-scene-joystick-thumb {
     width: 34px;
     height: 34px;
     border-radius: var(--di-radius);
-    background: rgba(var(--di-danger-rgb), 0.75);
+    background: rgba(255, 255, 255, 0.75);
     pointer-events: none;
     will-change: transform;
 }
@@ -228,7 +229,7 @@
     bottom: 40px;
     right: 40px;
     padding: var(--di-space-2) var(--di-space-4);
-    border: 1px solid rgba(var(--di-danger-rgb), 0.5);
+    border: 1px solid var(--di-cyan-line);
     border-radius: var(--di-radius);
     background: rgba(0, 0, 0, 0.4);
     color: rgba(255, 255, 255, 0.6);
@@ -242,12 +243,12 @@
     z-index: 11;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    transition: color 0.2s ease, border-color 0.2s ease;
+    transition: color var(--di-motion-base) ease, border-color var(--di-motion-base) ease;
 }
 
 .live-scene-fly-btn.active {
-    color: var(--di-danger);
-    border-color: var(--di-danger);
+    color: var(--di-cyan);
+    border-color: var(--di-cyan);
 }
 
 /* Fly mode altitude buttons (mobile only -- Space/Q/C/E have no touch
@@ -265,7 +266,7 @@
 .live-scene-vert-btn {
     width: 44px;
     height: 44px;
-    border: 1px solid rgba(var(--di-danger-rgb), 0.5);
+    border: 1px solid var(--di-cyan-line);
     border-radius: var(--di-radius);
     background: rgba(0, 0, 0, 0.4);
     color: rgba(255, 255, 255, 0.75);
@@ -279,9 +280,9 @@
 }
 
 .live-scene-vert-btn:active {
-    color: var(--di-danger);
-    border-color: var(--di-danger);
-    background: rgba(var(--di-danger-rgb), 0.15);
+    color: var(--di-cyan);
+    border-color: var(--di-cyan);
+    background: var(--di-cyan-dim);
 }
 
 @media (max-width: 720px) {
@@ -301,13 +302,13 @@
 /* Ghost joystick (mobile) */
 .ls-ghost-joy {
     position: absolute; bottom: 124px; left: 52px; width: 96px; height: 96px; border-radius: var(--di-radius);
-    border: 1px solid rgba(var(--di-danger-rgb),0.5); background: rgba(0,0,0,0.22);
+    border: 1px solid rgba(var(--di-cyan-rgb),0.45); background: rgba(0,0,0,0.22);
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
     display: flex; align-items: center; justify-content: center; animation: ls-ring-pulse 2.4s ease-in-out infinite;
 }
-.ls-ghost-thumb { width: 36px; height: 36px; border-radius: var(--di-radius); background: rgba(var(--di-danger-rgb),0.8); animation: ls-thumb-demo 2.4s ease-in-out infinite; }
+.ls-ghost-thumb { width: 36px; height: 36px; border-radius: var(--di-radius); background: rgba(255,255,255,0.75); animation: ls-thumb-demo 2.4s ease-in-out infinite; }
 .ls-hint-label--joy { bottom: 100px; left: 56px; }
-@keyframes ls-ring-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(var(--di-danger-rgb),0); } 50% { box-shadow: 0 0 0 9px rgba(var(--di-danger-rgb),0.12); } }
+@keyframes ls-ring-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(var(--di-cyan-rgb),0); } 50% { box-shadow: 0 0 0 9px rgba(var(--di-cyan-rgb),0.12); } }
 @keyframes ls-thumb-demo {
     0% { transform: translate(0,0); } 20% { transform: translate(22px,-13px); } 40% { transform: translate(-18px,15px); }
     60% { transform: translate(19px,17px); } 80% { transform: translate(-17px,-17px); } 100% { transform: translate(0,0); }
@@ -325,4 +326,4 @@
 .ls-key--a { animation: ls-key-glow 1.8s ease-in-out infinite 0.18s; }
 .ls-key--s { animation: ls-key-glow 1.8s ease-in-out infinite 0.36s; }
 .ls-key--d { animation: ls-key-glow 1.8s ease-in-out infinite 0.54s; }
-@keyframes ls-key-glow { 0%,100% { border-color: rgba(255,255,255,0.22); color: rgba(255,255,255,0.5); } 50% { border-color: rgba(var(--di-danger-rgb),0.85); color: var(--di-text); } }
+@keyframes ls-key-glow { 0%,100% { border-color: rgba(255,255,255,0.22); color: rgba(255,255,255,0.5); } 50% { border-color: rgba(var(--di-cyan-rgb),0.85); color: var(--di-text); } }

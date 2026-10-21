@@ -14,9 +14,10 @@ import { describe, expect, it } from 'vitest'
  * and the WebGL guard. A file joins the list the day it is converted and never
  * leaves it.
  *
- * Kept round on purpose, each marked Q4 (an open owner question: the recording
- * light stays as it is until the owner answers): the scan surface's record
- * button and its red mark. Nothing else.
+ * Every control is square, the scan shutter and the walk joystick included
+ * (owner, 2026-10-21). Kept round on purpose, and only these: a status dot
+ * (it reports, it is not pressed) and a drawing (the scan coverage dial, the
+ * loading rings). Each carries a comment saying "not a control" right above it.
  */
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
@@ -46,9 +47,17 @@ const SURFACES = {
 }
 const FILES = Object.values(SURFACES).flat()
 
-// Q4 — the recording light. file → selectors allowed a round corner.
-const Q4_ROUND = {
-    'scan/scanSurface.css': ['.scan-record', '.scan-record-mark'],
+// file → selectors allowed a round corner: status dots and drawings, never a control.
+const ROUND_ALLOWED = {
+    'styles/preferences.css': ['.preferences-architecture-node-dot'],
+    'styles/workspace.css': ['.workspace-status-chip::before'],
+    'styles/inspector/misc.css': ['.status-dot'],
+    'styles/controls.css': ['.collaboration-cursor-dot'],
+    'project/components/jamSurface.css': ['.jam-count-dot'],
+    'scan/scanSurface.css': ['.scan-ring', '.scan-record-mark'],
+    'perform/perform.css': ['.perform-beat'],
+    'components/liveProjectScene.css': ['.live-scene-loading-ring'],
+    'components/loadingScreen.css': ['.loading-screen-spinner'],
 }
 
 const ROUND = /border-radius\s*:\s*([^;}]*(?:50%|999px|--di-radius-pill)[^;}]*)/
@@ -75,10 +84,10 @@ describe('square corners on the tool surfaces', () => {
     })
 
     for (const [surface, files] of Object.entries(SURFACES)) {
-        it(`${surface}: no circle, pill or pill token outside the Q4 recording light`, () => {
+        it(`${surface}: no circle, pill or pill token on a control`, () => {
             const bad = []
             for (const file of files) {
-                const allowed = Q4_ROUND[file] ?? []
+                const allowed = ROUND_ALLOWED[file] ?? []
                 for (const rule of roundRules(read(file))) {
                     if (!allowed.includes(rule.selector)) bad.push(`${file}:${rule.line} ${rule.selector} → ${rule.value}`)
                 }
@@ -87,15 +96,27 @@ describe('square corners on the tool surfaces', () => {
         })
     }
 
-    it('keeps the Q4 recording light exactly as it is, and marks it Q4 in the stylesheet', () => {
-        for (const [file, selectors] of Object.entries(Q4_ROUND)) {
+    it('keeps every allowed round mark round, each with "not a control" right above it', () => {
+        for (const [file, selectors] of Object.entries(ROUND_ALLOWED)) {
+            expect(FILES, file).toContain(file)
             const css = read(file)
             expect(roundRules(css).map((r) => r.selector)).toEqual(selectors)
             for (const selector of selectors) {
                 const at = css.indexOf(`${selector} {`)
                 expect(at, selector).toBeGreaterThan(-1)
-                expect(css.slice(Math.max(0, at - 400), at), `${selector} needs a Q4 comment above it`).toMatch(/Q4/)
+                const before = css.slice(0, at).trimEnd()
+                expect(before.endsWith('*/'), `${selector} needs a comment right above it`).toBe(true)
+                expect(before.slice(before.lastIndexOf('/*')), selector).toMatch(/not a control/)
             }
+        }
+    })
+
+    it('squares the scan shutter and the walk joystick (owner, 2026-10-21)', () => {
+        const rounds = (file) => roundRules(read(file)).map((r) => r.selector)
+        expect(rounds('scan/scanSurface.css')).not.toContain('.scan-record')
+        expect(rounds('scan/scanSurface.css')).not.toContain('.scan-out')
+        for (const s of ['.live-scene-joystick', '.live-scene-joystick-thumb']) {
+            expect(rounds('components/liveProjectScene.css')).not.toContain(s)
         }
     })
 
@@ -191,5 +212,47 @@ describe('the raw wordmark', () => {
         const editor = read('raw/components/RawEditor.jsx')
         expect(editor).toMatch(/className=\{`raw-surface-wordmark[\s\S]{0,400}?>di<span className="dot">\.<\/span>iiii<\/a>/)
         expect(read('raw/styles/raw.css')).toMatch(/\.raw-surface-wordmark \.dot \{/)
+    })
+})
+
+describe('the live-project chrome', () => {
+    const css = read('components/liveProjectScene.css')
+
+    it('draws no control in --di-danger: nothing on it is dangerous', () => {
+        const hits = lines(css).map((l, i) => [i + 1, l]).filter(([, l]) => /--di-danger/.test(l))
+        expect(hits).toEqual([])
+    })
+
+    it('times every transition with a motion token (0.12s or 0.15s), no literal duration', () => {
+        const bad = lines(css).filter((l) => /transition\s*:/.test(l) && /\d(ms|s)\b/.test(l.replace(/var\([^)]*\)/g, '')))
+        expect(bad).toEqual([])
+    })
+
+    it('draws no 1.5px border', () => {
+        expect(css).not.toMatch(/(^|[^\d.])1\.5px/m)
+    })
+})
+
+describe('raw: focus you can see, a name you can read', () => {
+    const raw = read('raw/styles/raw.css')
+
+    it('outlines the focused selection scaffold 2px cyan, outside the edge', () => {
+        expect(raw).toMatch(/\.raw-selection-scaffold:focus-visible \{ outline: 2px solid var\(--di-cyan\); outline-offset: 2px \}/)
+    })
+
+    it('draws the wordmark in --di-text-muted, not white at .28 (2.3:1)', () => {
+        const at = raw.indexOf('.raw-surface-wordmark {')
+        expect(raw.slice(at, raw.indexOf('}', at))).toMatch(/\n\s*color: var\(--di-text-muted\);/)
+    })
+})
+
+describe('preferences draws its chevron, not a glyph Inter lacks', () => {
+    it('draws the header toggle as an SVG chevron, no ▸ or ▾ glyph', () => {
+        const page = read('components/PreferencesPage.jsx')
+        const at = page.indexOf('className="preferences-collapse-toggle"')
+        expect(at).toBeGreaterThan(-1)
+        const button = page.slice(at, page.indexOf('</button>', at))
+        expect(button).not.toMatch(/'\u25B8'|'\u25BE'/)
+        expect(button).toMatch(/<svg [^>]*aria-hidden="true"/)
     })
 })

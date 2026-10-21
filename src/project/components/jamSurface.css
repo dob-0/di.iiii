@@ -62,10 +62,11 @@
     letter-spacing: -0.01em;
 }
 
+/* status dot, not a control: stays round (owner, 2026-10-21). */
 .jam-count-dot {
     width: 0.5rem;
     height: 0.5rem;
-    border-radius: var(--di-radius);
+    border-radius: 50%;
     background: var(--di-success);
     box-shadow: 0 0 0 3px rgba(var(--di-success-rgb), 0.18);
 }

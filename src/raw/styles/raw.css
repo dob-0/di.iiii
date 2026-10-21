@@ -2567,7 +2567,7 @@
 }
 
 .raw-selection-scaffold:focus { outline: none }
-.raw-selection-scaffold:focus-visible { outline: 1px solid var(--di-cyan-border); outline-offset: -1px }
+.raw-selection-scaffold:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 2px }
 
 /* Drag handle on the column's left edge; arrows resize it from the keyboard. */
 .raw-column-resize {
@@ -4352,7 +4352,7 @@
     font-weight: 700;
     font-size: var(--di-text-4);
     letter-spacing: -0.02em;
-    color: rgba(255, 255, 255, 0.28);
+    color: var(--di-text-muted);
     user-select: none;
     /* Chrome sits BEHIND the cards (the owner's screenshot, hayfilm MOCT: the
        mark drew over a card). 0 = above the canvas ground, below .raw-graph-stage
@@ -4362,13 +4362,13 @@
 }
 
 .raw-surface-wordmark:hover {
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--di-text);
 }
 
 .raw-surface-wordmark:focus-visible {
     outline: 1px solid var(--di-cyan);
     outline-offset: 4px;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--di-text);
 }
 
 .raw-surface-wordmark .dot {

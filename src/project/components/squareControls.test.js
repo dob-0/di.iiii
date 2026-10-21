@@ -38,13 +38,13 @@ describe('the visitor viewer draws rectangles', () => {
         expect(read('../../components/authReturnNotice.css')).not.toMatch(round)
     })
 
-    // Wave 2. The jam surface and the kit page. Since brand-tool-surfaces (2026-10-21) the
-    // jam's two marks are square too, so a pill or circle anywhere in these files fails here.
-    it('keeps the jam surface square, its marks included', () => {
-        const css = read('../../project/components/jamSurface.css')
+    // Wave 2. The jam surface and the kit page: the jam keeps one round mark, its presence
+    // dot (a status dot, not a control — owner, 2026-10-21); a new pill or circle fails here.
+    it('keeps the jam surface round only on its presence dot', () => {
+        const css = read('../../project/components/jamSurface.css').replace(/\/\*[\s\S]*?\*\//g, '')
         const rounds = [...css.matchAll(/([^{}]+)\{[^}]*border-radius:\s*(var\(--di-radius-pill\)|999px|50%)/g)]
             .map((m) => m[1].trim())
-        expect(rounds).toEqual([])
+        expect(rounds).toEqual(['.jam-count-dot'])
     })
 
     it('draws every kit page control and tag with a 2 px corner', () => {

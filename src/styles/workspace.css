@@ -220,11 +220,12 @@
     white-space: nowrap;
 }
 
+/* status dot, not a control: stays round (owner, 2026-10-21). */
 .workspace-status-chip::before {
     content: '';
     width: 6px;
     height: 6px;
-    border-radius: var(--di-radius);
+    border-radius: 50%;
     background: var(--di-cyan);
     flex: 0 0 auto;
 }
