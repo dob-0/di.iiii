@@ -2,6 +2,7 @@ import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import WikiPage from './WikiPage.jsx'
+import { getAppLocationState } from '../utils/spaceRouting.js'
 import { WIKI_ARTICLES, WIKI_HIGHLIGHTS, WIKI_CATEGORIES } from './wikiContent.js'
 
 describe('wikiContent', () => {
@@ -65,6 +66,43 @@ describe('WikiPage', () => {
             window.history.replaceState({}, '', '/wiki#not-a-real-article')
             render(<WikiPage />)
             expect(document.title).toBe('Wiki — di.iiii')
+        })
+    })
+
+    // Audit 2026-10-21, G25: each article is its own address, /wiki/{id}.
+    describe('an article at its own address', () => {
+        afterEach(() => {
+            window.history.replaceState({}, '', '/wiki')
+            document.querySelector('meta[name="description"]')?.remove()
+        })
+
+        it('the router reads /wiki/{id} as the wiki, opened on that article', () => {
+            expect(getAppLocationState({ pathname: '/wiki/glossary', search: '' }))
+                .toMatchObject({ page: 'wiki', wikiArticleId: 'glossary' })
+            expect(getAppLocationState({ pathname: '/wiki', search: '' }).wikiArticleId).toBeUndefined()
+            expect(getAppLocationState({ pathname: '/wiki/%E0', search: '' }).wikiArticleId).toBeUndefined()
+        })
+
+        it('names the article in the tab and in the meta description', () => {
+            const article = WIKI_ARTICLES.find((a) => a.id === 'glossary')
+            window.history.replaceState({}, '', '/wiki/glossary')
+            render(<WikiPage articleId="glossary" />)
+            expect(document.title).toBe(`${article.title} — Wiki — di.iiii`)
+            expect(document.querySelector('meta[name="description"]').getAttribute('content')).toBe(article.summary)
+        })
+
+        it('every sidebar link is the article\'s own address, not a #hash', () => {
+            render(<WikiPage />)
+            const links = [...document.querySelectorAll('.wiki-sidebar-link')]
+            expect(links).toHaveLength(WIKI_ARTICLES.length)
+            for (const link of links) expect(link.getAttribute('href')).toMatch(/^\/wiki\/[^#]+$/)
+        })
+
+        it('an id the wiki does not have shows the index at the index\'s address', () => {
+            window.history.replaceState({}, '', '/wiki/no-such-article')
+            render(<WikiPage articleId="no-such-article" />)
+            expect(document.title).toBe('Wiki — di.iiii')
+            expect(window.location.pathname).toBe('/wiki')
         })
     })
 })

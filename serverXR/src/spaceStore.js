@@ -192,6 +192,9 @@ function createSpaceStore({
     trustedUserIds: parseTrusted(row.trusted_user_ids),
     // Owner opt-in: anonymous append-only inscriptions (see inscriptionRoutes).
     openInscriptions: Boolean(row.open_inscriptions),
+    // One line for visitors: the card on /spaces and the share card's
+    // description (shared/spaceBlurb.cjs). null = the space has not said yet.
+    blurb: row.blurb || null,
     sceneVersion: row.scene_version || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -350,9 +353,10 @@ function createSpaceStore({
       const nextInscribe  = 'openInscriptions' in updates ? (updates.openInscriptions ? 1 : 0)                                                       : row.open_inscriptions
       const nextArchived  = 'archived'         in updates ? (updates.archived ? (row.archived_at || now) : null)                                       : (row.archived_at ?? null)
       const nextTrusted   = 'trustedUserIds'   in updates ? serializeTrusted(updates.trustedUserIds)                                                       : (row.trusted_user_ids ?? null)
-      db.prepare('UPDATE spaces SET archived_at=? WHERE id=?').run(nextArchived, spaceId)
+      const nextBlurb     = 'blurb'            in updates ? (updates.blurb ?? null)                                                                  : (row.blurb ?? null)
+      db.prepare('UPDATE spaces SET archived_at=?, blurb=? WHERE id=?').run(nextArchived, nextBlurb, spaceId)
       update.run(nextSlug, nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, nextInscribe, nextTrusted, spaceId)
-      return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe, trusted_user_ids: nextTrusted, archived_at: nextArchived })
+      return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe, trusted_user_ids: nextTrusted, archived_at: nextArchived, blurb: nextBlurb })
     })()
   }
 

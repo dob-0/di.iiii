@@ -806,6 +806,9 @@ function initDb(dbPath) {
   // invisible to an older build (no SCHEMA_VERSION bump). Not the trash: no TTL.
   ensureColumn(db, 'spaces', 'archived_at', 'INTEGER')
   ensureColumn(db, 'spaces', 'position', 'INTEGER NOT NULL DEFAULT 0')
+  // The space's one line for visitors (shared/spaceBlurb.cjs). Nullable,
+  // invisible to an older build, like archived_at above.
+  ensureColumn(db, 'spaces', 'blurb', 'TEXT')
   db.exec('CREATE INDEX IF NOT EXISTS idx_projects_collection ON projects(collection_id, position)')
   ensureColumn(db, 'users', 'spaces', 'TEXT')
   ensureColumn(db, 'users', 'is_unrestricted', 'INTEGER NOT NULL DEFAULT 0')
