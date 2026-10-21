@@ -44,13 +44,9 @@ describe('wiki.css', () => {
         expect(rule('.wiki-search:focus-visible')).toMatch(/outline:\s*2px solid var\(--di-cyan\)/)
     })
 
-    // Audit 2026-10-21 W6, measured in Chromium at 1440x900: 25 % of the screen
-    // (the margins beside the text) is the background canvas, and a wheel there
-    // moved the page 0 px. Same cause as the landing's (landing.css, L6): a fixed
-    // layer whose canvas turns pointer events back on, inline.
-    it('lets the background canvas take no pointer events, so a wheel anywhere scrolls', () => {
-        const at = wiki.indexOf('.wiki-root .grid-floor-background *')
-        expect(at).toBeGreaterThanOrEqual(0)
-        expect(wiki.slice(at, wiki.indexOf('}', at))).toMatch(/pointer-events:\s*none\s*!important/)
+    // Audit 2026-10-21 W6: same cause as the landing's L6 and fixed in the same
+    // place (LiveProjectScene's Canvas style, guarded in liveProjectSceneSeams.test.js).
+    it('does not patch the background canvas with an !important rule', () => {
+        expect(wiki).not.toMatch(/grid-floor-background[^{]*\{[^}]*pointer-events:\s*none\s*!important/)
     })
 })

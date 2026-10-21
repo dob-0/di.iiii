@@ -10,15 +10,6 @@
     scroll-behavior: smooth;
 }
 
-/* The room behind the wiki is only ever a picture. It sits in a position:fixed
-   layer, so a wheel that lands on its canvas chains to the document, which does
-   not scroll, instead of .wiki-root: the margins beside the text (25 % of a
-   1440x900 screen) did not scroll. R3F sets pointer-events inline, hence !important. */
-.wiki-root .grid-floor-background,
-.wiki-root .grid-floor-background * {
-    pointer-events: none !important;
-}
-
 /* Dark, blurred scrim over the decorative 3D background so header/sidebar text
    stays readable. Sits above the fixed GL canvas (z 0), below the content (z 2). */
 .wiki-root::before {
