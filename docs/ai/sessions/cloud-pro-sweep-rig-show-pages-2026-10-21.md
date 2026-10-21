@@ -18,3 +18,8 @@
   (the owner's words); "room" / "desk" / "scenes" against the vocabulary; currency defaults to AMD.
 - Not seen on a real phone, touchpad, Safari or screen reader: the owner's look on phone, touchpad and
   desktop is owed.
+- Review of #1070, fixed: a mouse notch on a scaled screen panned the plot. Chromium divides the wheel delta
+  by the screen scale (100 px → 66.67 at 150 %), and `planWheel.js` read any fractional deltaY as a touchpad.
+  Now only deltaX ≠ 0 marks a touchpad; deltaY 80 / 66.67 / 50 / 4.000244 zoom, as on dev. The plot's + - keys
+  also skip a contenteditable target. Three new tests, red on the previous code (3 failed / 6 passed).
+  Not checked on a physical mouse at 150 % or on macOS.

@@ -27,8 +27,10 @@ Found by `scripts/audit/rig-show-pages.cjs` (headless Chromium + axe-core 4.13, 
 `docs/ai/audits/2026-10-21-rig-show-pages.md`). Symptoms and fixes, one commit each:
 - **The plot zoomed on a touchpad's two-finger scroll and dropped its sideways part.** `onWheel` read deltaY
   only and always zoomed. `src/rigbuild/planWheel.js` tells the gesture from the event: ctrlKey = pinch
-  (zoom), a deltaX or a fractional pixel = touchpad (pan both axes), a whole-pixel notch or line mode =
-  mouse (zoom to the pointer); one meaning per gesture, deltaX always pans. Guard: `plotInput.test.jsx`.
+  (zoom), a deltaX = touchpad (pan both axes), any purely vertical wheel or line mode = mouse (zoom to the
+  pointer); one meaning per gesture, deltaX always pans. A fractional deltaY is NOT a touchpad tell:
+  Chromium divides a notch by the screen scale (100 → 66.67 at 150 %) and macOS sends 4.000244…; reading
+  it as a touchpad made a mouse pan on a scaled screen (review of #1070). Guard: `plotInput.test.jsx`.
 - **The plot could not zoom without a wheel or two fingers** (WCAG 2.5.1, 2.1.1): + − fit on the plan and
   the keys + - 0. Guard: `plotInput.test.jsx`.
 - **Perform's strip menus ignored Escape and a press outside.** A window listener (not `document`: the

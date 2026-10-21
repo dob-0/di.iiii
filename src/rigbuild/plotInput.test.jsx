@@ -66,6 +66,28 @@ describe('the plot under a touchpad, a mouse and one pointer', () => {
         fireEvent.keyDown(window, { key: '-' })
         expect(box()[2]).toBeGreaterThan(start[2])
     })
+
+    it('a mouse notch on a 150 % screen (deltaY 66.67) zooms the plan, it does not pan it', async () => {
+        const { svg, box } = await mountPlot()
+        const before = box()
+        fireEvent.wheel(svg, { deltaX: 0, deltaY: 100 / 1.5, deltaMode: 0 })
+        expect(box()[2]).toBeGreaterThan(before[2])
+    })
+
+    it('+ and - typed into an editable element leave the plan alone', async () => {
+        const { box } = await mountPlot()
+        const start = box()
+        const note = document.createElement('div')
+        note.contentEditable = 'true'
+        // jsdom has no isContentEditable; a browser computes it from contentEditable.
+        Object.defineProperty(note, 'isContentEditable', { value: true })
+        document.body.appendChild(note)
+        fireEvent.keyDown(note, { key: '+' })
+        expect(box()[2]).toBeCloseTo(start[2], 9)
+        fireEvent.keyDown(note, { key: '-' })
+        expect(box()[2]).toBeCloseTo(start[2], 9)
+        note.remove()
+    })
 })
 
 describe('createPlanWheel — which gesture a wheel event is', () => {
@@ -79,8 +101,13 @@ describe('createPlanWheel — which gesture a wheel event is', () => {
     it('a touchpad scroll with any sideways part pans, both axes, in pixels', () => {
         expect(wheel()({ deltaX: -4, deltaY: 0, deltaMode: 0 }, 0)).toEqual({ zoom: 1, pan: [-4, 0] })
     })
-    it('a fractional vertical delta (a touchpad, never a notch) pans', () => {
-        expect(wheel()({ deltaX: 0, deltaY: 2.5, deltaMode: 0 }, 0).pan).toEqual([0, 2.5])
+    it('a fractional vertical notch zooms: a mouse on a scaled screen or a macOS accelerated wheel (#1070 review)', () => {
+        // Chromium divides a 100 px notch by the device scale: 80 at 125 %, 66.67 at 150 %, 50 at 200 %.
+        for (const deltaY of [100 / 1.25, 100 / 1.5, 50, 4.000244140625, -66.66666666666667]) {
+            const out = wheel()({ deltaX: 0, deltaY, deltaMode: 0 }, 0)
+            expect(out.pan).toBeNull()
+            expect(out.zoom).toBeCloseTo(Math.exp(-deltaY * 0.0015), 12)
+        }
     })
     it('a whole-pixel vertical notch, or a line-mode wheel, zooms', () => {
         expect(wheel()({ deltaX: 0, deltaY: 100, deltaMode: 0 }, 0).pan).toBeNull()

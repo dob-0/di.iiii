@@ -4,11 +4,13 @@
 // the editors that scroll) and the touchpad's own meaning: a pinch arrives as a wheel with ctrlKey (Chromium,
 // Firefox) and zooms; a two-finger scroll arrives as pixel deltas on both axes and pans; a mouse notch keeps
 // what the plot always did, zoom to the pointer. A browser does not say which device sent a wheel, so the
-// tell is the event itself: a sideways part (deltaX ≠ 0) or a fraction of a pixel comes from a touchpad, a
-// whole-pixel vertical step or a line-mode wheel from a mouse. One gesture keeps one meaning while its events
-// keep coming (a touchpad's scroll is not cut into zoom and pan halfway), but a sideways part always pans:
-// deltaX is never dropped. Limit: a touchpad scroll that is perfectly vertical in whole pixels from its first
-// event reads as a mouse and zooms (seen nowhere yet; UNVERIFIED on a real touchpad).
+// tell is the event itself: only a sideways part (deltaX ≠ 0) marks a touchpad. A fraction of a pixel is NOT
+// a tell: Chromium divides a mouse notch by the screen's scale (100 px arrives as 66.67 at 150 %, measured over
+// CDP in review of #1070) and a macOS accelerated wheel sends 4.000244…, and both must zoom as they do on dev.
+// One gesture keeps one meaning while its events keep coming (a touchpad's scroll is not cut into zoom and pan
+// halfway), but a sideways part always pans: deltaX is never dropped. Limit: a touchpad scroll that is purely
+// vertical from its first event reads as a mouse and zooms, which is what dev does today (UNVERIFIED on a
+// real touchpad).
 
 export const PLAN_GESTURE_GAP_MS = 180
 export const PLAN_WHEEL_ZOOM = 0.0015
@@ -28,7 +30,7 @@ export const createPlanWheel = () => {
             return { zoom: Math.exp(-dy * PLAN_PINCH_ZOOM), pan: null }
         }
         const going = now - last.at < PLAN_GESTURE_GAP_MS && last.mode !== 'pinch'
-        const looksLikeTouchpad = (e.deltaMode || 0) === 0 && (dx !== 0 || !Number.isInteger(dy))
+        const looksLikeTouchpad = (e.deltaMode || 0) === 0 && dx !== 0
         const mode = looksLikeTouchpad || (going && last.mode === 'pan') ? 'pan' : 'zoom'
         last = { mode, at: now }
         if (mode === 'pan') return { zoom: 1, pan: [dx, dy] }

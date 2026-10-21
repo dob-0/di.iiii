@@ -646,7 +646,7 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
     useEffect(() => {
         const onKey = (event) => {
             const tag = event.target?.tagName
-            if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+            if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || event.target?.isContentEditable) return
             const zoomKey = { '+': ZOOM_STEP, '=': ZOOM_STEP, '-': 1 / ZOOM_STEP, _: 1 / ZOOM_STEP }[event.key]
             if (!event.ctrlKey && !event.metaKey && !event.altKey && (zoomKey || event.key === '0')) {
                 event.preventDefault()

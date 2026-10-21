@@ -115,8 +115,10 @@ severity-3 left (F5) is M. Seven S-sized severity 2 / 1 rows were fixed on the w
 
 - Nothing was seen on a real screen, a real touchpad, a real phone or tablet, Safari (gesture events), or a
   screen reader. The plot's touchpad rule (planWheel.js) tells a mouse notch from a touchpad by the event
-  itself; a touchpad scroll that is perfectly vertical in whole pixels from its first event reads as a
-  mouse and zooms. The owner's look on phone, touchpad and desktop is owed.
+  itself, and only a sideways part (deltaX ≠ 0) counts as a touchpad. A first version also read a fractional
+  deltaY as a touchpad; the #1070 review measured a mouse notch at 150 % scale arriving as 66.67 and panning,
+  so that clause is gone. A touchpad scroll that is purely vertical from its first event reads as a mouse and
+  zooms, as on dev. The owner's look on phone, touchpad and desktop is owed.
 - Touch drags (plot pan, visualiser divider, Perform windows) are code-read only.
 - The seed has no lamps, positions or rental list: the cards' dealing, the patch bars, the equipment order
   and the plot's placing were not walked with content.
