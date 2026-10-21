@@ -488,7 +488,7 @@ in future people can use that."*
 | **settings set** | The values di.apptune writes into an app's own settings for one goal (Recommended, Performance, Quality, Yours). | not "profile" (a person has a profile), not "preset" (a game's own word for its menu presets) |
 
 Where it lives in code: di.apptune `apps/<source>-<id>.toml` with `type = "game" | "creative" | "app"`
-(the `docs/APP_FILE.md` of the dob-0/di.apptune repo).
+(described in the di.apptune repo, dob-0/di.apptune, file APP_FILE.md).
 
 ## The rule for anything new
 
