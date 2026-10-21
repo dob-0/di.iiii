@@ -26,9 +26,12 @@ const testFiles = (dir) => readdirSync(dir).flatMap((name) => {
 
 // A hand-rolled probe: a server listens on port 0, is closed again, and its number is handed back (`close(() => resolve(port))`).
 const PROBE = /\.close\([^\n]*\bresolve\((?:port|p)\)/
-// Handing a number to a child: PORT: String(<something picked earlier>). Code only: a line where a quote comes first is a
-// string that names the call (scripts/di/lan.test.js asserts the text 'writeEnv(home, { PORT: String(port) })').
-const PORT_ENV = /^[^'"`\n]*\bPORT:\s*String\(/m
+// Handing a number to a child: PORT: String(<something picked earlier>). Code only: the inside of a '…' or "…" string is
+// blanked first, because scripts/di/lan.test.js asserts the text 'writeEnv(home, { PORT: String(port) })'. Blanking the
+// string, not skipping the line, keeps `NODE_ENV: 'test', PORT: String(port)` caught.
+const PORT_ENV = /\bPORT:\s*String\(/
+const QUOTED = /'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/g
+const handsPort = (text) => PORT_ENV.test(text.replace(QUOTED, "''"))
 
 describe('test servers do not pick a port by hand', () => {
     const own = path.join(SRC, 'testSupport', 'noPickedPort.test.js')
@@ -36,6 +39,12 @@ describe('test servers do not pick a port by hand', () => {
 
     it('finds the test files it is guarding, under every root', () => {
         for (const root of ROOTS) expect(files.filter((f) => f.startsWith(root + path.sep)).length, root).toBeGreaterThan(50)
+    })
+
+    it('the PORT check reads code, not the text of a string', () => {
+        expect(handsPort("env: { ...process.env, NODE_ENV: 'test', PORT: String(port) },")).toBe(true)
+        expect(handsPort("env: { ...process.env, PORT: String(port), NODE_ENV: 'test' },")).toBe(true)
+        expect(handsPort("expect(writes).toEqual(['writeEnv(home, { PORT: String(port) })'])")).toBe(false)
     })
 
     it('no test file probes a port, closes it, and starts a server on the number', () => {
@@ -47,7 +56,7 @@ describe('test servers do not pick a port by hand', () => {
 
     it('no test file hands a child server a PORT it chose itself', () => {
         const offenders = files
-            .filter((f) => PORT_ENV.test(readFileSync(f, 'utf8')))
+            .filter((f) => handsPort(readFileSync(f, 'utf8')))
             .map((f) => path.relative(REPO, f))
         expect(offenders).toEqual([])
     })

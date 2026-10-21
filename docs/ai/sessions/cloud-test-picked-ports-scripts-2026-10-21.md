@@ -10,7 +10,9 @@
   attempt 1 died EADDRINUSE on 32871, attempt 2 came up on 38599, 6/6 passed.
 - Guard `serverXR/src/testSupport/noPickedPort.test.js` now walks `serverXR/src` AND `scripts/` (each root must hold
   >50 test files). Before the fix it failed naming both files (probe check) and space-cleanup (PORT check).
-  `PORT_ENV` skips a line where a quote comes first — `scripts/di/lan.test.js:71` asserts that text as a string.
+  `PORT_ENV` reads code only: the inside of '…'/"…" strings is blanked first (`scripts/di/lan.test.js:71` asserts that
+  text as a string). Review fix: the first version skipped any line where a quote came first, which let
+  `NODE_ENV: 'test', PORT: String(port)` through; a self-test now holds both shapes.
 - 10/10 runs in a row each: openFile ~12.2s, space-cleanup ~2.2s.
 - Left alone on purpose: `scripts/rig/lib.mjs` `freePort` (production code for start-member, not a test).
 - Not done: the "already running" retry branch (a sibling's HTTP server on the candidate) was not forced in a test;
