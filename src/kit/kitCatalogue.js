@@ -90,7 +90,7 @@ export const DI_HELP_LINES = [
     'di uninstall     remove it, keep your work',
     '--port N     run somewhere other than 4000',
     '--lan        answer on this wifi too, for phones in the room — anyone on it can edit',
-    '--guests     with --lan: visitors get their own room, not yours'
+    '--guests     with --lan: visitors get their own space, not yours'
 ]
 
 const help = (...prefixes) => prefixes.map((prefix) => DI_HELP_LINES.find((line) => line.startsWith(prefix)))

@@ -1686,15 +1686,15 @@ export const WIKI_ARTICLES = [
         id: 'guests-in-the-room',
         category: 'Spaces & access',
         title: 'Letting a room work without handing over your spaces',
-        summary: 'di up --lan --guests: visitors get their own room and the open space, and nothing of yours.',
+        summary: 'di up --lan --guests: visitors get their own space and the open space, and nothing of yours.',
         body: [
             'A local di.iiii on the wifi used to have one setting: auth off. Everyone who opened the address was, to the server, you — your spaces, every delete button, the admin page. Fine for five people you know; not something to leave open in a room.',
-            'di up --lan --guests turns auth on for everyone except the person at the machine. A visitor arrives as a guest exactly as they would on diiii.xyz: their own sandbox room and the shared open space, editor there and nowhere else. Your spaces are not listed, a private one answers 403, and so does the admin page.',
+            'di up --lan --guests turns auth on for everyone except the person at the machine. A visitor arrives as a guest exactly as they would on diiii.xyz: their own sandbox space and the shared open space, editor there and nowhere else. Your spaces are not listed, a private one answers 403, and so does the admin page.',
             'You are not asked to sign in on your own laptop, because a local di.iiii has no accounts to sign in to. The address the request came from decides: anything arriving from this machine is you, and everyone on the network is a guest.',
             'It lasts for that start only, like --lan itself. The start prints which of the two is true tonight.'
         ],
         tags: ['guests', 'lan', 'room', 'local', 'access', 'workshop'],
-        updated: '2026-09-09'
+        updated: '2026-10-21'
     },
     {
         id: 'following-a-space',

@@ -35,7 +35,7 @@ import {
     listSnapshots,
     pruneVersions,
     releaseFromFile,
-    rehearseAgainst,
+    withRehearsal,
     restoreSnapshot,
     rollback,
     smokeTest,
@@ -896,25 +896,27 @@ const cmdUpdate = async (args) => {
 
     say(ui.installing(release.version))
     let staged
-    let rehearsal = null
     try {
         staged = await stageVersion({ home, release, verbose })
         // The rehearsal: the new build opens a COPY of the artist's own data and
         // runs its migrations there. An empty scratch directory only ever proved
-        // the binary starts, which is not what an update risks.
-        rehearsal = await rehearseAgainst({ home })
-        if (rehearsal) say(ui.rehearsing())
-        const healthy = await smokeTest({
-            home,
-            versionDir: staged.partialDir,
-            nodeBinary: node.nodeBinary(home),
-            dataRoot: rehearsal
+        // the binary starts, which is not what an update risks. The copy is
+        // thrown away on every path, success or not; the real database is
+        // migrated afterwards, by the build that has now proved it can.
+        await withRehearsal({ home }, async (rehearsal) => {
+            if (rehearsal) say(ui.rehearsing())
+            const healthy = await smokeTest({
+                home,
+                versionDir: staged.partialDir,
+                nodeBinary: node.nodeBinary(home),
+                dataRoot: rehearsal
+            })
+            if (!healthy) {
+                throw new Error(rehearsal
+                    ? 'the new version could not open your work — nothing has been changed'
+                    : 'the new version did not answer on a test port')
+            }
         })
-        if (!healthy) {
-            throw new Error(rehearsal
-                ? 'the new version could not open your work — nothing has been changed'
-                : 'the new version did not answer on a test port')
-        }
     } catch (error) {
         // Nothing has been stopped and `current` has not moved, so the artist
         // is exactly where they were — say so plainly rather than leaving them
@@ -924,11 +926,6 @@ const cmdUpdate = async (args) => {
         say(ui.updateFailed(from))
         process.exitCode = 1
         return
-    } finally {
-        // The rehearsal was a copy and its migrations are thrown away with it.
-        // The real database is migrated afterwards, by the build that has now
-        // proved it can.
-        if (rehearsal) await fsp.rm(rehearsal, { recursive: true, force: true }).catch(() => {})
     }
 
     const runner = runnerFor(home)
