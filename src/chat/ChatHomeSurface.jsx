@@ -8,7 +8,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import LockIcon from '@mui/icons-material/Lock'
 import GroupsIcon from '@mui/icons-material/Groups'
 import ShieldIcon from '@mui/icons-material/ShieldOutlined'
-import { diFontTheme } from '../styles/muiTheme.js'
+import { diTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { buildChatPath, buildPrivateChatPath } from './chatRouting.js'
@@ -55,7 +55,7 @@ const Avatar = ({ label, tone = 'var(--ui-border)', children = null }) => (
         width: 42,
         height: 42,
         flexShrink: 0,
-        borderRadius: '50%',
+        borderRadius: 0,
         border: `1px solid ${tone}`,
         display: 'flex',
         alignItems: 'center',
@@ -180,7 +180,7 @@ export default function ChatHomeSurface() {
     const loading = rooms === null
 
     return (
-        <ThemeProvider theme={diFontTheme}>
+        <ThemeProvider theme={diTheme}>
             <Box sx={{
                 position: 'fixed',
                 inset: 0,
