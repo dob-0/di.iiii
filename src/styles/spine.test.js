@@ -173,7 +173,7 @@ const ALLOWED_RADII = new Set(['0', '0px', '50%', 'inherit', 'unset', 'var(--di-
  * stays literal rather than half-converted).
  */
 const RHYTHM_FILES = SPINE_FILES
-    .filter((f) => f !== 'wiki/wiki.css' && f !== 'studio/styles/studio-space-hub.css')
+    .filter((f) => f !== 'studio/styles/studio-space-hub.css')
     .concat(BY_DESIGN)
 
 const SPACING_PROP_SRC = '(?:padding|margin)(?:-(?:top|right|bottom|left|inline(?:-(?:start|end))?|block(?:-(?:start|end))?))?|(?:row-|column-)?gap'
@@ -203,6 +203,8 @@ const FONT_EXCEPTIONS = {
     'raw/styles/raw.css': ['24px', '13px', '10px', '11px', '30px', '16px'],
     'studio/styles/space-constellation.css': ['0.92em'],
     'studio/styles/studio-hub.css': ['1.4rem', '2rem'],
+    // The wiki title's clamp() endpoints (44.8 px at 1440): its size is the owner's call (audit D27).
+    'wiki/wiki.css': ['1.8rem', '2.8rem'],
     'styles/preferences.css': ['1.1rem', '1.4rem', '1rem', '1.25rem'],
 }
 
