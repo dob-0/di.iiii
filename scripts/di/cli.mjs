@@ -70,6 +70,7 @@ import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './chan
 import * as autoupdate from './autoupdate.mjs'
 import { mcpArgs, moveToken, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
+import { withUserAgent } from './userAgent.mjs'
 
 const HOME = () => {
     const override = String(process.env.DI_HOME || '').trim()
@@ -598,7 +599,8 @@ const cmdMove = async (args) => {
     try {
         const response = await fetch(`${base}/api/projects/${encodeURIComponent(project)}/move`, {
             method: 'POST',
-            headers,
+            // `--from` aims this at another di.iiii: it says who it is there too (userAgent.mjs).
+            headers: withUserAgent(headers),
             body: JSON.stringify({ toSpace: to, unpublish: Boolean(args.flags.unpublish), dryRun })
         })
         const body = await response.json().catch(() => ({}))
@@ -1172,16 +1174,18 @@ const cmdFollow = async (args) => {
     const at = readAtFlag(args)
     if (at === false) { process.exitCode = 1; return }
 
-    if (!spaceId || !from) {
-        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
-        process.exitCode = 1
-        return
-    }
-
     // The answer to a refusal, never a default (audit F4): at most one.
     const takeHost = Boolean(args.flags['take-host'])
     const takeMine = Boolean(args.flags['take-mine'])
     if (takeHost && takeMine) { fail(ui.followBothDirections()); process.exitCode = 1; return }
+
+    // `--take-mine` / `--take-host` alone may name a space already followed:
+    // followSpace takes that follow's remote. Anything else needs --from.
+    if (!spaceId || (!from && !takeHost && !takeMine)) {
+        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
+        process.exitCode = 1
+        return
+    }
     // `--from-now` is the default start, accepted so it can be said out loud;
     // `--replay` is the old one — read both logs from the beginning.
     if (args.flags['from-now'] && args.flags.replay) { fail(ui.followBothStarts()); process.exitCode = 1; return }
@@ -1194,11 +1198,20 @@ const cmdFollow = async (args) => {
         insecure: Boolean(args.flags.insecure)
     })
     if (!result.ok) {
-        sayFollowRefusal(result.reason, { spaceId, url: from }, at)
+        // The short form asked the stored follow's remote, through its pin:
+        // name those — not "undefined", and no --at hint when a pin was used.
+        const stored = from ? null : (readFollows(paths(home).data)[spaceId] ?? null)
+        const where = from || stored?.remote
+        const pin = at || stored?.address || null
+        if (result.reason === 'no-from') fail(ui.followNotFollowed(spaceId))
+        else if (result.reason === 'remote-differs') fail(ui.followRemoteDiffers(spaceId, result.stored, result.base))
+        else sayFollowRefusal(result.reason, { spaceId, url: where }, pin)
         process.exitCode = 1
         return
     }
-    say(ui.following(spaceId, result.base, result.running, at))
+    if (result.keptKey) say(ui.followKeptKey())
+    // result.address is the pin used: typed with --at, or the stored follow's.
+    say(ui.following(spaceId, result.base, result.running, result.address))
 }
 
 /** `di follows` — what this install is following, and whether it is keeping up. */
