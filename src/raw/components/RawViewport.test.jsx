@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import RawViewport, { renderNodeBody } from './RawViewport.jsx'
+import PointCloud from '../../project/viewport/PointCloud.jsx'
 
 vi.mock('@react-three/fiber', () => ({
     Canvas: ({ children }) => <div data-testid="mock-canvas">{children}</div>,
@@ -206,6 +207,17 @@ describe('RawViewport', () => {
         const body = renderNodeBody(node, { bgColor: '#112233', gridVisible: true })
         expect(body).not.toBeNull()
         expect(body.type).toBe('group')
+    })
+
+    // Points (2026-10-21): a spatial type with no case here renders nothing
+    // at all, silently — the same class as audit finding #22 above.
+    it('renders Points as a point cloud fed by its own Source, Count, Size and Colour', () => {
+        const source = { kind: 'box', size: [1, 1, 1] }
+        const node = { id: 'points-1', typeId: 'geom.points', label: 'Points' }
+        const body = renderNodeBody(node, { source, count: 5000, size: 0.03, color: '#ff0000' })
+        expect(body).not.toBeNull()
+        expect(body.type).toBe(PointCloud)
+        expect(body.props).toEqual({ source, count: 5000, size: 0.03, color: '#ff0000' })
     })
 
     // A container carries what stands inside it. Before this, a node whose

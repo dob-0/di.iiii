@@ -69,7 +69,7 @@ export const pieceShape = (leaf) => {
 }
 
 // The same BufferGeometry the viewport builds (same arguments, same segment counts).
-const meshOf = (shape) => {
+export const meshOf = (shape) => {
     const [a, b, c] = shape.dims
     switch (shape.kind) {
         case 'box': return new BoxGeometry(a, b, c)

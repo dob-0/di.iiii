@@ -10,7 +10,7 @@ import { getNodeType } from '../../../project/nodeRegistry.js'
 //
 //   body  — the node's own room body (RawViewport's renderNodeBody) with its
 //           resolved values: cube, sphere, plane, cylinder, cone, torus, line,
-//           circle.
+//           circle, points.
 //   shape — the node has no body of its own but CARRIES a shape: the geometry
 //           descriptor it outputs (Geo, Merge, Array, Transform) or wears
 //           (Constructor), drawn through the same renderer the room uses for

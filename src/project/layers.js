@@ -36,7 +36,7 @@ import { NODE_TYPES, getNodeFamily } from './nodeRegistry.js'
 
 export const LAYER_KEYS = ['space', 'things', 'connections', 'wall', 'lamps', 'handover']
 
-// A node that stands in the room is a THING, not a connection: the 17 kinds
+// A node that stands in the room is a THING, not a connection: the 18 kinds
 // Nodes' room draws (RawViewport.jsx isSpatialNode). Read from the registry so
 // a new kind is counted the day it lands; the server's copy is a hand-kept list
 // checked against this one.

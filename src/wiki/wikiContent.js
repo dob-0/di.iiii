@@ -1870,6 +1870,19 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-14'
     },
     {
+        id: 'points-node',
+        category: 'Editing',
+        title: 'Points — a point cloud in the scene',
+        summary: 'Points scatters dots over the surface of any shape you wire into it and stands them in the scene as one cloud.',
+        body: [
+            'Wire any shape into Points’ Source — a Cube, a Sphere, a Torus, a Geo, a Merge, an Array — and the dots land on its surface, where the 3D view would draw it. Bigger faces get more dots, so the cloud looks equally dense all over. Nothing wired, Points scatters over a small sphere so you can see where it stands.',
+            'Count is how many dots (20,000 unless you change it). It is never more than 120,000, and never more than 60,000 on a phone or for a visitor whose device asks for less motion. Size is each dot’s size in metres; dots further away look smaller. Colour colours them all. Position and Rotation place the cloud like any other object.',
+            'The cloud is the same on every load. A Line has no surface, so it gives no dots. A Model file cannot be the Source yet, and the cloud does not move on its own yet: a sweeping reveal, a twinkle and a morph toward a second shape are planned after a first look on a phone.'
+        ],
+        tags: ['raw', 'nodes', 'points', 'point cloud', 'particles', 'scatter', 'geometry', 'make'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'build-zones',
         category: 'Editing',
         title: 'A room that arranges itself',

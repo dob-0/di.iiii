@@ -9,6 +9,7 @@ import TorusObject from '../../objectComponents/TorusObject.jsx'
 import PrimitiveMaterial from '../../objectComponents/PrimitiveMaterial.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
+import PointCloud from '../../project/viewport/PointCloud.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
 import AudioObject from '../../objectComponents/AudioObject.jsx'
 import { detectModelFormatFromMeta } from '../../utils/modelFormats.js'
@@ -445,6 +446,15 @@ export function renderNodeBody(node, values, assetMap = null) {
                     color={values.color}
                     opacity={values.opacity}
                     emissive={values.emissive}
+                />
+            )
+        case 'geom.points':
+            return (
+                <PointCloud
+                    source={values.source}
+                    count={values.count}
+                    size={values.size}
+                    color={values.color}
                 />
             )
         case 'geom.circle':
