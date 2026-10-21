@@ -1870,6 +1870,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-14'
     },
     {
+        id: 'visitor-and-tilt-nodes',
+        category: 'Editing',
+        title: 'Visitor and Tilt — what the phone or screen is, as wires',
+        summary: 'Visitor tells the graph whether the screen is a phone, asks for reduced motion, stands in portrait, how wide and tall it is, its language and whether it is embedded; it also keeps a Name, Hue and Id in this browser. Tilt turns how the phone is tipped into X and Y from -1 to 1.',
+        body: [
+            'Visitor has no window. Its outputs are Phone (a touch screen whose short side is under 600 pixels, so a tablet is not a phone), Reduced motion (the person asked their device for less movement), Portrait (taller than wide), Width and Height in pixels, Language (the first part of the browser language, such as en or hy) and Embedded (the page is in a frame, or its address has embed=1 or preview=1). They change as the screen turns or resizes. Wire Phone into a Route to draw fewer things on a phone, or Reduced motion into a Mix to slow an Oscillator down.',
+            'Name, Hue and Id belong to the person, not the project: they are kept in this browser, so two people see their own. Id and Hue (0 to 1, the Hue of a Colour Split) are made on the first visit. Wire a text into New name and it is kept; an empty New name keeps the old one. Where the browser refuses to keep anything, they last until the page is closed.',
+            'Tilt gives X (the right edge dipping is plus) and Y (the top edge dipping is plus), from -1 to 1. Level is however the phone was held at the first reading, and Range is how many degrees reach 1 (30 unless changed). Live says a reading has arrived. On an iPhone the browser asks first, and only after a tap: Tilt asks at the first tap anywhere on the page, and stays at 0 and not Live if the answer is no. On a computer it stays at 0.',
+            'Both work where the Nodes editor runs, on the desk and in Perform. The published page and /out do not run them yet: there they answer their plain values (not a phone, 0 wide, level).'
+        ],
+        tags: ['raw', 'nodes', 'visitor', 'phone', 'mobile', 'reduced motion', 'portrait', 'language', 'embed', 'tilt', 'orientation', 'gyro'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'build-zones',
         category: 'Editing',
         title: 'A room that arranges itself',
