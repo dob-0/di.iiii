@@ -120,7 +120,9 @@ clearer and unambiguous. A product does not refer to itself by its category; tha
 outsiders do. Swept 2026-08-23: ~25 sentences, zero left.
 
 Where a category genuinely has to appear in a sentence rather than a label, the verb is
-cleaner than the noun — **di.iiii hosts 3D spaces on the web** — and Terms and Privacy may
+cleaner than the noun — **di.iiii — public spaces on the open web** (the line picked
+for the front door, the README and the link-preview card; Q2 pick, 2026-10-21, which retired the
+older "hosts 3D spaces" wording) — and Terms and Privacy may
 use *the Service*, which is the legal convention.
 
 ## Node labels settled 2026-08-19
