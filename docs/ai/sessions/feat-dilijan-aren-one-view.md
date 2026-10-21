@@ -11,3 +11,12 @@
 - Finding 1 was fixed by the reviewer (every asset URL whole). Finding 2/3: `texcheck.py` was never committed and is not in any branch; the numbers stay as recorded and cannot be re-run here (the scans live on the scratch stack). `yard.html`'s comment now says so, and `spaces/dilijan/aren/yard.test.mjs` (3 tests) runs the page's own `makeTexture` and fails when the default goes back to `false` (1 failed / 2 passed). known-fixes has the entry.
 - Finding 4: `combine-pages.mjs` sends `DI_TOKEN` to `--assets-from` only on the same origin; another server gets `DI_ASSETS_TOKEN` or none. Finding 5: the backup, with `kept`, is written before the kept page, so a stopped run can be undone. Two tests, both fail on the old script (2 failed / 22 passed); `npx vitest run scripts/space/ spaces/dilijan/`: 27 passed.
 - Finding 6 (the cabin's place) is a limit, not a defect: the page shows the cabin only in the wall arrangement. Still not done: a browser look, desktop and phone, at the photos; a real `--apply`/`--undo` against serverXR.
+
+## 2026-10-21 — Aren's yard: the right textures (N1131)
+
+- Owner: "aren look right but there are wrong textturing it not the right textured".
+- Measured: the yard was drawn in the wall page's light and the wall stood 4.3 degrees off its scanned lean; flipY, photo
+  order, UV axes and UV offsets ruled out with numbers (spaces/dilijan/aren/README.md, "Photos, measured per fragment").
+- Changed: texfit.py (new: seams, cloud fit, pose through shared UVs), register.py (UV poses instead of yaw-only ICP),
+  texcheck.py (new: the per-fragment table), yard.html (quaternion poses, the yard's own surfaces as photographed in Բակը).
+- Tests: aren-tex.test.mjs + texfit_test.py. Applied on the scratch stack only; dev not touched.

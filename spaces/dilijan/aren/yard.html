@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Բակը · Պատը — aren · Dilijan 26.08.2026</title>
-<!-- Aren's yard and wall as ONE view (owner 2026-10-21, N1123). The wall page's three scan fragments ARE the yard's own
-     surfaces, decimated, with sharper photos (measured: spaces/dilijan/aren/README.md). Բակը: they stand where they were
-     scanned, under the yard's measured cloud and its tour. Պատը: the wall steps out and stands in a row with the cabin
-     beside the courtyard, the way the wall page laid them out. One canvas, one renderer: one 3D view live.
-     Source: spaces/dilijan/aren/yard.html in di.iiii; the originals are kept (the-yard's page as yard-original, elevation). -->
+<!-- Aren's yard and wall as ONE view (owner 2026-10-21, N1123). Բակը is the yard page's own texturing: its scan and its
+     photos, drawn as photographed, under its measured cloud and its tour; only the wall wears the wall page's sharper
+     photo, at the exact place it was scanned (N1131, measured: spaces/dilijan/aren/README.md). Պատը: the wall steps out
+     and stands in a row with the cabin beside the courtyard, the way the wall page laid them out. One canvas, one
+     renderer: one 3D view live. Source: spaces/dilijan/aren/yard.html in di.iiii; the originals are kept (the-yard's
+     page as yard-original, elevation). -->
 <style>
   html,body{margin:0;height:100%;overflow:hidden;background:#F4F2ED}
   /* width/height: without them the canvas shows at its drawing-buffer size, 2x the screen on any retina display */
@@ -54,14 +55,20 @@ const PMETA={"n": 89999, "min": [-5.02, 0.0, -3.38], "range": [11.11, 1.75, 6.76
 const CLOUD=fetchAsset('/serverXR/api/projects/the-yard/assets/a20d668825b2a369fc0eb2dbeb8c437c0ecbe38e302805795e7726da145463e9','cloud');
 // the wall page's pack: three fragments (wall, cabin, courtyard), photos 2048/2048/1024 px, and a contact shadow
 const PACK=fetchAsset('/serverXR/api/projects/the-yard/assets/e30e26445e9f25c62e5c21aa14d65941d7b1f102adf4ac20ae5b5416d197e5e8','fragments');
-// Where each fragment stands in the yard: yaw about the vertical (degrees) and position (metres), found by registering
-// it on the yard's own scan (spaces/dilijan/aren/register.py, trimmed ICP; residuals in spaces/dilijan/aren/README.md).
-// The cabin is NOT in the yard's scan (no pose matches its shape or its photo: README), so it has no place here: it is
-// shown only in the wall, arriving the way the wall page brings it in. The yard's own part it seemed to stand on,
-// wall_mid, comes from the yard page's mesh, so the yard stays whole.
-const IN_YARD={"wall":{"yaw":229.769,"t":[4.5694,0.8666,0.4348]},"courtyard":{"yaw":0,"t":[0.0004,0.844,-0.0022]}};
-const YARD_MESH='/serverXR/api/projects/the-yard/assets/8bf0c55fa6878b14d42a64de7a4aaaafd2cc0bac928763080422860e94e5f4a0', WALL_MID_PHOTO='/serverXR/api/projects/the-yard/assets/5f72ae52da1f59fcf0d39f2f4afe7f6a684420b18ae916f0a2b8f34fc23f83d9';
-const WALL_MID={gmin:[-5.02,0.0,-3.38],grng:[11.11,1.75,6.76],nv:29189,nf:49999,off:987056};
+// Where each fragment stands in the yard: rotation (quaternion x,y,z,w) and position (metres). The wall and the courtyard
+// share their photo atlases with the yard's parts wall_right and main, so the same UV is the same surface point: the pose
+// is a rigid fit through those UVs (spaces/dilijan/aren/register.py; residual median 0.01 and 0.03 cm). The wall leans
+// 4.3 degrees in the yard and the wall page stood it upright, so a turn about the vertical alone left it up to 8 cm off.
+// The cabin is NOT in the yard's scan (it shares no atlas and matches no shape: README): it shows only in the wall.
+const IN_YARD={"wall":{"q":[0.02826,-0.907906,0.024653,0.417493],"t":[4.5231,0.8936,0.4268]},"courtyard":{"q":[0,0,0,1],"t":[0.0019,0.8435,-0.002]}};
+// The yard's own surfaces (the yard page's mesh and photos), shown in Բակը as the yard page showed them. 'main' is the
+// same surface as the wall page's courtyard (same atlas, same UVs) with its full geometry (98 % of it within 3 cm of the
+// cloud, the courtyard 93 %), so in the yard it stands in for the courtyard, which shows only in Պատը. wall_right is not
+// drawn: the wall fragment covers it at its exact pose with a sharper photo (the same fit to the cloud: r 0.99).
+const YARD_MESH='/serverXR/api/projects/the-yard/assets/8bf0c55fa6878b14d42a64de7a4aaaafd2cc0bac928763080422860e94e5f4a0', YARD_Q={gmin:[-5.02,0.0,-3.38],grng:[11.11,1.75,6.76]};
+const YARD_PARTS=[
+  {name:'main',nv:48911,nf:82991,off:0,photo:'/serverXR/api/projects/the-yard/assets/61c29ae555ac889e1c8c52cf58e498af7cc79519652a027aecd0dd6d2ecba128',standsFor:'courtyard'},
+  {name:'wall_mid',nv:29189,nf:49999,off:987056,photo:'/serverXR/api/projects/the-yard/assets/5f72ae52da1f59fcf0d39f2f4afe7f6a684420b18ae916f0a2b8f34fc23f83d9'}];
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const mark=document.getElementById('mark');
 const PAPER=0xF4F2ED;
@@ -168,13 +175,13 @@ const SOLID_VS=`
   }`;
 const SOLID_FS=COMMON+`
   uniform sampler2D map; uniform vec3 lightDir; uniform float ambient; uniform int mode;
-  uniform float scanX; uniform vec3 paper; uniform float desat; uniform float redSat; uniform float opacity;
+  uniform float scanX; uniform vec3 paper; uniform float desat; uniform float redSat; uniform float opacity; uniform float photo;
   varying vec2 vUv; varying vec3 vN; varying float vX;
   void main(){
     vec3 n=normalize(vN); if(!gl_FrontFacing) n=-n;
     float sh=ambient+(1.0-ambient)*max(dot(n,lightDir),0.0);
     vec3 t=texture2D(map,vUv).rgb; vec3 c;
-    if(mode==0){c=mix(vec3(lum(t)),t,desat)*sh;}
+    if(mode==0){c=mix(mix(vec3(lum(t)),t,desat)*sh,t,photo);}   // photo 1: as photographed (the yard page); 0: the wall page's light
     else if(mode==1){c=monoRed(t,redSat)*sh;}
     else{
       vec3 col=mix(vec3(lum(t)),t,desat)*sh; vec3 mono=monoRed(t,redSat)*sh;
@@ -199,24 +206,24 @@ const POINT_FS=COMMON+`
     vec3 c=monoRed(texture2D(map,vUv).rgb,redSat);
     gl_FragColor=vec4(mix(c,vec3(1.0),0.05),1.0);
   }`;
-const shared={mode:{value:0},scanX:{value:0},lightDir:{value:V(-0.4,1.0,0.8).normalize()},ambient:{value:0.55},
+const shared={mode:{value:0},photo:{value:1},scanX:{value:0},lightDir:{value:V(-0.4,1.0,0.8).normalize()},ambient:{value:0.55},
   paper:{value:new THREE.Color(PAPER)},desat:{value:0.85},redSat:{value:0.55},proj:{value:1000},worldSize:{value:0.026}};
 const fragments=[];
 let shadowMat=null, row=null;       // row: the wall arrangement's frame (centre, width, height, x range)
 const OFF=new THREE.Vector3();      // wall page coordinates -> yard coordinates (the courtyard does not move)
 const SHADOW_OPACITY=0.15;
-// flipY: the scans' UVs expect the photo the usual way up. Measured 2026-10-21 against the cloud's own colours: with
-// flipY=true the photos land right (courtyard r 0.89, wall r 0.65, the yard's parts 0.71-0.84); with flipY=false, the
-// wall page's setting, r was about 0 and every face showed another part of the photo (the owner: "all textures in not
-// the right place"). The script that measured this was never committed, so these numbers cannot be re-run from the
-// repo; spaces/dilijan/aren/yard.test.mjs holds the setting. The shadow keeps the wall page's setting (not measured).
+// flipY: the scans' UVs expect the photo the usual way up. Measured 2026-10-21 (spaces/dilijan/aren/texcheck.py): with
+// flipY=true every surface's seams agree (r 0.72-0.94) and, at its exact place, its photo matches the cloud's own colours
+// (10 cm patches r 0.97-0.99); with flipY=false, the wall page's setting, both are about 0: every face showed another part
+// of the photo (the owner: "all textures in not the right place"). The shadow keeps the wall page's setting (not measured).
 function makeTexture(img,flipY=true){
   const tex=new THREE.Texture(img); tex.flipY=flipY; tex.needsUpdate=true;
   tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
   tex.minFilter=THREE.LinearMipmapLinearFilter; tex.magFilter=THREE.LinearFilter;
   return tex;
 }
-function buildFragment(m,img,only){
+function buildFragment(m,img,only,opts){
+  opts=opts||{};
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.BufferAttribute(m.positions,3));
   geo.setAttribute('uv',new THREE.BufferAttribute(m.uvs,2));
@@ -225,16 +232,17 @@ function buildFragment(m,img,only){
   const tex=makeTexture(img);
   const op={value:0};
   const solid=new THREE.Mesh(geo,new THREE.ShaderMaterial({vertexShader:SOLID_VS,fragmentShader:SOLID_FS,side:THREE.DoubleSide,transparent:true,
-    uniforms:{map:{value:tex},mode:shared.mode,scanX:shared.scanX,lightDir:shared.lightDir,ambient:shared.ambient,paper:shared.paper,
+    uniforms:{map:{value:tex},mode:shared.mode,photo:shared.photo,scanX:shared.scanX,lightDir:shared.lightDir,ambient:shared.ambient,paper:shared.paper,
       desat:shared.desat,redSat:shared.redSat,opacity:op}}));
   // wire: paper fill (hidden-line) + ink lines
   const fill=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:PAPER,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1.5,polygonOffsetUnits:2}));
   const wire=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x141414,wireframe:true,transparent:true,opacity:0.42}));
   fill.visible=wire.visible=false;
   const group=new THREE.Group(); group.add(solid,fill,wire);
-  const y=only==='yard'?{yaw:0,t:[0,0,0]}:IN_YARD[m.name]||{yaw:0,t:m.center};
-  group.userData={solid,fill,wire,points:null,tex,model:m,op,only,fade:only==='wall'?0:1,
-    yard:{p:new THREE.Vector3().fromArray(y.t),q:new THREE.Quaternion().setFromAxisAngle(V(0,1,0),y.yaw*Math.PI/180)},
+  const y=only==='yard'?{q:[0,0,0,1],t:[0,0,0]}:IN_YARD[m.name]||{q:[0,0,0,1],t:m.center};
+  // stay: never moves (shown in one arrangement only); swap: the same surface as another part, so it changes at once
+  group.userData={solid,fill,wire,points:null,tex,model:m,op,only,stay:!!opts.stay,swap:!!opts.swap,fade:only==='wall'?0:1,
+    yard:{p:new THREE.Vector3().fromArray(y.t),q:y.q?new THREE.Quaternion().fromArray(y.q):new THREE.Quaternion().setFromAxisAngle(V(0,1,0),(y.yaw||0)*Math.PI/180)},
     wall:{p:new THREE.Vector3().fromArray(m.center).add(OFF),q:new THREE.Quaternion()}};
   group.position.copy(group.userData.yard.p); group.quaternion.copy(group.userData.yard.q);
   scene.add(group);
@@ -287,13 +295,18 @@ async function buildFragments(){
   const bmin=new THREE.Vector3().fromArray(manifest.bmin).add(OFF), bmax=new THREE.Vector3().fromArray(manifest.bmax).add(OFF);
   row={centre:bmin.clone().add(bmax).multiplyScalar(0.5).setY(0.55),width:bmax.x-bmin.x,height:bmax.y-bmin.y,x0:bmin.x-0.8,x1:bmax.x+0.8};
   const imgs=await Promise.all(manifest.models.map(m=>loadImage(m.texBytes)).concat([loadImage(manifest.shadowBytes)]));
-  manifest.models.forEach((m,i)=>fragments.push(buildFragment(m,imgs[i],IN_YARD[m.name]?undefined:'wall')));
+  // a fragment that a yard part stands in for shows only in Պատը, and stays where it is (the courtyard)
+  const shownByYard=new Set(YARD_PARTS.map(p=>p.standsFor).filter(Boolean));
+  manifest.models.forEach((m,i)=>fragments.push(shownByYard.has(m.name)?buildFragment(m,imgs[i],'wall',{stay:true,swap:true})
+    :buildFragment(m,imgs[i],IN_YARD[m.name]?undefined:'wall')));
   buildShadow(imgs[imgs.length-1],manifest);
-  const mb=await inflate(await fetchAsset(YARD_MESH,'yard mesh')), {nv,nf,off,gmin,grng}=WALL_MID;
-  const P=new Uint16Array(mb.buffer,off,nv*3), U=new Uint16Array(mb.buffer,off+nv*6,nv*2), I=new Uint16Array(mb.buffer,off+nv*10,nf*3);
-  const pos=new Float32Array(nv*3), uv=new Float32Array(nv*2);
-  for(let i=0;i<nv;i++){for(let k=0;k<3;k++)pos[i*3+k]=gmin[k]+P[i*3+k]/65535*grng[k];uv[i*2]=U[i*2]/65535;uv[i*2+1]=U[i*2+1]/65535;}
-  fragments.push(buildFragment({name:'wall_mid',positions:pos,uvs:uv,indices:new Uint16Array(I),nf,area:0,center:[0,0,0]},await loadImage(WALL_MID_PHOTO),'yard'));
+  const [mb,...photos]=await Promise.all([fetchAsset(YARD_MESH,'yard mesh').then(inflate)].concat(YARD_PARTS.map(p=>loadImage(p.photo))));
+  YARD_PARTS.forEach(({name,nv,nf,off,standsFor},j)=>{
+    const P=new Uint16Array(mb.buffer,off,nv*3), U=new Uint16Array(mb.buffer,off+nv*6,nv*2), I=new Uint16Array(mb.buffer,off+nv*10,nf*3);
+    const pos=new Float32Array(nv*3), uv=new Float32Array(nv*2), {gmin,grng}=YARD_Q;
+    for(let i=0;i<nv;i++){for(let k=0;k<3;k++)pos[i*3+k]=gmin[k]+P[i*3+k]/65535*grng[k];uv[i*2]=U[i*2]/65535;uv[i*2+1]=U[i*2+1]/65535;}
+    fragments.push(buildFragment({name,positions:pos,uvs:uv,indices:new Uint16Array(I),nf,area:0,center:[0,0,0]},photos[j],'yard',{swap:!!standsFor}));
+  });
   placeFragments(now());
 }
 
@@ -412,7 +425,7 @@ const samples=[], start=now();
 const ease=(cur,target,dt,tau)=>cur+(target-cur)*(1-Math.exp(-dt/tau));
 function placeFragments(t){
   fragments.forEach((g,i)=>{
-    const u=g.userData; if(u.only==='yard') return; let k=where;
+    const u=g.userData; if(u.only==='yard'||u.stay) return; let k=where;
     if(trans){const e=smooth((t-trans.t0-DELAY[i])/MOVE);k=trans.to?e:1-e;}
     if(u.only==='wall'){const e=1-Math.pow(1-k,3);g.position.copy(u.wall.p).addScaledVector(ARRIVE.off,1-e);g.quaternion.copy(ARRIVE.q).slerp(u.wall.q,e);return;}
     // rise, travel, land: nothing passes through the courtyard's walls on the way
@@ -463,10 +476,11 @@ function frame(){
   uni.uTime.value=t; uni.uFade.value=cloudF; uni.uFront.value=auto?yp[2]:99;
   if(cloud) cloud.visible=cloudF>0.01;
   shared.mode.value=look<0?0:Math.min(look,2);
+  shared.photo.value=ease(shared.photo.value,where===0&&!trans?1:0,dt,0.5);   // Բակը as photographed, Պատը in the wall page's light
   if(look===2){const r=(trans?trans.to:where)?[row.x0,row.x1]:YARD_X;shared.scanX.value=r[0]+(r[1]-r[0])*(0.5-0.5*Math.cos((t-start)*2*Math.PI/18));}
   const pts=look===3&&(where===1||!!trans);
   fragments.forEach(g=>{const u=g.userData;
-    u.fade=ease(u.fade,u.only==='yard'?(where===0&&!trans?1:0):u.only==='wall'?(where===1||trans?1:0):1,dt,0.35);
+    u.fade=ease(u.fade,u.only==='yard'?(where===0&&!trans?1:0):u.only==='wall'?(where===1||trans?1:0):1,dt,u.swap?0.05:0.35);
     u.op.value=meshF*u.fade; u.solid.visible=u.op.value>0.005; u.solid.material.depthWrite=u.op.value>0.6;
     u.fill.visible=u.wire.visible=look===4&&u.fade>0.5;
     const p=pts&&u.only!=='yard'&&u.fade>0.5; if(p)ensurePoints(g); if(u.points)u.points.visible=p;});

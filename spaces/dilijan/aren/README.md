@@ -20,52 +20,68 @@ It is built into the project by `scripts/space/combine-pages.mjs --spec spaces/d
 
 ## The finding the design rests on
 
-The wall's three fragments are the yard's own scans, decimated, with sharper photos on the two walls. Registered on the yard's
-measured cloud by `register.py` (yaw search with an FFT shift, then trimmed ICP; nearest-point distances of 5 000 fragment vertices):
+The wall page's fragments wall and courtyard ARE the yard's own parts wall_right and main, decimated: they share the
+photo atlas (the courtyard's UVs equal main's, median |du| 0.0000, |dv| 0.0001; the wall's photo is wall_right's atlas at
+2048 px with real detail above 832 px: 0.88 % of the luma energy against 0.10 % for an upscale). The same UV is the same
+surface point, so `register.py` fits each pose through the UVs (trimmed Kabsch; no search):
 
-| fragment | yard part | yaw | median | p90 | within 5 cm |
-|---|---|---|---|---|---|
-| courtyard | main | 0° (359.98) | 1.4 cm | 3.0 cm | 96 % |
-| wall | wall_right | 229.77° | 2.2 cm | 4.7 cm | 92 % |
-| cabin | none | - | (best 4.7 cm) | (26.7 cm) | (52 %) |
+| fragment | yard part | residual median | p90 | tilt |
+|---|---|---|---|---|
+| wall | wall_right | 0.01 cm | 0.22 cm | 4.30 degrees |
+| courtyard | main | 0.03 cm | 0.40 cm | 0.00 |
+| cabin | none: shares no atlas, matches no shape | - | - | - |
 
-The cabin is NOT in the yard's scan: no pose fits its shape (above) or its photo (a colour-aware search over 360° and the 24 best
-shifts: best r = 0.26, 15 % of it within 4 cm). It is shown only in Պատը, arriving the way the wall page brings it in;
-the yard keeps its own part there, wall_mid (from the yard page's mesh and photo).
-
-The courtyard sits at the same place in both pages' frames (shift 0.4 mm, 0.844 m, -2.2 mm), so the one view puts the wall
-page's frame on it: the courtyard never moves, and the wall and the cabin step out to its side.
+The wall leans 4.3 degrees in the yard; the wall page stood it upright. The first registration (N1123, yaw-only ICP) could
+not turn it back, so the wall stood up to 8.2 cm off (p90) until N1131.
 
 ## What the one view keeps, and why
 
-- **From the yard:** the measured cloud with its red reveal front and the tour (the truest record of the place, and Aren's
-  own walk through it), the VR/AR entry, the tall-screen field of view, the mark.
-- **From the wall:** the fragments as the surfaces in BOTH arrangements (4x the photo pixels on the two walls, where the red
-  chalk is; 76 k faces instead of 181 k), the five looks, the row layout, the contact shadow, pinch and inertia, the adaptive
-  resolution and idle frame skipping.
-- **New, to make it one:** the switch Բակը · The yard / Պատը · The wall. The wall rises 2.2 m (above the
-  courtyard's walls, 1.69 m), travel, turn and land in the row; the camera swings round above the yard, never through it.
-  In the yard the cycle runs as before; a picked look holds until R or a double click.
-- **Left out:** the yard's own mesh and its three JPEGs (the same surfaces with blurrier photos; 2.2 MB); the second arrival
-  (one remains: "ԲԱԿԸ · ՊԱՏԸ"); in the yard, the wall's sampled cloud (the measured cloud is shown instead; it cannot travel
-  with the fragments, so in Պատը the cloud look still samples them); the yard's drag direction (the wall's is used: drag up
-  looks from higher).
-- **Downloads:** 2.48 MB (cloud 0.79 + pack 1.69) instead of 4.69 MB for the two pages.
+- **Բակը is the yard page's own texturing** (N1131, owner: "wrong texturing, it is not the right textured"): the yard's
+  own mesh parts main and wall_mid with their own photos, drawn as photographed (unlit, full colour, the way the yard
+  page drew them), under the measured cloud, its red reveal front and the tour; the VR/AR entry, the tall-screen field of
+  view, the mark.
+- **The wall's sharper photo is kept where it truly fits:** at its exact pose the wall fragment fits the yard's cloud as
+  well as the yard's own wall_right (r_patch 0.99 both; 97 % and 98 % of it within 3 cm) with 6x the photo pixels, so it
+  stands in the yard and travels to the row.
+- **Պատը is the wall page's:** the fragments wall, cabin and courtyard, the five looks in its light, the row, the contact
+  shadow, pinch and inertia, adaptive resolution, idle frame skipping. The courtyard fragment and main are the same
+  surface: they swap at the start and the end of the move (0.05 s), the colour eases from photographed to the wall's light.
+- **New, to make it one:** the switch Բակը · The yard / Պատը · The wall. The wall rises 2.2 m (above the courtyard's
+  walls, 1.69 m), travels, turns and lands in the row; the camera swings round above the yard, never through it.
+- **Left out:** the yard's wall_right (the wall fragment covers it) and the second arrival (one remains: "ԲԱԿԸ · ՊԱՏԸ").
+- **Downloads:** 2.64 MB (cloud 0.79, mesh 1.80 with its two photos 0.30, pack 1.69 minus what is shared) instead of
+  4.69 MB for the two pages. Faces drawn: about 153 k in Բակը (the yard page drew 181 k), 76 k in Պատը.
+
+## Photos, measured per fragment (texcheck.py, 2026-10-21, N1131)
+
+Seams: the colour on both sides of a 3D edge shared by two charts (r of luma; flipY=false in brackets). Cloud: the photo at
+the surface against the yard cloud's own colours within 3 cm, at the page's poses (10 cm patches, exposure fitted).
+
+| surface | seams r | cover | r_patch | good | best wrong mapping r_patch |
+|---|---|---|---|---|---|
+| yard main (Բակը) | 0.85 (-0.01) | 98 % | 0.99 | 96 % | 0.09 |
+| yard wall_mid (Բակը) | 0.72 (0.03) | 98 % | 0.97 | 94 % | 0.10 |
+| wall fragment (both) | 0.89 (-0.00) | 97 % | 0.99 | 97 % | 0.30 |
+| courtyard fragment (Պատը) | 0.86 (-0.02) | 93 % | 0.97 | 93 % | 0.09 |
+| cabin fragment (Պատը) | 0.94 (0.01) | not in the yard scan | | | |
+| before N1131: wall at the yaw-only pose | | 54 % | 0.78 | 70 % | |
+
+Wrong mappings tried for each surface: flipY=false, u/v swapped, u mirrored, every other photo of its set.
+Rendered against the yard page itself (same camera, auto look at the hold; aren-tex harness): mean |dRGB| 26-45 and luma
+0.62-0.77x before, 0.7-3.6 and 1.00x after, at 1440x900 and 390x844.
 
 ## Limits
 
-- Photos, fixed 2026-10-21 after the owner's look ("all textures in not the right place"): the wall page decoded its
-  photos with flipY=false; measured against the cloud's own colours, flipY=true is right (courtyard r 0.89, wall 0.65;
-  the yard page's own parts 0.71-0.84) and flipY=false gives r about 0, so every face showed another part of the atlas.
-  The ORIGINAL wall page (elevation) has the same fault; the yard page was right (its 09-28 note). Not the cause, tested:
-  a swapped photo (each fits only its own fragment), a re-encoded or resized atlas (served bytes hash to their ids).
-- Measured on the agent screen only (Chromium, RTX 3080): 60 fps in both arrangements at 1440x900 and 390x844. Not seen on
-  a real phone or headset.
+- Holes: the yard's own mesh has small holes (near the bean bags) where the paper shows through, as on the yard page; the
+  wall page's courtyard had them filled. The yard keeps its own record.
+- The cabin is not in the yard scan, so its photo can be checked only by its seams (r 0.94).
+- Measured on the agent screen only (Chromium, RTX 3080). Not seen on a real phone or headset.
 
 ## Rebuild, apply, undo (scratch stack first; dev needs `--assets-from` a server that holds the assets)
 
 ```
 python3 -I spaces/dilijan/aren/register.py --api http://dilijan-test.diiii.localhost/serverXR   # the poses (IN_YARD)
+python3 -I spaces/dilijan/aren/texcheck.py --api http://dilijan-test.diiii.localhost/serverXR   # the photo table above
 node scripts/space/combine-pages.mjs --api http://dilijan-test.diiii.localhost/serverXR --spec spaces/dilijan/combine-aren.json --apply
 node scripts/space/apply-structure.mjs spaces/dilijan/structure.json --api http://dilijan-test.diiii.localhost/serverXR --apply
 node scripts/space/combine-pages.mjs --api … --undo BACKUP.json --apply    # back; empties yard-original if unchanged
