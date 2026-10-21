@@ -3,7 +3,7 @@
 // An update moves two things: the app, and sometimes the shape the work is
 // stored in. `--rollback` only moves one of them back. These are the four
 // checks that stand between an artist and finding that out afterwards.
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import os from 'node:os'
@@ -17,7 +17,8 @@ import {
     listSnapshots,
     rehearseAgainst,
     restoreSnapshot,
-    snapshotData
+    snapshotData,
+    withRehearsal
 } from './install.mjs'
 import { paths } from './paths.mjs'
 
@@ -108,6 +109,77 @@ describe('the rehearsal', () => {
         const home = fs.mkdtempSync(path.join(os.tmpdir(), 'di-safety-'))
         homes.push(home)
         expect(await rehearseAgainst({ home })).toBeNull()
+    })
+})
+
+describe('the rehearsal copy never outlives its run', () => {
+    // os.tmpdir() reads TMPDIR on every call, so a private one makes "nothing
+    // left behind" a count of one directory, not a guess about the machine's /tmp.
+    let tmp
+    let savedTmp
+    beforeEach(() => {
+        savedTmp = process.env.TMPDIR
+        tmp = fs.mkdtempSync(path.join(savedTmp || os.tmpdir(), 'di-tmpdir-'))
+        process.env.TMPDIR = tmp
+    })
+    afterEach(() => {
+        if (savedTmp === undefined) delete process.env.TMPDIR
+        else process.env.TMPDIR = savedTmp
+        fs.rmSync(tmp, { recursive: true, force: true })
+    })
+    const leftovers = () => fs.readdirSync(tmp).filter(name => name.startsWith('di-rehearsal-'))
+
+    it('removes the copy after a run that works, having had it during the run', async () => {
+        const home = makeHome({ schema: 1, files: { 'spaces/open/scene.json': '{"v":1}' } })
+        let seen = null
+        const result = await withRehearsal({ home }, async (scratch) => {
+            seen = fs.existsSync(path.join(scratch, 'di.db'))
+            return 'ok'
+        })
+        expect(result).toBe('ok')
+        expect(seen).toBe(true)
+        expect(leftovers()).toEqual([])
+    })
+
+    it('removes the copy when the run throws halfway', async () => {
+        const home = makeHome({ schema: 1 })
+        await expect(withRehearsal({ home }, async (scratch) => {
+            fs.writeFileSync(path.join(scratch, 'half-migrated'), 'x')
+            throw new Error('boom')
+        })).rejects.toThrow('boom')
+        expect(leftovers()).toEqual([])
+    })
+
+    it('removes the copy when the copy itself dies halfway', async () => {
+        // A link to nothing: fs.cp follows links (dereference) and fails on it
+        // after having written the files before it.
+        const home = makeHome({ schema: 1, files: { 'a/first.txt': 'x' } })
+        fs.symlinkSync(path.join(tmp, 'does-not-exist'), path.join(paths(home).data, 'z-broken'))
+        await expect(withRehearsal({ home }, async () => 'unreachable')).rejects.toThrow()
+        expect(leftovers()).toEqual([])
+    })
+
+    it('says the path in one line when it cannot remove the copy, and does not fail the run', async () => {
+        const home = makeHome({ schema: 1 })
+        const lines = []
+        let scratchPath = null
+        const result = await withRehearsal({
+            home,
+            rm: async () => { throw new Error('EBUSY') },
+            warn: (line) => lines.push(line)
+        }, async (scratch) => { scratchPath = scratch; return 'ok' })
+        expect(result).toBe('ok')
+        expect(lines).toHaveLength(1)
+        expect(lines[0]).toContain(scratchPath)
+        expect(lines[0]).not.toContain('\n')
+        fs.rmSync(scratchPath, { recursive: true, force: true })
+    })
+
+    it('has nothing to remove on a first install', async () => {
+        const home = fs.mkdtempSync(path.join(os.tmpdir(), 'di-safety-'))
+        homes.push(home)
+        expect(await withRehearsal({ home }, async (scratch) => scratch)).toBeNull()
+        expect(leftovers()).toEqual([])
     })
 })
 

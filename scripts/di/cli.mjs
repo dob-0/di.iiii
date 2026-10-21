@@ -35,7 +35,7 @@ import {
     listSnapshots,
     pruneVersions,
     releaseFromFile,
-    rehearseAgainst,
+    withRehearsal,
     restoreSnapshot,
     rollback,
     smokeTest,
@@ -61,6 +61,7 @@ import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
 import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from './share.mjs'
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
+import { runPost } from './post.mjs'
 import {
     isStageMachine, joinPlan, joinStage, leaveStage, readManifest,
     restartSupervisor, runSupervisor, stageStatus, startSupervisor
@@ -615,6 +616,25 @@ const cmdMove = async (args) => {
     }
 }
 
+/** `di post draft|show|send|channels` — the share door; same address and login rules as `di move`. */
+const cmdPost = async (args) => {
+    const from = args.flags.from
+    const headers = {}
+    let base
+    if (from && from !== true) {
+        base = `${String(from).replace(/\/+$/, '')}/serverXR`
+        const token = args.flags.token === '-' ? (await readStdin()).trim() : moveToken({ from, env: process.env })
+        if (token) headers.Authorization = `Bearer ${token}`
+    } else {
+        const home = HOME()
+        if (!requireInstalled(home)) return
+        const port = resolvePort(home)
+        if (!(await alive(home, port))) { say(ui.notRunning()); return }
+        base = apiBase(home, port)
+    }
+    process.exitCode = await runPost(args, { base, headers: withUserAgent(headers), say, fail })
+}
+
 const cmdSpaces = async () => {
     const home = HOME()
     if (!requireInstalled(home)) return
@@ -876,25 +896,27 @@ const cmdUpdate = async (args) => {
 
     say(ui.installing(release.version))
     let staged
-    let rehearsal = null
     try {
         staged = await stageVersion({ home, release, verbose })
         // The rehearsal: the new build opens a COPY of the artist's own data and
         // runs its migrations there. An empty scratch directory only ever proved
-        // the binary starts, which is not what an update risks.
-        rehearsal = await rehearseAgainst({ home })
-        if (rehearsal) say(ui.rehearsing())
-        const healthy = await smokeTest({
-            home,
-            versionDir: staged.partialDir,
-            nodeBinary: node.nodeBinary(home),
-            dataRoot: rehearsal
+        // the binary starts, which is not what an update risks. The copy is
+        // thrown away on every path, success or not; the real database is
+        // migrated afterwards, by the build that has now proved it can.
+        await withRehearsal({ home }, async (rehearsal) => {
+            if (rehearsal) say(ui.rehearsing())
+            const healthy = await smokeTest({
+                home,
+                versionDir: staged.partialDir,
+                nodeBinary: node.nodeBinary(home),
+                dataRoot: rehearsal
+            })
+            if (!healthy) {
+                throw new Error(rehearsal
+                    ? 'the new version could not open your work — nothing has been changed'
+                    : 'the new version did not answer on a test port')
+            }
         })
-        if (!healthy) {
-            throw new Error(rehearsal
-                ? 'the new version could not open your work — nothing has been changed'
-                : 'the new version did not answer on a test port')
-        }
     } catch (error) {
         // Nothing has been stopped and `current` has not moved, so the artist
         // is exactly where they were — say so plainly rather than leaving them
@@ -904,11 +926,6 @@ const cmdUpdate = async (args) => {
         say(ui.updateFailed(from))
         process.exitCode = 1
         return
-    } finally {
-        // The rehearsal was a copy and its migrations are thrown away with it.
-        // The real database is migrated afterwards, by the build that has now
-        // proved it can.
-        if (rehearsal) await fsp.rm(rehearsal, { recursive: true, force: true }).catch(() => {})
     }
 
     const runner = runnerFor(home)
@@ -1635,6 +1652,7 @@ const COMMANDS = {
     follow: cmdFollow,
     stage: cmdStage,
     follows: cmdFollows,
+    post: cmdPost,
     unfollow: cmdUnfollow,
     down: cmdDown,
     stop: cmdDown,
