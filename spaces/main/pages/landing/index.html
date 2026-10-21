@@ -12,6 +12,8 @@
 :root{
   --room:#1B1BCB; --room-deep:#0B0B6E; --night:#05052A;
   --cyan:#4FD6FF; --ink:#F4F5FA; --dim:#A9B0D6; --line:rgba(255,255,255,.14);
+  /* The platform corner (src/styles/base.css --di-radius), copied: this page fetches nothing. */
+  --di-radius:2px;
   --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
 }
@@ -35,7 +37,6 @@ nav{
 }
 nav .wrap{display:flex;align-items:center;gap:22px;height:58px}
 .brand{font-weight:700;letter-spacing:-.02em;text-decoration:none;color:var(--ink);font-size:18px}
-.brand i{color:var(--cyan);font-style:normal}
 nav .spacer{flex:1}
 nav a{color:var(--dim);text-decoration:none;font-size:14px}
 nav a:hover{color:var(--ink)}
@@ -54,7 +55,8 @@ h1.mark{
   font-size:clamp(58px,13vw,150px);line-height:.86;font-weight:800;letter-spacing:-.05em;
   margin:0 0 26px
 }
-h1.mark i{color:var(--cyan);font-style:normal}
+/* The dot of the name is the one cyan in the wordmark. */
+.dot{color:var(--cyan)}
 .tagline{font-size:clamp(17px,2.3vw,23px);color:var(--dim);margin:0 auto 34px;max-width:26ch}
 .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:20px}
 .btn{
@@ -94,7 +96,7 @@ h2{
 .card p{margin:0;color:var(--dim);font-size:14.5px}
 .step{display:flex;gap:14px;align-items:flex-start}
 .step .n{
-  flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--cyan);
+  flex:none;width:26px;height:26px;border-radius:var(--di-radius);border:1px solid var(--cyan);
   color:var(--cyan);font:600 12px/24px var(--mono);text-align:center
 }
 .readmore{display:block;text-decoration:none;color:inherit}
@@ -112,7 +114,7 @@ a:focus-visible,.btn:focus-visible{outline:2px solid var(--cyan);outline-offset:
 </style></head><body>
 
 <nav><div class="wrap">
-  <a class="brand" href="/" target="_top">di<i>.</i>iiii</a>
+  <a class="brand" href="/" target="_top">di<span class="dot">.</span>iiii</a>
   <a href="/spaces" target="_top">Spaces</a>
   <a href="/wiki" target="_top">Wiki</a>
   <a href="https://github.com/dob-0/di.iiii" target="_top" rel="noopener">GitHub</a>
@@ -122,7 +124,7 @@ a:focus-visible,.btn:focus-visible{outline:2px solid var(--cyan);outline-offset:
 
 <header class="hero"><div class="wrap">
   <p class="eyebrow">Public spaces · on the open web</p>
-  <h1 class="mark">di<i>.</i>iiii</h1>
+  <h1 class="mark">di<span class="dot">.</span>iiii</h1>
   <p class="tagline">Make a space, hand out the address. A link while it runs, a file when it ends.</p>
   <div class="cta">
     <a class="btn solid" href="/spaces" target="_top">Step inside</a>
