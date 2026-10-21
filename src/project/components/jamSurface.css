@@ -65,7 +65,7 @@
 .jam-count-dot {
     width: 0.5rem;
     height: 0.5rem;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     background: var(--di-success);
     box-shadow: 0 0 0 3px rgba(var(--di-success-rgb), 0.18);
 }
@@ -359,7 +359,7 @@
 .jam-mine-swatch {
     width: 1rem;
     height: 1rem;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     flex: none;
     border: 1px solid rgba(0, 0, 0, 0.4);
 }
