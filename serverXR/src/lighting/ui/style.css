@@ -1455,3 +1455,12 @@ button.ndrow:hover { outline: 1px solid var(--muted); }
 .nodegroup .sq.armed { background: var(--danger); border-color: var(--danger); color: #041012; font-weight: 600; }
 .nodegroup .sq.on { border-color: var(--accent); color: var(--accent); }
 @media (max-width: 700px) { .nodedetails .nodegrid { grid-template-columns: 1fr; max-height: none; } }
+
+/* Touch colours (colour.js): a strip on each look tile, and the live stage. Square corners: the house signature. */
+.tbtn.lookbtn { position: relative; }
+.tstrip { display: block; align-self: stretch; height: 6px; margin: 0 -10px -10px; background: var(--line); }
+.tstage { flex: none; }
+.tstage .bankhead { position: static; }
+.tstagebox { position: relative; margin-top: 10px; height: clamp(120px, 28vh, 240px); background: var(--pane2); border: 1px solid var(--line); border-radius: 0; }
+.tdot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; background: #1d1d20; border: 1px solid var(--line); border-radius: 0; }
+.tdot.lit { border-color: transparent; }
