@@ -10,8 +10,6 @@
     scroll-behavior: smooth;
 }
 
-/* Dark, blurred scrim over the decorative 3D background so header/sidebar text
-   stays readable. Sits above the fixed GL canvas (z 0), below the content (z 2). */
 /* The room behind the wiki is only ever a picture. It sits in a position:fixed
    layer, so a wheel that lands on its canvas chains to the document, which does
    not scroll, instead of .wiki-root: the margins beside the text (25 % of a
@@ -21,6 +19,8 @@
     pointer-events: none !important;
 }
 
+/* Dark, blurred scrim over the decorative 3D background so header/sidebar text
+   stays readable. Sits above the fixed GL canvas (z 0), below the content (z 2). */
 .wiki-root::before {
     content: '';
     position: fixed;
