@@ -158,6 +158,9 @@ const s = () => {
     // scripts/project-move.mjs writes one row per move; the resolver below
     // reads the latest one for a given (old space, old id-or-slug).
     selectLatestMove: db.prepare('SELECT * FROM project_moves WHERE from_space = ? AND (project_id = ? OR old_slug = ?) ORDER BY moved_at DESC LIMIT 1'),
+    // The latest move that took this space's front door away and still
+    // forwards its bare address (db.js clears the flag on a new front door).
+    selectSpaceRootMove: db.prepare('SELECT * FROM project_moves WHERE from_space = ? AND forwards_space_root = 1 ORDER BY moved_at DESC, id DESC LIMIT 1'),
     // The index is what resolves a project id to its space, so a trashed
     // project must be absent from it — otherwise its url keeps working after it
     // was deleted, which is the opposite of what delete means.
@@ -213,6 +216,16 @@ const findProjectBySlug = async (spaceId, slug) => rowToMeta(s().selectBySlug.ge
 const findProjectMove = (fromSpaceId, segment) => {
   if (!fromSpaceId || !segment) return null
   const row = s().selectLatestMove.get(fromSpaceId, segment, segment)
+  return row ? { projectId: row.project_id, toSpace: row.to_space } : null
+}
+
+// Did `fromSpaceId`'s front door leave it in a recorded move, with no front
+// door set there since? Same answer shape as findProjectMove. The caller still
+// checks that the space has no front door now and that the visitor may open
+// the destination.
+const findSpaceRootMove = (fromSpaceId) => {
+  if (!fromSpaceId) return null
+  const row = s().selectSpaceRootMove.get(fromSpaceId)
   return row ? { projectId: row.project_id, toSpace: row.to_space } : null
 }
 
@@ -666,6 +679,7 @@ module.exports = {
   findProjectByIdAny,
   findProjectBySlug,
   findProjectMove,
+  findSpaceRootMove,
   getProjectPaths,
   isReservedProjectSlug,
   isValidAssetId,

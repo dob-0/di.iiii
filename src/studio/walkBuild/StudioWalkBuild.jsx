@@ -42,18 +42,23 @@ function Hand({ spaceId, projectId, document, entities, applyLocalOps, undo, red
     useEffect(() => { live.current = { slots, slotIndex, model, entities, library, inventory, yaw, undo, redo, apply, ensureAsset } })
     useEffect(() => {
         const L = () => live.current
+        // A placement awaits its piece's upload; when that settles after the hand is gone, the hand's own state is
+        // gone with it. `apply` stays open: it is the Studio's writer, and the asset a placed piece names must land.
+        let alive = true
+        const ifAlive = (set) => (value) => { if (alive) set(value) }
         const builder = createWalkBuilder({
             slots: () => L().slots, slotIndex: () => L().slotIndex, model: () => L().model, entities: () => L().entities,
             library: () => L().library, inventoryOpen: () => L().inventory, yaw: () => L().yaw,
-            apply: (ops, message) => L().apply(ops, message), say: setSaid, pick: setSlotIndex,
-            setInventory: (open) => {
+            apply: (ops, message) => L().apply(ops, message), say: ifAlive(setSaid), pick: ifAlive(setSlotIndex),
+            setInventory: ifAlive((open) => {
                 if (open && globalThis.document?.pointerLockElement) globalThis.document.exitPointerLock?.()
                 setInventory(open)
-            },
-            setYaw, undo: () => L().undo(), redo: () => L().redo(), newId: () => generateId('entity'),
+            }),
+            setYaw: ifAlive(setYaw), undo: () => L().undo(), redo: () => L().redo(), newId: () => generateId('entity'),
             ensureAsset: (kind) => L().ensureAsset(kind)
         })
-        return setWalkBuilder(builder)
+        const release = setWalkBuilder(builder)
+        return () => { alive = false; release() }
     }, [setSlotIndex])
 
     return (
