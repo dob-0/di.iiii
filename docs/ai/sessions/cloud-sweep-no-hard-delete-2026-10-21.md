@@ -1,0 +1,8 @@
+## 2026-10-21 — the idle sweep trashes and reports, never hard-deletes a space someone can reach
+
+- Cause of the 2026-10-20 21:35 UTC loss of `support` (published, linked from the landing and FUNDING.yml): `pruneSpaces` hard-deleted every non-permanent space idle 30 days; a read is not a touch.
+- Now one `sweepPlan()` (`serverXR/src/spaceStore.js`) feeds both the sweep and the admin list. Skipped and reported: front room, published, publicly listed, site-linked (`serverXR/src/siteLinkedSpaces.js`), own domain, repository link, named address (slug), a live project with `document_version > 0`. Everything else → the space trash (`moveToTrash`, same stamp and restore as a manual delete); only `purgeSpaceTrash` removes bytes, after 30 days.
+- One line per trash/skip/purge: `[sweep] <action> space=<id> reason="…" owner=<id|guest|none>` in the server log and a `sweep_log` row (new table, no FK). Skips repeat at most once a day.
+- `GET /api/admin/sweep` (admin): due in the next 14 days with the action and reason, plus the last 200 acts. Admin page: Manage → "Due for the sweep". The sandbox purge button runs the same sweep, sandboxes only. A guest whose sandbox was trashed gets it restored on return.
+- Tests: spaceStore 23/23 (6 new, all 6 red on the old store), siteLinkedSpaces 2/2, AdminManageSection 10/10 (2 new), httpContracts sandbox-purge case 1/1, catalogueContracts 3/3.
+- NOT done: `support` itself is still gone on prod — restore it from the nightly backup or re-sync it. No browser check of the new admin section (no dev stack in this cloud session). "Linked from the site" only knows the landing and FUNDING.yml.

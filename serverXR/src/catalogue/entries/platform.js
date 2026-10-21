@@ -24,8 +24,16 @@ module.exports = [
     agent: false
   },
   {
+    route: "GET /api/admin/sweep",
+    summary: "the idle-space sweep: every space it reaches in the next 14 days and what it will do (trash, or skip with the reason), plus the last 200 things it did",
+    reach: "read",
+    role: "admin",
+    agent: false,
+    note: "names spaces nobody listed and their owners — admin only."
+  },
+  {
     route: "POST /api/admin/sandboxes/purge",
-    summary: "remove guest sandboxes past their TTL and archive idle account sandboxes, on demand instead of waiting for the periodic sweep",
+    summary: "move guest sandboxes past their TTL into the space trash and archive idle account sandboxes, on demand instead of waiting for the periodic sweep",
     reach: "private",
     role: "admin",
     agent: false

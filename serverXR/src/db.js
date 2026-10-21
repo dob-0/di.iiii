@@ -532,6 +532,21 @@ const SCHEMA = `
     active_since INTEGER
   );
   CREATE INDEX IF NOT EXISTS idx_space_domains_space ON space_domains(space_id);
+
+  -- What the idle-space sweep did, one row per act (spaceStore.pruneSpaces):
+  -- 'trashed' (into the space trash, restorable), 'skipped' (idle past its
+  -- time but kept: reason says why) or 'purged' (the trash emptied, for good).
+  -- No foreign key: the row must outlive the space it names. On 2026-10-20 the
+  -- sweep removed a published space and the only trace was one log line.
+  CREATE TABLE IF NOT EXISTS sweep_log (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    at INTEGER NOT NULL,
+    space_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    reason TEXT NOT NULL DEFAULT '',
+    owner TEXT NOT NULL DEFAULT ''
+  );
+  CREATE INDEX IF NOT EXISTS idx_sweep_log_space ON sweep_log(space_id, action, at);
 `
 
 // Patch a DatabaseSync instance to expose the better-sqlite3 surface used
