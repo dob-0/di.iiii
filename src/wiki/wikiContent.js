@@ -1817,6 +1817,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-13'
     },
     {
+        id: 'recorder-and-still-nodes',
+        category: 'Editing',
+        title: 'Recorder and Still — keep what the show looked like',
+        summary: 'Recorder records a picture, and a sound if you wire one, to a WebM file between Start and Stop; Still saves one PNG of a picture. Both land in the project’s files.',
+        body: [
+            'Add a Recorder in the node editor and wire a picture into its Picture socket: a Scene’s Picture, a Picture Out, or a camera’s Frame. Press Start to record and Stop to finish, or wire signals into Start and Stop — a Button, a Trigger or a Timer — so the show records itself. Holding a signal high starts once; it has to fall and rise again to act again.',
+            'The file is a WebM video. Recorder asks the browser for VP9 first, then VP8, then any WebM it can write, at 6 Mbps and 30 frames a second. When it stops, the file lands in the project’s files, named after what fed its picture and the moment recording began, for example recording-scene-2026-10-21T14-03-07.webm. On a project that is not saved to a server, the file stays in this browser.',
+            'Wire a sound into Sound to record it with the picture. Sound takes a live sound stream; without one the recording is picture only, and Recorder says so while it records.',
+            'Recorder answers four things the graph can read: Recording (true while it records), Seconds, Status (what it is doing, in words) and File (the name of the last file it kept).',
+            'Add a Still and wire a picture into Picture. Press Take, or send a signal into Take, and Still saves one PNG at the picture’s own size, named the same way: still-scene-2026-10-21T14-03-07.png. Its Status and File outputs say what it kept.',
+            'Both need their window open: a Scene gives its Picture only while its own window draws it, and a closed Recorder window stops and keeps what it recorded. If no picture is arriving, neither makes an empty file; each says that nothing is arriving.',
+            'For people who cut films of a project in a test browser: the editor and the output page answer window.__seek(seconds), which holds the clock at that moment and resolves once the frame is drawn (window.__ready is true then); window.__play() lets the clock run again.'
+        ],
+        tags: ['raw', 'nodes', 'record', 'recording', 'video', 'still', 'png', 'webm', 'documentation', 'show'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'laser-out-node',
         category: 'Editing',
         title: 'Laser and Laser Out — draw for the LaserCubes',

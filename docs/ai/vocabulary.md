@@ -270,7 +270,7 @@ Confirmed as they stand (the census found no better professional word):
 - **the scene**: Scene · Kiosk · Geo · Constructor's siblings 3D Desk / 2D Desk *(deliberate survivors — see the 2026-08-19 note; 3D Desk retires from the palette with the container pass)* · Light *(splits into Light + Environment in the Light pass — reserved below)* · Camera · Background · Grid · In · Out · Studio · Node 0 / Activate Node / Universe Link *(shells, hidden)*
 - **watch**: Monitor · Inspector · Outliner · Timeline · Director
 - **bring in**: Button · Keyboard *(the operator's hands, 2026-08-20 — the desk's Go and a chosen key; Keyboard ignores keys typed into fields)* · Model · Video · Sound *(kept over "Audio": a Sound is a thing standing in the scene, matching Blender's Speaker idea; "audio" is reserved for the analysis outputs coming with the show operators)* · Webcam · Microphone · MIDI In · the capture shells (AR Camera, Insta360 Camera, Stereo Camera, RealSense D405, OSC In, PTZ Camera)
-- **send out**: MIDI Out *(REAL since 2026-08-21 — Web MIDI send: Trigger holds the note, a change while held re-strikes, a changed Value goes out as CC; Status answers what it is doing)* · OSC Out *(shell — no UDP without the bridge)* — and the streaming four keep their labels until built
+- **send out**: MIDI Out *(REAL since 2026-08-21 — Web MIDI send: Trigger holds the note, a change while held re-strikes, a changed Value goes out as CC; Status answers what it is doing)* · OSC Out *(shell — no UDP without the bridge)* · **Recorder** · **Still** *(built 2026-10-21 — keep what the show looked like; see the amendment below)* — and the other streaming shells keep their labels until built
 - **agents**: Agent · Keeper · Agent Run · Work Status *(dev-local, low-stakes; renamed only if they ever ship)*
 
 Reserved names — settle NOW so the build waves don't invent their own:
@@ -278,7 +278,7 @@ Reserved names — settle NOW so the build waves don't invent their own:
 | --- | --- | --- |
 | `world.environment` (Light split) | **Environment** | TD Environment Light; the scene's ambient/directional settings |
 | `light.point` (Light split) | **Light** | the lamp you place; the legacy dual-identity `world.light` goes paletteHidden with a non-colliding label decided in that pass |
-| streaming four, when built | **Composite · Switch (texture) · Output · Record** | TD TOP names; if number-Switch and texture-Switch would meet in one palette, the texture one ships as **Composite**'s sibling and the collision is resolved in that PR, not silently |
+| streaming four, when built | **Composite · Switch (texture) · Output** · ~~Record~~ **Recorder** (built 2026-10-21, see the amendment below) | TD TOP names; if number-Switch and texture-Switch would meet in one palette, the texture one ships as **Composite**'s sibling and the collision is resolved in that PR, not silently |
 
 Guard: `src/nodeLabelVocabulary.test.js` — labels must carry no banned word, no
 parenthetical, no leading article, and stay within two words. The prose guard
@@ -423,6 +423,19 @@ Design: the raw laser workflow decision of 2026-10-14 (lands in docs/ai/decision
 | **Laser** (port type) | The wire type laser nodes speak: a set of paths (below). Green on the canvas. Not to be confused with the **Laser** node (`laser.shape`), which keeps its name. |
 | **path** (laser) | One unbroken stroke the beam draws, lit all along. A **path set** (frame v2 in code) is what flows between laser nodes; Laser Out turns it into the wire's points, putting the dark moves between paths. Developer word; the card says "Frame". |
 | **Auto** (Laser Out's budget) | The point budget sized from the drawn length instead of a number. The checkbox beside Laser Out's Points slider; 0 on the Budget port means the same. |
+
+## Amended 2026-10-21 — Recorder and Still (keep what the show looked like)
+
+The owner, 2026-10-21: "yes build all 12" — this is one of the twelve. The reserved word above was
+**Record**; the brief named the card **Recorder**, the noun for the thing that records (a verb on a
+card reads as a button). Type id unchanged: `stream.recorder`.
+
+| Word | Its one job |
+|---|---|
+| **Recorder** (`stream.recorder`) | The node that records a picture wire (a Scene's Picture, a Picture Out), and a sound if one is wired, to a WebM file between **Start** and **Stop**. Its outputs: **Recording**, **Seconds**, **Status**, **File**. The file lands in the project's files. |
+| **Still** (`stream.still`) | The node that saves one PNG of a picture wire on **Take** (its button, or a rising signal). Outputs **Status** and **File**. |
+| **take** | One thing a Recorder or a Still kept: one recording, or one still. Its file is named `<kind>-<source>-<date>`, e.g. `still-scene-2026-10-21T14-03-07.png`, because a project file carries a name and a date and nothing else. |
+| **seek** (the clock) | Holding the document clock at one moment so a test browser can cut a project frame-exact: `__seek(t)` (seconds), `__ready`, `__play`. Developer words; no card shows them. |
 
 ## Proposed 2026-10-13 — a lighting look, and the Dilijan words (owner's pick, nothing renamed)
 
