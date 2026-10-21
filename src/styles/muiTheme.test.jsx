@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { render, screen } from '@testing-library/react'
-import { Box, SnackbarContent, ThemeProvider } from '@mui/material'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { Badge, Box, Button, SnackbarContent, ThemeProvider } from '@mui/material'
 import { describe, expect, it } from 'vitest'
 import { diTheme } from './muiTheme.js'
 
@@ -24,7 +24,7 @@ describe('the shared MUI theme', () => {
         expect(token('--di-text-3')).toBe('0.76rem')
         expect(diTheme.typography.body2.fontSize).toBe('0.9rem')
         expect(diTheme.typography.caption.fontSize).toBe('0.76rem')
-        expect(diTheme.typography.button.fontSize).toBe('0.76rem')
+        expect(diTheme.typography.button.fontSize).toBe('0.9rem')
     })
 
     it('is dark, in the house colours of base.css', () => {
@@ -58,5 +58,57 @@ describe('the shared MUI theme', () => {
         expect(style.backgroundColor).toBe('rgb(50, 50, 50)')
         expect(style.color).toBe('rgb(255, 255, 255)')
         expect(style.borderRadius).toBe('0px')
+    })
+
+    // MUI 7 Badge.js uses its literal RADIUS_STANDARD = 10 and never reads
+    // theme.shape; the unread count is a number, not a status dot.
+    it('draws a Badge with a number as a box, not a disc', () => {
+        render(
+            <ThemeProvider theme={diTheme}>
+                <Badge badgeContent={7}><span>chat</span></Badge>
+            </ThemeProvider>
+        )
+        const badge = screen.getByText('7')
+        expect(badge.className).toContain('MuiBadge-badge')
+        expect(getComputedStyle(badge).borderRadius).toBe('0px')
+    })
+
+    // Rendered sizes in px: html font-size is 16 px in jsdom, so rem * 16.
+    it('never draws a small Button bigger than a medium one', () => {
+        render(
+            <ThemeProvider theme={diTheme}>
+                <Button variant="contained" size="medium">Sign in</Button>
+                <Button variant="text" size="small">Use an access token instead</Button>
+                <Button variant="text" size="large">Enter</Button>
+            </ThemeProvider>
+        )
+        const px = (name) => parseFloat(getComputedStyle(screen.getByText(name)).fontSize)
+        const rem = (v) => parseFloat(v) * 16
+        expect(px('Sign in')).toBeCloseTo(rem(token('--di-text-4')), 5)
+        expect(px('Use an access token instead')).toBeCloseTo(rem(token('--di-text-3')), 5)
+        expect(px('Use an access token instead')).toBeLessThan(px('Sign in'))
+        expect(px('Enter')).toBeCloseTo(rem(token('--di-text-5')), 5)
+    })
+
+    // Q12: cyan only for selected and live.
+    it('washes a hovered or keyboard-focused text and outlined Button grey, not cyan', () => {
+        render(
+            <ThemeProvider theme={diTheme}>
+                <Button variant="text">Retry</Button>
+                <Button variant="outlined">Back</Button>
+            </ThemeProvider>
+        )
+        for (const name of ['Retry', 'Back']) {
+            const button = screen.getByText(name)
+            fireEvent.mouseOver(button)
+            // jsdom has no :hover; read the rule from the emitted stylesheet.
+            const rules = [...document.styleSheets].flatMap((s) => [...s.cssRules]).map((r) => r.cssText)
+            const mine = rules.filter((t) => button.className.split(' ').some((c) => c && t.includes(`.${c}`)))
+            const hover = mine.filter((t) => t.includes(':hover') && t.includes('background-color')).join('\n')
+            const focus = mine.filter((t) => t.includes('Mui-focusVisible') && t.includes('background-color')).join('\n')
+            expect(hover).toContain('rgba(255, 255, 255, 0.08)')
+            expect(focus).toContain('rgba(255, 255, 255, 0.08)')
+            expect(hover).not.toMatch(/77, ?249, ?255|4df9ff/i)
+        }
     })
 })

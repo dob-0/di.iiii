@@ -33,6 +33,13 @@ export const DI_FONT_FAMILY = 'var(--di-sans)'
 //   --di-danger, --di-success, --di-warning; muiTheme.test.js holds them equal.
 export const DI_TYPE_BODY2 = '0.9rem'   // --di-text-4, 14.4 px
 export const DI_TYPE_SMALL = '0.76rem'  // --di-text-3, 12.16 px
+export const DI_TYPE_LARGE = '1.0625rem' // --di-text-5, 17 px
+
+// Hover and keyboard-focus wash of a text or outlined Button. MUI derives it
+// from palette.primary (--variant-textBg = alpha(primary.main, 0.08)), which
+// would be cyan; cyan is for selected and live only (Q12). White at the same
+// 0.08 is a grey wash on the black room.
+const DI_HOVER_WASH = 'rgba(255, 255, 255, 0.08)'
 
 export const diTheme = createTheme({
     shape: { borderRadius: 0 },
@@ -47,7 +54,7 @@ export const diTheme = createTheme({
         fontFamily: DI_FONT_FAMILY,
         body2: { fontSize: DI_TYPE_BODY2 },
         caption: { fontSize: DI_TYPE_SMALL },
-        button: { fontSize: DI_TYPE_SMALL }
+        button: { fontSize: DI_TYPE_BODY2 }
     },
     components: {
         // Dark mode lays a white gradient over every elevated Paper (menus,
@@ -60,6 +67,28 @@ export const diTheme = createTheme({
         // the chat's notices showed before the palette turned dark.
         MuiSnackbarContent: {
             styleOverrides: { root: { backgroundColor: 'rgb(50, 50, 50)', color: '#fff' } }
+        },
+        // The unread count on the chat is a number in a 20 px box, not a status
+        // dot. MUI's Badge reads its literal RADIUS_STANDARD = 10, never
+        // theme.shape, so it stayed a disc.
+        MuiBadge: {
+            styleOverrides: { badge: { borderRadius: 0 } }
+        },
+        // The ladder: medium = typography.button (--di-text-4), small one step
+        // below, large one above. MUI keeps pxToRem(13) / pxToRem(15) on the
+        // sizes, which put 'small' (13 px) above 'medium' (12.16 px).
+        // Hover and focus-visible washes are grey, not primary cyan.
+        MuiButton: {
+            styleOverrides: {
+                sizeSmall: { fontSize: DI_TYPE_SMALL },
+                sizeLarge: { fontSize: DI_TYPE_LARGE },
+                text: {
+                    '&:hover, &.Mui-focusVisible': { backgroundColor: DI_HOVER_WASH }
+                },
+                outlined: {
+                    '&:hover, &.Mui-focusVisible': { backgroundColor: DI_HOVER_WASH }
+                }
+            }
         },
         // IconButton's round hit area is a literal '50%', not a theme number.
         MuiIconButton: {
