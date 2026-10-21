@@ -241,7 +241,11 @@ describe('F13 — a host restored from an older backup, whose log then passes th
     // version 4 — past the saved cursor 3 — so the follower reads from 3 and the
     // restored host's edits at versions 2 and 3 are never read. Fix sketch in
     // the audit (a log epoch beside each cursor).
-    it.fails('carries every edit the restored host makes, the ones under the old cursor too', async () => {
+    // Asserts the loss exactly, not `it.fails`: `it.fails` passes on ANY error
+    // (a settle that times out, a broken fake), so it could stay green for a
+    // reason that is not F13. When the fix lands the missing list becomes []
+    // and this goes red: then assert [] and rename it.
+    it('loses the restored host\'s edits under the old cursor (F13 open; red the day it is fixed)', async () => {
         const saves = []
         const { host, mine, follower, restart, ticks } = await pair({ onSave: (snapshot) => { saves.push(snapshot) } })
         await settle('the follow running', () => ticks() >= 2)
@@ -267,7 +271,7 @@ describe('F13 — a host restored from an older backup, whose log then passes th
 
         restart(follower, { saved: saves.at(-1) })
         await settle('the restored host\'s newest edit here', () => mine.hasOp('op-after-3'))
-        expect(['op-after-1', 'op-after-2'].filter(opId => !mine.hasOp(opId))).toEqual([])
+        expect(['op-after-1', 'op-after-2'].filter(opId => !mine.hasOp(opId))).toEqual(['op-after-1', 'op-after-2'])
     })
 })
 

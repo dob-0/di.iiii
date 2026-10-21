@@ -32,8 +32,8 @@ whether a thing CAN happen, not how often.
 | F10 | MEDIUM | FIXED (ccd00a91) | Files: each project's document was reconciled once per process; a file named only by a converged document was never fetched. Now each document is read again every `reconcileEveryMs` (10 min); guard `assets.test.js` "(audit F10)", red on ccd00a91^. Limit: up to one period (10 min) late | assets.js `noteProjects`, `reconcileOne` |
 | F11 | MEDIUM | PLAUSIBLE | `di follow` accepts a wrong, revoked or missing key on a public space (the check is a read); outbound then fails forever with a bare "401" | share.mjs:163-172 |
 | F12 | MEDIUM | FIXED (544510e, #905) | Converge could overwrite a local edit made between the ops read and the document read, then never converge it back. Now a converge is skipped (flags kept) when this copy's document version is not the one its log was read at; guard `followRaces.test.js` C1 (the rename made mid-compare is on both copies, which end equal) | follower.js `converge` (`readThrough`) |
-| F13 | LOW-MED | CONFIRMED (test), not fixed | Cursors carry no epoch: a host restored from an older backup that then passes the old version number makes the follower skip the overlap. `followRaces.test.js` "F13" (`it.fails`): restored to v1, three edits to v4 past the saved cursor 3, the edits at v2 and v3 never arrive | follower.js `runStream` (`behind`) |
-| F14 | LOW-MED | FIXED (0934fe96) for a default follow; `--replay` still re-sends | After state loss the whole retained window of each side was re-sent. A follow with nothing saved now starts from now (audit F4 fix); guard `followRaces.test.js` "F14": state dropped, restart, 0 ops land on either side but the next real edit, nothing reverted. With `start: 'replay'` the same run re-lands 4 old ops (mine 7 → 11) | follower.js `startCursorAt`, `fromNow` |
+| F13 | LOW-MED | CONFIRMED (test), not fixed | Cursors carry no epoch: a host restored from an older backup that then passes the old version number makes the follower skip the overlap. `followRaces.test.js` "F13" (asserts the loss; red the day it is fixed): restored to v1, three edits to v4 past the saved cursor 3, the edits at v2 and v3 never arrive | follower.js `runStream` (`behind`) |
+| F14 | LOW-MED | FIXED (0934fe96) for a default follow; `--replay` still re-sends | After state loss the whole retained window of each side was re-sent. A follow with nothing saved now starts from now (audit F4 fix); guard `followRaces.test.js` "F14": state dropped, restart, 0 ops land on either side but the next real edit, nothing reverted. With `start: 'replay'` the same run re-lands 4 old ops (mine 6 → 11, expected 6 → 7) | follower.js `startCursorAt`, `fromNow` |
 | F15 | LOW | CONFIRMED (test) | `follows.json` is 0600 only when created; an existing 0644 file stays readable, key included | followStore.js:38; follows.mjs:106-110 |
 | F16 | LOW | CONFIRMED (trace) | Status lags: `state` is set once per tick and a tick runs every stream in turn (8 s per stream on a blackholed link); `di follows` shows "starting" for the first park, and "waiting" only after the whole sweep | follower.js:446-486,507 |
 | F17 | LOW | CONFIRMED (trace) | A failed write is reported as the bare status number (`401`, `413`), not in words | follower.js:183,478; ui.mjs:224 |
@@ -241,8 +241,8 @@ counters with no identity. Fix: the host's ops answer carries a log epoch (rando
 restored); the follower stores it with the cursor and resets on a change. Guard: restore the host from an old copy,
 edit past the cursor, assert all ops arrive.
 
-**2026-10-21: CONFIRMED by test, not fixed.** `serverXR/src/follow/followRaces.test.js` "F13" (`it.fails`, so it turns
-red the day this is fixed and must then become a plain `it`): host at v3, follower saves cursor 3 and stops; the host is
+**2026-10-21: CONFIRMED by test, not fixed.** `serverXR/src/follow/followRaces.test.js` "F13" (asserts the two missing ops
+exactly, so it turns red the day this is fixed and must then assert none missing): host at v3, follower saves cursor 3 and stops; the host is
 restored to its v1 copy and makes three edits (v2, v3, v4); the follower resumes from the saved state and carries v4
 only. Received missing `['op-after-1', 'op-after-2']`. Stable 5 of 5 runs beside the whole serverXR suite. Smallest
 fix sketch (a protocol change, so not made by the test): the ops answer carries `logEpoch`, a random id minted when a log is
@@ -270,7 +270,7 @@ nothing saved, each stream starts at the latest version on both sides and the do
 host still holds them; the state is dropped and the follow restarted; afterwards each side's version moved by exactly
 1 (the next real edit), the lamp is `v2` on both, the copies are equal. Stable 5 of 5 beside the serverXR suite. Not
 covered: a follow made with `--replay` still re-sends the windows after state loss: the same test with
-`start: 'replay'` re-landed 4 old ops here (version 7 → 11, expected 7 → 8; run once). In that linear history the
+`start: 'replay'` re-landed 4 old ops here (version 6 → 11, expected 6 → 7; run twice). In that linear history the
 replay re-applies a suffix in order and no value ended reverted; a revert needs a newer value that is not in the
 sender's window after the old op (a converged document, or an edit still in flight), which was not built.
 
