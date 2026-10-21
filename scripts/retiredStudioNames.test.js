@@ -62,7 +62,11 @@ describe('retired studio names', () => {
     it('appear on no live surface', () => {
         const unexplained = live
             .filter((h) => !ALLOWED_LINES.some((a) => a.file === h.file && h.text.includes(a.includes)))
-            .map((h) => `${h.file}:${h.line}: ${h.text.trim().slice(0, 160)}`)
+            // generated rooms are one long line: show the words around the hit, not the line's start
+            .map((h) => {
+                const at = Math.max(0, h.text.search(new RegExp(RETIRED)) - 60)
+                return `${h.file}:${h.line}: ${h.text.slice(at, at + 160).trim()}`
+            })
         expect(unexplained).toEqual([])
     })
 
