@@ -1,0 +1,8 @@
+## 2026-10-21 — 40 W laser chart: the owner's never-use ranges 72-81, 88-89, 146-168 and test pattern 181
+
+- Source: the owner's message of 2026-10-17 05:04Z, dropped by the old di.bo, recovered 2026-10-21: "don't use from 72-81,88,89,146-168, and 181 is the test pattern add in chart to not use this values"; same thread: "this is 0", "and it goes till the 9 so don't photo", "and this is the after 9", "this 166".
+- `scripts/place/fixtures/charts/up-la40wf.json` → `graphics`: three new `neverUse` entries (`owner-72-81`, `owner-88-89`, `owner-146-168`), each with its source; the measured entries (hearts, arrows, numbers) kept and now say they are measured. `neverUseValues` 14 → 43. Overlaps: 74-75, 78-79 inside 72-81; 166-167 inside 146-168; 246-253 alone; the dot range 146-165 is now inside 146-168. `testPattern.value` 24 → 181 (24 kept under `replaces`). New `looks.oneLook` [0, 9]: 0-9 is one look.
+- Datasheet page `docs/moxir/devices/up-la40wf.md` says the same.
+- Readers: `scripts/place/laser_rules.py` (python, 43 values) and `scripts/rigbuild/la40-player.mjs` read the chart; no code change. The desk (`src/rigbuild`, `serverXR/src/lighting`) does not read the list. Desk API refusal not changed (owner decision, still open).
+- Test: `scripts/place/laser-rules-one-source.test.js` 7/7 pass; on dev's chart 3 of 7 fail. `src/rigbuild/uplusProfiles.test.js` passes (23/23 for both files).
+- Limit: the 0-9 rule contradicts the manual's "one graphic per two values" and the player's comment that 1, 2, 5, 8 are different lines; the player's defaults (1,5,8,10,48,2,27) are not changed and not re-walked. Nothing checked on a real unit.

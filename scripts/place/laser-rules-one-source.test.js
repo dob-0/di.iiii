@@ -20,10 +20,31 @@ describe('laser rules: one source', () => {
         expect(LASER_MIN_HEIGHT_M).toBe(3)
         expect(LASER_HAND_RULE_M).toBeCloseTo(5.4, 9)
     })
-    it('the chart list equals the owner values of ledger N1037 (74-75, 78-79, 166-167, 246-253)', () => {
-        const want = [74, 75, 78, 79, 166, 167, ...Array.from({ length: 8 }, (_, i) => 246 + i)]
+    it('the chart list equals the owner values: measured (N1037) plus the 05:04Z ranges (2026-10-17, recovered 2026-10-21)', () => {
+        const span = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i)
+        // measured 74-75, 78-79, 166-167 fall inside the owner's 72-81 and 146-168; 246-253 stands alone
+        const want = [...span(72, 81), 88, 89, ...span(146, 168), ...span(246, 253)]
+        expect(want).toHaveLength(43)
         expect([...chart.neverUseValues].sort((a, b) => a - b)).toEqual(want)
-        expect(Object.values(chart.neverUse).flatMap((g) => g.values).sort((a, b) => a - b)).toEqual(want)
+        expect([...new Set(Object.values(chart.neverUse).flatMap((g) => g.values))].sort((a, b) => a - b)).toEqual(want)
+        for (const v of [74, 75, 78, 79, 166, 167, ...span(246, 253)]) expect(chart.neverUseValues).toContain(v)
+    })
+    it('every 05:04Z entry names its source; 181 is the test pattern; 0-9 is one look', () => {
+        for (const k of ['owner-72-81', 'owner-88-89', 'owner-146-168']) {
+            expect(chart.neverUse[k].source.when).toBe('2026-10-17 05:04Z')
+            expect(chart.neverUse[k].source.recovered).toMatch(/recovered 2026-10-21/)
+        }
+        expect(chart.testPattern.value).toBe(181)
+        expect(chart.neverUseValues).not.toContain(181)
+        expect(chart.looks.oneLook).toEqual([0, 9])
+    })
+    it('the 40 W player refuses a graphic from the new list (80) and accepts its defaults', () => {
+        const player = path.join(here, '..', 'rigbuild', 'la40-player.mjs')
+        const bad = spawnSync(process.execPath, [player, '--graphics', '80'], { encoding: 'utf8' })
+        expect(bad.status).not.toBe(0)
+        expect(bad.stderr).toMatch(/a forbidden graphic is in the list/)
+        const ok = spawnSync(process.execPath, [player], { encoding: 'utf8' }) // no --cues: prints usage, exits 2, touches no desk
+        expect(ok.status, ok.stderr).toBe(2)
     })
     it('no script holds its own never-use list or dot ranges', () => {
         const bad = code.filter((f) => /\b74,\s*75,\s*78,\s*79\b|\b246\D{1,4}253\b|\b146\D{1,4}165\b/.test(read(f)))
