@@ -29,3 +29,17 @@
   inspector guard fails. Full suite (`npx vitest run`, serverXR deps installed): 11861 passed, 4 failed — the 4
   `scripts/di/oneAddressPrinted.test.js` cases, which fail identically with this change stashed (the cloud
   container's `diiii.localhost` does not answer). `npm run build` passes.
+
+## 2026-10-21 — Laser File review fixes: blank what leaves the field, .ild uploads, SVG read once, cap filled
+
+- An independent review of PR #1071 found 6 points. **Fixed:** (1) Size/Height clamped out-of-field points onto the
+  edge — now `clipField.js` blanks them (a 400-point circle at Size 10 had 340 corner vertices, now 0; known-fixes
+  entry added); (2) `.ild` uploads were refused — `serverXR/src/uploadPolicy.js` now holds the upload allowlist
+  (moved out of `index.js` unchanged) with `.ild` added; (4) the runtime's cache key carried the frame index for an
+  SVG, so Speed > 0 flattened it again each step — the key leaves the index out unless the bytes are ILDA;
+  (5) `capPaths` rounded down (1999 of 2000) — remainders now go by largest remainder, the sum is the cap exactly.
+- (3) **Still owed:** no ILDA file from outside the repo is tested. Two fixtures typed by hand in hex (format 5;
+  format 2 palette + format 0) now hold `readIlda` to the documented byte layout independently of `writeIlda`,
+  but the layout itself is still second-hand and DEFAULT_PALETTE still unverified. (6) needed nothing.
+- Tests: 15 new (clipField 5, laserFile 5, ildaFile 2 hand fixtures, uploadPolicy 3 — of which 6 fail with the
+  fixes reverted). Not seen in a browser or on the cubes; serverXR upload not exercised over HTTP.

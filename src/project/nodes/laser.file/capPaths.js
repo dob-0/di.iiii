@@ -11,8 +11,9 @@ const lengthOf = (p) => {
 /**
  * Paths -> { paths, cutPoints, cutPaths } with at most `max` vertices in all. Under the cap the paths are
  * returned as they are. Over it, every path keeps its two ends and an even share (by index) of its inner
- * vertices, rounded down, so the sum never passes `max`; if even two vertices a path will not fit, the
- * longest paths are kept and the rest counted in `cutPaths`. A closed path cut below 3 vertices is open. Pure.
+ * vertices, rounded by largest remainder, so the sum is `max` and never passes it; if even two vertices a
+ * path will not fit, the longest paths are kept and the rest counted in `cutPaths`. A closed path cut below
+ * 3 vertices is open. Pure.
  */
 export const capPaths = (paths, max = FRAME_MAX_POINTS) => {
     const cap = Math.max(2, Math.floor(max))
@@ -30,10 +31,19 @@ export const capPaths = (paths, max = FRAME_MAX_POINTS) => {
     const fixed = counts.reduce((s, n) => s + Math.min(n, 2), 0)
     const inner = counts.reduce((s, n) => s + Math.max(0, n - 2), 0)
     const ratio = inner > 0 ? Math.max(0, cap - fixed) / inner : 0
+    // Largest remainder: the vertices the rounding down leaves over go, one each, to the paths it cut most.
+    const shares = counts.map((n) => Math.max(0, n - 2) * ratio)
+    const keepInner = shares.map((s, i) => Math.min(counts[i] - 2, Math.floor(s)))
+    let spare = Math.max(0, cap - fixed) - keepInner.reduce((s, k) => s + Math.max(0, k), 0)
+    const byRemainder = shares.map((s, i) => [s - Math.floor(s), i]).filter(([, i]) => counts[i] > 2).sort((a, b) => b[0] - a[0] || a[1] - b[1])
+    for (const [, i] of byRemainder) {
+        if (spare <= 0) break
+        if (keepInner[i] < counts[i] - 2) { keepInner[i] += 1; spare -= 1 }
+    }
     const out = list.map((path, i) => {
         const n = counts[i]
         if (n <= 2) return path
-        const k = 2 + Math.min(n - 2, Math.floor((n - 2) * ratio))
+        const k = 2 + keepInner[i]
         if (k >= n) return path
         const p = []
         for (let j = 0; j < k; j += 1) {

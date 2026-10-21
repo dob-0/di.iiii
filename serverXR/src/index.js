@@ -208,42 +208,7 @@ const MAX_OP_HISTORY = 500
 // guard in POST /ops has to recognise.
 const MAX_OP_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const DEFAULT_SPACE_ID = 'main'
-const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'model/']
-const ALLOWED_MIME_TYPES = new Set([
-  'application/json',
-  'application/octet-stream',
-  'application/pdf',
-  'application/zip',
-  'application/x-zip-compressed',
-  'application/gzip',
-  'text/plain'
-])
-const ALLOWED_EXTENSIONS = new Set([
-  '.glb',
-  '.gltf',
-  '.obj',
-  '.mtl',
-  '.stl',
-  '.fbx',
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.gif',
-  '.webp',
-  '.svg',
-  '.mp4',
-  '.mov',
-  '.webm',
-  '.mp3',
-  '.wav',
-  '.ogg',
-  '.m4a',
-  '.zip',
-  '.bin',
-  '.hdr',
-  '.exr'
-])
-
+const { isAllowedUpload } = require('./uploadPolicy')
 const releaseInfo = loadReleaseInfo(config.directories.root)
 
 const {
@@ -326,21 +291,6 @@ const stampImportedOpsActor = (spaceId, actor) => {
     .run(actor.actor, actor.type, actor.label, spaceId)
   db.prepare('UPDATE project_ops SET actor = ?, actor_type = ?, actor_label = ? WHERE actor IS NULL AND project_id IN (SELECT id FROM projects WHERE space_id = ?)')
     .run(actor.actor, actor.type, actor.label, spaceId)
-}
-
-const isAllowedUpload = (file) => {
-  const mime = (file?.mimetype || '').toLowerCase()
-  const name = (file?.originalname || '').toLowerCase()
-  const ext = path.extname(name)
-  if (ALLOWED_MIME_PREFIXES.some(prefix => mime.startsWith(prefix))) return true
-  if (ALLOWED_MIME_TYPES.has(mime)) {
-    if (mime === 'application/octet-stream' && ext) {
-      return ALLOWED_EXTENSIONS.has(ext)
-    }
-    return true
-  }
-  if (ext && ALLOWED_EXTENSIONS.has(ext)) return true
-  return false
 }
 
 const upload = multer({

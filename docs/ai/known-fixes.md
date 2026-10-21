@@ -21,6 +21,12 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## Laser File pressed what left the field onto its edge, drawing lines the file never had (Raw, 2026-10-21)
+
+Symptom (review of PR #1071, before merge): a 400-vertex ILDA circle (radius 0.8) at Size 10 put 400/400 vertices on the field's edge and 340 on its corners, a full-field square with ~21 % of the frame on each corner; `M0 0 L1 1` at Height 9 drew a lit line along y = 1. The server's `stillBeams` passed both (each corner under the 0.5 dwell share).
+Cause: `laserFile.js` clamped each coordinate to -1..1 after Size and Height.
+Fix: `src/project/nodes/laser.file/clipField.js` `clipToField` cuts every path at the field edge (Liang–Barsky per segment), drops what is outside, never makes a dot from a corner graze, and Status counts the blanked points. Guard: `clipField.test.js` (5) and two cases in `laserFile.test.js` (circle at Size 10: 0 corner vertices, every vertex on the circle; line at Height 9: no path).
+
 ## A "two requests at once" test failed under load: `Promise.all` is not an overlap (2026-10-20)
 
 Cause: `syncKeyMoveRace.test.js` sent two key moves with `Promise.all`; under CPU load the second started after the first had finished and was refused at the scope gate (403) instead of reaching the in-lock re-read (409). Fix: a race test makes the overlap a fact with the test-only rendezvous `serverXR/src/testBarrier.js` (`X-Test-Barrier: name:n`, inert unless `NODE_ENV=test`), never with sleeps or luck. Check a race test by disabling the guard it proves: it must fail every run. Note: `docs/ai/sessions/fix-sync-key-race-test-deterministic-2026-10-20.md`.

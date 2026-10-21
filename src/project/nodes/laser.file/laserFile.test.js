@@ -143,3 +143,62 @@ describe('the laser.file node', () => {
         expect(run({ src: 'a1' }, enc('nope'), 'status')).toMatch(/^Refused: not-laser-file/)
     })
 })
+
+// Review of PR #1071, finding 1: size and height used to press what leaves the field onto its edge.
+describe('Laser File blanks what leaves the field', () => {
+    const corners = (frame) => {
+        let c = 0
+        for (const path of frame.paths) for (let i = 0; i < path.p.length; i += 5) if (Math.abs(path.p[i]) === 1 && Math.abs(path.p[i + 1]) === 1) c += 1
+        return c
+    }
+    it('an ILDA circle at Size 10 draws its arcs inside the field, not a square on its edge', () => {
+        const read = readLaserFile(writeIlda([{ paths: [circlePath(400, 0.8)] }], { format: 5 }), { size: 10 })
+        expect(read.ok).toBe(true)
+        expect(inField(read.frame)).toBe(true)
+        expect(corners(read.frame)).toBe(0)
+        // every vertex kept is on the circle (radius 8 now), so nothing runs along the edge
+        for (const path of read.frame.paths) for (let i = 0; i < path.p.length; i += 5) {
+            expect(Math.abs(Math.hypot(path.p[i], path.p[i + 1]) - 8)).toBeLessThan(0.01)
+        }
+        expect(read.outside).toBeGreaterThan(0)
+        expect(read.status).toMatch(/points outside the field blanked/)
+    })
+    it('an SVG line moved past the top by Height draws nothing, not a line along y = 1', () => {
+        const read = readLaserFile(enc('M0 0 L1 1'), { height: 9 })
+        expect(read.ok).toBe(true)
+        expect(read.frame.paths).toEqual([])
+        expect(read.outside).toBe(2)
+    })
+})
+
+// Review of PR #1071, finding 4: with Speed > 0 an SVG was flattened again at every frame step.
+describe('the laser.file node reads an SVG once whatever the Speed', () => {
+    it('gives the same frame object at every frame step', () => {
+        const node = createNode('laser.file', { id: 'lf-svg', values: { src: 'a2', fps: 10 } })
+        const bytes = enc('<svg><path d="M0 0 C 10 20 30 40 50 0"/></svg>')
+        const liveOutputs = new Map([['lf-svg:bytes', bytes]])
+        const at = (now) => evaluateNodeOutput(node, 'frame', createNodeGraphContext({ nodes: [node], edges: [] }, { now, liveOutputs }))
+        const first = at(0)
+        expect(first.paths.length).toBe(1)
+        expect(at(100)).toBe(first)
+        expect(at(2500)).toBe(first)
+    })
+})
+
+// Review of PR #1071, finding 5: the cap rounded down, so one long path kept 1999 of 2000 vertices.
+describe('capPaths fills the cap exactly', () => {
+    it('one 20 000-vertex path keeps FRAME_MAX_POINTS, ends included', () => {
+        const big = { p: [], closed: false }
+        for (let i = 0; i < 20000; i += 1) big.p.push(-1 + (2 * i) / 19999, 0, 1, 1, 1)
+        const out = capPaths([big])
+        expect(out.paths[0].p.length / 5).toBe(FRAME_MAX_POINTS)
+        expect(out.cutPoints).toBe(20000 - FRAME_MAX_POINTS)
+        expect(out.paths[0].p.slice(0, 2)).toEqual([-1, 0])
+        expect(out.paths[0].p.slice(-5, -3)).toEqual([1, 0])
+    })
+    it('three uneven paths sum to the cap, never past it', () => {
+        const line = (n) => ({ p: Array.from({ length: n }, (_, i) => [i / n, 0, 1, 1, 1]).flat(), closed: false })
+        const out = capPaths([line(7001), line(3333), line(999)], 1000)
+        expect(out.paths.reduce((s, p) => s + p.p.length / 5, 0)).toBe(1000)
+    })
+})

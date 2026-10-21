@@ -2,6 +2,7 @@
 // not in node.values (src is an assetId, the Model/Video/Sound convention): the editor's LaserFileFeed
 // fetches the asset and publishes its bytes on the live side channel as `${node.id}:bytes`. One read per
 // evaluation serves the three ports.
+import { isIldaBytes } from './ildaFile.js'
 import { readLaserFile } from './laserFile.js'
 
 const last = new Map()
@@ -21,7 +22,9 @@ const readFor = (node, { input, asNumber, context }) => {
         level: asNumber(input('level'), 1),
         tolerance: asNumber(input('tolerance'), 0.002),
     }
-    const key = JSON.stringify([src, options])
+    // Only an ILDA file has frames to step through: an SVG's key leaves the index out, so Speed > 0 does
+    // not flatten the same drawing again at every frame step.
+    const key = JSON.stringify([src, bytes && isIldaBytes(bytes) ? options : { ...options, index: 0 }])
     const hit = last.get(node.id)
     if (hit && hit.key === key && hit.bytes === bytes) return hit.result
     let result

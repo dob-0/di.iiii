@@ -3,6 +3,7 @@
 // Pure: the same bytes and options give the same frame; the node's runtime only finds the bytes.
 import { FRAME_VERSION } from '../../../shared/laserFrame.js'
 import { capPaths } from './capPaths.js'
+import { clipToField } from './clipField.js'
 import { ildaFrameToPaths, isIldaBytes, readIlda } from './ildaFile.js'
 import { flattenPathData, parsePathData } from './svgPath.js'
 
@@ -81,16 +82,15 @@ const finish = (paths, { colour, level }) => {
 
 const ILDA_READS = new WeakMap()
 
-const clampField = (v) => (v < -1 ? -1 : v > 1 ? 1 : v)
-
 /**
- * Bytes (or a string) -> { ok: true, kind: 'ilda' | 'svg', frame, frames, status, cut } or
+ * Bytes (or a string) -> { ok: true, kind: 'ilda' | 'svg', frame, frames, status, cut, outside } or
  * { ok: false, reason, at, status }. `frame` is a frame v2 value within FRAME_MAX_POINTS vertices.
  * options: index (which ILDA frame, wrapped), size (1 = as the file says for ILDA, fitted to 80 % of the
  * field for SVG), height (added to y), colour (a hex string recolours every point; unset keeps the file's),
  * level (0..1 brightness), tolerance (field units, SVG curves), max (vertex cap). Refusal reasons:
  * empty, too-large, not-laser-file (neither ILDA nor SVG path data), every readIlda reason, and the
- * SVG grammar's when not one segment could be read. Pure.
+ * SVG grammar's when not one segment could be read. Whatever size and height carry past the field is
+ * blanked (clipToField), and `outside` counts the vertices that were. Pure.
  */
 export const readLaserFile = (input, {
     index = 0, size = 1, height = 0, colour = null, level = 1, tolerance = DEFAULT_TOLERANCE, max,
@@ -112,19 +112,22 @@ export const readLaserFile = (input, {
         const f = read.frames[i]
         let paths = ildaFrameToPaths(f)
         for (const path of paths) for (let k = 0; k < path.p.length; k += 5) {
-            path.p[k] = clampField(path.p[k] * scale)
-            path.p[k + 1] = clampField(path.p[k + 1] * scale + dy)
+            path.p[k] = path.p[k] * scale
+            path.p[k + 1] = path.p[k + 1] * scale + dy
         }
-        const capped = capPaths(finish(paths, { colour, level }), max)
+        // Size and height can carry a file past the field: what leaves it is blanked (clipField.js).
+        const clipped = clipToField(paths)
+        const capped = capPaths(finish(clipped.paths, { colour, level }), max)
         paths = capped.paths
         frame.paths = paths
         // An ILDA frame's order is the artist's: kept, as the projector would draw it.
         frame.order = 'kept'
         const points = paths.reduce((s, p) => s + p.p.length / 5, 0)
         const cut = capped.cutPoints + capped.cutPaths ? `, cut ${capped.cutPoints} points / ${capped.cutPaths} paths to fit` : ''
+        const off = clipped.outside ? `, ${clipped.outside} points outside the field blanked` : ''
         return {
-            ok: true, kind: 'ilda', frame, frames: count, cut: { points: capped.cutPoints, paths: capped.cutPaths },
-            status: `ILDA format ${f.format}, frame ${i + 1} of ${count}, ${paths.length} paths, ${points} points${cut}${read.ended ? '' : ', no end header'}`,
+            ok: true, kind: 'ilda', frame, frames: count, cut: { points: capped.cutPoints, paths: capped.cutPaths }, outside: clipped.outside,
+            status: `ILDA format ${f.format}, frame ${i + 1} of ${count}, ${paths.length} paths, ${points} points${cut}${off}${read.ended ? '' : ', no end header'}`,
         }
     }
     const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes)
@@ -164,21 +167,23 @@ export const readLaserFile = (input, {
         for (const line of flattenPathData(d, { tolerance: tol }).polylines) {
             const p = []
             // SVG's y runs down, the field's up.
-            for (const [x, y] of line.points) p.push(clampField((x - midX) * k), clampField(-(y - midY) * k + dy), rgb[0], rgb[1], rgb[2])
+            for (const [x, y] of line.points) p.push((x - midX) * k, -(y - midY) * k + dy, rgb[0], rgb[1], rgb[2])
             paths.push({ p, closed: line.closed })
         }
     }
-    const capped = capPaths(finish(paths, { colour, level }), max)
+    const clipped = clipToField(paths)
+    const capped = capPaths(finish(clipped.paths, { colour, level }), max)
     frame.paths = capped.paths
     const points = capped.paths.reduce((s, p) => s + p.p.length / 5, 0)
     const notes = [
         capped.cutPoints + capped.cutPaths ? `cut ${capped.cutPoints} points / ${capped.cutPaths} paths to fit` : '',
+        clipped.outside ? `${clipped.outside} points outside the field blanked` : '',
         firstError ? `stopped at ${firstError.reason} (char ${firstError.at})` : '',
         skipped ? `${skipped} non-path elements not read` : '',
         transforms ? `${transforms} transforms ignored` : '',
     ].filter(Boolean)
     return {
-        ok: true, kind: 'svg', frame, frames: 1, cut: { points: capped.cutPoints, paths: capped.cutPaths },
+        ok: true, kind: 'svg', frame, frames: 1, cut: { points: capped.cutPoints, paths: capped.cutPaths }, outside: clipped.outside,
         status: `SVG, ${capped.paths.length} paths, ${points} points${notes.length ? `, ${notes.join(', ')}` : ''}`,
     }
 }

@@ -154,3 +154,50 @@ describe('ILDA refusals, each by name', () => {
         expect(isIldaBytes(new TextEncoder().encode('<svg'))).toBe(false)
     })
 })
+
+// Review of PR #1071, finding 3: every other test here reads what writeIlda wrote, so a layout mistake
+// shared by both would pass. These bytes are typed by hand from the layout in ildaFile.js's header
+// (big-endian, 32-byte header, status bit 7 last / bit 6 blanked, true colour stored b g r). They are
+// still NOT a file from the ILDA or from a real show: that check stays owed (see the session note).
+describe('readIlda reads bytes typed by hand, not written by writeIlda', () => {
+    const hex = (s) => Uint8Array.from(s.replace(/\s+/g, '').match(/../g).map((h) => parseInt(h, 16)))
+    const header = (format, records) => `494c4441 000000 ${format} 46495854555245 00 48414e4400000000 ${records} 0000 0001 00 00`
+    it('format 5: a blanked move, then a red line and a green line, then the closing header', () => {
+        const bytes = hex(`
+            ${header('05', '0003')}
+            c000 0000 40 000000
+            4000 0000 00 0000ff
+            4000 4000 80 00ff00
+            ${header('05', '0000')}`)
+        const read = readIlda(bytes)
+        expect(read.ok).toBe(true)
+        expect(read.ended).toBe(true)
+        const [f] = read.frames
+        expect(f).toMatchObject({ format: 5, name: 'FIXTURE', company: 'HAND', number: 0, total: 1 })
+        expect(f.points).toEqual([
+            { x: -16384, y: 0, z: 0, blank: true, last: false, r: 0, g: 0, b: 0 },
+            { x: 16384, y: 0, z: 0, blank: false, last: false, r: 255, g: 0, b: 0 },
+            { x: 16384, y: 16384, z: 0, blank: false, last: true, r: 0, g: 255, b: 0 },
+        ])
+        const paths = ildaFrameToPaths(f)
+        expect(paths).toHaveLength(1)
+        // the red line starts at the blanked point the beam travels from
+        expect(paths[0].p.filter((_, i) => i % 5 < 2).map((v) => Math.round(v * 1000) / 1000)).toEqual([-0.5, 0, 0.5, 0, 0.5, 0.5])
+    })
+    it('format 0 (3D, indexed) with a format-2 palette before it: z read, colour from the palette', () => {
+        const bytes = hex(`
+            ${header('02', '0002')}
+            102030 a0b0c0
+            ${header('00', '0002')}
+            0100 fffe 7fff 00 01
+            8000 0002 8001 80 00
+            ${header('00', '0000')}`)
+        const read = readIlda(bytes)
+        expect(read.ok).toBe(true)
+        expect(read.palettes[0].colours).toEqual([[0x10, 0x20, 0x30], [0xa0, 0xb0, 0xc0]])
+        expect(read.frames[0].points).toEqual([
+            { x: 256, y: -2, z: 32767, blank: false, last: false, r: 0xa0, g: 0xb0, b: 0xc0, index: 1 },
+            { x: -32768, y: 2, z: -32767, blank: false, last: true, r: 0x10, g: 0x20, b: 0x30, index: 0 },
+        ])
+    })
+})
