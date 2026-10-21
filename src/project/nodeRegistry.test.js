@@ -357,6 +357,24 @@ describe('unimplemented node types', () => {
         }
     })
 
+    // NODE_BACKLOG.md "Structure": a Link (one project to another) waits on the
+    // URL/tree addressing spec, or it is built against the wrong address model.
+    // Signing the spec means changing its Status line; until then nothing that
+    // navigates between projects is offered.
+    it('offers no Link node while the URL/tree addressing spec is a draft', () => {
+        const spec = readFileSync(
+            resolve(cwd(), 'docs/architecture/SPEC_url_architecture_and_tree_addressing.md'),
+            'utf8',
+        )
+        const status = spec.split('\n').find((line) => line.startsWith('Status:')) || ''
+        if (!/DRAFT/.test(status)) return
+        expect(UNIMPLEMENTED_NODE_TYPES.has('universe.link')).toBe(true)
+        const links = listNodeTypes().filter(
+            (type) => type.id.endsWith('.link') || /^link$/i.test(type.label),
+        )
+        expect(links.map((type) => type.id)).toEqual([])
+    })
+
     it('still offers everything that actually works', () => {
         const offered = listNodeTypes().map((type) => type.id)
         // world.light left this list with the Light split: it still WORKS
