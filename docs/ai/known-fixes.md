@@ -21,6 +21,10 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## `di follow` again without `--key` wrote `"token": null` and the host refused every edit (2026-10-20)
+
+Seen 2026-10-20 22:19 +04 on one install: `di follow di-laser --take-mine` alone was refused ("which space, and where from?"); the re-run `di follow di-laser --from https://dev.diiii.xyz --into di-laser --take-mine`, with no `--key`, replaced the whole follow record with `"token": null`. The space's edit key (minted 10-04) was gone, and the host refused every edit from that space. Cause: `scripts/di/follow.mjs` called `addFollow(..., { token: key })` with `key = null` and read a missing `--key` as "no key". Fix, in `followSpace`: same remote and no `--key` keeps the stored key and label (`kept the stored edit key`); a different remote and no `--key` is refused (`remote-differs`, both remotes named, the record untouched); `--take-mine` / `--take-host` alone on a followed space use that follow's remote, pin and key. Same rule for `di stage join`. Guards: `scripts/di/followKeepsKey.test.js` (10 cases: the host that lets anyone read writes `"token": null` without the fix, as the real one did; two run the CLI's short form and check it names the stored remote and pin and never prints the key), `stageAutostart.test.js` "puts an earlier follow of the SAME space back".
+
 ## A "two requests at once" test failed under load: `Promise.all` is not an overlap (2026-10-20)
 
 Cause: `syncKeyMoveRace.test.js` sent two key moves with `Promise.all`; under CPU load the second started after the first had finished and was refused at the scope gate (403) instead of reaching the in-lock re-read (409). Fix: a race test makes the overlap a fact with the test-only rendezvous `serverXR/src/testBarrier.js` (`X-Test-Barrier: name:n`, inert unless `NODE_ENV=test`), never with sleeps or luck. Check a race test by disabling the guard it proves: it must fail every run. Note: `docs/ai/sessions/fix-sync-key-race-test-deterministic-2026-10-20.md`.
