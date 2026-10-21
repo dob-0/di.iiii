@@ -1817,6 +1817,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-13'
     },
     {
+        id: 'mesh-in-out-nodes',
+        category: 'Editing',
+        title: 'Mesh In and Mesh Out — screens and phones in sync',
+        summary: 'Mesh Out publishes a value to every other screen and phone in the same group; Mesh In hears it, with who sent it and when.',
+        body: [
+            'Mesh Out and Mesh In speak to the mesh: a live hub on the di.iiii server where every screen and phone in one group hears what the others publish. Nothing to install — any browser that opens the project can join.',
+            'Group names who meets. Leave it empty and the node uses this project’s own group, so every screen and phone that opens the same project meets there. Type a name to meet across projects. Channel names what is being said, so one group can carry several values at once; Mesh In listens to one channel.',
+            'Mesh Out publishes its Value on its Channel whenever Value changes — at most once per Interval (200 ms by default, which is five times a second; anything under 50 ms is raised to 50). If several values arrive inside one interval, the latest is the one that goes out. While the link is down nothing is sent and nothing is kept for later; when the link comes back, the current value goes out once.',
+            'Mesh In gives the latest Value, who sent it (From) and when the server passed it on (Time, in milliseconds), and Signal counts one more for every event, so a Counter or a Trigger can react to each one. Min and Max, when Min is below Max, only let numbers in that range through; Allowed is a comma list of the only values let through; Max Length refuses longer text. A refused value is dropped and the Status says why.',
+            'Both nodes say Up (1) while the link is up and 0 while it is down, and Status says how many others are in the group. A dropped link is tried again after 1 second, then 2, 4, 8, and every 10 seconds after that.',
+            'Each Mesh In and Mesh Out holds its own link, so a Mesh In hears a Mesh Out on the same page too, which makes one tab enough to try it. The server passes an event to everyone in the group except the link that published it. Up to 64 links can share one group.'
+        ],
+        tags: ['raw', 'nodes', 'mesh', 'phone', 'screens', 'sync', 'remote', 'wall', 'device', 'network'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'laser-out-node',
         category: 'Editing',
         title: 'Laser and Laser Out — draw for the LaserCubes',

@@ -31,6 +31,7 @@ import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
 import MidiOutFeed from './MidiOutFeed.jsx'
+import { MeshInFeed, MeshOutFeed } from './MeshFeeds.jsx'
 import ButtonPanelWindow from './ButtonPanelWindow.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
@@ -2765,6 +2766,22 @@ export default function RawEditor({
                             onStatus={handleMidiOutStatus}
                         />
                     ))}
+                {/* One socket per Mesh In / Mesh Out — see MeshFeeds.jsx. An
+                    empty Group meets in this project's own group. */}
+                {nodes
+                    .filter((node) => node.typeId === 'device.mesh.in' || node.typeId === 'device.mesh.out')
+                    .map((node) => {
+                        const Feed = node.typeId === 'device.mesh.in' ? MeshInFeed : MeshOutFeed
+                        return (
+                            <Feed
+                                key={node.id}
+                                node={node}
+                                inputs={evaluateNodeInputs(node, graphContext)}
+                                fallbackGroup={`${resolvedSpaceId}/${projectId || 'local'}`}
+                                onLiveOutput={handleLiveOutputChange}
+                            />
+                        )
+                    })}
         </>
     )
 

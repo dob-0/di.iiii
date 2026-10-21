@@ -203,6 +203,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('go', 'view.button', { label: 'Go', col: 4, row: 0 })
     add('keys', 'device.keyboard', { label: 'Keyboard', col: 4, row: 1 })
     add('midiOut', 'device.midi.out', { label: 'MIDI Out', col: 4, row: 2 })
+    add('meshOut', 'device.mesh.out', { label: 'Mesh Out', col: 4, row: 20 })
+    add('meshIn', 'device.mesh.in', { label: 'Mesh In', col: 4, row: 21 })
     add('dmxOut', 'device.dmx.out', { label: 'DMX Out', col: 4, row: 15 })
     add('laser', 'laser.shape', { label: 'Laser', col: 4, row: 16 })
     add('laserOut', 'device.laser.out', { label: 'Laser Out', col: 4, row: 17 })
@@ -489,6 +491,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('compare', 'greater', 'midiOut', 'trigger'),
         wire('numB', 'out', 'midiOut', 'note'),
         wire('sin', 'out', 'midiOut', 'value'),
+        wire('sin', 'out', 'meshOut', 'value'),
 
         // A wire OUT of a container — new on 2026-08-19, and the thing that
         // used to be impossible: every container declared zero outputs, so
