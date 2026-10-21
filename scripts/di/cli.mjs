@@ -61,6 +61,7 @@ import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
 import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from './share.mjs'
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
+import { runPost } from './post.mjs'
 import {
     isStageMachine, joinPlan, joinStage, leaveStage, readManifest,
     restartSupervisor, runSupervisor, stageStatus, startSupervisor
@@ -613,6 +614,25 @@ const cmdMove = async (args) => {
         fail(String(error?.message || error))
         process.exitCode = 1
     }
+}
+
+/** `di post draft|show|send|channels` — the share door; same address and login rules as `di move`. */
+const cmdPost = async (args) => {
+    const from = args.flags.from
+    const headers = {}
+    let base
+    if (from && from !== true) {
+        base = `${String(from).replace(/\/+$/, '')}/serverXR`
+        const token = args.flags.token === '-' ? (await readStdin()).trim() : moveToken({ from, env: process.env })
+        if (token) headers.Authorization = `Bearer ${token}`
+    } else {
+        const home = HOME()
+        if (!requireInstalled(home)) return
+        const port = resolvePort(home)
+        if (!(await alive(home, port))) { say(ui.notRunning()); return }
+        base = apiBase(home, port)
+    }
+    process.exitCode = await runPost(args, { base, headers: withUserAgent(headers), say, fail })
 }
 
 const cmdSpaces = async () => {
@@ -1635,6 +1655,7 @@ const COMMANDS = {
     follow: cmdFollow,
     stage: cmdStage,
     follows: cmdFollows,
+    post: cmdPost,
     unfollow: cmdUnfollow,
     down: cmdDown,
     stop: cmdDown,
