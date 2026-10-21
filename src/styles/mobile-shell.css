@@ -45,11 +45,11 @@
     min-width: 18px;
     height: 18px;
     padding: 0 var(--di-space-1);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     background: rgba(255,255,255,0.08);
     color: rgba(255,255,255,0.72);
     font-size: var(--di-text-2);
-    font-weight: 800;
+    font-weight: 700;
     line-height: 18px;
 }
 

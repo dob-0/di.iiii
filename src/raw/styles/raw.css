@@ -2864,7 +2864,7 @@
     width: 8px;
     height: 8px;
     border-radius: 0;
-    border: 1.5px solid var(--di-black);
+    border: 1px solid var(--di-black);
     pointer-events: auto;
     touch-action: none;
 }
@@ -4349,7 +4349,7 @@
        the opaque canvas. The corner is the one place no fit puts a card. */
     left: 300px;
     font-family: var(--di-sans);
-    font-weight: 800;
+    font-weight: 700;
     font-size: var(--di-text-4);
     letter-spacing: -0.02em;
     color: rgba(255, 255, 255, 0.28);
@@ -4371,7 +4371,7 @@
     color: rgba(255, 255, 255, 0.55);
 }
 
-.raw-surface-wordmark span {
+.raw-surface-wordmark .dot {
     color: var(--di-cyan);
     opacity: 0.75;
 }
