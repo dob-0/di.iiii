@@ -13,6 +13,7 @@ import useAuthSession from '../hooks/useAuthSession.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { buildChatPath, buildPrivateChatPath } from './chatRouting.js'
 import { listRememberedConversations, readRoomSeen } from './privateChatIndex.js'
+import { claimManifest } from './claimManifest.js'
 
 // The list the app opens on.
 //
@@ -163,12 +164,9 @@ export default function ChatHomeSurface() {
     // this one is the app's start_url, so it must claim them too or an install
     // made from the list has no worker at all.
     useEffect(() => {
-        const link = document.createElement('link')
-        link.rel = 'manifest'
-        link.href = '/chat-app/manifest.webmanifest'
-        document.head.appendChild(link)
+        const releaseManifest = claimManifest('/chat-app/manifest.webmanifest')
         navigator.serviceWorker?.register('/chat-sw.js', { scope: '/chat' }).catch(() => {})
-        return () => { link.remove() }
+        return releaseManifest
     }, [])
 
     const shown = useMemo(() => {

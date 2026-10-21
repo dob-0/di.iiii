@@ -49,6 +49,13 @@ import { WORK_IDS, workAssetDirs, workEntries, workPublicDirs } from './works.js
 export const PROGRAM_PUBLIC_DIRS = ['fonts', 'draco', 'basis', 'suite', 'unicode-fonts', 'vendor', 'rigbuild']
 
 /**
+ * Single files at the root of public/ that src/index.html links on every page:
+ * without them an install answers the shell's manifest link and the root icon
+ * probe with a 404 (gaps G49, G50, 2026-10-21).
+ */
+export const PROGRAM_PUBLIC_FILES = ['favicon.ico', 'manifest.webmanifest']
+
+/**
  * @param {Record<string, string|undefined>} env  usually process.env
  */
 export const resolveBuildProfile = (env = {}) => {
@@ -72,7 +79,7 @@ export const resolveBuildProfile = (env = {}) => {
         stubEntries: slim ? workEntries() : [],
         stubAssetDirs: slim ? workAssetDirs() : [],
         // null on the hosted build: it copies public/ wholesale and needs no list.
-        publicInclude: local ? [...PROGRAM_PUBLIC_DIRS, ...(slim ? [] : workPublicDirs())] : null,
+        publicInclude: local ? [...PROGRAM_PUBLIC_DIRS, ...PROGRAM_PUBLIC_FILES, ...(slim ? [] : workPublicDirs())] : null,
         // Belt and braces for the slim build: if a work's directory ever gets
         // typed into PROGRAM_PUBLIC_DIRS by hand, the registry says it does not
         // belong in a copy of the program alone.
