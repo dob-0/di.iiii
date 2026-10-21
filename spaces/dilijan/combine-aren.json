@@ -1,0 +1,23 @@
+{
+  "into": "the-yard",
+  "title": "Արեն · Aren",
+  "start": 0,
+  "tabs": [
+    {
+      "label": "AirCanvas",
+      "id": "aircanvas"
+    },
+    {
+      "label": "Բակը · The yard",
+      "id": "the-yard"
+    },
+    {
+      "label": "Պատը · The wall",
+      "id": "elevation"
+    }
+  ],
+  "relink": {
+    "/dilijan/worlds": "/dilijan#works"
+  },
+  "note": "Owner 2026-10-21 (N1104): Aren's work is ONE world: AirCanvas, the yard and the wall (the yard and the wall are the same place). Applied by scripts/space/combine-pages.mjs --spec; the originals (aircanvas, elevation) are kept."
+}
