@@ -61,6 +61,7 @@ import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
 import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from './share.mjs'
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
+import { runPost } from './post.mjs'
 import {
     isStageMachine, joinPlan, joinStage, leaveStage, readManifest,
     restartSupervisor, runSupervisor, stageStatus, startSupervisor
@@ -70,6 +71,7 @@ import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './chan
 import * as autoupdate from './autoupdate.mjs'
 import { mcpArgs, moveToken, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
+import { withUserAgent } from './userAgent.mjs'
 
 const HOME = () => {
     const override = String(process.env.DI_HOME || '').trim()
@@ -598,7 +600,8 @@ const cmdMove = async (args) => {
     try {
         const response = await fetch(`${base}/api/projects/${encodeURIComponent(project)}/move`, {
             method: 'POST',
-            headers,
+            // `--from` aims this at another di.iiii: it says who it is there too (userAgent.mjs).
+            headers: withUserAgent(headers),
             body: JSON.stringify({ toSpace: to, unpublish: Boolean(args.flags.unpublish), dryRun })
         })
         const body = await response.json().catch(() => ({}))
@@ -611,6 +614,25 @@ const cmdMove = async (args) => {
         fail(String(error?.message || error))
         process.exitCode = 1
     }
+}
+
+/** `di post draft|show|send|channels` — the share door; same address and login rules as `di move`. */
+const cmdPost = async (args) => {
+    const from = args.flags.from
+    const headers = {}
+    let base
+    if (from && from !== true) {
+        base = `${String(from).replace(/\/+$/, '')}/serverXR`
+        const token = args.flags.token === '-' ? (await readStdin()).trim() : moveToken({ from, env: process.env })
+        if (token) headers.Authorization = `Bearer ${token}`
+    } else {
+        const home = HOME()
+        if (!requireInstalled(home)) return
+        const port = resolvePort(home)
+        if (!(await alive(home, port))) { say(ui.notRunning()); return }
+        base = apiBase(home, port)
+    }
+    process.exitCode = await runPost(args, { base, headers: withUserAgent(headers), say, fail })
 }
 
 const cmdSpaces = async () => {
@@ -1633,6 +1655,7 @@ const COMMANDS = {
     follow: cmdFollow,
     stage: cmdStage,
     follows: cmdFollows,
+    post: cmdPost,
     unfollow: cmdUnfollow,
     down: cmdDown,
     stop: cmdDown,
