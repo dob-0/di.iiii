@@ -4274,6 +4274,14 @@ function renderAll(busy) {
     wp.classList.add('stale', 'off');
     wp.textContent = 'output off';
     wp.title = 'Nothing is leaving this machine. Open Output and switch it on.';
+  } else if (st.bus && st.bus.status === 'unreachable') {
+    // The bus says a route cannot be reached (port not open, socket down, a node that spoke and went
+    // quiet, sends failing). Louder than a frame counter: frames "sent" into a dead route still count.
+    const bad = st.bus.routes.filter((r) => r.status === 'unreachable');
+    wp.hidden = false;
+    wp.classList.add('stale');
+    wp.textContent = bad.length > 1 ? `${bad.length} outputs unreachable` : `${bad[0].name} unreachable`;
+    wp.title = bad.map((r) => `${r.name}: ${r.reason}`).join('\n');
   } else if (S.output.driver === 'enttec' && st.serial) {
     const s = st.serial;
     const stalled = !s.connected || s.ageMs == null || s.ageMs > 2000;
