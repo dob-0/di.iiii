@@ -21,6 +21,13 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## Front pages appended words to `di.iiii` and named the retired Beta editor (2026-10-21)
+
+Symptom: six headings fused a word onto the platform name (`di.iiii Control Server`, `di.iiii Deck Context`, `di.iiii Ecosystem Map`, `di.iiii AI Engineering Collective`, `The di.iiii SDK`, `The di.iiii Visual Identity — Complete Spec`); `serverXR/README.md` listed `Beta` as a supported editor three times, eleven weeks after the lane was deleted (2026-08-06); `docs/deck/README.md` said "lane", `ONBOARDING.md` said "Raw" as a name; and `sdk/README.md` told a reader to `import { connect } from 'di.iiii/sdk'`, a package that does not exist (the root package is private and named otherwise; there is no `sdk/package.json`).
+Cause: copy rots silently — nothing read these files against NAMING.md (spec v2 §1, "nothing appended") or `docs/ai/vocabulary.md`.
+Fix: headings keep their meaning without the name; serverXR names the editors that exist (Studio, the node editor, V1 for compatibility); the SDK table shows `./sdk/index.js`, the import its own "Using it" section and `sdk/index.js` already use.
+Guard: `scripts/brandReadmes.test.js` — 10 cases, all 10 fail on the old text. Note: `docs/ai/sessions/claude-brand-readmes-it2292.md`.
+
 ## `di follow` again without `--key` wrote `"token": null` and the host refused every edit (2026-10-20)
 
 Seen 2026-10-20 22:19 +04 on one install: `di follow di-laser --take-mine` alone was refused ("which space, and where from?"); the re-run `di follow di-laser --from https://dev.diiii.xyz --into di-laser --take-mine`, with no `--key`, replaced the whole follow record with `"token": null`. The space's edit key (minted 10-04) was gone, and the host refused every edit from that space. Cause: `scripts/di/follow.mjs` called `addFollow(..., { token: key })` with `key = null` and read a missing `--key` as "no key". Fix, in `followSpace`: same remote and no `--key` keeps the stored key and label (`kept the stored edit key`); a different remote and no `--key` is refused (`remote-differs`, both remotes named, the record untouched); `--take-mine` / `--take-host` alone on a followed space use that follow's remote, pin and key. Same rule for `di stage join`. Guards: `scripts/di/followKeepsKey.test.js` (10 cases: the host that lets anyone read writes `"token": null` without the fix, as the real one did; two run the CLI's short form and check it names the stored remote and pin and never prints the key), `stageAutostart.test.js` "puts an earlier follow of the SAME space back".
