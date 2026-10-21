@@ -1,0 +1,5 @@
+## 2026-10-21 — Dependabot alerts: dev was already patched, and a lockfile guard now keeps it that way
+
+- The 11 open Dependabot alerts (undici, source-map-js, js-yaml, browserslist, postcss, brace-expansion, baseline-browser-mapping) are on `main`'s lockfile. Dependabot scans the default branch, `main`; `dev` had already raised every one in #1020. `npm audit`: `main` root 10 (2 moderate, 8 high), serverXR 1 high (@modelcontextprotocol/server); `dev` root 0, serverXR 0. No lockfile or `overrides` change was made.
+- CI cannot catch these: `ci.yml` runs `npm audit --production`, and all 7 are root dev dependencies. New guard `scripts/lockfileFloors.test.js`: 10 floors (the 7 alerts plus nanoid, vite and @modelcontextprotocol/server, which `main`'s audit also names), both lockfiles, nested copies included. It fails on `main`'s lockfile with all 10 named.
+- Still undone: the alerts close only when `dev` is promoted to `main` (the owner's call). Root `overrides.postcss` stays `^8.5.10`; it resolves to 8.5.29.
