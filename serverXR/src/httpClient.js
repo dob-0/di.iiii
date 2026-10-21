@@ -6,6 +6,7 @@
 const http = require('node:http')
 const https = require('node:https')
 const net = require('node:net')
+const { withDiUserAgent } = require('./diUserAgent')
 
 // Tie a request to a caller's AbortSignal. A follow shares ONE signal across
 // every request it makes for hours, so the listener must come off when the
@@ -73,7 +74,9 @@ const httpRequest = (url, { method = 'GET', headers = {}, body = null, timeoutMs
     // a socket some other address already opened.
     const req = lib.request(u, {
       method,
-      headers,
+      // Identified, or another di.iiii counts this as an anonymous program
+      // (diUserAgent.js).
+      headers: withDiUserAgent(headers),
       ...(servername ? { servername } : {}),
       ...(address ? { lookup: pinnedLookup(address), agent: agentFor(u.protocol, address) } : {})
     }, (res) => {
@@ -119,7 +122,7 @@ const open = (url, { method, headers, timeoutMs, signal, servername, address }, 
   const lib = u.protocol === 'https:' ? https : http
   const req = lib.request(u, {
     method,
-    headers,
+    headers: withDiUserAgent(headers),
     ...(servername ? { servername } : {}),
     // The same ADDRESS PIN httpRequest honours: a pinned follow must carry its
     // files over the route its ops take, or the files go where DNS says.
