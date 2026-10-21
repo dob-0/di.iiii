@@ -70,8 +70,9 @@ const IN_YARD={"wall":{"q":[0.02826,-0.907906,0.024653,0.417493],"t":[4.5231,0.8
 // scanned apart at 1.19x its size; its scale brings it to the yard's. The courtyard stays where it is. These two lines
 // are written by spaces/dilijan/aren/elevation.py --write; WALL_VIEW faces the courtyard's facade (theta, radians) and
 // frames everything drawn (its width spans every vertex along the level line, tent and divider included).
-const IN_WALL={"wall":{"s":1.0,"q":[0.020382,0.008144,-0.003976,0.999751],"t":[-10.1419,0.8735,2.447],"face":[0.0444,0.04049,0.99819]},"cabin":{"s":0.84026,"q":[0.004066,0.00663,-0.014395,0.999866],"t":[-6.7832,0.5851,2.0466],"face":[0.04746,0.00905,0.99883]},"courtyard":{"s":1.0,"q":[0.0,0.0,0.0,1.0],"t":[0.0019,0.8435,-0.002],"face":[0.06082,-0.00063,0.99815]}};
-const WALL_VIEW={"theta":0.06086,"centre":[-3.582,0.755,1.914],"width":17.458,"height":1.219};
+const IN_WALL={"wall":{"s":1.0,"q":[0.02826,-0.907906,0.024653,0.417493],"t":[4.5231,0.8936,0.4268]},"courtyard":{"s":1.0,"q":[0.0,0.0,0.0,1.0],"t":[0.0019,0.8435,-0.002]},"cabin":{"s":0.83978,"q":[-0.012045,0.998331,-0.020571,0.052605],"t":[2.1334,0.5498,1.8336]}};
+const FOOT=[[3.6644,1.9468],[3.4497,3.7659],[0.4099,3.6194],[-3.4499,3.9788],[-3.6432,1.9581],[0.3855,1.578],[3.6644,1.9468]];
+const WALL_VIEW={"theta":-1.67557,"phi":0.42,"centre":[0.541,0.877,-0.002],"width":6.626,"height":1.755,"foot":0.1491};
 // The yard's own surfaces (the yard page's mesh and photos), shown in Բակը as the yard page showed them. 'main' is the
 // same surface as the wall page's courtyard (same atlas, same UVs) with its full geometry (98 % of it within 3 cm of the
 // cloud, the courtyard 93 %), so in the yard it stands in for the courtyard, which shows only in Պատը. wall_right is not
@@ -295,6 +296,15 @@ function samplePoints(m,count){
 // The wall page baked one contact shadow under its row. Each fragment takes the part under it (cut halfway between
 // neighbours) and carries it as a child, so the shadow stays under its piece wherever the elevation stands it (physics
 // first: no shadow where nothing stands). A part lies at its fragment's own lowest point.
+// The building's footprint from OpenStreetMap (spaces/dilijan/building-footprint.json, ODbL), brought into the scan's
+// frame by building.py (FOOT, plan x z) and drawn as one thin ink line on the ground line of the facades (WALL_VIEW.foot).
+let footMat=null;
+function buildFootprint(){
+  if(typeof FOOT==='undefined'||!FOOT.length) return;
+  const y=WALL_VIEW.foot??0, g=new THREE.BufferGeometry().setFromPoints(FOOT.map(([x,z])=>V(x,y,z)));
+  footMat=new THREE.LineBasicMaterial({color:0x141414,transparent:true,opacity:0,depthWrite:false});
+  scene.add(new THREE.LineLoop(g,footMat));
+}
 function buildShadow(img,manifest){
   const s=manifest.shadow, tex=makeTexture(img,false); tex.anisotropy=1;
   shadowMat=new THREE.MeshBasicMaterial({color:0x141414,alphaMap:tex,transparent:true,opacity:0,depthWrite:false});
@@ -325,6 +335,7 @@ async function buildFragments(){
   manifest.models.forEach((m,i)=>fragments.push(shownByYard.has(m.name)?buildFragment(m,imgs[i],'wall',{stay:true,swap:true})
     :buildFragment(m,imgs[i],IN_YARD[m.name]?undefined:'wall')));
   buildShadow(imgs[imgs.length-1],manifest);
+  buildFootprint();
   const [mb,...photos]=await Promise.all([fetchAsset(YARD_MESH,'yard mesh').then(inflate)].concat(YARD_PARTS.map(p=>loadImage(p.photo))));
   YARD_PARTS.forEach(({name,nv,nf,off,standsFor},j)=>{
     const P=new Uint16Array(mb.buffer,off,nv*3), U=new Uint16Array(mb.buffer,off+nv*6,nv*2), I=new Uint16Array(mb.buffer,off+nv*10,nf*3);
@@ -378,7 +389,7 @@ function pickLook(i){look=(i+LOOKS.length)%LOOKS.length;picked=true;}
 // camera: a target and a position; drag turns around the target, pinch / wheel come closer (the wall page's hands)
 const tgt=tgtCurve.getPoint(0).clone(); camera.position.copy(camCurve.getPoint(0));
 let manual=false,lastTouch=-99,blend=1,frozen=0,vTheta=0,vPhi=0,fitD=20;
-const WALL_PHI=0.10;   // an elevation: facing the facades, a little above the eaves' line
+const WALL_PHI=WALL_VIEW.phi??0.10;   // the building from above its eaves: plan and height read at once (building.py)
 let wallOrbit={theta:WALL_VIEW.theta,phi:WALL_PHI,dist:20};
 function sphOf(p,c){const o=p.clone().sub(c),d=Math.max(1e-6,o.length());return {theta:Math.atan2(o.x,o.z),phi:Math.asin(clamp(o.y/d,-1,1)),dist:d};}
 function fromSph(c,s){const cp=Math.cos(s.phi);return new THREE.Vector3(cp*Math.sin(s.theta),Math.sin(s.phi),cp*Math.cos(s.theta)).multiplyScalar(s.dist).add(c);}
@@ -512,6 +523,7 @@ function frame(){
     u.fill.visible=u.wire.visible=look===4&&u.fade>0.5;
     const p=pts&&u.only!=='yard'&&u.fade>0.5; if(p)ensurePoints(g); if(u.points)u.points.visible=p;});
   if(shadowMat){shadowMat.opacity=shadowF;shadowMat.visible=shadowF>0.003;}
+  if(footMat){footMat.opacity=Math.min(1,shadowF/SHADOW_OPACITY)*0.55;footMat.visible=footMat.opacity>0.01;}
   const shown=auto?(cloudF>0.5?3:0):look;
   lookBtn.forEach((b,k)=>b.classList.toggle('on',k===shown));
   if(!bar.classList.contains('on')&&t-start>(reduced?0.2:2.3)) bar.classList.add('on');

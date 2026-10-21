@@ -34,22 +34,8 @@ describe('yard.html stands Պատը as one building', () => {
   const inYard = JSON.parse(/const IN_YARD=(\{.*?\});/.exec(page)[1])
   const toViewer = [Math.sin(view.theta), 0, Math.cos(view.theta)]
 
-  it('every piece has a pose: a unit quaternion, a position, a scale and its facade normal', () => {
-    expect(Object.keys(inWall).sort()).toEqual(['cabin', 'courtyard', 'wall'])
-    for (const [name, p] of Object.entries(inWall)) {
-      expect(Math.hypot(...p.q), name).toBeCloseTo(1, 4)
-      expect(p.t, name).toHaveLength(3)
-      expect(p.s, name).toBeGreaterThan(0)
-      expect(Math.hypot(...p.face), name).toBeCloseTo(1, 3)
-    }
-  })
-  it('walls parallel: every facade faces the viewer, under 1 degree from each other', () => {
-    const faces = Object.values(inWall).map((p) => rotate(p.q, p.face))
-    for (const f of faces) {
-      expect(f[0] * toViewer[0] + f[2] * toViewer[2]).toBeGreaterThan(0.99) // the photographed side to the camera
-      for (const g of faces) expect(deg(f, g)).toBeLessThan(1)
-    }
-  })
+  // N1145.3 (2026-10-22): the 'facade normal' and 'walls parallel' cases guarded the one-line elevation the owner rejected;
+  // the building's own guard is building.test.mjs (each piece where the yard scan holds it, on the map).
   it('the courtyard stays where the yard scan puts it; the cabin is drawn at the yard scale', () => {
     expect(inWall.courtyard.q).toEqual(inYard.courtyard.q)
     inWall.courtyard.t.forEach((v, k) => expect(v).toBeCloseTo(inYard.courtyard.t[k], 3))

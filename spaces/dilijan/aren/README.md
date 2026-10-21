@@ -156,3 +156,30 @@ The target's token (`DI_TOKEN`) never goes to an `--assets-from` server on anoth
 empties it.
 
 Data: the assets of `the-yard` (scans of the Dilijan camp yard, Aren, August 2026, from the camp's own pages); no new media.
+
+## Պատը as the building it is, on the map (N1145.3, 2026-10-22)
+
+Owner 02:4x-03:1x: the one-line elevation was wrong — *"look to map … 4 parts of the one building … I don't want it in one line,
+I want it full like building"*. `building.py` (replaces elevation.py's layout for the page; elevation.py's measurements are reused):
+
+- **Each piece stands where the yard scan holds it** (one reconstruction, one frame): the wall and the courtyard at their UV-fit
+  poses (IN_YARD), the cabin on its part wall_mid (scale 0.84, residual median 0.58 cm). Nothing is turned, parallelised or put on a line.
+- **The frame is registered on the map**: OSM way 457239427 (ODbL; `../building-footprint.json`, by `scripts/place/osm_footprint.py`),
+  the building 13 m from the Apicius Armenia node (7/7 Moldovakan) inside its site. The long face (main + wall_mid, bent 7 deg in
+  the scan, 11.8 deg on the map) lies on the footprint's north-west face; similarity fit (Umeyama 1991 + point-to-line refinement):
+  **3.84 m per scan unit**, rotation 42.9 deg. So a door is ~2.3 m and the eaves 3.3-3.8 m above the foot.
+- Checks (`../building-pieces.json`): facade samples to their map edge, median 0.14 m (main) / 0.17 m (wall_mid), p90 0.29 / 0.33 m,
+  93.5 % / 81.6 % within 0.3 m; corners off by 0.39 m (bend) and 0.50 m (north corner); main runs 5.3 m past the footprint's west
+  corner (a wall or the map's short outline: open). The yard wall (the wall piece) leaves the north corner at bearing 355 deg.
+- **Open:** the yard lies north-west of the building in this reading (its ground and the yard wall; Esri imagery shows a wall
+  going north from the north corner). The courtyard's window face is photographed from the other side (winding), which favours
+  the south-east face. Both faces fit the bend; the yard ground would then fall inside the building, so the north-west face is kept.
+- The page draws the footprint as one thin line on the facades' ground line (`FOOT`, `WALL_VIEW.foot`), shown with Պատը.
+
+Rebuild (about 2.5 minutes; reads the scans from the scratch stack) and refresh the combined tab:
+
+```
+python3 -I scripts/place/osm_footprint.py --way 457239427 --origin-node 13296475769 --out spaces/dilijan/building-footprint.json
+python3 -I spaces/dilijan/aren/building.py --api http://dilijan-front.diiii.localhost/serverXR --write
+node scripts/space/refresh-combined-tab.mjs --api http://dilijan-front.diiii.localhost/serverXR --spec spaces/dilijan/combine-aren.json --tab 1 --apply
+```
