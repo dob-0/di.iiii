@@ -19,14 +19,14 @@ export const WIKI_ARTICLES = [
     {
         id: 'studio-frame',
         category: 'Editing',
-        title: 'The Studio\'s frame and your scene',
+        title: 'The Editor\'s frame and your scene',
         summary: 'The panels, buttons and bars around the viewport wear di.iiii\'s own colours and square corners. What your project draws inside the viewport keeps its own colours.',
         body: [
-            'The Studio\'s frame is the house\'s: one cyan, a near-black ground, and rectangles for every button, tab, badge, switch and slider. A project\'s scene is yours: its background, its objects and their colours look exactly as you set them, with or without the frame around them.',
-            'A slider\'s thumb is a small upright bar with a dark rim, so it stays visible over the filled cyan line. The whole 24 px row of a slider takes a click or a touch, not only the thin line. A switch is a square in a rectangle: grey when off, cyan when on. Controls have sharp corners; the only round marks are the status dots (who is here, whether you are connected).',
-            'On the Spaces page, the view you are on (Grid, List, Map) is lit, a row you reach with the keyboard is lit too, and a public space is drawn in the same cyan as a live one, at a lower strength. A space\'s address is printed in grey; green is kept for what is live.'
+            'The Editor\'s frame is di.iiii\'s: one cyan, a near-black ground, and rectangles for every button, tab, badge, switch and slider. A project\'s scene is yours: its background, its objects and their colours look exactly as you set them, with or without the frame around them.',
+            'A slider\'s thumb is a small upright bar with a dark rim, so it stays visible over the filled cyan line. The whole 24 px row of a slider takes a click or a touch, not only the thin line. A switch is a square in a rectangle: grey when off, cyan when on. Controls have sharp corners; the only round mark is the connection light.',
+            'On the Spaces page, the view you are on (Grid, List, Map) is lit, a row you reach with the keyboard is lit too, and a public space is drawn light grey, because cyan means live. A space\'s address is printed in grey; green is kept for what is live.'
         ],
-        tags: ['studio', 'frame', 'colours', 'slider', 'switch', 'look'],
+        tags: ['studio', 'editor', 'frame', 'colours', 'slider', 'switch', 'look'],
         updated: '2026-10-21'
     },
     {

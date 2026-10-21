@@ -450,8 +450,7 @@
     justify-content: center;
     width: 22px;
     height: 22px;
-    /* status dot, not a control */
-    border-radius: 50%;
+    border-radius: 0;
     background: rgba(var(--di-cyan-rgb), 0.2);
     border: 1px solid var(--di-cyan-line);
     color: var(--di-cyan);

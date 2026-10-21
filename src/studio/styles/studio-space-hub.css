@@ -337,7 +337,7 @@
 }
 
 .ssh-space-card {
-    background: var(--di-cyan-wash);
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--di-cyan-border);
     padding: 18px 20px;
     cursor: pointer;
@@ -349,8 +349,8 @@
 .ssh-space-card:hover,
 .ssh-space-card:focus-visible {
     border-color: var(--di-cyan-line);
-    /* One step above the card's rest fill (--di-cyan-wash), so hover never dims it. */
-    background: var(--di-cyan-dim);
+    /* One step above the card's rest fill (white 0.03), so hover never dims it. */
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .ssh-space-card:focus-visible {

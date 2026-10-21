@@ -10,6 +10,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { studioThemeOptions } from './StudioThemeProvider.jsx'
+import { NODE_COLORS } from './utils/constellationLayout.js'
 
 const SRC = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 const read = (rel) => readFileSync(join(SRC, rel), 'utf8')
@@ -39,9 +40,10 @@ export const retiredIn = (file, text) => text.split('\n').flatMap((line, i) =>
 const STUDIO_CSS = ['studio.css', 'studio-help.css', 'studio-mobile.css', 'space-constellation.css']
     .map((f) => `studio/styles/${f}`)
 
-// Round marks that are not controls: the two status dots (owner, 2026-10-21). Each one
-// says so in its rule, so a control cannot slip in under the same exception.
-export const ROUND_ALLOWED = ['.scc-sync-dot', '.scc-presence-dot']
+// Round marks that are not controls: the connection light (owner, 2026-10-21). It
+// says so in its rule, so a control cannot slip in under the same exception. The
+// presence initials are an avatar, not a dot, so they are square like the chat's.
+export const ROUND_ALLOWED = ['.scc-sync-dot']
 
 // The body of the first rule whose selector list is exactly `sel`, comments kept.
 export const ruleOf = (css, sel) => {
@@ -130,15 +132,23 @@ describe('the Studio frame is di.iiii\'s', () => {
         expect(ruleOf(read('studio/styles/space-constellation.css'), '.scon-sat-label')).toMatch(/\/\*[\s\S]*shadow[\s\S]*\*\/\s*text-shadow/)
     })
 
-    it('prints an address muted and lays the space card on the cyan wash', () => {
+    it('prints an address muted and keeps the space card off cyan (cyan means live)', () => {
         const css = read('studio/styles/studio-space-hub.css')
         expect(ruleOf(css, '.ssh-live-url')).toMatch(/color:\s*var\(--di-text-muted\)/)
         expect(ruleOf(css, '.ssh-badge-live')).toMatch(/color:\s*var\(--di-success\)/)
         // two rules carry this selector; the one with the fill is the one that counts
         const fills = [...css.matchAll(/\.ssh-space-card\s*\{([^}]*)\}/g)].map((m) => m[1]).filter((b) => /background:/.test(b))
         expect(fills).toHaveLength(1)
-        expect(fills[0]).toMatch(/background:\s*var\(--di-cyan-wash\)/)
-        expect(ruleOf(css, '.ssh-space-card:hover,\n.ssh-space-card:focus-visible')).toMatch(/background:\s*var\(--di-cyan-dim\)/)
+        expect(fills[0]).toMatch(/background:\s*rgba\(255,\s*255,\s*255,\s*0\.03\)/)
+        expect(ruleOf(css, '.ssh-space-card:hover,\n.ssh-space-card:focus-visible')).not.toMatch(/background:\s*var\(--di-cyan/)
+    })
+
+    it('squares the presence initials and draws a public space grey, not cyan', () => {
+        expect(ruleOf(read('studio/styles/studio.css'), '.scc-presence-dot')).toMatch(/border-radius:\s*0(px)?\s*;/)
+        expect(NODE_COLORS.public).not.toBe(NODE_COLORS.live)
+        expect(NODE_COLORS.public).toMatch(/^#([0-9a-f])\1?/i)
+        const [r, g, b] = [1, 3, 5].map((i) => parseInt(NODE_COLORS.public.slice(i, i + 2), 16))
+        expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeLessThanOrEqual(16)
     })
 
     it('squares the Code view\'s cards and drops the warm shadow', () => {
