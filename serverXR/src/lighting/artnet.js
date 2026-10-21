@@ -136,7 +136,7 @@ class ArtNet {
     this.sequence = (this.sequence + 1) % 256;
     if (this.sequence === 0) this.sequence = 1;
     this.socket.send(pkt, 0, pkt.length, this.port, target, (err) => {
-      if (err) this.lastError = `${target}: ${err.message}`;
+      if (err) { this.lastError = `${target}: ${err.message}`; this.lastErrorAt = Date.now(); }
       else this.packetsSent++;
     });
   }

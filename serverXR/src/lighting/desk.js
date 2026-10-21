@@ -25,6 +25,8 @@ const { STYLES: FAN_STYLES, fanValues } = require('./fan');
 const { rigPatch, rigList } = require('./rigpatch');
 const library = require('./library');
 const { SACN, cidFor } = require('./sacn');
+const { busStatus } = require('./outputStatus');
+const { backupShowFile } = require('./showBackup');
 const { DmxInput } = require('./dmxin-net');
 const { sanitizeInputConfig, artNetFromDesk, sacnFromDesk, cidString } = require('./dmxin');
 const {
@@ -1004,6 +1006,27 @@ function createDesk(opts = {}) {
     return body.replace(SCENES_TOKEN, scenesJson());
   }
 
+  // One answer per route (outputStatus.js): ok | unreachable | off, with the reason in words, for the
+  // main output and every extra device. The page shows it; nothing sends into a dead route in silence.
+  function outputBus() {
+    const o = state.output;
+    const main = o.driver === 'enttec' ? { serial: enttec ? enttec.status() : null, serialPort: o.serialPort }
+      : o.driver === 'sacn' ? { ready: offline || !!(sacn && sacn.ready), lastError: sacn && sacn.lastError, lastErrorAt: sacn && sacn.lastErrorAt, targets: o.targets }
+      : { ready: offline || !!artnet.ready, lastError: artnet.lastError, lastErrorAt: artnet.lastErrorAt, targets: o.mode === 'unicast' ? o.targets : [] };
+    const routes = [{ id: 'main', name: 'Output', driver: o.driver, enabled: !!o.enabled, ...main }];
+    for (const s of o.extra || []) {
+      const held = extraDrivers.get(s.id);
+      const d = held ? held.drv : null;
+      const st = d && d.status ? d.status() : null;
+      routes.push({
+        id: s.id, name: s.name || s.id, driver: s.driver, enabled: !!s.enabled, targets: s.targets, serialPort: s.serialPort,
+        ...(s.driver === 'enttec' ? { serial: st } : s.driver === 'sacn' ? { ready: offline || !!(d && d.ready), lastError: d && d.lastError, lastErrorAt: d && d.lastErrorAt }
+          : { ready: offline || !!artnet.ready, lastError: artnet.lastError, lastErrorAt: artnet.lastErrorAt })
+      });
+    }
+    return busStatus(routes, nodeList());
+  }
+
   function summary() {
     const active = state.activeScene ? state.scenes.find((s) => s.id === state.activeScene) : null;
     const ser = enttec ? enttec.status() : null;
@@ -1032,6 +1055,7 @@ function createDesk(opts = {}) {
         packetsSent: enttec ? enttec.packetsSent : sacn ? sacn.packetsSent : artnet.packetsSent,
         lastError: enttec ? enttec.lastError : sacn ? sacn.lastError : artnet.lastError,
         lanAllowed,
+        bus: outputBus(),
       },
       input: inputSummary(),
     };
@@ -1143,6 +1167,7 @@ function createDesk(opts = {}) {
         driver: state.output.driver,
         sacn: sacn ? sacn.status() : null,
         outputEnabled: !!state.output.enabled,
+        bus: outputBus(),
         lanAllowed,
         listen: listen ? listen() : null,
         serial: enttec ? enttec.status() : null,
@@ -2315,8 +2340,11 @@ function createDesk(opts = {}) {
   // Load another show in place of this one. The one being left is saved whole first;
   // the rig carries over untouched; the profile registry is emptied of the old show's
   // own fixture types and filled with the new one's (each show carries its own).
+  const backupShow = (reason) => backupShowFile(showFile(), reason);
+
   function switchShow(next) {
     writeShow();
+    try { backupShow('before-switch'); } catch (e) { log('could not back up the show before leaving it: ' + e.message); }
     cancelPending();
     cueRunner.close();
     const rig = state.output;

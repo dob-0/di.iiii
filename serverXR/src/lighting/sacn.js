@@ -136,7 +136,7 @@ class SACN {
     const to = this.targets.length ? this.targets : [multicastAddress(wire)];
     for (const address of to) {
       this.socket.send(packet, 0, packet.length, PORT, address, (err) => {
-        if (err) this.lastError = `${address}: ${err.message}`;
+        if (err) { this.lastError = `${address}: ${err.message}`; this.lastErrorAt = Date.now(); }
         else { this.packetsSent++; this.lastError = null; }
       });
     }
