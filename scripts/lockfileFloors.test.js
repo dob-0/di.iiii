@@ -28,9 +28,10 @@ export const FLOORS = {
     vite: '8.2.4'
 }
 
-// Lines of release, keyed by major: a floor applies only to copies on the
-// same major (brace-expansion 1.x and 2.x are separate lines; a 2.x copy is
-// not "below" 1.1.21). A copy on an OLDER major than the floor still fails.
+// A copy on a NEWER major than the floor passes (brace-expansion 2.x is not
+// "below" 1.1.21). A copy on an OLDER major fails, even where the advisory's
+// range starts at the floor's major (undici >=8.0.0, js-yaml >=4.0.0,
+// vite >=8.2.0): the guard is stricter than `npm audit` there, on purpose.
 const parse = (version) => String(version).split(/[.+-]/).slice(0, 3).map((n) => Number.parseInt(n, 10) || 0)
 
 export function belowFloor(version, floor) {
