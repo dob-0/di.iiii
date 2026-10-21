@@ -22,7 +22,7 @@
 .loading-screen-spinner {
     width: 34px;
     height: 34px;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     /* One bright arc on a faint ring — legible as motion on black without
        being a lit object in its own right. */
     border: 2px solid rgba(255, 255, 255, 0.14);
