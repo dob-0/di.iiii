@@ -24,11 +24,12 @@ const back = (to) => `<a href="${to}" target="_top" onclick="event.preventDefaul
 const yardHtml = `<html><body>${back('/dilijan/worlds')}<script>fetch("https://di-studio.xyz/serverXR/api/projects/the-yard/assets/${H1}")</script></body></html>`
 const wallHtml = `<html><body>${back('/dilijan/worlds')}<script>fetch("https://staging.di-studio.xyz/serverXR/api/projects/elevation/assets/${H2}")</script></body></html>`
 const airHtml = '<html><body>air canvas</body></html>'
-const docOf = (html) => ({ version: 1, nodes: [{ id: 'keep-me' }], presentationState: { mode: 'code', entryView: 'code', codeHtml: html } })
+const docOf = (html) => ({ version: 1, projectMeta: { spaceId: 'dilijan' }, nodes: [{ id: 'keep-me' }], presentationState: { mode: 'code', entryView: 'code', codeHtml: html } })
 
 // A fake serverXR: documents, assets, and the unidentified-program refusal.
-function fakeApi({ docs, assets = {} }) {
+function fakeApi({ docs, assets = {}, lostPut = {} }) {
   const log = []
+  const created = []
   const server = http.createServer((req, res) => {
     const chunks = []
     req.on('data', (c) => chunks.push(c))
@@ -41,12 +42,23 @@ function fakeApi({ docs, assets = {} }) {
       let m
       if ((m = req.url.match(/^\/api\/projects\/([^/]+)\/document$/))) {
         if (req.method === 'GET') return docs[m[1]] ? send(200, { document: docs[m[1]] }) : send(404, { error: 'Project not found.' })
-        if (req.method === 'PUT') { docs[m[1]] = JSON.parse(body.toString()); return send(200, { ok: true }) }
+        if (req.method === 'PUT') {
+          docs[m[1]] = JSON.parse(body.toString())
+          // the write lands but its answer is lost: the run stops right after it
+          return lostPut[m[1]] ? send(502, { error: 'Bad gateway.' }) : send(200, { ok: true })
+        }
       }
       if ((m = req.url.match(/^\/api\/projects\/([^/]+)\/assets\/([0-9a-f]{64})(\/meta)?$/)) && req.method === 'GET') {
         const bytes = assets[`${m[1]}/${m[2]}`]
         if (!bytes) return send(404, { error: 'Asset not found.' })
         return m[3] ? send(200, { id: m[2] }) : send(200, bytes, 'application/octet-stream')
+      }
+      if ((m = req.url.match(/^\/api\/spaces\/([^/]+)\/projects$/)) && req.method === 'POST') {
+        const b = JSON.parse(body.toString())
+        if (docs[b.slug]) return send(409, { error: 'that name is taken on this di.iiii — try another' })
+        docs[b.slug] = { version: 1, projectMeta: { id: b.slug, spaceId: m[1], title: b.title }, presentationState: {} }
+        created.push({ space: m[1], slug: b.slug, visibility: b.visibility })
+        return send(200, { project: { id: b.slug } })
       }
       if ((m = req.url.match(/^\/api\/projects\/([^/]+)\/assets$/)) && req.method === 'POST') {
         const id = /name="assetId"\r\n\r\n([0-9a-f]{64})/.exec(body.toString('latin1'))
@@ -59,7 +71,7 @@ function fakeApi({ docs, assets = {} }) {
       return send(404, { error: `no route ${req.method} ${req.url}` })
     })
   })
-  return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({ server, log, docs, assets, url: `http://127.0.0.1:${server.address().port}` })))
+  return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({ server, log, docs, assets, created, lostPut, url: `http://127.0.0.1:${server.address().port}` })))
 }
 
 const run = (argv, env = {}) => new Promise((resolve) => execFile(process.execPath, [COMBINE, ...argv], { timeout: 20000, env: { ...process.env, DI_TOKEN: '', DI_ASSETS_TOKEN: '', ...env } }, (error, stdout, stderr) => resolve({ code: error ? error.code : 0, stdout, stderr })))
@@ -103,6 +115,13 @@ describe('repointAssets', () => {
   it('does not touch another project\'s assets', () => {
     const other = `/serverXR/api/projects/orange-room/assets/${H1}`
     expect(repointAssets(`x ${other} y`, 'elevation', 'the-yard')).toEqual({ html: `x ${other} y`, hashes: [] })
+  })
+  it('sees every asset the repo page spaces/dilijan/aren/yard.html names, so a combine copies them all', () => {
+    // An asset URL built as PREFIX + hash is invisible to repointAssets: the combine would neither check nor copy it.
+    const html = fs.readFileSync(path.join(here, '../../spaces/dilijan/aren/yard.html'), 'utf8')
+    const named = new Set(html.match(/[0-9a-f]{64}/g))
+    expect(named.size).toBe(5) // cloud, fragment pack, yard mesh, the photos of main and wall_mid (main since N1131)
+    expect(repointAssets(html, 'the-yard', 'the-yard').hashes.sort()).toEqual([...named].sort())
   })
 })
 
@@ -275,5 +294,106 @@ describe('combine-pages.mjs against a fake serverXR', () => {
       expect(api.assets[`the-yard/${H2}`]).toBeDefined()
       expect(source.log.every((l) => l.kind === 'app')).toBe(true)
     } finally { source.server.close() }
+  })
+
+  it('--assets-from on another server never gets the target\'s token; DI_ASSETS_TOKEN is the one it gets', async () => {
+    const source = await fakeApi({ docs: {}, assets: { [`elevation/${H2}`]: Buffer.from('wall') } })
+    try {
+      for (const [env, expected] of [[{ DI_TOKEN: 'target-secret' }, undefined], [{ DI_TOKEN: 'target-secret', DI_ASSETS_TOKEN: 'source-token' }, 'Bearer source-token']]) {
+        delete api.assets[`elevation/${H2}`]; delete api.assets[`the-yard/${H2}`]
+        api.docs['the-yard'] = docOf(yardHtml); source.log.length = 0; api.log.length = 0
+        const r = await run(argv(['--apply', '--backup', path.join(tmp, 'b.json'), '--assets-from', source.url]), env)
+        expect(r.code).toBe(0)
+        expect(source.log.length).toBeGreaterThan(0)
+        expect(source.log.map((l) => l.authorization)).toEqual(source.log.map(() => expected))
+        expect(api.log.every((l) => l.authorization === 'Bearer target-secret')).toBe(true) // the target still gets its own
+      }
+    } finally { source.server.close() }
+  })
+
+  it('--assets-from naming the --api server itself still sends its token', async () => {
+    delete api.assets[`elevation/${H2}`]
+    api.assets[`elevation/${H2}`] = Buffer.from('wall')
+    const r = await run(argv(['--apply', '--backup', path.join(tmp, 'b.json'), '--assets-from', `${api.url}/`]), { DI_TOKEN: 'target-secret' })
+    expect(r.code).toBe(0)
+    expect(api.log.filter((l) => l.url === `/api/projects/elevation/assets/${H2}`).map((l) => l.authorization)).toEqual(['Bearer target-secret'])
+  })
+
+  it('a tab can be a page kept in the repo: read relative to the spec, its assets checked on the target, its links repointed', async () => {
+    const one = `<html><body>${back('/dilijan/worlds')}<script>fetch("/serverXR/api/projects/the-yard/assets/${H1}")</script>one view</body></html>`
+    fs.mkdirSync(path.join(tmp, 'aren'))
+    fs.writeFileSync(path.join(tmp, 'aren', 'one.html'), one)
+    const spec = path.join(tmp, 'spec.json')
+    fs.writeFileSync(spec, JSON.stringify({ into: 'the-yard', tabs: [{ label: 'AirCanvas', id: 'aircanvas' }, { label: 'Yard · Wall', file: 'aren/one.html' }], relink: { '/dilijan/worlds': '/dilijan#works' } }))
+    const r = await run(['--api', api.url, '--spec', spec, '--apply', '--backup', path.join(tmp, 'b.json')])
+    expect(r.code).toBe(0)
+    expect(pagesIn(api.docs['the-yard'].presentationState.codeHtml)).toEqual([airHtml, relinkHtml(one, '/dilijan/worlds', '/dilijan#works').html])
+    expect(api.log.some((l) => l.url === `/api/projects/the-yard/assets/${H1}/meta`)).toBe(true)
+  })
+
+  it('the command line takes a file tab too, and a missing file is named', async () => {
+    fs.writeFileSync(path.join(tmp, 'one.html'), '<html>one</html>')
+    const ok = await run(['--api', api.url, '--into', 'the-yard', '--tab', 'AirCanvas=aircanvas', '--tab', `One=file:${path.join(tmp, 'one.html')}`])
+    expect(ok.code).toBe(0)
+    expect(ok.stdout).toMatch(/would replace the-yard's page with 2 tabs \(AirCanvas \| One\)/)
+    const missing = await run(['--api', api.url, '--into', 'the-yard', '--tab', 'AirCanvas=aircanvas', '--tab', `One=file:${path.join(tmp, 'nope.html')}`])
+    expect(missing.code).toBe(1)
+    expect(missing.stderr).toMatch(/nope\.html: no such page/)
+  })
+
+  it('--keep-as keeps the target\'s own page as a private project (assets copied, links repointed); --undo empties it again', async () => {
+    api.assets[`the-yard/${H1}`] = Buffer.from('PHOTO-BYTES') // a photo: the server stores its copy under a new id
+    const H3 = 'c'.repeat(64)
+    fs.writeFileSync(path.join(tmp, 'one.html'), '<html>one</html>')
+    const args = ['--api', api.url, '--into', 'the-yard', '--tab', 'AirCanvas=aircanvas', '--tab', `One=file:${path.join(tmp, 'one.html')}`, '--relink', '/dilijan/worlds=/dilijan#works', '--keep-as', 'yard-original']
+    const dry = await run(args)
+    expect(dry.code).toBe(0)
+    expect(dry.stdout).toMatch(/would keep the-yard's own page as project yard-original in dilijan \(private\)/)
+    expect(api.docs['yard-original']).toBeUndefined()
+    const backup = path.join(tmp, 'b.json')
+    expect((await run([...args, '--apply', '--backup', backup])).code).toBe(0)
+    const kept = api.docs['yard-original'].presentationState
+    expect(kept.codeHtml).toContain(`/serverXR/api/projects/yard-original/assets/${H3}`) // the id the server gave
+    expect(kept.codeHtml).not.toContain(H1)
+    expect(kept.codeHtml).not.toContain('di-studio.xyz')
+    expect(kept.codeHtml).not.toContain('/dilijan/worlds')
+    expect(kept.entryView).toBe('code')
+    expect(api.assets[`yard-original/${H3}`]).toBeDefined()
+    expect(api.created).toEqual([{ space: 'dilijan', slug: 'yard-original', visibility: 'private' }])
+    expect(isCombined(api.docs['the-yard'].presentationState.codeHtml)).toBe(true)
+    // undo: the target has its page again, the kept copy goes empty (the project stays), and the combine can run again
+    expect((await run(['--api', api.url, '--undo', backup, '--apply'])).code).toBe(0)
+    expect(api.docs['the-yard'].presentationState.codeHtml).toBe(yardHtml)
+    expect(api.docs['yard-original'].presentationState.codeHtml).toBe('')
+    const backup2 = path.join(tmp, 'b2.json')
+    expect((await run([...args, '--apply', '--backup', backup2])).code).toBe(0)
+    expect(api.docs['yard-original'].presentationState.codeHtml).toBe(kept.codeHtml)
+    // a kept page someone changed is never emptied, and never overwritten
+    api.docs['yard-original'].presentationState.codeHtml = '<html>edited</html>'
+    const undo2 = await run(['--api', api.url, '--undo', backup2, '--apply'])
+    expect(undo2.stdout).toMatch(/left yard-original as it is/)
+    expect(api.docs['yard-original'].presentationState.codeHtml).toBe('<html>edited</html>')
+    const before = JSON.stringify(api.docs)
+    const again = await run([...args, '--apply'])
+    expect(again.code).toBe(1)
+    expect(again.stderr).toMatch(/yard-original already holds a page/)
+    expect(JSON.stringify(api.docs)).toBe(before)
+  })
+
+  it('--keep-as: a run that stops after writing the kept page still leaves a backup, and its --undo empties the page', async () => {
+    api.lostPut['yard-original'] = true
+    fs.writeFileSync(path.join(tmp, 'one.html'), '<html>one</html>')
+    const args = ['--api', api.url, '--into', 'the-yard', '--tab', 'AirCanvas=aircanvas', '--tab', `One=file:${path.join(tmp, 'one.html')}`, '--keep-as', 'yard-original']
+    const backup = path.join(tmp, 'b.json')
+    const r = await run([...args, '--apply', '--backup', backup])
+    expect(r.code).not.toBe(0)
+    expect(api.docs['yard-original'].presentationState.codeHtml).toContain('/serverXR/api/projects/yard-original/assets/') // the page was written
+    expect(isCombined(api.docs['the-yard'].presentationState.codeHtml)).toBe(false) // the target was not
+    expect(JSON.parse(fs.readFileSync(backup, 'utf8')).kept.id).toBe('yard-original')
+    delete api.lostPut['yard-original']
+    expect((await run(['--api', api.url, '--undo', backup, '--apply'])).code).toBe(0)
+    expect(api.docs['yard-original'].presentationState.codeHtml).toBe('')
+    expect(api.docs['the-yard'].presentationState.codeHtml).toBe(yardHtml)
+    expect((await run([...args, '--apply', '--backup', path.join(tmp, 'b2.json')])).code).toBe(0) // and it can run again
   })
 })
