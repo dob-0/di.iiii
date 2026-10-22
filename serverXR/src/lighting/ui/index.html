@@ -712,6 +712,16 @@
         <div class="bankhead">Looks</div>
         <div class="touchgrid" id="touchLooks"></div>
       </section>
+      <!-- The live stage: a dot per lamp where it stands, coloured from what the output sends (view only) -->
+      <section class="tstage" id="tStage" hidden>
+        <div class="bankhead">Stage</div>
+        <div class="tstagebox" id="tStageBox"></div>
+      </section>
+      <!-- Pixel strips: a line of live pixels per strip (the desk's /api/strips) -->
+      <section class="tstrips" id="touchStrips" hidden>
+        <div class="bankhead">Pixel strips</div>
+        <div class="touchgrid" id="touchStripGrid"></div>
+      </section>
       <div class="touchgrid" id="touchGrid"></div>
     </div>
 
@@ -1023,6 +1033,7 @@
 <script src="from.js"></script>
 <script src="show.js"></script>
 <script src="caps.js"></script>
+<script src="colour.js"></script>
 <script src="dmxfeed.js"></script>
 <script src="app.js"></script>
 </body>
