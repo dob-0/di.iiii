@@ -135,7 +135,7 @@
         "react-router-dom": "^7.18.3",
         "socket.io-client": "^4.8.4",
         "three": "^0.186.1",
-        "three-mesh-bvh": "^0.9.15",
+        "three-mesh-bvh": "^0.9.16",
         "troika-three-text": "^0.52.4",
         "uqr": "0.1.3"
     },
