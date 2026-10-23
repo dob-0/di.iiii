@@ -299,6 +299,7 @@
     gap: var(--di-space-2);
 }
 
+/* status dot, not a control: stays round (owner, 2026-10-21). */
 .perform-beat {
     width: 14px;
     height: 14px;

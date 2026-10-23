@@ -3204,7 +3204,7 @@ export default function RawEditor({
                     href="/"
                     aria-label="di.iiii — home"
                     onClick={(e) => { e.preventDefault(); navigateToRawPath('/') }}
-                >di<span>.</span>iiii</a>
+                >di<span className="dot">.</span>iiii</a>
             {/* THE DESK IS CLEAR — always. The backdrop room lived here from
                 2026-08-19 to 2026-08-20: first always-on, then only when
                 something stood in it, and the owner's verdict stayed the

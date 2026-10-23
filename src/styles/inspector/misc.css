@@ -68,6 +68,7 @@
     letter-spacing: 0.01em;
 }
 
+/* status dot, not a control: stays round (owner, 2026-10-21). */
 .status-dot {
     width: 9px;
     height: 9px;
@@ -93,7 +94,7 @@
 .status-toggle-button {
     padding: var(--di-space-2) var(--di-space-3);
     border: 1px solid rgba(255,255,255,0.12);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     background: rgba(255,255,255,0.04);
     color: rgba(255, 255, 255, 0.88);
     font: inherit;
@@ -144,7 +145,7 @@
     width: 100%;
     height: 8px;
     background: rgba(255, 255, 255, 0.08);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     overflow: hidden;
     position: relative;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -161,7 +162,7 @@
 .status-progress {
     background: linear-gradient(90deg, var(--di-success), var(--di-cyan));
     height: 100%;
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
@@ -189,7 +190,7 @@
     background: rgba(0, 0, 0, 0.75);
     color: rgba(255,255,255,0.85);
     padding: var(--di-space-2) var(--di-space-3);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     font-size: var(--di-text-3);
     letter-spacing: 0.02em;
     z-index: 31;
@@ -204,7 +205,7 @@
     padding: var(--di-space-3) var(--di-space-3);
     background: var(--di-scrim-strong);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
     display: inline-flex;
     align-items: center;
@@ -218,7 +219,7 @@
 .ar-hint-dot {
     width: 10px;
     height: 10px;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     background: var(--di-cyan);
     box-shadow: 0 0 0 0 rgba(var(--di-cyan-rgb), 0.45);
     animation: status-pulse 1.6s ease-out infinite;
