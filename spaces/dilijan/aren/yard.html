@@ -62,7 +62,7 @@ const PACK=fetchAsset('/serverXR/api/projects/the-yard/assets/e30e26445e9f25c62e
 // 4.3 degrees in the yard and the wall page stood it upright, so a turn about the vertical alone left it up to 8 cm off.
 // The cabin shares no atlas: it is the yard's back wall (wall_mid) scanned apart at 1.19x (elevation.py registers it by
 // its facade, N1145). wall_mid stands for it in Բակը, so it shows only in the wall.
-const IN_YARD={"wall":{"q":[0.02826,-0.907906,0.024653,0.417493],"t":[4.5231,0.8936,0.4268]},"courtyard":{"q":[0,0,0,1],"t":[0.0019,0.8435,-0.002]}};
+const IN_YARD={"wall":{"q":[0.035164,-0.700927,0.013033,0.712247],"t":[-5.2377,0.7358,0.492],"s":0.99},"courtyard":{"q":[0,0,0,1],"t":[0.0019,0.8435,-0.002]},"wall_mid":{"q":[0.0,0.0591,0.0,0.998252],"t":[-6.1501,-0.0288,-4.2109],"s":1.67417}};
 // Պատը as one building, an elevation (owner 2026-10-21, N1145: "look walls parallel, windows parallel it the one
 // building"). Each fragment is turned so its photographed facade lies on the courtyard's facade plane, levelled (the
 // projection-profile roll of its edges), its foot on the courtyard's ground line, in the order of the building with the
@@ -251,13 +251,13 @@ function buildFragment(m,img,only,opts){
   const wire=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x141414,wireframe:true,transparent:true,opacity:0.42}));
   fill.visible=wire.visible=false;
   const group=new THREE.Group(); group.add(solid,fill,wire);
-  const y=only==='yard'?{q:[0,0,0,1],t:[0,0,0]}:IN_YARD[m.name]||{q:[0,0,0,1],t:m.center};
+  const y=only==='yard'?IN_YARD[m.name]||{q:[0,0,0,1],t:[0,0,0]}:IN_YARD[m.name]||{q:[0,0,0,1],t:m.center};   // s: owner 10-23, one building by its photos (visual.json)
   const w=only==='yard'?null:IN_WALL[m.name];        // Պատը: the elevation's pose (and the scale of a piece scanned apart)
   // stay: never moves (shown in one arrangement only); swap: the same surface as another part, so it changes at once
   group.userData={solid,fill,wire,points:null,tex,model:m,op,only,stay:!!opts.stay,swap:!!opts.swap,fade:only==='wall'?0:1,
-    yard:{p:new THREE.Vector3().fromArray(y.t),q:y.q?new THREE.Quaternion().fromArray(y.q):new THREE.Quaternion().setFromAxisAngle(V(0,1,0),(y.yaw||0)*Math.PI/180)},
-    wall:w?{p:new THREE.Vector3().fromArray(w.t),q:new THREE.Quaternion().fromArray(w.q)}:{p:new THREE.Vector3().fromArray(m.center).add(OFF),q:new THREE.Quaternion()}};
-  if(w&&w.s) group.scale.setScalar(w.s);
+    yard:{s:y.s||1,p:new THREE.Vector3().fromArray(y.t),q:y.q?new THREE.Quaternion().fromArray(y.q):new THREE.Quaternion().setFromAxisAngle(V(0,1,0),(y.yaw||0)*Math.PI/180)},
+    wall:w?{s:w.s||1,p:new THREE.Vector3().fromArray(w.t),q:new THREE.Quaternion().fromArray(w.q)}:{s:1,p:new THREE.Vector3().fromArray(m.center).add(OFF),q:new THREE.Quaternion()}};
+  group.scale.setScalar(only==='wall'?group.userData.wall.s:group.userData.yard.s);
   group.position.copy(group.userData.yard.p); group.quaternion.copy(group.userData.yard.q);
   scene.add(group);
   return group;
@@ -347,14 +347,14 @@ async function buildFragments(){
 }
 
 // ---------- the yard's tour (from the yard page) ----------
+// owner 10-23: the pieces stand as ONE building (one-building.json); the old rail ran through its walls, so the tour
+// circles the building outside its walls (radius 10.5 units ~ 26 m from its centre, eye 2.0-3.2 units)
 const camCurve=new THREE.CatmullRomCurve3([
- V(0.4,1.5,-7.6),V(-5.8,1.0,-4.2),V(-6.8,0.75,-0.6),V(-3.8,0.8,-1.1),V(-0.8,0.85,-1.3),
- V(2.0,0.9,-1.7),V(4.0,0.95,-2.6),V(6.2,1.0,-3.9),V(8.2,1.8,-4.8),V(4.5,3.6,-7.2)],true,'centripetal',0.6);
+ V(0.63,2.60,-8.71),V(-5.82,3.17,-8.02),V(-10.63,2.95,-3.67),V(-11.97,2.25,2.68),V(-9.32,2.03,8.60),V(-3.69,2.60,11.83),V(2.76,3.17,11.14),V(7.57,2.95,6.79),V(8.91,2.25,0.44),V(6.26,2.03,-5.48)],true,'centripetal',0.6);
 const tgtCurve=new THREE.CatmullRomCurve3([
- V(0.4,0.55,1.6),V(-4.6,0.55,1.9),V(-5.0,0.5,1.9),V(-3.2,0.55,1.95),V(-0.4,0.55,1.85),
- V(2.2,0.6,1.7),V(4.2,0.65,1.2),V(6.0,0.55,-1.0),V(4.0,0.5,0.2),V(0.6,0.4,1.4)],true,'centripetal',0.6);
+ V(-2.38,0.85,0.72),V(-2.72,0.85,1.38),V(-2.60,0.85,2.11),V(-2.07,0.85,2.63),V(-1.33,0.85,2.74),V(-0.68,0.85,2.40),V(-0.34,0.85,1.74),V(-0.46,0.85,1.01),V(-0.99,0.85,0.49),V(-1.73,0.85,0.38)],true,'centripetal',0.6);
 const T_REV=7,T_TOUR=50,T_FADE=5,T_HOLD=13,T_OUT=3.5, CYCLE=T_REV+T_TOUR+T_FADE+T_HOLD+T_OUT, HOLD_AT=T_REV+T_TOUR+T_FADE;
-const holdA=V(0.4,1.5,-7.6),holdB=V(0.25,1.05,-5.9),holdT=V(0.4,0.62,1.2);
+const holdA=camCurve.getPoint(0).clone(),holdB=holdA.clone().lerp(V(-1.53,2.0,1.56),0.18),holdT=V(-1.53,0.8,1.56);
 const YARD_X=[PMETA.min[0]-0.8,PMETA.min[0]+PMETA.range[0]+0.8];
 function pose(tc){ // -> [camera, target, reveal front, cloud fade, surface opacity]
   if(reduced) return [holdB,holdT,99,0,1];
@@ -470,7 +470,7 @@ function placeFragments(t){
     // rise, travel, land: nothing passes through the courtyard's walls on the way
     const h=smooth((k-0.25)/0.5), lift=LIFT*(smooth(k/0.3)-smooth((k-0.7)/0.3));
     g.position.copy(u.yard.p).lerp(u.wall.p,h).y+=lift;
-    g.quaternion.copy(u.yard.q).slerp(u.wall.q,h);
+    g.quaternion.copy(u.yard.q).slerp(u.wall.q,h); g.scale.setScalar(u.yard.s+(u.wall.s-u.yard.s)*h);
   });
 }
 function frame(){

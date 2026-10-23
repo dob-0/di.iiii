@@ -8,18 +8,19 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
+const one = JSON.parse(fs.readFileSync(path.join(here, '..', 'one-building.json'), 'utf8'))
 const html = fs.readFileSync(path.join(here, 'yard.html'), 'utf8')
 const grab = (name) => JSON.parse(html.match(new RegExp(`const ${name}=(.*?);\\n`))[1])
 const rec = JSON.parse(fs.readFileSync(path.join(here, '..', 'building-pieces.json'), 'utf8'))
 const fp = JSON.parse(fs.readFileSync(path.join(here, '..', 'building-footprint.json'), 'utf8'))
 
+
 describe('Aren: the building as it stands', () => {
-  it('each piece stands where the yard scan holds it (no layout of its own)', () => {
+  it('the yard takes the one-building fit; the wall view keeps its own', () => {
     const inWall = grab('IN_WALL'), inYard = grab('IN_YARD')
-    for (const k of ['wall', 'courtyard']) {
-      inYard[k].t.forEach((v, i) => expect(inWall[k].t[i]).toBeCloseTo(v, 3))
-      inYard[k].q.forEach((v, i) => expect(Math.abs(inWall[k].q[i])).toBeCloseTo(Math.abs(v), 4))
-    }
+    // owner 10-23: the yard stands as ONE building by its photos (one-building.json), no longer on the map's layout
+    expect(inYard).toEqual(one.IN_YARD)
+    expect(inYard.wall_mid.s).toBeGreaterThan(1.6); expect(inYard.wall_mid.s).toBeLessThan(1.75)   // scanned at 4.09 m/unit
     expect(inWall.cabin.s).toBeGreaterThan(0.8); expect(inWall.cabin.s).toBeLessThan(0.9)   // scanned apart at 1.19x
     expect(rec.IN_WALL).toEqual(inWall)
   })
