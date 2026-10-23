@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Բակը · Պատը — aren · Dilijan 26.08.2026</title>
+<title>Բակը · Yard — aren · Dilijan 26.08.2026</title>
 <!-- Aren's yard and wall as ONE view (owner 2026-10-21, N1123). Բակը is the yard page's own texturing: its scan and its
      photos, drawn as photographed, under its measured cloud and its tour; only the wall wears the wall page's sharper
      photo, at the exact place it was scanned (N1131, measured: spaces/dilijan/aren/README.md). Պատը: the wall steps out
@@ -420,28 +420,117 @@ function go(i){
   manual=false; vTheta=vPhi=0;
   whereBtn.forEach((b,j)=>b.setAttribute('aria-pressed',String(j===i)));
 }
+// ---------- moving in the yard (owner 10-23, N1248: "movement in the yard so bad") ----------
+// The di.iiii way of moving (src/studio/navigation/mappings.js 'studio' = camera-controls 2.10.1's defaults), written for this
+// page: drag turns about the building's centre, one full turn per screen height; every move is eased by a critically damped
+// SmoothDamp (Game Programming Gems 4, ch. 1.10, the function camera-controls and Unity use) with 0.125 s while a hand is on it and
+// 0.25 s after; a turn that is let go carries on and dies away (inertia: 0.3 s, at most 1.5 rad/s, so a flick adds at most ~26 degrees); wheel and pinch come closer toward the point
+// under the pointer (camera-controls' dollyToCursor), and going back out drifts the turn point home so the building returns to
+// the centre. Physics first: the eye never enters the building's box (it slides along it) and never goes below the eye line of
+// the ground (pitch 3-77 degrees above the turn point, which stays inside the box above the ground).
+// Idle turn (model-viewer's auto-rotate rule: it stops the moment a hand touches, and resumes after a delay): one slow turn per
+// 90 s at first sight, so a visitor sees it is a live building; it stops at the first touch, wheel or key and comes back only after
+// 30 s without a hand, easing in over 3 s from wherever the person left the camera, never snapping back to a tour. Space toggles
+// it; R or a double click goes back to the first view. Reduced motion: no idle turn.
+const ORB_DRAG_ST=0.125, ORB_ST=0.25, ORB_SPIN_TAU=0.3, ORB_SPIN_MAX=1.5, ORB_PHI=[0.05,1.35], IDLE_SPEED=2*Math.PI/90, IDLE_AFTER=30, IDLE_EASE=3, BOX_PAD=0.35;
+const ORB={goal:{theta:0,phi:0.3,dist:20},cur:{theta:0,phi:0.3,dist:20},gt:V(0,0.8,0),ct:V(0,0.8,0),
+  vel:{theta:0,phi:0,dist:0,x:0,y:0,z:0},spin:0,spinPhi:0,lastMove:0,
+  box:new THREE.Box3(V(PMETA.min[0],PMETA.min[1],PMETA.min[2]),V(PMETA.min[0]+PMETA.range[0],PMETA.min[1]+PMETA.range[1],PMETA.min[2]+PMETA.range[2])),
+  home:null,minD:0.6,maxD:60,hand:-1e9,touched:false};
+function smoothDamp(cur,goal,vel,key,st,dt){        // Game Programming Gems 4, 1.10 (no max speed), with overshoot guard
+  const omega=2/st,x=omega*dt,e=1/(1+x+0.48*x*x+0.235*x*x*x),change=cur-goal,temp=(vel[key]+omega*change)*dt;
+  vel[key]=(vel[key]-omega*temp)*e; let out=goal+(change+temp)*e;
+  if((goal-cur>0)===(out>goal)){out=goal;vel[key]=0;} return out;
+}
+function orbHome(){
+  const b=ORB.box,c=b.getCenter(new THREE.Vector3()),h=b.max.y-b.min.y;
+  const t=V(c.x,b.min.y+0.42*h,c.z), first=camCurve.getPoint(0), theta=Math.atan2(first.x-c.x,first.z-c.z), phi=0.32;
+  // the nearest distance at which every corner of the box sits inside 86 % x 78 % of the frame (centred, any aspect)
+  const cam=camera.clone(), corners=[];
+  for(let i=0;i<8;i++) corners.push(V(i&1?b.max.x:b.min.x,i&2?b.max.y:b.min.y,i&4?b.max.z:b.min.z));
+  const fits=(d)=>{cam.position.copy(fromSph(t,{theta,phi,dist:d}));cam.lookAt(t);cam.updateMatrixWorld();
+    return corners.every(p=>{const q=p.clone().project(cam);return q.z<1&&Math.abs(q.x)<=0.86&&Math.abs(q.y)<=0.78;});};
+  let lo=0.5,hi=400; for(let i=0;i<30;i++){const m=(lo+hi)/2; if(fits(m)) hi=m; else lo=m;}
+  ORB.home={theta,phi,dist:hi,t}; ORB.maxD=hi*2.6; ORB.minD=0.6;
+  if(!ORB.touched){Object.assign(ORB.goal,{theta,phi,dist:hi});ORB.gt.copy(t);}
+}
+function orbClampTarget(v){const b=ORB.box;v.x=clamp(v.x,b.min.x,b.max.x);v.z=clamp(v.z,b.min.z,b.max.z);v.y=clamp(v.y,b.min.y+0.3,b.max.y);return v;}
+// the eye outside the padded box: from the turn point (inside it) out along the view line to where the line leaves the box
+function orbOutside(pos,t){
+  const lo=ORB.box.min.clone().subScalar(BOX_PAD), hi=ORB.box.max.clone().addScalar(BOX_PAD);
+  if(pos.x<=lo.x||pos.x>=hi.x||pos.y<=lo.y||pos.y>=hi.y||pos.z<=lo.z||pos.z>=hi.z) return 0;
+  const d=pos.clone().sub(t).normalize(); let tExit=Infinity;
+  for(const k of ['x','y','z']){ if(Math.abs(d[k])<1e-9) continue; const s=((d[k]>0?hi[k]:lo[k])-t[k])/d[k]; if(s>0) tExit=Math.min(tExit,s); }
+  pos.copy(t).addScaledVector(d,tExit+0.02); return tExit+0.02;
+}
+function orbHand(){ORB.hand=now();ORB.touched=true;}
+function orbTurn(dx,dy){
+  const k=2*Math.PI/Math.max(700,innerHeight),   // one turn per screen height; a small frame (the front page's hero) counts as 700 px, or a short swipe spun it twice
+     t=now(), dt=Math.max(1/120,t-ORB.lastMove);
+  ORB.goal.theta-=dx*k; ORB.goal.phi=clamp(ORB.goal.phi+dy*k,ORB_PHI[0],ORB_PHI[1]);
+  ORB.spin=clamp(ORB.spin*0.5+(-dx*k/dt)*0.5,-ORB_SPIN_MAX,ORB_SPIN_MAX); ORB.spinPhi=clamp(ORB.spinPhi*0.5+(dy*k/dt)*0.5,-ORB_SPIN_MAX,ORB_SPIN_MAX); ORB.lastMove=t; orbHand();
+}
+function orbZoom(f,cx,cy){
+  const d0=ORB.goal.dist, d1=clamp(d0*f,ORB.minD,ORB.maxD), g=d1/d0; if(Math.abs(g-1)<1e-6) return;
+  ORB.goal.dist=d1;
+  if(g<1&&cx!=null){
+    // the point under the pointer on the plane through the turn point that faces the eye (camera-controls dollyToCursor)
+    const ndc=V((cx/innerWidth)*2-1,-(cy/innerHeight)*2+1,0.5), ray=ndc.unproject(camera).sub(camera.position).normalize();
+    const n=camera.getWorldDirection(new THREE.Vector3()), den=ray.dot(n);
+    if(den>1e-4){const P=camera.position.clone().addScaledVector(ray,ORB.ct.clone().sub(camera.position).dot(n)/den);ORB.gt.lerp(P,1-g);}
+  }else if(g>1&&ORB.home) ORB.gt.lerp(ORB.home.t,Math.min(1,(g-1)*1.5));
+  orbClampTarget(ORB.gt); orbHand();
+}
+function orbReset(){
+  if(!ORB.home) return; const h=ORB.home, turns=Math.round((ORB.cur.theta-h.theta)/(2*Math.PI));
+  Object.assign(ORB.goal,{theta:h.theta+turns*2*Math.PI,phi:h.phi,dist:h.dist}); ORB.gt.copy(h.t); ORB.spin=ORB.spinPhi=0; ORB.hand=now();
+}
+function orbStep(t,dt,dragging){
+  if(!dragging){
+    ORB.goal.theta+=ORB.spin*dt; ORB.goal.phi=clamp(ORB.goal.phi+ORB.spinPhi*dt,ORB_PHI[0],ORB_PHI[1]);
+    const k=Math.exp(-dt/ORB_SPIN_TAU); ORB.spin*=k; ORB.spinPhi*=k;
+    if(!reduced){const ramp=smooth((t-ORB.hand-IDLE_AFTER)/IDLE_EASE); if(ramp>0) ORB.goal.theta+=IDLE_SPEED*ramp*dt;}
+  }
+  const st=dragging?ORB_DRAG_ST:ORB_ST, c=ORB.cur, g=ORB.goal, v=ORB.vel;
+  c.theta=smoothDamp(c.theta,g.theta,v,'theta',st,dt); c.phi=smoothDamp(c.phi,g.phi,v,'phi',st,dt); c.dist=smoothDamp(c.dist,g.dist,v,'dist',st,dt);
+  ORB.ct.x=smoothDamp(ORB.ct.x,ORB.gt.x,v,'x',st,dt); ORB.ct.y=smoothDamp(ORB.ct.y,ORB.gt.y,v,'y',st,dt); ORB.ct.z=smoothDamp(ORB.ct.z,ORB.gt.z,v,'z',st,dt);
+  const pos=fromSph(ORB.ct,c), pushed=orbOutside(pos,ORB.ct);
+  if(pushed){ // the wall stops the eye: what was asked past it is dropped, so going back out answers at once
+    if(g.dist<pushed){g.dist=pushed;} if(c.dist<pushed){c.dist=pushed;v.dist=0;}
+  }
+  camera.position.copy(pos); tgt.copy(ORB.ct);
+}
 function resetView(){
   picked=false; look=0; manual=false; blend=1; vTheta=vPhi=0; lastTouch=-99;
-  if(where===0) frozen=0; else wallOrbit={theta:WALL_VIEW.theta,phi:WALL_PHI,dist:fitD};
+  if(where===0){frozen=0;orbReset();} else wallOrbit={theta:WALL_VIEW.theta,phi:WALL_PHI,dist:fitD};
 }
 
 // hands
 const pointers=new Map(); let pinch=0;
 canvas.addEventListener('pointerdown',e=>{
   canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  canvas.classList.add('drag'); manual=true; lastTouch=now();
+  canvas.classList.add('drag'); manual=true; lastTouch=now(); if(where===0){ORB.spin=ORB.spinPhi=0;ORB.lastMove=now();orbHand();}
   if(pointers.size===2){const [p,q]=[...pointers.values()];pinch=Math.hypot(p.x-q.x,p.y-q.y);}
 });
 canvas.addEventListener('pointermove',e=>{
   if(!pointers.has(e.pointerId)||trans) return;
   const prev=pointers.get(e.pointerId), dx=e.clientX-prev.x, dy=e.clientY-prev.y;
   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); lastTouch=now();
+  if(where===0){
+    if(pointers.size===1) orbTurn(dx,dy);
+    else if(pointers.size===2){const [p,q]=[...pointers.values()],d=Math.hypot(p.x-q.x,p.y-q.y);if(pinch>0&&d>0)orbZoom(pinch/d,(p.x+q.x)/2,(p.y+q.y)/2);pinch=d;}
+    return;
+  }
   if(pointers.size===1){vTheta=-dx*0.0042;vPhi=dy*0.0042;orbitBy(vTheta,vPhi);}
   else if(pointers.size===2){const [p,q]=[...pointers.values()],d=Math.hypot(p.x-q.x,p.y-q.y);if(pinch>0&&d>0)zoomBy(pinch/d);pinch=d;}
 });
-const endPointer=e=>{pointers.delete(e.pointerId);if(!pointers.size)canvas.classList.remove('drag');lastTouch=now();};
+const endPointer=e=>{if(where===0&&now()-ORB.lastMove>0.08){ORB.spin=ORB.spinPhi=0;} // a hand held still, then lifted, throws nothing
+  if(pointers.size===2)pinch=0; pointers.delete(e.pointerId);if(!pointers.size)canvas.classList.remove('drag');lastTouch=now();};
 canvas.addEventListener('pointerup',endPointer); canvas.addEventListener('pointercancel',endPointer);
-canvas.addEventListener('wheel',e=>{if(window.DI_EMBED==='hero')return;e.preventDefault();if(trans)return;manual=true;lastTouch=now();zoomBy(Math.exp(e.deltaY*0.0012));},{passive:false});
+// in the hero the wheel scrolls the front page; Ctrl/Cmd + wheel (a touchpad pinch arrives as Ctrl + wheel) comes closer (the
+// cooperative-gesture rule of embedded maps)
+canvas.addEventListener('wheel',e=>{if(window.DI_EMBED==='hero'&&!e.ctrlKey&&!e.metaKey)return;e.preventDefault();if(trans)return;manual=true;lastTouch=now();
+  const f=Math.exp(clamp(e.deltaMode===1?e.deltaY*16:e.deltaY,-240,240)*0.0012); if(where===0) orbZoom(f,e.clientX,e.clientY); else zoomBy(f);},{passive:false});
 canvas.addEventListener('dblclick',resetView);
 addEventListener('keydown',e=>{
   if(e.target&&e.target.closest&&e.target.closest('button')) return;
@@ -449,7 +538,7 @@ addEventListener('keydown',e=>{
   else if(e.key==='ArrowRight') pickLook((look<0?0:look)+1);
   else if(e.key==='ArrowLeft') pickLook((look<0?0:look)-1);
   else if(e.key==='r'||e.key==='R') resetView();
-  else if(e.code==='Space'){manual=!manual;lastTouch=now();}
+  else if(e.code==='Space'){e.preventDefault(); if(where===0){const on=now()-ORB.hand>IDLE_AFTER; ORB.hand=on?now():now()-IDLE_AFTER; ORB.touched=true;} else {manual=!manual;lastTouch=now();}}
 });
 
 function resize(){
@@ -459,6 +548,7 @@ function resize(){
   camera.updateProjectionMatrix();
   uni.uPx.value=1.35*pr;
   const f=fitDistance(); if(where===1&&!trans) wallOrbit.dist*=f/fitD; fitD=f;
+  if(typeof ORB!=='undefined') orbHome();
 }
 addEventListener('resize',resize); resize();
 
@@ -492,6 +582,9 @@ function frame(){
       if(trans.to===1) wallOrbit=sphOf(camera.position,row.centre); else frozen=reduced?0:HOLD_AT;
       trans=null; blend=1; manual=false; placeFragments(t);
     }
+  }else if(where===0){
+    orbStep(t,dt,pointers.size>0);
+    frozen+=dt;   // the tour's clock still drives the yard's own look cycle (look -1), never the camera
   }else{
     if(!pointers.size&&(Math.abs(vTheta)+Math.abs(vPhi)>1e-5)){if(manual)orbitBy(vTheta,vPhi);vTheta*=0.9;vPhi*=0.9;}
     if(manual&&!pointers.size&&t-lastTouch>(where?1.8:7)){manual=false;if(where===1)wallOrbit=sphOf(camera.position,row.centre);}
@@ -546,8 +639,11 @@ function frame(){
   renderer.render(scene,camera);
 }
 buildCloud().catch(e=>{mark.textContent='could not load the cloud — '+e.message;});
-buildFragments().then(()=>{ready=true;resize();})
-  .catch(e=>{mark.textContent='could not load the wall — '+e.message;});
+buildFragments().then(()=>{ready=true;
+  const b=new THREE.Box3(); fragments.forEach(g=>{if(g.userData.only!=='wall') b.expandByObject(g.userData.solid);}); if(!b.isEmpty()) ORB.box.copy(b);
+  resize(); if(!ORB.touched){Object.assign(ORB.cur,ORB.goal);ORB.ct.copy(ORB.gt);}})
+  .catch(e=>{mark.textContent='could not load the building — '+e.message;});
+orbHome(); Object.assign(ORB.cur,ORB.goal); ORB.ct.copy(ORB.gt); ORB.hand=now()-IDLE_AFTER+1.5;   // framed from the first frame; the idle turn eases in after 1.5 s
 renderer.setAnimationLoop(frame);
 </script>
 

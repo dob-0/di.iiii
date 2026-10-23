@@ -11,6 +11,7 @@
     },
     {
       "label": "Բակը · Yard",
+      "key": "yard",
       "file": "aren/yard.html"
     }
   ],

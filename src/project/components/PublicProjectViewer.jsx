@@ -380,7 +380,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const previewDocument = buildPresentationPreviewDocument(
         rawHtml,
         typeof window !== 'undefined' ? window.location.search : '',
-        typeof window !== 'undefined' ? window.location.origin : ''
+        typeof window !== 'undefined' ? window.location.origin : '',
+        typeof window !== 'undefined' ? window.location.hash : ''
     )
     const xrDefaultMode = publishState.xrDefaultMode || 'none'
     const codeUrl = presentationState.codeSourceType === 'url' ? presentationState.codeUrl?.trim() : ''

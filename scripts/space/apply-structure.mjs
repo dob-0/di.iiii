@@ -5,7 +5,7 @@
 //   node scripts/space/apply-structure.mjs STRUCTURE.json --api URL [--apply] [--backup FILE]
 //   node scripts/space/apply-structure.mjs --undo BACKUP.json --api URL [--apply]
 import fs from 'node:fs'
-import { relinkHtml, userAgent } from './pages-lib.mjs'
+import { relinkHtml, relinkPortals, userAgent } from './pages-lib.mjs'
 
 const args = process.argv.slice(2)
 const flag = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined }
@@ -88,14 +88,16 @@ if (relinks.length) {
   for (const p of before.projects) {
     const res = await call('GET', `/api/projects/${p.id}/document`); const doc = res.document || res
     let html = doc.presentationState?.codeHtml
-    if (!html) continue
+    let entities = doc.entities
     const notes = []
     for (const [from, to] of relinks) {
-      const r = relinkHtml(html, from, to)
-      if (r.count) { notes.push(`${r.count} × ${from} -> ${to}`); html = r.html }
+      if (html) { const r = relinkHtml(html, from, to); if (r.count) { notes.push(`${r.count} × ${from} -> ${to}`); html = r.html } }
+      // a scene's doors too (N1248): the hall kept a door to a hidden project after every page was repointed
+      if (Array.isArray(entities)) { const r = relinkPortals(entities, from, to, s.space); if (r.count) { notes.push(`${r.count} door(s) ${from} -> ${to}`); entities = r.entities } }
     }
     if (!notes.length) continue
-    await step(`relink ${p.id}: ${notes.join(', ')}`, () => call('PUT', `/api/projects/${p.id}/document`, { ...doc, presentationState: { ...doc.presentationState, codeHtml: html } }))
+    const next = { ...doc, ...(Array.isArray(doc.entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}) } }
+    await step(`relink ${p.id}: ${notes.join(', ')}`, () => call('PUT', `/api/projects/${p.id}/document`, next))
   }
 }
 if (s.order) await step('order', () => call('PUT', `/api/spaces/${s.space}/projects/order`, { ids: [...s.order, ...unplaced] }))

@@ -43,3 +43,22 @@ describe('yard.html: the photos land on their own faces', () => {
     expect(fn('loadImage')).toMatch(/new Image\(\)/)
   })
 })
+
+// N1248 (owner 2026-10-23: "movement in the yard so bad"): the yard follows the hands, not the 78 s tour; the eye stays
+// outside the building and above the ground; the hero lets the wheel scroll the front page.
+describe('yard.html: moving in the yard (N1248)', () => {
+  it('the camera in the yard is the orbit, never the tour pose', () => {
+    expect(page).toMatch(/\}else if\(where===0\)\{\n    orbStep\(t,dt,pointers\.size>0\);/)
+  })
+  it('keeps the eye out of the building box, the turn point inside it, inertia capped, idle only after 30 s', () => {
+    expect(page).toMatch(/function orbOutside\(pos,t\)/)
+    expect(page).toMatch(/pushed=orbOutside\(pos,ORB\.ct\)/)
+    expect(page).toMatch(/orbClampTarget\(ORB\.gt\)/)
+    expect(page).toMatch(/ORB_PHI=\[0\.05,1\.35\]/)
+    expect(page).toMatch(/ORB_SPIN_MAX=1\.5/)
+    expect(page).toMatch(/IDLE_AFTER=30/)
+  })
+  it('in the hero the wheel scrolls the page unless Ctrl/Cmd is held', () => {
+    expect(page).toMatch(/if\(window\.DI_EMBED==='hero'&&!e\.ctrlKey&&!e\.metaKey\)return;/)
+  })
+})

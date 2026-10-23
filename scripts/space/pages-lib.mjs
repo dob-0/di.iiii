@@ -34,6 +34,25 @@ export function repointAssets(html, fromId, toId) {
   return { html: out, hashes: [...hashes] }
 }
 
+// The same repointing for a scene's doors (portal entities): a door whose destination is `from` goes to `to` instead,
+// written into its reference (spaceId, projectId, anchor). Owner 2026-10-23 (N1248): the hall's door "ԱՇԽԱՐՀՆԵՐ" still
+// went to /dilijan/worlds, a private camp tool, after every code page had been repointed. Pure; returns a new list.
+const pathOf = (r, space) => `/${r.spaceId || space}${r.projectId ? `/${r.projectId}` : ''}${r.anchor ? `#${String(r.anchor).replace(/^#/, '')}` : ''}`
+export function relinkPortals(entities, from, to, space = '') {
+  const m = /^\/([\w-]+)(?:\/([\w-]+))?(?:#([A-Za-z][\w:.-]*))?$/.exec(to)
+  if (!m) throw new Error(`a door goes to /space[/project][#part]: ${to}`)
+  let count = 0
+  const out = (entities || []).map((e) => {
+    const r = e?.components?.reference
+    if (!r || r.mode === 'embed' || pathOf(r, space) !== from) return e
+    count += 1
+    const reference = { ...r, spaceId: m[1], projectId: m[2] || '' }
+    if (m[3]) reference.anchor = m[3]; else delete reference.anchor
+    return { ...e, components: { ...e.components, reference } }
+  })
+  return { entities: out, count }
+}
+
 export const MARK = '<!-- di:combined-pages v1 -->'
 export const isCombined = (html) => typeof html === 'string' && html.includes(MARK)
 
@@ -62,7 +81,13 @@ const HAND_ON = String.raw`function handOn(h){
   return tag+h;
 }`
 
-// One page, a tab per source page. Only the open tab's page is loaded: a tab switch replaces the frame, so the old
+// A tab's name in an address: `key` if the spec gives one, else its project id or file name without `.html`, lower case.
+export const tabKey = (p, i) => String(p.key || p.id || '').toLowerCase().replace(/\.html?$/, '').replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || String(i + 1)
+
+// One page, a tab per source page. A link chooses the tab it opens with `?tab=<key>` (or `?tab=<n>`, counted from 1): owner
+// 2026-10-23 (N1248), "'into the yard' not goes into the work", the door to the yard opened on the first tab. The viewer hands
+// the address's query to the page as window.diiPageQuery (presentationPreviewDocument.js), so the choice survives the srcdoc.
+// Only the open tab's page is loaded: a tab switch replaces the frame, so the old
 // page (its 3D view, its camera) is unloaded before the next one starts. The strip sits ABOVE the frame, never on top
 // of it, so it covers none of a page's own controls at any width.
 export function buildCombinedPage({ title, pages, links = [], allow = ALLOW, start = 0 }) {
@@ -91,6 +116,7 @@ nav button:focus-visible,nav a:focus-visible{outline:2px solid var(--ink);outlin
 <script>
 const PAGES=${json},ALLOW=${JSON.stringify(allow)};
 const btn=[...document.querySelectorAll('nav button')];let view=document.getElementById('view');
+const KEYS=${JSON.stringify(pages.map(tabKey))};
 ${HAND_ON}
 function show(i){
   const f=document.createElement('iframe');f.id='view';f.title=btn[i].textContent;f.allow=ALLOW;f.srcdoc=handOn(PAGES[i]);
@@ -98,6 +124,7 @@ function show(i){
   btn.forEach((b,j)=>b.setAttribute('aria-pressed',String(j===i)));
 }
 btn.forEach((b,i)=>b.addEventListener('click',()=>show(i)));
-show(${first});
+let asked=-1;try{const q=new URLSearchParams(window.diiPageQuery||'').get('tab');if(q){asked=KEYS.indexOf(q.toLowerCase());if(asked<0&&/^[0-9]+$/.test(q))asked=Math.min(+q,KEYS.length)-1;}}catch(e){}
+show(asked>=0?asked:${first});
 </script></body></html>`
 }

@@ -11,7 +11,7 @@ import { execFile } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { JSDOM } from 'jsdom'
-import { ALLOW, MARK, buildCombinedPage, isCombined, relinkHtml, repointAssets, userAgent } from './pages-lib.mjs'
+import { ALLOW, MARK, buildCombinedPage, isCombined, relinkHtml, relinkPortals, repointAssets, userAgent } from './pages-lib.mjs'
 
 const require = createRequire(import.meta.url)
 const { classifyUserAgent } = require('../../serverXR/src/appVisitors.js')
@@ -125,6 +125,21 @@ describe('repointAssets', () => {
   })
 })
 
+describe('relinkPortals (a scene\'s doors, N1248)', () => {
+  const door = (id, r) => ({ id, type: 'portal', components: { reference: { mode: 'portal', label: id, ...r } } })
+  it('repoints a door to a hidden project, with the part of the page, and leaves the rest alone', () => {
+    const ents = [door('a', { spaceId: 'dilijan', projectId: 'worlds' }), door('b', { spaceId: 'dilijan', projectId: 'the-yard' }), { id: 'c', type: 'box', components: {} }, door('d', { projectId: 'worlds', mode: 'embed' })]
+    const r = relinkPortals(ents, '/dilijan/worlds', '/dilijan#works', 'dilijan')
+    expect(r.count).toBe(1)
+    expect(r.entities[0].components.reference).toMatchObject({ spaceId: 'dilijan', projectId: '', anchor: 'works', label: 'a' })
+    expect(r.entities[1]).toBe(ents[1]); expect(r.entities[3]).toBe(ents[3])
+    expect(ents[0].components.reference.projectId).toBe('worlds') // pure
+  })
+  it('refuses a destination that is not /space[/project][#part]', () => {
+    expect(() => relinkPortals([], '/a', 'https://x.test')).toThrow()
+  })
+})
+
 describe('buildCombinedPage', () => {
   const pages = [{ label: 'AirCanvas', html: airHtml }, { label: 'Բակը · Yard', html: yardHtml }, { label: '<b>Wall</b>', html: wallHtml }]
 
@@ -182,6 +197,16 @@ describe('buildCombinedPage', () => {
     expect(tab.diiPageQuery).toBe(query)
     const bare = new JSDOM(buildCombinedPage({ pages: [{ label: 'a', html: air }, { label: 'b', html: airHtml }] }), { runScripts: 'dangerously' })
     expect(bare.window.document.querySelector('iframe').srcdoc).toBe(air)
+  })
+  it('?tab=<key> (or a number from 1) opens that tab: a door into the yard lands in the yard (N1248)', () => {
+    const two = [{ label: 'AirCanvas', id: 'aircanvas', html: airHtml }, { label: 'Yard', id: 'yard.html', html: yardHtml }]
+    const open = (query) => viewerHands(buildCombinedPage({ pages: two }), '', query).window.document
+    const pressed = (doc) => [...doc.querySelectorAll('nav button')].map((b) => b.getAttribute('aria-pressed'))
+    expect(pressed(open('?tab=yard'))).toEqual(['false', 'true'])
+    expect(open('?tab=yard').querySelector('iframe').srcdoc).toContain(yardHtml.slice(-30))
+    expect(pressed(open('?tab=2'))).toEqual(['false', 'true'])
+    expect(pressed(open('?tab=nope'))).toEqual(['true', 'false'])
+    expect(pressed(open(''))).toEqual(['true', 'false'])
   })
   it('refuses an empty list', () => {
     expect(() => buildCombinedPage({ pages: [] })).toThrow()
