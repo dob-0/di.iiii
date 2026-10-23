@@ -22,6 +22,8 @@ export const parseArgs = (argv) => {
         if (name === 'key') { args.flags.key = argv[++i]; continue }
         // `di move PROJECT --to SPACE [--token -]`
         if (name === 'to') { args.flags.to = argv[++i]; continue }
+        // `di post draft --text … --link … --media a.png,b.png --to telegram,bluesky`
+        if (name === 'text' || name === 'link' || name === 'media') { args.flags[name] = argv[++i]; continue }
         if (name === 'token') { args.flags.token = argv[++i]; continue }
         if (name === 'at') { args.flags.at = argv[++i]; continue }
         if (name === 'build') { args.flags.build = argv[++i]; continue }

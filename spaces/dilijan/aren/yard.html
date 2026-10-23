@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="hy">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Բակը · Պատը — aren · Dilijan 26.08.2026</title>
+<!-- Aren's yard and wall as ONE view (owner 2026-10-21, N1123). Բակը is the yard page's own texturing: its scan and its
+     photos, drawn as photographed, under its measured cloud and its tour; only the wall wears the wall page's sharper
+     photo, at the exact place it was scanned (N1131, measured: spaces/dilijan/aren/README.md). Պատը: the wall steps out
+     and the pieces stand as one building, an elevation (N1145): facades parallel, level, on one ground line, in the
+     order of the building (spaces/dilijan/aren/elevation.py). One canvas, one
+     renderer: one 3D view live. Source: spaces/dilijan/aren/yard.html in di.iiii; the originals are kept (the-yard's
+     page as yard-original, elevation). -->
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#F4F2ED}
+  /* width/height: without them the canvas shows at its drawing-buffer size, 2x the screen on any retina display */
+  #c{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none;outline:none}
+  #c.drag{cursor:grabbing}
+  #mark{position:fixed;right:16px;top:20px;font:11px/1 Helvetica,Arial,sans-serif;letter-spacing:.22em;color:#111;
+        user-select:none;pointer-events:none}
+  #mark b{font-weight:400;color:#D92B1C}
+  #bar{position:fixed;left:0;right:0;bottom:14px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
+       gap:6px 14px;padding:0 12px;opacity:0;transition:opacity 1.2s ease;pointer-events:none}
+  #bar.on{opacity:1}
+  #bar.on>*{pointer-events:auto}
+  #where{display:flex}
+  #where button{font:500 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em;color:#111;
+       background:rgba(244,242,237,.88);border:1px solid #111;border-radius:0;padding:11px 12px;margin:0 0 0 -1px;cursor:pointer}
+  #where button[aria-pressed=true]{background:#111;color:#F4F2ED}
+  #where button:disabled{opacity:.4;cursor:wait}
+  #looks{display:flex;flex-wrap:wrap;justify-content:center}
+  #looks button{font:500 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em;color:#111;
+       background:rgba(244,242,237,.88);border:1px solid #111;border-radius:0;padding:9px 10px;margin:0 0 0 -1px;cursor:pointer}
+  #looks button.on{background:#111;color:#F4F2ED}
+  #looks button:hover:not(.on){background:#e6e3dc}
+  button:focus-visible{outline:2px solid #111;outline-offset:2px}
+  @media (max-width:560px){#mark .d{display:none}}
+  @media (prefers-reduced-motion:reduce){#bar{transition:none}}
+</style>
+</head>
+<body>
+<canvas id="c" tabindex="0" aria-label="Aren's yard in Dilijan, scanned. Drag to look around, pinch or scroll to come closer."></canvas>
+<div id="mark">aren&nbsp;&nbsp;<b>·</b>&nbsp;&nbsp;dilijan<span class="d">&nbsp;&nbsp;<b>·</b>&nbsp;&nbsp;26.08.2026</span></div>
+<div id="bar">
+  <div id="where" role="group" aria-label="arrangement"><button type="button" aria-pressed="true">Բակը · The yard</button><button type="button" aria-pressed="false" disabled>Պատը · The wall</button></div>
+  <div id="looks" role="group" aria-label="view modes"></div>
+</div>
+<script src="/vendor/three@0.128.0/three.min.js"></script>
+<script>window.THREE||document.write('<script src="/vendor/three@0.128.0/three.min.js"><\/script>')</script>
+<script>
+// ---------- data: both live in the project's own assets ----------
+// Each URL is written whole, so scripts/space/combine-pages.mjs sees it (and copies the asset into the target project).
+const fetchAsset=(url,what)=>fetch(url,{mode:'cors'}).then(r=>{if(!r.ok)throw new Error(what+' '+r.status);return r.arrayBuffer();});
+// the yard's measured cloud: 89 999 points, quantised position + colour, deflate-raw (from the yard page)
+const PMETA={"n": 89999, "min": [-5.02, 0.0, -3.38], "range": [11.11, 1.75, 6.76]};
+const CLOUD=fetchAsset('/serverXR/api/projects/the-yard/assets/a20d668825b2a369fc0eb2dbeb8c437c0ecbe38e302805795e7726da145463e9','cloud');
+// the wall page's pack: three fragments (wall, cabin, courtyard), photos 2048/2048/1024 px, and a contact shadow
+const PACK=fetchAsset('/serverXR/api/projects/the-yard/assets/e30e26445e9f25c62e5c21aa14d65941d7b1f102adf4ac20ae5b5416d197e5e8','fragments');
+// Where each fragment stands in the yard: rotation (quaternion x,y,z,w) and position (metres). The wall and the courtyard
+// share their photo atlases with the yard's parts wall_right and main, so the same UV is the same surface point: the pose
+// is a rigid fit through those UVs (spaces/dilijan/aren/register.py; residual median 0.01 and 0.03 cm). The wall leans
+// 4.3 degrees in the yard and the wall page stood it upright, so a turn about the vertical alone left it up to 8 cm off.
+// The cabin shares no atlas: it is the yard's back wall (wall_mid) scanned apart at 1.19x (elevation.py registers it by
+// its facade, N1145). wall_mid stands for it in Բակը, so it shows only in the wall.
+const IN_YARD={"wall":{"q":[0.02826,-0.907906,0.024653,0.417493],"t":[4.5231,0.8936,0.4268]},"courtyard":{"q":[0,0,0,1],"t":[0.0019,0.8435,-0.002]}};
+// Պատը as one building, an elevation (owner 2026-10-21, N1145: "look walls parallel, windows parallel it the one
+// building"). Each fragment is turned so its photographed facade lies on the courtyard's facade plane, levelled (the
+// projection-profile roll of its edges), its foot on the courtyard's ground line, in the order of the building with the
+// gaps measured in the yard scan (round the corner, along the wall). s: the cabin is the yard's back wall (wall_mid)
+// scanned apart at 1.19x its size; its scale brings it to the yard's. The courtyard stays where it is. These two lines
+// are written by spaces/dilijan/aren/elevation.py --write; WALL_VIEW faces the courtyard's facade (theta, radians) and
+// frames everything drawn (its width spans every vertex along the level line, tent and divider included).
+const IN_WALL={"wall":{"s":1.0,"q":[0.02826,-0.907906,0.024653,0.417493],"t":[4.5231,0.8936,0.4268]},"courtyard":{"s":1.0,"q":[0.0,0.0,0.0,1.0],"t":[0.0019,0.8435,-0.002]},"cabin":{"s":0.83978,"q":[-0.012045,0.998331,-0.020571,0.052605],"t":[2.1334,0.5498,1.8336]}};
+const FOOT=[[3.6644,1.9468],[3.4497,3.7659],[0.4099,3.6194],[-3.4499,3.9788],[-3.6432,1.9581],[0.3855,1.578],[3.6644,1.9468]];
+const WALL_VIEW={"theta":-1.67557,"phi":0.42,"centre":[0.541,0.877,-0.002],"width":6.626,"height":1.755,"foot":0.1491};
+// The yard's own surfaces (the yard page's mesh and photos), shown in Բակը as the yard page showed them. 'main' is the
+// same surface as the wall page's courtyard (same atlas, same UVs) with its full geometry (98 % of it within 3 cm of the
+// cloud, the courtyard 93 %), so in the yard it stands in for the courtyard, which shows only in Պատը. wall_right is not
+// drawn: the wall fragment covers it at its exact pose with a sharper photo (the same fit to the cloud: r 0.99).
+const YARD_MESH='/serverXR/api/projects/the-yard/assets/8bf0c55fa6878b14d42a64de7a4aaaafd2cc0bac928763080422860e94e5f4a0', YARD_Q={gmin:[-5.02,0.0,-3.38],grng:[11.11,1.75,6.76]};
+const YARD_PARTS=[
+  {name:'main',nv:48911,nf:82991,off:0,photo:'/serverXR/api/projects/the-yard/assets/61c29ae555ac889e1c8c52cf58e498af7cc79519652a027aecd0dd6d2ecba128',standsFor:'courtyard'},
+  {name:'wall_mid',nv:29189,nf:49999,off:987056,photo:'/serverXR/api/projects/the-yard/assets/5f72ae52da1f59fcf0d39f2f4afe7f6a684420b18ae916f0a2b8f34fc23f83d9'}];
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const mark=document.getElementById('mark');
+const PAPER=0xF4F2ED;
+const now=()=>performance.now()/1000;
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
+const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+
+// ---------- renderer (global names: the VR/AR entry at the end reaches renderer and scene) ----------
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+const PR_CAP=Math.min(devicePixelRatio||1,1.5);
+let pr=Math.min(PR_CAP,1.25);   // start conservative, climb only while frames stay fast (the wall page's rule)
+renderer.setPixelRatio(pr); renderer.setClearColor(PAPER,1);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(PAPER);
+const camera=new THREE.PerspectiveCamera(46,1,0.05,300);
+
+// ---------- the yard's cloud, with its red reveal front (from the yard page) ----------
+const uni={uFront:{value:-5.6},uPx:{value:1.35*pr},uTime:{value:0},uFade:{value:1}};
+async function inflate(buf){
+  if(typeof DecompressionStream==='undefined') throw new Error('browser too old');
+  const st=new Blob([new Uint8Array(buf)]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(st).arrayBuffer());
+}
+let cloud=null;
+async function buildCloud(){
+  const pb=await inflate(await CLOUD), n=PMETA.n;
+  const q=new Uint16Array(pb.buffer,0,n*3), cols=new Uint8Array(pb.buffer,n*6,n*3);
+  const pos=new Float32Array(n*3), col=new Float32Array(n*3), rnd=new Float32Array(n);
+  for(let i=0;i<n;i++){for(let k=0;k<3;k++){pos[i*3+k]=PMETA.min[k]+q[i*3+k]/65535*PMETA.range[k];col[i*3+k]=cols[i*3+k]/255;}rnd[i]=Math.random();}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setAttribute('aColor',new THREE.BufferAttribute(col,3));
+  g.setAttribute('aRnd',new THREE.BufferAttribute(rnd,1));
+  const m=new THREE.ShaderMaterial({uniforms:uni,
+   vertexShader:`attribute vec3 aColor; attribute float aRnd;
+    uniform float uFront,uPx,uTime,uFade;
+    varying vec3 vC; varying float vEdge; varying float vVis;
+    void main(){
+      vec4 mv=modelViewMatrix*vec4(position,1.0);
+      float d=uFront-position.x;
+      vEdge=smoothstep(0.22,0.0,abs(d+0.06));
+      vVis=step(0.0,d)*step(0.01,uFade);
+      vC=aColor;
+      float tw=0.85+0.3*sin(uTime*(0.6+aRnd)+aRnd*6.2831);
+      gl_PointSize=uPx*(0.55+3.2/max(1.5,-mv.z))*(1.0+1.8*vEdge)*tw*vVis*uFade;
+      gl_Position=projectionMatrix*mv;}`,
+   fragmentShader:`precision mediump float;
+    varying vec3 vC; varying float vEdge; varying float vVis;
+    void main(){
+      if(vVis<0.5) discard;
+      vec2 p=gl_PointCoord-0.5; if(dot(p,p)>0.25) discard;
+      gl_FragColor=vec4(mix(vC,vec3(0.851,0.169,0.110),vEdge),1.0);}`});
+  cloud=new THREE.Points(g,m); scene.add(cloud);
+}
+
+// ---------- the wall's fragments (from the wall page) ----------
+function unpack(buf){
+  const dv=new DataView(buf), jl=dv.getUint32(4,true);
+  const manifest=JSON.parse(new TextDecoder().decode(new Uint8Array(buf,8,jl))), base=8+jl;
+  manifest.models.forEach(m=>{
+    const q=new Uint16Array(buf,base+m.pos,m.nv*3), quv=new Uint16Array(buf,base+m.uv,m.nv*2);
+    const pos=new Float32Array(m.nv*3), uv=new Float32Array(m.nv*2);
+    const s=[0,1,2].map(k=>(m.qmax[k]-m.qmin[k])/65535);
+    for(let i=0;i<m.nv;i++){
+      for(let k=0;k<3;k++) pos[i*3+k]=m.qmin[k]+q[i*3+k]*s[k];
+      uv[i*2]=quv[i*2]/65535; uv[i*2+1]=quv[i*2+1]/65535;
+    }
+    m.positions=pos; m.uvs=uv;
+    m.indices=new Uint16Array(buf,base+m.idx,m.nf*3).slice();
+    m.texBytes=new Uint8Array(buf,base+m.tex,m.texLen);
+  });
+  manifest.shadowBytes=new Uint8Array(buf,base+manifest.shadow.off,manifest.shadow.len);
+  return manifest;
+}
+// Through an <img>, so three.js can flip it on upload (flipY). An ImageBitmap ignores flipY.
+function loadImage(src){
+  return new Promise((res,rej)=>{const img=new Image();img.crossOrigin='anonymous';
+    const url=typeof src==='string'?src:URL.createObjectURL(new Blob([src],{type:'image/webp'}));
+    img.onload=()=>{if(typeof src!=='string')URL.revokeObjectURL(url);res(img);};img.onerror=()=>rej(new Error('photo'));img.src=url;});
+}
+const COMMON=`
+  float lum(vec3 c){return dot(c,vec3(0.299,0.587,0.114));}
+  vec3 rgb2hsv(vec3 c){
+    vec4 K=vec4(0.0,-1.0/3.0,2.0/3.0,-1.0);
+    vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g));
+    vec4 q=mix(vec4(p.xyw,c.r),vec4(c.r,p.yzx),step(p.x,c.r));
+    float d=q.x-min(q.w,q.y); float e=1.0e-10;
+    return vec3(abs(q.z+(q.w-q.y)/(6.0*d+e)),d/(q.x+e),q.x);
+  }
+  // grayscale except the red chalk, which stays as a muted red
+  vec3 monoRed(vec3 t,float redSat){
+    float L=lum(t); vec3 hsv=rgb2hsv(t); float h=hsv.x*360.0;
+    float isRed=clamp(step(h,22.0)+step(335.0,h),0.0,1.0)*step(0.35,hsv.y)*step(0.25,hsv.z);
+    vec3 red=vec3(L)+(t-vec3(L))*redSat*1.6;
+    return mix(vec3(L),red,isRed);
+  }`;
+const SOLID_VS=`
+  varying vec2 vUv; varying vec3 vN; varying float vX;
+  void main(){
+    vUv=uv; vN=normalize(mat3(modelMatrix)*normal);
+    vec4 w=modelMatrix*vec4(position,1.0); vX=w.x;
+    gl_Position=projectionMatrix*viewMatrix*w;
+  }`;
+const SOLID_FS=COMMON+`
+  uniform sampler2D map; uniform vec3 lightDir; uniform float ambient; uniform int mode;
+  uniform float scanX; uniform vec3 paper; uniform float desat; uniform float redSat; uniform float opacity; uniform float photo;
+  varying vec2 vUv; varying vec3 vN; varying float vX;
+  void main(){
+    vec3 n=normalize(vN); if(!gl_FrontFacing) n=-n;
+    float sh=ambient+(1.0-ambient)*max(dot(n,lightDir),0.0);
+    vec3 t=texture2D(map,vUv).rgb; vec3 c;
+    if(mode==0){c=mix(mix(vec3(lum(t)),t,desat)*sh,t,photo);}   // photo 1: as photographed (the yard page); 0: the wall page's light
+    else if(mode==1){c=monoRed(t,redSat)*sh;}
+    else{
+      vec3 col=mix(vec3(lum(t)),t,desat)*sh; vec3 mono=monoRed(t,redSat)*sh;
+      float d=vX-scanX;
+      vec3 basec=d>0.0?mix(paper,mono,0.28):mono;
+      c=mix(basec,col,1.0-smoothstep(0.22,0.55,abs(d)));
+      c=mix(c,vec3(0.72,0.20,0.17),(1.0-smoothstep(0.0,0.018,abs(d)))*0.9);
+    }
+    gl_FragColor=vec4(c,opacity);
+  }`;
+const POINT_VS=`
+  uniform float proj; uniform float worldSize; varying vec2 vUv;
+  void main(){
+    vUv=uv; vec4 mv=modelViewMatrix*vec4(position,1.0);
+    gl_PointSize=clamp(worldSize*proj/-mv.z,1.0,14.0);
+    gl_Position=projectionMatrix*mv;
+  }`;
+const POINT_FS=COMMON+`
+  uniform sampler2D map; uniform float redSat; varying vec2 vUv;
+  void main(){
+    vec2 d=gl_PointCoord-0.5; if(dot(d,d)>0.25) discard;
+    vec3 c=monoRed(texture2D(map,vUv).rgb,redSat);
+    gl_FragColor=vec4(mix(c,vec3(1.0),0.05),1.0);
+  }`;
+const shared={mode:{value:0},photo:{value:1},scanX:{value:0},lightDir:{value:V(-0.4,1.0,0.8).normalize()},ambient:{value:0.55},
+  paper:{value:new THREE.Color(PAPER)},desat:{value:0.85},redSat:{value:0.55},proj:{value:1000},worldSize:{value:0.026}};
+const fragments=[];
+let shadowMat=null, row=null;       // row: the wall arrangement's frame (centre, width, height, x range)
+const OFF=new THREE.Vector3();      // wall page coordinates -> yard coordinates (the courtyard does not move)
+const SHADOW_OPACITY=0.15;
+// flipY: the scans' UVs expect the photo the usual way up. Measured 2026-10-21 (spaces/dilijan/aren/texcheck.py): with
+// flipY=true every surface's seams agree (r 0.72-0.94) and, at its exact place, its photo matches the cloud's own colours
+// (10 cm patches r 0.97-0.99); with flipY=false, the wall page's setting, both are about 0: every face showed another part
+// of the photo (the owner: "all textures in not the right place"). The shadow keeps the wall page's setting (not measured).
+function makeTexture(img,flipY=true){
+  const tex=new THREE.Texture(img); tex.flipY=flipY; tex.needsUpdate=true;
+  tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+  tex.minFilter=THREE.LinearMipmapLinearFilter; tex.magFilter=THREE.LinearFilter;
+  return tex;
+}
+function buildFragment(m,img,only,opts){
+  opts=opts||{};
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(m.positions,3));
+  geo.setAttribute('uv',new THREE.BufferAttribute(m.uvs,2));
+  geo.setIndex(new THREE.BufferAttribute(m.indices,1));
+  geo.computeVertexNormals();
+  const tex=makeTexture(img);
+  const op={value:0};
+  const solid=new THREE.Mesh(geo,new THREE.ShaderMaterial({vertexShader:SOLID_VS,fragmentShader:SOLID_FS,side:THREE.DoubleSide,transparent:true,
+    uniforms:{map:{value:tex},mode:shared.mode,photo:shared.photo,scanX:shared.scanX,lightDir:shared.lightDir,ambient:shared.ambient,paper:shared.paper,
+      desat:shared.desat,redSat:shared.redSat,opacity:op}}));
+  // wire: paper fill (hidden-line) + ink lines
+  const fill=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:PAPER,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1.5,polygonOffsetUnits:2}));
+  const wire=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x141414,wireframe:true,transparent:true,opacity:0.42}));
+  fill.visible=wire.visible=false;
+  const group=new THREE.Group(); group.add(solid,fill,wire);
+  const y=only==='yard'?{q:[0,0,0,1],t:[0,0,0]}:IN_YARD[m.name]||{q:[0,0,0,1],t:m.center};
+  const w=only==='yard'?null:IN_WALL[m.name];        // Պատը: the elevation's pose (and the scale of a piece scanned apart)
+  // stay: never moves (shown in one arrangement only); swap: the same surface as another part, so it changes at once
+  group.userData={solid,fill,wire,points:null,tex,model:m,op,only,stay:!!opts.stay,swap:!!opts.swap,fade:only==='wall'?0:1,
+    yard:{p:new THREE.Vector3().fromArray(y.t),q:y.q?new THREE.Quaternion().fromArray(y.q):new THREE.Quaternion().setFromAxisAngle(V(0,1,0),(y.yaw||0)*Math.PI/180)},
+    wall:w?{p:new THREE.Vector3().fromArray(w.t),q:new THREE.Quaternion().fromArray(w.q)}:{p:new THREE.Vector3().fromArray(m.center).add(OFF),q:new THREE.Quaternion()}};
+  if(w&&w.s) group.scale.setScalar(w.s);
+  group.position.copy(group.userData.yard.p); group.quaternion.copy(group.userData.yard.q);
+  scene.add(group);
+  return group;
+}
+// the cloud of a fragment (the wall page's 'cloud' look) is built the first time it is asked for
+function ensurePoints(g){
+  if(g.userData.points) return g.userData.points;
+  const m=g.userData.model;
+  const points=new THREE.Points(samplePoints(m,Math.round(m.area*2600)),new THREE.ShaderMaterial({vertexShader:POINT_VS,fragmentShader:POINT_FS,
+    uniforms:{map:{value:g.userData.tex},redSat:shared.redSat,proj:shared.proj,worldSize:shared.worldSize}}));
+  g.add(points); g.userData.points=points;
+  return points;
+}
+function samplePoints(m,count){
+  const P=m.positions,U=m.uvs,I=m.indices,nf=m.nf,cum=new Float64Array(nf);let acc=0;
+  for(let f=0;f<nf;f++){
+    const i0=I[f*3]*3,i1=I[f*3+1]*3,i2=I[f*3+2]*3;
+    const ax=P[i1]-P[i0],ay=P[i1+1]-P[i0+1],az=P[i1+2]-P[i0+2],bx=P[i2]-P[i0],by=P[i2+1]-P[i0+1],bz=P[i2+2]-P[i0+2];
+    const cx=ay*bz-az*by,cy=az*bx-ax*bz,cz=ax*by-ay*bx;
+    acc+=Math.sqrt(cx*cx+cy*cy+cz*cz)*0.5; cum[f]=acc;
+  }
+  const pos=new Float32Array(count*3),uv=new Float32Array(count*2);
+  for(let k=0;k<count;k++){
+    const r=Math.random()*acc;let lo=0,hi=nf-1;
+    while(lo<hi){const mid=(lo+hi)>>1;if(cum[mid]<r)lo=mid+1;else hi=mid;}
+    const i0=I[lo*3],i1=I[lo*3+1],i2=I[lo*3+2];
+    let u=Math.random(),v=Math.random(); if(u+v>1){u=1-u;v=1-v;} const w=1-u-v;
+    for(let d=0;d<3;d++) pos[k*3+d]=w*P[i0*3+d]+u*P[i1*3+d]+v*P[i2*3+d];
+    for(let d=0;d<2;d++) uv[k*2+d]=w*U[i0*2+d]+u*U[i1*2+d]+v*U[i2*2+d];
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+  return g;
+}
+// The wall page baked one contact shadow under its row. Each fragment takes the part under it (cut halfway between
+// neighbours) and carries it as a child, so the shadow stays under its piece wherever the elevation stands it (physics
+// first: no shadow where nothing stands). A part lies at its fragment's own lowest point.
+// The building's footprint from OpenStreetMap (spaces/dilijan/building-footprint.json, ODbL), brought into the scan's
+// frame by building.py (FOOT, plan x z) and drawn as one thin ink line on the ground line of the facades (WALL_VIEW.foot).
+let footMat=null;
+function buildFootprint(){
+  if(typeof FOOT==='undefined'||!FOOT.length) return;
+  const y=WALL_VIEW.foot??0, g=new THREE.BufferGeometry().setFromPoints(FOOT.map(([x,z])=>V(x,y,z)));
+  footMat=new THREE.LineBasicMaterial({color:0x141414,transparent:true,opacity:0,depthWrite:false});
+  scene.add(new THREE.LineLoop(g,footMat));
+}
+function buildShadow(img,manifest){
+  const s=manifest.shadow, tex=makeTexture(img,false); tex.anisotropy=1;
+  shadowMat=new THREE.MeshBasicMaterial({color:0x141414,alphaMap:tex,transparent:true,opacity:0,depthWrite:false});
+  const parts=fragments.filter(g=>manifest.models.includes(g.userData.model))
+    .map(g=>{const m=g.userData.model;return {g,m,x0:m.center[0]+m.qmin[0],x1:m.center[0]+m.qmax[0]};}).sort((a,b)=>a.x0-b.x0);
+  parts.forEach((p,i)=>{
+    const xa=i?(parts[i-1].x1+p.x0)/2:s.x0, xb=i<parts.length-1?(p.x1+parts[i+1].x0)/2:s.x1;
+    if(xb<=xa) return;
+    const geo=new THREE.PlaneGeometry(xb-xa,s.z1-s.z0), uv=geo.attributes.uv;
+    for(let k=0;k<uv.count;k++) uv.setX(k,(xa+(xb-xa)*uv.getX(k)-s.x0)/(s.x1-s.x0));
+    const plane=new THREE.Mesh(geo,shadowMat); plane.rotation.x=-Math.PI/2;
+    // in the fragment's own frame: the wall page stood it at its centre, upright, at its own size
+    plane.position.set((xa+xb)/2-p.m.center[0],p.m.qmin[1]-0.004,(s.z0+s.z1)/2-p.m.center[2]);
+    p.g.add(plane);
+  });
+}
+async function buildFragments(){
+  const manifest=unpack(await PACK);
+  const court=manifest.models.find(m=>m.name==='courtyard');
+  // the courtyard stands in the same place in both arrangements, so the wall page's frame is put on it
+  if(court&&IN_YARD.courtyard) OFF.fromArray(IN_YARD.courtyard.t).sub(new THREE.Vector3().fromArray(court.center));
+  // the elevation's frame (every drawn vertex along the level line, from elevation.py): the camera's target, the fit, the scan line's range
+  const wc=new THREE.Vector3().fromArray(WALL_VIEW.centre);
+  row={centre:wc,width:WALL_VIEW.width,height:WALL_VIEW.height,x0:wc.x-WALL_VIEW.width/2-0.8,x1:wc.x+WALL_VIEW.width/2+0.8};
+  const imgs=await Promise.all(manifest.models.map(m=>loadImage(m.texBytes)).concat([loadImage(manifest.shadowBytes)]));
+  // a fragment that a yard part stands in for shows only in Պատը, and stays where it is (the courtyard)
+  const shownByYard=new Set(YARD_PARTS.map(p=>p.standsFor).filter(Boolean));
+  manifest.models.forEach((m,i)=>fragments.push(shownByYard.has(m.name)?buildFragment(m,imgs[i],'wall',{stay:true,swap:true})
+    :buildFragment(m,imgs[i],IN_YARD[m.name]?undefined:'wall')));
+  buildShadow(imgs[imgs.length-1],manifest);
+  buildFootprint();
+  const [mb,...photos]=await Promise.all([fetchAsset(YARD_MESH,'yard mesh').then(inflate)].concat(YARD_PARTS.map(p=>loadImage(p.photo))));
+  YARD_PARTS.forEach(({name,nv,nf,off,standsFor},j)=>{
+    const P=new Uint16Array(mb.buffer,off,nv*3), U=new Uint16Array(mb.buffer,off+nv*6,nv*2), I=new Uint16Array(mb.buffer,off+nv*10,nf*3);
+    const pos=new Float32Array(nv*3), uv=new Float32Array(nv*2), {gmin,grng}=YARD_Q;
+    for(let i=0;i<nv;i++){for(let k=0;k<3;k++)pos[i*3+k]=gmin[k]+P[i*3+k]/65535*grng[k];uv[i*2]=U[i*2]/65535;uv[i*2+1]=U[i*2+1]/65535;}
+    fragments.push(buildFragment({name,positions:pos,uvs:uv,indices:new Uint16Array(I),nf,area:0,center:[0,0,0]},photos[j],'yard',{swap:!!standsFor}));
+  });
+  placeFragments(now());
+}
+
+// ---------- the yard's tour (from the yard page) ----------
+const camCurve=new THREE.CatmullRomCurve3([
+ V(0.4,1.5,-7.6),V(-5.8,1.0,-4.2),V(-6.8,0.75,-0.6),V(-3.8,0.8,-1.1),V(-0.8,0.85,-1.3),
+ V(2.0,0.9,-1.7),V(4.0,0.95,-2.6),V(6.2,1.0,-3.9),V(8.2,1.8,-4.8),V(4.5,3.6,-7.2)],true,'centripetal',0.6);
+const tgtCurve=new THREE.CatmullRomCurve3([
+ V(0.4,0.55,1.6),V(-4.6,0.55,1.9),V(-5.0,0.5,1.9),V(-3.2,0.55,1.95),V(-0.4,0.55,1.85),
+ V(2.2,0.6,1.7),V(4.2,0.65,1.2),V(6.0,0.55,-1.0),V(4.0,0.5,0.2),V(0.6,0.4,1.4)],true,'centripetal',0.6);
+const T_REV=7,T_TOUR=50,T_FADE=5,T_HOLD=13,T_OUT=3.5, CYCLE=T_REV+T_TOUR+T_FADE+T_HOLD+T_OUT, HOLD_AT=T_REV+T_TOUR+T_FADE;
+const holdA=V(0.4,1.5,-7.6),holdB=V(0.25,1.05,-5.9),holdT=V(0.4,0.62,1.2);
+const YARD_X=[PMETA.min[0]-0.8,PMETA.min[0]+PMETA.range[0]+0.8];
+function pose(tc){ // -> [camera, target, reveal front, cloud fade, surface opacity]
+  if(reduced) return [holdB,holdT,99,0,1];
+  if(tc<T_REV) return [camCurve.getPoint(0),tgtCurve.getPoint(0),-5.6+smooth(tc/T_REV)*12.4,1,0];
+  const tt=tc-T_REV;
+  if(tt<T_TOUR+T_FADE){
+    const u=Math.min(0.9999,tt/(T_TOUR+T_FADE)); let mo=0,pf=1;
+    if(tt>T_TOUR){const k=smooth((tt-T_TOUR)/T_FADE);mo=k;pf=1-k;}
+    return [camCurve.getPoint(u),tgtCurve.getPoint(u),99,pf,mo];
+  }
+  const th=tt-T_TOUR-T_FADE;
+  if(th<T_HOLD){const k=smooth(th/T_HOLD);return [holdA.clone().lerp(holdB,k),tgtCurve.getPoint(0).clone().lerp(holdT,k),99,0,1];}
+  return [holdB,holdT,-5.6,0,Math.max(0,1-smooth((th-T_HOLD)/T_OUT))];
+}
+
+// ---------- the one view's state ----------
+const LOOKS=['colour','mono','scan','cloud','wire'];
+const LOOK_NAMES=['Գույն · Colour','Մոնո · Mono','Սկան · Scan','Կետեր · Points','Ցանց · Wire'];   // owner 10-23: named, not dots
+let where=0;          // 0 Բակը, the fragments in place; 1 Պատը, laid out as the wall
+let look=0;           // 0..4 a look; owner 10-23 ("not particles, nothing is understood"): open on the photographed surfaces.
+                      // -1 (the yard's own cycle: cloud, then the surfaces) is no longer the start
+let picked=false, trans=null, ready=false;
+const MOVE=reduced?0.01:2.3, DELAY=[0,0.22,0.44], TD=reduced?0.01:MOVE+0.44, LIFT=2.2;
+// the wall page's entrance for the cabin: on its side, up and back, then settling into the row
+const ARRIVE={q:new THREE.Quaternion().setFromAxisAngle(V(0,0,1),-Math.PI/2).multiply(new THREE.Quaternion().setFromAxisAngle(V(0,1,0),-0.6)),off:V(0.6,2.5,-2.4)};
+const whereBtn=[...document.querySelectorAll('#where button')], bar=document.getElementById('bar');
+const looksEl=document.getElementById('looks');
+LOOKS.forEach((name,i)=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-pressed','false');
+  b.textContent=LOOK_NAMES[i];b.addEventListener('click',()=>pickLook(i));looksEl.appendChild(b);});
+const lookBtn=[...looksEl.children];
+whereBtn.forEach((b,i)=>b.addEventListener('click',()=>go(i)));
+function pickLook(i){look=(i+LOOKS.length)%LOOKS.length;picked=true;}
+
+// camera: a target and a position; drag turns around the target, pinch / wheel come closer (the wall page's hands)
+const tgt=tgtCurve.getPoint(0).clone(); camera.position.copy(camCurve.getPoint(0));
+let manual=false,lastTouch=-99,blend=1,frozen=0,vTheta=0,vPhi=0,fitD=20;
+const WALL_PHI=WALL_VIEW.phi??0.10;   // the building from above its eaves: plan and height read at once (building.py)
+let wallOrbit={theta:WALL_VIEW.theta,phi:WALL_PHI,dist:20};
+function sphOf(p,c){const o=p.clone().sub(c),d=Math.max(1e-6,o.length());return {theta:Math.atan2(o.x,o.z),phi:Math.asin(clamp(o.y/d,-1,1)),dist:d};}
+function fromSph(c,s){const cp=Math.cos(s.phi);return new THREE.Vector3(cp*Math.sin(s.theta),Math.sin(s.phi),cp*Math.cos(s.theta)).multiplyScalar(s.dist).add(c);}
+function orbitBy(dt,dp){const s=sphOf(camera.position,tgt);s.theta+=dt;s.phi=clamp(s.phi+dp,where?0.02:0.12,where?1.35:1.32);camera.position.copy(fromSph(tgt,s));}
+function zoomBy(f){const s=sphOf(camera.position,tgt);s.dist=clamp(s.dist*f,where?fitD*0.12:1.2,where?fitD*2.6:40);camera.position.copy(fromSph(tgt,s));}
+function yardFov(){const a=innerWidth/innerHeight;return a>=1.6?46:Math.min(80,2*Math.atan(Math.tan(23*Math.PI/180)*1.6/a)*180/Math.PI);}
+function fitDistance(){
+  if(!row) return 20;
+  const vfov=30*Math.PI/180, hfov=2*Math.atan(Math.tan(vfov/2)*innerWidth/innerHeight);
+  return Math.max((row.width*0.58)/Math.tan(hfov/2),(row.height*2.4)/Math.tan(vfov/2))*1.02;
+}
+function wallPose(o){return {cam:fromSph(row.centre,o),tgt:row.centre.clone(),fov:30};}
+function endPose(i){
+  if(i===1) return wallPose({theta:WALL_VIEW.theta,phi:WALL_PHI,dist:fitD});
+  const [cp,tp]=pose(reduced?0:HOLD_AT); return {cam:cp.clone(),tgt:tp.clone(),fov:yardFov()};
+}
+function go(i){
+  if(i===where||trans||(i===1&&!ready)) return;
+  const from={cam:camera.position.clone(),tgt:tgt.clone(),fov:camera.fov}, end=endPose(i);
+  trans={to:i,t0:now(),from,end,a:sphOf(from.cam,from.tgt),b:sphOf(end.cam,end.tgt)};
+  where=i; if(!picked) look=0;
+  manual=false; vTheta=vPhi=0;
+  whereBtn.forEach((b,j)=>b.setAttribute('aria-pressed',String(j===i)));
+}
+function resetView(){
+  picked=false; look=0; manual=false; blend=1; vTheta=vPhi=0; lastTouch=-99;
+  if(where===0) frozen=0; else wallOrbit={theta:WALL_VIEW.theta,phi:WALL_PHI,dist:fitD};
+}
+
+// hands
+const pointers=new Map(); let pinch=0;
+canvas.addEventListener('pointerdown',e=>{
+  canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  canvas.classList.add('drag'); manual=true; lastTouch=now();
+  if(pointers.size===2){const [p,q]=[...pointers.values()];pinch=Math.hypot(p.x-q.x,p.y-q.y);}
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!pointers.has(e.pointerId)||trans) return;
+  const prev=pointers.get(e.pointerId), dx=e.clientX-prev.x, dy=e.clientY-prev.y;
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); lastTouch=now();
+  if(pointers.size===1){vTheta=-dx*0.0042;vPhi=dy*0.0042;orbitBy(vTheta,vPhi);}
+  else if(pointers.size===2){const [p,q]=[...pointers.values()],d=Math.hypot(p.x-q.x,p.y-q.y);if(pinch>0&&d>0)zoomBy(pinch/d);pinch=d;}
+});
+const endPointer=e=>{pointers.delete(e.pointerId);if(!pointers.size)canvas.classList.remove('drag');lastTouch=now();};
+canvas.addEventListener('pointerup',endPointer); canvas.addEventListener('pointercancel',endPointer);
+canvas.addEventListener('wheel',e=>{e.preventDefault();if(trans)return;manual=true;lastTouch=now();zoomBy(Math.exp(e.deltaY*0.0012));},{passive:false});
+canvas.addEventListener('dblclick',resetView);
+addEventListener('keydown',e=>{
+  if(e.target&&e.target.closest&&e.target.closest('button')) return;
+  if(e.key>='1'&&e.key<='5') pickLook(+e.key-1);
+  else if(e.key==='ArrowRight') pickLook((look<0?0:look)+1);
+  else if(e.key==='ArrowLeft') pickLook((look<0?0:look)-1);
+  else if(e.key==='r'||e.key==='R') resetView();
+  else if(e.code==='Space'){manual=!manual;lastTouch=now();}
+});
+
+function resize(){
+  renderer.setPixelRatio(pr); renderer.setSize(innerWidth,innerHeight,false);
+  camera.aspect=innerWidth/innerHeight;
+  if(!trans) camera.fov=where?30:yardFov();
+  camera.updateProjectionMatrix();
+  uni.uPx.value=1.35*pr;
+  const f=fitDistance(); if(where===1&&!trans) wallOrbit.dist*=f/fitD; fitD=f;
+}
+addEventListener('resize',resize); resize();
+
+// ---------- one loop ----------
+let cloudF=1, meshF=0, shadowF=0, lastT=now(), skip=false, lastRendered=false, lastPrChange=0, prevMs=0;
+const samples=[], start=now();
+const ease=(cur,target,dt,tau)=>cur+(target-cur)*(1-Math.exp(-dt/tau));
+function placeFragments(t){
+  fragments.forEach((g,i)=>{
+    const u=g.userData; if(u.only==='yard'||u.stay) return; let k=where;
+    if(trans){const e=smooth((t-trans.t0-DELAY[i])/MOVE);k=trans.to?e:1-e;}
+    if(u.only==='wall'){const e=1-Math.pow(1-k,3);g.position.copy(u.wall.p).addScaledVector(ARRIVE.off,1-e);g.quaternion.copy(ARRIVE.q).slerp(u.wall.q,e);return;}
+    // rise, travel, land: nothing passes through the courtyard's walls on the way
+    const h=smooth((k-0.25)/0.5), lift=LIFT*(smooth(k/0.3)-smooth((k-0.7)/0.3));
+    g.position.copy(u.yard.p).lerp(u.wall.p,h).y+=lift;
+    g.quaternion.copy(u.yard.q).slerp(u.wall.q,h);
+  });
+}
+function frame(){
+  const t=now(), dt=Math.min(0.05,t-lastT); lastT=t;
+  const xr=renderer.xr&&renderer.xr.isPresenting;
+  // the camera
+  if(trans){
+    const u=smooth((t-trans.t0)/TD), a=trans.a, b=trans.b;
+    let dth=b.theta-a.theta; dth=Math.atan2(Math.sin(dth),Math.cos(dth));     // the short way round
+    const c=trans.from.tgt.clone().lerp(trans.end.tgt,u);
+    camera.position.copy(fromSph(c,{theta:a.theta+dth*u,phi:clamp(a.phi+(b.phi-a.phi)*u+0.35*Math.sin(Math.PI*u),0.02,1.4),dist:a.dist+(b.dist-a.dist)*u}));
+    tgt.copy(c); camera.fov=trans.from.fov+(trans.end.fov-trans.from.fov)*u; camera.updateProjectionMatrix();
+    placeFragments(t);
+    if(t-trans.t0>=TD){
+      if(trans.to===1) wallOrbit=sphOf(camera.position,row.centre); else frozen=reduced?0:HOLD_AT;
+      trans=null; blend=1; manual=false; placeFragments(t);
+    }
+  }else{
+    if(!pointers.size&&(Math.abs(vTheta)+Math.abs(vPhi)>1e-5)){if(manual)orbitBy(vTheta,vPhi);vTheta*=0.9;vPhi*=0.9;}
+    if(manual&&!pointers.size&&t-lastTouch>(where?1.8:7)){manual=false;if(where===1)wallOrbit=sphOf(camera.position,row.centre);}
+    if(!manual&&where===0) frozen+=dt;
+    blend+=((manual?0:1)-blend)*0.02;
+    let A;
+    if(where===0){const p=pose(reduced?0:frozen%CYCLE);A={cam:p[0],tgt:p[1]};}
+    else{
+      // idle drift (the wall page's), kept within 7 degrees of facing the facades, so it stays an elevation
+      const th0=WALL_VIEW.theta;
+      if(!reduced&&!manual&&Math.abs(wallOrbit.theta-th0)<0.15){
+        if(wallOrbit.theta>th0+0.12) wallOrbit.dir=-1; else if(wallOrbit.theta<th0-0.12) wallOrbit.dir=1;
+        wallOrbit.theta+=0.012*(wallOrbit.dir||1)*dt;
+      }
+      A=wallPose(wallOrbit);
+    }
+    if(blend>0.002){camera.position.lerp(A.cam,0.035*blend);tgt.lerp(A.tgt,0.05*blend);}
+  }
+  camera.lookAt(tgt);
+  shared.proj.value=(innerHeight*pr)/(2*Math.tan(camera.fov*Math.PI/360));
+  // what shows
+  const yp=pose(reduced?0:frozen%CYCLE), auto=look<0&&where===0&&!trans;
+  cloudF=ease(cloudF,(!trans&&where===0)?(look<0?yp[3]:look===3?1:0):0,dt,0.35);
+  meshF=ease(meshF,auto?yp[4]:(look===3||look===4)?0:1,dt,0.35);
+  shadowF=ease(shadowF,(!trans&&where===1)?SHADOW_OPACITY:0,dt,0.6);
+  uni.uTime.value=t; uni.uFade.value=cloudF; uni.uFront.value=auto?yp[2]:99;
+  if(cloud) cloud.visible=cloudF>0.01;
+  shared.mode.value=look<0?0:Math.min(look,2);
+  shared.photo.value=ease(shared.photo.value,where===0&&!trans?1:0,dt,0.5);   // Բակը as photographed, Պատը in the wall page's light
+  if(look===2){const r=(trans?trans.to:where)?[row.x0,row.x1]:YARD_X;shared.scanX.value=r[0]+(r[1]-r[0])*(0.5-0.5*Math.cos((t-start)*2*Math.PI/18));}
+  const pts=look===3&&(where===1||!!trans);
+  fragments.forEach(g=>{const u=g.userData;
+    u.fade=ease(u.fade,u.only==='yard'?(where===0&&!trans?1:0):u.only==='wall'?(where===1||trans?1:0):1,dt,u.swap?0.05:0.35);
+    u.op.value=meshF*u.fade; u.solid.visible=u.op.value>0.005; u.solid.material.depthWrite=u.op.value>0.6;
+    u.fill.visible=u.wire.visible=look===4&&u.fade>0.5;
+    const p=pts&&u.only!=='yard'&&u.fade>0.5; if(p)ensurePoints(g); if(u.points)u.points.visible=p;});
+  if(shadowMat){shadowMat.opacity=shadowF;shadowMat.visible=shadowF>0.003;}
+  if(footMat){footMat.opacity=Math.min(1,shadowF/SHADOW_OPACITY)*0.55;footMat.visible=footMat.opacity>0.01;}
+  const shown=auto?(cloudF>0.5?3:0):look;
+  lookBtn.forEach((b,k)=>{b.classList.toggle('on',k===shown);b.setAttribute('aria-pressed',String(k===shown));});
+  if(!bar.classList.contains('on')&&t-start>(reduced?0.2:2.3)) bar.classList.add('on');
+  // when nothing moves but the slow drift, draw every other frame (the wall page)
+  const busy=xr||trans||pointers.size||t-lastTouch<1.8||(where===0&&!reduced)||Math.abs(vTheta)+Math.abs(vPhi)>1e-4||Math.abs(cloudF-(where===0&&look===3?1:cloudF))>0.01;
+  if(!busy){skip=!skip;if(skip){lastRendered=false;return;}}
+  // adaptive resolution: judge consecutive drawn frames only, after the load
+  const ms=performance.now();
+  if(!xr&&lastRendered&&t-start>0.9){samples.push(ms-prevMs);
+    if(samples.length>=40){const avg=samples.reduce((a,b)=>a+b,0)/samples.length;samples.length=0;
+      if(avg>29&&pr>0.75){pr=Math.max(0.75,pr-0.25);resize();lastPrChange=ms;}
+      else if(avg<17.5&&pr<PR_CAP&&ms-lastPrChange>8000){pr=Math.min(PR_CAP,pr+0.25);resize();lastPrChange=ms;}}}
+  prevMs=ms; lastRendered=true;
+  renderer.render(scene,camera);
+}
+buildCloud().catch(e=>{mark.textContent='could not load the cloud — '+e.message;});
+buildFragments().then(()=>{ready=true;resize();whereBtn[1].disabled=false;})
+  .catch(e=>{mark.textContent='could not load the wall — '+e.message;});
+renderer.setAnimationLoop(frame);
+</script>
+
+<script>(function(){var d=document,w=window;try{
+var HU=["#DCC9FF","#EE8866","#EEDD88","#44BB99","#FFAABB"],K=3,NZ=.011,NM="ԲԱԿԸ · ՊԱՏԸ";
+var PR=[0,.431,.453,.569,.453,.42,0,.395,.487,.605,.487,.42,0,.336,.541,.664,.541,.42,0,.257,.614,.743,.614,.42,0,.157,.706,.843,.706,.42,0,.038,.817,.962,.817,.42,0,-.1,.945,1.1,.945,.42,0,.448,.44,-.1,.945,.4,0,.469,.44,.14,.945,.4,0,.487,.44,.35,.945,.4,0,.513,.44,.65,.945,.4,0,.531,.44,.86,.945,.4,0,.552,.44,1.1,.945,.4,0,.44,.44,.56,.44,.6,0,.128,.29,.33,.29,1.2,0,.33,.29,.33,.65,1.2,0,.33,.65,.128,.65,1.2,0,.128,.65,.128,.29,1.2,0,.632,.245,.868,.245,1.2,0,.868,.245,.868,.645,1.2,0,.868,.645,.632,.645,1.2,0,.632,.645,.632,.245,1.2,0,.128,.356,.33,.356,.3,0,.128,.432,.33,.432,.3,0,.128,.509,.33,.509,.3,0,.128,.585,.33,.585,.3,0,.632,.319,.868,.319,.3,0,.632,.404,.868,.404,.3,0,.632,.489,.868,.489,.3,0,.632,.574,.868,.574,.3,0,.128,.65,.062,.76,.42,0,.33,.65,.396,.76,.42,0,.632,.645,.566,.752,.42,0,.868,.645,.934,.752,.42];
+var MIN=2600,MAX=50000;
+var RM=w.matchMedia&&w.matchMedia('(prefers-reduced-motion:reduce)').matches?1:0;
+var HOLD=900,STAG=600,DUR=950,SET=HOLD+STAG+DUR;
+if(RM){HOLD=700;STAG=0;DUR=900;SET=1600}
+var wrap=d.createElement('div');wrap.id='di-arrival';
+wrap.setAttribute('style','position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483646;pointer-events:none;background:#07070a;opacity:1;transform:scale(1);transition:opacity .8s cubic-bezier(.4,0,.25,1) .18s,transform .95s cubic-bezier(.33,0,.2,1);will-change:opacity,transform');
+var cv=d.createElement('canvas');cv.id='di-arrival-cv';
+cv.setAttribute('style','position:absolute;top:0;left:0;width:100%;height:100%;display:block');
+var sr=wrap.attachShadow?wrap.attachShadow({mode:'open'}):null;
+(sr||wrap).appendChild(cv);(d.body||d.documentElement).appendChild(wrap);
+var g=cv.getContext('2d',{alpha:false});if(!g)return;
+function hx(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+function deep(c,k){var m=Math.max(c[0],c[1],c[2]),o=[];
+for(var i=0;i<3;i++)o[i]=Math.max(0,Math.min(255,m+(c[i]-m)*k))|0;return o}
+var RGB=HU.map(hx),DP2=RGB.map(function(c){return deep(c,1.55)}),MD=RGB.map(function(c){return deep(c,1.25)});
+var DC=RGB[K],DD=DP2[K];
+function rgba(c,a){return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'}
+var SP=[];for(var i=0;i<5;i++){SP[i]=[];for(var j=0;j<4;j++){
+var t=j/3*.88,c=[0,0,0],c2=[0,0,0];
+for(var q=0;q<3;q++){c[q]=RGB[i][q]+(DC[q]-RGB[i][q])*t|0;c2[q]=DP2[i][q]+(DD[q]-DP2[i][q])*t|0}
+var s=d.createElement('canvas');s.width=s.height=32;var sg=s.getContext('2d');
+var gr=sg.createRadialGradient(16,16,0,16,16,16);
+gr.addColorStop(0,'rgba(255,255,255,.62)');gr.addColorStop(.10,rgba(c,.92));
+gr.addColorStop(.30,rgba(c2,.42));gr.addColorStop(.62,rgba(c2,.11));gr.addColorStop(1,rgba(c2,0));
+sg.fillStyle=gr;sg.fillRect(0,0,32,32);SP[i][j]=s}}
+var RX=[],RY=[],RR=[];for(i=0;i<5;i++){var o=Math.abs(i-2),sg2=i<2?-1:1;
+RX[i]=.5+sg2*(o*.118+o*o*.024);RY[i]=.430+o*.058;RR[i]=(.045+o*.0155)*(i===K?1.18:1)}
+var N=0,M=0,pr=[],tot=0;
+(function(){var i=0;while(i<PR.length){var t=PR[i++];
+if(t===0){var a=PR[i++],b=PR[i++],c=PR[i++],e=PR[i++],v=PR[i++];
+var l=Math.sqrt((c-a)*(c-a)+(e-b)*(e-b))*v;pr.push([l,0,a,b,c,e]);tot+=l}
+else{var a=PR[i++],b=PR[i++],r=PR[i++],s0=PR[i++],s1=PR[i++],v=PR[i++];
+var l=Math.abs(s1-s0)*r*v;pr.push([l,1,a,b,r,s0,s1]);tot+=l}}})();
+var AX,AY,BX,BY,QX,QY,DL,RI,SZ,PH,KX,KY,cxN=.5,cyN=.5,SB=.9;
+function build(){
+var tx=[],ty=[];
+for(var i=0;i<pr.length;i++){var p=pr[i],n=Math.max(2,Math.round(N*p[0]/tot));
+for(var j=0;j<n;j++){var t=(j+.5)/n,x,y;
+if(p[1]===0){x=p[2]+(p[4]-p[2])*t;y=p[3]+(p[5]-p[3])*t}
+else{var an=p[5]+(p[6]-p[5])*t;x=p[2]+Math.cos(an)*p[4];y=p[3]+Math.sin(an)*p[4]}
+tx.push(x+(Math.random()-.5)*NZ);ty.push(y+(Math.random()-.5)*NZ)}}
+M=tx.length;
+var ax0=1e9,ax1=-1e9,ay0=1e9,ay1=-1e9;
+for(i=0;i<M;i++){if(tx[i]<ax0)ax0=tx[i];if(tx[i]>ax1)ax1=tx[i];
+if(ty[i]<ay0)ay0=ty[i];if(ty[i]>ay1)ay1=ty[i]}
+var fz=Math.min(.90/(ax1-ax0||1),.86/(ay1-ay0||1)),fx=(ax0+ax1)/2,fy2=(ay0+ay1)/2;
+for(i=0;i<M;i++){tx[i]=.5+(tx[i]-fx)*fz;ty[i]=.5+(ty[i]-fy2)*fz}
+SB=.5+(ay1-fy2)*fz;
+var sx=0,sy=0;for(i=0;i<M;i++){sx+=tx[i];sy+=ty[i]}cxN=sx/M;cyN=sy/M;
+var hx2=new Float32Array(M),hy2=new Float32Array(M),hr=new Uint8Array(M),idx=0;
+for(i=0;i<5;i++){var n2=i===4?M-idx:Math.round(M*(i===K?.34:.165));
+if(idx+n2>M)n2=M-idx;
+for(var j=0;j<n2;j++){var a2=(j/n2)*6.2832+i*1.1;
+hx2[idx]=RX[i]+Math.cos(a2)*RR[i];hy2[idx]=RY[i]+Math.sin(a2)*RR[i]*.9;hr[idx]=i;idx++}}
+var oa=[],ob=[];
+for(i=0;i<M;i++){oa.push(i);ob.push(i)}
+oa.sort(function(p,q){return Math.atan2(hy2[p]-.485,hx2[p]-.5)-Math.atan2(hy2[q]-.485,hx2[q]-.5)});
+ob.sort(function(p,q){return Math.atan2(ty[p]-cyN,tx[p]-cxN)-Math.atan2(ty[q]-cyN,tx[q]-cxN)});
+AX=new Float32Array(M);AY=new Float32Array(M);BX=new Float32Array(M);BY=new Float32Array(M);
+QX=new Float32Array(M);QY=new Float32Array(M);KX=new Float32Array(M);KY=new Float32Array(M);
+DL=new Float32Array(M);RI=new Uint8Array(M);SZ=new Float32Array(M);PH=new Float32Array(M);
+var mny=1,mxy=0;for(i=0;i<M;i++){if(ty[i]<mny)mny=ty[i];if(ty[i]>mxy)mxy=ty[i]}
+for(i=0;i<M;i++){var ai=oa[i],bi=ob[i];
+AX[i]=hx2[ai];AY[i]=hy2[ai];RI[i]=hr[ai];KX[i]=RX[hr[ai]];KY[i]=RY[hr[ai]];
+BX[i]=tx[bi];BY[i]=ty[bi];
+var mx=(AX[i]+BX[i])/2,my=(AY[i]+BY[i])/2,dx=BX[i]-AX[i],dy=BY[i]-AY[i];
+var s2=i%2?1:-1,k2=.09+Math.random()*.24;
+QX[i]=mx-dy*k2*s2;QY[i]=my+dx*k2*s2;
+DL[i]=(mxy-BY[i])/(mxy-mny+1e-6)*.70+Math.random()*.30;
+SZ[i]=.72+Math.random()*.62;PH[i]=Math.random()*6.283}
+}
+var W,H,S,CX,CY,BS,FS,DP,flg,tw=0,cw=[],NC=NM.split('');
+var bgc=d.createElement('canvas'),bg=bgc.getContext('2d');
+function FONT(){return '500 '+FS.toFixed(1)+'px ui-sans-serif,system-ui,"Noto Sans Armenian","Segoe UI",Roboto,sans-serif'}
+function size(){
+W=w.innerWidth||d.documentElement.clientWidth;H=w.innerHeight||d.documentElement.clientHeight;
+DP=Math.min(2,w.devicePixelRatio||1);
+cv.width=Math.round(W*DP);cv.height=Math.round(H*DP);g.setTransform(DP,0,0,DP,0,0);
+S=Math.min(W*.99,H*.60);CX=W/2;CY=H*.470;BS=Math.max(1.75,S*.0072);FS=Math.max(13,S*.042);
+bgc.width=cv.width;bgc.height=cv.height;bg.setTransform(DP,0,0,DP,0,0);
+var grd=bg.createLinearGradient(0,0,0,H);
+grd.addColorStop(0,'#06060a');grd.addColorStop(.46,'#100e18');grd.addColorStop(1,'#05050a');
+bg.fillStyle=grd;bg.fillRect(0,0,W,H);
+var rad=bg.createRadialGradient(CX,CY-S*.06,0,CX,CY-S*.06,S*.86);
+rad.addColorStop(0,rgba(DD,.20));rad.addColorStop(.45,rgba(DD,.075));rad.addColorStop(1,rgba(DD,0));
+bg.fillStyle=rad;bg.fillRect(0,0,W,H);
+flg=g.createLinearGradient(CX-S*.56,0,CX+S*.56,0);
+flg.addColorStop(0,'rgba(190,180,230,0)');flg.addColorStop(.5,'rgba(200,192,236,.6)');
+flg.addColorStop(1,'rgba(190,180,230,0)');
+for(var pass=0;pass<4;pass++){
+g.font=FONT();tw=0;cw=[];
+for(var i=0;i<NC.length;i++){var q=g.measureText(NC[i]).width;cw.push(q);tw+=q+FS*.24}
+tw-=FS*.24;if(tw<=W*.84)break;FS*=Math.max(.72,W*.84/tw)}
+var n2=Math.round(Math.max(460,Math.min(1300,S*2.2)));
+if(n2!==N){N=n2;build()}
+}
+size();w.addEventListener('resize',size,{passive:true});
+var T0=(w.performance&&w.performance.now)?w.performance.now():Date.now();
+var ready=0,seen=0,seenAt=0,going=0,goAt=0,raf=0,AC=0,prv=0;
+function wcv(){var cs=d.getElementsByTagName('canvas');
+for(var i=0;i<cs.length;i++){var c=cs[i];if(c!==cv&&c.clientWidth>40&&c.clientHeight>40)return c}return null}
+function poll(now){
+var c=wcv();if(!c){seen=0;return}
+if(!seen){seen=1;seenAt=now;return}
+if(now-seenAt<450)return;
+if(now-seenAt<8000){
+var P=[[W*.5,H*.5],[W*.3,H*.42],[W*.72,H*.62]];
+for(var k=0;k<3;k++){var el=d.elementFromPoint(P[k][0],P[k][1]);
+if(el&&el!==c&&el!==d.body&&el!==d.documentElement&&el.tagName!=='CANVAS')return}}
+ready=1}
+function ez(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
+function bump(x,c,r){var q=(x-c)/r;q=1-q*q;return q>0?q*q:0}
+function tick(now){
+raf=w.requestAnimationFrame(tick);
+var wall=now-T0;
+if(prv)AC+=Math.min(now-prv,48)*(ready&&AC<SET?1.9:1);prv=now;
+var e=AC;
+if(!ready)poll(now);
+if(!going&&((ready&&(e>MIN||wall>MIN*2.4))||wall>MAX)){going=1;goAt=now;
+wrap.style.opacity='0';wrap.style.transform='scale(1.085)'}
+var rel=going?Math.min(1,(now-goAt)/320):0;
+var tau=e<HOLD?.54:(e<SET?.32:.80);if(going)tau=.50;
+g.globalCompositeOperation='source-over';
+g.globalAlpha=tau;g.drawImage(bgc,0,0,W,H);
+var ra=Math.max(0,Math.min(1,1-(e-HOLD*.42)/(HOLD*1.2)))*Math.min(1,e/300);
+if(ra>.004){
+var fy=CY+(RY[0]+RR[0]*.98-.5)*S;
+g.globalAlpha=ra*.34;g.strokeStyle=flg;g.lineWidth=Math.max(1,S*.0020);
+g.beginPath();g.moveTo(CX-S*.58,fy);g.lineTo(CX+S*.58,fy);g.stroke();
+g.globalCompositeOperation='lighter';
+for(var i=0;i<5;i++){var rx=CX+(RX[i]-.5)*S,ry=CY+(RY[i]-.5)*S,rr=RR[i]*S;
+var nr=.52+Math.abs(i-2)*.24,lit=i===K?1:nr*.42;
+g.globalAlpha=ra*lit*.42;
+g.drawImage(SP[i][0],rx-rr*2.6,ry+rr*.30,rr*5.2,rr*1.9);
+g.globalAlpha=ra*lit*.22;
+g.drawImage(SP[i][0],rx-rr*2.9,ry-rr*2.9,rr*5.8,rr*5.8)}
+g.globalCompositeOperation='source-over';
+for(i=0;i<5;i++){var nr2=.52+Math.abs(i-2)*.24;
+g.lineWidth=Math.max(1.1,S*.0030*nr2);
+g.globalAlpha=ra*(i===K?.78:nr2*.42);g.strokeStyle=rgba(MD[i],1);
+g.beginPath();g.ellipse(CX+(RX[i]-.5)*S,CY+(RY[i]-.5)*S,RR[i]*S,RR[i]*S*.92,0,0,6.2832);g.stroke()}}
+g.globalCompositeOperation='lighter';
+var fi=Math.min(1,e/380),GA=(e<HOLD?.46:(e<SET?.56:.44))*(1+rel*.5);
+var rc=[],rs=[],rp=[];
+for(i=0;i<5;i++){var an=RM?0:now*.00019*(i%2?1:-1);rc[i]=Math.cos(an);rs[i]=Math.sin(an);
+rp[i]=RM?1:1+.022*Math.sin(now*.0017+i)}
+var swp=RM?-9:((now*.00034)%1)*1.7-.35, pw=-9;
+if(!RM&&e>SET+700){var pt=((e-SET-700)%5400)/1500;if(pt<1)pw=-.25+pt*1.55}
+for(i=0;i<M;i++){
+var r5=RI[i],t,x,y;
+if(RM)t=e<=HOLD?0:Math.min(1,(e-HOLD)/DUR);
+else{var st=HOLD+DL[i]*STAG;t=e<=st?0:Math.min(1,(e-st)/DUR)}
+var ee=t>=1?1:ez(t);
+var dx=AX[i]-KX[i],dy=AY[i]-KY[i],p5=rp[r5];
+var ax=KX[i]+(dx*rc[r5]-dy*rs[r5])*p5,ay=KY[i]+(dx*rs[r5]+dy*rc[r5])*p5;
+if(RM){
+var al0=(r5===K?1:.28)*(1-ee),al1=ee;
+if(al0>.01){var px=CX+(ax-.5)*S,py=CY+(ay-.5)*S,dz=BS*SZ[i]*2.9;
+g.globalAlpha=Math.min(1,al0*GA*fi);g.drawImage(SP[r5][0],px-dz/2,py-dz/2,dz,dz)}
+if(al1>.01){var px2=CX+(BX[i]-.5)*S,py2=CY+(BY[i]-.5)*S,dz2=BS*SZ[i]*2.9*(1+rel*.2);
+g.globalAlpha=Math.min(1,al1*GA*fi);g.drawImage(SP[r5][3],px2-dz2/2,py2-dz2/2,dz2,dz2)}
+continue}
+if(ee>=1){x=BX[i];y=BY[i];
+var qq=now*.0011+PH[i];x+=Math.sin(qq)*.0034;y+=Math.cos(qq*1.27)*.0034;
+if(pw>-1){var b2=bump((BX[i]-cxN)*1.4+.5,pw,.19);if(b2>0){x+=(BX[i]-cxN)*b2*.020;y+=(BY[i]-cyN)*b2*.020}}}
+else{var u=1-ee;x=u*u*ax+2*u*ee*QX[i]+ee*ee*BX[i];y=u*u*ay+2*u*ee*QY[i]+ee*ee*BY[i]}
+if(rel>0){x+=(x-cxN)*rel*.075;y+=(y-cyN)*rel*.075}
+var base=r5===K?1:.28,al=(base+(1-base)*ee)*(ee>=1?1:.85+.15*ee);
+if(ee>=1){al*=1+bump(x+y,swp,.24)*.9;if(pw>-1)al*=1+bump((BX[i]-cxN)*1.4+.5,pw,.19)*.8}
+var dz3=BS*SZ[i]*2.9*(1+rel*.22);
+var px3=CX+(x-.5)*S,py3=CY+(y-.5)*S;
+g.globalAlpha=Math.min(1,al*GA*fi);
+g.drawImage(SP[r5][ee<=0?0:(ee>=1?3:(ee*3.99)|0)],px3-dz3/2,py3-dz3/2,dz3,dz3)}
+g.globalCompositeOperation='source-over';
+var ta=Math.max(0,Math.min(1,(e-(SET-420))/760))*(1-rel*.55);
+if(ta>.01){
+var ty2=CY+(SB-.5)*S+Math.max(26,S*.088);if(ty2>H-44)ty2=H-44;
+g.font=FONT();g.textBaseline='alphabetic';g.textAlign='left';
+g.shadowColor=rgba(DC,.75);g.shadowBlur=22*ta;
+g.fillStyle='rgba(252,250,246,'+ta.toFixed(3)+')';
+var xx=CX-tw/2;
+for(i=0;i<NC.length;i++){g.fillText(NC[i],xx,ty2);xx+=cw[i]+FS*.24}
+g.shadowBlur=0;
+var dy2=ty2+FS*1.05,sp2=Math.max(10,FS*.56);
+for(i=0;i<5;i++){var dxp=CX+(i-2)*sp2;
+g.beginPath();g.arc(dxp,dy2,i===K?2.4:1.6,0,6.2832);
+g.fillStyle=i===K?rgba(DC,ta*.95):'rgba(230,226,240,'+(ta*.20).toFixed(3)+')';g.fill()}}
+if(going&&now-goAt>1160){w.cancelAnimationFrame(raf);if(wrap.parentNode)wrap.parentNode.removeChild(wrap)}
+}
+raf=w.requestAnimationFrame(tick);
+}catch(err){var z=d.getElementById('di-arrival');if(z&&z.parentNode)z.parentNode.removeChild(z)}
+})();</script>
+
+<a href="/dilijan#works" target="_top" onpointerdown="event.stopPropagation()" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation();event.preventDefault();window.open('/dilijan#works','_top')" style="position:fixed;left:12px;top:12px;z-index:2147483647;font:500 12px/1 ui-monospace,monospace;letter-spacing:.08em;text-decoration:none;color:#111;background:rgba(255,255,255,.82);border:1px solid rgba(0,0,0,.18);border-radius:999px;padding:9px 14px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);touch-action:manipulation;cursor:pointer">← ԱՇԽԱՐՀՆԵՐ</a>
+
+<!-- VR-ENTRY-BEGIN 2026-08-30 -->
+<script>
+(function(){try{
+var N=navigator;if(!N.xr||!N.xr.isSessionSupported)return;
+var D=document,ses=null,busy=false,ctx=null;
+function pill(t,POS){var b=D.createElement('button');b.type='button';b.textContent=t;
+ b.style.cssText='position:fixed;'+POS+';z-index:2147483646;display:none;font:500 12px/1 ui-monospace,monospace;letter-spacing:.08em;color:#111;background:rgba(255,255,255,.82);border:1px solid rgba(0,0,0,.18);border-radius:999px;padding:9px 14px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);touch-action:manipulation;cursor:pointer';
+ D.body.appendChild(b);return b}
+function enter(mode){
+ if(busy||ses)return;busy=true;
+ try{
+  var R=(function(){if(typeof renderer==='undefined'||typeof scene==='undefined')return null;return{renderer:renderer,scene:scene}})();
+  if(!R){busy=false;return}
+  R.renderer.xr.enabled=true;
+  N.xr.requestSession(mode,{optionalFeatures:['local-floor','bounded-floor']}).then(function(s){
+   ses=s;busy=false;
+   try{
+    ctx={};
+    if(mode==='immersive-ar'){ctx.bg=R.scene.background;R.scene.background=null}
+    s.addEventListener('end',function(){ses=null;try{if(ctx&&ctx.bg){R.scene.background=ctx.bg}}catch(e){}ctx=null});
+    R.renderer.xr.setSession(s);
+   }catch(e){try{console.warn('[xr] hook failed',String(e))}catch(_){}try{s.end()}catch(_){}}
+  }).catch(function(e){busy=false;try{console.warn('[xr] '+mode+' refused',String(e))}catch(_){}});
+ }catch(e){busy=false}
+}
+var pv=pill('\u0534\u053B\u054F\u0535\u053C VR-\u0548\u054E',"right:12px;top:44px");
+pv.addEventListener('click',function(){enter('immersive-vr')});
+N.xr.isSessionSupported('immersive-vr').then(function(ok){if(ok)pv.style.display='block'}).catch(function(){});
+var pa=pill('\u0534\u053B\u054F\u0535\u053C AR-\u0548\u054E',"right:12px;top:88px");
+pa.addEventListener('click',function(){enter('immersive-ar')});
+N.xr.isSessionSupported('immersive-ar').then(function(ok){if(ok)pa.style.display='block'}).catch(function(){});
+}catch(e){}})();
+</script>
+<!-- VR-ENTRY-END -->
+</body>
+</html>

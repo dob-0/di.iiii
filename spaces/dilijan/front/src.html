@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="hy">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Դիլիջանը որպես էկրան · Dilijan As A Screen</title>
+<style>
+:root{--paper:#f5f2ea;--ink:#16181a;--mute:#5d625f;--rule:#16181a;--c1:#DCC9FF;--c2:#EE8866;--c3:#EEDD88;--c4:#44BB99;--c5:#FFAABB}
+*{box-sizing:border-box;border-radius:0}
+html{background:var(--paper)}
+body{margin:0;color:var(--ink);background:var(--paper);font:17px/1.55 "Noto Sans Armenian","Noto Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+.mono{font-family:ui-monospace,"JetBrains Mono","SF Mono",Menlo,monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+header.top{border-bottom:2px solid var(--rule);padding:14px 0}
+header.top .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.strip{display:flex;height:10px}.strip i{flex:1}
+.hero{padding:56px 0 40px}
+h1{font-size:clamp(40px,8vw,88px);line-height:1;margin:14px 0 18px;font-weight:700;letter-spacing:-.01em}
+h1 small{display:block;font-size:.42em;font-weight:500;color:var(--mute);margin-top:12px;letter-spacing:0}
+.lede{font-size:clamp(20px,2.6vw,28px);line-height:1.35;max-width:30em;margin:0 0 10px}
+.lede-en{color:var(--mute);max-width:36em;margin:0}
+.door{display:inline-block;margin-top:28px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);padding:14px 22px;text-decoration:none}
+.door:hover,.door:focus-visible{background:var(--paper);color:var(--ink)}
+section{border-top:2px solid var(--rule);padding:36px 0 44px}
+h2{margin:0 0 22px;font-size:13px;font-weight:600}
+h2 span{color:var(--mute)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.two p{margin:0 0 12px}.two .en{color:var(--mute)}
+.days{display:grid;grid-template-columns:repeat(6,1fr);border:2px solid var(--rule)}
+.day{padding:14px 12px 16px;border-right:2px solid var(--rule);min-height:128px}
+.day:last-child{border-right:0}
+.day b{display:block;font-size:30px;line-height:1}
+.day .hy{display:block;margin-top:10px;font-weight:600;line-height:1.25}
+.day .en{display:block;color:var(--mute);font-size:14px;margin-top:2px}
+.day.show{background:var(--ink);color:var(--paper)}.day.show .en{color:#c9c6bd}
+.works{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.work{border:2px solid var(--rule);background:#fff;display:flex;flex-direction:column;text-decoration:none}
+.work .bar{height:10px}
+.work img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;border-bottom:2px solid var(--rule)}
+.work .t{padding:14px 14px 16px}
+.work .n{font-size:26px;font-weight:700;line-height:1.1}
+.work .n small{font-weight:500;font-size:16px;color:var(--mute);margin-left:6px}
+.work .w{margin-top:6px}.work .w .en{color:var(--mute)}
+.work .go{display:block;margin-top:10px}
+.work:hover{outline:3px solid var(--ink)}
+.also{margin-top:28px;border:2px solid var(--rule)}
+.also a,.also div{display:grid;grid-template-columns:200px 1fr;gap:14px;padding:12px 14px;border-bottom:2px solid var(--rule);text-decoration:none}
+.also a:last-child,.also div:last-child{border-bottom:0}
+.also a:hover{background:#fff}
+.also .k{font-weight:600}.also .v span{color:var(--mute)}
+
+
+.wall i:nth-child(1){flex:1.5}.wall i:nth-child(4){flex:.8;height:100%}
+
+
+
+
+.credits{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.credits p{margin:0 0 6px}.credits .en{color:var(--mute)}
+.names{margin:18px 0 0;display:flex;flex-wrap:wrap;gap:10px}
+.names span{border:2px solid var(--ink);padding:4px 12px;font-weight:600}
+footer{border-top:2px solid var(--rule);padding:22px 0 90px;color:var(--mute);font-size:14px}
+@media(max-width:860px){
+ .two,.credits{grid-template-columns:1fr}.works{grid-template-columns:1fr 1fr}
+ .days{grid-template-columns:repeat(3,1fr)}.day:nth-child(3){border-right:0}.day:nth-child(-n+3){border-bottom:2px solid var(--rule)}
+ .facts div:nth-child(2){border-right:0}.facts div:nth-child(-n+2){border-bottom:2px solid var(--rule)}
+}
+@media(max-width:560px){
+ body{font-size:16px}.works{grid-template-columns:1fr}.also a,.also div{grid-template-columns:1fr;gap:2px}
+ .days{grid-template-columns:repeat(2,1fr)}.day{border-right:2px solid var(--rule)!important;border-bottom:2px solid var(--rule)}
+ .day:nth-child(2n){border-right:0!important}.day:nth-last-child(-n+2){border-bottom:0}
+ .hero{padding-top:36px}
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap mono"><span>di.iiii · Դիլիջանը որպես էկրան · Dilijan As A Screen</span><span>Camp · 25–30.08.2026</span></div></header>
+<div class="strip" aria-hidden="true"><i style="background:var(--c1)"></i><i style="background:var(--c2)"></i><i style="background:var(--c3)"></i><i style="background:var(--c4)"></i><i style="background:var(--c5)"></i></div>
+
+<main class="wrap">
+<div class="hero">
+ <div class="mono">Green Rock Foundation × hosq Foundation</div>
+ <h1>Դիլիջանը որպես էկրան<small lang="en">Dilijan As A Screen</small></h1>
+ <p class="lede">Հինգ երեխա մեկ շաբաթում հավաքեցին իրենց քաղաքը ու վերադարձրին այն որպես լույս։</p>
+ <p class="lede-en" lang="en">Five kids spent one week collecting their town and gave it back as light.</p>
+ <a class="door mono" target="_parent" href="/dilijan/welcome">Մտնել 3D դահլիճ · Into the 3D hall →</a>
+</div>
+
+<section>
+ <h2 class="mono">Ի՞նչ էր ճամբարը <span>· What the camp was</span></h2>
+ <div class="two">
+  <div>
+   <p>Արվեստի, գիտության և տեխնոլոգիայի օրական ճամբար՝ Green Rock և hosq հիմնադրամների կազմակերպմամբ, Apicius Armenia դպրոցում, Դիլիջանում։ 25–30 օգոստոսի, ամեն օր 12:00–17:00։</p>
+   <p>Մեդիա արվեստի ուղղությունը՝ «Դիլիջանը որպես էկրան», վարեց di.i-ն։ Երեխաները հավաքում են իրենց սեփական վայրը և այն վերադարձնում որպես պրոեկցված լույս։</p>
+  </div>
+  <div lang="en">
+   <p class="en">An Art, Science and Technology day camp by Green Rock Foundation and hosq Foundation, at Apicius Armenia in Dilijan. 25 to 30 August 2026, every day 12:00 to 17:00.</p>
+   <p class="en">di.i mentored the media art strand, «Dilijan As A Screen»: each kid collects a place of their own and gives it back as projected light.</p>
+  </div>
+ </div>
+</section>
+
+<section>
+ <h2 class="mono">Վեց օր <span>· The six days</span></h2>
+ <div class="days">
+  <div class="day"><b>1</b><span class="hy">Տեսնել</span><span class="en" lang="en">See</span><span class="mono en">25.08</span></div>
+  <div class="day"><b>2</b><span class="hy">Հավաքել</span><span class="en" lang="en">Collect</span><span class="mono en">26.08</span></div>
+  <div class="day"><b>3</b><span class="hy">Շարժման բերել</span><span class="en" lang="en">Make it move</span><span class="mono en">27.08</span></div>
+  <div class="day"><b>4</b><span class="hy">Փորձ և սառեցում</span><span class="en" lang="en">Rehearse + freeze</span><span class="mono en">28.08</span></div>
+  <div class="day"><b>5</b><span class="hy">Տեղ սարքել</span><span class="en" lang="en">Make it a place</span><span class="mono en">29.08</span></div>
+  <div class="day show"><b>6</b><span class="hy">Ցուցադրություն</span><span class="en" lang="en">Showcase</span><span class="mono en">30.08</span></div>
+ </div>
+</section>
+
+<section id="works">
+ <h2 class="mono">Աշխատանքները <span>· Each kid's world</span></h2>
+ <div class="works">
+  <a class="work" target="_parent" href="/dilijan/mushroom-house"><div class="bar" style="background:var(--c1)"></div><img src="{{img:mushroom}}" alt="Margarita's world: a village with a big mushroom house" loading="lazy"><div class="t"><div class="n">ՄԱՐԳԱՐԻՏԱ<small>Margarita</small></div><div class="w">Հազարգլխարկ<br><span class="en" lang="en">Mushroom village, walk it</span></div><span class="go mono">Բացել · Open →</span></div></a>
+  <a class="work" target="_parent" href="/dilijan/orange-room"><div class="bar" style="background:var(--c2)"></div><img src="{{img:orange}}" alt="Zhana's world: the orange room" loading="lazy"><div class="t"><div class="n">ԺԱՆԱ<small>Zhana</small></div><div class="w">Նարնջագույն սենյակ<br><span class="en" lang="en">The orange room</span></div><span class="go mono">Բացել · Open →</span></div></a>
+  <a class="work" target="_parent" href="/dilijan/dilijan-drive"><div class="bar" style="background:var(--c3)"></div><img src="{{img:drive}}" alt="Gor's world: the Dilijan Drive game" loading="lazy"><div class="t"><div class="n">ԳՈՌ<small>Gor</small></div><div class="w">Դիլիջան դրայվ<br><span class="en" lang="en">Dilijan Drive, a car game</span></div><span class="go mono">Խաղալ · Play →</span></div></a>
+  <a class="work" target="_parent" href="/dilijan/the-yard"><div class="bar" style="background:var(--c4)"></div><img src="{{img:aircanvas}}" alt="Aren's world: AirCanvas, the yard and the wall" loading="lazy"><div class="t"><div class="n">ԱՐԵՆ<small>Aren</small></div><div class="w">AirCanvas · Բակը · Պատը<br><span class="en" lang="en">AirCanvas, the yard and the wall</span></div><span class="go mono">Բացել · Open →</span></div></a>
+  <a class="work" target="_parent" href="/dilijan/tsaghkanots"><div class="bar" style="background:var(--c5)"></div><img src="{{img:flowers}}" alt="Hripsime's world: the flower garden" loading="lazy"><div class="t"><div class="n">ՀՐԻՓՍԻՄԵ<small>Hripsime</small></div><div class="w">Ծաղկանոց<br><span class="en" lang="en">The flower garden</span></div><span class="go mono">Բացել · Open →</span></div></a>
+  <a class="work" target="_parent" href="/dilijan/anahit-vachagan"><div class="bar" style="background:linear-gradient(90deg,var(--c1),var(--c2),var(--c3),var(--c4),var(--c5))"></div><img src="{{img:anahit}}" alt="Anahit and Vachagan, the tale the whole camp made on the last day" loading="lazy"><div class="t"><div class="n">Բոլորով<small>Together</small></div><div class="w">Անահիտ և Վաչագան<br><span class="en" lang="en">The tale the camp made on the last day</span></div><span class="go mono">Բացել · Open →</span></div></a>
+ </div>
+</section>
+
+<section>
+ <h2 class="mono">Շնորհակալություն <span>· Credits</span></h2>
+ <div class="credits">
+  <div><p>Green Rock Foundation</p><p>hosq Foundation</p><p>Apicius Armenia, Դիլիջան</p></div>
+  <div><p>Մեդիա արվեստի մենթոր՝ Գևորգ — di.i</p><p class="en" lang="en">Media art mentor: Gevorg — di.i</p><p>Արտ-դիրեկտոր՝ Էմիլյա — di.i</p><p class="en" lang="en">Art director: Emilya — di.i</p></div>
+  <div><p>Երեխաները</p><p class="en" lang="en">The kids</p></div>
+ </div>
+ <div class="names"><span style="background:var(--c1)">ՄԱՐԳԱՐԻՏԱ</span><span style="background:var(--c2)">ԺԱՆԱ</span><span style="background:var(--c3)">ԳՈՌ</span><span style="background:var(--c4)">ԱՐԵՆ</span><span style="background:var(--c5)">ՀՐԻՓՍԻՄԵ</span></div>
+</section>
+</main>
+
+<footer><div class="wrap"><span class="mono">Dilijan · di.iiii</span> Այս էջը di.iiii-ի տարածքի մի նախագիծ է. աշխարհները նույն տարածքում են։ · This page is a project in the Dilijan space; the worlds live in the same space.</div></footer>
+</body>
+</html>

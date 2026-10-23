@@ -389,8 +389,41 @@ export const rehearseAgainst = async ({ home }) => {
     // The data root may be a symlink — an install pointed at a shared tier —
     // and fs.cp refuses to lay a link over the scratch directory. Copy what it
     // points at, and follow links inside too: the rehearsal must open files.
-    await fsp.cp(await fsp.realpath(p.data), scratch, { recursive: true, dereference: true })
+    try {
+        await fsp.cp(await fsp.realpath(p.data), scratch, { recursive: true, dereference: true })
+    } catch (error) {
+        // A copy that dies halfway (a broken link, a full disk) leaves what it
+        // had written so far, and the caller never receives the path to remove.
+        await removeRehearsal(scratch)
+        throw error
+    }
     return scratch
+}
+
+/**
+ * Remove a rehearsal copy. If it cannot be removed, say where it is, in one
+ * line, because the next person to find it will be looking at a full /tmp.
+ */
+export const removeRehearsal = async (scratch, { rm = fsp.rm, warn = (line) => process.stderr.write(`${line}\n`) } = {}) => {
+    try {
+        await rm(scratch, { recursive: true, force: true })
+    } catch (error) {
+        warn(`could not remove the rehearsal copy ${scratch}: ${String(error?.message || error)}`)
+    }
+}
+
+/**
+ * Run `fn(scratch)` against a rehearsal copy and remove the copy afterwards on
+ * every path: fn returned, fn threw, or the copy itself failed. `scratch` is
+ * null when there is nothing to rehearse (a first install).
+ */
+export const withRehearsal = async ({ home, ...removal }, fn) => {
+    const scratch = await rehearseAgainst({ home })
+    try {
+        return await fn(scratch)
+    } finally {
+        if (scratch) await removeRehearsal(scratch, removal)
+    }
 }
 
 const withoutExperimentalWarning = (fn) => {
