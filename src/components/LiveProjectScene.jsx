@@ -1921,7 +1921,7 @@ export default function LiveProjectScene({
     // approach. The frame they are looking at is what the curtain holds.
     const handlePortalReached = useCallback((entity, frameState = null) => {
         const reference = entity?.components?.reference || {}
-        const href = portalHref(reference.spaceId, reference.projectId)
+        const href = portalHref(reference.spaceId, reference.projectId, reference.anchor)
         if (!href || isEntryInProgress()) return
         markArriveWalking()
         const three = frameState && frameState.gl ? frameState : null

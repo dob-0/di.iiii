@@ -5,7 +5,7 @@
 //   node scripts/space/apply-structure.mjs STRUCTURE.json --api URL [--apply] [--backup FILE]
 //   node scripts/space/apply-structure.mjs --undo BACKUP.json --api URL [--apply]
 import fs from 'node:fs'
-import { relinkHtml, userAgent } from './pages-lib.mjs'
+import { editHtml, extendDoorSet, relinkHtml, relinkPortals, upsertDoors, upsertEntities, userAgent } from './pages-lib.mjs'
 
 const args = process.argv.slice(2)
 const flag = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined }
@@ -83,19 +83,26 @@ for (const id of s.private || []) {
 }
 // Links inside code pages that point at a project this structure hides, repointed (e.g. a back button).
 // Every project is read once and written once; the link is repointed in href AND window.open, also inside a combined page.
+// Then each page's exact text edits (`edits`) and each scene's doors (`doors`), in the same one read and one write (N1250).
 const relinks = Object.entries(s.relink || {})
-if (relinks.length) {
+if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).length || Object.keys(s.doorSets || {}).length) {
   for (const p of before.projects) {
     const res = await call('GET', `/api/projects/${p.id}/document`); const doc = res.document || res
     let html = doc.presentationState?.codeHtml
-    if (!html) continue
+    let entities = doc.entities
     const notes = []
     for (const [from, to] of relinks) {
-      const r = relinkHtml(html, from, to)
-      if (r.count) { notes.push(`${r.count} × ${from} -> ${to}`); html = r.html }
+      if (html) { const r = relinkHtml(html, from, to); if (r.count) { notes.push(`${r.count} × ${from} -> ${to}`); html = r.html } }
+      // a scene's doors too (N1248): the hall kept a door to a hidden project after every page was repointed
+      if (Array.isArray(entities)) { const r = relinkPortals(entities, from, to, s.space); if (r.count) { notes.push(`${r.count} door(s) ${from} -> ${to}`); entities = r.entities } }
     }
+    if (html && (s.edits || []).length) { const r = editHtml(html, s.edits, p.id); if (r.count) { notes.push(...r.notes); html = r.html } }
+    if (s.doors?.[p.id]) { const r = upsertDoors(Array.isArray(entities) ? entities : [], s.doors[p.id]); if (r.count) { notes.push(...r.notes); entities = r.entities } }
+    // each new door's parts, carried on from the scene's own last two sets (doorSets: project -> [{ match, prev, src, next, ... }])
+    for (const set of s.doorSets?.[p.id] || []) { const r = upsertEntities(entities, extendDoorSet(entities, set)); if (r.count) { notes.push(`${r.count} part(s) of ${set.doorNext}`); entities = r.entities } }
     if (!notes.length) continue
-    await step(`relink ${p.id}: ${notes.join(', ')}`, () => call('PUT', `/api/projects/${p.id}/document`, { ...doc, presentationState: { ...doc.presentationState, codeHtml: html } }))
+    const next = { ...doc, ...(Array.isArray(entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}) } }
+    await step(`page ${p.id}: ${notes.join(', ')}`, () => call('PUT', `/api/projects/${p.id}/document`, next))
   }
 }
 if (s.order) await step('order', () => call('PUT', `/api/spaces/${s.space}/projects/order`, { ids: [...s.order, ...unplaced] }))

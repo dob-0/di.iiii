@@ -34,6 +34,101 @@ export function repointAssets(html, fromId, toId) {
   return { html: out, hashes: [...hashes] }
 }
 
+// The same repointing for a scene's doors (portal entities): a door whose destination is `from` goes to `to` instead,
+// written into its reference (spaceId, projectId, anchor). Owner 2026-10-23 (N1248): the hall's door "ԱՇԽԱՐՀՆԵՐ" still
+// went to /dilijan/worlds, a private camp tool, after every code page had been repointed. Pure; returns a new list.
+const pathOf = (r, space) => `/${r.spaceId || space}${r.projectId ? `/${r.projectId}` : ''}${r.anchor ? `#${String(r.anchor).replace(/^#/, '')}` : ''}`
+export function relinkPortals(entities, from, to, space = '') {
+  const m = /^\/([\w-]+)(?:\/([\w-]+))?(?:#([A-Za-z][\w:.-]*))?$/.exec(to)
+  if (!m) throw new Error(`a door goes to /space[/project][#part]: ${to}`)
+  let count = 0
+  const out = (entities || []).map((e) => {
+    const r = e?.components?.reference
+    if (!r || r.mode === 'embed' || pathOf(r, space) !== from) return e
+    count += 1
+    const reference = { ...r, spaceId: m[1], projectId: m[2] || '' }
+    if (m[3]) reference.anchor = m[3]; else delete reference.anchor
+    return { ...e, components: { ...e.components, reference } }
+  })
+  return { entities: out, count }
+}
+
+// Exact text edits inside chosen projects' code pages, from a structure file (`edits`). Owner 2026-10-23 (N1250): the
+// back link "← ԱՇԽԱՐՀՆԵՐ" inside every work becomes bilingual; the orange room's hint moves off its back button on phones.
+// Each edit names its projects ('*' = all); an edit whose `from` is absent changes nothing, so a re-run is a no-op. Pure.
+export function editHtml(html, edits, projectId) {
+  let out = html, count = 0
+  const notes = []
+  for (const ed of edits || []) {
+    if (!ed || typeof ed.from !== 'string' || typeof ed.to !== 'string' || !ed.from) throw new Error('an edit needs from and to')
+    const ps = ed.projects || ['*']
+    if (!ps.includes('*') && !ps.includes(projectId)) continue
+    const n = out.split(ed.from).length - 1
+    if (!n) continue
+    out = out.split(ed.from).join(ed.to); count += n
+    notes.push(`${n} × ${ed.why || ed.from.slice(0, 40)}`)
+  }
+  return { html: out, count, notes }
+}
+
+// A scene's doors, from a structure file (`doors`: project -> portal entities): each door is put in by its id, or replaced
+// when it differs; doors not named are left as they are. Owner 2026-10-23 (N1250): the hall had no door to one work. Pure.
+export function upsertDoors(entities, doors) {
+  for (const d of doors || []) if (!d?.id || d.type !== 'portal' || !d.components?.reference) throw new Error(`a door is a portal entity with an id and a reference: ${d?.id}`)
+  return upsertEntities(entities, doors, 'door')
+}
+
+// A scene's doors stand on an arc, each with its own set of parts (island, pad, stones, beacon...). extendDoorSet makes the
+// set for one more door by carrying the scene's own pattern one step on, measured from the last two sets: each part keeps
+// its place relative to its door (a fixed world offset when the two sets share it, else turned with the arc), its turn
+// grows by the same step, its colours are swapped (`recolor`). The new door itself comes from `doors`. Owner 2026-10-23
+// (N1250): the hall's sixth door must stand like the other five. Pure; returns the new parts only.
+export function extendDoorSet(entities, { match, prev, src, next, doorPrev, doorSrc, doorNext, recolor = {} }) {
+  const byId = new Map((entities || []).map((e) => [e.id, e]))
+  const pos = (id) => { const p = byId.get(id)?.components?.transform?.position; if (!p) throw new Error(`no position for ${id}`); return p }
+  const [dp, ds, dn] = [pos(doorPrev), pos(doorSrc), pos(doorNext)]
+  const ang = (p) => Math.atan2(p[0], -p[2])
+  const step = ang(dn) - ang(ds)   // the new door may skip a place on the arc that is taken (the turn is to IT, not one step)
+  // the turn of an arc about the scene's centre, the same way the doors go: x' = x cos b - z sin b, z' = x sin b + z cos b
+  const turn = (o, b) => [o[0] * Math.cos(b) - o[2] * Math.sin(b), o[1], o[0] * Math.sin(b) + o[2] * Math.cos(b)]
+  const re = new RegExp(match.replace('{i}', src))
+  const swap = (v) => (typeof v !== 'string' ? v : v.includes(`-${src}`) ? v.replace(`-${src}`, `-${next}`)
+    : new RegExp(`\\b${+src + 1}\\b`).test(v) ? v.replace(new RegExp(`\\b${+src + 1}\\b`), String(+next + 1))
+      : v.replace(new RegExp(`\\b${src}\\b`), String(next)))   // ids say the index; names count from one ("Door pad 5") or not ("Path firefly 4")
+  const lower = Object.fromEntries(Object.entries(recolor).map(([k, v]) => [k.toLowerCase(), v]))
+  const out = []
+  for (const e of entities || []) {
+    if (!re.test(e.id)) continue
+    const before = byId.get(e.id.replace(`-${src}`, `-${prev}`))
+    if (!before) throw new Error(`no earlier part for ${e.id}`)
+    const t1 = e.components.transform, t0 = before.components.transform
+    const o1 = t1.position.map((v, k) => v - ds[k]), o0 = t0.position.map((v, k) => v - dp[k])
+    const fixed = o1.every((v, k) => Math.abs(v - o0[k]) < 1e-3)
+    const o = fixed ? o1 : turn(o1, step)   // dp only tells fixed from turning parts
+    const rot = (t1.rotation || [0, 0, 0]).map((v, k) => v + (v - ((t0.rotation || [0, 0, 0])[k] || 0)))
+    const appearance = e.components.appearance && Object.fromEntries(Object.entries(e.components.appearance)
+      .map(([k, v]) => [k, typeof v === 'string' && lower[v.toLowerCase()] ? lower[v.toLowerCase()] : v]))
+    out.push({ ...e, id: swap(e.id), name: swap(e.name), parentId: e.parentId ? swap(e.parentId) : e.parentId,
+      components: { ...e.components, transform: { ...t1, position: o.map((v, k) => +(v + dn[k]).toFixed(6)), rotation: rot.map((v) => +v.toFixed(6)) },
+        ...(appearance ? { appearance } : {}) } })
+  }
+  if (!out.length) throw new Error(`no parts match ${match} for ${src}`)
+  return out
+}
+
+// Entities put in by their id, or replaced when they differ; the rest are left as they are. Pure.
+export function upsertEntities(entities, list, what = 'part') {
+  const out = [...(entities || [])]
+  const notes = []
+  for (const d of list || []) {
+    if (!d?.id) throw new Error(`a ${what} needs an id`)
+    const i = out.findIndex((e) => e?.id === d.id)
+    if (i < 0) { out.push(d); notes.push(`${what} ${d.id} added`) }
+    else if (JSON.stringify(out[i]) !== JSON.stringify({ ...out[i], ...d })) { out[i] = { ...out[i], ...d }; notes.push(`${what} ${d.id} updated`) }
+  }
+  return { entities: out, count: notes.length, notes }
+}
+
 export const MARK = '<!-- di:combined-pages v1 -->'
 export const isCombined = (html) => typeof html === 'string' && html.includes(MARK)
 
@@ -62,7 +157,13 @@ const HAND_ON = String.raw`function handOn(h){
   return tag+h;
 }`
 
-// One page, a tab per source page. Only the open tab's page is loaded: a tab switch replaces the frame, so the old
+// A tab's name in an address: `key` if the spec gives one, else its project id or file name without `.html`, lower case.
+export const tabKey = (p, i) => String(p.key || p.id || '').toLowerCase().replace(/\.html?$/, '').replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || String(i + 1)
+
+// One page, a tab per source page. A link chooses the tab it opens with `?tab=<key>` (or `?tab=<n>`, counted from 1): owner
+// 2026-10-23 (N1248), "'into the yard' not goes into the work", the door to the yard opened on the first tab. The viewer hands
+// the address's query to the page as window.diiPageQuery (presentationPreviewDocument.js), so the choice survives the srcdoc.
+// Only the open tab's page is loaded: a tab switch replaces the frame, so the old
 // page (its 3D view, its camera) is unloaded before the next one starts. The strip sits ABOVE the frame, never on top
 // of it, so it covers none of a page's own controls at any width.
 export function buildCombinedPage({ title, pages, links = [], allow = ALLOW, start = 0 }) {
@@ -91,6 +192,7 @@ nav button:focus-visible,nav a:focus-visible{outline:2px solid var(--ink);outlin
 <script>
 const PAGES=${json},ALLOW=${JSON.stringify(allow)};
 const btn=[...document.querySelectorAll('nav button')];let view=document.getElementById('view');
+const KEYS=${JSON.stringify(pages.map(tabKey))};
 ${HAND_ON}
 function show(i){
   const f=document.createElement('iframe');f.id='view';f.title=btn[i].textContent;f.allow=ALLOW;f.srcdoc=handOn(PAGES[i]);
@@ -98,6 +200,7 @@ function show(i){
   btn.forEach((b,j)=>b.setAttribute('aria-pressed',String(j===i)));
 }
 btn.forEach((b,i)=>b.addEventListener('click',()=>show(i)));
-show(${first});
+let asked=-1;try{const q=new URLSearchParams(window.diiPageQuery||'').get('tab');if(q){asked=KEYS.indexOf(q.toLowerCase());if(asked<0&&/^[0-9]+$/.test(q))asked=Math.min(+q,KEYS.length)-1;}}catch(e){}
+show(asked>=0?asked:${first});
 </script></body></html>`
 }

@@ -20,6 +20,11 @@ h1{font-size:clamp(40px,8vw,88px);line-height:1;margin:14px 0 18px;font-weight:7
 h1 small{display:block;font-size:.42em;font-weight:500;color:var(--mute);margin-top:12px;letter-spacing:0}
 .lede{font-size:clamp(20px,2.6vw,28px);line-height:1.35;max-width:30em;margin:0 0 10px}
 .lede-en{color:var(--mute);max-width:36em;margin:0}
+.place{position:relative;margin:30px 0 0;border:2px solid var(--ink);background:var(--paper)}
+.place iframe{display:block;width:100%;height:clamp(320px,56vw,620px);border:0;background:var(--paper)}
+.place .cap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;border-top:2px solid var(--ink);padding:10px 14px;font-size:12px;letter-spacing:.06em}
+.place .cap a{color:var(--ink)}
+.place .hint{position:absolute;left:14px;top:12px;font-size:11px;letter-spacing:.08em;color:var(--mute);pointer-events:none}
 .door{display:inline-block;margin-top:28px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);padding:14px 22px;text-decoration:none}
 .door:hover,.door:focus-visible{background:var(--paper);color:var(--ink)}
 section{border-top:2px solid var(--rule);padding:36px 0 44px}
@@ -84,7 +89,12 @@ footer{border-top:2px solid var(--rule);padding:22px 0 90px;color:var(--mute);fo
  <h1>Դիլիջանը որպես էկրան<small lang="en">Dilijan As A Screen</small></h1>
  <p class="lede">Հինգ երեխա մեկ շաբաթում հավաքեցին իրենց քաղաքը ու վերադարձրին այն որպես լույս։</p>
  <p class="lede-en" lang="en">Five kids spent one week collecting their town and gave it back as light.</p>
- <a class="door mono" target="_parent" href="/dilijan/welcome">Մտնել 3D դահլիճ · Into the 3D hall →</a>
+ <figure class="place" style="margin-left:0;margin-right:0">
+  <iframe title="Apicius Armenia, Dilijan: the place of the screening, scanned by Aren. Drag to turn it." loading="lazy" srcdoc="{{page:../aren/yard.html}}"></iframe>
+  <div class="hint mono" aria-hidden="true">Քաշել · Drag to turn</div>
+  <figcaption class="cap mono"><span>Ցուցադրության վայրը · The place of the screening · Apicius Armenia, Դիլիջան</span><span>Սկան՝ Արեն · Scan: Aren · <a target="_parent" href="/dilijan/the-yard?tab=yard">Մտնել բակ · Into the yard →</a></span></figcaption>
+ </figure>
+ <a class="door mono" target="_parent" href="/dilijan/welcome">Մտնել 3D սրահ · Into the 3D hall →</a>
 </div>
 
 <section>
@@ -119,7 +129,7 @@ footer{border-top:2px solid var(--rule);padding:22px 0 90px;color:var(--mute);fo
   <a class="work" target="_parent" href="/dilijan/mushroom-house"><div class="bar" style="background:var(--c1)"></div><img src="{{img:mushroom}}" alt="Margarita's world: a village with a big mushroom house" loading="lazy"><div class="t"><div class="n">ՄԱՐԳԱՐԻՏԱ<small>Margarita</small></div><div class="w">Հազարգլխարկ<br><span class="en" lang="en">Mushroom village, walk it</span></div><span class="go mono">Բացել · Open →</span></div></a>
   <a class="work" target="_parent" href="/dilijan/orange-room"><div class="bar" style="background:var(--c2)"></div><img src="{{img:orange}}" alt="Zhana's world: the orange room" loading="lazy"><div class="t"><div class="n">ԺԱՆԱ<small>Zhana</small></div><div class="w">Նարնջագույն սենյակ<br><span class="en" lang="en">The orange room</span></div><span class="go mono">Բացել · Open →</span></div></a>
   <a class="work" target="_parent" href="/dilijan/dilijan-drive"><div class="bar" style="background:var(--c3)"></div><img src="{{img:drive}}" alt="Gor's world: the Dilijan Drive game" loading="lazy"><div class="t"><div class="n">ԳՈՌ<small>Gor</small></div><div class="w">Դիլիջան դրայվ<br><span class="en" lang="en">Dilijan Drive, a car game</span></div><span class="go mono">Խաղալ · Play →</span></div></a>
-  <a class="work" target="_parent" href="/dilijan/the-yard"><div class="bar" style="background:var(--c4)"></div><img src="{{img:aircanvas}}" alt="Aren's world: AirCanvas, the yard and the wall" loading="lazy"><div class="t"><div class="n">ԱՐԵՆ<small>Aren</small></div><div class="w">AirCanvas · Բակը · Պատը<br><span class="en" lang="en">AirCanvas, the yard and the wall</span></div><span class="go mono">Բացել · Open →</span></div></a>
+  <a class="work" target="_parent" href="/dilijan/the-yard"><div class="bar" style="background:var(--c4)"></div><img src="{{img:aircanvas}}" alt="Aren's world: AirCanvas and the yard" loading="lazy"><div class="t"><div class="n">ԱՐԵՆ<small>Aren</small></div><div class="w">AirCanvas · Բակը<br><span class="en" lang="en">AirCanvas and the yard</span></div><span class="go mono">Բացել · Open →</span></div></a>
   <a class="work" target="_parent" href="/dilijan/tsaghkanots"><div class="bar" style="background:var(--c5)"></div><img src="{{img:flowers}}" alt="Hripsime's world: the flower garden" loading="lazy"><div class="t"><div class="n">ՀՐԻՓՍԻՄԵ<small>Hripsime</small></div><div class="w">Ծաղկանոց<br><span class="en" lang="en">The flower garden</span></div><span class="go mono">Բացել · Open →</span></div></a>
   <a class="work" target="_parent" href="/dilijan/anahit-vachagan"><div class="bar" style="background:linear-gradient(90deg,var(--c1),var(--c2),var(--c3),var(--c4),var(--c5))"></div><img src="{{img:anahit}}" alt="Anahit and Vachagan, the tale the whole camp made on the last day" loading="lazy"><div class="t"><div class="n">Բոլորով<small>Together</small></div><div class="w">Անահիտ և Վաչագան<br><span class="en" lang="en">The tale the camp made on the last day</span></div><span class="go mono">Բացել · Open →</span></div></a>
  </div>

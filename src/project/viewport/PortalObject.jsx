@@ -253,7 +253,7 @@ export const withGlideCleanup = (resolve, clear) => (frame) => {
     clear()
 }
 
-function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate = true, style = 'gateway' }) {
+function PortalGateway({ spaceId, projectId, anchor, label, color = '#4df9ff', showPlate = true, style = 'gateway' }) {
     const isFrame = style === 'frame'
     const inEditor = typeof window !== 'undefined' && isStudioEditorPath(window.location.pathname)
     const groupRef = useRef(null)
@@ -277,7 +277,7 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
         // project instead. A hub whose doors all point at rooms INSIDE one space
         // therefore went nowhere: every door re-opened the room you were standing
         // in. Route to the project when one is named.
-        const href = portalHref(spaceId, projectId)
+        const href = portalHref(spaceId, projectId, anchor)
         if (!href) return
         const target = ringRef.current || groupRef.current
         enterDestination(href, {
@@ -474,6 +474,7 @@ export default function PortalObject({ entity }) {
         <PortalGateway
             spaceId={reference.spaceId}
             projectId={reference.projectId}
+            anchor={reference.anchor}
             label={reference.label || reference.projectId || reference.spaceId || 'Portal'}
             color={entity.components?.appearance?.color}
             showPlate={reference.labelPlate !== false}
