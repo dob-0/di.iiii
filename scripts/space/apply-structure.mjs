@@ -5,6 +5,8 @@
 //   node scripts/space/apply-structure.mjs STRUCTURE.json --api URL [--apply] [--backup FILE]
 //   node scripts/space/apply-structure.mjs --undo BACKUP.json --api URL [--apply]
 import fs from 'node:fs'
+import crypto from 'node:crypto'
+import path from 'node:path'
 import { editHtml, extendDoorSet, relinkHtml, relinkPortals, upsertDoors, upsertEntities, userAgent } from './pages-lib.mjs'
 
 const args = process.argv.slice(2)
@@ -30,6 +32,36 @@ async function read(space) {
   return { projects, collections }
 }
 
+// A media file named by an entity (`components.media.file`, a path next to the structure file) is uploaded to its project
+// once (content-addressed: the sha256 is the asset id, so a re-run finds it and sends nothing), registered in the
+// document's `assets`, and the entity then names it by `assetId`. N1259: the cinema screen of the Dilijan hall.
+async function resolveMedia(projectId, doc, entity) {
+  const file = entity.components?.media?.file
+  if (!file) return entity
+  const abs = path.resolve(path.dirname(path.resolve(structureFile)), file)
+  const bytes = fs.readFileSync(abs)
+  const id = crypto.createHash('sha256').update(bytes).digest('hex')
+  const known = (doc.assets || []).find((a) => a.id === id)
+  let asset = known
+  if (!asset) {
+    asset = { id, name: path.basename(abs), mimeType: entity.components.media.mimeType || 'video/mp4', size: bytes.length, createdAt: Date.now(), url: `/serverXR/api/projects/${projectId}/assets/${id}`, source: 'server' }
+    await step(`upload ${path.basename(abs)} (${(bytes.length / 1048576).toFixed(1)} MB) to ${projectId}`, async () => {
+      const form = new FormData()
+      form.append('assetId', id)
+      form.append('asset', new Blob([bytes], { type: asset.mimeType }), asset.name)
+      const res = await fetch(`${api}/api/projects/${projectId}/assets`, { method: 'POST', body: form, headers: Object.fromEntries(Object.entries(headers).filter(([k]) => k !== 'content-type')) })
+      if (!res.ok) throw new Error(`upload: ${res.status} ${(await res.text()).slice(0, 120)}`)
+      const out = await res.json().catch(() => ({}))
+      const stored = out.asset || out
+      if (stored.id && stored.id !== id) throw new Error(`the server stored ${stored.id}, not ${id}`)
+      if (stored.url) asset.url = stored.url
+    })
+    doc.assets = [...(doc.assets || []), asset]
+  }
+  const { file: _f, mimeType: _m, ...media } = entity.components.media
+  return { ...entity, components: { ...entity.components, media: { ...media, assetId: asset.id } } }
+}
+
 const undo = flag('--undo')
 if (undo) {
   const b = JSON.parse(fs.readFileSync(undo, 'utf8'))
@@ -46,6 +78,7 @@ if (undo) {
   process.exit(0)
 }
 
+const structureFile = args.find((a) => a.endsWith('.json') && a !== flag('--backup') && a !== flag('--undo')) || ''
 const file = args.find((a) => a.endsWith('.json') && a !== flag('--backup'))
 if (!file) { console.error('give a structure .json'); process.exit(2) }
 const s = JSON.parse(fs.readFileSync(file, 'utf8'))
@@ -85,7 +118,7 @@ for (const id of s.private || []) {
 // Every project is read once and written once; the link is repointed in href AND window.open, also inside a combined page.
 // Then each page's exact text edits (`edits`) and each scene's doors (`doors`), in the same one read and one write (N1250).
 const relinks = Object.entries(s.relink || {})
-if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).length || Object.keys(s.doorSets || {}).length) {
+if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).length || Object.keys(s.doorSets || {}).length || Object.keys(s.entities || {}).length) {
   for (const p of before.projects) {
     const res = await call('GET', `/api/projects/${p.id}/document`); const doc = res.document || res
     let html = doc.presentationState?.codeHtml
@@ -100,8 +133,10 @@ if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).lengt
     if (s.doors?.[p.id]) { const r = upsertDoors(Array.isArray(entities) ? entities : [], s.doors[p.id]); if (r.count) { notes.push(...r.notes); entities = r.entities } }
     // each new door's parts, carried on from the scene's own last two sets (doorSets: project -> [{ match, prev, src, next, ... }])
     for (const set of s.doorSets?.[p.id] || []) { const r = upsertEntities(entities, extendDoorSet(entities, set)); if (r.count) { notes.push(`${r.count} part(s) of ${set.doorNext}`); entities = r.entities } }
+    // media entities of this project (s.entities: project -> [entity]); the file is uploaded first, then the entity is upserted
+    if (s.entities?.[p.id]) { const list = []; for (const e of s.entities[p.id]) list.push(await resolveMedia(p.id, doc, e)); const r = upsertEntities(entities, list, 'entity'); if (r.count) { notes.push(...r.notes); entities = r.entities } }
     if (!notes.length) continue
-    const next = { ...doc, ...(Array.isArray(entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}) } }
+    const next = { ...doc, ...(doc.assets ? { assets: doc.assets } : {}), ...(Array.isArray(entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}) } }
     await step(`page ${p.id}: ${notes.join(', ')}`, () => call('PUT', `/api/projects/${p.id}/document`, next))
   }
 }
