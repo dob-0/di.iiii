@@ -1986,7 +1986,10 @@ export default function LiveProjectScene({
                 shadows={renderSettings.shadows !== false ? 'percentage' : false}
                 gl={rendererWithFallback({ antialias: renderSettings.antialias !== false })}
                 onCreated={({ gl }) => bindContextGuard(gl)}
-                style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none' }}
+                // R3F writes pointer-events:auto on this element inline, which beats any
+                // stylesheet below it: a decorative scene (interactive off) must say none
+                // here, or a wheel over the landing/wiki background never reaches the page.
+                style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none', pointerEvents: interactive ? 'auto' : 'none' }}
             >
                 <XR store={xr.xrStore}>
                 <RenderSettingsEffect renderSettings={renderSettings} />

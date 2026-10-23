@@ -250,21 +250,26 @@ export default function AdminManageSection({ onStats }) {
 
                     {spaces.map((space) => {
                         const isOpen = expanded.has(space.id)
+                        const isSelected = selection.type === 'space' && selection.spaceId === space.id
                         const bucket = projectsBySpace[space.id]
                         return (
                             <div key={space.id} className="preferences-tree-group">
+                                {/* One control per row. The caret used to be a second
+                                    button inside this one, and the only way to close a
+                                    space — out of reach of a keyboard. Now the row opens
+                                    a space and selects it; on the selected space it
+                                    closes it again. */}
                                 <button
                                     type="button"
-                                    className={`preferences-tree-row is-child${selection.type === 'space' && selection.spaceId === space.id ? ' is-selected' : ''}`}
-                                    onClick={() => { setSelection({ type: 'space', spaceId: space.id }); if (!isOpen) toggleExpand(space.id) }}
+                                    className={`preferences-tree-row is-child${isSelected ? ' is-selected' : ''}`}
+                                    aria-expanded={isOpen}
+                                    onClick={() => {
+                                        if (isSelected && isOpen) { toggleExpand(space.id); return }
+                                        setSelection({ type: 'space', spaceId: space.id })
+                                        if (!isOpen) toggleExpand(space.id)
+                                    }}
                                 >
-                                    <span
-                                        className="preferences-tree-caret"
-                                        role="button"
-                                        tabIndex={-1}
-                                        aria-hidden="true"
-                                        onClick={(e) => { e.stopPropagation(); toggleExpand(space.id) }}
-                                    >
+                                    <span className="preferences-tree-caret" aria-hidden="true">
                                         {isOpen ? '▾' : '▸'}
                                     </span>
                                     <span className="preferences-tree-name">{space.label || space.id}</span>
@@ -435,6 +440,7 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
                     <input
                         className="preferences-input"
                         placeholder="Space name"
+                        aria-label="New space name"
                         value={draftSpace}
                         onChange={(e) => setDraftSpace(e.target.value)}
                     />
@@ -525,6 +531,7 @@ function SpaceDetail({
                             ref={(el) => el?.focus()}
                             value={editing.value}
                             placeholder={editing.type === 'space-slug' ? 'Leave empty to clear (falls back to id)' : ''}
+                            aria-label={editing.type === 'space-slug' ? 'Public link' : 'Space name'}
                             onChange={(e) => setEditing({ ...editing, value: e.target.value })}
                             onKeyDown={(e) => e.key === 'Escape' && setEditing(null)}
                         />
@@ -586,6 +593,7 @@ function SpaceDetail({
                     <input
                         className="preferences-input"
                         placeholder="New project title"
+                        aria-label="New project title"
                         value={draftProject}
                         onChange={(e) => setDraftProject(e.target.value)}
                     />
@@ -699,6 +707,7 @@ function CommonsModerationSection() {
                 <input
                     className="preferences-input"
                     placeholder="Search shared assets"
+                    aria-label="Search shared assets"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                 />
@@ -773,6 +782,7 @@ function ProjectDetail({ space, project, isPublished, editing, startEdit, submit
                             ref={(el) => el?.focus()}
                             value={editing.value}
                             placeholder={editing.type === 'project-slug' ? 'Leave empty to clear (falls back to id)' : ''}
+                            aria-label={editing.type === 'project-slug' ? 'Public link' : 'Project title'}
                             onChange={(e) => setEditing({ ...editing, value: e.target.value })}
                             onKeyDown={(e) => e.key === 'Escape' && setEditing(null)}
                         />
