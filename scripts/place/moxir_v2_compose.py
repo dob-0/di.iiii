@@ -144,15 +144,8 @@ def compose(repo, gpath, cpath):
     T['review'] = copy.deepcopy(g['review'])
     # --- patch, DMX lines, power: #875's own code, on the composed list
     import moxir_v2_ground as GR
-    plan = json.load(open(os.path.join(repo, GR.PATCH_PLAN)))
-    n_cut = sum(1 for f in fx if f['id'].startswith(CUT_PREFIX))
-    n_planes = sum(1 for f in fx if f['id'].startswith('rig-par-planes-') and f['type'] == 'up-pl5403')
-    for u in plan['universes']:
-        for b in u['blocks']:
-            if b['select'].get('group') == 'rig-par-cut':
-                b['units'] = n_cut
-            elif b['select'].get('group') == 'rig-par-planes':
-                b['units'] = n_planes
+    plan, counts = GR.plan_with_counts(repo, fx)
+    n_cut, n_planes = counts['rig-par-cut'], counts['rig-par-planes']
     plan['v2_1_note'] = 'a copy of the official v2 patch (N460.2) with the block counts cut %d / planes %d (planes-25 became cut-11); nothing else changed' % (n_cut, n_planes)
     A = GR.Area(repo)
     G_ = GR.world(repo).G

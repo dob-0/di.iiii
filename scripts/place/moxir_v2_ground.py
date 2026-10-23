@@ -1847,6 +1847,28 @@ def plan_addresses(repo, fixtures, plan=None):
     return out, P, absent
 
 
+def plan_with_counts(repo, fixtures):
+    """#880 / #882: a copy of the official v2 patch (PATCH_PLAN) whose group blocks ('<group>-NN') carry THIS fixture list's counts.
+    The official file carries the show rig's counts (cut 11 / planes 39 after 9cfc8ee7: planes-25 became cut-11 on the cranes);
+    the ground layer still has cut 10 / planes 40, so each rig lays the same plan with its own counts and records them. Returns
+    (plan copy, {group: count}). Limit, stated: addresses are walked by unit id from the block's start, so a layer whose count
+    differs from the show rig's puts the units after the moved one on other addresses; the show patch is the composed rig's."""
+    import copy, re
+    P = copy.deepcopy(json.load(open(os.path.join(repo, PATCH_PLAN))))
+    counts = {}
+    for u in P['universes']:
+        for b in u['blocks']:
+            sel = b['select']
+            if not sel.get('group'):
+                continue
+            rx = re.compile('^%s-\\d+$' % re.escape(sel['group']))
+            n = sum(1 for f in fixtures if f['type'] == sel['type'] and rx.match(f['id']))
+            counts[sel['group']] = n
+            if b.get('units') is not None and n and n != b['units']:
+                b['units'] = n
+    return P, counts
+
+
 class Router:
     """The cable router (R2 / A9): a 1 m grid inside the walls; a step costs its length on non-public floor and PUBLIC_COST x its
     length on public floor (and on the artists' route), never through a machine, a column or #873's tower pen. Dijkstra from a
@@ -2480,6 +2502,10 @@ def patch_power(repo, T, A, G, SPR, RT, plan=None):
     T['power'], T['patch'] and each unit's dmx / circuit. build() calls it; moxir_v2_compose.py calls it again on the composed
     list (plan = the patch plan to lay, default the official file). Returns what build() uses later."""
     units = [f for f in T['fixtures'] if f['type'] in ('up-pl5403', 'up-b380f', 'up-yz31p')]
+    if plan is None:
+        plan, counts = plan_with_counts(repo, units)
+    else:
+        counts = plan_with_counts(repo, units)[1]
     addr, plan_doc, absent = plan_addresses(repo, units, plan)
     for f in units:
         f['dmx'] = dict(addr[f['id']])
@@ -2526,8 +2552,15 @@ def patch_power(repo, T, A, G, SPR, RT, plan=None):
         uni_used.setdefault(a['universe'], []).extend([a['footprint']] * (a['units'] or 0))
     T['power'] = {'circuits': circ, 'phases_w': ph, 'distros': DISTROS_R2, 'feeders': feeders,
                   'method': 'moxir_v2_ground.circuits_r2: each area\'s distro (DISTROS_R2), one kind per circuit, <= 2 944 W and <= 5 %% volt drop (BS 7671 4D2B), every leg along the cable router\'s run (walls and the hall\'s edges; a public metre costs %g); C-LASER phased with the rest; the board ASSUMED at D-LEFT (owed)' % PUBLIC_COST}
+    official = json.load(open(os.path.join(repo, PATCH_PLAN)))
+    show = {b['select']['group']: b.get('units') for u in official['universes'] for b in u['blocks'] if b['select'].get('group')}
     T['patch'] = {'from': PATCH_PLAN, 'owner': 'N460.2', 'universes': [{'universe': u, 'used': sum(v), 'devices': len(v)} for u, v in sorted(uni_used.items())],
                   'not_in_this_rig': absent, 'lines': lines, 'network': network, 'nodes': NODES_R2, 'control': CONTROL_SITE,
+                  'counts': {'cut': counts.get('rig-par-cut', 0), 'planes': counts.get('rig-par-planes', 0)},
+                  'show_counts': {'cut': show.get('rig-par-cut'), 'planes': show.get('rig-par-planes')},
+                  'layer_note': 'this rig lays the official plan with its own counts (cut %d / planes %d; the official file says cut %s / planes %s for the show rig); '
+                                'where they differ, the units after the moved one sit on other addresses here than in the show patch (the composed rig, moxir-v2-patch-v2-1-*.json)'
+                                % (counts.get('rig-par-cut', 0), counts.get('rig-par-planes', 0), show.get('rig-par-cut'), show.get('rig-par-planes')),
                   'slots': {str(u): sum(v) for u, v in sorted(uni_used.items())},
                   'method': 'addresses by unit id from the official v2 patch (%s; src/rigbuild/patchPlan.js lays the same); this rig routes the lines: one per area and universe (port A = U1, B = U2), <= %d devices (ANSI E1.11 / EIA-485, 4 of 32 spare), a 120 ohm terminator after the last unit' % (PATCH_PLAN, DMX_MAX_DEVICES)}
     return dict(units=units, lines=lines, circ=circ, ph=ph, feeders=feeders, network=network, cable_list=cable_list, runs=runs, union=union, xings=xings, uni_used=uni_used, absent=absent)

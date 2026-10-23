@@ -9,7 +9,7 @@
     "Two universes, by the owner's decision (N460.2): U1 holds the 18 UP-B380F beams, the 2 Poligraf UP-LA40WF lasers and the one UP-YZ31P smoke machine (353 of 512 channels); U2 holds the 50 UP-PL5403 washes (400 of 512). The six LaserCubes are on no universe at all (offDmx, below).",
     "Blocks select lamps from the PROJECT by type or by unit-id group — never by the name of a truss — and walk them in unit-id order (order id-asc), so an address belongs to its unit and moves only if the unit's number does. Every unit keeps its address when its place changes (a new ground layout moves units, not their ids): the beams by type, the PARs by the id groups rig-par-cut and rig-par-planes, the two lasers by rig-la40wf-entry-01 and -02 (the entry-laser rig, #873). Each block also states how many lamps it expects (units): a project with another count is refused before anything is written.",
     "Blocks start on round numbers (001, 101, 401, 501) and a fixture sits whole inside one universe: every block is checked against 512 (ANSI E1.11 DMX512-A: 512 slots per universe).",
-    "Room to grow: every block is followed by free addresses up to the next block, so a lamp added on the night takes the next address of its own block and nothing moves — beams 289–400 (7 more heads), lasers 465–500 (1 more), smoke 502–512, cut 081–100 (2 more PARs), planes 421–512 (11 more). The lasers start 112 channels after the last beam, so a beam set seven units too high still lands on free slots and never on a laser's channels.",
+    "Room to grow: every block is followed by free addresses up to the next block, so a lamp added on the night takes the next address of its own block and nothing moves — beams 289–400 (7 more heads), lasers 465–500 (1 more), smoke 502–512, cut 089–100 (1 more PAR), planes 413–512 (12 more). The lasers start 112 channels after the last beam, so a beam set seven units too high still lands on free slots and never on a laser's channels.",
     "Fixture numbers: the hundred is the universe; a block's numbers leave the same room to grow as its addresses (beams 101–125, lasers 131–133, smoke 141, cut 201–212, planes 221–271). A crew reads U2.101 and fixture 221 as the same lamp.",
     "At most 32 devices on one DMX line (ANSI E1.11): U1 has 21 devices and runs on one line; U2 has 50 and must leave its node on at least two lines, the same universe on two outputs or one output through a splitter. Which lamp sits on which line is the cabling plan (owed); the addresses do not depend on it.",
     "Spare: U1 keeps 159 channels and U2 112, so the Minimal plan's rule of half of every universe spare (256) cannot hold here; minSpare is 100, and the planner warns if a universe falls under it.",
@@ -98,9 +98,9 @@
           "start": 1,
           "fixture": 201,
           "order": "id-asc",
-          "units": 10,
+          "units": 11,
           "name": "UP-PL5403 wash, the cut",
-          "what": "the 10 UP-PL5403 on the cut, 8 ch each: 001, 009 … 073 (last channel 080); room for 2 more before 101"
+          "what": "the 11 UP-PL5403 on the cut, 8 ch each: 001, 009 … 081 (last channel 088); room for 1 more before 101. The plan follows the rig (lead decision 2026-10-10, N463 + commit 9cfc8ee7): the pit PAR rig-par-planes-25 hangs on the near crane's cut as rig-par-cut-11 (the DJ kicker), same DMX address, so cut 11 / planes 39; addresses, starts and the universe totals (U1 353, U2 400) are unchanged."
         },
         {
           "select": {
@@ -110,9 +110,9 @@
           "start": 101,
           "fixture": 221,
           "order": "id-asc",
-          "units": 40,
+          "units": 39,
           "name": "UP-PL5403 wash, the planes",
-          "what": "the 40 UP-PL5403 of the planes (columns, embers, halo, roof, speaker faces, stage), 8 ch each: 101, 109 … 413 (last channel 420); room for 11 more before the end of the universe"
+          "what": "the 39 UP-PL5403 of the planes (columns, embers, halo, roof, speaker faces, stage), 8 ch each: 101, 109 … 405 (last channel 412); room for 12 more before the end of the universe"
         }
       ]
     }
