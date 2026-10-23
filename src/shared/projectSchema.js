@@ -1109,6 +1109,9 @@ export const normalizeEntity = (entity = {}) => {
             projectId: ensureString(refSource.projectId, refDefault.projectId || ''),
             mode: ['embed', 'portal'].includes(refMode) ? refMode : 'portal',
             label: ensureString(refSource.label, refDefault.label || ''),
+            // A part of the destination page (a section id): /dilijan#works. Optional; a door without one
+            // is unchanged. Only a plain id survives (N1248).
+            ...(/^[A-Za-z][\w:.-]{0,63}$/.test(String(refSource.anchor || '').replace(/^#/, '')) ? { anchor: String(refSource.anchor).replace(/^#/, '') } : {}),
             // Label styling. Defaults reproduce the original look exactly (white
             // type on a dark plate, renderer's built-in font), so a portal
             // authored before these existed is untouched.

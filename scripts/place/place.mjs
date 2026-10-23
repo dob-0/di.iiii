@@ -36,6 +36,11 @@
  *   --no-sources        do not carry the footage into the space (it is there)
  *   --dry-run           say what would happen, change nothing
  *
+ * 360 footage (Insta360 exported as equirectangular MP4/JPG) goes in the same
+ * folder or the same space as phone clips; step 1 cuts it into pinhole views.
+ * Tuning, all passed to frames.mjs: --views <n> --pano-fov <deg> --pano-fps <n>
+ * --max-pano-frames <n> --no-up --view-size <px> --mask-below <deg> --mask-sector <yaw:half>
+ *
  * Each step leaves its work in <work> and can be run again on its own — see
  * scripts/place/README.md. Nothing here writes to the footage folder.
  */
@@ -50,14 +55,23 @@ const args = parseArgs()
 
 const step = (name, script, scriptArgs) => ({ name, script, args: scriptArgs })
 
+// The 360 knobs travel to frames.mjs untouched; place.mjs holds no opinion on them.
+export const PANO_FLAGS = ['views', 'pano-fov', 'pano-fps', 'max-pano-frames', 'view-size', 'mask-below', 'mask-sector']
+export const panoArgs = (source) => {
+    const out = []
+    for (const flag of PANO_FLAGS) if (source[flag] !== undefined && source[flag] !== true) out.push(`--${flag}`, String(source[flag]))
+    if (source['no-up']) out.push('--no-up')
+    return out
+}
+
 export const buildSteps = (options) => {
     const { work, from, name } = options
     const steps = []
     // Either a folder on this disk, or a space whose `sources` room a phone
     // already filled. Never both — the caller chose one.
     steps.push(step('frames', 'frames.mjs', options.fromSpace
-        ? ['--from-space', options.fromSpace, '--work', work, ...(options.api ? ['--api', options.api] : [])]
-        : ['--from', from, '--work', work]))
+        ? ['--from-space', options.fromSpace, '--work', work, ...(options.api ? ['--api', options.api] : []), ...(options.pano || [])]
+        : ['--from', from, '--work', work, ...(options.pano || [])]))
     steps.push(step('build', 'colab-job.mjs', options.localObj
         ? ['--work', work, '--local-obj', options.localObj]
         : ['--work', work, '--gpu', options.gpu || 'L4']))
@@ -140,6 +154,7 @@ const main = () => {
         forward: args.forward === undefined ? null : num(args.forward, null),
         flip: Boolean(args.flip),
         api: args.api ? String(args.api) : null,
+        pano: panoArgs(args),
         label: args.label ? String(args.label) : null
     })
 
