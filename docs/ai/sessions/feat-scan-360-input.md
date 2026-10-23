@@ -1,4 +1,4 @@
-# Session note — 360 footage as scan input (2026-10-23, ledger N1250.1)
+## 2026-10-23 — 360 footage (Insta360) accepted as scan input
 
 Owner: "i want to full also i have 360 insta, so start with the android ..." — he owns an Insta360; its footage should feed the scan of a place (Hayfilm next).
 
