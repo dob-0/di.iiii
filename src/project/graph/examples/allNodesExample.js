@@ -202,6 +202,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('circle', 'geom.circle', { label: 'Circle', col: 3, row: 14, values: { position: [-5.5, 0.5, -2] } })
     add('go', 'view.button', { label: 'Go', col: 4, row: 0 })
     add('keys', 'device.keyboard', { label: 'Keyboard', col: 4, row: 1 })
+    add('visitor', 'device.visitor', { label: 'Visitor', col: 4, row: 20 })
+    add('tilt', 'device.tilt', { label: 'Tilt', col: 4, row: 21 })
     add('midiOut', 'device.midi.out', { label: 'MIDI Out', col: 4, row: 2 })
     add('dmxOut', 'device.dmx.out', { label: 'DMX Out', col: 4, row: 15 })
     add('laser', 'laser.shape', { label: 'Laser', col: 4, row: 16 })

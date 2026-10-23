@@ -5,6 +5,8 @@ import { computeOutput as colourCombine } from './colour.combine/runtime.js'
 import { computeOutput as colourRamp } from './colour.ramp/runtime.js'
 import { computeOutput as colourSplit } from './colour.split/runtime.js'
 import { computeOutput as deviceKeyboard } from './device.keyboard/runtime.js'
+import { computeOutput as deviceVisitor } from './device.visitor/runtime.js'
+import { computeOutput as deviceTilt } from './device.tilt/runtime.js'
 import { computeOutput as deviceDmxOut } from './device.dmx.out/runtime.js'
 import { computeOutput as deviceLaserOut } from './device.laser.out/runtime.js'
 import { computeOutput as laserShape } from './laser.shape/runtime.js'
@@ -71,6 +73,8 @@ export const NODE_RUNTIMES = new Map([
     ['colour.ramp', colourRamp],
     ['colour.split', colourSplit],
     ['device.keyboard', deviceKeyboard],
+    ['device.visitor', deviceVisitor],
+    ['device.tilt', deviceTilt],
     ['device.dmx.out', deviceDmxOut],
     ['device.laser.out', deviceLaserOut],
     ['laser.shape', laserShape],

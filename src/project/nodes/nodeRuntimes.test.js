@@ -603,6 +603,37 @@ describe('the operator hands wave (TD audit)', () => {
         expect(evaluateNodeOutput(keys, 'pressed', out)).toBe(false)
         expect(evaluateNodeOutput(keys, 'count', out)).toBe(0)
     })
+
+    it('Visitor reads the feed, quiet where no feed publishes', () => {
+        const visitor = node('v', 'device.visitor')
+        const live = createNodeGraphContext({ nodes: [visitor], edges: [] }, { liveOutputs: new Map([
+            ['v:phone', true], ['v:reducedMotion', true], ['v:portrait', true], ['v:width', 390], ['v:height', 844],
+            ['v:language', 'hy'], ['v:embedded', true], ['v:name', 'Ani'], ['v:hue', 0.5], ['v:visitorId', 'id-1'],
+        ]) })
+        expect(evaluateNodeOutput(visitor, 'phone', live)).toBe(true)
+        expect(evaluateNodeOutput(visitor, 'width', live)).toBe(390)
+        expect(evaluateNodeOutput(visitor, 'language', live)).toBe('hy')
+        expect(evaluateNodeOutput(visitor, 'hue', live)).toBe(0.5)
+        expect(evaluateNodeOutput(visitor, 'visitorId', live)).toBe('id-1')
+        const out = createNodeGraphContext({ nodes: [visitor], edges: [] })
+        expect(evaluateNodeOutput(visitor, 'phone', out)).toBe(false)
+        expect(evaluateNodeOutput(visitor, 'reducedMotion', out)).toBe(false)
+        expect(evaluateNodeOutput(visitor, 'width', out)).toBe(0)
+        expect(evaluateNodeOutput(visitor, 'language', out)).toBe('')
+        expect(evaluateNodeOutput(visitor, 'name', out)).toBe('')
+    })
+
+    it('Tilt reads the feed, level and not live where no feed publishes', () => {
+        const tilt = node('t', 'device.tilt')
+        const live = createNodeGraphContext({ nodes: [tilt], edges: [] }, { liveOutputs: new Map([['t:x', 0.5], ['t:y', -1], ['t:live', true]]) })
+        expect(evaluateNodeOutput(tilt, 'x', live)).toBe(0.5)
+        expect(evaluateNodeOutput(tilt, 'y', live)).toBe(-1)
+        expect(evaluateNodeOutput(tilt, 'live', live)).toBe(true)
+        const out = createNodeGraphContext({ nodes: [tilt], edges: [] })
+        expect(evaluateNodeOutput(tilt, 'x', out)).toBe(0)
+        expect(evaluateNodeOutput(tilt, 'y', out)).toBe(0)
+        expect(evaluateNodeOutput(tilt, 'live', out)).toBe(false)
+    })
 })
 
 describe('the second vector wave (TD audit)', () => {
