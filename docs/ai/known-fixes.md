@@ -1139,6 +1139,12 @@ enters the hall through an opening. Review of #1059: `inside` is also true ON a 
 run on the crane-dj record every shipped rig uses (no dims.shell); "outside" now also needs the point 1 mm along the ray outside (hall-reach's flush rule).
 Guard: `scripts/rigbuild/footprints.test.js` "a lamp outside the hall" (7 cases on the v13 record: ground, end wall outer face, deck from above,
 open air, a nearer solid, the refusal), each throw equal to hall-reach's. Session note: `docs/ai/sessions/cloud-footprints-outside-lamps-2026-10-21.md`.
+## Self-update installed an https release with no checksums.txt unchecked (2026-10-21, bug-sweep 2026-10-07 §C)
+
+- Symptom: `stageVersion` (`scripts/di/install.mjs`) downloaded, unpacked and `npm ci`'d an https release whose GitHub release had no `checksums.txt` asset; `latestRelease()` set `checksumsUrl: null` and the check was skipped.
+- Fix: a release whose url is not `file:` and has no `checksumsUrl` throws before any download or extract: "release <version> has no checksums.txt, so it cannot be verified — refusing to install it". `file:` installs (`di update --from`) and the mismatch / "does not mention this artifact" refusals are unchanged. Signing, attestations and automatic rollback stay the owner's call.
+- Guard: `scripts/di/stageVersion.test.js` (4 tests; the refusal test fails on dev because dev calls `fetch`).
+
 ## Space scripts were refused as an unidentified program, repointed only a link's href, and left a dead host in a combined page (2026-10-21)
 
 Symptom (the Dilijan front, Aren's one world): `apply-structure.mjs --apply` stopped at the 31st read with `429 Too many requests from this address by an unidentified program`; after its relink the back buttons of mushroom-house, orange-room, dilijan-drive and tsaghkanots still opened `/dilijan/worlds` (a hidden project) through their `window.open`; the combined wall tab could not load its data because the page names `https://staging.di-studio.xyz/...` (no DNS) and the yard names `https://di-studio.xyz/...` (3 of 5 assets answer 404 there).
