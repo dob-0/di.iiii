@@ -49,7 +49,13 @@ sha256 is of the file as downloaded on 2026-09-06 (`sha256sum`).
 | `leaflet@1.9.4/images/marker-shadow.png` | https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png | 1.9.4 | `264f5c640339f042dd729062cfc04c17f8ea0f29882b538e3848ed8f10edb4da` |
 | `marked@15.0.12/marked.min.js` | https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js (the pages ask for unpinned `marked/marked.min.js`; this is what jsdelivr resolved it to on 2026-09-06) | 15.0.12 | `3e7e7d7feb3e5d58cb6c804f68ab5c24cc7e5eb6270fd6e5cbb9124739217d0c` |
 
-3.4 MB added on top of the 740 KB that was already here; 4.1 MB in all.
+| `qrcode-generator@1.4.4/qrcode.js` | `node_modules/qrcode-generator/qrcode.js` from the npm registry (2026-10-21; jsdelivr refused this session's proxy). Byte-identical to the copy the QR Code node imports — `src/project/nodes/view.qrcode/qrCode.test.js` holds both to this sha256 | 1.4.4 (UMD) | `18ae399f81182bc9de916e9c77b195df20cc58d6f2d55a62b085a299f1bf1780` |
+| `qrcode-generator@1.4.4/LICENSE` | https://raw.githubusercontent.com/kazuhikoarase/qrcode-generator/master/LICENSE (MIT, © 2009 Kazuhiko Arase — the same licence `qrcode.js`'s own header and its `package.json` name) | — | `3a850fa5f08101db6f40676c2786e10bd2cd5fff7b12ffdf1e0c434d4e49d90c` |
+
+3.4 MB added on top of the 740 KB that was already here; 4.1 MB in all. The QR
+encoder (2026-10-21) adds 57 KB more. Unlike the rest it is also a
+`package.json` dependency at the same exact version: the Raw node bundles it
+through vite, and a page loads this copy.
 
 ## What is deliberately not here
 

@@ -110,6 +110,7 @@ export const FAMILY_BY_TYPE = {
     // Create sits with the things it makes, not with the panels it looks like.
     'view.library': 'make',
     'view.image': 'make',
+    'view.qrcode': 'make',
     'view.browser': 'make',
     'node.null': 'make',
     // numbers — values, time, math: the stuff you shape and wire
@@ -1762,6 +1763,37 @@ export const NODE_TYPES = {
         outputs: [],
         defaultValues: {},
         render: 'panel-2d',
+    },
+
+    // A live code for the address phones should open (ISO/IEC 18004, through
+    // the vendored qrcode-generator 1.4.4). Text left empty encodes this
+    // tier's own address, so moving a project to another tier cannot leave a
+    // dead code on the wall. Its picture is a texture wire, like Webcam's
+    // Frame: a plane, an Image panel or Picture Out shows it.
+    'view.qrcode': {
+        id: 'view.qrcode',
+        label: 'QR Code',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['qr', 'qrcode', 'code', 'scan', 'phone', 'join', 'address', 'link', 'url', 'barcode'],
+        inputs: [
+            // Empty: this tier's own address (diiPageOrigin, else the origin).
+            { id: 'text',  type: 'string', label: 'Text', default: '' },
+            // How much of the code may be covered or worn and still read:
+            // about 7, 15, 25 and 30 per cent.
+            { id: 'level', type: 'string', label: 'Correction', default: 'M', options: [
+                { value: 'L', label: 'L · 7%' },
+                { value: 'M', label: 'M · 15%' },
+                { value: 'Q', label: 'Q · 25%' },
+                { value: 'H', label: 'H · 30%' },
+            ] },
+        ],
+        outputs: [
+            { id: 'picture', type: 'texture', label: 'Picture' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
     },
 
     // The two panels below finally implement type ids that RawEditor and

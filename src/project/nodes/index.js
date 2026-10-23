@@ -40,6 +40,7 @@ import { computeOutput as signalTimer } from './signal.timer/runtime.js'
 import { computeOutput as signalTrigger } from './signal.trigger/runtime.js'
 import { computeOutput as viewButton } from './view.button/runtime.js'
 import { computeOutput as viewList } from './view.list/runtime.js'
+import { computeOutput as viewQrCode } from './view.qrcode/runtime.js'
 import { computeOutput as viewText } from './view.text/runtime.js'
 import { computeOutput as viewTimeline } from './view.timeline/runtime.js'
 import { computeOutput as geomCircle } from './geom.circle/runtime.js'
@@ -118,6 +119,7 @@ export const NODE_RUNTIMES = new Map([
     ['vector.split', vectorSplit],
     ['view.button', viewButton],
     ['view.list', viewList],
+    ['view.qrcode', viewQrCode],
     ['view.text', viewText],
     ['view.timeline', viewTimeline],
 ])
