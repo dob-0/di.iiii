@@ -4,14 +4,14 @@ import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { smoothstep } from '../../timeline/clock.js'
 import { createRandom } from '../random.js'
-import { cloudPoints } from './scanPoints.js'
+import { cloudPoints } from '../../project/points/surfacePoints.js'
 import scanUrl from '../assets/scan.glb?url'
 
 // Sequence — the scan, POINT CLOUD VERSION. PARKED 2026-07-31, hours after it
 // was built: the direction moved on to the raw textured mesh, static, with a
 // slice-glitch shader (see ScanRoom.jsx). Kept whole under the standing rule —
 // nothing is deleted — and because the machinery here (surface-sampled cloud
-// via scanPoints.js, CPU texture readback, per-point dissolve with a seeded
+// via src/project/points/surfacePoints.js, CPU texture readback, per-point dissolve with a seeded
 // death order, gaze-driven turntable) is finished, tested, and one row-swap
 // away if the cloud comes back.
 //
@@ -53,7 +53,7 @@ import scanUrl from '../assets/scan.glb?url'
 //      centre.
 //
 // The sampling itself (points scattered on triangles, stretched-triangle
-// cull, material slots) is pure and tested in scanPoints.js.
+// cull, material slots) is pure and tested in src/project/points/surfacePoints.js.
 
 // Display scale. LESS than life size — the room is an exhibit, not a place.
 // At 0.85 the cloud is about 4.9m wide and 2m tall.

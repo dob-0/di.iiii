@@ -210,6 +210,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('laserMerge', 'laser.merge', { label: 'Laser Merge', col: 4, row: 19 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
+    add('points', 'geom.points', { label: 'Points', col: 3, row: 15, values: { position: [-7, 0, -2] } })
 
     // --- column 2: scene settings ---------------------------------------------
     // world.light is the RETIRED dual-identity node (paletteHidden; the
@@ -477,6 +478,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         // for its pass-through out (bare, an Array carries nothing).
         wire('cube', 'geometry', 'array', 'geometry'),
         wire('torus', 'geometry', 'transform', 'geometry'),
+        // Points scatters over the torus's surface: a cloud with a source.
+        wire('torus', 'geometry', 'points', 'source'),
 
         // The operator's hands fire the state wave: Go presses count, the
         // chosen key samples the sine.

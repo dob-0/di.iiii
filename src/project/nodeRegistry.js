@@ -96,6 +96,7 @@ export const FAMILY_BY_TYPE = {
     'geom.plane': 'make',
     'shape.merge': 'make',
     'geom.array': 'make',
+    'geom.points': 'make',
     'geom.cylinder': 'make',
     'geom.cone': 'make',
     'geom.torus': 'make',
@@ -2119,6 +2120,34 @@ export const NODE_TYPES = {
         ],
         defaultValues: {},
         render: 'hidden',
+    },
+
+    // A point cloud standing in the scene (2026-10-21): what works built by
+    // hand as three.js Points with a ShaderMaterial — scan clouds, particle
+    // fields, backdrops. One GPU points object, sampled by area over the
+    // surface the Source wire draws (src/project/points). Count is capped at
+    // 120,000, and at 60,000 on a phone or for reduced motion. Reveal,
+    // Twinkle and Morph come after a first look on a phone.
+    'geom.points': {
+        id: 'geom.points',
+        label: 'Points',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['points', 'point cloud', 'cloud', 'particles', 'particle', 'dots', 'scatter', 'scan', 'dust', 'stars'],
+        inputs: [
+            // No default on geometry: bare, Points scatters over a sphere of
+            // radius 0.5 so a placed node is visible before anything is wired.
+            { id: 'source',   type: 'geometry', label: 'Source'                      },
+            { id: 'count',    type: 'number',   label: 'Count',    default: 20000, step: 1000 },
+            { id: 'size',     type: 'number',   label: 'Size',     default: 0.02, step: 0.005 },
+            { id: 'color',    type: 'color',    label: 'Colour',   default: '#5fa8ff'  },
+            { id: 'position', type: 'vec3',     label: 'Position', default: [0, 0, 0] },
+            { id: 'rotation', type: 'vec3',     label: 'Rotation', default: [0, 0, 0] },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'spatial-3d',
     },
 
     // The numbers wave (TD audit, 2026-08-20). All pure, all wire-first —

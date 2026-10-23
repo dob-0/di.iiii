@@ -35,7 +35,7 @@ describe('which cards carry a preview', () => {
         const previewed = Object.keys(NODE_TYPES).filter(hasCardPreview).sort()
         expect(previewed).toEqual([
             'geom.circle', 'geom.cone', 'geom.constructor', 'geom.cube', 'geom.cylinder',
-            'geom.array', 'geom.geo', 'geom.line', 'geom.plane', 'geom.sphere', 'geom.torus',
+            'geom.array', 'geom.geo', 'geom.line', 'geom.plane', 'geom.points', 'geom.sphere', 'geom.torus',
             'geom.transform', 'light.point', 'shape.merge', 'world.environment', 'world.light'
         ].sort())
     })
