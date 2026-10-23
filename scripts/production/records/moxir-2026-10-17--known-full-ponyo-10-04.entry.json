@@ -1,0 +1,29 @@
+{
+  "id": "known-full-ponyo-10-04",
+  "projectId": "moxir-hall-known-full",
+  "title": "Known · full · the cut, movers on the ground · PONYO 10-04",
+  "status": "for-the-show",
+  "madeFrom": "known-full",
+  "madeBy": {
+    "machine": null,
+    "install": "another install — the copy's label: \"PONYO 10-04\"",
+    "tool": "copy-version.mjs --from-api (brought here under the same id)",
+    "commit": null
+  },
+  "madeAt": "2026-10-04T18:07:46.188Z",
+  "fingerprint": "sha256:3d64a1bc7690aeb6d817587978a7334273384639392270db8ff73d3eba4c79a7",
+  "rig": {
+    "file": "scripts/place/rigs/moxir-2026-10-17-known-full.json",
+    "blob": "6bd4ea08ed55e5d1d55f96d7355e09990102cfef"
+  },
+  "listed": {
+    "at": "2026-10-04T19:45:42.570Z",
+    "by": {
+      "machine": "aylmo",
+      "install": "dev.diiii.xyz",
+      "tool": "build-moxir-versions.mjs",
+      "commit": "7a751cf3008f"
+    }
+  },
+  "note": "Made from git: every part git builds (125 entities, looks, equipment list, venue plan, mark) is identical to the rig file at blob 6bd4ea08 (rebuild-compare.mjs, 2026-10-05, dev and local). Not from git: the hall model hall-night.glb sha256 df837baa…e48b and the world/render settings. Record: scripts/production/records/moxir-2026-10-17--known-full-ponyo-10-04.json."
+}
