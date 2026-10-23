@@ -42,7 +42,7 @@
 <canvas id="c" tabindex="0" aria-label="Aren's yard in Dilijan, scanned. Drag to look around, pinch or scroll to come closer."></canvas>
 <div id="mark">aren&nbsp;&nbsp;<b>·</b>&nbsp;&nbsp;dilijan<span class="d">&nbsp;&nbsp;<b>·</b>&nbsp;&nbsp;26.08.2026</span></div>
 <div id="bar">
-  <div id="where" role="group" aria-label="arrangement"><button type="button" aria-pressed="true">Բակը · The yard</button><button type="button" aria-pressed="false" disabled>Պատը · The wall</button></div>
+  <!-- owner 10-23: "we dont need the wall anymore": Պատը · The wall is gone from the page; only Բակը, the one building -->
   <div id="looks" role="group" aria-label="view modes"></div>
 </div>
 <script src="/vendor/three@0.128.0/three.min.js"></script>
@@ -542,7 +542,7 @@ function frame(){
   renderer.render(scene,camera);
 }
 buildCloud().catch(e=>{mark.textContent='could not load the cloud — '+e.message;});
-buildFragments().then(()=>{ready=true;resize();whereBtn[1].disabled=false;})
+buildFragments().then(()=>{ready=true;resize();})
   .catch(e=>{mark.textContent='could not load the wall — '+e.message;});
 renderer.setAnimationLoop(frame);
 </script>
