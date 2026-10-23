@@ -28,14 +28,14 @@
        background:rgba(244,242,237,.88);border:1px solid #111;border-radius:0;padding:11px 12px;margin:0 0 0 -1px;cursor:pointer}
   #where button[aria-pressed=true]{background:#111;color:#F4F2ED}
   #where button:disabled{opacity:.4;cursor:wait}
-  #looks{display:flex;gap:2px}
-  #looks button{width:28px;height:28px;border:0;background:transparent;padding:0;cursor:pointer;display:grid;place-items:center;border-radius:50%}
-  #looks button i{display:block;width:6px;height:6px;border-radius:50%;background:#141414;opacity:.2;transition:opacity .35s,transform .35s}
-  #looks button.on i{opacity:1;transform:scale(1.35)}
-  #looks button:hover i{opacity:.55}
+  #looks{display:flex;flex-wrap:wrap;justify-content:center}
+  #looks button{font:500 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em;color:#111;
+       background:rgba(244,242,237,.88);border:1px solid #111;border-radius:0;padding:9px 10px;margin:0 0 0 -1px;cursor:pointer}
+  #looks button.on{background:#111;color:#F4F2ED}
+  #looks button:hover:not(.on){background:#e6e3dc}
   button:focus-visible{outline:2px solid #111;outline-offset:2px}
   @media (max-width:560px){#mark .d{display:none}}
-  @media (prefers-reduced-motion:reduce){#bar,#looks button i{transition:none}}
+  @media (prefers-reduced-motion:reduce){#bar{transition:none}}
 </style>
 </head>
 <body>
@@ -372,16 +372,18 @@ function pose(tc){ // -> [camera, target, reveal front, cloud fade, surface opac
 
 // ---------- the one view's state ----------
 const LOOKS=['colour','mono','scan','cloud','wire'];
+const LOOK_NAMES=['Գույն · Colour','Մոնո · Mono','Սկան · Scan','Կետեր · Points','Ցանց · Wire'];   // owner 10-23: named, not dots
 let where=0;          // 0 Բակը, the fragments in place; 1 Պատը, laid out as the wall
-let look=-1;          // -1 the yard's own cycle (cloud, then the surfaces); 0..4 a look picked from the dots
+let look=0;           // 0..4 a look; owner 10-23 ("not particles, nothing is understood"): open on the photographed surfaces.
+                      // -1 (the yard's own cycle: cloud, then the surfaces) is no longer the start
 let picked=false, trans=null, ready=false;
 const MOVE=reduced?0.01:2.3, DELAY=[0,0.22,0.44], TD=reduced?0.01:MOVE+0.44, LIFT=2.2;
 // the wall page's entrance for the cabin: on its side, up and back, then settling into the row
 const ARRIVE={q:new THREE.Quaternion().setFromAxisAngle(V(0,0,1),-Math.PI/2).multiply(new THREE.Quaternion().setFromAxisAngle(V(0,1,0),-0.6)),off:V(0.6,2.5,-2.4)};
 const whereBtn=[...document.querySelectorAll('#where button')], bar=document.getElementById('bar');
 const looksEl=document.getElementById('looks');
-LOOKS.forEach((name,i)=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-label',name);b.title=name;
-  b.innerHTML='<i></i>';b.addEventListener('click',()=>pickLook(i));looksEl.appendChild(b);});
+LOOKS.forEach((name,i)=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-pressed','false');
+  b.textContent=LOOK_NAMES[i];b.addEventListener('click',()=>pickLook(i));looksEl.appendChild(b);});
 const lookBtn=[...looksEl.children];
 whereBtn.forEach((b,i)=>b.addEventListener('click',()=>go(i)));
 function pickLook(i){look=(i+LOOKS.length)%LOOKS.length;picked=true;}
@@ -410,12 +412,12 @@ function go(i){
   if(i===where||trans||(i===1&&!ready)) return;
   const from={cam:camera.position.clone(),tgt:tgt.clone(),fov:camera.fov}, end=endPose(i);
   trans={to:i,t0:now(),from,end,a:sphOf(from.cam,from.tgt),b:sphOf(end.cam,end.tgt)};
-  where=i; if(!picked) look=i?0:-1;
+  where=i; if(!picked) look=0;
   manual=false; vTheta=vPhi=0;
   whereBtn.forEach((b,j)=>b.setAttribute('aria-pressed',String(j===i)));
 }
 function resetView(){
-  picked=false; look=where?0:-1; manual=false; blend=1; vTheta=vPhi=0; lastTouch=-99;
+  picked=false; look=0; manual=false; blend=1; vTheta=vPhi=0; lastTouch=-99;
   if(where===0) frozen=0; else wallOrbit={theta:WALL_VIEW.theta,phi:WALL_PHI,dist:fitD};
 }
 
@@ -525,7 +527,7 @@ function frame(){
   if(shadowMat){shadowMat.opacity=shadowF;shadowMat.visible=shadowF>0.003;}
   if(footMat){footMat.opacity=Math.min(1,shadowF/SHADOW_OPACITY)*0.55;footMat.visible=footMat.opacity>0.01;}
   const shown=auto?(cloudF>0.5?3:0):look;
-  lookBtn.forEach((b,k)=>b.classList.toggle('on',k===shown));
+  lookBtn.forEach((b,k)=>{b.classList.toggle('on',k===shown);b.setAttribute('aria-pressed',String(k===shown));});
   if(!bar.classList.contains('on')&&t-start>(reduced?0.2:2.3)) bar.classList.add('on');
   // when nothing moves but the slow drift, draw every other frame (the wall page)
   const busy=xr||trans||pointers.size||t-lastTouch<1.8||(where===0&&!reduced)||Math.abs(vTheta)+Math.abs(vPhi)>1e-4||Math.abs(cloudF-(where===0&&look===3?1:cloudF))>0.01;
