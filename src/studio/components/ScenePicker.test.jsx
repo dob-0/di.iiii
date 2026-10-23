@@ -148,7 +148,8 @@ describe('studio.css .scene-picker: where it sits and how big its targets are', 
     it('is a rectangle: it adds no radius of its own and the Studio\'s radius token is 2 px at most', () => {
         const section = studioCss.slice(studioCss.indexOf('/* ─── Scenes picker'))
         expect(section).not.toMatch(/border-radius/)
-        expect(Number(/--di-radius:\s*(\d+)px/.exec(baseCss)?.[1])).toBeLessThanOrEqual(2)
+        // `0` carries no unit (brand spec v2, M17), so the unit is optional
+        expect(Number(/--di-radius:\s*(\d+)(?:px)?\s*;/.exec(baseCss)?.[1])).toBeLessThanOrEqual(2)
     })
 })
 

@@ -2,6 +2,13 @@ import { generateId } from '../shared/projectSchema.js'
 import { TOP_TYPE_IDS, buildTopNodeTypes } from './tops/topOperators.js'
 import { VJ_DECK_TYPE, buildVjDeckNodeTypes } from './tops/vjDeck.js'
 
+// Palette provenance (SYSTEM rule 8: a quotation is named as one). Seven of the
+// port, category and family colours below quote the Dracula theme's palette —
+// #8be9fd cyan, #50fa7b green, #ffb86c orange, #ff79c6 pink, #bd93f9 purple,
+// #ff5555 red, #f1fa8c yellow. Source: github.com/dracula/dracula-theme,
+// MIT licence, © 2023 Dracula Theme; licence read 2026-10-21. The other values
+// in these tables are not Dracula's. Values unchanged.
+
 // --- Port Types ---
 // Every connection wire carries one of these types.
 // color is visual shorthand for the graph canvas.
