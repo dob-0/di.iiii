@@ -284,6 +284,8 @@ const {
   normalizeSpaceSlug,
   pruneSpaces,
   pruneStaleSandboxes,
+  sweepPlan,
+  listSweepLog,
   listSpaceSnapshots,
   readLatestSpaceSnapshot,
   readSpaceSnapshot,
@@ -306,6 +308,8 @@ const {
   accountSandboxTtlMs: config.accountSandboxTtlMs,
   // Read each sweep, so `di follow` / `di unfollow` count without a restart.
   keptSpaceIds: () => Object.keys(require('./follow/followStore').readFollows(config.directories.dataDir)),
+  linkedSpaceIds: () => require('./siteLinkedSpaces').SITE_LINKED_SPACE_IDS,
+  log: logger,
   blankScene: BLANK_SCENE
 })
 
@@ -1187,6 +1191,12 @@ const isOwnSandbox = (state, spaceId) => {
 const ensureOwnSandbox = async (state, spaceId) => {
   if (!isOwnSandbox(state, spaceId)) return
   if (await spaceExists(spaceId)) return
+  // The idle sweep trashes a guest sandbox (no person can): a guest back
+  // inside the hold gets their room back instead of a refused name.
+  if (await loadTrashedSpaceMeta(spaceId)) {
+    await restoreSpace(spaceId)
+    return
+  }
   const isGuest = state.type === 'guest' || isGuestSubject(state.subject)
   await ensureSpaceScene(spaceId)
   // Account sandboxes are permanent (one per user, survives the sweep);
@@ -3320,6 +3330,24 @@ router.post('/api/admin/sandboxes/purge', requireAdminAlways, async (req, res, n
   }
 })
 
+// What the idle sweep will reach in the next 14 days (and what it will do to
+// each: trash, or skip and say why), plus what it already did — so a person
+// sees a space coming due before it goes, not after.
+const SWEEP_DUE_HORIZON_MS = 14 * 24 * 60 * 60 * 1000
+router.get('/api/admin/sweep', requireAdminAlways, (req, res, next) => {
+  try {
+    const now = Date.now()
+    res.json({
+      now,
+      horizonMs: SWEEP_DUE_HORIZON_MS,
+      due: sweepPlan({ now, horizonMs: SWEEP_DUE_HORIZON_MS }),
+      log: listSweepLog({ limit: 200 })
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 registerConfigRoutes(router, {
   requireAdminAlways,
   configStore,
@@ -3512,9 +3540,9 @@ initStorage()
     // Buffered guest-book counts land every 30s; the timer is unref'd, so it
     // never holds the process open.
     guestBook.start()
-    // The sweep deletes for good: say which spaces it took.
+    // The sweep trashes (restorable for 30 days) and skips anything published,
+    // listed, linked or holding work; it logs one line per act itself.
     const pruneAndSay = () => pruneSpaces()
-      .then((removed) => { if (removed.length) logger.info(`[spaces] removed ${removed.length} space(s) idle past their time: ${removed.join(', ')}`) })
       .catch((error) => logger.warn('Failed to prune spaces', error))
     pruneAndSay()
     // Spent and expired Telegram sign-in tokens. They are already worthless —
