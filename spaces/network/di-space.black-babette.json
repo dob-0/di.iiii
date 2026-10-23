@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-black-babette",
+  "slug": "black-babette",
+  "label": "Black Babette",
+  "mode": "code",
+  "entry": "spaces/network/pages/black-babette.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

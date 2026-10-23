@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-sanjay-j-choudari",
+  "slug": "sanjay-j-choudari",
+  "label": "Sanjay J Choudari",
+  "mode": "code",
+  "entry": "spaces/network/pages/sanjay-j-choudari.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

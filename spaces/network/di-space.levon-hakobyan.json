@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-levon-hakobyan",
+  "slug": "levon-hakobyan",
+  "label": "Levon Hakobyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/levon-hakobyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-ibrahim-hatahet",
+  "slug": "ibrahim-hatahet",
+  "label": "Ibrahim Hatahet",
+  "mode": "code",
+  "entry": "spaces/network/pages/ibrahim-hatahet.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-andriesh-gandrabur",
+  "slug": "andriesh-gandrabur",
+  "label": "Andriesh Gandrabur",
+  "mode": "code",
+  "entry": "spaces/network/pages/andriesh-gandrabur.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

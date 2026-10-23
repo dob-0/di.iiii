@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-dima-ustinov",
+  "slug": "dima-ustinov",
+  "label": "Dima Ustinov",
+  "mode": "code",
+  "entry": "spaces/network/pages/dima-ustinov.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

@@ -12,12 +12,12 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { CSS } from './lib/css.mjs'
 import { renderIndex } from './index-template.mjs'
-import { renderRoom } from './room-template.mjs'
+import { renderRoom, renderOrganisation } from './room-template.mjs'
 import { renderConstellation } from './constellation-template.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const read = (p) => fs.readFileSync(path.join(HERE, p), 'utf8')
-const { people } = JSON.parse(read('people.json'))
+const { people, organisations } = JSON.parse(read('people.json'))
 
 const PAPER = '#f7f7f5'
 const luminance = (hex) => {
@@ -32,11 +32,15 @@ const contrast = (a, b) => {
 
 describe('network pages are generated, not hand-kept', () => {
     it('code/index.html is exactly what renderIndex produces', () => {
-        expect(read('code/index.html')).toBe(renderIndex(people))
+        expect(read('code/index.html')).toBe(renderIndex(people, organisations))
     })
 
     it('every room page is exactly what renderRoom produces', () => {
         for (const p of people) expect(read(`pages/${p.slug}.html`)).toBe(renderRoom(p, people))
+    })
+
+    it('every organisation page is exactly what renderOrganisation produces', () => {
+        for (const o of organisations) expect(read(`pages/${o.slug}.html`), o.slug).toBe(renderOrganisation(o))
     })
 
     it('the constellation is exactly what renderConstellation produces', () => {
@@ -169,5 +173,43 @@ describe('every link a visitor can follow names the public address', () => {
     it('no source links to the old name or to a machine', () => {
         const stale = hrefs.filter((h) => /\/\/(di-studio\.xyz|[\w.-]*thedi\.studio|localhost)/.test(h))
         expect(stale).toEqual([])
+    })
+})
+
+// 2026-10-22: partners get a page, on one rule — every fact has a public page
+// behind it, linked on the entry. Nothing here is a person, so none is counted
+// in the roster's sentence.
+describe('organisations', () => {
+    it('holds the three that a linked public page names', () => {
+        expect(organisations.map((o) => o.slug)).toEqual(['hosq', 'g-urban', 'fachbetrieb-rita-grechen'])
+    })
+
+    it('gives each a name, what was done together, and a link to its own site', () => {
+        for (const o of organisations) {
+            expect(o.name && o.what, o.slug).toBeTruthy()
+            expect(o.sources.some((s) => /^https:\/\//.test(s.href || '')), o.slug).toBe(true)
+        }
+    })
+
+    it('carries no private data and no script, and does not slip into the people count', () => {
+        for (const o of organisations) {
+            const html = read(`pages/${o.slug}.html`)
+            expect(html, o.slug).not.toMatch(/drive\.google\.com|docs\.google\.com|[\w.]+@[\w.]+\.\w+|\+\s*\(?374|<script/i)
+            expect(people.some((p) => p.slug === o.slug), o.slug).toBe(false)
+        }
+    })
+
+    it('puts every organisation on the roster as a link', () => {
+        const html = read('code/index.html')
+        for (const o of organisations) expect(html, o.slug).toContain(`href="/network/${o.slug}"`)
+    })
+})
+
+// One person, three works: the owner's answer of 2026-10-22.
+describe('Arthur Steiner is one entry', () => {
+    it('holds Beyond Form and RecordAR, and no second Arthur exists', () => {
+        const arthurs = people.filter((p) => /^arthur st[ae]i?ner$/i.test(p.name))
+        expect(arthurs.map((p) => p.name)).toEqual(['Arthur Steiner'])
+        expect(arthurs[0].works.map((w) => w.title)).toEqual(expect.arrayContaining(['Beyond Form', 'RecordAR']))
     })
 })

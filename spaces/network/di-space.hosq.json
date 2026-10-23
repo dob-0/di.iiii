@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-hosq",
+  "slug": "hosq",
+  "label": "hosq",
+  "mode": "code",
+  "entry": "spaces/network/pages/hosq.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

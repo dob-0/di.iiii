@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-daria-daka-vasiuta",
+  "slug": "daria-daka-vasiuta",
+  "label": "Daria Daka Vasiuta",
+  "mode": "code",
+  "entry": "spaces/network/pages/daria-daka-vasiuta.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}
