@@ -427,6 +427,12 @@ Design: the raw laser workflow decision of 2026-10-14 (lands in docs/ai/decision
 | **path** (laser) | One unbroken stroke the beam draws, lit all along. A **path set** (frame v2 in code) is what flows between laser nodes; Laser Out turns it into the wire's points, putting the dark moves between paths. Developer word; the card says "Frame". |
 | **Auto** (Laser Out's budget) | The point budget sized from the drawn length instead of a number. The checkbox beside Laser Out's Points slider; 0 on the Budget port means the same. |
 
+## Amended 2026-10-21 — the Lamp node
+
+| Type id | Label | Its one job |
+|---|---|---|
+| `light.lamp` (new, the scene) | **Lamp** | One stage lamp — **lamp** in the sense above (a stage fixture) — with its patch, its picture and its DMX in one card. Its **Type** and **Mode** come from the fixture library (`src/rigbuild/types/library/`); **Universe** and **Address** place it. Ports: Dimmer, Colour, Pan, Tilt, Strobe, Zoom; it answers **DMX** (the lamp's bytes, the same the lighting desk sends for it — `shared/lampDmx.cjs`) and **Patch** (where it sits, or why it sends nothing). It stands in the scene with a body and a beam that stops at the first surface. Not **Light**: that card is a 3D scene light joined to nothing on the rig. |
+
 ## Proposed 2026-10-13 — a lighting look, and the Dilijan words (owner's pick, nothing renamed)
 
 The owner, 2026-10-13: the looks (*"the wall"*, *"peak"*) and the Dilijan things get Studio words; he did not pick

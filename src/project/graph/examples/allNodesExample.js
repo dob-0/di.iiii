@@ -219,6 +219,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('background', 'world.background', { label: 'Background', col: 2, row: 1 })
     add('grid', 'world.grid', { label: 'Grid', col: 2, row: 2 })
     add('lamp', 'light.point', { label: 'Light', col: 2, row: 3, values: { position: [1.5, 1.6, 0.5] } })
+    // A stage lamp with no type: drawn with its beam, sends nothing (`dmx` null, `patch` says why).
+    add('stageLamp', 'light.lamp', { label: 'Lamp', col: 2, row: 22, values: { position: [-1.5, 3, -1] } })
 
     // --- column 3: geometry ----------------------------------------------------
     add('cube', 'geom.cube', { label: 'Cube', col: 3, row: 0 })
