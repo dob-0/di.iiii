@@ -39,8 +39,17 @@ export const codeRecordOf = (spec, id) => {
     return { madeFrom: v.of || v.candidateOf || null, rigFile: rigFileOf(spec.set, id), named: true }
 }
 
-/** Every version id the code's versions file names (the hall as ordered, the set, variants, candidates). */
-export const codeVersionIds = (spec) => (spec ? [...(spec.ordered?.id ? [spec.ordered.id] : []), ...allVersions(spec).map((v) => v.id)] : [])
+/**
+ * Every version id the code's versions file names (the hall as ordered, the set, variants, candidates), as the
+ * production's LIST names it: a version whose list id differs from its rig-builder id says so in the file's
+ * `listedAs` map ({ codeId: listId }); any other is listed under its own id.
+ */
+export const codeVersionIds = (spec) => {
+    if (!spec) return []
+    const listedAs = spec.listedAs && typeof spec.listedAs === 'object' ? spec.listedAs : {}
+    const listId = (id) => (typeof listedAs[id] === 'string' && listedAs[id] ? listedAs[id] : id)
+    return [...(spec.ordered?.id ? [spec.ordered.id] : []), ...allVersions(spec).map((v) => v.id)].map(listId)
+}
 
 /**
  * The entry for one project, or { skip: reason } when it is not a version of `production`.
