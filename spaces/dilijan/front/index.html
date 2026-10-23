@@ -557,7 +557,8 @@ function orbOutside(pos,t){
 }
 function orbHand(){ORB.hand=now();ORB.touched=true;}
 function orbTurn(dx,dy){
-  const k=2*Math.PI/Math.max(1,innerHeight), t=now(), dt=Math.max(1/120,t-ORB.lastMove);
+  const k=2*Math.PI/Math.max(700,innerHeight),   // one turn per screen height; a small frame (the front page's hero) counts as 700 px, or a short swipe spun it twice
+     t=now(), dt=Math.max(1/120,t-ORB.lastMove);
   ORB.goal.theta-=dx*k; ORB.goal.phi=clamp(ORB.goal.phi+dy*k,ORB_PHI[0],ORB_PHI[1]);
   ORB.spin=clamp(ORB.spin*0.5+(-dx*k/dt)*0.5,-ORB_SPIN_MAX,ORB_SPIN_MAX); ORB.spinPhi=clamp(ORB.spinPhi*0.5+(dy*k/dt)*0.5,-ORB_SPIN_MAX,ORB_SPIN_MAX); ORB.lastMove=t; orbHand();
 }
