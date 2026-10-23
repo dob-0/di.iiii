@@ -58,7 +58,7 @@ const portToInspectorField = (port, node = null) => {
         }
     }
     if (port.type === 'vec3') return { label, path, type: 'vec3', portType: 'vec3', default: port.default }
-    if (port.type === 'geometry' || port.type === 'texture' || port.type === 'signal' || port.type === 'laser') {
+    if (port.type === 'geometry' || port.type === 'texture' || port.type === 'signal' || port.type === 'laser' || port.type === 'clock') {
         return { label, path, type: 'connection', portType: port.type }
     }
     return { label, path, type: 'text', portType: port.type || 'any' }

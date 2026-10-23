@@ -17,6 +17,8 @@ export const PORT_TYPES = {
     signal:   { label: 'Signal',   color: '#ffffff' },
     // Laser paths (frame v2, shared/laserFrame.cjs): what flows between laser nodes to Laser Out.
     laser:    { label: 'Laser',    color: '#39ff14' },
+    // A clock (src/project/graph/beatClock.js): a Beat's tempo and phase, wired into an Oscillator.
+    clock:    { label: 'Clock',    color: '#ffd166' },
     any:      { label: 'Any',      color: '#888888' },
 }
 
@@ -92,6 +94,10 @@ export const FAMILY_BY_TYPE = {
     'laser.shape': 'make',
     'laser.trace': 'make',
     'laser.merge': 'make',
+    // laser Phase 2 (a clock; numbers, beside Oscillator)
+    'signal.beat': 'numbers',
+    // music to wires: a baked beat analysis read at a time (beside Beat)
+    'signal.beatgrid': 'numbers',
     'geom.sphere': 'make',
     'geom.plane': 'make',
     'shape.merge': 'make',
@@ -2239,6 +2245,83 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    // laser Phase 2 — a clock (TD Beat CHOP). The first Beat set to Master is
+    // the project's master clock; every other Beat is an extra clock an
+    // Oscillator can pick by wire. Tempo from the Light desk is optional.
+    'signal.beat': {
+        id: 'signal.beat',
+        label: 'Beat',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['beat', 'clock', 'bpm', 'tempo', 'tap', 'bar', 'ramp', 'pulse', 'master', 'sync', 'music', 'light'],
+        inputs: [
+            { id: 'bpm',    type: 'number', label: 'BPM',    default: 120 },
+            // Ramp, Pulse and Count run over this many beats (fractions allowed).
+            { id: 'period', type: 'number', label: 'Period', default: 1 },
+            { id: 'role',   type: 'string', label: 'Clock',  default: 'master', options: [
+                { value: 'master', label: 'Master' },
+                { value: 'extra',  label: 'Extra' },
+            ] },
+            { id: 'source', type: 'string', label: 'Tempo from', default: 'own', options: [
+                { value: 'own',   label: 'This node' },
+                { value: 'light', label: 'Light desk' },
+            ] },
+            { id: 'tap',    type: 'signal', label: 'Tap'   },
+            { id: 'reset',  type: 'signal', label: 'Reset' },
+        ],
+        outputs: [
+            { id: 'clock',   type: 'clock',   label: 'Clock'    },
+            { id: 'ramp',    type: 'number',  label: 'Ramp'     },
+            { id: 'pulse',   type: 'boolean', label: 'Pulse'    },
+            { id: 'count',   type: 'number',  label: 'Count'    },
+            { id: 'beat',    type: 'number',  label: 'Beat'     },
+            { id: 'bar',     type: 'number',  label: 'Bar'      },
+            { id: 'rampBar', type: 'number',  label: 'Ramp bar' },
+            { id: 'bpm',     type: 'number',  label: 'BPM'      },
+            { id: 'status',  type: 'string',  label: 'Status'   },
+        ],
+        // Beat 0 on the document clock; a tap or Reset moves it (BeatFeed).
+        defaultValues: { epoch: 0 },
+        render: 'hidden',
+    },
+
+    // Music to wires (owner 2026-10-21): beats, bars and three bands read
+    // from a BAKED analysis at a time in the track, never a live analyser, so
+    // a piece built on it can be seeked. Format and bake method:
+    // docs/ai/decisions/2026-10-21-beat-bake-method.md.
+    'signal.beatgrid': {
+        id: 'signal.beatgrid',
+        label: 'Beat Grid',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['beat', 'grid', 'music', 'song', 'track', 'bar', 'downbeat', 'bands', 'bass', 'low', 'mid', 'high', 'analysis', 'seek', 'tempo', 'bpm'],
+        inputs: [
+            // The baked analysis as JSON text (paste it, or wire a Text in).
+            { id: 'analysis', type: 'string', label: 'Analysis', default: '' },
+            // Seconds into the track. Unwired: the document clock.
+            { id: 'time',     type: 'number', label: 'Time' },
+        ],
+        outputs: [
+            { id: 'beat',   type: 'number',  label: 'Beat'   },
+            { id: 'phase',  type: 'number',  label: 'Phase'  },
+            { id: 'age',    type: 'number',  label: 'Age'    },
+            { id: 'bar',    type: 'number',  label: 'Bar'    },
+            { id: 'count',  type: 'number',  label: 'Count'  },
+            { id: 'pulse',  type: 'boolean', label: 'Pulse'  },
+            { id: 'strong', type: 'boolean', label: 'Strong' },
+            { id: 'low',    type: 'number',  label: 'Low'    },
+            { id: 'mid',    type: 'number',  label: 'Mid'    },
+            { id: 'high',   type: 'number',  label: 'High'   },
+            { id: 'bpm',    type: 'number',  label: 'BPM'    },
+            { id: 'clock',  type: 'clock',   label: 'Clock'  },
+            { id: 'status', type: 'string',  label: 'Status' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
     'signal.lfo': {
         id: 'signal.lfo',
         label: 'Oscillator',
@@ -2249,12 +2332,32 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'frequency', type: 'number', label: 'Frequency', default: 1 },
             { id: 'phase',     type: 'number', label: 'Phase',     default: 0 },
+            // laser Phase 2 — appended, so an old document's ports keep their places.
+            // Each default leaves the four old outputs exactly as they were.
+            { id: 'wave',      type: 'string', label: 'Wave',      default: 'sine', options: [
+                { value: 'sine',     label: 'Sine' },
+                { value: 'triangle', label: 'Triangle' },
+                { value: 'ramp',     label: 'Ramp' },
+                { value: 'square',   label: 'Square' },
+                { value: 'pulse',    label: 'Pulse' },
+                { value: 'glide',    label: 'Random glide' },
+                { value: 'hold',     label: 'Sample & hold' },
+            ] },
+            { id: 'amplitude', type: 'number', label: 'Amplitude', default: 1 },
+            { id: 'offset',    type: 'number', label: 'Offset',    default: 0 },
+            { id: 'bias',      type: 'number', label: 'Bias',      default: 0 },
+            // 0: the cycle is Frequency in Hz. Above 0: one cycle lasts this many beats (¼ … 64) of the Clock.
+            { id: 'beats',     type: 'number', label: 'Beats',     default: 0 },
+            // Unwired: the project's master clock.
+            { id: 'clock',     type: 'clock',  label: 'Clock' },
+            { id: 'reset',     type: 'signal', label: 'Reset' },
         ],
         outputs: [
             { id: 'sine',     type: 'number', label: 'Sine'     },
             { id: 'square',   type: 'number', label: 'Square'   },
             { id: 'triangle', type: 'number', label: 'Triangle' },
             { id: 'saw',      type: 'number', label: 'Saw'      },
+            { id: 'out',      type: 'number', label: 'Out'      },
         ],
         defaultValues: {},
         render: 'hidden',
