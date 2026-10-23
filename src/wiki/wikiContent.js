@@ -1871,6 +1871,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-14'
     },
     {
+        id: 'slider-pad-nodes',
+        category: 'Editing',
+        title: 'Slider and Pad — a fader and a stick for the thumb',
+        summary: 'Slider is a fader (Value between Min and Max); Pad is a two-axis stick (X and Y from -1 to 1). Both open as windows sized for a thumb, in the editor and in Perform.',
+        body: [
+            'Slider and Pad sit next to Button in the bring in family. Each opens as a window you drag in with a finger or a mouse, on a desk or on a phone, and in Perform as well as in the editor.',
+            'They work like Button. While your finger is down, the window you are touching follows it: Value (or X and Y) moves with the finger and Held is true. When you let go, the level is written into the project, and every other window and every node downstream agrees on it. The other windows see the new level when you let go, not while you drag.',
+            'Slider: Min and Max set the range (0 to 1 unless changed), and Direction picks Vertical (top is Max) or Horizontal (right is Max). With the slider focused, the arrow keys move it by a hundredth of the range.',
+            'Pad: X runs left to right and Y bottom to top, both from -1 to 1, with 0, 0 in the centre. With Spring back on (the default) it is a stick: letting go returns it to the centre. Off, the pad keeps the point where you let go.'
+        ],
+        tags: ['raw', 'nodes', 'slider', 'fader', 'pad', 'joystick', 'touch', 'phone', 'perform', 'held'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'build-zones',
         category: 'Editing',
         title: 'A room that arranges itself',
