@@ -108,5 +108,142 @@
     "/dilijan/worlds": "/dilijan#works",
     "/dilijan/aircanvas": "/dilijan/the-yard",
     "/dilijan/elevation": "/dilijan/the-yard"
+  },
+  "doors_note": "Owner 2026-10-23 (N1250): the hall's sixth door, to Բոլորով · Together (anahit-vachagan), stands on the five doors' arc (radius 24 m, the 32-degree grid) at +128 degrees, right of ՀՐԻՓՍԻՄԵ in the works' order: +96 is taken by the cinema island (e-cine, radius 6 m; the door's island is 5.5 m), so it skips that place; measured clear of every other part, path stones included. Colour #77AADD from Paul Tol's 'light' scheme like #EE8866 #EEDD88 #44BB99 #FFAABB; label = the authors' names like the other doors. The worlds door's label is bilingual. Its island, pad, stones, beacon, sky room and tether come from doorSets: door 5's parts carried to the new door (scripts/space/pages-lib.mjs extendDoorSet), recoloured. Applied by scripts/space/apply-structure.mjs (upsert by id).",
+  "doors": {
+    "welcome": [
+      {
+        "id": "e-door-6",
+        "type": "portal",
+        "name": "ԱՆԱՀԻՏ · ՎԱՉԱԳԱՆ",
+        "parentId": null,
+        "createdBy": null,
+        "components": {
+          "transform": {
+            "position": [
+              18.912258,
+              2.05,
+              14.775875
+            ],
+            "rotation": [
+              -1.5708,
+              -2.234021,
+              0
+            ],
+            "scale": [
+              1.7,
+              1.7,
+              1.7
+            ]
+          },
+          "appearance": {
+            "color": "#77AADD",
+            "opacity": 1
+          },
+          "reference": {
+            "spaceId": "dilijan",
+            "projectId": "anahit-vachagan",
+            "mode": "portal",
+            "label": "ԱՆԱՀԻՏ · ՎԱՉԱԳԱՆ",
+            "labelColor": "#ffffff",
+            "labelPlate": true,
+            "labelFont": "default",
+            "style": "gateway"
+          },
+          "animation": {
+            "mode": "float",
+            "speed": 0.7,
+            "amplitude": 0.1
+          }
+        }
+      },
+      {
+        "id": "e-door-worlds",
+        "type": "portal",
+        "name": "ԱՇԽԱՐՀՆԵՐ · Worlds",
+        "parentId": null,
+        "createdBy": null,
+        "components": {
+          "transform": {
+            "position": [
+              5,
+              2.05,
+              5
+            ],
+            "rotation": [
+              -1.5708,
+              -2.356194490192345,
+              0
+            ],
+            "scale": [
+              1.7,
+              1.7,
+              1.7
+            ]
+          },
+          "appearance": {
+            "color": "#F2EFE9",
+            "opacity": 1
+          },
+          "reference": {
+            "spaceId": "dilijan",
+            "projectId": "",
+            "mode": "portal",
+            "label": "ԱՇԽԱՐՀՆԵՐ · Worlds",
+            "anchor": "works",
+            "labelColor": "#ffffff",
+            "labelPlate": true,
+            "labelFont": "default",
+            "style": "gateway"
+          },
+          "animation": {
+            "mode": "float",
+            "speed": 0.7,
+            "amplitude": 0.1
+          }
+        }
+      }
+    ]
+  },
+  "edits_note": "Owner 2026-10-23 (N1250): exact text edits inside the works' own pages, nothing else changed. (1) the back link becomes bilingual; the yard (the-yard) and the front page carry it from their sources (spaces/dilijan/aren/yard.html, front/build.mjs). (2) orange room on phones (<=520 px): its hint moves below the back button and wraps inside the screen; its words are the artist's and are not changed.",
+  "edits": [
+    {
+      "projects": [
+        "mushroom-house",
+        "orange-room",
+        "dilijan-drive",
+        "tsaghkanots",
+        "anahit-vachagan",
+        "aircanvas"
+      ],
+      "from": "← ԱՇԽԱՐՀՆԵՐ</a>",
+      "to": "← ԱՇԽԱՐՀՆԵՐ · Worlds</a>",
+      "why": "back link bilingual"
+    },
+    {
+      "projects": [
+        "orange-room"
+      ],
+      "from": "#hint{font-size:10px;letter-spacing:.14em}",
+      "to": "#hint{font-size:10px;letter-spacing:.14em;top:60px;white-space:normal;width:calc(100% - 32px);text-align:center;line-height:1.6}",
+      "why": "orange room hint below the back button on phones"
+    }
+  ],
+  "doorSets": {
+    "welcome": [
+      {
+        "match": "^e-(disle|pad|marker|beacon|glass|mini|tether|stone|pff)-{i}(-|[ab]?$)",
+        "prev": "3",
+        "src": "4",
+        "next": "5",
+        "doorPrev": "e-door-4",
+        "doorSrc": "e-door-5",
+        "doorNext": "e-door-6",
+        "recolor": {
+          "#FFAABB": "#77AADD",
+          "#ff8fb3": "#5b93cc"
+        }
+      }
+    ]
   }
 }

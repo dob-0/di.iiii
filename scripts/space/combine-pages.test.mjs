@@ -422,3 +422,48 @@ describe('combine-pages.mjs against a fake serverXR', () => {
     expect((await run([...args, '--apply', '--backup', path.join(tmp, 'b2.json')])).code).toBe(0) // and it can run again
   })
 })
+
+describe('structure edits and doors (N1250)', () => {
+  it('editHtml changes only the named projects, exactly, and a re-run is a no-op', async () => {
+    const { editHtml } = await import('./pages-lib.mjs')
+    const edits = [{ projects: ['a'], from: '← W</a>', to: '← W · Worlds</a>', why: 'back' }]
+    const once = editHtml('<a>← W</a><a>← W</a>', edits, 'a')
+    expect(once.count).toBe(2)
+    expect(once.html).toBe('<a>← W · Worlds</a><a>← W · Worlds</a>')
+    expect(editHtml(once.html, edits, 'a').count).toBe(0)
+    expect(editHtml('<a>← W</a>', edits, 'b').count).toBe(0)
+    expect(() => editHtml('x', [{ from: '', to: 'y' }], 'a')).toThrow()
+  })
+  it('upsertDoors adds a missing door, updates a changed one, leaves the rest', async () => {
+    const { upsertDoors } = await import('./pages-lib.mjs')
+    const door = (id, label) => ({ id, type: 'portal', components: { reference: { spaceId: 's', projectId: id, mode: 'portal', label } } })
+    const keep = door('k', 'K')
+    const r = upsertDoors([keep, door('w', 'W')], [door('w', 'W · Worlds'), door('n', 'N')])
+    expect(r.count).toBe(2)
+    expect(r.entities.map((e) => e.id)).toEqual(['k', 'w', 'n'])
+    expect(r.entities[0]).toBe(keep)
+    expect(r.entities[1].components.reference.label).toBe('W · Worlds')
+    expect(upsertDoors(r.entities, [door('w', 'W · Worlds'), door('n', 'N')]).count).toBe(0)
+    expect(() => upsertDoors([], [{ id: 'x', type: 'box' }])).toThrow()
+  })
+})
+
+describe('extendDoorSet (N1250)', () => {
+  it('carries the last two sets one step on the arc: turned parts turn, fixed offsets stay, colours swap', async () => {
+    const { extendDoorSet } = await import('./pages-lib.mjs')
+    const at = (deg, r = 24) => [r * Math.sin(deg * Math.PI / 180), 2, -r * Math.cos(deg * Math.PI / 180)]
+    const ent = (id, p, extra = {}) => ({ id, name: id, components: { transform: { position: p, rotation: [0, 0, 0] }, appearance: { color: '#FFAABB' }, ...extra } })
+    const ents = [ent('e-door-4', at(32)), ent('e-door-5', at(64)), ent('e-door-6', at(96)),
+      ent('e-pad-3', at(32)), ent('e-pad-4', at(64)),
+      ent('e-stone-3-0', at(32, 20)), ent('e-stone-4-0', at(64, 20)),
+      ent('e-beacon-3', at(32).map((v, k) => v + [0, 1, -1.9][k])), ent('e-beacon-4', at(64).map((v, k) => v + [0, 1, -1.9][k]))]
+    const out = extendDoorSet(ents, { match: '^e-(pad|stone|beacon)-{i}(-|$)', prev: '3', src: '4', next: '5', doorPrev: 'e-door-4', doorSrc: 'e-door-5', doorNext: 'e-door-6', recolor: { '#ffaabb': '#77AADD' } })
+    const by = Object.fromEntries(out.map((e) => [e.id, e.components]))
+    expect(Object.keys(by).sort()).toEqual(['e-beacon-5', 'e-pad-5', 'e-stone-5-0'])
+    const near = (a, b) => a.forEach((v, k) => expect(v).toBeCloseTo(b[k], 4))
+    near(by['e-pad-5'].transform.position, at(96))
+    near(by['e-stone-5-0'].transform.position, at(96, 20))
+    near(by['e-beacon-5'].transform.position, at(96).map((v, k) => v + [0, 1, -1.9][k]))
+    expect(by['e-pad-5'].appearance.color).toBe('#77AADD')
+  })
+})

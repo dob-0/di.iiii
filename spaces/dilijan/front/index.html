@@ -109,7 +109,16 @@ footer{border-top:2px solid var(--rule);padding:22px 0 90px;color:var(--mute);fo
   #c{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none;outline:none}
   /* hero: the front page's live building; only the building and its hands (owner 10-23: &quot;max interactive&quot;) */
   body.hero #bar,body.hero #mark,body.hero .back,body.hero #di-arrival{display:none!important}
-  body.hero #c{touch-action:pan-y}
+  /* hero = a view on a page that scrolls: cooperative gestures (Google Maps JS API gestureHandling 'cooperative', Mapbox GL JS
+     cooperativeGestures): one finger and the plain wheel belong to the page; two fingers, Ctrl/Cmd + wheel, or a click/tap
+     into the view (until the pointer leaves, Esc, or focus goes elsewhere) belong to the view (owner 10-23, N1250) */
+  body.hero #c{touch-action:pan-x pan-y}
+  body.hero.active #c{touch-action:none}
+  #coop{position:fixed;left:16px;right:16px;top:50%;margin:0 auto;width:fit-content;transform:translateY(-50%);box-sizing:border-box;
+        padding:12px 16px;background:rgba(17,17,17,.78);color:#F4F2ED;font:500 12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+        letter-spacing:.04em;text-align:center;border-radius:0;pointer-events:none;opacity:0;transition:opacity .25s ease;z-index:5}
+  #coop.on{opacity:1}
+  #coop span{display:block;opacity:.75}
   #c.drag{cursor:grabbing}
   #mark{position:fixed;right:16px;top:20px;font:11px/1 Helvetica,Arial,sans-serif;letter-spacing:.22em;color:#111;
         user-select:none;pointer-events:none}
@@ -135,7 +144,8 @@ footer{border-top:2px solid var(--rule);padding:22px 0 90px;color:var(--mute);fo
 </head>
 <body>
 <script>if(window.DI_EMBED==='hero')document.body.classList.add('hero')</script>
-<canvas id=&quot;c&quot; tabindex=&quot;0&quot; aria-label=&quot;Aren's yard in Dilijan, scanned. Drag to look around, pinch or scroll to come closer.&quot;></canvas>
+<canvas id=&quot;c&quot; tabindex=&quot;0&quot; aria-label=&quot;Aren's yard in Dilijan, scanned. Drag to look around, right-drag or two fingers to move, pinch or scroll to come closer, R or double-click for the first view.&quot;></canvas>
+<div id=&quot;coop&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;></div>
 <div id=&quot;mark&quot;>aren&amp;nbsp;&amp;nbsp;<b>·</b>&amp;nbsp;&amp;nbsp;dilijan<span class=&quot;d&quot;>&amp;nbsp;&amp;nbsp;<b>·</b>&amp;nbsp;&amp;nbsp;26.08.2026</span></div>
 <div id=&quot;bar&quot;>
   <!-- owner 10-23: &quot;we dont need the wall anymore&quot;: Պատը · The wall is gone from the page; only Բակը, the one building -->
@@ -573,6 +583,13 @@ function orbZoom(f,cx,cy){
   }else if(g>1&amp;&amp;ORB.home) ORB.gt.lerp(ORB.home.t,Math.min(1,(g-1)*1.5));
   orbClampTarget(ORB.gt); orbHand();
 }
+// right drag / two fingers: the turn point slides in the screen plane, one pixel = one pixel of the turn point's depth
+// (camera-controls truck); it stays inside the building's box (orbClampTarget), so the building cannot be lost
+function orbPan(dx,dy){
+  const h=2*ORB.cur.dist*Math.tan(camera.fov*Math.PI/360)/Math.max(1,innerHeight), e=camera.matrixWorld.elements;
+  ORB.gt.x+=(-dx*e[0]+dy*e[4])*h; ORB.gt.y+=(-dx*e[1]+dy*e[5])*h; ORB.gt.z+=(-dx*e[2]+dy*e[6])*h;
+  orbClampTarget(ORB.gt); orbHand();
+}
 function orbReset(){
   if(!ORB.home) return; const h=ORB.home, turns=Math.round((ORB.cur.theta-h.theta)/(2*Math.PI));
   Object.assign(ORB.goal,{theta:h.theta+turns*2*Math.PI,phi:h.phi,dist:h.dist}); ORB.gt.copy(h.t); ORB.spin=ORB.spinPhi=0; ORB.hand=now();
@@ -597,31 +614,73 @@ function resetView(){
   if(where===0){frozen=0;orbReset();} else wallOrbit={theta:WALL_VIEW.theta,phi:WALL_PHI,dist:fitD};
 }
 
-// hands
-const pointers=new Map(); let pinch=0;
+// hands: the di.iiii Studio mapping 'studio' (src/studio/navigation/mappings.js = camera-controls 2.10.1 defaults): left drag
+// turns, right drag pans, middle drag comes closer, wheel comes closer toward the pointer; touch: one finger turns, two fingers
+// pinch and pan together (TOUCH_DOLLY_TRUCK). Double-click / R: the first view. Owner 10-23, N1250.
+// handsMode: what one gesture does. hero = this view sits on a page that scrolls; active = a click/tap took the view.
+function handsMode(o){
+  if(o.touch){ if(o.n>=2) return 'pinch'; return (!o.hero||o.active)?'turn':'page'; }
+  if(o.button===2) return 'pan'; if(o.button===1) return 'dolly'; return 'turn';
+}
+// wheelOwner: the wheel zooms the view, or scrolls the page (cooperative gestures; a touchpad pinch arrives as Ctrl + wheel)
+function wheelOwner(o){ return (!o.hero||o.active||o.ctrl||o.meta)?'view':'page'; }
+const HERO=window.DI_EMBED==='hero', COARSE=matchMedia('(pointer:coarse)').matches, coop=document.getElementById('coop');
+let active=false, coopT=0, coopLast=-9;
+function coopHint(touch){   // Armenian owes a native read
+  if(now()-coopLast<0.8){clearTimeout(coopT);coopT=setTimeout(()=>coop.classList.remove('on'),1600);return;}
+  coopLast=now();
+  coop.innerHTML=touch?'Երկու մատով՝ շարժել · հպիր՝ պտտել<span>Two fingers to move · tap to turn</span>'
+    :'Ctrl + անիվ՝ մոտեցնել · սեղմիր՝ ազատ շարժել<span>Ctrl + scroll to zoom · click to move freely</span>';
+  coop.classList.add('on'); clearTimeout(coopT); coopT=setTimeout(()=>coop.classList.remove('on'),1600);
+}
+function setActive(on){ if(!HERO||active===on) return; active=on; document.body.classList.toggle('active',on); if(on) coop.classList.remove('on'); }
+const pointers=new Map(); let pinch=0, mode='turn', downAt=null;
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('pointerdown',e=>{
+  const touch=e.pointerType==='touch';
+  if(!touch) setActive(true);   // a mouse press takes the view until the pointer leaves
   canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  mode=handsMode({touch,n:pointers.size,button:e.button,hero:HERO,active});
+  if(pointers.size===1) downAt={x:e.clientX,y:e.clientY,t:now(),touch,moved:0};
+  if(mode==='page') return;
   canvas.classList.add('drag'); manual=true; lastTouch=now(); if(where===0){ORB.spin=ORB.spinPhi=0;ORB.lastMove=now();orbHand();}
   if(pointers.size===2){const [p,q]=[...pointers.values()];pinch=Math.hypot(p.x-q.x,p.y-q.y);}
 });
 canvas.addEventListener('pointermove',e=>{
   if(!pointers.has(e.pointerId)||trans) return;
   const prev=pointers.get(e.pointerId), dx=e.clientX-prev.x, dy=e.clientY-prev.y;
-  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); lastTouch=now();
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(downAt) downAt.moved+=Math.abs(dx)+Math.abs(dy);
+  if(mode==='page'){ if(downAt&amp;&amp;downAt.moved>12) coopHint(true); return; }   // one finger on a page that scrolls: the page's swipe
+  lastTouch=now();
   if(where===0){
-    if(pointers.size===1) orbTurn(dx,dy);
-    else if(pointers.size===2){const [p,q]=[...pointers.values()],d=Math.hypot(p.x-q.x,p.y-q.y);if(pinch>0&amp;&amp;d>0)orbZoom(pinch/d,(p.x+q.x)/2,(p.y+q.y)/2);pinch=d;}
+    if(pointers.size===2){const [p,q]=[...pointers.values()],d=Math.hypot(p.x-q.x,p.y-q.y);if(pinch>0&amp;&amp;d>0)orbZoom(pinch/d,(p.x+q.x)/2,(p.y+q.y)/2);pinch=d;orbPan(dx/2,dy/2);}
+    else if(mode==='pan') orbPan(dx,dy);
+    else if(mode==='dolly') orbZoom(Math.exp(dy*0.006));
+    else orbTurn(dx,dy);
     return;
   }
   if(pointers.size===1){vTheta=-dx*0.0042;vPhi=dy*0.0042;orbitBy(vTheta,vPhi);}
   else if(pointers.size===2){const [p,q]=[...pointers.values()],d=Math.hypot(p.x-q.x,p.y-q.y);if(pinch>0&amp;&amp;d>0)zoomBy(pinch/d);pinch=d;}
 });
 const endPointer=e=>{if(where===0&amp;&amp;now()-ORB.lastMove>0.08){ORB.spin=ORB.spinPhi=0;} // a hand held still, then lifted, throws nothing
-  if(pointers.size===2)pinch=0; pointers.delete(e.pointerId);if(!pointers.size)canvas.classList.remove('drag');lastTouch=now();};
+  // a tap (short, still, one finger) takes the view on a touch screen
+  if(e.type==='pointerup'&amp;&amp;downAt&amp;&amp;downAt.touch&amp;&amp;pointers.size===1&amp;&amp;downAt.moved<10&amp;&amp;now()-downAt.t<0.5) setActive(true);
+  if(pointers.size===2)pinch=0; pointers.delete(e.pointerId);
+  if(!pointers.size){canvas.classList.remove('drag');downAt=null;}
+  else{const n=pointers.size;mode=handsMode({touch:e.pointerType==='touch',n,button:0,hero:HERO,active});}
+  lastTouch=now();};
 canvas.addEventListener('pointerup',endPointer); canvas.addEventListener('pointercancel',endPointer);
-// in the hero the wheel scrolls the front page; Ctrl/Cmd + wheel (a touchpad pinch arrives as Ctrl + wheel) comes closer (the
-// cooperative-gesture rule of embedded maps)
-canvas.addEventListener('wheel',e=>{if(window.DI_EMBED==='hero'&amp;&amp;!e.ctrlKey&amp;&amp;!e.metaKey)return;e.preventDefault();if(trans)return;manual=true;lastTouch=now();
+// two fingers on a page that scrolls belong to the view: the browser must not start a page pan/pinch (Mapbox does the same)
+const twoFingers=e=>{if(HERO&amp;&amp;e.touches.length>=2)e.preventDefault();};
+canvas.addEventListener('touchstart',twoFingers,{passive:false}); canvas.addEventListener('touchmove',twoFingers,{passive:false});
+// the view is given back: the mouse leaves it, Esc, or focus goes to the page
+canvas.addEventListener('pointerleave',e=>{if(e.pointerType!=='touch'&amp;&amp;!pointers.size)setActive(false);});
+document.addEventListener('mouseout',e=>{if(!e.relatedTarget&amp;&amp;!pointers.size)setActive(false);});   // the mouse left this frame
+addEventListener('blur',()=>setActive(false));
+canvas.addEventListener('wheel',e=>{
+  if(wheelOwner({hero:HERO,active,ctrl:e.ctrlKey,meta:e.metaKey})==='page'){coopHint(COARSE);return;}
+  e.preventDefault();if(trans)return;manual=true;lastTouch=now();
   const f=Math.exp(clamp(e.deltaMode===1?e.deltaY*16:e.deltaY,-240,240)*0.0012); if(where===0) orbZoom(f,e.clientX,e.clientY); else zoomBy(f);},{passive:false});
 canvas.addEventListener('dblclick',resetView);
 addEventListener('keydown',e=>{
@@ -630,6 +689,7 @@ addEventListener('keydown',e=>{
   else if(e.key==='ArrowRight') pickLook((look<0?0:look)+1);
   else if(e.key==='ArrowLeft') pickLook((look<0?0:look)-1);
   else if(e.key==='r'||e.key==='R') resetView();
+  else if(e.key==='Escape') setActive(false);
   else if(e.code==='Space'){e.preventDefault(); if(where===0){const on=now()-ORB.hand>IDLE_AFTER; ORB.hand=on?now():now()-IDLE_AFTER; ORB.touched=true;} else {manual=!manual;lastTouch=now();}}
 });
 
@@ -935,7 +995,7 @@ raf=w.requestAnimationFrame(tick);
 }catch(err){var z=d.getElementById('di-arrival');if(z&amp;&amp;z.parentNode)z.parentNode.removeChild(z)}
 })();</script>
 
-<a class=&quot;back&quot; href=&quot;/dilijan#works&quot; target=&quot;_top&quot; onpointerdown=&quot;event.stopPropagation()&quot; onmousedown=&quot;event.stopPropagation()&quot; ontouchstart=&quot;event.stopPropagation()&quot; onclick=&quot;event.stopPropagation();event.preventDefault();window.open('/dilijan#works','_top')&quot; style=&quot;position:fixed;left:12px;top:12px;z-index:2147483647;font:500 12px/1 ui-monospace,monospace;letter-spacing:.08em;text-decoration:none;color:#111;background:rgba(255,255,255,.82);border:1px solid rgba(0,0,0,.18);border-radius:999px;padding:9px 14px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);touch-action:manipulation;cursor:pointer&quot;>← ԱՇԽԱՐՀՆԵՐ</a>
+<a class=&quot;back&quot; href=&quot;/dilijan#works&quot; target=&quot;_top&quot; onpointerdown=&quot;event.stopPropagation()&quot; onmousedown=&quot;event.stopPropagation()&quot; ontouchstart=&quot;event.stopPropagation()&quot; onclick=&quot;event.stopPropagation();event.preventDefault();window.open('/dilijan#works','_top')&quot; style=&quot;position:fixed;left:12px;top:12px;z-index:2147483647;font:500 12px/1 ui-monospace,monospace;letter-spacing:.08em;text-decoration:none;color:#111;background:rgba(255,255,255,.82);border:1px solid rgba(0,0,0,.18);border-radius:999px;padding:9px 14px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);touch-action:manipulation;cursor:pointer&quot;>← ԱՇԽԱՐՀՆԵՐ · Worlds</a>
 
 <!-- VR-ENTRY-BEGIN 2026-08-30 -->
 <script>
