@@ -246,7 +246,7 @@
       }
     ]
   },
-  "entities_note": "Owner 2026-10-23 (N1259): the hall's cinema screen plays a loop of the five children's worlds (cinema/dilijan-as-a-screen-loop.mp4, credited by name on title cards). A `video` entity in front of the e-screen box face (+z, the cushions' side), 16:9, muted, looped. apply-structure uploads the file (sha256 id) and names it by assetId.",
+  "entities_note": "Owner 2026-10-23 (N1259): the hall's cinema screen plays a loop of the five children's worlds (cinema/dilijan-as-a-screen-loop.mp4, credited by name on title cards). A `video` entity in front of the e-screen box face (+z, the cushions' side), 16:9, muted, looped. VideoObject lies flat (its mesh is rotated -90 deg about x), so the entity is stood up with rotation x +90 deg and scale [s, 1, s] (the plane's height runs along local z). apply-structure uploads the file (sha256 id) and names it by assetId.",
   "entities": {
     "welcome": [
       {
@@ -263,14 +263,14 @@
               0.63
             ],
             "rotation": [
-              0,
+              1.570796,
               0,
               0
             ],
             "scale": [
               1.2938,
-              1.2938,
-              1
+              1,
+              1.2938
             ]
           },
           "appearance": {
