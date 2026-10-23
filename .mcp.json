@@ -7,6 +7,10 @@
     "playwright": {
       "command": "npx",
       "args": ["@playwright/mcp@latest"]
+    },
+    "di": {
+      "command": "di",
+      "args": ["mcp", "--port", "5335"]
     }
   }
 }
