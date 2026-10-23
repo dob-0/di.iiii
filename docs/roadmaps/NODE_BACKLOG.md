@@ -114,6 +114,12 @@ nothing to composite is meaningless. `stream.recorder` is the exception worth
 pulling forward: `MediaRecorder` is already used in `src/hooks/useAssetPipeline.js`,
 so recording a canvas to an asset is mostly wiring that exists.
 
+**Built 2026-10-21:** `stream.recorder` is now **Recorder** (off the gate list),
+and **Still** (`stream.still`) sits beside it. Both are `panel-2d`: the window
+owns the canvas and the `MediaRecorder` (vp9 → vp8 → WebM, 6 Mbps, 30 fps),
+the runtime reads its report back. Files land as project files. The graph clock
+has a seek contract for test browsers (`src/project/graph/clockSeek.js`).
+
 Note `stream.monitor` and `stream.controller` are `panel-2d`, so they hit the
 trap in §"Known trap" below.
 

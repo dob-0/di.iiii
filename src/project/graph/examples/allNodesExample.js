@@ -208,6 +208,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('laserOut', 'device.laser.out', { label: 'Laser Out', col: 4, row: 17 })
     add('laserTrace', 'laser.trace', { label: 'Laser Trace', col: 4, row: 18 })
     add('laserMerge', 'laser.merge', { label: 'Laser Merge', col: 4, row: 19 })
+    add('recorder', 'stream.recorder', { label: 'Recorder', col: 4, row: 20 })
+    add('still', 'stream.still', { label: 'Still', col: 4, row: 21 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 

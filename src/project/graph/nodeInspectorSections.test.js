@@ -91,11 +91,10 @@ describe('deriveNodeInspectorSections', () => {
         expect(field).toMatchObject({ label: 'Target URL', type: 'text' })
     })
 
-    it('exposes stream.recorder\'s file pattern as an editable field', () => {
+    it('gives Recorder no file-pattern field: the file is named after its source and date', () => {
         const node = createNode('stream.recorder')
         const sections = deriveNodeInspectorSections(node)
-        const field = sections[0].fields.find((f) => f.path[0] === 'filePattern')
-        expect(field).toMatchObject({ label: 'File Pattern', type: 'text' })
+        expect(sections[0].fields.find((f) => f.path[0] === 'filePattern')).toBeUndefined()
     })
 
     // Universal code panel (product decision 2026-07-19): every node type,

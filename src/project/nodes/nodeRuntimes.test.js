@@ -781,6 +781,38 @@ describe('device.laser.out status', () => {
     })
 })
 
+describe('stream.recorder report', () => {
+    it('reads as not recording when its window is not mounted', () => {
+        const doc = { nodes: [node('rec', 'stream.recorder')], edges: [] }
+        expect(evalPort(doc, 'rec', 'recording')).toBe(false)
+        expect(evalPort(doc, 'rec', 'seconds')).toBe(0)
+        expect(evalPort(doc, 'rec', 'status')).toBe('')
+        expect(evalPort(doc, 'rec', 'file')).toBe('')
+    })
+
+    it('reads Recording, Seconds, Status and File from the window report', () => {
+        const doc = { nodes: [node('rec', 'stream.recorder')], edges: [] }
+        const live = new Map([
+            ['rec:recording', true], ['rec:seconds', 12], ['rec:status', 'Recording 0:12'], ['rec:file', 'recording-scene-2026-10-21T14-03-07.webm'],
+        ])
+        const context = createNodeGraphContext(doc, { liveOutputs: live })
+        expect(evaluateNodeOutput(doc.nodes[0], 'recording', context)).toBe(true)
+        expect(evaluateNodeOutput(doc.nodes[0], 'seconds', context)).toBe(12)
+        expect(evaluateNodeOutput(doc.nodes[0], 'status', context)).toBe('Recording 0:12')
+        expect(evaluateNodeOutput(doc.nodes[0], 'file', context)).toBe('recording-scene-2026-10-21T14-03-07.webm')
+    })
+})
+
+describe('stream.still report', () => {
+    it('reads empty when unmounted, the window report when mounted', () => {
+        const doc = { nodes: [node('st', 'stream.still')], edges: [] }
+        expect(evalPort(doc, 'st', 'file')).toBe('')
+        expect(evalPort(doc, 'st', 'status')).toBe('')
+        const context = createNodeGraphContext(doc, { liveOutputs: new Map([['st:file', 'still-scene-2026-10-21T14-03-07.png']]) })
+        expect(evaluateNodeOutput(doc.nodes[0], 'file', context)).toBe('still-scene-2026-10-21T14-03-07.png')
+    })
+})
+
 describe('laser.shape frame', () => {
     const frameAt = (values, now = 0) => {
         const doc = { nodes: [node('ls', 'laser.shape', values)], edges: [] }

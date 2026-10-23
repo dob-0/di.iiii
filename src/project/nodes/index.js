@@ -7,6 +7,8 @@ import { computeOutput as colourSplit } from './colour.split/runtime.js'
 import { computeOutput as deviceKeyboard } from './device.keyboard/runtime.js'
 import { computeOutput as deviceDmxOut } from './device.dmx.out/runtime.js'
 import { computeOutput as deviceLaserOut } from './device.laser.out/runtime.js'
+import { computeOutput as streamRecorder } from './stream.recorder/runtime.js'
+import { computeOutput as streamStill } from './stream.still/runtime.js'
 import { computeOutput as laserShape } from './laser.shape/runtime.js'
 import { computeOutput as laserTrace } from './laser.trace/runtime.js'
 import { computeOutput as laserMerge } from './laser.merge/runtime.js'
@@ -77,6 +79,8 @@ export const NODE_RUNTIMES = new Map([
     ['laser.trace', laserTrace],
     ['laser.merge', laserMerge],
     ['device.midi.out', deviceMidiOut],
+    ['stream.recorder', streamRecorder],
+    ['stream.still', streamStill],
     ['geom.array', geomArray],
     ['geom.cone', geomCone],
     ['geom.cylinder', geomCylinder],
