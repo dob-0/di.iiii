@@ -64,6 +64,11 @@ const FEATURED_SPACES = [
     { id: 'algovrithm', label: 'algovrithm', href: '/algovrithm', className: 'landing-cta-algo-vrithm' }
 ]
 
+// How many people the network names (spaces/network/people.json). A number,
+// not an import: the roster is 139 KB and the landing needs one integer of it.
+// landingFooterLinks.test.jsx fails the moment the roster and this disagree.
+const NETWORK_PEOPLE = 65
+
 // WHICH OF THOSE FOUR IS A DOOR ONTO SOMETHING, HERE.
 //
 // Two are works — code in this repo, compiled into the artifact (see
@@ -792,12 +797,19 @@ function LandingPageInner() {
                         <a href={studioHref} onClick={openDoor} className="lp-footer-link">Step inside</a>
                         <a href={studioHref} className="lp-footer-link">Spaces</a>
                         <a href={buildWikiPath()} className="lp-footer-link">Wiki</a>
+                        {/* /network was linked only from /spaces, /suite and
+                            /for-apps from no page a visitor reads (audit
+                            2026-10-21, G26–G28). The count is checked against
+                            spaces/network/people.json by landingFooterLinks.test.jsx. */}
+                        <a href="/network" className="lp-footer-link">The network — {NETWORK_PEOPLE} people</a>
+                        <a href="/suite" className="lp-footer-link">Name and mark</a>
                         <a href="/privacy" className="lp-footer-link">Privacy</a>
                         <a href="/terms" className="lp-footer-link">Terms</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
                         {/* The nav row is hidden under 640px; this is the phone's way to it. */}
                         <a href="/support" className="lp-footer-link">Support</a>
                         <a href="https://www.instagram.com/di.iiiiiiiiiiiiiiiiiiiii/" target="_blank" rel="noopener noreferrer" className="lp-footer-link">Instagram</a>
+                        <a href="/for-apps" className="lp-footer-link">For apps</a>
                         <a href="/serverXR/api/health" className="lp-footer-link">API</a>
                     </nav>
                     <span className="lp-footer-note">Open source · Web XR · <a href="https://thedi.studio" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>thedi.studio</a></span>

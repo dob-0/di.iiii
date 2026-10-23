@@ -46,6 +46,7 @@ import {
 import { lightingDeskPath, probeLightingDesk } from '../../map/lightingLink.js'
 import { PREVIEW_POSTER_MESSAGE, PREVIEW_READY_MESSAGE, PREVIEW_STUB_MESSAGE } from '../../utils/previewMode.js'
 import '../styles/studio-space-hub.css'
+import { SPACE_BLURB_MAX } from '../utils/spaceBlurb.js'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 // Every space card embeds the SAME app at a different route, and browsers
@@ -565,6 +566,27 @@ export default function SpaceHub() {
         }
     }, [loadSpaces])
 
+    // The space's one line for visitors (shared/spaceBlurb.cjs): shown under
+    // its name on this card, and what its share card says. An empty answer
+    // clears it; Cancel leaves it alone.
+    const handleEditBlurb = useCallback(async (space, e) => {
+        e.stopPropagation()
+        const next = window.prompt(`One line for visitors — what is in this space? (up to ${SPACE_BLURB_MAX} characters, empty to clear)`, space.blurb || '')
+        if (next === null) return
+        const line = next.replace(/\s+/g, ' ').trim()
+        if (line === (space.blurb || '')) return
+        if (line.length > SPACE_BLURB_MAX) {
+            alert(`That line is ${line.length} characters; the limit is ${SPACE_BLURB_MAX}.`)
+            return
+        }
+        try {
+            await updateServerSpace(space.id, { blurb: line })
+            await loadSpaces()
+        } catch (err) {
+            alert(err.message || 'Could not save the line.')
+        }
+    }, [loadSpaces])
+
     // Work as files, the browser half. The same document `di save` writes and
     // `di open` reads: one file holding the space, its whole history and its
     // assets, openable on any di.iiii. Saving is a plain download; opening is a
@@ -912,6 +934,13 @@ export default function SpaceHub() {
                 <div className="ssh-card-actions" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                     <button className="ssh-card-btn" onClick={e => handleRename(space, e)}>
                         Rename
+                    </button>
+                    <button
+                        className="ssh-card-btn"
+                        onClick={e => handleEditBlurb(space, e)}
+                        title="One line, shown on this card and on every link to the space that is shared"
+                    >
+                        One line for visitors
                     </button>
                     <button
                         className={`ssh-card-btn${space.isPublic ? ' ssh-card-btn--active' : ''}`}
@@ -1669,6 +1698,12 @@ export default function SpaceHub() {
                                         )
                                     })()}
                                     <p className="ssh-space-label">{spaceName(space)}</p>
+                                    {/* What the space is, in its owner's words. 10 of 11
+                                        public cards said nothing about what was inside
+                                        (audit 2026-10-21, G23). */}
+                                    {space.blurb && (
+                                        <p className="ssh-space-tagline ssh-space-blurb">{space.blurb}</p>
+                                    )}
                                     {/* In a visitor's single grid the Open Space is one card
                                         among the others, so it carries its own line instead of
                                         a shelf heading above it. */}
