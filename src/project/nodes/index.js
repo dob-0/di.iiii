@@ -31,6 +31,7 @@ import { computeOutput as mediaAudioLevels } from './media.audio/runtime.js'
 import { computeOutput as mediaVideoFrame } from './media.video/runtime.js'
 import { computeOutput as signalCounter } from './signal.counter/runtime.js'
 import { computeOutput as signalDelay } from './signal.delay/runtime.js'
+import { computeOutput as signalFlash } from './signal.flash/runtime.js'
 import { computeOutput as signalEase } from './signal.ease/runtime.js'
 import { computeOutput as signalHold } from './signal.hold/runtime.js'
 import { computeOutput as signalLag } from './signal.lag/runtime.js'
@@ -97,6 +98,7 @@ export const NODE_RUNTIMES = new Map([
     ['media.video', mediaVideoFrame],
     ['signal.counter', signalCounter],
     ['signal.delay', signalDelay],
+    ['signal.flash', signalFlash],
     ['signal.ease', signalEase],
     ['signal.hold', signalHold],
     ['signal.lag', signalLag],
