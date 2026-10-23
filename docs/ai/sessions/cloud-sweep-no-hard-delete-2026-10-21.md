@@ -6,3 +6,4 @@
 - `GET /api/admin/sweep` (admin): due in the next 14 days with the action and reason, plus the last 200 acts. Admin page: Manage → "Due for the sweep". The sandbox purge button runs the same sweep, sandboxes only. A guest whose sandbox was trashed gets it restored on return.
 - Tests: spaceStore 23/23 (6 new, all 6 red on the old store), siteLinkedSpaces 2/2, AdminManageSection 10/10 (2 new), httpContracts sandbox-purge case 1/1, catalogueContracts 3/3.
 - NOT done: `support` itself is still gone on prod — restore it from the nightly backup or re-sync it. No browser check of the new admin section (no dev stack in this cloud session). "Linked from the site" only knows the landing and FUNDING.yml.
+- 2026-10-23: merged origin/dev; the landing now also links /network, /suite and /for-apps, so siteLinkedSpaces.js names them (the guard test failed CI on exactly that).
