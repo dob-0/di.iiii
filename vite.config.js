@@ -660,6 +660,13 @@ export default {
                 changeOrigin: true,
                 xfwd: true
             },
+            // OSC — the same shape: serverXR answers /osc itself on a local install
+            // (serverXR/src/routes/oscRoutes.js), the OSC In and OSC Out nodes' UDP.
+            '^/osc(/|$)': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true
+            },
             // Live AI — a WebSocket to the image model on this machine, relayed by
             // serverXR (serverXR/src/liveAi/relay.js). Anchored like /ndi above.
             '^/liveai(/|$)': {

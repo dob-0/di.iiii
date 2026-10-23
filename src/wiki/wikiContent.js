@@ -1818,6 +1818,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-13'
     },
     {
+        id: 'osc-dmx-in-nodes',
+        category: 'Editing',
+        title: 'OSC In, OSC Out and DMX In: talk to the other show machines',
+        summary: 'Hear and send OSC to TouchDesigner, Resolume, QLab, VCV Cardinal or a console, and read a lighting console\'s faders, through the di.iiii on your own machine.',
+        body: [
+            'A web page cannot open a network socket, so these three nodes ask the di.iiii running on your own computer (`di up`, or npm run dev) to do it for them. On a hosted tab there is no such di, and each node says “No local bridge” (or that there is no desk) instead of sitting blank.',
+            'OSC IN. Set the Port it listens on (8000 by default; any number from 1024 to 65535) and, if you like, an Address Filter: an OSC address pattern such as /fader/* or /layer?/clip[1-3] or /{go,stop}. Empty hears every address. Address and Value are the latest matching message — Value is its first argument: a number, a word, or true/false. Signal is a rising count of matching messages, so a Counter or an OSC Out Trigger sees each one. Messages already waiting when the node opens are shown, not counted, so opening a project does not fire its cues. Bundles are opened. The node reads twenty times a second.',
+            'OSC OUT. Set Target Host and Target Port in the card. A message goes out at Address whenever Value changes — at most fifty a second, the newest value winning — and nothing is sent while Value stays the same. Trigger sends the message again: on its rising edge, and whenever it changes while held (MIDI In\'s and OSC In\'s rising counts). A Trigger with nothing on Value sends the bare address, which is a whole command to QLab (/go). A list on Value is one argument per item. Numbers go as 32-bit floats; choose Whole number for receivers that want integers.',
+            'Where OSC Out may send: an address on this computer (127.0.0.1) or on a private network (192.168…, 10…, 172.16–31…, 169.254…). Public addresses and broadcast addresses are refused, and Status says why.',
+            'Another machine on the network: OSC In hears only this computer until di is started with di up --lan; then it hears the network. OSC Out reaches the network either way.',
+            'DMX IN. Your console sends Art-Net or sACN to this di.iiii\'s lighting desk; switch that on under Setup → Input on the desk and add the universe there. Then give DMX In a Universe (1 is the desk\'s U1: Art-Net 0:0:0, sACN universe 1) and a Channel (1–512), and Value is that channel from 0 to 1 — the same range DMX Out takes back. If the signal stops, Value holds the last level it read and Status says so; nothing drops to zero because a cable was pulled.',
+            'Measured on the loopback (scripts/osc/osc-loopback-rehearsal.mjs, three runs of 1000 messages each way, one every millisecond): every message heard, in order, and every message sent arrived byte for byte; readable about 1.3 ms after it was sent. A burst of thousands of messages with no gap can still overflow the computer\'s receive buffer and lose some. Not yet tried against a real TouchDesigner, Resolume, QLab or console.'
+        ],
+        tags: ['nodes', 'osc', 'open sound control', 'udp', 'dmx', 'artnet', 'sacn', 'console', 'touchdesigner', 'resolume', 'qlab', 'cardinal', 'device', 'performance', 'network'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'laser-out-node',
         category: 'Editing',
         title: 'Laser and Laser Out — draw for the LaserCubes',

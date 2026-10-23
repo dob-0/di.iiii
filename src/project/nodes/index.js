@@ -5,7 +5,10 @@ import { computeOutput as colourCombine } from './colour.combine/runtime.js'
 import { computeOutput as colourRamp } from './colour.ramp/runtime.js'
 import { computeOutput as colourSplit } from './colour.split/runtime.js'
 import { computeOutput as deviceKeyboard } from './device.keyboard/runtime.js'
+import { computeOutput as deviceDmxIn } from './device.dmx.in/runtime.js'
 import { computeOutput as deviceDmxOut } from './device.dmx.out/runtime.js'
+import { computeOutput as deviceOscIn } from './device.osc.in/runtime.js'
+import { computeOutput as deviceOscOut } from './device.osc.out/runtime.js'
 import { computeOutput as deviceLaserOut } from './device.laser.out/runtime.js'
 import { computeOutput as laserShape } from './laser.shape/runtime.js'
 import { computeOutput as laserTrace } from './laser.trace/runtime.js'
@@ -71,7 +74,10 @@ export const NODE_RUNTIMES = new Map([
     ['colour.ramp', colourRamp],
     ['colour.split', colourSplit],
     ['device.keyboard', deviceKeyboard],
+    ['device.dmx.in', deviceDmxIn],
     ['device.dmx.out', deviceDmxOut],
+    ['device.osc.in', deviceOscIn],
+    ['device.osc.out', deviceOscOut],
     ['device.laser.out', deviceLaserOut],
     ['laser.shape', laserShape],
     ['laser.trace', laserTrace],

@@ -353,6 +353,11 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // than channel 1 would otherwise look broken in the one graph that exists
     // to show what works.
     add('midiIn', 'device.midi.in', { label: 'MIDI In', col: 7, row: 3, values: { channel: 0 } })
+    // The show-network trio beside MIDI In: OSC both ways through this
+    // machine's di.iiii, and one channel of the lighting desk's input.
+    add('oscIn', 'device.osc.in', { label: 'OSC In', col: 7, row: 4 })
+    add('oscOut', 'device.osc.out', { label: 'OSC Out', col: 7, row: 5 })
+    add('dmxIn', 'device.dmx.in', { label: 'DMX In', col: 7, row: 6 })
 
     const id = (key) => made.get(key)?.id || ''
     const wire = (fromKey, fromPort, toKey, toPort) => {
