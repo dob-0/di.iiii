@@ -1120,7 +1120,10 @@ export const normalizeEntity = (entity = {}) => {
             labelFont: LABEL_FONT_NAMES.includes(refSource.labelFont) ? refSource.labelFont : 'default',
             // Door shape. 'gateway' reproduces the ring exactly, so an
             // unknown or absent value leaves an existing portal untouched.
-            style: PORTAL_STYLES.includes(refSource.style) ? refSource.style : 'gateway'
+            style: PORTAL_STYLES.includes(refSource.style) ? refSource.style : 'gateway',
+            // A door that invites: a ripple and arrows toward it (portalInvite.js). Only `true` is kept, so a door
+            // authored before this is untouched.
+            ...(refSource.invite === true ? { invite: true } : {})
         }
     }
     if (sourceComponents.runtime || defaultComponents.runtime) {

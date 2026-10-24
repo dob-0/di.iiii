@@ -1,5 +1,6 @@
 {
   "space": "dilijan",
+  "label": "Dilijan As A Screen",
   "note": "Owner 2026-10-21 (N1103.3): one door, the kids' worlds, the wall, camp tools kept private. Armenian titles owe a native read. N1104: Aren's AirCanvas, yard and wall are ONE world in the project the-yard (spaces/dilijan/combine-aren.json, scripts/space/combine-pages.mjs); aircanvas and elevation are kept as originals on their own shelf (aircanvas stays public: the wall board names it; elevation stays private). N1123: the yard and the wall are one view inside the-yard; the-yard's own page before that is kept as yard-original (private, on the kept shelf).",
   "order": [
     "dilijan-home",
@@ -242,6 +243,82 @@
         "recolor": {
           "#FFAABB": "#77AADD",
           "#ff8fb3": "#5b93cc"
+        }
+      }
+    ]
+  },
+  "entities_note": "Owner 2026-10-23 (N1259): the hall's cinema screen plays a loop of the five children's worlds (cinema/dilijan-as-a-screen-loop.mp4, credited by name on title cards). A `video` entity in front of the e-screen box face (+z, the cushions' side), 16:9, muted, looped. VideoObject lies flat (its mesh is rotated -90 deg about x), so the entity is stood up with rotation x +90 deg and scale [s, 1, s] (the plane's height runs along local z). apply-structure uploads the file (sha256 id) and names it by assetId.",
+  "remove": {
+    "welcome": [
+      "e-screen-video"
+    ]
+  },
+  "entities": {
+    "welcome": [
+      {
+        "id": "e-door-1",
+        "components": {
+          "media": {
+            "file": "door-previews/mushroom-house.jpg"
+          },
+          "reference": {
+            "invite": true
+          }
+        }
+      },
+      {
+        "id": "e-door-2",
+        "components": {
+          "media": {
+            "file": "door-previews/orange-room.jpg"
+          },
+          "reference": {
+            "invite": true
+          }
+        }
+      },
+      {
+        "id": "e-door-3",
+        "components": {
+          "media": {
+            "file": "door-previews/dilijan-drive.jpg"
+          },
+          "reference": {
+            "invite": true
+          }
+        }
+      },
+      {
+        "id": "e-door-4",
+        "components": {
+          "media": {
+            "file": "door-previews/the-yard.jpg"
+          },
+          "reference": {
+            "invite": true
+          }
+        }
+      },
+      {
+        "id": "e-door-5",
+        "components": {
+          "media": {
+            "file": "door-previews/tsaghkanots.jpg"
+          },
+          "reference": {
+            "invite": true
+          }
+        }
+      },
+      {
+        "id": "e-door-6",
+        "components": {
+          "media": {
+            "file": "door-previews/anahit-vachagan.jpg"
+          },
+          "reference": {
+            "invite": true
+          }
         }
       }
     ]

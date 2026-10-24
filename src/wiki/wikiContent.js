@@ -24,10 +24,11 @@ export const WIKI_ARTICLES = [
         body: [
             'On a room page, Auto fly sits beside Walk / Fly (in the Studio it is in the view bar, after X-ray). Press it and the camera flies a closed lap while the show keeps playing: a slow rise from the entrance, a fast low pass over the dance floor, a banked turn round the DJ, a climb under the truss through the beams and a dive back. The camera leans into every turn like a quad, up to 25 degrees, and goes up to 6 m/s on the straights.',
             'Any input ends it where it is: a click or touch, the wheel, a key (Esc too), or the button again. The camera stays where the flight left it, level, and you carry on from there. A small “flying · tap to take the controls” line says so while it runs. Add ?fly=1 to the address and the page opens already flying, which is the way to show someone the work. It runs on a phone too, at Low quality.',
-            'The flight never leaves the room: every point of the path is at least 0.8 m inside the walls and under the roof, and at least 1.2 m above the floor; it passes under the rig, not through it. The route is computed from the room itself (its frame, the DJ riser, the rig, the entrance); nothing in it is specific to one production. A room shorter than 10 m on its short side gets one slow oval instead of the full route.'
+            'The flight never leaves the room: every point of the path is at least 0.8 m inside the walls and under the roof, and at least 1.2 m above the floor; it passes under the rig, not through it. The route is computed from the room itself (its frame, the DJ riser, the rig, the entrance); nothing in it is specific to one production. A room shorter than 10 m on its short side gets one slow oval instead of the full route.',
+            'A room with doors and no stage gets a tour instead of the drone: the camera glides level at walking pace, halts in front of each door looking into it, and turns to the next, round the room. It never leans, and anything standing in its way it rises over. A room with doors but no building (walls or a model) flies too: the tour keeps to the space the doors span.'
         ],
         tags: ['auto fly', 'drone', 'fpv', 'camera', 'view page', 'show'],
-        updated: '2026-10-15'
+        updated: '2026-10-25'
     },
     {
         id: 'view-page-controls',
@@ -149,12 +150,13 @@ export const WIKI_ARTICLES = [
                 '/main \u2014 the old address of that same room. It still resolves and always will, and it still opens the room; the name just never reaches the address bar.'
             ] },
             'Going anywhere else from here is one move too \u2014 a door in the room, one of the featured exhibitions, The Spaces, Open Jam, or a card on the Spaces page. What you are looking at stays on screen and the view pushes slowly in toward what you pressed, until the place you are going to has drawn its first frame; then that place comes up in its stead. There is no black screen with a spinner in between, and no effect laid over it \u2014 it is the same quiet move every time, only its timing breathes a little from one visit to the next.',
+            'A door can show where it leads. Give a door a picture (the same media slot an image uses) and the picture fills the door\u2019s opening \u2014 the round door or the standing frame \u2014 a little veiled until you point at it, then clear. A door with no picture keeps its own colour, as before. A door can also invite: in its own colour a ripple spreads out from it and arrows slide in from both sides, so it reads as a place to go from across the room; with reduced motion they stand still.',
             'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately, and nothing falls. Going through a door is a short plain fade. The destination is never different, only the journey.',
             'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.',
             'Everything on the page can be reached with the tab key, and whatever you are on is ringed in cyan. While the door is opening, what falls past you is a picture of the page you were reading, drawn as flat pieces in the room itself \u2014 not a second set of its controls, so nothing in the flight can be tabbed to or read twice by a screen reader.'
         ],
         tags: ['landing', 'basics', 'navigation', 'room', 'walk'],
-        updated: '2026-09-15'
+        updated: '2026-10-25'
     },
     {
         id: 'studio-mouse-navigation',

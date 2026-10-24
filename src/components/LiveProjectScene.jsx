@@ -276,7 +276,7 @@ function EntityVisual({ entity, assetMap }) {
         // children render via the hierarchy walk in AnimatedEntity
         return null
     case 'portal':
-        return <PortalObject entity={entity} />
+        return <PortalObject entity={entity} preview={asset || null} />
     case 'text': {
         const tc = entity.components?.text || {}
         const value = (tc.value || '').replace(/\\n/g, '\n')

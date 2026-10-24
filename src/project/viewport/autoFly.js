@@ -218,7 +218,8 @@ export const sampleFlight = (path, t) => {
     const ja = (ia + 1) % n
     const ta1 = ja === 0 ? duration : time[ja]
     const ka = clamp((ahead - time[ia]) / Math.max(1e-9, ta1 - time[ia]), 0, 1)
-    const at = pts[ia].clone().lerp(pts[ja], ka)
+    // a tour looks where it was told (each door in turn); a drone looks ahead along its path
+    const at = path.look ? path.look[i].clone().lerp(path.look[j], k) : pts[ia].clone().lerp(pts[ja], ka)
     return { eye: eye.toArray(), at: at.toArray(), roll: roll[i] + (roll[j] - roll[i]) * k, speed: speed[i] + (speed[j] - speed[i]) * k }
 }
 
@@ -244,3 +245,109 @@ export const checkFlight = (path, frame) => {
     }
 }
 
+/**
+ * Auto fly as a tour, not FPV (owner 2026-10-25: "make autofly but not fpv"): for a room with doors and no stage
+ * (a hall whose doors open worlds). The camera glides level (no bank) at walking pace, halts in front of each door
+ * looking into it, and turns to the next one. Same spline and the same envelope as the drone's; the stops are
+ * stand-points pulled from each door toward the room's centre, ordered round the centre. Anything in `obstacles`
+ * (boxes {min,max}) is cleared by rising over it, smoothly, never through it. Pure and deterministic.
+ */
+export const TOUR_DEFAULTS = Object.freeze({
+    ...FLIGHT_DEFAULTS,
+    standBack: 12,        // m from a door to where the camera halts (at most 60 % of the way to the centre)
+    lift: 1.4,            // m above the door's centre the camera looks from
+    maxSpeed: 1.8,        // m/s between doors
+    minSpeed: 0.35,       // m/s in front of a door: the halt
+    stopRadius: 3,        // m over which it slows into a halt
+    clearance: 0.8        // m kept from any obstacle
+})
+
+export const tourStops = (frame, doors, opts = {}) => {
+    const o = { ...TOUR_DEFAULTS, ...opts }
+    const c = frame.center
+    return doors
+        .map((d) => {
+            const dx = c[0] - d[0]; const dz = c[2] - d[2]
+            const dist = Math.hypot(dx, dz) || 1
+            const back = Math.min(o.standBack, dist * 0.6)
+            return { eye: [d[0] + (dx / dist) * back, d[1] + o.lift, d[2] + (dz / dist) * back], at: [...d], angle: Math.atan2(d[2] - c[2], d[0] - c[0]) }
+        })
+        .sort((a, b) => a.angle - b.angle)
+}
+
+export const tourPath = (frame, doors, opts = {}) => {
+    if (!frame?.bounds || !Array.isArray(doors) || doors.length < 2) return null
+    const o = { ...TOUR_DEFAULTS, ...opts }
+    const env = flightEnvelope(frame, o)
+    const stops = tourStops(frame, doors, o)
+    const ctl = stops.map((s) => fit(env, s.eye))
+    const curve = new THREE.CatmullRomCurve3(ctl.map(vec), true, 'centripetal')
+    const { pts, ds, length } = buildSamples(curve, o)
+    const n = pts.length
+    for (const q of pts) { q.x = clamp(q.x, env.min[0], env.max[0]); q.y = clamp(q.y, env.min[1], env.max[1]); q.z = clamp(q.z, env.min[2], env.max[2]) }
+    // rise over obstacles: the height each sample needs, widened and smoothed so the rise starts early and eases
+    const need = pts.map((q) => {
+        let y = -Infinity
+        for (const b of o.obstacles || []) {
+            const k = o.clearance
+            if (q.x > b.min[0] - k && q.x < b.max[0] + k && q.z > b.min[2] - k && q.z < b.max[2] + k && q.y < b.max[1] + k && q.y > b.min[1] - k) y = Math.max(y, b.max[1] + k)
+        }
+        return y
+    })
+    if (need.some(Number.isFinite)) {
+        const w = Math.ceil(4 / ds)   // 4 m either side
+        let lifted = need.map((_, i) => { let m = -Infinity; for (let d = -w; d <= w; d += 1) m = Math.max(m, need[(i + d + n) % n]); return m })
+        lifted = smoothRing(lifted.map((y, i) => (Number.isFinite(y) ? y : pts[i].y)), Math.ceil(2 / ds))
+        pts.forEach((q, i) => { q.y = clamp(Math.max(q.y, lifted[i], Number.isFinite(need[i]) ? need[i] : -Infinity), env.min[1], env.max[1]) })
+    }
+    // where it looks: the door of the nearest stop, blended between stops so the turn is a pan, not a cut
+    // each halt is the path's own point nearest the stand-point across the floor (after any rise)
+    const stopPts = stops.map((s) => {
+        let best = pts[0]; let bd = Infinity
+        for (const q of pts) { const d = Math.hypot(q.x - s.eye[0], q.z - s.eye[2]); if (d < bd) { bd = d; best = q } }
+        return best.clone()
+    })
+    const look = pts.map((q) => {
+        let wsum = 0; const acc = new THREE.Vector3()
+        stops.forEach((s, k) => { const d = q.distanceTo(stopPts[k]); const wt = 1 / (d * d * d + 1e-3); wsum += wt; acc.add(vec(s.at).multiplyScalar(wt)) })
+        return acc.multiplyScalar(1 / wsum)
+    })
+    // speed: walking pace between doors, a halt in front of each, accel-limited and smoothed
+    let v = pts.map((q) => {
+        const near = Math.min(...stopPts.map((r) => q.distanceTo(r)))
+        return o.minSpeed + (o.maxSpeed - o.minSpeed) * clamp(near / o.stopRadius, 0, 1)
+    })
+    const accel = 0.6
+    for (let pass = 0; pass < 3; pass += 1) {
+        for (let i = 0; i < 2 * n; i += 1) { const a = i % n; const b = (i + 1) % n; v[b] = Math.min(v[b], Math.sqrt(v[a] * v[a] + 2 * accel * ds)) }
+        for (let i = 2 * n; i > 0; i -= 1) { const a = i % n; const b = (i + n - 1) % n; v[b] = Math.min(v[b], Math.sqrt(v[a] * v[a] + 2 * accel * ds)) }
+    }
+    v = smoothRing(v, 4).map((x) => clamp(x, o.minSpeed * 0.95, o.maxSpeed))
+    const time = new Array(n)
+    let t = 0
+    for (let i = 0; i < n; i += 1) { time[i] = t; t += ds / ((v[i] + v[(i + 1) % n]) / 2) }
+    const kappa = new Array(n).fill(0)
+    return { pts, speed: v, roll: new Array(n).fill(0), look, time, duration: t, length, ds, env, opts: { ...o, lookAhead: 0 }, kappa, stops, style: 'tour' }
+}
+
+
+/** The doors a tour visits: every top-level portal's position. */
+export const tourDoors = (entities = []) => entities
+    .filter((e) => e?.type === 'portal' && !e.parentId && Array.isArray(e.components?.transform?.position))
+    .map((e) => e.components.transform.position)
+
+/**
+ * A room with doors and no building has no measured frame (computeRoomFrame needs walls or a model), so the tour
+ * flies in the box the doors span, widened by `pad` m, from a floor at 0 (or 2 m under the lowest door) to `headroom`
+ * m over the highest. The same shape as computeRoomFrame's result. null for fewer than two doors.
+ */
+export const doorsFrame = (doors, { pad = 6, headroom = 8 } = {}) => {
+    if (!Array.isArray(doors) || doors.length < 2) return null
+    const lo = [0, 1, 2].map((i) => Math.min(...doors.map((d) => d[i])))
+    const hi = [0, 1, 2].map((i) => Math.max(...doors.map((d) => d[i])))
+    const floorY = Math.min(0, lo[1] - 2)
+    const min = [lo[0] - pad, floorY, lo[2] - pad]
+    const max = [hi[0] + pad, hi[1] + headroom, hi[2] + pad]
+    const center = min.map((v, i) => (v + max[i]) / 2)
+    return { bounds: { min, max }, floorY, roofCut: max[1], roofTop: max[1], center, radius: Math.hypot(...max.map((v, i) => v - center[i])) }
+}
