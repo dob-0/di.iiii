@@ -25,8 +25,31 @@ h1 small{display:block;font-size:.42em;font-weight:500;color:var(--mute);margin-
 .place .cap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;border-top:2px solid var(--ink);padding:10px 14px;font-size:12px;letter-spacing:.06em}
 .place .cap a{color:var(--ink)}
 .place .hint{position:absolute;left:14px;top:12px;font-size:11px;letter-spacing:.08em;color:var(--mute);pointer-events:none}
-.door{display:inline-block;margin-top:28px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);padding:14px 22px;text-decoration:none}
-.door:hover,.door:focus-visible{background:var(--paper);color:var(--ink)}
+/* the way into the hall (owner 10-25: "move it up and make it interactive button"): a picture of the hall, the five
+   worlds' colours, an arrow that nudges; on hover the picture leans in, the colours grow and the arrow runs on */
+.enter{display:grid;grid-template-columns:minmax(150px,240px) 1fr auto;align-items:stretch;margin-top:28px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);text-decoration:none;position:relative;overflow:hidden;transition:transform .12s ease}
+.enter .pic{position:relative;overflow:hidden;border-right:2px solid var(--ink);min-height:120px}
+.enter .pic img{display:block;width:100%;height:100%;object-fit:cover;transform:scale(1);transition:transform .5s ease}
+.enter .txt{padding:18px 22px 22px;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.enter .hy{font-size:clamp(22px,3vw,32px);font-weight:700;line-height:1.1}
+.enter .en{font-size:16px;color:#c9c6bd}
+.enter .sub{margin-top:8px;color:#c9c6bd}
+.enter .go{display:flex;align-items:center;justify-content:center;width:84px;border-left:2px solid var(--paper);font-size:34px;line-height:1}
+.enter .go span{display:inline-block;animation:nudge 1.8s ease-in-out infinite}
+.enter .colours{position:absolute;left:0;right:0;bottom:0;display:flex;height:6px;transition:height .25s ease}
+.enter .colours i{flex:1}
+.enter:hover,.enter:focus-visible{background:var(--paper);color:var(--ink);outline:none}
+.enter:hover .en,.enter:focus-visible .en,.enter:hover .sub,.enter:focus-visible .sub{color:var(--mute)}
+.enter:hover .go,.enter:focus-visible .go{border-left-color:var(--ink)}
+.enter:hover .pic img,.enter:focus-visible .pic img{transform:scale(1.07)}
+.enter:hover .colours,.enter:focus-visible .colours{height:12px}
+.enter:hover .go span,.enter:focus-visible .go span{animation:run .7s ease-in-out infinite}
+.enter:focus-visible{box-shadow:0 0 0 3px var(--paper),0 0 0 5px var(--ink)}
+.enter:active{transform:translateY(2px)}
+@keyframes nudge{0%,60%,100%{transform:translateX(0)}30%{transform:translateX(7px)}}
+@keyframes run{0%{transform:translateX(-6px);opacity:.4}50%{transform:translateX(6px);opacity:1}100%{transform:translateX(-6px);opacity:.4}}
+@media (max-width:640px){.enter{grid-template-columns:1fr auto}.enter .pic{grid-column:1/-1;border-right:0;border-bottom:2px solid var(--ink);height:160px}.enter .go{width:64px}}
+@media (prefers-reduced-motion:reduce){.enter .go span,.enter:hover .go span{animation:none}.enter .pic img,.enter,.enter .colours{transition:none}}
 section{border-top:2px solid var(--rule);padding:36px 0 44px}
 h2{margin:0 0 22px;font-size:13px;font-weight:600}
 h2 span{color:var(--mute)}
@@ -89,12 +112,17 @@ footer{border-top:2px solid var(--rule);padding:22px 0 90px;color:var(--mute);fo
  <h1>Դիլիջանը որպես էկրան<small lang="en">Dilijan As A Screen</small></h1>
  <p class="lede">Հինգ երեխա մեկ շաբաթում հավաքեցին իրենց քաղաքը ու վերադարձրին այն որպես լույս։</p>
  <p class="lede-en" lang="en">Five kids spent one week collecting their town and gave it back as light.</p>
+ <a class="enter" target="_parent" href="/dilijan/welcome" aria-label="Մտնել 3D սրահ · Into the 3D hall: six worlds behind six doors">
+  <span class="pic"><img src="{{img:hall}}" alt="" loading="eager"></span>
+  <span class="txt"><span class="hy">Մտնել 3D սրահ</span><span class="en" lang="en">Into the 3D hall</span><span class="sub mono">6 աշխարհ, 6 դուռ · 6 worlds behind 6 doors</span></span>
+  <span class="go" aria-hidden="true"><span>→</span></span>
+  <span class="colours" aria-hidden="true"><i style="background:var(--c1)"></i><i style="background:var(--c2)"></i><i style="background:var(--c3)"></i><i style="background:var(--c4)"></i><i style="background:var(--c5)"></i></span>
+ </a>
  <figure class="place" style="margin-left:0;margin-right:0">
   <iframe title="Apicius Armenia, Dilijan: the place of the screening, scanned by Aren. Drag to turn it." loading="lazy" srcdoc="{{page:../aren/yard.html}}"></iframe>
   <div class="hint mono" aria-hidden="true">Քաշել · Drag to turn</div>
   <figcaption class="cap mono"><span>Ցուցադրության վայրը · The place of the screening · Apicius Armenia, Դիլիջան</span><span>Սկան՝ Արեն · Scan: Aren · <a target="_parent" href="/dilijan/the-yard?tab=yard">Մտնել բակ · Into the yard →</a></span></figcaption>
  </figure>
- <a class="door mono" target="_parent" href="/dilijan/welcome">Մտնել 3D սրահ · Into the 3D hall →</a>
 </div>
 
 <section>

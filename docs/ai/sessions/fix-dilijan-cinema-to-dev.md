@@ -34,3 +34,4 @@
   8 m headroom), only while flying; StudioViewport keeps the smart view mounted after a flight to hand the camera back.
   The drone lap is unchanged for rooms with a stage. Measured in the hall: 7 stops, 249 samples, 0 inside any of 137
   objects, lap 57 s, y 3.4-5.3 m, vmax 1.80 m/s; halts frame Orange room, Drive, the yard; click stops it; wheel works after.
+- 2026-10-25 owner: "move it up and make it interactive button": the Dilijan front page's way into the hall is now right under the title (y 530 of 1352, was 1249): a picture of the hall (images/hall.jpg, from the test copy), the five worlds' colours, an arrow that nudges; hover = light, picture leans in 7 %, strip 6->12 px, arrow runs; press sinks 2 px; focus ring; stacks on a phone; still with reduced motion. Old button under the building removed. Seen at 1600 and 390 px; click opens /dilijan/welcome.
