@@ -24,6 +24,7 @@ function fakeApi(doc) {
       const send = (data) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(data)) }
       if (req.url === '/api/spaces/s/projects') return send({ projects: [{ id: 'p', title: 'P', visibility: 'public' }] })
       if (req.url === '/api/spaces/s/collections') return send({ collections: [] })
+      if (req.url === '/api/spaces/s') { if (req.method === 'PATCH') doc.label = JSON.parse(body.toString()).label; return send({ space: { id: 's', label: doc.label || 'Old' } }) }
       if (req.url === '/api/projects/p/document') { if (req.method === 'PUT') doc.d = JSON.parse(body.toString()); return send({ document: doc.d }) }
       if (req.url === '/api/projects/p/assets' && req.method === 'POST') {
         const m = /name="assetId"\r\n\r\n([0-9a-f]{64})/.exec(body.toString('latin1'))
@@ -104,6 +105,18 @@ describe('an image the server stores under another id (metadata stripped)', () =
     api.log.length = 0
     await run()
     expect(api.log.filter((l) => l.startsWith('POST') || l.startsWith('PUT'))).toEqual([])
+  })
+})
+
+describe('the space name', () => {
+  it('is set when it differs, and a re-run sends nothing', async () => {
+    fs.writeFileSync(path.join(dir, 's.json'), JSON.stringify({ space: 's', label: 'New name' }))
+    const r = await run()
+    expect(r.code, r.stderr).toBe(0)
+    expect(doc.label).toBe('New name')
+    api.log.length = 0
+    await run()
+    expect(api.log.filter((l) => l.startsWith('PATCH'))).toEqual([])
   })
 })
 

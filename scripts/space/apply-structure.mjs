@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Apply a space's structure file (shelves, order, titles, who sees what) through the API.
+// Apply a space's structure file (its shown name, shelves, order, titles, who sees what) through the API.
 // Nothing is deleted except the entities a structure names under `remove` (project -> [entity id]). A backup of every project's title, shelf and visibility is written first,
 // and `--undo BACKUP` puts them back (relinked pages: the server's space history keeps each page before the replace). Dry run unless --apply.
 //   node scripts/space/apply-structure.mjs STRUCTURE.json --api URL [--apply] [--backup FILE]
@@ -151,6 +151,12 @@ if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).lengt
     const next = { ...doc, ...(doc.assets ? { assets: doc.assets } : {}), ...(Array.isArray(entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}) } }
     await step(`page ${p.id}: ${notes.join(', ')}`, () => call('PUT', `/api/projects/${p.id}/document`, next))
   }
+}
+// the space's shown name (its address, s.space, never changes)
+if (typeof s.label === 'string' && s.label.trim()) {
+  const cur = await call('GET', `/api/spaces/${s.space}`)
+  const now = cur.space?.label ?? cur.label
+  if (now !== s.label) await step(`space name "${now}" -> "${s.label}"`, () => call('PATCH', `/api/spaces/${s.space}`, { label: s.label }))
 }
 if (s.order) await step('order', () => call('PUT', `/api/spaces/${s.space}/projects/order`, { ids: [...s.order, ...unplaced] }))
 if (s.shelves) {
