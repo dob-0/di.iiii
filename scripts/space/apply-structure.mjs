@@ -36,6 +36,10 @@ async function read(space) {
 // once (content-addressed: the sha256 is the asset id, so a re-run finds it and sends nothing), registered in the
 // document's `assets`, and the entity then names it by `assetId`. N1259: the cinema screen of the Dilijan hall.
 const MIME_BY_EXT = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.mp4': 'video/mp4', '.webm': 'video/webm' }
+// a structure's components add to an entity's own, one level deep: `reference: { invite: true }` keeps the door's target
+const isPlain = (v) => v && typeof v === 'object' && !Array.isArray(v)
+const mergeComponents = (cur = {}, add = {}) => Object.fromEntries([...new Set([...Object.keys(cur), ...Object.keys(add)])]
+  .map((k) => [k, isPlain(cur[k]) && isPlain(add[k]) ? { ...cur[k], ...add[k] } : (k in add ? add[k] : cur[k])]))
 async function resolveMedia(projectId, doc, entity) {
   const file = entity.components?.media?.file
   if (!file) return entity
@@ -140,7 +144,7 @@ if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).lengt
     for (const set of s.doorSets?.[p.id] || []) { const r = upsertEntities(entities, extendDoorSet(entities, set)); if (r.count) { notes.push(`${r.count} part(s) of ${set.doorNext}`); entities = r.entities } }
     // media entities of this project (s.entities: project -> [entity]); the file is uploaded first, then the entity is upserted;
     // an entity that exists keeps the components the structure does not name (a door keeps its reference when it gains a preview)
-    if (s.entities?.[p.id]) { const list = []; for (const e of s.entities[p.id]) { const r = await resolveMedia(p.id, doc, e); const cur = (Array.isArray(entities) ? entities : []).find((x) => x?.id === r.id); list.push(cur ? { ...r, components: { ...cur.components, ...r.components } } : r) }; const r = upsertEntities(entities, list, 'entity'); if (r.count) { notes.push(...r.notes); entities = r.entities } }
+    if (s.entities?.[p.id]) { const list = []; for (const e of s.entities[p.id]) { const r = await resolveMedia(p.id, doc, e); const cur = (Array.isArray(entities) ? entities : []).find((x) => x?.id === r.id); list.push(cur ? { ...r, components: mergeComponents(cur.components, r.components) } : r) }; const r = upsertEntities(entities, list, 'entity'); if (r.count) { notes.push(...r.notes); entities = r.entities } }
     // entities taken out of this project (s.remove: project -> [entity id]); the server's space history keeps the page before
     if (s.remove?.[p.id] && Array.isArray(entities)) { const gone = new Set(s.remove[p.id]); const kept = entities.filter((e) => !gone.has(e?.id)); if (kept.length < entities.length) { notes.push(`${entities.length - kept.length} entit(ies) removed`); entities = kept } }
     if (!notes.length) continue

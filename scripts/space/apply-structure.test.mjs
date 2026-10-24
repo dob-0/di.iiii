@@ -82,12 +82,12 @@ describe('remove', () => {
 describe('an existing entity gains a media file', () => {
   it('keeps the components the structure does not name', async () => {
     doc.d.entities.push({ id: 'door', type: 'portal', components: { reference: { projectId: 'w' }, appearance: { color: '#fff' } } })
-    fs.writeFileSync(path.join(dir, 's.json'), JSON.stringify({ space: 's', entities: { p: [{ id: 'door', components: { media: { file: 'film.mp4', mimeType: 'image/jpeg' } } }] } }))
+    fs.writeFileSync(path.join(dir, 's.json'), JSON.stringify({ space: 's', entities: { p: [{ id: 'door', components: { media: { file: 'film.mp4', mimeType: 'image/jpeg' }, reference: { invite: true } } }] } }))
     const r = await run()
     expect(r.code, r.stderr).toBe(0)
     const d = doc.d.entities.find((x) => x.id === 'door')
     expect(d.type).toBe('portal')
-    expect(d.components.reference).toEqual({ projectId: 'w' })
+    expect(d.components.reference).toEqual({ projectId: 'w', invite: true })
     expect(d.components.appearance).toEqual({ color: '#fff' })
     expect(d.components.media.assetId).toBe(ID)
   })

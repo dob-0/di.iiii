@@ -15,6 +15,10 @@ import { enterDestination } from '../../components/entryTransition/entryTransiti
 import EntryGlideCamera, { captureRendererFrame } from '../../components/entryTransition/EntryGlide.jsx'
 import { useAssetUrl } from '../../hooks/useAssetUrl.js'
 import { coverCrop, PREVIEW_OPACITY, uprightTurn } from './portalPreview.js'
+import { chevronPoints, INVITE, inviteFrame } from './portalInvite.js'
+
+const RING_RADIUS = 1.1
+const reducedMotion = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)
 
 // The door's preview picture as a texture, centre-cropped to the opening's aspect; null until it loads
 // (and on a failed load: the door then simply keeps its plain tint).
@@ -288,7 +292,7 @@ export const withGlideCleanup = (resolve, clear) => (frame) => {
     clear()
 }
 
-function PortalGateway({ spaceId, projectId, anchor, label, color = '#4df9ff', showPlate = true, style = 'gateway', preview = null }) {
+function PortalGateway({ spaceId, projectId, anchor, label, color = '#4df9ff', showPlate = true, style = 'gateway', preview = null, invite = false }) {
     const isFrame = style === 'frame'
     const previewTexture = usePreviewTexture(preview, isFrame ? (PORTAL_FRAME.halfWidth * 2) / PORTAL_FRAME.height : 1)
     const inEditor = typeof window !== 'undefined' && isStudioEditorPath(window.location.pathname)
@@ -298,6 +302,12 @@ function PortalGateway({ spaceId, projectId, anchor, label, color = '#4df9ff', s
     const ringMatRef = useRef(null)
     const fillMatRef = useRef(null)
     const previewRef = useRef(null)
+    const rippleRefs = useRef([])
+    const arrowRefs = useRef([])
+    const inviting = invite && !inEditor && !isFrame
+    const still = useMemo(() => reducedMotion(), [])
+    const chevron = useMemo(() => new THREE.ShapeGeometry(new THREE.Shape(chevronPoints().map(([x, y]) => new THREE.Vector2(x, y)))), [])
+    useEffect(() => () => chevron.dispose(), [chevron])
     const revealRef = useRef(inEditor ? 1 : 0)
     const [hovered, setHovered] = useState(false)
     const { gl, scene, camera } = useThree()
@@ -364,11 +374,26 @@ function PortalGateway({ spaceId, projectId, anchor, label, color = '#4df9ff', s
         // with a slightly stronger flat fill in the opening — the brand's own
         // hover-fill move, and the same damp curve as the ring's.
         // keep the preview picture upright while the door turns in its own plane
-        const preview = previewTexture && !isFrame ? previewRef.current : null
+        const preview = (previewTexture || inviting) && !isFrame ? previewRef.current : null
         if (preview?.parent) {
             preview.parent.getWorldQuaternion(scratchQuat).invert()
             const turn = uprightTurn(scratchUp.set(0, 1, 0).applyQuaternion(scratchQuat).toArray())
             if (turn !== null) preview.quaternion.setFromAxisAngle(AXIS_Y, turn).multiply(QUARTER_X)
+        }
+        if (inviting) {
+            const f = inviteFrame(state.clock.elapsedTime, { still })
+            rippleRefs.current.forEach((m, i) => {
+                const r = f.ripples[i]
+                if (!m) return
+                m.visible = Boolean(r)
+                if (r) { m.scale.setScalar(r.scale); m.material.opacity = r.opacity }
+            })
+            arrowRefs.current.forEach((m, i) => {
+                if (!m) return
+                m.position.x = (i === 0 ? -1 : 1) * f.arrow.distance * RING_RADIUS
+                m.material.opacity = f.arrow.opacity
+            })
+            if (!still) state.invalidate()
         }
         if (fillMatRef.current) {
             const [idle, hover] = previewTexture ? [PREVIEW_OPACITY.idle, PREVIEW_OPACITY.hover] : [FRAME_FILL_IDLE, FRAME_FILL_HOVER]
@@ -443,9 +468,8 @@ function PortalGateway({ spaceId, projectId, anchor, label, color = '#4df9ff', s
                 minimum, and tapping the hole a door visibly has did nothing. */}
             {/* A preview picture turns with the ring (+90°) so it faces the way the door faces, and useFrame keeps
                 its top up while the door spins; the plain tint is the same from both sides and keeps its old turn. */}
+            <group ref={previewRef} rotation={[previewTexture || inviting ? Math.PI / 2 : -Math.PI / 2, 0, 0]}>
             <mesh
-                ref={previewRef}
-                rotation={[previewTexture ? Math.PI / 2 : -Math.PI / 2, 0, 0]}
                 onClick={inEditor ? undefined : enter}
                 onPointerOver={inEditor ? undefined : hoverOn}
                 onPointerOut={inEditor ? undefined : hoverOff}
@@ -474,6 +498,26 @@ function PortalGateway({ spaceId, projectId, anchor, label, color = '#4df9ff', s
                     />
                 )}
             </mesh>
+            {inviting ? Array.from({ length: INVITE.ripples }, (_, i) => (
+                <mesh key={`ripple-${i}`} ref={(m) => { rippleRefs.current[i] = m }}>
+                    <ringGeometry args={[RING_RADIUS + 0.06, RING_RADIUS + 0.13, 64]} />
+                    <meshBasicMaterial color={color} transparent opacity={0} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} />
+                </mesh>
+            )) : null}
+            {inviting ? [0, 1].map((i) => (
+                <mesh
+                    key={`arrow-${i}`}
+                    ref={(m) => { arrowRefs.current[i] = m }}
+                    geometry={chevron}
+                    rotation={[0, 0, i === 0 ? 0 : Math.PI]}
+                    onClick={enter}
+                    onPointerOver={hoverOn}
+                    onPointerOut={hoverOff}
+                >
+                    <meshBasicMaterial color={color} transparent opacity={0} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} />
+                </mesh>
+            )) : null}
+            </group>
             {getGlowTexture() ? (
                 <sprite scale={[3.4, 3.4, 1]}>
                     <spriteMaterial
@@ -544,6 +588,7 @@ export default function PortalObject({ entity, preview = null }) {
             showPlate={reference.labelPlate !== false}
             style={reference.style === 'frame' ? 'frame' : 'gateway'}
             preview={preview}
+            invite={reference.invite === true}
         />
     )
 }

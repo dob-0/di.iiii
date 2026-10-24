@@ -21,3 +21,9 @@
   Tests: 64 passed (10 files). Seen on cinema.diiii.localhost: 5 of 6 doors upright after 40 s; the garden door is behind
   the photo board in every view taken. Owed: dev write after merge; a re-run still re-writes e-door-6 (its `doors` entry
   is applied before the picture) — harmless, not idempotent.
+- 2026-10-25 owner: "arrows or something showing come here or click me". `reference.invite: true` (schema + server mirror,
+  only `true` kept): a ripple (2 rings, staggered, grow 55 %, fade) and two chevrons sliding in toward the ring, in the
+  door's colour, upright with the picture, clickable; still under prefers-reduced-motion; no words (the name stays the
+  reward for approaching). Timing pure + tested (`portalInvite.js`). apply-structure merges components one level deep so
+  `reference: { invite: true }` keeps the target. Seen: ripple + arrows move between two frames 1.1 s apart, 0 page errors.
+  Not done: the frame-style door does not invite yet; arrows read small from the far side of the hall (owner's call).

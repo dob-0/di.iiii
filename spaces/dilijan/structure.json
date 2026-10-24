@@ -259,6 +259,9 @@
         "components": {
           "media": {
             "file": "door-previews/mushroom-house.jpg"
+          },
+          "reference": {
+            "invite": true
           }
         }
       },
@@ -267,6 +270,9 @@
         "components": {
           "media": {
             "file": "door-previews/orange-room.jpg"
+          },
+          "reference": {
+            "invite": true
           }
         }
       },
@@ -275,6 +281,9 @@
         "components": {
           "media": {
             "file": "door-previews/dilijan-drive.jpg"
+          },
+          "reference": {
+            "invite": true
           }
         }
       },
@@ -283,6 +292,9 @@
         "components": {
           "media": {
             "file": "door-previews/the-yard.jpg"
+          },
+          "reference": {
+            "invite": true
           }
         }
       },
@@ -291,6 +303,9 @@
         "components": {
           "media": {
             "file": "door-previews/tsaghkanots.jpg"
+          },
+          "reference": {
+            "invite": true
           }
         }
       },
@@ -299,6 +314,9 @@
         "components": {
           "media": {
             "file": "door-previews/anahit-vachagan.jpg"
+          },
+          "reference": {
+            "invite": true
           }
         }
       }

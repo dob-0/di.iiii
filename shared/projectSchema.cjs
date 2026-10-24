@@ -1103,7 +1103,9 @@ const normalizeEntity = (entity = {}) => {
       labelFont: LABEL_FONT_NAMES.includes(refSource.labelFont) ? refSource.labelFont : 'default',
       // Door shape. 'gateway' reproduces the ring exactly, so an
       // unknown or absent value leaves an existing portal untouched.
-      style: PORTAL_STYLES.includes(refSource.style) ? refSource.style : 'gateway'
+      style: PORTAL_STYLES.includes(refSource.style) ? refSource.style : 'gateway',
+      // a door that invites (portalInvite.js); only `true` is kept
+      ...(refSource.invite === true ? { invite: true } : {})
     }
   }
   if (sourceComponents.runtime || defaultComponents.runtime) {
