@@ -64,3 +64,16 @@ describe('entities with a media file', () => {
     expect(api.log.filter((l) => l.startsWith('POST') || l.startsWith('PUT'))).toEqual([])
   })
 })
+
+describe('remove', () => {
+  it('takes out only the named entities, and a re-run writes nothing', async () => {
+    doc.d.entities.push({ id: 'photo-1' }, { id: 'photo-2' })
+    fs.writeFileSync(path.join(dir, 's.json'), JSON.stringify({ space: 's', remove: { p: ['photo-1', 'photo-2', 'not-there'] } }))
+    const r = await run()
+    expect(r.code, r.stderr).toBe(0)
+    expect(doc.d.entities.map((x) => x.id)).toEqual(['keep'])
+    api.log.length = 0
+    await run()
+    expect(api.log.filter((l) => l.startsWith('PUT'))).toEqual([])
+  })
+})

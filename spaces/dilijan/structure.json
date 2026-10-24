@@ -287,5 +287,25 @@
         }
       }
     ]
+  },
+  "remove": {
+    "welcome": [
+      "e-day2-day2-01-photo-jpg",
+      "e-day2-day2-02-photo-jpg",
+      "e-day2-day2-03-photo-jpg",
+      "e-day2-day2-05-photo-jpg",
+      "e-day2-day2-06-photo-jpg",
+      "e-day2-day2-07-photo-jpg",
+      "e-day2-day2-08-photo-jpg",
+      "e-day2-day2-09-photo-jpg",
+      "e-day2-day2-10-photo-jpg",
+      "e-day2-day2-11-photo-jpg",
+      "e-day2-day2-12-photo-jpg",
+      "e-day2-day2-13-photo-jpg",
+      "e-day2-day2-14-photo-jpg",
+      "e-day2-day2-15-photo-jpg",
+      "e-day2-day2-16-photo-jpg",
+      "e-day2-day2-17-photo-jpg"
+    ]
   }
 }

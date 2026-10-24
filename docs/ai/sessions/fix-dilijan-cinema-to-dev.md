@@ -8,3 +8,4 @@
   its vitest (2 passed), the 54.5 s loop of the five worlds, and the hall's screen entity in `spaces/dilijan/structure.json`.
 - Owed: applying the structure to dev (`apply-structure.mjs … --api https://dev.diiii.xyz --apply`) after merge; the owner's pick on
   the day-2 photo board that hides the screen's top ~1.2 m (N1259.4).
+- 2026-10-25 owner: the day-2 photo board overlaps the cinema screen, not needed -> apply-structure gains `remove` (project -> [entity id]); the 16 day-2 photos are removed from `welcome`; tests 3 passed; applied on the test copy and seen (scratchpad hall-after.png).

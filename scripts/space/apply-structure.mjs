@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Apply a space's structure file (shelves, order, titles, who sees what) through the API.
-// Nothing is deleted. A backup of every project's title, shelf and visibility is written first,
+// Nothing is deleted except the entities a structure names under `remove` (project -> [entity id]). A backup of every project's title, shelf and visibility is written first,
 // and `--undo BACKUP` puts them back (relinked pages: the server's space history keeps each page before the replace). Dry run unless --apply.
 //   node scripts/space/apply-structure.mjs STRUCTURE.json --api URL [--apply] [--backup FILE]
 //   node scripts/space/apply-structure.mjs --undo BACKUP.json --api URL [--apply]
@@ -118,7 +118,7 @@ for (const id of s.private || []) {
 // Every project is read once and written once; the link is repointed in href AND window.open, also inside a combined page.
 // Then each page's exact text edits (`edits`) and each scene's doors (`doors`), in the same one read and one write (N1250).
 const relinks = Object.entries(s.relink || {})
-if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).length || Object.keys(s.doorSets || {}).length || Object.keys(s.entities || {}).length) {
+if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).length || Object.keys(s.doorSets || {}).length || Object.keys(s.entities || {}).length || Object.keys(s.remove || {}).length) {
   for (const p of before.projects) {
     const res = await call('GET', `/api/projects/${p.id}/document`); const doc = res.document || res
     let html = doc.presentationState?.codeHtml
@@ -135,6 +135,8 @@ if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).lengt
     for (const set of s.doorSets?.[p.id] || []) { const r = upsertEntities(entities, extendDoorSet(entities, set)); if (r.count) { notes.push(`${r.count} part(s) of ${set.doorNext}`); entities = r.entities } }
     // media entities of this project (s.entities: project -> [entity]); the file is uploaded first, then the entity is upserted
     if (s.entities?.[p.id]) { const list = []; for (const e of s.entities[p.id]) list.push(await resolveMedia(p.id, doc, e)); const r = upsertEntities(entities, list, 'entity'); if (r.count) { notes.push(...r.notes); entities = r.entities } }
+    // entities taken out of this project (s.remove: project -> [entity id]); the server's space history keeps the page before
+    if (s.remove?.[p.id] && Array.isArray(entities)) { const gone = new Set(s.remove[p.id]); const kept = entities.filter((e) => !gone.has(e?.id)); if (kept.length < entities.length) { notes.push(`${entities.length - kept.length} entit(ies) removed`); entities = kept } }
     if (!notes.length) continue
     const next = { ...doc, ...(doc.assets ? { assets: doc.assets } : {}), ...(Array.isArray(entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}) } }
     await step(`page ${p.id}: ${notes.join(', ')}`, () => call('PUT', `/api/projects/${p.id}/document`, next))
