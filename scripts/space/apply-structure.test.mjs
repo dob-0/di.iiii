@@ -27,7 +27,8 @@ function fakeApi(doc) {
       if (req.url === '/api/projects/p/document') { if (req.method === 'PUT') doc.d = JSON.parse(body.toString()); return send({ document: doc.d }) }
       if (req.url === '/api/projects/p/assets' && req.method === 'POST') {
         const m = /name="assetId"\r\n\r\n([0-9a-f]{64})/.exec(body.toString('latin1'))
-        assets[m[1]] = true; return send({ ok: true, asset: { id: m[1] } })
+        const stored = doc.storeAs || m[1]
+        assets[stored] = true; return send({ ok: true, asset: { id: stored } })
       }
       res.writeHead(404); res.end('{}')
     })
@@ -77,3 +78,32 @@ describe('remove', () => {
     expect(api.log.filter((l) => l.startsWith('PUT'))).toEqual([])
   })
 })
+
+describe('an existing entity gains a media file', () => {
+  it('keeps the components the structure does not name', async () => {
+    doc.d.entities.push({ id: 'door', type: 'portal', components: { reference: { projectId: 'w' }, appearance: { color: '#fff' } } })
+    fs.writeFileSync(path.join(dir, 's.json'), JSON.stringify({ space: 's', entities: { p: [{ id: 'door', components: { media: { file: 'film.mp4', mimeType: 'image/jpeg' } } }] } }))
+    const r = await run()
+    expect(r.code, r.stderr).toBe(0)
+    const d = doc.d.entities.find((x) => x.id === 'door')
+    expect(d.type).toBe('portal')
+    expect(d.components.reference).toEqual({ projectId: 'w' })
+    expect(d.components.appearance).toEqual({ color: '#fff' })
+    expect(d.components.media.assetId).toBe(ID)
+  })
+})
+
+describe('an image the server stores under another id (metadata stripped)', () => {
+  it('names the stored id, keeps the file hash in the name, and a re-run sends nothing', async () => {
+    doc.storeAs = 'b'.repeat(64)
+    const r = await run()
+    expect(r.code, r.stderr).toBe(0)
+    const e = doc.d.entities.find((x) => x.id === 'e-screen')
+    expect(e.components.media.assetId).toBe('b'.repeat(64))
+    expect(doc.d.assets).toEqual([expect.objectContaining({ id: 'b'.repeat(64), name: `film.${ID.slice(0, 12)}.mp4` })])
+    api.log.length = 0
+    await run()
+    expect(api.log.filter((l) => l.startsWith('POST') || l.startsWith('PUT'))).toEqual([])
+  })
+})
+

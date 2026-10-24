@@ -149,12 +149,13 @@ export const WIKI_ARTICLES = [
                 '/main \u2014 the old address of that same room. It still resolves and always will, and it still opens the room; the name just never reaches the address bar.'
             ] },
             'Going anywhere else from here is one move too \u2014 a door in the room, one of the featured exhibitions, The Spaces, Open Jam, or a card on the Spaces page. What you are looking at stays on screen and the view pushes slowly in toward what you pressed, until the place you are going to has drawn its first frame; then that place comes up in its stead. There is no black screen with a spinner in between, and no effect laid over it \u2014 it is the same quiet move every time, only its timing breathes a little from one visit to the next.',
+            'A door can show where it leads. Give a door a picture (the same media slot an image uses) and the picture fills the door\u2019s opening \u2014 the round door or the standing frame \u2014 a little veiled until you point at it, then clear. A door with no picture keeps its own colour, as before.',
             'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately, and nothing falls. Going through a door is a short plain fade. The destination is never different, only the journey.',
             'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.',
             'Everything on the page can be reached with the tab key, and whatever you are on is ringed in cyan. While the door is opening, what falls past you is a picture of the page you were reading, drawn as flat pieces in the room itself \u2014 not a second set of its controls, so nothing in the flight can be tabbed to or read twice by a screen reader.'
         ],
         tags: ['landing', 'basics', 'navigation', 'room', 'walk'],
-        updated: '2026-09-15'
+        updated: '2026-10-25'
     },
     {
         id: 'studio-mouse-navigation',

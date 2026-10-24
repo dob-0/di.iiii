@@ -251,5 +251,57 @@
     "welcome": [
       "e-screen-video"
     ]
+  },
+  "entities": {
+    "welcome": [
+      {
+        "id": "e-door-1",
+        "components": {
+          "media": {
+            "file": "door-previews/mushroom-house.jpg"
+          }
+        }
+      },
+      {
+        "id": "e-door-2",
+        "components": {
+          "media": {
+            "file": "door-previews/orange-room.jpg"
+          }
+        }
+      },
+      {
+        "id": "e-door-3",
+        "components": {
+          "media": {
+            "file": "door-previews/dilijan-drive.jpg"
+          }
+        }
+      },
+      {
+        "id": "e-door-4",
+        "components": {
+          "media": {
+            "file": "door-previews/the-yard.jpg"
+          }
+        }
+      },
+      {
+        "id": "e-door-5",
+        "components": {
+          "media": {
+            "file": "door-previews/tsaghkanots.jpg"
+          }
+        }
+      },
+      {
+        "id": "e-door-6",
+        "components": {
+          "media": {
+            "file": "door-previews/anahit-vachagan.jpg"
+          }
+        }
+      }
+    ]
   }
 }
