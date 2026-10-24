@@ -9,3 +9,4 @@
 - Owed: applying the structure to dev (`apply-structure.mjs … --api https://dev.diiii.xyz --apply`) after merge; the owner's pick on
   the day-2 photo board that hides the screen's top ~1.2 m (N1259.4).
 - 2026-10-25 owner: the day-2 photo board overlaps the cinema screen, not needed -> apply-structure gains `remove` (project -> [entity id]); the 16 day-2 photos are removed from `welcome`; tests 3 passed; applied on the test copy and seen (scratchpad hall-after.png).
+- 2026-10-25 owner, next message: 'keep just photos' -> the photos come back (space restore point 2026-10-24T20-59-26-580Z on the test copy), the film leaves the screen (`remove: welcome -> e-screen-video`, the mp4 out of the repo). Seen: scratchpad hall-photos.png.
