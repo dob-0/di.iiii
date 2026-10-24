@@ -24,10 +24,11 @@ export const WIKI_ARTICLES = [
         body: [
             'On a room page, Auto fly sits beside Walk / Fly (in the Studio it is in the view bar, after X-ray). Press it and the camera flies a closed lap while the show keeps playing: a slow rise from the entrance, a fast low pass over the dance floor, a banked turn round the DJ, a climb under the truss through the beams and a dive back. The camera leans into every turn like a quad, up to 25 degrees, and goes up to 6 m/s on the straights.',
             'Any input ends it where it is: a click or touch, the wheel, a key (Esc too), or the button again. The camera stays where the flight left it, level, and you carry on from there. A small “flying · tap to take the controls” line says so while it runs. Add ?fly=1 to the address and the page opens already flying, which is the way to show someone the work. It runs on a phone too, at Low quality.',
-            'The flight never leaves the room: every point of the path is at least 0.8 m inside the walls and under the roof, and at least 1.2 m above the floor; it passes under the rig, not through it. The route is computed from the room itself (its frame, the DJ riser, the rig, the entrance); nothing in it is specific to one production. A room shorter than 10 m on its short side gets one slow oval instead of the full route.'
+            'The flight never leaves the room: every point of the path is at least 0.8 m inside the walls and under the roof, and at least 1.2 m above the floor; it passes under the rig, not through it. The route is computed from the room itself (its frame, the DJ riser, the rig, the entrance); nothing in it is specific to one production. A room shorter than 10 m on its short side gets one slow oval instead of the full route.',
+            'A room with doors and no stage gets a tour instead of the drone: the camera glides level at walking pace, halts in front of each door looking into it, and turns to the next, round the room. It never leans, and anything standing in its way it rises over. A room with doors but no building (walls or a model) flies too: the tour keeps to the space the doors span.'
         ],
         tags: ['auto fly', 'drone', 'fpv', 'camera', 'view page', 'show'],
-        updated: '2026-10-15'
+        updated: '2026-10-25'
     },
     {
         id: 'view-page-controls',

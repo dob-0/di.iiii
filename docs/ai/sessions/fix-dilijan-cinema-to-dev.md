@@ -27,3 +27,10 @@
   reward for approaching). Timing pure + tested (`portalInvite.js`). apply-structure merges components one level deep so
   `reference: { invite: true }` keeps the target. Seen: ripple + arrows move between two frames 1.1 s apart, 0 page errors.
   Not done: the frame-style door does not invite yet; arrows read small from the far side of the hall (owner's call).
+- 2026-10-25 owner: "make autofly but not fpv". Found: Auto fly did nothing in the hall (the smart view needs a building;
+  the hall has none). Now: a room with >= 2 top-level doors and no stage flies `tourPath` (autoFly.js): level (roll 0),
+  1.8 m/s between doors, a halt (0.35 m/s) 12 m in front of each door looking into it, rises over any obstacle box
+  (`flightObstacles` from the scene). Without a building the frame is `doorsFrame` (the doors' box + 6 m, floor 0,
+  8 m headroom), only while flying; StudioViewport keeps the smart view mounted after a flight to hand the camera back.
+  The drone lap is unchanged for rooms with a stage. Measured in the hall: 7 stops, 249 samples, 0 inside any of 137
+  objects, lap 57 s, y 3.4-5.3 m, vmax 1.80 m/s; halts frame Orange room, Drive, the yard; click stops it; wheel works after.
