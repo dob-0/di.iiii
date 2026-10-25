@@ -9,6 +9,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { applyEdits } from './fake-ops.test-helper.mjs'
 
 const APPLY = path.join(path.dirname(fileURLToPath(import.meta.url)), 'apply-structure.mjs')
 const BYTES = Buffer.from('not really a film, but bytes')
@@ -25,7 +26,8 @@ function fakeApi(doc) {
       if (req.url === '/api/spaces/s/projects') return send({ projects: [{ id: 'p', title: 'P', visibility: 'public' }] })
       if (req.url === '/api/spaces/s/collections') return send({ collections: [] })
       if (req.url === '/api/spaces/s') { if (req.method === 'PATCH') doc.label = JSON.parse(body.toString()).label; return send({ space: { id: 's', label: doc.label || 'Old' } }) }
-      if (req.url === '/api/projects/p/document') { if (req.method === 'PUT') doc.d = JSON.parse(body.toString()); return send({ document: doc.d }) }
+      if (req.url === '/api/projects/p/document') return send({ document: doc.d, version: 1 })
+      if (req.url === '/api/projects/p/ops' && req.method === 'POST') { doc.d = applyEdits(doc.d, JSON.parse(body.toString()).ops); return send({ ok: true }) }
       if (req.url === '/api/projects/p/assets' && req.method === 'POST') {
         const m = /name="assetId"\r\n\r\n([0-9a-f]{64})/.exec(body.toString('latin1'))
         const stored = doc.storeAs || m[1]
@@ -76,7 +78,7 @@ describe('remove', () => {
     expect(doc.d.entities.map((x) => x.id)).toEqual(['keep'])
     api.log.length = 0
     await run()
-    expect(api.log.filter((l) => l.startsWith('PUT'))).toEqual([])
+    expect(api.log.filter((l) => l.startsWith('PUT') || l.endsWith('/ops'))).toEqual([])
   })
 })
 

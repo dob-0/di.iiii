@@ -8,7 +8,7 @@
 //   node scripts/space/refresh-combined-tab.mjs --api URL --undo BACKUP.json [--apply]
 import fs from 'node:fs'
 import path from 'node:path'
-import { isCombined, relinkHtml, repointAssets, userAgent } from './pages-lib.mjs'
+import { isCombined, relinkHtml, repointAssets, userAgent, saveDocument } from './pages-lib.mjs'
 
 const args = process.argv.slice(2)
 const flag = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined }
@@ -22,7 +22,7 @@ if (flag('--undo')) {
   const b = JSON.parse(fs.readFileSync(flag('--undo'), 'utf8')); const id = b.document.projectMeta?.id || flag('--into')
   if (!id) { console.error('the backup names no project; add --into ID'); process.exit(2) }
   console.log(`${apply ? 'restore' : 'would restore'} ${id} from ${flag('--undo')}`)
-  if (apply) await call('PUT', `/api/projects/${id}/document`, b.document)
+  if (apply) await saveDocument(call, id, b.document)
   process.exit(0)
 }
 const specFile = flag('--spec'), n = Number(flag('--tab'))
@@ -43,7 +43,7 @@ if (!apply) process.exit(0)
 const backup = flag('--backup') || `${into}-before-refresh-${new Date().toISOString().slice(0, 19).replace(/:/g, '')}.json`
 fs.writeFileSync(backup, JSON.stringify(got)); console.log('backup', backup)
 doc.presentationState = { ...doc.presentationState, codeHtml: next }
-await call('PUT', `/api/projects/${into}/document`, doc)
+await saveDocument(call, into, doc)
 const back = (await call('GET', `/api/projects/${into}/document`)).document.presentationState.codeHtml
 if (back !== next) { console.error(`READ-BACK FAILED; undo: --undo ${backup} --apply`); process.exit(2) }
 console.log('ok, read back')

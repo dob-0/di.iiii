@@ -238,3 +238,59 @@ let asked=-1;try{const q=new URLSearchParams(window.diiPageQuery||'').get('tab')
 show(asked>=0?asked:${first});
 </script></body></html>`
 }
+
+// A page saved as EDITS, not as a whole new document (N1282, 2026-10-25). A whole-document PUT is a
+// `replaceDocument` in the op log, and a follow refuses those by design (serverXR follow/followPlan.js:
+// "a whole-work replace is a conversation between people"), so every tool save stopped the own di's follow.
+// The same change as edits is carried like a person's: one op per object made, changed or taken out, and one
+// for the page's own state. `documentEdits` is pure; `saveDocument` reads the version, sends the ops, and a
+// change that edits cannot carry is refused, never quietly dropped.
+const CARRIED = new Set(['entities', 'assets', 'presentationState', 'worldState'])
+const IGNORED = new Set(['version', 'updatedAt', 'createdAt', 'meta', 'projectMeta'])
+const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
+const byId = (list) => new Map((Array.isArray(list) ? list : []).filter((x) => x && x.id).map((x) => [x.id, x]))
+const changedKeys = (before = {}, after = {}) => {
+  const patch = {}
+  for (const k of new Set([...Object.keys(before || {}), ...Object.keys(after || {})])) {
+    if (!same(before?.[k], after?.[k])) patch[k] = k in (after || {}) ? after[k] : null
+  }
+  return patch
+}
+
+export function documentEdits(before = {}, after = {}, clientId = 'di-structure') {
+  const ops = []
+  const op = (type, payload) => ops.push({ opId: crypto.randomUUID(), clientId, type, payload })
+  const notCarried = [...new Set([...Object.keys(before), ...Object.keys(after)])]
+    .filter((k) => !CARRIED.has(k) && !IGNORED.has(k) && !same(before[k], after[k]))
+
+  const was = byId(before.entities)
+  const now = byId(after.entities)
+  const gone = [...was.keys()].filter((id) => !now.has(id))
+  gone.forEach((entityId) => op('deleteEntity', { entityId }))
+  // deleteEntity also takes the children; one that stays is made again
+  const fell = (id) => { for (let e = was.get(id), seen = new Set(); e?.parentId && !seen.has(e.parentId); e = was.get(e.parentId)) { seen.add(e.parentId); if (gone.includes(e.parentId)) return true } return false }
+  for (const [id, entity] of now) if (!was.has(id) || !same(was.get(id), entity) || fell(id)) op('createEntity', { entity })
+
+  const assetsWas = byId(before.assets)
+  const assetsNow = byId(after.assets)
+  for (const id of assetsWas.keys()) if (!assetsNow.has(id)) op('deleteAsset', { assetId: id })
+  for (const [id, asset] of assetsNow) if (!same(assetsWas.get(id), asset)) op('upsertAsset', { asset })
+
+  const ps = changedKeys(before.presentationState, after.presentationState)
+  if (Object.keys(ps).length) op('setPresentationState', { patch: ps })
+  const ws = changedKeys(before.worldState, after.worldState)
+  if (Object.keys(ws).length) op('setWorldState', { patch: ws })
+  return { ops, notCarried }
+}
+
+// `from` is the read the tool built `after` on ({ document, version }); without it the page is read here. Saving
+// against the version the tool read means an edit made in between is a conflict (409), never undone.
+export async function saveDocument(call, projectId, after, { from = null, clientId } = {}) {
+  const res = from || await call('GET', `/api/projects/${projectId}/document`)
+  const before = res.document || res
+  const { ops, notCarried } = documentEdits(before, after, clientId)
+  if (notCarried.length) throw new Error(`${projectId}: ${notCarried.join(', ')} changed, which edits do not carry; not saved (use di sync for a whole replace)`)
+  if (!ops.length) return 0
+  await call('POST', `/api/projects/${projectId}/ops`, { baseVersion: Number(res.version) || 0, ops })
+  return ops.length
+}
