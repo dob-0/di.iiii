@@ -125,3 +125,37 @@ describe('failureDelay — a refused stream is left alone longer each time', () 
         expect(text).toBe("this di.iiii refused the other side's changes to project test (HTTP 500: Server error) (see this server's log) — trying again in 20 s; the rest of the space keeps following")
     })
 })
+
+describe('a batch is cut by size too (N1291)', () => {
+    const { BATCH_BYTES } = require('./followPlan')
+    // MOXIR show night: 360 laser-cube edits of ~265 KB each
+    const heavy = (id) => ({ opId: id, type: 'updateComponent', payload: { beam: 'x'.repeat(265 * 1024) } })
+    const ops = Array.from({ length: 360 }, (_, i) => heavy(`l${i}`))
+
+    it('one send stays under the body limit, and there is more to carry', () => {
+        const batch = unseen(ops, new Set())
+        expect(batch.length).toBeGreaterThan(0)
+        expect(Buffer.byteLength(JSON.stringify(batch))).toBeLessThan(BATCH_BYTES + 300 * 1024)
+        expect(moreToCarry(ops, new Set())).toBe(true)
+    })
+
+    it('carried in order, every op once, until nothing is left', () => {
+        const seen = new Set()
+        const sent = []
+        for (let tick = 0; tick < 1000 && moreToCarry(ops, seen) | unseen(ops, seen).length; tick++) {
+            for (const op of unseen(ops, seen)) { sent.push(op.opId); seen.add(op.opId) }
+        }
+        expect(sent).toEqual(ops.map(o => o.opId))
+    })
+
+    it('one op bigger than the cap still goes, alone', () => {
+        const giant = [{ opId: 'g', type: 'updateComponent', payload: { x: 'y'.repeat(BATCH_BYTES + 1) } }, heavy('next')]
+        expect(unseen(giant, new Set()).map(o => o.opId)).toEqual(['g'])
+    })
+
+    it('small ops still go 200 at a time', () => {
+        const small = Array.from({ length: 250 }, (_, i) => ({ opId: `s${i}`, type: 'updateEntity', payload: {} }))
+        expect(unseen(small, new Set()).length).toBe(200)
+    })
+})
+
