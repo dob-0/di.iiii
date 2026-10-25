@@ -122,3 +122,23 @@ describe('the space name', () => {
   })
 })
 
+
+describe('the address in a page made of several files', () => {
+  it('moves links in its HTML files only, saved as edits; a re-run sends nothing', async () => {
+    doc.d = { version: 1, entities: [], presentationState: { mode: 'code', codeFiles: [
+      { name: 'index.html', content: '<a href="/s" target="_top">Look</a> <a href="/s/p">P</a> <a href="/sx">other</a>' },
+      { name: 'app.js', content: 'fetch("/s/data")' }
+    ] } }
+    fs.writeFileSync(path.join(dir, 's.json'), JSON.stringify({ space: 's', address: 's-new' }))
+    const r = await run()
+    expect(r.code, r.stderr).toBe(0)
+    const [html, js] = doc.d.presentationState.codeFiles
+    expect(html.content).toBe('<a href="/s-new" target="_top">Look</a> <a href="/s-new/p">P</a> <a href="/sx">other</a>')
+    expect(js.content).toBe('fetch("/s/data")')
+    expect(api.log.some((l) => l.endsWith('/ops'))).toBe(true)
+    expect(api.log.some((l) => l.startsWith('PUT'))).toBe(false)
+    api.log.length = 0
+    await run()
+    expect(api.log.filter((l) => l.endsWith('/ops'))).toEqual([])
+  })
+})
