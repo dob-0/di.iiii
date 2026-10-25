@@ -38,3 +38,18 @@ describe('moveAddressPortals', () => {
     expect(r.entities[1].components.reference.spaceId).toBe('open')
   })
 })
+
+describe('absolute asset links', async () => {
+  const { absoluteAssets, toRelativeAssets } = await import('./pages-lib.mjs')
+  const html = '<img src="https://di-studio.xyz/serverXR/api/projects/w/assets/05979b1cb6f2b66d"><img src="https://diiii.xyz/serverXR/api/projects/w/assets/4dbb2f67a7b8cd0a"><img src="/serverXR/api/projects/w/assets/aaaaaaaaaaaaaaaa">'
+  it('finds each one once, as its relative path', () => {
+    expect(absoluteAssets(html)).toEqual(['/serverXR/api/projects/w/assets/05979b1cb6f2b66d', '/serverXR/api/projects/w/assets/4dbb2f67a7b8cd0a'])
+  })
+  it('makes relative only the ones this server has', () => {
+    const r = toRelativeAssets(html, ['/serverXR/api/projects/w/assets/05979b1cb6f2b66d'])
+    expect(r.count).toBe(1)
+    expect(r.html).toContain('src="/serverXR/api/projects/w/assets/05979b1cb6f2b66d"')
+    expect(r.html).toContain('https://diiii.xyz/serverXR/api/projects/w/assets/4dbb2f67a7b8cd0a')
+  })
+})
+

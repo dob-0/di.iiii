@@ -7,7 +7,7 @@
 import fs from 'node:fs'
 import crypto from 'node:crypto'
 import path from 'node:path'
-import { editHtml, extendDoorSet, moveAddressHtml, moveAddressPortals, relinkHtml, relinkPortals, upsertDoors, upsertEntities, userAgent } from './pages-lib.mjs'
+import { absoluteAssets, editHtml, extendDoorSet, moveAddressHtml, moveAddressPortals, relinkHtml, relinkPortals, upsertDoors, toRelativeAssets, upsertEntities, userAgent } from './pages-lib.mjs'
 
 const args = process.argv.slice(2)
 const flag = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined }
@@ -127,7 +127,7 @@ for (const id of s.private || []) {
 // Every project is read once and written once; the link is repointed in href AND window.open, also inside a combined page.
 // Then each page's exact text edits (`edits`) and each scene's doors (`doors`), in the same one read and one write (N1250).
 const relinks = Object.entries(s.relink || {})
-if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).length || Object.keys(s.doorSets || {}).length || Object.keys(s.entities || {}).length || Object.keys(s.remove || {}).length || s.address) {
+if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).length || Object.keys(s.doorSets || {}).length || Object.keys(s.entities || {}).length || Object.keys(s.remove || {}).length || s.address || s.relativeAssets) {
   for (const p of before.projects) {
     const res = await call('GET', `/api/projects/${p.id}/document`); const doc = res.document || res
     let html = doc.presentationState?.codeHtml
@@ -151,6 +151,15 @@ if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).lengt
     if (s.address && s.address !== s.space) {
       if (html) { const r = moveAddressHtml(html, s.space, s.address); if (r.count) { notes.push(`${r.count} link(s) /${s.space} -> /${s.address}`); html = r.html } }
       if (Array.isArray(entities)) { const r = moveAddressPortals(entities, s.space, s.address); if (r.count) { notes.push(`${r.count} door(s) -> /${s.address}`); entities = r.entities } }
+    }
+    // a page that loads its files from a fixed host (prod) works only while it answers: relative, where this server has them
+    if (s.relativeAssets && html) {
+      const found = absoluteAssets(html)
+      const here = []
+      for (const rel of found) { const r = await fetch(`${api}${rel.replace(/^\/serverXR/, '')}`, { method: 'HEAD', headers }).catch(() => null); if (r?.ok) here.push(rel) }
+      const r = toRelativeAssets(html, here)
+      if (r.count) { notes.push(`${r.count} file link(s) made relative`); html = r.html }
+      if (found.length > here.length) console.log(`note ${p.id}: ${found.length - here.length} file(s) not on this server, kept as they are`)
     }
     if (!notes.length) continue
     const next = { ...doc, ...(doc.assets ? { assets: doc.assets } : {}), ...(Array.isArray(entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}) } }

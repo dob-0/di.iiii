@@ -14,3 +14,13 @@
 - Applied: dev (slug, 15 pages, the hall's 7 doors + 5 rooms' doors), the test copy, own di (slug by its API; the follow
   refused the whole-page replaces -> `di follow dilijan --take-host`, restore point first; hall arrived with the new doors).
 - Owed: a follow does not carry a space's slug (own di had to be set by hand through its API); the e-door-6 re-write on every run.
+- 2026-10-25 owner: "check one by one everything, all bugs". `scripts/space/sweep-space.cjs` (run with di-test-browser): every
+  public project of a space, page/console errors, failed loads, every link and door followed (a /space/project must exist and
+  be public; a link with the space's old id is flagged), a wide and a phone picture; report.json. Run on dev, 14 pages.
+  Found and fixed: (1) the viewer's "everything in this space" link used the space id (/dilijan/projects): the surface now
+  passes the address (`spaceAddressOf`, slug or id); (2) three worlds (mushroom-house, orange-room, tsaghkanots) loaded their
+  files from prod by full address: apply-structure `relativeAssets` makes them relative where the server has the file (dev: 5).
+  Checked, not bugs: WebGL/shader errors are the agent test browser (NVIDIA shader compiler, dob-67 N1271.7); the same five
+  worlds draw with 0 WebGL errors on software GL; /api/resolve/<space> 404 is the designed "no forward" answer; the flower
+  garden's optional artifact runtime (_runtime/_transforms) is not hosted (the page catches it, draws fine);
+  unicode-fonts 404 falls back to the CDN (pre-existing).

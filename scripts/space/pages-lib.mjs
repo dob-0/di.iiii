@@ -60,6 +60,18 @@ export function moveAddressPortals(entities, from, to) {
   return { entities: out, count }
 }
 
+// Full-address asset links in a page (https://<host>/serverXR/api/projects/<id>/assets/<hash>): the page then works only
+// while that host answers (a dev page that loads from prod). `toRelativeAssets` makes the ones in `keep` relative, so they
+// resolve on whichever server shows the page; the caller checks each one answers there first. Pure.
+const ABSOLUTE_ASSET = /https?:\/\/[a-z0-9.-]+(?::\d+)?(\/serverXR\/api\/projects\/[\w-]+\/assets\/[0-9a-f]{16,64})/g
+export const absoluteAssets = (html) => [...new Set([...String(html || '').matchAll(ABSOLUTE_ASSET)].map((m) => m[1]))]
+export function toRelativeAssets(html, keep) {
+  const ok = new Set(keep)
+  let count = 0
+  const out = String(html).replace(ABSOLUTE_ASSET, (all, rel) => { if (!ok.has(rel)) return all; count += 1; return rel })
+  return { html: out, count }
+}
+
 export function relinkPortals(entities, from, to, space = '') {
   const m = /^\/([\w-]+)(?:\/([\w-]+))?(?:#([A-Za-z][\w:.-]*))?$/.exec(to)
   if (!m) throw new Error(`a door goes to /space[/project][#part]: ${to}`)
