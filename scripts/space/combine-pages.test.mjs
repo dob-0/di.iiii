@@ -11,7 +11,7 @@ import { execFile } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { JSDOM } from 'jsdom'
-import { ALLOW, MARK, buildCombinedPage, isCombined, relinkHtml, repointAssets, userAgent } from './pages-lib.mjs'
+import { ALLOW, MARK, buildCombinedPage, isCombined, relinkHtml, relinkPortals, repointAssets, userAgent } from './pages-lib.mjs'
 
 const require = createRequire(import.meta.url)
 const { classifyUserAgent } = require('../../serverXR/src/appVisitors.js')
@@ -125,6 +125,21 @@ describe('repointAssets', () => {
   })
 })
 
+describe('relinkPortals (a scene\'s doors, N1248)', () => {
+  const door = (id, r) => ({ id, type: 'portal', components: { reference: { mode: 'portal', label: id, ...r } } })
+  it('repoints a door to a hidden project, with the part of the page, and leaves the rest alone', () => {
+    const ents = [door('a', { spaceId: 'dilijan', projectId: 'worlds' }), door('b', { spaceId: 'dilijan', projectId: 'the-yard' }), { id: 'c', type: 'box', components: {} }, door('d', { projectId: 'worlds', mode: 'embed' })]
+    const r = relinkPortals(ents, '/dilijan/worlds', '/dilijan#works', 'dilijan')
+    expect(r.count).toBe(1)
+    expect(r.entities[0].components.reference).toMatchObject({ spaceId: 'dilijan', projectId: '', anchor: 'works', label: 'a' })
+    expect(r.entities[1]).toBe(ents[1]); expect(r.entities[3]).toBe(ents[3])
+    expect(ents[0].components.reference.projectId).toBe('worlds') // pure
+  })
+  it('refuses a destination that is not /space[/project][#part]', () => {
+    expect(() => relinkPortals([], '/a', 'https://x.test')).toThrow()
+  })
+})
+
 describe('buildCombinedPage', () => {
   const pages = [{ label: 'AirCanvas', html: airHtml }, { label: 'Բակը · Yard', html: yardHtml }, { label: '<b>Wall</b>', html: wallHtml }]
 
@@ -182,6 +197,16 @@ describe('buildCombinedPage', () => {
     expect(tab.diiPageQuery).toBe(query)
     const bare = new JSDOM(buildCombinedPage({ pages: [{ label: 'a', html: air }, { label: 'b', html: airHtml }] }), { runScripts: 'dangerously' })
     expect(bare.window.document.querySelector('iframe').srcdoc).toBe(air)
+  })
+  it('?tab=<key> (or a number from 1) opens that tab: a door into the yard lands in the yard (N1248)', () => {
+    const two = [{ label: 'AirCanvas', id: 'aircanvas', html: airHtml }, { label: 'Yard', id: 'yard.html', html: yardHtml }]
+    const open = (query) => viewerHands(buildCombinedPage({ pages: two }), '', query).window.document
+    const pressed = (doc) => [...doc.querySelectorAll('nav button')].map((b) => b.getAttribute('aria-pressed'))
+    expect(pressed(open('?tab=yard'))).toEqual(['false', 'true'])
+    expect(open('?tab=yard').querySelector('iframe').srcdoc).toContain(yardHtml.slice(-30))
+    expect(pressed(open('?tab=2'))).toEqual(['false', 'true'])
+    expect(pressed(open('?tab=nope'))).toEqual(['true', 'false'])
+    expect(pressed(open(''))).toEqual(['true', 'false'])
   })
   it('refuses an empty list', () => {
     expect(() => buildCombinedPage({ pages: [] })).toThrow()
@@ -395,5 +420,50 @@ describe('combine-pages.mjs against a fake serverXR', () => {
     expect(api.docs['yard-original'].presentationState.codeHtml).toBe('')
     expect(api.docs['the-yard'].presentationState.codeHtml).toBe(yardHtml)
     expect((await run([...args, '--apply', '--backup', path.join(tmp, 'b2.json')])).code).toBe(0) // and it can run again
+  })
+})
+
+describe('structure edits and doors (N1250)', () => {
+  it('editHtml changes only the named projects, exactly, and a re-run is a no-op', async () => {
+    const { editHtml } = await import('./pages-lib.mjs')
+    const edits = [{ projects: ['a'], from: '← W</a>', to: '← W · Worlds</a>', why: 'back' }]
+    const once = editHtml('<a>← W</a><a>← W</a>', edits, 'a')
+    expect(once.count).toBe(2)
+    expect(once.html).toBe('<a>← W · Worlds</a><a>← W · Worlds</a>')
+    expect(editHtml(once.html, edits, 'a').count).toBe(0)
+    expect(editHtml('<a>← W</a>', edits, 'b').count).toBe(0)
+    expect(() => editHtml('x', [{ from: '', to: 'y' }], 'a')).toThrow()
+  })
+  it('upsertDoors adds a missing door, updates a changed one, leaves the rest', async () => {
+    const { upsertDoors } = await import('./pages-lib.mjs')
+    const door = (id, label) => ({ id, type: 'portal', components: { reference: { spaceId: 's', projectId: id, mode: 'portal', label } } })
+    const keep = door('k', 'K')
+    const r = upsertDoors([keep, door('w', 'W')], [door('w', 'W · Worlds'), door('n', 'N')])
+    expect(r.count).toBe(2)
+    expect(r.entities.map((e) => e.id)).toEqual(['k', 'w', 'n'])
+    expect(r.entities[0]).toBe(keep)
+    expect(r.entities[1].components.reference.label).toBe('W · Worlds')
+    expect(upsertDoors(r.entities, [door('w', 'W · Worlds'), door('n', 'N')]).count).toBe(0)
+    expect(() => upsertDoors([], [{ id: 'x', type: 'box' }])).toThrow()
+  })
+})
+
+describe('extendDoorSet (N1250)', () => {
+  it('carries the last two sets one step on the arc: turned parts turn, fixed offsets stay, colours swap', async () => {
+    const { extendDoorSet } = await import('./pages-lib.mjs')
+    const at = (deg, r = 24) => [r * Math.sin(deg * Math.PI / 180), 2, -r * Math.cos(deg * Math.PI / 180)]
+    const ent = (id, p, extra = {}) => ({ id, name: id, components: { transform: { position: p, rotation: [0, 0, 0] }, appearance: { color: '#FFAABB' }, ...extra } })
+    const ents = [ent('e-door-4', at(32)), ent('e-door-5', at(64)), ent('e-door-6', at(96)),
+      ent('e-pad-3', at(32)), ent('e-pad-4', at(64)),
+      ent('e-stone-3-0', at(32, 20)), ent('e-stone-4-0', at(64, 20)),
+      ent('e-beacon-3', at(32).map((v, k) => v + [0, 1, -1.9][k])), ent('e-beacon-4', at(64).map((v, k) => v + [0, 1, -1.9][k]))]
+    const out = extendDoorSet(ents, { match: '^e-(pad|stone|beacon)-{i}(-|$)', prev: '3', src: '4', next: '5', doorPrev: 'e-door-4', doorSrc: 'e-door-5', doorNext: 'e-door-6', recolor: { '#ffaabb': '#77AADD' } })
+    const by = Object.fromEntries(out.map((e) => [e.id, e.components]))
+    expect(Object.keys(by).sort()).toEqual(['e-beacon-5', 'e-pad-5', 'e-stone-5-0'])
+    const near = (a, b) => a.forEach((v, k) => expect(v).toBeCloseTo(b[k], 4))
+    near(by['e-pad-5'].transform.position, at(96))
+    near(by['e-stone-5-0'].transform.position, at(96, 20))
+    near(by['e-beacon-5'].transform.position, at(96).map((v, k) => v + [0, 1, -1.9][k]))
+    expect(by['e-pad-5'].appearance.color).toBe('#77AADD')
   })
 })

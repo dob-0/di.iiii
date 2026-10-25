@@ -45,7 +45,7 @@ describe('yard.html stands Պատը as one building', () => {
   })
   it('the page reads the elevation: pose, scale, frame, a camera facing the facades', () => {
     expect(page).toMatch(/const w=only==='yard'\?null:IN_WALL\[m\.name\];/)
-    expect(page).toContain('if(w&&w.s) group.scale.setScalar(w.s);')
+    expect(page).toContain("group.scale.setScalar(only==='wall'?group.userData.wall.s:group.userData.yard.s);")
     expect(page).toContain('const wc=new THREE.Vector3().fromArray(WALL_VIEW.centre);')
     expect(page).toContain('if(i===1) return wallPose({theta:WALL_VIEW.theta,phi:WALL_PHI,dist:fitD});')
     expect(page).not.toMatch(/theta:-0\.42/)
