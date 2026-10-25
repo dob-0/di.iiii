@@ -25,6 +25,7 @@
  *   --work <dir>        where the working files go (default <from>/../place-<name>)
  *   --scale-edge <m>    the room's longest wall, measured with a tape
  *   --edge <which>      which edge that number is: width · depth · height
+ *   --scale-from <scale.json>  the AR walk's own metres (poses.mjs --scale-out)
  *   --door-guess        no tape: call the tallest doorway 2.1 m and GUESS
  *   --local-obj <file>  a mesh you already have; no GPU is rented
  *   --gpu <kind>        L4 (default) · T4 · A100 · H100 · local (this machine, ~/tools/meshroom)
@@ -80,6 +81,8 @@ export const buildSteps = (options) => {
     if (Number.isFinite(options.scaleEdge)) {
         fitArgs.push('--scale-edge', String(options.scaleEdge))
         if (options.edge) fitArgs.push('--edge', options.edge)
+    } else if (options.scaleFrom) {
+        fitArgs.push('--scale-from', options.scaleFrom)
     } else if (options.doorGuess) {
         fitArgs.push('--door-guess')
     }
@@ -128,7 +131,7 @@ const main = () => {
     ensureDir(work)
 
     const scaleEdge = args['scale-edge'] === undefined ? null : num(args['scale-edge'], null)
-    if (!Number.isFinite(scaleEdge) && !args['door-guess']) {
+    if (!Number.isFinite(scaleEdge) && !args['door-guess'] && !args['scale-from']) {
         warn('')
         warn('Nothing says how big this room is.')
         warn('Measure one wall and pass --scale-edge <metres>, or accept a guess with --door-guess.')
@@ -147,6 +150,7 @@ const main = () => {
         scaleEdge,
         edge: args.edge ? String(args.edge) : null,
         doorGuess: Boolean(args['door-guess']),
+        scaleFrom: args['scale-from'] ? path.resolve(String(args['scale-from'])) : null,
         forward: args.forward === undefined ? null : num(args.forward, null),
         flip: Boolean(args.flip),
         api: args.api ? String(args.api) : null,
