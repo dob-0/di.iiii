@@ -5,6 +5,7 @@ import lazyWithReload from './utils/lazyWithReload.js'
 import LoadingScreen from './components/LoadingScreen.jsx'
 import useDocumentTitle from './hooks/useDocumentTitle.js'
 import { isPreviewRequest } from './utils/previewMode.js'
+import { spaceAddressOf } from './utils/spaceAddress.js'
 
 const App = lazyWithReload(() => import('./App.jsx'), 'app')
 const BlankNodeWorkspaceApp = lazyWithReload(() => import('./raw/BlankNodeWorkspaceApp.jsx'), 'raw-workspace')
@@ -12,10 +13,6 @@ const PublicProjectViewer = lazyWithReload(() => import('./project/components/Pu
 
 const DEFAULT_SPACE_ID = 'main'
 const SPACE_META_REFRESH_MS = 2000
-
-// The address a visitor reaches the space by: its slug when it has one (/dilijan-camp), else its id. Links the
-// viewer draws (everything in this space) use it, so a space that moved keeps showing its new address. Pure.
-export const spaceAddressOf = (space, spaceId) => (typeof space?.slug === 'string' && space.slug.trim() ? space.slug.trim() : spaceId)
 
 export default function SpaceSurfaceApp({ routeState }) {
     const page = routeState?.page || null
