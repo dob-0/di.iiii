@@ -13,6 +13,10 @@ const PublicProjectViewer = lazyWithReload(() => import('./project/components/Pu
 const DEFAULT_SPACE_ID = 'main'
 const SPACE_META_REFRESH_MS = 2000
 
+// The address a visitor reaches the space by: its slug when it has one (/dilijan-camp), else its id. Links the
+// viewer draws (everything in this space) use it, so a space that moved keeps showing its new address. Pure.
+export const spaceAddressOf = (space, spaceId) => (typeof space?.slug === 'string' && space.slug.trim() ? space.slug.trim() : spaceId)
+
 export default function SpaceSurfaceApp({ routeState }) {
     const page = routeState?.page || null
     const hasExplicitSpaceId = Boolean(routeState?.spaceId)
@@ -131,6 +135,7 @@ export default function SpaceSurfaceApp({ routeState }) {
                     spaceId={spaceId}
                     projectId={routeProjectId}
                     spaceLabel={surfaceState.space?.label || spaceId}
+                    spaceAddress={spaceAddressOf(surfaceState.space, spaceId)}
                     // The URL itself names this project (/{space}/p/{project} or
                     // its vanity-slug form) — the naming rule's "inside a
                     // project" case. The bare-space branch below is the other
@@ -150,6 +155,7 @@ export default function SpaceSurfaceApp({ routeState }) {
                     spaceId={spaceId}
                     projectId={publishedProjectId}
                     spaceLabel={surfaceState.space?.label || spaceId}
+                    spaceAddress={spaceAddressOf(surfaceState.space, spaceId)}
                 />
             </Suspense>
         )
