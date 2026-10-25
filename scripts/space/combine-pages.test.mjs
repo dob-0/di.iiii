@@ -2,6 +2,7 @@
 // combine-pages.mjs and the helpers it shares with apply-structure.mjs. The command runs for real against a fake
 // serverXR that files an unidentified program the way the real one does (it uses the server's own classifier),
 // so a script that forgets to say who it is fails here, not at the 31st request.
+import { applyEdits } from './fake-ops.test-helper.mjs'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import http from 'node:http'
 import fs from 'node:fs'
@@ -41,12 +42,17 @@ function fakeApi({ docs, assets = {}, lostPut = {} }) {
       if (kind === 'anonymous') return send(429, { error: 'Too many requests from this address by an unidentified program — retry in 28s.' })
       let m
       if ((m = req.url.match(/^\/api\/projects\/([^/]+)\/document$/))) {
-        if (req.method === 'GET') return docs[m[1]] ? send(200, { document: docs[m[1]] }) : send(404, { error: 'Project not found.' })
+        if (req.method === 'GET') return docs[m[1]] ? send(200, { document: docs[m[1]], version: 1 }) : send(404, { error: 'Project not found.' })
         if (req.method === 'PUT') {
           docs[m[1]] = JSON.parse(body.toString())
           // the write lands but its answer is lost: the run stops right after it
           return lostPut[m[1]] ? send(502, { error: 'Bad gateway.' }) : send(200, { ok: true })
         }
+      }
+      if ((m = req.url.match(/^\/api\/projects\/([^/]+)\/ops$/)) && req.method === 'POST') {
+        if (!docs[m[1]]) return send(404, { error: 'Project not found.' })
+        docs[m[1]] = applyEdits(docs[m[1]], JSON.parse(body.toString()).ops)
+        return lostPut[m[1]] ? send(502, { error: 'Bad gateway.' }) : send(200, { ok: true })
       }
       if ((m = req.url.match(/^\/api\/projects\/([^/]+)\/assets\/([0-9a-f]{64})(\/meta)?$/)) && req.method === 'GET') {
         const bytes = assets[`${m[1]}/${m[2]}`]
