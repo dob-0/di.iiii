@@ -1541,6 +1541,11 @@ describe('a project\'s life crosses a follow: trash, restore, rename, private, m
         await timed('space label host->follower', () => api(hosting, `/api/spaces/${SPACE}`, { method: 'PATCH', body: { label: 'Renamed room' } }),
             async () => (await api(following, `/api/spaces/${SPACE}`)).payload?.space?.label === 'Renamed room')
     })
+
+    it('the host\'s space address reaches this install too (N1279)', async () => {
+        await timed('space address host->follower', () => api(hosting, `/api/spaces/${SPACE}`, { method: 'PATCH', body: { slug: 'moved-room' } }),
+            async () => (await api(following, `/api/spaces/${SPACE}`)).payload?.space?.slug === 'moved-room')
+    })
 })
 
 describe('a follow never empties this copy, and keeps a project moved to a space it does not follow', () => {
