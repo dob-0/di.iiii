@@ -1542,6 +1542,28 @@ describe('a project\'s life crosses a follow: trash, restore, rename, private, m
             async () => (await api(following, `/api/spaces/${SPACE}`)).payload?.space?.label === 'Renamed room')
     })
 
+    it('a page tool\'s save on the host reaches this install: edits, not a whole replace (N1282)', async () => {
+        const { saveDocument } = await import('../../../scripts/space/pages-lib.mjs')
+        const call = async (method, route, body) => {
+            const answer = await api(hosting, route, { method, body })
+            if (answer.status >= 300) throw new Error(`${method} ${route}: ${answer.status}`)
+            return answer.payload
+        }
+        const read = await call('GET', '/api/projects/to-rename/document')
+        const page = read.document
+        const html = '<a href="/moved-room/hall">into the hall</a>'
+        const door = { id: 'door-n1282', name: 'Into the hall', type: 'portal', components: {} }
+        await timed('tool save host->follower', () => saveDocument(call, 'to-rename', {
+            ...page,
+            entities: [...(page.entities || []), door],
+            presentationState: { ...page.presentationState, codeHtml: html }
+        }, { from: read }), async () => {
+            const there = (await api(following, '/api/projects/to-rename/document')).payload?.document
+            return there?.presentationState?.codeHtml === html && (there.entities || []).some(e => e.id === 'door-n1282')
+        })
+        expect(followers.every(f => !f.state.lastError)).toBe(true)
+    })
+
     it('the host\'s space address reaches this install too (N1279)', async () => {
         await timed('space address host->follower', () => api(hosting, `/api/spaces/${SPACE}`, { method: 'PATCH', body: { slug: 'moved-room' } }),
             async () => (await api(following, `/api/spaces/${SPACE}`)).payload?.space?.slug === 'moved-room')

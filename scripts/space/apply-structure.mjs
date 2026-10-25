@@ -7,7 +7,7 @@
 import fs from 'node:fs'
 import crypto from 'node:crypto'
 import path from 'node:path'
-import { absoluteAssets, editHtml, extendDoorSet, moveAddressHtml, moveAddressPortals, relinkHtml, relinkPortals, upsertDoors, toRelativeAssets, upsertEntities, userAgent } from './pages-lib.mjs'
+import { absoluteAssets, editHtml, extendDoorSet, moveAddressHtml, moveAddressPortals, relinkHtml, relinkPortals, upsertDoors, toRelativeAssets, upsertEntities, userAgent, saveDocument } from './pages-lib.mjs'
 
 const args = process.argv.slice(2)
 const flag = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined }
@@ -130,6 +130,7 @@ const relinks = Object.entries(s.relink || {})
 if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).length || Object.keys(s.doorSets || {}).length || Object.keys(s.entities || {}).length || Object.keys(s.remove || {}).length || s.address || s.relativeAssets) {
   for (const p of before.projects) {
     const res = await call('GET', `/api/projects/${p.id}/document`); const doc = res.document || res
+    const read = structuredClone(res) // the page as read: the steps below change `doc`, and the edits are what differs from this
     let html = doc.presentationState?.codeHtml
     let entities = doc.entities
     const notes = []
@@ -163,7 +164,7 @@ if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).lengt
     }
     if (!notes.length) continue
     const next = { ...doc, ...(doc.assets ? { assets: doc.assets } : {}), ...(Array.isArray(entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}) } }
-    await step(`page ${p.id}: ${notes.join(', ')}`, () => call('PUT', `/api/projects/${p.id}/document`, next))
+    await step(`page ${p.id}: ${notes.join(', ')}`, () => saveDocument(call, p.id, next, { from: read }))
   }
 }
 // the space's shown name (its address, s.space, never changes)
