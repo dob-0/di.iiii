@@ -11,7 +11,7 @@
 //   node scripts/space/combine-pages.mjs --api URL --into ID --tab "Label=ID" --tab "Label=file:PAGE.html" [--title "…"]
 //        [--start N] [--link "Label=/space/project"] [--relink "/old=/new"] [--assets-from API] [--keep-as ID] [--apply] [--backup FILE]
 //   node scripts/space/combine-pages.mjs --api URL --undo BACKUP.json [--apply]
-// SPEC.json: { into, title, start, keepAs, keepTitle, tabs: [{ label, id } | { label, file, assetsOf }], links: [{ label, href }],
+// SPEC.json: { into, title, start, keepAs, keepTitle, tabs: [{ label, id, key } | { label, file, assetsOf, key }] (key: the ?tab= name), links: [{ label, href }],
 //   relink: { "/old": "/new" } } (the Dilijan one: spaces/dilijan/combine-aren.json). Flags override the spec.
 //   `file` is read relative to the spec; `assetsOf` names the project whose assets the file's URLs name (default: into).
 // --assets-from: read a page's assets from ANOTHER api when this one does not have them yet (e.g. a scratch stack
@@ -94,7 +94,7 @@ const specDir = specPath ? path.dirname(path.resolve(specPath)) : process.cwd()
 const into = flag('--into') || spec.into
 const tabOf = (label, src) => (src.startsWith('file:') ? { label, file: path.resolve(src.slice(5)) } : { label, id: src })
 const tabs = all('--tab').length ? all('--tab').map(pair).map(([label, src]) => tabOf(label, src))
-  : (spec.tabs || []).map((t) => (t.file ? { label: t.label, file: path.resolve(specDir, t.file), assetsOf: t.assetsOf } : { label: t.label, id: t.id }))
+  : (spec.tabs || []).map((t) => (t.file ? { label: t.label, key: t.key, file: path.resolve(specDir, t.file), assetsOf: t.assetsOf } : { label: t.label, key: t.key, id: t.id }))
 const keepAs = flag('--keep-as') || spec.keepAs
 const links = all('--link').length ? all('--link').map(pair) : (spec.links || []).map((l) => [l.label, l.href])
 const relinks = all('--relink').length ? Object.fromEntries(all('--relink').map(pair)) : (spec.relink || {})
@@ -135,7 +135,7 @@ for (const tab of tabs) {
   }
   const name = tab.id || path.basename(tab.file)
   if (!source) { console.error(`${name} has no code page`); process.exit(1) }
-  pages.push({ label: tab.label, id: name, html: await prepare(source, from, into, name) })
+  pages.push({ label: tab.label, id: name, key: tab.key, html: await prepare(source, from, into, name) })
 }
 
 // The target's own page, kept as its own project before it is replaced (see --keep-as above).

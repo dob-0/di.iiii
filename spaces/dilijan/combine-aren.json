@@ -10,7 +10,8 @@
       "id": "aircanvas"
     },
     {
-      "label": "Բակը · Պատը · Yard · Wall",
+      "label": "Բակը · Yard",
+      "key": "yard",
       "file": "aren/yard.html"
     }
   ],

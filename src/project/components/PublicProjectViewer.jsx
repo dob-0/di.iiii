@@ -380,7 +380,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const previewDocument = buildPresentationPreviewDocument(
         rawHtml,
         typeof window !== 'undefined' ? window.location.search : '',
-        typeof window !== 'undefined' ? window.location.origin : ''
+        typeof window !== 'undefined' ? window.location.origin : '',
+        typeof window !== 'undefined' ? window.location.hash : ''
     )
     const xrDefaultMode = publishState.xrDefaultMode || 'none'
     const codeUrl = presentationState.codeSourceType === 'url' ? presentationState.codeUrl?.trim() : ''
@@ -638,7 +639,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         data-autofly
                         data-testid="auto-fly"
                         aria-pressed={flying}
-                        title="Auto fly — an FPV drone flight through the room; touch anything to take the controls (Esc stops)"
+                        title="Auto fly — a flight through the room (a drone lap, or a tour of its doors); touch anything to take the controls (Esc stops)"
                         style={{
                             ...btnBase,
                             ...abs({ top: `calc(${topClear} + ${hasBuilding ? '13.6rem' : '10.2rem'})`, right: '1rem', minWidth: 104 }),

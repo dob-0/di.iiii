@@ -276,7 +276,7 @@ function EntityVisual({ entity, assetMap }) {
         // children render via the hierarchy walk in AnimatedEntity
         return null
     case 'portal':
-        return <PortalObject entity={entity} />
+        return <PortalObject entity={entity} preview={asset || null} />
     case 'text': {
         const tc = entity.components?.text || {}
         const value = (tc.value || '').replace(/\\n/g, '\n')
@@ -1921,7 +1921,7 @@ export default function LiveProjectScene({
     // approach. The frame they are looking at is what the curtain holds.
     const handlePortalReached = useCallback((entity, frameState = null) => {
         const reference = entity?.components?.reference || {}
-        const href = portalHref(reference.spaceId, reference.projectId)
+        const href = portalHref(reference.spaceId, reference.projectId, reference.anchor)
         if (!href || isEntryInProgress()) return
         markArriveWalking()
         const three = frameState && frameState.gl ? frameState : null

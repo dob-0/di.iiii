@@ -934,3 +934,15 @@ describe('a measured pan correction survives a save on both sides (MOXIR 2026-10
         }
     })
 })
+
+describe('a door that invites', () => {
+    it('keeps invite: true, and nothing for any other value', () => {
+        const doc = normalizeProjectDocument({ entities: [
+            { id: 'a', type: 'portal', components: { reference: { spaceId: 's', invite: true } } },
+            { id: 'b', type: 'portal', components: { reference: { spaceId: 's', invite: 'yes' } } }
+        ] })
+        expect(doc.entities.find((e) => e.id === 'a').components.reference.invite).toBe(true)
+        expect('invite' in doc.entities.find((e) => e.id === 'b').components.reference).toBe(false)
+    })
+})
+

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Բակը · Պատը — aren · Dilijan 26.08.2026</title>
+<title>Բակը · Yard — aren · Dilijan 26.08.2026</title>
 <!-- Aren's yard and wall as ONE view (owner 2026-10-21, N1123). Բակը is the yard page's own texturing: its scan and its
      photos, drawn as photographed, under its measured cloud and its tour; only the wall wears the wall page's sharper
      photo, at the exact place it was scanned (N1131, measured: spaces/dilijan/aren/README.md). Պատը: the wall steps out
@@ -15,6 +15,18 @@
   html,body{margin:0;height:100%;overflow:hidden;background:#F4F2ED}
   /* width/height: without them the canvas shows at its drawing-buffer size, 2x the screen on any retina display */
   #c{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none;outline:none}
+  /* hero: the front page's live building; only the building and its hands (owner 10-23: "max interactive") */
+  body.hero #bar,body.hero #mark,body.hero .back,body.hero #di-arrival{display:none!important}
+  /* hero = a view on a page that scrolls: cooperative gestures (Google Maps JS API gestureHandling 'cooperative', Mapbox GL JS
+     cooperativeGestures): one finger and the plain wheel belong to the page; two fingers, Ctrl/Cmd + wheel, or a click/tap
+     into the view (until the pointer leaves, Esc, or focus goes elsewhere) belong to the view (owner 10-23, N1250) */
+  body.hero #c{touch-action:pan-x pan-y}
+  body.hero.active #c{touch-action:none}
+  #coop{position:fixed;left:16px;right:16px;top:50%;margin:0 auto;width:fit-content;transform:translateY(-50%);box-sizing:border-box;
+        padding:12px 16px;background:rgba(17,17,17,.78);color:#F4F2ED;font:500 12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+        letter-spacing:.04em;text-align:center;border-radius:0;pointer-events:none;opacity:0;transition:opacity .25s ease;z-index:5}
+  #coop.on{opacity:1}
+  #coop span{display:block;opacity:.75}
   #c.drag{cursor:grabbing}
   #mark{position:fixed;right:16px;top:20px;font:11px/1 Helvetica,Arial,sans-serif;letter-spacing:.22em;color:#111;
         user-select:none;pointer-events:none}
@@ -39,10 +51,12 @@
 </style>
 </head>
 <body>
-<canvas id="c" tabindex="0" aria-label="Aren's yard in Dilijan, scanned. Drag to look around, pinch or scroll to come closer."></canvas>
+<script>if(window.DI_EMBED==='hero')document.body.classList.add('hero')</script>
+<canvas id="c" tabindex="0" aria-label="Aren's yard in Dilijan, scanned. Drag to look around, right-drag or two fingers to move, pinch or scroll to come closer, R or double-click for the first view."></canvas>
+<div id="coop" role="status" aria-live="polite"></div>
 <div id="mark">aren&nbsp;&nbsp;<b>·</b>&nbsp;&nbsp;dilijan<span class="d">&nbsp;&nbsp;<b>·</b>&nbsp;&nbsp;26.08.2026</span></div>
 <div id="bar">
-  <div id="where" role="group" aria-label="arrangement"><button type="button" aria-pressed="true">Բակը · The yard</button><button type="button" aria-pressed="false" disabled>Պատը · The wall</button></div>
+  <!-- owner 10-23: "we dont need the wall anymore": Պատը · The wall is gone from the page; only Բակը, the one building -->
   <div id="looks" role="group" aria-label="view modes"></div>
 </div>
 <script src="/vendor/three@0.128.0/three.min.js"></script>
@@ -62,7 +76,7 @@ const PACK=fetchAsset('/serverXR/api/projects/the-yard/assets/e30e26445e9f25c62e
 // 4.3 degrees in the yard and the wall page stood it upright, so a turn about the vertical alone left it up to 8 cm off.
 // The cabin shares no atlas: it is the yard's back wall (wall_mid) scanned apart at 1.19x (elevation.py registers it by
 // its facade, N1145). wall_mid stands for it in Բակը, so it shows only in the wall.
-const IN_YARD={"wall":{"q":[0.02826,-0.907906,0.024653,0.417493],"t":[4.5231,0.8936,0.4268]},"courtyard":{"q":[0,0,0,1],"t":[0.0019,0.8435,-0.002]}};
+const IN_YARD={"wall":{"q":[0.035164,-0.700927,0.013033,0.712247],"t":[-5.2377,0.7358,0.492],"s":0.99},"courtyard":{"q":[0,0,0,1],"t":[0.0019,0.8435,-0.002]},"wall_mid":{"q":[0.0,0.0591,0.0,0.998252],"t":[-6.1501,-0.0288,-4.2109],"s":1.67417}};
 // Պատը as one building, an elevation (owner 2026-10-21, N1145: "look walls parallel, windows parallel it the one
 // building"). Each fragment is turned so its photographed facade lies on the courtyard's facade plane, levelled (the
 // projection-profile roll of its edges), its foot on the courtyard's ground line, in the order of the building with the
@@ -251,13 +265,13 @@ function buildFragment(m,img,only,opts){
   const wire=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x141414,wireframe:true,transparent:true,opacity:0.42}));
   fill.visible=wire.visible=false;
   const group=new THREE.Group(); group.add(solid,fill,wire);
-  const y=only==='yard'?{q:[0,0,0,1],t:[0,0,0]}:IN_YARD[m.name]||{q:[0,0,0,1],t:m.center};
+  const y=only==='yard'?IN_YARD[m.name]||{q:[0,0,0,1],t:[0,0,0]}:IN_YARD[m.name]||{q:[0,0,0,1],t:m.center};   // s: owner 10-23, one building by its photos (visual.json)
   const w=only==='yard'?null:IN_WALL[m.name];        // Պատը: the elevation's pose (and the scale of a piece scanned apart)
   // stay: never moves (shown in one arrangement only); swap: the same surface as another part, so it changes at once
   group.userData={solid,fill,wire,points:null,tex,model:m,op,only,stay:!!opts.stay,swap:!!opts.swap,fade:only==='wall'?0:1,
-    yard:{p:new THREE.Vector3().fromArray(y.t),q:y.q?new THREE.Quaternion().fromArray(y.q):new THREE.Quaternion().setFromAxisAngle(V(0,1,0),(y.yaw||0)*Math.PI/180)},
-    wall:w?{p:new THREE.Vector3().fromArray(w.t),q:new THREE.Quaternion().fromArray(w.q)}:{p:new THREE.Vector3().fromArray(m.center).add(OFF),q:new THREE.Quaternion()}};
-  if(w&&w.s) group.scale.setScalar(w.s);
+    yard:{s:y.s||1,p:new THREE.Vector3().fromArray(y.t),q:y.q?new THREE.Quaternion().fromArray(y.q):new THREE.Quaternion().setFromAxisAngle(V(0,1,0),(y.yaw||0)*Math.PI/180)},
+    wall:w?{s:w.s||1,p:new THREE.Vector3().fromArray(w.t),q:new THREE.Quaternion().fromArray(w.q)}:{s:1,p:new THREE.Vector3().fromArray(m.center).add(OFF),q:new THREE.Quaternion()}};
+  group.scale.setScalar(only==='wall'?group.userData.wall.s:group.userData.yard.s);
   group.position.copy(group.userData.yard.p); group.quaternion.copy(group.userData.yard.q);
   scene.add(group);
   return group;
@@ -347,14 +361,14 @@ async function buildFragments(){
 }
 
 // ---------- the yard's tour (from the yard page) ----------
+// owner 10-23: the pieces stand as ONE building (one-building.json); the old rail ran through its walls, so the tour
+// circles the building outside its walls (radius 10.5 units ~ 26 m from its centre, eye 2.0-3.2 units)
 const camCurve=new THREE.CatmullRomCurve3([
- V(0.4,1.5,-7.6),V(-5.8,1.0,-4.2),V(-6.8,0.75,-0.6),V(-3.8,0.8,-1.1),V(-0.8,0.85,-1.3),
- V(2.0,0.9,-1.7),V(4.0,0.95,-2.6),V(6.2,1.0,-3.9),V(8.2,1.8,-4.8),V(4.5,3.6,-7.2)],true,'centripetal',0.6);
+ V(0.63,2.60,-8.71),V(-5.82,3.17,-8.02),V(-10.63,2.95,-3.67),V(-11.97,2.25,2.68),V(-9.32,2.03,8.60),V(-3.69,2.60,11.83),V(2.76,3.17,11.14),V(7.57,2.95,6.79),V(8.91,2.25,0.44),V(6.26,2.03,-5.48)],true,'centripetal',0.6);
 const tgtCurve=new THREE.CatmullRomCurve3([
- V(0.4,0.55,1.6),V(-4.6,0.55,1.9),V(-5.0,0.5,1.9),V(-3.2,0.55,1.95),V(-0.4,0.55,1.85),
- V(2.2,0.6,1.7),V(4.2,0.65,1.2),V(6.0,0.55,-1.0),V(4.0,0.5,0.2),V(0.6,0.4,1.4)],true,'centripetal',0.6);
+ V(-2.38,0.85,0.72),V(-2.72,0.85,1.38),V(-2.60,0.85,2.11),V(-2.07,0.85,2.63),V(-1.33,0.85,2.74),V(-0.68,0.85,2.40),V(-0.34,0.85,1.74),V(-0.46,0.85,1.01),V(-0.99,0.85,0.49),V(-1.73,0.85,0.38)],true,'centripetal',0.6);
 const T_REV=7,T_TOUR=50,T_FADE=5,T_HOLD=13,T_OUT=3.5, CYCLE=T_REV+T_TOUR+T_FADE+T_HOLD+T_OUT, HOLD_AT=T_REV+T_TOUR+T_FADE;
-const holdA=V(0.4,1.5,-7.6),holdB=V(0.25,1.05,-5.9),holdT=V(0.4,0.62,1.2);
+const holdA=camCurve.getPoint(0).clone(),holdB=holdA.clone().lerp(V(-1.53,2.0,1.56),0.18),holdT=V(-1.53,0.8,1.56);
 const YARD_X=[PMETA.min[0]-0.8,PMETA.min[0]+PMETA.range[0]+0.8];
 function pose(tc){ // -> [camera, target, reveal front, cloud fade, surface opacity]
   if(reduced) return [holdB,holdT,99,0,1];
@@ -416,28 +430,166 @@ function go(i){
   manual=false; vTheta=vPhi=0;
   whereBtn.forEach((b,j)=>b.setAttribute('aria-pressed',String(j===i)));
 }
+// ---------- moving in the yard (owner 10-23, N1248: "movement in the yard so bad") ----------
+// The di.iiii way of moving (src/studio/navigation/mappings.js 'studio' = camera-controls 2.10.1's defaults), written for this
+// page: drag turns about the building's centre, one full turn per screen height; every move is eased by a critically damped
+// SmoothDamp (Game Programming Gems 4, ch. 1.10, the function camera-controls and Unity use) with 0.125 s while a hand is on it and
+// 0.25 s after; a turn that is let go carries on and dies away (inertia: 0.3 s, at most 1.5 rad/s, so a flick adds at most ~26 degrees); wheel and pinch come closer toward the point
+// under the pointer (camera-controls' dollyToCursor), and going back out drifts the turn point home so the building returns to
+// the centre. Physics first: the eye never enters the building's box (it slides along it) and never goes below the eye line of
+// the ground (pitch 3-77 degrees above the turn point, which stays inside the box above the ground).
+// Idle turn (model-viewer's auto-rotate rule: it stops the moment a hand touches, and resumes after a delay): one slow turn per
+// 90 s at first sight, so a visitor sees it is a live building; it stops at the first touch, wheel or key and comes back only after
+// 30 s without a hand, easing in over 3 s from wherever the person left the camera, never snapping back to a tour. Space toggles
+// it; R or a double click goes back to the first view. Reduced motion: no idle turn.
+const ORB_DRAG_ST=0.125, ORB_ST=0.25, ORB_SPIN_TAU=0.3, ORB_SPIN_MAX=1.5, ORB_PHI=[0.05,1.35], IDLE_SPEED=2*Math.PI/90, IDLE_AFTER=30, IDLE_EASE=3, BOX_PAD=0.35;
+const ORB={goal:{theta:0,phi:0.3,dist:20},cur:{theta:0,phi:0.3,dist:20},gt:V(0,0.8,0),ct:V(0,0.8,0),
+  vel:{theta:0,phi:0,dist:0,x:0,y:0,z:0},spin:0,spinPhi:0,lastMove:0,
+  box:new THREE.Box3(V(PMETA.min[0],PMETA.min[1],PMETA.min[2]),V(PMETA.min[0]+PMETA.range[0],PMETA.min[1]+PMETA.range[1],PMETA.min[2]+PMETA.range[2])),
+  home:null,minD:0.6,maxD:60,hand:-1e9,touched:false};
+function smoothDamp(cur,goal,vel,key,st,dt){        // Game Programming Gems 4, 1.10 (no max speed), with overshoot guard
+  const omega=2/st,x=omega*dt,e=1/(1+x+0.48*x*x+0.235*x*x*x),change=cur-goal,temp=(vel[key]+omega*change)*dt;
+  vel[key]=(vel[key]-omega*temp)*e; let out=goal+(change+temp)*e;
+  if((goal-cur>0)===(out>goal)){out=goal;vel[key]=0;} return out;
+}
+function orbHome(){
+  const b=ORB.box,c=b.getCenter(new THREE.Vector3()),h=b.max.y-b.min.y;
+  const t=V(c.x,b.min.y+0.42*h,c.z), first=camCurve.getPoint(0), theta=Math.atan2(first.x-c.x,first.z-c.z), phi=0.32;
+  // the nearest distance at which every corner of the box sits inside 86 % x 78 % of the frame (centred, any aspect)
+  const cam=camera.clone(), corners=[];
+  for(let i=0;i<8;i++) corners.push(V(i&1?b.max.x:b.min.x,i&2?b.max.y:b.min.y,i&4?b.max.z:b.min.z));
+  const fits=(d)=>{cam.position.copy(fromSph(t,{theta,phi,dist:d}));cam.lookAt(t);cam.updateMatrixWorld();
+    return corners.every(p=>{const q=p.clone().project(cam);return q.z<1&&Math.abs(q.x)<=0.86&&Math.abs(q.y)<=0.78;});};
+  let lo=0.5,hi=400; for(let i=0;i<30;i++){const m=(lo+hi)/2; if(fits(m)) hi=m; else lo=m;}
+  ORB.home={theta,phi,dist:hi,t}; ORB.maxD=hi*2.6; ORB.minD=0.6;
+  if(!ORB.touched){Object.assign(ORB.goal,{theta,phi,dist:hi});ORB.gt.copy(t);}
+}
+function orbClampTarget(v){const b=ORB.box;v.x=clamp(v.x,b.min.x,b.max.x);v.z=clamp(v.z,b.min.z,b.max.z);v.y=clamp(v.y,b.min.y+0.3,b.max.y);return v;}
+// the eye outside the padded box: from the turn point (inside it) out along the view line to where the line leaves the box
+function orbOutside(pos,t){
+  const lo=ORB.box.min.clone().subScalar(BOX_PAD), hi=ORB.box.max.clone().addScalar(BOX_PAD);
+  if(pos.x<=lo.x||pos.x>=hi.x||pos.y<=lo.y||pos.y>=hi.y||pos.z<=lo.z||pos.z>=hi.z) return 0;
+  const d=pos.clone().sub(t).normalize(); let tExit=Infinity;
+  for(const k of ['x','y','z']){ if(Math.abs(d[k])<1e-9) continue; const s=((d[k]>0?hi[k]:lo[k])-t[k])/d[k]; if(s>0) tExit=Math.min(tExit,s); }
+  pos.copy(t).addScaledVector(d,tExit+0.02); return tExit+0.02;
+}
+function orbHand(){ORB.hand=now();ORB.touched=true;}
+function orbTurn(dx,dy){
+  const k=2*Math.PI/Math.max(700,innerHeight),   // one turn per screen height; a small frame (the front page's hero) counts as 700 px, or a short swipe spun it twice
+     t=now(), dt=Math.max(1/120,t-ORB.lastMove);
+  ORB.goal.theta-=dx*k; ORB.goal.phi=clamp(ORB.goal.phi+dy*k,ORB_PHI[0],ORB_PHI[1]);
+  ORB.spin=clamp(ORB.spin*0.5+(-dx*k/dt)*0.5,-ORB_SPIN_MAX,ORB_SPIN_MAX); ORB.spinPhi=clamp(ORB.spinPhi*0.5+(dy*k/dt)*0.5,-ORB_SPIN_MAX,ORB_SPIN_MAX); ORB.lastMove=t; orbHand();
+}
+function orbZoom(f,cx,cy){
+  const d0=ORB.goal.dist, d1=clamp(d0*f,ORB.minD,ORB.maxD), g=d1/d0; if(Math.abs(g-1)<1e-6) return;
+  ORB.goal.dist=d1;
+  if(g<1&&cx!=null){
+    // the point under the pointer on the plane through the turn point that faces the eye (camera-controls dollyToCursor)
+    const ndc=V((cx/innerWidth)*2-1,-(cy/innerHeight)*2+1,0.5), ray=ndc.unproject(camera).sub(camera.position).normalize();
+    const n=camera.getWorldDirection(new THREE.Vector3()), den=ray.dot(n);
+    if(den>1e-4){const P=camera.position.clone().addScaledVector(ray,ORB.ct.clone().sub(camera.position).dot(n)/den);ORB.gt.lerp(P,1-g);}
+  }else if(g>1&&ORB.home) ORB.gt.lerp(ORB.home.t,Math.min(1,(g-1)*1.5));
+  orbClampTarget(ORB.gt); orbHand();
+}
+// right drag / two fingers: the turn point slides in the screen plane, one pixel = one pixel of the turn point's depth
+// (camera-controls truck); it stays inside the building's box (orbClampTarget), so the building cannot be lost
+function orbPan(dx,dy){
+  const h=2*ORB.cur.dist*Math.tan(camera.fov*Math.PI/360)/Math.max(1,innerHeight), e=camera.matrixWorld.elements;
+  ORB.gt.x+=(-dx*e[0]+dy*e[4])*h; ORB.gt.y+=(-dx*e[1]+dy*e[5])*h; ORB.gt.z+=(-dx*e[2]+dy*e[6])*h;
+  orbClampTarget(ORB.gt); orbHand();
+}
+function orbReset(){
+  if(!ORB.home) return; const h=ORB.home, turns=Math.round((ORB.cur.theta-h.theta)/(2*Math.PI));
+  Object.assign(ORB.goal,{theta:h.theta+turns*2*Math.PI,phi:h.phi,dist:h.dist}); ORB.gt.copy(h.t); ORB.spin=ORB.spinPhi=0; ORB.hand=now();
+}
+function orbStep(t,dt,dragging){
+  if(!dragging){
+    ORB.goal.theta+=ORB.spin*dt; ORB.goal.phi=clamp(ORB.goal.phi+ORB.spinPhi*dt,ORB_PHI[0],ORB_PHI[1]);
+    const k=Math.exp(-dt/ORB_SPIN_TAU); ORB.spin*=k; ORB.spinPhi*=k;
+    if(!reduced){const ramp=smooth((t-ORB.hand-IDLE_AFTER)/IDLE_EASE); if(ramp>0) ORB.goal.theta+=IDLE_SPEED*ramp*dt;}
+  }
+  const st=dragging?ORB_DRAG_ST:ORB_ST, c=ORB.cur, g=ORB.goal, v=ORB.vel;
+  c.theta=smoothDamp(c.theta,g.theta,v,'theta',st,dt); c.phi=smoothDamp(c.phi,g.phi,v,'phi',st,dt); c.dist=smoothDamp(c.dist,g.dist,v,'dist',st,dt);
+  ORB.ct.x=smoothDamp(ORB.ct.x,ORB.gt.x,v,'x',st,dt); ORB.ct.y=smoothDamp(ORB.ct.y,ORB.gt.y,v,'y',st,dt); ORB.ct.z=smoothDamp(ORB.ct.z,ORB.gt.z,v,'z',st,dt);
+  const pos=fromSph(ORB.ct,c), pushed=orbOutside(pos,ORB.ct);
+  if(pushed){ // the wall stops the eye: what was asked past it is dropped, so going back out answers at once
+    if(g.dist<pushed){g.dist=pushed;} if(c.dist<pushed){c.dist=pushed;v.dist=0;}
+  }
+  camera.position.copy(pos); tgt.copy(ORB.ct);
+}
 function resetView(){
   picked=false; look=0; manual=false; blend=1; vTheta=vPhi=0; lastTouch=-99;
-  if(where===0) frozen=0; else wallOrbit={theta:WALL_VIEW.theta,phi:WALL_PHI,dist:fitD};
+  if(where===0){frozen=0;orbReset();} else wallOrbit={theta:WALL_VIEW.theta,phi:WALL_PHI,dist:fitD};
 }
 
-// hands
-const pointers=new Map(); let pinch=0;
+// hands: the di.iiii Studio mapping 'studio' (src/studio/navigation/mappings.js = camera-controls 2.10.1 defaults): left drag
+// turns, right drag pans, middle drag comes closer, wheel comes closer toward the pointer; touch: one finger turns, two fingers
+// pinch and pan together (TOUCH_DOLLY_TRUCK). Double-click / R: the first view. Owner 10-23, N1250.
+// handsMode: what one gesture does. hero = this view sits on a page that scrolls; active = a click/tap took the view.
+function handsMode(o){
+  if(o.touch){ if(o.n>=2) return 'pinch'; return (!o.hero||o.active)?'turn':'page'; }
+  if(o.button===2) return 'pan'; if(o.button===1) return 'dolly'; return 'turn';
+}
+// wheelOwner: the wheel zooms the view, or scrolls the page (cooperative gestures; a touchpad pinch arrives as Ctrl + wheel)
+function wheelOwner(o){ return (!o.hero||o.active||o.ctrl||o.meta)?'view':'page'; }
+const HERO=window.DI_EMBED==='hero', COARSE=matchMedia('(pointer:coarse)').matches, coop=document.getElementById('coop');
+let active=false, coopT=0, coopLast=-9;
+function coopHint(touch){   // Armenian owes a native read
+  if(now()-coopLast<0.8){clearTimeout(coopT);coopT=setTimeout(()=>coop.classList.remove('on'),1600);return;}
+  coopLast=now();
+  coop.innerHTML=touch?'Երկու մատով՝ շարժել · հպիր՝ պտտել<span>Two fingers to move · tap to turn</span>'
+    :'Ctrl + անիվ՝ մոտեցնել · սեղմիր՝ ազատ շարժել<span>Ctrl + scroll to zoom · click to move freely</span>';
+  coop.classList.add('on'); clearTimeout(coopT); coopT=setTimeout(()=>coop.classList.remove('on'),1600);
+}
+function setActive(on){ if(!HERO||active===on) return; active=on; document.body.classList.toggle('active',on); if(on) coop.classList.remove('on'); }
+const pointers=new Map(); let pinch=0, mode='turn', downAt=null;
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('pointerdown',e=>{
+  const touch=e.pointerType==='touch';
+  if(!touch) setActive(true);   // a mouse press takes the view until the pointer leaves
   canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  canvas.classList.add('drag'); manual=true; lastTouch=now();
+  mode=handsMode({touch,n:pointers.size,button:e.button,hero:HERO,active});
+  if(pointers.size===1) downAt={x:e.clientX,y:e.clientY,t:now(),touch,moved:0};
+  if(mode==='page') return;
+  canvas.classList.add('drag'); manual=true; lastTouch=now(); if(where===0){ORB.spin=ORB.spinPhi=0;ORB.lastMove=now();orbHand();}
   if(pointers.size===2){const [p,q]=[...pointers.values()];pinch=Math.hypot(p.x-q.x,p.y-q.y);}
 });
 canvas.addEventListener('pointermove',e=>{
   if(!pointers.has(e.pointerId)||trans) return;
   const prev=pointers.get(e.pointerId), dx=e.clientX-prev.x, dy=e.clientY-prev.y;
-  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); lastTouch=now();
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(downAt) downAt.moved+=Math.abs(dx)+Math.abs(dy);
+  if(mode==='page'){ if(downAt&&downAt.moved>12) coopHint(true); return; }   // one finger on a page that scrolls: the page's swipe
+  lastTouch=now();
+  if(where===0){
+    if(pointers.size===2){const [p,q]=[...pointers.values()],d=Math.hypot(p.x-q.x,p.y-q.y);if(pinch>0&&d>0)orbZoom(pinch/d,(p.x+q.x)/2,(p.y+q.y)/2);pinch=d;orbPan(dx/2,dy/2);}
+    else if(mode==='pan') orbPan(dx,dy);
+    else if(mode==='dolly') orbZoom(Math.exp(dy*0.006));
+    else orbTurn(dx,dy);
+    return;
+  }
   if(pointers.size===1){vTheta=-dx*0.0042;vPhi=dy*0.0042;orbitBy(vTheta,vPhi);}
   else if(pointers.size===2){const [p,q]=[...pointers.values()],d=Math.hypot(p.x-q.x,p.y-q.y);if(pinch>0&&d>0)zoomBy(pinch/d);pinch=d;}
 });
-const endPointer=e=>{pointers.delete(e.pointerId);if(!pointers.size)canvas.classList.remove('drag');lastTouch=now();};
+const endPointer=e=>{if(where===0&&now()-ORB.lastMove>0.08){ORB.spin=ORB.spinPhi=0;} // a hand held still, then lifted, throws nothing
+  // a tap (short, still, one finger) takes the view on a touch screen
+  if(e.type==='pointerup'&&downAt&&downAt.touch&&pointers.size===1&&downAt.moved<10&&now()-downAt.t<0.5) setActive(true);
+  if(pointers.size===2)pinch=0; pointers.delete(e.pointerId);
+  if(!pointers.size){canvas.classList.remove('drag');downAt=null;}
+  else{const n=pointers.size;mode=handsMode({touch:e.pointerType==='touch',n,button:0,hero:HERO,active});}
+  lastTouch=now();};
 canvas.addEventListener('pointerup',endPointer); canvas.addEventListener('pointercancel',endPointer);
-canvas.addEventListener('wheel',e=>{e.preventDefault();if(trans)return;manual=true;lastTouch=now();zoomBy(Math.exp(e.deltaY*0.0012));},{passive:false});
+// two fingers on a page that scrolls belong to the view: the browser must not start a page pan/pinch (Mapbox does the same)
+const twoFingers=e=>{if(HERO&&e.touches.length>=2)e.preventDefault();};
+canvas.addEventListener('touchstart',twoFingers,{passive:false}); canvas.addEventListener('touchmove',twoFingers,{passive:false});
+// the view is given back: the mouse leaves it, Esc, or focus goes to the page
+canvas.addEventListener('pointerleave',e=>{if(e.pointerType!=='touch'&&!pointers.size)setActive(false);});
+document.addEventListener('mouseout',e=>{if(!e.relatedTarget&&!pointers.size)setActive(false);});   // the mouse left this frame
+addEventListener('blur',()=>setActive(false));
+canvas.addEventListener('wheel',e=>{
+  if(wheelOwner({hero:HERO,active,ctrl:e.ctrlKey,meta:e.metaKey})==='page'){coopHint(COARSE);return;}
+  e.preventDefault();if(trans)return;manual=true;lastTouch=now();
+  const f=Math.exp(clamp(e.deltaMode===1?e.deltaY*16:e.deltaY,-240,240)*0.0012); if(where===0) orbZoom(f,e.clientX,e.clientY); else zoomBy(f);},{passive:false});
 canvas.addEventListener('dblclick',resetView);
 addEventListener('keydown',e=>{
   if(e.target&&e.target.closest&&e.target.closest('button')) return;
@@ -445,7 +597,8 @@ addEventListener('keydown',e=>{
   else if(e.key==='ArrowRight') pickLook((look<0?0:look)+1);
   else if(e.key==='ArrowLeft') pickLook((look<0?0:look)-1);
   else if(e.key==='r'||e.key==='R') resetView();
-  else if(e.code==='Space'){manual=!manual;lastTouch=now();}
+  else if(e.key==='Escape') setActive(false);
+  else if(e.code==='Space'){e.preventDefault(); if(where===0){const on=now()-ORB.hand>IDLE_AFTER; ORB.hand=on?now():now()-IDLE_AFTER; ORB.touched=true;} else {manual=!manual;lastTouch=now();}}
 });
 
 function resize(){
@@ -455,6 +608,7 @@ function resize(){
   camera.updateProjectionMatrix();
   uni.uPx.value=1.35*pr;
   const f=fitDistance(); if(where===1&&!trans) wallOrbit.dist*=f/fitD; fitD=f;
+  if(typeof ORB!=='undefined') orbHome();
 }
 addEventListener('resize',resize); resize();
 
@@ -470,7 +624,7 @@ function placeFragments(t){
     // rise, travel, land: nothing passes through the courtyard's walls on the way
     const h=smooth((k-0.25)/0.5), lift=LIFT*(smooth(k/0.3)-smooth((k-0.7)/0.3));
     g.position.copy(u.yard.p).lerp(u.wall.p,h).y+=lift;
-    g.quaternion.copy(u.yard.q).slerp(u.wall.q,h);
+    g.quaternion.copy(u.yard.q).slerp(u.wall.q,h); g.scale.setScalar(u.yard.s+(u.wall.s-u.yard.s)*h);
   });
 }
 function frame(){
@@ -488,6 +642,9 @@ function frame(){
       if(trans.to===1) wallOrbit=sphOf(camera.position,row.centre); else frozen=reduced?0:HOLD_AT;
       trans=null; blend=1; manual=false; placeFragments(t);
     }
+  }else if(where===0){
+    orbStep(t,dt,pointers.size>0);
+    frozen+=dt;   // the tour's clock still drives the yard's own look cycle (look -1), never the camera
   }else{
     if(!pointers.size&&(Math.abs(vTheta)+Math.abs(vPhi)>1e-5)){if(manual)orbitBy(vTheta,vPhi);vTheta*=0.9;vPhi*=0.9;}
     if(manual&&!pointers.size&&t-lastTouch>(where?1.8:7)){manual=false;if(where===1)wallOrbit=sphOf(camera.position,row.centre);}
@@ -542,12 +699,15 @@ function frame(){
   renderer.render(scene,camera);
 }
 buildCloud().catch(e=>{mark.textContent='could not load the cloud — '+e.message;});
-buildFragments().then(()=>{ready=true;resize();whereBtn[1].disabled=false;})
-  .catch(e=>{mark.textContent='could not load the wall — '+e.message;});
+buildFragments().then(()=>{ready=true;
+  const b=new THREE.Box3(); fragments.forEach(g=>{if(g.userData.only!=='wall') b.expandByObject(g.userData.solid);}); if(!b.isEmpty()) ORB.box.copy(b);
+  resize(); if(!ORB.touched){Object.assign(ORB.cur,ORB.goal);ORB.ct.copy(ORB.gt);}})
+  .catch(e=>{mark.textContent='could not load the building — '+e.message;});
+orbHome(); Object.assign(ORB.cur,ORB.goal); ORB.ct.copy(ORB.gt); ORB.hand=now()-IDLE_AFTER+1.5;   // framed from the first frame; the idle turn eases in after 1.5 s
 renderer.setAnimationLoop(frame);
 </script>
 
-<script>(function(){var d=document,w=window;try{
+<script>(function(){var d=document,w=window;if(w.DI_EMBED==='hero')return;try{
 var HU=["#DCC9FF","#EE8866","#EEDD88","#44BB99","#FFAABB"],K=3,NZ=.011,NM="ԲԱԿԸ · ՊԱՏԸ";
 var PR=[0,.431,.453,.569,.453,.42,0,.395,.487,.605,.487,.42,0,.336,.541,.664,.541,.42,0,.257,.614,.743,.614,.42,0,.157,.706,.843,.706,.42,0,.038,.817,.962,.817,.42,0,-.1,.945,1.1,.945,.42,0,.448,.44,-.1,.945,.4,0,.469,.44,.14,.945,.4,0,.487,.44,.35,.945,.4,0,.513,.44,.65,.945,.4,0,.531,.44,.86,.945,.4,0,.552,.44,1.1,.945,.4,0,.44,.44,.56,.44,.6,0,.128,.29,.33,.29,1.2,0,.33,.29,.33,.65,1.2,0,.33,.65,.128,.65,1.2,0,.128,.65,.128,.29,1.2,0,.632,.245,.868,.245,1.2,0,.868,.245,.868,.645,1.2,0,.868,.645,.632,.645,1.2,0,.632,.645,.632,.245,1.2,0,.128,.356,.33,.356,.3,0,.128,.432,.33,.432,.3,0,.128,.509,.33,.509,.3,0,.128,.585,.33,.585,.3,0,.632,.319,.868,.319,.3,0,.632,.404,.868,.404,.3,0,.632,.489,.868,.489,.3,0,.632,.574,.868,.574,.3,0,.128,.65,.062,.76,.42,0,.33,.65,.396,.76,.42,0,.632,.645,.566,.752,.42,0,.868,.645,.934,.752,.42];
 var MIN=2600,MAX=50000;
@@ -743,12 +903,12 @@ raf=w.requestAnimationFrame(tick);
 }catch(err){var z=d.getElementById('di-arrival');if(z&&z.parentNode)z.parentNode.removeChild(z)}
 })();</script>
 
-<a href="/dilijan#works" target="_top" onpointerdown="event.stopPropagation()" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation();event.preventDefault();window.open('/dilijan#works','_top')" style="position:fixed;left:12px;top:12px;z-index:2147483647;font:500 12px/1 ui-monospace,monospace;letter-spacing:.08em;text-decoration:none;color:#111;background:rgba(255,255,255,.82);border:1px solid rgba(0,0,0,.18);border-radius:999px;padding:9px 14px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);touch-action:manipulation;cursor:pointer">← ԱՇԽԱՐՀՆԵՐ</a>
+<a class="back" href="/dilijan#works" target="_top" onpointerdown="event.stopPropagation()" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation();event.preventDefault();window.open('/dilijan#works','_top')" style="position:fixed;left:12px;top:12px;z-index:2147483647;font:500 12px/1 ui-monospace,monospace;letter-spacing:.08em;text-decoration:none;color:#111;background:rgba(255,255,255,.82);border:1px solid rgba(0,0,0,.18);border-radius:999px;padding:9px 14px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);touch-action:manipulation;cursor:pointer">← ԱՇԽԱՐՀՆԵՐ · Worlds</a>
 
 <!-- VR-ENTRY-BEGIN 2026-08-30 -->
 <script>
 (function(){try{
-var N=navigator;if(!N.xr||!N.xr.isSessionSupported)return;
+var N=navigator;if(window.DI_EMBED==='hero'||!N.xr||!N.xr.isSessionSupported)return;
 var D=document,ses=null,busy=false,ctx=null;
 function pill(t,POS){var b=D.createElement('button');b.type='button';b.textContent=t;
  b.style.cssText='position:fixed;'+POS+';z-index:2147483646;display:none;font:500 12px/1 ui-monospace,monospace;letter-spacing:.08em;color:#111;background:rgba(255,255,255,.82);border:1px solid rgba(0,0,0,.18);border-radius:999px;padding:9px 14px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);touch-action:manipulation;cursor:pointer';
