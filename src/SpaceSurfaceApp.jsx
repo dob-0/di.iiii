@@ -5,6 +5,7 @@ import lazyWithReload from './utils/lazyWithReload.js'
 import LoadingScreen from './components/LoadingScreen.jsx'
 import useDocumentTitle from './hooks/useDocumentTitle.js'
 import { isPreviewRequest } from './utils/previewMode.js'
+import { spaceAddressOf } from './utils/spaceAddress.js'
 
 const App = lazyWithReload(() => import('./App.jsx'), 'app')
 const BlankNodeWorkspaceApp = lazyWithReload(() => import('./raw/BlankNodeWorkspaceApp.jsx'), 'raw-workspace')
@@ -131,6 +132,7 @@ export default function SpaceSurfaceApp({ routeState }) {
                     spaceId={spaceId}
                     projectId={routeProjectId}
                     spaceLabel={surfaceState.space?.label || spaceId}
+                    spaceAddress={spaceAddressOf(surfaceState.space, spaceId)}
                     // The URL itself names this project (/{space}/p/{project} or
                     // its vanity-slug form) — the naming rule's "inside a
                     // project" case. The bare-space branch below is the other
@@ -150,6 +152,7 @@ export default function SpaceSurfaceApp({ routeState }) {
                     spaceId={spaceId}
                     projectId={publishedProjectId}
                     spaceLabel={surfaceState.space?.label || spaceId}
+                    spaceAddress={spaceAddressOf(surfaceState.space, spaceId)}
                 />
             </Suspense>
         )

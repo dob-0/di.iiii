@@ -87,7 +87,7 @@ const PAGE_SANDBOX = 'allow-scripts allow-forms allow-popups allow-popups-to-esc
 // only ever be a backstop, not a real "finished loading" signal.
 const CODE_PREVIEW_PAINT_TIMEOUT_MS = 10000
 
-export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', initialCameraView = null, showProjectSwitcher = false, showProjectInTitle = false }) {
+export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', spaceAddress = null, initialCameraView = null, showProjectSwitcher = false, showProjectInTitle = false }) {
     const [state, setState] = useState({
         status: 'loading',
         document: null,
@@ -380,7 +380,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const previewDocument = buildPresentationPreviewDocument(
         rawHtml,
         typeof window !== 'undefined' ? window.location.search : '',
-        typeof window !== 'undefined' ? window.location.origin : ''
+        typeof window !== 'undefined' ? window.location.origin : '',
+        typeof window !== 'undefined' ? window.location.hash : ''
     )
     const xrDefaultMode = publishState.xrDefaultMode || 'none'
     const codeUrl = presentationState.codeSourceType === 'url' ? presentationState.codeUrl?.trim() : ''
@@ -638,7 +639,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         data-autofly
                         data-testid="auto-fly"
                         aria-pressed={flying}
-                        title="Auto fly — an FPV drone flight through the room; touch anything to take the controls (Esc stops)"
+                        title="Auto fly — a flight through the room (a drone lap, or a tour of its doors); touch anything to take the controls (Esc stops)"
                         style={{
                             ...btnBase,
                             ...abs({ top: `calc(${topClear} + ${hasBuilding ? '13.6rem' : '10.2rem'})`, right: '1rem', minWidth: 104 }),
@@ -908,7 +909,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     title={viewerTitle}
                     spaceId={resolvedRouteSpaceId}
                     entities={document?.entities || []}
-                    contentsHref={spaceContentsCount > 1 ? buildSpaceContentsPath(resolvedRouteSpaceId) : null}
+                    contentsHref={spaceContentsCount > 1 ? buildSpaceContentsPath(spaceAddress || resolvedRouteSpaceId) : null}
                 />
             ) : null}
 
@@ -922,7 +923,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         spaceId={resolvedRouteSpaceId}
                         homeIsThisRoom={!localInstall.isLocal}
                     />
-                    <SpaceContentsBadge spaceId={resolvedRouteSpaceId} count={spaceContentsCount} />
+                    <SpaceContentsBadge spaceId={spaceAddress || resolvedRouteSpaceId} count={spaceContentsCount} />
                 </>
             ) : null}
 

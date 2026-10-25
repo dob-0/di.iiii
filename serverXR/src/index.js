@@ -68,6 +68,7 @@ const { createKeyedLock } = require('./asyncLock')
 const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerOgRoutes } = require('./routes/ogRoutes')
+const { loadWikiArticles } = require('./wikiIndex')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { TRUST_PROXY } = require('./proxyTrust')
 const { registerWorkStatusRoutes } = require('./routes/workStatusRoutes')
@@ -2322,6 +2323,7 @@ const sceneWriter = createSceneWriter({
 // platform tile. Same resolver the /api/resolve middleware above uses: slug
 // first, then the normalized id.
 registerOgRoutes(router, {
+  loadWikiArticles,
   loadSpaceMeta: async (segment) =>
     (await findSpaceBySlug(segment)) || (await loadSpaceMeta(normalizeSpaceId(segment) || segment)),
   // Same slug-then-id resolution the /api/resolve/:spaceSegment/:projectSegment
