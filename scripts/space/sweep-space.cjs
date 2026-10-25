@@ -26,7 +26,8 @@ const getJson = async (url) => { const r = await fetch(url); return r.ok ? r.jso
   const projects = listed.filter((p) => p.visibility === 'public')
   const known = new Map()   // "space/project" -> exists and public
   const names = new Set([SPACE, spaceId])
-  for (const p of listed) known.set(p.id, p.visibility === 'public')
+  // a project answers to its id and to its short name (/network/gevorg-grigoryan is network-gevorg-grigoryan)
+  for (const p of listed) { known.set(p.id, p.visibility === 'public'); if (p.slug) known.set(p.slug, p.visibility === 'public') }
 
   // where a path lands: { ok, why }
   const landing = new Map()
@@ -38,8 +39,11 @@ const getJson = async (url) => { const r = await fetch(url); return r.ok ? r.jso
     else {
       const parts = u.pathname.split('/').filter(Boolean)
       const r = await fetch(u.href, { redirect: 'follow' }).catch(() => null)
+      // a file (/suite/mark.svg, /wcc/artist-works-land/index.html) is judged by its answer alone, not as a space or project
+      const file = /\.[a-z0-9]{2,5}$/i.test(u.pathname)
       if (!r || r.status >= 400) out = { ok: false, why: `HTTP ${r ? r.status : 'no answer'}` }
-      else if (parts.length >= 2 && names.has(parts[0]) && !/^(p|serverXR|api|projects)$/.test(parts[1])) {
+      else if (file) out = { ok: true, why: 'file' }
+      else if (parts.length >= 2 && names.has(parts[0]) && !/^(p|serverXR|api|projects|studio|show|scene)$/.test(parts[1])) {
         if (!known.has(parts[1])) out = { ok: false, why: `no project ${parts[1]} in the space` }
         else if (!known.get(parts[1])) out = { ok: false, why: `project ${parts[1]} is private` }
       } else if (parts.length >= 1 && !names.has(parts[0]) && !/^(serverXR|api|assets|wiki|spaces)$/.test(parts[0])) {
