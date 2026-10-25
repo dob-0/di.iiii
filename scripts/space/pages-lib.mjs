@@ -38,6 +38,40 @@ export function repointAssets(html, fromId, toId) {
 // written into its reference (spaceId, projectId, anchor). Owner 2026-10-23 (N1248): the hall's door "ԱՇԽԱՐՀՆԵՐ" still
 // went to /dilijan/worlds, a private camp tool, after every code page had been repointed. Pure; returns a new list.
 const pathOf = (r, space) => `/${r.spaceId || space}${r.projectId ? `/${r.projectId}` : ''}${r.anchor ? `#${String(r.anchor).replace(/^#/, '')}` : ''}`
+// A space that moves to a new address (its slug; owner 2026-10-25: /dilijan -> /dilijan-camp): every quoted link in a page
+// that names the space (/old, /old/..., /old#...) names the new address. Links to other spaces are untouched. Pure.
+export function moveAddressHtml(html, from, to) {
+  if (!/^[a-z0-9-]+$/.test(to)) throw new Error(`an address is lowercase letters, numbers and dashes: ${to}`)
+  const re = new RegExp(`(\\\\?["']|&quot;)/${escapeRegExp(from)}(?=[/#"'\\\\?&])`, 'g')
+  let count = 0
+  const out = html.replace(re, (_, quote) => { count += 1; return `${quote}/${to}` })
+  return { html: out, count }
+}
+
+// The same move for a scene's doors: a door into the space names it by its new address.
+export function moveAddressPortals(entities, from, to) {
+  let count = 0
+  const out = (entities || []).map((e) => {
+    const r = e?.components?.reference
+    if (!r || r.spaceId !== from) return e
+    count += 1
+    return { ...e, components: { ...e.components, reference: { ...r, spaceId: to } } }
+  })
+  return { entities: out, count }
+}
+
+// Full-address asset links in a page (https://<host>/serverXR/api/projects/<id>/assets/<hash>): the page then works only
+// while that host answers (a dev page that loads from prod). `toRelativeAssets` makes the ones in `keep` relative, so they
+// resolve on whichever server shows the page; the caller checks each one answers there first. Pure.
+const ABSOLUTE_ASSET = /https?:\/\/[a-z0-9.-]+(?::\d+)?(\/serverXR\/api\/projects\/[\w-]+\/assets\/[0-9a-f]{16,64})/g
+export const absoluteAssets = (html) => [...new Set([...String(html || '').matchAll(ABSOLUTE_ASSET)].map((m) => m[1]))]
+export function toRelativeAssets(html, keep) {
+  const ok = new Set(keep)
+  let count = 0
+  const out = String(html).replace(ABSOLUTE_ASSET, (all, rel) => { if (!ok.has(rel)) return all; count += 1; return rel })
+  return { html: out, count }
+}
+
 export function relinkPortals(entities, from, to, space = '') {
   const m = /^\/([\w-]+)(?:\/([\w-]+))?(?:#([A-Za-z][\w:.-]*))?$/.exec(to)
   if (!m) throw new Error(`a door goes to /space[/project][#part]: ${to}`)
