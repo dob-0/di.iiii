@@ -23,7 +23,7 @@ import { WIKI_ARTICLES } from '../wiki/wikiContent.js'
 //   2. NOW — the replacement is there, and where two pages share a sentence they
 //      say the same thing (the front door spells optimized / organizers with a
 //      z; the copy with an s. Nothing else may differ).
-// Then three PREMISES: the wiki's new sentences are true only while the code is
+// Then six PREMISES: the wiki's new sentences are true only while the code is
 // what it is today, so each premise is read from the code. If you change the
 // code, this fails and sends you to the sentence.
 //
@@ -73,7 +73,7 @@ const RETIRED = [
     { claim: 6, text: 'Lock editing or leave it open', in: ['door', 'copy'], why: 'No control in Studio or on the Spaces page sets allowEdits; the buttons are in the older editor only.' },
     { claim: 7, text: 'Open Studio →', in: ['door', 'copy', 'wiki:guest-and-sandbox-modes'], why: 'The link goes to the Spaces page; Studio is the four editing panels (vocabulary.md).' },
     { claim: 8, text: 'open your own room', in: ['door'], why: 'The button goes to the shared Open Space jam (buildJamScenePath); nothing there is "your own".' },
-    { claim: 9, text: 'has a public URL', in: ['door', 'copy', 'wiki:publishing'], why: 'Every space has an address; it opens for a visitor only when a project is live and the space is marked Public (StudioShellPanels.jsx "Space is private").' },
+    { claim: 9, text: 'has a public URL', in: ['door', 'copy', 'wiki:publishing'], why: 'Every space has an address, but a private space opens for a visitor on a sign-in wall, not on its work (StudioShellPanels.jsx "Space is private"). Only a Public space opens with no sign-in, and a live project is not needed for that: it only decides what they see there (claim 23).' },
     { claim: 10, text: 'sets the sky', in: ['door', 'copy'], why: 'No Studio control is called sky; an environment map gives light and reflections, never a sky (WorldEnvironment.jsx).' },
     { claim: 11, text: 'embed in your own site', in: ['door', 'copy'], why: 'dev and prod send frame-ancestors \'self\' and two studio addresses (nginx.conf); an iframe on another site stays empty (browser test 2026-10-26).' },
     { claim: 11, text: 'put it in an iframe', in: ['wiki:publishing'], why: 'Same rule: the wiki told people to frame a published link on their own page.' },
@@ -89,7 +89,15 @@ const RETIRED = [
     { claim: 20, text: 'conferences, or art shows', in: ['door', 'copy'], why: '"Conferences" has no feature or use on record.' },
     { claim: 1, text: 'opens your own private sandbox', in: ['wiki:guest-and-sandbox-modes'], why: 'On the front door Step inside flies into the scene; the sandbox is on the Spaces page.' },
     // Claim 22: found by the same read, after the first pass. A local install shows its own line under the buttons.
-    { claim: 22, text: 'Studio is a room on the same desk', in: ['door'], why: 'It names no button and says `desk`, a word the dictionary retired ("say the true thing", vocabulary.md). Step inside is a camera move into the scene, on a local install as on a hosted one (LandingPage.jsx openDoor).' }
+    { claim: 22, text: 'Studio is a room on the same desk', in: ['door'], why: 'It names no button and says `desk`, a word the dictionary retired ("say the true thing", vocabulary.md). Step inside is a camera move into the scene, on a local install as on a hosted one (LandingPage.jsx openDoor).' },
+    // Claims 23 to 25: found in a third pass. A skeptic read the two wiki paragraphs
+    // the second pass had re-stamped "2026-10-26" and found them still false.
+    // Claim 23's sentence was written on this branch (red against its earlier
+    // head 25eb141a2, not against dev); 24 and 25 are older sentences the branch
+    // kept in the guest article (red against origin/dev too).
+    { claim: 23, text: 'only when two things are true', in: ['wiki:publishing'], why: 'Marking the space Public is enough. requireReadRole passes every GET on a public space before it looks at a live project (serverXR/src/index.js), SpaceSurfaceRoute drops the sign-in wall for it (RootApp.jsx), and with no live project SpaceSurfaceApp shows the space itself. Measured on dev 2026-10-26: the space the-light-put-back is public with publishedProjectId null, and GET /serverXR/api/spaces/the-light-put-back/scene answers 200 with no session.' },
+    { claim: 24, text: 'The room has one address', in: ['wiki:guest-and-sandbox-modes'], why: 'The space main has the slug di-iiii. Seen in the agent browser on dev and on the own di, 2026-10-26: /di-iiii stays at /di-iiii and draws the same scene as /?room=1. The copy links /di-iiii. And "room" is not the 3D place: the dictionary reversed Room to Scene (vocabulary.md, 2026-08-19).' },
+    { claim: 25, text: 'it just heals to / so', in: ['wiki:guest-and-sandbox-modes'], why: 'A bare /main heals to /?room=1, the scene without the page (RootApp.jsx isBareHomeSpacePath), and not at all on a local install. Seen 2026-10-26: dev /main ends at /?room=1; the own di /main stays /main and draws the scene.' }
 ]
 
 // The replacement. `both` is one sentence on both pages; `door` / `copy` differ
@@ -152,12 +160,35 @@ describe('landing promises: the replacements are there, and the two pages agree'
         expect(guest).toContain('“Step inside” button walks you into the scene behind the page')
         expect(guest).toContain('Open your Spaces →')
         const publishing = SURFACE['wiki:publishing']
-        expect(publishing).toContain('only when two things are true: a project is set live, and the space is marked Public')
+        expect(publishing).toContain('Each space has its own address at /<space>. Mark the space Public and anyone can open it without signing in; set a project live and that project is what they see there.')
         expect(publishing).toContain('does not let another website show the link in a frame')
         const api = SURFACE['wiki:api-and-agents']
         expect(api).toContain('/serverXR/api/catalogue')
         expect(api).toContain('Reading a public space needs no sign-in. Changing anything does')
         expect(api).toContain('run di mcp from an install')
+    })
+
+    it('the guest article names the front door\'s routes as they are today, in dictionary words', () => {
+        // A skeptic found this paragraph still false after the second pass had
+        // re-stamped the article: "The room has one address and it is the bare
+        // domain" (the space has its own, /di-iiii), "heals to /" (it heals to
+        // /?room=1, and not at all on a local install) and "room" for the 3D
+        // place, which the dictionary calls a scene (Room was reversed to Scene
+        // on 2026-08-19). copyVocabulary.test.js leaves lowercase "room" alone on
+        // purpose ("read new copy for the sense"), so the sense is read here.
+        const paragraph = WIKI_ARTICLES.find((a) => a.id === 'guest-and-sandbox-modes')
+            .body.find((b) => typeof b === 'string' && b.startsWith('The front door is the landing page'))
+        expect(paragraph, 'the front-door paragraph of the guest article').toBeTruthy()
+        const text = plain(paragraph)
+        expect(text).toContain('a phone loads the scene only when you press “Step inside”')
+        expect(text).toContain('?room=1 opens the scene bare, without the page')
+        expect(text).toContain('its own address, /di-iiii')
+        expect(text).toContain('heals to /?room=1')
+        expect(text).toContain('the landing page is at /?tour=1, and /main is not rewritten')
+        // No "room" for a place, except the query value the address really has.
+        expect(text.replaceAll('?room=1', '')).not.toMatch(/\brooms?\b/i)
+        // The address it names is the one the copy links.
+        expect(read('spaces/main/pages/landing/index.html')).toContain('href="/di-iiii"')
     })
 })
 
@@ -185,5 +216,38 @@ describe('landing promises: the premises the new sentences stand on', () => {
         const door = read('src/landing/LandingPage.jsx')
         expect(door).toContain('event.preventDefault()')
         expect(door).toContain('flyInside(')
+    })
+
+    it('a phone gets the scene only when the door is pressed (wiki: guest-and-sandbox-modes)', () => {
+        // Seen 2026-10-26 at 390 px: the hero is a plain page, no rings, no grid.
+        // The door mounts the scene at rest only above 520 px, and on a press it
+        // loads the chunk and flies anyway.
+        const door = read('src/landing/LandingPage.jsx')
+        expect(door).toContain("window.matchMedia?.('(max-width: 520px)').matches")
+        expect(door).toContain('const showBackground = entered || flightArmed || (heroInView && !isSmallScreen)')
+    })
+
+    it('a public space opens with no live project (wiki: publishing)', () => {
+        // The article says Public alone opens a space and a live project only
+        // decides what visitors see there. Server: the public pass is the first
+        // thing requireReadRole does with a space, before any look at a live
+        // project. Client: the sign-in wall is dropped for a public space
+        // whether or not a project is live.
+        const server = read('serverXR/src/index.js')
+        const from = server.indexOf('const requireReadRole = ')
+        const pass = server.indexOf('if (meta?.isPublic) return next()', from)
+        expect(from, 'requireReadRole exists').toBeGreaterThan(-1)
+        expect(pass, 'requireReadRole lets a public space through').toBeGreaterThan(from)
+        expect(server.slice(from, pass), 'nothing before the public pass looks at a live project').not.toContain('publishedProjectId')
+        expect(read('src/RootApp.jsx')).toMatch(/if \(canBePublic && isPublic\) \{\s*return <SpaceSurfaceApp routeState=\{appState\} \/>/)
+    })
+
+    it('the bare /main heals to /?room=1, not on a local install, and /?tour=1 keeps the landing (wiki: guest-and-sandbox-modes)', () => {
+        const root = read('src/RootApp.jsx')
+        expect(root).toContain('&& localInstall.resolved && !localInstall.isLocal')
+        expect(root).toContain("params.set('room', '1')")
+        expect(root).toContain("rootQuery.get('room') === '1'")
+        expect(root).toContain("rootQuery.get('tour') === '1'")
+        expect(root).toContain('localInstall.isLocal && !wantsTour')
     })
 })
