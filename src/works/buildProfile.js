@@ -42,11 +42,20 @@ import { WORK_IDS, workAssetDirs, workEntries, workPublicDirs } from './works.js
  *   and the pages rewritten to use them go black offline AND online.
  * rigbuild: the inventory's item renders and photos (public/rigbuild/items/,
  *   RIG_BUILD.md §13) — without it every item card on an install is blank.
+ * kit: the 21 stills on the Kit's cards at /tools (public/kit/README.md,
+ *   src/kit/kitCatalogue.js) — without it every card on that page shows a
+ *   broken picture on an install.
  *
  * A work's own public directory is NOT listed here. It is added by the
  * registry, so a new work brings its media without anyone editing this line.
+ *
+ * Every other entry of public/ is hosting furniture, or a question still open,
+ * and src/works/localProfile.test.js names each one with its reason. A new
+ * entry in public/ fails that test until someone decides which side it is on —
+ * a folder is left out by decision, never by forgetting it (which is how `kit`
+ * went missing: the Kit shipped on 2026-09-28 and its list entry did not).
  */
-export const PROGRAM_PUBLIC_DIRS = ['fonts', 'draco', 'basis', 'suite', 'unicode-fonts', 'vendor', 'rigbuild']
+export const PROGRAM_PUBLIC_DIRS = ['fonts', 'draco', 'basis', 'suite', 'unicode-fonts', 'vendor', 'rigbuild', 'kit']
 
 /**
  * @param {Record<string, string|undefined>} env  usually process.env

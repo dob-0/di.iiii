@@ -15,3 +15,7 @@ belong to their authors and appear here only as they appear on the public site.
 
 To remake one: screenshot the surface at 1440×900, then
 `sharp(src).extract({top:0,left:0,width:1440,height:810}).resize(640,360).webp({quality:72})`.
+
+Ships in: the hosted site and every local pack (`kit` is in `PROGRAM_PUBLIC_DIRS`,
+`src/works/buildProfile.js`). A local pack without it shows a broken picture on every card of
+`/tools`; `src/works/localProfile.test.js` fails if a card's picture is not under a carried entry.
