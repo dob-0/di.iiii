@@ -15,8 +15,8 @@
 // title, so the furniture says the brand once and does not repeat it as the name of a space: no second "di.iiii", no id, no
 // address, and no link of its own to the space in the bar (the wordmark leads to /spaces). docs/ai/vocabulary.md ("One name
 // per space") says a stored name that is simply wrong (its own example is a space labelled "di.iiii") is fixed in data,
-// "not a code carve-out", and docs/ai/sessions/fix-one-name-per-space.md (2026-09-15) lists `main` labelled "di.iiii" as the
-// owner's call. The test is on the label, in any letter case, not on the id: ANY space labelled "di.iiii" is treated the
+// "not a code carve-out"; the 2026-09-15 one-name work left `main` labelled "di.iiii" as the owner's call.
+// The test is on the label, in any letter case, not on the id: ANY space labelled "di.iiii" is treated the
 // same. To drop it: relabel the space (spaces/main/di-space.space.json) and delete isPlatformName and the lines that call
 // it (in SurfaceBar.jsx, and in spaceTabTitle below).
 export const PLATFORM_NAME = 'di.iiii'
