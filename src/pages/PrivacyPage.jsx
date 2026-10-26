@@ -5,6 +5,8 @@ import './legal.css'
 
 // Written from docs/ai/privacy-data-inventory.md — a code audit, every claim
 // traced to source. If the code changes, this page must change with it.
+// PrivacyPage.test.jsx holds the sign-in section to the server: every sign-in
+// in GET /api/auth/providers is named here, and every link lifetime matches.
 const CONTACT_EMAIL = 'info@thedi.studio'
 
 export default function PrivacyPage() {
@@ -36,7 +38,7 @@ export default function PrivacyPage() {
             </header>
 
             <main className="legal-content">
-                <p className="legal-updated">updated 2026-09-13 · audited against the codebase 2026-07-28</p>
+                <p className="legal-updated">updated 2026-10-26 · audited against the codebase 2026-07-28, signing in 2026-10-26</p>
 
                 <section className="legal-section">
                     <h2>the session cookie</h2>
@@ -55,7 +57,13 @@ export default function PrivacyPage() {
                 <section className="legal-section">
                     <h2>signing in</h2>
                     <p>
-                        Sign-in is GitHub or Google OAuth. Four fields are kept per account: provider
+                        Every account comes from one of four sign-ins: GitHub, Google, Telegram, or a
+                        password. Password sign-in is always offered; GitHub, Google and Telegram only
+                        where this di.iiii is set up for them. All four make the same kind of account
+                        and the same session cookie.
+                    </p>
+                    <p>
+                        <strong>GitHub or Google.</strong> Four fields are kept per account: provider
                         id, email, display name, avatar URL. The OAuth access tokens are discarded —
                         di.iiii cannot act on your GitHub or Google account after sign-in.
                     </p>
@@ -63,6 +71,40 @@ export default function PrivacyPage() {
                         One exception: if you explicitly connect Google Drive to import a file, that
                         token is kept — encrypted at rest — so the import works. Disconnecting Drive
                         is the way to revoke it.
+                    </p>
+                    <p>
+                        <strong>Telegram.</strong> The sign-in button opens our Telegram bot, which
+                        sends sign-in links only in a private chat. Of what Telegram tells the bot
+                        about you, it passes on two things: your numeric Telegram id, and the name on
+                        your profile (your Telegram username if the profile has no name). Those two
+                        are what the account keeps, and the name is refreshed each time you sign in
+                        this way. No email address and no phone number are kept. A picture would be
+                        kept only as a link to Telegram&apos;s own servers, and the bot sends none.
+                    </p>
+                    <p>
+                        The sign-in link works once, for 10 minutes. The server keeps a short record
+                        of it: your Telegram id, the name, and a SHA-256 fingerprint in place of the
+                        link itself. A clean-up that runs every half hour deletes the record once the
+                        link has been used or has run out. The bot can also ask which account your
+                        Telegram id belongs to and which spaces that account can open, to answer you
+                        in a private chat; nothing is written when it asks.
+                    </p>
+                    <p>
+                        <strong>Password.</strong> An email address or a username, a password, and a
+                        display name if you give one; without one, your username or address is used
+                        as your name. The password itself is never stored, only a scrypt hash with a
+                        random salt: enough to check a password, never enough to read one back. The
+                        time you confirmed your address is kept too.
+                    </p>
+                    <p>
+                        Where this di.iiii can send mail, it sends three kinds of link: confirm your
+                        address (works for 24 hours), set a new password (30 minutes), and sign in
+                        without the password (15 minutes). Each works once. Mail goes out through the
+                        mail server this di.iiii is set up with. For every link, the server keeps which
+                        account it was for, its kind, when it was made, used and runs out, and a
+                        SHA-256 fingerprint in place of the link itself. These records have no
+                        automatic deletion yet. An account with a username and no email address
+                        cannot be recovered by mail if its password is lost.
                     </p>
                 </section>
 

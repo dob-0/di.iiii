@@ -5,9 +5,13 @@ What di.iiii actually collects, stores, and transmits — established by code au
 written from fact instead of from boilerplate, and so the gaps below are visible
 rather than discovered by whoever asks first.
 
-**Status: no privacy policy, cookie notice, or consent mechanism exists in the
-repo.** Wiring `/privacy` is blocked on the product decisions in the last section,
-not on routing.
+**Status (2026-10-26): the privacy policy exists.** It is the built-in page at
+`/privacy` (`src/pages/PrivacyPage.jsx`, linked from the landing footer and the
+static shell, `src/landing/LandingPage.jsx`, `src/index.html`), written from this
+inventory. There is still no cookie notice or consent mechanism; the page is the
+disclosure and says so. The audit below is the one of 2026-07-28; "Sign-in,
+re-checked 2026-10-26" is newer. "Gaps" and "Where the page goes" are kept as
+the record of that audit, not as today's state.
 
 ---
 
@@ -26,6 +30,57 @@ fields each — provider id, email, display name, avatar URL
 (`routes/authRoutes.js:55-99`). Access/refresh tokens are explicitly discarded
 (`:61`, `:85`). The separate **Drive connect** flow does persist tokens, AES-256-GCM
 encrypted at rest (`driveTokenStore.js:19-60`).
+
+**Sign-in, re-checked 2026-10-26** (origin/dev `c032580fe`; paths under
+`serverXR/src/` unless named). Live that day, `GET /serverXR/api/auth/providers`:
+diiii.xyz `github, google, telegram (bot diiii111bot), password`, `mail:false`;
+dev.diiii.xyz `github, google, password`, `mail:false`.
+
+- Four kinds of account, one `users` table: rows are written only by `upsertUser`
+  (GitHub, Google, Telegram; the hub carries GitHub and Google only,
+  `authHub.js:33`) and `createPasswordUser` (`userStore.js:27-55`, `:121-150`).
+  Password sign-in is always registered (`index.js:1376-1380`,
+  `routes/authRoutes.js:509-513`); the others only when configured (`:503-508`).
+- **Telegram.** di.bo (`di-bo` repo, `bot.mjs` at `origin/master` `6a556cb`) gives
+  links only in a private chat (`:1818-1820`) and posts `telegramId` and a name,
+  first + last name or else the Telegram username (`:1824-1832`); no picture
+  (`:1801-1804`). Telegram hands a bot more with each message (`language_code`,
+  `is_premium`, and so on: Bot API "User" object, core.telegram.org/bots/api#user,
+  read 2026-10-26); the bot passes none of it on. The server reads only
+  `telegramId` (numeric, 1-20 digits), `displayName` (cut to 80), `avatarUrl`
+  (kept only on `*.telegram.org` / `*.telesco.pe`), `returnTo`
+  (`routes/authRoutes.js:335-358`). The account: `provider 'telegram'`,
+  `provider_id` = Telegram id, `email` null, display name refreshed on each
+  sign-in (`routes/authRoutes.js:483-489`, `userStore.js:36-45`). The link token:
+  10 min (`telegramLoginStore.js:21`), single use (`:69`, `:77`), the row keeps
+  Telegram id, name, avatar, return path and a SHA-256 of the secret (`:40-45`),
+  deleted when spent or expired (`:94-97`) by the 30-minute sweep
+  (`index.js:3524-3528`, `:3544`). `whoami` is read-only: label, role, spaces
+  (`routes/authRoutes.js:382-418`); di.bo asks it for `/spaces`, in a private
+  chat only (`bot.mjs:3211`, `:3216-3217`). `act-token` exists
+  (`routes/authRoutes.js:433-473`) but di.bo `6a556cb` never calls it; its row
+  keeps user id, Telegram id, label, a hash, 15 min to 1 h
+  (`telegramActTokenStore.js:24-57`), swept when expired (`:115-118`), and minting
+  logs the user id (`routes/authRoutes.js:462`). Not on the page: no data flows
+  through it today.
+- **Password.** Email (lower-cased) or username (3-32 characters), password,
+  optional display name (`routes/passwordAuthRoutes.js:109-126`); with none, the
+  name is the username, else the address (`userStore.js:147`). Stored: scrypt
+  N=65536, r=8, p=1, 16-byte random salt, `scrypt$N$r$p$salt$hash`
+  (`passwordHash.js:1-17`, `:22-26`, `:42-46`); `email_verified_at`
+  (`userStore.js:158-162`). Mail links only when SMTP is configured
+  (`mailer.js:16-27`, `:54`): verify 24 h, reset 30 min, magic 15 min
+  (`authTokenStore.js:32-36`), single use (`:94`, `:102`), a new one voids the
+  last of its kind (`:60`). Each `auth_tokens` row keeps id, kind, user id,
+  SHA-256 of the secret, made, expires, used (`:56-72`); `pruneAuthTokens`
+  (`:110-117`) is never called, so the rows stay. A username-only account has no
+  reset path: the password hash is set only by reset and by the login rehash
+  (`routes/passwordAuthRoutes.js:192`, `:248`).
+- Not re-checked: the GitHub and Google hub pass (`routes/authRoutes.js:185-199`,
+  `:289-300`), terminal sign-in (`routes/cliLoginRoutes.js`). Found, not fixed:
+  "no user ids are written" to logs is not true (7 `logger` lines carry a user
+  id: `actTokenGate.js:182`, `cliTokenGate.js:104`, `routes/cliLoginRoutes.js:82`,
+  `:122`, `:143`, `:177`, `routes/authRoutes.js:462`).
 
 **Guests.** Auto-minted `guest:<uuid>` with label `Guest`
 (`index.js:660-675`). No personal data.
