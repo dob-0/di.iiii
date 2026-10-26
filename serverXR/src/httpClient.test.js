@@ -158,3 +158,24 @@ describe('a pinned address keeps its connection alive, like an unpinned call', (
         }
     })
 })
+
+// DSC-10, after review: "like an unpinned call" means every option Node's global agent
+// has, scheduling 'lifo' included (Node 22: keepAlive, scheduling, timeout, noDelay).
+describe('a pinned agent has exactly the options of Node\'s global agent', () => {
+    it('http and https, key for key', async () => {
+        const https = require('node:https')
+        // Nothing listens on port 9 here: each call fails, but its pinned agent is made.
+        await httpRequest('http://same.invalid:9/', { address: '127.0.0.1' }).catch(() => {})
+        await httpRequest('https://same.invalid:9/', { address: '127.0.0.1' }).catch(() => {})
+        try {
+            for (const [key, global] of [['http:|127.0.0.1', http.globalAgent], ['https:|127.0.0.1', https.globalAgent]]) {
+                const pinned = pinnedAgents.get(key)
+                expect(pinned, key).toBeTruthy()
+                expect(pinned.options).toEqual(global.options)
+            }
+        } finally {
+            for (const agent of pinnedAgents.values()) agent.destroy()
+            pinnedAgents.clear()
+        }
+    })
+})

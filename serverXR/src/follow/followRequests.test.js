@@ -15,12 +15,14 @@ const cleanups = []
 afterEach(async () => { while (cleanups.length) await cleanups.pop()() })
 
 // A quiet di.iiii that counts what it is asked, by method and path.
-const countingSpace = async ({ projects = [{ id: 'proj-one', slug: 'proj-one', title: 'One' }] } = {}) => {
+// `special(req, res)` answers first when it returns true (a test's own route).
+const countingSpace = async ({ projects = [{ id: 'proj-one', slug: 'proj-one', title: 'One' }], special = () => false } = {}) => {
     const asked = []
     const server = http.createServer((req, res) => {
         const url = req.url || ''
         asked.push(`${req.method} ${url}`)
         const answer = () => {
+            if (special(req, res, projects)) return
             res.writeHead(200, { 'Content-Type': 'application/json' })
             if (url.startsWith('/serverXR/api/spaces/s/projects')) res.end(JSON.stringify({ projects }))
             else if (url.startsWith('/serverXR/api/trash')) res.end(JSON.stringify({ items: [] }))
@@ -47,9 +49,10 @@ const until = async (check, ms = 8000) => {
 }
 
 // Follow until the first tick has ended; what each side was asked by then.
-const firstTick = async ({ host, local }) => {
+const firstTick = async ({ host, local, options = {} }) => {
     let first = null
     const follower = startFollowing({
+        ...options,
         local: side({ base: local.base, spaceId: 's' }),
         remote: side({ base: host.base, spaceId: 's' }),
         log: { info() {}, warn() {} },
@@ -82,6 +85,31 @@ describe('one tick reads the space\'s project list once on each side (DSC-7)', (
         const local = await countingSpace()
         const tick = await firstTick({ host, local })
         expect(tick.here.some(line => line.startsWith('POST /serverXR/api/spaces/s/projects'))).toBe(true)
+        expect(listReads(tick.here)).toBe(3)
+    })
+})
+
+describe('a project moved into this space here is read afresh too (DSC-7, after review)', () => {
+    it('moveHere succeeding marks the lists moved, so settings and short names re-read this install\'s list', async () => {
+        // The host has proj-two in this space; here it is in the space `other`, which
+        // this install follows from the same host: the follow moves it here.
+        const host = await countingSpace({ projects: [{ id: 'proj-one', slug: 'proj-one', title: 'One' }, { id: 'proj-two', slug: 'proj-two', title: 'Two' }] })
+        const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); return true }
+        const local = await countingSpace({
+            special: (req, res, projects) => {
+                const url = (req.url || '').split('?')[0]
+                if (req.method === 'POST' && url === '/serverXR/api/spaces/s/projects') return json(res, 409, { error: 'taken', code: 'taken' })
+                if (req.method === 'GET' && url === '/serverXR/api/projects/proj-two') return json(res, 200, { project: { id: 'proj-two', spaceId: 'other', title: 'Two' } })
+                if (req.method === 'POST' && url === '/serverXR/api/projects/proj-two/move') {
+                    projects.push({ id: 'proj-two', slug: 'proj-two', title: 'Two' })
+                    return json(res, 200, { slug: 'proj-two' })
+                }
+                return false
+            }
+        })
+        const tick = await firstTick({ host, local, options: { sameHostFollows: (spaceId) => spaceId === 'other' } })
+        expect(tick.here).toContain('POST /serverXR/api/projects/proj-two/move')
+        // refreshStreams, then the space settings and the short names each read it again.
         expect(listReads(tick.here)).toBe(3)
     })
 })

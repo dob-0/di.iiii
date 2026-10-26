@@ -103,10 +103,10 @@ Code: `serverXR/src/follow/` — `follower.js` (the loop), `followPlan.js` (what
    already resumed on the base; the late start and the once-per-run comparison are the faults found.
 10. **Quieter when nothing moves (2026-10-26, DSC-1/2/7/9/10).** One tick reads the space's project list once here and
    once on the host, and hands it to the space settings and the short names (it was 3 + 2 reads; a list a project was
-   just made or moved into is read again). A file NEITHER machine holds is asked about again after 5 min, then 10, 20 …
-   at most every 6 h (each wait up to a fifth shorter at random), one try per look, said once in the log; `di follows`
-   shows "looked N times; next in …". The 10-minute comparison does not reset that wait; an op that names the file (an
-   upload on either machine) asks at once. Limit: a file put on a disk with no op is found at its next look (≤ 6 h). The
+   just made or moved into is read again). A file NEITHER machine holds is tried on the same clock as any failed file
+   (its tries, again 5 min after the last, again whenever the 10-minute comparison names it), because its bytes may
+   only be on their way: an upload's op reaches the host before the bytes. It is said once when it is first found held
+   nowhere and once when that ends, never on the tries between; `di follows` counts these files (`heldNowhere`). The
    chase reads a project's document at most once per pass for these checks. The machine link keeps each loop's last
    failure apart, and on 401/403 says it once and waits 30 s doubling to 10 min. Address-pinned requests keep their
    connection alive like unpinned ones.

@@ -49,10 +49,14 @@ const pinnedLookup = (address) => (hostname, options, callback) => {
 // https.globalAgent use keepAlive with a 5 s idle timeout since Node 19 (Node.js
 // docs, http.globalAgent, "v19.0.0: The agent now uses HTTP Keep-Alive and a 5
 // second timeout by default"). Until 2026-10-26 (DSC-10) a pinned follow opened
-// a new connection, and a new TLS handshake, for every request. The map itself stays
+// a new connection, and a new TLS handshake, for every request. The options are
+// exactly what http.globalAgent.options holds on Node 22 (checked on v22.23.2:
+// keepAlive true, scheduling 'lifo', timeout 5000; noDelay true and path null are
+// every Agent's own); httpClient.test.js fails if Node's global agent moves away
+// from them. The map itself stays
 // small in practice: the callers of `address` are follows and machine links,
 // each configured with at most one pinned address, changed rarely.
-const PINNED_AGENT_OPTIONS = { keepAlive: true, timeout: 5000 }
+const PINNED_AGENT_OPTIONS = Object.freeze({ keepAlive: true, scheduling: 'lifo', timeout: 5000 })
 const pinnedAgents = new Map()
 const agentFor = (protocol, address) => {
   const key = `${protocol}|${address}`

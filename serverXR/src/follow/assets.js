@@ -43,17 +43,14 @@ const DEFAULT_BACKOFF_MS = [2000, 10_000, 30_000]
 // A file that ran out of tries is looked at again after this long — the other
 // machine may simply have been switched off for the afternoon.
 const DEFAULT_RETRY_FAILED_AFTER_MS = 5 * 60_000
-// A file NEITHER machine holds (named in a document, its bytes on no disk) is not a
-// passing fault: asking every 5 minutes for ever, and again whenever the 10-minute
-// comparison named it, cost the owner's di 226 whole-document reads and 56 lines per
-// 10 minutes for 28 such files (DSC-1/DSC-2, aylmo 2026-10-26). So it is asked about
-// again after 5 min, then 10, 20 … at most every 6 h, each wait up to a fifth
-// shorter at random so many such files do not ask together. Method: capped
-// exponential back-off with jitter (AWS Architecture Blog, M. Brooker, "Exponential
-// Backoff And Jitter", 2015). An op that names the file again — an upload on either
-// machine — asks at once.
-const DEFAULT_HELD_NOWHERE_FIRST_MS = 5 * 60_000
-const DEFAULT_HELD_NOWHERE_MOST_MS = 6 * 60 * 60_000
+// A file NEITHER machine holds (named in a document, its bytes on no disk yet) is
+// asked about on the same clock as any other failure: its tries, then again every
+// 5 minutes and whenever the 10-minute comparison names it. Its bytes may simply be
+// on their way: an upload's op reaches the host on the op loop before the bytes do,
+// so a follower can see the name first. A longer wait would make such a file late
+// (review of PR #1143). What changed (DSC-2, aylmo 2026-10-26: 56 lines per 10 min
+// for 28 such files) is only what is SAID: one line when a file is first found held
+// nowhere, one when that ends, nothing on the tries in between.
 const HELD_NOWHERE = 'neither machine holds this file'
 // What the documents list is compared with what each machine can serve again
 // this often, for as long as the follow runs (not only once after a start): a
@@ -168,9 +165,6 @@ const createAssetChase = ({
     waitMostMs = FAILURE_CEILING_MS,
     io = { request: httpRequest, download: httpDownloadToFile, upload: httpUploadFile },
     now = () => Date.now(),
-    random = Math.random,
-    heldNowhereFirstMs = DEFAULT_HELD_NOWHERE_FIRST_MS,
-    heldNowhereMostMs = DEFAULT_HELD_NOWHERE_MOST_MS,
     log = console
 } = {}) => {
     const pending = new Map()     // key → { projectId, id, name, size, attempts, notBefore }
@@ -181,9 +175,9 @@ const createAssetChase = ({
     const reconciled = new Map()   // projectId → when its documents were last compared with what each side holds
     const known = new Set()        // keys of every file a document or an op has named, carriable or not
     let carried = 0
-    // key → how many looks a file held on neither machine has had; kept while it
-    // waits so its wait grows, dropped once it is carried, settled or forgotten.
-    const heldNowhere = new Map()
+    // keys of the files last found held on neither machine: said once on the way
+    // in and once on the way out, never on the tries in between.
+    const heldNowhere = new Set()
     // projectId → the ids this install's document names, for ONE work() pass: read
     // once (or taken from the comparison that just read it), never once per file.
     let namedHere = new Map()
@@ -191,9 +185,10 @@ const createAssetChase = ({
     // before one of them is not kept for the rest of the pass (op loop runs alongside).
     const docMoves = new Map()
     const movesOf = (projectId) => docMoves.get(projectId) || 0
-    const heldNowhereWait = (looks) => {
-        const full = Math.min(heldNowhereMostMs, heldNowhereFirstMs * 2 ** Math.max(0, looks - 1))
-        return Math.round(full * (1 - 0.2 * random()))
+    // The one line on the way out of "held nowhere", whatever ended it.
+    const leftHeldNowhere = (key, fileName, how) => {
+        if (!heldNowhere.delete(key)) return
+        log.info?.(`[follow] ${local.spaceId}: ${fileName} ${how}`)
     }
     let stopped = false
     let running = null
@@ -260,9 +255,7 @@ const createAssetChase = ({
 
     const keyOf = (projectId, id) => `${projectId}:${id}`
 
-    // `anew`: an op named it (an upload, here or there), not the periodic comparison
-    // finding the same name in a document again.
-    const name = (projectId, ref, { anew = false } = {}) => {
+    const name = (projectId, ref) => {
         known.add(keyOf(projectId, ref.id))
         if (!isCarriableId(ref.id)) {
             notCarried.add(keyOf(projectId, ref.id))
@@ -270,21 +263,18 @@ const createAssetChase = ({
         }
         const key = keyOf(projectId, ref.id)
         if (settled.has(key) || pending.has(key)) return
-        // Held on neither machine, and only named again by the comparison: it keeps
-        // its wait. The id is the file's sha256, so the same id is the same file.
-        if (!anew && failed.get(key)?.heldNowhere) return
         failed.delete(key)
         pending.set(key, { projectId, id: ref.id, name: ref.name, size: ref.size, attempts: 0, notBefore: 0 })
     }
 
     const forget = (projectId, id) => {
         const key = keyOf(projectId, id)
+        leftHeldNowhere(key, (pending.get(key) || failed.get(key))?.name || id, 'is no longer named — not looked for any more')
         pending.delete(key)
         failed.delete(key)
         settled.delete(key)
         notCarried.delete(key)
         known.delete(key)
-        heldNowhere.delete(key)
     }
 
     /** Ops seen on a project's stream, from either machine. */
@@ -294,7 +284,7 @@ const createAssetChase = ({
             // What the document names has moved: this pass reads it again if it must.
             namedHere.delete(projectId)
             docMoves.set(projectId, movesOf(projectId) + 1)
-            if (change.kind === 'named') name(projectId, change, { anew: true })
+            if (change.kind === 'named') name(projectId, change)
             else forget(projectId, change.id)
         }
     }
@@ -486,7 +476,7 @@ const createAssetChase = ({
         } else {
             for (const item of pending.values()) soonest = Math.min(soonest, item.notBefore)
             for (const entry of failed.values()) {
-                if (!entry.final) soonest = Math.min(soonest, entry.at + (entry.waitMs ?? retryFailedAfterMs))
+                if (!entry.final) soonest = Math.min(soonest, entry.at + retryFailedAfterMs)
             }
             if (toReconcile.size) soonest = Math.min(soonest, now() + (backoffMs[0] || 1000))
         }
@@ -504,12 +494,11 @@ const createAssetChase = ({
         }
         // A new pass reads a document afresh the first time it needs it.
         namedHere = new Map()
-        // Files that ran out of tries a while ago get another look. One held on
-        // neither machine gets ONE look, not a new round of tries.
+        // Files that ran out of tries a while ago get another look.
         for (const [key, entry] of failed) {
-            if (entry.final || now() - entry.at < (entry.waitMs ?? retryFailedAfterMs)) continue
+            if (entry.final || now() - entry.at < retryFailedAfterMs) continue
             failed.delete(key)
-            pending.set(key, { projectId: entry.projectId, id: entry.id, name: entry.name, size: entry.size || 0, attempts: entry.heldNowhere ? backoffMs.length : 0, notBefore: 0 })
+            pending.set(key, { projectId: entry.projectId, id: entry.id, name: entry.name, size: entry.size || 0, attempts: 0, notBefore: 0 })
         }
         for (const projectId of [...toReconcile]) {
             if (stopped || waiting()) return
@@ -527,7 +516,9 @@ const createAssetChase = ({
             try {
                 const outcome = await carryOne(item)
                 pending.delete(key)
-                heldNowhere.delete(key)
+                leftHeldNowhere(key, item.name, outcome === 'carried' ? 'is held again and was carried'
+                    : outcome === 'settled' ? 'is held on both machines now'
+                        : 'is no longer named — not looked for any more')
                 if (outcome === 'carried') carried += 1
                 if (outcome !== 'dropped') settled.add(key)
             } catch (error) {
@@ -539,16 +530,16 @@ const createAssetChase = ({
                 const why = String(error?.message || error)
                 if (error?.final || item.attempts > backoffMs.length) {
                     pending.delete(key)
+                    failed.set(key, { projectId: item.projectId, id: item.id, name: item.name, size: item.size, why, final: Boolean(error?.final), at: now() })
                     if (error?.heldNowhere) {
-                        const looks = (heldNowhere.get(key) || 0) + 1
-                        heldNowhere.set(key, looks)
-                        const waitMs = heldNowhereWait(looks)
-                        failed.set(key, { projectId: item.projectId, id: item.id, name: item.name, size: item.size, why, final: false, heldNowhere: true, looks, waitMs, at: now() })
-                        // Said once, when it starts: every later look is quiet until it is carried.
-                        if (looks === 1) log.warn?.(`[follow] ${local.spaceId}: ${item.name} could not be carried — ${why}; asking again in ${howLong(waitMs)}, then less often, at most every ${howLong(heldNowhereMostMs)}, and at once when it is added again`)
+                        // Said once, when it starts; its later tries keep the same clock, quietly.
+                        if (heldNowhere.has(key)) continue
+                        heldNowhere.add(key)
+                        log.warn?.(`[follow] ${local.spaceId}: ${item.name} could not be carried — ${why}; still asked again every ${howLong(retryFailedAfterMs)}, said again only when that changes`)
                         continue
                     }
-                    failed.set(key, { projectId: item.projectId, id: item.id, name: item.name, size: item.size, why, final: Boolean(error?.final), at: now() })
+                    // Another reason now: "held nowhere" is over, and this line says why.
+                    heldNowhere.delete(key)
                     log.warn?.(`[follow] ${local.spaceId}: ${item.name} could not be carried — ${why}`)
                 } else {
                     item.notBefore = now() + backoffMs[item.attempts - 1]
@@ -609,14 +600,9 @@ const createAssetChase = ({
                 pending: pending.size,
                 failed: failed.size,
                 // who and why, for a person: `di follows` prints these
-                failures: [...failed.values()].map(({ id, name: fileName, why, heldNowhere: nowhere, looks, waitMs, at }) => ({
-                    id,
-                    name: fileName,
-                    // `di follows` prints `why`: a file held nowhere says when it is looked for next.
-                    ...(nowhere ? { nextLookAt: at + waitMs } : {}),
-                    why: nowhere ? `${why} (looked ${looks} ${looks === 1 ? 'time' : 'times'}; next in ${howLong(Math.max(0, at + waitMs - now()))})` : why
-                })),
-                heldNowhere: [...failed.values()].filter(entry => entry.heldNowhere).length,
+                failures: [...failed.values()].map(({ id, name: fileName, why }) => ({ id, name: fileName, why })),
+                // how many of those neither machine holds (bytes not arrived, or lost)
+                heldNowhere: heldNowhere.size,
                 notCarried: notCarried.size,
                 bytesPending
             }

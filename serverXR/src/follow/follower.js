@@ -532,7 +532,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 // Taken here: ids are global on an install, so the project is here
                 // already, in another space. The host moved it into this one.
                 if (made.status === 409 && toSide === local) {
-                    await moveHere(projectId)
+                    // Moved into this space here: this install's list read above is stale.
+                    if (await moveHere(projectId)) listsMoved = true
                     continue
                 }
                 if (made.status === 409 && toSide === remote) {
@@ -730,6 +731,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         if (!fromNowPending) fromNowPending = new Set()
         fromNowPending.add(key)
         log.info?.(`[follow] ${local.spaceId}: ${projectId} was moved here from ${from} on the host — moved here the same way`)
+        return true
     }
 
     /**
