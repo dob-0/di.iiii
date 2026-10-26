@@ -7,7 +7,7 @@
 import fs from 'node:fs'
 import crypto from 'node:crypto'
 import path from 'node:path'
-import { absoluteAssets, editHtml, extendDoorSet, moveAddressHtml, moveAddressPortals, relinkHtml, relinkPortals, upsertDoors, toRelativeAssets, upsertEntities, userAgent } from './pages-lib.mjs'
+import { absoluteAssets, editHtml, extendDoorSet, moveAddressHtml, moveAddressPortals, relinkHtml, relinkPortals, upsertDoors, toRelativeAssets, upsertEntities, userAgent, saveDocument } from './pages-lib.mjs'
 
 const args = process.argv.slice(2)
 const flag = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined }
@@ -130,7 +130,9 @@ const relinks = Object.entries(s.relink || {})
 if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).length || Object.keys(s.doorSets || {}).length || Object.keys(s.entities || {}).length || Object.keys(s.remove || {}).length || s.address || s.relativeAssets) {
   for (const p of before.projects) {
     const res = await call('GET', `/api/projects/${p.id}/document`); const doc = res.document || res
+    const read = structuredClone(res) // the page as read: the steps below change `doc`, and the edits are what differs from this
     let html = doc.presentationState?.codeHtml
+    let codeFiles = null
     let entities = doc.entities
     const notes = []
     for (const [from, to] of relinks) {
@@ -151,6 +153,16 @@ if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).lengt
     if (s.address && s.address !== s.space) {
       if (html) { const r = moveAddressHtml(html, s.space, s.address); if (r.count) { notes.push(`${r.count} link(s) /${s.space} -> /${s.address}`); html = r.html } }
       if (Array.isArray(entities)) { const r = moveAddressPortals(entities, s.space, s.address); if (r.count) { notes.push(`${r.count} door(s) -> /${s.address}`); entities = r.entities } }
+      // a page made of several files keeps its HTML in codeFiles, not codeHtml (di-iiii/di-landing linked /main, 2026-10-26)
+      if (Array.isArray(doc.presentationState?.codeFiles)) {
+        let moved = 0
+        const files = doc.presentationState.codeFiles.map((f) => {
+          if (!/\.html?$/i.test(f?.name || f?.path || '') || typeof f.content !== 'string') return f
+          const r = moveAddressHtml(f.content, s.space, s.address); moved += r.count
+          return r.count ? { ...f, content: r.html } : f
+        })
+        if (moved) { notes.push(`${moved} link(s) in code files /${s.space} -> /${s.address}`); codeFiles = files }
+      }
     }
     // a page that loads its files from a fixed host (prod) works only while it answers: relative, where this server has them
     if (s.relativeAssets && html) {
@@ -162,8 +174,8 @@ if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).lengt
       if (found.length > here.length) console.log(`note ${p.id}: ${found.length - here.length} file(s) not on this server, kept as they are`)
     }
     if (!notes.length) continue
-    const next = { ...doc, ...(doc.assets ? { assets: doc.assets } : {}), ...(Array.isArray(entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}) } }
-    await step(`page ${p.id}: ${notes.join(', ')}`, () => call('PUT', `/api/projects/${p.id}/document`, next))
+    const next = { ...doc, ...(doc.assets ? { assets: doc.assets } : {}), ...(Array.isArray(entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}), ...(codeFiles ? { codeFiles } : {}) } }
+    await step(`page ${p.id}: ${notes.join(', ')}`, () => saveDocument(call, p.id, next, { from: read }))
   }
 }
 // the space's shown name (its address, s.space, never changes)

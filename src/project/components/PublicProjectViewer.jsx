@@ -923,7 +923,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         spaceId={resolvedRouteSpaceId}
                         homeIsThisRoom={!localInstall.isLocal}
                     />
-                    <SpaceContentsBadge spaceId={resolvedRouteSpaceId} count={spaceContentsCount} />
+                    <SpaceContentsBadge spaceId={spaceAddress || resolvedRouteSpaceId} count={spaceContentsCount} />
                 </>
             ) : null}
 

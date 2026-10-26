@@ -9,6 +9,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { applyEdits } from './fake-ops.test-helper.mjs'
 
 const APPLY = path.join(path.dirname(fileURLToPath(import.meta.url)), 'apply-structure.mjs')
 const BYTES = Buffer.from('not really a film, but bytes')
@@ -25,7 +26,8 @@ function fakeApi(doc) {
       if (req.url === '/api/spaces/s/projects') return send({ projects: [{ id: 'p', title: 'P', visibility: 'public' }] })
       if (req.url === '/api/spaces/s/collections') return send({ collections: [] })
       if (req.url === '/api/spaces/s') { if (req.method === 'PATCH') doc.label = JSON.parse(body.toString()).label; return send({ space: { id: 's', label: doc.label || 'Old' } }) }
-      if (req.url === '/api/projects/p/document') { if (req.method === 'PUT') doc.d = JSON.parse(body.toString()); return send({ document: doc.d }) }
+      if (req.url === '/api/projects/p/document') return send({ document: doc.d, version: 1 })
+      if (req.url === '/api/projects/p/ops' && req.method === 'POST') { doc.d = applyEdits(doc.d, JSON.parse(body.toString()).ops); return send({ ok: true }) }
       if (req.url === '/api/projects/p/assets' && req.method === 'POST') {
         const m = /name="assetId"\r\n\r\n([0-9a-f]{64})/.exec(body.toString('latin1'))
         const stored = doc.storeAs || m[1]
@@ -76,7 +78,7 @@ describe('remove', () => {
     expect(doc.d.entities.map((x) => x.id)).toEqual(['keep'])
     api.log.length = 0
     await run()
-    expect(api.log.filter((l) => l.startsWith('PUT'))).toEqual([])
+    expect(api.log.filter((l) => l.startsWith('PUT') || l.endsWith('/ops'))).toEqual([])
   })
 })
 
@@ -120,3 +122,23 @@ describe('the space name', () => {
   })
 })
 
+
+describe('the address in a page made of several files', () => {
+  it('moves links in its HTML files only, saved as edits; a re-run sends nothing', async () => {
+    doc.d = { version: 1, entities: [], presentationState: { mode: 'code', codeFiles: [
+      { name: 'index.html', content: '<a href="/s" target="_top">Look</a> <a href="/s/p">P</a> <a href="/sx">other</a>' },
+      { name: 'app.js', content: 'fetch("/s/data")' }
+    ] } }
+    fs.writeFileSync(path.join(dir, 's.json'), JSON.stringify({ space: 's', address: 's-new' }))
+    const r = await run()
+    expect(r.code, r.stderr).toBe(0)
+    const [html, js] = doc.d.presentationState.codeFiles
+    expect(html.content).toBe('<a href="/s-new" target="_top">Look</a> <a href="/s-new/p">P</a> <a href="/sx">other</a>')
+    expect(js.content).toBe('fetch("/s/data")')
+    expect(api.log.some((l) => l.endsWith('/ops'))).toBe(true)
+    expect(api.log.some((l) => l.startsWith('PUT'))).toBe(false)
+    api.log.length = 0
+    await run()
+    expect(api.log.filter((l) => l.endsWith('/ops'))).toEqual([])
+  })
+})

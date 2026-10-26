@@ -124,6 +124,15 @@ describe('one log line per run, failures included', () => {
         expect(logLines(home)[0]).toContain('checksum mismatch')
         expect(readState(home).autoupdate.lastError.message).toContain('checksum mismatch')
     })
+    it('logs the reason a failed update gave, not the boilerplate line after it', async () => {
+        const home = await makeHome({ channel: 'dev' })
+        const output = ['installing 0.5.0', '\u001b[31mUnknown system error -122: Unknown system error -122, cp\u001b[0m', 'update failed, still on 0.4.16. your work was not touched.'].join('\n')
+        const out = await runAutoUpdate({ home, now: () => at, temp: () => 50, update: async () => ({ code: 1, output }) })
+        expect(out.outcome).toBe('failed')
+        expect(logLines(home)[0]).toContain('Unknown system error -122')
+        expect(logLines(home)[0]).not.toContain('update failed')
+        expect(readState(home).autoupdate.lastError.message).toBe('Unknown system error -122: Unknown system error -122, cp')
+    })
     it('says so when it could not read the temperature', async () => {
         const home = await makeHome()
         await runAutoUpdate({ home, now: () => at, temp: () => null, update: async () => ({ code: 0, output: 'already the newest.' }) })

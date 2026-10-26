@@ -24,7 +24,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import { createHash } from 'node:crypto'
 import path from 'node:path'
-import { buildCombinedPage, isCombined, relinkHtml, repointAssets, userAgent } from './pages-lib.mjs'
+import { buildCombinedPage, isCombined, relinkHtml, repointAssets, userAgent, saveDocument } from './pages-lib.mjs'
 
 const args = process.argv.slice(2)
 const flag = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined }
@@ -75,13 +75,13 @@ const undo = flag('--undo')
 if (undo) {
   const b = JSON.parse(fs.readFileSync(undo, 'utf8'))
   say(`put back the document of ${b.into} (${b.at})`)
-  if (apply) await call('PUT', `/api/projects/${b.into}/document`, b.document)
+  if (apply) await saveDocument(call, b.into, b.document)
   if (b.kept) { // a page kept by that run goes empty again (the target holds it again), unless someone changed it since
     const doc = await getDoc(b.kept.id).catch(() => null)
     const html = doc?.presentationState?.codeHtml || ''
     if (html && sha256(html) === b.kept.sha256) {
       say(`empty the page kept as ${b.kept.id} (${b.into} holds it again; the project stays)`)
-      if (apply) await call('PUT', `/api/projects/${b.kept.id}/document`, { ...doc, presentationState: { ...doc.presentationState, codeHtml: '' } })
+      if (apply) await saveDocument(call, b.kept.id, { ...doc, presentationState: { ...doc.presentationState, codeHtml: '' } })
     } else if (html) console.log(`left ${b.kept.id} as it is: its page changed since the combine`)
   }
   console.log(apply ? 'done' : 'dry run; add --apply')
@@ -156,7 +156,7 @@ async function keepOwnPage() {
   // Recorded before the write, so a run that stops after it still leaves a backup whose --undo empties the kept page.
   kept = { id: keepAs, sha256: sha256(html) }
   writeBackup()
-  await call('PUT', `/api/projects/${keepAs}/document`, { ...doc, presentationState: { ...doc.presentationState, mode, entryView, codeSourceType, fixedCamera, deviceAccess, codeUrl: '', codeHtml: html } })
+  await saveDocument(call, keepAs, { ...doc, presentationState: { ...doc.presentationState, mode, entryView, codeSourceType, fixedCamera, deviceAccess, codeUrl: '', codeHtml: html } })
   const back = (await getDoc(keepAs)).presentationState?.codeHtml
   if (back !== html) throw new Error(`${keepAs}: the kept page did not read back; --undo ${backupPath} empties it`)
 }
@@ -170,6 +170,6 @@ say(`replace ${into}'s page with ${pages.length} tabs (${pages.map((p) => p.labe
 if (apply) {
   writeBackup()
   console.log(`backup: ${backupPath}`)
-  await call('PUT', `/api/projects/${into}/document`, { ...target, presentationState: { ...ps, codeHtml: combined } })
+  await saveDocument(call, into, { ...target, presentationState: { ...ps, codeHtml: combined } })
 }
 console.log(apply ? 'done' : 'dry run; add --apply')
