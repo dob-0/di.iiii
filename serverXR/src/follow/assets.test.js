@@ -555,10 +555,10 @@ describe('when the other di.iiii stops answering', () => {
     })
 })
 
-// A file NEITHER machine holds (DSC-1/DSC-2, aylmo 2026-10-26): two moxir checkpoint
-// projects named 28 files no disk had. Every attempt read the whole 1.5 MB document
-// again for each file, and the 10-minute comparison put every file back in the line,
-// so it was asked about and said in the log for ever.
+// A file NEITHER machine holds (DSC-2, aylmo 2026-10-26): two checkpoint projects
+// named 28 files no disk had, and every round of tries that ran out said a line in
+// the log again (56 lines per 10 min). It is still asked about on the same clock;
+// only what is said changes: one line when it starts, one when it ends.
 describe('a file held on neither machine', () => {
     let tmpDir = null
     let chase = null
@@ -594,48 +594,7 @@ describe('a file held on neither machine', () => {
         } while (Date.now() < deadline)
         throw new Error(`never settled: ${JSON.stringify(chase.files)}`)
     }
-    const documentReads = (world, origin) => world.calls.requests.filter(r => r.to === origin && r.path.endsWith('/document')).length
     const missingFiles = (n) => Array.from({ length: n }, (_, i) => Buffer.from(`file ${i} that no disk holds`))
-
-    it('reads this install\'s document at most once a pass, not once per missing file per try (DSC-1)', async () => {
-        const world = twoMachines()
-        const files = missingFiles(6)
-        const doc = { assets: files.map((bytes, i) => ({ id: sha(bytes), name: `f${i}.glb`, size: bytes.length })) }
-        world.here.docs.set('show', doc)
-        world.there.docs.set('show', doc)
-        await make(world, {})
-        chase.noteProjects(['show'])
-        await settle()
-        expect(chase.files).toMatchObject({ failed: 6, heldNowhere: 6, pending: 0 })
-        // 6 files x 3 tries each read the document before: 1 + 18 reads. Now one for
-        // the comparison (kept for its pass) and at most one for each later pass.
-        const reads = documentReads(world, 'http://here')
-        console.info(`[DSC-1] 6 missing files, 3 tries: ${reads} reads of this install's document`)
-        expect(reads).toBeLessThanOrEqual(1 + 2)
-    })
-
-    it('an op that names a file while its document is being read is not dropped on a stale read', async () => {
-        const world = twoMachines()
-        const [old, fresh] = missingFiles(2)
-        world.here.docs.set('show', { assets: [{ id: sha(old), name: 'old.glb', size: 1 }] })
-        world.there.docs.set('show', { assets: [{ id: sha(old), name: 'old.glb', size: 1 }] })
-        // The op loop names `fresh` while the comparison is reading the host's document.
-        const request = world.io.request
-        world.io.request = async (url, options) => {
-            const answer = await request(url, options)
-            if (url === 'http://there/api/projects/show/document' && !world.named) {
-                world.named = true
-                world.here.docs.set('show', { assets: [{ id: sha(old), name: 'old.glb', size: 1 }, { id: sha(fresh), name: 'fresh.glb', size: 1 }] })
-                chase.noteOps('show', [upsert(sha(fresh), 'fresh.glb', 1)])
-            }
-            return answer
-        }
-        await make(world, {})
-        chase.noteProjects(['show'])
-        await settle()
-        // Still named here, so it is owed (held nowhere), never silently dropped.
-        expect(chase.files.failures.map(f => f.name).sort()).toEqual(['fresh.glb', 'old.glb'])
-    })
 
     it('a file that turns up later is carried in the pass after the op that names it, as before', async () => {
         const world = twoMachines()

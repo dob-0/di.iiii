@@ -178,13 +178,6 @@ const createAssetChase = ({
     // keys of the files last found held on neither machine: said once on the way
     // in and once on the way out, never on the tries in between.
     const heldNowhere = new Set()
-    // projectId → the ids this install's document names, for ONE work() pass: read
-    // once (or taken from the comparison that just read it), never once per file.
-    let namedHere = new Map()
-    // projectId → how many ops have changed its files: a document read that began
-    // before one of them is not kept for the rest of the pass (op loop runs alongside).
-    const docMoves = new Map()
-    const movesOf = (projectId) => docMoves.get(projectId) || 0
     // The one line on the way out of "held nowhere", whatever ended it.
     const leftHeldNowhere = (key, fileName, how) => {
         if (!heldNowhere.delete(key)) return
@@ -281,9 +274,6 @@ const createAssetChase = ({
     const noteOps = (projectId, ops) => {
         if (!projectId) return
         for (const change of assetChangesFromOps(ops)) {
-            // What the document names has moved: this pass reads it again if it must.
-            namedHere.delete(projectId)
-            docMoves.set(projectId, movesOf(projectId) + 1)
             if (change.kind === 'named') name(projectId, change)
             else forget(projectId, change.id)
         }
@@ -327,20 +317,10 @@ const createAssetChase = ({
         address: side.address
     })
 
-    // At most one read of a project's document per pass, however many of its files
-    // are missing (DSC-1: one 1.5 MB read per missing file per attempt before).
     const stillNamedHere = async (item) => {
-        let ids = namedHere.get(item.projectId)
-        if (!ids) {
-            const before = movesOf(item.projectId)
-            const answer = await readDocument(local, item.projectId)
-            if (!answer.ok) return true // cannot tell — keep saying it is missing
-            ids = new Set(assetsFromDocument(answer.json()?.document).map(ref => ref.id))
-            // An op moved its files while this was read: cannot tell, keep saying it is missing.
-            if (movesOf(item.projectId) !== before) return true
-            namedHere.set(item.projectId, ids)
-        }
-        return ids.has(item.id)
+        const answer = await readDocument(local, item.projectId)
+        if (!answer.ok) return true // cannot tell — keep saying it is missing
+        return assetsFromDocument(answer.json()?.document).some(ref => ref.id === item.id)
     }
 
     /** One file, one attempt. Resolves 'carried' | 'settled' | 'dropped'; throws with `.final` otherwise. */
@@ -431,7 +411,6 @@ const createAssetChase = ({
     // document already names everything. Done only when BOTH have answered (a
     // project one side has not made yet is an answer: 404).
     const reconcileOne = async (projectId) => {
-        const before = movesOf(projectId)
         const [here, there] = await Promise.all([local, remote].map(side => readDocument(side, projectId).catch(error => ({ ok: false, status: 0, error }))))
         if (notAnswering(there)) {
             missed(there.status, there.error)
@@ -453,9 +432,6 @@ const createAssetChase = ({
         for (const answer of [here, there]) {
             if (answer.ok) for (const ref of assetsFromDocument(answer.json()?.document)) name(projectId, ref)
         }
-        // This install's document, just read: what stillNamedHere asks this pass
-        // (a 404 here is "cannot tell", as stillNamedHere's own read would say).
-        if (here.ok && movesOf(projectId) === before) namedHere.set(projectId, new Set(assetsFromDocument(here.json()?.document).map(ref => ref.id)))
         return true
     }
 
@@ -492,8 +468,6 @@ const createAssetChase = ({
             // over, one small question before any of the work.
             if (waiting() || !(await probe())) return
         }
-        // A new pass reads a document afresh the first time it needs it.
-        namedHere = new Map()
         // Files that ran out of tries a while ago get another look.
         for (const [key, entry] of failed) {
             if (entry.final || now() - entry.at < retryFailedAfterMs) continue
