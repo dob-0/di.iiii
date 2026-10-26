@@ -12,6 +12,7 @@ const http = require('http')
 const https = require('https')
 const cors = require('cors')
 const morgan = require('morgan')
+const { accessLogSkip } = require('./accessLog')
 const multer = require('multer')
 const fs = require('node:fs')
 const { isOwnerAtTheMachine } = require('./localOwner')
@@ -599,7 +600,8 @@ if (hasLocalRuntime() && scanAtBootFrom()) {
 }
 
 app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
-app.use(morgan('tiny'))
+// A log line only for answers that went wrong (400 and up); DI_ACCESS_LOG=all for every one. Why: accessLog.js.
+app.use(morgan('tiny', { skip: accessLogSkip() }))
 app.use((req, res, next) => {
   pushEvent('request', { method: req.method, url: req.url })
   next()
