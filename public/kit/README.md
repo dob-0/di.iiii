@@ -17,5 +17,6 @@ To remake one: screenshot the surface at 1440×900, then
 `sharp(src).extract({top:0,left:0,width:1440,height:810}).resize(640,360).webp({quality:72})`.
 
 Ships in: the hosted site and every local pack (`kit` is in `PROGRAM_PUBLIC_DIRS`,
-`src/works/buildProfile.js`). A local pack without it shows a broken picture on every card of
-`/tools`; `src/works/localProfile.test.js` fails if a card's picture is not under a carried entry.
+`src/works/buildProfile.js`). A local pack without it shows a broken picture on each of the 21
+picture cards of `/tools` (counts of 2026-10-26: the page has 30 cards, the other 9 show text);
+`src/works/localProfile.test.js` fails if a card's picture is not under a carried entry.

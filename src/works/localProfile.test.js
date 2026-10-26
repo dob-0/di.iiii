@@ -15,8 +15,11 @@
  *      entry point resolves to the work
  *   2. a slim local build still does, and still leaves the work's public/
  *      directory out
- *   3. every public/ file a page of the program names reaches a local pack,
- *      and every entry of public/ is either carried or named as left out
+ *   3. every picture of the Kit page reaches a local pack, and every
+ *      top-level entry of public/ is either carried or named as left out,
+ *      with its reason. This does NOT assert that every public/ file a page
+ *      names is carried: pages name four entries that are left out (chat-app,
+ *      chat-sw.js, robots.txt, llms.txt), and the list below says why.
  *
  * Nothing here builds anything. The profile's decisions are data
  * (works/buildProfile.js) and the plugin list is data, so both can be read
@@ -150,13 +153,21 @@ describe('vite installs the profile the flags asked for', () => {
 // every install from the day the Kit shipped (2026-09-28): a green build, and
 // a 404 only on the person's own machine.
 //
-// Same method as src/utils/reservedSegments.test.js ("every directory in
-// public/ is spoken for"): list what is on disk and make each entry say which
-// side it is on.
+// Same method as src/utils/reservedSegments.test.js (its test "every directory
+// in public/ is refused as a space slug"): list what is on disk and make each
+// entry say which side it is on.
+//
+// What this proves, and what it does not. It proves that the pictures of the
+// Kit page are carried (the page draws no other picture of its own:
+// KitPreview.jsx is its only <img>) and that no top-level entry of public/ is
+// undecided. It does not prove that every file a page names is carried: pages
+// do name four of the entries left out below (chat-app and chat-sw.js by the
+// chat pages, robots.txt and llms.txt by /for-apps), on purpose or still open,
+// and each has its reason.
 
 // What a local pack leaves out of public/, and why. A name goes here only by
 // decision, with its reason; a new entry of public/ fails the test below until
-// it is in PROGRAM_PUBLIC_DIRS or here.
+// it is carried (PROGRAM_PUBLIC_DIRS, or a work's own directory) or is here.
 const LEFT_OUT_OF_A_LOCAL_PACK = {
     // Hosting furniture: it only means something on the hosted domain.
     serverXR: 'the cPanel shim of the hosted site (serve-asset.php and its .htaccess)',
@@ -164,8 +175,11 @@ const LEFT_OUT_OF_A_LOCAL_PACK = {
     'clear-default-scene.php': 'a cPanel php shim',
     'upload-default-scene.php': 'a cPanel php shim',
     og: 'link-preview cards that serverXR/src/routes/ogRoutes.js hands to crawlers of the hosted domain',
-    'robots.txt': 'crawler rules; names https://diiii.xyz/ for the sitemap and the pages',
-    'llms.txt': 'a page for language models; every link in it is https://diiii.xyz/…',
+    // robots.txt and llms.txt are linked from /for-apps (src/pages/ForAppsPage.jsx),
+    // so on an install those two links answer 404. Left as is: hiding them there
+    // is a change to that page, which nobody asked for.
+    'robots.txt': 'crawler rules for the hosted domain; names https://diiii.xyz/ for the sitemap and the pages',
+    'llms.txt': 'a page for language models about the hosted site; every di.iiii address in it is https://diiii.xyz/… (it also links the source on github.com)',
     '.well-known': 'assetlinks.json: lets the studio chat Android app open the hosted domain',
     // Open, not decided. The chat pages ask for these as soon as someone is
     // signed in (src/chat/StudioChatSurface.jsx, ChatHomeSurface.jsx) and a
@@ -177,7 +191,7 @@ const LEFT_OUT_OF_A_LOCAL_PACK = {
     'chat-sw.js': 'OWED, undecided: the studio chat\'s service worker (a file, not a directory)'
 }
 
-describe('a local pack carries what the program\'s own pages name in public/', () => {
+describe('the public/ list of a local pack: the Kit pictures are carried, every entry is decided', () => {
     const plain = () => resolveBuildProfile({ DI_PROFILE: 'local' }).publicInclude
     const slim = () => resolveBuildProfile({ DI_PROFILE: 'local', DI_LOCAL_SLIM: '1' }).publicInclude
     const posters = KIT_TOOLS.map((tool) => tool.preview?.poster).filter(Boolean)
@@ -199,7 +213,7 @@ describe('a local pack carries what the program\'s own pages name in public/', (
         }
     })
 
-    it('has decided, for every entry of public/, whether a local pack carries it', () => {
+    it('has decided, for every top-level entry of public/, whether a local pack carries it', () => {
         const entries = readdirSync(PUBLIC_DIR).filter((name) => name !== '.DS_Store')
         // A floor: the listing worked and this is not a loop over nothing.
         expect(entries.length).toBeGreaterThan(10)
