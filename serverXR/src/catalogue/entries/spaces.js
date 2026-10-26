@@ -371,11 +371,11 @@ module.exports = [
           slug: { type: "string", description: "explicit project id/slug" },
           source: { type: "string", description: "optional starting-content marker" },
           visibility: { type: "string", enum: ["public", "private"], description: "create it private (only the space's members see it); default public" },
-          carried: { type: "boolean", description: "true only when this is the same project arriving from another install (a follow or a copy), so it keeps the id it already has even if that id is a reserved word. Never set it to get a reserved name: a project you are making new never gets one. Only the boolean true counts." }
+          carried: { type: "boolean", description: "true only when this is the same project arriving from another install (a follow or a copy), so it keeps the id it already has even if that id is a reserved word. It is the caller's own word, not something the server checks: the server cannot tell a project that exists elsewhere from a new one, and any editor can send it. Never send it for a project you are making new: with a reserved word as its id that project opens only at /{space}/p/{id}, never at /{space}/{id}. Only the boolean true counts." }
         }
       }
     },
-    note: "project ids are unique across the whole server, not just this space — a collision names a project in a space you may not be able to see. A reserved word (one of the app's own addresses, such as privacy or tools) is refused as the id of a new project with 400, checked on the cleaned-up id so \"Privacy!\" is the same word, and before the 409 so you are told about the word. A copy of private work should be created with visibility 'private', never made private after the fact."
+    note: "project ids are unique across the whole server, not just this space — a collision names a project in a space you may not be able to see. A reserved word (one of the app's own addresses, such as privacy or tools) is refused as the project id with 400 unless the body says carried: true (see that field: the caller's own word, not a check). It is checked on the cleaned-up id so \"Privacy!\" is the same word, and before the 409 so you are told about the word. A copy of private work should be created with visibility 'private', never made private after the fact."
   },
   {
     route: "PUT /api/spaces/:spaceId/projects/order",

@@ -108,10 +108,12 @@ const RESERVED_SPACE_SLUGS = new Set([...APP_SEGMENTS, ...STATIC_SEGMENTS, ...SH
 // router drops these words in that position (src/utils/spaceRouting.js). The
 // store does not apply it (ensureProject, used by snapshot restore and the
 // open-jam bootstrap, takes any well-formed id); the create route does. The one
-// way past the route is `carried: true` in the create body, for the same project
-// arriving from another install, which keeps the id it has (the follower sends it;
-// the copy scripts do not yet). It is never a way to get a reserved name for a
-// project that is new.
+// way past the route is `carried: true` in the create body, meant for the same
+// project arriving from another install, which keeps the id it has (the follower
+// sends it; the copy scripts do not yet). The route cannot check that: it takes
+// the caller's own word, and any editor can send it. Nobody should send it for a
+// project that is new, because that project would have a reserved word as its id
+// and open only at /{space}/p/{id}.
 // Two words can never be an id anyway: `p` is under 3 letters and `open_jam` has
 // an underscore (the store turns that into a hyphen).
 const RESERVED_PROJECT_SLUGS = new Set([...APP_SEGMENTS, ...SHAPE_SEGMENTS])

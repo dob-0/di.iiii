@@ -97,7 +97,7 @@ describe('a router mounted with no reserved-word wiring still refuses the shared
     expect(made).toEqual(['privacy-policy'])
   })
 
-  it('lets a carried project keep the reserved id it already has', async () => {
+  it('keeps a reserved id when the body says `carried: true`, on the caller\'s word', async () => {
     const answer = await send('POST', '/api/spaces/main/projects', { slug: 'privacy', title: 'Privacy Policy', carried: true })
     expect(answer.status).toBe(201)
     expect(made).toEqual(['privacy'])

@@ -372,7 +372,10 @@ function registerProjectRoutes(router, {
       // through ensureProject and must keep working. One caller does come through this
       // route with an id it did not choose: a follow, making a project the other side
       // already has (follower.js, makeMissing). It says so with `carried: true` and keeps
-      // its id; only the boolean `true` counts. The copy scripts (project-pull, space-sync,
+      // its id; only the boolean `true` counts. This cannot be checked here: the route has
+      // no way to tell a project that exists elsewhere from a new one, so `carried` is the
+      // caller's own word and any editor can send it (a project made new with it would open
+      // only at /{space}/p/{id}). The copy scripts (project-pull, space-sync,
       // space-sync-github, local-mirror, tier-sync) use this route too and do not say so
       // yet: for a reserved id they get the 400.
       const carried = req.body?.carried === true

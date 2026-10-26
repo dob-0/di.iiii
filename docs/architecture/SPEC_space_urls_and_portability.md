@@ -30,7 +30,8 @@ published project at 200 while the address bar said otherwise. See `docs/ai/know
   **Amendment, 2026-10-26:** create is covered too — `POST /api/spaces/:id/projects` answers 400
   for a reserved word as the id (on the cleaned-up id, before the 409), since with no slug the
   id is the address `/{space}/{id}`; a follow bringing a project that already has such an id
-  sends `carried: true` and keeps it (the copy scripts do not yet).
+  sends `carried: true` and keeps it (the copy scripts do not yet). The route takes `carried`
+  on the caller's word and cannot check it; a project made new with it opens only at `/{space}/p/{id}`.
 - **3b — bare short-link routing**: `GET /api/resolve/:spaceSegment/:projectSegment`
   resolves slug-or-id to real ids (gated by the same `requireReadRole` every other route
   uses — a private space's slug is not distinguishable from a nonexistent one to an

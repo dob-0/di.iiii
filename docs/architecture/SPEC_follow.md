@@ -56,8 +56,9 @@ Code: `serverXR/src/follow/` — `follower.js` (the loop), `followPlan.js` (what
    wakes the follower and the space's waiters, so it crosses in about a second. Trash, restore, rename and move: see
    "A project trashed, restored, renamed or moved" below.
    The create body says `carried: true` (2026-10-26): the same project arriving keeps its id even when that id is a
-   reserved word, which the create route now refuses for a new project (400); without it `privacy` in the space
-   `main` would never reach an install that follows the space. The 409 "taken" answer is unchanged.
+   reserved word, which the create route now refuses (400) unless the body says so; without it `privacy` in the space
+   `main` would never reach an install that follows the space. The route takes `carried` on the caller's word and
+   cannot check it. The 409 "taken" answer is unchanged.
 3. **A restart resumes where it was.** Cursors and the carried opIds are saved to
    `DATA_ROOT/follow-state/<space>.json` (temp file + rename) and reloaded; an old edit is never re-sent past the
    receiver's 500-op dedupe window and applied twice. A saved cursor past the end of a log (a rebuilt install)

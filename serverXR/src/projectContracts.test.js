@@ -979,7 +979,7 @@ describe('project contracts', () => {
     })
 })
 
-// ── A reserved word is never a new project's id ──────────────────────────────
+// ── A reserved word is refused as a project's id unless the caller says it is carried ──
 // Added 2026-10-26 (fix-all, reserved names). A project with no short name is
 // opened at /{space}/{id}, and spaceRouting.js throws away a reserved word in
 // that position, so a project born with one (a title of "Privacy", "Plot" or
@@ -991,8 +991,10 @@ describe('project contracts', () => {
 // The guard sits in the create ROUTE, not in ensureProject: a snapshot restore
 // and the open-jam bootstrap call ensureProject themselves (projectStore.test.js
 // pins that). A follow makes a missing project through this very route, so the
-// route lets a request that says `carried: true` keep an id it already has.
-describe('a reserved word is never a new project\'s id', () => {
+// route lets a request that says `carried: true` keep an id it already has. That
+// is the caller's own word, not a check: the route cannot tell a project that
+// exists elsewhere from a new one (the "caller's word" test below pins it).
+describe('a reserved word is refused as a project\'s id unless the caller says it is carried', () => {
     const ID_SHAPE = /^[a-z0-9-]{3,64}$/
     // `p` (under three letters) and `open_jam` (an underscore) can never be a
     // project id, so there is nothing for the guard to stop. Every other word is
@@ -1061,10 +1063,10 @@ describe('a reserved word is never a new project\'s id', () => {
         }
     })
 
-    it('lets a follow or a copy bring a project that already has a reserved id, and no one else', async () => {
+    it('takes `carried: true` on the caller\'s word: only the boolean true skips the reserved check', async () => {
         const server = await startServer()
 
-        // A person, an agent or a script choosing the name: refused.
+        // A request that does not say it is carried: refused.
         expect((await post(server, 'main', { slug: 'privacy', title: 'Privacy Policy' })).status).toBe(400)
         // Only the boolean `true` counts, never a word that looks like it.
         for (const carried of ['true', 'yes', 1, null, false]) {
@@ -1073,7 +1075,9 @@ describe('a reserved word is never a new project\'s id', () => {
         }
         expect(await reservedIdsIn(server, 'main')).toEqual([])
 
-        // The follower making the same project it found on the other side: made, with its id.
+        // The follower's request for a project it found on the other side: made, with its id.
+        // This server has no other side and makes it all the same: `carried` is the caller's
+        // own word, not a check. That is the design, pinned here so nobody reads it as one.
         const made = await post(server, 'main', { slug: 'privacy', title: 'Privacy Policy', carried: true })
         expect(made.status).toBe(201)
         expect((await made.json()).project.id).toBe('privacy')
