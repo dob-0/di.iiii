@@ -40,7 +40,7 @@ export default function PrivacyPage() {
             </header>
 
             <main className="legal-content">
-                <p className="legal-updated">updated 2026-10-26 · audited against the codebase 2026-07-28; sessions, signing in, logs, chat and retention re-checked 2026-10-26</p>
+                <p className="legal-updated">updated 2026-10-26 · audited against the codebase 2026-07-28; sessions, signing in, logs, chat, third parties and retention re-checked 2026-10-26</p>
 
                 <section className="legal-section">
                     <h2>the session cookie</h2>
@@ -51,13 +51,21 @@ export default function PrivacyPage() {
                         as your label, so the cookie can contain your email.
                     </p>
                     <p>
-                        Lifetime: 12 hours signed in, 7 days as a guest. Guests get a random id and
+                        Lifetime: 12 hours signed in, 7 days as a guest, renewed while in use: once
+                        less than 6 hours are left, your next request to the server gets a fresh
+                        12-hour cookie. A session therefore ends 12 hours after its last renewal,
+                        or when you sign out. A guest cookie renews the same way, in 12-hour steps,
+                        once less than 6 hours of its 7 days are left. Guests get a random id and
                         the label &quot;Guest&quot; — no personal data.
                     </p>
                     <p>
-                        Signing out ends every session of your account at once, on every device:
-                        each cookie made before it stops working. A guest session has no account
-                        to sign out of; it ends when it runs out or its cookie is cleared.
+                        Signing out ends every browser session of your account at once, on every
+                        device, and every key our Telegram bot was given to act for you: each one
+                        made before it stops working. Terminal logins are the exception: signing out
+                        does not end them. Each terminal login can be ended on its own, and ends by
+                        itself after 90 days unused or 365 days after it was made. A guest session
+                        has no account to sign out of; it ends when it runs out or its cookie is
+                        cleared.
                     </p>
                 </section>
 
@@ -90,9 +98,11 @@ export default function PrivacyPage() {
                     </p>
                     <p>
                         The sign-in link works once, for 10 minutes. The server keeps a short record
-                        of it: your Telegram id, the name, and a SHA-256 fingerprint in place of the
-                        link itself. A clean-up that runs every half hour deletes the record once the
-                        link has been used or has run out. The bot can also ask which account your
+                        of it: your Telegram id, the name, and a SHA-256 fingerprint of the
+                        link&apos;s key rather than the key itself. A clean-up that runs every half
+                        hour deletes the record once the link has been used or has run out. The link
+                        itself, key included, can be written to a web server&apos;s log when you
+                        open it (see logs and realtime). The bot can also ask which account your
                         Telegram id belongs to and which spaces that account can open, to answer you
                         in a private chat; nothing is written when it asks.
                     </p>
@@ -109,8 +119,10 @@ export default function PrivacyPage() {
                         without the password (15 minutes). Each works once. Mail goes out through the
                         mail server this di.iiii is set up with. For every link, the server keeps which
                         account it was for, its kind, when it was made, used and runs out, and a
-                        SHA-256 fingerprint in place of the link itself. Nothing deletes these
-                        records today: they are kept after the link is used or runs out. An
+                        SHA-256 fingerprint of its key rather than the key itself. Nothing deletes
+                        these records today: they are kept after the link is used or runs out. The
+                        link itself, key included, can be written to a web server&apos;s log when
+                        you open it (see logs and realtime). An
                         account with a username and no email address cannot be recovered by mail
                         if its password is lost.
                     </p>
@@ -157,9 +169,17 @@ export default function PrivacyPage() {
                 <section className="legal-section">
                     <h2>logs and realtime</h2>
                     <p>
-                        Server logs record each request&apos;s method, URL, status, size and
-                        duration — no IP address, no user agent. A few lines also say who an event
-                        concerns. When someone joins a space or project live, the line holds the
+                        The server&apos;s own log writes a line for a request only when its answer
+                        went wrong (an error status) or never came, unless whoever runs this
+                        di.iiii turns on a line for every request. Such a line holds the request&apos;s
+                        method, URL, status, size and duration — no IP address, no user agent — and
+                        a URL can carry a sign-in link&apos;s key. In front of the server, the web
+                        server this codebase sets up for production (nginx) writes a line for every
+                        request in nginx&apos;s standard format: the address the request came from,
+                        the time, the full request with its URL, the status, the size, the page it
+                        came from and your browser&apos;s user agent. Nothing in this codebase
+                        deletes that log. A few lines of the server&apos;s own log also say who an
+                        event concerns. When someone joins a space or project live, the line holds the
                         name their browser sent and which space or project it was. When a terminal
                         or our Telegram bot gets a key to act for an account, and when such a key
                         is approved or turned down, ended, or held back from a session cookie, the
@@ -167,15 +187,22 @@ export default function PrivacyPage() {
                     </p>
                     <p>
                         IP addresses are used in memory, for rate limiting and to tell this machine
-                        from others. The one place the server stores one is a change that waits
-                        for approval. Where this di.iiii has an approval bot set up, some changes
-                        wait for a person to approve them: a space file proposed by someone that
-                        space does not trust, and admin-level changes when the approval gate is
-                        switched on. For each, the server keeps who asked (account id, role, and
-                        name or email address), what would change, the request&apos;s method, path
-                        and IP address, and when. Nothing deletes these records: one that runs out
-                        is marked expired and kept. The bot is sent a summary of the change and
-                        who asked, to show the person who decides.
+                        from others. Apart from the web server&apos;s log above, the one place the
+                        server stores one is a change that waits for approval. Where this di.iiii
+                        has an approval bot set up, some changes wait for a person to approve them:
+                        a space file proposed by someone that space does not trust and, when the
+                        approval gate is switched on, deleting or purging a space (its owner&apos;s
+                        own included), changing a space&apos;s visibility, address, owner or other
+                        key settings, deleting an asset from the commons, and admin changes to
+                        accounts, settings and sandboxes. For each, the server keeps who asked
+                        (account id, role, and name or email address), what would change, the
+                        request&apos;s method, path and IP address, and when. Nothing deletes these
+                        records: one that runs out is marked expired and kept. The bot is sent a
+                        summary of the change and who asked, to show the person who decides. Where
+                        change notices are switched on as well, the bot is also told each time
+                        someone who does not own a space finishes a burst of edits in it: who
+                        edited (account id and name), the space, how many changes of each kind,
+                        and a link to it.
                     </p>
                     <p>
                         Presence and cursors are relayed live and never stored. Chat is stored:
@@ -195,11 +222,20 @@ export default function PrivacyPage() {
                     <h2>third parties</h2>
                     <p>
                         No third-party tracking in the main app: no analytics, no telemetry, no
-                        error reporting, no session replay, no tag manager. The site loads its own
-                        assets, including fonts. Where this di.iiii is set up with them, other
-                        services receive what the sections above say: the sign-in you choose,
-                        Google Drive if you connect it, the mail server, the model server and the
-                        approval bot.
+                        session replay, no tag manager, and the app sends no error reports of its
+                        own. The site loads its own assets, including fonts. Where this di.iiii is
+                        set up with them, other services receive what the sections above say: the
+                        sign-in you choose, Google Drive if you connect it, the mail server, the
+                        model server, the approval bot, and Google Drive again for copies of the
+                        backups (see retention and backups).
+                    </p>
+                    <p>
+                        diiii.xyz and dev.diiii.xyz are reached through Cloudflare, which carries
+                        every request and answer between your browser and the server: it sees your
+                        IP address, each address you open (sign-in link keys included) and what is
+                        sent. Cloudflare also asks your browser to report requests to these sites
+                        that fail (Network Error Logging); such a report goes from your browser to
+                        Cloudflare with the page&apos;s address, the kind of error and when.
                     </p>
                     <p>
                         We count our own traffic, anonymously: one first-party event per page load
@@ -233,10 +269,13 @@ export default function PrivacyPage() {
                         <li>Accounts, open-call applications, published assets, mail-link records
                             and approval records have no retention limit — nothing deletes them
                             automatically; they persist until removed by hand.</li>
-                        <li>Backups, as this codebase&apos;s backup scripts make them: nightly, kept
-                            on the server for 14 days, and pulled off it to a second machine that
-                            keeps the last 30. A backup restore can bring back data deleted in the
-                            meantime — there is no exclusion mechanism yet.</li>
+                        <li>Backups, as this codebase&apos;s backup script makes them: nightly, the
+                            newest 14 kept on the server. For diiii.xyz they are also pulled to a
+                            second machine of ours (58 there on 2026-10-26, the oldest from
+                            2026-08-26) and copied from it to Google Drive, where nothing deletes
+                            them: those copies have no retention limit. A backup restore can bring
+                            back data deleted in the meantime — there is no exclusion mechanism
+                            yet.</li>
                     </ul>
                 </section>
 
@@ -249,11 +288,14 @@ export default function PrivacyPage() {
                             and data will be removed by hand.</li>
                         <li><strong>No data export.</strong> Same route — email, and you&apos;ll get a
                             copy of what&apos;s held about you.</li>
-                        <li><strong>No way to end one session alone.</strong> Signing out ends all of
-                            your account&apos;s sessions at once; one device cannot be signed out on
-                            its own.</li>
+                        <li><strong>No way to end one browser session alone.</strong> Signing out
+                            ends all of your account&apos;s browser sessions and Telegram bot keys
+                            at once; one browser cannot be signed out on its own. Terminal logins
+                            are apart: each one is ended on its own, and signing out leaves
+                            them.</li>
                         <li><strong>No retention limit</strong> on accounts, open-call applications,
-                            published assets, mail-link records or approval records — see above.</li>
+                            published assets, mail-link records, approval records or the backup
+                            copies on Google Drive — see above.</li>
                     </ul>
                 </section>
 

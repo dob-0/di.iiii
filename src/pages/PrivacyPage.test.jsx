@@ -91,26 +91,66 @@ describe('/privacy', () => {
     // 2026-10-26: the page said guests keep their cookie 30 days (the code:
     // the guest sandbox's 7) and that there was no sign-out-everywhere (logout
     // bumps the account's token version, which ends every session).
-    it('states the session lifetimes and the sign-out the server uses', () => {
+    // Review of #1141: the cookie is renewed while in use (half its lifetime
+    // left -> a fresh one, refreshSessionCookieIfStale in index.js), and a
+    // sign-out leaves terminal logins, which carry no token version and end on
+    // their own clock (cliLoginStore.js).
+    it('states the session lifetimes, their renewal and the sign-out the server uses', () => {
         const config = serverSource('config.js')
         const index = serverSource('index.js')
         const signedIn = product(config.match(/AUTH_SESSION_TTL_MS, ([\d\s*]*\d)\)/)[1])
         const guest = product(config.match(/SANDBOX_TTL_MS \|\| ([\d\s*]*\d)\)/)[1])
         expect(index).toContain('const GUEST_SESSION_TTL_MS = Math.max(config.sandboxTtlMs')
         const cookie = sectionText('the session cookie')
-        expect(cookie).toContain(`${inWords(signedIn)} signed in, ${inDays(guest)} as a guest`)
+        expect(cookie).toContain(`${inWords(signedIn)} signed in, ${inDays(guest)} as a guest, renewed while in use`)
+        expect(index, 'the renewal rule changed: re-check the page').toContain('if (expiresAt - Date.now() > ttl / 2) return')
+        const hourly = inWords(signedIn).replace(' hours', '-hour')
+        expect(cookie).toContain(`once less than ${inWords(signedIn / 2)} are left, your next request to the server gets a fresh ${hourly} cookie`)
+        expect(cookie).toContain(`ends ${inWords(signedIn)} after its last renewal`)
+        expect(cookie).toContain(`A guest cookie renews the same way, in ${hourly} steps`)
         expect(index).toContain('bumpUserTokenVersion(state.subject)')
-        expect(cookie).toContain('Signing out ends every session of your account at once, on every device')
-        expect(sectionText('not built yet')).not.toContain('sign-out-everywhere')
+        expect(cookie).toContain('Signing out ends every browser session of your account at once, on every device')
+        // A bot key is minted with the account's token version; a terminal
+        // login's table has none, so a sign-out cannot end it.
+        expect(serverSource('telegramActTokenStore.js')).toMatch(/token_version/)
+        expect(cookie).toContain('every key our Telegram bot was given to act for you')
+        const db = serverSource('db.js')
+        const cliTable = db.slice(db.indexOf('CREATE TABLE IF NOT EXISTS cli_tokens'))
+        const cliColumns = cliTable.slice(0, cliTable.indexOf(');'))
+        expect(cliColumns).toContain('user_id')
+        expect(cookie.includes('Terminal logins are the exception: signing out does not end them'), 'cli_tokens token_version vs the page')
+            .toBe(!cliColumns.includes('token_version'))
+        const cli = serverSource('cliLoginStore.js')
+        const idle = product(cli.match(/const TOKEN_IDLE_MS = ([\d\s*]*\d)/)[1])
+        const max = product(cli.match(/const TOKEN_MAX_MS = ([\d\s*]*\d)/)[1])
+        expect(cookie).toContain(`after ${inDays(idle)} unused or ${inDays(max)} after it was made`)
+        const notBuilt = sectionText('not built yet')
+        expect(notBuilt).not.toContain('sign-out-everywhere')
+        expect(notBuilt).not.toContain('one device cannot be signed out')
+        expect(notBuilt).toContain('one browser cannot be signed out on its own')
     })
 
     // 2026-10-26: the page said no user ids are written to the logs; seven
     // logger lines write an account id and two write the name a browser sent.
+    // Review of #1141: #1136 keeps a request line only for answers that went
+    // wrong, and the production nginx this repo sets up logs every request in
+    // nginx's predefined "combined" format: address, request line, referrer,
+    // user agent (nginx.org/en/docs/http/ngx_http_log_module.html).
     it('says what the logs write about a person, as the server writes it', () => {
         // morgan's 'tiny' format: method, URL, status, size, time. No IP, no user agent.
-        expect(serverSource('index.js')).toContain("app.use(morgan('tiny'))")
+        expect(serverSource('index.js')).toContain("app.use(morgan('tiny', { skip: accessLogSkip() }))")
+        expect(serverSource('accessLog.js')).toContain('res.statusCode < 400')
         const logs = sectionText('logs and realtime')
+        expect(logs).toContain('writes a line for a request only when its answer went wrong')
         expect(logs).toContain('method, URL, status, size and duration — no IP address, no user agent')
+        const nginx = readFileSync(join(here, '../../scripts/standby/nginx-conf.sh'), 'utf8')
+        const accessLog = nginx.match(/^\s*access_log\s+([^;]+);/m)
+        expect(accessLog, 'nginx-conf.sh has no access_log line: say what the web server logs now').toBeTruthy()
+        const [, format, ...rest] = accessLog[1].trim().split(/\s+/)
+        expect(accessLog[1].trim()).not.toBe('off')
+        expect({ format, rest }, 'nginx-conf.sh names a log format: re-check the page').toEqual({ format: undefined, rest: [] })
+        expect(logs).toContain("in nginx's standard format: the address the request came from")
+        expect(logs).toContain("the page it came from and your browser's user agent")
         expect(logs).not.toContain('no user ids')
         const naming = serverLines(/logger\.\w+\(.*(subject:|\$\{userName\})/)
         const namesAccount = naming.some(({ text }) => text.includes('subject:'))
@@ -127,9 +167,21 @@ describe('/privacy', () => {
         expect(stored.length, 'nothing stores request_ip any more: say so on /privacy').toBeGreaterThan(0)
         const logs = sectionText('logs and realtime')
         expect(logs).not.toMatch(/IPs? [^.]*never stored/)
-        expect(logs).toContain('The one place the server stores one is a change that waits for approval')
+        expect(logs).toContain('Apart from the web server\'s log above, the one place the server stores one is a change that waits for approval')
         const deletes = serverLines(/DELETE FROM pending_actions/)
         expect(logs.includes('Nothing deletes these records'), 'pending_actions deletion vs the page').toBe(deletes.length === 0)
+        // Review of #1141: with the gate on, a space's delete and purge wait
+        // whoever asks (its owner too), and change notices reach the same bot.
+        const gate = serverSource('approvalGate.js')
+        expect(gate).toContain("kind: 'spaces.delete'")
+        expect(gate).toContain("kind: 'spaces.purge'")
+        expect(logs).toContain("deleting or purging a space (its owner's own included)")
+        expect(logs).not.toContain('and admin-level changes when the approval gate')
+        expect(serverSource('config.js')).toContain('CONTENT_CHANGE_NOTICES_ENABLED')
+        expect(serverSource('spaceHistory.js')).toContain('/content-changed')
+        expect(logs).toContain('finishes a burst of edits in it: who edited (account id and name)')
+        const wiki = readFileSync(join(here, '../wiki/wikiContent.js'), 'utf8')
+        expect(wiki, 'the wiki says /privacy covers "no stored IP addresses"').not.toContain('no stored IP')
     })
 
     // 2026-10-26: the page said chat is never stored; space chat, mesh-room
@@ -159,9 +211,38 @@ describe('/privacy', () => {
         // route passes it (0 disables it), so the page states the count alone.
         const maxOps = Number(index.match(/const MAX_OP_HISTORY = (\d+)/)[1])
         expect(retention).toContain(`the last ${maxOps} changes of each space and each project.`)
-        const pull = readFileSync(join(here, '../../scripts/backup-pull.sh'), 'utf8')
-        const keptOff = Number(pull.match(/KEEP="\$\{DII_KEEP:-(\d+)\}"/)[1])
+        // Review of #1141: the server keeps the newest 14 by count
+        // (scripts/standby/backup-data.sh); the live pull to aylmo held 58 and
+        // its copy on Google Drive (rclone copy) never deletes.
+        const standby = readFileSync(join(here, '../../scripts/standby/backup-data.sh'), 'utf8')
+        const keepOnServer = Number(standby.match(/\[keep \(default (\d+)\)\]/)[1])
+        expect(retention).toContain(`nightly, the newest ${keepOnServer} kept on the server`)
         expect(retention).not.toContain('nowhere else')
-        expect(retention).toContain(`a second machine that keeps the last ${keptOff}`)
+        expect(retention).not.toContain('keeps the last 30')
+        expect(retention).toContain('copied from it to Google Drive, where nothing deletes them')
+        expect(sectionText('not built yet')).toContain('the backup copies on Google Drive')
+    })
+
+    // Review of #1141: the page said a fingerprint is kept "in place of the
+    // link itself", but every link carries its key in the URL, and URLs reach
+    // the logs the page describes.
+    it('says a sign-in link, key included, can reach a web server log', () => {
+        expect(serverSource('routes/passwordAuthRoutes.js')).toContain('?token=${encodeURIComponent(minted.token)}')
+        expect(serverSource('routes/authRoutes.js')).toContain('/api/auth/telegram/callback?token=${encodeURIComponent(token)}')
+        const text = signingInText()
+        expect(text).not.toContain('in place of the link itself')
+        expect(text.match(/The link itself, key included, can be written to a web server's log/g)).toHaveLength(2)
+    })
+
+    // Review of #1141: diiii.xyz and dev.diiii.xyz answer "server: cloudflare"
+    // with report-to/nel headers (a.nel.cloudflare.com), and the backups have a
+    // copy on Google Drive. Deployment facts: pinned here so they are not lost.
+    it('names the services that carry requests or hold copies', () => {
+        const third = sectionText('third parties')
+        expect(third).not.toContain('no error reporting')
+        expect(third).toContain('the app sends no error reports of its own')
+        expect(third).toContain('reached through Cloudflare')
+        expect(third).toContain('(Network Error Logging)')
+        expect(third).toContain('Google Drive again for copies of the backups')
     })
 })

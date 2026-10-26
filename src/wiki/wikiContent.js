@@ -1224,7 +1224,7 @@ export const WIKI_ARTICLES = [
         title: 'Privacy & terms',
         summary: 'What di.iiii stores about you and under which terms — plainly, at /privacy and /terms.',
         body: [
-            'Two pages disclose how di.iiii treats you: /privacy describes exactly what is collected (the session cookie, what each of the four sign-ins keeps — GitHub, Google, Telegram and password — uploads, retention) and what is deliberately not (no third-party analytics, no stored IP addresses, no tracking that links visits together) — including the parts that are not built yet, named as gaps rather than hidden.',
+            'Two pages disclose how di.iiii treats you: /privacy describes exactly what is collected (the session cookie, what each of the four sign-ins keeps — GitHub, Google, Telegram and password — uploads, logs and where an IP address is kept, retention and backups, and the services that see your requests) and what is deliberately not (no third-party analytics, no tracking that links visits together) — including the parts that are not built yet, named as gaps rather than hidden.',
             '/terms covers the AGPL-3.0 license, the 3-free-spaces limit, and the append-only nature of anonymous inscriptions.',
             'Visits are counted anonymously first-party: one event per page load with path, time, and referring site — no cookie, no IP, nothing identifying.',
             'Programs that call the API (apps, crawlers, scripts) are counted per day by the name they give and, for apps that publish one, the contact in their User-Agent — never an address or a page. See the Apps, scripts and AIs article.',
