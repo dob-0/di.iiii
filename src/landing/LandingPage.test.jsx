@@ -44,13 +44,13 @@ describe('LandingPage CTA routing', () => {
         expect(internalLinksTo('/raw')).toHaveLength(0)
     })
 
-    it('points every Studio link at the spaces hub, not one space\'s project list', () => {
+    it('points every "Open your Spaces" link at the spaces hub, not one space\'s project list', () => {
         // Regression: these used to go to /open/studio?browse=1, which is
         // StudioHub — the *open space's project list*, one level below the
         // top. The label promises the hub; deliver the hub.
         Object.assign(sessionState, { authenticated: false, type: null })
         render(<LandingPage />)
-        const spacesLinks = screen.getAllByRole('link', { name: /Open Studio/ })
+        const spacesLinks = screen.getAllByRole('link', { name: /Open your Spaces/ })
         expect(spacesLinks.length).toBeGreaterThan(0)
         for (const link of spacesLinks) {
             expect(link.getAttribute('href')).toBe('/spaces')
@@ -68,7 +68,7 @@ describe('LandingPage CTA routing', () => {
         ]) {
             Object.assign(sessionState, session)
             const { unmount } = render(<LandingPage />)
-            for (const link of screen.getAllByRole('link', { name: /Open Studio/ })) {
+            for (const link of screen.getAllByRole('link', { name: /Open your Spaces/ })) {
                 expect(link.getAttribute('href')).toBe('/spaces')
             }
             unmount()
