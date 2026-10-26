@@ -554,3 +554,188 @@ describe('when the other di.iiii stops answering', () => {
         expect(lines.info).toEqual([])
     })
 })
+
+// A file NEITHER machine holds (DSC-1/DSC-2, aylmo 2026-10-26): two moxir checkpoint
+// projects named 28 files no disk had. Every attempt read the whole 1.5 MB document
+// again for each file, and the 10-minute comparison put every file back in the line,
+// so it was asked about and said in the log for ever.
+describe('a file held on neither machine', () => {
+    let tmpDir = null
+    let chase = null
+    const lines = { warn: [] }
+    const MIN = 60_000
+
+    const make = async (world, options = {}) => {
+        tmpDir = await mkdtemp(path.join(os.tmpdir(), 'dii-nowhere-'))
+        lines.warn = []
+        chase = createAssetChase({
+            local: side({ base: 'http://here', spaceId: 'room', token: 'self-token' }),
+            remote: side({ base: 'http://there', spaceId: 'room', token: 'dii_sync_key' }),
+            tmpDir,
+            backoffMs: [1, 1],
+            io: world.io,
+            log: { warn: (line) => lines.warn.push(line), info: () => {} },
+            ...options
+        })
+        return chase
+    }
+    afterEach(async () => {
+        chase?.stop()
+        if (tmpDir) await rm(tmpDir, { recursive: true, force: true })
+    })
+    // A clock that does not move: no tries within a round (backoffMs: []) in those tests.
+    const settle = async () => {
+        const deadline = Date.now() + 3000
+        do {
+            await chase.run()
+            await chase.idle()
+            if (!chase.files.pending) return
+            await new Promise(resolve => setTimeout(resolve, 5))
+        } while (Date.now() < deadline)
+        throw new Error(`never settled: ${JSON.stringify(chase.files)}`)
+    }
+    const documentReads = (world, origin) => world.calls.requests.filter(r => r.to === origin && r.path.endsWith('/document')).length
+    const metaAsks = (world) => world.calls.requests.filter(r => r.path.endsWith('/meta')).length
+    const missingFiles = (n) => Array.from({ length: n }, (_, i) => Buffer.from(`file ${i} that no disk holds`))
+
+    it('reads this install\'s document at most once a pass, not once per missing file per try (DSC-1)', async () => {
+        const world = twoMachines()
+        const files = missingFiles(6)
+        const doc = { assets: files.map((bytes, i) => ({ id: sha(bytes), name: `f${i}.glb`, size: bytes.length })) }
+        world.here.docs.set('show', doc)
+        world.there.docs.set('show', doc)
+        await make(world, { random: () => 0 })
+        chase.noteProjects(['show'])
+        await settle()
+        expect(chase.files).toMatchObject({ failed: 6, heldNowhere: 6, pending: 0 })
+        // 6 files x 3 tries each read the document before: 1 + 18 reads. Now one for
+        // the comparison (kept for its pass) and at most one for each later pass.
+        const reads = documentReads(world, 'http://here')
+        console.info(`[DSC-1] 6 missing files, 3 tries: ${reads} reads of this install's document`)
+        expect(reads).toBeLessThanOrEqual(1 + 2)
+    })
+
+    it('an op that names a file while its document is being read is not dropped on a stale read', async () => {
+        const world = twoMachines()
+        const [old, fresh] = missingFiles(2)
+        world.here.docs.set('show', { assets: [{ id: sha(old), name: 'old.glb', size: 1 }] })
+        world.there.docs.set('show', { assets: [{ id: sha(old), name: 'old.glb', size: 1 }] })
+        // The op loop names `fresh` while the comparison is reading the host's document.
+        const request = world.io.request
+        world.io.request = async (url, options) => {
+            const answer = await request(url, options)
+            if (url === 'http://there/api/projects/show/document' && !world.named) {
+                world.named = true
+                world.here.docs.set('show', { assets: [{ id: sha(old), name: 'old.glb', size: 1 }, { id: sha(fresh), name: 'fresh.glb', size: 1 }] })
+                chase.noteOps('show', [upsert(sha(fresh), 'fresh.glb', 1)])
+            }
+            return answer
+        }
+        await make(world, { random: () => 0 })
+        chase.noteProjects(['show'])
+        await settle()
+        // Still named here, so it is owed (held nowhere), never silently dropped.
+        expect(chase.files.failures.map(f => f.name).sort()).toEqual(['fresh.glb', 'old.glb'])
+    })
+
+    it('waits 5 min, then 10, 20 … at most 6 h; the comparison does not reset it; said once (DSC-2)', async () => {
+        const world = twoMachines()
+        const [bytes] = missingFiles(1)
+        const doc = { assets: [{ id: sha(bytes), name: 'lost.glb', size: bytes.length }] }
+        world.here.docs.set('show', doc)
+        world.there.docs.set('show', doc)
+        let clock = 0
+        await make(world, { backoffMs: [], now: () => clock, random: () => 0, reconcileEveryMs: 2 * MIN })
+        chase.noteProjects(['show'])
+        await settle()
+        expect(chase.files.failures[0].why).toBe('neither machine holds this file (looked 1 time; next in 5 min)')
+
+        // The comparison (every 2 min here, 10 on a real follow) names the same file again: it keeps its wait and
+        // nothing is asked about it (before: back in the line, 4 more tries, 1 more line).
+        clock = 3 * MIN
+        const docsBefore = documentReads(world, 'http://there')
+        const asksBefore = metaAsks(world)
+        chase.noteProjects(['show'])
+        await settle()
+        expect(documentReads(world, 'http://there')).toBe(docsBefore + 1) // the comparison ran
+        expect(metaAsks(world)).toBe(asksBefore)
+
+        const waits = []
+        let lookedAt = 0 // the first look, at the start
+        for (let look = 0; look < 9; look += 1) {
+            const { nextLookAt } = chase.files.failures[0]
+            waits.push((nextLookAt - lookedAt) / MIN)
+            clock = lookedAt = nextLookAt
+            const asked = metaAsks(world)
+            chase.noteProjects(['show'])
+            await settle()
+            // One look, not a new round of three tries: one ask of each machine.
+            expect(metaAsks(world) - asked).toBe(2)
+        }
+        expect(waits).toEqual([5, 10, 20, 40, 80, 160, 320, 360, 360])
+        expect(lines.warn).toHaveLength(1)
+        expect(lines.warn[0]).toMatch(/lost\.glb could not be carried — neither machine holds this file; asking again in 5 min, then less often, at most every 6\.0 h/)
+    })
+
+    it('a later look is one try, not a new round of tries', async () => {
+        const world = twoMachines()
+        const [bytes] = missingFiles(1)
+        world.here.docs.set('show', { assets: [{ id: sha(bytes), name: 'lost.glb', size: bytes.length }] })
+        await make(world, { random: () => 0, heldNowhereFirstMs: 20, heldNowhereMostMs: 40 })
+        chase.noteProjects(['show'])
+        await settle()
+        // The first round: 3 tries (backoffMs [1, 1]), each asking both machines.
+        expect(metaAsks(world)).toBe(6)
+        await new Promise(resolve => setTimeout(resolve, 30))
+        await settle()
+        expect(metaAsks(world)).toBe(8)
+        expect(chase.files.failures[0].why).toMatch(/looked 2 times/)
+    })
+
+    it('each wait is up to a fifth shorter at random', async () => {
+        const world = twoMachines()
+        const [bytes] = missingFiles(1)
+        world.here.docs.set('show', { assets: [{ id: sha(bytes), name: 'lost.glb', size: bytes.length }] })
+        let clock = 0
+        await make(world, { backoffMs: [], now: () => clock, random: () => 1 })
+        chase.noteProjects(['show'])
+        await settle()
+        expect(chase.files.failures[0].nextLookAt - clock).toBe(4 * MIN)
+    })
+
+    it('a file that turns up later is carried in the pass after the op that names it, not after the wait', async () => {
+        const world = twoMachines()
+        const [bytes] = missingFiles(1)
+        const doc = { assets: [{ id: sha(bytes), name: 'late.glb', size: bytes.length }] }
+        world.here.docs.set('show', doc)
+        world.there.docs.set('show', doc)
+        let clock = 0
+        await make(world, { backoffMs: [], now: () => clock, random: () => 0 })
+        chase.noteProjects(['show'])
+        await settle()
+        expect(chase.files.heldNowhere).toBe(1)
+
+        // It is added again on the host a minute later: the upload's op names it.
+        clock = 1 * MIN
+        world.there.files.set(sha(bytes), bytes)
+        chase.noteOps('show', [upsert(sha(bytes), 'late.glb', bytes.length)])
+        await settle()
+        expect(world.here.files.get(sha(bytes))?.equals(bytes)).toBe(true)
+        expect(chase.files).toMatchObject({ carried: 1, failed: 0, heldNowhere: 0 })
+    })
+
+    it('a file that turns up with no op is carried at its next look', async () => {
+        const world = twoMachines()
+        const [bytes] = missingFiles(1)
+        world.here.docs.set('show', { assets: [{ id: sha(bytes), name: 'late.glb', size: bytes.length }] })
+        let clock = 0
+        await make(world, { backoffMs: [], now: () => clock, random: () => 0 })
+        chase.noteProjects(['show'])
+        await settle()
+        world.here.files.set(sha(bytes), bytes)
+        clock = chase.files.failures[0].nextLookAt
+        await settle()
+        expect(world.there.files.get(sha(bytes))?.equals(bytes)).toBe(true)
+        expect(chase.files).toMatchObject({ carried: 1, failed: 0 })
+    })
+})

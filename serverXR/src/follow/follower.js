@@ -439,6 +439,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
         const trashPath = `/api/trash?space=${encodeURIComponent(local.spaceId)}`
         const askedAt = Date.now()
+        // A project made or moved on either side this pass: the lists read above no longer hold.
+        let listsMoved = false
         // Every id dropped this pass, once each however many lists named it.
         const dropped = { 'bad id': new Set(), 'over cap': new Set() }
         const onDrop = (reason, id) => dropped[reason]?.add(id)
@@ -464,6 +466,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // not be read is never taken for an empty one.
         if (await carryProjectLife({ here, hereTrash, there, thereTrash, onDrop })) {
             [here, hereTrash] = await readHere()
+            // The host's list is not read again; settings and short names read their own.
+            listsMoved = true
         }
         const localProjects = projectIdsFrom(here.payload, onDrop)
         const remoteProjects = projectIdsFrom(there.payload, onDrop)
@@ -515,6 +519,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 })
                 // Made EMPTY on the host from this side's listing: its content has to
                 // follow by comparison, whatever ops there are or are not.
+                if (made.ok) listsMoved = true
                 if (made.ok && toSide === remote) seeded.add(`project:${projectId}`)
                 // Live on both now: in the base at once, so a trash or rename made
                 // straight after (within one park) is understood as one.
@@ -531,7 +536,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                     continue
                 }
                 if (made.status === 409 && toSide === remote) {
-                    if (await moveThere(projectId)) continue
+                    if (await moveThere(projectId)) { listsMoved = true; continue }
                     sayProjectOnce(`${projectId}|taken-there`, keyScope === 'manage'
                         ? `${projectId} is here and the host has that id in another space — not moved there (the space it is in on the host is not followed here from the same host with a manage key)`
                         : `${projectId} is here and the host has that id in another space — not made there (a follow cannot move a project on the host)`)
@@ -557,6 +562,11 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             const sample = [...dropped['bad id']].slice(0, 3).map(id => JSON.stringify(id.slice(0, 40))).join(', ')
             log.warn?.(`[follow] ${local.spaceId}: ids not carried this pass — ${refusedIds['bad id']} bad id${sample ? ` (${sample})` : ''}, ${refusedIds['over cap']} over the cap of ${MAX_FOLLOWED_PROJECTS}`)
         }
+        // The two lists this pass read, for the space settings and the short names of
+        // the same tick (DSC-7, 2026-10-26: each of the three read them for itself, so
+        // the list was asked 3 times here and twice on the host per tick). A list that
+        // a project was just made into is stale; those two then read it afresh.
+        return listsMoved ? {} : { here, there }
     }
 
     /** Said once per distinct thing, in the log; `di follows` carries the current notes. */
@@ -775,7 +785,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     let settingsNotes = []
     let settingsCarried = 0
     const settingsAttempted = new Set()
-    const syncSettings = async () => {
+    // `lists` is what refreshStreams read this tick; a list it has not is read here.
+    const syncSettings = async (lists = {}) => {
         if (!settingsForce && Date.now() - settingsAt < SETTINGS_EVERY_MS) return
         settingsForce = false
         settingsAt = Date.now()
@@ -783,7 +794,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         const [there, here, mine] = await Promise.all([
             request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address }),
             request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
-            request(local.url(`${path}/projects`), { token: local.token, servername: local.servername, address: local.address })
+            lists.here?.ok ? lists.here : request(local.url(`${path}/projects`), { token: local.token, servername: local.servername, address: local.address })
         ])
         if (!there.ok || !here.ok) return
         const { patch, slug, notes } = planSettings({
@@ -821,13 +832,13 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     let slugNotes = []
     let slugsCarried = 0
     const slugAttempted = new Set()
-    const syncSlugs = async () => {
+    const syncSlugs = async (lists = {}) => {
         if (Date.now() - slugsAt < SETTINGS_EVERY_MS) return
         slugsAt = Date.now()
         const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
         const [there, here] = await Promise.all([
-            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address }),
-            request(local.url(path), { token: local.token, servername: local.servername, address: local.address })
+            lists.there?.ok ? lists.there : request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address }),
+            lists.here?.ok ? lists.here : request(local.url(path), { token: local.token, servername: local.servername, address: local.address })
         ])
         if (!there.ok || !here.ok) return
         const rowsOf = (answer) => (Array.isArray(answer.payload?.projects) ? answer.payload.projects : [])
@@ -1095,9 +1106,10 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // Everything from here on is read afresh, so a wake from before now has
         // been answered; one from after this line keeps the tick from parking.
         woken = false
-        await refreshStreams()
-        await syncSettings().catch(() => {})
-        await syncSlugs().catch(() => {})
+        // The space's project lists, read once here and once on the host (DSC-7).
+        const lists = (await refreshStreams()) || {}
+        await syncSettings(lists).catch(() => {})
+        await syncSlugs(lists).catch(() => {})
 
         // The files the documents list are looked at NOW, before this tick reads
         // the room's log and parks on the other machine for up to 20 s. They used to

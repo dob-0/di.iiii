@@ -13,7 +13,7 @@ import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { httpRequest, pinnedLookup } = require('./httpClient.js')
+const { httpRequest, pinnedLookup, pinnedAgents } = require('./httpClient.js')
 
 let server = null
 afterEach(async () => {
@@ -131,5 +131,30 @@ describe('pinnedLookup — both forms Node may call a custom lookup with', () =>
         const all = []
         pinnedLookup('::1')('caller.invalid', { all: true }, (err, addresses) => all.push({ err, addresses }))
         expect(all).toEqual([{ err: null, addresses: [{ address: '::1', family: 6 }] }])
+    })
+})
+
+// DSC-10 (2026-10-26): a pinned call built `new Agent()`, whose keepAlive is false,
+// while every unpinned call rides Node's global agent (keepAlive since v19). So a
+// pinned follow opened a new connection — and on https a new handshake — per request.
+describe('a pinned address keeps its connection alive, like an unpinned call', () => {
+    it('two requests pinned to one address ride one socket', async () => {
+        let connections = 0
+        const server = http.createServer((req, res) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end('{"ok":true}') })
+        server.on('connection', () => { connections += 1 })
+        await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+        const { port } = server.address()
+        try {
+            const url = `http://kept.invalid:${port}/api/health`
+            expect((await httpRequest(url, { address: '127.0.0.1' })).status).toBe(200)
+            expect((await httpRequest(url, { address: '127.0.0.1' })).status).toBe(200)
+            expect(connections).toBe(1)
+            expect(pinnedAgents.get('http:|127.0.0.1').keepAlive).toBe(true)
+        } finally {
+            for (const agent of pinnedAgents.values()) agent.destroy()
+            pinnedAgents.clear()
+            server.closeAllConnections?.()
+            await new Promise((resolve) => server.close(resolve))
+        }
     })
 })

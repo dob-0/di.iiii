@@ -42,17 +42,23 @@ const pinnedLookup = (address) => (hostname, options, callback) => {
 // a different address, answered 200 from the FIRST address's socket without
 // ever connecting to the second.
 //
-// Each entry gets Node's own Agent defaults — the same ones every unpinned
-// call in this file already gets by passing no `agent` at all — so pinning
-// isolates the pool without changing pooling behaviour. The map itself stays
+// Each entry is built with the options of Node's own global agent — the one
+// every unpinned call in this file gets by passing no `agent` at all — so
+// pinning isolates the pool without changing pooling behaviour. A bare
+// `new Agent()` is NOT that: its keepAlive is false, while http.globalAgent and
+// https.globalAgent use keepAlive with a 5 s idle timeout since Node 19 (Node.js
+// docs, http.globalAgent, "v19.0.0: The agent now uses HTTP Keep-Alive and a 5
+// second timeout by default"). Until 2026-10-26 (DSC-10) a pinned follow opened
+// a new connection, and a new TLS handshake, for every request. The map itself stays
 // small in practice: the callers of `address` are follows and machine links,
 // each configured with at most one pinned address, changed rarely.
+const PINNED_AGENT_OPTIONS = { keepAlive: true, timeout: 5000 }
 const pinnedAgents = new Map()
 const agentFor = (protocol, address) => {
   const key = `${protocol}|${address}`
   let agent = pinnedAgents.get(key)
   if (!agent) {
-    agent = protocol === 'https:' ? new https.Agent() : new http.Agent()
+    agent = protocol === 'https:' ? new https.Agent(PINNED_AGENT_OPTIONS) : new http.Agent(PINNED_AGENT_OPTIONS)
     pinnedAgents.set(key, agent)
   }
   return agent
