@@ -6,6 +6,7 @@ import LoadingScreen from './components/LoadingScreen.jsx'
 import useDocumentTitle from './hooks/useDocumentTitle.js'
 import { isPreviewRequest } from './utils/previewMode.js'
 import { spaceAddressOf } from './utils/spaceAddress.js'
+import { spaceTabTitle, spaceWordFor } from './utils/oneNamePerSpace.js'
 
 const App = lazyWithReload(() => import('./App.jsx'), 'app')
 const BlankNodeWorkspaceApp = lazyWithReload(() => import('./raw/BlankNodeWorkspaceApp.jsx'), 'raw-workspace')
@@ -90,19 +91,21 @@ export default function SpaceSurfaceApp({ routeState }) {
 
     const publishedProjectId = surfaceState.space?.publishedProjectId || null
     const routeProjectId = routeState?.projectId || null
+    // One name per space (docs/ai/vocabulary.md): what the viewer's bar, heading and tab say is the space's name, its address
+    // when nobody named it, whichever address was typed (utils/oneNamePerSpace.js).
+    const spaceAddress = spaceAddressOf(surfaceState.space, spaceId)
+    const spaceLabel = spaceWordFor(surfaceState.space?.label, spaceAddress)
 
-    // The naming rule (docs/ai/vocabulary.md): a space's own name is what a
-    // visitor sees for it — tab included. Skipped for 'main', the platform's
-    // own space: its name IS di.iiii, so index.html's default tab title
-    // already says the right thing — the same fossil ogRoutes.js's `own`
-    // check carries for the link-preview card. Only set here for the bare
-    // <App/> surface below; both PublicProjectViewer branches set their own
-    // title once they know whether they are showing a project too.
+    // The naming rule (docs/ai/vocabulary.md): a space's own name is what a visitor sees for it — tab included. The
+    // platform's own space gets no title here: its name IS di.iiii, which index.html's default tab already says (the same
+    // fossil ogRoutes.js's `own` check carries for the link-preview card). Asked of the space's record, not of the word
+    // that was typed: /di-iiii is the same space as /main. Only set here for the bare <App/> surface below; both
+    // PublicProjectViewer branches set their own title once they know whether they are showing a project too.
     useDocumentTitle(
-        shouldResolvePublishedSurface && spaceId !== DEFAULT_SPACE_ID
+        shouldResolvePublishedSurface
             && !routeProjectId && !publishedProjectId && page !== APP_PAGE_PREFERENCES
             && surfaceState.status === 'ready'
-            ? `${surfaceState.space?.label || spaceId} — di.iiii`
+            ? spaceTabTitle({ spaceId: surfaceState.space?.id || spaceId, label: surfaceState.space?.label, address: spaceAddress })
             : null
     )
 
@@ -131,8 +134,8 @@ export default function SpaceSurfaceApp({ routeState }) {
                     key={`${spaceId}:${routeProjectId}`}
                     spaceId={spaceId}
                     projectId={routeProjectId}
-                    spaceLabel={surfaceState.space?.label || spaceId}
-                    spaceAddress={spaceAddressOf(surfaceState.space, spaceId)}
+                    spaceLabel={spaceLabel}
+                    spaceAddress={spaceAddress}
                     // The URL itself names this project (/{space}/p/{project} or
                     // its vanity-slug form) — the naming rule's "inside a
                     // project" case. The bare-space branch below is the other
@@ -151,8 +154,8 @@ export default function SpaceSurfaceApp({ routeState }) {
                     key={`${spaceId}:${publishedProjectId}`}
                     spaceId={spaceId}
                     projectId={publishedProjectId}
-                    spaceLabel={surfaceState.space?.label || spaceId}
-                    spaceAddress={spaceAddressOf(surfaceState.space, spaceId)}
+                    spaceLabel={spaceLabel}
+                    spaceAddress={spaceAddress}
                 />
             </Suspense>
         )

@@ -81,6 +81,45 @@ describe('a space\'s contents page', () => {
         expect(document.title).toBe(before)
     })
 
+    // One name per space (owner, 2026-09-14), on the platform's own space reached by its address: the page compared the
+    // word that was typed with 'main', so the tab read "di.iiii — di.iiii" and the bar "di.iiii · di.iiii".
+    it('keeps the default tab and says the brand once on the platform\'s own space, reached by its address', async () => {
+        getServerSpaceMock.mockResolvedValue({ id: 'main', slug: 'di-iiii', label: 'di.iiii', publishedProjectId: null })
+        listSpaceContentsMock.mockResolvedValue(contents)
+        document.title = 'di.iiii — public spaces on the open web'
+        render(<SpaceContentsPage spaceId="di-iiii" />)
+
+        expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('di.iiii')
+        expect(document.title).toBe('di.iiii — public spaces on the open web')
+        expect(document.querySelector('.sbar-home').textContent).toBe('di.iiii')
+        expect(document.querySelector('.sbar-where')).toBeNull()
+    })
+
+    it('says the address for a space that has no name — in the bar, the heading and the tab', async () => {
+        getServerSpaceMock.mockResolvedValue({ id: 'queerlab', slug: 'queer-lab', label: '', publishedProjectId: null })
+        listSpaceContentsMock.mockResolvedValue(contents)
+        render(<SpaceContentsPage spaceId="queerlab" />)
+
+        expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('queer-lab')
+        const where = document.querySelector('.sbar-where')
+        expect(where.textContent).toBe('queer-lab')
+        expect(where).toHaveAttribute('href', '/queer-lab')
+        await waitFor(() => expect(document.title).toBe('queer-lab — di.iiii'))
+    })
+
+    it('says a named space\'s name in the bar and links it to the space\'s address, whichever address was typed', async () => {
+        listSpaceContentsMock.mockResolvedValue(contents)
+        for (const typed of ['dilijan', 'dilijan-camp']) {
+            getServerSpaceMock.mockResolvedValue({ id: 'dilijan', slug: 'dilijan-camp', label: 'Dilijan As A Screen', publishedProjectId: null })
+            const { unmount } = render(<SpaceContentsPage spaceId={typed} />)
+            await screen.findByRole('heading', { level: 1 })
+            const where = document.querySelector('.sbar-where')
+            expect(where.textContent, typed).toBe('Dilijan As A Screen')
+            expect(where, typed).toHaveAttribute('href', '/dilijan-camp')
+            unmount()
+        }
+    })
+
     // The server sends a private row to a member only (serverXR/src/projectVisibility.js);
     // the member is told that this one is not what a visitor sees.
     it('marks a private row as private, and no other', async () => {

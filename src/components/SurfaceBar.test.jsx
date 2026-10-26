@@ -83,6 +83,71 @@ describe('SurfaceBar', () => {
         expect(document.querySelector('.sbar-where').textContent).toBe('queerlab')
     })
 
+    // One name per space (owner, 2026-09-14; docs/ai/vocabulary.md). The bar was fed a different word by each surface: the
+    // id, the segment that was typed, or a carve-out — so the platform's own space read "di.iiii · main", "di.iiii · di-iiii"
+    // and "di.iiii · di.iiii" depending on the page, and the space link went to the id on some of them.
+    describe('one name per space', () => {
+        // What the bar says on its left: the brand, then the space when it says one, then the project when there is one.
+        const barLeft = () => [...document.querySelector('nav.sbar').children]
+            .filter(el => /\bsbar-(home|sep|where)\b/.test(el.className))
+            .map(el => el.textContent)
+            .join(' ')
+        const spaceWord = () => document.querySelector('.sbar-where:not(.sbar-where--project)')
+
+        it('says the brand once for the platform\'s own space, reached by its id or by its address', () => {
+            for (const props of [
+                { space: 'main', spaceLabel: 'di.iiii', spaceAddress: 'di-iiii' },
+                { space: 'di-iiii', spaceLabel: 'di.iiii', spaceAddress: 'di-iiii' }
+            ]) {
+                const { unmount } = render(<SurfaceBar {...props} />)
+                // no second "di.iiii", no "main", no "di-iiii"
+                expect(barLeft()).toBe('di.iiii')
+                expect(spaceWord()).toBeNull()
+                expect(document.querySelectorAll('.sbar-sep')).toHaveLength(0)
+                unmount()
+            }
+        })
+
+        it('still leads on to the project after the brand: di.iiii · project', () => {
+            render(<SurfaceBar space="main" spaceLabel="di.iiii" spaceAddress="di-iiii" project="p1" projectLabel="Everything made here" here="studio" />)
+            expect(barLeft()).toBe('di.iiii · Everything made here')
+            expect(document.querySelectorAll('.sbar-sep')).toHaveLength(1)
+        })
+
+        it('says a named space\'s name and links to its address, whichever address was typed', () => {
+            for (const typed of ['dilijan', 'dilijan-camp']) {
+                const { unmount } = render(<SurfaceBar space={typed} spaceLabel="Dilijan As A Screen" spaceAddress="dilijan-camp" here="studio" />)
+                expect(barLeft()).toBe('di.iiii · Dilijan As A Screen')
+                expect(spaceWord().getAttribute('href')).toBe('/dilijan-camp')
+                // only the space link moved: the tools still open from the space as the surface was reached
+                expect(hrefFor('Studio')).toBe(`/${typed}/studio`)
+                unmount()
+            }
+        })
+
+        it('says the address for a space that has no name — never its id', () => {
+            render(<SurfaceBar space="queerlab" spaceLabel={null} spaceAddress="queer-lab" />)
+            expect(spaceWord().textContent).toBe('queer-lab')
+            expect(spaceWord().getAttribute('href')).toBe('/queer-lab')
+        })
+
+        it('reads a blank name as no name', () => {
+            render(<SurfaceBar space="queerlab" spaceLabel="   " spaceAddress="queer-lab" />)
+            expect(spaceWord().textContent).toBe('queer-lab')
+        })
+
+        it('links to what it was reached by while the address is not known yet', () => {
+            render(<SurfaceBar space="queerlab" />)
+            expect(spaceWord().textContent).toBe('queerlab')
+            expect(spaceWord().getAttribute('href')).toBe('/queerlab')
+        })
+
+        it('leaves the project link as it was — built from the space the surface was reached by', () => {
+            render(<SurfaceBar space="main" spaceLabel="di.iiii" spaceAddress="di-iiii" project="p1" projectLabel="First room" />)
+            expect(document.querySelector('.sbar-where--project').getAttribute('href')).toBe('/main/studio/projects/p1')
+        })
+    })
+
     it('gets out of the way of a presentation', () => {
         const { container } = render(<SurfaceBar hidden />)
         expect(container.querySelector('.sbar')).toBeNull()

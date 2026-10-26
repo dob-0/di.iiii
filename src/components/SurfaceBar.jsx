@@ -7,6 +7,7 @@ import { buildRawProjectPath, buildRawProjectsPath } from '../raw/utils/rawRouti
 import { buildMapPath } from '../map/mapRouting.js'
 import { useAllTools } from '../studio/utils/jamMode.js'
 import SyncLight from '../sync/SyncLight.jsx'
+import { isPlatformName, spaceWordFor } from '../utils/oneNamePerSpace.js'
 
 /**
  * The one strip that is on every surface.
@@ -136,8 +137,9 @@ export const fitDestinations = ({ widths, gap, more, avail }) => {
 
 export default function SurfaceBar({
     here = null,           // which destination is the current one
-    space = null,          // space id, when the surface belongs to one
-    spaceLabel = null,     // what to call it in words
+    space = null,          // the space, as this surface was reached (its id or its address): the tools below are built from it
+    spaceLabel = null,     // the space's NAME (its label), when it has one
+    spaceAddress = null,   // the address a visitor reaches the space by (utils/spaceAddress.js); `space` until it is known
     project = null,        // project id, when the surface is one project's
     projectLabel = null,   // its title
     isLocalInstall = false,
@@ -251,6 +253,14 @@ export default function SurfaceBar({
     const overflow = destinations.slice(shown)
     const hereInMore = overflow.some(d => d.key === here)
 
+    // One name per space (owner, 2026-09-14; docs/ai/vocabulary.md): the bar says the space's NAME, or its address when
+    // nobody named it, and its link goes to that address — the same word on every surface of the space, whatever address
+    // was typed to reach it. The platform's own space is named after the brand this bar already leads with, so the brand
+    // shows once: no second "di.iiii", no id, no address.
+    const address = spaceAddress || space
+    const spaceWord = space ? spaceWordFor(spaceLabel, address) : ''
+    const sayBrandOnce = isPlatformName(spaceWord)
+
     const linkFor = (d, className = 'sbar-link') => (
         <a
             key={d.key}
@@ -273,10 +283,10 @@ export default function SurfaceBar({
     return (
         <nav ref={barRef} className={`sbar${float ? ' sbar--float' : ''}${syncShown ? ' sbar--sync' : ''}`} aria-label="di.iiii">
             <a className="sbar-home" href="/spaces">di.iiii</a>
-            {space && (
+            {space && !sayBrandOnce && (
                 <>
                     <span className="sbar-sep" aria-hidden="true">·</span>
-                    <a className="sbar-where" href={`/${space}`}>{spaceLabel || space}</a>
+                    <a className="sbar-where" href={`/${address}`}>{spaceWord}</a>
                 </>
             )}
             {space && project && (
