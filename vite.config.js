@@ -500,9 +500,11 @@ export default {
     root: 'src/',
     // An include-list, not a delete-list: under the local profile the public
     // directory is copied by localPublicDirPlugin, which names what a copy of
-    // the program needs (fonts, draco, basis, suite, unicode-fonts, vendor)
+    // the program needs (PROGRAM_PUBLIC_DIRS in src/works/buildProfile.js)
     // plus each work's own media, and therefore cannot silently start shipping
-    // whatever gets dropped into public/ next.
+    // whatever gets dropped into public/ next. The same list cannot silently
+    // drop it either: src/works/localProfile.test.js fails on an entry of
+    // public/ that is neither in the list nor named there as left out.
     publicDir: LOCAL_PROFILE ? false : '../public/',
     envDir: '../',
     // Keep the dep-optimizer cache in the WORKTREE, not in node_modules.
