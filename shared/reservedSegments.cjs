@@ -101,6 +101,18 @@ const RESERVED_SPACE_SLUGS = new Set([...APP_SEGMENTS, ...STATIC_SEGMENTS, ...SH
 
 // Static directories do not shadow a project: they only ever match at the top
 // level, and a project always lives one segment deeper.
+//
+// This list covers a project's short name (PATCH /api/projects/:id) AND the id of
+// a NEW project (POST /api/spaces/:space/projects, refused with 400 since
+// 2026-10-26): with no short name the id IS the address, /{space}/{id}, and the
+// router drops these words in that position (src/utils/spaceRouting.js). The
+// store does not apply it (ensureProject, used by snapshot restore and the
+// open-jam bootstrap, takes any well-formed id); the create route does. The one
+// way past the route is `carried: true` in the create body, for the same project
+// arriving from another install (a follow, a copy), which keeps the id it has.
+// It is never a way to get a reserved name for a project that is new.
+// Two words can never be an id anyway: `p` is under 3 letters and `open_jam` has
+// an underscore (the store turns that into a hyphen).
 const RESERVED_PROJECT_SLUGS = new Set([...APP_SEGMENTS, ...SHAPE_SEGMENTS])
 
 module.exports = {

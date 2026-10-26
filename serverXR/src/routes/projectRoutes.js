@@ -17,6 +17,7 @@ const { countProjectLayers } = require('../../../shared/layers.cjs')
 const { canAccessSpace, formatAuthScopeLabel } = require('../authAccess')
 const { assetCacheControl, filterVisibleProjects } = require('../projectVisibility')
 const { normalizeProductionVersion, normalizeProductionMeta } = require('../../../shared/projectSchema.cjs')
+const { RESERVED_PROJECT_SLUGS } = require('../../../shared/reservedSegments.cjs')
 
 // A project's write: the version check, the document, the ops and the version
 // itself, guarded against this process AND every other server on the same data
@@ -62,7 +63,11 @@ function registerProjectRoutes(router, {
   findProjectBySlug,
   getProjectLiveBucket,
   getProjectPaths,
-  isReservedProjectSlug = () => false,
+  // Fails CLOSED. This used to default to `() => false`, so a router mounted without the
+  // predicate (a line missing in index.js, a test, another host) quietly stopped refusing
+  // reserved words, with no error anywhere. The default is the shared list itself
+  // (shared/reservedSegments.cjs): the words stay reserved however the router is built.
+  isReservedProjectSlug = (slug) => RESERVED_PROJECT_SLUGS.has(slug),
   isValidAssetId,
   listProjectsInSpace,
   maxOpHistory,
@@ -352,6 +357,25 @@ function registerProjectRoutes(router, {
       const projectId = normalizeProjectId(slugSource)
       if (!projectId) {
         return res.status(400).json({ error: 'Invalid project id.' })
+      }
+      // The id is the address of a project that has no short name: /{space}/{id}.
+      // spaceRouting.js throws away a reserved word in that position, so a project
+      // born with one can be made but never opened at its own address (seen: `privacy`
+      // in `main`, which opens only at /p/privacy). PATCH has refused these words as a
+      // short name since the slug-hijack fix, and space creation as a space id; this
+      // was the third door. It is checked on the NORMALISED id, so "PRIVACY", " Privacy "
+      // and "Privacy!" are the word too, and BEFORE "taken", so the person is told about
+      // the word and not about somebody else's project.
+      //
+      // It lives here, in the route, and not in ensureProject: a snapshot restore, the
+      // open-jam bootstrap and a project already stored under such an id make theirs
+      // through ensureProject and must keep working. One caller does come through this
+      // route with an id it did not choose: a follow, and the copy scripts, making a
+      // project the other side already has (follower.js, makeMissing). It says so with
+      // `carried: true` and keeps its id; only the boolean `true` counts.
+      const carried = req.body?.carried === true
+      if (!carried && isReservedProjectSlug(projectId)) {
+        return res.status(400).json({ error: `"${projectId}" is a reserved address and can't be a project name — try another.` })
       }
       const existing = await resolveProjectContext(projectId)
       if (existing) {

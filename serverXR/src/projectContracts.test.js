@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -19,6 +20,11 @@ vi.setConfig({ testTimeout: 25_000, hookTimeout: 40_000 })
 
 const SERVER_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SERVER_ENTRY = path.join(SERVER_ROOT, 'src/index.js')
+
+// The one list of words a project may not be called (shared/reservedSegments.cjs):
+// the reserved-word tests below loop over it, so a word added there is covered
+// with no edit in this file.
+const { RESERVED_PROJECT_SLUGS } = createRequire(import.meta.url)('../../shared/reservedSegments.cjs')
 
 const activeServers = []
 
@@ -970,6 +976,162 @@ describe('project contracts', () => {
         const collisionBody = await collision.json()
         expect(collisionBody.error).toBe('that name is taken on this di.iiii — try another')
         expect(collisionBody.error).not.toBe('Project already exists.')
+    })
+})
+
+// ── A reserved word is never a new project's id ──────────────────────────────
+// Added 2026-10-26 (fix-all, reserved names). A project with no short name is
+// opened at /{space}/{id}, and spaceRouting.js throws away a reserved word in
+// that position, so a project born with one (a title of "Privacy", "Plot" or
+// "Light") could be made but never opened at its own address. PATCH has refused
+// these words as a short name, and space creation as a space id, since the
+// slug-hijack fix; creating a project did not. One project was already in that
+// state when this was found: id `privacy`, in the space `main`.
+//
+// The guard sits in the create ROUTE, not in ensureProject: a snapshot restore
+// and the open-jam bootstrap call ensureProject themselves (projectStore.test.js
+// pins that). A follow makes a missing project through this very route, so the
+// route lets a request that says `carried: true` keep an id it already has.
+describe('a reserved word is never a new project\'s id', () => {
+    const ID_SHAPE = /^[a-z0-9-]{3,64}$/
+    // `p` (under three letters) and `open_jam` (an underscore) can never be a
+    // project id, so there is nothing for the guard to stop. Every other word is
+    // checked, and a word added to the shared list is covered with no edit here.
+    const idShaped = [...RESERVED_PROJECT_SLUGS].filter((word) => ID_SHAPE.test(word))
+    const cap = (word) => word[0].toUpperCase() + word.slice(1)
+    const json = { 'Content-Type': 'application/json' }
+
+    const post = (server, spaceId, body) => fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+        method: 'POST',
+        headers: json,
+        body: JSON.stringify(body)
+    })
+    const reservedIdsIn = async (server, spaceId) => {
+        const { projects } = await (await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`)).json()
+        return projects.map((project) => project.id).filter((id) => RESERVED_PROJECT_SLUGS.has(id))
+    }
+    const sentence = (word) => `"${word}" is a reserved address and can't be a project name — try another.`
+
+    it('refuses every one of them, in a plain sentence, and makes nothing', async () => {
+        // A loop over nothing proves nothing: the list is 31 words today, 29 of them ids.
+        expect(idShaped.length).toBeGreaterThan(25)
+        const server = await startServer()
+
+        for (const word of idShaped) {
+            const answer = await post(server, 'main', { title: word, slug: word })
+            expect(answer.status, word).toBe(400)
+            expect((await answer.json()).error, word).toBe(sentence(word))
+            expect((await fetch(`${server.baseUrl}/api/projects/${word}`)).status, word).toBe(404)
+        }
+        expect(await reservedIdsIn(server, 'main')).toEqual([])
+    })
+
+    it('reads a word the way the router does: any case, either source, padding and marks', async () => {
+        const server = await startServer()
+
+        for (const word of idShaped) {
+            // The title alone is an id source ...
+            const shouted = await post(server, 'main', { title: word.toUpperCase() })
+            expect(shouted.status, word.toUpperCase()).toBe(400)
+            // ... and the studio's own shape is { title, slug: title }.
+            const typed = await post(server, 'main', { title: cap(word), slug: cap(word) })
+            expect(typed.status, cap(word)).toBe(400)
+        }
+        // Padding is trimmed, marks fall out of an id, and a space becomes the dash of `for-apps`.
+        for (const title of ['  Privacy  ', 'Privacy!', 'PRIVACY', 'For Apps']) {
+            expect((await post(server, 'main', { title })).status, title).toBe(400)
+        }
+        expect(await reservedIdsIn(server, 'main')).toEqual([])
+    })
+
+    it('still makes a project whose name only contains a reserved word', async () => {
+        const server = await startServer()
+
+        for (const [title, id] of [
+            ['Privacy Policy', 'privacy-policy'],
+            ['Tools Room', 'tools-room'],
+            ['Wiki notes', 'wiki-notes'],
+            ['Light desk', 'light-desk'],
+            ['The Plot', 'the-plot']
+        ]) {
+            const made = await post(server, 'main', { title, slug: title })
+            expect(made.status, title).toBe(201)
+            expect((await made.json()).project.id, title).toBe(id)
+            expect((await fetch(`${server.baseUrl}/api/projects/${id}`)).status, id).toBe(200)
+        }
+    })
+
+    it('lets a follow or a copy bring a project that already has a reserved id, and no one else', async () => {
+        const server = await startServer()
+
+        // A person, an agent or a script choosing the name: refused.
+        expect((await post(server, 'main', { slug: 'privacy', title: 'Privacy Policy' })).status).toBe(400)
+        // Only the boolean `true` counts, never a word that looks like it.
+        for (const carried of ['true', 'yes', 1, null, false]) {
+            const answer = await post(server, 'main', { slug: 'privacy', title: 'Privacy Policy', carried })
+            expect(answer.status, String(carried)).toBe(400)
+        }
+        expect(await reservedIdsIn(server, 'main')).toEqual([])
+
+        // The follower making the same project it found on the other side: made, with its id.
+        const made = await post(server, 'main', { slug: 'privacy', title: 'Privacy Policy', carried: true })
+        expect(made.status).toBe(201)
+        expect((await made.json()).project.id).toBe('privacy')
+        expect((await fetch(`${server.baseUrl}/api/projects/privacy`)).status).toBe(200)
+        // The flag changes nothing for an ordinary name.
+        expect((await post(server, 'main', { slug: 'ordinary-name', title: 'Ordinary', carried: true })).status).toBe(201)
+    })
+
+    it('answers "reserved" before "taken", and a carried copy of a taken id still meets the 409', async () => {
+        const server = await startServer()
+        expect((await post(server, 'main', { slug: 'privacy', title: 'Privacy Policy', carried: true })).status).toBe(201)
+        const other = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: json,
+            body: JSON.stringify({ label: 'Second Space', slug: 'second-space' })
+        })
+        expect(other.status).toBe(201)
+
+        // The same id asked for again in another space, by a person: the word is the news.
+        const chosen = await post(server, 'second-space', { slug: 'privacy', title: 'Privacy Policy' })
+        expect(chosen.status).toBe(400)
+        expect((await chosen.json()).error).toBe(sentence('privacy'))
+        // The follower asking for it: the project is on this install already, in another space, and
+        // the 409 is how it learns to move it here instead (follower.js, makeMissing).
+        const carried = await post(server, 'second-space', { slug: 'privacy', title: 'Privacy Policy', carried: true })
+        expect(carried.status).toBe(409)
+        expect((await carried.json()).error).toBe('that name is taken on this di.iiii — try another')
+    })
+
+    it('leaves a project that already holds a reserved id as it was: it takes edits and can be given a short name', async () => {
+        const server = await startServer()
+        expect((await post(server, 'main', { slug: 'privacy', title: 'Privacy Policy', carried: true })).status).toBe(201)
+
+        const edit = await fetch(`${server.baseUrl}/api/projects/privacy/ops`, {
+            method: 'POST',
+            headers: json,
+            body: JSON.stringify({ baseVersion: 0, ops: [{ type: 'createEntity', payload: { entity: { id: 'entity-1', type: 'box', name: 'Shared Box' } } }] })
+        })
+        expect(edit.status).toBe(200)
+        expect((await edit.json()).newVersion).toBe(1)
+
+        // A short name that is not a reserved word is the way out for a project whose id is one:
+        // /{space}/privacy-policy opens it, while its id stays what it always was.
+        const named = await fetch(`${server.baseUrl}/api/projects/privacy`, {
+            method: 'PATCH',
+            headers: json,
+            body: JSON.stringify({ slug: 'privacy-policy' })
+        })
+        expect(named.status).toBe(200)
+        expect((await named.json()).project.slug).toBe('privacy-policy')
+        expect((await fetch(`${server.baseUrl}/api/resolve/main/privacy-policy`)).status).toBe(200)
+        // The reserved word itself is still refused as a short name.
+        const refused = await fetch(`${server.baseUrl}/api/projects/privacy`, {
+            method: 'PATCH',
+            headers: json,
+            body: JSON.stringify({ slug: 'terms' })
+        })
+        expect(refused.status).toBe(400)
     })
 })
 

@@ -27,6 +27,10 @@ published project at 200 while the address bar said otherwise. See `docs/ai/know
   from the immutable id; project slugs unique per-space, space slugs unique platform-wide).
   `PATCH /api/spaces/:id` / `PATCH /api/projects/:id` accept `slug`; reserved-word and
   format validation, 409 on collision, never silent truncation/auto-suffixing.
+  **Amendment, 2026-10-26:** create is covered too — `POST /api/spaces/:id/projects` answers 400
+  for a reserved word as the id (on the cleaned-up id, before the 409), since with no slug the
+  id is the address `/{space}/{id}`; the same project arriving by follow or copy sends
+  `carried: true` and keeps its id.
 - **3b — bare short-link routing**: `GET /api/resolve/:spaceSegment/:projectSegment`
   resolves slug-or-id to real ids (gated by the same `requireReadRole` every other route
   uses — a private space's slug is not distinguishable from a nonexistent one to an
