@@ -170,6 +170,19 @@ describe('LandingPage local-install copy', () => {
         expect(screen.queryByText('3 free spaces')).not.toBeInTheDocument()
     })
 
+    // The line under the three buttons used to say "Studio is a room on the
+    // same desk": it named no button and used `desk`, a word the dictionary
+    // retired. It now says what the first button does, which is the same camera
+    // move into the scene as on a hosted install.
+    it('says under the buttons what Step inside does, in the dictionary\'s words', async () => {
+        serverConfigState.current = { local: true, requireAuth: false }
+        render(<LandingPage />)
+
+        expect(await screen.findByText('no account, no quota. Step inside walks into the scene.')).toBeInTheDocument()
+        expect(screen.queryByText(/desk/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/Studio is a room/)).not.toBeInTheDocument()
+    })
+
     it('keeps hosted copy on the hosted product', async () => {
         serverConfigState.current = { local: false, requireAuth: true }
         render(<LandingPage />)

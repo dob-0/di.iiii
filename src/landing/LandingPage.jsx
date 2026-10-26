@@ -103,7 +103,9 @@ const LOCAL_STEP_OPEN = { n: '01', title: 'Open a space', body: 'Open the Spaces
 // row was hidden here too; it is filtered per chip now — see
 // featuredSpacesFor above.) Same one boolean, no second mode.
 const LOCAL_TAGLINE = 'Running on your own machine. Offline, no account, and the work stays in your home folder.'
-const LOCAL_CTA_SUB = 'no account, no quota. Studio is a room on the same desk.'
+// The line under the three buttons says what the first one does: the same
+// camera move into the scene behind the page as on a hosted install (openDoor).
+const LOCAL_CTA_SUB = 'no account, no quota. Step inside walks into the scene.'
 const LOCAL_FEATURE_SPACES = { icon: '✦', title: 'Your machine, your spaces', desc: 'This di.iiii runs locally. Create as many spaces as you like — no sign-in, no quota, and your work stays in your own home folder.' }
 
 // Step 04's promise reaches further than a local install goes: `di up` binds

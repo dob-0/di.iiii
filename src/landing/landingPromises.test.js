@@ -87,7 +87,9 @@ const RETIRED = [
     { claim: 18, text: 'automated systems alike', in: ['door', 'copy'], why: '"alike" says equal support; the four cards are not equal.' },
     { claim: 19, text: 'No 3D software experience needed', in: ['door', 'copy'], why: 'No first-time-user test exists.' },
     { claim: 20, text: 'conferences, or art shows', in: ['door', 'copy'], why: '"Conferences" has no feature or use on record.' },
-    { claim: 1, text: 'opens your own private sandbox', in: ['wiki:guest-and-sandbox-modes'], why: 'On the front door Step inside flies into the scene; the sandbox is on the Spaces page.' }
+    { claim: 1, text: 'opens your own private sandbox', in: ['wiki:guest-and-sandbox-modes'], why: 'On the front door Step inside flies into the scene; the sandbox is on the Spaces page.' },
+    // Claim 22: found by the same read, after the first pass. A local install shows its own line under the buttons.
+    { claim: 22, text: 'Studio is a room on the same desk', in: ['door'], why: 'It names no button and says `desk`, a word the dictionary retired ("say the true thing", vocabulary.md). Step inside is a camera move into the scene, on a local install as on a hosted one (LandingPage.jsx openDoor).' }
 ]
 
 // The replacement. `both` is one sentence on both pages; `door` / `copy` differ
@@ -113,7 +115,8 @@ const NOW = [
     { claim: 16, both: 'free accounts, publishing, and the API.' },
     { claim: 17, both: 'Four steps, from a new space to a link you can share.' },
     { claim: 18, door: 'artists, developers, organizers, and automated systems.', copy: 'artists, developers, organisers, and automated systems.' },
-    { claim: 20, both: 'for live events or art shows.' }
+    { claim: 20, both: 'for live events or art shows.' },
+    { claim: 22, door: 'no account, no quota. Step inside walks into the scene.' }
 ]
 
 describe('landing promises: what was proven false stays out', () => {
