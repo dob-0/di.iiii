@@ -409,7 +409,7 @@ export const WIKI_ARTICLES = [
         title: 'The Open Space, your sandbox & guest mode',
         summary: 'Everyone shares one communal Open Space, and every visitor — guest or account — gets exactly one private sandbox.',
         body: [
-            'The landing page’s “Step inside” button opens your own private sandbox — no account, no space picker, one click to building. What you make there is kept in the space, where Studio and Nodes sit side by side and “View live” hands out the address. The shared Open Space itself lives at /open.',
+            'The landing page’s “Step inside” button walks you into the scene behind the page: it makes nothing and asks for no sign-in. Your own private sandbox is on the Spaces page, and it comes into existence when you enter it — no account needed. What you make there is kept in the space, where Studio and Nodes sit side by side and “View live” hands out the address. On the standing copy of the landing page (/di-iiii/landing), “Step inside” opens the Spaces page instead. The shared Open Space itself lives at /open.',
             'There are three kinds of places, and everyone gets the first two without an account:',
             { list: [
                 'The Open Space — one shared space where every visitor can build, together, live. It is always there and survives cleanup; an admin can restore it from a daily snapshot if it gets trashed.',
@@ -428,12 +428,12 @@ export const WIKI_ARTICLES = [
             'For admins: Ops Graph → Manage can repoint the communal space (the guest entry), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.',
             'Ops Graph → Manage also shows the site’s own traffic for the last 30 days under Traffic: page views, sign-ups, the busiest day, the most viewed pages and the sites visitors came from. These are counted here, one per page load, with no cookie and no third party — the same counting the privacy page describes.',
             'A room carries its own text for anything that reads instead of looking. A space drawn on a canvas used to be an empty page to a screen reader, a search engine, or a browser whose 3D failed; every published room now also carries its name, its lines and its doors as ordinary links, out of sight but reachable — tab through a room and each door becomes a visible link you can follow without a mouse.',
-            'The front door IS the room. Opening diiii.xyz no longer shows a page about the space with the space drawn behind it — it opens the space: the name and the one line stand inside it as things you can walk past, and the doors to the works are the real links. The room has one address and it is the bare domain: an old /main link still resolves, it just heals to / so you are never shown a room called “main”. The addresses inside that space — /main/studio, /main/raw, a project deep-link — keep their names. The old landing page is moved rather than deleted: it is at /?tour=1.',
-            'The landing page has one door. It used to offer three side by side — “Step inside”, “Open Studio” and “Enter Space” — which asked a first-time visitor to choose between them before they knew what any of them were. Studio is not a rival to the door now: step inside, and Studio is there to walk into. The quiet “Already have spaces? Open Studio →” line under the button is the return path for people who already have work of their own.',
-            'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page. Where no Main space is set at all, the landing offers “Look around” instead — a decorative walkable preview of its own hero, not a real space.'
+            'The front door is the landing page, and the scene is behind it: on a wide screen the page is ordinary HTML over the scene, and a phone loads the scene only when you press “Step inside”. Pressing it turns the page’s pieces into objects in that scene while the camera flies in, instead of a new page loading. The scene holds the name, the one line and a door to each featured work, all things you can walk past. ?room=1 opens the scene bare, without the page. That scene is the live project of di.iiii’s own front space, which has its own address, /di-iiii; an old /main link still resolves and heals to /?room=1, so the bare name “main” never stays in the address bar. The addresses inside that space — /main/studio, /main/raw, a project deep-link — keep their names. On a local install, / is your own home, the landing page is at /?tour=1, and /main is not rewritten.',
+            'The landing page names three routes, in order of weight: “Step inside” walks into the scene behind the page, “The Spaces” opens the Spaces page, and “Open Space” opens the shared Open Jam. The quiet “Already have spaces? Open your Spaces →” line further down is the return path for people who already have work of their own.',
+            'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page.'
         ],
         tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr', 'telegram', 'sign in'],
-        updated: '2026-09-28'
+        updated: '2026-10-26'
     },
     {
         id: 'space-history',
@@ -812,7 +812,7 @@ export const WIKI_ARTICLES = [
         title: 'Publishing & public spaces',
         summary: 'Make a project live and decide who can see it — right from your Spaces page.',
         body: [
-            'Each space has a public URL at /<space>. Set a space’s published project, then mark the space Public to let anyone view it without signing in.',
+            'Each space has its own address at /<space>. Mark the space Public and anyone can open it without signing in; set a project live and that project is what they see there.',
             'If you own the space you do all of this yourself on the Spaces page (/studio): Rename, Public/Private, Link project, GitHub sync, and Delete sit on each of your space cards. No admin needed.',
             'Public spaces show their live link right on the card (and in the editor’s Spaces panel) with one-click Copy — that link is what visitors open. Public spaces you can’t edit are marked “View live”, and clicking their card takes you straight to the live view — one click, no login wall.',
             'A few spaces share their address with a piece that is part of diiii.xyz itself — /wcc is the WCC exhibition’s own landing page, and the wcc SPACE, with its eleven artist projects, lives one step deeper. Where that happens, the space card no longer points at the piece: its picture, its live frame and its Live link all open the space’s published project, so the card is always a door to the space it names. The piece keeps its own address; nothing about /wcc itself changed. On an offline copy of di.iiii, where those pieces are left out to keep the download small, such a card used to say “not in this copy” even though every project it holds was sitting on the machine — now it opens them.',
@@ -829,10 +829,10 @@ export const WIKI_ARTICLES = [
             'Published code pages can use the visitor’s camera, microphone and motion sensors — but only if the project opts in by setting deviceAccess: true in its presentation state (repo-synced pages set it in their di-space manifest). Opted-in pages run without the usual origin isolation, so reserve it for pages you author yourself; everything else stays fully sandboxed. The visitor still gets the normal browser permission prompt either way.',
             'Opting into deviceAccess also gives the page real, persistent localStorage and sessionStorage — what it saves survives reloads and is shared with the space’s other opted-in pages on the same device, which is how one page can leave something for a sibling to find. Fully sandboxed pages keep an in-memory stand-in instead: calls succeed, but nothing outlives the visit.',
             'Published code pages can read the URL’s query string — /<space>/<slug>?just=bkyi — through window.diiPageQuery (already parsed for you as window.diiPageParams). A published page is rendered inside a frame with no URL of its own, so location.search there is always empty; read new URLSearchParams(window.diiPageQuery || location.search) and the same code keeps working when you open the file locally. This is what lets one published page hand over to another with state — “open the field, on the core I just made”.',
-            'Add ?embed=1 to any published link and the viewer becomes glass: no dark shell of its own, no “Made with di.iiii” badge, no Walk/Fly button, no loading screen. Use it when the page is a window inside another page rather than somewhere you send people — put it in an iframe and whatever your host page draws shows through behind it. Your page keeps its own background, so make that transparent too if you want the host to show through.'
+            'Add ?embed=1 to any published link and the viewer becomes glass: no dark shell of its own, no “Made with di.iiii” badge, no Walk/Fly button, no loading screen. That changes only what the viewer draws. It does not let another website show the link in a frame: diiii.xyz and dev.diiii.xyz send a frame-ancestors rule that admits only di.iiii itself and the studio’s own tools, so an iframe on any other site stays empty. To show a space to others, share its link.'
         ],
         tags: ['publish', 'public', 'sharing', 'owner', 'live link', 'slug', 'custom link', 'camera', 'device access', 'query', 'url parameters', 'embed', 'iframe', 'transparent', 'storage', 'localstorage', 'space card', 'wcc'],
-        updated: '2026-10-21'
+        updated: '2026-10-26'
     },
     {
         id: 'invite-links',
@@ -1175,19 +1175,23 @@ export const WIKI_ARTICLES = [
         id: 'api-and-agents',
         category: 'For developers',
         title: 'API & agents',
-        summary: 'Read and drive spaces and projects over the serverXR REST API.',
+        summary: 'Read and drive spaces and projects over the serverXR REST API, or hand di.iiii to an agent over MCP.',
         body: [
-            'di.iiii exposes a structured REST API under /serverXR/api/ for developers and AI agents.',
+            'di.iiii exposes a structured REST API under /serverXR/api/ for developers and AI agents. The path itself is not a page: the machine-readable list of what the API can do is an OpenAPI 3.1 document at /serverXR/api/catalogue. It shows what the asking program may call, so a program that is not signed in sees fewer endpoints than a signed-in one.',
             { list: [
                 'GET /serverXR/api/health — backend health',
                 'GET /serverXR/api/auth/session — session + space quota state',
                 'GET /serverXR/api/spaces — spaces visible to you',
-                'GET /serverXR/api/spaces/:id/projects — projects in a space'
+                'GET /serverXR/api/spaces/:id/projects — projects in a space',
+                'GET /serverXR/api/spaces/:id/scene — a space’s scene as JSON',
+                'GET /serverXR/api/projects/:id/document — a project as JSON'
             ] },
+            'Reading a public space needs no sign-in. Changing anything does: a browser session, or the token a terminal login (di login) gives — and a terminal login is refused anything public (publish, delete, invites). On a local install with sign-in off, nothing needs one. Name your program in the User-Agent; the rate limits are in “Apps, scripts and AIs”.',
+            'To hand di.iiii to an agent, run di mcp from an install (node sdk/mcp.mjs from a checkout). It is an MCP server with four tools whatever the server can do — di_find, di_describe, di_call and di_run — and it reads the catalogue of the server it talks to. The server stays the protection: it refuses what the token may not do, and public moves are refused unless the person who launched the server allows them and each call carries a confirmation.',
             'Realtime updates are delivered over WebSocket (socket.io) and SSE.'
         ],
-        tags: ['api', 'developers', 'agents'],
-        updated: '2026-08-19'
+        tags: ['api', 'developers', 'agents', 'mcp', 'catalogue', 'openapi'],
+        updated: '2026-10-26'
     },
     {
         id: 'dev-copy-label',
