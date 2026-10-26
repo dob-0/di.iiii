@@ -1186,7 +1186,7 @@ export const WIKI_ARTICLES = [
                 'GET /serverXR/api/spaces/:id/scene — a space’s scene as JSON',
                 'GET /serverXR/api/projects/:id/document — a project as JSON'
             ] },
-            'Reading a public space needs no sign-in. Changing anything does: a browser session, or the token a terminal login (di login) gives — and a terminal login is refused anything public (publish, delete, invites). On a local install with sign-in off, nothing needs one. Name your program in the User-Agent; Apps, scripts and AIs has the rate limits.',
+            'Reading a public space needs no sign-in. Changing anything does: a browser session, or the token a terminal login (di login) gives — and a terminal login is refused anything public (publish, delete, invites). On a local install with sign-in off, nothing needs one. Name your program in the User-Agent; the rate limits are in “Apps, scripts and AIs”.',
             'To hand di.iiii to an agent, run di mcp from an install (node sdk/mcp.mjs from a checkout). It is an MCP server with four tools whatever the server can do — di_find, di_describe, di_call and di_run — and it reads the catalogue of the server it talks to. The server stays the protection: it refuses what the token may not do, and public moves are refused unless the person who launched the server allows them and each call carries a confirmation.',
             'Realtime updates are delivered over WebSocket (socket.io) and SSE.'
         ],
