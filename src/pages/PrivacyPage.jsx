@@ -5,8 +5,10 @@ import './legal.css'
 
 // Written from docs/ai/privacy-data-inventory.md — a code audit, every claim
 // traced to source. If the code changes, this page must change with it.
-// PrivacyPage.test.jsx holds the sign-in section to the server: every sign-in
-// in GET /api/auth/providers is named here, and every link lifetime matches.
+// PrivacyPage.test.jsx holds the page to the server: every sign-in in
+// GET /api/auth/providers is named here, every link and session lifetime
+// matches, and what the logs, the chat stores and the clean-ups do is said
+// the way the code does it (2026-10-26).
 const CONTACT_EMAIL = 'info@thedi.studio'
 
 export default function PrivacyPage() {
@@ -38,7 +40,7 @@ export default function PrivacyPage() {
             </header>
 
             <main className="legal-content">
-                <p className="legal-updated">updated 2026-10-26 · audited against the codebase 2026-07-28, signing in 2026-10-26</p>
+                <p className="legal-updated">updated 2026-10-26 · audited against the codebase 2026-07-28; sessions, signing in, logs, chat and retention re-checked 2026-10-26</p>
 
                 <section className="legal-section">
                     <h2>the session cookie</h2>
@@ -49,8 +51,13 @@ export default function PrivacyPage() {
                         as your label, so the cookie can contain your email.
                     </p>
                     <p>
-                        Lifetime: 12 hours signed in, 30 days as a guest. Guests get a random id and
+                        Lifetime: 12 hours signed in, 7 days as a guest. Guests get a random id and
                         the label &quot;Guest&quot; — no personal data.
+                    </p>
+                    <p>
+                        Signing out ends every session of your account at once, on every device:
+                        each cookie made before it stops working. A guest session has no account
+                        to sign out of; it ends when it runs out or its cookie is cleared.
                     </p>
                 </section>
 
@@ -102,9 +109,10 @@ export default function PrivacyPage() {
                         without the password (15 minutes). Each works once. Mail goes out through the
                         mail server this di.iiii is set up with. For every link, the server keeps which
                         account it was for, its kind, when it was made, used and runs out, and a
-                        SHA-256 fingerprint in place of the link itself. These records have no
-                        automatic deletion yet. An account with a username and no email address
-                        cannot be recovered by mail if its password is lost.
+                        SHA-256 fingerprint in place of the link itself. Nothing deletes these
+                        records today: they are kept after the link is used or runs out. An
+                        account with a username and no email address cannot be recovered by mail
+                        if its password is lost.
                     </p>
                 </section>
 
@@ -138,31 +146,60 @@ export default function PrivacyPage() {
                     <h2>in your browser</h2>
                     <p>
                         The app sets around 15 localStorage keys — a persistent pseudonymous id,
-                        display names, and your projects. They stay on your machine.
-                        There is no consent banner; this page is the disclosure. The keys are listed,
-                        and clearable, in Preferences.
+                        display names, and your projects. They stay on your machine, with one
+                        exception: when you open a space or project live, your browser sends the
+                        pseudonymous id and the name you appear under to the server, which shows
+                        them to the others there. There is no consent banner; this page is the
+                        disclosure. The keys are listed, and clearable, in Preferences.
                     </p>
                 </section>
 
                 <section className="legal-section">
                     <h2>logs and realtime</h2>
                     <p>
-                        Server logs record method, URL, status, size, duration. No IP addresses, no
-                        user agents, no user ids are written. IPs are computed in memory for rate
-                        limiting and never stored.
+                        Server logs record each request&apos;s method, URL, status, size and
+                        duration — no IP address, no user agent. A few lines also say who an event
+                        concerns. When someone joins a space or project live, the line holds the
+                        name their browser sent and which space or project it was. When a terminal
+                        or our Telegram bot gets a key to act for an account, and when such a key
+                        is approved or turned down, ended, or held back from a session cookie, the
+                        line holds the account id.
                     </p>
                     <p>
-                        Presence, cursors, and chat are relayed live and never persisted — there is
-                        no chat log and no presence table.
+                        IP addresses are used in memory, for rate limiting and to tell this machine
+                        from others. The one place the server stores one is a change that waits
+                        for approval. Where this di.iiii has an approval bot set up, some changes
+                        wait for a person to approve them: a space file proposed by someone that
+                        space does not trust, and admin-level changes when the approval gate is
+                        switched on. For each, the server keeps who asked (account id, role, and
+                        name or email address), what would change, the request&apos;s method, path
+                        and IP address, and when. Nothing deletes these records: one that runs out
+                        is marked expired and kept. The bot is sent a summary of the change and
+                        who asked, to show the person who decides.
+                    </p>
+                    <p>
+                        Presence and cursors are relayed live and never stored. Chat is stored:
+                        each space keeps the last 500 lines of its chat, each with the name and id
+                        it was sent under, the text and the time, plus one pinned line; a line can
+                        be removed. Mesh rooms, which link several devices live, keep the last
+                        5,000 lines of their talk.
+                    </p>
+                    <p>
+                        Conversations with the AI assistant are kept with your account until you
+                        delete them. Your messages are sent to the model server this di.iiii is
+                        set up with.
                     </p>
                 </section>
 
                 <section className="legal-section">
                     <h2>third parties</h2>
                     <p>
-                        None in the main app. No third-party analytics, no telemetry, no error
-                        reporting, no session replay, no tag manager. The site loads its own
-                        assets, including fonts.
+                        No third-party tracking in the main app: no analytics, no telemetry, no
+                        error reporting, no session replay, no tag manager. The site loads its own
+                        assets, including fonts. Where this di.iiii is set up with them, other
+                        services receive what the sections above say: the sign-in you choose,
+                        Google Drive if you connect it, the mail server, the model server and the
+                        approval bot.
                     </p>
                     <p>
                         We count our own traffic, anonymously: one first-party event per page load
@@ -191,12 +228,15 @@ export default function PrivacyPage() {
                         <li>Idle spaces expire after 30 days. Guest sandboxes after 7. Account
                             sandboxes archive to a snapshot after 180 days and revive on your next
                             visit.</li>
-                        <li>Edit history is capped at 500 operations per project.</li>
-                        <li>Accounts, open-call applications, and published assets currently have no
-                            retention limit — they persist until removed by hand.</li>
-                        <li>Nightly backups are kept on the server for 14 days, nowhere else. A
-                            backup restore can bring back data deleted in the meantime — there is no
-                            exclusion mechanism yet.</li>
+                        <li>Edit history keeps at most the last 500 changes of each space and each
+                            project.</li>
+                        <li>Accounts, open-call applications, published assets, mail-link records
+                            and approval records have no retention limit — nothing deletes them
+                            automatically; they persist until removed by hand.</li>
+                        <li>Backups, as this codebase&apos;s backup scripts make them: nightly, kept
+                            on the server for 14 days, and pulled off it to a second machine that
+                            keeps the last 30. A backup restore can bring back data deleted in the
+                            meantime — there is no exclusion mechanism yet.</li>
                     </ul>
                 </section>
 
@@ -209,11 +249,11 @@ export default function PrivacyPage() {
                             and data will be removed by hand.</li>
                         <li><strong>No data export.</strong> Same route — email, and you&apos;ll get a
                             copy of what&apos;s held about you.</li>
-                        <li><strong>No per-session sign-out-everywhere.</strong> Sessions are signed
-                            cookies, valid until they expire. The only kill switch rotates the
-                            signing key and logs every user out at once.</li>
+                        <li><strong>No way to end one session alone.</strong> Signing out ends all of
+                            your account&apos;s sessions at once; one device cannot be signed out on
+                            its own.</li>
                         <li><strong>No retention limit</strong> on accounts, open-call applications,
-                            or published assets — see above.</li>
+                            published assets, mail-link records or approval records — see above.</li>
                     </ul>
                 </section>
 

@@ -23,7 +23,7 @@ the record of that audit, not as today's state.
 base64url JSON + HMAC-SHA256 (`authSession.js:20-45`), holding `subject`, `label`,
 `role`, `spaces[]`. There is no `sessions` table. `label` falls back to the user's
 email when no display name is set (`routes/authRoutes.js:120`), so **an email
-address can live inside the cookie**. TTL 12 h signed-in, 30 days guest.
+address can live inside the cookie**. TTL 12 h signed-in, 7 days guest (was "30 days"; corrected 2026-10-26, `index.js:1129`).
 
 **OAuth.** GitHub (scope `user:email`) and Google (`profile`,`email`) persist four
 fields each — provider id, email, display name, avatar URL
@@ -99,13 +99,13 @@ filename (`routes/spaceRoutes.js:600-614`). 100 MB cap, MIME allowlist
 published to the commons.
 
 **Logging.** `morgan('tiny')` — method, URL, status, size, duration
-(`index.js:349`). **No IP, user agent, referrer, or user id.** IPs are computed for
+(`index.js:349`). **No IP, user agent or referrer.** (Ids and names: some lines carry them, and one IP is stored; see "Logs, IP, chat, sessions and retention, re-checked 2026-10-26" below.) IPs are computed for
 rate limiting but held in a pruned in-memory Map and never written
 (`rateLimit.js:13-43`). Socket logs do include user-supplied display names
 (`socketHandlers.js:258`). Docker caps logs at 10 MB/service; nginx and Caddy
 configure no access log.
 
-**Realtime.** Presence, cursors and chat are relayed in memory and **never
+**Realtime.** (Corrected 2026-10-26: chat is stored; see the re-check below.) Presence, cursors and chat are relayed in memory and **never
 persisted** — no presence table (`socketHandlers.js:200-209`, `:402-428`). The
 mesh hub (`meshHub.js`) is unauthenticated by default and relays `motion`/`bio`/`env`
 payloads between room members without inspecting or storing them.
@@ -221,3 +221,18 @@ decision, and several need code before a policy could truthfully describe them.
 means minting a URL the spec intends to redirect. The sustainability doc (now private, `di.iiii-ops/promo/SUSTAINABILITY.md`)
 also owes a `/terms` page covering the licensing commitments — the two should ship
 together.
+
+## Logs, IP, chat, sessions and retention, re-checked 2026-10-26 (N1300)
+
+Against origin/dev `01ce7792c` (`serverXR/src/` unless named). Each line confirms or corrects a sentence of `/privacy`.
+
+- Request log: `morgan('tiny')` (`index.js:602`): method, URL, status, size, time. No IP, no user agent.
+- Log lines that name a person: the account id (`subject`) in `actTokenGate.js:182`, `cliTokenGate.js:104`, `routes/cliLoginRoutes.js:82`, `:122`, `:143`, `:177`, `routes/authRoutes.js:462`; the name a browser sent on join in `socketHandlers.js:446` (space) and `:503` (project), from the join payload (`:436`).
+- IP: in memory for rate limiting (`rateLimit.js:14`, `:53`) and for "is this the machine itself?" checks (`localRuntimeGuard.js`, `devLocalGuard.js`, `machines/onThisMachine.js`, `routes/statusRoutes.js`, `routes/agentBoardRoutes.js`; rig members in memory for 20 s, `rig/members.js:13-14`). Stored once: `pending_actions.request_ip` (`db.js:363`), written by `approvalGate.js:162` through `pendingActionStore.js:40-51`, with the asker's account id, type, role and label or email (`approvalGate.js:159`), the kind, arguments, summary, method and path. Rows exist only where an approval bot is set up: always for a space bundle proposed by someone the space does not trust (`contentProposals.js:557-573`, `requireApproval`), and for admin writes when `APPROVAL_GATE_ENABLED` (`config.js:437-441`, default off; `approvalGate.js:133-149`). Never deleted: `sweepExpired` only marks them `expired` (`pendingActionStore.js:107-110`); no `DELETE FROM pending_actions` anywhere. The bot receives the summary and the asker's id, label or email and role (`approvalGate.js:166-172`).
+- Chat is stored: `space_chat_lines` (space, user id, user name, text, time; `db.js:296-303`), the last 500 per space (`spaceChatStore.js:12`, `:49`), one line removable (`socketHandlers.js:807`, `spaceChatStore.js:93`), one pin per space (`db.js:309`). Mesh rooms: `mesh_room_lines`, the last 5000 per room, talk channels only (`meshRoomHistoryStore.js:1-8`). AI chats: `ai_chats` and `ai_messages` (`db.js:263-284`), kept until the account deletes them (`routes/aiChatRoutes.js:127-128`, `aiChatStore.js:46`), sent to `LLM_BASE_URL` (`localModelClient.js:15-16`). Presence and cursors: no table.
+- Browser ids leave the machine on join: `src/project/hooks/useProjectPresence.js:68` (`getOrCreateUserId`), `:119-127` (join-project and join-space with the id and the name); the server passes them to the others there (`socketHandlers.js:420-424`, the leave notice).
+- Sessions: 12 h signed in (`config.js:155`); 7 days as a guest (`index.js:1129`, `:1264`, `:1272`, the guest sandbox's `sandboxTtlMs`, `config.js:338`; the "30-day guest cookie" comment at `index.js:2966` is stale). Sign-out bumps `token_version` (`index.js:1576-1581`, `userStore.js:194-196`), checked on every request (`authSession.js:75-84`): every session of the account ends; a guest only loses the cookie.
+- Mail-link rows (`auth_tokens`): `pruneAuthTokens` (`authTokenStore.js:110-117`) is called only by its test (`authTokenStore.test.js:81`), so the rows are kept. Telegram sign-in rows: deleted half-hourly once used or run out (`telegramLoginStore.js:94-97`, `index.js:3544`).
+- Edit history: 500 changes per space and per project (`index.js:205`; defaults `spaceStore.js:906`, `sceneWrite.js:138`). A 30-day age cap (`index.js:213`) applies at commit only where a route passes it (`projectWrite.js:83-88`, `spaceStore.js:899-906`; 0 disables it), so the page states the count only.
+- Backups, as the repo's scripts make them: `deploy/vps-backup.sh:63-64` prunes at 14 days on the server; `scripts/backup-pull.sh:1-8`, `:35`, `:164-170` pulls them off it and keeps 30. The live deployment is not re-checked here (the VPS is offline; production runs elsewhere).
+- Not re-checked in this pass: uploads (whether op data carries an author id), the open-call form, the localStorage key count, third-party script loads, the Drive token's encryption and its disconnect route.
