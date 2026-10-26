@@ -370,9 +370,11 @@ function registerProjectRoutes(router, {
       // It lives here, in the route, and not in ensureProject: a snapshot restore, the
       // open-jam bootstrap and a project already stored under such an id make theirs
       // through ensureProject and must keep working. One caller does come through this
-      // route with an id it did not choose: a follow, and the copy scripts, making a
-      // project the other side already has (follower.js, makeMissing). It says so with
-      // `carried: true` and keeps its id; only the boolean `true` counts.
+      // route with an id it did not choose: a follow, making a project the other side
+      // already has (follower.js, makeMissing). It says so with `carried: true` and keeps
+      // its id; only the boolean `true` counts. The copy scripts (project-pull, space-sync,
+      // space-sync-github, local-mirror, tier-sync) use this route too and do not say so
+      // yet: for a reserved id they get the 400.
       const carried = req.body?.carried === true
       if (!carried && isReservedProjectSlug(projectId)) {
         return res.status(400).json({ error: `"${projectId}" is a reserved address and can't be a project name — try another.` })

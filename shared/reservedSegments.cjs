@@ -109,8 +109,9 @@ const RESERVED_SPACE_SLUGS = new Set([...APP_SEGMENTS, ...STATIC_SEGMENTS, ...SH
 // store does not apply it (ensureProject, used by snapshot restore and the
 // open-jam bootstrap, takes any well-formed id); the create route does. The one
 // way past the route is `carried: true` in the create body, for the same project
-// arriving from another install (a follow, a copy), which keeps the id it has.
-// It is never a way to get a reserved name for a project that is new.
+// arriving from another install, which keeps the id it has (the follower sends it;
+// the copy scripts do not yet). It is never a way to get a reserved name for a
+// project that is new.
 // Two words can never be an id anyway: `p` is under 3 letters and `open_jam` has
 // an underscore (the store turns that into a hyphen).
 const RESERVED_PROJECT_SLUGS = new Set([...APP_SEGMENTS, ...SHAPE_SEGMENTS])
