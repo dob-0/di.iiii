@@ -479,6 +479,10 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // same id: ids are global in di.iiii, so the same project is the same
         // project on both machines. Title as made; born private when private
         // at the source — never public for a moment. Deletions are not carried.
+        // `carried: true` says the id is not a new choice: the create route refuses
+        // a reserved word as the id of a NEW project (2026-10-26), and a project made
+        // before that rule (`privacy` in the space `main`) must still reach an install
+        // that follows the space, and the host, under the id it has.
         const makeMissing = async (from, toProjects, toSide, toTrash) => {
             // A project deleted on a side is still in that side's trash, and a
             // create there would take it out again (ensureProject restores a
@@ -511,7 +515,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 const title = typeof row?.title === 'string' && row.title.trim() ? row.title.trim() : projectId
                 const made = await request(toSide.url(path), {
                     method: 'POST', token: toSide.token, servername: toSide.servername, address: toSide.address,
-                    body: { slug: projectId, title, ...(row?.visibility === 'private' ? { visibility: 'private' } : {}) }
+                    body: { slug: projectId, title, carried: true, ...(row?.visibility === 'private' ? { visibility: 'private' } : {}) }
                 })
                 // Made EMPTY on the host from this side's listing: its content has to
                 // follow by comparison, whatever ops there are or are not.
