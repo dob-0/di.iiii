@@ -255,8 +255,9 @@ export default function SurfaceBar({
 
     // One name per space (owner, 2026-09-14; docs/ai/vocabulary.md): the bar says the space's NAME, or its address when
     // nobody named it, and its link goes to that address — the same word on every surface of the space, whatever address
-    // was typed to reach it. The platform's own space is named after the brand this bar already leads with, so the brand
-    // shows once: no second "di.iiii", no id, no address.
+    // was typed to reach it. The exception is not the dictionary's and is open for the owner (utils/oneNamePerSpace.js, "THE
+    // BRAND ONCE"): a space labelled with the brand this bar already leads with shows the brand once: no second "di.iiii", no
+    // id, no address, and no link of its own to the space; the wordmark leads to /spaces.
     const address = spaceAddress || space
     const spaceWord = space ? spaceWordFor(spaceLabel, address) : ''
     const sayBrandOnce = isPlatformName(spaceWord)

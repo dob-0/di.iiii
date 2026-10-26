@@ -216,7 +216,7 @@ const LANES = [
         render: () => renderNodes()
     },
     {
-        name: 'the Projection desk',
+        name: 'Projection',
         body: () => document.querySelector('header.map-bar'),
         render: () => render(<MapSurface spaceId="main" projectId="p" />)
     }
@@ -378,7 +378,7 @@ describe('the bar says one name per space, on every surface', () => {
     ]
     const ONE_THING = [{ id: 'p', slug: null, title: 'p', mode: 'scene', updatedAt: 0 }]
 
-    // The list of one thing that IS the door hands the visitor on to the room instead of drawing its bar.
+    // The list of one thing that IS the door hands the visitor on to the project instead of drawing its bar.
     beforeEach(() => { listSpaceContents.mockResolvedValue(TWO_THINGS) })
     afterEach(() => {
         listSpaceContents.mockResolvedValue(ONE_THING)
@@ -402,7 +402,7 @@ describe('the bar says one name per space, on every surface', () => {
                 return render(<RawEditor projectId="p" spaceId={typed} />)
             }
         },
-        { name: 'the Projection desk', render: ({ typed }) => render(<MapSurface spaceId={typed} projectId="p" />) },
+        { name: 'Projection', render: ({ typed }) => render(<MapSurface spaceId={typed} projectId="p" />) },
         { name: 'the rig pages', render: ({ typed }) => render(<RigBar spaceId={typed} projectId="p" here="plot" isLocalInstall />) }
     ]
 
