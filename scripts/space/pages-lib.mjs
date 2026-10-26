@@ -89,7 +89,9 @@ export function relinkPortals(entities, from, to, space = '') {
 
 // Exact text edits inside chosen projects' code pages, from a structure file (`edits`). Owner 2026-10-23 (N1250): the
 // back link "← ԱՇԽԱՐՀՆԵՐ" inside every work becomes bilingual; the orange room's hint moves off its back button on phones.
-// Each edit names its projects ('*' = all); an edit whose `from` is absent changes nothing, so a re-run is a no-op. Pure.
+// Each edit names its projects ('*' = all); an edit whose `from` is absent changes nothing, so a re-run is a no-op. An
+// edit that keeps its `from` inside its `to` (it adds a line next to one) skips the places that already read `to`, so
+// its re-run is a no-op too (N1330: the tools room's added line matched again and would have gone in twice). Pure.
 export function editHtml(html, edits, projectId) {
   let out = html, count = 0
   const notes = []
@@ -97,9 +99,11 @@ export function editHtml(html, edits, projectId) {
     if (!ed || typeof ed.from !== 'string' || typeof ed.to !== 'string' || !ed.from) throw new Error('an edit needs from and to')
     const ps = ed.projects || ['*']
     if (!ps.includes('*') && !ps.includes(projectId)) continue
-    const n = out.split(ed.from).length - 1
+    const done = ed.to.includes(ed.from) ? ed.to : null
+    const pieces = done ? out.split(done) : [out]
+    const n = pieces.reduce((k, p) => k + p.split(ed.from).length - 1, 0)
     if (!n) continue
-    out = out.split(ed.from).join(ed.to); count += n
+    out = pieces.map((p) => p.split(ed.from).join(ed.to)).join(done ?? ''); count += n
     notes.push(`${n} × ${ed.why || ed.from.slice(0, 40)}`)
   }
   return { html: out, count, notes }
