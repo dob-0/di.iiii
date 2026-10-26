@@ -211,7 +211,7 @@ Behavior rules:
 | `CORS_ORIGINS` | Comma-separated allowlist of origins. | _none_ |
 | `MAX_UPLOAD_MB` | Max asset upload size in MB. | `100` |
 | `MIN_FREE_DISK_MB` | Free-disk floor below which POST/PUT/PATCH get a `507` instead of writing toward ENOSPC (`0` disables). | `512` |
-| `DI_ACCESS_LOG` | `all` writes a request-log line for every answer. Unset, only answers with status 400 and up get one (`src/accessLog.js`). | errors only |
+| `DI_ACCESS_LOG` | `1` (or `all`) writes a request-log line for every answer. Unset, only answers with status 400 and up, and requests that got no answer, get one (`src/accessLog.js`). | errors only |
 | `SHARED_ROOT` | Override for shared schema loading. Use this when the dev tier and production keep separate shared folders outside the repo. | repo-local `shared/` fallback |
 
 Security notes:

@@ -7,10 +7,13 @@
 // (N1307) — 98 % of them "200"/"304" — so the journal's 4 GB cap held six days and pushed
 // real errors out with them. A systemd LogFilterPatterns= drop-in cannot do this instead:
 // it works for system services only, and di-server is a user unit (man systemd.exec).
-// DI_ACCESS_LOG=all logs every request again, for debugging a client.
+// A request the client gave up on before any answer keeps its line ("GET /x - - - - ms"):
+// with no headers sent res.statusCode still reads 200, so headersSent is checked first —
+// those lines are how a hung endpoint shows. DI_ACCESS_LOG=1 (or =all) logs every request
+// again, for debugging a client.
 const accessLogSkip = (env = process.env) => {
-  const logAll = env.DI_ACCESS_LOG === 'all'
-  return (_req, res) => !logAll && res.statusCode < 400
+  const logAll = env.DI_ACCESS_LOG === '1' || env.DI_ACCESS_LOG === 'all'
+  return (_req, res) => !logAll && res.headersSent && res.statusCode < 400
 }
 
 module.exports = { accessLogSkip }

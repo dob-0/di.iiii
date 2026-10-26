@@ -599,9 +599,11 @@ if (hasLocalRuntime() && scanAtBootFrom()) {
   try { ndi.startScan() } catch (error) { logger.warn(`[ndi] autoscan did not start: ${error?.message || error}`) }
 }
 
-app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
-// A log line only for answers that went wrong (400 and up); DI_ACCESS_LOG=all for every one. Why: accessLog.js.
+// A log line only for answers that went wrong (400 and up) or never came; DI_ACCESS_LOG=1 for
+// every one. Why: accessLog.js. Ahead of express.json, so a body that fails to parse (400) or
+// is too large (413) still gets its line; after the NDI routes on purpose (see above).
 app.use(morgan('tiny', { skip: accessLogSkip() }))
+app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
 app.use((req, res, next) => {
   pushEvent('request', { method: req.method, url: req.url })
   next()
