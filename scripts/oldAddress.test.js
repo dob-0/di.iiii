@@ -64,7 +64,13 @@ const ALLOWED = {
     'scripts/space-push.test.js': [2, 'the old address is refused as production'],
     'scripts/tier-sync.test.js': [1, 'the old address is refused as production'],
     'scripts/page-vendor-cdn.test.js': [3, 'the old address is refused as production'],
-    'scripts/suitePage.test.mjs': [2, 'guard: the suite page never names the old address'],
+    'scripts/sitemap.mjs': [1, 'comment: says the old address still serves the same place'],
+    'scripts/sitemap.test.js': [1, 'guard: the sitemap never names the old address'],
+    'scripts/space/apply-structure.test.mjs': [4, 'fixture: a text edit from the old address to the new'],
+    'scripts/space/combine-pages.test.mjs': [6, 'fixture: pages that hard-code the old host are rewritten'],
+    'scripts/space/pages-lib.address.test.mjs': [1, 'fixture: a hard-coded old host in a page is rewritten'],
+    'scripts/space/pages-lib.mjs': [1, 'comment: names the old host the rewrite removes'],
+    'scripts/suitePage.test.mjs': [3, 'guard: the suite page never names the old address'],
     'serverXR/src/domainService.test.js': [2, 'platform host list includes the old name'],
     'serverXR/src/domainAddRace.test.js': [1, 'platform host list includes the old name'],
     'serverXR/src/googleOAuth.test.js': [1, 'the registered Drive callback'],
@@ -79,7 +85,6 @@ const ALLOWED = {
     'MANIFESTO.md': [1, 'owner text: the old name keeps answering for everything already printed'],
     'docs/architecture/SPEC_space_own_domain.md': [1, 'lists our own platform names, both'],
     'src/wiki/wikiContent.js': [1, 'tells people the old address still reaches the same place'],
-    'public/sitemap.xml': [1, 'comment: why the old name is not listed'],
     'spaces/open/tools/set-jam-qr.mjs': [1, 'what the printed QR in the room encodes'],
 
     // A past incident or a past state, recorded with its date or as "used to".
