@@ -143,6 +143,7 @@ export const FAMILY_BY_TYPE = {
     'signal.counter': 'numbers',
     'signal.hold': 'numbers',
     'signal.delay': 'numbers',
+    'signal.flash': 'numbers',
     'signal.timer': 'numbers',
     'signal.trigger': 'numbers',
     'signal.speed': 'numbers',
@@ -2527,6 +2528,33 @@ export const NODE_TYPES = {
         ],
         outputs: [
             { id: 'out', type: 'number', label: 'Later' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // WCAG 2.2 SC 2.3.1, three flashes or below: sits between any value and a
+    // Lamp, DMX Out, a Laser Out level or a picture's brightness. The rule
+    // (count, threshold, window, limit) is src/project/nodes/flashRule.js, the
+    // same file the offline checks count with. No input turns it off: Limit
+    // can only be stricter than three; empty, 0 or not a number reads three.
+    'signal.flash': {
+        id: 'signal.flash',
+        label: 'Flash Guard',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['flash', 'strobe', 'wcag', 'epilepsy', 'photosensitive', 'seizure', 'limit', 'safety', 'light', 'lamp', 'dmx', 'brightness'],
+        inputs: [
+            { id: 'value', type: 'number', label: 'Value', default: 0 },
+            // What "full" is on this wire: 1 for the 0..1 convention, 255 for bytes.
+            { id: 'full',  type: 'number', label: 'Full',  default: 1 },
+            { id: 'limit', type: 'number', label: 'Limit', default: 3 },
+        ],
+        outputs: [
+            { id: 'out',     type: 'number',  label: 'Guarded' },
+            { id: 'rate',    type: 'number',  label: 'Rate'    },
+            { id: 'limited', type: 'boolean', label: 'Limited' },
         ],
         defaultValues: {},
         render: 'hidden',

@@ -182,6 +182,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('counter', 'signal.counter', { label: 'Counter', col: 0, row: 11 })
     add('hold', 'signal.hold', { label: 'Hold', col: 0, row: 12 })
     add('delay', 'signal.delay', { label: 'Delay', col: 0, row: 13 })
+    add('flashGuard', 'signal.flash', { label: 'Flash Guard', col: 0, row: 18 })
     add('timer', 'signal.timer', { label: 'Timer', col: 0, row: 14 })
     add('trigger', 'signal.trigger', { label: 'Trigger', col: 0, row: 15 })
     add('speed', 'signal.speed', { label: 'Speed', col: 0, row: 16 })

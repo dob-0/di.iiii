@@ -1826,6 +1826,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-13'
     },
     {
+        id: 'flash-guard-node',
+        category: 'Editing',
+        title: 'Flash Guard: no more than three flashes a second',
+        summary: 'Put a Flash Guard between any number and a light or a picture, and it never lets more than three flashes a second through.',
+        body: [
+            'Fast light can cause seizures in people with photosensitive epilepsy. The web\'s accessibility rule (WCAG 2.2, success criterion 2.3.1, “Three Flashes or Below Threshold”) says nothing may flash more than three times in any one second. A flash is a pair of opposite changes — up then down, or down then up — of 10 % of full or more.',
+            'Wire the number that drives a light — into a DMX Out Value or Master, a Laser\'s Level, a picture\'s brightness — through a Flash Guard. While the number changes slowly, or by less than 10 %, it passes untouched. When it would flash a fourth time inside a second, the Guard holds the light where it is, a little short of the change, until an older flash has left that second; then it lets the next change through. A 10-a-second strobe comes out as three flashes a second.',
+            'Rate is how many times a second the incoming number flashes. Limited is true while the Guard is holding the light back, and for a second after: wire it into a Text panel or a lamp of its own, and the operator sees when the Guard acted.',
+            'Full says what “full” means on the wire: 1 for the usual 0 to 1, 255 if the wire carries bytes. Limit can be made stricter — 2, or 1 — but never looser: anything above 3, and an empty, zero or wrong Limit, counts as 3. There is no switch that turns the Guard off.',
+            'The Guard counts the same way the venue checks do (scripts/measure/flashrate.cjs and scripts/place/scenes_flash.cjs measure a lighting file with the same code). What it does not know: WCAG excuses changes where the darker side is very bright, and the Guard counts those too, so it is stricter there. It does not see colour, so WCAG\'s separate rule for saturated red flashes is not checked. It guards one number: two lamps flashing out of step, or a whole picture, each need their own Guard.'
+        ],
+        tags: ['raw', 'nodes', 'flash', 'strobe', 'safety', 'wcag', 'accessibility', 'light', 'dmx', 'performance'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'laser-out-node',
         category: 'Editing',
         title: 'Laser and Laser Out — draw for the LaserCubes',
