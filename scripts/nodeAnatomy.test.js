@@ -6,6 +6,7 @@ import { EXTRA_PLACES, isMeasuredFile } from './node-anatomy-lib.mjs'
 import { NODE_ANATOMY, DOORWAY_PLACE, SOURCE_FINGERPRINTS } from 'virtual:node-anatomy'
 import { NODE_TYPES, createNode } from '../src/project/nodeRegistry.js'
 import { isLiveFedOutput } from '../src/project/graph/nodeReading.js'
+import { createNodeGraphContext, evaluateNodeOutput } from '../src/project/graph/nodeGraphRuntime.js'
 import { fingerprintSource } from '../src/raw/utils/sourceFingerprint.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -96,6 +97,19 @@ describe('the node anatomy manifest', () => {
     it('agrees with the substitution probe about which types are live-fed', () => {
         for (const [id, entry] of Object.entries(NODE_ANATOMY)) {
             const sliceSaysLive = Boolean(entry.computes) && slice(entry.computes).join('\n').includes('liveOutputs')
+            // A live INPUT (EXTRA_PLACES' liveInput): no output is the side channel's value, but an output
+            // must change when the feed publishes under that key — or the sheet's sentence is a lie.
+            const liveInput = entry.alsoNeeds?.liveInput
+            if (liveInput) {
+                const fed = createNode(id, { values: entry.alsoNeeds.probeValues || {} })
+                const doc = { nodes: [fed], edges: [] }
+                const outputs = (liveOutputs) => JSON.stringify((NODE_TYPES[id].outputs || [])
+                    .map((port) => evaluateNodeOutput(fed, port.id, createNodeGraphContext(doc, { liveOutputs }))))
+                expect(sliceSaysLive, `${id}: names live input '${liveInput}' but its slice never reads liveOutputs`).toBe(true)
+                expect(outputs(new Map([[`${fed.id}:${liveInput}`, new Uint8Array([1, 2, 3])]])), `${id}: '${liveInput}' moves no output`)
+                    .not.toBe(outputs(new Map()))
+                continue
+            }
             const node = createNode(id)
             if (!node) continue
             const document = { nodes: [node], edges: [] }

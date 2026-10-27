@@ -29,6 +29,7 @@ import { isTopType } from '../../project/tops/topOperators.js'
 import { DECK_INPUTS, VJ_DECK_TYPE, isPictureType, normalizeDeck, pictureIdOf, setBpm } from '../../project/tops/vjDeck.js'
 import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
+import LaserFileFeed from './LaserFileFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
 import MidiOutFeed from './MidiOutFeed.jsx'
 import BeatFeed from './BeatFeed.jsx'
@@ -1803,6 +1804,10 @@ export default function RawEditor({
     const handleMidiOutStatus = useCallback((nodeId, status) => {
         handleLiveOutputChange(nodeId, 'status', status)
     }, [handleLiveOutputChange])
+    // A Laser File's bytes (LaserFileFeed.jsx). Stable for the same reason as the Frame handler above.
+    const handleLaserFileBytes = useCallback((nodeId, bytes) => {
+        handleLiveOutputChange(nodeId, 'bytes', bytes)
+    }, [handleLiveOutputChange])
     const handleSoundOutputChange = useCallback((nodeId, levels) => {
         handleLiveOutputChange(nodeId, 'volume', levels?.volume ?? null)
         handleLiveOutputChange(nodeId, 'low', levels?.low ?? null)
@@ -2761,6 +2766,16 @@ export default function RawEditor({
                             node={node}
                             asset={assetMap.get(node.values.src)}
                             onLevelsChange={handleSoundOutputChange}
+                        />
+                    ))}
+                {nodes
+                    .filter((node) => node.typeId === 'laser.file' && node.values?.src && assetMap.has(node.values.src))
+                    .map((node) => (
+                        <LaserFileFeed
+                            key={node.id}
+                            node={node}
+                            asset={assetMap.get(node.values.src)}
+                            onBytesChange={handleLaserFileBytes}
                         />
                     ))}
                 {nodes

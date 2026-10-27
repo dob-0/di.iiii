@@ -43,6 +43,12 @@ Found by `scripts/audit/rig-show-pages.cjs` (headless Chromium + axe-core 4.13, 
   and 24 / 44 px in Perform (`touchTargets.test.js`), the visualiser title 2.89 → 5.28:1
   (`visualiserContrast.test.js`), and a production name out of the Perform save box's placeholder.
 
+## Laser File pressed what left the field onto its edge, drawing lines the file never had (Raw, 2026-10-21)
+
+Symptom (review of PR #1071, before merge): a 400-vertex ILDA circle (radius 0.8) at Size 10 put 400/400 vertices on the field's edge and 340 on its corners, a full-field square with ~21 % of the frame on each corner; `M0 0 L1 1` at Height 9 drew a lit line along y = 1. The server's `stillBeams` passed both (each corner under the 0.5 dwell share).
+Cause: `laserFile.js` clamped each coordinate to -1..1 after Size and Height.
+Fix: `src/project/nodes/laser.file/clipField.js` `clipToField` cuts every path at the field edge (Liang–Barsky per segment), drops what is outside, never makes a dot from a corner graze, and Status counts the blanked points. Guard: `clipField.test.js` (5) and two cases in `laserFile.test.js` (circle at Size 10: 0 corner vertices, every vertex on the circle; line at Height 9: no path).
+
 ## Front pages appended words to `di.iiii` and named the retired Beta editor (2026-10-21)
 
 Symptom: six headings fused a word onto the platform name (`di.iiii Control Server`, `di.iiii Deck Context`, `di.iiii Ecosystem Map`, `di.iiii AI Engineering Collective`, `The di.iiii SDK`, `The di.iiii Visual Identity — Complete Spec`); `serverXR/README.md` listed `Beta` as a supported editor three times, eleven weeks after the lane was deleted (2026-08-06); `docs/deck/README.md` said "lane", `ONBOARDING.md` said "Raw" as a name; and `sdk/README.md` told a reader to `import { connect } from 'di.iiii/sdk'`, a package that does not exist (the root package is private and named otherwise; there is no `sdk/package.json`).

@@ -428,6 +428,8 @@ Design: the raw laser workflow decision of 2026-10-14 (lands in docs/ai/decision
 | **Laser** (port type) | The wire type laser nodes speak: a set of paths (below). Green on the canvas. Not to be confused with the **Laser** node (`laser.shape`), which keeps its name. |
 | **path** (laser) | One unbroken stroke the beam draws, lit all along. A **path set** (frame v2 in code) is what flows between laser nodes; Laser Out turns it into the wire's points, putting the dark moves between paths. Developer word; the card says "Frame". |
 | **Auto** (Laser Out's budget) | The point budget sized from the drawn length instead of a number. The checkbox beside Laser Out's Points slider; 0 on the Budget port means the same. |
+| **Laser File** | The node (`laser.file`, Phase 9, 2026-10-20) that draws a file as laser paths: an ILDA file (formats 0, 1, 4, 5) or SVG path data, told apart by its bytes. Its File is a project asset. Not "ILDA node" or "SVG node": one node reads both. |
+| **Laser Text** | The node (`laser.text`, Phase 9, 2026-10-20) that writes a string as single-stroke laser paths in Hershey Roman Simplex. Not "Text": that card shows text in the scene. |
 
 ## Amended 2026-10-21 — Beat and Oscillator v2 (Phase 2 of the laser workflow)
 
