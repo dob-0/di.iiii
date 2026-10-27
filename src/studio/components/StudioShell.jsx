@@ -739,6 +739,7 @@ export default function StudioShell({
                 here="studio"
                 space={liveProjectState?.spaceId}
                 spaceLabel={liveProjectState?.spaceLabel}
+                spaceAddress={liveProjectState?.spaceAddress}
                 project={document?.projectMeta?.id}
                 projectLabel={document?.projectMeta?.title}
                 isLocalInstall={localInstall.isLocal}
