@@ -591,6 +591,95 @@ describe('the state wave (TD audit) — frameMemory operators', () => {
     })
 })
 
+describe('signal.cue — the cue list as wires', () => {
+    const CUES = [
+        { id: 'c1', name: 'Open', fade: 2, hold: 8, lightLook: 'rig-a' },
+        { id: 'c2', name: 'Middle', fade: 4, hold: 10, lightLook: 'rig-b' },
+        { id: 'c3', name: 'Close', fade: 0, hold: 5, lightLook: 'rig-c' }
+    ]
+    const PORTS = ['index', 'name', 'look', 'progress', 'fading', 'fired']
+    const read = (doc, now, memory) => {
+        const context = createNodeGraphContext(doc, { now, frameMemory: memory })
+        const cue = doc.nodes.find((n) => n.typeId === 'signal.cue')
+        return Object.fromEntries(PORTS.map((port) => [port, evaluateNodeOutput(cue, port, context)]))
+    }
+
+    it('bare, with no cue list, says nothing is on: index -1, empty name and look', () => {
+        expect(read({ nodes: [node('q', 'signal.cue')], edges: [] }, 1000, createFrameMemory()))
+            .toEqual({ index: -1, name: '', look: '', progress: 0, fading: false, fired: 0 })
+    })
+
+    it('a document with a show reads the cue the show\'s clock puts every room on', async () => {
+        const { showOf, showStateAt } = await import('../../rigbuild/showClock.js')
+        const clockEpoch = 1_700_000_000_000
+        const doc = {
+            nodes: [node('q', 'signal.cue')],
+            edges: [],
+            mappingState: { cues: CUES, showEpoch: clockEpoch + 5000 },
+            showState: { clockEpoch }
+        }
+        const show = showOf(doc)
+        for (const now of [5000, 6000, 13000, 14000, 23000, 30000, 99000]) {
+            const out = read(doc, now, null)
+            const room = showStateAt(show, clockEpoch + now)
+            expect(out.index).toBe(room.index)
+            expect(out.look).toBe(CUES[room.index].lightLook) // the document's own id; the room reads it without its rig- prefix
+        }
+        expect(read(doc, 14000, null)).toMatchObject({ index: 1, name: 'Middle', look: 'rig-b', fading: true, progress: 0.1, fired: 13000 })
+    })
+
+    it('Go takes a Button\'s press count, Back a Keyboard\'s edge, Jump a changed index', () => {
+        const memory = createFrameMemory()
+        const presses = node('p', 'value.number', { value: 3 })
+        const key = node('k', 'value.boolean', { value: false })
+        const jump = node('j', 'value.number', { value: 0 })
+        const doc = {
+            nodes: [presses, key, jump, node('q', 'signal.cue')],
+            edges: [edge('p', 'out', 'q', 'go'), edge('k', 'out', 'q', 'back'), edge('j', 'out', 'q', 'jump')],
+            mappingState: { cues: CUES }
+        }
+        const at = (now, { go = presses.values.value, back = false, to = jump.values.value } = {}) => {
+            presses.values = { value: go }; key.values = { value: back }; jump.values = { value: to }
+            return read(doc, now, memory)
+        }
+        expect(at(0).index).toBe(-1) // the count it finds is where it starts, not three presses
+        expect(at(100, { go: 4 })).toMatchObject({ index: 0, name: 'Open', fired: 100 })
+        expect(at(200, { go: 5 })).toMatchObject({ index: 1, fired: 200 })
+        expect(at(300, { back: true })).toMatchObject({ index: 0, fired: 300 })
+        expect(at(400, { back: true }).index).toBe(0) // a held key is one press
+        expect(at(500, { to: 2 })).toMatchObject({ index: 2, look: 'rig-c', fired: 500 })
+        expect(at(5600)).toMatchObject({ index: 2, progress: 1 }) // past the last, no loop: it holds
+    })
+
+    it('Loop, unwired, is the document\'s switch; wired, the wire wins', () => {
+        const loopDoc = (wired) => {
+            const go = node('g', 'value.boolean', { value: true })
+            const flag = node('f', 'value.boolean', { value: false })
+            return {
+                nodes: [go, flag, node('q', 'signal.cue')],
+                edges: [edge('g', 'out', 'q', 'go'), ...(wired ? [edge('f', 'out', 'q', 'loop')] : [])],
+                mappingState: { cues: CUES, loop: true }
+            }
+        }
+        for (const [wired, index] of [[false, 0], [true, 2]]) {
+            const memory = createFrameMemory()
+            const doc = loopDoc(wired)
+            read(doc, 0, memory) // GO at 0: cue 1
+            expect(read(doc, 24000, memory).index).toBe(index)
+        }
+    })
+
+    it('a pass\'s ports agree, and reading every port does not press GO again', () => {
+        const memory = createFrameMemory()
+        const go = node('g', 'value.number', { value: 0 })
+        const doc = { nodes: [go, node('q', 'signal.cue')], edges: [edge('g', 'out', 'q', 'go')], mappingState: { cues: CUES } }
+        read(doc, 0, memory)
+        go.values = { value: 1 }
+        expect(read(doc, 10, memory).index).toBe(0)
+        expect(read(doc, 20, memory).index).toBe(0)
+    })
+})
+
 describe('the vector/colour wave (TD audit)', () => {
     it('Split and Combine are inverses; Distance answers both questions', () => {
         const doc = {

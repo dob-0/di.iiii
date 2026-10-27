@@ -1,6 +1,7 @@
 import { nextRaiseOf } from '../utils/cardOrder.js'
 import { Fragment, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PropertyInspector from './PropertyInspector.jsx'
+import { useCueNodeFiring } from './useCueNodeFiring.js'
 import { COLUMN_OPEN_DELAY_MS, clampColumnWidth, isPhoneWidth, readColumnWidth, writeColumnWidth } from '../utils/settingsColumn.js'
 import DesktopWindow from './DesktopWindow.jsx'
 import NodeAnatomyPanel from './NodeAnatomyPanel.jsx'
@@ -1979,6 +1980,9 @@ export default function RawEditor({
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
         [document, clockNow, liveOutputs, frameMemory]
     )
+    // A Cue node a person presses fires its cues the way the Perform window does.
+    // Not from a preview card (a picture on someone else's page acts on nothing).
+    useCueNodeFiring({ document, context: graphContext, applyOps: applySharedOps, enabled: !isPreview })
 
     // The sheet's own context, built from the SAME three inputs as the one the
     // room draws with — evaluation is pure, so same document + same clock +

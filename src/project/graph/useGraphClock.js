@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 // starts the per-frame rebuild (and the show-clock stamp), not just Time.
 // Lag glides between answers; Noise wanders; both read context.now.
 export const CLOCK_DRIVEN_TYPE_IDS = new Set(['time', 'signal.lag', 'signal.lfo', 'signal.delay', 'signal.timer', 'signal.trigger', 'signal.speed', 'value.noise', 'signal.beat'])
+export const CLOCK_DRIVEN_TYPE_IDS = new Set(['time', 'signal.lag', 'signal.lfo', 'signal.delay', 'signal.timer', 'signal.cue', 'signal.trigger', 'signal.speed', 'value.noise'])
 
 export const hasClockNode = (nodes = []) => nodes.some((node) => (
     CLOCK_DRIVEN_TYPE_IDS.has(node?.typeId)

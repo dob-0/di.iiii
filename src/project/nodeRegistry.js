@@ -146,6 +146,7 @@ export const FAMILY_BY_TYPE = {
     'signal.delay': 'numbers',
     'signal.flash': 'numbers',
     'signal.timer': 'numbers',
+    'signal.cue': 'numbers',
     'signal.trigger': 'numbers',
     'signal.speed': 'numbers',
     'logic.toggle': 'numbers',
@@ -2634,6 +2635,36 @@ export const NODE_TYPES = {
             { id: 'elapsed',  type: 'number',  label: 'Elapsed (s)' },
             { id: 'progress', type: 'number',  label: 'Progress'    },
             { id: 'done',     type: 'boolean', label: 'Done'        },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The project's cue list (mappingState.cues) as wires — the list the desk's
+    // cue runner and the Perform windows play. Where it is comes from the
+    // shared cue clock (shared/cueClock.cjs), so the node, the desk and the
+    // show's clock agree. Go and Back take a Button's presses, a Keyboard or a
+    // beat; Jump a cue index; Loop, unwired, is the document's own switch.
+    'signal.cue': {
+        id: 'signal.cue',
+        label: 'Cue',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['cue', 'cue list', 'show', 'go', 'back', 'scene', 'look', 'fade', 'hold', 'running order'],
+        inputs: [
+            { id: 'go',   type: 'any',     label: 'Go'   },
+            { id: 'back', type: 'any',     label: 'Back' },
+            { id: 'jump', type: 'number',  label: 'Jump' },
+            { id: 'loop', type: 'boolean', label: 'Loop' },
+        ],
+        outputs: [
+            { id: 'index',    type: 'number',  label: 'Index'    },
+            { id: 'name',     type: 'string',  label: 'Name'     },
+            { id: 'look',     type: 'string',  label: 'Look'     },
+            { id: 'progress', type: 'number',  label: 'Progress' },
+            { id: 'fading',   type: 'boolean', label: 'Fading'   },
+            { id: 'fired',    type: 'signal',  label: 'Fired'    },
         ],
         defaultValues: {},
         render: 'hidden',

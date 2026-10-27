@@ -39,6 +39,7 @@ describe('NodePalette family grouping', () => {
         // the TD-audit waves. Nine fewer than before the 2026-09-01 operator
         // merge: eight math types became Math's operation menu, and Gate and
         // Switch became Route's. One more on 2026-10-21: Beat (laser Phase 2).
+        // Switch became Route's.
         expect(numbers.querySelector('.raw-node-palette-group-count').textContent).toBe('39')
     })
 
