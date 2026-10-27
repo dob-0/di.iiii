@@ -1572,3 +1572,109 @@ describe('a follow whose other side answers 502 waits between asks, on both side
         }
     }, 30_000)
 })
+
+describe('one project whose log answers 500 is read less often, and the others keep moving', () => {
+    let hosting = null
+    let following = null
+    let edge = null
+    let follower = null
+    const lines = { warn: [] }
+    const gate = { broken: false }
+    const BAD = 'broken'
+    const GOOD = 'sound'
+
+    /** Passes every ask to the host; answers 500 to one project's op log while `gate.broken`. */
+    const proxy = (target) => new Promise((resolve, reject) => {
+        const asks = []
+        const to = new URL(target)
+        const server = http.createServer((req, res) => {
+            if (req.url.startsWith(`/serverXR/api/projects/${BAD}/ops`)) {
+                asks.push(req.url)
+                if (gate.broken) {
+                    req.resume()
+                    res.writeHead(500, { 'Content-Type': 'application/json' })
+                    res.end(JSON.stringify({ error: 'database is broken' }))
+                    return
+                }
+            }
+            const upstream = http.request({ host: to.hostname, port: to.port, path: req.url, method: req.method, headers: req.headers }, (answer) => {
+                res.writeHead(answer.statusCode, answer.headers)
+                answer.pipe(res)
+            })
+            upstream.on('error', () => { res.writeHead(502); res.end() })
+            req.pipe(upstream)
+        })
+        server.on('error', reject)
+        server.listen(0, '127.0.0.1', () => resolve({ server, asks, port: server.address().port }))
+    })
+
+    const writeProjectOp = async (server, project, opId) => {
+        const { latestVersion } = await (await fetch(`${server.baseUrl}/api/projects/${project}/ops`, { headers: authHeaders })).json()
+        const response = await fetch(`${server.baseUrl}/api/projects/${project}/ops`, {
+            method: 'POST', headers: authHeaders,
+            body: JSON.stringify({ baseVersion: latestVersion, ops: [{ opId, type: 'createEntity', payload: { entity: { id: opId, name: opId } } }] })
+        })
+        expect(response.status).toBe(200)
+    }
+    const projectHas = (server, project, opId) => async () => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${project}/ops`, { headers: authHeaders })
+        if (response.status !== 200) return false
+        return opIds(await response.json()).includes(opId)
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        edge = await proxy(hosting.baseUrl)
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: `http://127.0.0.1:${edge.port}/serverXR`, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: (line) => lines.warn.push(line), info: () => {} }
+        })
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        if (edge) { edge.server.closeAllConnections(); await new Promise(resolve => edge.server.close(resolve)) }
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('asks about the broken project about once per failure delay, carries the other, and recovers', async () => {
+        for (const slug of [BAD, GOOD]) {
+            const made = await fetch(`${hosting.baseUrl}/api/spaces/${SPACE}/projects`, {
+                method: 'POST', headers: authHeaders, body: JSON.stringify({ slug, title: slug })
+            })
+            expect(made.status).toBe(201)
+        }
+        for (const slug of [BAD, GOOD]) await settle(`${slug} existing on the follower`, async () => (await fetch(`${following.baseUrl}/api/projects/${slug}/ops`, { headers: authHeaders })).status === 200)
+        await writeProjectOp(hosting, BAD, 'op-before')
+        await settle('the broken project reaching the follower while healthy', projectHas(following, BAD, 'op-before'))
+        gate.broken = true
+        await wait(300)
+        const from = edge.asks.length
+        const busy0 = setInterval(() => follower.wake(), 250)
+        await writeProjectOp(hosting, GOOD, 'op-good')
+        const started = Date.now()
+        await settle('an edit in the other project crossing', projectHas(following, GOOD, 'op-good'), { timeout: 8000 })
+        const crossedAfter = Date.now() - started
+        clearInterval(busy0)
+        // Edits made on this install wake the follower (nudgeFollow), so a busy
+        // space goes round often: wake it every quarter second for the rest of the window.
+        const busy = setInterval(() => follower.wake(), 250)
+        await wait(Math.max(0, 8000 - crossedAfter))
+        clearInterval(busy)
+        const asked = edge.asks.length - from
+        console.log(`[project 500 for 8000 ms] ${JSON.stringify({ asked, crossedAfterMs: crossedAfter, said: lines.warn.length })}`)
+        // 0 s, then 5 s (failure delay 5 s, then 10 s): two asks in eight seconds, three at most.
+        expect(asked).toBeLessThanOrEqual(3)
+        expect(crossedAfter).toBeLessThan(4000)
+        expect(lines.warn.length).toBeLessThanOrEqual(3)
+
+        // The first good read ends the wait: an edit made while it was down arrives.
+        await writeProjectOp(hosting, BAD, 'op-after')
+        gate.broken = false
+        await settle('the broken project recovering', projectHas(following, BAD, 'op-after'), { timeout: 20_000 })
+    }, 60_000)
+})
