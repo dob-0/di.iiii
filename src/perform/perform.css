@@ -299,11 +299,12 @@
     gap: var(--di-space-2);
 }
 
+/* status dot, not a control: square like every light (owner rule, rectangles only). */
 .perform-beat {
     width: 14px;
     height: 14px;
     border: 1px solid var(--di-dim);
-    border-radius: 50%;
+    border-radius: var(--di-radius);
 }
 
 .perform-beat.is-on {
