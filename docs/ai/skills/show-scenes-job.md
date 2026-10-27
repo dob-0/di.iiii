@@ -1,6 +1,6 @@
 # Show scenes job — one documented method for a show's light scenes
 
-Skill text, 2026-10-17. Drafted from the MOXIR v6 scenes job (session note `docs/ai/sessions/feat-moxir-scenes-v5-pr-2026-10-17.md`),
+Skill text, 2026-10-17. **The skill `.claude/skills/show-scenes-job/SKILL.md` (2026-10-26) is the entry point and holds the safe-flag defaults and the rules that must never be skipped; this file stays the long source for the steps and traps (one source for each text).** Drafted from the MOXIR v6 scenes job (session note `docs/ai/sessions/feat-moxir-scenes-v5-pr-2026-10-17.md`),
 where several agents designed and wrote the scenes over hours. Owner: *"learn for future that we can work fast"* — *learn once, optimise forever.*
 This is steps 4–6 of [venue-to-show.md](venue-to-show.md) as one job. **Read it before any scenes job; fix it in the same branch as the work that proves it wrong.**
 Words (`docs/ai/vocabulary.md`): **space** = the owner's domain on the platform · **project** = the thing you make (a version of a show) · **scene** (a designed

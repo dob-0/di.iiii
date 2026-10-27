@@ -2,6 +2,13 @@ import { generateId } from '../shared/projectSchema.js'
 import { TOP_TYPE_IDS, buildTopNodeTypes } from './tops/topOperators.js'
 import { VJ_DECK_TYPE, buildVjDeckNodeTypes } from './tops/vjDeck.js'
 
+// Palette provenance (SYSTEM rule 8: a quotation is named as one). Seven of the
+// port, category and family colours below quote the Dracula theme's palette —
+// #8be9fd cyan, #50fa7b green, #ffb86c orange, #ff79c6 pink, #bd93f9 purple,
+// #ff5555 red, #f1fa8c yellow. Source: github.com/dracula/dracula-theme,
+// MIT licence, © 2023 Dracula Theme; licence read 2026-10-21. The other values
+// in these tables are not Dracula's. Values unchanged.
+
 // --- Port Types ---
 // Every connection wire carries one of these types.
 // color is visual shorthand for the graph canvas.
@@ -119,6 +126,7 @@ export const FAMILY_BY_TYPE = {
     // Create sits with the things it makes, not with the panels it looks like.
     'view.library': 'make',
     'view.image': 'make',
+    'view.qrcode': 'make',
     'view.browser': 'make',
     'node.null': 'make',
     // numbers — values, time, math: the stuff you shape and wire
@@ -196,6 +204,7 @@ export const FAMILY_BY_TYPE = {
     'device.osc.out': 'send-out',
     'stream.output': 'send-out',
     'stream.recorder': 'send-out',
+    'stream.still': 'send-out',
     'stream.compositor': 'send-out',
     'stream.switcher': 'send-out',
     'stream.controller': 'send-out',
@@ -1040,31 +1049,57 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    // Recorder and Still keep what the show looked like (NODE_BACKLOG.md §3,
+    // "the exception worth pulling forward"). The browser does the work —
+    // MediaRecorder and a canvas — so both live in their windows
+    // (RecorderPanelWindow, StillPanelWindow); the runtimes only read the
+    // windows' report back through context.liveOutputs. What they make lands
+    // as a project file named after its source and the moment it was taken.
     'stream.recorder': {
         id: 'stream.recorder',
-        label: 'Stream Recorder',
+        label: 'Recorder',
         category: 'stream',
-        runtime: 'local',
-        authoringOnly: true,
+        runtime: 'web',
         singleton: false,
+        keywords: ['record', 'recording', 'video', 'webm', 'capture', 'reel', 'documentation', 'film'],
         inputs: [
-            { id: 'video', type: 'texture', label: 'Video In' },
-            { id: 'audio', type: 'any',     label: 'Audio In' },
-            { id: 'start', type: 'signal',  label: 'Start'    },
-            { id: 'stop',  type: 'signal',  label: 'Stop'     },
+            // A Scene's Picture, a Picture Out, a camera's Frame.
+            { id: 'video', type: 'texture', label: 'Picture' },
+            // A sound as a MediaStream (or anything carrying one); without
+            // it the file is picture only, and the window says so.
+            { id: 'audio', type: 'any',     label: 'Sound'   },
+            { id: 'start', type: 'signal',  label: 'Start'   },
+            { id: 'stop',  type: 'signal',  label: 'Stop'    },
+        ],
+        outputs: [
+            { id: 'recording', type: 'boolean', label: 'Recording' },
+            { id: 'seconds',   type: 'number',  label: 'Seconds'   },
+            { id: 'status',    type: 'string',  label: 'Status'    },
+            { id: 'file',      type: 'string',  label: 'File'      },
+        ],
+        defaultValues: {},
+        render: 'panel-2d',
+        defaultFrame: { width: 320, height: 300 },
+    },
+
+    'stream.still': {
+        id: 'stream.still',
+        label: 'Still',
+        category: 'stream',
+        runtime: 'web',
+        singleton: false,
+        keywords: ['still', 'snapshot', 'screenshot', 'png', 'photo', 'frame', 'grab', 'documentation'],
+        inputs: [
+            { id: 'picture', type: 'texture', label: 'Picture' },
+            { id: 'take',    type: 'signal',  label: 'Take'    },
         ],
         outputs: [
             { id: 'status', type: 'string', label: 'Status' },
             { id: 'file',   type: 'string', label: 'File'   },
         ],
-        defaultValues: {
-            hostHint: 'windows',
-            filePattern: 'recording-{timestamp}.mp4',
-        },
-        configInputs: [
-            { id: 'filePattern', type: 'string', label: 'File Pattern' },
-        ],
-        render: 'hidden',
+        defaultValues: {},
+        render: 'panel-2d',
+        defaultFrame: { width: 300, height: 280 },
     },
 
     'view.desk': {
@@ -1831,6 +1866,37 @@ export const NODE_TYPES = {
         outputs: [],
         defaultValues: {},
         render: 'panel-2d',
+    },
+
+    // A live code for the address phones should open (ISO/IEC 18004, through
+    // uqr). Text left empty encodes this
+    // tier's own address, so moving a project to another tier cannot leave a
+    // dead code on the wall. Its picture is a texture wire, like Webcam's
+    // Frame: a plane, an Image panel or Picture Out shows it.
+    'view.qrcode': {
+        id: 'view.qrcode',
+        label: 'QR Code',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['qr', 'qrcode', 'code', 'scan', 'phone', 'join', 'address', 'link', 'url', 'barcode'],
+        inputs: [
+            // Empty: this tier's own address (diiPageOrigin, else the origin).
+            { id: 'text',  type: 'string', label: 'Text', default: '' },
+            // How much of the code may be covered or worn and still read:
+            // about 7, 15, 25 and 30 per cent.
+            { id: 'level', type: 'string', label: 'Correction', default: 'M', options: [
+                { value: 'L', label: 'L · 7%' },
+                { value: 'M', label: 'M · 15%' },
+                { value: 'Q', label: 'Q · 25%' },
+                { value: 'H', label: 'H · 30%' },
+            ] },
+        ],
+        outputs: [
+            { id: 'picture', type: 'texture', label: 'Picture' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
     },
 
     // The two panels below finally implement type ids that RawEditor and
@@ -3458,7 +3524,6 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
     'stream.compositor',
     'stream.switcher',
     'stream.output',
-    'stream.recorder',
     'stream.controller',
     // structure — zero consumers outside this file
     'universe.node0',

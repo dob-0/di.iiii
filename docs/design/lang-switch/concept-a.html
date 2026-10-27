@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Language switch — concept A: the corner word</title>
+<style>
+:root {
+    --di-cyan: #4df9ff;
+    --di-cyan-dim: rgba(77, 249, 255, 0.1);
+    --di-cyan-border: rgba(77, 249, 255, 0.3);
+    --di-cyan-line: rgba(77, 249, 255, 0.35);
+    --di-cyan-wash: rgba(77, 249, 255, 0.06);
+    --di-black: #000;
+    --di-surface: #0a0a0a;
+    --di-text: #fff;
+    --di-text-muted: rgba(255, 255, 255, 0.5);
+    --di-note-ink: rgba(255, 196, 140, 0.62);
+    --di-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --di-sans: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --di-space-1: 3px;
+    --di-space-2: 7px;
+    --di-space-3: 12px;
+    --di-space-4: 16px;
+    --di-space-5: 22px;
+    --di-space-6: 30px;
+    --di-space-7: 40px;
+    --di-text-2: 0.625rem;
+    --di-text-3: 0.76rem;
+    --di-text-4: 0.9rem;
+    --di-text-5: 1.0625rem;
+    --di-text-6: 1.25rem;
+    --di-label-tracking: 0.16em;
+    --di-touch-target: 44px;
+}
+* { box-sizing: border-box; border-radius: 0; }
+body { margin: 0; background: var(--di-black); color: var(--di-text); font: var(--di-text-4)/1.5 var(--di-sans); }
+main { max-width: 1320px; margin: 0 auto; padding: var(--di-space-6) var(--di-space-4); }
+h1 { font-size: var(--di-text-6); font-weight: 600; margin: 0 0 var(--di-space-2); }
+h2 { font: 500 var(--di-text-2)/1 var(--di-mono); letter-spacing: var(--di-label-tracking); text-transform: uppercase; color: var(--di-text-muted); margin: 0 0 var(--di-space-3); }
+p { margin: 0 0 var(--di-space-3); }
+.lede { color: var(--di-text-muted); max-width: 70ch; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--di-space-5); margin: var(--di-space-6) 0; }
+.panel { border: 1px solid var(--di-cyan-border); background: var(--di-surface); padding: var(--di-space-4); min-width: 0; }
+.mock { border: 1px solid var(--di-cyan-line); background: var(--di-black); }
+.bar { display: flex; align-items: center; gap: var(--di-space-3); padding: var(--di-space-2) var(--di-space-3); border-bottom: 1px solid var(--di-cyan-line); font: var(--di-text-3) var(--di-mono); }
+.bar .grow { flex: 1; }
+.brand { color: var(--di-cyan); font-weight: 600; }
+.muted { color: var(--di-text-muted); }
+.sw { display: inline-flex; border: 1px solid var(--di-cyan); font: 600 var(--di-text-3) var(--di-mono); }
+.sw span { padding: var(--di-space-1) var(--di-space-2); }
+.sw .on { background: var(--di-cyan); color: var(--di-black); }
+.acct { width: 22px; height: 22px; border: 1px solid var(--di-cyan-border); }
+.hero { padding: var(--di-space-6) var(--di-space-4); }
+.hero b { font-size: var(--di-text-6); font-weight: 600; display: block; margin-bottom: var(--di-space-2); }
+.work { margin: var(--di-space-3); padding: var(--di-space-4); min-height: 120px; border: 1px dashed var(--di-note-ink);
+    background: repeating-linear-gradient(135deg, transparent 0 10px, var(--di-cyan-wash) 10px 11px); }
+.work .tag { font: var(--di-text-2) var(--di-mono); letter-spacing: var(--di-label-tracking); text-transform: uppercase; color: var(--di-note-ink); }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--di-space-3); margin-top: var(--di-space-2); }
+.studio { display: grid; grid-template-columns: 90px 1fr 110px; min-height: 150px; }
+.studio > div { border-right: 1px solid var(--di-cyan-line); padding: var(--di-space-2); font: var(--di-text-2) var(--di-mono); color: var(--di-text-muted); }
+.studio > div:last-child { border-right: 0; }
+.phone { width: 230px; margin: 0 auto; border: 1px solid var(--di-cyan); background: var(--di-black); min-height: 360px; display: flex; flex-direction: column; }
+.phone .hero { padding: var(--di-space-5) var(--di-space-3); flex: 1; }
+.phone .sw span { min-width: var(--di-touch-target); min-height: var(--di-touch-target); display: inline-flex; align-items: center; justify-content: center; }
+.callout { margin-top: var(--di-space-3); color: var(--di-cyan); font: var(--di-text-3) var(--di-mono); }
+.note { border-left: 2px solid var(--di-note-ink); color: var(--di-note-ink); padding: var(--di-space-2) var(--di-space-3); margin: var(--di-space-3); font-size: var(--di-text-3); }
+dl { display: grid; grid-template-columns: 200px 1fr; gap: var(--di-space-3) var(--di-space-5); border-top: 1px solid var(--di-cyan-border); padding-top: var(--di-space-5); }
+dt { font: 500 var(--di-text-2)/1.6 var(--di-mono); letter-spacing: var(--di-label-tracking); text-transform: uppercase; color: var(--di-cyan); }
+dd { margin: 0; max-width: 80ch; }
+code { font: var(--di-text-3) var(--di-mono); color: var(--di-cyan); }
+@media (max-width: 800px) {
+    .grid { grid-template-columns: 1fr; }
+    dl { grid-template-columns: 1fr; gap: var(--di-space-1); }
+    dd { margin-bottom: var(--di-space-3); }
+    .studio { grid-template-columns: 60px 1fr 70px; }
+}
+</style>
+</head>
+<body>
+<main>
+<h2>di.iiii · language switch · concept A of 3 · sketch, not built</h2>
+<h1>A — The corner word</h1>
+<p class="lede">One small two-word switch, <b>ՀԱՅ | EN</b>, in the same top-right corner of every header on di.iiii, beside the account. Pressing it changes the frame at once, in place. The address never changes. Cheapest of the three to build; Armenian is invisible to search.</p>
+
+<div class="grid">
+    <section class="panel" data-surface="landing">
+        <h2>1 · Landing page header</h2>
+        <div class="mock">
+            <div class="bar"><span class="brand">di.iiii</span><span class="muted">Spaces</span><span class="muted">Wiki</span><span class="grow"></span><span class="sw" title="Լեզու / Language"><span>ՀԱՅ</span><span class="on">EN</span></span><span class="acct"></span></div>
+            <div class="hero"><b>A place for spaces.</b><span class="muted">Pressing ՀԱՅ redraws this text in Armenian. Same address.</span></div>
+        </div>
+        <p class="callout">↑ top-right, left of the account. Always the same corner.</p>
+    </section>
+
+    <section class="panel" data-surface="space">
+        <h2>2 · Inside a space's front page</h2>
+        <div class="mock">
+            <div class="bar"><span class="brand">di.iiii</span><span class="muted">/ sample-space</span><span class="grow"></span><span class="sw"><span class="on">ՀԱՅ</span><span>EN</span></span><span class="acct"></span></div>
+            <div class="work" data-work translate="no" lang="und">
+                <span class="tag">the work · as the artist made it · not switched</span>
+                <div class="cols"><span>Հայերեն տեքստ, ինչպես արվեստագետը գրել է։</span><span>English text, as the artist wrote it.</span></div>
+            </div>
+        </div>
+        <p class="callout">↑ the frame strip switches; the dashed area is the work and never does. A side-by-side bilingual work stays side by side.</p>
+    </section>
+
+    <section class="panel" data-surface="studio">
+        <h2>3 · Inside the Studio</h2>
+        <div class="mock">
+            <div class="bar"><span class="brand">Studio</span><span class="muted">sample-space / first-project</span><span class="grow"></span><span class="sw"><span class="on">ՀԱՅ</span><span>EN</span></span><span class="acct"></span></div>
+            <div class="studio"><div>Օբյեկտներ<br>Objects</div><div>scene</div><div>Հատկություններ<br>Inspector</div></div>
+        </div>
+        <p class="callout">↑ same corner in the Studio bar. Panel names, menus and buttons switch; object names the artist typed do not.</p>
+    </section>
+
+    <section class="panel" data-surface="phone">
+        <h2>4 · On a phone (390 wide)</h2>
+        <div class="phone">
+            <div class="bar"><span class="brand">di.iiii</span><span class="grow"></span><span class="sw"><span>ՀԱՅ</span><span class="on">EN</span></span></div>
+            <div class="hero"><b>A place for spaces.</b><span class="muted">The switch stays in the bar; each half is a 44 px target.</span></div>
+        </div>
+        <p class="callout">↑ the account moves into the menu on a phone; the switch does not.</p>
+    </section>
+</div>
+
+<dl>
+    <dt data-answer="where">Where it sits</dt>
+    <dd>Top-right of every header (landing, /spaces, a space's frame strip, the Studio bar, the wiki), immediately left of the account. One component, one place. Both words are always shown, the current one filled cyan, so a visitor who reads only one of the two scripts can still find their way back.</dd>
+
+    <dt data-answer="remembers">What it remembers, and how</dt>
+    <dd>Per device: <code>localStorage["di.lang"]</code> = <code>hy</code> | <code>en</code>. Signed in: also saved on the account (serverXR user preferences), so a second device picks it up at sign-in; the account wins over the device when they differ. First visit with nothing saved: English (what the site is today); the switch is the only way in — no guessing from the browser language.</dd>
+
+    <dt data-answer="address">What the address does</dt>
+    <dd>Nothing. <code>/sample-space</code> is the same address in both languages. A link someone sends opens in the receiver's own saved language, not the sender's.</dd>
+
+    <dt data-answer="search">What it means for search</dt>
+    <dd>Google Search Central ("Managing multi-regional and multilingual sites") recommends a different URL for each language version rather than cookies or browser settings, and notes its crawlers usually come from US addresses without an <code>Accept-Language</code> header; a crawler keeps no stored choice, so it sees English only. <b>The Armenian frame is never indexed</b>, and hreflang cannot be used — it needs a second URL to point at. Plainly: nobody finds di.iiii by searching in Armenian.</dd>
+
+    <dt data-answer="missing">A page with no Armenian yet</dt>
+    <dd>The frame (bar, buttons, menus) switches anyway. The page body stays English, with one line on top in Armenian: <span class="note" style="display:inline-block;margin:0">Այս էջը դեռ հայերեն չունի։ Ստորև՝ անգլերեն։</span> (“This page has no Armenian yet. English below.”) The switch itself never hides or greys out.</dd>
+
+    <dt data-answer="work">How the work is left untouched</dt>
+    <dd>The switch only changes strings the platform owns. The work (a space's page, scene or iframe) gets no message and no attribute from it; its container carries <code>translate="no"</code> so a browser's own translate button on the frame cannot rewrite it either, and the work's <code>lang</code> is whatever the artist declared. A bilingual work, like a front page that carries Armenian and English side by side today, stays exactly as made.</dd>
+</dl>
+<p class="muted" style="margin-top:var(--di-space-5)">Typeface: the platform's Inter is a latin subset (48,256 bytes) with no Armenian glyphs, so Armenian here falls back to the system font, as it would on the live site today. All Armenian copy in this sketch needs a native speaker's check.</p>
+</main>
+</body>
+</html>

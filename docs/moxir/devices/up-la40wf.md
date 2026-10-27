@@ -105,10 +105,10 @@ Values come from his 86 s sweep video (di.bo `1490-1116697124_1490.mp4`) with th
 `photos/la40wf-shapes-by-value-1-2026-10-17.jpg` (1-71), `-2-` (72-168), `-3-` (170-255). A shape lasts about two values.
 The same on ch 3 and ch 20 of BOTH units (32 ch each: U2.137 ch 139/156, U2.169 ch 171/188). Data: `scripts/place/fixtures/charts/up-la40wf.json` → `graphics`.
 
-- **Test pattern: value 24 — the square** (it shows from 23 to 25).
-- **Never use — hearts:** 78-79, 166-167.
-- **Never use — arrows:** 74-75.
-- **Never use — numbers:** 246-253.
-- **Everything else is usable**, from value 1 up (owner: "other is ok").
-- **Safety, not taste:** single dots and blobs (about 146-165, 185-187) put all 40 W in one spot. Never toward people; only for an aim test on a surface.
-- **Exact, by the owner's word:** only the values he named are banned; no approximate neighbours are added.
+- **Test pattern: value 181** (owner, 2026-10-17 05:04Z, recovered 2026-10-21). Was 24, the square (it shows from 23 to 25; measured in the sweep video).
+- **Never use — the owner's ranges (2026-10-17 05:04Z):** 72-81, 88, 89, 146-168. The owner's words: "don't use from 72-81,88,89,146-168, and 181 is the test pattern add in chart to not use this values". The message was dropped by the old di.bo and recovered on 2026-10-21; it is the owner's word, not measured on the wire log.
+- **Never use — measured (sweep video, 2026-10-17):** hearts 78-79, 166-167 · arrows 74-75 · numbers 246-253. Overlap: 74-75 and 78-79 sit inside 72-81, 166-167 inside 146-168; 246-253 stands alone. 43 values in all.
+- **0-9 is one look.** The same thread: "this is 0", "and it goes till the 9 so don't photo", "and this is the after 9", "this 166". Values 0-9 draw the same graphic; the next look starts at 10. This holds for 0-9 only; above 9 the manual's "one graphic for every two values" is not re-walked.
+- **Everything else is usable** (owner: "other is ok").
+- **Safety, not taste:** single dots and blobs (about 146-165, 185-187) put all 40 W in one spot. Never toward people; only for an aim test on a surface. 146-165 is now never-use as well.
+- **Exact, by the owner's word:** only the values the owner named are banned; no approximate neighbours are added.

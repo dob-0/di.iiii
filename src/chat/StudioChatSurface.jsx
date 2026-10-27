@@ -8,7 +8,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
 import IosShareIcon from '@mui/icons-material/IosShare'
 import PushPinIcon from '@mui/icons-material/PushPin'
-import { diFontTheme } from '../styles/muiTheme.js'
+import { diTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useSpaceChat from './useSpaceChat.js'
 import { buildChatHomePath, buildChatPath, buildPrivateChatPath } from './chatRouting.js'
@@ -16,6 +16,7 @@ import { appNavigate } from '../utils/appNavigate.js'
 import ReplyQuote from './ReplyQuote.jsx'
 import { markRoomSeen } from './privateChatIndex.js'
 import MessageActions, { copyAction, linkAction, pinAction, removeAction, replyAction, useLongPress } from './MessageActions.jsx'
+import { claimManifest } from './claimManifest.js'
 
 // `iiii` — the room, at its own address, with nothing else on the screen.
 // Named for the platform, not for a function: it is not "the studio chat", it is
@@ -198,12 +199,10 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
     // the address itself unreliable. Site-wide they would offer to install the whole
     // platform under this room's name, and put a cache in front of the editor.
     // The link is added at runtime for the same reason — src/index.html is one
-    // document shared by every route.
+    // document shared by every route — and takes the site's own link out while
+    // it is here (claimManifest.js: a browser reads only the first).
     useEffect(() => {
-        const link = document.createElement('link')
-        link.rel = 'manifest'
-        link.href = '/chat-app/manifest.webmanifest'
-        document.head.appendChild(link)
+        const releaseManifest = claimManifest('/chat-app/manifest.webmanifest')
         // The worker is only registered on a secure origin; on plain http a dev
         // server is exempt (localhost), a LAN address is not, and the failure
         // is silent and correct.
@@ -221,9 +220,7 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                 .filter((name) => /\/(assets|fonts|chat-app)\//.test(name))
             if (urls.length) worker.postMessage({ type: 'dii-chat-warm', urls })
         }).catch(() => {})
-        return () => {
-            link.remove()
-        }
+        return releaseManifest
     }, [])
 
     // Consecutive lines from one person are one block: the name and the clock
@@ -340,7 +337,7 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
     const typing = typingLine(typingNames)
 
     return (
-        <ThemeProvider theme={diFontTheme}>
+        <ThemeProvider theme={diTheme}>
             <Box sx={{
                 position: 'fixed',
                 inset: 0,
