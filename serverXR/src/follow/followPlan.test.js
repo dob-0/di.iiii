@@ -5,7 +5,9 @@ import { describe, expect, it } from 'vitest'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
-const { accountedThrough, unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval, BATCH } = require('./followPlan')
+const { accountedThrough, unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval, BATCH, batchOf, MAX_BODY_BYTES, MAX_OP_BYTES } = require('./followPlan')
+const { readFileSync } = require('node:fs')
+const path = require('node:path')
 
 const op = (id) => ({ opId: id, type: 'updateEntity', payload: {}, version: 1 })
 
@@ -123,5 +125,55 @@ describe('failureDelay — a refused stream is left alone longer each time', () 
     it('says when it will try again and that the rest keeps following', () => {
         const text = describeWriteFailure({ stream: { kind: 'project', projectId: 'test', key: 'project:test' }, direction: 'in', status: 500, error: 'Server error', retryInMs: 20_000 })
         expect(text).toBe("this di.iiii refused the other side's changes to project test (HTTP 500: Server error) (see this server's log) — trying again in 20 s; the rest of the space keeps following")
+    })
+})
+
+// Audit F3 (docs/ai/audits/follow-audit-2026-10-04.md): a batch was capped by
+// count (200), never by bytes, so two ops the host had each accepted alone
+// (6 MB) could not cross together in one POST (413), and the same batch was
+// retried every tick for ever. A batch is now also capped by the receiving
+// server's JSON body limit.
+describe('a batch is capped by bytes as well as by count (audit F3)', () => {
+    const big = (id, bytes) => ({ opId: id, type: 'addObject', version: 1, payload: { s: 'x'.repeat(bytes) } })
+    const size = (value) => Buffer.byteLength(JSON.stringify(value))
+
+    it('takes the cap from the server\'s own express.json limit, not from a number of ours', () => {
+        const source = readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8')
+        expect(source).toMatch(/express\.json\(\{ limit: '10mb'/)
+        expect(MAX_BODY_BYTES).toBe(10 * 1024 * 1024)
+    })
+
+    it('never builds a body bigger than the server accepts (three 4 MB ops, the audit\'s F-batch)', () => {
+        const ops = [big('o1', 4_000_000), big('o2', 4_000_000), big('o3', 4_000_000)]
+        const plan = planDirection({ ops, seen: new Set(), targetVersion: 1 })
+        expect(size(plan)).toBeLessThanOrEqual(MAX_BODY_BYTES)
+        expect(plan.ops.map(o => o.opId)).toEqual(['o1', 'o2'])
+    })
+
+    it('says there is more to carry when the bytes, not the count, stopped the batch', () => {
+        const ops = [big('o1', 4_000_000), big('o2', 4_000_000), big('o3', 4_000_000)]
+        expect(moreToCarry(ops, new Set())).toBe(true)
+        expect(moreToCarry(ops, new Set(['o3']))).toBe(false)
+    })
+
+    it('carries each of two 6 MB ops in its own batch rather than stalling', () => {
+        const ops = [big('o1', 6_000_000), big('o2', 6_000_000)]
+        expect(batchOf(ops, new Set()).ops.map(o => o.opId)).toEqual(['o1'])
+        expect(batchOf(ops, new Set(['o1'])).ops.map(o => o.opId)).toEqual(['o2'])
+    })
+
+    it('gives a single op bigger than the cap a defined result: left out of the batch and named', () => {
+        const huge = big('huge', MAX_OP_BYTES + 10)
+        const result = batchOf([huge, op('after')], new Set())
+        expect(result.ops.map(o => o.opId)).toEqual(['after'])
+        expect(result.tooLarge).toHaveLength(1)
+        expect(result.tooLarge[0]).toMatchObject({ opId: 'huge', type: 'addObject' })
+        expect(result.tooLarge[0].bytes).toBeGreaterThan(MAX_OP_BYTES)
+        expect(unseen([huge], new Set())).toEqual([])
+    })
+
+    it('still carries 200 small ops in one batch', () => {
+        const many = Array.from({ length: BATCH + 5 }, (_, i) => op(`s${i}`))
+        expect(batchOf(many, new Set()).ops).toHaveLength(BATCH)
     })
 })

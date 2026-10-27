@@ -1480,3 +1480,130 @@ describe('a follow whose other side stops answering waits as one, and carries on
         }
     }, 60_000)
 })
+
+// Audit F1 (docs/ai/audits/follow-audit-2026-10-04.md): project ids are global
+// per install. A project of the followed space that has the same id as a
+// project in ANOTHER space here (or there) must not be wired to it: the create
+// answers 409, and the follower used to swallow that and carry ops between two
+// unrelated projects, both ways.
+describe('a project id that lives in another space is never wired to the followed one (audit F1)', () => {
+    let hosting = null
+    let following = null
+    let follower = null
+    const warned = []
+
+    const projectOp = (id, opId) => ({ opId, type: 'createEntity', payload: { entity: { id, type: 'box' } } })
+    const writeProjectOp = async (server, projectId, op) => {
+        const ops = await (await fetch(`${server.baseUrl}/api/projects/${projectId}/ops`, { headers: authHeaders })).json()
+        const response = await fetch(`${server.baseUrl}/api/projects/${projectId}/ops`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ baseVersion: ops.latestVersion, ops: [op] })
+        })
+        expect(response.status).toBe(200)
+    }
+    const entityIds = async (server, projectId) => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${projectId}/document`, { headers: authHeaders })
+        if (response.status !== 200) return []
+        return ((await response.json()).document?.entities || []).map(entity => entity.id).sort()
+    }
+    const makeProject = async (server, spaceId, slug, title) => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug, title })
+        })
+        expect(response.status).toBe(201)
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        await createSpace(following, 'other-space')
+        await makeProject(following, 'other-space', 'notes', 'private notes')
+        await makeProject(hosting, SPACE, 'notes', 'notes')
+        await writeProjectOp(following, 'notes', projectOp('secret-local', 'op-f1-local'))
+        await writeProjectOp(hosting, 'notes', projectOp('from-host', 'op-f1-host'))
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: line => warned.push(String(line)), info: () => {} }
+        })
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('leaves the other space\'s project exactly as it was, and sends nothing of it to the host', async () => {
+        await settle('the follow naming the refused id', () => /notes/.test(String(follower.state.lastError || '')), { timeout: 15_000 })
+        await wait(2500)
+        expect(await entityIds(following, 'notes')).toEqual(['secret-local'])
+        expect(await entityIds(hosting, 'notes')).toEqual(['from-host'])
+    })
+
+    it('says which id was refused, in the log and in the follow\'s state', () => {
+        expect(warned.some(line => line.includes('notes') && /another space/.test(line))).toBe(true)
+        expect(String(follower.state.lastError)).toMatch(/notes.*another space/)
+    })
+
+    it('keeps following the rest of the space', async () => {
+        await writeOp(hosting, addObject('still-flows', 'op-f1-flow'))
+        await settle('an ordinary edit still crossing', hasOp(following, 'op-f1-flow'), { timeout: 15_000 })
+    })
+})
+
+// Audit F3: a batch was capped by count, not bytes; two edits of 6 MB, each
+// accepted by the host alone, never crossed together (413 for ever).
+describe('large edits cross one by one and never stall a stream (audit F3)', () => {
+    let hosting = null
+    let following = null
+    let follower = null
+    const warned = []
+    const named = (id, opId, bytes) => ({ opId, type: 'addObject', payload: { object: { id, type: 'box', name: 'x'.repeat(bytes) } } })
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('carries two 6 MB edits, each in its own request', async () => {
+        // Both are on the host BEFORE the follow starts and it replays the
+        // log, so the first read holds both at once: the case that stalled.
+        for (const index of [1, 2]) {
+            const written = await writeOp(hosting, named(`big-${index}`, `op-f3-big-${index}`, 6_000_000))
+            expect(written.status).toBe(200)
+        }
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: line => warned.push(String(line)), info: () => {} },
+            start: 'replay'
+        })
+        await settle('both 6 MB edits on the follower', async () => {
+            const ids = objectIds(await readScene(following))
+            return ids.includes('big-1') && ids.includes('big-2')
+        }, { timeout: 30_000 })
+    })
+
+    it('reports a single edit over the cap once, by name, and keeps carrying what is behind it', async () => {
+        // 10.44 MB: the host takes it alone (under its 10 MiB body limit) but
+        // no request this side builds can hold it with its envelope.
+        const written = await writeOp(hosting, named('too-big', 'op-f3-huge', 10_440_000))
+        expect(written.status).toBe(200)
+        await writeOp(hosting, addObject('after-huge', 'op-f3-after'))
+        follower.wake()
+        await settle('the edit behind the oversize one', hasOp(following, 'op-f3-after'), { timeout: 30_000 })
+        expect(String(follower.state.lastError)).toMatch(/op-f3-huge.*too large/)
+        expect(warned.filter(line => line.includes('op-f3-huge'))).toHaveLength(1)
+        expect(objectIds(await readScene(following))).not.toContain('too-big')
+        await wait(2500)
+        expect(follower.state.status).not.toBe('waiting')
+    })
+})

@@ -19,7 +19,7 @@
  */
 
 const { httpRequest } = require('../httpClient')
-const { accountedThrough, moreToCarry, unseen, planDirection, planAfterConflict, nextInterval, refusedWholeWork, WHOLE_WORK_OPS, failureDelay, isStuckRefusal, describeWriteFailure } = require('./followPlan')
+const { accountedThrough, batchOf, moreToCarry, unseen, planDirection, planAfterConflict, nextInterval, refusedWholeWork, WHOLE_WORK_OPS, failureDelay, isStuckRefusal, describeWriteFailure } = require('./followPlan')
 const { projectIdsFrom, sceneStream, streamsFor } = require('./streams')
 const { createAssetChase } = require('./assets')
 const { CONVERGE_CLIENT, DIRECTIONS, describeCounts, planConverge, readDocument } = require('./followConverge')
@@ -143,7 +143,19 @@ const readOps = async (from, stream, since, { waitSeconds = 0, signal = null, ma
  * HTTP's: how many landed, whether the target moved, and whether we are still
  * in step with it.
  */
-const carry = async ({ to, stream, ops, seen, targetVersion, send = request, direction = null }) => {
+const carry = async (args) => {
+    const { ops, seen } = args
+    // An op that cannot fit in any request the other side would accept is
+    // accounted for here, and named: left unseen it would hold the cursor, and
+    // everything behind it, in place for ever (audit F3).
+    const { tooLarge } = batchOf(ops, seen)
+    if (tooLarge.length) rememberSeen(seen, tooLarge)
+    const result = await carryBatch(args)
+    const refused = [...tooLarge, ...(result.tooLarge || [])]
+    return refused.length ? { ...result, tooLarge: refused } : result
+}
+
+const carryBatch = async ({ to, stream, ops, seen, targetVersion, send = request, direction = null }) => {
     const plan = planDirection({ ops, seen, targetVersion })
     if (!plan) return { wrote: 0, targetVersion, moved: false }
 
@@ -182,6 +194,21 @@ const carry = async ({ to, stream, ops, seen, targetVersion, send = request, dir
         // the target's log like any other edit.
         const { apply, retryAt } = planAfterConflict(answer.payload)
         return { wrote: 0, targetVersion: retryAt ?? targetVersion, moved: apply.length > 0, caughtUp: apply, carriedThrough: null }
+    }
+
+    // The other side's body limit is lower than ours (an older or smaller
+    // server): halve the batch, and an op that is refused alone is named and
+    // accounted for, never retried for ever.
+    if (answer.status === 413) {
+        if (plan.ops.length > 1) {
+            return carryBatch({ to, stream, ops: plan.ops.slice(0, Math.ceil(plan.ops.length / 2)), seen, targetVersion, send, direction })
+        }
+        const [only] = plan.ops
+        rememberSeen(seen, [only])
+        return {
+            wrote: 0, targetVersion, moved: false, carriedThrough: null,
+            tooLarge: [{ opId: only.opId, type: only.type, bytes: Buffer.byteLength(JSON.stringify(only)), refusedBy: 'the other side (HTTP 413)' }]
+        }
     }
 
     // A sentence, never a bare number: `di follows` printed "500" for hours on
@@ -349,6 +376,21 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     }
 
     const refusedMake = new Set()
+
+    // Edits too large to travel (followPlan.js MAX_OP_BYTES): each is left where
+    // it is, said once in the log, and kept in `di follows` for as long as this
+    // follow runs.
+    const tooLargeNotes = new Map()
+    const noteTooLarge = (stream, list = []) => {
+        for (const item of list) {
+            if (tooLargeNotes.has(item.opId)) continue
+            const where = stream.kind === 'project' ? `project ${stream.projectId}` : 'the room'
+            const mb = (item.bytes / (1024 * 1024)).toFixed(1)
+            const message = `edit ${item.opId} (${item.type}, ${mb} MB, in ${where}) is too large to carry${item.refusedBy ? ` — refused by ${item.refusedBy}` : ''} and was left on the side that made it`
+            tooLargeNotes.set(item.opId, message)
+            log.warn?.(`[follow] ${local.spaceId}: ${message}`)
+        }
+    }
 
     /** The projects on both sides, so a project made on either appears on both. */
     const refreshStreams = async () => {
@@ -656,6 +698,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
 
         const inbound = await carry({ to: local, stream, ops: theirs.ops, seen, targetVersion: ours.latestVersion, direction: 'in' })
         const outbound = await carry({ to: remote, stream, ops: ours.ops, seen, targetVersion: theirs.latestVersion, direction: 'out' })
+        noteTooLarge(stream, [...(inbound.tooLarge || []), ...(outbound.tooLarge || [])])
         const stuck = [inbound, outbound].find(result => result.stuck)
         if (stuck) stuck.failed = noteRefusal(stream, { direction: stuck === inbound ? 'in' : 'out', status: stuck.status, error: stuck.refusal })
         else if (inbound.wrote > 0 || outbound.wrote > 0 || (!inbound.failed && !outbound.failed)) writeBackoff.delete(stream.key)
@@ -756,6 +799,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 lastError: failed
                     || (refusals.size ? `${[...refusals.values()].join('; ')}. Choose: di follow ${local.spaceId} --take-host or --take-mine` : null)
                     || convergeRefused
+                    || (tooLargeNotes.size ? [...tooLargeNotes.values()].join('; ') : null)
                     || (refused.length ? `${refused.join(', ')}: one side replaced the whole work and the two copies differ — a follow does not carry that; use di sync` : null),
                 lastMoveAt: moved ? Date.now() : started.lastMoveAt,
                 converged: started.converged + converged,

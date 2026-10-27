@@ -47,14 +47,50 @@ const BATCH = 200
 // carries edits; a whole-scene replacement is a conversation between people.
 const WHOLE_WORK_OPS = new Set(['replaceScene', 'replaceDocument'])
 
-const unseen = (ops = [], seen = new Set()) => ops
+/*
+ * The most one write may weigh. The receiving server reads a JSON body up to
+ * `express.json({ limit: '10mb' })` (serverXR/src/index.js), which the `bytes`
+ * package reads as 10 * 1024 * 1024; a larger body is a 413. followPlan.test.js
+ * reads index.js and fails if that literal ever changes, so this number cannot
+ * drift from the server's. Audit F3, docs/ai/audits/follow-audit-2026-10-04.md.
+ */
+const MAX_BODY_BYTES = 10 * 1024 * 1024
+// Room for `{"baseVersion":<n>,"ops":[` … `]}` and the commas between ops.
+const ENVELOPE_BYTES = 1024
+/** The most one op may weigh and still travel, alone, in a body under the limit. */
+const MAX_OP_BYTES = MAX_BODY_BYTES - ENVELOPE_BYTES
+
+const opBytes = (op) => Buffer.byteLength(JSON.stringify(op))
+
+const eligible = (ops = [], seen = new Set()) => ops
     .filter(op => op && op.opId && !seen.has(op.opId) && !WHOLE_WORK_OPS.has(op.type))
-    .slice(0, BATCH)
+
+/**
+ * One batch: the first eligible ops that fit under BOTH caps (count, bytes), in
+ * order. An op that cannot fit even alone is never put in a batch, since no
+ * retry could get it through; it is returned in `tooLarge` so the caller can say
+ * so and account for it instead of looping on it. `more` is true when something
+ * eligible was left for a later batch.
+ */
+const batchOf = (ops = [], seen = new Set()) => {
+    const batch = []
+    const tooLarge = []
+    let bytes = 0
+    let more = false
+    for (const op of eligible(ops, seen)) {
+        const size = opBytes(op)
+        if (size > MAX_OP_BYTES) { tooLarge.push({ opId: op.opId, type: op.type, bytes: size }); continue }
+        if (batch.length >= BATCH || bytes + size + 1 > MAX_OP_BYTES) { more = true; break }
+        batch.push(op)
+        bytes += size + 1
+    }
+    return { ops: batch, tooLarge, more }
+}
+
+const unseen = (ops = [], seen = new Set()) => batchOf(ops, seen).ops
 
 /** Did we stop short of the end — i.e. is there more to carry right now? */
-const moreToCarry = (ops = [], seen = new Set()) => ops
-    .filter(op => op && op.opId && !seen.has(op.opId) && !WHOLE_WORK_OPS.has(op.type))
-    .length > BATCH
+const moreToCarry = (ops = [], seen = new Set()) => batchOf(ops, seen).more
 
 /**
  * Whether a batch contained a whole-work op we refused to carry. The follower's
@@ -161,4 +197,4 @@ const describeWriteFailure = ({ stream, direction, status, error = null, retryIn
     return `${who} ${what} (${code}${words})${look}${later}`
 }
 
-module.exports = { BATCH, WHOLE_WORK_OPS, accountedThrough, unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval, failureDelay, isStuckRefusal, describeWriteFailure, FAILURE_FLOOR_MS, FAILURE_CEILING_MS }
+module.exports = { BATCH, MAX_BODY_BYTES, MAX_OP_BYTES, batchOf, WHOLE_WORK_OPS, accountedThrough, unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval, failureDelay, isStuckRefusal, describeWriteFailure, FAILURE_FLOOR_MS, FAILURE_CEILING_MS }
