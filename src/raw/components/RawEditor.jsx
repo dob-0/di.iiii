@@ -1,6 +1,7 @@
 import { nextRaiseOf } from '../utils/cardOrder.js'
 import { Fragment, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PropertyInspector from './PropertyInspector.jsx'
+import { useCueNodeFiring } from './useCueNodeFiring.js'
 import { COLUMN_OPEN_DELAY_MS, clampColumnWidth, isPhoneWidth, readColumnWidth, writeColumnWidth } from '../utils/settingsColumn.js'
 import DesktopWindow from './DesktopWindow.jsx'
 import NodeAnatomyPanel from './NodeAnatomyPanel.jsx'
@@ -29,8 +30,14 @@ import { isTopType } from '../../project/tops/topOperators.js'
 import { DECK_INPUTS, VJ_DECK_TYPE, isPictureType, normalizeDeck, pictureIdOf, setBpm } from '../../project/tops/vjDeck.js'
 import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
+import LaserFileFeed from './LaserFileFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
+import VisitorFeed from './VisitorFeed.jsx'
+import TiltFeed from './TiltFeed.jsx'
+import { VISITOR_DEFAULTS } from '../../project/nodes/device.visitor/runtime.js'
 import MidiOutFeed from './MidiOutFeed.jsx'
+import BeatFeed from './BeatFeed.jsx'
+import { MeshInFeed, MeshOutFeed } from './MeshFeeds.jsx'
 import ButtonPanelWindow from './ButtonPanelWindow.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
@@ -54,7 +61,7 @@ const BarAccount = lazy(() => import('./BarAccount.jsx'))
 import SurfaceBar from '../../components/SurfaceBar.jsx'
 import { useProjectLayers } from '../../project/useProjectLayers.js'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
-import useSpaceName from '../../hooks/useSpaceName.js'
+import useSpaceIdentity from '../../hooks/useSpaceIdentity.js'
 import { isEmbedRequest, isPreviewRequest, signalPreviewReady } from '../../utils/previewMode.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
@@ -419,7 +426,7 @@ export default function RawEditor({
     const localInstall = useLocalInstall()
     // A preview hides the same navigation an embedded window does.
     const [isEmbed] = useState(() => isEmbedRequest() || isPreviewRequest())
-    const spaceName = useSpaceName(isLocalWorkspace ? null : resolvedSpaceId)
+    const spaceIdentity = useSpaceIdentity(isLocalWorkspace ? null : resolvedSpaceId)
     // The node canvas is cards, not a WebGL canvas, so the app-wide paint
     // watcher (index.jsx) has nothing to see; the picture says itself when
     // the project it shows has arrived.
@@ -1802,8 +1809,23 @@ export default function RawEditor({
         handleLiveOutputChange(nodeId, 'pressed', pressed)
         handleLiveOutputChange(nodeId, 'count', count)
     }, [handleLiveOutputChange])
+    // null facts (the feed unmounting) clear every port back to the defaults.
+    const handleVisitor = useCallback((nodeId, facts) => {
+        for (const portId of Object.keys(VISITOR_DEFAULTS)) {
+            handleLiveOutputChange(nodeId, portId, facts ? facts[portId] : null)
+        }
+    }, [handleLiveOutputChange])
+    const handleTilt = useCallback((nodeId, reading) => {
+        handleLiveOutputChange(nodeId, 'x', reading ? reading.x : null)
+        handleLiveOutputChange(nodeId, 'y', reading ? reading.y : null)
+        handleLiveOutputChange(nodeId, 'live', reading ? reading.live : null)
+    }, [handleLiveOutputChange])
     const handleMidiOutStatus = useCallback((nodeId, status) => {
         handleLiveOutputChange(nodeId, 'status', status)
+    }, [handleLiveOutputChange])
+    // A Laser File's bytes (LaserFileFeed.jsx). Stable for the same reason as the Frame handler above.
+    const handleLaserFileBytes = useCallback((nodeId, bytes) => {
+        handleLiveOutputChange(nodeId, 'bytes', bytes)
     }, [handleLiveOutputChange])
     const handleSoundOutputChange = useCallback((nodeId, levels) => {
         handleLiveOutputChange(nodeId, 'volume', levels?.volume ?? null)
@@ -1961,6 +1983,9 @@ export default function RawEditor({
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
         [document, clockNow, liveOutputs, frameMemory]
     )
+    // A Cue node a person presses fires its cues the way the Perform window does.
+    // Not from a preview card (a picture on someone else's page acts on nothing).
+    useCueNodeFiring({ document, context: graphContext, applyOps: applySharedOps, enabled: !isPreview })
 
     // The sheet's own context, built from the SAME three inputs as the one the
     // room draws with — evaluation is pure, so same document + same clock +
@@ -2753,11 +2778,23 @@ export default function RawEditor({
             payload: { nodeId: deckNode.id, patch: { values: { ...deckNode.values, deck: setBpm(deckNode.values?.deck, bpm, epoch) } } }
         })
     }, [applyLocalOps])
+    // A Beat whose Tempo from is the Light desk asks for the desk's clock too —
+    // and only then: a Beat on its own tempo never reads the desk.
+    const beatWantsDesk = useMemo(() => nodes.some((node) => node.typeId === 'signal.beat' && node.values?.source === 'light'), [nodes])
     const showClock = useShowClock({
         deck: deckTempo,
         onDeckTempo: firstDeck ? handleDeckTempo : null,
-        enabled: Boolean(firstDeck) || Boolean(perform)
+        enabled: Boolean(firstDeck) || Boolean(perform) || beatWantsDesk
     })
+    // A tap or Reset on a Beat with its own tempo writes bpm/epoch into the
+    // node, so the op log carries it and every window keeps one beat.
+    const nodesNowRef = useRef(nodes)
+    useEffect(() => { nodesNowRef.current = nodes }, [nodes])
+    const handleBeatTempo = useCallback((nodeId, patch) => {
+        const beatNode = nodesNowRef.current.find((node) => node.id === nodeId)
+        if (!beatNode) return
+        applyLocalOps({ type: 'updateNode', payload: { nodeId, patch: { values: { ...beatNode.values, ...patch } } } })
+    }, [applyLocalOps])
     // Perform's "Add a VJ deck": a deck at the root of the project, the same
     // node the palette makes, so Nodes shows it as a card beside the rest.
     const handleAddDeck = useCallback(() => {
@@ -2799,9 +2836,39 @@ export default function RawEditor({
                         />
                     ))}
                 {nodes
+                    .filter((node) => node.typeId === 'laser.file' && node.values?.src && assetMap.has(node.values.src))
+                    .map((node) => (
+                        <LaserFileFeed
+                            key={node.id}
+                            node={node}
+                            asset={assetMap.get(node.values.src)}
+                            onBytesChange={handleLaserFileBytes}
+                        />
+                    ))}
+                {nodes
                     .filter((node) => node.typeId === 'device.keyboard')
                     .map((node) => (
                         <KeyboardFeed key={node.id} node={node} onKeyState={handleKeyState} />
+                    ))}
+                {nodes
+                    .filter((node) => node.typeId === 'device.visitor')
+                    .map((node) => (
+                        <VisitorFeed
+                            key={node.id}
+                            node={node}
+                            newName={evaluateNodeInputs(node, graphContext).newName}
+                            onVisitor={handleVisitor}
+                        />
+                    ))}
+                {nodes
+                    .filter((node) => node.typeId === 'device.tilt')
+                    .map((node) => (
+                        <TiltFeed
+                            key={node.id}
+                            node={node}
+                            range={evaluateNodeInputs(node, graphContext).range}
+                            onTilt={handleTilt}
+                        />
                     ))}
                 {nodes
                     .filter((node) => node.typeId === 'device.midi.out')
@@ -2813,6 +2880,35 @@ export default function RawEditor({
                             onStatus={handleMidiOutStatus}
                         />
                     ))}
+                {nodes
+                    .filter((node) => node.typeId === 'signal.beat')
+                    .map((node) => (
+                        <BeatFeed
+                            key={node.id}
+                            node={node}
+                            inputs={evaluateNodeInputs(node, graphContext)}
+                            showClock={showClock}
+                            clockEpoch={showClockEpoch}
+                            onLiveOutput={handleLiveOutputChange}
+                            onTempo={handleBeatTempo}
+                        />
+                    ))}
+                {/* One socket per Mesh In / Mesh Out — see MeshFeeds.jsx. An
+                    empty Group meets in this project's own group. */}
+                {nodes
+                    .filter((node) => node.typeId === 'device.mesh.in' || node.typeId === 'device.mesh.out')
+                    .map((node) => {
+                        const Feed = node.typeId === 'device.mesh.in' ? MeshInFeed : MeshOutFeed
+                        return (
+                            <Feed
+                                key={node.id}
+                                node={node}
+                                inputs={evaluateNodeInputs(node, graphContext)}
+                                fallbackGroup={`${resolvedSpaceId}/${projectId || 'local'}`}
+                                onLiveOutput={handleLiveOutputChange}
+                            />
+                        )
+                    })}
         </>
     )
 
@@ -3122,7 +3218,8 @@ export default function RawEditor({
                 <SurfaceBar
                     float
                     space={resolvedSpaceId}
-                    spaceLabel={spaceName}
+                    spaceLabel={spaceIdentity.spaceLabel}
+                    spaceAddress={spaceIdentity.spaceAddress}
                     project={projectId}
                     projectLabel={document.projectMeta?.title}
                     isLocalInstall={localInstall.isLocal}
@@ -3171,7 +3268,8 @@ export default function RawEditor({
                 float
                 here="raw"
                 space={resolvedSpaceId}
-                spaceLabel={spaceName}
+                spaceLabel={spaceIdentity.spaceLabel}
+                spaceAddress={spaceIdentity.spaceAddress}
                 project={projectId}
                 projectLabel={document.projectMeta?.title}
                 isLocalInstall={localInstall.isLocal}
@@ -3234,8 +3332,14 @@ export default function RawEditor({
                 floating button sat over content on dev and under the column
                 on #769. */}
             <div className={`raw-workbench${regionOccupant && !columnPhone ? ' has-column' : ''}`} data-testid="raw-workbench">
+            {/* Named, so it is the canvas region a screen reader can jump to
+                rather than a nameless section carrying drop handlers (jsx-a11y
+                no-static-element-interactions, 2026-10-21). Dropping files is
+                pointer-only; the inspector's file field is the keyboard way to
+                give a node a file. */}
             <section
                 className={`raw-surface-shell${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
+                aria-label="Canvas"
                 onDragEnter={handleSurfaceDragEnter}
                 onDragOver={handleSurfaceDragOver}
                 onDragLeave={handleSurfaceDragLeave}

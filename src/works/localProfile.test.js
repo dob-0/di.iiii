@@ -10,20 +10,32 @@
  * named option (`DI_LOCAL_SLIM=1`) for anyone who wants the 15 MB download
  * instead of the 128 MB one.
  *
- * Two things are asserted here, and they are the two that can silently invert:
+ * Three things are asserted here, and they are the three that can silently invert:
  *   1. a plain local build does NOT install the stubbing plugin, so a work's
  *      entry point resolves to the work
  *   2. a slim local build still does, and still leaves the work's public/
  *      directory out
+ *   3. every picture of the Kit page reaches a local pack, and every
+ *      top-level entry of public/ is either carried or named as left out,
+ *      with its reason. This does NOT assert that every public/ file a page
+ *      names is carried: pages name four entries that are left out (chat-app,
+ *      chat-sw.js, robots.txt, llms.txt), and the list below says why.
  *
  * Nothing here builds anything. The profile's decisions are data
  * (works/buildProfile.js) and the plugin list is data, so both can be read
  * without paying for a 128 MB artifact per assertion.
  */
 /* global process */
+import { existsSync, readdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { KIT_TOOLS } from '../kit/kitCatalogue.js'
 import { resolveBuildProfile } from './buildProfile.js'
 import { WORK_IDS, workEntries, workPublicDirs } from './works.js'
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..')
+const PUBLIC_DIR = join(ROOT, 'public')
 
 const ENV_KEYS = ['DI_PROFILE', 'DI_LOCAL_SLIM']
 const saved = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]))
@@ -105,7 +117,7 @@ describe('vite installs the profile the flags asked for', () => {
         const config = await configFor({ DI_PROFILE: 'local' })
         expect(pluginNames(config)).not.toContain('di-local-profile')
         // The public include-list still applies: a local install is the
-        // program plus the works, never di-studio.xyz's hosting furniture.
+        // program plus the works, never diiii.xyz's hosting furniture.
         expect(pluginNames(config)).toContain('di-local-public-dir')
         expect(config.publicDir).toBe(false)
     })
@@ -128,5 +140,97 @@ describe('vite installs the profile the flags asked for', () => {
         expect(JSON.parse(full.define.__DI_WORKS__)).toEqual(WORK_IDS)
         const slim = await configFor({ DI_PROFILE: 'local', DI_LOCAL_SLIM: '1' })
         expect(JSON.parse(slim.define.__DI_WORKS__)).toEqual([])
+    })
+})
+
+// ── public/ ─────────────────────────────────────────────────────────────────
+//
+// A local pack copies public/ by an include-list (PROGRAM_PUBLIC_DIRS), on
+// purpose: what is dropped into public/ next for the hosted website must not
+// become part of every artist's install. The other side of that choice is as
+// silent: a folder a page needs, left off the list, builds, ships and 404s.
+// That is how all 21 pictures on the Kit page (/tools) were broken images on
+// every install from the day the Kit shipped (2026-09-28): a green build, and
+// a 404 only on the person's own machine.
+//
+// Same method as src/utils/reservedSegments.test.js (its test "every directory
+// in public/ is refused as a space slug"): list what is on disk and make each
+// entry say which side it is on.
+//
+// What this proves, and what it does not. It proves that the pictures of the
+// Kit page are carried (the page draws no other picture of its own:
+// KitPreview.jsx is its only <img>) and that no top-level entry of public/ is
+// undecided. It does not prove that every file a page names is carried: pages
+// do name four of the entries left out below (chat-app and chat-sw.js by the
+// chat pages, robots.txt and llms.txt by /for-apps), on purpose or still open,
+// and each has its reason.
+
+// What a local pack leaves out of public/, and why. A name goes here only by
+// decision, with its reason; a new entry of public/ fails the test below until
+// it is carried (PROGRAM_PUBLIC_DIRS, or a work's own directory) or is here.
+const LEFT_OUT_OF_A_LOCAL_PACK = {
+    // Hosting furniture: it only means something on the hosted domain.
+    serverXR: 'the cPanel shim of the hosted site (serve-asset.php and its .htaccess)',
+    '.htaccess': 'the Apache rewrite rules of the hosted site',
+    'clear-default-scene.php': 'a cPanel php shim',
+    'upload-default-scene.php': 'a cPanel php shim',
+    og: 'link-preview cards that serverXR/src/routes/ogRoutes.js hands to crawlers of the hosted domain',
+    // robots.txt and llms.txt are linked from /for-apps (src/pages/ForAppsPage.jsx),
+    // so on an install those two links answer 404. Left as is: hiding them there
+    // is a change to that page, which nobody asked for.
+    'robots.txt': 'crawler rules for the hosted domain; names https://diiii.xyz/ for the sitemap and the pages',
+    'llms.txt': 'a page for language models about the hosted site; every di.iiii address in it is https://diiii.xyz/… (it also links the source on github.com)',
+    '.well-known': 'assetlinks.json: lets the studio chat Android app open the hosted domain',
+    // Open, not decided. The chat pages ask for these as soon as someone is
+    // signed in (src/chat/StudioChatSurface.jsx, ChatHomeSurface.jsx) and a
+    // local install answers 404, so the chat cannot be installed as an app
+    // there. Carrying them starts a service worker on installs, and chat-sw.js
+    // is a file where the include-list holds directories only
+    // (scripts/packProfile.test.js): a call to make, not a gap to close in passing.
+    'chat-app': 'OWED, undecided: the studio chat\'s install manifest and icons',
+    'chat-sw.js': 'OWED, undecided: the studio chat\'s service worker (a file, not a directory)'
+}
+
+describe('the public/ list of a local pack: the Kit pictures are carried, every entry is decided', () => {
+    const plain = () => resolveBuildProfile({ DI_PROFILE: 'local' }).publicInclude
+    const slim = () => resolveBuildProfile({ DI_PROFILE: 'local', DI_LOCAL_SLIM: '1' }).publicInclude
+    const posters = KIT_TOOLS.map((tool) => tool.preview?.poster).filter(Boolean)
+    const isUnder = (include, file) => include.some((name) => file.startsWith(`/${name}/`))
+
+    it('has Kit pictures to check (a floor, so an empty list cannot pass)', () => {
+        expect(posters.length).toBeGreaterThan(15)
+    })
+
+    it.each([
+        ['a plain local build', plain],
+        ['a slim local build', slim]
+    ])('puts every picture of the Kit page in %s', (_label, include) => {
+        for (const poster of posters) {
+            expect(
+                isUnder(include(), poster),
+                `${poster} is not under an entry of the pack's public/ list, so /tools shows a broken picture`
+            ).toBe(true)
+        }
+    })
+
+    it('has decided, for every top-level entry of public/, whether a local pack carries it', () => {
+        const entries = readdirSync(PUBLIC_DIR).filter((name) => name !== '.DS_Store')
+        // A floor: the listing worked and this is not a loop over nothing.
+        expect(entries.length).toBeGreaterThan(10)
+        const carried = new Set(plain())
+        const undecided = entries.filter((name) => !carried.has(name) && !(name in LEFT_OUT_OF_A_LOCAL_PACK))
+        expect(
+            undecided,
+            `new in public/: add each to PROGRAM_PUBLIC_DIRS (src/works/buildProfile.js) if a page of the program loads it, `
+            + `or to LEFT_OUT_OF_A_LOCAL_PACK here with the reason: ${undecided.join(', ')}`
+        ).toEqual([])
+    })
+
+    it('never lists a name as both carried and left out, nor one that is gone', () => {
+        const carried = new Set(plain())
+        for (const name of Object.keys(LEFT_OUT_OF_A_LOCAL_PACK)) {
+            expect(carried.has(name), `${name} is carried and also listed as left out`).toBe(false)
+            expect(existsSync(join(PUBLIC_DIR, name)), `${name} is no longer in public/: delete its line`).toBe(true)
+        }
     })
 })

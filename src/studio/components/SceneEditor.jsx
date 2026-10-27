@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import {
     HEX, MOTION_MODES, MOTION_SPATIAL, HEAD_PATTERNS, HEAD_SPATIAL, FLASH,
     modeAllowed, bpmRange, clampBpm, flashLine, headsWarning, partRows, changeSceneOps, cueOps, withSource, SHOW_ID_OF
@@ -10,13 +10,15 @@ import {
 // Rectangles, 2 px (no round UI). The flash rule is enforced here (sceneEdit.js FLASH), not only warned.
 
 // A text field that keeps what you type until it is a whole value, then writes it.
-function Field({ value, onCommit, valid = () => true, label, width, testId, type = 'text' }) {
+// `id` when a visible <label htmlFor> names it (that text is then its name); `label` only when nothing visible does.
+function Field({ value, onCommit, valid = () => true, label, id, width, testId, type = 'text' }) {
     const [draft, setDraft] = useState(String(value ?? ''))
     useEffect(() => { setDraft(String(value ?? '')) }, [value])
     return (
         <input
             className="scene-editor__input"
             type={type}
+            id={id}
             aria-label={label}
             data-testid={testId}
             style={width ? { width } : undefined}
@@ -37,6 +39,7 @@ const num = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v)))
 
 export default function SceneEditor({ document, scene, onApplyOps, onPlay, onClose }) {
     const [playState, setPlayState] = useState('')
+    const uid = useId()
     const show = SHOW_ID_OF(document)
     const look = show?.components?.rigLooks?.looks.find((l) => l.id === scene.lookId)
     const cue = (document?.mappingState?.cues || []).find((c) => c.id === scene.cueId)
@@ -64,13 +67,13 @@ export default function SceneEditor({ document, scene, onApplyOps, onPlay, onClo
     return (
         <div className="scene-editor" role="group" aria-label={`Edit scene ${look.title}`} data-testid="scene-editor">
             <div className="scene-editor__row">
-                <label>Title <Field label="Title" testId="scene-title" value={look.title} onCommit={(v) => change({ title: v.slice(0, 60) })} valid={(v) => v.trim().length > 0} width={170} /></label>
-                <label>Act <Field label="Act" type="number" value={look.act ?? ''} onCommit={(v) => change({ act: num(v, 0, 99) })} valid={(v) => v !== '' && Number.isFinite(Number(v))} width={48} /></label>
+                <label htmlFor={`${uid}-title`}>Title <Field id={`${uid}-title`} testId="scene-title" value={look.title} onCommit={(v) => change({ title: v.slice(0, 60) })} valid={(v) => v.trim().length > 0} width={170} /></label>
+                <label htmlFor={`${uid}-act`}>Act <Field id={`${uid}-act`} type="number" value={look.act ?? ''} onCommit={(v) => change({ act: num(v, 0, 99) })} valid={(v) => v !== '' && Number.isFinite(Number(v))} width={48} /></label>
                 <button type="button" className="scc-btn scene-editor__play" data-testid="scene-play" title="The desk's GO on this scene" onClick={async () => { setPlayState('…'); try { await onPlay?.(cue); setPlayState('playing on the desk') } catch (e) { setPlayState(`not played: ${e.message}`) } }}>Play</button>
                 <button type="button" className="scc-btn" aria-label="Close the editor" onClick={onClose}>Close</button>
             </div>
             {playState && <div className="scene-editor__line" data-testid="play-state">{playState}</div>}
-            <label className="scene-editor__row">Intent <Field label="Intent" value={look.intent} onCommit={(v) => change({ intent: v.slice(0, 480) })} width={300} /></label>
+            <label className="scene-editor__row" htmlFor={`${uid}-intent`}>Intent <Field id={`${uid}-intent`} value={look.intent} onCommit={(v) => change({ intent: v.slice(0, 480) })} width={300} /></label>
 
             <div className="scene-editor__title">Parts{show?.components?.rigParts ? '' : ' (each lamp its own: this project keeps no parts)'}</div>
             <div className="scene-editor__parts" data-testid="scene-parts">
@@ -90,11 +93,11 @@ export default function SceneEditor({ document, scene, onApplyOps, onPlay, onClo
             <div className="scene-editor__row">
                 <Select label="Motion mode" testId="motion-mode" value={motion?.mode || 'none'} options={['none', ...MOTION_MODES]} disabled={(m) => !modeAllowed(m)} onChange={(m) => (m === 'none' ? change({ motion: null }) : setMotion({ mode: m }))} />
                 {motion && <>
-                    <label>bpm <Field label="bpm" type="number" value={motion.bpm} width={56} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => setMotion({ bpm: Number(v) })} /></label>
-                    <label>depth <Field label="depth" type="number" value={motion.depth} width={56} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => setMotion({ depth: num(v, 0, 255) })} /></label>
+                    <label htmlFor={`${uid}-bpm`}>bpm <Field id={`${uid}-bpm`} type="number" value={motion.bpm} width={56} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => setMotion({ bpm: Number(v) })} /></label>
+                    <label htmlFor={`${uid}-depth`}>depth <Field id={`${uid}-depth`} type="number" value={motion.depth} width={56} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => setMotion({ depth: num(v, 0, 255) })} /></label>
                     <Select label="Motion spatial" value={motion.spatial} options={MOTION_SPATIAL} onChange={(v) => setMotion({ spatial: v })} />
-                    <label>still <Field label="still" type="number" value={motion.still} width={52} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => setMotion({ still: num(v, 0, 1) })} /></label>
-                    <label>kinds <Field label="kinds" value={(motion.kinds || []).join(' ')} width={110} onCommit={(v) => setMotion({ kinds: v.split(/[\s,]+/).filter(Boolean).slice(0, 8) })} /></label>
+                    <label htmlFor={`${uid}-still`}>still <Field id={`${uid}-still`} type="number" value={motion.still} width={52} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => setMotion({ still: num(v, 0, 1) })} /></label>
+                    <label htmlFor={`${uid}-kinds`}>kinds <Field id={`${uid}-kinds`} value={(motion.kinds || []).join(' ')} width={110} onCommit={(v) => setMotion({ kinds: v.split(/[\s,]+/).filter(Boolean).slice(0, 8) })} /></label>
                 </>}
             </div>
             <div className="scene-editor__line" data-testid="flash-line">{flashLine(motion)}{motion ? ` · bpm ${bpmLo}–${bpmHi} · glitch ${FLASH.glitch}` : ''}</div>
@@ -103,9 +106,9 @@ export default function SceneEditor({ document, scene, onApplyOps, onPlay, onClo
             <div className="scene-editor__row">
                 <Select label="Heads pattern" testId="heads-pattern" value={heads?.pattern || 'none'} options={['none', ...HEAD_PATTERNS]} onChange={(p) => (p === 'none' ? change({ heads: null }) : setHeads({ pattern: p }))} />
                 {heads && <>
-                    <label>period s <Field label="period" type="number" value={heads.period_s} width={56} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => setHeads({ period_s: num(v, 0.5, 600) })} /></label>
-                    <label>pan° <Field label="pan" type="number" value={heads.pan_deg} width={52} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => setHeads({ pan_deg: num(v, 0, 270) })} /></label>
-                    <label>tilt° <Field label="tilt" type="number" value={heads.tilt_deg} width={52} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => setHeads({ tilt_deg: num(v, 0, 135) })} /></label>
+                    <label htmlFor={`${uid}-period`}>period s <Field id={`${uid}-period`} type="number" value={heads.period_s} width={56} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => setHeads({ period_s: num(v, 0.5, 600) })} /></label>
+                    <label htmlFor={`${uid}-pan`}>pan° <Field id={`${uid}-pan`} type="number" value={heads.pan_deg} width={52} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => setHeads({ pan_deg: num(v, 0, 270) })} /></label>
+                    <label htmlFor={`${uid}-tilt`}>tilt° <Field id={`${uid}-tilt`} type="number" value={heads.tilt_deg} width={52} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => setHeads({ tilt_deg: num(v, 0, 135) })} /></label>
                     <Select label="Heads spatial" value={heads.spatial} options={HEAD_SPATIAL} onChange={(v) => setHeads({ spatial: v })} />
                 </>}
             </div>
@@ -113,8 +116,8 @@ export default function SceneEditor({ document, scene, onApplyOps, onPlay, onClo
 
             <div className="scene-editor__title">Cue</div>
             <div className="scene-editor__row">
-                <label>fade s <Field label="Cue fade" type="number" value={cue.fade ?? 0} width={56} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => onApplyOps(cueOps(cue.id, { fade: num(v, 0, 3600) }))} /></label>
-                <label>hold s <Field label="Cue hold" type="number" value={cue.hold ?? 0} width={56} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => onApplyOps(cueOps(cue.id, { hold: num(v, 0, 3600) }))} /></label>
+                <label htmlFor={`${uid}-cue-fade`}>fade s <Field id={`${uid}-cue-fade`} type="number" value={cue.fade ?? 0} width={56} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => onApplyOps(cueOps(cue.id, { fade: num(v, 0, 3600) }))} /></label>
+                <label htmlFor={`${uid}-cue-hold`}>hold s <Field id={`${uid}-cue-hold`} type="number" value={cue.hold ?? 0} width={56} valid={(v) => v !== '' && Number.isFinite(Number(v))} onCommit={(v) => onApplyOps(cueOps(cue.id, { hold: num(v, 0, 3600) }))} /></label>
             </div>
         </div>
     )

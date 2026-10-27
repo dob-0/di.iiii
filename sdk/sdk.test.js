@@ -168,9 +168,9 @@ describe('the traps, encoded', () => {
         const b = fakeServer(routes)
         await (await connect({ base: 'http://localhost:4000/serverXR', token: 't', fetchImpl: a.fetchImpl, cache }))
             .run('asset.push', { project: 'p', files: [{ name: 'x.pdf', bytes: new Uint8Array([1]) }] })
-        await (await connect({ base: 'https://di-studio.xyz/serverXR', token: 't', fetchImpl: b.fetchImpl, cache }))
+        await (await connect({ base: 'https://diiii.xyz/serverXR', token: 't', fetchImpl: b.fetchImpl, cache }))
             .run('asset.push', { project: 'p', files: [{ name: 'x.pdf', bytes: new Uint8Array([1]) }] })
-        expect([...store.keys()]).toEqual(['localhost:4000::p::x.pdf', 'di-studio.xyz::p::x.pdf'])
+        expect([...store.keys()]).toEqual(['localhost:4000::p::x.pdf', 'diiii.xyz::p::x.pdf'])
         expect(b.seen.filter((s) => s.method === 'POST')).toHaveLength(1)   // uploaded again, not assumed
     })
 

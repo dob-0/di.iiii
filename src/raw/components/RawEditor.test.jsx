@@ -1200,7 +1200,7 @@ describe('RawEditor view.browser panel', () => {
             BROWSER_STORAGE_KEY,
             makeWorkspaceDoc(
                 [
-                    { id: 'url-1', typeId: 'value.string', label: 'URL', parentId: null, values: { value: 'https://di-studio.xyz' } },
+                    { id: 'url-1', typeId: 'value.string', label: 'URL', parentId: null, values: { value: 'https://diiii.xyz' } },
                     { id: 'browser-1', typeId: 'view.browser', label: 'Browser', parentId: null, values: {} }
                 ]
             ).replace('"edges":[]', '"edges":[{"id":"e1","fromNodeId":"url-1","fromPort":"out","toNodeId":"browser-1","toPort":"url"}]')
@@ -1209,7 +1209,7 @@ describe('RawEditor view.browser panel', () => {
 
         const iframe = document.querySelector('iframe')
         expect(iframe).toBeTruthy()
-        expect(iframe.getAttribute('src')).toBe('https://di-studio.xyz')
+        expect(iframe.getAttribute('src')).toBe('https://diiii.xyz')
         expect(screen.queryByText('This panel is ready for authored UI.')).toBeNull()
     })
 })
@@ -1992,5 +1992,15 @@ describe('RawEditor: one bar (audit row 5)', () => {
         expect(screen.queryByRole('region', { name: 'Help' })).toBeNull()
         fireEvent.keyDown(window, { key: '?' })
         expect(screen.getByRole('region', { name: 'Help' })).toBeTruthy()
+    })
+})
+
+// The section that takes dropped files is the canvas, and is named as the
+// canvas region (it was a nameless section with drop handlers, 2026-10-21).
+describe('RawEditor canvas region', () => {
+    it('the drop surface is a region named Canvas, holding the graph', () => {
+        render(<RawEditor localStorageKey="test-canvas-region" />)
+        const region = screen.getByRole('region', { name: 'Canvas' })
+        expect(region.classList.contains('raw-surface-shell')).toBe(true)
     })
 })

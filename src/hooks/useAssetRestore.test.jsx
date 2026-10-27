@@ -38,7 +38,7 @@ describe('useAssetRestore', () => {
                 id: 'asset-1',
                 name: 'legacy.webp',
                 mimeType: 'image/webp',
-                url: 'https://di-studio.xyz/serverXR/api/spaces/platform_recordAR/assets/asset-1'
+                url: 'https://diiii.xyz/serverXR/api/spaces/platform_recordAR/assets/asset-1'
             }
         ], blobLoader)
 

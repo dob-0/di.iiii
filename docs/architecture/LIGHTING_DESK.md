@@ -117,7 +117,10 @@ hold still runs — one absent look must not stall a looping show.
 What a room reads: `GET /api/dmx` `looks[]` entries carry `fadeMs` (the cue's fade), `since`
 (ms since that layer's look was put there; null after a restart) and `from` (the look it
 replaced), so a following room can crossfade; top-level `cues` (also on `/api/summary`) is
-`{ project, index, n, name, loop, running, nextInMs, missing }` or null. The document's
+`{ project, index, n, name, loop, running, nextInMs, firedAt, progress, fading, missing }` or null
+(`progress` 0 … 1 over the cue's hold, or its fade when that is longer; `fading` while the fade
+runs — both from the shared cue clock, `shared/cueClock.cjs`, which the show's clock and the Cue node
+also run). The document's
 `mappingState.loop` (written only when on) is where the switch is kept; the page hands it
 to the desk with the list. Tests: `tests/test-cues.js` (in `lighting.test.js`).
 

@@ -22,6 +22,7 @@
  */
 
 import process from 'node:process'
+import { DI_USER_AGENT, diUserAgent } from './userAgent.mjs'
 
 export const REPO = 'dob-0/di.iiii'
 export const CHANNELS = ['dev', 'stable']
@@ -59,10 +60,10 @@ export const HEALTH_WAIT_CAP_MS = 30000
 /**
  * How di names itself to a hub: a product token and a contact in parentheses,
  * which is what serverXR/src/appVisitors.js `classifyUserAgent` counts as an
- * identified app (Node's default `node` is counted as anonymous).
+ * identified app (Node's default `node` is counted as anonymous). The installed
+ * version when known, else the packed one (scripts/di/userAgent.mjs).
  */
-export const userAgent = (version) =>
-    `di/${String(version || '').trim().replace(/[^A-Za-z0-9._+-]/g, '') || 'unknown'} (+https://diiii.xyz/for-apps)`
+export const userAgent = (version) => (String(version || '').trim() ? diUserAgent(version) : DI_USER_AGENT)
 
 const realSleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 

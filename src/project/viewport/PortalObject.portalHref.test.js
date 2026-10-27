@@ -14,6 +14,13 @@ describe('portalHref', () => {
         expect(portalHref('dilijan', undefined)).toBe('/dilijan')
     })
 
+    it('lands on a part of the page when the door names an anchor (N1248), and drops a junk one', () => {
+        expect(portalHref('dilijan', '', 'works')).toBe('/dilijan#works')
+        expect(portalHref('dilijan', 'the-yard', '#top')).toBe('/dilijan/the-yard#top')
+        expect(portalHref('dilijan', '', '"><script>')).toBe('/dilijan')
+        expect(portalHref('', '', 'works')).toBeNull()
+    })
+
     it('refuses to navigate without a space', () => {
         expect(portalHref('', 'room-3')).toBeNull()
         expect(portalHref(undefined, undefined)).toBeNull()

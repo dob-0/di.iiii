@@ -39,6 +39,6 @@ describe('fetch-equipment-media', () => {
     })
     it('uploads only to a local install, never a hosted tier', () => {
         for (const ok of ['https://local.thedi.studio/serverXR', 'http://localhost:4395/serverXR', 'http://127.0.0.1:4000', 'http://dii.localhost:8088/serverXR']) expect(isLocalApi(ok), ok).toBe(true)
-        for (const no of ['https://diiii.xyz/serverXR', 'https://dev.diiii.xyz/serverXR', 'https://di-studio.xyz', 'https://local.thedi.studio.evil.example', 'not a url']) expect(isLocalApi(no), no).toBe(false)
+        for (const no of ['https://diiii.xyz/serverXR', 'https://dev.diiii.xyz/serverXR', 'https://diiii.xyz', 'https://local.thedi.studio.evil.example', 'not a url']) expect(isLocalApi(no), no).toBe(false)
     })
 })

@@ -17,6 +17,8 @@ export const PORT_TYPES = {
     signal:   { label: 'Signal',   color: '#ffffff' },
     // Laser paths (frame v2, shared/laserFrame.cjs): what flows between laser nodes to Laser Out.
     laser:    { label: 'Laser',    color: '#39ff14' },
+    // A clock (src/project/graph/beatClock.js): a Beat's tempo and phase, wired into an Oscillator.
+    clock:    { label: 'Clock',    color: '#ffd166' },
     any:      { label: 'Any',      color: '#888888' },
 }
 
@@ -81,6 +83,7 @@ export const FAMILY_BY_TYPE = {
     'source.webcam': 'bring-in',
     'source.mic': 'bring-in',
     'device.midi.in': 'bring-in',
+    'device.mesh.in': 'bring-in',
     'device.osc.in': 'bring-in',
     'device.dmx.in': 'bring-in',
     'source.ar': 'bring-in',
@@ -93,6 +96,10 @@ export const FAMILY_BY_TYPE = {
     'laser.shape': 'make',
     'laser.trace': 'make',
     'laser.merge': 'make',
+    // laser Phase 2 (a clock; numbers, beside Oscillator)
+    'signal.beat': 'numbers',
+    'laser.file': 'bring-in',
+    'laser.text': 'make',
     'geom.sphere': 'make',
     'geom.plane': 'make',
     'shape.merge': 'make',
@@ -105,6 +112,8 @@ export const FAMILY_BY_TYPE = {
     'geom.transform': 'make',
     'view.button': 'bring-in',
     'device.keyboard': 'bring-in',
+    'device.visitor': 'bring-in',
+    'device.tilt': 'bring-in',
     'geom.constructor': 'make',
     'view.text': 'make',
     'view.list': 'make',
@@ -136,7 +145,9 @@ export const FAMILY_BY_TYPE = {
     'signal.counter': 'numbers',
     'signal.hold': 'numbers',
     'signal.delay': 'numbers',
+    'signal.flash': 'numbers',
     'signal.timer': 'numbers',
+    'signal.cue': 'numbers',
     'signal.trigger': 'numbers',
     'signal.speed': 'numbers',
     'logic.toggle': 'numbers',
@@ -182,6 +193,7 @@ export const FAMILY_BY_TYPE = {
     'device.dmx.out': 'send-out',
     'device.laser.out': 'send-out',
     'device.midi.out': 'send-out',
+    'device.mesh.out': 'send-out',
     'device.osc.out': 'send-out',
     'stream.output': 'send-out',
     'stream.recorder': 'send-out',
@@ -837,6 +849,40 @@ export const NODE_TYPES = {
         defaultFrame: { width: 320, height: 260 },
     },
 
+    'device.mesh.in': {
+        id: 'device.mesh.in',
+        label: 'Mesh In',
+        category: 'device',
+        // A browser WebSocket to serverXR's mesh hub (src/raw/utils/meshClient.js):
+        // every screen and phone in one group hears what the others publish.
+        runtime: 'web',
+        singleton: false,
+        keywords: ['mesh', 'phone', 'phones', 'screens', 'sync', 'remote', 'wall', 'crowd', 'websocket', 'network', 'receive', 'listen'],
+        inputs: [
+            // Empty Group = this project's own group, so every screen that
+            // opens the same project meets without anyone typing a name.
+            { id: 'group',     type: 'string', label: 'Group',      default: '' },
+            { id: 'channel',   type: 'string', label: 'Channel',    default: 'value' },
+            // The checks the walls ran by hand. Each is off until set; a range
+            // is on when Min < Max, so a fresh node's 0/0 admits everything.
+            { id: 'min',       type: 'number', label: 'Min',        default: 0 },
+            { id: 'max',       type: 'number', label: 'Max',        default: 0 },
+            { id: 'allowed',   type: 'string', label: 'Allowed',    default: '' },
+            { id: 'maxLength', type: 'number', label: 'Max Length', default: 0 },
+        ],
+        outputs: [
+            { id: 'value',  type: 'any',    label: 'Value'  },
+            { id: 'from',   type: 'string', label: 'From'   },
+            { id: 'time',   type: 'number', label: 'Time'   },
+            // A rising count, the MIDI In idiom: an event is the number changing.
+            { id: 'signal', type: 'signal', label: 'Signal' },
+            { id: 'up',     type: 'number', label: 'Up'     },
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
     'device.dmx.out': {
         id: 'device.dmx.out',
         label: 'DMX Out',
@@ -950,6 +996,29 @@ export const NODE_TYPES = {
         defaultValues: {
             channel: 1,
         },
+        render: 'hidden',
+    },
+
+    'device.mesh.out': {
+        id: 'device.mesh.out',
+        label: 'Mesh Out',
+        category: 'device',
+        runtime: 'web',
+        singleton: false,
+        keywords: ['mesh', 'phone', 'phones', 'screens', 'sync', 'remote', 'wall', 'crowd', 'websocket', 'network', 'send', 'publish'],
+        inputs: [
+            { id: 'group',    type: 'string', label: 'Group',    default: '' },
+            { id: 'channel',  type: 'string', label: 'Channel',  default: 'value' },
+            { id: 'value',    type: 'any',    label: 'Value' },
+            // ms between sends; the latest value wins. 200 is the 5 Hz the
+            // hand-built phone pages settled on; under 50 is raised to 50.
+            { id: 'interval', type: 'number', label: 'Interval', default: 200 },
+        ],
+        outputs: [
+            { id: 'up',     type: 'number', label: 'Up'     },
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
         render: 'hidden',
     },
 
@@ -2295,6 +2364,113 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    // laser Phase 2 — a clock (TD Beat CHOP). The first Beat set to Master is
+    // the project's master clock; every other Beat is an extra clock an
+    // Oscillator can pick by wire. Tempo from the Light desk is optional.
+    'signal.beat': {
+        id: 'signal.beat',
+        label: 'Beat',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['beat', 'clock', 'bpm', 'tempo', 'tap', 'bar', 'ramp', 'pulse', 'master', 'sync', 'music', 'light'],
+        inputs: [
+            { id: 'bpm',    type: 'number', label: 'BPM',    default: 120 },
+            // Ramp, Pulse and Count run over this many beats (fractions allowed).
+            { id: 'period', type: 'number', label: 'Period', default: 1 },
+            { id: 'tap',    type: 'signal', label: 'Tap'   },
+            { id: 'reset',  type: 'signal', label: 'Reset' },
+        ],
+        outputs: [
+            { id: 'clock',   type: 'clock',   label: 'Clock'    },
+            { id: 'ramp',    type: 'number',  label: 'Ramp'     },
+            { id: 'pulse',   type: 'boolean', label: 'Pulse'    },
+            { id: 'count',   type: 'number',  label: 'Count'    },
+            { id: 'beat',    type: 'number',  label: 'Beat'     },
+            { id: 'bar',     type: 'number',  label: 'Bar'      },
+            { id: 'rampBar', type: 'number',  label: 'Ramp bar' },
+            { id: 'bpm',     type: 'number',  label: 'BPM'      },
+            { id: 'status',  type: 'string',  label: 'Status'   },
+        ],
+        // Beat 0 on the document clock; a tap or Reset moves it (BeatFeed).
+        defaultValues: { epoch: 0, role: 'master', source: 'own' },
+        // Settings, not ports: which clock leads the project, and whether the
+        // Light desk is asked at all, are read from node.values (the master
+        // lookup and RawEditor's desk poll), so a wire into them would
+        // silently do nothing. DMX Out's Rig is the same case.
+        configInputs: [
+            { id: 'role',   type: 'string', label: 'Clock', options: [
+                { value: 'master', label: 'Master' },
+                { value: 'extra',  label: 'Extra' },
+            ] },
+            { id: 'source', type: 'string', label: 'Tempo from', options: [
+                { value: 'own',   label: 'This node' },
+                { value: 'light', label: 'Light desk' },
+            ] },
+        ],
+        render: 'hidden',
+    },
+
+    // Laser Phase 9 (design 2026-10-14 §5): a file and a string as laser paths. Pure functions of the
+    // bytes and the text (nodes/laser.file, nodes/laser.text).
+    // An ILDA file (formats 0/1/4/5) or SVG path data -> laser paths. `src` is an assetId, as Model's.
+    'laser.file': {
+        id: 'laser.file',
+        label: 'Laser File',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['laser', 'file', 'ilda', 'ild', 'svg', 'path', 'import', 'drawing', 'logo', 'asset', 'lasercube'],
+        inputs: [
+            { id: 'src',       type: 'string', label: 'File',      default: '' },
+            // Which frame of an ILDA file (from 0, wraps); with Speed above 0 it plays from here.
+            { id: 'frame',     type: 'number', label: 'Frame',     default: 0, step: 1 },
+            // Frames a second; 0 holds the chosen frame.
+            { id: 'fps',       type: 'number', label: 'Speed',     default: 0, step: 1 },
+            // 1 = as the ILDA file says, or an SVG fitted into 80 % of the field.
+            { id: 'size',      type: 'number', label: 'Size',      default: 1 },
+            // Added to y; the server blanks everything below the cube's own aim (keep-in zone).
+            { id: 'height',    type: 'number', label: 'Height',    default: 0 },
+            // Unwired, the file's own colours; wired, one colour for all.
+            { id: 'colour',    type: 'color',  label: 'Colour' },
+            { id: 'level',     type: 'number', label: 'Level',     default: 1 },
+            // The largest distance from an SVG curve to its chords, in field units (the field is 2 wide).
+            { id: 'tolerance', type: 'number', label: 'Tolerance', default: 0.002, step: 0.001 },
+        ],
+        outputs: [
+            { id: 'frame',  type: 'laser',  label: 'Frame' },
+            { id: 'frames', type: 'number', label: 'Frames' },
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // A string -> single-stroke Hershey text (Roman Simplex, ASCII 32-126) as laser paths.
+    'laser.text': {
+        id: 'laser.text',
+        label: 'Laser Text',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['laser', 'text', 'word', 'letters', 'type', 'font', 'hershey', 'write', 'lasercube'],
+        inputs: [
+            { id: 'text',   type: 'string', label: 'Text',   default: 'di' },
+            // A capital's height in field units (the field is 2 tall); brought down if the text would not fit.
+            { id: 'size',   type: 'number', label: 'Size',   default: 0.2 },
+            // Where the text's middle sits up the field; 0.5 keeps it above the keep-in zone, as Laser does.
+            { id: 'height', type: 'number', label: 'Height', default: 0.5 },
+            { id: 'colour', type: 'color',  label: 'Colour', default: '#00ff40' },
+            { id: 'level',  type: 'number', label: 'Level',  default: 1 },
+        ],
+        outputs: [
+            { id: 'frame',  type: 'laser',  label: 'Frame' },
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
     'signal.lfo': {
         id: 'signal.lfo',
         label: 'Oscillator',
@@ -2305,12 +2481,32 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'frequency', type: 'number', label: 'Frequency', default: 1 },
             { id: 'phase',     type: 'number', label: 'Phase',     default: 0 },
+            // laser Phase 2 — appended, so an old document's ports keep their places.
+            // Each default leaves the four old outputs exactly as they were.
+            { id: 'wave',      type: 'string', label: 'Wave',      default: 'sine', options: [
+                { value: 'sine',     label: 'Sine' },
+                { value: 'triangle', label: 'Triangle' },
+                { value: 'ramp',     label: 'Ramp' },
+                { value: 'square',   label: 'Square' },
+                { value: 'pulse',    label: 'Pulse' },
+                { value: 'glide',    label: 'Random glide' },
+                { value: 'hold',     label: 'Sample & hold' },
+            ] },
+            { id: 'amplitude', type: 'number', label: 'Amplitude', default: 1 },
+            { id: 'offset',    type: 'number', label: 'Offset',    default: 0 },
+            { id: 'bias',      type: 'number', label: 'Bias',      default: 0 },
+            // 0: the cycle is Frequency in Hz. Above 0: one cycle lasts this many beats (¼ … 64) of the Clock.
+            { id: 'beats',     type: 'number', label: 'Beats',     default: 0 },
+            // Unwired: the project's master clock.
+            { id: 'clock',     type: 'clock',  label: 'Clock' },
+            { id: 'reset',     type: 'signal', label: 'Reset' },
         ],
         outputs: [
             { id: 'sine',     type: 'number', label: 'Sine'     },
             { id: 'square',   type: 'number', label: 'Square'   },
             { id: 'triangle', type: 'number', label: 'Triangle' },
             { id: 'saw',      type: 'number', label: 'Saw'      },
+            { id: 'out',      type: 'number', label: 'Out'      },
         ],
         defaultValues: {},
         render: 'hidden',
@@ -2453,6 +2649,33 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    // WCAG 2.2 SC 2.3.1, three flashes or below: sits between any value and a
+    // Lamp, DMX Out, a Laser Out level or a picture's brightness. The rule
+    // (count, threshold, window, limit) is src/project/nodes/flashRule.js, the
+    // same file the offline checks count with. No input turns it off: Limit
+    // can only be stricter than three; empty, 0 or not a number reads three.
+    'signal.flash': {
+        id: 'signal.flash',
+        label: 'Flash Guard',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['flash', 'strobe', 'wcag', 'epilepsy', 'photosensitive', 'seizure', 'limit', 'safety', 'light', 'lamp', 'dmx', 'brightness'],
+        inputs: [
+            { id: 'value', type: 'number', label: 'Value', default: 0 },
+            // What "full" is on this wire: 1 for the 0..1 convention, 255 for bytes.
+            { id: 'full',  type: 'number', label: 'Full',  default: 1 },
+            { id: 'limit', type: 'number', label: 'Limit', default: 3 },
+        ],
+        outputs: [
+            { id: 'out',     type: 'number',  label: 'Guarded' },
+            { id: 'rate',    type: 'number',  label: 'Rate'    },
+            { id: 'limited', type: 'boolean', label: 'Limited' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
     'signal.timer': {
         id: 'signal.timer',
         label: 'Timer',
@@ -2468,6 +2691,36 @@ export const NODE_TYPES = {
             { id: 'elapsed',  type: 'number',  label: 'Elapsed (s)' },
             { id: 'progress', type: 'number',  label: 'Progress'    },
             { id: 'done',     type: 'boolean', label: 'Done'        },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The project's cue list (mappingState.cues) as wires — the list the desk's
+    // cue runner and the Perform windows play. Where it is comes from the
+    // shared cue clock (shared/cueClock.cjs), so the node, the desk and the
+    // show's clock agree. Go and Back take a Button's presses, a Keyboard or a
+    // beat; Jump a cue index; Loop, unwired, is the document's own switch.
+    'signal.cue': {
+        id: 'signal.cue',
+        label: 'Cue',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['cue', 'cue list', 'show', 'go', 'back', 'scene', 'look', 'fade', 'hold', 'running order'],
+        inputs: [
+            { id: 'go',   type: 'any',     label: 'Go'   },
+            { id: 'back', type: 'any',     label: 'Back' },
+            { id: 'jump', type: 'number',  label: 'Jump' },
+            { id: 'loop', type: 'boolean', label: 'Loop' },
+        ],
+        outputs: [
+            { id: 'index',    type: 'number',  label: 'Index'    },
+            { id: 'name',     type: 'string',  label: 'Name'     },
+            { id: 'look',     type: 'string',  label: 'Look'     },
+            { id: 'progress', type: 'number',  label: 'Progress' },
+            { id: 'fading',   type: 'boolean', label: 'Fading'   },
+            { id: 'fired',    type: 'signal',  label: 'Fired'    },
         ],
         defaultValues: {},
         render: 'hidden',
@@ -2923,6 +3176,58 @@ export const NODE_TYPES = {
         outputs: [
             { id: 'pressed', type: 'boolean', label: 'Pressed' },
             { id: 'count',   type: 'number',  label: 'Count'   },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // What the person's phone or screen is, as wires — the facts every work
+    // used to re-derive by hand (halve the particles on a phone, slow down
+    // for reduced motion, lay out for portrait, speak their language). Name,
+    // Hue and Id are kept in THIS browser; where storage refuses they last
+    // the visit. The browser is read by VisitorFeed, not by the runtime.
+    'device.visitor': {
+        id: 'device.visitor',
+        label: 'Visitor',
+        category: 'device',
+        runtime: 'any',
+        keywords: ['visitor', 'device', 'phone', 'mobile', 'screen', 'reduced motion', 'portrait', 'language', 'embed', 'name', 'presence'],
+        inputs: [
+            { id: 'newName', type: 'string', label: 'New name' },
+        ],
+        outputs: [
+            { id: 'phone',         type: 'boolean', label: 'Phone'          },
+            { id: 'reducedMotion', type: 'boolean', label: 'Reduced motion' },
+            { id: 'portrait',      type: 'boolean', label: 'Portrait'       },
+            { id: 'width',         type: 'number',  label: 'Width'          },
+            { id: 'height',        type: 'number',  label: 'Height'         },
+            { id: 'language',      type: 'string',  label: 'Language'       },
+            { id: 'embedded',      type: 'boolean', label: 'Embedded'       },
+            { id: 'name',          type: 'string',  label: 'Name'           },
+            { id: 'hue',           type: 'number',  label: 'Hue'            },
+            { id: 'visitorId',     type: 'string',  label: 'Id'             },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // How the phone is tipped: deviceorientation's beta and gamma as x and y
+    // in -1..1, level being however it was held when the first reading came.
+    // iOS asks permission, and only inside a tap — TiltFeed asks on the
+    // person's first tap anywhere on the page.
+    'device.tilt': {
+        id: 'device.tilt',
+        label: 'Tilt',
+        category: 'device',
+        runtime: 'any',
+        keywords: ['tilt', 'gyro', 'orientation', 'accelerometer', 'phone', 'lean', 'deviceorientation'],
+        inputs: [
+            { id: 'range', type: 'number', label: 'Range', default: 30 },
+        ],
+        outputs: [
+            { id: 'x',    type: 'number',  label: 'X'    },
+            { id: 'y',    type: 'number',  label: 'Y'    },
+            { id: 'live', type: 'boolean', label: 'Live' },
         ],
         defaultValues: {},
         render: 'hidden',

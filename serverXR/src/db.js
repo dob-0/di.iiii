@@ -244,6 +244,22 @@ const SCHEMA = `
     PRIMARY KEY (user_id, provider)
   );
 
+  CREATE TABLE IF NOT EXISTS share_posts (
+    id TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    text TEXT NOT NULL DEFAULT '',
+    link TEXT NOT NULL DEFAULT '',
+    media TEXT NOT NULL DEFAULT '[]',
+    channels TEXT NOT NULL DEFAULT '[]',
+    results TEXT NOT NULL DEFAULT '{}',
+    created_by TEXT,
+    approved_by TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    approved_at INTEGER,
+    sent_at INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS ai_chats (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -775,6 +791,9 @@ function initDb(dbPath) {
   // invisible to an older build (no SCHEMA_VERSION bump). Not the trash: no TTL.
   ensureColumn(db, 'spaces', 'archived_at', 'INTEGER')
   ensureColumn(db, 'spaces', 'position', 'INTEGER NOT NULL DEFAULT 0')
+  // The space's one line for visitors (shared/spaceBlurb.cjs). Nullable,
+  // invisible to an older build, like archived_at above.
+  ensureColumn(db, 'spaces', 'blurb', 'TEXT')
   db.exec('CREATE INDEX IF NOT EXISTS idx_projects_collection ON projects(collection_id, position)')
   ensureColumn(db, 'users', 'spaces', 'TEXT')
   ensureColumn(db, 'users', 'is_unrestricted', 'INTEGER NOT NULL DEFAULT 0')
