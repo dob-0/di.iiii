@@ -12,7 +12,7 @@ Sources (repo files; memory notes are dated background, not needed to run): `doc
 ## 0. Rules
 - Work stays on the dev tier (`dev.diiii.xyz`) during a session; promote to main only at the session end or on the owner's ask, never per fix. Data writes follow the same order: dev first, LOOK at it, then prod, never both in one command.
 - Never push straight to `dev`. A PR merges; a BEHIND PR gets `origin/dev` merged INTO the branch (not a rebase).
-- A merge is a word. On a di-atlas machine queue with `di-merge add owner/repo#N "note" --try URL --see FILE` (V: `di-merge --help`), then `di-merge`; elsewhere plain `gh -R dob-0/di.iiii pr merge <n>` after review. Merge needs proof (a link to try or pictures).
+- A merge is a window, not a word (owner 2026-10-27). On a di-atlas machine queue with `di-merge add owner/repo#N "note" --try URL --see FILE` (V: `di-merge --help`), then open ONE window with `di-ask "merge …" -- di-merge`; his Enter merges, never a pasted command; elsewhere plain `gh -R dob-0/di.iiii pr merge <n>` after review. Merge needs proof (a link to try or pictures).
 
 ## 1. Dev deploy (a merge to `dev`)
 - The push to `dev` runs `.github/workflows/deploy-vps-dev.yml` (V) and publishes the release; the Mac pulls it a minute or more later. A tab opened before the pull shows old code: reload and compare the bundle name in `https://dev.diiii.xyz/` (`assets/index-<hash>.js`). UNVERIFIED this run (needs a live deploy).
