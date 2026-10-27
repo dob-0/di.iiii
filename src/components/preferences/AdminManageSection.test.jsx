@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import axe from 'axe-core'
 
 vi.mock('../../services/serverSpaces.js', () => ({
     listServerSpaces: vi.fn(),
@@ -176,5 +177,40 @@ describe('AdminManageSection', () => {
         fireEvent.click((await screen.findAllByText('Studio'))[0])
 
         expect(await screen.findByText('/demo/artistplace')).toBeTruthy()
+    })
+
+    // Audit 2026-10-21 A1 (axe `label`, critical, measured in Chromium on /admin):
+    // the rename and public-link fields had no name — no label, no placeholder for
+    // a rename — so a screen reader announced "edit text" and nothing else.
+    it('names every field it opens, for space and project alike (axe label rule)', async () => {
+        const run = async (container) => (await axe.run(container, { runOnly: ['label'] })).violations
+        const { container } = render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+        for (const edit of ['Rename', 'Edit public link']) {
+            fireEvent.click(await screen.findByRole('button', { name: edit }))
+            expect(await run(container)).toEqual([])
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+        }
+        expect(screen.getByRole('button', { name: 'Rename' })).toBeTruthy()
+        fireEvent.click((await screen.findAllByText('First Project'))[0])
+        for (const edit of ['Rename', 'Edit public link']) {
+            fireEvent.click(await screen.findByRole('button', { name: edit }))
+            expect(await run(container)).toEqual([])
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+        }
+    })
+
+    // Audit 2026-10-21 A2 (axe `nested-interactive`, serious ×4 in Chromium): the
+    // caret was a role=button inside the row's button, and it was the only way to
+    // close a space — a keyboard could open one and never close it again.
+    it('opens and closes a space from the row itself, with no button inside a button', async () => {
+        const { container } = render(<AdminManageSection />)
+        const row = (await screen.findByText('Demo')).closest('button')
+        expect(row.getAttribute('aria-expanded')).toBe('false')
+        fireEvent.click(row)
+        await waitFor(() => expect(row.getAttribute('aria-expanded')).toBe('true'))
+        fireEvent.click(row)
+        expect(row.getAttribute('aria-expanded')).toBe('false')
+        expect((await axe.run(container, { runOnly: ['nested-interactive'] })).violations).toEqual([])
     })
 })
