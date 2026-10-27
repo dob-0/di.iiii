@@ -13,7 +13,7 @@
  * Options:
  *   --to     <url>    Server API base (default: $DEV_API_URL (legacy alias $LIVE_API_URL), else the dev tier —
  *                     https://dev.diiii.xyz/serverXR. Production pushes
- *                     must be explicit: --to https://di-studio.xyz/serverXR)
+ *                     must be explicit: --to https://diiii.xyz/serverXR)
  *   --token  <token>  Bearer token (default: $LIVE_API_TOKEN)
  *   --space  <id>     Space ID (REQUIRED — there is no default)
  *   --project <id>    Only push this one project

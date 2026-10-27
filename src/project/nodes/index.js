@@ -5,12 +5,19 @@ import { computeOutput as colourCombine } from './colour.combine/runtime.js'
 import { computeOutput as colourRamp } from './colour.ramp/runtime.js'
 import { computeOutput as colourSplit } from './colour.split/runtime.js'
 import { computeOutput as deviceKeyboard } from './device.keyboard/runtime.js'
+import { computeOutput as deviceVisitor } from './device.visitor/runtime.js'
+import { computeOutput as deviceTilt } from './device.tilt/runtime.js'
 import { computeOutput as deviceDmxOut } from './device.dmx.out/runtime.js'
 import { computeOutput as deviceLaserOut } from './device.laser.out/runtime.js'
 import { computeOutput as laserShape } from './laser.shape/runtime.js'
 import { computeOutput as laserTrace } from './laser.trace/runtime.js'
 import { computeOutput as laserMerge } from './laser.merge/runtime.js'
+import { computeOutput as signalBeat } from './signal.beat/runtime.js'
+import { computeOutput as laserFile } from './laser.file/runtime.js'
+import { computeOutput as laserText } from './laser.text/runtime.js'
 import { computeOutput as deviceMidiOut } from './device.midi.out/runtime.js'
+import { computeOutput as deviceMeshIn } from './device.mesh.in/runtime.js'
+import { computeOutput as deviceMeshOut } from './device.mesh.out/runtime.js'
 import { computeOutput as geomArray } from './geom.array/runtime.js'
 import { computeOutput as geomCone } from './geom.cone/runtime.js'
 import { computeOutput as geomCylinder } from './geom.cylinder/runtime.js'
@@ -30,7 +37,9 @@ import { computeOutput as logicToggle } from './logic.toggle/runtime.js'
 import { computeOutput as mediaAudioLevels } from './media.audio/runtime.js'
 import { computeOutput as mediaVideoFrame } from './media.video/runtime.js'
 import { computeOutput as signalCounter } from './signal.counter/runtime.js'
+import { computeOutput as signalCue } from './signal.cue/runtime.js'
 import { computeOutput as signalDelay } from './signal.delay/runtime.js'
+import { computeOutput as signalFlash } from './signal.flash/runtime.js'
 import { computeOutput as signalEase } from './signal.ease/runtime.js'
 import { computeOutput as signalHold } from './signal.hold/runtime.js'
 import { computeOutput as signalLag } from './signal.lag/runtime.js'
@@ -71,12 +80,19 @@ export const NODE_RUNTIMES = new Map([
     ['colour.ramp', colourRamp],
     ['colour.split', colourSplit],
     ['device.keyboard', deviceKeyboard],
+    ['device.visitor', deviceVisitor],
+    ['device.tilt', deviceTilt],
     ['device.dmx.out', deviceDmxOut],
     ['device.laser.out', deviceLaserOut],
     ['laser.shape', laserShape],
     ['laser.trace', laserTrace],
     ['laser.merge', laserMerge],
+    ['signal.beat', signalBeat],
+    ['laser.file', laserFile],
+    ['laser.text', laserText],
     ['device.midi.out', deviceMidiOut],
+    ['device.mesh.in', deviceMeshIn],
+    ['device.mesh.out', deviceMeshOut],
     ['geom.array', geomArray],
     ['geom.cone', geomCone],
     ['geom.cylinder', geomCylinder],
@@ -96,7 +112,9 @@ export const NODE_RUNTIMES = new Map([
     ['media.audio', mediaAudioLevels],
     ['media.video', mediaVideoFrame],
     ['signal.counter', signalCounter],
+    ['signal.cue', signalCue],
     ['signal.delay', signalDelay],
+    ['signal.flash', signalFlash],
     ['signal.ease', signalEase],
     ['signal.hold', signalHold],
     ['signal.lag', signalLag],

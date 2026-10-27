@@ -69,6 +69,8 @@ export function formatPortValue(value, type = 'any') {
 
     // A laser frame flows between laser nodes; the type says what it is, the shape of the object need not.
     if (type === 'laser' && typeof value === 'object') return { text: 'laser paths', swatch: null, empty: false }
+    // A clock (beatClock.js) reads as its tempo and which clock it is.
+    if (type === 'clock' && value?.kind === 'clock') return { text: `${value.master ? 'master clock' : 'clock'} — ${value.bpm} bpm`, swatch: null, empty: false }
 
     // Reached by a live output carrying a MediaStream, an AudioBuffer, a model
     // — things with no honest one-line reading. Saying so beats "[object

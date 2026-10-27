@@ -34,10 +34,14 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **work** | What the public meets: a title, an author, an address. The same object a **project** names backstage. |
 | **Nodes** | The node canvas: the tool where a project's nodes are wired together. Opens at `/{space}/raw/projects/{project}` — the route stays `raw`, the word a person reads is Nodes. Added 2026-09-23. |
 | **Projection** | The tool that puts a project on a wall: drag its surfaces onto the shapes there. Opens at `/{space}/map/{project}` — the route stays `map`, the word a person reads is Projection. |
-| **Light** | The lighting desk: patch, scenes, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The capital is the tool; a light in a scene and a stage fixture have their own words, **light** and **lamp** below (settled 2026-10-13). |
+| **Light** | The lighting desk: patch, looks, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The capital is the tool; a light in a scene and a stage fixture have their own words, **light** and **lamp** below (settled 2026-10-13). |
 | **lamp** | A stage fixture: the real device on the rig (a moving head, a par, a strip). In a scene it is a light that carries a fixture: a typed one from the rig builder, or a join to a fixture of the lighting desk. A project's card counts these: "74 lamps". Owner, 2026-10-13: *"lamp" = a stage fixture.* Added 2026-10-13. |
 | **light** | A 3D scene light: the sun, a point, a spot, an ambient light, joined to nothing on the rig. Written with a small l; the lighting desk is **Light** with a capital. A project's card counts these: "2 lights". Owner, 2026-10-13: *"light" = a 3D scene light (sun, point…).* Added 2026-10-13. |
 | **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
+| **mesh** | serverXR's live hub at `/serverXR/mesh`, where every screen and phone in one **group** hears what the others publish on a **channel**. Spoken in Nodes through Mesh In and Mesh Out. The hub's own protocol calls a group a `room`; copy says **group**, because Room is banned copy. Added 2026-10-21. |
+| **post** | A short message the share door sends out about a space or a project: words, one link, pictures or a video. A draft until it is approved; then sent to the channels it names. Never a project and never a page. Added 2026-10-21. |
+| **share channel** | An outside place a **post** can go: a Telegram channel, Bluesky, Mastodon. Not a release channel (`dev`, `stable`) and not a lighting-desk channel. Where the context is clear, "channel". Added 2026-10-21. |
+| **share door** | The part of di.iiii that drafts a post, shows its preview and sends it to the share channels (`serverXR/src/share/`, `di post`). Added 2026-10-21. |
 | **team** | The members of a space, said as one word where a page has to name them to a guest — the show page's "who may choose: team". Not a role and not a new group: exactly the people the space's scope already lets edit. Added 2026-10-08. |
 | **view** | A named camera a project keeps — a button that takes you there. A **live** view is one visitors get; a **work** view stays in the Studio. A project that is a version of a **production** shares its views with every other version. Added 2026-10-13 (decisions 1–3, `docs/ai/decisions/2026-10-13-views-library-words-workflow.md`). |
 | **quality** | The room's one render setting, with two values: **Low** (beams and haze, light enough for a phone) and **High** (the work renderer: shadows, bloom, every lamp a real light). The button shows the quality now in use; its title says what a tap switches to. `?quality=low\|high` in an address. Why these words: the field names a renderer's two presets Low / High (quality presets in games, video players, Blender's render presets); HD / HQ name video formats, not a renderer setting. Owner 2026-10-15 ("Full and Lite do not suit"). Stored values and old links `lite` / `full` are read as `low` / `high`. |
@@ -117,7 +121,9 @@ clearer and unambiguous. A product does not refer to itself by its category; tha
 outsiders do. Swept 2026-08-23: ~25 sentences, zero left.
 
 Where a category genuinely has to appear in a sentence rather than a label, the verb is
-cleaner than the noun — **di.iiii hosts 3D spaces on the web** — and Terms and Privacy may
+cleaner than the noun — **di.iiii — public spaces on the open web** (the line picked
+for the front door, the README and the link-preview card; Q2 pick, 2026-10-21, which retired the
+older "hosts 3D spaces" wording) — and Terms and Privacy may
 use *the Service*, which is the legal convention.
 
 ## Node labels settled 2026-08-19
@@ -209,21 +215,23 @@ answering forever like any printed link.
 **The world is `diiii.xyz`.** MANIFESTO's three distances named thedi.studio as the public
 distance. The public distance is the platform, and the platform's address is now `diiii.xyz`
 (live 2026-09-11). `thedi.studio` is the studio's own address on it — one space, eventually
-served under its own domain. `di-studio.xyz` keeps serving, unchanged and forever: it is the
-name printed on the QR in the room and on the workshop handouts, and its job is never to mean
-anything new again.
+served under its own domain. `diiii.xyz` is the one public address (owner, 2026-10-21:
+"diiii.xyz main public"): every new link, default and page names it. `di-studio.xyz` is the old
+address and is to forward to `diiii.xyz`; it is the name printed on the QR in the room and on
+the workshop handouts, so it keeps answering, and its job is never to mean anything new again.
+`scripts/oldAddress.test.js` fails when new code names it outside its allowlist.
 
 ## One open product call
 
 **The creator host must not be named `studio.`** The URL spec (DRAFT, unsigned) proposes
-`studio.di-studio.xyz` for the authoring host. That would make Studio the name of the entire
+`studio.diiii.xyz` for the authoring host. That would make Studio the name of the entire
 authoring side of di.iiii — which is the exact one-word-two-sizes disease this file exists
 to cure, and a hostname in every creator's URL bar teaches it harder than any copy can undo.
 
 The ratified direction is the opposite: MANIFESTO §6 states that "Studio's own role is being
 drawn into Raw's node model as a container node — one palette entry you enter to find its
 subgraph." Ratified beats unsigned, so **Studio is one place inside the product, not the product**. If Stage 0 of the URL spec ever
-ships, give the host a name that is not a product noun — `edit.di-studio.xyz` — or reopen this.
+ships, give the host a name that is not a product noun — `edit.diiii.xyz` — or reopen this.
 
 ## Spelling
 
@@ -266,11 +274,11 @@ Changed by this table:
 
 Confirmed as they stand (the census found no better professional word):
 - **make**: Cube · Sphere · Plane · Cylinder · Cone · Torus *(the TD-audit geometry wave, 2026-08-20 — primitives the entity system always had, finally spoken as nodes)* · Merge · Array *(shipped 2026-08-20 — repeats what arrives, Count × Offset)* · Transform *(re-frames one copy — Array's sibling)* · Constructor · Text · Browser · Image · Create *(paletteHidden in the node editor — objects belong to Studio)* · Line · Circle *(2026-08-21 — Line is a stroke between two wirable endpoints, drawn as a thin cylinder; Circle is a flat disc facing +Z like Plane; both answer Geometry descriptors so Array and Transform can repeat them)*
-- **numbers**: Number · Colour · Vector · Boolean · String · Time · **Math** *(the operator family, 2026-09-01 — one card with an operation menu, wearing the name of the operation it is set to: Add · Subtract · Multiply · Divide · Modulo · Power · Sin · Absolute. Those eight labels survive as OPERATION names, not type names, so nothing a person had learned to read on a card changed)* · Mix · Clamp · **Route** *(Gate and Switch, merged the same day — same menu idea; Gate is the operation it is born in)* · Compare *(stayed its own card: it is wire-first, three boolean outputs, and an operation menu can only answer one question at a time)* · Lag · Noise *(shipped 2026-08-20; Noise's variation input is Variant — "seed" is banned copy)* · Range · Oscillator · Logic · Extremes · Absolute · Round · Ease *(the TD-audit numbers wave, 2026-08-20 — wire-first: Oscillator speaks Sine/Square/Triangle/Saw, Logic answers Both/Either/One/Neither, Ease shapes Smooth/Ease In/Ease Out/Bounce)* · Counter · Hold · Delay · Timer · Trigger · Speed · Toggle *(the state wave — every one remembers through frameMemory and reacts to rising edges)* · Split · Combine · Channels · Compose · Distance · Ramp *(the vector/colour wave — pure taps and joins for the two compound wire types)* · Dot · Cross · Direction · Rotation · Aim · Random *(the second vector wave, 2026-08-21 — Dot's Angle and Rotation's Angle input speak degrees; Aim's output is a rotation ready for any shape's Rotation port; Random is one fixed draw per Variant, Noise is the one that wanders)*
+- **numbers**: Number · Colour · Vector · Boolean · String · Time · **Math** *(the operator family, 2026-09-01 — one card with an operation menu, wearing the name of the operation it is set to: Add · Subtract · Multiply · Divide · Modulo · Power · Sin · Absolute. Those eight labels survive as OPERATION names, not type names, so nothing a person had learned to read on a card changed)* · Mix · Clamp · **Route** *(Gate and Switch, merged the same day — same menu idea; Gate is the operation it is born in)* · Compare *(stayed its own card: it is wire-first, three boolean outputs, and an operation menu can only answer one question at a time)* · Lag · Noise *(shipped 2026-08-20; Noise's variation input is Variant — "seed" is banned copy)* · Range · Oscillator · Logic · Extremes · Absolute · Round · Ease *(the TD-audit numbers wave, 2026-08-20 — wire-first: Oscillator speaks Sine/Square/Triangle/Saw, Logic answers Both/Either/One/Neither, Ease shapes Smooth/Ease In/Ease Out/Bounce)* · Counter · Hold · Delay · Timer · Trigger · Speed · Toggle *(the state wave — every one remembers through frameMemory and reacts to rising edges)* · Flash Guard *(2026-10-21 — WCAG 2.2 SC 2.3.1, three flashes or below: holds a light or picture value back so no more than three flashes a second pass; Rate and Limited say when it acted; the count is `src/project/nodes/flashRule.js`, shared with the offline flash checks; Limit only goes stricter)* · Cue *(2026-10-21 — the project's cue list as wires: Index, Name, Look, Progress, Fading, Fired out; Go, Back, Jump, Loop in. Where the list is comes from the shared cue clock, `shared/cueClock.cjs`, the same lines the desk's cue runner and the show's clock run)* · Split · Combine · Channels · Compose · Distance · Ramp *(the vector/colour wave — pure taps and joins for the two compound wire types)* · Dot · Cross · Direction · Rotation · Aim · Random *(the second vector wave, 2026-08-21 — Dot's Angle and Rotation's Angle input speak degrees; Aim's output is a rotation ready for any shape's Rotation port; Random is one fixed draw per Variant, Noise is the one that wanders)*
 - **the scene**: Scene · Kiosk · Geo · Constructor's siblings 3D Desk / 2D Desk *(deliberate survivors — see the 2026-08-19 note; 3D Desk retires from the palette with the container pass)* · Light *(splits into Light + Environment in the Light pass — reserved below)* · Camera · Background · Grid · In · Out · Studio · Node 0 / Activate Node / Universe Link *(shells, hidden)*
 - **watch**: Monitor · Inspector · Outliner · Timeline · Director
-- **bring in**: Button · Keyboard *(the operator's hands, 2026-08-20 — the desk's Go and a chosen key; Keyboard ignores keys typed into fields)* · Model · Video · Sound *(kept over "Audio": a Sound is a thing standing in the scene, matching Blender's Speaker idea; "audio" is reserved for the analysis outputs coming with the show operators)* · Webcam · Microphone · MIDI In · the capture shells (AR Camera, Insta360 Camera, Stereo Camera, RealSense D405, OSC In, PTZ Camera)
-- **send out**: MIDI Out *(REAL since 2026-08-21 — Web MIDI send: Trigger holds the note, a change while held re-strikes, a changed Value goes out as CC; Status answers what it is doing)* · OSC Out *(shell — no UDP without the bridge)* — and the streaming four keep their labels until built
+- **bring in**: Button · Keyboard *(the operator's hands, 2026-08-20 — the desk's Go and a chosen key; Keyboard ignores keys typed into fields)* · Visitor *(what the person's phone or screen is, 2026-10-21 — Phone, Reduced motion, Portrait, Width, Height, Language, Embedded, and a Name, Hue and Id kept in that browser; "visitor" because it describes whoever opens the page, the word this file already uses for them)* · Tilt *(how the phone is tipped, X and Y in -1..1, 2026-10-21; not "Gyro" — the reading is deviceorientation, not the gyroscope's rate)* · Model · Video · Sound *(kept over "Audio": a Sound is a thing standing in the scene, matching Blender's Speaker idea; "audio" is reserved for the analysis outputs coming with the show operators)* · Mesh In *(2026-10-21 — what other screens and phones in the group publish on one channel: Value, From, Time, a Signal count per event, Up, Status; optional Min/Max, Allowed and Max Length checks)* · Webcam · Microphone · MIDI In · the capture shells (AR Camera, Insta360 Camera, Stereo Camera, RealSense D405, OSC In, PTZ Camera)
+- **send out**: MIDI Out *(REAL since 2026-08-21 — Web MIDI send: Trigger holds the note, a change while held re-strikes, a changed Value goes out as CC; Status answers what it is doing)* · Mesh Out *(2026-10-21 — publishes Value on a channel to the group, at most once per Interval (200 ms by default, 50 ms floor), the latest value winning, only while Up)* · OSC Out *(shell — no UDP without the bridge)* — and the streaming four keep their labels until built
 - **agents**: Agent · Keeper · Agent Run · Work Status *(dev-local, low-stakes; renamed only if they ever ship)*
 
 Reserved names — settle NOW so the build waves don't invent their own:
@@ -423,6 +431,22 @@ Design: the raw laser workflow decision of 2026-10-14 (lands in docs/ai/decision
 | **Laser** (port type) | The wire type laser nodes speak: a set of paths (below). Green on the canvas. Not to be confused with the **Laser** node (`laser.shape`), which keeps its name. |
 | **path** (laser) | One unbroken stroke the beam draws, lit all along. A **path set** (frame v2 in code) is what flows between laser nodes; Laser Out turns it into the wire's points, putting the dark moves between paths. Developer word; the card says "Frame". |
 | **Auto** (Laser Out's budget) | The point budget sized from the drawn length instead of a number. The checkbox beside Laser Out's Points slider; 0 on the Budget port means the same. |
+| **Laser File** | The node (`laser.file`, Phase 9, 2026-10-20) that draws a file as laser paths: an ILDA file (formats 0, 1, 4, 5) or SVG path data, told apart by its bytes. Its File is a project asset. Not "ILDA node" or "SVG node": one node reads both. |
+| **Laser Text** | The node (`laser.text`, Phase 9, 2026-10-20) that writes a string as single-stroke laser paths in Hershey Roman Simplex. Not "Text": that card shows text in the scene. |
+
+## Amended 2026-10-21 — Beat and Oscillator v2 (Phase 2 of the laser workflow)
+
+Decision 3 of `docs/ai/decisions/2026-10-14-raw-laser-workflow.md` (owner 2026-10-14): one **master clock** runs, LFOs follow it,
+extra **clocks** can be added. The rows for **master clock** and **clock** are in the dictionary above; these are the words Phase 2 adds.
+
+| Word | Its one job |
+|---|---|
+| **Beat** | The node that is a **clock** (TouchDesigner's Beat CHOP): a tempo in BPM and the moment of beat 0. Outputs Clock, Ramp, Pulse, Count, Beat, Bar, Ramp bar, BPM. Its **Clock** setting is **Master** (the first Beat set to Master is the project's master clock) or **Extra**. Not "Time": that card counts seconds. |
+| **Tempo from** | A Beat's choice of whose tempo it keeps: **This node** (its BPM and its own taps) or **Light desk** (the `/light` desk's clock and tap, an optional source; with no desk answering, the Beat keeps its own). |
+| **Clock** (port type) | The wire a Beat's Clock output speaks; wired into an Oscillator's Clock, that Oscillator follows that clock instead of the master. |
+| **Beats** (Oscillator) | How many beats of its clock one cycle lasts, ¼ … 64. 0 keeps the cycle in Hz (Frequency), which is what every Oscillator made before Phase 2 does. |
+| **Bias** (Oscillator) | Leans the cycle: −1 … 1 moves the half-way point (a triangle's peak, a square's edge) from the middle toward an end; on a square it is the duty. TouchDesigner's word. |
+| **Sample & hold** | The wave that holds one random value for a whole cycle and jumps at the next. The `/light` desk calls the same wave **random**. **Random glide** walks from one cycle's value to the next instead of jumping. |
 
 ## Proposed 2026-10-13 — a lighting look, and the Dilijan words (owner's pick, nothing renamed)
 
@@ -472,6 +496,23 @@ The holds line follows it (`describeProjectLayers`, `src/project/layers.js`): a 
 carries a fixture counts as a lamp, any other light as a light, and an object is neither. Other strings that
 name a placed light (Studio's Lights row, the `light.point` row of the node table above) were
 not touched by this amendment; a later pass lines them up with these two rows.
+
+## Amended 2026-10-21 — app, game, software
+
+di.g_apptune (`dob-0/di.g_apptune`, the tuner for the apps and games on a machine) needed one word for "the things it
+tunes". Owner's words: *"look what is the game, it soft or app, what the difference — lets make it professional that
+in future people can use that."*
+
+| Word | Means | Not |
+|---|---|---|
+| **app** | Any program a person installs and runs on a machine: a game, Blender, TouchDesigner, a browser. The overall word — Steam names every item an app (its *appid*), the Linux desktop names every launcher entry an application (freedesktop Desktop Entry, `Type=Application`, games under `Categories=Game`). | not a di.iiii **tool** (Studio · Nodes · Projection · Light are tools *inside* di.iiii) |
+| **game** | An app made to be played. A *type* of app, never a separate thing. | not "software", not "title" in copy |
+| **creative app** | An app made to create with: Blender, TouchDesigner, a DAW, an editor. | not "creative tool" — **tool** is taken by di.iiii's own tools |
+| **software** | Not used in product copy. It means any code at all (drivers, libraries, firmware), wider than what a person runs. | — |
+| **settings set** | The values di.g_apptune writes into an app's own settings for one goal (Recommended, Performance, Quality, Yours). | not "profile" (a person has a profile), not "preset" (a game's own word for its menu presets) |
+
+Where it lives in code: di.g_apptune `apps/<source>-<id>.toml` with `type = "game" | "creative" | "app"`
+(described in the di.g_apptune repo, dob-0/di.g_apptune, file APP_FILE.md).
 
 ## The rule for anything new
 

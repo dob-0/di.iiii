@@ -116,6 +116,9 @@
        is the sanctioned form; `rgba(77, 249, 255, .2)` is not, and the spine
        test fails on it. */
     --di-cyan-rgb: 77, 249, 255;
+    /* --di-surface and --di-surface-2 as channels, for a scrim over the scene. */
+    --di-surface-rgb: 10, 10, 10;
+    --di-surface-2-rgb: 17, 17, 20;
     --di-danger-rgb: 242, 95, 92;
     --di-success-rgb: 77, 249, 192;
     --di-warning-rgb: 255, 179, 71;

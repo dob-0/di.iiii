@@ -19,7 +19,7 @@ native install and no engine lock-in. The editor runs in the browser; a
 Node/Express backend (`serverXR`) owns persistence, auth, and publish state.
 The public unit is a **space**; creators own their data.
 
-- **Live:** [di-studio.xyz](https://di-studio.xyz) · **Repo:** `dob-0/di.iiii`
+- **Live:** [diiii.xyz](https://diiii.xyz) · **Repo:** `dob-0/di.iiii`
 - **Stack:** React 18 + React-Three-Fiber / Three.js + MUI on the client;
   Express + SQLite + Socket.IO + SSE on the server; Vite build; Vitest tests.
 - **Runtime baseline:** Node `22.x`, npm `10.x`.

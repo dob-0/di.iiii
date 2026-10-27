@@ -6,7 +6,7 @@
  *
  * Options:
  *   --label  <text>   Human-readable name for the space (default: spaceId)
- *   --to     <url>    Live server API base (default: $LIVE_API_URL or https://di-studio.xyz/serverXR)
+ *   --to     <url>    Live server API base (default: $LIVE_API_URL or https://diiii.xyz/serverXR)
  *   --local  <url>    Local server API base (default: $LOCAL_API_URL or http://localhost:4000/serverXR)
  *   --token  <token>  Admin token for the live server (default: $LIVE_API_TOKEN)
  *   --local-only      Only create the space locally (skip live server)
@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url'
 import { SCENE_DATA_VERSION } from '../src/shared/sceneSchema.js'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
+const DEFAULT_LIVE_URL = 'https://diiii.xyz/serverXR'
 const DEFAULT_LOCAL_URL = 'http://localhost:4000/serverXR'
 
 const parseArgs = (argv) => {

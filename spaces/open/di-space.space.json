@@ -1,5 +1,5 @@
 {
-  "$schema": "https://di-studio.xyz/schemas/di-space.space.schema.json",
+  "$schema": "https://diiii.xyz/schemas/di-space.space.schema.json",
   "spaceId": "open",
   "label": "Open Space",
   "isPublic": true,
@@ -7,7 +7,7 @@
   "note": "The communal room every visitor can build in, and the target of the Open Jam link. Authored live by whoever is in it.",
   "tiers": {
     "prod": {
-      "url": "https://di-studio.xyz/serverXR",
+      "url": "https://diiii.xyz/serverXR",
       "tokenEnv": "PROD_API_TOKEN"
     },
     "dev": {

@@ -259,7 +259,7 @@ describe('code before data', () => {
 describe('production is asked for twice', () => {
     it('refuses the prod tier until --allow-production says it out loud', () => {
         expect(() => resolveApi({ tier: 'prod' })).toThrow(/--allow-production/)
-        expect(resolveApi({ tier: 'prod', allowProduction: true })).toBe('https://di-studio.xyz/serverXR')
+        expect(resolveApi({ tier: 'prod', allowProduction: true })).toBe('https://diiii.xyz/serverXR')
         expect(resolveApi({ tier: 'local' })).toBe('http://localhost:4000/serverXR')
         expect(resolveApi({ tier: 'dev' })).toBe('https://dev.diiii.xyz/serverXR')
         expect(parseArgs(['--tier', 'dev']).tier).toBe('dev')
@@ -271,7 +271,7 @@ describe('production is asked for twice', () => {
     it('refuses an --api that points at di-studio.xyz by any spelling, with the same flag', () => {
         expect(() => resolveApi({ tier: 'local', api: 'https://di-studio.xyz/serverXR' })).toThrow(/production/)
         expect(() => resolveApi({ tier: 'local', api: 'https://www.di-studio.xyz/serverXR/' })).toThrow(/production/)
-        expect(resolveApi({ tier: 'local', api: 'https://di-studio.xyz/serverXR', allowProduction: true })).toBe('https://di-studio.xyz/serverXR')
+        expect(resolveApi({ tier: 'local', api: 'https://diiii.xyz/serverXR', allowProduction: true })).toBe('https://diiii.xyz/serverXR')
         expect(resolveApi({ tier: 'local', api: 'http://localhost:4141/serverXR/' })).toBe('http://localhost:4141/serverXR')
     })
 

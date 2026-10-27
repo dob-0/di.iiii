@@ -54,7 +54,7 @@
  *                       are left out and listed. Replaces this destination's
  *                       baseline; writes only the baseline file, never a tier.
  *                       Defaults to --from local --to dev. Honors --dry-run.
- *   --allow-production  Required before anything may be written to di-studio.xyz
+ *   --allow-production  Required before anything may be written to diiii.xyz
  *
  * Tiers: local, dev (dev.diiii.xyz), prod — the same names key TIERS and the baseline.
  *
@@ -94,7 +94,7 @@ export const localBase = (env = {}) => {
 export const TIERS = {
     local: { base: localBase(), tokenKey: 'API_TOKEN' },
     dev: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
-    prod: { base: 'https://di-studio.xyz/serverXR', tokenKey: 'PROD_API_TOKEN' }
+    prod: { base: 'https://diiii.xyz/serverXR', tokenKey: 'PROD_API_TOKEN' }
 }
 
 // The dev tier's old key is refused outright, not mapped: one name per tier.

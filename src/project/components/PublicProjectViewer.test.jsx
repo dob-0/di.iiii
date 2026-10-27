@@ -1215,9 +1215,49 @@ describe('document title', () => {
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
 
-        render(<PublicProjectViewer spaceId="main" projectId="room" spaceLabel="di.iiii" showProjectInTitle />)
+        render(<PublicProjectViewer spaceId="main" projectId="room" spaceLabel="Home" spaceAddress="di-iiii" showProjectInTitle />)
 
         await screen.findByText('viewer-scene:scene')
         expect(document.title).toBe('di.iiii — public spaces on the open web')
+    })
+
+    // One name per space: the viewer is handed the word that was typed (/di-iiii) as spaceId, so the tab is asked of the
+    // record's id (spaceRecordId). "di.iiii — di.iiii" was the tab on the platform's own space reached by its address.
+    it('leaves the tab title alone for the platform\'s own space, reached by its address too', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'room', title: 'The Room' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        const { unmount } = render(<PublicProjectViewer spaceId="di-iiii" projectId="room" spaceLabel="Home" spaceAddress="di-iiii" spaceRecordId="main" />)
+        await screen.findByText('viewer-scene:scene')
+        expect(document.title).toBe('di.iiii — public spaces on the open web')
+        unmount()
+
+        // and on a project the address named
+        render(<PublicProjectViewer spaceId="di-iiii" projectId="room" spaceLabel="Home" spaceAddress="di-iiii" spaceRecordId="main" showProjectInTitle />)
+        await screen.findByText('viewer-scene:scene')
+        expect(document.title).toBe('di.iiii — public spaces on the open web')
+    })
+
+    it('names a space that has no name by its address', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'room', title: 'The Room' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="queerlab" projectId="room" spaceAddress="queer-lab" />)
+
+        await waitFor(() => expect(document.title).toBe('queer-lab — di.iiii'))
     })
 })

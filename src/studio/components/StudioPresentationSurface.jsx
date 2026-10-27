@@ -15,7 +15,7 @@ const overlayInnerStyle = {
     background: 'rgba(6, 9, 13, 0.82)',
     border: '1px solid rgba(255,255,255,0.1)',
     color: '#f5f7fa',
-    borderRadius: '18px',
+    borderRadius: 'var(--di-radius)',
     padding: '1rem 1.1rem',
     maxWidth: '28rem',
     boxShadow: '0 20px 60px rgba(0,0,0,0.35)',

@@ -3,6 +3,7 @@ import MadeWithBadge from '../../components/MadeWithBadge.jsx'
 import SpaceContentsBadge from '../../components/SpaceContentsBadge.jsx'
 import SurfaceBar from '../../components/SurfaceBar.jsx'
 import useDocumentTitle from '../../hooks/useDocumentTitle.js'
+import { spaceTabTitle } from '../../utils/oneNamePerSpace.js'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
 import useSpaceContentsCount from '../../hooks/useSpaceContentsCount.js'
 import useRoomSound, { useVisitorSoundGate } from '../../hooks/useRoomSound.js'
@@ -87,7 +88,7 @@ const PAGE_SANDBOX = 'allow-scripts allow-forms allow-popups allow-popups-to-esc
 // only ever be a backstop, not a real "finished loading" signal.
 const CODE_PREVIEW_PAINT_TIMEOUT_MS = 10000
 
-export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', initialCameraView = null, showProjectSwitcher = false, showProjectInTitle = false }) {
+export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', spaceAddress = null, spaceRecordId = null, initialCameraView = null, showProjectSwitcher = false, showProjectInTitle = false }) {
     const [state, setState] = useState({
         status: 'loading',
         document: null,
@@ -194,7 +195,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const resolvedRouteSpaceId = spaceId || DEFAULT_PROJECT_SPACE_ID
     // Standing in a room, the only way out was one badge to the whole Spaces
     // grid — and inside `main` not even that, because the badge assumes `/`
-    // already IS this room. True for a visitor to di-studio.xyz, false on an
+    // already IS this room. True for a visitor to diiii.xyz, false on an
     // install, where `/` is the Spaces list. So: on a machine that is running
     // di.iiii, the room carries the bar and the space you are in stays named.
     const localInstall = useLocalInstall()
@@ -380,7 +381,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const previewDocument = buildPresentationPreviewDocument(
         rawHtml,
         typeof window !== 'undefined' ? window.location.search : '',
-        typeof window !== 'undefined' ? window.location.origin : ''
+        typeof window !== 'undefined' ? window.location.origin : '',
+        typeof window !== 'undefined' ? window.location.hash : ''
     )
     const xrDefaultMode = publishState.xrDefaultMode || 'none'
     const codeUrl = presentationState.codeSourceType === 'url' ? presentationState.codeUrl?.trim() : ''
@@ -532,25 +534,27 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // "Welcome", /network as "who makes di.iiii" and /br-id-ge as "the landing —
     // the door" while its tab, card and list all said the space's name.
     const viewerTitle = useMemo(() => {
-        const spaceName = spaceLabel || resolvedRouteSpaceId
+        const spaceName = spaceLabel || spaceAddress || resolvedRouteSpaceId
         if (showProjectInTitle && document?.projectMeta?.title) return document.projectMeta.title
         return spaceName || document?.projectMeta?.title || ''
-    }, [document?.projectMeta?.title, resolvedRouteSpaceId, showProjectInTitle, spaceLabel])
+    }, [document?.projectMeta?.title, resolvedRouteSpaceId, showProjectInTitle, spaceAddress, spaceLabel])
 
-    // The tab title. Naming rule (docs/ai/vocabulary.md): a space's own name
-    // is what a visitor sees for it; a project's name shows only when the URL
-    // named that project. 'main' is skipped — it is the platform's own space,
-    // named di.iiii, so index.html's default title already says the right
-    // thing (the same 'own' fossil ogRoutes.js carries for the preview card).
-    // Held back until the document is ready so a loading project never
-    // flashes an empty or stale title, and skipped for a thumbnail/embed —
-    // neither is a destination whose tab this page owns.
+    // The tab title. Naming rule (docs/ai/vocabulary.md): a space's own name is what a visitor sees for it; a project's
+    // name shows only when the URL named that project. The platform's own space gets none — it is named di.iiii, so
+    // index.html's default title already says the right thing (the same 'own' fossil ogRoutes.js carries for the preview
+    // card). The name decides, not the word that was typed: this page is handed /di-iiii as often as /main
+    // (utils/oneNamePerSpace.js). Held back until the document is ready so a loading project never flashes an empty or
+    // stale title, and skipped for a thumbnail/embed — neither is a destination whose tab this page owns.
     useDocumentTitle(
-        resolvedRouteSpaceId === 'main' || isPreview || isEmbed || state.status !== 'ready'
+        isPreview || isEmbed || state.status !== 'ready'
             ? null
-            : (showProjectInTitle && document?.projectMeta?.title
-                ? `${document.projectMeta.title} — ${spaceLabel || resolvedRouteSpaceId} — di.iiii`
-                : `${spaceLabel || resolvedRouteSpaceId} — di.iiii`)
+            : spaceTabTitle({
+                // the record's id, asked of the space (/di-iiii is the same space as /main); the typed word while unknown
+                spaceId: spaceRecordId || resolvedRouteSpaceId,
+                label: spaceLabel,
+                address: spaceAddress,
+                projectTitle: showProjectInTitle ? document?.projectMeta?.title : ''
+            })
     )
 
     // Inside / Free and Low / High: drawn in the page's corner column, or (in the scene bar) behind its Display chip.
@@ -638,7 +642,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         data-autofly
                         data-testid="auto-fly"
                         aria-pressed={flying}
-                        title="Auto fly — an FPV drone flight through the room; touch anything to take the controls (Esc stops)"
+                        title="Auto fly — a flight through the room (a drone lap, or a tour of its doors); touch anything to take the controls (Esc stops)"
                         style={{
                             ...btnBase,
                             ...abs({ top: `calc(${topClear} + ${hasBuilding ? '13.6rem' : '10.2rem'})`, right: '1rem', minWidth: 104 }),
@@ -908,7 +912,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     title={viewerTitle}
                     spaceId={resolvedRouteSpaceId}
                     entities={document?.entities || []}
-                    contentsHref={spaceContentsCount > 1 ? buildSpaceContentsPath(resolvedRouteSpaceId) : null}
+                    contentsHref={spaceContentsCount > 1 ? buildSpaceContentsPath(spaceAddress || resolvedRouteSpaceId) : null}
                 />
             ) : null}
 
@@ -922,7 +926,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         spaceId={resolvedRouteSpaceId}
                         homeIsThisRoom={!localInstall.isLocal}
                     />
-                    <SpaceContentsBadge spaceId={resolvedRouteSpaceId} count={spaceContentsCount} />
+                    <SpaceContentsBadge spaceId={spaceAddress || resolvedRouteSpaceId} count={spaceContentsCount} />
                 </>
             ) : null}
 
@@ -930,7 +934,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 <SurfaceBar
                     float
                     space={resolvedRouteSpaceId}
-                    spaceLabel={spaceLabel && spaceLabel !== 'di.iiii' ? spaceLabel : resolvedRouteSpaceId}
+                    spaceLabel={spaceLabel}
+                    spaceAddress={spaceAddress || resolvedRouteSpaceId}
                     isLocalInstall
                 />
             ) : null}

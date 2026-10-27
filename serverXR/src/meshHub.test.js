@@ -481,3 +481,16 @@ describe('mesh hub survives frames that parse to a non-object', () => {
     await wait(50)
   })
 })
+
+// The hub requires `ws` itself (top of meshHub.js), but until 2026-10-21 no
+// package.json named it: it arrived only because socket.io's engine.io
+// depends on it, so an engine.io release that dropped or moved it would have
+// taken the hub down with no change in this repo. Declared and pinned now.
+describe('the hub’s own WebSocket library is declared', () => {
+  it('serverXR/package.json names ws at an exact version, matching its lockfile', () => {
+    const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+    const lock = JSON.parse(readFileSync(new URL('../package-lock.json', import.meta.url), 'utf8'))
+    expect(pkg.dependencies.ws).toMatch(/^\d+\.\d+\.\d+$/)
+    expect(lock.packages['node_modules/ws'].version).toBe(pkg.dependencies.ws)
+  })
+})

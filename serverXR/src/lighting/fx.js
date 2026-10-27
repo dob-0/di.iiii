@@ -101,19 +101,9 @@ function fxApplyDepth(level, depth) {
   return (255 - d) + Math.floor((level * d + 127) / 255);
 }
 
-// The firmware's 32-bit mixer, kept rather than Math.random because sparkle and glitch
-// have to be reproducible: the same millisecond gives the same flicker every time, which
-// is the only reason a random-looking effect can be tested at all. `>>> 0` after every
-// step is what keeps it 32-bit; without it Math.imul's sign leaks into the next shift.
-function fxHash(x) {
-  let h = x >>> 0;
-  h = (h ^ (h >>> 16)) >>> 0;
-  h = Math.imul(h, 0x7feb352d) >>> 0;
-  h = (h ^ (h >>> 15)) >>> 0;
-  h = Math.imul(h, 0x846ca68b) >>> 0;
-  h = (h ^ (h >>> 16)) >>> 0;
-  return h;
-}
+// The firmware's 32-bit mixer lives in waves.js now (the light desk and the Nodes Oscillator
+// share it); fxHash is the same function under the name every effect here calls.
+const { waveHash: fxHash } = require('./waves');
 
 // The tail behind a chase or comet head, four lanes long. The curve is steep on purpose:
 // an even ramp reads as a smear rather than as a head with something following it.

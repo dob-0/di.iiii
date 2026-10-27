@@ -10,3 +10,18 @@ export const risingEdge = (memory, key, current) => {
     memory.set(key, now)
     return now && !prev
 }
+
+// A trigger input "fires" when it turns truthy, or changes while truthy (a
+// rising count from a Counter or MIDI In) — MidiOutFeed's rule, and the one
+// every Reset and Tap uses (Beat in BeatFeed, Oscillator below), so one word
+// means one thing whatever is wired into it.
+export const signalFired = (was, now) => Boolean(now) && (!was || now !== was)
+
+// signalFired over frameMemory, multi-output safe like risingEdge: the first
+// port's compute consumes the change, the same pass's other ports see none.
+export const firedEdge = (memory, key, current) => {
+    if (!memory) return false
+    const was = memory.get(key)
+    memory.set(key, current)
+    return signalFired(was, current)
+}

@@ -58,7 +58,7 @@ describe('space-push production guard', () => {
     it('refuses a production target inherited from the environment', async () => {
         const run = execFileAsync(process.execPath, [SCRIPT, 'wcc'], {
             cwd: ROOT_DIR,
-            env: { ...process.env, LIVE_API_URL: 'https://di-studio.xyz/serverXR', LIVE_API_TOKEN: 'x' },
+            env: { ...process.env, LIVE_API_URL: 'https://diiii.xyz/serverXR', LIVE_API_TOKEN: 'x' },
         })
         await expect(run).rejects.toMatchObject({ code: 1 })
         const { stderr } = await run.catch((e) => e)
@@ -72,7 +72,7 @@ describe('space-push production guard', () => {
         // is that it got past the guard rather than being refused by it.
         const { stderr } = await execFileAsync(
             process.execPath,
-            [SCRIPT, 'definitely-not-a-real-space', '--to', 'https://di-studio.xyz/serverXR', '--dry-run'],
+            [SCRIPT, 'definitely-not-a-real-space', '--to', 'https://diiii.xyz/serverXR', '--dry-run'],
             { cwd: ROOT_DIR, env: { ...process.env, LIVE_API_TOKEN: 'x' } }
         ).catch((e) => e)
         expect(stderr || '').not.toContain('Refusing to push to PRODUCTION')
