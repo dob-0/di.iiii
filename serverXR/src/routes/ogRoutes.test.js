@@ -375,3 +375,92 @@ describe('a card for a space on its own domain', () => {
     expect(r.body).toContain('rel="canonical" href="https://diiii.xyz"')
   })
 })
+
+// ── marketing audit 2026-10-21: G23 (a space's own line) and G25 (a card per
+// wiki article). Mounted like index.js mounts it; the wiki loader is the REAL
+// one, reading src/wiki/wikiContent.js, so a broken path or shape fails here.
+describe('a space\'s line for visitors, and one card per wiki article', () => {
+  const express = createRequire(import.meta.url)('express')
+  const { registerOgRoutes } = createRequire(import.meta.url)('./ogRoutes')
+  const { loadWikiArticles } = createRequire(import.meta.url)('../wikiIndex')
+
+  const app = (() => {
+    const a = express()
+    const router = express.Router()
+    registerOgRoutes(router, {
+      loadSpaceMeta: async (h) => ({
+        said: { id: 'said', label: 'Said', isPublic: true, blurb: 'Nineteen films made by children in one town.' },
+        quiet: { id: 'quiet', label: 'Quiet', isPublic: true, blurb: null },
+      })[h] || null,
+      siteOrigin: 'https://diiii.xyz',
+      loadWikiArticles,
+    })
+    a.use('/serverXR', router)
+    return a
+  })()
+
+  const hit = (path) => new Promise((resolve) => {
+    const server = app.listen(0, async () => {
+      const r = await fetch(`http://127.0.0.1:${server.address().port}${path}`)
+      const body = await r.text()
+      server.close(() => resolve({ status: r.status, body }))
+    })
+  })
+
+  it('a space that wrote its line is described by it, not by the formula', async () => {
+    const r = await hit('/serverXR/og/said')
+    expect(r.body).toContain('<meta property="og:description" content="Nineteen films made by children in one town.">')
+    expect(r.body).toContain('<meta name="description" content="Nineteen films made by children in one town.">')
+    expect(r.body).not.toContain('a space on di.iiii')
+  })
+
+  it('a space without one keeps the old sentence', async () => {
+    const r = await hit('/serverXR/og/quiet')
+    expect(r.body).toContain('Quiet — a space on di.iiii.')
+  })
+
+  it('reads every wiki article from the real wiki file', async () => {
+    const articles = await loadWikiArticles()
+    // 118 on 2026-10-21; the floor is the audit's 108 anchors.
+    expect(articles.size).toBeGreaterThanOrEqual(108)
+    for (const a of articles.values()) {
+      expect(a.title.length).toBeGreaterThan(0)
+      expect(a.summary.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('/wiki/{id} is its own page: title, description and canonical', async () => {
+    const articles = await loadWikiArticles()
+    const glossary = articles.get('glossary')
+    expect(glossary).toBeTruthy()
+    const r = await hit('/serverXR/og/wiki/glossary')
+    expect(r.status).toBe(200)
+    expect(r.body).toContain(`<title>${glossary.title} — Wiki — di.iiii</title>`)
+    expect(r.body).toContain('rel="canonical" href="https://diiii.xyz/wiki/glossary"')
+    expect(r.body).toContain('<meta property="og:url" content="https://diiii.xyz/wiki/glossary">')
+    expect(r.body).toContain('One word, one meaning.')
+  })
+
+  it('every article gets a different title from every other', async () => {
+    const articles = await loadWikiArticles()
+    const ids = [...articles.keys()].slice(0, 12)
+    const titles = new Set()
+    for (const id of ids) {
+      const r = await hit(`/serverXR/og/wiki/${id}`)
+      titles.add(r.body.match(/<title>(.*)<\/title>/)[1])
+    }
+    expect(titles.size).toBe(ids.length)
+  })
+
+  it('an id the wiki does not have gets the wiki\'s own card, canonical to /wiki', async () => {
+    const r = await hit('/serverXR/og/wiki/no-such-article')
+    expect(r.status).toBe(200)
+    expect(r.body).toContain('<title>Wiki — di.iiii</title>')
+    expect(r.body).toContain('rel="canonical" href="https://diiii.xyz/wiki"')
+  })
+
+  it('a wiki file that cannot be read gives an empty index, not a crash', async () => {
+    const missing = await loadWikiArticles('/nonexistent/wikiContent.js')
+    expect(missing.size).toBe(0)
+  })
+})

@@ -7,28 +7,20 @@
 // A real install, as far as the CLI can tell: `current` points at a version
 // directory laid out the way pack-runtime.mjs lays one out (cli/, scripts/,
 // sdk/, serverXR/, release.json), and `di up` boots serverXR from it on a
-// free port with a scratch data root. Nothing here touches ~/.di.
+// port it then proves it holds (upOnOwnPort below), with a scratch data root. Nothing here touches ~/.di.
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { MAX_ATTEMPTS, getFreePort } from '../../serverXR/src/testSupport/spawnServer.mjs'
 
 vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 })
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '..', '..')
 
-const freePort = () => new Promise((resolve, reject) => {
-    const server = net.createServer()
-    server.on('error', reject)
-    server.listen(0, '127.0.0.1', () => {
-        const { port } = server.address()
-        server.close((error) => (error ? reject(error) : resolve(port)))
-    })
-})
 
 const copyDir = (from, to, keep = () => true) => {
     fs.mkdirSync(to, { recursive: true })
@@ -47,7 +39,6 @@ let pidOf
 
 beforeAll(async () => {
     home = fs.mkdtempSync(path.join(os.tmpdir(), 'di-open-'))
-    port = await freePort()
     const version = '9.9.9-test'
     const versionDir = path.join(home, 'versions', version)
     const notATest = (file) => !/\.(test|spec)\.[cm]?js$/.test(file)
@@ -67,8 +58,6 @@ beforeAll(async () => {
     // lastUpdateCheck now: `di up` must not go looking for a release on the
     // network from inside a test.
     fs.writeFileSync(path.join(home, 'state.json'), JSON.stringify({ mode: 'node', version, lastUpdateCheck: new Date().toISOString() }))
-    // A 1 MB wire, so the fallback below can be reached with a 2.5 MB file.
-    fs.writeFileSync(path.join(home, 'di.env'), `PORT=${port}\nMAX_UPLOAD_MB=1\n`)
 
     di = (...args) => {
         const result = spawnSync(process.execPath, [path.join(home, 'current', 'cli', 'cli.mjs'), ...args], {
@@ -82,9 +71,39 @@ beforeAll(async () => {
     }
     pidOf = () => Number(fs.readFileSync(path.join(home, 'run', 'server.pid'), 'utf8'))
 
-    const up = di('up', '--no-open')
-    expect(up.out, up.err).toContain('di.iiii is running.')
+    port = await upOnOwnPort()
 })
+
+const pidAlive = (pid) => { try { process.kill(pid, 0); return true } catch { return false } }
+const readPid = () => { try { return pidOf() } catch { return null } }
+
+// `di up` takes its port from di.env, so the number is chosen before the server
+// binds it -- and a sibling test file can take it in between (the EADDRINUSE flake
+// of 2026-10-20, docs/ai/known-fixes.md). A health answer on that port proves
+// nothing: a sibling's server answers it too. So the port counts only when THIS
+// install's server says it is listening on it (its own log line) and is still
+// alive; a lost race (EADDRINUSE, or "already running" because someone else
+// answered first) is stopped and retried on a new number, like spawnServer.mjs.
+const upOnOwnPort = async () => {
+    const serverLog = path.join(home, 'logs', 'server.log')
+    for (let attempt = 1; ; attempt += 1) {
+        const candidate = await getFreePort()
+        // A 1 MB wire, so the fallback below can be reached with a 2.5 MB file.
+        fs.writeFileSync(path.join(home, 'di.env'), `PORT=${candidate}\nMAX_UPLOAD_MB=1\n`)
+        fs.rmSync(serverLog, { force: true })
+        fs.rmSync(path.join(home, 'run', 'server.pid'), { force: true })
+        const up = di('up', '--no-open')
+        const log = () => { try { return fs.readFileSync(serverLog, 'utf8') } catch { return '' } }
+        const pid = readPid()
+        if (up.out.includes('di.iiii is running.') && pid && pidAlive(pid)
+            && log().includes(`Listening on: 127.0.0.1:${candidate}`)) return candidate
+        di('down')
+        if (pid) try { process.kill(pid, 'SIGKILL') } catch { /* already gone */ }
+        const lost = /EADDRINUSE/.test(`${log()}${up.out}${up.err}`) || up.out.includes('already running')
+        if (lost && attempt < MAX_ATTEMPTS) continue
+        throw new Error(`di up did not come up on a port of its own (attempt ${attempt}, port ${candidate}).\n${up.out}\n${up.err}\n${log()}`)
+    }
+}
 
 afterAll(() => {
     if (!home) return

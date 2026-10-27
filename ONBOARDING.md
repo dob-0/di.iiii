@@ -117,7 +117,7 @@ This starts **serverXR** (`http://localhost:4000`) and the **Vite client**
 - `http://localhost:5173/spaces` — your spaces
 - `http://localhost:5173/main` — public view
 - `http://localhost:5173/main/studio` — main editor
-- `http://localhost:5173/main/raw/projects` — the node editor (Raw; `beta` was
+- `http://localhost:5173/main/raw/projects` — Nodes, the node editor (`beta` was
   deleted in Aug 2026 and its route is gone)
 - `http://localhost:5173/admin` — ops
 - `http://localhost:4000/serverXR/api/health` — server health check

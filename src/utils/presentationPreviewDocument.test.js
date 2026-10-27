@@ -33,6 +33,20 @@ describe('presentationPreviewDocument', () => {
         expect(result).toContain('scrollIntoView')
     })
 
+    it('hands the shell #fragment down and scrolls to the element it names (N1248: "back to the works" opened at the top)', async () => {
+        const { JSDOM } = await import('jsdom')
+        const html = buildPresentationPreviewDocument('<!doctype html><html><head></head><body><div style="height:3000px"></div><section id="works">w</section></body></html>', '', 'https://x.test', '#works')
+        expect(html).toContain('window.diiPageHash = "#works"')
+        const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true })
+        let scrolled = null
+        dom.window.HTMLElement.prototype.scrollIntoView = function () { scrolled = this.id }
+        dom.window.dispatchEvent(new dom.window.Event('load'))
+        expect(scrolled).toBe('works')
+        const evil = buildPresentationPreviewDocument('<p>x</p>', '', '', '#a</script><script>window.pwned=1</script>')
+        const d2 = new JSDOM(evil, { runScripts: 'dangerously' })
+        expect(d2.window.pwned).toBeUndefined()
+    })
+
     it('hands the shell query down to the srcdoc page, which has no URL of its own', () => {
         const result = buildPresentationPreviewDocument('<main>Field</main>', '?just=bkyi')
 

@@ -34,10 +34,13 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **work** | What the public meets: a title, an author, an address. The same object a **project** names backstage. |
 | **Nodes** | The node canvas: the tool where a project's nodes are wired together. Opens at `/{space}/raw/projects/{project}` — the route stays `raw`, the word a person reads is Nodes. Added 2026-09-23. |
 | **Projection** | The tool that puts a project on a wall: drag its surfaces onto the shapes there. Opens at `/{space}/map/{project}` — the route stays `map`, the word a person reads is Projection. |
-| **Light** | The lighting desk: patch, scenes, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The capital is the tool; a light in a scene and a stage fixture have their own words, **light** and **lamp** below (settled 2026-10-13). |
+| **Light** | The lighting desk: patch, looks, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The capital is the tool; a light in a scene and a stage fixture have their own words, **light** and **lamp** below (settled 2026-10-13). |
 | **lamp** | A stage fixture: the real device on the rig (a moving head, a par, a strip). In a scene it is a light that carries a fixture: a typed one from the rig builder, or a join to a fixture of the lighting desk. A project's card counts these: "74 lamps". Owner, 2026-10-13: *"lamp" = a stage fixture.* Added 2026-10-13. |
 | **light** | A 3D scene light: the sun, a point, a spot, an ambient light, joined to nothing on the rig. Written with a small l; the lighting desk is **Light** with a capital. A project's card counts these: "2 lights". Owner, 2026-10-13: *"light" = a 3D scene light (sun, point…).* Added 2026-10-13. |
 | **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
+| **post** | A short message the share door sends out about a space or a project: words, one link, pictures or a video. A draft until it is approved; then sent to the channels it names. Never a project and never a page. Added 2026-10-21. |
+| **share channel** | An outside place a **post** can go: a Telegram channel, Bluesky, Mastodon. Not a release channel (`dev`, `stable`) and not a lighting-desk channel. Where the context is clear, "channel". Added 2026-10-21. |
+| **share door** | The part of di.iiii that drafts a post, shows its preview and sends it to the share channels (`serverXR/src/share/`, `di post`). Added 2026-10-21. |
 | **team** | The members of a space, said as one word where a page has to name them to a guest — the show page's "who may choose: team". Not a role and not a new group: exactly the people the space's scope already lets edit. Added 2026-10-08. |
 | **view** | A named camera a project keeps — a button that takes you there. A **live** view is one visitors get; a **work** view stays in the Studio. A project that is a version of a **production** shares its views with every other version. Added 2026-10-13 (decisions 1–3, `docs/ai/decisions/2026-10-13-views-library-words-workflow.md`). |
 | **quality** | The room's one render setting, with two values: **Low** (beams and haze, light enough for a phone) and **High** (the work renderer: shadows, bloom, every lamp a real light). The button shows the quality now in use; its title says what a tap switches to. `?quality=low\|high` in an address. Why these words: the field names a renderer's two presets Low / High (quality presets in games, video players, Blender's render presets); HD / HQ name video formats, not a renderer setting. Owner 2026-10-15 ("Full and Lite do not suit"). Stored values and old links `lite` / `full` are read as `low` / `high`. |
@@ -474,6 +477,23 @@ The holds line follows it (`describeProjectLayers`, `src/project/layers.js`): a 
 carries a fixture counts as a lamp, any other light as a light, and an object is neither. Other strings that
 name a placed light (Studio's Lights row, the `light.point` row of the node table above) were
 not touched by this amendment; a later pass lines them up with these two rows.
+
+## Amended 2026-10-21 — app, game, software
+
+di.g_apptune (`dob-0/di.g_apptune`, the tuner for the apps and games on a machine) needed one word for "the things it
+tunes". Owner's words: *"look what is the game, it soft or app, what the difference — lets make it professional that
+in future people can use that."*
+
+| Word | Means | Not |
+|---|---|---|
+| **app** | Any program a person installs and runs on a machine: a game, Blender, TouchDesigner, a browser. The overall word — Steam names every item an app (its *appid*), the Linux desktop names every launcher entry an application (freedesktop Desktop Entry, `Type=Application`, games under `Categories=Game`). | not a di.iiii **tool** (Studio · Nodes · Projection · Light are tools *inside* di.iiii) |
+| **game** | An app made to be played. A *type* of app, never a separate thing. | not "software", not "title" in copy |
+| **creative app** | An app made to create with: Blender, TouchDesigner, a DAW, an editor. | not "creative tool" — **tool** is taken by di.iiii's own tools |
+| **software** | Not used in product copy. It means any code at all (drivers, libraries, firmware), wider than what a person runs. | — |
+| **settings set** | The values di.g_apptune writes into an app's own settings for one goal (Recommended, Performance, Quality, Yours). | not "profile" (a person has a profile), not "preset" (a game's own word for its menu presets) |
+
+Where it lives in code: di.g_apptune `apps/<source>-<id>.toml` with `type = "game" | "creative" | "app"`
+(described in the di.g_apptune repo, dob-0/di.g_apptune, file APP_FILE.md).
 
 ## The rule for anything new
 
