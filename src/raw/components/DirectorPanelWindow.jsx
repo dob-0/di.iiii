@@ -25,7 +25,7 @@ import '../director/director.css'
 // through the dev-server endpoint, which resolves the id against its own
 // allow-list rather than trusting a path from here; off the dev server it
 // falls through to "saved to this space" for algovrithm (useSavedTiming.js),
-// so the same window works from di-studio.xyz. That file stays the source of
+// so the same window works from diiii.xyz. That file stays the source of
 // truth either way.
 //
 // NOT YET WIRED: 3D placement. The gizmo, the orbit camera and the standpoint

@@ -153,9 +153,10 @@ export const WIKI_ARTICLES = [
             'A door can show where it leads. Give a door a picture (the same media slot an image uses) and the picture fills the door\u2019s opening \u2014 the round door or the standing frame \u2014 a little veiled until you point at it, then clear. A door with no picture keeps its own colour, as before. A door can also invite: in its own colour a ripple spreads out from it and arrows slide in from both sides, so it reads as a place to go from across the room; with reduced motion they stand still.',
             'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately, and nothing falls. Going through a door is a short plain fade. The destination is never different, only the journey.',
             'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.',
-            'Everything on the page can be reached with the tab key, and whatever you are on is ringed in cyan. While the door is opening, what falls past you is a picture of the page you were reading, drawn as flat pieces in the room itself \u2014 not a second set of its controls, so nothing in the flight can be tabbed to or read twice by a screen reader.'
+            'Everything on the page can be reached with the tab key, and whatever you are on is ringed in cyan. While the door is opening, what falls past you is a picture of the page you were reading, drawn as flat pieces in the room itself \u2014 not a second set of its controls, so nothing in the flight can be tabbed to or read twice by a screen reader.',
+            'The address is diiii.xyz. A link or a printed code that names di-studio.xyz, the old address, still reaches the same place; new links name diiii.xyz.'
         ],
-        tags: ['landing', 'basics', 'navigation', 'room', 'walk'],
+        tags: ['landing', 'basics', 'navigation', 'room', 'walk', 'address'],
         updated: '2026-10-25'
     },
     {

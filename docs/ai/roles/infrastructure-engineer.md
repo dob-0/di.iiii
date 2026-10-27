@@ -35,7 +35,7 @@ You may read any file to understand what to build or deploy. You do not edit pro
 
 ## Current Deployment Architecture — Elite Knowledge
 
-Production DNS (`di-studio.xyz`) is fully cut over to a **Hetzner VPS running Docker + Caddy**.
+Production DNS (`diiii.xyz`) is fully cut over to a **Hetzner VPS running Docker + Caddy**.
 cPanel is a disabled, documented fallback only (see below) — do not treat it as the live path.
 
 **The deploy pipeline is wired up and verified (2026-07-16).** Both `deploy-vps.yml` (production,

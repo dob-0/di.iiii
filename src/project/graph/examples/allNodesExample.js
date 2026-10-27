@@ -281,7 +281,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
 
     add('text', 'view.text', { label: 'Text panel', col: 4, row: 3, values: { content: 'Every node type, one graph.' } })
     // Same-origin on purpose: the example must also open on a local install
-    // with no network, where an iframe of di-studio.xyz is a dead panel.
+    // with no network, where an iframe of diiii.xyz is a dead panel.
     add('browser', 'view.browser', { label: 'Browser panel', col: 4, row: 4, values: { url: '/wiki' } })
     add('image', 'view.image', { label: 'Image panel', col: 4, row: 5 })
     add('publish', 'view.publish', { label: 'Public page panel', col: 4, row: 6, values: { title: 'The example project' } })

@@ -5,7 +5,7 @@
  *   node scripts/space-pull.mjs <spaceId> [options]
  *
  * Options:
- *   --from   <url>    Live server API base (default: $LIVE_API_URL or https://di-studio.xyz/serverXR)
+ *   --from   <url>    Live server API base (default: $LIVE_API_URL or https://diiii.xyz/serverXR)
  *   --to     <url>    Local server API base (default: $LOCAL_API_URL or http://localhost:4000/serverXR)
  *   --token  <token>  Bearer token for the live server (default: $LIVE_API_TOKEN)
  *   --local-token <t> Bearer token for the destination (default: $API_TOKEN)
@@ -23,7 +23,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
+const DEFAULT_LIVE_URL = 'https://diiii.xyz/serverXR'
 const DEFAULT_LOCAL_URL = 'http://localhost:4000/serverXR'
 
 const parseArgs = (argv) => {
