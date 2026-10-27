@@ -1,0 +1,135 @@
+{
+ "source": {
+  "what": "OpenStreetMap way 457239427",
+  "url": "https://www.openstreetmap.org/way/457239427",
+  "api": "https://api.openstreetmap.org/api/0.6/way/457239427/full",
+  "version": 1,
+  "edited": "2016-12-02T15:50:29Z",
+  "editor": "fergsarm",
+  "licence": "ODbL 1.0, (c) OpenStreetMap contributors",
+  "fetched": "2026-10-21T23:29:56+00:00"
+ },
+ "tags": {
+  "building": "yes"
+ },
+ "origin": {
+  "kind": "osm node",
+  "id": 13296475769,
+  "version": 3,
+  "tags": {
+   "addr:city": "Դիլիջան",
+   "addr:housenumber": "7/7",
+   "addr:street": "Մոլդովական փողոց",
+   "contact:email": "info@apicius.am",
+   "contact:instagram": "apiciusarmenia",
+   "contact:phone": "+374 44 240240",
+   "contact:website": "https://apicius.am",
+   "education": "courses",
+   "name": "Apicius Armenia",
+   "operator": "Green Rock"
+  },
+  "lat": 40.7430214,
+  "lon": 44.8308448
+ },
+ "frame": "local tangent plane at the origin: x east (m), y north (m)",
+ "wgs84": [
+  [
+   40.7432427,
+   44.8309261
+  ],
+  [
+   40.7431916,
+   44.8309754
+  ],
+  [
+   40.7431238,
+   44.8308693
+  ],
+  [
+   40.7430239,
+   44.8307515
+  ],
+  [
+   40.7430705,
+   44.8306823
+  ],
+  [
+   40.7431749,
+   44.8308051
+  ],
+  [
+   40.7432427,
+   44.8309261
+  ]
+ ],
+ "local_m": [
+  [
+   6.849,
+   24.607
+  ],
+  [
+   11.003,
+   18.925
+  ],
+  [
+   2.064,
+   11.386
+  ],
+  [
+   -7.86,
+   0.278
+  ],
+  [
+   -13.69,
+   5.46
+  ],
+  [
+   -3.345,
+   17.068
+  ],
+  [
+   6.849,
+   24.607
+  ]
+ ],
+ "edges": [
+  {
+   "from": 0,
+   "to": 1,
+   "length_m": 7.04,
+   "bearing_deg": 143.8
+  },
+  {
+   "from": 1,
+   "to": 2,
+   "length_m": 11.69,
+   "bearing_deg": 229.9
+  },
+  {
+   "from": 2,
+   "to": 3,
+   "length_m": 14.9,
+   "bearing_deg": 221.8
+  },
+  {
+   "from": 3,
+   "to": 4,
+   "length_m": 7.8,
+   "bearing_deg": 311.6
+  },
+  {
+   "from": 4,
+   "to": 5,
+   "length_m": 15.55,
+   "bearing_deg": 41.7
+  },
+  {
+   "from": 5,
+   "to": 6,
+   "length_m": 12.68,
+   "bearing_deg": 53.5
+  }
+ ],
+ "area_m2": 209.3,
+ "note": "Apicius Armenia, 7/7 Moldovakan St., Dilijan: the building nearest the address node (13 m) inside its site (OSM way 1447247415, operator Green Rock). Aren's yard scan (the-yard) is registered on its north-west face: spaces/dilijan/building-pieces.json."
+}

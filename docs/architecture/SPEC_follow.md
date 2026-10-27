@@ -55,6 +55,10 @@ Code: `serverXR/src/follow/` — `follower.js` (the loop), `followPlan.js` (what
    has no ops to carry it, so before 2026-10-04 it never left the machine it was made on. Making a project also
    wakes the follower and the space's waiters, so it crosses in about a second. Trash, restore, rename and move: see
    "A project trashed, restored, renamed or moved" below.
+   The create body says `carried: true` (2026-10-26): the same project arriving keeps its id even when that id is a
+   reserved word, which the create route now refuses (400) unless the body says so; without it `privacy` in the space
+   `main` would never reach an install that follows the space. The route takes `carried` on the caller's word and
+   cannot check it. The 409 "taken" answer is unchanged.
 3. **A restart resumes where it was.** Cursors and the carried opIds are saved to
    `DATA_ROOT/follow-state/<space>.json` (temp file + rename) and reloaded; an old edit is never re-sent past the
    receiver's 500-op dedupe window and applied twice. A saved cursor past the end of a log (a rebuilt install)
@@ -101,9 +105,19 @@ Code: `serverXR/src/follow/` — `follower.js` (the loop), `followPlan.js` (what
    earlier are asked about again), half-received `.part` files from a killed install are cleared after an hour, and
    `di follows` prints "N files still coming, of M listed". Not reproduced as one single cause: a two-server restart
    already resumed on the base; the late start and the once-per-run comparison are the faults found.
+10. **Quieter when nothing moves (2026-10-26, DSC-2/9/10).** A file NEITHER machine holds is tried on the same clock
+   as any failed file (its tries, again 5 min after the last, again whenever the 10-minute comparison names it),
+   because its bytes may only be on their way: an upload's op reaches the host before the bytes. It is said once when
+   it is first found held nowhere and once when that ends, never on the tries between; `di follows` counts these files
+   (`heldNowhere`). The machine link keeps each loop's last failure apart, and on 401/403 says it once and waits 30 s
+   doubling to 10 min. Address-pinned requests keep their connection alive like unpinned ones. Not done, because each
+   changed what is synced (review of PR #1143): sharing one project-list read per tick (DSC-7: syncSlugs got a host
+   list from before carryProjectLife's PATCH there and reverted a short name changed on the follower) and caching a
+   project's document per chase pass (DSC-1: noteOps runs before the inbound carry, so a read in between was cached
+   without the newly named ids and later held-nowhere files of that project were dropped for the pass).
 
 Guards: `follower.test.js`, `followConverge.test.js`, `followSettings.test.js`, `index.test.js` (new key),
-`assets.test.js`, `scripts/di/followRemote.test.js` (remote), `followIntegration.test.js` ("a followed space stays one
+`assets.test.js`, `machines/link.test.js`, `httpClient.test.js`, `scripts/di/followRemote.test.js` (remote), `followIntegration.test.js` ("a followed space stays one
 space"; "a follow starts from now and never silently erases work only the follower has") — each fails without its fix.
 
 ## Measured

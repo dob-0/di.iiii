@@ -826,7 +826,7 @@ function AppRouter() {
     if (appState.page === APP_PAGE_WIKI) {
         return (
             <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
-                <WikiPage />
+                <WikiPage articleId={appState.wikiArticleId} />
             </Suspense>
         )
     }
