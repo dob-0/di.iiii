@@ -554,3 +554,82 @@ describe('when the other di.iiii stops answering', () => {
         expect(lines.info).toEqual([])
     })
 })
+
+// 2026-10-10, aylmo: the kids space names 8 videos that neither this install
+// nor dev.diiii.xyz holds (searched by name and sha256: nowhere). Nobody can
+// carry what nobody has, yet every 5 minutes the chase tried all 8 again and
+// said "could not be carried" 8 more times: ~130 tries, ~1,000 warn lines since
+// 10-05. A file that is nowhere is listed once, and asked about less and less
+// often (capped exponential back-off, the files breaker's way), and each new
+// warning is rarer than the one before.
+describe('a file that neither machine holds', () => {
+    const local = side({ base: 'http://here', spaceId: 'kids', token: 'self-token' })
+    const remote = side({ base: 'http://there', spaceId: 'kids', token: 'dii_sync_key' })
+    let tmpDir = null
+    let chase = null
+    afterEach(async () => {
+        chase?.stop()
+        chase = null
+        vi.useRealTimers()
+        if (tmpDir) await rm(tmpDir, { recursive: true, force: true })
+        tmpDir = null
+    })
+
+    const NAMES = ['Timeline 1.mp4', 'Hands loop.mp4', 'Pizz.mp4', 'Video.mp4', 'Xervv.mp4', 'Notations zoom.mp4', 'Cleaning the camera.mp4', 'Pizzkakak.mp4']
+    const run = async (hours) => {
+        const world = twoMachines()
+        const assets = NAMES.map((name, n) => ({ id: sha(Buffer.from(`gone ${n}`)), name, size: 1000 }))
+        world.here.docs.set('p1', { assets })
+        world.there.docs.set('p1', { assets })
+        const lines = { warn: [], info: [] }
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+        tmpDir = await mkdtemp(path.join(os.tmpdir(), 'dii-chase-gone-'))
+        chase = createAssetChase({ local, remote, tmpDir, io: world.io, log: { warn: (l) => lines.warn.push(l), info: (l) => lines.info.push(l) } })
+        // what the follower does every 5 s (see the outage tests above)
+        for (let at = 0; at < hours * 3_600_000; at += 5000) {
+            chase.noteProjects(['p1'])
+            chase.run()
+            await vi.advanceTimersByTimeAsync(5000)
+            await chase.idle()
+        }
+        const asks = world.calls.requests.filter(r => r.path.includes('/assets/')).length
+        return { world, lines, asks }
+    }
+
+    it('is listed once, asked about less and less often, and warned about less and less often', async () => {
+        const { lines, asks } = await run(6)
+        console.info(`[8 files nowhere, 6 simulated hours] warn lines ${lines.warn.length}, asks on the file routes ${asks}`)
+        expect(chase.files).toMatchObject({ failed: 8, listed: 8, carried: 0 })
+        expect(chase.files.failures).toHaveLength(8)
+        // Base (measured): 8 files x ~73 passes = 584 lines. Bound: first
+        // warning, then at tries 2, 4, 8, 16 only.
+        expect(lines.warn.length).toBeLessThanOrEqual(8 * 5)
+        expect(lines.warn.filter(l => /Pizz\.mp4/.test(l))[0]).toMatch(/neither machine holds this file/)
+        // 4 file-route asks per try (meta here+there ... two sides, plus document reads excluded)
+        expect(asks).toBeLessThanOrEqual(8 * 2 * 25)
+    }, 120_000)
+
+    it('is carried after all once one machine has it, however long it was missing', async () => {
+        const world = twoMachines()
+        const bytes = Buffer.from('found at last')
+        const assets = [{ id: sha(bytes), name: 'Video.mp4', size: bytes.length }]
+        world.here.docs.set('p1', { assets })
+        world.there.docs.set('p1', { assets })
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+        tmpDir = await mkdtemp(path.join(os.tmpdir(), 'dii-chase-gone-'))
+        chase = createAssetChase({ local, remote, tmpDir, io: world.io, log: quiet })
+        const follow = async (ms) => {
+            for (let at = 0; at < ms; at += 5000) {
+                chase.noteProjects(['p1']); chase.run()
+                await vi.advanceTimersByTimeAsync(5000); await chase.idle()
+            }
+        }
+        await follow(3 * 3_600_000)
+        expect(chase.files.failed).toBe(1)
+        world.here.files.set(sha(bytes), bytes)
+        // the longest rest is an hour: carried within that
+        await follow(61 * 60_000)
+        expect(world.there.files.get(sha(bytes))).toEqual(bytes)
+        expect(chase.files).toMatchObject({ carried: 1, failed: 0, missing: 0 })
+    }, 120_000)
+})
