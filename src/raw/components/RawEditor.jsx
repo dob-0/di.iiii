@@ -31,6 +31,7 @@ import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
 import MidiOutFeed from './MidiOutFeed.jsx'
+import BeatFeed from './BeatFeed.jsx'
 import ButtonPanelWindow from './ButtonPanelWindow.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
@@ -2705,11 +2706,23 @@ export default function RawEditor({
             payload: { nodeId: deckNode.id, patch: { values: { ...deckNode.values, deck: setBpm(deckNode.values?.deck, bpm, epoch) } } }
         })
     }, [applyLocalOps])
+    // A Beat whose Tempo from is the Light desk asks for the desk's clock too —
+    // and only then: a Beat on its own tempo never reads the desk.
+    const beatWantsDesk = useMemo(() => nodes.some((node) => node.typeId === 'signal.beat' && node.values?.source === 'light'), [nodes])
     const showClock = useShowClock({
         deck: deckTempo,
         onDeckTempo: firstDeck ? handleDeckTempo : null,
-        enabled: Boolean(firstDeck) || Boolean(perform)
+        enabled: Boolean(firstDeck) || Boolean(perform) || beatWantsDesk
     })
+    // A tap or Reset on a Beat with its own tempo writes bpm/epoch into the
+    // node, so the op log carries it and every window keeps one beat.
+    const nodesNowRef = useRef(nodes)
+    useEffect(() => { nodesNowRef.current = nodes }, [nodes])
+    const handleBeatTempo = useCallback((nodeId, patch) => {
+        const beatNode = nodesNowRef.current.find((node) => node.id === nodeId)
+        if (!beatNode) return
+        applyLocalOps({ type: 'updateNode', payload: { nodeId, patch: { values: { ...beatNode.values, ...patch } } } })
+    }, [applyLocalOps])
     // Perform's "Add a VJ deck": a deck at the root of the project, the same
     // node the palette makes, so Nodes shows it as a card beside the rest.
     const handleAddDeck = useCallback(() => {
@@ -2763,6 +2776,19 @@ export default function RawEditor({
                             node={node}
                             inputs={evaluateNodeInputs(node, graphContext)}
                             onStatus={handleMidiOutStatus}
+                        />
+                    ))}
+                {nodes
+                    .filter((node) => node.typeId === 'signal.beat')
+                    .map((node) => (
+                        <BeatFeed
+                            key={node.id}
+                            node={node}
+                            inputs={evaluateNodeInputs(node, graphContext)}
+                            showClock={showClock}
+                            clockEpoch={showClockEpoch}
+                            onLiveOutput={handleLiveOutputChange}
+                            onTempo={handleBeatTempo}
                         />
                     ))}
         </>

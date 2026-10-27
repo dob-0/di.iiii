@@ -1878,6 +1878,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-14'
     },
     {
+        id: 'beat-and-oscillator',
+        category: 'Editing',
+        title: 'Beat and Oscillator — move things on the beat',
+        summary: 'Beat is a clock: a tempo and a beat 0. One master clock runs for the whole project; Oscillators follow it, or an extra clock you wire in. The Light desk can lend a Beat its tempo and tap.',
+        body: [
+            'One master clock always runs in a project: 120 BPM until you add a Beat. The first Beat whose Clock is set to Master is the master; every other Beat is an extra clock. Each Beat gives Ramp (0 to 1 over its Period, in beats), Pulse (on for the first tenth of each period), Count, Beat (1 to 4 in the bar), Bar, Ramp bar and BPM, and its Clock output for Oscillators.',
+            'An Oscillator still runs in Hz, as before, until you give it Beats: then one cycle lasts that many beats (¼ to 64) of the master clock, or of the Beat you wire into its Clock. Wave picks the shape of the Out output — Sine, Triangle, Ramp, Square, Pulse, Random glide, Sample & hold; Amplitude and Offset scale and move it; Bias leans it (on a square it is how long it stays up); Reset starts the cycle again now. The old Sine, Square, Triangle and Saw outputs are unchanged, so a project made before this moves exactly as it did.',
+            'Tap and Reset on a Beat: wire a Button or a Keyboard key in. Two taps set the tempo and put beat 0 on the last tap; every window keeps the same beat. Clock and Tempo from are settings in the Beat’s inspector, not inputs: nothing wired in can change them. Set Tempo from to Light desk and the Beat takes the /light desk’s tempo and phase instead, and a tap goes to the desk; when no desk answers, the Beat keeps its own tempo and its Status says so.',
+            'The waves are the light desk’s own: a Sample & hold on an Oscillator and a random LFO on the desk draw the same values at the same moment. Still to be seen on the real cubes: a Laser Trace pulsing on the beat, and a tap on the desk moving the laser’s tempo.'
+        ],
+        tags: ['raw', 'nodes', 'beat', 'clock', 'master clock', 'bpm', 'tempo', 'tap', 'oscillator', 'lfo', 'wave', 'laser', 'light', 'touchdesigner'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'build-zones',
         category: 'Editing',
         title: 'A room that arranges itself',

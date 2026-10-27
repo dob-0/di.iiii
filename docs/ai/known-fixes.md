@@ -1143,6 +1143,16 @@ rule `floor`, as before #1050); open sky is a ray that does not go down; the lam
 and a first hit of 0 m is a row (`inside_slab` / `on_floor`, `hidden: true`, counted, exit 1, never fixed); a hidden lamp outside the hall is not a row (only the 0 m result is checked).
 Guard: `physics_check_test.py` `FloorIsTheHallFloor`, `HiddenBeamStillChecksTheLamp`; `hall-reach.test.js` (v13 gate reach 8 m, epic-build -> physics_check row, parity).
 
+## Beat's Clock and Tempo from took wires that did nothing; Oscillator Reset ignored a rising count; a tap before the clock stamp wrote a window-local epoch (2026-10-21, review of #1073)
+
+Symptom (four minor findings of the review of PR #1073, none on dev): (1) Beat's `role` and (2) `source` were ports, but `findMasterBeatNode`, the runtime and RawEditor's
+desk poll read `node.values`, so a wire there was accepted and silently ignored (a wired 'light' gave "no Light desk answers" from a desk that was never asked);
+(3) the Oscillator's Reset used `risingEdge` (false→true only) while Beat's Tap and Reset fire on a change while truthy too, so a Counter restarted a Beat on every count and an Oscillator once;
+(4) BeatFeed converted a tap or Reset made before `showState.clockEpoch` was stamped with this window's `performance.timeOrigin` and wrote that epoch into the op log.
+Fix: (1–2) `role` and `source` are `configInputs` (select fields, defaults in `defaultValues`), like DMX Out's Rig; the runtime and BeatFeed read `node.values.source`;
+(3) `edge.js` `signalFired` / `firedEdge` is the one rule; Oscillator Reset and BeatFeed both use it; (4) BeatFeed holds the tap/Reset in wall-clock ms until `clockEpoch > 0`, then writes it once.
+Guard: `beat.test.js` "no wire can reach role or source"; `oscillator.test.js` "Reset fires on a rising count too"; `BeatFeed.test.jsx` "a wire cannot set Tempo from", "held, then written in document time".
+
 ## `di update` on the dev channel failed on any 429 from the hub, and the error did not say who answered (2026-10-21)
 
 Symptom: `could not read the hub's health (https://dev.diiii.xyz: 429)`. Measured on one install 10-19..10-21: 5 of 12 update runs failed with 429, four in a row 23:30-00:16 +04;
