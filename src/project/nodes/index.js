@@ -9,6 +9,8 @@ import { computeOutput as deviceVisitor } from './device.visitor/runtime.js'
 import { computeOutput as deviceTilt } from './device.tilt/runtime.js'
 import { computeOutput as deviceDmxOut } from './device.dmx.out/runtime.js'
 import { computeOutput as deviceLaserOut } from './device.laser.out/runtime.js'
+import { computeOutput as streamRecorder } from './stream.recorder/runtime.js'
+import { computeOutput as streamStill } from './stream.still/runtime.js'
 import { computeOutput as laserShape } from './laser.shape/runtime.js'
 import { computeOutput as laserTrace } from './laser.trace/runtime.js'
 import { computeOutput as laserMerge } from './laser.merge/runtime.js'
@@ -94,6 +96,9 @@ export const NODE_RUNTIMES = new Map([
     ['device.midi.out', deviceMidiOut],
     ['device.mesh.in', deviceMeshIn],
     ['device.mesh.out', deviceMeshOut],
+
+    ['stream.recorder', streamRecorder],
+    ['stream.still', streamStill],
     ['geom.array', geomArray],
     ['geom.cone', geomCone],
     ['geom.cylinder', geomCylinder],

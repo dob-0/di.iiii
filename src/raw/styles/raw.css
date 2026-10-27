@@ -3635,6 +3635,85 @@
     overflow-wrap: anywhere;
 }
 
+/* Recorder and Still — a preview of what will be kept, the button that keeps
+   it, and one line that says what happened. */
+.raw-take-panel {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    background: var(--di-surface);
+    padding: var(--di-space-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    font-size: var(--di-text-3);
+    color: var(--di-text);
+}
+
+.raw-take-preview {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--di-radius);
+    background: var(--di-scrim);
+    overflow: hidden;
+}
+
+.raw-take-media {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.raw-take-empty {
+    margin: 0;
+    padding: var(--di-space-3);
+    text-align: center;
+    color: var(--di-text-muted);
+    font-family: var(--di-mono);
+}
+
+.raw-take-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+}
+
+.raw-take-button {
+    padding: var(--di-space-1) var(--di-space-3);
+    font: inherit;
+    color: var(--di-text);
+    background: var(--di-cyan-wash);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
+    cursor: pointer;
+}
+
+.raw-take-button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.raw-take-button:focus-visible {
+    outline: 2px solid var(--di-cyan);
+    outline-offset: 1px;
+}
+
+.raw-take-time {
+    margin-left: auto;
+    font-family: var(--di-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.raw-take-status {
+    margin: 0;
+    color: var(--di-text-muted);
+    overflow-wrap: anywhere;
+}
+
 /* Laser Out reuses the DMX panel's frame; these are only its own two things:
    the square the shape is drawn in, and the armed/disarmed badge. */
 .raw-laser-panel-budget {

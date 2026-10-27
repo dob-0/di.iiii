@@ -46,6 +46,8 @@ import TimelinePanelWindow from './TimelinePanelWindow.jsx'
 import KeeperPanelWindow from './KeeperPanelWindow.jsx'
 import DmxOutPanelWindow from './DmxOutPanelWindow.jsx'
 import LaserOutPanelWindow from './LaserOutPanelWindow.jsx'
+import RecorderPanelWindow from './RecorderPanelWindow.jsx'
+import StillPanelWindow from './StillPanelWindow.jsx'
 import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import VjDeckView from './vjDeck/VjDeckView.jsx'
@@ -76,6 +78,7 @@ import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateN
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode } from '../../project/graph/useGraphClock.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
+import { installClockSeek } from '../../project/graph/clockSeek.js'
 import { isNodeInScope, useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
@@ -1758,6 +1761,9 @@ export default function RawEditor({
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
     // must not survive a tick or the clock would freeze at its first sample.
     const clockNow = useDocumentClock(document)
+    // A test browser cuts any project frame-exact: __seek(t), __ready, __play
+    // (clockSeek.js). Nothing is held until a script asks.
+    useEffect(() => installClockSeek(typeof window === 'undefined' ? null : window), [])
     // Stamp the show clock ONCE, the first time a Time node lands in the
     // document. From then on every window — editor, second tab, /out —
     // derives the same elapsed time from the document instead of its own
@@ -1824,6 +1830,20 @@ export default function RawEditor({
     const handleLaserFileBytes = useCallback((nodeId, bytes) => {
         handleLiveOutputChange(nodeId, 'bytes', bytes)
     }, [handleLiveOutputChange])
+
+    // Recorder and Still: their windows report what they did, and hand over
+    // the file they made. The file takes the same road a dropped file does —
+    // the project's own upload when there is a project, this browser's store
+    // when there is not — and lands as a project file (upsertAsset).
+    const handleTakeReport = useCallback((nodeId, report) => {
+        for (const [portId, value] of Object.entries(report || {})) handleLiveOutputChange(nodeId, portId, value)
+    }, [handleLiveOutputChange])
+    const handleTakeSave = useCallback(async (nodeId, file) => {
+        const asset = projectId ? await uploadProjectAsset(projectId, file) : await saveAssetFromFile(file)
+        if (!asset?.id) return null
+        applyLocalOps({ type: 'upsertAsset', payload: { asset } }, { activityMessage: `Saved ${file.name}.` })
+        return asset
+    }, [applyLocalOps, projectId])
     const handleSoundOutputChange = useCallback((nodeId, levels) => {
         handleLiveOutputChange(nodeId, 'volume', levels?.volume ?? null)
         handleLiveOutputChange(nodeId, 'low', levels?.low ?? null)
@@ -2203,6 +2223,24 @@ export default function RawEditor({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
                     })}
+                />
+            )
+        }
+        if (node.typeId === 'stream.recorder' || node.typeId === 'stream.still') {
+            // The take is named after what feeds its picture: the source's
+            // own label, else its type's.
+            const port = node.typeId === 'stream.recorder' ? 'video' : 'picture'
+            const wire = (document.edges || []).find((edge) => edge?.toNodeId === node.id && edge.toPort === port)
+            const from = wire ? (document.nodes || []).find((candidate) => candidate.id === wire.fromNodeId) : null
+            const sourceLabel = from ? (from.label || getNodeType(from.typeId)?.label || '') : ''
+            const Panel = node.typeId === 'stream.recorder' ? RecorderPanelWindow : StillPanelWindow
+            return (
+                <Panel
+                    node={node}
+                    values={resolvedValues}
+                    sourceLabel={sourceLabel}
+                    onSave={handleTakeSave}
+                    onReport={handleTakeReport}
                 />
             )
         }

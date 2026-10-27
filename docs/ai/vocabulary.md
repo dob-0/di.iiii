@@ -286,7 +286,7 @@ Reserved names — settle NOW so the build waves don't invent their own:
 | --- | --- | --- |
 | `world.environment` (Light split) | **Environment** | TD Environment Light; the scene's ambient/directional settings |
 | `light.point` (Light split) | **Light** | the lamp you place; the legacy dual-identity `world.light` goes paletteHidden with a non-colliding label decided in that pass |
-| streaming four, when built | **Composite · Switch (texture) · Output · Record** | TD TOP names; if number-Switch and texture-Switch would meet in one palette, the texture one ships as **Composite**'s sibling and the collision is resolved in that PR, not silently |
+| streaming four, when built | **Composite · Switch (texture) · Output** · ~~Record~~ **Recorder** (built 2026-10-21, see the amendment below) | TD TOP names; if number-Switch and texture-Switch would meet in one palette, the texture one ships as **Composite**'s sibling and the collision is resolved in that PR, not silently |
 
 Guard: `src/nodeLabelVocabulary.test.js` — labels must carry no banned word, no
 parenthetical, no leading article, and stay within two words. The prose guard
@@ -454,6 +454,19 @@ extra **clocks** can be added. The rows for **master clock** and **clock** are i
 | **Beats** (Oscillator) | How many beats of its clock one cycle lasts, ¼ … 64. 0 keeps the cycle in Hz (Frequency), which is what every Oscillator made before Phase 2 does. |
 | **Bias** (Oscillator) | Leans the cycle: −1 … 1 moves the half-way point (a triangle's peak, a square's edge) from the middle toward an end; on a square it is the duty. TouchDesigner's word. |
 | **Sample & hold** | The wave that holds one random value for a whole cycle and jumps at the next. The `/light` desk calls the same wave **random**. **Random glide** walks from one cycle's value to the next instead of jumping. |
+
+## Amended 2026-10-21 — Recorder and Still (keep what the show looked like)
+
+The owner, 2026-10-21: "yes build all 12" — this is one of the twelve. The reserved word above was
+**Record**; the brief named the card **Recorder**, the noun for the thing that records (a verb on a
+card reads as a button). Type id unchanged: `stream.recorder`.
+
+| Word | Its one job |
+|---|---|
+| **Recorder** (`stream.recorder`) | The node that records a picture wire (a Scene's Picture, a Picture Out), and a sound if one is wired, to a WebM file between **Start** and **Stop**. Its outputs: **Recording**, **Seconds**, **Status**, **File**. The file lands in the project's files. |
+| **Still** (`stream.still`) | The node that saves one PNG of a picture wire on **Take** (its button, or a rising signal). Outputs **Status** and **File**. |
+| **take** | One thing a Recorder or a Still kept: one recording, or one still. Its file is named `<kind>-<source>-<date>`, e.g. `still-scene-2026-10-21T14-03-07.png`, because a project file carries a name and a date and nothing else. |
+| **seek** (the clock) | Holding the document clock at one moment so a test browser can cut a project frame-exact: `__seek(t)` (seconds), `__ready`, `__play`. Developer words; no card shows them. |
 
 ## Proposed 2026-10-13 — a lighting look, and the Dilijan words (owner's pick, nothing renamed)
 

@@ -204,6 +204,7 @@ export const FAMILY_BY_TYPE = {
     'device.osc.out': 'send-out',
     'stream.output': 'send-out',
     'stream.recorder': 'send-out',
+    'stream.still': 'send-out',
     'stream.compositor': 'send-out',
     'stream.switcher': 'send-out',
     'stream.controller': 'send-out',
@@ -1048,31 +1049,57 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    // Recorder and Still keep what the show looked like (NODE_BACKLOG.md §3,
+    // "the exception worth pulling forward"). The browser does the work —
+    // MediaRecorder and a canvas — so both live in their windows
+    // (RecorderPanelWindow, StillPanelWindow); the runtimes only read the
+    // windows' report back through context.liveOutputs. What they make lands
+    // as a project file named after its source and the moment it was taken.
     'stream.recorder': {
         id: 'stream.recorder',
-        label: 'Stream Recorder',
+        label: 'Recorder',
         category: 'stream',
-        runtime: 'local',
-        authoringOnly: true,
+        runtime: 'web',
         singleton: false,
+        keywords: ['record', 'recording', 'video', 'webm', 'capture', 'reel', 'documentation', 'film'],
         inputs: [
-            { id: 'video', type: 'texture', label: 'Video In' },
-            { id: 'audio', type: 'any',     label: 'Audio In' },
-            { id: 'start', type: 'signal',  label: 'Start'    },
-            { id: 'stop',  type: 'signal',  label: 'Stop'     },
+            // A Scene's Picture, a Picture Out, a camera's Frame.
+            { id: 'video', type: 'texture', label: 'Picture' },
+            // A sound as a MediaStream (or anything carrying one); without
+            // it the file is picture only, and the window says so.
+            { id: 'audio', type: 'any',     label: 'Sound'   },
+            { id: 'start', type: 'signal',  label: 'Start'   },
+            { id: 'stop',  type: 'signal',  label: 'Stop'    },
+        ],
+        outputs: [
+            { id: 'recording', type: 'boolean', label: 'Recording' },
+            { id: 'seconds',   type: 'number',  label: 'Seconds'   },
+            { id: 'status',    type: 'string',  label: 'Status'    },
+            { id: 'file',      type: 'string',  label: 'File'      },
+        ],
+        defaultValues: {},
+        render: 'panel-2d',
+        defaultFrame: { width: 320, height: 300 },
+    },
+
+    'stream.still': {
+        id: 'stream.still',
+        label: 'Still',
+        category: 'stream',
+        runtime: 'web',
+        singleton: false,
+        keywords: ['still', 'snapshot', 'screenshot', 'png', 'photo', 'frame', 'grab', 'documentation'],
+        inputs: [
+            { id: 'picture', type: 'texture', label: 'Picture' },
+            { id: 'take',    type: 'signal',  label: 'Take'    },
         ],
         outputs: [
             { id: 'status', type: 'string', label: 'Status' },
             { id: 'file',   type: 'string', label: 'File'   },
         ],
-        defaultValues: {
-            hostHint: 'windows',
-            filePattern: 'recording-{timestamp}.mp4',
-        },
-        configInputs: [
-            { id: 'filePattern', type: 'string', label: 'File Pattern' },
-        ],
-        render: 'hidden',
+        defaultValues: {},
+        render: 'panel-2d',
+        defaultFrame: { width: 300, height: 280 },
     },
 
     'view.desk': {
@@ -3497,7 +3524,6 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
     'stream.compositor',
     'stream.switcher',
     'stream.output',
-    'stream.recorder',
     'stream.controller',
     // structure — zero consumers outside this file
     'universe.node0',

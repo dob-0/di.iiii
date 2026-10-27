@@ -5,6 +5,7 @@ import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSy
 import { readLocalWorkspaceDocument } from '../utils/localWorkspaceStorage.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import useScreenWakeLock from '../../hooks/useScreenWakeLock.js'
+import { installClockSeek } from '../../project/graph/clockSeek.js'
 
 // The projector cable. /out renders ONE thing: a scope's room, seen as the
 // audience sees it — no graph, no topbar, no palette, no cursors, no
@@ -31,6 +32,8 @@ export default function RawOutSurface({ projectId = null, localStorageKey = '', 
         clientIdPrefix: 'raw-out-client',
         opIdPrefix: 'raw-out-op'
     })
+    // A test browser cuts the house frame-exact: __seek(t), __ready, __play.
+    useEffect(() => installClockSeek(typeof window === 'undefined' ? null : window), [])
 
     useEffect(() => {
         if (projectId || !localStorageKey || typeof window === 'undefined') return undefined
