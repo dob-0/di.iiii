@@ -17,11 +17,16 @@ const bridgeFor = (opts = {}) => {
   cleanups.push(() => bridge.close())
   return bridge
 }
-// A free UDP port, found by binding 0 and letting go.
-const freePort = () => new Promise((resolve) => {
-  const s = dgram.createSocket('udp4')
-  s.bind(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => resolve(port)) })
-})
+// The bind is the proof: try random ports until the bridge itself reports it holds one (no probe-and-release race
+// between parallel test files; see testSupport/noPickedPort.test.js).
+const listenFree = async (bridge) => {
+  for (let i = 0; i < 20; i++) {
+    const port = 20000 + Math.floor(Math.random() * 40000)
+    const opened = await bridge.listen(port)
+    if (opened.ok) return { port, opened }
+  }
+  throw new Error('no free UDP port after 20 tries')
+}
 const sendRaw = (buf, port) => new Promise((resolve, reject) => {
   const s = dgram.createSocket('udp4')
   s.send(buf, port, '127.0.0.1', (err) => { s.close(); if (err) reject(err); else resolve() })
@@ -39,8 +44,7 @@ const until = async (fn, ms = 1000) => {
 describe('hearing', () => {
   it('binds the loopback, reads a message, a bundle, and filters by pattern', async () => {
     const bridge = bridgeFor()
-    const port = await freePort()
-    const opened = await bridge.listen(port)
+    const { port, opened } = await listenFree(bridge)
     expect(opened).toMatchObject({ ok: true, bind: '127.0.0.1', port })
     await sendRaw(osc.encodeMessage('/fader/1', [0.5]), port)
     await sendRaw(osc.encodeBundle([osc.encodeMessage('/fader/2', [0.25]), osc.encodeMessage('/cue/go', ['3'])]), port)
@@ -54,8 +58,7 @@ describe('hearing', () => {
 
   it('counts a malformed packet as refused and keeps no made-up message', async () => {
     const bridge = bridgeFor()
-    const port = await freePort()
-    await bridge.listen(port)
+    const { port } = await listenFree(bridge)
     await sendRaw(Buffer.from('not osc!'), port)
     await until(() => bridge.read(port).refused === 1)
     const r = bridge.read(port)
@@ -65,8 +68,7 @@ describe('hearing', () => {
 
   it('keeps the last 4 when keep = 4, and tells a slow reader how many it missed', async () => {
     const bridge = bridgeFor({ keep: 4 })
-    const port = await freePort()
-    await bridge.listen(port)
+    const { port } = await listenFree(bridge)
     for (let i = 1; i <= 10; i++) await sendRaw(osc.encodeMessage('/n', [{ type: 'i', value: i }]), port)
     await until(() => bridge.read(port).seq === 10)
     const r = bridge.read(port, { since: 2 })
@@ -93,8 +95,7 @@ describe('hearing', () => {
   it('closes a listener nobody asked about for idleMs', async () => {
     let t = 0
     const bridge = bridgeFor({ now: () => t, idleMs: 1000 })
-    const port = await freePort()
-    await bridge.listen(port)
+    const { port } = await listenFree(bridge)
     t = 500; bridge.read(port); bridge.sweep()
     expect(bridge.state().listeners.length).toBe(1)
     t = 1600; bridge.sweep()

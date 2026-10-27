@@ -26,10 +26,15 @@ const boot = async () => {
 }
 // The page's own origin, as requireOwnPage wants it.
 const post = (base, path, body) => fetch(`${base}${path}`, { method: 'POST', headers: { 'content-type': 'application/json', origin: base }, body: JSON.stringify(body) })
-const freePort = () => new Promise((resolve) => {
-  const s = dgram.createSocket('udp4')
-  s.bind(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => resolve(port)) })
-})
+// The bind is the proof: try random ports until /in reports it listens (no probe-and-release race between test files).
+const openFree = async (base) => {
+  for (let i = 0; i < 20; i++) {
+    const port = 20000 + Math.floor(Math.random() * 40000)
+    const first = await (await post(base, '/osc/api/in', { port })).json()
+    if (first.ok) return { port, first }
+  }
+  throw new Error('no free UDP port after 20 tries')
+}
 
 describe('/osc on a local runtime', () => {
   it('is dormant until asked', async () => {
@@ -44,8 +49,7 @@ describe('/osc on a local runtime', () => {
   it('in → out round trip through the routes: what /out sends, /in hears', async () => {
     delete process.env.NODE_ENV
     const { base } = await boot()
-    const port = await freePort()
-    const first = await (await post(base, '/osc/api/in', { port })).json()
+    const { port, first } = await openFree(base)
     expect(first).toMatchObject({ ok: true, listening: true, port, messages: [] })
     const sent = await post(base, '/osc/api/out', { host: '127.0.0.1', port, address: '/layer1/opacity', args: [0.4] })
     expect(sent.status).toBe(200)
@@ -85,8 +89,7 @@ describe('/osc on a local runtime', () => {
   it('a real packet from a plain sender reaches the reader', async () => {
     delete process.env.NODE_ENV
     const { base } = await boot()
-    const port = await freePort()
-    await post(base, '/osc/api/in', { port })
+    const { port } = await openFree(base)
     await new Promise((resolve) => {
       const s = dgram.createSocket('udp4')
       s.send(osc.encodeMessage('/go', ['cue 3']), port, '127.0.0.1', () => { s.close(); resolve() })

@@ -1,11 +1,9 @@
 // @vitest-environment node
 // The desk's input levels as a reader outside the desk sees them (the Nodes editor's DMX In):
-// the pure read on the merger, then the route on a real offline desk.
-import fs from 'node:fs'
-import os from 'node:os'
-import path from 'node:path'
+// the pure read on the merger. The route is in routes/inputLevelsRoute.test.js (the light desk directory
+// reaches nothing outside itself, shared/waves.test.js).
 import { createRequire } from 'node:module'
-import { afterEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const { InputMerger, inputLevels, LOSS_MS } = require('./dmxin.js')
@@ -43,31 +41,5 @@ describe('inputLevels', () => {
     const held = inputLevels(hold, 0, LOSS_MS.sacn + 100)
     expect(held.state).toBe('held')
     expect(held.levels[0]).toBe(200)
-  })
-})
-
-describe('GET /light/api/input/levels on a real (offline) desk', () => {
-  const cleanups = []
-  afterEach(async () => { while (cleanups.length) await cleanups.pop()() })
-
-  it('reads what the input heard, and never switches the input on', async () => {
-    delete process.env.NODE_ENV
-    const express = require('express')
-    const { registerLightingRoutes } = require('../routes/lightingRoutes.js')
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dii-dmxin-levels-'))
-    const app = express()
-    const lane = registerLightingRoutes(app, { dataDir: dir, offline: true, log: () => {} })
-    const server = await new Promise((r) => { const s = app.listen(0, '127.0.0.1', () => r(s)) })
-    cleanups.push(() => new Promise((r) => { lane.close(); server.close(r); fs.rmSync(dir, { recursive: true, force: true }) }))
-    const base = `http://127.0.0.1:${server.address().port}/light/api`
-    const off = await (await fetch(`${base}/input/levels?universe=0`)).json()
-    expect(off).toMatchObject({ universe: 0, state: 'off', levels: null })
-    expect(lane.getDesk().input.merger.config.enabled).toBe(false)
-    // Switch input on for U1 (desk universe 0) as Setup → Input would, then a console's frame arrives.
-    lane.getDesk().input.merger.setConfig({ enabled: true, universes: [{ universe: 0 }] })
-    lane.getDesk().input.merger.feed(pkt(frameOf([[5, 64]])), Date.now())
-    const live = await (await fetch(`${base}/input/levels?universe=0`)).json()
-    expect(live.state).toBe('live')
-    expect(live.levels[4]).toBe(64)
   })
 })
