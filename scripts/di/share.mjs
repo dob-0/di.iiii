@@ -16,6 +16,8 @@ import http from 'node:http'
 import https from 'node:https'
 import net from 'node:net'
 
+import { withUserAgent } from './userAgent.mjs'
+
 const TIMEOUT_MS = 8000
 
 /**
@@ -57,11 +59,11 @@ const pinnedRequest = (url, { method = 'GET', token = null, body = null, address
             // second. These are one-shot pre-checks, not a long-running
             // follower, so there is nothing worth pooling for.
             agent: false,
-            headers: {
+            headers: withUserAgent({
                 Accept: 'application/json',
                 ...(payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {}),
                 ...(token ? { Authorization: `Bearer ${token}` } : {})
-            }
+            })
         }, (res) => {
             const chunks = []
             res.on('data', (chunk) => chunks.push(chunk))
@@ -98,11 +100,11 @@ const request = async (url, { method = 'GET', token = null, body = null, address
         const response = await fetch(url, {
             method,
             signal: controller.signal,
-            headers: {
+            headers: withUserAgent({
                 Accept: 'application/json',
                 ...(body ? { 'Content-Type': 'application/json' } : {}),
                 ...(token ? { Authorization: `Bearer ${token}` } : {})
-            },
+            }),
             ...(body ? { body: JSON.stringify(body) } : {})
         })
         let payload = null
