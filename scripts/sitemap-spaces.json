@@ -1,0 +1,16 @@
+{
+  "note": "Public spaces the sitemap lists (scripts/sitemap.mjs). Kept by hand: the build has no server to ask, and a space here must be public on diiii.xyz, or a search engine is sent to a sign-in wall. Moved here unchanged from public/sitemap.xml on 2026-10-21.",
+  "spaces": [
+    "open",
+    "network",
+    "wcc",
+    "br_id_ge",
+    "beyond-form",
+    "algovrithm",
+    "dilijan",
+    "azd",
+    "platform-recordar",
+    "cascade",
+    "the-light-put-back"
+  ]
+}

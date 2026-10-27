@@ -11,3 +11,11 @@
 **Planned, not built here:** `fetch_desk_ui.py --manifest <dir>` in vizzz.di, reading this directory in place of its GitHub fetch. Until then the node keeps pinning with `desk_ui.lock`.
 
 Test: `node serverXR/src/lighting/tests/test-bundle.js` (part of `lighting.test.js`).
+
+## Output bus (Light v3, step 1.2)
+
+`outputStatus.js` gives every route (the main output and each extra device) one word — `ok`, `unreachable` or `off` — with the reason
+in plain words. It is on `GET /api/state` (`status.bus`) and `GET /api/summary` (`output.bus`), and the wire pill on the page turns
+to "<name> unreachable" with the reasons in its tooltip. An Art-Net node that never answered ArtPoll is not called unreachable (most
+ignore it); one that answered and went quiet for 20 s is. `showBackup.js` copies the show into `backups/` (newest 20) before the desk
+leaves it for another show; before a manual reset run `node tools/backup-show.js <data dir>`.

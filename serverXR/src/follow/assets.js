@@ -43,6 +43,15 @@ const DEFAULT_BACKOFF_MS = [2000, 10_000, 30_000]
 // A file that ran out of tries is looked at again after this long — the other
 // machine may simply have been switched off for the afternoon.
 const DEFAULT_RETRY_FAILED_AFTER_MS = 5 * 60_000
+// A file NEITHER machine holds (named in a document, its bytes on no disk yet) is
+// asked about on the same clock as any other failure: its tries, then again every
+// 5 minutes and whenever the 10-minute comparison names it. Its bytes may simply be
+// on their way: an upload's op reaches the host on the op loop before the bytes do,
+// so a follower can see the name first. A longer wait would make such a file late
+// (review of PR #1143). What changed (DSC-2, aylmo 2026-10-26: 56 lines per 10 min
+// for 28 such files) is only what is SAID: one line when a file is first found held
+// nowhere, one when that ends, nothing on the tries in between.
+const HELD_NOWHERE = 'neither machine holds this file'
 // What the documents list is compared with what each machine can serve again
 // this often, for as long as the follow runs (not only once after a start): a
 // transfer that was interrupted, or a file lost from one disk, is found and
@@ -166,6 +175,14 @@ const createAssetChase = ({
     const reconciled = new Map()   // projectId → when its documents were last compared with what each side holds
     const known = new Set()        // keys of every file a document or an op has named, carriable or not
     let carried = 0
+    // keys of the files last found held on neither machine: said once on the way
+    // in and once on the way out, never on the tries in between.
+    const heldNowhere = new Set()
+    // The one line on the way out of "held nowhere", whatever ended it.
+    const leftHeldNowhere = (key, fileName, how) => {
+        if (!heldNowhere.delete(key)) return
+        log.info?.(`[follow] ${local.spaceId}: ${fileName} ${how}`)
+    }
     let stopped = false
     let running = null
     let timer = null
@@ -245,6 +262,7 @@ const createAssetChase = ({
 
     const forget = (projectId, id) => {
         const key = keyOf(projectId, id)
+        leftHeldNowhere(key, (pending.get(key) || failed.get(key))?.name || id, 'is no longer named — not looked for any more')
         pending.delete(key)
         failed.delete(key)
         settled.delete(key)
@@ -313,7 +331,7 @@ const createAssetChase = ({
             // Named and then taken away again, with the ops read out of order:
             // nothing to chase, and not worth a line in anybody's terminal.
             if (!(await stillNamedHere(item))) return 'dropped'
-            throw Object.assign(new Error('neither machine holds this file'), { final: false })
+            throw Object.assign(new Error(HELD_NOWHERE), { final: false, heldNowhere: true })
         }
         const from = here.held ? local : remote
         const to = here.held ? remote : local
@@ -472,6 +490,9 @@ const createAssetChase = ({
             try {
                 const outcome = await carryOne(item)
                 pending.delete(key)
+                leftHeldNowhere(key, item.name, outcome === 'carried' ? 'is held again and was carried'
+                    : outcome === 'settled' ? 'is held on both machines now'
+                        : 'is no longer named — not looked for any more')
                 if (outcome === 'carried') carried += 1
                 if (outcome !== 'dropped') settled.add(key)
             } catch (error) {
@@ -484,6 +505,15 @@ const createAssetChase = ({
                 if (error?.final || item.attempts > backoffMs.length) {
                     pending.delete(key)
                     failed.set(key, { projectId: item.projectId, id: item.id, name: item.name, size: item.size, why, final: Boolean(error?.final), at: now() })
+                    if (error?.heldNowhere) {
+                        // Said once, when it starts; its later tries keep the same clock, quietly.
+                        if (heldNowhere.has(key)) continue
+                        heldNowhere.add(key)
+                        log.warn?.(`[follow] ${local.spaceId}: ${item.name} could not be carried — ${why}; still asked again every ${howLong(retryFailedAfterMs)}, said again only when that changes`)
+                        continue
+                    }
+                    // Another reason now: "held nowhere" is over, and this line says why.
+                    heldNowhere.delete(key)
                     log.warn?.(`[follow] ${local.spaceId}: ${item.name} could not be carried — ${why}`)
                 } else {
                     item.notBefore = now() + backoffMs[item.attempts - 1]
@@ -545,6 +575,8 @@ const createAssetChase = ({
                 failed: failed.size,
                 // who and why, for a person: `di follows` prints these
                 failures: [...failed.values()].map(({ id, name: fileName, why }) => ({ id, name: fileName, why })),
+                // how many of those neither machine holds (bytes not arrived, or lost)
+                heldNowhere: heldNowhere.size,
                 notCarried: notCarried.size,
                 bytesPending
             }
