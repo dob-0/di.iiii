@@ -7,9 +7,14 @@
 // be able to ask without pulling the renderer into its bundle. The published
 // code-mode page guards exactly that (publicViewerCodeModeGraph.test.js), and
 // it is what caught this being imported from the wrong side.
-export const portalHref = (spaceId, projectId) => {
+//
+// `anchor` (optional, reference.anchor) lands on a part of the page: a door "back to the works" goes to /dilijan#works,
+// not the top of the front page (owner 2026-10-23, N1248). Only a plain id is accepted; anything else is dropped.
+export const portalHref = (spaceId, projectId, anchor) => {
     const space = String(spaceId || '').trim()
     if (!space) return null
     const project = String(projectId || '').trim()
-    return project ? `/${space}/${project}` : `/${space}`
+    const id = String(anchor || '').trim().replace(/^#/, '')
+    const hash = /^[A-Za-z][\w:.-]*$/.test(id) ? `#${id}` : ''
+    return (project ? `/${space}/${project}` : `/${space}`) + hash
 }
