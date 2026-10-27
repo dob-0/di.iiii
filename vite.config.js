@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 // Plain data, no imports of its own — see the note at the top of that file.
 import { resolveBuildProfile } from './src/works/buildProfile.js'
 import { isMeasuredFile } from './scripts/node-anatomy-lib.mjs'
+import { llmsFullPlugin } from './scripts/llmsFull.mjs'
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const XR_EMULATE_STUB = path.resolve(ROOT_DIR, 'src/xr/emulateStub.js')
@@ -564,6 +565,10 @@ export default {
 
         // dist/build-profile.json — which of the three shapes this dist is
         emitBuildProfilePlugin(),
+
+        // dist/llms-full.txt — llms.txt plus the whole wiki. Hosted only, like
+        // llms.txt itself: it names diiii.xyz, which a laptop install is not.
+        ...(LOCAL_PROFILE ? [] : [llmsFullPlugin({ rootDir: ROOT_DIR })]),
 
         // Save from the algovrithm director panel (dev only)
         algoVrithmSavePlugin(),

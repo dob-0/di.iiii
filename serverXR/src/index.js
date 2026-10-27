@@ -3362,6 +3362,15 @@ if (CLIENT_DIR) {
     })
   })
 
+  // iOS asks the root for its home-screen icon under two names without reading
+  // the page's <head>; the file lives once, in the suite. nginx.conf carries the
+  // same alias for the hosted tiers (gap G49, 2026-10-21).
+  app.get(['/apple-touch-icon.png', '/apple-touch-icon-precomposed.png'], (req, res, next) => {
+    res.sendFile('suite/apple-touch-icon.png', { root: CLIENT_DIR }, (error) => {
+      if (error) next()
+    })
+  })
+
   // A hashed asset that is not on disk is a real 404 that nothing may cache: the
   // file usually exists a moment later (a deploy in flight), and a cached miss
   // would outlive it. Never the SPA, never a long-lived cache header.

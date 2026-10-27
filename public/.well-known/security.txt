@@ -1,0 +1,7 @@
+# Security contact for di.iiii (RFC 9116). The code is open:
+# https://github.com/dob-0/di.iiii
+Contact: mailto:info@thedi.studio
+Expires: 2027-10-21T00:00:00.000Z
+Preferred-Languages: en, hy, ru
+Canonical: https://diiii.xyz/.well-known/security.txt
+Policy: https://diiii.xyz/terms

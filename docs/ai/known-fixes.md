@@ -28,6 +28,10 @@ Cause: the shared theme for the six MUI surfaces outside Studio (`src/styles/mui
 
 Review fixes, 2026-10-22 (same entry): (1) the chat's unread `<Badge>` stayed a disc because MUI 7 Badge uses a literal radius 10, not `theme.shape` — `MuiBadge` badge `borderRadius: 0`. (2) `typography.button` 0.76rem reached medium only, so 'Sign in' (12.16 px) drew smaller than a small button (13 px) — medium is now 0.9rem, `sizeSmall` 0.76rem, `sizeLarge` 1.0625rem. (3) text and outlined buttons washed cyan on hover (alpha of primary) — now `rgba(255,255,255,0.08)` on hover and focus-visible. Guards: `src/styles/muiTheme.test.jsx` (Badge radius, rendered font sizes, hover/focus rules); with the theme change reverted, 4 of its 8 tests fail.
 
+## /favicon.ico, /manifest.webmanifest and /.well-known/security.txt answered the HTML shell (2026-10-21)
+
+Seen in the 2026-10-21 marketing audit: `GET https://diiii.xyz/favicon.ico` → 200 text/html 8,058 B; the same for `/apple-touch-icon.png`, `/apple-touch-icon-precomposed.png`, `/manifest.webmanifest`, `/.well-known/security.txt`, `/llms-full.txt`. Cause: nothing at those paths, so nginx's `location /` handed out index.html (and its crawler `if` would proxy bots to the og route). Fix: one exact location per address in `nginx.conf` with `types { }` + `default_type` and `try_files … =404` (never the shell), the files in `public/` (llms-full.txt written by the build, `scripts/llmsFull.mjs`), serverXR aliases for a local install. The shell's manifest link means the chat pages must swap theirs in, not append it (`src/chat/claimManifest.js`): a browser reads the first. Guards: `src/rootFiles.test.js` (picks the location nginx would pick for each address; 17 of 24 fail without the fix), `src/chat/claimManifest.test.js`, `serverXR/src/spaHostingContracts.test.js` apple-touch case. Note: `docs/ai/sessions/cloud-mkt-backstage-hygiene-2026-10-21.md`.
+
 ## The rig pages under a touchpad, a keyboard and a finger (2026-10-21)
 
 Found by `scripts/audit/rig-show-pages.cjs` (headless Chromium + axe-core 4.13, 8 pages × 4 device rows; audit
