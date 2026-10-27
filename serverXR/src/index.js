@@ -12,6 +12,7 @@ const http = require('http')
 const https = require('https')
 const cors = require('cors')
 const morgan = require('morgan')
+const { accessLogSkip } = require('./accessLog')
 const multer = require('multer')
 const fs = require('node:fs')
 const { isOwnerAtTheMachine } = require('./localOwner')
@@ -35,7 +36,7 @@ const {
   normalizeAuthScopeSpaces,
   setCommunalSpaceId
 } = require('./authAccess')
-const { PROJECT_NOT_FOUND, canSeeProject } = require('./projectVisibility')
+const { PROJECT_NOT_FOUND, canSeeProject, isSpaceMember } = require('./projectVisibility')
 const {
   createAuthSessionValue,
   readCookie,
@@ -68,12 +69,15 @@ const { createKeyedLock } = require('./asyncLock')
 const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerOgRoutes } = require('./routes/ogRoutes')
+const { loadWikiArticles } = require('./wikiIndex')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { TRUST_PROXY } = require('./proxyTrust')
 const { registerWorkStatusRoutes } = require('./routes/workStatusRoutes')
 const { registerAgentRunRoutes } = require('./routes/agentRunRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
 const { registerAiConnectionRoutes } = require('./routes/aiConnectionRoutes')
+const { registerShareRoutes } = require('./routes/shareRoutes')
+const { createShareService } = require('./share/shareService')
 const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
 const { registerAiChatRoutes } = require('./routes/aiChatRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
@@ -177,6 +181,7 @@ const {
   findProjectById, findProjectByIdAny,
   findProjectBySlug,
   findProjectMove,
+  findSpaceRootMove,
   getProjectPaths,
   isReservedProjectSlug,
   isValidAssetId: isValidProjectAssetId,
@@ -544,8 +549,11 @@ if (hasLocalRuntime() && scanAtBootFrom()) {
   try { ndi.startScan() } catch (error) { logger.warn(`[ndi] autoscan did not start: ${error?.message || error}`) }
 }
 
+// A log line only for answers that went wrong (400 and up) or never came; DI_ACCESS_LOG=1 for
+// every one. Why: accessLog.js. Ahead of express.json, so a body that fails to parse (400) or
+// is too large (413) still gets its line; after the NDI routes on purpose (see above).
+app.use(morgan('tiny', { skip: accessLogSkip() }))
 app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
-app.use(morgan('tiny'))
 app.use((req, res, next) => {
   pushEvent('request', { method: req.method, url: req.url })
   next()
@@ -2164,7 +2172,9 @@ router.use('/api/projects/:projectId', async (req, res, next) => {
 // "silent hardcoded fallback"/fail-open bug class this session's known-fixes
 // entry is about, applied here to a brand new route rather than an existing
 // one.
-router.use('/api/resolve/:spaceSegment/:projectSegment', async (req, res, next) => {
+// One prefix covers both shapes: /api/resolve/:space/:project and the bare
+// /api/resolve/:space a space root asks (below).
+router.use('/api/resolve/:spaceSegment', async (req, res, next) => {
   try {
     const spaceSegment = req.params.spaceSegment
     const space = (await findSpaceBySlug(spaceSegment)) || (await loadSpaceMeta(normalizeSpaceId(spaceSegment) || spaceSegment))
@@ -2267,6 +2277,7 @@ const sceneWriter = createSceneWriter({
 // platform tile. Same resolver the /api/resolve middleware above uses: slug
 // first, then the normalized id.
 registerOgRoutes(router, {
+  loadWikiArticles,
   loadSpaceMeta: async (segment) =>
     (await findSpaceBySlug(segment)) || (await loadSpaceMeta(normalizeSpaceId(segment) || segment)),
   // Same slug-then-id resolution the /api/resolve/:spaceSegment/:projectSegment
@@ -2392,6 +2403,40 @@ router.get('/api/resolve/:spaceSegment/:projectSegment', async (req, res, next) 
   }
 })
 
+// The bare space address, /{space}. Answers { movedTo } when the space has no
+// front door and its last one left it in a recorded move (projectMove.js
+// writes forwards_space_root; db.js clears it the moment the space gets a new
+// front door) — the same pointer, and the same client-side replace,
+// /api/resolve/:spaceSegment/:projectSegment gives an old project link.
+// Anything else is a 404 and the client opens the space as it always did.
+// Gated like its sibling: requiredSpaceId is set by the router.use above, so a
+// private space answers nothing to someone who cannot read it. The pointer is
+// only given when the caller could open where it leads — the project (private
+// work, drafts, archived work stay with members) AND its space.
+router.get('/api/resolve/:spaceSegment', async (req, res, next) => {
+  try {
+    const spaceSegment = req.params.spaceSegment
+    const space = (await findSpaceBySlug(spaceSegment)) || (await loadSpaceMeta(normalizeSpaceId(spaceSegment) || spaceSegment))
+    if (!space || space.publishedProjectId) return res.status(404).json({ error: 'Not found.' })
+    const moved = findSpaceRootMove(space.id)
+    if (!moved) return res.status(404).json({ error: 'Not found.' })
+    const target = await findProjectById(SPACES_DIR, moved.projectId)
+    const targetSpace = target ? await loadSpaceMeta(target.spaceId) : null
+    if (!target || !targetSpace) return res.status(404).json({ error: 'Not found.' })
+    const options = { requireAuth: config.requireAuth }
+    const member = isSpaceMember(req.authState, target.spaceId, options)
+    const canOpenSpace = !config.requireAuth || Boolean(targetSpace.isPublic) || member
+    const canOpenProject = canSeeProject(req.authState, target.meta, options)
+      && (member || target.meta.state === 'live')
+    if (!canOpenSpace || !canOpenProject) return res.status(404).json({ error: 'Not found.' })
+    // Where it is NOW, not where the move put it: a project that moved on
+    // again is still reached by its id in its current space.
+    res.json({ movedTo: { spaceId: target.spaceId, projectId: target.projectId } })
+  } catch (error) {
+    next(error)
+  }
+})
+
 registerStatusRoutes(router, {
   recentEvents,
   releaseInfo,
@@ -2403,6 +2448,21 @@ registerAgentRunRoutes(router, {})
 
 registerIntegrationRoutes(router)
 registerAiConnectionRoutes(router)
+
+// The share door: drafts, preview, send to channels (docs/ai/publishing.md).
+registerShareRoutes(router, {
+  requireAdminAlways,
+  service: createShareService({
+    config: config.share,
+    readAsset: async (spaceId, assetId) => {
+      if (!isValidAssetId(assetId)) return null
+      const { assetsDir } = getSpacePaths(spaceId)
+      const meta = await fs.promises.readFile(path.join(assetsDir, `${assetId}.json`), 'utf8').then(JSON.parse).catch(() => null)
+      const buffer = await fs.promises.readFile(path.join(assetsDir, assetId)).catch(() => null)
+      return buffer ? { buffer, mime: meta?.mimeType, name: meta?.filename || meta?.name || assetId } : null
+    }
+  })
+})
 
 registerAgentBoardRoutes(router)
 

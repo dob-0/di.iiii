@@ -6,6 +6,29 @@ const { planSettings, readSettings } = require('./followSettings.js')
 
 const space = (over = {}) => ({ label: 'Laser', isPublic: false, publishedProjectId: null, ...over })
 
+describe('planSettings — the space address (N1279)', () => {
+    const at = (over = {}) => space({ id: 'dilijan', slug: 'dilijan', ...over })
+
+    it('carries the address the host chose, apart from the patch', () => {
+        const { patch, slug } = planSettings({ host: at({ slug: 'dilijan-camp' }), local: at() })
+        expect(slug).toBe('dilijan-camp')
+        expect(patch).toEqual({})
+    })
+
+    it('a host with no chosen address never clears this copy\'s', () => {
+        expect(planSettings({ host: at(), local: at({ slug: 'dilijan-camp' }) }).slug).toBe(null)
+        expect(planSettings({ host: at({ slug: null }), local: at({ slug: 'dilijan-camp' }) }).slug).toBe(null)
+    })
+
+    it('nothing to carry when both already agree', () => {
+        expect(planSettings({ host: at({ slug: 'dilijan-camp' }), local: at({ slug: 'dilijan-camp' }) }).slug).toBe(null)
+    })
+
+    it('readSettings keeps the id and the slug', () => {
+        expect(readSettings({ space: { id: 'dilijan', slug: 'dilijan-camp', label: 'D' } })).toMatchObject({ id: 'dilijan', slug: 'dilijan-camp' })
+    })
+})
+
 describe('planSettings — host to follower, never more public', () => {
     it('carries the host\'s label', () => {
         expect(planSettings({ host: space({ label: 'di.laser' }), local: space({ label: 'di-laser' }) }).patch).toEqual({ label: 'di.laser' })
@@ -37,8 +60,8 @@ describe('planSettings — host to follower, never more public', () => {
     })
 
     it('does nothing when they agree or when a side cannot be read', () => {
-        expect(planSettings({ host: space(), local: space() })).toEqual({ patch: {}, notes: [] })
-        expect(planSettings({ host: null, local: space() })).toEqual({ patch: {}, notes: [] })
+        expect(planSettings({ host: space(), local: space() })).toEqual({ patch: {}, slug: null, notes: [] })
+        expect(planSettings({ host: null, local: space() })).toEqual({ patch: {}, slug: null, notes: [] })
         expect(readSettings({})).toBeNull()
     })
 })

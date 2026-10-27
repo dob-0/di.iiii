@@ -25,6 +25,7 @@
  *   --work <dir>        where the working files go (default <from>/../place-<name>)
  *   --scale-edge <m>    the room's longest wall, measured with a tape
  *   --edge <which>      which edge that number is: width · depth · height
+ *   --scale-from <scale.json>  the AR walk's own metres (poses.mjs --scale-out)
  *   --door-guess        no tape: call the tallest doorway 2.1 m and GUESS
  *   --local-obj <file>  a mesh you already have; no GPU is rented
  *   --gpu <kind>        L4 (default) · T4 · A100 · H100 · local (this machine, ~/tools/meshroom)
@@ -34,6 +35,11 @@
  *   --from-step <n>     start at step n, using what is already in <work>
  *   --no-sources        do not carry the footage into the space (it is there)
  *   --dry-run           say what would happen, change nothing
+ *
+ * 360 footage (Insta360 exported as equirectangular MP4/JPG) goes in the same
+ * folder or the same space as phone clips; step 1 cuts it into pinhole views.
+ * Tuning, all passed to frames.mjs: --views <n> --pano-fov <deg> --pano-fps <n>
+ * --max-pano-frames <n> --no-up --view-size <px> --mask-below <deg> --mask-sector <yaw:half>
  *
  * Each step leaves its work in <work> and can be run again on its own — see
  * scripts/place/README.md. Nothing here writes to the footage folder.
@@ -49,14 +55,23 @@ const args = parseArgs()
 
 const step = (name, script, scriptArgs) => ({ name, script, args: scriptArgs })
 
+// The 360 knobs travel to frames.mjs untouched; place.mjs holds no opinion on them.
+export const PANO_FLAGS = ['views', 'pano-fov', 'pano-fps', 'max-pano-frames', 'view-size', 'mask-below', 'mask-sector']
+export const panoArgs = (source) => {
+    const out = []
+    for (const flag of PANO_FLAGS) if (source[flag] !== undefined && source[flag] !== true) out.push(`--${flag}`, String(source[flag]))
+    if (source['no-up']) out.push('--no-up')
+    return out
+}
+
 export const buildSteps = (options) => {
     const { work, from, name } = options
     const steps = []
     // Either a folder on this disk, or a space whose `sources` room a phone
     // already filled. Never both — the caller chose one.
     steps.push(step('frames', 'frames.mjs', options.fromSpace
-        ? ['--from-space', options.fromSpace, '--work', work, ...(options.api ? ['--api', options.api] : [])]
-        : ['--from', from, '--work', work]))
+        ? ['--from-space', options.fromSpace, '--work', work, ...(options.api ? ['--api', options.api] : []), ...(options.pano || [])]
+        : ['--from', from, '--work', work, ...(options.pano || [])]))
     steps.push(step('build', 'colab-job.mjs', options.localObj
         ? ['--work', work, '--local-obj', options.localObj]
         : ['--work', work, '--gpu', options.gpu || 'L4']))
@@ -66,6 +81,8 @@ export const buildSteps = (options) => {
     if (Number.isFinite(options.scaleEdge)) {
         fitArgs.push('--scale-edge', String(options.scaleEdge))
         if (options.edge) fitArgs.push('--edge', options.edge)
+    } else if (options.scaleFrom) {
+        fitArgs.push('--scale-from', options.scaleFrom)
     } else if (options.doorGuess) {
         fitArgs.push('--door-guess')
     }
@@ -114,7 +131,7 @@ const main = () => {
     ensureDir(work)
 
     const scaleEdge = args['scale-edge'] === undefined ? null : num(args['scale-edge'], null)
-    if (!Number.isFinite(scaleEdge) && !args['door-guess']) {
+    if (!Number.isFinite(scaleEdge) && !args['door-guess'] && !args['scale-from']) {
         warn('')
         warn('Nothing says how big this room is.')
         warn('Measure one wall and pass --scale-edge <metres>, or accept a guess with --door-guess.')
@@ -133,9 +150,11 @@ const main = () => {
         scaleEdge,
         edge: args.edge ? String(args.edge) : null,
         doorGuess: Boolean(args['door-guess']),
+        scaleFrom: args['scale-from'] ? path.resolve(String(args['scale-from'])) : null,
         forward: args.forward === undefined ? null : num(args.forward, null),
         flip: Boolean(args.flip),
         api: args.api ? String(args.api) : null,
+        pano: panoArgs(args),
         label: args.label ? String(args.label) : null
     })
 
