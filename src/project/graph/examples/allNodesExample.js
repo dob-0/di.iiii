@@ -290,6 +290,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // with no network, where an iframe of diiii.xyz is a dead panel.
     add('browser', 'view.browser', { label: 'Browser panel', col: 4, row: 4, values: { url: '/wiki' } })
     add('image', 'view.image', { label: 'Image panel', col: 4, row: 5 })
+    add('qrcode', 'view.qrcode', { label: 'QR Code', col: 4, row: 11 })
     add('publish', 'view.publish', { label: 'Public page panel', col: 4, row: 6, values: { title: 'The example project' } })
     add('list', 'view.list', { label: 'List panel', col: 4, row: 7, values: {
         groups: ['Core', 'Would be good'],
