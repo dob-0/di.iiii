@@ -45,6 +45,9 @@ import AgentRunPanel from './AgentRunPanel.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
 import KeeperPanelWindow from './KeeperPanelWindow.jsx'
 import DmxOutPanelWindow from './DmxOutPanelWindow.jsx'
+import DmxInPanelWindow from './DmxInPanelWindow.jsx'
+import OscInPanelWindow from './OscInPanelWindow.jsx'
+import OscOutPanelWindow from './OscOutPanelWindow.jsx'
 import LaserOutPanelWindow from './LaserOutPanelWindow.jsx'
 import RecorderPanelWindow from './RecorderPanelWindow.jsx'
 import StillPanelWindow from './StillPanelWindow.jsx'
@@ -2188,6 +2191,51 @@ export default function RawEditor({
                     // Endpoint and model are settable in the window itself, not
                     // only in the inspector: a node the palette can place must be
                     // usable where it lands, without also placing an inspector.
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
+        if (node.typeId === 'device.dmx.in') {
+            return (
+                <DmxInPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onLevelChange={(nodeId, ports) => {
+                        // null clears both at once (unmount): the graph then reads
+                        // the runtime's bare 0 and ''.
+                        handleLiveOutputChange(nodeId, 'value', ports === null ? null : ports.value)
+                        handleLiveOutputChange(nodeId, 'status', ports === null ? null : ports.status)
+                    }}
+                />
+            )
+        }
+        if (node.typeId === 'device.osc.in') {
+            return (
+                <OscInPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onSignalChange={(nodeId, ports) => {
+                        for (const portId of ['address', 'value', 'signal', 'status']) {
+                            handleLiveOutputChange(nodeId, portId, ports === null ? null : ports[portId])
+                        }
+                    }}
+                    // Port and Filter are set in the card itself, like DMX Out's host.
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
+        if (node.typeId === 'device.osc.out') {
+            return (
+                <OscOutPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onStatus={handleMidiOutStatus}
                     onConfigChange={(nodeId, patch) => applyLocalOps({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
