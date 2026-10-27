@@ -38,6 +38,12 @@ describe('laser rules: one source', () => {
         expect(chart.neverUseValues).not.toContain(181)
         expect(chart.looks.oneLook).toEqual([0, 9])
     })
+    it('the 40 W player refuses the test pattern (181) like the other never-use values', () => {
+        const player = path.join(here, '..', 'rigbuild', 'la40-player.mjs')
+        const bad = spawnSync(process.execPath, [player, '--graphics', String(chart.testPattern.value)], { encoding: 'utf8' })
+        expect(bad.status).not.toBe(0)
+        expect(bad.stderr).toMatch(/a forbidden graphic is in the list/)
+    })
     it('the 40 W player refuses a graphic from the new list (80) and accepts its defaults', () => {
         const player = path.join(here, '..', 'rigbuild', 'la40-player.mjs')
         const bad = spawnSync(process.execPath, [player, '--graphics', '80'], { encoding: 'utf8' })
