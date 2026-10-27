@@ -21,6 +21,28 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## The rig pages under a touchpad, a keyboard and a finger (2026-10-21)
+
+Found by `scripts/audit/rig-show-pages.cjs` (headless Chromium + axe-core 4.13, 8 pages × 4 device rows; audit
+`docs/ai/audits/2026-10-21-rig-show-pages.md`). Symptoms and fixes, one commit each:
+- **The plot zoomed on a touchpad's two-finger scroll and dropped its sideways part.** `onWheel` read deltaY
+  only and always zoomed. `src/rigbuild/planWheel.js` tells the gesture from the event: ctrlKey = pinch
+  (zoom), a deltaX = touchpad (pan both axes), any purely vertical wheel or line mode = mouse (zoom to the
+  pointer); one meaning per gesture, deltaX always pans. A fractional deltaY is NOT a touchpad tell:
+  Chromium divides a notch by the screen scale (100 → 66.67 at 150 %) and macOS sends 4.000244…; reading
+  it as a touchpad made a mouse pan on a scaled screen (review of #1070). Guard: `plotInput.test.jsx`.
+- **The plot could not zoom without a wheel or two fingers** (WCAG 2.5.1, 2.1.1): + − fit on the plan and
+  the keys + - 0. Guard: `plotInput.test.jsx`.
+- **Perform's strip menus ignored Escape and a press outside.** A window listener (not `document`: the
+  component's `document` prop is the project) closes the open menu and returns focus. Guard:
+  `PerformDesk.test.jsx`.
+- **The patch sheet's sideways-scrolling tables were out of keyboard reach on a phone** (axe
+  scrollable-region-focusable): `sheet.js` `wrap()` makes each box a named region with tabindex 0.
+  Guard: `PatchSheetSurface.test.jsx`. The same pattern is still in `scripts/rigbuild/patch-sheet.mjs`.
+- Smaller, same run: beat dots `role="img"` (axe aria-prohibited-attr), touch targets to 44 px on the plot
+  and 24 / 44 px in Perform (`touchTargets.test.js`), the visualiser title 2.89 → 5.28:1
+  (`visualiserContrast.test.js`), and a production name out of the Perform save box's placeholder.
+
 ## Front pages appended words to `di.iiii` and named the retired Beta editor (2026-10-21)
 
 Symptom: six headings fused a word onto the platform name (`di.iiii Control Server`, `di.iiii Deck Context`, `di.iiii Ecosystem Map`, `di.iiii AI Engineering Collective`, `The di.iiii SDK`, `The di.iiii Visual Identity — Complete Spec`); `serverXR/README.md` listed `Beta` as a supported editor three times, eleven weeks after the lane was deleted (2026-08-06); `docs/deck/README.md` said "lane", `ONBOARDING.md` said "Raw" as a name; and `sdk/README.md` told a reader to `import { connect } from 'di.iiii/sdk'`, a package that does not exist (the root package is private and named otherwise; there is no `sdk/package.json`).
