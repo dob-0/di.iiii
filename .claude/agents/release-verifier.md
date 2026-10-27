@@ -24,7 +24,7 @@ the tags collided and nothing checked.
 
 2. **Is the running build the one you think?**
    ```
-   curl -s https://di-studio.xyz/serverXR/api/health | jq .release
+   curl -s https://diiii.xyz/serverXR/api/health | jq .release
    curl -s https://dev.diiii.xyz/serverXR/api/health | jq .release
    ```
    Assert all three: `gitCommit` matches the branch head, `deployEnv` matches

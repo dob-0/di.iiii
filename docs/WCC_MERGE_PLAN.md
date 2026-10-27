@@ -78,7 +78,7 @@ existed.
     access (`spaces: []`), not unrestricted. The admin finds her in
     `GET /api/users` (admin-only) and grants `wcc` specifically:
     ```bash
-    curl -X PATCH https://di-studio.xyz/serverXR/api/users/<her-user-id> \
+    curl -X PATCH https://diiii.xyz/serverXR/api/users/<her-user-id> \
       -H "Authorization: Bearer <admin-token>" -H "Content-Type: application/json" \
       -d '{"spaces": ["wcc"]}'
     ```

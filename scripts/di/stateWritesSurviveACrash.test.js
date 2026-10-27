@@ -112,7 +112,7 @@ describe('a write that dies half-way leaves the old file whole', () => {
 
     it('credentials.json keeps every sync key when one more link is interrupted', async () => {
         writeLink(home, 'open', { remote: 'https://dev.diiii.xyz/serverXR', key: 'dii_sync_a.s1' })
-        writeLink(home, 'wcc', { remote: 'https://di-studio.xyz/serverXR', key: 'dii_sync_b.s2' })
+        writeLink(home, 'wcc', { remote: 'https://diiii.xyz/serverXR', key: 'dii_sync_b.s2' })
         const before = fs.readFileSync(paths(home).credentials)
 
         await interruptEveryWrite()
@@ -146,7 +146,7 @@ describe('a corrupt credentials file is kept, not written over', () => {
         fs.mkdirSync(path.dirname(file), { recursive: true })
         fs.writeFileSync(file, '{"links":{"open":{"remote":"https://dev.diiii.xyz/serverXR","key":"dii_sync_a.s')
 
-        writeLink(home, 'wcc', { remote: 'https://di-studio.xyz/serverXR', key: 'dii_sync_b.s2' })
+        writeLink(home, 'wcc', { remote: 'https://diiii.xyz/serverXR', key: 'dii_sync_b.s2' })
 
         const kept = fs.readdirSync(path.dirname(file)).filter((name) => name.startsWith('credentials.json.corrupt-'))
         expect(kept).toHaveLength(1)

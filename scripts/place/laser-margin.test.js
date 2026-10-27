@@ -15,6 +15,7 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const hasPython = spawnSync('python3', ['-c', 'import numpy'], { encoding: 'utf8' }).status === 0
 const RIG = path.join(here, 'rigs', 'moxir-v2-8-matrix-2026-10-13.json')
 const HALL = path.join(here, 'rigs', 'moxir-hall-2026-10-11-v11-show-park-far41.hall.json')
+const REF = path.join(here, 'rigs', 'moxir-hall-reference-2026-10-17.json')   // the owner's final placement (10-17)
 
 function run(args) {
     const r = spawnSync('python3', ['-I', path.join(here, 'laser_margin.py'), '--json', ...args],
@@ -97,6 +98,8 @@ describe.skipIf(!hasPython)('laser_margin.py', () => {
             const wall = { id: 'wall', x_m: [-50, 50], y_m: [0, 12], z_m: [-5, -4] }
             const closed = room(f, { shell: [wall] })
             expect(closed.walled.crosses_zone).toBe(false)
+            expect(closed.walled.blocked_before_zone).toBe(true)
+            expect(closed.walled.first_surface).toMatchObject({ solid: 'wall', shell: true })
         })
 
         it('a beam into the ceiling or the floor does not count past it', () => {
@@ -106,6 +109,40 @@ describe.skipIf(!hasPython)('laser_margin.py', () => {
             const fl = room([fx('down', [5, 5, -10], [5, -20, 30])])   // dives into the floor: stops at y 0, so the zone stretch is short or gone
             expect(fl.down.crosses_zone === false || fl.down.pass_3m === false).toBe(true)
         })
+    })
+
+    describe('the real hall shell (hall_shell.py, 2026-10-20)', () => {
+        const len = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])
+
+        it('the v2.8 rig: no line is blocked before the zone, and a line that meets a wall or the roof meets it at its stored end', () => {
+            const R = run(['--rig', RIG, '--hall', HALL])
+            expect(R.shell_modelled).toBe(true)
+            expect(R.summary.blocked_before_zone).toEqual([])
+            for (const l of R.lines.filter(l => l.first_surface?.shell)) {
+                expect(Math.abs(len(l.from, l.to) - l.first_surface.t_m)).toBeLessThan(0.01)   // not a metre through a wall
+            }
+        }, 120000)
+
+        it('the final hall reference (--lamps): every laser line ends on the hall (none leaves it), all >= 3 m over the zone', () => {
+            const R = run(['--rig', RIG, '--hall', HALL, '--lamps', REF])
+            expect(R.summary.lines).toBe(38)                       // 36 LaserCube beams + the two UP-LA40WF
+            expect(R.lines.every(l => l.first_surface)).toBe(true)  // a lamp list has no end: the hall must stop each line
+            expect(R.summary.blocked_before_zone).toEqual([])
+            expect(R.summary.pass_3m).toBe(R.summary.crossing_zone)
+            expect(R.summary.worst.lowest_m).toBeGreaterThanOrEqual(8)
+        }, 120000)
+
+        it('refuses a lamp list when the hall record has no dims.shell (no end to stop at)', () => {
+            const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'laser-margin-'))
+            const hall = JSON.parse(fs.readFileSync(HALL, 'utf8'))
+            delete hall.dims.shell
+            fs.writeFileSync(path.join(dir, 'hall.json'), JSON.stringify(hall))
+            const r = spawnSync('python3', ['-I', path.join(here, 'laser_margin.py'), '--rig', RIG, '--hall', path.join(dir, 'hall.json'), '--lamps', REF],
+                { encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } })
+            fs.rmSync(dir, { recursive: true, force: true })
+            expect(r.status).not.toBe(0)
+            expect(r.stderr).toMatch(/dims\.shell/)
+        }, 60000)
     })
 
     describe('the v2.8 matrix rig over the dance zone', () => {
@@ -118,7 +155,7 @@ describe.skipIf(!hasPython)('laser_margin.py', () => {
             expect(R.summary.pass_3m).toBe(38)
             expect(R.separation_m).toBe(LASER_MIN_HEIGHT_M)   // one source: dev's laser-distance.mjs
             expect(R.validated).toBe(false)
-            expect(R.shell_modelled).toBe(false)
+            expect(R.shell_modelled).toBe(true)   // dims.shell from hall_shell.py (2026-10-20): walls and roof are checked
             expect(R.summary.worst.lowest_m).toBeGreaterThanOrEqual(8)
             expect(R.summary.worst_tilted.lowest_tilted_m).toBeGreaterThanOrEqual(7)
             expect(R.summary.hanging_strikes).toEqual([])

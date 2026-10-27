@@ -10,18 +10,19 @@
 // honoured; its absence marks the side `verbatim: false`, which the plan
 // treats as a hard stop for any future write.
 import { localUrl } from './state.mjs'
+import { withUserAgent } from './userAgent.mjs'
 
 const TIMEOUT_MS = 8000
 
 // Bounded and non-throwing, like every network probe in this CLI — a sync
 // audit against a sleeping laptop must report "not answering", not stack.
-export const fetchJson = async (url, { token = null, timeoutMs = TIMEOUT_MS } = {}) => {
+export const fetchJson = async (url, { token = null, timeoutMs = TIMEOUT_MS, fetchImpl = fetch } = {}) => {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), timeoutMs)
     try {
         const headers = { Accept: 'application/json' }
         if (token) headers.Authorization = `Bearer ${token}`
-        const response = await fetch(url, { headers, signal: controller.signal })
+        const response = await fetchImpl(url, { headers: withUserAgent(headers), signal: controller.signal })
         let json = null
         try { json = await response.json() } catch { /* not json */ }
         return { ok: response.ok, status: response.status, json }

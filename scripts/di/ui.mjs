@@ -146,7 +146,7 @@ export const ui = {
                     : (prettyUrl ? style.dim(`  ${isLocalhostUrl(prettyUrl) ? 'this machine only.' : 'one address, here and on the phones.'} ${url} answers too.`) : null)),
             !one && why ? oneAddressWhy(why, '  ') : null,
             '',
-            door('tools', '/tools', 'every tool, in one room'),
+            door('tools', '/tools', 'every tool, on one page'),
             door('spaces', '/spaces', spacesNote),
             door('light', '/light/', 'the lighting desk — output off until you say so'),
             door('wiki', '/wiki', 'how all of it works'),
@@ -253,6 +253,7 @@ export const ui = {
             denied: 'that key was refused — ask for a fresh one: di invite <space> on their machine.',
             'local-space': 'this install could not make room for it — is di.iiii running here?',
             itself: 'that address is this di.iiii — a space cannot follow itself.',
+            'remote-differs': 'that space is already followed from another remote, with an edit key, and no --key was given — nothing was changed. pass the new remote\'s key: --key dii_sync_…',
             cleartext: `that address is plain http on a network that is not yours — the key and every edit would travel in the clear. use https, or say so out loud: --insecure`,
             'manage-cleartext': 'that is a MANAGE key, and a manage key is sent only over https (or to this machine) — on any network, --insecure or not. use the https address, or ask for an ordinary key.',
             corrupt: `follows.json in this install's data folder cannot be read, so nothing was written — writing over it would drop every other follow and its key. it was left as it is, with a .corrupt copy beside it. look at it, fix or move it, then follow again.`
@@ -265,6 +266,12 @@ export const ui = {
             : message
     },
 
+    followKeptKey: () => 'kept the stored edit key — no --key was given, and the remote is the same.',
+    followRemoteDiffers: (spaceId, stored, base) =>
+        `${spaceId} is followed from ${stored}, with an edit key; ${base} is another remote, and no --key was given — nothing was changed.\n` +
+        `to follow it from ${base}, pass that remote's key: --key dii_sync_… (or --key - to read it from stdin).`,
+    followNotFollowed: (spaceId) =>
+        `${spaceId} is not followed here, so there is no remote to take — say where from: --from https://…`,
     followBothDirections: () => '--take-host and --take-mine answer opposite questions — say one of them.',
     followBothStarts: () => '--from-now and --replay are opposite starts — say one of them.',
 
@@ -273,12 +280,12 @@ export const ui = {
     following: (spaceId, remote, running, at = null) => [
         `following ${style.cyan(spaceId)} on ${remote.replace(/\/serverXR$/, '')}.`,
         at ? style.dim(`the name stays — the socket goes to ${at}.`) : null,
-        style.dim('edits travel both ways — the room and every project in it. your copy stays on your disk.'),
+        style.dim('edits travel both ways — the space and every project in it. your copy stays on your disk.'),
         // Said plainly rather than discovered. Files named by a PROJECT are
         // carried (serverXR/src/follow/assets.js); files placed straight into
-        // the room's own scene are not — that manifest never travels. Better a
+        // the space's own scene are not — that manifest never travels. Better a
         // sentence now than a grey wall later.
-        style.dim('files in its projects travel too. files placed straight in the room itself are not carried yet — they stay where they were added.'),
+        style.dim('files in its projects travel too. files placed straight in the space itself are not carried yet — they stay where they were added.'),
         running ? null : style.dim(`start it to begin: ${CMD} up`)
     ].filter(Boolean).join('\n'),
 
@@ -316,7 +323,7 @@ export const ui = {
     // Said in place of the "anyone can edit it" warning, because it is the
     // opposite fact and the room deserves to hear which one is true tonight.
     guestsOn: () => [
-        'visitors arrive as guests: their own room and the open space, and nothing of yours.',
+        'visitors arrive as guests: their own space and the open space, and nothing of yours.',
         style.dim(`you, on this machine, stay the owner — no sign-in. ${CMD} down when the room is done.`)
     ].join('\n'),
 
@@ -427,22 +434,17 @@ export const ui = {
     ].join('\n'),
 
     // The one screen an artist is asked to read when something is wrong. It
-    // names the two ways forward and does not rank them by what a developer
-    // would prefer.
+    // names the one way out, in the words install.sh and install.ps1 use:
+    // Docker is not one, because the di command itself runs on node.
     noRuntime: () => [
         'di.iiii could not start on this machine.',
         '',
-        '  docker    not found',
         '  node.js   not found, and nodejs.org could not be reached',
         '',
-        'you need one of these. pick whichever sounds easier:',
+        `Install Node.js 22.15 or newer from ${style.cyan('https://nodejs.org')} (the LTS button),`,
+        `then run:  ${CMD} up`,
         '',
-        `  docker desktop  ${style.cyan('https://docker.com/products/docker-desktop')}`,
-        `                  install it, open it once, then run:  ${CMD} up`,
-        `  node.js 22      ${style.cyan('https://nodejs.org')}`,
-        `                  the big green LTS button, then run:  ${CMD} up`,
-        '',
-        'nothing was installed. full report:  di doctor'
+        'Nothing was installed.'
     ].join('\n'),
 
     nodeTooOld: (found, needed) => [
@@ -564,12 +566,14 @@ export const ui = {
         '  --take-mine     the same, the other way: this copy becomes the host\'s. Restore point',
         '                  taken on the host first; used once, then cleared',
         '                  (with neither, a difference where this copy is ahead is REFUSED and',
-        `                  shown in ${CMD} follows)`,
+        `                  shown in ${CMD} follows). On a space already followed, either one`,
+        `                  alone is enough: ${CMD} follow SPACE --take-mine uses that follow's address and key`,
         '  --insecure      allow a key to travel over plain http to a public address (http to',
         '                  localhost, .local, LAN and Tailscale addresses needs no flag)',
         '',
         style.dim(`  ${CMD} follows          what this install is following`),
-        style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`)
+        style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`),
+        style.dim(`  ${CMD} post draft|show|send|channels   share a post to Telegram, Bluesky, Mastodon`),
     ].join('\n'),
 
     // `di mcp --help` and `di help mcp`. Printed instead of starting the
@@ -1041,7 +1045,7 @@ export const ui = {
         '',
         style.dim('  --port N     run somewhere other than 4000'),
         style.dim('  --lan        answer on this wifi too, for phones in the room — anyone on it can edit'),
-        style.dim('  --guests     with --lan: visitors get their own room, not yours'),
+        style.dim('  --guests     with --lan: visitors get their own space, not yours'),
         style.dim('  --verbose    show the docker/npm/node underneath'),
         ''
     ].join('\n')

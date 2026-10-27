@@ -7,6 +7,7 @@ const { getSpaceBlobPaths, hasBlob, storeBlobFromFile } = require('../blobStore'
 const { receiveBodyToTempFile } = require('../verbatimAsset')
 const { withProjectWriteLock, withProjectInProcessLock, commitProjectWrite: commitWrite } = require('../projectWrite')
 const { createKeyedLock } = require('../asyncLock')
+const { createTestBarrier } = require('../testBarrier')
 const logger = require('../logger')
 const { applyAssetSafetyHeaders } = require('../spaceStore')
 const { findIdlessCreateOp } = require('../opValidation')
@@ -16,6 +17,7 @@ const { countProjectLayers } = require('../../../shared/layers.cjs')
 const { canAccessSpace, formatAuthScopeLabel } = require('../authAccess')
 const { assetCacheControl, filterVisibleProjects } = require('../projectVisibility')
 const { normalizeProductionVersion, normalizeProductionMeta } = require('../../../shared/projectSchema.cjs')
+const { RESERVED_PROJECT_SLUGS } = require('../../../shared/reservedSegments.cjs')
 
 // A project's write: the version check, the document, the ops and the version
 // itself, guarded against this process AND every other server on the same data
@@ -31,6 +33,8 @@ const withProjectLock = (project, fn) => withProjectWriteLock({
 // One sync key's limited actions run one at a time, so two requests at once
 // cannot both pass the same last unit of its budget (SPEC_space_sync_keys.md §13.5).
 const withKeyLock = createKeyedLock()
+// Test-only (inert unless NODE_ENV=test): lets a test hold two key moves until both have passed their gates.
+const testBarrier = createTestBarrier()
 
 /** The sync key a request came with, when that is all it is (not an owner, not an admin). */
 const projectMovedAnswer = () => ({ status: 409, body: { error: 'This project is no longer in the space this request was made for; nothing was changed.', code: 'project_moved' } })
@@ -59,7 +63,11 @@ function registerProjectRoutes(router, {
   findProjectBySlug,
   getProjectLiveBucket,
   getProjectPaths,
-  isReservedProjectSlug = () => false,
+  // Fails CLOSED. This used to default to `() => false`, so a router mounted without the
+  // predicate (a line missing in index.js, a test, another host) quietly stopped refusing
+  // reserved words, with no error anywhere. The default is the shared list itself
+  // (shared/reservedSegments.cjs): the words stay reserved however the router is built.
+  isReservedProjectSlug = (slug) => RESERVED_PROJECT_SLUGS.has(slug),
   isValidAssetId,
   listProjectsInSpace,
   maxOpHistory,
@@ -350,6 +358,30 @@ function registerProjectRoutes(router, {
       if (!projectId) {
         return res.status(400).json({ error: 'Invalid project id.' })
       }
+      // The id is the address of a project that has no short name: /{space}/{id}.
+      // spaceRouting.js throws away a reserved word in that position, so a project
+      // born with one can be made but never opened at its own address (seen: `privacy`
+      // in `main`, which opens only at /p/privacy). PATCH has refused these words as a
+      // short name since the slug-hijack fix, and space creation as a space id; this
+      // was the third door. It is checked on the NORMALISED id, so "PRIVACY", " Privacy "
+      // and "Privacy!" are the word too, and BEFORE "taken", so the person is told about
+      // the word and not about somebody else's project.
+      //
+      // It lives here, in the route, and not in ensureProject: a snapshot restore, the
+      // open-jam bootstrap and a project already stored under such an id make theirs
+      // through ensureProject and must keep working. One caller does come through this
+      // route with an id it did not choose: a follow, making a project the other side
+      // already has (follower.js, makeMissing). It says so with `carried: true` and keeps
+      // its id; only the boolean `true` counts. This cannot be checked here: the route has
+      // no way to tell a project that exists elsewhere from a new one, so `carried` is the
+      // caller's own word and any editor can send it (a project made new with it would open
+      // only at /{space}/p/{id}). The copy scripts (project-pull, space-sync,
+      // space-sync-github, local-mirror, tier-sync) use this route too and do not say so
+      // yet: for a reserved id they get the 400.
+      const carried = req.body?.carried === true
+      if (!carried && isReservedProjectSlug(projectId)) {
+        return res.status(400).json({ error: `"${projectId}" is a reserved address and can't be a project name — try another.` })
+      }
       const existing = await resolveProjectContext(projectId)
       if (existing) {
         // Project ids are global across every space (deliberate — see
@@ -595,7 +627,12 @@ function registerProjectRoutes(router, {
       if (config.requireAuth) {
         const state = req.authState || {}
         const [fromMeta, toMeta] = await Promise.all([loadSpaceMeta(project.spaceId), loadSpaceMeta(toSpaceId)])
-        if (!toMeta) return res.status(404).json({ error: `target space "${toSpaceId}" not found` })
+        // Only an admin, who can list every space anyway, hears that a target
+        // does not exist. Everyone else gets the refusal a space they may not
+        // use gets, word for word, so a move is not a test of which space ids
+        // exist (review r3 I2, 2026-10-20). A missing target is never theirs:
+        // no owner matches null, and no key's space is a missing id.
+        if (!toMeta && state.role === 'admin') return res.status(404).json({ error: `target space "${toSpaceId}" not found` })
         const asOwner = canAccessSpace(state, toSpaceId) &&
           isSpaceOwnerOrAdminState(state, fromMeta) && isSpaceOwnerOrAdminState(state, toMeta)
         if (!asOwner) {
@@ -610,7 +647,7 @@ function registerProjectRoutes(router, {
           const also = state.alsoSyncKey
           const record = (why) => key && syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'move', projectId: project.projectId, toSpaceId, outcome: 'refused', reason: why, alsoKeyId: also?.keyId || null })
           const managesFrom = key && typeof canManageProjectsState === 'function' && canManageProjectsState(state, fromMeta)
-          const managesTo = Boolean(also && also.scope === 'manage' && also.spaceId === toMeta.id)
+          const managesTo = Boolean(toMeta && also && also.scope === 'manage' && also.spaceId === toMeta.id)
           if (!managesFrom || !managesTo) {
             const why = key
               ? 'A sync key moves a project only with a manage key of BOTH spaces: this one as the bearer, the other as alsoSyncKey in the body.'
@@ -651,6 +688,8 @@ function registerProjectRoutes(router, {
       if (key) {
         const alsoKeyId = req.authState?.alsoSyncKey?.keyId || null
         const record = (outcome, reason = null) => syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'move', projectId: project.projectId, toSpaceId, outcome, reason, alsoKeyId })
+        // Both racing moves are past every gate here; a test barrier (X-Test-Barrier) holds each until its partner is too.
+        await testBarrier.arrive(req)
         const refused = await withKeyLock(key.keyId, async () => {
           // Re-read inside the lock (review r3 L1): the loser of two moves finds
           // the project already elsewhere and changes nothing.

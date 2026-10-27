@@ -81,7 +81,7 @@ export default function TermsPage() {
                 <section className="legal-section">
                     <h2>no warranty</h2>
                     <p>
-                        The hosted service at di-studio.xyz is run by a small studio and provided
+                        The hosted service at diiii.xyz is run by a small studio and provided
                         as-is, same as the AGPL says for the code. Back up work you care about —
                         bundle export exists for exactly that.
                     </p>

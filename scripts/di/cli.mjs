@@ -35,7 +35,7 @@ import {
     listSnapshots,
     pruneVersions,
     releaseFromFile,
-    rehearseAgainst,
+    withRehearsal,
     restoreSnapshot,
     rollback,
     smokeTest,
@@ -61,6 +61,7 @@ import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
 import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from './share.mjs'
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
+import { runPost } from './post.mjs'
 import {
     isStageMachine, joinPlan, joinStage, leaveStage, readManifest,
     restartSupervisor, runSupervisor, stageStatus, startSupervisor
@@ -70,6 +71,7 @@ import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './chan
 import * as autoupdate from './autoupdate.mjs'
 import { mcpArgs, moveToken, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
+import { withUserAgent } from './userAgent.mjs'
 
 const HOME = () => {
     const override = String(process.env.DI_HOME || '').trim()
@@ -598,7 +600,8 @@ const cmdMove = async (args) => {
     try {
         const response = await fetch(`${base}/api/projects/${encodeURIComponent(project)}/move`, {
             method: 'POST',
-            headers,
+            // `--from` aims this at another di.iiii: it says who it is there too (userAgent.mjs).
+            headers: withUserAgent(headers),
             body: JSON.stringify({ toSpace: to, unpublish: Boolean(args.flags.unpublish), dryRun })
         })
         const body = await response.json().catch(() => ({}))
@@ -611,6 +614,25 @@ const cmdMove = async (args) => {
         fail(String(error?.message || error))
         process.exitCode = 1
     }
+}
+
+/** `di post draft|show|send|channels` — the share door; same address and login rules as `di move`. */
+const cmdPost = async (args) => {
+    const from = args.flags.from
+    const headers = {}
+    let base
+    if (from && from !== true) {
+        base = `${String(from).replace(/\/+$/, '')}/serverXR`
+        const token = args.flags.token === '-' ? (await readStdin()).trim() : moveToken({ from, env: process.env })
+        if (token) headers.Authorization = `Bearer ${token}`
+    } else {
+        const home = HOME()
+        if (!requireInstalled(home)) return
+        const port = resolvePort(home)
+        if (!(await alive(home, port))) { say(ui.notRunning()); return }
+        base = apiBase(home, port)
+    }
+    process.exitCode = await runPost(args, { base, headers: withUserAgent(headers), say, fail })
 }
 
 const cmdSpaces = async () => {
@@ -874,25 +896,27 @@ const cmdUpdate = async (args) => {
 
     say(ui.installing(release.version))
     let staged
-    let rehearsal = null
     try {
         staged = await stageVersion({ home, release, verbose })
         // The rehearsal: the new build opens a COPY of the artist's own data and
         // runs its migrations there. An empty scratch directory only ever proved
-        // the binary starts, which is not what an update risks.
-        rehearsal = await rehearseAgainst({ home })
-        if (rehearsal) say(ui.rehearsing())
-        const healthy = await smokeTest({
-            home,
-            versionDir: staged.partialDir,
-            nodeBinary: node.nodeBinary(home),
-            dataRoot: rehearsal
+        // the binary starts, which is not what an update risks. The copy is
+        // thrown away on every path, success or not; the real database is
+        // migrated afterwards, by the build that has now proved it can.
+        await withRehearsal({ home }, async (rehearsal) => {
+            if (rehearsal) say(ui.rehearsing())
+            const healthy = await smokeTest({
+                home,
+                versionDir: staged.partialDir,
+                nodeBinary: node.nodeBinary(home),
+                dataRoot: rehearsal
+            })
+            if (!healthy) {
+                throw new Error(rehearsal
+                    ? 'the new version could not open your work — nothing has been changed'
+                    : 'the new version did not answer on a test port')
+            }
         })
-        if (!healthy) {
-            throw new Error(rehearsal
-                ? 'the new version could not open your work — nothing has been changed'
-                : 'the new version did not answer on a test port')
-        }
     } catch (error) {
         // Nothing has been stopped and `current` has not moved, so the artist
         // is exactly where they were — say so plainly rather than leaving them
@@ -902,11 +926,6 @@ const cmdUpdate = async (args) => {
         say(ui.updateFailed(from))
         process.exitCode = 1
         return
-    } finally {
-        // The rehearsal was a copy and its migrations are thrown away with it.
-        // The real database is migrated afterwards, by the build that has now
-        // proved it can.
-        if (rehearsal) await fsp.rm(rehearsal, { recursive: true, force: true }).catch(() => {})
     }
 
     const runner = runnerFor(home)
@@ -1172,16 +1191,18 @@ const cmdFollow = async (args) => {
     const at = readAtFlag(args)
     if (at === false) { process.exitCode = 1; return }
 
-    if (!spaceId || !from) {
-        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
-        process.exitCode = 1
-        return
-    }
-
     // The answer to a refusal, never a default (audit F4): at most one.
     const takeHost = Boolean(args.flags['take-host'])
     const takeMine = Boolean(args.flags['take-mine'])
     if (takeHost && takeMine) { fail(ui.followBothDirections()); process.exitCode = 1; return }
+
+    // `--take-mine` / `--take-host` alone may name a space already followed:
+    // followSpace takes that follow's remote. Anything else needs --from.
+    if (!spaceId || (!from && !takeHost && !takeMine)) {
+        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
+        process.exitCode = 1
+        return
+    }
     // `--from-now` is the default start, accepted so it can be said out loud;
     // `--replay` is the old one — read both logs from the beginning.
     if (args.flags['from-now'] && args.flags.replay) { fail(ui.followBothStarts()); process.exitCode = 1; return }
@@ -1194,11 +1215,20 @@ const cmdFollow = async (args) => {
         insecure: Boolean(args.flags.insecure)
     })
     if (!result.ok) {
-        sayFollowRefusal(result.reason, { spaceId, url: from }, at)
+        // The short form asked the stored follow's remote, through its pin:
+        // name those — not "undefined", and no --at hint when a pin was used.
+        const stored = from ? null : (readFollows(paths(home).data)[spaceId] ?? null)
+        const where = from || stored?.remote
+        const pin = at || stored?.address || null
+        if (result.reason === 'no-from') fail(ui.followNotFollowed(spaceId))
+        else if (result.reason === 'remote-differs') fail(ui.followRemoteDiffers(spaceId, result.stored, result.base))
+        else sayFollowRefusal(result.reason, { spaceId, url: where }, pin)
         process.exitCode = 1
         return
     }
-    say(ui.following(spaceId, result.base, result.running, at))
+    if (result.keptKey) say(ui.followKeptKey())
+    // result.address is the pin used: typed with --at, or the stored follow's.
+    say(ui.following(spaceId, result.base, result.running, result.address))
 }
 
 /** `di follows` — what this install is following, and whether it is keeping up. */
@@ -1622,6 +1652,7 @@ const COMMANDS = {
     follow: cmdFollow,
     stage: cmdStage,
     follows: cmdFollows,
+    post: cmdPost,
     unfollow: cmdUnfollow,
     down: cmdDown,
     stop: cmdDown,

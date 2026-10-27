@@ -10,8 +10,9 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import { parseArgs } from './args.mjs'
-import { devRelease, hubCommit, hubUrl, isChannel } from './channels.mjs'
+import { devRelease, hubCommit, hubUrl, isChannel, retryAfterMs, userAgent } from './channels.mjs'
 import { stageVersion } from './install.mjs'
+import { classifyUserAgent } from '../../serverXR/src/appVisitors.js'
 
 const SHA_A = 'a'.repeat(8) + 'b'.repeat(32)
 const SHA_B = 'c'.repeat(8) + 'd'.repeat(32)
@@ -75,6 +76,87 @@ describe('the dev pick is gated on the hub commit, and anonymous', () => {
         await devRelease({ hub: 'https://h', installed: `0.4.16-dev.${'c'.repeat(8)}`, fetchImpl: feed({ release: { gitCommit: SHA_A } }, [A8], calls) })
         expect(calls).toHaveLength(2)
         expect(calls.every(c => !c.includes('api.github.com'))).toBe(true)
+    })
+})
+
+// A hub that answers the given statuses in order, then 200 with SHA_A.
+const answers = (steps, calls = []) => async (url) => {
+    calls.push(String(url))
+    const step = steps[calls.length - 1]
+    if (!step) return { ok: true, status: 200, json: async () => ({ release: { gitCommit: SHA_A } }) }
+    const headers = new Headers(step.headers || {})
+    return { ok: false, status: step.status, headers, text: async () => step.body ?? '' }
+}
+
+describe('the health read waits out a 429 or 503 and says who answered when it gives up', () => {
+    const edge429 = { status: 429, headers: { server: 'cloudflare', 'cf-ray': '8f1e2d3c4b5a6978-FRA' }, body: '<html>\n  <title>429 Too Many Requests</title>' + 'x'.repeat(300) }
+
+    it('succeeds after one retry when a 429 is followed by a 200, waiting 2 s', async () => {
+        const calls = []; const slept = []
+        const commit = await hubCommit({ hub: 'https://h', fetchImpl: answers([edge429], calls), sleep: async (ms) => { slept.push(ms) } })
+        expect(commit).toBe(SHA_A)
+        expect(calls).toHaveLength(2)
+        expect(slept).toEqual([2000])
+    })
+    it('honours Retry-After in seconds and as an HTTP date', async () => {
+        const slept = []
+        const sleep = async (ms) => { slept.push(ms) }
+        await hubCommit({ hub: 'https://h', fetchImpl: answers([{ status: 429, headers: { 'retry-after': '5' } }]), sleep })
+        const now = () => Date.parse('Wed, 21 Oct 2026 00:00:00 GMT')
+        await hubCommit({ hub: 'https://h', fetchImpl: answers([{ status: 503, headers: { 'retry-after': 'Wed, 21 Oct 2026 00:00:07 GMT' } }]), sleep, now })
+        expect(slept).toEqual([5000, 7000])
+        expect(retryAfterMs('soon')).toBeNull()
+    })
+    it('waits 2, 4, 8 s and caps the total at 30 s', async () => {
+        const slept = []
+        const sleep = async (ms) => { slept.push(ms) }
+        await expect(hubCommit({ hub: 'https://h', fetchImpl: answers([edge429, edge429, edge429, edge429]), sleep })).rejects.toThrow()
+        expect(slept).toEqual([2000, 4000, 8000])
+        slept.length = 0
+        const long = { status: 429, headers: { 'retry-after': '20' } }
+        await expect(hubCommit({ hub: 'https://h', fetchImpl: answers([long, long, long, long]), sleep })).rejects.toThrow()
+        expect(slept).toEqual([20000, 10000])
+        expect(slept.reduce((a, b) => a + b, 0)).toBe(30000)
+    })
+    it('fails after three retries with one line naming status, server, cf-ray and the body', async () => {
+        const calls = []
+        const error = await hubCommit({ hub: 'https://dev.diiii.xyz', fetchImpl: answers([edge429, edge429, edge429, edge429], calls), sleep: async () => {} }).catch(e => e)
+        expect(calls).toHaveLength(4)
+        expect(error.message).not.toMatch(/\n/)
+        expect(error.message).toBe(
+            "could not read the hub's health (https://dev.diiii.xyz: 429; server cloudflare; cf-ray 8f1e2d3c4b5a6978-FRA; after 3 retries; body "
+            + JSON.stringify(('<html> <title>429 Too Many Requests</title>' + 'x'.repeat(300)).slice(0, 120)) + ')')
+    })
+    it('names retry-after in the line when the last answer carried one', async () => {
+        const r = { status: 503, headers: { 'retry-after': '1' } }
+        await expect(hubCommit({ hub: 'https://h', fetchImpl: answers([r, r, r, r]), sleep: async () => {} }))
+            .rejects.toThrow("could not read the hub's health (https://h: 503; retry-after 1; after 3 retries; no body)")
+    })
+    it('names x-powered-by, which marks serverXR behind Cloudflare (server and cf-ray come on every answer)', async () => {
+        const bounced = { status: 429, headers: { server: 'cloudflare', 'x-powered-by': 'Express', 'cf-ray': 'a4db4dc48bf9d94c-EVN', 'retry-after': '1' }, body: '{"error":"Too many requests from this address by an unidentified program — retry in 1s."}' }
+        await expect(hubCommit({ hub: 'https://h', fetchImpl: answers([bounced, bounced, bounced, bounced]), sleep: async () => {} }))
+            .rejects.toThrow('(https://h: 429; server cloudflare; x-powered-by Express; cf-ray a4db4dc48bf9d94c-EVN; retry-after 1; after 3 retries; body "{\\"error\\":\\"Too many requests from this address by an unidentified program')
+    })
+    it('does not retry a 500', async () => {
+        const calls = []; const slept = []
+        await expect(hubCommit({ hub: 'https://h', fetchImpl: answers([{ status: 500, body: 'boom' }], calls), sleep: async (ms) => { slept.push(ms) } }))
+            .rejects.toThrow("could not read the hub's health (https://h: 500; body \"boom\")")
+        expect(calls).toHaveLength(1)
+        expect(slept).toEqual([])
+    })
+})
+
+describe('di names itself to the hub, so the bouncer counts it as an identified app', () => {
+    it('sends a User-Agent with its version and a contact on the health read', async () => {
+        const seen = []
+        const fetchImpl = async (url, init) => { seen.push(init.headers['User-Agent']); return { ok: true, status: 200, json: async () => ({ release: { gitCommit: SHA_A } }) } }
+        await devRelease({ hub: 'https://h', installed: `0.4.16-dev.${'a'.repeat(8)}`, fetchImpl })
+        expect(seen).toEqual(['di.iiii/0.4.16-dev.aaaaaaaa (+https://diiii.xyz/for-apps)'])
+    })
+    it('is classified as an app by serverXR, where Node\'s default is anonymous', () => {
+        expect(classifyUserAgent(userAgent('0.4.16'))).toMatchObject({ kind: 'app', name: 'di.iiii', contact: 'https://diiii.xyz/for-apps' })
+        expect(classifyUserAgent(userAgent(null))).toMatchObject({ kind: 'app', name: 'di.iiii' })
+        expect(classifyUserAgent('node').kind).toBe('anonymous')
     })
 })
 

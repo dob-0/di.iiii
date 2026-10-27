@@ -17,12 +17,11 @@
 //     who chose it;
 //   - a private space is not shown to a stranger; the setting is the operator's alone.
 import { mkdtemp, rm } from 'node:fs/promises'
-import { spawn } from 'node:child_process'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const SERVER_ENTRY = path.join(HERE, 'index.js')
@@ -32,24 +31,13 @@ const STRANGER = 'show-stranger-token'
 const AWAY = { 'X-Forwarded-For': '203.0.113.9' }
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-const getFreePort = () => new Promise((resolve, reject) => {
-    const probe = net.createServer()
-    probe.on('error', reject)
-    probe.listen(0, '127.0.0.1', () => {
-        const { port } = probe.address()
-        probe.close((error) => (error ? reject(error) : resolve(port)))
-    })
-})
-
 let server = null
 
 const startServer = async () => {
     const cwd = await mkdtemp(path.join(os.tmpdir(), 'dii-show-cwd-'))
     const dataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-show-data-'))
-    const port = await getFreePort()
     const env = {
         ...process.env,
-        PORT: String(port),
         NODE_ENV: 'production',
         DI_LOCAL: '1',
         ARTNET_OFFLINE: '1',
@@ -69,21 +57,12 @@ const startServer = async () => {
     delete env.SPACES_DIR
     delete env.UPLOADS_DIR
     delete env.DI_ALLOW_LAN_DEVICES
-    const child = spawn(process.execPath, [SERVER_ENTRY], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] })
-    let logs = ''
-    child.stdout.on('data', (chunk) => { logs += chunk })
-    child.stderr.on('data', (chunk) => { logs += chunk })
+    const { child, port, logs: readLogs } = await spawnServerUntilReady({ entry: SERVER_ENTRY, cwd, env })
     const origin = `http://127.0.0.1:${port}`
-    const deadline = Date.now() + 20000
-    while (Date.now() < deadline) {
-        if (child.exitCode !== null) throw new Error(`server exited early\n${logs}`)
-        try { if ((await fetch(`${origin}/serverXR/api/health`)).ok) break } catch { /* booting */ }
-        await wait(200)
-    }
     return {
         origin,
         baseUrl: `${origin}/serverXR`,
-        logs: () => logs,
+        logs: readLogs,
         stop: async () => {
             if (child.exitCode === null) {
                 child.kill('SIGTERM')

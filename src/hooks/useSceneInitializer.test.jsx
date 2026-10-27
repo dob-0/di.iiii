@@ -125,7 +125,7 @@ describe('useSceneInitializer', () => {
             sceneVersion: 8,
             objects: [],
             assets,
-            assetsBaseUrl: 'https://di-studio.xyz/serverXR/api/spaces/main/assets',
+            assetsBaseUrl: 'https://diiii.xyz/serverXR/api/spaces/main/assets',
             backgroundColor: defaultScene.backgroundColor,
             gridSize: defaultScene.gridSize,
             gridAppearance: defaultGridAppearance,

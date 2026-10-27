@@ -164,6 +164,45 @@ What ends up in the working folder:
 | `import.json` | where it went and the addresses to walk |
 | `pulled/` | only with `--from-space`: the footage as it came down off the API |
 
+## 360 footage — an Insta360 (or any 360 camera) as scan input
+
+Footage from a 360 camera goes in the same drop folder, or the same space's footage room, as phone clips. Nothing to
+switch on: step 1 (`frames.mjs`) looks inside each file and cuts every sphere into ordinary pinhole views.
+
+```bash
+# export from Insta360 Studio first: Export, MP4 / JPG, "Panoramic" (not Reframe), highest resolution
+node scripts/place/place.mjs --from /mnt/data/footage/hayfilm-walk --name hayfilm --scale-edge 24   # phone + 360 mixed
+node scripts/place/place.mjs --from-space hayfilm --name hayfilm --scale-edge 24                    # a space's own footage
+node scripts/place/frames.mjs --from <folder> --work <work> --views 8 --pano-fov 90 --mask-sector 180:50   # step 1 alone
+```
+
+- **Found by content, never by name.** A picture or clip is a sphere when its Photo Sphere XMP (`GPano:ProjectionType`)
+  or ffprobe's spherical side data says equirectangular and it is 2:1, or when it is 2:1 and at least 1440 px wide with no
+  metadata (the basis is printed). A raw `.insv` / `.insp` (dual fisheye) is found by Insta360's 32-byte trailer
+  signature or by two square video streams, skipped, and the export steps above are printed. The Insta360 SDK is not
+  bundled: it is given on application, with an NDA and a business licence (insta360.com/sdk/apply); its redistribution
+  terms were not read (owed).
+- **Method.** Each sphere becomes pinhole views that share one centre, the practice of COLMAP's `panorama_sfm.py` and
+  AliceVision's Split360Images node. Default: 8 views round the horizon, 90 degrees each (45 degrees apart: 50 % overlap),
+  plus one straight up (trusses, lanterns); nothing looks down. View side = the sphere's own density
+  (width x fov / 360, 640 to 2400 px), so nothing is upscaled. The EXIF carries `FocalLengthIn35mmFilm` so the build starts
+  from the true focal. Output: `images/pano-NNNNN-vK.jpg`, beside the phone's `frame-NNNNN.jpg`.
+- **Photographer.** Everything pointing more than `--mask-below` (60) degrees under the horizon is painted black (no
+  features, so the matcher ignores it), and a view that is more than half black is not written. A person standing behind
+  a hand-held camera: `--mask-sector <yaw>:<half-width>` (for example `180:50`) blacks out that sector; the default is
+  none, because where the photographer stands depends on how the camera was held.
+- **Sampling.** Clips are sampled at `--pano-fps` (1), blur and sameness are scored on the sphere (own batch, not mixed
+  with phone frames), and at most `--max-pano-frames` (150) spheres are cut, evenly spread: 150 x 9 = 1350 views is already
+  heavy for one Meshroom run. These two numbers are starting points, not measured on a real hall.
+- **Rig.** `rig.json` in the work folder lists, per sphere, its views, so views of one centre can be found again.
+  Meshroom's Split360Images writes the same relation as `rig.sfm` and CameraInit has `rigId` / `subPoseId` fields. The
+  Meshroom batch in `colab-job.mjs` is fed a folder of pictures and does not read that relation, so today the views are
+  matched as independent cameras with one shared focal. A rig-aware build is owed and untested.
+- **Checked** on a synthetic box room (`pano_synth.py`, ray cast from numbers, no photograph): each view differs from a true
+  pinhole render of the same room by 1.7 to 2.9 grey levels of 255 (a straight line stays straight because the view is a
+  pinhole image), and by 2.2 to 2.5 from ffmpeg's `v360`. A view turned 5 degrees off fails the same test (above 8).
+  Tests: `npx vitest run scripts/place/pano`. Not tested: a real Insta360 file.
+
 ## Looking at the scanning page
 
 Three defects in `/{space}/scan` were found only by driving it, and none of them

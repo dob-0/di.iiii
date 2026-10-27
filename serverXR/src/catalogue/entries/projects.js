@@ -168,7 +168,7 @@ module.exports = [
         required: ["toSpace"]
       }
     },
-    note: "admin, or the owner of BOTH spaces (403 otherwise). Two MANAGE sync keys may also move (SPEC_space_sync_keys.md §13.2): the bearer is the source space's key and alsoSyncKey the target's; both spaces must have the same owner and both keys be his (403 sync_key_not_same_owner); nobody new may gain access — never into the communal open space, into an open space unless the project is private, or into a space with accounts, token scopes, invite links or other keys the source lacks (403 sync_key_never_public: do this signed in); never with unpublish; at most 10 an hour and 30 a day per key (429). 409 on a slug already used in the target, on a front-door project without unpublish, or a directory already there. All-or-nothing: files, rewritten links and the database row are put back if any step fails. Writes a project_moves line, so the old bare link answers with where the project went. A follow does not carry a move yet: each install that follows either space runs the same move."
+    note: "admin, or the owner of BOTH spaces (403 otherwise; a target space that does not exist answers 404 only to an admin, to anyone else the same 403). Two MANAGE sync keys may also move (SPEC_space_sync_keys.md §13.2): the bearer is the source space's key and alsoSyncKey the target's; both spaces must have the same owner and both keys be his (403 sync_key_not_same_owner); nobody new may gain access — never into the communal open space, into an open space unless the project is private, or into a space with accounts, token scopes, invite links or other keys the source lacks (403 sync_key_never_public: do this signed in); never with unpublish; at most 10 an hour and 30 a day per key (429). 409 on a slug already used in the target, on a front-door project without unpublish, or a directory already there. All-or-nothing: files, rewritten links and the database row are put back if any step fails. Writes a project_moves line, so the old bare link answers with where the project went. A follow does not carry a move yet: each install that follows either space runs the same move."
   },
   {
     route: "PATCH /api/projects/:projectId/shelf",
@@ -194,5 +194,13 @@ module.exports = [
     role: "viewer",
     agent: true,
     note: "404 for both 'does not exist' and 'exists but private' — existence of a private space is not revealed."
+  },
+  {
+    route: "GET /api/resolve/:spaceSegment",
+    summary: "where a space's bare address forwards: { movedTo } when its front door left in a recorded move and none was set since",
+    reach: "read",
+    role: "viewer",
+    agent: true,
+    note: "404 when there is nothing to forward, and when the caller could not open the destination project or its space — a private destination is never named."
   },
 ]

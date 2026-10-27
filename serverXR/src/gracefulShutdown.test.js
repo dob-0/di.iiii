@@ -5,28 +5,32 @@
 // deadline leaving a database that opens clean with no write-ahead file behind
 // (SQLite WAL: https://sqlite.org/wal.html#ckpt).
 import { mkdtemp, rm, readdir, stat } from 'node:fs/promises'
-import { spawn } from 'node:child_process'
 import { DatabaseSync } from 'node:sqlite'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 const require = createRequire(import.meta.url)
 const { createShutdown, createInflight } = require('./gracefulShutdown')
 const http = require('node:http')
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-const freePort = () => new Promise((resolve, reject) => {
-  const probe = net.createServer()
-  probe.on('error', reject)
-  probe.listen(0, '127.0.0.1', () => { const { port } = probe.address(); probe.close(() => resolve(port)) })
-})
+// The server is already listening when this runs, and it still creates and removes short-lived lock directories
+// (follows.lock.guard) in the data folder: a directory that vanishes mid-walk is not an error, look again.
 const findDb = async (dir) => {
-  for (const entry of await readdir(dir, { withFileTypes: true, recursive: true })) {
-    if (entry.isFile() && entry.name.endsWith('.db')) return path.join(entry.parentPath || entry.path, entry.name)
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    try {
+      for (const entry of await readdir(dir, { withFileTypes: true, recursive: true })) {
+        if (entry.isFile() && entry.name.endsWith('.db')) return path.join(entry.parentPath || entry.path, entry.name)
+      }
+      return null
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error
+      await wait(50)
+    }
   }
   return null
 }
@@ -35,22 +39,11 @@ describe('serverXR stops in order on SIGTERM', () => {
   it('exits 0 within the deadline and leaves a clean database', async () => {
     const cwd = await mkdtemp(path.join(os.tmpdir(), 'dii-shutdown-cwd-'))
     const dataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-shutdown-data-'))
-    const port = await freePort()
-    const env = { ...process.env, PORT: String(port), APP_BASE_PATH: '/serverXR', DATA_ROOT: dataRoot, REQUIRE_AUTH: 'false' }
+    const env = { ...process.env, APP_BASE_PATH: '/serverXR', DATA_ROOT: dataRoot, REQUIRE_AUTH: 'false' }
     for (const k of ['API_TOKEN', 'SPACES_DIR', 'UPLOADS_DIR', 'ADMIN_API_TOKEN', 'VIEWER_API_TOKEN']) delete env[k]
-    const child = spawn(process.execPath, [path.join(HERE, 'index.js')], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] })
-    let logs = ''
-    child.stdout.on('data', (c) => { logs += c })
-    child.stderr.on('data', (c) => { logs += c })
+    const { child, logs: readLogs } = await spawnServerUntilReady({ entry: path.join(HERE, 'index.js'), cwd, env, readyTimeoutMs: 30000 })
     const exited = new Promise((resolve) => child.on('exit', (code, signal) => resolve({ code, signal })))
     try {
-      const deadline = Date.now() + 30000
-      for (;;) {
-        if (child.exitCode !== null) throw new Error(`exited while booting\n${logs}`)
-        try { const r = await fetch(`http://127.0.0.1:${port}/serverXR/api/health`); if (r.ok) break } catch { /* not up */ }
-        if (Date.now() > deadline) throw new Error(`never became healthy\n${logs}`)
-        await wait(150)
-      }
       const dbPath = await findDb(dataRoot)
       expect(dbPath).toBeTruthy()
       // a write that lands in the write-ahead log
@@ -62,7 +55,7 @@ describe('serverXR stops in order on SIGTERM', () => {
       child.kill('SIGTERM')
       const result = await Promise.race([exited, wait(12000).then(() => ({ code: 'timeout' }))])
       const took = Date.now() - t0
-      expect(result, logs).toEqual({ code: 0, signal: null })
+      expect(result, readLogs()).toEqual({ code: 0, signal: null })
       expect(took).toBeLessThan(10000)
       const files = await readdir(path.dirname(dbPath))
       const wal = files.filter((f) => f.endsWith('.db-wal'))

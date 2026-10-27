@@ -11,7 +11,7 @@ describe('preferLocalAssetsBaseUrl', () => {
 
     it('prefers the local server asset base over a remote absolute scene base on localhost', () => {
         expect(preferLocalAssetsBaseUrl({
-            sceneBaseUrl: 'https://di-studio.xyz/serverXR/api/spaces/main/assets',
+            sceneBaseUrl: 'https://diiii.xyz/serverXR/api/spaces/main/assets',
             serverAssetBaseUrl: 'http://localhost:4000/serverXR/api/spaces/main/assets'
         })).toBe('http://localhost:4000/serverXR/api/spaces/main/assets')
     })

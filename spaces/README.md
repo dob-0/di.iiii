@@ -90,12 +90,12 @@ space → Owner & access — or over the API:
 
 ```bash
 # who owns what, and which accounts exist
-curl -s -H "Authorization: Bearer $PROD_API_TOKEN" https://di-studio.xyz/serverXR/api/spaces
-curl -s -H "Authorization: Bearer $PROD_API_TOKEN" https://di-studio.xyz/serverXR/api/users
+curl -s -H "Authorization: Bearer $PROD_API_TOKEN" https://diiii.xyz/serverXR/api/spaces
+curl -s -H "Authorization: Bearer $PROD_API_TOKEN" https://diiii.xyz/serverXR/api/users
 
 # adopt one space (admin only; null releases it back to the platform)
 curl -X PATCH -H "Authorization: Bearer $PROD_API_TOKEN" -H 'Content-Type: application/json' \
-  -d '{"ownerUserId":"<account-id>"}' https://di-studio.xyz/serverXR/api/spaces/<spaceId>
+  -d '{"ownerUserId":"<account-id>"}' https://diiii.xyz/serverXR/api/spaces/<spaceId>
 ```
 
 Spaces created before ownership existed carry `ownerUserId: null`, so every

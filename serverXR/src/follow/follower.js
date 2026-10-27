@@ -20,7 +20,7 @@
 
 const { httpRequest } = require('../httpClient')
 const { accountedThrough, moreToCarry, unseen, planDirection, planAfterConflict, nextInterval, refusedWholeWork, WHOLE_WORK_OPS, failureDelay, isStuckRefusal, describeWriteFailure } = require('./followPlan')
-const { projectIdsFrom, sceneStream, streamsFor } = require('./streams')
+const { MAX_FOLLOWED_PROJECTS, projectIdsFrom, sceneStream, streamsFor } = require('./streams')
 const { createAssetChase } = require('./assets')
 const { CONVERGE_CLIENT, DIRECTIONS, describeCounts, planConverge, readDocument } = require('./followConverge')
 const { planSettings, readSettings } = require('./followSettings')
@@ -277,6 +277,10 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     let departed = resume?.departed && typeof resume.departed === 'object' ? resume.departed : {}
     let projectNotes = []
     let projectsCarried = 0
+    // Ids the other side listed that this follow would not carry, last pass
+    // (follow audit F18): 'bad id' — not an id this server would make, so never
+    // a path here; 'over cap' — past MAX_FOLLOWED_PROJECTS in one list.
+    let refusedIds = { 'bad id': 0, 'over cap': 0 }
     // What this follow's key may do on the host (SPEC_space_sync_keys.md §13):
     // 'manage' carries a trash, restore, making private and a move made here;
     // 'edit' (and a host too old to say: 404) does not. Asked at the start and
@@ -435,6 +439,9 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
         const trashPath = `/api/trash?space=${encodeURIComponent(local.spaceId)}`
         const askedAt = Date.now()
+        // Every id dropped this pass, once each however many lists named it.
+        const dropped = { 'bad id': new Set(), 'over cap': new Set() }
+        const onDrop = (reason, id) => dropped[reason]?.add(id)
         const readHere = () => Promise.all([
             request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
             request(local.url(trashPath), { token: local.token, servername: local.servername, address: local.address })
@@ -455,11 +462,11 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // A project's trash, restore, rename and visibility (followProjects.js).
         // Guard 2: only when all four lists answered as lists — a list that could
         // not be read is never taken for an empty one.
-        if (await carryProjectLife({ here, hereTrash, there, thereTrash })) {
+        if (await carryProjectLife({ here, hereTrash, there, thereTrash, onDrop })) {
             [here, hereTrash] = await readHere()
         }
-        const localProjects = projectIdsFrom(here.payload)
-        const remoteProjects = projectIdsFrom(there.payload)
+        const localProjects = projectIdsFrom(here.payload, onDrop)
+        const remoteProjects = projectIdsFrom(there.payload, onDrop)
         if (fromNow && fromNowPending === null && here.ok && there.ok) {
             fromNowPending = new Set([sceneStream(local.spaceId).key, ...localProjects.filter(id => remoteProjects.includes(id)).map(id => `project:${id}`)])
         }
@@ -472,6 +479,10 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // same id: ids are global in di.iiii, so the same project is the same
         // project on both machines. Title as made; born private when private
         // at the source — never public for a moment. Deletions are not carried.
+        // `carried: true` says the id is not a new choice: the create route refuses
+        // a reserved word as the id of a NEW project (2026-10-26), and a project made
+        // before that rule (`privacy` in the space `main`) must still reach an install
+        // that follows the space, and the host, under the id it has.
         const makeMissing = async (from, toProjects, toSide, toTrash) => {
             // A project deleted on a side is still in that side's trash, and a
             // create there would take it out again (ensureProject restores a
@@ -486,7 +497,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 }
                 return
             }
-            const trashed = new Set(projectIdsFrom(toTrash.payload))
+            const trashed = new Set(projectIdsFrom(toTrash.payload, onDrop))
             const rows = Array.isArray(from.payload?.projects) ? from.payload.projects : []
             for (const projectId of projectIdsFrom(from.payload)) {
                 if (toProjects.includes(projectId)) continue
@@ -504,7 +515,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 const title = typeof row?.title === 'string' && row.title.trim() ? row.title.trim() : projectId
                 const made = await request(toSide.url(path), {
                     method: 'POST', token: toSide.token, servername: toSide.servername, address: toSide.address,
-                    body: { slug: projectId, title, ...(row?.visibility === 'private' ? { visibility: 'private' } : {}) }
+                    body: { slug: projectId, title, carried: true, ...(row?.visibility === 'private' ? { visibility: 'private' } : {}) }
                 })
                 // Made EMPTY on the host from this side's listing: its content has to
                 // follow by comparison, whatever ops there are or are not.
@@ -544,6 +555,12 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // follow on every pass.
         const kept = (id) => !departed[id]
         streams = streamsFor({ spaceId: local.spaceId, localProjects: localProjects.filter(kept), remoteProjects: remoteProjects.filter(kept) })
+        refusedIds = { 'bad id': dropped['bad id'].size, 'over cap': dropped['over cap'].size }
+        // Once per pass, never per id: a list of 10 000 is one line.
+        if (refusedIds['bad id'] || refusedIds['over cap']) {
+            const sample = [...dropped['bad id']].slice(0, 3).map(id => JSON.stringify(id.slice(0, 40))).join(', ')
+            log.warn?.(`[follow] ${local.spaceId}: ids not carried this pass — ${refusedIds['bad id']} bad id${sample ? ` (${sample})` : ''}, ${refusedIds['over cap']} over the cap of ${MAX_FOLLOWED_PROJECTS}`)
+        }
     }
 
     /** Said once per distinct thing, in the log; `di follows` carries the current notes. */
@@ -560,7 +577,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
      * through the receiving install's own route. Returns true when this install
      * changed, so the caller reads its lists again.
      */
-    const carryProjectLife = async ({ here, hereTrash, there, thereTrash }) => {
+    const carryProjectLife = async ({ here, hereTrash, there, thereTrash, onDrop = null }) => {
         const lists = { hereLive: listOf(here), hereTrash: listOf(hereTrash), thereLive: listOf(there), thereTrash: listOf(thereTrash) }
         // A stopped follow changes nothing more, even in the middle of a pass.
         if (stopped || Object.values(lists).some(list => list === null)) return false
@@ -575,7 +592,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             departed,
             here: { live: lists.hereLive, trash: lists.hereTrash },
             there: { live: lists.thereLive, trash: lists.thereTrash },
-            manageThere
+            manageThere,
+            onDrop
         })
         const nextBase = plan.base
         let changedHere = false
@@ -713,8 +731,9 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
      * project into this space from another space it follows from the same
      * host; on the host it is still in that other space. Find which one (each
      * other follow's key reads its own space), and ask the host to move it with
-     * that space's key as the bearer and this space's in X-Di-Sync-Key-Also —
-     * the host checks both are manage keys (SPEC_space_sync_keys.md §13.2).
+     * that space's key as the bearer and this space's as `alsoSyncKey` in the
+     * JSON body (never a header; review L4, r3 I3) — the host checks both are
+     * manage keys (SPEC_space_sync_keys.md §13.2, §13.3).
      * Returns true when the host moved it.
      */
     const moveThere = async (projectId) => {
@@ -771,28 +790,32 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             request(local.url(`${path}/projects`), { token: local.token, servername: local.servername, address: local.address })
         ])
         if (!there.ok || !here.ok) return
-        const { patch, notes } = planSettings({
+        const { patch, slug, notes } = planSettings({
             host: readSettings(there.payload),
             local: readSettings(here.payload),
             localProjects: Array.isArray(mine.payload?.projects) ? mine.payload.projects : []
         })
         settingsNotes = notes
-        if (!Object.keys(patch).length) return
-        // The same change asked twice in a row and refused is said once.
-        const attempt = JSON.stringify(patch)
-        const answer = await request(local.url(path), { method: 'PATCH', token: local.token, servername: local.servername, address: local.address, body: patch })
-        if (answer.ok && answer.status === 200) {
-            settingsAttempted.delete(attempt)
-            settingsCarried += 1
-            log.info?.(`[follow] ${local.spaceId}: took the host's space settings (${Object.keys(patch).join(', ')})`)
-            return
+        // The address goes on its own: a name taken here (409) must not hold back the rest.
+        for (const body of [patch, slug ? { slug } : {}]) {
+            if (!Object.keys(body).length) continue
+            const what = Object.keys(body).join(', ')
+            // The same change asked twice in a row and refused is said once.
+            const attempt = JSON.stringify(body)
+            const answer = await request(local.url(path), { method: 'PATCH', token: local.token, servername: local.servername, address: local.address, body })
+            if (answer.ok && answer.status === 200) {
+                settingsAttempted.delete(attempt)
+                settingsCarried += 1
+                log.info?.(`[follow] ${local.spaceId}: took the host's space settings (${what})`)
+                continue
+            }
+            if (!settingsAttempted.has(attempt)) {
+                settingsAttempted.add(attempt)
+                const why = answer.status === 202 ? 'it waits for approval here' : `${answer.status || 'no answer'}: ${answer.payload?.error || answer.error || 'refused'}`
+                log.warn?.(`[follow] ${local.spaceId}: could not take the host's space settings (${what}) — ${why}`)
+            }
+            settingsNotes = [...settingsNotes, `the host's ${what} could not be set here`]
         }
-        if (!settingsAttempted.has(attempt)) {
-            settingsAttempted.add(attempt)
-            const why = answer.status === 202 ? 'it waits for approval here' : `${answer.status || 'no answer'}: ${answer.payload?.error || answer.error || 'refused'}`
-            log.warn?.(`[follow] ${local.spaceId}: could not take the host's space settings (${Object.keys(patch).join(', ')}) — ${why}`)
-        }
-        settingsNotes = [...notes, `the host's ${Object.keys(patch).join(', ')} could not be set here`]
     }
 
     // Project short names (followSlugs.js), both ways: a name chosen on one side and not on
@@ -1132,7 +1155,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 lastAnswerAt: hostDown || answered.down ? started.lastAnswerAt : Date.now(),
                 latencyMs: answered.latencyMs,
                 settings: { carried: settingsCarried, notes: settingsNotes },
-                projects: { carried: projectsCarried, notes: projectNotes, paired: Object.keys(projectBase || {}).sort() },
+                projects: { carried: projectsCarried, notes: projectNotes, paired: Object.keys(projectBase || {}).sort(), refusedIds },
                 slugs: { carried: slugsCarried, notes: slugNotes },
                 key: {
                     scope: keyScope,

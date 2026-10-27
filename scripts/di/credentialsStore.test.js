@@ -21,9 +21,9 @@ const mode = (file) => fs.statSync(file).mode & 0o777
 describe('credentialsStore', () => {
     it('round-trips a link and preserves other links on rewrite', () => {
         writeLink(home, 'open', { remote: 'https://dev.diiii.xyz/serverXR', key: 'dii_sync_a.s1' })
-        writeLink(home, 'wcc', { remote: 'https://di-studio.xyz/serverXR', key: 'dii_sync_b.s2' })
+        writeLink(home, 'wcc', { remote: 'https://diiii.xyz/serverXR', key: 'dii_sync_b.s2' })
         expect(readLink(home, 'open').key).toBe('dii_sync_a.s1')
-        expect(readLink(home, 'wcc').remote).toBe('https://di-studio.xyz/serverXR')
+        expect(readLink(home, 'wcc').remote).toBe('https://diiii.xyz/serverXR')
         expect(readLink(home, 'open').linkedAt).toMatch(/^\d{4}-/)
     })
 

@@ -23,6 +23,7 @@ import { fileURLToPath } from 'node:url'
 import { parseArgs } from './args.mjs'
 import { cleanText, cmdLogin, cmdLogout, cmdWhoami, hasDisplay, labelFor, mcpArgs, moveToken, openInBrowser } from './login.mjs'
 import { credentialsFile, readLogin, writeLogin } from './loginStore.mjs'
+import { DI_USER_AGENT } from './userAgent.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const CLI = path.join(HERE, 'cli.mjs')
@@ -105,7 +106,7 @@ const isStart = (r) => r.path.endsWith('/device/start')
 const isPoll = (r) => r.path.endsWith('/device/token')
 const mode = (target) => fs.statSync(target).mode & 0o777
 // The three hosts the tiers name are answered by the stub; the URL asked for is still recorded as asked.
-const rewrite = (url) => String(url).replace(/^(https:\/\/(dev\.diiii\.xyz|di-studio\.xyz)|http:\/\/localhost:4000)/, ORIGIN)
+const rewrite = (url) => String(url).replace(/^(https:\/\/(dev\.diiii\.xyz|diiii\.xyz|di-studio\.xyz)|http:\/\/localhost:4000)/, ORIGIN)
 
 /** One command, in process: real HTTP to the stub, everything else fake. */
 const run = async (command, argv, { env = { DISPLAY: ':0' }, platform = 'linux', fetchImpl = null, signal = null, onSleep = null, hostname = 'taron-laptop', version = '0.4.17' } = {}) => {
@@ -323,6 +324,16 @@ describe('di login — the flow', () => {
         expect(seenInit.every((init) => init.redirect === 'manual')).toBe(true)
     })
 
+    it('names itself to the hub on every request, so its polling is not throttled as an anonymous program', async () => {
+        S.polls = [PENDING, approved()]
+        const agents = []
+        const fetchImpl = (url, init) => { agents.push(init?.headers?.['user-agent']); return fetch(url, init) }
+        const r = await login(['--no-open'], { fetchImpl })
+        expect(r.code).toBe(0)
+        expect(agents.length).toBeGreaterThan(1)
+        expect(new Set(agents)).toEqual(new Set([DI_USER_AGENT]))
+    })
+
     it('Ctrl-C ends the wait at once, says nothing was saved, and writes nothing (exit 130)', async () => {
         S.polls = [PENDING]
         const controller = new AbortController()
@@ -385,13 +396,20 @@ describe('di login — who it signs in as, and what it keeps', () => {
 
         S.pollIndex = 0
         const prod = await run(cmdLogin, ['login', '--no-open', '--tier', 'prod'])
-        expect(prod.requested[0]).toBe('POST https://di-studio.xyz/serverXR/api/auth/device/start')
+        expect(prod.requested[0]).toBe('POST https://diiii.xyz/serverXR/api/auth/device/start')
         expect(Object.keys(JSON.parse(fs.readFileSync(credentialsFile(home), 'utf8'))).sort()).toEqual(['dev', 'prod'])
 
         // --to a tier's own address is that tier
         S.pollIndex = 0
-        const same = await run(cmdLogin, ['login', '--no-open', '--to', 'https://di-studio.xyz/', '--force'])
+        const same = await run(cmdLogin, ['login', '--no-open', '--to', 'https://diiii.xyz/', '--force'])
         expect(same.code).toBe(0)
+        expect(Object.keys(JSON.parse(fs.readFileSync(credentialsFile(home), 'utf8'))).sort()).toEqual(['dev', 'prod'])
+
+        // the old prod address is still prod, and is asked at the address given
+        S.pollIndex = 0
+        const old = await run(cmdLogin, ['login', '--no-open', '--to', 'https://di-studio.xyz/', '--force'])
+        expect(old.code).toBe(0)
+        expect(old.requested[0]).toBe('POST https://di-studio.xyz/serverXR/api/auth/device/start')
         expect(Object.keys(JSON.parse(fs.readFileSync(credentialsFile(home), 'utf8'))).sort()).toEqual(['dev', 'prod'])
     })
 
@@ -518,7 +536,7 @@ describe('di whoami', () => {
         expect(r.out).toContain('not signed in to dev.diiii.xyz — di login')
         expect(r.requested).toEqual([])
         const prod = await run(cmdWhoami, ['whoami', '--tier', 'prod'])
-        expect(prod.out).toContain('not signed in to di-studio.xyz — di login --tier prod')
+        expect(prod.out).toContain('not signed in to diiii.xyz — di login --tier prod')
     })
 
     it('with DI_TOKEN set: says it wins and that the stored login is not the one in use — and still asks about the stored one', async () => {
@@ -546,7 +564,7 @@ describe('di whoami', () => {
         writeLogin({ home, key: 'prod', entry: { token: TOKEN } })
         const r = await run(cmdWhoami, ['whoami', '--tier', 'prod'])
         expect(r.code).toBe(0)
-        expect(r.requested).toEqual(['GET https://di-studio.xyz/serverXR/api/auth/cli/whoami'])
+        expect(r.requested).toEqual(['GET https://diiii.xyz/serverXR/api/auth/cli/whoami'])
     })
 })
 
