@@ -195,6 +195,11 @@ export const releaseFromFile = async (file) => {
  * that is currently installed or running.
  */
 export const stageVersion = async ({ home, release, verbose = false }) => {
+    // A file: release has no feed to compare against (releaseFromFile); one from
+    // the network without its checksums.txt would be installed unchecked.
+    if (!String(release.url).startsWith('file://') && !release.checksumsUrl) {
+        throw new Error(`release ${release.version} has no checksums.txt, so it cannot be verified — refusing to install it`)
+    }
     const p = paths(home)
     const finalDir = p.versionDir(release.version)
     const partialDir = `${finalDir}.partial`
