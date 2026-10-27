@@ -407,6 +407,25 @@ describe('spaceStore snapshots carry project documents', () => {
         expect(await jamEntityIds()).toEqual(['contribution-a'])
     })
 
+    // The create route refuses a reserved word as a new project's id (projectRoutes.js,
+    // 2026-10-26). A restore does not go through that route: a snapshot taken before
+    // the rule may hold such a project, and it has to come back as it was.
+    it('restores a project whose id is a reserved word', async () => {
+        await seedJam(['contribution-a'])
+        const document = {
+            ...jamDocument(['kept']),
+            projectMeta: { id: 'privacy', spaceId: 'open-space', title: 'Privacy Policy', source: 'studio-v3' }
+        }
+
+        const restored = await jamStore.restoreSpaceProjectDocuments('open-space', [
+            { id: 'privacy', meta: { title: 'Privacy Policy', source: 'studio-v3' }, document, assets: {} }
+        ])
+
+        expect(restored.map((entry) => entry.projectId)).toEqual(['privacy'])
+        expect((await projectStore.loadProjectMeta(spacesRoot, 'open-space', 'privacy')).title).toBe('Privacy Policy')
+        expect((await projectStore.readProjectDocument(spacesRoot, 'open-space', 'privacy')).entities.map((e) => e.id)).toEqual(['kept'])
+    })
+
     it('keeps the existing rotation: one file per snapshot, oldest dropped', async () => {
         await seedJam(['contribution-a'])
         const dir = path.join(snapshotsRoot, 'open-space')

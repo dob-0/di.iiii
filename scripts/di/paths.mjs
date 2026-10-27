@@ -37,6 +37,9 @@ export const paths = (home = diHome()) => ({
     // The artist's work. Never inside versions/, so update, rollback and
     // uninstall physically cannot reach it.
     data: path.join(home, 'data'),
+    // Working copies (a rehearsal of the data, a download). Beside data/, on the
+    // same filesystem, never os.tmpdir(): /tmp is a small tmpfs with a quota.
+    scratch: path.join(home, 'scratch'),
     env: path.join(home, 'di.env'),
     state: path.join(home, 'state.json'),
     logs: path.join(home, 'logs'),
