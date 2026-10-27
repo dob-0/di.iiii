@@ -36,6 +36,18 @@ async function deskOn(existing) {
 const beam = (n, extra) => Object.assign({ key: `p:b${n}`, name: `beam ${n}`, code: 'UP-B380F', type: 'up-b380f', mode: '16ch', footprint: 16 }, extra || {});
 const at = (a) => a.map((x) => `${x.key}=U${x.universe}.${x.address}`);
 
+check('an unnumbered lamp early in the list never takes a number a later lamp asked for', async () => {
+  const d = await deskOn();
+  // the 47 of moxir-v2-11: two units newly on DMX (no number) listed BEFORE numbered ones
+  const lamps = [beam(1, { index: 1 }), beam(2), beam(3, { index: 2 }), beam(4, { index: 3 }), beam(5, { index: 4 })]
+    .map((l, i) => Object.assign(l, { universe: 1, address: 1 + i * 16 }));
+  const r = await d.patch({ project: 'p', lamps });
+  const got = Object.fromEntries(r.body.assignments.map((a) => [a.key, a.index]));
+  assert.deepStrictEqual([got['p:b1'], got['p:b3'], got['p:b4'], got['p:b5']], [1, 2, 3, 4], 'numbered lamps keep their numbers');
+  assert.strictEqual(got['p:b2'], 5, 'the unnumbered lamp takes the next number above the asked ones');
+  d.stop();
+});
+
 check('new lamps are patched at the next free address, universe 1 first', async () => {
   const d = await deskOn();
   const r = await d.patch({ project: 'p', lamps: [beam(1), beam(2), beam(3)] });

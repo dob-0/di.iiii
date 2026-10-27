@@ -9,7 +9,8 @@
 // free address found by the desk's OWN allocator (engine.nextFreeAddress). The room
 // then writes back what the desk decided. The desk allocates; the room records.
 //
-//   a lamp new to the desk              created (its address if free, else next free)
+//   a lamp new to the desk              created (its address if free, else next free; its number if asked and free,
+//                                         else above every number the request asks for)
 //   a new lamp carrying the address of  a COPY (duplicate/paste): next free address and
 //     another lamp in the same room       a new index, as a console does on copy
 //   a lamp whose address was typed      moved there if free; REFUSED and flagged if it
@@ -177,7 +178,11 @@ function rigPatch(ctx, body) {
     return !!other && other.universe === lamp.universe && other.address === lamp.address;
   };
 
-  const nextIndex = () => engine.nextIndex();
+  // A lamp with no number takes the next one ABOVE every number this request asks for, not the next free one in the
+  // moment: otherwise an unnumbered lamp early in the list takes a number a later lamp asked for, and that lamp (and
+  // every one after it) is renumbered (the 47 "not where planned" of moxir-v2-11, 2026-10-15).
+  const askedMax = lamps.reduce((m, l) => (Number.isInteger(l.index) ? Math.max(m, l.index) : m), 0);
+  const nextIndex = () => Math.max(engine.nextIndex(), askedMax + 1);
   const indexTaken = (index, skip) => state.fixtures.some((f) => f !== skip && f.index === index);
 
   // Lowest universe (0-based) with `width` free channels in a row, starting at `from`.
