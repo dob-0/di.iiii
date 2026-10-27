@@ -108,3 +108,24 @@ describe('the zoom strip (row 6, §3.8)', () => {
         expect(css).toMatch(/@media \(pointer: coarse\) \{[^@]*\.raw-zoom-step,[^@]*\.raw-graph-zoom-value \{ display: none; \}/)
     })
 })
+
+describe('the corner wordmark is a real target (audit 2026-10-21 NR-04)', () => {
+    // Measured in Chromium at 820x1180: the bare text was 33x17, under 2.5.8's
+    // 24px; axe target-size, serious. The phone rule (≤640px) already gave it 44.
+    const raw = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'styles/raw.css'), 'utf8')
+    it('declares at least 24px of height outside the phone rule', () => {
+        const base = raw.match(/\n\.raw-surface-wordmark \{([^}]*)\}/)[1]
+        expect(base).toMatch(/min-height: 24px;/)
+        expect(base).toMatch(/display: inline-flex;/)
+    })
+
+    // The taller target must not move the letters: they sat at bottom 18px
+    // with a 17px line box (measured in Chromium). bottom 14px put them 0.5px
+    // lower (865 -> 865.5 at 1440x900), against its own comment.
+    it('keeps the letters at bottom 18px: bottom + (min-height - line-height) / 2', () => {
+        const base = raw.match(/\n\.raw-surface-wordmark \{([^}]*)\}/)[1]
+        const px = (prop) => Number(base.match(new RegExp(`\\n\\s*${prop}: ([\\d.]+)px;`))?.[1])
+        expect(px('line-height')).toBe(17)
+        expect(px('bottom') + (px('min-height') - px('line-height')) / 2).toBe(18)
+    })
+})

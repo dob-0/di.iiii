@@ -1535,7 +1535,8 @@ export const WIKI_ARTICLES = [
             { list: [
                 'Press ⌖ to pin a window to the screen — it holds still at its current on-screen position and size while the canvas pans and zooms underneath it, the old behaviour. Press it again to release it back onto the canvas, where it keeps exactly where it was standing.',
                 'Drag the title bar to move a window; drag any edge or corner to resize it, not only the bottom-right grip. Arrow keys on the title bar move it, arrow keys on the corner grip resize it — hold Shift for a one-pixel nudge.',
-                'Scrolling inside a window\'s body belongs to that window: a Text note scrolls, a List scrolls, a Scene orbits. Scrolling on the canvas zooms the desk, and Ctrl/⌘ + scroll zooms the desk from anywhere, including over a window.',
+                'Scrolling inside a window\'s body belongs to that window: a Text note scrolls, a List scrolls, a Scene orbits. Scrolling on the canvas zooms the desk; on a touchpad a sideways two-finger swipe pans it instead of zooming. Ctrl/⌘ + scroll (and a touchpad pinch) zooms the desk from anywhere, including over a window.',
+                'A card moves with the arrow keys too: the card you have tabbed to, or else the selected one, 10 steps a press and 50 with Shift, for when a drag is not the way: a keyboard, a switch, a hand that cannot hold a drag.',
                 'On a phone every window stays pinned — the clamp that fits a wide default frame into a narrow screen is the whole layout there, and a window that travelled freely on the canvas would walk straight off it.',
                 'A window that would open exactly on top of another one steps down and to the right, so four Lists opened one after another show four title bars, not one.',
                 'A node\'s window opens below its card, never over it, also when the canvas moves a little as the first node lands. Positions you have saved stay as they are.',
@@ -1543,7 +1544,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['raw', 'nodes', 'windows', 'pin', 'resize', 'zoom', 'canvas', 'editor', 'escape'],
-        updated: '2026-10-20'
+        updated: '2026-10-21'
     },
     {
         id: 'raw-on-a-phone',
@@ -1554,7 +1555,7 @@ export const WIKI_ARTICLES = [
             'The graph editor was previously mouse-only in a way no amount of zooming could work around: starting a wire on an output port captured the pointer, so the release never reached the input port under your finger and no connection could be made. Dragging between ports now works the same way on a phone as on a desktop.',
             { list: [
                 'Drag from an output port to an input port to wire them. You do not have to land exactly on the dot — the drop snaps to the nearest port that accepts that type, within a finger’s width, so a small miss still connects.',
-                'Pinch with two fingers to zoom and pan the canvas at the same time. The zoom buttons in the bottom-left corner do the same thing in steps.',
+                'Pinch with two fingers to zoom and pan the canvas at the same time. The zoom buttons in the bottom-left corner do the same thing in steps. A pinch never selects a card, even one your first finger lands on: a card is selected when one finger lets go of it. So a card you drag with a finger is not highlighted while it moves; it is selected, and its settings rise, when you let go. A mouse still selects on the press.',
                 'Opening a graph fits it to the screen instead of dropping you at 100% somewhere inside it, so you can see the whole patch before choosing where to work.',
                 'The ⤢ button fits every card, at whatever zoom that takes — on a phone a wide graph can land small, and pinching in from there is one gesture. Fits nobody asked for (opening, resizing) stop at a readable size and say "showing N of M".',
                 'Resizing the window (or turning the phone) keeps the cards: a view you have not moved fits again; a view you panned or zoomed keeps the same point in the middle, and if no card is left on screen it fits.',
@@ -1565,7 +1566,7 @@ export const WIKI_ARTICLES = [
             'The overflow menu (⋯) has an All Nodes Example: one graph containing every node type the palette can create, with a clock driving a chain of maths into a pulsing sphere, a colour crossfade on a cube, and a breathing light. It is the quickest way to see what the node system can currently do — and it is deliberately honest about what it cannot: geometry, texture and signal outputs are declared on several node types but are not computed yet, so those ports are left unwired rather than connected to look complete.'
         ],
         tags: ['raw', 'nodes', 'mobile', 'touch', 'phone', 'example', 'editor', 'fit', 'resize'],
-        updated: '2026-10-02'
+        updated: '2026-10-21'
     },
     {
         id: 'br-id-ge',
@@ -2003,12 +2004,13 @@ export const WIKI_ARTICLES = [
             'On the left is a rail: select, truss, tower, deck, fixture, fx and measure. Drag on the plan with truss to draw a run — it is laid in 3, 2 and 1 m pieces end to end. Click with tower near the end of a truss and the tower stands under it, built to the truss\'s height. Click with fixture near a truss and the lamp hangs at the nearest clamp point. Everything snaps: truss end to truss end, tower top, deck edge, a 0.5 m grid. Type exact numbers in the inspector when you want them — length, height, x, z, turn.',
             'A new lamp is patched on this machine\'s desk as soon as you place it, like in Studio: the number and the address appear beside it. Opening the plot never patches anything — a room that arrived unpatched (a bundle from another machine) stays as it is until you press patch the room on the desk, in the title block. Select several and press patch this group to lay them out again as one block. Two lamps on the same channels are drawn in a dashed box with a !, and the inspector says what the desk said.',
             'The room beside the plan is the same room as in Studio, showing what is selected. On a phone the plan fills the screen; plan and room are one tap apart, and the tools and the inspector are in a sheet you pull up.',
+            'Moving around the plan: the mouse wheel zooms to the pointer; on a touchpad two fingers move the plan and a pinch zooms; on a phone one finger moves it and two pinch. The + − fit buttons at the plan\'s bottom left, and the keys + - 0, zoom without a wheel or a second finger.',
             'Print sheet 1 gives the plot on A3 or A4 at a true scale with a scale bar — the whole rig, or just what is on the screen for a close-up of the stage. Sheets 2 and 3, the patch and the power, are the patch sheet. Print at 100%, not "fit to page".',
             'The hall comes from the model it was built from, never drawn by hand. The plot makes no load or rigging calculation: a truss end with no tower under it is marked free, and the real hang needs a rigger\'s sign-off.',
             'A run may slope: a line hung from a crane on picks of different height (MOXIR\'s "cut", 12 m at 15°) is one run, and its clamp points follow it — a lamp on it sits at its real height, the looks reach it, and the plan draws its footprint (its length × the cosine of the slope). Its heights, picks and loads come from the rig file, which states them with their sources; the plot still makes no calculation of its own.'
         ],
         tags: ['plot', 'lighting plot', 'plan', 'cad', 'truss', 'tower', 'deck', 'stage', 'rig', 'fixture', 'lamp', 'dmx', 'patch', 'address', 'print', 'a3', 'scale', 'room', 'build', 'light engineer', 'crew', 'rp-2'],
-        updated: '2026-10-01'
+        updated: '2026-10-21'
     },
     {
         id: 'rig-cards',
