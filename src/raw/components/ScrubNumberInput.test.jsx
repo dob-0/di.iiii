@@ -233,6 +233,19 @@ describe('ScrubNumberInput component', () => {
         expect(onChange).toHaveBeenLastCalledWith(4.9)
     })
 
+    // A touchpad's sideways swipe is a wheel with deltaY 0. It stepped the
+    // focused value DOWN once per event (dozens per swipe) and ate the page's
+    // horizontal scroll (audit 2026-10-21 NR-03).
+    it('a sideways wheel (deltaY 0) over a focused field changes nothing and is not swallowed', () => {
+        const onChange = vi.fn()
+        const { getByRole } = render(<ScrubNumberInput value={5} onChange={onChange} />)
+        const input = getByRole('spinbutton')
+        input.focus()
+        const notPrevented = fireEvent.wheel(input, { deltaX: 40, deltaY: 0 })
+        expect(onChange).not.toHaveBeenCalled()
+        expect(notPrevented).toBe(true)
+    })
+
     it('a disabled (wired) field ignores drag, keyboard and wheel', () => {
         const onChange = vi.fn()
         const { getByRole } = render(<ScrubNumberInput value={5} onChange={onChange} disabled />)

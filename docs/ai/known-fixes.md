@@ -55,6 +55,34 @@ Cause: 17 test files asked the OS for a free port, closed the probe, and only th
 Fix: every test that starts a serverXR child goes through `serverXR/src/testSupport/spawnServer.mjs` `spawnServerUntilReady` (waits for the child's own listen line, retries a lost race on a new port; `port:` pins one for a restart of the same install). In-process servers listen on port 0 and read `address().port`. Guard: `testSupport/noPickedPort.test.js` fails on any test file that picks a port by hand. Side effect found: the child is now ready sooner, so `gracefulShutdown.test.js` walked the data folder while `follows.lock.guard` vanished (ENOENT); its `findDb` now looks again.
 Follow-up 2026-10-21: `scripts/space-cleanup.test.js` (now `spawnServerUntilReady`) and `scripts/di/openFile.test.js` (goes through `di up`, which reads `di.env`: a port counts only when that install's `server.log` says it listens on it and its pid is alive; EADDRINUSE or "already running" retries on a new port) carried the same probe. The guard now walks `scripts/` as well as `serverXR/src`. `scripts/rig/lib.mjs` `freePort` is production code (start-member) and stays.
 
+## A pinch on a phone selected a card and raised the settings sheet (Raw, 2026-10-21)
+
+Cause: a card selected on `pointerdown`, so the first finger of a pinch that landed on a card selected it before the second finger arrived; beginning the pinch cancelled the drag but not the selection, and on a phone the settings sheet rose over half the screen. Measured at 390x844 in Chromium with CDP touch: after a pinch the card was selected and the sheet open. Fix: a touch selects on release, only if no pinch began (`touchSelectRef` in `RawGraphSurface`); a mouse still selects on press; a tap still selects. Guard: `RawGraphSurface.test.jsx` "a pinch never selects", and the phone row of `scripts/audit/nodes-raw.cjs`. Audit NR-08.
+
+## Nodes' small mono labels were under 4.5:1 (Raw, 2026-10-21)
+
+Cause: four labels in `src/raw/styles/raw.css` were white at 0.28–0.42 alpha on near-black: the palette's hint words (3.33:1, 3.22 on the active row), its group counts (2.41), the settings column's section headings (3.24) and the windows' default kicker `--window-accent` (4.05). Measured by axe in Chromium; WCAG 1.4.3 AA wants 4.5 for 10–11 px text. Fix: all four at 0.5 alpha. Guard: `src/raw/rawContrast.test.js` (computes each ratio over the ground axe reported). Audit NR-07.
+
+## A node card could be moved by a drag only (Raw, 2026-10-21)
+
+Cause: the only way to place a card was a pointer drag; no key and no single pointer moved it (WCAG 2.1.1, 2.5.7). Fix: the arrow keys move the focused card (else the selected one; selecting sends focus to the settings column, Escape hands it back to the card) 10 graph px a press, Shift 50, one `onMoveNode` per press; listed in the keys table (`src/raw/input/keymap.js` row `nudge`), so the help sheet shows it. Guards: `RawGraphSurface.test.jsx` "arrow keys move the selected card" and "the focused card moves", `keymap.test.js` "nudge row". Review follow-up: the context menu lets ← and → through when no submenu is open, so they moved the card the menu was opened on; the nudge now waits while a menu is open (guard: "arrow keys inside an open context menu never move the card behind it"); measured in Chromium by `scripts/audit/nodes-raw.cjs`. Audit NR-05. Still drag-only: drawing a wire (NR-06, OPEN, M).
+
+## The node canvas's corner wordmark was a 33x17 px link (Raw, 2026-10-21)
+
+Cause: `.raw-surface-wordmark` (the way home in the canvas corner) was bare text above 640 px wide; axe `target-size` in Chromium at 820x1180 (a tablet, touch) measured 33x17, under WCAG 2.5.8's 24 px. The phone rule already gave it 44. Fix: the base rule is `inline-flex`, `min-height: 24px`, `bottom` 18 → 14 px so the letters stay put. Guard: `src/raw/rawChrome.test.js` "the corner wordmark is a real target". Audit NR-04. Review follow-up: at `bottom: 14px` the letters moved 0.5 px down (Chromium, text top 865 → 865.5); now `bottom: 14.5px` with `line-height: 17px`, back at 865 (guard: "keeps the letters at bottom 18px").
+
+## A sideways touchpad swipe stepped a focused number field down (Raw, 2026-10-21)
+
+Cause: `ScrubNumberInput`'s wheel handler took `deltaY < 0 ? up : down`, so a wheel with `deltaY: 0` (a touchpad's sideways swipe, dozens of events per swipe) stepped the focused value down once per event and swallowed the scroll. Fix: a wheel with no `deltaY` is ignored and not prevented. Guard: `ScrubNumberInput.test.jsx` "a sideways wheel (deltaY 0)". Audit NR-03.
+
+## The node canvas was one button with every card inside it (Raw, 2026-10-21)
+
+Cause: `.raw-graph-surface` carried `role="button"` and `aria-label="Create a graph node"` (for Enter-creates-a-node). A button's children are presentational, so a screen reader could flatten the whole graph, cards and their controls, into one button; axe in Chromium reported `nested-interactive` (serious). Fix: the canvas is `role="group"`, named "Node canvas", still `tabIndex=0`, Enter still creates a node (`aria-keyshortcuts="Enter"`). Guard: `RawGraphSurface.test.jsx` "is a focusable named group" (runs axe-core in jsdom). Audit NR-02. Review follow-up: `aria-keyshortcuts` is set only when `onDoubleClick` is passed, so Studio's read-only `StudioGraphSurface` no longer announces a key that does nothing (guard: "announces Enter only when Enter creates a node").
+
+## A sideways touchpad swipe zoomed the node canvas out (Raw, 2026-10-21)
+
+Cause: `RawGraphSurface`'s wheel handler read `deltaY` only and clamped the zoom step to at least 1, so a two-finger swipe with `deltaY: 0` zoomed out (measured 1 → 0.984 for ten events in Chromium) and its `deltaX` was dropped. Fix: a wheel's `deltaX` pans the canvas (not under Ctrl/⌘, where it is a pinch), and a wheel with no `deltaY` never zooms. The vertical wheel still zooms, as documented. Guard: `RawGraphSurface.test.jsx` "a touchpad swipe pans by its deltaX". Audit: `docs/ai/audits/2026-10-21-nodes-raw.md` NR-01. Review follow-up: with both deltas applied, a vertical swipe that drifted sideways crept the desk sideways while it zoomed; now one axis per event, the larger delta (guard: "a diagonal swipe moves one axis only").
+
 ## A new node's card window opened over its own node (Raw, 2026-10-20)
 
 Cause: the graph surface published its screen origin only on pan/zoom/resize, but the surface moves (~57 px) when the first node lands, so every world window rendered off its card by the stale origin. Fix: `RawGraphSurface` re-measures on ResizeObserver and one frame after a pan. Guard: `src/raw/components/RawGraphSurface.origin.test.jsx`. Note: `docs/ai/sessions/fix-raw-card-window-placement-2026-10-20.md`.
