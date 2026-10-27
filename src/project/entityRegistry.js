@@ -445,6 +445,8 @@ const DEFINITIONS = {
                     ] },
                     { label: 'Space', component: 'reference', path: ['spaceId'], type: 'space' },
                     { label: 'Project', component: 'reference', path: ['projectId'], type: 'project' },
+                    // a part of that page: the id of a section (e.g. works -> /dilijan#works); N1248
+                    { label: 'Part of the page', component: 'reference', path: ['anchor'], type: 'text' },
                     { label: 'Label', component: 'reference', path: ['label'], type: 'text' }
                 ]
             }

@@ -1,6 +1,6 @@
-# di.iiii Deck Context
+# Deck Context
 
-This folder is the public-context lane for `di.iiii` deck, portfolio, and proof material.
+This folder holds the public context for `di.iiii` deck, portfolio, and proof material.
 
 > **The deck here is the CV-free build — 90 pages, not 95.** Pages 85–89 of the full
 > deck are CV pages for five named people, each carrying a date of birth, a personal

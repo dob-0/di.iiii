@@ -226,3 +226,15 @@ export const setMeasuredWall = async (projectId, metres) => {
  * builds and the room a phone builds are one room.
  */
 export const dressSourcesRoom = async (projectId) => writeToSources(projectId, () => sourceRoomOps())
+
+/**
+ * A walk's data file — the pose sidecar or a recorded session — kept in the
+ * sources project as an asset, NOT hung on the wall: it is for the pipeline
+ * (scripts/place/poses.mjs), not for looking at. Same upload route as a picture,
+ * so it is content-addressed and lands once.
+ */
+export const keepWalkFile = async (projectId, file) => {
+    const asset = await uploadProjectAsset(projectId, file, { filename: file?.name })
+    await writeToSources(projectId, () => [{ type: 'upsertAsset', payload: { asset } }])
+    return asset
+}

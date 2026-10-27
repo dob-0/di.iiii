@@ -1,4 +1,4 @@
-# di.iiii Control Server
+# Control Server
 
 `serverXR` is the Node/Express backend for `di.iiii`. It runs as a Docker container behind Caddy on the production VPS (cPanel's Node.js App model is a documented fallback, not the primary path — see Deploy Notes below), serves the monitor UI, persists space and project data, and is authoritative for edit enforcement, publish state, assets, SSE, and collaborator presence.
 
@@ -10,7 +10,7 @@ Runtime baseline:
 ## Start Here
 
 - backend authority: spaces, projects, assets, ops, SSE, presence, and writes
-- editor families supported: `V1`, `Studio`, and `Beta`
+- editors served: `Studio`, the node editor (`src/raw/`), and `V1` (compatibility)
 - public unit: `space`
 - editable document inside a space: `project`
 - live public project pointer: `publishedProjectId`
@@ -23,14 +23,14 @@ Runtime baseline:
   - owns labels, edit settings, permanence, and published project selection
 - `project`
   - the editable document inside a space
-  - used by `Studio` and `Beta`
+  - used by `Studio` and the node editor
 - `publishedProjectId`
   - the project shown on the space's public route
 
 Simple product split:
 
 - `V1` uses scene state and scene ops
-- `Studio` and `Beta` use project documents and project ops
+- `Studio` and the node editor use project documents and project ops
 - the backend decides whether a space exists and whether writes are allowed
 
 ## Code Map
@@ -211,6 +211,7 @@ Behavior rules:
 | `CORS_ORIGINS` | Comma-separated allowlist of origins. | _none_ |
 | `MAX_UPLOAD_MB` | Max asset upload size in MB. | `100` |
 | `MIN_FREE_DISK_MB` | Free-disk floor below which POST/PUT/PATCH get a `507` instead of writing toward ENOSPC (`0` disables). | `512` |
+| `DI_ACCESS_LOG` | `1` (or `all`) writes a request-log line for every answer. Unset, only answers with status 400 and up, and requests that got no answer, get one (`src/accessLog.js`). | errors only |
 | `SHARED_ROOT` | Override for shared schema loading. Use this when the dev tier and production keep separate shared folders outside the repo. | repo-local `shared/` fallback |
 
 Security notes:

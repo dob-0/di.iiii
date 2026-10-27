@@ -24,10 +24,11 @@ export const WIKI_ARTICLES = [
         body: [
             'On a room page, Auto fly sits beside Walk / Fly (in the Studio it is in the view bar, after X-ray). Press it and the camera flies a closed lap while the show keeps playing: a slow rise from the entrance, a fast low pass over the dance floor, a banked turn round the DJ, a climb under the truss through the beams and a dive back. The camera leans into every turn like a quad, up to 25 degrees, and goes up to 6 m/s on the straights.',
             'Any input ends it where it is: a click or touch, the wheel, a key (Esc too), or the button again. The camera stays where the flight left it, level, and you carry on from there. A small “flying · tap to take the controls” line says so while it runs. Add ?fly=1 to the address and the page opens already flying, which is the way to show someone the work. It runs on a phone too, at Low quality.',
-            'The flight never leaves the room: every point of the path is at least 0.8 m inside the walls and under the roof, and at least 1.2 m above the floor; it passes under the rig, not through it. The route is computed from the room itself (its frame, the DJ riser, the rig, the entrance); nothing in it is specific to one production. A room shorter than 10 m on its short side gets one slow oval instead of the full route.'
+            'The flight never leaves the room: every point of the path is at least 0.8 m inside the walls and under the roof, and at least 1.2 m above the floor; it passes under the rig, not through it. The route is computed from the room itself (its frame, the DJ riser, the rig, the entrance); nothing in it is specific to one production. A room shorter than 10 m on its short side gets one slow oval instead of the full route.',
+            'A room with doors and no stage gets a tour instead of the drone: the camera glides level at walking pace, halts in front of each door looking into it, and turns to the next, round the room. It never leans, and anything standing in its way it rises over. A room with doors but no building (walls or a model) flies too: the tour keeps to the space the doors span.'
         ],
         tags: ['auto fly', 'drone', 'fpv', 'camera', 'view page', 'show'],
-        updated: '2026-10-15'
+        updated: '2026-10-25'
     },
     {
         id: 'view-page-controls',
@@ -149,12 +150,13 @@ export const WIKI_ARTICLES = [
                 '/main \u2014 the old address of that same room. It still resolves and always will, and it still opens the room; the name just never reaches the address bar.'
             ] },
             'Going anywhere else from here is one move too \u2014 a door in the room, one of the featured exhibitions, The Spaces, Open Jam, or a card on the Spaces page. What you are looking at stays on screen and the view pushes slowly in toward what you pressed, until the place you are going to has drawn its first frame; then that place comes up in its stead. There is no black screen with a spinner in between, and no effect laid over it \u2014 it is the same quiet move every time, only its timing breathes a little from one visit to the next.',
+            'A door can show where it leads. Give a door a picture (the same media slot an image uses) and the picture fills the door\u2019s opening \u2014 the round door or the standing frame \u2014 a little veiled until you point at it, then clear. A door with no picture keeps its own colour, as before. A door can also invite: in its own colour a ripple spreads out from it and arrows slide in from both sides, so it reads as a place to go from across the room; with reduced motion they stand still.',
             'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately, and nothing falls. Going through a door is a short plain fade. The destination is never different, only the journey.',
             'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.',
             'Everything on the page can be reached with the tab key, and whatever you are on is ringed in cyan. While the door is opening, what falls past you is a picture of the page you were reading, drawn as flat pieces in the room itself \u2014 not a second set of its controls, so nothing in the flight can be tabbed to or read twice by a screen reader.'
         ],
         tags: ['landing', 'basics', 'navigation', 'room', 'walk'],
-        updated: '2026-09-15'
+        updated: '2026-10-25'
     },
     {
         id: 'studio-mouse-navigation',
@@ -358,7 +360,7 @@ export const WIKI_ARTICLES = [
         title: 'The bar: where you are, and the way out',
         summary: 'Every surface carries the same strip — Spaces, Studio, Nodes, Projection, Tools, Light, Wiki — says which space and project you are in, and takes the project with you.',
         body: [
-            'Every surface in di.iiii carries one bar along the top. On the left is the di.iiii wordmark, which always leads to Spaces; when the surface belongs to a space, the name of that space, which leads to it; and when it is one project, that project\'s title, which opens it in Studio. On the right are the destinations, always in the same order: Spaces, Studio, Nodes, Projection, Tools, Light, Wiki. Projection is there only inside a project, because it has no page of its own — it is always one project\'s wall. The one you are on is stated in cyan and is not a link.',
+            'Every surface in di.iiii carries one bar along the top. On the left is the di.iiii wordmark, which always leads to Spaces; when the surface belongs to a space, the name of that space, which leads to it; and when it is one project, that project\'s title, which opens it in Studio. The space\'s name is the same word on every page of the space and whichever address you typed: the name you gave it with Rename, or the space\'s address when nobody has named it. di.iiii\'s own space is a space like any other: it is named Home, so there the bar says di.iiii · Home. On the right are the destinations, always in the same order: Spaces, Studio, Nodes, Projection, Tools, Light, Wiki. Projection is there only inside a project, because it has no page of its own — it is always one project\'s wall. The one you are on is stated in cyan and is not a link.',
             'Inside a project the bar grows with the project. A new project shows Spaces, Studio, Tools and Wiki; Nodes arrives when the room holds its first thing, Projection when the project has its first node or wire, Light when a lamp stands in the room — each in its own place in the order, with no reload. Outside a project — /tools, the wiki, a space\'s pages — every name is always there. The tool you are standing in is never taken off, nothing hides while a project is still loading, and “⚒ All tools” in Studio brings every name back on every project. Studio’s own Nodes and Projection buttons, on a computer and on a phone, follow the same rule: they appear when the bar’s name does.',
             'When the window is too narrow for every name — a phone, mostly — the bar shows the names that fit, in their usual order, and puts the rest under More at its right end. Tap More for the others, one under another; tap anywhere else or press Escape to close it. If the surface you are on is one of them, More is lit instead. On a wide screen every name fits and there is no More.',
             'Standing inside a space, Studio and Nodes mean THAT space\'s studio and node canvas, not the general hub — so moving between the ways of working never loses the space you were in.',
@@ -368,7 +370,7 @@ export const WIKI_ARTICLES = [
             'Add ?embed=1 to any address and that is what you get: /tools, the wiki, a space’s contents list, the node canvas, Studio, the Projection page and a published room all drop the bar, because the page you have put them inside already carries the way out. The flag hides that navigation and nothing else — you are signed in exactly as you would be in a tab, edits save the same, and nothing is held back from a window that a tab would be given.'
         ],
         tags: ['navigation', 'bar', 'surfaces', 'ui', 'light', 'studio', 'raw', 'nodes', 'projection', 'project', 'embed', 'iframe'],
-        updated: '2026-09-27'
+        updated: '2026-10-26'
     },
     {
         id: 'layers-one-at-a-time',
@@ -407,7 +409,7 @@ export const WIKI_ARTICLES = [
         title: 'The Open Space, your sandbox & guest mode',
         summary: 'Everyone shares one communal Open Space, and every visitor — guest or account — gets exactly one private sandbox.',
         body: [
-            'The landing page’s “Step inside” button opens your own private sandbox — no account, no space picker, one click to building. What you make there is kept in the space, where Studio and Nodes sit side by side and “View live” hands out the address. The shared Open Space itself lives at /open.',
+            'The landing page’s “Step inside” button walks you into the scene behind the page: it makes nothing and asks for no sign-in. Your own private sandbox is on the Spaces page, and it comes into existence when you enter it — no account needed. What you make there is kept in the space, where Studio and Nodes sit side by side and “View live” hands out the address. On the standing copy of the landing page (/di-iiii/landing), “Step inside” opens the Spaces page instead. The shared Open Space itself lives at /open.',
             'There are three kinds of places, and everyone gets the first two without an account:',
             { list: [
                 'The Open Space — one shared space where every visitor can build, together, live. It is always there and survives cleanup; an admin can restore it from a daily snapshot if it gets trashed.',
@@ -426,12 +428,12 @@ export const WIKI_ARTICLES = [
             'For admins: Ops Graph → Manage can repoint the communal space (the guest entry), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.',
             'Ops Graph → Manage also shows the site’s own traffic for the last 30 days under Traffic: page views, sign-ups, the busiest day, the most viewed pages and the sites visitors came from. These are counted here, one per page load, with no cookie and no third party — the same counting the privacy page describes.',
             'A room carries its own text for anything that reads instead of looking. A space drawn on a canvas used to be an empty page to a screen reader, a search engine, or a browser whose 3D failed; every published room now also carries its name, its lines and its doors as ordinary links, out of sight but reachable — tab through a room and each door becomes a visible link you can follow without a mouse.',
-            'The front door IS the room. Opening diiii.xyz no longer shows a page about the space with the space drawn behind it — it opens the space: the name and the one line stand inside it as things you can walk past, and the doors to the works are the real links. The room has one address and it is the bare domain: an old /main link still resolves, it just heals to / so you are never shown a room called “main”. The addresses inside that space — /main/studio, /main/raw, a project deep-link — keep their names. The old landing page is moved rather than deleted: it is at /?tour=1.',
-            'The landing page has one door. It used to offer three side by side — “Step inside”, “Open Studio” and “Enter Space” — which asked a first-time visitor to choose between them before they knew what any of them were. Studio is not a rival to the door now: step inside, and Studio is there to walk into. The quiet “Already have spaces? Open Studio →” line under the button is the return path for people who already have work of their own.',
-            'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page. Where no Main space is set at all, the landing offers “Look around” instead — a decorative walkable preview of its own hero, not a real space.'
+            'The front door is the landing page, and the scene is behind it: on a wide screen the page is ordinary HTML over the scene, and a phone loads the scene only when you press “Step inside”. Pressing it turns the page’s pieces into objects in that scene while the camera flies in, instead of a new page loading. The scene holds the name, the one line and a door to each featured work, all things you can walk past. ?room=1 opens the scene bare, without the page. That scene is the live project of di.iiii’s own front space, which has its own address, /di-iiii; an old /main link still resolves and heals to /?room=1, so the bare name “main” never stays in the address bar. The addresses inside that space — /main/studio, /main/raw, a project deep-link — keep their names. On a local install, / is your own home, the landing page is at /?tour=1, and /main is not rewritten.',
+            'The landing page names three routes, in order of weight: “Step inside” walks into the scene behind the page, “The Spaces” opens the Spaces page, and “Open Space” opens the shared Open Jam. The quiet “Already have spaces? Open your Spaces →” line further down is the return path for people who already have work of their own.',
+            'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page.'
         ],
         tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr', 'telegram', 'sign in'],
-        updated: '2026-09-28'
+        updated: '2026-10-26'
     },
     {
         id: 'space-history',
@@ -810,12 +812,13 @@ export const WIKI_ARTICLES = [
         title: 'Publishing & public spaces',
         summary: 'Make a project live and decide who can see it — right from your Spaces page.',
         body: [
-            'Each space has a public URL at /<space>. Set a space’s published project, then mark the space Public to let anyone view it without signing in.',
+            'Each space has its own address at /<space>. Mark the space Public and anyone can open it without signing in; set a project live and that project is what they see there.',
             'If you own the space you do all of this yourself on the Spaces page (/studio): Rename, Public/Private, Link project, GitHub sync, and Delete sit on each of your space cards. No admin needed.',
             'Public spaces show their live link right on the card (and in the editor’s Spaces panel) with one-click Copy — that link is what visitors open. Public spaces you can’t edit are marked “View live”, and clicking their card takes you straight to the live view — one click, no login wall.',
             'A few spaces share their address with a piece that is part of diiii.xyz itself — /wcc is the WCC exhibition’s own landing page, and the wcc SPACE, with its eleven artist projects, lives one step deeper. Where that happens, the space card no longer points at the piece: its picture, its live frame and its Live link all open the space’s published project, so the card is always a door to the space it names. The piece keeps its own address; nothing about /wcc itself changed. On an offline copy of di.iiii, where those pieces are left out to keep the download small, such a card used to say “not in this copy” even though every project it holds was sitting on the machine — now it opens them.',
             'Live space cards on the Spaces page also show a live preview — a real miniature of the published project, streamed from the live route and always up to date. Previews only load while their card is on screen, so a long spaces list stays fast.',
             'Owners manage the card preview from the Preview button on the card: keep the live miniature or upload a custom cover image (Replace image / Use live preview to switch back anytime). A cover image also works on spaces that aren’t public yet.',
+            'One line for visitors (Manage on the card): say in one line, up to 160 characters, what is in the space. It shows under the space’s name on its card, and it is what a link to the space says when it is shared in a chat or found by a search engine. Empty clears it.',
             'The editor’s Spaces panel has the same self-serve Make Public / Make Private toggle as the Spaces page.',
             'Publishing (which project is live) and visibility (Public/Private) are independent choices — linking a project does not automatically make the space public.',
             'A public space also shares every project individually at /<space>/p/<project-id> — the same no-login viewer as the live route, without touching the published pointer. Handy for one-pagers, drafts, and projects that live next to the main one. Like the live route, these carry no toolbar of ours — nothing floats over your design; hop between a space’s projects from the Studio Projects window.',
@@ -826,10 +829,10 @@ export const WIKI_ARTICLES = [
             'Published code pages can use the visitor’s camera, microphone and motion sensors — but only if the project opts in by setting deviceAccess: true in its presentation state (repo-synced pages set it in their di-space manifest). Opted-in pages run without the usual origin isolation, so reserve it for pages you author yourself; everything else stays fully sandboxed. The visitor still gets the normal browser permission prompt either way.',
             'Opting into deviceAccess also gives the page real, persistent localStorage and sessionStorage — what it saves survives reloads and is shared with the space’s other opted-in pages on the same device, which is how one page can leave something for a sibling to find. Fully sandboxed pages keep an in-memory stand-in instead: calls succeed, but nothing outlives the visit.',
             'Published code pages can read the URL’s query string — /<space>/<slug>?just=bkyi — through window.diiPageQuery (already parsed for you as window.diiPageParams). A published page is rendered inside a frame with no URL of its own, so location.search there is always empty; read new URLSearchParams(window.diiPageQuery || location.search) and the same code keeps working when you open the file locally. This is what lets one published page hand over to another with state — “open the field, on the core I just made”.',
-            'Add ?embed=1 to any published link and the viewer becomes glass: no dark shell of its own, no “Made with di.iiii” badge, no Walk/Fly button, no loading screen. Use it when the page is a window inside another page rather than somewhere you send people — put it in an iframe and whatever your host page draws shows through behind it. Your page keeps its own background, so make that transparent too if you want the host to show through.'
+            'Add ?embed=1 to any published link and the viewer becomes glass: no dark shell of its own, no “Made with di.iiii” badge, no Walk/Fly button, no loading screen. That changes only what the viewer draws. It does not let another website show the link in a frame: diiii.xyz and dev.diiii.xyz send a frame-ancestors rule that admits only di.iiii itself and the studio’s own tools, so an iframe on any other site stays empty. To show a space to others, share its link.'
         ],
         tags: ['publish', 'public', 'sharing', 'owner', 'live link', 'slug', 'custom link', 'camera', 'device access', 'query', 'url parameters', 'embed', 'iframe', 'transparent', 'storage', 'localstorage', 'space card', 'wcc'],
-        updated: '2026-09-10'
+        updated: '2026-10-26'
     },
     {
         id: 'invite-links',
@@ -1172,19 +1175,23 @@ export const WIKI_ARTICLES = [
         id: 'api-and-agents',
         category: 'For developers',
         title: 'API & agents',
-        summary: 'Read and drive spaces and projects over the serverXR REST API.',
+        summary: 'Read and drive spaces and projects over the serverXR REST API, or hand di.iiii to an agent over MCP.',
         body: [
-            'di.iiii exposes a structured REST API under /serverXR/api/ for developers and AI agents.',
+            'di.iiii exposes a structured REST API under /serverXR/api/ for developers and AI agents. The path itself is not a page: the machine-readable list of what the API can do is an OpenAPI 3.1 document at /serverXR/api/catalogue. It shows what the asking program may call, so a program that is not signed in sees fewer endpoints than a signed-in one.',
             { list: [
                 'GET /serverXR/api/health — backend health',
                 'GET /serverXR/api/auth/session — session + space quota state',
                 'GET /serverXR/api/spaces — spaces visible to you',
-                'GET /serverXR/api/spaces/:id/projects — projects in a space'
+                'GET /serverXR/api/spaces/:id/projects — projects in a space',
+                'GET /serverXR/api/spaces/:id/scene — a space’s scene as JSON',
+                'GET /serverXR/api/projects/:id/document — a project as JSON'
             ] },
+            'Reading a public space needs no sign-in. Changing anything does: a browser session, or the token a terminal login (di login) gives — and a terminal login is refused anything public (publish, delete, invites). On a local install with sign-in off, nothing needs one. Name your program in the User-Agent; the rate limits are in “Apps, scripts and AIs”.',
+            'To hand di.iiii to an agent, run di mcp from an install (node sdk/mcp.mjs from a checkout). It is an MCP server with four tools whatever the server can do — di_find, di_describe, di_call and di_run — and it reads the catalogue of the server it talks to. The server stays the protection: it refuses what the token may not do, and public moves are refused unless the person who launched the server allows them and each call carries a confirmation.',
             'Realtime updates are delivered over WebSocket (socket.io) and SSE.'
         ],
-        tags: ['api', 'developers', 'agents'],
-        updated: '2026-08-19'
+        tags: ['api', 'developers', 'agents', 'mcp', 'catalogue', 'openapi'],
+        updated: '2026-10-26'
     },
     {
         id: 'dev-copy-label',
@@ -1221,14 +1228,14 @@ export const WIKI_ARTICLES = [
         title: 'Privacy & terms',
         summary: 'What di.iiii stores about you and under which terms — plainly, at /privacy and /terms.',
         body: [
-            'Two pages disclose how di.iiii treats you: /privacy describes exactly what is collected (the session cookie, OAuth profile fields, uploads, retention) and what is deliberately not (no third-party analytics, no stored IP addresses, no tracking that links visits together) — including the parts that are not built yet, named as gaps rather than hidden.',
+            'Two pages disclose how di.iiii treats you: /privacy describes exactly what is collected (the session cookie, what each of the four sign-ins keeps — GitHub, Google, Telegram and password — uploads, logs and where an IP address is kept, retention and backups, and the services that see your requests) and what is deliberately not (no third-party analytics, no tracking that links visits together) — including the parts that are not built yet, named as gaps rather than hidden.',
             '/terms covers the AGPL-3.0 license, the 3-free-spaces limit, and the append-only nature of anonymous inscriptions.',
             'Visits are counted anonymously first-party: one event per page load with path, time, and referring site — no cookie, no IP, nothing identifying.',
             'Programs that call the API (apps, crawlers, scripts) are counted per day by the name they give and, for apps that publish one, the contact in their User-Agent — never an address or a page. See the Apps, scripts and AIs article.',
             'For anything the pages do not answer, or to request account or data removal by hand: info@thedi.studio.'
         ],
         tags: ['privacy', 'terms', 'legal', 'data', 'contact'],
-        updated: '2026-09-13'
+        updated: '2026-10-26'
     },
     {
         id: 'for-apps',
@@ -1528,7 +1535,8 @@ export const WIKI_ARTICLES = [
             { list: [
                 'Press ⌖ to pin a window to the screen — it holds still at its current on-screen position and size while the canvas pans and zooms underneath it, the old behaviour. Press it again to release it back onto the canvas, where it keeps exactly where it was standing.',
                 'Drag the title bar to move a window; drag any edge or corner to resize it, not only the bottom-right grip. Arrow keys on the title bar move it, arrow keys on the corner grip resize it — hold Shift for a one-pixel nudge.',
-                'Scrolling inside a window\'s body belongs to that window: a Text note scrolls, a List scrolls, a Scene orbits. Scrolling on the canvas zooms the desk, and Ctrl/⌘ + scroll zooms the desk from anywhere, including over a window.',
+                'Scrolling inside a window\'s body belongs to that window: a Text note scrolls, a List scrolls, a Scene orbits. Scrolling on the canvas zooms the desk; on a touchpad a sideways two-finger swipe pans it instead of zooming. Ctrl/⌘ + scroll (and a touchpad pinch) zooms the desk from anywhere, including over a window.',
+                'A card moves with the arrow keys too: the card you have tabbed to, or else the selected one, 10 steps a press and 50 with Shift, for when a drag is not the way: a keyboard, a switch, a hand that cannot hold a drag.',
                 'On a phone every window stays pinned — the clamp that fits a wide default frame into a narrow screen is the whole layout there, and a window that travelled freely on the canvas would walk straight off it.',
                 'A window that would open exactly on top of another one steps down and to the right, so four Lists opened one after another show four title bars, not one.',
                 'A node\'s window opens below its card, never over it, also when the canvas moves a little as the first node lands. Positions you have saved stay as they are.',
@@ -1536,7 +1544,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['raw', 'nodes', 'windows', 'pin', 'resize', 'zoom', 'canvas', 'editor', 'escape'],
-        updated: '2026-10-20'
+        updated: '2026-10-21'
     },
     {
         id: 'raw-on-a-phone',
@@ -1547,7 +1555,7 @@ export const WIKI_ARTICLES = [
             'The graph editor was previously mouse-only in a way no amount of zooming could work around: starting a wire on an output port captured the pointer, so the release never reached the input port under your finger and no connection could be made. Dragging between ports now works the same way on a phone as on a desktop.',
             { list: [
                 'Drag from an output port to an input port to wire them. You do not have to land exactly on the dot — the drop snaps to the nearest port that accepts that type, within a finger’s width, so a small miss still connects.',
-                'Pinch with two fingers to zoom and pan the canvas at the same time. The zoom buttons in the bottom-left corner do the same thing in steps.',
+                'Pinch with two fingers to zoom and pan the canvas at the same time. The zoom buttons in the bottom-left corner do the same thing in steps. A pinch never selects a card, even one your first finger lands on: a card is selected when one finger lets go of it. So a card you drag with a finger is not highlighted while it moves; it is selected, and its settings rise, when you let go. A mouse still selects on the press.',
                 'Opening a graph fits it to the screen instead of dropping you at 100% somewhere inside it, so you can see the whole patch before choosing where to work.',
                 'The ⤢ button fits every card, at whatever zoom that takes — on a phone a wide graph can land small, and pinching in from there is one gesture. Fits nobody asked for (opening, resizing) stop at a readable size and say "showing N of M".',
                 'Resizing the window (or turning the phone) keeps the cards: a view you have not moved fits again; a view you panned or zoomed keeps the same point in the middle, and if no card is left on screen it fits.',
@@ -1558,7 +1566,7 @@ export const WIKI_ARTICLES = [
             'The overflow menu (⋯) has an All Nodes Example: one graph containing every node type the palette can create, with a clock driving a chain of maths into a pulsing sphere, a colour crossfade on a cube, and a breathing light. It is the quickest way to see what the node system can currently do — and it is deliberately honest about what it cannot: geometry, texture and signal outputs are declared on several node types but are not computed yet, so those ports are left unwired rather than connected to look complete.'
         ],
         tags: ['raw', 'nodes', 'mobile', 'touch', 'phone', 'example', 'editor', 'fit', 'resize'],
-        updated: '2026-10-02'
+        updated: '2026-10-21'
     },
     {
         id: 'br-id-ge',
@@ -1955,10 +1963,12 @@ export const WIKI_ARTICLES = [
             'A ring of 36 marks fills as you turn, and it is labelled "directions covered" because that is honestly all it counts: you could stand still in a doorway and fill every mark having seen nothing of the hall. What it does catch is a walk that never looked back. If the phone will not give a compass the ring says so and everything else works as it was.',
             'The last step asks you to measure ONE wall with a tape and type the number in metres, and to photograph that wall. Nothing in a reconstruction knows how big a room is — a hall and a model of a hall are the same pile of numbers — so without that number the room walks at a size nobody chose, and the page tells you so in capitals until you give it. The number and the photograph both stay in the footage room, so anyone can check one against the other later.',
             'Once there is about a minute of walking, or forty photographs, "Make the hall" appears. Building the copy runs a reconstruction on a graphics card for the better part of an hour, so it happens on the studio machine and nowhere else: on diiii.xyz the button says the copy is built there instead. The footage still collects wherever you walked — that is the point of collecting it into the space rather than into an app on the phone — and the copy can be built from it afterwards.',
-            'When it finishes, the hall arrives as another room in the same space, standing on its floor at the size you measured, with a door you arrive at. The footage stays beside it. A visitor can walk the hall and then walk into what the hall was made of.'
+            'When it finishes, the hall arrives as another room in the same space, standing on its floor at the size you measured, with a door you arrive at. The footage stays beside it. A visitor can walk the hall and then walk into what the hall was made of.',
+            'On an Android phone in Chrome, a second button appears: "Scan in AR". It uses the phone\'s AR tracking, so the camera view is painted as you go — green where the shots have seen a wall or a floor well, yellow where it is thin, red where part of the place was found but no shot covers it. A small map of the place from above draws your path, a dot per shot and the gaps. A square on the floor breathes where the next shot is needed, and an arrow says where to point. "Slower", "too close" and "too dark" appear BEFORE a frame is taken, and no frame is kept while one of them is up — the shots are taken for you when the phone is still enough.',
+            'An AR walk knows its own size: the tracking is in metres, so the hall needs no tape. Every shot is saved with where the camera stood and which way it pointed, in one pose file per walk beside the shots, which the build uses. The AR shots are about the size of the phone\'s screen, not 4K; for the sharpest footage, walk with the camera too. Add ?ar=play to the scan address to watch a recorded walk on any screen.',
         ],
         tags: ['scan', 'scanning', 'place', 'hall', 'venue', 'phone', 'camera', 'photogrammetry', 'walk', 'footage', 'sources', '3d', 'model', 'reconstruction', 'meshroom', 'measure', 'tape', 'theatre', 'factory', 'space', 'room', 'polycam', 'lidar'],
-        updated: '2026-09-22'
+        updated: '2026-10-23'
     },
     {
         id: 'patch-sheet',
@@ -1994,12 +2004,13 @@ export const WIKI_ARTICLES = [
             'On the left is a rail: select, truss, tower, deck, fixture, fx and measure. Drag on the plan with truss to draw a run — it is laid in 3, 2 and 1 m pieces end to end. Click with tower near the end of a truss and the tower stands under it, built to the truss\'s height. Click with fixture near a truss and the lamp hangs at the nearest clamp point. Everything snaps: truss end to truss end, tower top, deck edge, a 0.5 m grid. Type exact numbers in the inspector when you want them — length, height, x, z, turn.',
             'A new lamp is patched on this machine\'s desk as soon as you place it, like in Studio: the number and the address appear beside it. Opening the plot never patches anything — a room that arrived unpatched (a bundle from another machine) stays as it is until you press patch the room on the desk, in the title block. Select several and press patch this group to lay them out again as one block. Two lamps on the same channels are drawn in a dashed box with a !, and the inspector says what the desk said.',
             'The room beside the plan is the same room as in Studio, showing what is selected. On a phone the plan fills the screen; plan and room are one tap apart, and the tools and the inspector are in a sheet you pull up.',
+            'Moving around the plan: the mouse wheel zooms to the pointer; on a touchpad two fingers move the plan and a pinch zooms; on a phone one finger moves it and two pinch. The + − fit buttons at the plan\'s bottom left, and the keys + - 0, zoom without a wheel or a second finger.',
             'Print sheet 1 gives the plot on A3 or A4 at a true scale with a scale bar — the whole rig, or just what is on the screen for a close-up of the stage. Sheets 2 and 3, the patch and the power, are the patch sheet. Print at 100%, not "fit to page".',
             'The hall comes from the model it was built from, never drawn by hand. The plot makes no load or rigging calculation: a truss end with no tower under it is marked free, and the real hang needs a rigger\'s sign-off.',
             'A run may slope: a line hung from a crane on picks of different height (MOXIR\'s "cut", 12 m at 15°) is one run, and its clamp points follow it — a lamp on it sits at its real height, the looks reach it, and the plan draws its footprint (its length × the cosine of the slope). Its heights, picks and loads come from the rig file, which states them with their sources; the plot still makes no calculation of its own.'
         ],
         tags: ['plot', 'lighting plot', 'plan', 'cad', 'truss', 'tower', 'deck', 'stage', 'rig', 'fixture', 'lamp', 'dmx', 'patch', 'address', 'print', 'a3', 'scale', 'room', 'build', 'light engineer', 'crew', 'rp-2'],
-        updated: '2026-10-01'
+        updated: '2026-10-21'
     },
     {
         id: 'rig-cards',
