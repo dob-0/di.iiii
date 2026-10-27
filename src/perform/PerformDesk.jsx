@@ -199,6 +199,27 @@ export default function PerformDesk({
     const [menu, setMenu] = useState(null) // 'presets' | 'add' | null
     const [saving, setSaving] = useState(null) // 'mine' | 'show' | null
     const [saveName, setSaveName] = useState('')
+    // An open menu closes the way menus close (WAI-ARIA APG, menu button): Escape, focus back on its button,
+    // or a press anywhere outside it.
+    const presetsAnchor = useRef(null)
+    const addAnchor = useRef(null)
+    useEffect(() => {
+        if (!menu) return undefined
+        const anchor = (menu === 'presets' ? presetsAnchor : addAnchor).current
+        const close = (refocus) => {
+            setMenu(null)
+            setSaving(null)
+            if (refocus) anchor?.querySelector('button')?.focus()
+        }
+        const onKey = (event) => { if (event.key === 'Escape') { event.preventDefault(); close(true) } }
+        const onDown = (event) => { if (anchor && !anchor.contains(event.target)) close(false) }
+        window.addEventListener('keydown', onKey)
+        window.addEventListener('pointerdown', onDown)
+        return () => {
+            window.removeEventListener('keydown', onKey)
+            window.removeEventListener('pointerdown', onDown)
+        }
+    }, [menu])
 
     const pick = (id) => {
         setChosenId(id)
@@ -263,7 +284,7 @@ export default function PerformDesk({
     return (
         <>
             <div className="perform-strip" ref={stripRef}>
-                <div className="perform-menu-anchor">
+                <div className="perform-menu-anchor" ref={presetsAnchor}>
                     <button
                         type="button"
                         className="perform-strip-button"
@@ -311,7 +332,7 @@ export default function PerformDesk({
                                             // eslint-disable-next-line jsx-a11y/no-autofocus
                                             autoFocus
                                             value={saveName}
-                                            placeholder={saving === 'mine' ? 'friday at MOCT' : 'sunday caller'}
+                                            placeholder={saving === 'mine' ? 'friday, small room' : 'sunday caller'}
                                             aria-label={saving === 'mine' ? 'Name for your preset' : 'Name for the show’s preset'}
                                             onChange={(event) => setSaveName(event.target.value)}
                                         />
@@ -338,7 +359,7 @@ export default function PerformDesk({
                         </div>
                     ) : null}
                 </div>
-                <div className="perform-menu-anchor">
+                <div className="perform-menu-anchor" ref={addAnchor}>
                     <button
                         type="button"
                         className="perform-strip-button"

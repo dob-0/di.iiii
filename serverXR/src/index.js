@@ -12,6 +12,7 @@ const http = require('http')
 const https = require('https')
 const cors = require('cors')
 const morgan = require('morgan')
+const { accessLogSkip } = require('./accessLog')
 const multer = require('multer')
 const fs = require('node:fs')
 const { isOwnerAtTheMachine } = require('./localOwner')
@@ -212,42 +213,7 @@ const MAX_OP_HISTORY = 500
 // guard in POST /ops has to recognise.
 const MAX_OP_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const DEFAULT_SPACE_ID = 'main'
-const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'model/']
-const ALLOWED_MIME_TYPES = new Set([
-  'application/json',
-  'application/octet-stream',
-  'application/pdf',
-  'application/zip',
-  'application/x-zip-compressed',
-  'application/gzip',
-  'text/plain'
-])
-const ALLOWED_EXTENSIONS = new Set([
-  '.glb',
-  '.gltf',
-  '.obj',
-  '.mtl',
-  '.stl',
-  '.fbx',
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.gif',
-  '.webp',
-  '.svg',
-  '.mp4',
-  '.mov',
-  '.webm',
-  '.mp3',
-  '.wav',
-  '.ogg',
-  '.m4a',
-  '.zip',
-  '.bin',
-  '.hdr',
-  '.exr'
-])
-
+const { isAllowedUpload } = require('./uploadPolicy')
 const releaseInfo = loadReleaseInfo(config.directories.root)
 
 const {
@@ -330,21 +296,6 @@ const stampImportedOpsActor = (spaceId, actor) => {
     .run(actor.actor, actor.type, actor.label, spaceId)
   db.prepare('UPDATE project_ops SET actor = ?, actor_type = ?, actor_label = ? WHERE actor IS NULL AND project_id IN (SELECT id FROM projects WHERE space_id = ?)')
     .run(actor.actor, actor.type, actor.label, spaceId)
-}
-
-const isAllowedUpload = (file) => {
-  const mime = (file?.mimetype || '').toLowerCase()
-  const name = (file?.originalname || '').toLowerCase()
-  const ext = path.extname(name)
-  if (ALLOWED_MIME_PREFIXES.some(prefix => mime.startsWith(prefix))) return true
-  if (ALLOWED_MIME_TYPES.has(mime)) {
-    if (mime === 'application/octet-stream' && ext) {
-      return ALLOWED_EXTENSIONS.has(ext)
-    }
-    return true
-  }
-  if (ext && ALLOWED_EXTENSIONS.has(ext)) return true
-  return false
 }
 
 const upload = multer({
@@ -598,8 +549,11 @@ if (hasLocalRuntime() && scanAtBootFrom()) {
   try { ndi.startScan() } catch (error) { logger.warn(`[ndi] autoscan did not start: ${error?.message || error}`) }
 }
 
+// A log line only for answers that went wrong (400 and up) or never came; DI_ACCESS_LOG=1 for
+// every one. Why: accessLog.js. Ahead of express.json, so a body that fails to parse (400) or
+// is too large (413) still gets its line; after the NDI routes on purpose (see above).
+app.use(morgan('tiny', { skip: accessLogSkip() }))
 app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
-app.use(morgan('tiny'))
 app.use((req, res, next) => {
   pushEvent('request', { method: req.method, url: req.url })
   next()
@@ -1913,7 +1867,7 @@ approvalGate.registerReauthorizer('spaces.purge', async (args, subject, actorTyp
 // ── One-click GitHub sync: webhook receiver (signature-authed, pre-gate) ──────
 // Default loopback works on a normal TCP listen; under Passenger (cPanel) the app
 // is fronted by a Unix socket and nothing binds config.port, so SELF_API_URL must
-// point at the server's own public origin (e.g. https://di-studio.xyz/serverXR).
+// point at the server's own public origin (e.g. https://diiii.xyz/serverXR).
 const internalApiBase = () =>
   process.env.SELF_API_URL?.replace(/\/$/, '') || `http://127.0.0.1:${config.port}${config.basePath || ''}`
 const internalHeaders = () => ({ 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${config.internalApiToken}` })

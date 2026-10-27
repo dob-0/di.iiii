@@ -84,7 +84,7 @@ const emitInstallScriptsPlugin = () => ({
     name: 'emit-install-scripts',
     apply: 'build',
     generateBundle() {
-        // The install scripts are how a stranger reaches di-studio.xyz. Inside
+        // The install scripts are how a stranger reaches diiii.xyz. Inside
         // an install they would offer to install what is already installed.
         if (LOCAL_PROFILE) return
         for (const [source, fileName] of [['install.sh', 'get.sh'], ['install.ps1', 'get.ps1']]) {
@@ -137,7 +137,7 @@ const emitBuildProfilePlugin = () => ({
 //
 // `DI_PROFILE=local` builds di.iiii for an artist's own machine: the program
 // and the studio's own pieces, without the hosting furniture that only means
-// anything on di-studio.xyz. `DI_LOCAL_SLIM=1` alongside it builds the program
+// anything on diiii.xyz. `DI_LOCAL_SLIM=1` alongside it builds the program
 // ALONE — which is what `local` used to mean, and no longer does.
 //
 // Why it changed. The strip was measured and correct and it broke the one
@@ -500,9 +500,11 @@ export default {
     root: 'src/',
     // An include-list, not a delete-list: under the local profile the public
     // directory is copied by localPublicDirPlugin, which names what a copy of
-    // the program needs (fonts, draco, basis, suite, unicode-fonts, vendor)
+    // the program needs (PROGRAM_PUBLIC_DIRS in src/works/buildProfile.js)
     // plus each work's own media, and therefore cannot silently start shipping
-    // whatever gets dropped into public/ next.
+    // whatever gets dropped into public/ next. The same list cannot silently
+    // drop it either: src/works/localProfile.test.js fails on an entry of
+    // public/ that is neither in the list nor named there as left out.
     publicDir: LOCAL_PROFILE ? false : '../public/',
     envDir: '../',
     // Keep the dep-optimizer cache in the WORKTREE, not in node_modules.
@@ -537,7 +539,7 @@ export default {
     plugins:
     [
         // DI_PROFILE=local — di.iiii for an artist's own machine: the program
-        // and the works, without di-studio.xyz's hosting furniture.
+        // and the works, without diiii.xyz's hosting furniture.
         ...(LOCAL_PROFILE ? [localPublicDirPlugin()] : []),
         // …and DI_LOCAL_SLIM=1 on top of it — the program alone. This is the
         // plugin that cuts the works out, so on a plain local build it is not

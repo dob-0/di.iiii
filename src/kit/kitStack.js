@@ -66,6 +66,7 @@ const STACK = [
     { group: 'server', name: 'node:sqlite', licence: 'MIT (part of Node.js)', url: 'https://nodejs.org/api/sqlite.html', use: 'Where spaces, projects and their files are recorded.' },
     { group: 'server', name: 'Express', npm: 'express', server: true, licence: 'MIT', url: 'https://expressjs.com', use: 'The HTTP server and its API.' },
     { group: 'server', name: 'Socket.IO server', npm: 'socket.io', server: true, licence: 'MIT', url: 'https://socket.io', use: 'The other end of every live connection.' },
+    { group: 'server', name: 'ws', npm: 'ws', server: true, licence: 'MIT', url: 'https://github.com/websockets/ws', use: 'The mesh: what screens and phones in one group say to each other.' },
     { group: 'server', name: 'Passport.js', npm: 'passport', server: true, licence: 'MIT', url: 'https://www.passportjs.org', use: 'Sign-in with GitHub and Google.' },
     { group: 'server', name: 'multer', npm: 'multer', server: true, licence: 'MIT', url: 'https://github.com/expressjs/multer', use: 'Receives uploaded pictures, models and files.' },
     { group: 'server', name: 'sharp', npm: 'sharp', server: true, licence: 'Apache-2.0', url: 'https://sharp.pixelplumbing.com', use: 'Resizes pictures and strips what a camera wrote into them.' },

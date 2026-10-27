@@ -440,6 +440,17 @@ describe('structure edits and doors (N1250)', () => {
     expect(editHtml('<a>← W</a>', edits, 'b').count).toBe(0)
     expect(() => editHtml('x', [{ from: '', to: 'y' }], 'a')).toThrow()
   })
+  it('an edit that keeps its text and adds a line next to it adds the line once, and a re-run is a no-op (N1330)', async () => {
+    const { editHtml } = await import('./pages-lib.mjs')
+    const edits = [{ from: '<p>sketch</p>', to: '<p>sketch</p><p>today: a list</p>', why: 'add' }]
+    const once = editHtml('<p>sketch</p>', edits, 'a')
+    expect(once.count).toBe(1)
+    expect(once.html).toBe('<p>sketch</p><p>today: a list</p>')
+    const again = editHtml(once.html, edits, 'a')
+    expect(again.count).toBe(0)
+    expect(again.html).toBe(once.html)
+    expect(editHtml(`${once.html}<p>sketch</p>`, edits, 'a').html).toBe('<p>sketch</p><p>today: a list</p><p>sketch</p><p>today: a list</p>')
+  })
   it('upsertDoors adds a missing door, updates a changed one, leaves the rest', async () => {
     const { upsertDoors } = await import('./pages-lib.mjs')
     const door = (id, label) => ({ id, type: 'portal', components: { reference: { spaceId: 's', projectId: id, mode: 'portal', label } } })

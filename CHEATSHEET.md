@@ -51,6 +51,6 @@ prod-only read reports the estate complete while quietly lacking it.
 
 ## Safety
 
-- Never run `space:push` without `--dry-run` first — it can write to production (`di-studio.xyz`).
+- Never run `space:push` without `--dry-run` first — it can write to production (`diiii.xyz`).
 - Never commit `.env`/`.env.local` files or print their values.
 - `dev` → the dev tier, dev.diiii.xyz · `main` → diiii.xyz (prod). Don't start routine work on `main`.

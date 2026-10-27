@@ -20,6 +20,12 @@ JSX text; then re-run the scan and fix what it finds.
 **route:** QA · **size:** S
 **status:** parked.
 
+## 2026-10-21 · raw-wordmark-not-visible-on-desktop
+**raw:** (agent finding, PR #1068 review follow-up) the corner wordmark does not show in a 1440x900 screenshot of Nodes, before or after the PR.
+**translation:** `.raw-surface-wordmark` measures 33x24 at (300, 862) at 1440x900 in Chromium, yet a crop of that corner shows only the canvas grid, on `origin/dev` and on the PR alike (white at 0.28 alpha, `z-index: 0`, behind the canvas ground is the likely reason, not checked). The way home may be invisible on desktop. Not touched: outside the PR's scope, and its placement is an owner decision (2026-10-05).
+**route:** UI · **size:** S
+**status:** parked
+
 ## 2026-09-28 · first-run-owner-and-send-work
 **raw:** "yes and also what i tought we need to admin or 1st usage pswd where when you
 install it will create psd if you work local and want to keep files and workflow and after

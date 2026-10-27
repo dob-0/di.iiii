@@ -29,7 +29,7 @@ const written = []
 for (const p of people) {
   fs.writeFileSync(path.join(HERE, `pages/${p.slug}.html`), renderRoom(p, people))
   fs.writeFileSync(path.join(HERE, `di-space.${p.slug}.json`), JSON.stringify({
-    $schema: 'https://di-studio.xyz/schemas/di-space.schema.json',
+    $schema: 'https://diiii.xyz/schemas/di-space.schema.json',
     spaceId: 'network',
     // ids are global across di.iiii and two of these names are already wcc
     // project ids; the slug is what the address shows.

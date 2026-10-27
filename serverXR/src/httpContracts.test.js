@@ -2563,7 +2563,7 @@ describe('open-call application contracts', () => {
     })
 
     it('answers submission preflights permissively for sandboxed (Origin: null) iframes', async () => {
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://diiii.xyz' } })
 
         const preflight = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications`, {
             method: 'OPTIONS',
@@ -2595,7 +2595,7 @@ describe('open-call application contracts', () => {
         await writeFile(path.join(clientDir, 'index.html'), '<!doctype html><title>x</title>')
         await writeFile(path.join(clientDir, 'fonts', 'inter-regular.woff'), 'not-really-a-font')
         await writeFile(path.join(clientDir, 'plain.txt'), 'no header for this one')
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://diiii.xyz' } })
         const origin = new URL(server.baseUrl).origin
 
         const font = await fetch(`${origin}/fonts/inter-regular.woff`, { headers: { Origin: 'null' } })
@@ -2618,7 +2618,7 @@ describe('open-call application contracts', () => {
         await mkdir(path.join(clientDir, 'wcc', 'process'), { recursive: true })
         await writeFile(path.join(clientDir, 'index.html'), '<!doctype html><title>x</title>')
         await writeFile(path.join(clientDir, 'wcc', 'process', 'process-01.jpeg'), 'not-really-a-jpeg')
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://diiii.xyz' } })
         const origin = new URL(server.baseUrl).origin
 
         const photo = await fetch(`${origin}/wcc/process/process-01.jpeg`, { headers: { Origin: 'null' } })
@@ -2627,7 +2627,7 @@ describe('open-call application contracts', () => {
     })
 
     it('serves project asset reads with permissive CORS for sandboxed iframes', async () => {
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://diiii.xyz' } })
 
         const preflight = await fetch(`${server.baseUrl}/api/projects/some-project/assets/some-asset`, {
             method: 'OPTIONS',

@@ -141,7 +141,7 @@ function registerOgRoutes(router, { loadSpaceMeta, resolveProject = null, siteOr
   //
   // `*splat` requires AT LEAST ONE segment, so `/og` and `/og/` never matched
   // it. nginx proxies a crawler to `/serverXR/og$uri`, and for the bare domain
-  // $uri is `/` — so the one link most likely to be shared, di-studio.xyz
+  // $uri is `/` — so the one link most likely to be shared, diiii.xyz
   // itself, fell past this router entirely and a crawler got nginx's 403 page.
   // The fallback for "no handle" was already written a few lines below; it was
   // simply unreachable. Registering the empty case is the whole fix.
