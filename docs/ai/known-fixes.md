@@ -21,6 +21,13 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## Sign-in, the closed door, the landing page and the chat drew MUI's own corners and light colours (design audit D16, D17, D21, 2026-10-21)
+
+Symptom: on a black room, `/login` drew an 8 px card and 4 px fields and button (measured 8px ×1, 4px ×3), `/no-such-space-here` 8px ×1 and 4px ×5, `/make` 8px and 4px; chat avatars and the `+` button were circles; MUI's light palette sat under every dialog, menu and field.
+Cause: the shared theme for the six MUI surfaces outside Studio (`src/styles/muiTheme.js`) set only the font, so every other MUI default stayed: `shape.borderRadius` 4 (MUI multiplies every numeric `borderRadius` in an `sx` by it), body2 0.875rem off the ladder, light mode. Fix: `diTheme` sets radius 0, body2 0.9rem / caption and button 0.76rem, dark mode in base.css's hex colours, `MuiIconButton` radius 0 (its `50%` is literal, not a theme number). A string radius stays literal, which is how the 8 px status dots stay round. Two overrides come WITH dark mode or it regresses: `MuiSnackbarContent` (dark mode alone computes the notice ground as `emphasize(background, 0.98)` = rgb(250,250,250) with rgba(0,0,0,.87) text) and `MuiPaper` `backgroundImage: 'none'` (dark mode's elevation wash). Palette values must be hex: `emphasize()`/`alpha()` throw on `var()`. Guard: `src/styles/muiTheme.test.jsx` (radius, sizes, palette = base.css tokens, a rendered Snackbar's ground), `AuthGate.test.jsx` (nothing on the sign-in card has a radius), `ChatHomeSurface.test.jsx` (avatar and `+` square).
+
+Review fixes, 2026-10-22 (same entry): (1) the chat's unread `<Badge>` stayed a disc because MUI 7 Badge uses a literal radius 10, not `theme.shape` — `MuiBadge` badge `borderRadius: 0`. (2) `typography.button` 0.76rem reached medium only, so 'Sign in' (12.16 px) drew smaller than a small button (13 px) — medium is now 0.9rem, `sizeSmall` 0.76rem, `sizeLarge` 1.0625rem. (3) text and outlined buttons washed cyan on hover (alpha of primary) — now `rgba(255,255,255,0.08)` on hover and focus-visible. Guards: `src/styles/muiTheme.test.jsx` (Badge radius, rendered font sizes, hover/focus rules); with the theme change reverted, 4 of its 8 tests fail.
+
 ## The rig pages under a touchpad, a keyboard and a finger (2026-10-21)
 
 Found by `scripts/audit/rig-show-pages.cjs` (headless Chromium + axe-core 4.13, 8 pages × 4 device rows; audit
