@@ -21,6 +21,28 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## The rig pages under a touchpad, a keyboard and a finger (2026-10-21)
+
+Found by `scripts/audit/rig-show-pages.cjs` (headless Chromium + axe-core 4.13, 8 pages × 4 device rows; audit
+`docs/ai/audits/2026-10-21-rig-show-pages.md`). Symptoms and fixes, one commit each:
+- **The plot zoomed on a touchpad's two-finger scroll and dropped its sideways part.** `onWheel` read deltaY
+  only and always zoomed. `src/rigbuild/planWheel.js` tells the gesture from the event: ctrlKey = pinch
+  (zoom), a deltaX = touchpad (pan both axes), any purely vertical wheel or line mode = mouse (zoom to the
+  pointer); one meaning per gesture, deltaX always pans. A fractional deltaY is NOT a touchpad tell:
+  Chromium divides a notch by the screen scale (100 → 66.67 at 150 %) and macOS sends 4.000244…; reading
+  it as a touchpad made a mouse pan on a scaled screen (review of #1070). Guard: `plotInput.test.jsx`.
+- **The plot could not zoom without a wheel or two fingers** (WCAG 2.5.1, 2.1.1): + − fit on the plan and
+  the keys + - 0. Guard: `plotInput.test.jsx`.
+- **Perform's strip menus ignored Escape and a press outside.** A window listener (not `document`: the
+  component's `document` prop is the project) closes the open menu and returns focus. Guard:
+  `PerformDesk.test.jsx`.
+- **The patch sheet's sideways-scrolling tables were out of keyboard reach on a phone** (axe
+  scrollable-region-focusable): `sheet.js` `wrap()` makes each box a named region with tabindex 0.
+  Guard: `PatchSheetSurface.test.jsx`. The same pattern is still in `scripts/rigbuild/patch-sheet.mjs`.
+- Smaller, same run: beat dots `role="img"` (axe aria-prohibited-attr), touch targets to 44 px on the plot
+  and 24 / 44 px in Perform (`touchTargets.test.js`), the visualiser title 2.89 → 5.28:1
+  (`visualiserContrast.test.js`), and a production name out of the Perform save box's placeholder.
+
 ## Front pages appended words to `di.iiii` and named the retired Beta editor (2026-10-21)
 
 Symptom: six headings fused a word onto the platform name (`di.iiii Control Server`, `di.iiii Deck Context`, `di.iiii Ecosystem Map`, `di.iiii AI Engineering Collective`, `The di.iiii SDK`, `The di.iiii Visual Identity — Complete Spec`); `serverXR/README.md` listed `Beta` as a supported editor three times, eleven weeks after the lane was deleted (2026-08-06); `docs/deck/README.md` said "lane", `ONBOARDING.md` said "Raw" as a name; and `sdk/README.md` told a reader to `import { connect } from 'di.iiii/sdk'`, a package that does not exist (the root package is private and named otherwise; there is no `sdk/package.json`).
@@ -54,6 +76,34 @@ Symptom: `followIntegration.test.js` failed 1 run in 10 with `Server exited earl
 Cause: 17 test files asked the OS for a free port, closed the probe, and only then started the server on that number; vitest runs files in parallel, so a sibling could take the number in between. Most files then polled `/api/health`, which a SIBLING's server could answer (wrong instance, odd 401s).
 Fix: every test that starts a serverXR child goes through `serverXR/src/testSupport/spawnServer.mjs` `spawnServerUntilReady` (waits for the child's own listen line, retries a lost race on a new port; `port:` pins one for a restart of the same install). In-process servers listen on port 0 and read `address().port`. Guard: `testSupport/noPickedPort.test.js` fails on any test file that picks a port by hand. Side effect found: the child is now ready sooner, so `gracefulShutdown.test.js` walked the data folder while `follows.lock.guard` vanished (ENOENT); its `findDb` now looks again.
 Follow-up 2026-10-21: `scripts/space-cleanup.test.js` (now `spawnServerUntilReady`) and `scripts/di/openFile.test.js` (goes through `di up`, which reads `di.env`: a port counts only when that install's `server.log` says it listens on it and its pid is alive; EADDRINUSE or "already running" retries on a new port) carried the same probe. The guard now walks `scripts/` as well as `serverXR/src`. `scripts/rig/lib.mjs` `freePort` is production code (start-member) and stays.
+
+## A pinch on a phone selected a card and raised the settings sheet (Raw, 2026-10-21)
+
+Cause: a card selected on `pointerdown`, so the first finger of a pinch that landed on a card selected it before the second finger arrived; beginning the pinch cancelled the drag but not the selection, and on a phone the settings sheet rose over half the screen. Measured at 390x844 in Chromium with CDP touch: after a pinch the card was selected and the sheet open. Fix: a touch selects on release, only if no pinch began (`touchSelectRef` in `RawGraphSurface`); a mouse still selects on press; a tap still selects. Guard: `RawGraphSurface.test.jsx` "a pinch never selects", and the phone row of `scripts/audit/nodes-raw.cjs`. Audit NR-08.
+
+## Nodes' small mono labels were under 4.5:1 (Raw, 2026-10-21)
+
+Cause: four labels in `src/raw/styles/raw.css` were white at 0.28–0.42 alpha on near-black: the palette's hint words (3.33:1, 3.22 on the active row), its group counts (2.41), the settings column's section headings (3.24) and the windows' default kicker `--window-accent` (4.05). Measured by axe in Chromium; WCAG 1.4.3 AA wants 4.5 for 10–11 px text. Fix: all four at 0.5 alpha. Guard: `src/raw/rawContrast.test.js` (computes each ratio over the ground axe reported). Audit NR-07.
+
+## A node card could be moved by a drag only (Raw, 2026-10-21)
+
+Cause: the only way to place a card was a pointer drag; no key and no single pointer moved it (WCAG 2.1.1, 2.5.7). Fix: the arrow keys move the focused card (else the selected one; selecting sends focus to the settings column, Escape hands it back to the card) 10 graph px a press, Shift 50, one `onMoveNode` per press; listed in the keys table (`src/raw/input/keymap.js` row `nudge`), so the help sheet shows it. Guards: `RawGraphSurface.test.jsx` "arrow keys move the selected card" and "the focused card moves", `keymap.test.js` "nudge row". Review follow-up: the context menu lets ← and → through when no submenu is open, so they moved the card the menu was opened on; the nudge now waits while a menu is open (guard: "arrow keys inside an open context menu never move the card behind it"); measured in Chromium by `scripts/audit/nodes-raw.cjs`. Audit NR-05. Still drag-only: drawing a wire (NR-06, OPEN, M).
+
+## The node canvas's corner wordmark was a 33x17 px link (Raw, 2026-10-21)
+
+Cause: `.raw-surface-wordmark` (the way home in the canvas corner) was bare text above 640 px wide; axe `target-size` in Chromium at 820x1180 (a tablet, touch) measured 33x17, under WCAG 2.5.8's 24 px. The phone rule already gave it 44. Fix: the base rule is `inline-flex`, `min-height: 24px`, `bottom` 18 → 14 px so the letters stay put. Guard: `src/raw/rawChrome.test.js` "the corner wordmark is a real target". Audit NR-04. Review follow-up: at `bottom: 14px` the letters moved 0.5 px down (Chromium, text top 865 → 865.5); now `bottom: 14.5px` with `line-height: 17px`, back at 865 (guard: "keeps the letters at bottom 18px").
+
+## A sideways touchpad swipe stepped a focused number field down (Raw, 2026-10-21)
+
+Cause: `ScrubNumberInput`'s wheel handler took `deltaY < 0 ? up : down`, so a wheel with `deltaY: 0` (a touchpad's sideways swipe, dozens of events per swipe) stepped the focused value down once per event and swallowed the scroll. Fix: a wheel with no `deltaY` is ignored and not prevented. Guard: `ScrubNumberInput.test.jsx` "a sideways wheel (deltaY 0)". Audit NR-03.
+
+## The node canvas was one button with every card inside it (Raw, 2026-10-21)
+
+Cause: `.raw-graph-surface` carried `role="button"` and `aria-label="Create a graph node"` (for Enter-creates-a-node). A button's children are presentational, so a screen reader could flatten the whole graph, cards and their controls, into one button; axe in Chromium reported `nested-interactive` (serious). Fix: the canvas is `role="group"`, named "Node canvas", still `tabIndex=0`, Enter still creates a node (`aria-keyshortcuts="Enter"`). Guard: `RawGraphSurface.test.jsx` "is a focusable named group" (runs axe-core in jsdom). Audit NR-02. Review follow-up: `aria-keyshortcuts` is set only when `onDoubleClick` is passed, so Studio's read-only `StudioGraphSurface` no longer announces a key that does nothing (guard: "announces Enter only when Enter creates a node").
+
+## A sideways touchpad swipe zoomed the node canvas out (Raw, 2026-10-21)
+
+Cause: `RawGraphSurface`'s wheel handler read `deltaY` only and clamped the zoom step to at least 1, so a two-finger swipe with `deltaY: 0` zoomed out (measured 1 → 0.984 for ten events in Chromium) and its `deltaX` was dropped. Fix: a wheel's `deltaX` pans the canvas (not under Ctrl/⌘, where it is a pinch), and a wheel with no `deltaY` never zooms. The vertical wheel still zooms, as documented. Guard: `RawGraphSurface.test.jsx` "a touchpad swipe pans by its deltaX". Audit: `docs/ai/audits/2026-10-21-nodes-raw.md` NR-01. Review follow-up: with both deltas applied, a vertical swipe that drifted sideways crept the desk sideways while it zoomed; now one axis per event, the larger delta (guard: "a diagonal swipe moves one axis only").
 
 ## A new node's card window opened over its own node (Raw, 2026-10-20)
 
@@ -1109,6 +1159,15 @@ Guard: `scripts/di/channels.test.js` "the health read waits out a 429 or 503…"
 ## An old space's address opened an empty space after its front door moved away (2026-10-20)
 
 Symptom: `di move PROJECT --to SPACE --unpublish` moved a space's front door; the old project links already forwarded (`/old-space/old-project` → `/new-space/p/old-project`, via `project_moves` and `GET /api/resolve/:space/:project` → `{ movedTo }`), but `/old-space` itself opened an empty space: nothing in `project_moves` said which move was the front door's, and nothing asked. Fix: `project_moves.forwards_space_root` (1 when the move took the front door, `projectMove.js`); a sqlite trigger (`db.js`) sets it to 0 for every move out of a space the moment that space gets a front door again, whoever writes the row, so a later unpublish does not bring the old forward back; a second trigger sets it to 0 when the space row is deleted for good (purge, the stale sweep), because a purge frees the name and a new space made under it never had a move (found in review: before it, a re-made space's address forwarded to the old space's project); `GET /api/resolve/:spaceSegment` answers `{ movedTo }` (the project's CURRENT space and id) only when the space has no front door, a flagged move exists, and the caller could open the destination — project not private (or caller a member), not a draft or archived (or caller a member), destination space public (or caller a member). Anything else is a 404 and the space opens as before. Client: `RootApp.jsx` `SpaceRootRoute` follows it with the same `replace()` and kept query/hash `SlugProjectRoute` uses — not on a space's own domain (`getHostSpace()`), where `/{other}/p/{id}` reads back as a project slug of the host space; there the space opens as before (found in review). Limits: moves recorded before the column existed stay 0 and do not forward; an own-domain visitor is not sent on to the platform (a separate decision). Guards: `serverXR/src/projectMove.test.js` (flag, both triggers), `serverXR/src/projectMoveContracts.test.js` (forward, no move, private space, private project, draft, new front door, a purged name made again), `src/RootApp.test.jsx` ("RootApp space root forward", own domain included).
+
+## Follow: a file named only by a document a converge brought in was never fetched (audit F10, 2026-10-21)
+
+The file chase (`serverXR/src/follow/assets.js`) learned names from `upsertAsset` ops and from each project's document once per process. When the host's op was out of its retained window, the converge brought in a document naming the file and nothing asked for its bytes: a dead frame, no word, until a restart. **Fix (already on dev, ccd00a91, 2026-10-05):** a document is read again every `reconcileEveryMs` (10 min), and the follower hands every project to `noteProjects` on each tick. **Guard:** `assets.test.js` "fetches a file named only by a document a converge brought in, within one period (audit F10)" — fake clock, 1 s period: not fetched at 999 ms, fetched at 1000 ms; red on `ccd00a91^`. Limit: up to one period late.
+
+## OPEN: Follow: a host restored from an older backup that passes the old version number is skipped over (audit F13, 2026-10-21)
+
+Confirmed by test, not fixed. A cursor is a bare version number and the follower notices a rebuilt log only when its cursor is past the log's end (`follower.js` `runStream`, `behind`). Host restored from v3 to its v1 copy, three edits to v4, follower resumes from saved cursor 3: v4 arrives, v2 and v3 never do (`['op-after-1', 'op-after-2']` missing). **Guard:** `followRaces.test.js` "F13" asserts the two missing ops exactly — when the fix lands it goes red and must then assert none missing. **Fix owed (protocol):** a `logEpoch` minted when a log is created or restored, returned with the ops, saved beside each cursor; a changed epoch resets that cursor to null. Sketch in `docs/ai/audits/follow-audit-2026-10-04.md` F13.
+
 ## di.iiii's own requests to another di.iiii were counted there as an anonymous program (30 API reads a minute, not 300) (2026-10-21)
 
 Symptom: seen 2026-10-20 on one install: 204 files a follow did not carry, and the auto-update failing with 429. The visitor bouncer (`createVisitorBouncer`, `serverXR/src/appVisitors.js`)
@@ -1267,3 +1326,8 @@ Symptom (measured 2026-10-26 on dev, `apply-structure.mjs` with the di.iiii spac
 Cause: `editHtml` (`scripts/space/pages-lib.mjs`) replaces every `from`. The tools-room edit keeps its `from` (the "sketch, not built" label) inside its `to` and adds a line under it, so after the edit the label is still there and matches again.
 Fix: an edit whose `to` holds its `from` skips the places that already read `to`; its re-run is a no-op again and the dry run says 0. Edits whose `to` does not hold their `from` work exactly as before.
 Guard: `scripts/space/combine-pages.test.mjs` "an edit that keeps its text and adds a line next to it adds the line once, and a re-run is a no-op (N1330)" (fails on the old code: 1 failed; scripts/space 56 passed).
+
+## The repository README said "hosts 3D spaces on the web" and sent visitors to di-studio.xyz (2026-10-21)
+
+Symptom: marketing audit 2026-10-21, row G45. `README.md`, which GitHub shows first, opened with `## di.iiii hosts 3D spaces on the web`, while `src/index.html`'s title, the og card (`serverXR/src/routes/ogRoutes.js`), `public-README.md` and `MANIFESTO.md` all said "public spaces on the open web". Its "live site" link and its joining-guide link pointed at di-studio.xyz; diiii.xyz is the one public address (owner, 2026-10-21). Cause: no test reads a markdown file, so the README's copy drifted with nothing to notice. Fix: the README heading is `## di.iiii — public spaces on the open web`; the two visitor links go to `https://diiii.xyz`. The deploy prose further down (`di-studio.xyz` in the legacy-deploy note and the Mermaid diagram) is infrastructure description and was left alone.
+Guard: `src/positioningLine.test.js` (7 cases); 4 failed on the old README (heading, retired line, live-site link, wiki link).

@@ -35,9 +35,10 @@ export const helpLines = () => [
 ]
 
 /** Every key and mouse row, written from the one table. */
+const ARROW_GLYPH = { ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓' }
 export const helpKeyRows = () => KEYMAP.map((row) => [
     row.does,
-    [row.keys.map((combo) => combo.replace('Ctrl+', 'Cmd/Ctrl+')).join(' · '), row.mouse].filter(Boolean).join(' — ')
+    [row.keys.map((combo) => ARROW_GLYPH[combo] || combo.replace('Ctrl+', 'Cmd/Ctrl+')).join(' · '), row.mouse].filter(Boolean).join(' — ')
 ])
 
 export const getGuideManualPath = () => MANUAL_PATH
