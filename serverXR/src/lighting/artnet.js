@@ -118,13 +118,13 @@ class ArtNet {
     // server bound to 6454 would steal poll replies from a live desk on the same box.
     if (this.offline) { this.socket = null; return; }
     this.socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
-    this.socket.on('error', (e) => { this.lastError = e.message; });
+    this.socket.on('error', (e) => { this.lastError = e.message; this.lastErrorAt = Date.now(); });
     this.socket.on('message', (msg, rinfo) => {
       const node = parsePollReply(msg, rinfo);
       if (node) this.nodes.set(node.ip, { ...(this.nodes.get(node.ip) || {}), ...node });
     });
     this.socket.bind(this.bindPort, this.bind, () => {
-      try { this.socket.setBroadcast(true); } catch (e) { this.lastError = e.message; }
+      try { this.socket.setBroadcast(true); } catch (e) { this.lastError = e.message; this.lastErrorAt = Date.now(); }
       this.ready = true;
     });
   }
@@ -136,7 +136,7 @@ class ArtNet {
     this.sequence = (this.sequence + 1) % 256;
     if (this.sequence === 0) this.sequence = 1;
     this.socket.send(pkt, 0, pkt.length, this.port, target, (err) => {
-      if (err) this.lastError = `${target}: ${err.message}`;
+      if (err) { this.lastError = `${target}: ${err.message}`; this.lastErrorAt = Date.now(); }
       else this.packetsSent++;
     });
   }
@@ -170,7 +170,7 @@ class ArtNet {
             // A refused unicast to an address nothing answers on is expected, not a fault
             // worth showing in the UI; only surface broadcast failures.
             if (err && targets.indexOf(t) < broadcastAddresses().length) {
-              this.lastError = `poll ${t}: ${err.message}`;
+              this.lastError = `poll ${t}: ${err.message}`; this.lastErrorAt = Date.now();
             }
           });
         }

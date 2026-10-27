@@ -1065,6 +1065,48 @@ describe('wheel policy', () => {
         fireEvent.wheel(surface.querySelector('.raw-window-header'), { deltaY: -100 })
         expect(readZoom()).not.toBe(mid)
     })
+
+    // A touchpad's two-finger swipe is a wheel with pixel deltas on BOTH
+    // axes. Its deltaX pans; it was dropped, and a pure sideways swipe
+    // (deltaY 0) zoomed the desk out by the minimum step instead (audit
+    // 2026-10-21 NR-01, measured 1 -> 0.984 in Chromium).
+    it('a touchpad swipe pans by its deltaX, and a sideways swipe never zooms', () => {
+        const { container } = render(<RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} initialZoom={1} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        const stage = () => /translate\(([-\d.]+)px,([-\d.]+)px\) scale\(([-\d.]+)\)/.exec(container.querySelector('.raw-graph-stage').style.transform).slice(1).map(Number)
+        const [x0, y0, z0] = stage()
+        for (let i = 0; i < 10; i++) fireEvent.wheel(surface, { deltaX: 40, deltaY: 0, deltaMode: 0 })
+        const [x1, y1, z1] = stage()
+        expect(z1).toBe(z0)
+        expect(y1).toBe(y0)
+        expect(x1).toBeCloseTo(x0 - 400, 5)
+        fireEvent.wheel(surface, { deltaX: 30, deltaY: -10, deltaMode: 0, ctrlKey: true })
+        const [x2, , z2] = stage()
+        expect(z2).toBeGreaterThan(z1)
+        expect(x2).not.toBeCloseTo(x1 - 30, 1)
+    })
+
+    // A vertical swipe drifts sideways a little. With both deltas applied the
+    // desk crept sideways while it zoomed (review of NR-01): one axis per
+    // event, the larger one.
+    it('a diagonal swipe moves one axis only: the larger delta wins', () => {
+        const { container } = render(<RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} initialZoom={1} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        const stage = () => /translate\(([-\d.]+)px,([-\d.]+)px\) scale\(([-\d.]+)\)/.exec(container.querySelector('.raw-graph-stage').style.transform).slice(1).map(Number)
+        const [x0, y0, z0] = stage()
+        // Mostly vertical: zoom about the cursor, exactly as a pure vertical wheel would.
+        fireEvent.wheel(surface, { deltaX: 6, deltaY: -40, deltaMode: 0, clientX: 0, clientY: 0 })
+        const [x1, y1, z1] = stage()
+        expect(z1).toBeGreaterThan(z0)
+        expect(x1).toBeCloseTo(x0 * (z1 / z0), 5)
+        expect(y1).toBeCloseTo(y0 * (z1 / z0), 5)
+        // Mostly sideways: pan by deltaX, no zoom.
+        fireEvent.wheel(surface, { deltaX: 40, deltaY: 6, deltaMode: 0 })
+        const [x2, y2, z2] = stage()
+        expect(z2).toBe(z1)
+        expect(y2).toBe(y1)
+        expect(x2).toBeCloseTo(x1 - 40, 5)
+    })
 })
 
 describe('RawGraphSurface wires follow portScopeNodes', () => {
@@ -1246,5 +1288,129 @@ describe('RawGraphSurface zoom strip (audit row 6, §3.8)', () => {
         expect(strip.querySelector('.raw-graph-zoom-value').textContent).toBe('150%')
         fireEvent.click(strip.querySelector('.raw-graph-zoom-value'))
         expect(strip.querySelector('.raw-graph-zoom-value').textContent).toBe('100%')
+    })
+})
+
+describe('the canvas in the accessibility tree', () => {
+    // The canvas was role="button" ("Create a graph node") around every card.
+    // A button's children are presentational, so a screen reader flattened
+    // the whole graph into one button; axe in Chromium: nested-interactive,
+    // serious (audit 2026-10-21 NR-02). It is a named group now, still
+    // focusable, and Enter on it still creates a node.
+    it('is a focusable named group, not a button holding the cards (axe nested-interactive)', async () => {
+        const axe = (await import('axe-core')).default
+        const onDoubleClick = vi.fn()
+        const { container } = render(<RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} initialZoom={1} onDoubleClick={onDoubleClick} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        expect(surface.getAttribute('role')).toBe('group')
+        expect(surface.getAttribute('aria-label')).toMatch(/node canvas/i)
+        expect(surface.tabIndex).toBe(0)
+        const result = await axe.run(container, { runOnly: ['nested-interactive', 'aria-allowed-role', 'aria-prohibited-attr'] })
+        expect(result.violations.map((v) => v.id)).toEqual([])
+        fireEvent.keyDown(surface, { key: 'Enter' })
+        expect(onDoubleClick).toHaveBeenCalledTimes(1)
+        expect(surface.getAttribute('aria-keyshortcuts')).toBe('Enter')
+    })
+
+    // Studio's read-only StudioGraphSurface passes no onDoubleClick, so Enter
+    // does nothing there; announcing it promised a key that did nothing.
+    it('announces Enter only when Enter creates a node', () => {
+        const { container } = render(<RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} initialZoom={1} />)
+        expect(container.querySelector('.raw-graph-surface').hasAttribute('aria-keyshortcuts')).toBe(false)
+    })
+})
+
+describe('moving a card without dragging (WCAG 2.1.1, 2.5.7)', () => {
+    // A card moved by a drag only; no key and no single pointer could place
+    // it (audit 2026-10-21 NR-05). Arrow keys on the canvas move the
+    // selected card 10 graph px, Shift ×5, one move op per press.
+    it('arrow keys move the selected card; Shift moves it 50; nothing selected moves nothing', () => {
+        const onMoveNode = vi.fn()
+        const card = makeNode('value.color', { id: 'c', graphX: 100, graphY: 40 })
+        const { container, rerender } = render(<RawGraphSurface nodes={[card]} edges={[]} initialZoom={1} onMoveNode={onMoveNode} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        fireEvent.keyDown(surface, { key: 'ArrowRight' })
+        expect(onMoveNode).not.toHaveBeenCalled()
+        rerender(<RawGraphSurface nodes={[card]} edges={[]} initialZoom={1} onMoveNode={onMoveNode} selectedNodeId="c" />)
+        fireEvent.keyDown(surface, { key: 'ArrowRight' })
+        expect(onMoveNode).toHaveBeenLastCalledWith('c', 110, 40)
+        fireEvent.keyDown(container.querySelector('.raw-graph-node-card'), { key: 'ArrowUp', shiftKey: true })
+        expect(onMoveNode).toHaveBeenLastCalledWith('c', 100, -10)
+        expect(onMoveNode).toHaveBeenCalledTimes(2)
+    })
+
+    // In the editor, selecting sends focus to the settings column and Escape
+    // hands it back to the card with nothing selected (measured in Chromium:
+    // the selected-only rule moved nothing). The focused card is the one.
+    it('the focused card moves even with nothing selected', () => {
+        const onMoveNode = vi.fn()
+        const a = makeNode('value.color', { id: 'a', graphX: 0, graphY: 0 })
+        const b = makeNode('value.color', { id: 'b', graphX: 300, graphY: 0 })
+        const { container } = render(<RawGraphSurface nodes={[a, b]} edges={[]} initialZoom={1} onMoveNode={onMoveNode} />)
+        fireEvent.keyDown(container.querySelector('[data-card-id="b"]'), { key: 'ArrowDown' })
+        expect(onMoveNode).toHaveBeenLastCalledWith('b', 300, 10)
+    })
+
+    // The context menu stops ↑ and ↓ but lets ← and → through when no
+    // submenu is open; they moved the card the menu was opened on.
+    it('arrow keys inside an open context menu never move the card behind it', () => {
+        const onMoveNode = vi.fn()
+        const card = makeNode('value.color', { id: 'c', graphX: 100, graphY: 40 })
+        const { container } = render(<RawGraphSurface nodes={[card]} edges={[]} initialZoom={1} onMoveNode={onMoveNode} selectedNodeId="c" onSelectNode={() => {}} onDuplicateNode={() => {}} />)
+        fireEvent.contextMenu(container.querySelector('[data-card-id="c"]'), { clientX: 400, clientY: 200 })
+        const row = document.querySelector('[role="menuitem"]')
+        fireEvent.keyDown(row, { key: 'ArrowRight' })
+        fireEvent.keyDown(row, { key: 'ArrowLeft' })
+        fireEvent.keyDown(container.querySelector('[data-card-id="c"]'), { key: 'ArrowRight' })
+        expect(onMoveNode).not.toHaveBeenCalled()
+    })
+})
+
+describe('a pinch never selects (audit 2026-10-21 NR-08)', () => {
+    // Measured at 390x844 in Chromium: a pinch whose first finger landed on a
+    // card selected it on the press, and the settings sheet rose over half
+    // the phone. A touch selects on release, and only if no pinch began.
+    const setup = () => {
+        const onSelectNode = vi.fn()
+        const a = makeNode('value.color', { id: 'a', graphX: 0, graphY: 0 })
+        const utils = render(<RawGraphSurface nodes={[a]} edges={[]} initialZoom={1} onSelectNode={onSelectNode} />)
+        utils.container.querySelector('[data-card-id="a"]').setPointerCapture = () => {}
+        const card = utils.container.querySelector('[data-card-id="a"] .raw-graph-node-header')
+        return { ...utils, onSelectNode, card, surface: utils.container.querySelector('.raw-graph-surface') }
+    }
+
+    it('a two-finger pinch that starts on a card leaves the selection alone', () => {
+        const { onSelectNode, card, surface } = setup()
+        fireEvent.pointerDown(card, { button: 0, pointerId: 1, pointerType: 'touch', clientX: 40, clientY: 20 })
+        fireEvent.pointerDown(surface, { pointerId: 2, pointerType: 'touch', clientX: 240, clientY: 100 })
+        fireEvent.pointerMove(window, { pointerId: 2, pointerType: 'touch', clientX: 340, clientY: 100 })
+        fireEvent.pointerUp(window, { pointerId: 1 })
+        fireEvent.pointerUp(window, { pointerId: 2 })
+        expect(onSelectNode).not.toHaveBeenCalled()
+    })
+
+    it('one finger on a card still selects it, on release; a mouse selects on press', () => {
+        const { onSelectNode, card } = setup()
+        fireEvent.pointerDown(card, { button: 0, pointerId: 1, pointerType: 'touch', clientX: 40, clientY: 20 })
+        expect(onSelectNode).not.toHaveBeenCalled()
+        fireEvent.pointerUp(window, { pointerId: 1, pointerType: 'touch', clientX: 40, clientY: 20 })
+        expect(onSelectNode).toHaveBeenCalledWith('a')
+        onSelectNode.mockClear()
+        fireEvent.pointerDown(card, { button: 0, pointerId: 3, pointerType: 'mouse', clientX: 40, clientY: 20 })
+        expect(onSelectNode).toHaveBeenCalledWith('a')
+    })
+})
+
+// A port dot is a pointer handle inside the card, and the card is the button: a
+// focusable or announced child would be a control nested in a control. The row's
+// label names the port; the dot is hidden from the reader (2026-10-21).
+describe('port dots and the reader', () => {
+    it('every port dot is hidden from assistive tech; the port label stays', () => {
+        const text = makeNode('view.text', { id: 't1' })
+        const { container } = render(<RawGraphSurface nodes={[text]} edges={[]} initialZoom={1} />)
+        const dots = [...container.querySelectorAll('.raw-graph-port-dot')]
+        expect(dots).toHaveLength(2)
+        for (const dot of dots) expect(dot.getAttribute('aria-hidden')).toBe('true')
+        expect(container.querySelector('.raw-graph-port-label').textContent).toBe('Content')
     })
 })

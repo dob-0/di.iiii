@@ -143,6 +143,14 @@ describe('deriveNodeInspectorSections', () => {
         expect(src.assetKind).toBe(assetKind)
     })
 
+    // An .ild and an .svg share no media kind, so Laser File offers every asset and reads the bytes.
+    it('gives laser.file an unfiltered asset picker', () => {
+        const src = deriveNodeInspectorSections(createNode('laser.file'))
+            .find((section) => section.id === 'values')?.fields.find((field) => field.path[0] === 'src')
+        expect(src).toMatchObject({ type: 'asset', portType: 'string' })
+        expect(src.assetKind).toBeUndefined()
+    })
+
         // A doorway's port type decides what its socket on the container carries.
     // Typed by hand, a typo produces a type nothing is compatible with and the
     // only symptom is a wire that silently refuses to connect.

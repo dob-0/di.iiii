@@ -30,13 +30,16 @@ const pieces = [
     lift(/^const BASE_ROLES = .*;$/m, 'BASE_ROLES'),
     lift(/^const EMITTER_MIX = \{[\s\S]*?^\};$/m, 'EMITTER_MIX'),
     lift(/^function emitterMix\(role\) \{[\s\S]*?^\}$/m, 'emitterMix'),
+    lift(/^function colourOfLamp\(chans, v\) \{[\s\S]*?^\}$/m, 'colourOfLamp'),
     lift(/^function liveColor\(f\) \{[\s\S]*?^\}$/m, 'liveColor')
 ]
 
 // `S` (the state) and `DMX` (the buffers) are the two globals liveColor reads.
+const deskColour = require(path.join(lightingDir, 'ui/colour.js'))
 const deskLiveColor = new Function(
-    `let S = null, DMX = {};\n${pieces.join('\n')}\nreturn (f, state, dmx) => { S = state; DMX = dmx; return liveColor(f); };`
-)()
+    'deskColour',
+    `const window = { deskColour };\nlet S = null, DMX = {};\n${pieces.join('\n')}\nreturn (f, state, dmx) => { S = state; DMX = dmx; return liveColor(f); };`
+)(deskColour)
 
 const publishedProfiles = Object.fromEntries(
     Object.entries(PROFILES).map(([key, p]) => [key, { channels: p.channels, cat: p.cat }])

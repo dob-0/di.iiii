@@ -268,6 +268,35 @@ describe('server write contracts', () => {
         expect(asStranger.publishedCount).toBeUndefined()
     })
 
+    // Marketing audit 2026-10-21, G23: a space's one line for visitors is set
+    // by its owner, listed with the space, and is what its share card says.
+    it('a space\'s blurb is saved, listed, cleared, refused when too long, and is its card\'s description', async () => {
+        const server = await startServer({ nodeEnv: 'production' })
+        const admin = { 'Content-Type': 'application/json', ...withAuth(server.apiToken) }
+        expect((await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST', headers: admin, body: JSON.stringify({ label: 'Told', slug: 'told', isPublic: true })
+        })).status).toBe(201)
+        const patch = (body) => fetch(`${server.baseUrl}/api/spaces/told`, { method: 'PATCH', headers: admin, body: JSON.stringify(body) })
+        const listed = async () => (await (await fetch(`${server.baseUrl}/api/spaces`)).json()).spaces.find((s) => s.id === 'told')
+
+        const saved = await patch({ blurb: '  Films made\n by   children.  ', isPublic: true })
+        expect(saved.status).toBe(200)
+        expect((await listed()).blurb).toBe('Films made by children.')
+
+        const card = await (await fetch(`${server.baseUrl}/og/told`)).text()
+        expect(card).toContain('<meta property="og:description" content="Films made by children.">')
+
+        expect((await patch({ blurb: 'x'.repeat(161) })).status).toBe(400)
+        expect((await patch({ blurb: 42 })).status).toBe(400)
+        expect((await listed()).blurb).toBe('Films made by children.')
+        // Another field written later must not wipe it.
+        expect((await patch({ label: 'Told again' })).status).toBe(200)
+        expect((await listed()).blurb).toBe('Films made by children.')
+
+        expect((await patch({ blurb: '' })).status).toBe(200)
+        expect((await listed()).blurb).toBeNull()
+    })
+
     it('requires auth by default in production when REQUIRE_AUTH is unset', async () => {
         const server = await startServer({ nodeEnv: 'production' })
 
@@ -2534,7 +2563,7 @@ describe('open-call application contracts', () => {
     })
 
     it('answers submission preflights permissively for sandboxed (Origin: null) iframes', async () => {
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://diiii.xyz' } })
 
         const preflight = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications`, {
             method: 'OPTIONS',
@@ -2566,7 +2595,7 @@ describe('open-call application contracts', () => {
         await writeFile(path.join(clientDir, 'index.html'), '<!doctype html><title>x</title>')
         await writeFile(path.join(clientDir, 'fonts', 'inter-regular.woff'), 'not-really-a-font')
         await writeFile(path.join(clientDir, 'plain.txt'), 'no header for this one')
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://diiii.xyz' } })
         const origin = new URL(server.baseUrl).origin
 
         const font = await fetch(`${origin}/fonts/inter-regular.woff`, { headers: { Origin: 'null' } })
@@ -2589,7 +2618,7 @@ describe('open-call application contracts', () => {
         await mkdir(path.join(clientDir, 'wcc', 'process'), { recursive: true })
         await writeFile(path.join(clientDir, 'index.html'), '<!doctype html><title>x</title>')
         await writeFile(path.join(clientDir, 'wcc', 'process', 'process-01.jpeg'), 'not-really-a-jpeg')
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://diiii.xyz' } })
         const origin = new URL(server.baseUrl).origin
 
         const photo = await fetch(`${origin}/wcc/process/process-01.jpeg`, { headers: { Origin: 'null' } })
@@ -2598,7 +2627,7 @@ describe('open-call application contracts', () => {
     })
 
     it('serves project asset reads with permissive CORS for sandboxed iframes', async () => {
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://diiii.xyz' } })
 
         const preflight = await fetch(`${server.baseUrl}/api/projects/some-project/assets/some-asset`, {
             method: 'OPTIONS',

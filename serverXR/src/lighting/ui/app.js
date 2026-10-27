@@ -304,6 +304,7 @@ async function fetchDmx() {
 function paintDmx(dmx) {
   DMX = dmx;
   paintStage();
+  paintTouchColours();
   paintSelList();
   syncAttr();
   if (page === 'fader') syncFaders();
@@ -326,30 +327,13 @@ const cssRgb = (c) => `rgb(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.
 // This is the light imitation: whatever is on the wire is what you see.
 function liveColor(f) {
   const chans = (S.profiles[f.profile] || {}).channels || [];
-  const buf = DMX[f.universe] || [];
-  const v = {};
-  chans.forEach((role, i) => { v[role] = buf[f.address - 1 + i] || 0; });
-
-  let r = 0, g = 0, b = 0;
-  if (chans.includes('r')) { r = v.r; g = v.g; b = v.b; }
-  else if (chans.includes('warm')) {
-    const w = v.warm / 255, c = v.cool / 255;
-    r = 255 * (w + c * 0.78); g = 255 * (w * 0.80 + c * 0.90); b = 255 * (w * 0.52 + c);
-  } else { r = g = b = 255; }
-
+  return colourOfLamp(chans, window.deskColour.frameValues(f, chans, DMX));
+}
+// One colour rule for the Control stage and the Touch page (colour.js): the emitters the desk names,
+// each mixed by emitterMix.
+function colourOfLamp(chans, v) {
   const emitters = (S.roleKinds && S.roleKinds.emitter) || Object.keys(EMITTER_MIX);
-  for (const role of emitters) {
-    if (BASE_ROLES.has(role)) continue;         // already in the base colour above
-    const lvl = v[role] || 0;
-    if (!lvl) continue;
-    const mix = emitterMix(role);
-    r += lvl * mix[0]; g += lvl * mix[1]; b += lvl * mix[2];
-  }
-  r = clamp(r, 0, 255); g = clamp(g, 0, 255); b = clamp(b, 0, 255);
-
-  const dim = chans.includes('dimmer') ? (v.dimmer || 0) / 255 : 1;
-  const level = Math.max(r, g, b) / 255 * dim;
-  return { r: r * dim, g: g * dim, b: b * dim, level };
+  return window.deskColour.colourOfValues(chans, v, emitters, emitterMix);
 }
 
 function profileOf(f) { return S.profiles[f.profile] || { channels: [] }; }
@@ -1073,10 +1057,61 @@ function buildStages() {
       node.innerHTML = `<div class="fx-body">${f.index}</div><div class="fx-label">${esc(f.name)}</div>`;
       inner.appendChild(node);
     }
+    for (const st of S.strips || []) inner.appendChild(stripNode(st, 'px-strip'));
   }
-  $$('.stage-empty').forEach((p) => { p.hidden = S.fixtures.length > 0; });
+  $$('.stage-empty').forEach((p) => { p.hidden = S.fixtures.length > 0 || (S.strips || []).length > 0; });
+  buildTouchStrips();
   placeStages();
   paintStage();
+}
+
+/* =============== pixel strips: a line of pixels on the stage, a tile on Touch =============== */
+// The page draws a strip from the DMX it already holds: the plan the desk sent (which universe, which
+// channels) says where each pixel lives, the colour order says which channel is which. At most
+// STRIP_DOTS dots are drawn along the line, each standing for the pixels it covers (the first of them).
+const STRIP_DOTS = 64;
+function stripNode(st, cls) {
+  const node = document.createElement('div');
+  node.className = cls;
+  node.dataset.strip = st.id;
+  const n = Math.max(1, Math.min(STRIP_DOTS, st.pixels));
+  node.innerHTML = `<span class="px-dots">${'<i></i>'.repeat(n)}</span><span class="px-label">${esc(st.name)} · ${st.pixels} px${st.plan ? ` · U${st.startUniverse + 1}.${st.startAddress}` : ''}</span>`;
+  return node;
+}
+
+function buildTouchStrips() {
+  const sec = $('#touchStrips');
+  if (!sec) return;
+  const list = S.strips || [];
+  sec.hidden = list.length === 0;
+  const grid = $('#touchStripGrid');
+  grid.innerHTML = '';
+  for (const st of list) grid.appendChild(stripNode(st, 'pxtile'));
+}
+
+function stripPixelRgb(st, i) {
+  const plan = st.plan;
+  if (!plan) return null;
+  const sp = plan.spans.find((x) => i >= x.first && i < x.first + x.count);
+  if (!sp) return null;
+  const buf = DMX[sp.universe] || [];
+  const base = sp.address - 1 + (i - sp.first) * plan.channelsPerPixel;
+  const at = (c) => { const k = plan.order.indexOf(c); return k < 0 ? 0 : (buf[base + k] || 0); };
+  const w = at('W');
+  return [Math.min(255, at('R') + w), Math.min(255, at('G') + w), Math.min(255, at('B') + w)];
+}
+
+function paintStrips() {
+  if (!S || !S.strips || !S.strips.length) return;
+  for (const node of $$('[data-strip]')) {
+    const st = S.strips.find((x) => x.id === node.dataset.strip);
+    if (!st) continue;
+    const dots = node.querySelectorAll('.px-dots i');
+    dots.forEach((dot, k) => {
+      const c = stripPixelRgb(st, Math.floor((k * st.pixels) / dots.length));
+      dot.style.background = !c || (c[0] + c[1] + c[2]) < 8 ? '#1d1d20' : `rgb(${c[0]},${c[1]},${c[2]})`;
+    });
+  }
 }
 
 // One UNIFORM scale for both axes, letterboxed to the pane and inset so a tile at the
@@ -1112,6 +1147,17 @@ function placeStages() {
     // label, and all of them when the view is too small or zoomed-out to read the text.
     const { W, H } = sizes[paneIdx];
     const { sc, ox, oy } = stageMap(W, H);
+    // A strip is a line from (x1,y1) to (x2,y2) in the same stage coordinates as a lamp.
+    for (const node of $$('.px-strip', inner)) {
+      const st = (S.strips || []).find((x) => x.id === node.dataset.strip);
+      if (!st) continue;
+      const { x1, y1, x2, y2 } = st.layout;
+      const dx = (x2 - x1) * sc, dy = (y2 - y1) * sc;
+      node.style.left = (ox + x1 * sc) + 'px';
+      node.style.top = (oy + y1 * sc) + 'px';
+      node.style.width = Math.max(8, Math.hypot(dx, dy)) + 'px';
+      node.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
+    }
     const tiny = zoom < 0.5 || W < 360;
     const shown = [];                    // fixtures whose labels stay visible
     for (const node of $$('.fx-node', inner)) {
@@ -1135,6 +1181,7 @@ function placeStages() {
 
 function paintStage() {
   if (!S) return;
+  paintStrips();
   for (const node of $$('.fx-node')) {
     const f = fxById(node.dataset.id);
     if (!f) continue;
@@ -2227,20 +2274,59 @@ function lookHealth(l) {
 // they were made for the hung movers, so they sit in a group of their own, after this
 // version's looks — never mixed in beside a ground look of the same name.
 const HUNG_RIG = /·\s*hung rig$/;
+// The colour strip of a look tile: the colours the look holds on the lamps patched now; the look that is
+// playing reads the output frame instead (dmx given), so its strip is what the rig shows.
+function lookStrip(l, dmx) {
+  return window.deskColour.stripCss(window.deskColour.lookColours(l, S.fixtures, S.profiles, colourOfLamp, dmx));
+}
+function paintTouchStrips() {
+  const act = activeLookId();
+  for (const b of $$('.lookbtn')) {
+    const l = looksOf().find((x) => x.id === b.dataset.look);
+    const strip = b.querySelector('.tstrip');
+    if (l && strip) strip.style.background = lookStrip(l, b.dataset.look === act ? DMX : null);
+  }
+}
+
+// The live stage on Touch: a dot per lamp at its stage place, coloured from the output frame. View only.
+function paintTouchStage() {
+  const sec = $('#tStage');
+  if (!S || !S.fixtures.length) { sec.hidden = true; return; }
+  sec.hidden = false;
+  const box = $('#tStageBox');
+  const sig = S.fixtures.map((f) => f.id + f.x + f.y).join('|');
+  if (box.dataset.sig !== sig) {
+    box.dataset.sig = sig;
+    box.innerHTML = S.fixtures.map((f) => `<i class="tdot" data-id="${esc(f.id)}" title="${esc(f.name)}"></i>`).join('');
+  }
+  const dots = new Map(window.deskColour.stageDots(S.fixtures, S.profiles, colourOfLamp, DMX).map((d) => [d.id, d]));
+  for (const el of $$('.tdot', box)) {
+    const d = dots.get(el.dataset.id);
+    if (!d) continue;
+    el.style.left = (d.x * 100) + '%';
+    el.style.top = (d.y * 100) + '%';
+    el.style.background = d.lit ? d.css : '';
+    el.style.boxShadow = d.lit ? `0 0 ${Math.round(4 + d.level * 14)}px ${d.css}` : 'none';
+    el.classList.toggle('lit', d.lit);
+  }
+}
+function paintTouchColours() { if (page === 'touch') { paintTouchStage(); paintTouchStrips(); } }
+
 function buildTouchLooks() {
   const sec = $('#tLooks');
   const wrap = $('#touchLooks');
   const looks = looksOf();
   sec.hidden = !looks.length;
   if (!looks.length) { delete wrap.dataset.sig; return; }
-  const sig = looks.map((l) => l.id + '\u0001' + l.name + '\u0001' + (lookHealth(l).dead ? 1 : 0)).join('|');
+  const sig = looks.map((l) => l.id + '\u0001' + l.name + '\u0001' + (lookHealth(l).dead ? 1 : 0) + '\u0001' + lookStrip(l, null)).join('|');
   if (wrap.dataset.sig !== sig) {
     wrap.dataset.sig = sig;
     const tile = (l) => {
       const h = lookHealth(l);
       const name = l.name.replace(HUNG_RIG, '').trim();
       return `<button class="tbtn lookbtn${h.dead ? ' dead' : ''}" data-look="${esc(l.id)}"${h.dead ? ` data-why="${esc(h.why)}" title="${esc(l.name)} — ${esc(h.why)}"` : ''}>`
-        + `<span>${esc(name)}</span><i class="tnote">${h.dead ? esc(h.why) : ''}</i></button>`;
+        + `<span>${esc(name)}</span><i class="tnote">${h.dead ? esc(h.why) : ''}</i>`
+        + `<b class="tstrip" style="background:${lookStrip(l, null)}" aria-hidden="true"></b></button>`;
     };
     const own = looks.filter((l) => !HUNG_RIG.test(l.name));
     const hung = looks.filter((l) => HUNG_RIG.test(l.name));
@@ -4274,6 +4360,14 @@ function renderAll(busy) {
     wp.classList.add('stale', 'off');
     wp.textContent = 'output off';
     wp.title = 'Nothing is leaving this machine. Open Output and switch it on.';
+  } else if (st.bus && st.bus.status === 'unreachable') {
+    // The bus says a route cannot be reached (port not open, socket down, a node that spoke and went
+    // quiet, sends failing). Louder than a frame counter: frames "sent" into a dead route still count.
+    const bad = st.bus.routes.filter((r) => r.status === 'unreachable');
+    wp.hidden = false;
+    wp.classList.add('stale');
+    wp.textContent = bad.length > 1 ? `${bad.length} outputs unreachable` : `${bad[0].name} unreachable`;
+    wp.title = bad.map((r) => `${r.name}: ${r.reason}`).join('\n');
   } else if (S.output.driver === 'enttec' && st.serial) {
     const s = st.serial;
     const stalled = !s.connected || s.ageMs == null || s.ageMs > 2000;
@@ -4296,7 +4390,8 @@ function renderAll(busy) {
   }
 
   const nextSig = S.fixtures.map((f) => `${f.id}${f.profile}${f.name}${f.universe}${f.address}${f.index}`).join('|')
-    + '#' + S.groups.map((g) => g.id + g.name).join('|');
+    + '#' + S.groups.map((g) => g.id + g.name).join('|')
+    + '#' + (S.strips || []).map((t) => `${t.id}${t.name}${t.pixels}${t.order}${t.startUniverse}${t.startAddress}${t.pixelsPerUniverse}${JSON.stringify(t.layout)}`).join('|');
   const structural = nextSig !== structSig;
   if (structural) { structSig = nextSig; safeBuild('buildStages', buildStages); safeBuild('buildGroups', buildGroups); attrSig = ''; }
 
@@ -4331,6 +4426,7 @@ function renderAll(busy) {
   if (menuOpen) $('#statusStrip').textContent = menuText();
 
   paintStage();
+  paintTouchColours();
   paintSelection();
   if (!busy) syncAttr();
   if (page === 'midi') safeBuild('buildMidi', buildMidi);

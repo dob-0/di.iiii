@@ -85,7 +85,7 @@ AND on a phone, by looking at it:
 
 ```bash
 npm run verify:surfaces -- --base https://dev.diiii.xyz          # desktop + 5 devices
-npm run verify:surfaces:mobile -- --base https://di-studio.xyz    # phones/tablet only
+npm run verify:surfaces:mobile -- --base https://diiii.xyz    # phones/tablet only
 ```
 
 Then **open the screenshots** in `.verify-surfaces/`. 43 of the 134 defects in

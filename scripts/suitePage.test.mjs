@@ -43,3 +43,22 @@ describe('public/suite/index.html', () => {
         expect(zipLinks[0][1]).toBe('/suite/di-iiii-suite.zip')
     })
 })
+
+// Audit 2026-10-21, G26: /suite had no canonical, and is served on four hosts.
+describe('public/suite/index.html — one address', () => {
+    it('names diiii.xyz/suite as its canonical and og:url', () => {
+        expect(html).toContain('<link rel="canonical" href="https://diiii.xyz/suite">')
+        expect(html).toContain('<meta property="og:url" content="https://diiii.xyz/suite">')
+        expect(html.match(/rel="canonical"/g)).toHaveLength(1)
+    })
+})
+
+// The brand guide (spaces/main/pages/brand-guide, served at /main/brand-guide)
+// printed the retired address three times as the bio to copy.
+describe('the brand guide', () => {
+    const guide = readFileSync(path.join(ROOT, '..', 'spaces', 'main', 'pages', 'brand-guide', 'index.html'), 'utf8')
+    it('never hands out the retired di-studio.xyz address', () => {
+        expect(guide).not.toMatch(/di-studio\.xyz/)
+        expect(guide.match(/diiii\.xyz/g)?.length).toBeGreaterThanOrEqual(3)
+    })
+})

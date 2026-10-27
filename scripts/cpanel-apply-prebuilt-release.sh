@@ -61,9 +61,9 @@ case "${DEPLOY_ENV}" in
     DEFAULT_WEB_ROOT="${HOME}/public_html"
     DEFAULT_SERVERXR_ROOT="${HOME}/serverXR"
     DEFAULT_SHARED_ROOT="${HOME}/shared"
-    DEFAULT_BASE_URL="https://di-studio.xyz"
+    DEFAULT_BASE_URL="https://diiii.xyz"
     DEFAULT_PORT="4000"
-    DEFAULT_CORS="https://di-studio.xyz,https://www.di-studio.xyz"
+    DEFAULT_CORS="https://diiii.xyz,https://www.diiii.xyz,https://di-studio.xyz,https://www.di-studio.xyz"
     ;;
   *)
     echo "[cpanel-prebuilt] Unsupported environment '${DEPLOY_ENV}'." >&2

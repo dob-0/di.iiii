@@ -103,6 +103,18 @@
          what the place is, and the way on to the works. Kept short on purpose;
          the room itself is the real thing, and this must never claim more. -->
     <noscript>
+        <!-- Inline because no stylesheet is certain here: the house ground and
+             type, nothing fetched. Values are base.css's tokens. -->
+        <style>
+            html, body { margin: 0; background: #000; color: #fff; }
+            .di-noscript { max-width: 40rem; padding: 48px 24px; font: 16px/1.6 Inter, system-ui, sans-serif; }
+            .di-noscript h1 { margin: 0 0 16px; font-size: 1.6rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; }
+            .di-noscript p, .di-noscript li { color: rgba(255, 255, 255, 0.82); }
+            .di-noscript ul { padding-left: 20px; }
+            .di-noscript a { color: #fff; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.875em; text-underline-offset: 3px; }
+            .di-noscript a:hover { color: #4df9ff; }
+        </style>
+        <div class="di-noscript">
         <h1>di.iiii — public spaces on the open web</h1>
         <p>Make a space, hand out the address — a link while it runs, a file when it ends.</p>
         <p>This page opens a space you can walk through, which needs JavaScript. The works it holds:</p>
@@ -113,6 +125,7 @@
             <li><a href="/algovrithm">algovrithm</a></li>
         </ul>
         <p><a href="/wiki">How it works</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
+        </div>
     </noscript>
     <script type="module" src="./index.jsx"></script></body>
 </html>

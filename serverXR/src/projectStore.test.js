@@ -215,3 +215,27 @@ describe('projectStore', () => {
         expect(kept.map((op) => op.opId)).toEqual(['ancient', 'recent'])
     })
 })
+
+// The reserved-word guard belongs to the create ROUTE (routes/projectRoutes.js),
+// never to this function: a snapshot restore (spaceStore.restoreSpaceProjectDocuments),
+// the open-jam bootstrap and a project already stored under such an id make their
+// project through here, and a project that exists must stay makeable and findable.
+// This pins that. It is a guard against a later "tidy-up" moving the check down
+// into the store, not a test of the new refusal (projectContracts.test.js is that).
+describe('ensureProject and a reserved word', () => {
+    it('makes and finds a project under every reserved id: the refusal is the route\'s, not the store\'s', async () => {
+        const { RESERVED_PROJECT_SLUGS } = require('../../shared/reservedSegments.cjs')
+        const ids = [...RESERVED_PROJECT_SLUGS].filter((word) => /^[a-z0-9-]{3,64}$/.test(word))
+        // A loop over nothing proves nothing.
+        expect(ids.length).toBeGreaterThan(25)
+        const spacesDir = await createSpacesDir()
+
+        for (const id of ids) {
+            const meta = await ensureProject(spacesDir, 'main', id, { title: `Old ${id}` })
+            expect(meta.id, id).toBe(id)
+            const found = await findProjectById(spacesDir, id)
+            expect(found?.projectId, id).toBe(id)
+            expect(found?.spaceId, id).toBe('main')
+        }
+    })
+})

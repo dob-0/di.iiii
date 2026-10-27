@@ -26,7 +26,7 @@
 }
 
 .vis-title {
-    color: var(--di-faint);
+    color: var(--di-dim);
     text-transform: uppercase;
     letter-spacing: var(--di-label-tracking, 0.12em);
 }

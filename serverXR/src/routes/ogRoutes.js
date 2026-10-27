@@ -257,7 +257,7 @@ const defaultLoadMeta = async (loadSpaceMeta, handle) => {
  * (slug, else id — the same link /spaces prints), so `/br_id_ge` and
  * `/br-id-ge` name one page, not two (audit G11).
  */
-async function resolveHead({ path, hostSpaceId = null, origin = '', loadSpaceMeta, resolveProject = null }) {
+async function resolveHead({ path, hostSpaceId = null, origin = '', loadSpaceMeta, resolveProject = null, loadWikiArticles = null }) {
   const parts = String(path || '').split(/[?#]/)[0].split('/').filter(Boolean)
   const segments = hostSpaceId ? [hostSpaceId, ...parts] : parts
   const handle = segments[0] || ''
@@ -285,6 +285,22 @@ async function resolveHead({ path, hostSpaceId = null, origin = '', loadSpaceMet
       }
     }
     const staticPage = STATIC_PAGES[lower]
+    // One wiki article, /wiki/{id} (G25): its own title, description and
+    // canonical. An id the wiki does not have falls through to the wiki's own
+    // card, with the wiki's address as canonical, not the address that missed.
+    if (staticPage && lower === 'wiki' && segments[1] && typeof loadWikiArticles === 'function') {
+      const articles = await loadWikiArticles().catch(() => null)
+      const article = articles?.get(segments[1])
+      if (article) {
+        return {
+          found: true,
+          ...front,
+          title: `${article.title} — Wiki — di.iiii`,
+          description: article.summary || staticPage.description,
+          url: at(`/wiki/${encodeURIComponent(article.id)}`),
+        }
+      }
+    }
     if (staticPage) {
       return { found: true, ...front, title: staticPage.title, description: staticPage.description, url: at(`/${lower}`) }
     }
@@ -357,7 +373,9 @@ async function resolveHead({ path, hostSpaceId = null, origin = '', loadSpaceMet
     }
   }
 
-  const description = meta.ogDescription || meta.description
+  // The space's own line for visitors (shared/spaceBlurb.cjs) before the
+  // generic sentence (G23).
+  const description = meta.ogDescription || meta.blurb || meta.description
     || (own ? FRONT_DOOR.description : `${meta.label || spaceHandle} — a space on di.iiii.`)
   return {
     found: true,
@@ -407,7 +425,7 @@ function createShellSource({ readShell = null, shellUrl = '', fetchImpl = global
   }
 }
 
-function registerOgRoutes(router, { loadSpaceMeta, resolveProject = null, siteOrigin, spaceIdForHost = null, loadShell = null }) {
+function registerOgRoutes(router, { loadSpaceMeta, resolveProject = null, siteOrigin, spaceIdForHost = null, loadShell = null, loadWikiArticles = null }) {
   // Express 5's router (path-to-regexp v8) rejects a bare '*' — it throws at
   // REGISTRATION, so this would not have failed a request, it would have stopped
   // serverXR from booting at all. Named wildcard, and params.splat is an array.
@@ -422,14 +440,14 @@ function registerOgRoutes(router, { loadSpaceMeta, resolveProject = null, siteOr
   //
   // `*splat` requires AT LEAST ONE segment, so `/og` and `/og/` never matched
   // it. nginx proxies a crawler to `/serverXR/og$uri`, and for the bare domain
-  // $uri is `/` — so the one link most likely to be shared, di-studio.xyz
+  // $uri is `/` — so the one link most likely to be shared, diiii.xyz
   // itself, fell past this router entirely and a crawler got nginx's 403 page.
   // The fallback for "no handle" was already written a few lines below; it was
   // simply unreachable. Registering the empty case is the whole fix.
   const cardHandler = async (req, res, next) => {
     try {
       const { hostSpaceId, origin } = hostContext(req, { siteOrigin, spaceIdForHost })
-      const head = await resolveHead({ path: splatPath(req), hostSpaceId, origin, loadSpaceMeta, resolveProject })
+      const head = await resolveHead({ path: splatPath(req), hostSpaceId, origin, loadSpaceMeta, resolveProject, loadWikiArticles })
       // An address nothing answers to still gets a valid card rather than a
       // 404, pointed at the platform's own front door — sending a crawler
       // back to a URL we just failed to resolve is a loop.
@@ -452,7 +470,7 @@ function registerOgRoutes(router, { loadSpaceMeta, resolveProject = null, siteOr
     const shell = typeof loadShell === 'function' ? await loadShell().catch(() => null) : null
     if (!shell) return null
     const { hostSpaceId, origin } = hostContext(req, { siteOrigin, spaceIdForHost })
-    const head = await resolveHead({ path, hostSpaceId, origin, loadSpaceMeta, resolveProject })
+    const head = await resolveHead({ path, hostSpaceId, origin, loadSpaceMeta, resolveProject, loadWikiArticles })
     return { status: head.found ? 200 : 404, html: injectHead(shell, head) }
   }
   const pageHandler = async (req, res, next) => {

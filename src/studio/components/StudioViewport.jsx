@@ -38,6 +38,7 @@ import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { createPivotDrag, getSelectionCentroid } from '../utils/multiTransform.js'
 import { sameTransform } from '../utils/transformDelta.js'
 import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../../project/viewport/timelinePlayback.js'
+import { defaultWorldState } from '../../shared/projectSchema.js'
 import { animationSeed, applyAnimation, authoredAnimation } from '../../project/viewport/entityAnimation.js'
 import { applyProximity, resolveProximity } from '../../project/viewport/entityProximity.js'
 import {
@@ -59,6 +60,7 @@ import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
 import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
 import { classifyArchitecture, parseLayersParam } from '../../project/viewport/smartView/smartViewGeometry.js'
 import { resolveViews } from '../../project/viewport/smartView/viewData.js'
+import { tourDoors } from '../../project/viewport/autoFly.js'
 import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { KICK_AFTER_INPUT_MS, RenderDemandProvider, useHoldFrames, useFrameloopMode, useStableDemand } from '../utils/renderDemand.jsx'
@@ -801,7 +803,7 @@ function StudioSceneContent({
     // frame and walk mode read the same switch (shadowCasting.js).
     const shadowCasting = resolveShadowCasting(document.renderSettings)
     const fogAuthored = Boolean(fog) && fog.enabled !== false
-    const fogColor = fog?.color || document.worldState?.backgroundColor || '#0a1118'
+    const fogColor = fog?.color || document.worldState?.backgroundColor || defaultWorldState.backgroundColor
     const fogNear = fog?.near ?? 8
     const fogFar = fog?.far ?? 50
 
@@ -817,7 +819,7 @@ function StudioSceneContent({
             <LaserView entities={document.entities} />
             <ShaderWarmup />
             <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
-            <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />
+            <color attach="background" args={[document.worldState?.backgroundColor || defaultWorldState.backgroundColor]} />
             {/* Authored fog reached walk mode only. A room composed with
                 atmosphere therefore had none in the frame a visitor ARRIVES on
                 and gained it a click later — the same document, two answers.
@@ -982,7 +984,7 @@ const TOOLBAR_BTN = {
     padding: '5px 11px',
     borderRadius: '2px',
     border: '1px solid rgba(255,255,255,0.12)',
-    background: 'rgba(15,23,34,0.82)',
+    background: 'rgba(var(--di-surface-2-rgb),0.82)',
     color: '#c8d8e8',
     fontSize: '12px',
     fontWeight: 600,
@@ -1027,7 +1029,7 @@ function FullscreenButton() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'rgba(15,23,34,0.55)',
+                background: 'rgba(var(--di-surface-2-rgb),0.55)',
                 border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: 2,
                 color: 'rgba(255,255,255,0.55)',
@@ -1040,12 +1042,12 @@ function FullscreenButton() {
             onMouseEnter={(e) => {
                 e.currentTarget.style.color = '#fff'
                 e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'
-                e.currentTarget.style.background = 'rgba(15,23,34,0.82)'
+                e.currentTarget.style.background = 'rgba(var(--di-surface-2-rgb),0.82)'
             }}
             onMouseLeave={(e) => {
                 e.currentTarget.style.color = 'rgba(255,255,255,0.55)'
                 e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-                e.currentTarget.style.background = 'rgba(15,23,34,0.55)'
+                e.currentTarget.style.background = 'rgba(var(--di-surface-2-rgb),0.55)'
             }}
         >
             {isFs ? (
@@ -1062,10 +1064,10 @@ function FullscreenButton() {
 }
 
 const TOOLBAR_BTN_ACTIVE_STRONG = {
-    background: 'rgba(79,214,255,0.28)',
-    borderColor: '#4fd6ff',
-    color: '#4fd6ff',
-    boxShadow: '0 0 8px rgba(79,214,255,0.35)'
+    background: 'rgba(var(--di-cyan-rgb),0.28)',
+    borderColor: 'var(--di-cyan)',
+    color: 'var(--di-cyan)',
+    boxShadow: '0 0 8px rgba(var(--di-cyan-rgb),0.35)'
 }
 
 // Every Blender numpad view command as a visible, labelled 44 px button, so a laptop
@@ -1222,7 +1224,13 @@ export default function StudioViewport({
         classifyArchitecture(entitiesForView || []).ids.size > 0
         || (entitiesForView || []).some((e) => e?.type === 'model')
     ), [entitiesForView])
-    const smartOn = Boolean(smartView) && !lowPower && hasBuilding
+    // A room without a building but with doors still flies (the tour, autoFly.js): the smart view comes on for the
+    // flight and stays mounted after it, so it can hand the camera back where the flight left it.
+    const hasDoors = useMemo(() => tourDoors(entitiesForView || []).length >= 2, [entitiesForView])
+    const [flownOnce, setFlownOnce] = useState(false)
+    const flyRequested = typeof smartView?.onFlyChange === 'function' && Boolean(smartView?.flyOn)
+    useEffect(() => { if (flyRequested) setFlownOnce(true) }, [flyRequested])
+    const smartOn = Boolean(smartView) && !lowPower && (hasBuilding || (hasDoors && (flyRequested || flownOnce)))
     const studioBar = smartView?.bar === 'studio'
     const cues = document.mappingState?.cues
     const reservedKeys = useMemo(() => (
@@ -1499,7 +1507,7 @@ export default function StudioViewport({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        background: 'rgba(15,23,34,0.55)',
+                        background: 'rgba(var(--di-surface-2-rgb),0.55)',
                         border: '1px solid rgba(255,255,255,0.1)',
                         borderRadius: 2,
                         color: 'rgba(255,255,255,0.55)',
@@ -1512,14 +1520,14 @@ export default function StudioViewport({
                         pointerEvents: 'auto'
                     }}
                     onMouseEnter={(e) => {
-                        e.currentTarget.style.color = '#4fd6ff'
-                        e.currentTarget.style.borderColor = 'rgba(79,214,255,0.4)'
-                        e.currentTarget.style.background = 'rgba(15,23,34,0.82)'
+                        e.currentTarget.style.color = 'var(--di-cyan)'
+                        e.currentTarget.style.borderColor = 'rgba(var(--di-cyan-rgb),0.4)'
+                        e.currentTarget.style.background = 'rgba(var(--di-surface-2-rgb),0.82)'
                     }}
                     onMouseLeave={(e) => {
                         e.currentTarget.style.color = 'rgba(255,255,255,0.55)'
                         e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-                        e.currentTarget.style.background = 'rgba(15,23,34,0.55)'
+                        e.currentTarget.style.background = 'rgba(var(--di-surface-2-rgb),0.55)'
                     }}
                 >
                     ?

@@ -111,4 +111,4 @@ echo "== restarting stack =="
 cd /opt/di.iiii
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
-echo "== done — verify with: curl -s https://di-studio.xyz/serverXR/api/health =="
+echo "== done — verify with: curl -s https://diiii.xyz/serverXR/api/health =="
