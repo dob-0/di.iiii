@@ -1766,7 +1766,7 @@ export const NODE_TYPES = {
     },
 
     // A live code for the address phones should open (ISO/IEC 18004, through
-    // the vendored qrcode-generator 1.4.4). Text left empty encodes this
+    // uqr). Text left empty encodes this
     // tier's own address, so moving a project to another tier cannot leave a
     // dead code on the wall. Its picture is a texture wire, like Webcam's
     // Frame: a plane, an Image panel or Picture Out shows it.

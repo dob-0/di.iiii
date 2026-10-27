@@ -1,14 +1,6 @@
-import { createHash } from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { cwd } from 'node:process'
 import jsQR from 'jsqr'
 import { describe, expect, it } from 'vitest'
 import { QR_LEVELS, QR_QUIET_ZONE, encodeQr, normaliseLevel, rasterQr } from './qrCode.js'
-
-// Vitest roots at src/ but node resolves from the repo — try both.
-const repoFile = (path) => [`../${path}`, path].map((p) => resolve(cwd(), p)).find(existsSync)
-const sha256 = (path) => createHash('sha256').update(readFileSync(repoFile(path))).digest('hex')
 
 const sameBytes = (a, b) => a.length === b.length && a.every((value, i) => value === b[i])
 
@@ -24,16 +16,6 @@ const asShown = (picture) => {
     }
     return { ...picture, data }
 }
-
-describe('the vendored encoder', () => {
-    it('is the same bytes the node bundles, at the sha256 VENDOR.md records', () => {
-        const recorded = '18ae399f81182bc9de916e9c77b195df20cc58d6f2d55a62b085a299f1bf1780'
-        expect(sha256('public/vendor/qrcode-generator@1.4.4/qrcode.js')).toBe(recorded)
-        expect(sha256('node_modules/qrcode-generator/qrcode.js')).toBe(recorded)
-        expect(readFileSync(repoFile('public/vendor/VENDOR.md'), 'utf8')).toContain(recorded)
-        expect(readFileSync(repoFile('public/vendor/qrcode-generator@1.4.4/LICENSE'), 'utf8')).toMatch(/^MIT License/)
-    })
-})
 
 describe('encodeQr + rasterQr — round trip through a decoder', () => {
     const texts = [

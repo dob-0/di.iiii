@@ -1,8 +1,7 @@
-// QR Code, per ISO/IEC 18004, through qrcode-generator 1.4.4 (MIT; the same
-// bytes are vendored for pages at public/vendor/qrcode-generator@1.4.4/).
-// Pure: text in, a module grid out, then RGBA bytes — no three, no DOM, so
-// the encoding can be decoded back in a test.
-import qrcode from 'qrcode-generator'
+// QR Code, per ISO/IEC 18004, through `uqr` (MIT, pinned in package.json) —
+// the same encoder as src/utils/qrCode.js. Pure: text in, a module grid out,
+// then RGBA bytes — no three, no DOM, so the encoding can be decoded back in a test.
+import { encode } from 'uqr'
 
 export const QR_LEVELS = ['L', 'M', 'Q', 'H']
 export const QR_DEFAULT_LEVEL = 'M'
@@ -16,31 +15,23 @@ export const normaliseLevel = (level) => {
     return QR_LEVELS.includes(upper) ? upper : QR_DEFAULT_LEVEL
 }
 
-// The encoder's Byte mode reads each char code & 0xff, so the text goes in as
-// its UTF-8 bytes, one char per byte — an address with ü or հ survives.
-const utf8Binary = (text) => {
-    let out = ''
-    for (const byte of new TextEncoder().encode(text)) out += String.fromCharCode(byte)
-    return out
-}
-
 /** text -> { size, dark: Uint8Array(size * size), row-major from the top }
  * or null when there is nothing to encode or it does not fit version 40. */
 export const encodeQr = (text, level = QR_DEFAULT_LEVEL) => {
     const value = String(text ?? '')
     if (!value) return null
-    const qr = qrcode(0, normaliseLevel(level))
+    let grid
     try {
-        qr.addData(utf8Binary(value), 'Byte')
-        qr.make()
+        // border 0: rasterQr draws the quiet zone. boostEcc off: the level asked for is the level used.
+        grid = encode(value, { ecc: normaliseLevel(level), border: 0, boostEcc: false }).data
     } catch {
-        // "code length overflow": longer than 2953 bytes at L, fewer at H.
+        // Longer than version 40 holds at this level (2953 bytes at L, fewer at H).
         return null
     }
-    const size = qr.getModuleCount()
+    const size = grid.length
     const dark = new Uint8Array(size * size)
     for (let row = 0; row < size; row += 1) {
-        for (let col = 0; col < size; col += 1) dark[row * size + col] = qr.isDark(row, col) ? 1 : 0
+        for (let col = 0; col < size; col += 1) dark[row * size + col] = grid[row][col] ? 1 : 0
     }
     return { size, dark }
 }
