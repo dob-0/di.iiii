@@ -71,3 +71,20 @@ describe('PatchSheetSurface reads the desk', () => {
         expect(screen.getByText('from the document (no desk on this tier)')).toBeTruthy()
     })
 })
+
+// Audit 2026-10-21 (docs/ai/audits/2026-10-21-rig-show-pages.md, row S1): on a phone the tables scroll
+// sideways inside their box, and axe-core found that box unreachable by keyboard (scrollable-region-focusable,
+// serious; WCAG 2.1.1). Every scrolling box takes focus and says which table it holds.
+describe('the sheet on a narrow screen, by keyboard', () => {
+    it('every sideways-scrolling table box is focusable and named', async () => {
+        const { container } = render(<PatchSheetSurface spaceId="s" projectId="hall" library={library} loadDocument={async () => ({ document: doc, version: 9 })} loadDesk={async () => null} />)
+        await waitFor(() => expect(screen.getByText('Hall — patch sheet')).toBeTruthy())
+        const boxes = [...container.querySelectorAll('.rigsheet .wrap')]
+        expect(boxes.length).toBe(3)
+        expect(boxes.map((b) => b.getAttribute('tabindex'))).toEqual(['0', '0', '0'])
+        expect(boxes.map((b) => b.getAttribute('role'))).toEqual(['region', 'region', 'region'])
+        expect(screen.getByRole('region', { name: 'Patch table' })).toBeTruthy()
+        expect(screen.getByRole('region', { name: 'Fixture types table' })).toBeTruthy()
+        expect(screen.getByRole('region', { name: 'Power table' })).toBeTruthy()
+    })
+})

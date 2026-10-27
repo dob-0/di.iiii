@@ -33,7 +33,7 @@ const SANDBOX_ERROR_PATTERN = /(sandbox|denied|securityerror|not allowed|blocked
 // `<` keeps a `</script>` in it from closing the bootstrap tag
 const inlineJson = (value) => JSON.stringify(value ?? '').replace(/</g, '\\u003c')
 
-const buildBootstrapScript = (pageQuery, pageOrigin) => `(() => {
+const buildBootstrapScript = (pageQuery, pageOrigin, pageHash = '') => `(() => {
     const MESSAGE_TYPE = ${JSON.stringify(PREVIEW_HOST_MESSAGE_TYPE)};
     const ENTER_EXHIBITION_KIND = ${JSON.stringify(PREVIEW_ENTER_EXHIBITION_KIND)};
     const PAINT_CONFIRMED_KIND = ${JSON.stringify(PREVIEW_PAINT_CONFIRMED_KIND)};
@@ -56,6 +56,18 @@ const buildBootstrapScript = (pageQuery, pageOrigin) => `(() => {
     // was running on the dev tier — the tier could never rehearse itself. Read
     // this instead of writing a hostname down.
     window.diiPageOrigin = ${inlineJson(pageOrigin)};
+
+    // …and its #fragment. A link like /dilijan#works ("back to the works") opened
+    // the page at its top: the fragment stayed on the shell's address and the
+    // srcdoc never saw it (owner 2026-10-23, N1248). Hand it down, and scroll to
+    // the element it names once the page has laid itself out, the way a browser
+    // does for a page with a URL of its own.
+    window.diiPageHash = ${inlineJson(pageHash)};
+    if (/^#[A-Za-z][\\w:.-]*$/.test(window.diiPageHash)) {
+        const id = window.diiPageHash.slice(1);
+        const go = () => { const el = document.getElementById(id); if (el) el.scrollIntoView({ block: 'start' }); };
+        window.addEventListener('load', () => { go(); setTimeout(go, 400); }, { once: true });
+    }
 
     // A ?preview=1 card thumbnail cannot ask this page "are you done loading"
     // — an author's own runtime is arbitrary code, unaware it is being asked.
@@ -268,8 +280,8 @@ const buildBootstrapScript = (pageQuery, pageOrigin) => `(() => {
     sendIssues();
 })();`
 
-const injectBootstrap = (documentSource, pageQuery, pageOrigin) => {
-    const bootstrapTag = `<script>${buildBootstrapScript(pageQuery, pageOrigin)}</script>`
+const injectBootstrap = (documentSource, pageQuery, pageOrigin, pageHash) => {
+    const bootstrapTag = `<script>${buildBootstrapScript(pageQuery, pageOrigin, pageHash)}</script>`
     const openHeadPattern = /<head(\s[^>]*)?>/i
     const openHtmlPattern = /<html(\s[^>]*)?>/i
 
@@ -294,9 +306,9 @@ ${documentSource}
 </html>`
 }
 
-export function buildPresentationPreviewDocument(html = '', pageQuery = '', pageOrigin = '') {
+export function buildPresentationPreviewDocument(html = '', pageQuery = '', pageOrigin = '', pageHash = '') {
     const normalizedHtml = stripSameOriginAssetHosts(String(html || ''))
-    return injectBootstrap(normalizedHtml, String(pageQuery || ''), String(pageOrigin || ''))
+    return injectBootstrap(normalizedHtml, String(pageQuery || ''), String(pageOrigin || ''), String(pageHash || ''))
 }
 
 export function getPreviewIssueMessage(code) {
