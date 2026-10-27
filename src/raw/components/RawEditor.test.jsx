@@ -1433,7 +1433,7 @@ describe('RawEditor — a thing from the palette (layers unit 7)', () => {
         render(<RawEditor localStorageKey={KEY} />)
         fireEvent.click(screen.getByText('enter-first-node'))
         mockApplyLocalOps.mockClear()
-        placeFromPalette('lamp')
+        placeFromPalette('point light')
         const made = createdEntities()
         expect(made).toHaveLength(1)
         expect(made[0].op.payload.entity.type).toBe('pointLight')
