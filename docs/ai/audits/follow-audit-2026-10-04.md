@@ -37,7 +37,7 @@ whether a thing CAN happen, not how often.
 | F15 | LOW | CONFIRMED (test) | `follows.json` is 0600 only when created; an existing 0644 file stays readable, key included | followStore.js:38; follows.mjs:106-110 |
 | F16 | LOW | CONFIRMED (trace) | Status lags: `state` is set once per tick and a tick runs every stream in turn (8 s per stream on a blackholed link); `di follows` shows "starting" for the first park, and "waiting" only after the whole sweep | follower.js:446-486,507 |
 | F17 | LOW | CONFIRMED (trace) | A failed write is reported as the bare status number (`401`, `413`), not in words | follower.js:183,478; ui.mjs:224 |
-| F18 | LOW | PLAUSIBLE | Hostile or odd project ids from a host: `.` and `..` survive `encodeURIComponent` and are dot-normalised by `new URL`; an unbounded project list means one POST per id per tick | follower.js:276-288; streams.js:119-126 |
+| F18 | LOW | FIXED (9bd19e1, 2026-10-21) | Hostile or odd project ids from a host: `.` and `..` survive `encodeURIComponent` and are dot-normalised by `new URL`; an unbounded project list means one POST per id per tick | follower.js:276-288; streams.js:119-126 |
 | F19 | LOW | CONFIRMED (trace) | `di unfollow` (CLI) leaves `follow-state/<space>.json`; the running server's follower may re-save state after the file was removed. A later follow resumes from stale cursors | cli.mjs:1064-1072; followStore.js:57-64 |
 | F20 | LOW | PLAUSIBLE | Interrupted transfers leave `follow-*.part` in the uploads dir (no sweep); key sent in clear if `--from` is `http://` to a non-loopback host | assets.js:214-272; follows.mjs |
 
@@ -305,6 +305,12 @@ small (a read or an unrelated route on the local server with the internal token)
 remote. There is also no cap on the number of ids: a host listing 100 000 projects makes the follower POST 100 000
 creates, sequentially, each tick (follower.js:277-288). Fix: validate each id with the local `normalizeProjectId`
 and cap the list per tick; log refusals.
+
+**FIXED 2026-10-21 (9bd19e1).** `projectIdsFrom` (streams.js) and `byId` (followProjects.js) keep an id only when
+`normalizeProjectId(id) === id`; one list carries at most `MAX_FOLLOWED_PROJECTS` (5000). Each dropped id is counted in
+`state.projects.refusedIds` (`bad id`, `over cap`) and the pass logs one line. Guards: streams.test.js,
+followProjects.test.js, followIntegration.test.js "a project id the host lists that this server would never make" — all
+seen red on dev (the follower sent `GET /api/ops`, `GET /api/document` and a create with slug `..`).
 
 ## F19  LOW, CONFIRMED (trace). Unfollow and state
 

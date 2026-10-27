@@ -7,6 +7,7 @@ const { layerValues, kindAllows } = require('./looks');
 const { headsFrame, headsPose } = require('./headMotion');
 const { motionFrame } = require('./lookMotion');
 const { recallHolds } = require('./holds');
+const { planStrip, claimedRanges, renderStrip } = require('./pixelstrip');
 
 // Roles that step, never fade (snapMask).
 const STEP_ROLES = new Set(['color', 'gobo', 'prism', 'rotation', 'frost', 'strobe', 'control', 'aux1', 'aux2']);
@@ -250,7 +251,13 @@ class Engine {
     // Audio envelope: attack-instant, release-decay. Lives on the engine, not the state,
     // because it is derived motion — nothing about it belongs in show.json.
     this.audioEnv = { level: 0, low: 0, mid: 0, high: 0, last: 0 };
+    // The latest live frame of each pixel strip (id -> { data: r,g,b,w per pixel, at }).
+    // Derived motion like the audio envelope: never saved, and stale after the strip's frameTtlMs.
+    this.stripFrames = new Map();
   }
+
+  setStripFrame(id, data, at = Date.now()) { this.stripFrames.set(id, { data, at }); }
+  dropStripFrame(id) { this.stripFrames.delete(id); }
 
   universes() {
     const set = new Set();
@@ -258,6 +265,10 @@ class Engine {
     for (const key of Object.keys(this.state.raw)) {
       const u = Number(key.split(':')[0]);
       if (Number.isInteger(u) && u >= 0) set.add(u);
+    }
+    for (const st of this.state.strips || []) {
+      const p = planStrip(st);
+      if (p.ok) for (const u of p.plan.universes) set.add(u);
     }
     if (set.size === 0) set.add(0);
     return [...set].sort((a, b) => a - b);
@@ -385,6 +396,13 @@ class Engine {
       });
     }
 
+    // PIXEL STRIPS (pixelstrip.js): each one writes its own universes, scaled by the master and
+    // by blackout like a lamp. A strip that cannot be planned writes nothing.
+    for (const st of state.strips || []) {
+      const p = planStrip(st);
+      if (!p.ok) continue;
+      renderStrip(st, p.plan, (u) => this.buffer(out, u), { now, frame: this.stripFrames.get(st.id) || null, scale: master });
+    }
     // Raw channel overrides sit on top of the fixtures, and ride the master and blackout
     // like everything else. They used to bypass both, so a shutter could be parked through
     // a blackout — but once manual channels became a control surface of their own (the
@@ -590,6 +608,15 @@ class Engine {
       if (f.universe !== universe) continue;
       const w = (PROFILES[f.profile] || PROFILES.rgb).channels.length;
       for (let c = f.address; c < f.address + w && c <= 512; c++) used[c] = 1;
+    }
+    // A pixel strip's channels are taken too: a lamp must never land on a strip.
+    for (const st of this.state.strips || []) {
+      const p = planStrip(st);
+      if (!p.ok) continue;
+      for (const r of claimedRanges(p.plan)) {
+        if (r.universe !== universe) continue;
+        for (let c = r.from; c <= r.to; c++) used[c] = 1;
+      }
     }
     for (let a = 1; a + width - 1 <= 512; a++) {
       let free = true;

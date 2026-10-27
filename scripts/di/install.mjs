@@ -12,7 +12,6 @@ import { spawn } from 'node:child_process'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
-import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { createRequire } from 'node:module'
@@ -203,7 +202,7 @@ export const stageVersion = async ({ home, release, verbose = false }) => {
     await fsp.rm(partialDir, { recursive: true, force: true })
     await fsp.mkdir(partialDir, { recursive: true })
 
-    const tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'di-runtime-'))
+    const tmp = await scratchDir(home, 'di-runtime-')
     const archive = path.join(tmp, `di-runtime-${release.version}.tar.gz`)
     try {
         await download(release.url, archive)
@@ -254,6 +253,8 @@ export const stageVersion = async ({ home, release, verbose = false }) => {
 export const smokeTest = async ({ home, versionDir, nodeBinary, dataRoot = null }) => {
     const layout = versionLayout(versionDir)
     const port = 40000 + Math.floor((Date.now() % 20000))
+    // Only a directory made here is removed here; a rehearsal copy is its caller's.
+    const ownScratch = dataRoot ? null : await scratchDir(home, 'di-smoke-')
     const child = spawn(nodeBinary, [layout.serverEntry], {
         cwd: layout.server,
         stdio: 'ignore',
@@ -265,7 +266,7 @@ export const smokeTest = async ({ home, versionDir, nodeBinary, dataRoot = null 
             CLIENT_DIR: layout.client,
             // Never the real one. Either a copy of it (a rehearsal — see
             // rehearseAgainst) or an empty scratch directory.
-            DATA_ROOT: dataRoot || await fsp.mkdtemp(path.join(os.tmpdir(), 'di-smoke-')),
+            DATA_ROOT: dataRoot || ownScratch,
             REQUIRE_AUTH: 'false',
             NODE_ENV: 'production'
         }
@@ -280,6 +281,7 @@ export const smokeTest = async ({ home, versionDir, nodeBinary, dataRoot = null 
         return false
     } finally {
         try { child.kill('SIGKILL') } catch { /* already gone */ }
+        if (ownScratch) await removeRehearsal(ownScratch)
     }
 }
 
@@ -377,15 +379,74 @@ export const pruneVersions = async ({ home, keep = [] }) => {
 export const rehearseAgainst = async ({ home }) => {
     const p = paths(home)
     if (!fs.existsSync(p.data)) return null
-    const scratch = await fsp.mkdtemp(path.join(os.tmpdir(), 'di-rehearsal-'))
-    // The whole data root, not just di.db: the server opens assets and space
-    // directories on boot too, and a rehearsal that copied only the database
-    // would pass on an install whose real start would not.
     // The data root may be a symlink — an install pointed at a shared tier —
     // and fs.cp refuses to lay a link over the scratch directory. Copy what it
     // points at, and follow links inside too: the rehearsal must open files.
-    await fsp.cp(await fsp.realpath(p.data), scratch, { recursive: true, dereference: true })
+    const realData = await fsp.realpath(p.data)
+    const scratch = await scratchDir(home, 'di-rehearsal-', realData)
+    // The data root, not just di.db: the server opens assets and space
+    // directories on boot too, and a rehearsal that copied only the database
+    // would pass on an install whose real start would not.
+    // Except snapshots/: backups the server only touches when a space asks
+    // for its history (serverXR/src/spaceStore.js — snapshotsDir is read in
+    // listSnapshotFileIds and the snapshot create/restore calls, none at
+    // boot). One install measured 4.2 GB of a 7.4 GB data root in there.
+    const skipped = path.join(realData, 'snapshots')
+    try {
+        await fsp.cp(realData, scratch, {
+            recursive: true,
+            dereference: true,
+            // A copy-on-write clone where the filesystem has one; a plain
+            // copy where it does not (COPYFILE_FICLONE, not _FORCE).
+            mode: fs.constants.COPYFILE_FICLONE,
+            filter: (src) => src !== skipped
+        })
+    } catch (error) {
+        // A copy that dies halfway (a broken link, a full disk) leaves what it
+        // had written so far, and the caller never receives the path to remove.
+        await removeRehearsal(scratch)
+        throw error
+    }
     return scratch
+}
+
+/**
+ * A new empty folder for working copies, on the same filesystem as the data
+ * (`paths().scratch`, or beside the real data folder when `data/` is a link to
+ * another disk) — never os.tmpdir(). /tmp is often a small tmpfs with a
+ * per-user quota, and a binary with file capabilities makes Node ignore TMPDIR,
+ * so there is no way to point os.tmpdir() elsewhere.
+ */
+export const scratchDir = async (home, prefix, dataRoot = null) => {
+    const base = dataRoot ? path.join(path.dirname(dataRoot), 'scratch') : paths(home).scratch
+    await fsp.mkdir(base, { recursive: true })
+    return fsp.mkdtemp(path.join(base, prefix))
+}
+
+/**
+ * Remove a rehearsal copy. If it cannot be removed, say where it is, in one
+ * line, because the next person to find it will be looking at a full /tmp.
+ */
+export const removeRehearsal = async (scratch, { rm = fsp.rm, warn = (line) => process.stderr.write(`${line}\n`) } = {}) => {
+    try {
+        await rm(scratch, { recursive: true, force: true })
+    } catch (error) {
+        warn(`could not remove the rehearsal copy ${scratch}: ${String(error?.message || error)}`)
+    }
+}
+
+/**
+ * Run `fn(scratch)` against a rehearsal copy and remove the copy afterwards on
+ * every path: fn returned, fn threw, or the copy itself failed. `scratch` is
+ * null when there is nothing to rehearse (a first install).
+ */
+export const withRehearsal = async ({ home, ...removal }, fn) => {
+    const scratch = await rehearseAgainst({ home })
+    try {
+        return await fn(scratch)
+    } finally {
+        if (scratch) await removeRehearsal(scratch, removal)
+    }
 }
 
 const withoutExperimentalWarning = (fn) => {

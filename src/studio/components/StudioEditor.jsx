@@ -22,6 +22,7 @@ import { defaultWorldState, normalizeProjectDocument } from '../../shared/projec
 import useXrAr from '../../hooks/useXrAr.js'
 import useSpaceAssets from '../../hooks/useSpaceAssets.js'
 import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAssets, importDriveSelection, listServerSpaces, setAssetShared, updateServerSpace } from '../../services/serverSpaces.js'
+import { spaceAddressOf } from '../../utils/spaceAddress.js'
 import { buildAppSpacePath, buildPublicProjectPath, buildShareUrl } from '../../utils/spaceRouting.js'
 import { buildStudioPreviewUrl } from '../utils/previewUrl.js'
 import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRouting.js'
@@ -1517,7 +1518,9 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onTransformCancel={handleTransformCancel}
             liveProjectState={{
                 spaceId: resolvedSpaceId,
-                spaceLabel: spaceMeta?.label || resolvedSpaceId,
+                // the space's name, else its address: the one word every surface of the space says (utils/oneNamePerSpace.js)
+                spaceLabel: spaceMeta?.label || spaceAddressOf(spaceMeta, resolvedSpaceId),
+                spaceAddress: spaceAddressOf(spaceMeta, resolvedSpaceId),
                 currentLiveProjectId: spaceMeta?.publishedProjectId || null,
                 isLiveProject: spaceMeta?.publishedProjectId === projectId,
                 // null until space meta loads, so the panel doesn't flash a
