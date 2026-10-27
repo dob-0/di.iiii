@@ -16,7 +16,7 @@ import { buildStudioProjectPath, navigateToStudioPath } from '../studio/utils/st
 import SurfaceBar from '../components/SurfaceBar.jsx'
 import DeskPerformSwitch from '../perform/DeskPerformSwitch.jsx'
 import useLocalInstall from '../hooks/useLocalInstall.js'
-import useSpaceName from '../hooks/useSpaceName.js'
+import useSpaceIdentity from '../hooks/useSpaceIdentity.js'
 import { isEmbedRequest, isPreviewRequest, signalPreviewReady } from '../utils/previewMode.js'
 import { useLocalFileUrl } from './useLocalFileUrl.js'
 import './mapSurface.css'
@@ -64,7 +64,7 @@ export default function MapSurface({ projectId, spaceId }) {
     // The one bar, above the desk's own. Never on /out — that is MapOutput,
     // the wall's picture, and a bar there would be projected with the work.
     const localInstall = useLocalInstall()
-    const spaceName = useSpaceName(spaceId)
+    const spaceIdentity = useSpaceIdentity(spaceId)
     const [isEmbed] = useState(() => isEmbedRequest() || isPreviewRequest())
     // Nothing here draws to a WebGL canvas, so the app-wide paint watcher has
     // nothing to see; the picture says itself once the mapping has loaded.
@@ -315,7 +315,8 @@ export default function MapSurface({ projectId, spaceId }) {
             <SurfaceBar
                 here="map"
                 space={spaceId}
-                spaceLabel={spaceName}
+                spaceLabel={spaceIdentity.spaceLabel}
+                spaceAddress={spaceIdentity.spaceAddress}
                 project={projectId}
                 projectLabel={doc?.projectMeta?.title}
                 isLocalInstall={localInstall.isLocal}

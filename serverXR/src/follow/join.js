@@ -23,10 +23,10 @@
  */
 
 const { httpRequest } = require('../httpClient')
+const { DI_USER_AGENT } = require('../diUserAgent')
 
 const PROBE_TIMEOUT_MS = 4000
 const CALL_TIMEOUT_MS = 8000
-const AGENT = 'di.iiii-join/1'
 
 const call = async (url, { method = 'GET', token = null, body = null, timeoutMs = CALL_TIMEOUT_MS, send = httpRequest } = {}) => {
     const text = body ? JSON.stringify(body) : null
@@ -36,7 +36,8 @@ const call = async (url, { method = 'GET', token = null, body = null, timeoutMs 
             timeoutMs,
             headers: {
                 Accept: 'application/json',
-                'User-Agent': AGENT,
+                // Named here as well as in httpClient: `send` may be any client.
+                'User-Agent': DI_USER_AGENT,
                 ...(text ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(text) } : {}),
                 ...(token ? { Authorization: `Bearer ${token}` } : {})
             },

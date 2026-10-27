@@ -8,7 +8,7 @@
 
 ## Live
 
-[di-studio.xyz](https://di-studio.xyz)
+[diiii.xyz](https://diiii.xyz)
 
 ## What di.iiii is
 

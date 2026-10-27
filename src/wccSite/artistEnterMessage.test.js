@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readArtistEnterMessage } from './artistEnterMessage.js'
 
-const ORIGIN = 'https://di-studio.xyz'
+const ORIGIN = 'https://diiii.xyz'
 const msg = (overrides = {}) => ({
     origin: ORIGIN,
     data: { type: 'dii-wcc-artist-enter', projectId: 'alla-virabyan' },

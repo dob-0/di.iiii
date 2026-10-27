@@ -22,13 +22,23 @@
  *    onto a project this copy holds and that is not private here — a private
  *    project is a door that 404s (the PATCH route refuses it, and so do we).
  *    Until the project has arrived the door waits; it is asked again each pass.
+ *  - The ADDRESS (the space's slug, /dilijan-camp) is carried as the host chose
+ *    it, never cleared: a slug equal to the space's id is "none chosen", and a
+ *    host with none leaves this copy's alone. It is returned apart from the
+ *    patch (`slug`), because a name already taken here answers 409 and must not
+ *    hold back the label or the door (2026-10-25, N1279).
  */
 
-/** @returns {{ patch: object, notes: string[] }} */
+const chosenSlug = (side) => {
+    const slug = typeof side?.slug === 'string' ? side.slug.trim() : ''
+    return slug && slug !== side.id ? slug : null
+}
+
+/** @returns {{ patch: object, slug: string|null, notes: string[] }} */
 const planSettings = ({ host, local, localProjects = [] }) => {
     const patch = {}
     const notes = []
-    if (!host || !local) return { patch, notes }
+    if (!host || !local) return { patch, slug: null, notes }
 
     const hostLabel = typeof host.label === 'string' ? host.label.trim() : ''
     if (hostLabel && hostLabel !== local.label) patch.label = hostLabel
@@ -49,14 +59,17 @@ const planSettings = ({ host, local, localProjects = [] }) => {
             else patch.publishedProjectId = hostDoor
         }
     }
-    return { patch, notes }
+
+    const hostSlug = chosenSlug(host)
+    const slug = hostSlug && hostSlug !== local.slug ? hostSlug : null
+    return { patch, slug, notes }
 }
 
 /** The settings a follow looks at, from one side's space record. */
 const readSettings = (payload) => {
     const space = payload?.space
     if (!space || typeof space !== 'object') return null
-    return { label: space.label ?? null, isPublic: Boolean(space.isPublic), publishedProjectId: space.publishedProjectId || null }
+    return { id: space.id ?? null, slug: space.slug ?? null, label: space.label ?? null, isPublic: Boolean(space.isPublic), publishedProjectId: space.publishedProjectId || null }
 }
 
 module.exports = { planSettings, readSettings }

@@ -40,6 +40,8 @@
  *     longer read, and said.
  */
 
+const { isFollowableProjectId } = require('./streams')
+
 const MAX_TRASH_PER_PASS = 5
 
 const text = (value) => (typeof value === 'string' ? value : '')
@@ -48,10 +50,17 @@ const agreedOf = (row) => ({ title: text(row?.title), slug: row?.slug || null })
 const isPrivate = (row) => row?.visibility === 'private'
 const visibilityOf = (row) => (isPrivate(row) ? 'private' : 'public')
 
-const byId = (rows = [], spaceId = null) => {
+// A row whose id this server would never make is no row (follow audit F18):
+// the plan sends DELETE, PATCH, restore and move to /api/projects/<id>, and
+// '..' there is a different path. Said through onDrop, never thrown.
+const byId = (rows = [], spaceId = null, onDrop = null) => {
     const map = new Map()
     for (const row of Array.isArray(rows) ? rows : []) {
         if (!row || typeof row.id !== 'string' || !row.id) continue
+        if (!isFollowableProjectId(row.id)) {
+            try { onDrop?.('bad id', row.id) } catch { /* a counter never stops a follow */ }
+            continue
+        }
         // A row from another space is not this space's project, whatever its id.
         if (spaceId && row.spaceId && row.spaceId !== spaceId) continue
         map.set(row.id, row)
@@ -70,13 +79,14 @@ const byId = (rows = [], spaceId = null) => {
  * @param {{live: object[], trash: object[]}} o.there  the host
  * @param {boolean} o.manageThere  the follow's key is a `manage` key: a trash, restore or
  *                                 making private made here may be carried to the host
+ * @param {function} o.onDrop      (reason, id) for each row dropped for its id ('bad id')
  * @returns {{ trashHere: string[], restoreHere: string[], trashThere: string[], restoreThere: string[], patchHere: {id: string, patch: object}[], patchThere: {id: string, patch: object}[], notes: string[], refused: string|null, refusedThere: string|null, base: object, trashedBoth: string[], departed: object }}
  */
-const planProjects = ({ spaceId = null, base = {}, trashedBoth = [], departed = {}, here, there, maxTrash = MAX_TRASH_PER_PASS, manageThere = false }) => {
-    const hereLive = byId(here?.live, spaceId)
-    const thereLive = byId(there?.live, spaceId)
-    const hereTrash = byId(here?.trash, spaceId)
-    const thereTrash = byId(there?.trash, spaceId)
+const planProjects = ({ spaceId = null, base = {}, trashedBoth = [], departed = {}, here, there, maxTrash = MAX_TRASH_PER_PASS, manageThere = false, onDrop = null }) => {
+    const hereLive = byId(here?.live, spaceId, onDrop)
+    const thereLive = byId(there?.live, spaceId, onDrop)
+    const hereTrash = byId(here?.trash, spaceId, onDrop)
+    const thereTrash = byId(there?.trash, spaceId, onDrop)
     const bothTrashed = new Set(trashedBoth)
 
     const nextBase = {}

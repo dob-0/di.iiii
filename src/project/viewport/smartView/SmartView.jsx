@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 import { fitCameraToAspect, getFovForArm } from '../../../utils/cameraFraming.js'
 import { venueOf } from '../../../rigbuild/venuePlan.js'
-import { flightPath, flightPois, sampleFlight } from '../autoFly.js'
+import { doorsFrame, flightPath, flightPois, sampleFlight, tourDoors, tourPath } from '../autoFly.js'
 import useAutoFlyStop from '../useAutoFlyStop.js'
 import { hazeFogBase, setCameraOutside } from '../../../objectComponents/atmosphereStore.js'
 import {
@@ -76,6 +76,26 @@ import {
 //   constraints      camera-controls' own maxPolarAngle (floor), maxDistance and
 //                    setBoundary (target) — only where the surface asks (a visitor's view).
 //
+
+// What a tour must not fly through: the box of every mesh that stands up from the floor and is smaller than
+// the room (the floor, walls, sky lines and the building are larger and are the frame's, not obstacles).
+const scratchObstacle = new THREE.Box3()
+function flightObstacles(scene, frame) {
+    const span = frame.bounds.max.map((v, i) => v - frame.bounds.min[i])
+    const floorY = Number.isFinite(frame.floorY) ? frame.floorY : frame.bounds.min[1]
+    const out = []
+    scene?.traverseVisible?.((o) => {
+        if (!o.isMesh || !o.geometry) return
+        scratchObstacle.setFromObject(o)
+        if (scratchObstacle.isEmpty()) return
+        const size = [0, 1, 2].map((i) => scratchObstacle.max.getComponent(i) - scratchObstacle.min.getComponent(i))
+        if (size.some((v, i) => v > span[i] * 0.5)) return
+        if (scratchObstacle.max.y < floorY + 0.3) return
+        out.push({ min: scratchObstacle.min.toArray(), max: scratchObstacle.max.toArray() })
+    })
+    return out
+}
+
 // Only the BUILDING is ever touched: entities that isArchitectureEntity names, or a big
 // model that holds the room (enclosingModelIds). Lamps, beams, rig pieces never.
 
@@ -753,10 +773,13 @@ export default function SmartView({
             measure()
             state.misses = state.frame ? 0 : (state.misses || 0) + 1
         }
-        const frame = state.frame
+        // A room with doors and no building has no measured frame: while it flies (and for the frame that hands
+        // the camera back) the tour flies in the box its doors span; nothing else here runs on that box.
+        const real = state.frame
+        const frame = real || ((flyRef.current || state.flight) ? doorsFrame(tourDoors(entities)) : null)
         if (import.meta.env.DEV && typeof window !== 'undefined') window.__diFlyState = { frame: Boolean(frame), fly: flyRef.current, misses: state.misses || 0, entities: entities.length }
         if (!frame) { if ((state.misses || 0) <= 20) frameState.invalidate(); return }
-        if (!state.building) {
+        if (real && !state.building) {
             state.building = true
             onBuildingRef.current?.(true)
         }
@@ -764,10 +787,17 @@ export default function SmartView({
         bindControls(cc)
         // --- Auto fly: the camera follows autoFly.js's path while the flight is on --------
         if (flyRef.current && !state.flight) {
-            state.flight = { path: flightPath(frame, flightPois(frame, { stageBox: state.stageBox, rigBox: state.rigBox })), t: 0 }
+            // A room with doors and no stage gets the tour (level, slow, door to door); a show room the drone lap.
+            const doors = state.stageBox ? [] : tourDoors(entities)
+            state.flight = {
+                path: doors.length >= 2
+                    ? tourPath(frame, doors, { obstacles: flightObstacles(scene, frame) })
+                    : flightPath(frame, flightPois(frame, { stageBox: state.stageBox, rigBox: state.rigBox })),
+                t: 0
+            }
             if (cc) cc.enabled = false
             // DEV ONLY, for the harness's physics check (window.__diRoom is the Full renderer's; Lite has none): the frame, the path, the camera.
-            if (import.meta.env.DEV && typeof window !== 'undefined' && window) window.__diFly = { frame, path: state.flight.path, camera }
+            if (import.meta.env.DEV && typeof window !== 'undefined' && window) window.__diFly = { frame, path: state.flight.path, camera, scene }
         }
         if (state.flight) {
             const flight = state.flight
@@ -790,6 +820,7 @@ export default function SmartView({
                 state.flightShot = null
             }
         }
+        if (!real) { if (moving) frameState.invalidate(); return }
         const target = scratch.target
         if (cc?.getTarget) cc.getTarget(target)
         else target.set(...frame.center)

@@ -5,6 +5,8 @@ import RouteSurfaceFallback from '../components/RouteSurfaceFallback.jsx'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 import useDocumentTitle from '../hooks/useDocumentTitle.js'
+import { spaceAddressOf } from '../utils/spaceAddress.js'
+import { spaceTabTitle, spaceWordFor } from '../utils/oneNamePerSpace.js'
 import { listSpaceContents } from '../project/services/projectsApi.js'
 import { getServerSpace } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
@@ -105,15 +107,17 @@ export default function SpaceContentsPage({ spaceId }) {
         return () => { alive = false }
     }, [spaceId])
 
-    const label = state.space?.label || spaceId
+    // One name per space: the bar, the heading and the tab say the same word, whichever address was typed.
+    const address = spaceAddressOf(state.space, spaceId)
+    const label = spaceWordFor(state.space?.label, address)
     const projects = state.projects
 
-    // The tab says the space's name, the same one the heading below and the
-    // /{space} tab say (docs/ai/vocabulary.md, "One name per space") — it was
-    // the index.html default on every space's list. 'main' is skipped for the
-    // reason SpaceSurfaceApp skips it: its name is di.iiii, which the default
-    // already says.
-    useDocumentTitle(state.status === 'ready' && spaceId !== 'main' ? `${label} — di.iiii` : null)
+    // The tab says the space's name, the same one the heading below and the /{space} tab say (docs/ai/vocabulary.md,
+    // "One name per space") — it was the index.html default on every space's list. The platform's own space (id main)
+    // gets none: the front door keeps index.html's title. Asked of the space's record, not of the word that was typed.
+    useDocumentTitle(state.status === 'ready'
+        ? spaceTabTitle({ spaceId: state.space?.id || spaceId, label: state.space?.label, address })
+        : null)
 
     // A page that is CODE has no row on any server, so a list built by asking
     // the server what a space holds cannot see it. That is the whole of why the
@@ -172,6 +176,7 @@ export default function SpaceContentsPage({ spaceId }) {
             <SurfaceBar
                 space={spaceId}
                 spaceLabel={label}
+                spaceAddress={address}
                 isLocalInstall={localInstall.isLocal}
                 hidden={isEmbed}
             />

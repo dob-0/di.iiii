@@ -20,7 +20,7 @@
  *   - a screenshot per combo, for a human to actually look at
  *
  * USAGE
- *   node scripts/verify-surfaces.mjs --base https://di-studio.xyz
+ *   node scripts/verify-surfaces.mjs --base https://diiii.xyz
  *   node scripts/verify-surfaces.mjs --base http://localhost:5173 --desktop-only
  *   node scripts/verify-surfaces.mjs --pages /,/wiki,/br_id_ge/field
  *
@@ -39,7 +39,7 @@ const arg = (name, fallback = null) => {
     : (process.argv.includes(`--${name}`) ? true : fallback)
 }
 
-const BASE = arg('base', 'https://di-studio.xyz')
+const BASE = arg('base', 'https://diiii.xyz')
 const OUT = arg('out', '.verify-surfaces')
 const DESKTOP_ONLY = !!arg('desktop-only', false)
 const MOBILE_ONLY = !!arg('mobile-only', false)
