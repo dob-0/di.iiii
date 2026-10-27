@@ -325,11 +325,11 @@
     touch-action: none;
 }
 
-/* status dot, not a control: the red mark stays round at rest and goes square while recording (owner, 2026-10-21). */
+/* status dot, not a control: the red mark is square at rest and smaller while recording (owner rule, rectangles only). */
 .scan-record-mark {
     width: 52px;
     height: 52px;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     background: var(--di-danger);
     transition: border-radius var(--di-motion-base), width var(--di-motion-base), height var(--di-motion-base);
 }

@@ -466,14 +466,14 @@
     box-shadow: inset 0 0 0 1px var(--di-cyan);
 }
 
-/* status dot, not a control: stays round (owner, 2026-10-21). */
+/* status dot, not a control: square like every light (owner rule, rectangles only). */
 .preferences-architecture-node-dot {
     grid-row: 1;
     grid-column: 1;
     width: 7px;
     height: 7px;
     margin-top: var(--di-space-1);
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     background: rgba(255, 255, 255, 0.25);
 }
 

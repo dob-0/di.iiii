@@ -197,11 +197,11 @@
     gap: var(--di-space-2);
 }
 
-/* status dot, not a control: stays round (owner, 2026-10-21). */
+/* status dot, not a control: square like every light (owner rule, rectangles only). */
 .collaboration-cursor-dot {
     width: 12px;
     height: 12px;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     border: 2px solid rgba(255,255,255,0.92);
     background: linear-gradient(135deg, var(--ui-accent), var(--ui-success));
     box-shadow: 0 0 0 4px rgba(var(--di-cyan-rgb), 0.16);

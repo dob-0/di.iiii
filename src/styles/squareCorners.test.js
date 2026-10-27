@@ -15,9 +15,8 @@ import { describe, expect, it } from 'vitest'
  * leaves it.
  *
  * Every control is square, the scan shutter and the walk joystick included
- * (owner, 2026-10-21). Kept round on purpose, and only these: a status dot
- * (it reports, it is not pressed) and a drawing (the scan coverage dial, the
- * loading rings). Each carries a comment saying "not a control" right above it.
+ * (owner, 2026-10-21). Kept round on purpose, only a drawing (the scan coverage dial, the
+ * loading rings); status dots are square too (owner: rectangles only, 2026-10-01). Each carries a comment saying "not a control" right above it.
  */
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
@@ -47,15 +46,9 @@ const SURFACES = {
 }
 const FILES = Object.values(SURFACES).flat()
 
-// file → selectors allowed a round corner: status dots and drawings, never a control.
+// file → selectors allowed a round corner: drawings only. Status dots are square too (owner: rectangles only).
 const ROUND_ALLOWED = {
-    'styles/preferences.css': ['.preferences-architecture-node-dot'],
-    'styles/workspace.css': ['.workspace-status-chip::before'],
-    'styles/inspector/misc.css': ['.status-dot'],
-    'styles/controls.css': ['.collaboration-cursor-dot'],
-    'project/components/jamSurface.css': ['.jam-count-dot'],
-    'scan/scanSurface.css': ['.scan-ring', '.scan-record-mark'],
-    'perform/perform.css': ['.perform-beat'],
+    'scan/scanSurface.css': ['.scan-ring'],
     'components/liveProjectScene.css': ['.live-scene-loading-ring'],
     'components/loadingScreen.css': ['.loading-screen-spinner'],
 }
@@ -218,9 +211,12 @@ describe('the raw wordmark', () => {
 describe('the live-project chrome', () => {
     const css = read('components/liveProjectScene.css')
 
-    it('draws no control in --di-danger: nothing on it is dangerous', () => {
+    it('keeps --di-danger only on the exit button hover (dev\'s colour, kept as it was)', () => {
         const hits = lines(css).map((l, i) => [i + 1, l]).filter(([, l]) => /--di-danger/.test(l))
-        expect(hits).toEqual([])
+        expect(hits).toHaveLength(2)
+        const at = css.indexOf('.live-scene-exit:hover {')
+        const body = css.slice(at, css.indexOf('}', at))
+        expect(body.match(/--di-danger/g)).toHaveLength(2)
     })
 
     it('times every transition with a motion token (0.12s or 0.15s), no literal duration', () => {
