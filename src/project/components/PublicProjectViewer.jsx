@@ -22,6 +22,7 @@ import {
     listProjectOps
 } from '../services/projectsApi.js'
 import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectSchema.js'
+import { resolveOpeningView } from '../../shared/openingView.js'
 import {
     buildPresentationPreviewDocument,
     PREVIEW_ENTER_EXHIBITION_KIND,
@@ -321,7 +322,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const hasSound = useMemo(() => roomHasSound(document?.entities), [document?.entities])
     const publishState = document?.publishState || {}
     const presentationState = document?.presentationState || {}
-    const entryView = viewMode || presentationState.entryView || 'scene'
+    // Decided from what the project holds (shared/openingView.js), not from the schema default.
+    const entryView = viewMode || (document ? resolveOpeningView(document) : 'scene')
     const showCodeView = entryView === 'code'
     // Work in the node lane. The renderer that can show it is not the one walk
     // mode uses — see the Walk / Fly control below. Only a graph that draws in the room counts (graphRoom.js): a VJ
@@ -776,6 +778,15 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         </div>
                     </div>
                 )
+            ) : document && entryView === 'page' ? (
+                <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: '2rem', overflow: 'auto' }}>
+                    <div style={overlayCardStyle} data-testid="project-plain-view">
+                        <strong>{viewerTitle}</strong>
+                        {(document.assets || []).filter((a) => /^image\//.test(a.mimeType) && a.url).map((a) => (
+                            <img key={a.id} src={a.url} alt={a.name} style={{ display: 'block', maxWidth: '100%', marginTop: '0.75rem' }} />
+                        ))}
+                    </div>
+                </div>
             ) : document ? (
                 <Suspense fallback={<LiveStallRing />}>
                     <PublicProjectSceneSurface
