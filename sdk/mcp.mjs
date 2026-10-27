@@ -14,6 +14,16 @@
  * di_rig_check, di_rig_truss, di_production_archive_plan. They read the
  * checkout's rig files (and, for the archive plan, one GET); none writes.
  *
+ * Plus di_context: the one context at the token's level (GET /ai/context on
+ * the server, serverXR/src/aiContext.js). The server decides the level from
+ * the token; asking above it is the server's 403, shown as is.
+ *
+ * Two transports. stdio, for a client on the same machine (the default). And
+ * remote HTTP (`--http <port>`), for an assistant that can only add a door by
+ * URL: each request must carry `Authorization: Bearer <act token>` (a di.bo
+ * act token, dii_tgact_…), and that token, never the launcher's, is what the
+ * door acts with. See serveHttp below for what the remote door leaves out.
+ *
  * Protocol: the official SDK, @modelcontextprotocol/server (pinned exact in
  * package.json and serverXR/package.json), serving MCP 2026-07-28 and the
  * 2025-era `initialize` handshake from one factory (serveStdio). The earlier
@@ -85,7 +95,8 @@ const INSTRUCTIONS =
     'Anything that opens a door — making a space public, minting an invite link, deleting — must be put to the ' +
     'person in words before you call it. ' +
     'For a production\'s rig (MOXIR), use di_rig_versions, di_rig_truss and di_rig_check instead of reading the rig JSON; ' +
-    'di_production_archive_plan shows what an archive would change and changes nothing.'
+    'di_production_archive_plan shows what an archive would change and changes nothing. ' +
+    'di_context returns what di.iiii is and how its words are used, at the level of your key; read it first when you need background.'
 
 const ok = (value) => {
     const { text, structured } = shape(value)
@@ -168,6 +179,33 @@ export const createDoor = ({ tier, base, token, env = process.env, connectImpl =
         rigCheck: async (input = {}) => { try { return ok(await rigCheck(input)) } catch (error) { return failWith(error) } },
         rigTruss: async (input = {}) => { try { return ok(await rigTruss(input)) } catch (error) { return failWith(error) } },
         archivePlan: async (input = {}) => { try { return ok(await archivePlan(await client(), input)) } catch (error) { return failWith(error) } },
+        // The one context at this token's level. The level is the server's to
+        // decide; a level above the token's comes back as its 403, as an error.
+        context: async ({ level } = {}) => {
+            try {
+                const query = level ? `?level=${encodeURIComponent(String(level))}` : ''
+                const res = await (await client()).request('GET', `/ai/context${query}`, { raw: true })
+                const text = await res.text()
+                if (!res.ok) {
+                    let detail = text
+                    try {
+                        const body = JSON.parse(text)
+                        detail = body.error === 'level_refused'
+                            ? `level_refused: your key reaches "${body.yours}", not "${body.level}"`
+                            : body.error || text
+                    } catch { /* plain text */ }
+                    return fail(`GET /ai/context${query} → ${res.status}: ${String(detail).slice(0, 300)}`)
+                }
+                return {
+                    content: [{ type: 'text', text }],
+                    structuredContent: {
+                        level: res.headers.get('x-di-context-level'),
+                        yours: res.headers.get('x-di-context-yours'),
+                        built: res.headers.get('x-di-context-built')
+                    }
+                }
+            } catch (error) { return failWith(error) }
+        },
         run: async ({ steps, confirm }) => {
             try {
                 const outcome = await runSteps(await client(), await loadIndex(), { steps, confirm, allowPublic: allowPublic() })
@@ -178,8 +216,13 @@ export const createDoor = ({ tier, base, token, env = process.env, connectImpl =
     }
 }
 
-/** One McpServer with the four tools — the factory serveStdio pins per connection. */
-export const createMcpServer = (door, { McpServer, fromJsonSchema }) => {
+/**
+ * One McpServer with the tools — the factory serveStdio pins per connection,
+ * and serveHttp builds per request. `rig: false` leaves the rig tools out:
+ * they read the checkout of the machine the door runs on, which for a remote
+ * door is the host's, not the caller's.
+ */
+export const createMcpServer = (door, { McpServer, fromJsonSchema }, { rig = true } = {}) => {
     const schema = (properties, required = []) => fromJsonSchema({ type: 'object', properties, required, additionalProperties: false })
     const server = new McpServer({ name: 'di.iiii', version: VERSION }, { capabilities: { tools: {} }, instructions: INSTRUCTIONS })
 
@@ -221,6 +264,17 @@ export const createMcpServer = (door, { McpServer, fromJsonSchema }) => {
         }, ['steps']),
         annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
     }, (input) => door.run(input))
+
+    server.registerTool('di_context', {
+        title: 'Read di.iiii\'s context at your level',
+        description: 'What di.iiii is, the words it uses and how it works, as markdown, at the level your key reaches (public with none). level asks for a lower one; asking above yours is refused.',
+        inputSchema: schema({
+            level: { type: 'string', enum: ['public', 'registered', 'partner', 'crew', 'core', 'owner'], description: 'a level at or below your key\'s (default: your own)' }
+        }),
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+    }, (input) => door.context(input))
+
+    if (!rig) return server
 
     // ── the rig tools: read only, nothing here writes (spec §5.1) ──
     const LOCAL_READ = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
@@ -274,6 +328,103 @@ export const serve = async (options = {}) => {
     })
 }
 
+// ── the remote door ──
+// A di.bo act token is the only key it takes: short (15 minutes at most),
+// one person's, and re-read by the server on every request, tier included
+// (serverXR/src/actTokenTier.js). The door verifies nothing itself beyond the
+// shape — the server is the protection, as on stdio — but it never falls back
+// to a token of its own: no key, no door.
+export const ACT_TOKEN_PREFIX = 'dii_tgact_'
+const bearerOf = (headers) => {
+    const raw = headers.get('authorization') || ''
+    const match = /^Bearer\s+(\S+)$/i.exec(raw.trim())
+    return match ? match[1] : null
+}
+const refuse = (status, error, message) => new Response(JSON.stringify({ error, message }), {
+    status,
+    headers: {
+        'content-type': 'application/json',
+        'cache-control': 'no-store',
+        ...(status === 401 ? { 'www-authenticate': 'Bearer realm="di.iiii", error="invalid_token"' } : {})
+    }
+})
+
+/**
+ * The remote door as a web-standard handler: (Request) => Response. Each
+ * request gets a door that acts with ITS bearer token. What it leaves out of
+ * the stdio door, on purpose: the rig tools (they would read this host's
+ * checkout), and public moves, which are refused whatever the host's env says
+ * (DI_MCP_ALLOW_PUBLIC means "the person who launched me said yes", and the
+ * person on the other end of a URL did not launch it).
+ */
+export const createHttpDoor = ({ base, tier = null, sdk, connectImpl = connect, path: mount = '/mcp', onerror } = {}) => {
+    if (!base && !tier) throw new Error('the remote door needs --base (the di.iiii API it fronts) or --tier')
+    const { McpServer, fromJsonSchema, createMcpHandler } = sdk
+    const doorEnv = { ...process.env, DI_MCP_ALLOW_PUBLIC: '0', DI_TOKEN: '' }
+    const handler = createMcpHandler(({ authInfo }) => createMcpServer(
+        createDoor({ tier, base, token: authInfo?.token, env: doorEnv, connectImpl }),
+        { McpServer, fromJsonSchema },
+        { rig: false }
+    ), { onerror })
+    return {
+        fetch: async (request) => {
+            const url = new URL(request.url)
+            if (url.pathname !== mount && url.pathname !== `${mount}/`) return refuse(404, 'not_found', `the door is at ${mount}`)
+            const token = bearerOf(request.headers)
+            if (!token) return refuse(401, 'auth_required', 'Send Authorization: Bearer <act token>.')
+            if (!token.startsWith(ACT_TOKEN_PREFIX)) return refuse(401, 'act_token_required', 'This door takes a di.bo act token (dii_tgact_…), nothing else.')
+            return handler.fetch(request, { authInfo: { token, clientId: 'di.bo', scopes: [] } })
+        },
+        close: () => handler.close()
+    }
+}
+
+// node:http in, web Request/Response through, node:http out — streaming, so
+// an SSE answer reaches the client as it is written.
+export const toNodeListener = (door) => async (req, res) => {
+    try {
+        const chunks = []
+        for await (const chunk of req) chunks.push(chunk)
+        const body = chunks.length ? Buffer.concat(chunks) : null
+        const headers = new Headers()
+        for (const [name, value] of Object.entries(req.headers)) {
+            if (Array.isArray(value)) value.forEach((v) => headers.append(name, v))
+            else if (value !== undefined) headers.set(name, value)
+        }
+        const url = `http://${req.headers.host || 'localhost'}${req.url}`
+        const response = await door.fetch(new Request(url, {
+            method: req.method,
+            headers,
+            ...(body && req.method !== 'GET' && req.method !== 'HEAD' ? { body } : {})
+        }))
+        res.writeHead(response.status, Object.fromEntries(response.headers))
+        if (response.body) {
+            for await (const chunk of response.body) res.write(chunk)
+        }
+        res.end()
+    } catch (error) {
+        if (!res.headersSent) res.writeHead(500, { 'content-type': 'application/json' })
+        res.end(JSON.stringify({ error: 'door_error', message: String(error?.message || error) }))
+    }
+}
+
+export const serveHttp = async ({ port = 8787, host = '127.0.0.1', base = null, tier = null, connectImpl } = {}) => {
+    const { createServer } = await import('node:http')
+    const sdk = await loadSdk()
+    const door = createHttpDoor({
+        base, tier, sdk, connectImpl,
+        onerror: (error) => process.stderr.write(`[di mcp http] ${error?.message || error}\n`)
+    })
+    const server = createServer(toNodeListener(door))
+    await new Promise((resolve) => server.listen(port, host, resolve))
+    return { server, door, url: `http://${host}:${server.address().port}/mcp` }
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    await serve({ tier: arg('tier', 'local'), base: arg('base'), token: arg('token') })
+    if (arg('http')) {
+        const { url } = await serveHttp({ port: Number(arg('http')), host: arg('host', '127.0.0.1'), base: arg('base'), tier: arg('tier') })
+        process.stderr.write(`[di mcp http] the door is at ${url} — each request must carry Authorization: Bearer <act token>\n`)
+    } else {
+        await serve({ tier: arg('tier', 'local'), base: arg('base'), token: arg('token') })
+    }
 }
