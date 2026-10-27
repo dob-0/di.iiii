@@ -1243,7 +1243,7 @@ export const WIKI_ARTICLES = [
         title: 'Apps, scripts and AIs',
         summary: 'Programs are welcome to read public di.iiii. Name yourself in the User-Agent and you get more room — /for-apps has the rules.',
         body: [
-            'Anything a visitor without an account can open — public spaces, published pages, /spaces, this wiki, and the API reads behind them — is open to programs too: apps, scripts, search engines and AI crawlers, for answering and for training alike. robots.txt welcomes them all, and /llms.txt describes di.iiii for language models.',
+            'Anything a visitor without an account can open — public spaces, published pages, /spaces, this wiki, and the API reads behind them — is open to programs too: apps, scripts, search engines and AI crawlers, for answering and for training alike. robots.txt welcomes them all, and /llms.txt describes di.iiii for language models: what it is, in markdown at /ai/about.md, and what each word means, at /ai/words.md.',
             'Say who you are with a User-Agent carrying your program’s name, version and a contact in parentheses, the way MusicBrainz asks: “SpaceMirror/1.4 ( ops@example.org )” or “my-bot/0.2 (+https://example.org/bot)”.',
             { list: [
                 'Identified apps and crawlers: 300 API reads a minute from one address.',
@@ -1254,8 +1254,8 @@ export const WIKI_ARTICLES = [
             'A name is only what a program claims, so the per-address limits hold whatever the header says. di.iiii keeps a count per day per program name and the contact it published — no addresses, no pages read — for 90 days. Admins see that guest book in Ops Graph → Visitors, and can turn a program away by name; it then gets a 403 pointing back to /for-apps. Nothing is counted on a local install.',
             'For a higher allowance or a block you think is a mistake: info@thedi.studio.'
         ],
-        tags: ['api', 'apps', 'ai', 'crawlers', 'bots', 'user-agent', 'rate limit', 'llms.txt', 'robots.txt', 'developers'],
-        updated: '2026-09-13'
+        tags: ['api', 'apps', 'ai', 'crawlers', 'bots', 'user-agent', 'rate limit', 'llms.txt', 'robots.txt', 'developers', 'markdown', 'assistant'],
+        updated: '2026-10-27'
     },
     {
         id: 'github-sync',

@@ -18,8 +18,8 @@
  *   3. every picture of the Kit page reaches a local pack, and every
  *      top-level entry of public/ is either carried or named as left out,
  *      with its reason. This does NOT assert that every public/ file a page
- *      names is carried: pages name four entries that are left out (chat-app,
- *      chat-sw.js, robots.txt, llms.txt), and the list below says why.
+ *      names is carried: pages name three entries that are left out (chat-app,
+ *      chat-sw.js, robots.txt), and the list below says why.
  *
  * Nothing here builds anything. The profile's decisions are data
  * (works/buildProfile.js) and the plugin list is data, so both can be read
@@ -161,8 +161,8 @@ describe('vite installs the profile the flags asked for', () => {
 // Kit page are carried (the page draws no other picture of its own:
 // KitPreview.jsx is its only <img>) and that no top-level entry of public/ is
 // undecided. It does not prove that every file a page names is carried: pages
-// do name four of the entries left out below (chat-app and chat-sw.js by the
-// chat pages, robots.txt and llms.txt by /for-apps), on purpose or still open,
+// do name three of the entries left out below (chat-app and chat-sw.js by the
+// chat pages, robots.txt by /for-apps), on purpose or still open,
 // and each has its reason.
 
 // What a local pack leaves out of public/, and why. A name goes here only by
@@ -175,11 +175,12 @@ const LEFT_OUT_OF_A_LOCAL_PACK = {
     'clear-default-scene.php': 'a cPanel php shim',
     'upload-default-scene.php': 'a cPanel php shim',
     og: 'link-preview cards that serverXR/src/routes/ogRoutes.js hands to crawlers of the hosted domain',
-    // robots.txt and llms.txt are linked from /for-apps (src/pages/ForAppsPage.jsx),
-    // so on an install those two links answer 404. Left as is: hiding them there
-    // is a change to that page, which nobody asked for.
+    // robots.txt is linked from /for-apps (src/pages/ForAppsPage.jsx), so on an
+    // install that link answers 404. Left as is: hiding it there is a change to
+    // that page, which nobody asked for. (llms.txt left public/ on 2026-10-27:
+    // serverXR serves it from docs/ai/public/, which a local pack does not carry
+    // either, for the same reason — every address in it is https://diiii.xyz/….)
     'robots.txt': 'crawler rules for the hosted domain; names https://diiii.xyz/ for the sitemap and the pages',
-    'llms.txt': 'a page for language models about the hosted site; every di.iiii address in it is https://diiii.xyz/… (it also links the source on github.com)',
     '.well-known': 'assetlinks.json: lets the studio chat Android app open the hosted domain',
     // Open, not decided. The chat pages ask for these as soon as someone is
     // signed in (src/chat/StudioChatSurface.jsx, ChatHomeSurface.jsx) and a

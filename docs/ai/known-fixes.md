@@ -21,6 +21,13 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## `/llms-full.txt` and every `/ai/…` address answered 200 with the app's HTML shell (2026-10-27)
+
+Symptom: an assistant fetching `https://diiii.xyz/llms-full.txt` or `/ai/context` got status 200, `text/html`, the app's shell (title "di.iiii — public spaces…"), and read it as content; nothing in serverXR answered either path (one-context audit, part 2, 7b).
+Cause: nginx's SPA catch-all (`try_files $uri $uri/ /index.html`) answers every path nothing else claims, and nothing claimed these; `/llms.txt` was a static file in `public/`, with no `.md` pages beside it.
+Fix: serverXR answers `/llms.txt`, `/llms-full.txt` (a 404 in text) and everything under `/ai/` from the public bundle `docs/ai/public/` (`serverXR/src/aiPublic.js`); nginx sends those paths to it before the catch-all, vite does the same in dev, the server image copies the folder; under `/ai/` a name the bundle lacks is a 404 in text, never the shell. `ai` is reserved as a space name (`shared/reservedSegments.cjs`). The route refuses to serve an `llms.txt` that does not parse per llmstxt.org (`serverXR/src/llmsTxt.js`).
+Guard: `serverXR/src/spaHostingContracts.test.js` (4 new cases, 3 seen red with the routes unmounted) and `serverXR/src/aiPublic.test.js` (29 cases, including the validator on the real file). Rule: any path an outside program is told to fetch must have a route of its own; a 200 from the shell is never an answer.
+
 ## Front pages appended words to `di.iiii` and named the retired Beta editor (2026-10-21)
 
 Symptom: six headings fused a word onto the platform name (`di.iiii Control Server`, `di.iiii Deck Context`, `di.iiii Ecosystem Map`, `di.iiii AI Engineering Collective`, `The di.iiii SDK`, `The di.iiii Visual Identity — Complete Spec`); `serverXR/README.md` listed `Beta` as a supported editor three times, eleven weeks after the lane was deleted (2026-08-06); `docs/deck/README.md` said "lane", `ONBOARDING.md` said "Raw" as a name; and `sdk/README.md` told a reader to `import { connect } from 'di.iiii/sdk'`, a package that does not exist (the root package is private and named otherwise; there is no `sdk/package.json`).
