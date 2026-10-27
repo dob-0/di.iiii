@@ -1626,7 +1626,7 @@ router.use(createVisitorBouncer({ guestBook, isKnownCaller, log: logger }))
 registerAiContextRoutes(router, {
   contextDir: config.directories.aiContextDir,
   isGuestSubject,
-  // The account's access group (di-bo docs/briefs/groups-design.md §2.1). The
+  // The account's access group (the di-bo repo's groups design brief §2.1). The
   // column does not exist yet; until it does this is null and member means
   // registered.
   groupOf: (userId) => {

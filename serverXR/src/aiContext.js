@@ -1,5 +1,5 @@
 // GET /ai/context — the one context, at the caller's level. The levels, one
-// order, each seeing what is below it (di-bo docs/briefs/one-context-audit.md
+// order, each seeing what is below it (the di-bo repo's one-context audit brief
 // §3):
 //
 //   owner > core > crew > partner > registered > public
@@ -21,7 +21,7 @@
 //
 // A group of core or owner stored on an account does NOT lift a member-tier
 // token: those two need the server's env list too (actTokenTier.js), so a
-// database edit alone reads as registered (di-bo docs/briefs/groups-design.md
+// database edit alone reads as registered (the di-bo repo's groups design brief
 // §2.1, "two keys"). The group column does not exist yet; until it does every
 // group lookup is null and member means registered.
 //
