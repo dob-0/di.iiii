@@ -7,7 +7,7 @@ import { buildRawProjectPath, buildRawProjectsPath } from '../raw/utils/rawRouti
 import { buildMapPath } from '../map/mapRouting.js'
 import { useAllTools } from '../studio/utils/jamMode.js'
 import SyncLight from '../sync/SyncLight.jsx'
-import { isPlatformName, spaceWordFor } from '../utils/oneNamePerSpace.js'
+import { spaceWordFor } from '../utils/oneNamePerSpace.js'
 
 /**
  * The one strip that is on every surface.
@@ -255,12 +255,10 @@ export default function SurfaceBar({
 
     // One name per space (owner, 2026-09-14; docs/ai/vocabulary.md): the bar says the space's NAME, or its address when
     // nobody named it, and its link goes to that address — the same word on every surface of the space, whatever address
-    // was typed to reach it. The exception is not the dictionary's and is open for the owner (utils/oneNamePerSpace.js, "THE
-    // BRAND ONCE"): a space labelled with the brand this bar already leads with shows the brand once: no second "di.iiii", no
-    // id, no address, and no link of its own to the space; the wordmark leads to /spaces.
+    // was typed to reach it. No space is special here: the platform's own space is named in data like any other
+    // (spaces/main/di-space.space.json, "Home"), so the bar reads "di.iiii · Home" and links to /di-iiii.
     const address = spaceAddress || space
     const spaceWord = space ? spaceWordFor(spaceLabel, address) : ''
-    const sayBrandOnce = isPlatformName(spaceWord)
 
     const linkFor = (d, className = 'sbar-link') => (
         <a
@@ -284,7 +282,7 @@ export default function SurfaceBar({
     return (
         <nav ref={barRef} className={`sbar${float ? ' sbar--float' : ''}${syncShown ? ' sbar--sync' : ''}`} aria-label="di.iiii">
             <a className="sbar-home" href="/spaces">di.iiii</a>
-            {space && !sayBrandOnce && (
+            {space && (
                 <>
                     <span className="sbar-sep" aria-hidden="true">·</span>
                     <a className="sbar-where" href={`/${address}`}>{spaceWord}</a>

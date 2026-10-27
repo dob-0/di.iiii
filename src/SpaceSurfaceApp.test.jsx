@@ -196,7 +196,7 @@ describe('SpaceSurfaceApp', () => {
         // compared the typed word with 'main' instead of asking the space which space it is.
         it('leaves the tab title alone for the platform\'s own space, reached by its address too', async () => {
             document.title = 'di.iiii — public spaces on the open web'
-            getServerSpace.mockResolvedValue({ id: 'main', slug: 'di-iiii', label: 'di.iiii', publishedProjectId: null })
+            getServerSpace.mockResolvedValue({ id: 'main', slug: 'di-iiii', label: 'Home', publishedProjectId: null })
 
             render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'di-iiii' }} />)
 

@@ -97,8 +97,8 @@ export default function SpaceSurfaceApp({ routeState }) {
     const spaceLabel = spaceWordFor(surfaceState.space?.label, spaceAddress)
 
     // The naming rule (docs/ai/vocabulary.md): a space's own name is what a visitor sees for it — tab included. The
-    // platform's own space gets no title here: its name IS di.iiii, which index.html's default tab already says (the same
-    // fossil ogRoutes.js's `own` check carries for the link-preview card). Asked of the space's record, not of the word
+    // platform's own space (id main, named "Home" in data) gets no title here: the front door keeps index.html's title (the
+    // same `own` check ogRoutes.js carries for the link-preview card). Asked of the space's record, not of the word
     // that was typed: /di-iiii is the same space as /main. Only set here for the bare <App/> surface below; both
     // PublicProjectViewer branches set their own title once they know whether they are showing a project too.
     useDocumentTitle(
@@ -136,6 +136,7 @@ export default function SpaceSurfaceApp({ routeState }) {
                     projectId={routeProjectId}
                     spaceLabel={spaceLabel}
                     spaceAddress={spaceAddress}
+                    spaceRecordId={surfaceState.space?.id}
                     // The URL itself names this project (/{space}/p/{project} or
                     // its vanity-slug form) — the naming rule's "inside a
                     // project" case. The bare-space branch below is the other
@@ -156,6 +157,7 @@ export default function SpaceSurfaceApp({ routeState }) {
                     projectId={publishedProjectId}
                     spaceLabel={spaceLabel}
                     spaceAddress={spaceAddress}
+                    spaceRecordId={surfaceState.space?.id}
                 />
             </Suspense>
         )

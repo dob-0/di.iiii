@@ -82,17 +82,20 @@ describe('a space\'s contents page', () => {
     })
 
     // One name per space (owner, 2026-09-14), on the platform's own space reached by its address: the page compared the
-    // word that was typed with 'main', so the tab read "di.iiii — di.iiii" and the bar "di.iiii · di.iiii".
-    it('keeps the default tab and says the brand once on the platform\'s own space, reached by its address', async () => {
-        getServerSpaceMock.mockResolvedValue({ id: 'main', slug: 'di-iiii', label: 'di.iiii', publishedProjectId: null })
+    // word that was typed with 'main', so the tab read "di.iiii — di.iiii" and the bar "di.iiii · di.iiii". The space is
+    // named in data ("Home") and the tab is asked of the record's id, so it keeps the front door's title.
+    it('keeps the default tab and says the platform\'s own space by its name, reached by its address', async () => {
+        getServerSpaceMock.mockResolvedValue({ id: 'main', slug: 'di-iiii', label: 'Home', publishedProjectId: null })
         listSpaceContentsMock.mockResolvedValue(contents)
         document.title = 'di.iiii — public spaces on the open web'
         render(<SpaceContentsPage spaceId="di-iiii" />)
 
-        expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('di.iiii')
+        expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Home')
         expect(document.title).toBe('di.iiii — public spaces on the open web')
         expect(document.querySelector('.sbar-home').textContent).toBe('di.iiii')
-        expect(document.querySelector('.sbar-where')).toBeNull()
+        const where = document.querySelector('.sbar-where')
+        expect(where.textContent).toBe('Home')
+        expect(where).toHaveAttribute('href', '/di-iiii')
     })
 
     it('says the address for a space that has no name — in the bar, the heading and the tab', async () => {

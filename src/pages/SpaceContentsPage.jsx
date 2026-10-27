@@ -113,8 +113,8 @@ export default function SpaceContentsPage({ spaceId }) {
     const projects = state.projects
 
     // The tab says the space's name, the same one the heading below and the /{space} tab say (docs/ai/vocabulary.md,
-    // "One name per space") — it was the index.html default on every space's list. The platform's own space gets none:
-    // its name is di.iiii, which the default already says. Asked of the space's record, not of the word that was typed.
+    // "One name per space") — it was the index.html default on every space's list. The platform's own space (id main)
+    // gets none: the front door keeps index.html's title. Asked of the space's record, not of the word that was typed.
     useDocumentTitle(state.status === 'ready'
         ? spaceTabTitle({ spaceId: state.space?.id || spaceId, label: state.space?.label, address })
         : null)

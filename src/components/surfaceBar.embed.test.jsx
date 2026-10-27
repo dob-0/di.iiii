@@ -35,8 +35,8 @@ vi.mock('../project/services/projectsApi.js', () => ({
 // GET /api/spaces/:segment. Any other word gets the one record every lane above has always been given.
 const { SPACES } = vi.hoisted(() => ({
     SPACES: {
-        // the platform's own space: its name is the brand
-        platform: { id: 'main', slug: 'di-iiii', label: 'di.iiii', publishedProjectId: 'p' },
+        // the platform's own space: named in data like any other (spaces/main/di-space.space.json)
+        platform: { id: 'main', slug: 'di-iiii', label: 'Home', publishedProjectId: 'p' },
         // a space with a name and an address of its own
         named: { id: 'dilijan', slug: 'dilijan-camp', label: 'Dilijan As A Screen', publishedProjectId: 'p' },
         // a space nobody named
@@ -366,8 +366,7 @@ describe('a presentation draws no bar', () => {
 
 // One name per space (owner, 2026-09-14; docs/ai/vocabulary.md). The bar says the space's NAME — the same word on every
 // surface of the space, whatever address was typed to reach it — and its space link goes to the space's ADDRESS. A space
-// nobody named shows its address. The platform's own space is named after the brand the bar already leads with, so the
-// bar says it once. Before this each surface fed the bar its own word, and one space read "di.iiii · main",
+// nobody named shows its address. The platform's own space is named in data ("Home") and is no exception. Before this each surface fed the bar its own word, and one space read "di.iiii · main",
 // "di.iiii · di-iiii" and "di.iiii · di.iiii" depending on the page (measured 2026-10-26, 19 addresses).
 //
 // The lanes are the table the bar's callers join; a surface that grows a bar owes it a row here.
@@ -407,7 +406,7 @@ describe('the bar says one name per space, on every surface', () => {
     ]
 
     const NAME_SPACES = [
-        { name: 'the platform\'s own space', space: SPACES.platform, typed: ['main', 'di-iiii'], says: 'di.iiii', link: null },
+        { name: 'the platform\'s own space', space: SPACES.platform, typed: ['main', 'di-iiii'], says: 'di.iiii · Home', link: '/di-iiii' },
         { name: 'a named space', space: SPACES.named, typed: ['dilijan', 'dilijan-camp'], says: 'di.iiii · Dilijan As A Screen', link: '/dilijan-camp' },
         { name: 'a space nobody named', space: SPACES.unnamed, typed: ['queerlab', 'queer-lab'], says: 'di.iiii · queer-lab', link: '/queer-lab' }
     ]

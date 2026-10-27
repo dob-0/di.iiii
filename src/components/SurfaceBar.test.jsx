@@ -94,24 +94,21 @@ describe('SurfaceBar', () => {
             .join(' ')
         const spaceWord = () => document.querySelector('.sbar-where:not(.sbar-where--project)')
 
-        it('says the brand once for the platform\'s own space, reached by its id or by its address', () => {
-            for (const props of [
-                { space: 'main', spaceLabel: 'di.iiii', spaceAddress: 'di-iiii' },
-                { space: 'di-iiii', spaceLabel: 'di.iiii', spaceAddress: 'di-iiii' }
-            ]) {
-                const { unmount } = render(<SurfaceBar {...props} />)
-                // no second "di.iiii", no "main", no "di-iiii"
-                expect(barLeft()).toBe('di.iiii')
-                expect(spaceWord()).toBeNull()
-                expect(document.querySelectorAll('.sbar-sep')).toHaveLength(0)
+        it('says the platform\'s own space by its name and links to its address, like any space', () => {
+            for (const typed of ['main', 'di-iiii']) {
+                const { unmount } = render(<SurfaceBar space={typed} spaceLabel="Home" spaceAddress="di-iiii" />)
+                // no "main", no "di-iiii", no second "di.iiii"
+                expect(barLeft()).toBe('di.iiii · Home')
+                expect(spaceWord().getAttribute('href')).toBe('/di-iiii')
+                expect(document.querySelectorAll('.sbar-sep')).toHaveLength(1)
                 unmount()
             }
         })
 
-        it('still leads on to the project after the brand: di.iiii · project', () => {
-            render(<SurfaceBar space="main" spaceLabel="di.iiii" spaceAddress="di-iiii" project="p1" projectLabel="Everything made here" here="studio" />)
-            expect(barLeft()).toBe('di.iiii · Everything made here')
-            expect(document.querySelectorAll('.sbar-sep')).toHaveLength(1)
+        it('leads on to the project after the space: di.iiii · Home · project', () => {
+            render(<SurfaceBar space="main" spaceLabel="Home" spaceAddress="di-iiii" project="p1" projectLabel="Everything made here" here="studio" />)
+            expect(barLeft()).toBe('di.iiii · Home · Everything made here')
+            expect(document.querySelectorAll('.sbar-sep')).toHaveLength(2)
         })
 
         it('says a named space\'s name and links to its address, whichever address was typed', () => {

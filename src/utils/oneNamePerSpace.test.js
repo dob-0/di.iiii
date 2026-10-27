@@ -1,21 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { isPlatformName, spaceTabTitle, spaceWordFor } from './oneNamePerSpace.js'
+import { spaceTabTitle, spaceWordFor } from './oneNamePerSpace.js'
 
 // "One name per space" (owner, 2026-09-14; docs/ai/vocabulary.md): the surface bar and the browser tab say the
 // space's NAME. The same word on every page of the space, whatever address was typed to reach it.
-
-describe('isPlatformName', () => {
-    it('is the brand, whatever its case or padding', () => {
-        expect(isPlatformName('di.iiii')).toBe(true)
-        expect(isPlatformName('  DI.iiii ')).toBe(true)
-    })
-
-    it('is not an address, an id or the name of any other space', () => {
-        for (const other of ['di-iiii', 'main', 'Main Space', 'Dilijan As A Screen', 'di.iiii studio', '', '  ', null, undefined, 4]) {
-            expect(isPlatformName(other), String(other)).toBe(false)
-        }
-    })
-})
 
 describe('spaceWordFor', () => {
     it('is the space\'s name', () => {
@@ -52,15 +39,15 @@ describe('spaceTabTitle', () => {
             .toBe('Mery Petrosyan — WCC Exhibition — di.iiii')
     })
 
-    it('leaves the tab to index.html for the platform\'s own space, however it was reached', () => {
-        // by its id
-        expect(spaceTabTitle({ spaceId: 'main', label: 'di.iiii', address: 'di-iiii' })).toBeNull()
-        // by its address: the id the surface was handed is the typed word, the name is still the brand
-        expect(spaceTabTitle({ spaceId: 'di-iiii', label: 'di.iiii', address: 'di-iiii' })).toBeNull()
-        // by its id, with no name on record
+    it('leaves the tab to index.html for the platform\'s own space, by its id, however it was reached', () => {
+        // the callers hand the record's id, whichever address was typed
+        expect(spaceTabTitle({ spaceId: 'main', label: 'Home', address: 'di-iiii' })).toBeNull()
         expect(spaceTabTitle({ spaceId: 'main' })).toBeNull()
-        // inside one of its projects: still the platform's, never "<project> — di.iiii — di.iiii"
-        expect(spaceTabTitle({ spaceId: 'di-iiii', label: 'di.iiii', projectTitle: 'Landing' })).toBeNull()
+        expect(spaceTabTitle({ spaceId: 'main', label: 'Home', projectTitle: 'Landing' })).toBeNull()
+    })
+
+    it('has no carve-out on a name: a space that happens to be named like the brand is a space', () => {
+        expect(spaceTabTitle({ spaceId: 'di-iiii', label: 'di.iiii', address: 'di-iiii' })).toBe('di.iiii — di.iiii')
     })
 
     it('says the address for a space with no name', () => {

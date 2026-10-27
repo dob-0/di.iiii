@@ -88,7 +88,7 @@ const PAGE_SANDBOX = 'allow-scripts allow-forms allow-popups allow-popups-to-esc
 // only ever be a backstop, not a real "finished loading" signal.
 const CODE_PREVIEW_PAINT_TIMEOUT_MS = 10000
 
-export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', spaceAddress = null, initialCameraView = null, showProjectSwitcher = false, showProjectInTitle = false }) {
+export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', spaceAddress = null, spaceRecordId = null, initialCameraView = null, showProjectSwitcher = false, showProjectInTitle = false }) {
     const [state, setState] = useState({
         status: 'loading',
         document: null,
@@ -549,7 +549,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         isPreview || isEmbed || state.status !== 'ready'
             ? null
             : spaceTabTitle({
-                spaceId: resolvedRouteSpaceId,
+                // the record's id, asked of the space (/di-iiii is the same space as /main); the typed word while unknown
+                spaceId: spaceRecordId || resolvedRouteSpaceId,
                 label: spaceLabel,
                 address: spaceAddress,
                 projectTitle: showProjectInTitle ? document?.projectMeta?.title : ''

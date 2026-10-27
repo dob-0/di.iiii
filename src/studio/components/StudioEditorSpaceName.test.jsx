@@ -58,10 +58,10 @@ describe('what StudioEditor tells the shell about the space', () => {
     })
 
     it('is the name and the address of the platform\'s own space, whichever address was typed', async () => {
-        getServerSpaceMock.mockResolvedValue({ id: 'main', slug: 'di-iiii', label: 'di.iiii', publishedProjectId: 'main-dii-project' })
+        getServerSpaceMock.mockResolvedValue({ id: 'main', slug: 'di-iiii', label: 'Home', publishedProjectId: 'main-dii-project' })
         for (const typed of ['main', 'di-iiii']) {
             const { unmount } = render(<StudioEditor projectId="main-dii-project" spaceId={typed} />)
-            await waitFor(() => expect(told().spaceLabel, typed).toBe('di.iiii'))
+            await waitFor(() => expect(told().spaceLabel, typed).toBe('Home'))
             expect(told().spaceAddress, typed).toBe('di-iiii')
             // the tools still open from the space as the surface was reached
             expect(told().spaceId, typed).toBe(typed)
