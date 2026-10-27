@@ -1238,6 +1238,36 @@ describe('RawEditor stream.monitor panel', () => {
     })
 })
 
+describe('RawEditor Recorder and Still windows', () => {
+    const TAKE_STORAGE_KEY = 'test-recorder-still'
+
+    afterEach(() => {
+        window.localStorage.removeItem(TAKE_STORAGE_KEY)
+        delete window.__seek
+    })
+
+    // Both were the generic text-panel trap until 2026-10-21 (Recorder was a
+    // gated shell). Each opens its own window, saying what to wire.
+    it('opens each in its own window with its own buttons, not the text-panel fallback', () => {
+        window.localStorage.setItem(
+            TAKE_STORAGE_KEY,
+            makeWorkspaceDoc([
+                { id: 'rec-1', typeId: 'stream.recorder', label: 'Recorder', parentId: null, values: {} },
+                { id: 'still-1', typeId: 'stream.still', label: 'Still', parentId: null, values: {} }
+            ])
+        )
+        render(<RawEditor localStorageKey={TAKE_STORAGE_KEY} />)
+
+        expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Stop' })).toBeDisabled()
+        expect(screen.getByRole('button', { name: 'Take' })).toBeInTheDocument()
+        expect(screen.getAllByText(/Wire a picture into Picture/)).toHaveLength(2)
+        expect(screen.queryByText('This panel is ready for authored UI.')).toBeNull()
+        // The editor puts the clock seek contract on the page.
+        expect(typeof window.__seek).toBe('function')
+    })
+})
+
 // A window and its graph card are two views of ONE node, and nothing used to
 // say so: the card said "the scene" in the family's colour while the window said
 // UNIVERSE.WORLD in grey, and both wore the same cyan frame. The window now
