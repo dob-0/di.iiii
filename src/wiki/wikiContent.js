@@ -17,6 +17,19 @@ export const WIKI_CATEGORIES = [
 
 export const WIKI_ARTICLES = [
     {
+        id: 'studio-frame',
+        category: 'Editing',
+        title: 'The Editor\'s frame and your scene',
+        summary: 'The panels, buttons and bars around the viewport wear di.iiii\'s own colours and square corners. What your project draws inside the viewport keeps its own colours.',
+        body: [
+            'The Editor\'s frame is di.iiii\'s: one cyan, a near-black ground, and rectangles for every button, tab, badge, switch and slider. A project\'s scene is yours: its background, its objects and their colours look exactly as you set them, with or without the frame around them.',
+            'A slider\'s thumb is a small upright bar with a dark rim, so it stays visible over the filled cyan line. The whole 24 px row of a slider takes a click or a touch, not only the thin line. A switch is a square in a rectangle: grey when off, cyan when on. Controls have sharp corners; the only round mark is the connection light.',
+            'On the Spaces page, the view you are on (Grid, List, Map) is lit, a row you reach with the keyboard is lit too, and a public space is drawn light grey, because cyan means live. A space\'s address is printed in grey; green is kept for what is live.'
+        ],
+        tags: ['studio', 'editor', 'frame', 'colours', 'slider', 'switch', 'look'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'auto-fly',
         category: 'Editing',
         title: 'Auto fly: a drone flight through the room',
@@ -153,9 +166,10 @@ export const WIKI_ARTICLES = [
             'A door can show where it leads. Give a door a picture (the same media slot an image uses) and the picture fills the door\u2019s opening \u2014 the round door or the standing frame \u2014 a little veiled until you point at it, then clear. A door with no picture keeps its own colour, as before. A door can also invite: in its own colour a ripple spreads out from it and arrows slide in from both sides, so it reads as a place to go from across the room; with reduced motion they stand still.',
             'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately, and nothing falls. Going through a door is a short plain fade. The destination is never different, only the journey.',
             'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.',
-            'Everything on the page can be reached with the tab key, and whatever you are on is ringed in cyan. While the door is opening, what falls past you is a picture of the page you were reading, drawn as flat pieces in the room itself \u2014 not a second set of its controls, so nothing in the flight can be tabbed to or read twice by a screen reader.'
+            'Everything on the page can be reached with the tab key, and whatever you are on is ringed in cyan. While the door is opening, what falls past you is a picture of the page you were reading, drawn as flat pieces in the room itself \u2014 not a second set of its controls, so nothing in the flight can be tabbed to or read twice by a screen reader.',
+            'The address is diiii.xyz. A link or a printed code that names the old studio address still reaches the same place; new links name diiii.xyz.'
         ],
-        tags: ['landing', 'basics', 'navigation', 'room', 'walk'],
+        tags: ['landing', 'basics', 'navigation', 'room', 'walk', 'address'],
         updated: '2026-10-25'
     },
     {
@@ -1825,6 +1839,37 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-13'
     },
     {
+        id: 'flash-guard-node',
+        category: 'Editing',
+        title: 'Flash Guard: no more than three flashes a second',
+        summary: 'Put a Flash Guard between any number and a light or a picture, and it never lets more than three flashes a second through.',
+        body: [
+            'Fast light can cause seizures in people with photosensitive epilepsy. The web\'s accessibility rule (WCAG 2.2, success criterion 2.3.1, “Three Flashes or Below Threshold”) says nothing may flash more than three times in any one second. A flash is a pair of opposite changes — up then down, or down then up — of 10 % of full or more.',
+            'Wire the number that drives a light — into a DMX Out Value or Master, a Laser\'s Level, a picture\'s brightness — through a Flash Guard. While the number changes slowly, or by less than 10 %, it passes untouched. When it would flash a fourth time inside a second, the Guard holds the light where it is, a little short of the change, until an older flash has left that second; then it lets the next change through. A 10-a-second strobe comes out as three flashes a second.',
+            'Rate is how many times a second the incoming number flashes. Limited is true while the Guard is holding the light back, and for a second after: wire it into a Text panel or a lamp of its own, and the operator sees when the Guard acted.',
+            'Full says what “full” means on the wire: 1 for the usual 0 to 1, 255 if the wire carries bytes. Limit can be made stricter — 2, or 1 — but never looser: anything above 3, and an empty, zero or wrong Limit, counts as 3. There is no switch that turns the Guard off.',
+            'The Guard counts the same way the venue checks do (scripts/measure/flashrate.cjs and scripts/place/scenes_flash.cjs measure a lighting file with the same code). What it does not know: WCAG excuses changes where the darker side is very bright, and the Guard counts those too, so it is stricter there. It does not see colour, so WCAG\'s separate rule for saturated red flashes is not checked. It guards one number: two lamps flashing out of step, or a whole picture, each need their own Guard.'
+        ],
+        tags: ['raw', 'nodes', 'flash', 'strobe', 'safety', 'wcag', 'accessibility', 'light', 'dmx', 'performance'],
+        updated: '2026-10-21'
+    },
+    {
+        id: 'mesh-in-out-nodes',
+        category: 'Editing',
+        title: 'Mesh In and Mesh Out — screens and phones in sync',
+        summary: 'Mesh Out publishes a value to every other screen and phone in the same group; Mesh In hears it, with who sent it and when.',
+        body: [
+            'Mesh Out and Mesh In speak to the mesh: a live hub on the di.iiii server where every screen and phone in one group hears what the others publish. Nothing to install — any browser that opens the project can join.',
+            'Group names who meets. Leave it empty and the node uses this project’s own group, so every screen and phone that opens the same project meets there. Type a name to meet across projects. Channel names what is being said, so one group can carry several values at once; Mesh In listens to one channel.',
+            'Mesh Out publishes its Value on its Channel whenever Value changes — at most once per Interval (200 ms by default, which is five times a second; anything under 50 ms is raised to 50). If several values arrive inside one interval, the latest is the one that goes out. While the link is down nothing is sent and nothing is kept for later; when the link comes back, the current value goes out once.',
+            'Mesh In gives the latest Value, who sent it (From) and when the server passed it on (Time, in milliseconds), and Signal counts one more for every event, so a Counter or a Trigger can react to each one. Min and Max, when Min is below Max, only let numbers in that range through; Allowed is a comma list of the only values let through; Max Length refuses longer text. A refused value is dropped and the Status says why.',
+            'Both nodes say Up (1) while the link is up and 0 while it is down, and Status says how many others are in the group. A dropped link is tried again after 1 second, then 2, 4, 8, and every 10 seconds after that.',
+            'Each Mesh In and Mesh Out holds its own link, so a Mesh In hears a Mesh Out on the same page too, which makes one tab enough to try it. The server passes an event to everyone in the group except the link that published it. Up to 64 links can share one group.'
+        ],
+        tags: ['raw', 'nodes', 'mesh', 'phone', 'screens', 'sync', 'remote', 'wall', 'device', 'network'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'laser-out-node',
         category: 'Editing',
         title: 'Laser and Laser Out — draw for the LaserCubes',
@@ -1876,6 +1921,62 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'nodes', 'laser', 'lasercube', 'trace', 'outline', 'wireframe', 'points', 'merge', 'budget', 'geometry', 'touchdesigner'],
         updated: '2026-10-14'
+    },
+    {
+        id: 'beat-and-oscillator',
+        category: 'Editing',
+        title: 'Beat and Oscillator — move things on the beat',
+        summary: 'Beat is a clock: a tempo and a beat 0. One master clock runs for the whole project; Oscillators follow it, or an extra clock you wire in. The Light desk can lend a Beat its tempo and tap.',
+        body: [
+            'One master clock always runs in a project: 120 BPM until you add a Beat. The first Beat whose Clock is set to Master is the master; every other Beat is an extra clock. Each Beat gives Ramp (0 to 1 over its Period, in beats), Pulse (on for the first tenth of each period), Count, Beat (1 to 4 in the bar), Bar, Ramp bar and BPM, and its Clock output for Oscillators.',
+            'An Oscillator still runs in Hz, as before, until you give it Beats: then one cycle lasts that many beats (¼ to 64) of the master clock, or of the Beat you wire into its Clock. Wave picks the shape of the Out output — Sine, Triangle, Ramp, Square, Pulse, Random glide, Sample & hold; Amplitude and Offset scale and move it; Bias leans it (on a square it is how long it stays up); Reset starts the cycle again now. The old Sine, Square, Triangle and Saw outputs are unchanged, so a project made before this moves exactly as it did.',
+            'Tap and Reset on a Beat: wire a Button or a Keyboard key in. Two taps set the tempo and put beat 0 on the last tap; every window keeps the same beat. Clock and Tempo from are settings in the Beat’s inspector, not inputs: nothing wired in can change them. Set Tempo from to Light desk and the Beat takes the /light desk’s tempo and phase instead, and a tap goes to the desk; when no desk answers, the Beat keeps its own tempo and its Status says so.',
+            'The waves are the light desk’s own: a Sample & hold on an Oscillator and a random LFO on the desk draw the same values at the same moment. Still to be seen on the real cubes: a Laser Trace pulsing on the beat, and a tap on the desk moving the laser’s tempo.'
+        ],
+        tags: ['raw', 'nodes', 'beat', 'clock', 'master clock', 'bpm', 'tempo', 'tap', 'oscillator', 'lfo', 'wave', 'laser', 'light', 'touchdesigner'],
+        updated: '2026-10-21'
+    },
+    {
+        id: 'laser-file-text-nodes',
+        category: 'Editing',
+        title: 'Laser File and Laser Text — draw a file or a word with the LaserCubes',
+        summary: 'Laser File draws an ILDA show file or an SVG drawing; Laser Text writes a word in a single-stroke font. Both wire into Laser Out like Laser Trace.',
+        body: [
+            'Laser File takes a file from the project: an ILDA file (.ild — formats 0, 1, 4 and 5, the ones laser shows are traded in) or an SVG drawing. It reads the file itself to tell which it is. An ILDA file draws as its author made it, in its own colours and order; Frame picks which frame, and Speed above 0 plays the frames that many a second. An SVG is fitted into most of the field, every path in its stroke colour (green where it has none); its curves and arcs become short straight lines no farther than Tolerance from the true curve. Only <path> shapes are read: rectangles, circles, text and transforms in the file are counted on Status, not drawn.',
+            'Laser Text writes Text in the Hershey Roman Simplex font, one stroke per line of each letter, the way engraving machines and plotters write. Size is a capital letter\'s height; Height is where the text sits up the field (0.5 keeps it above the half the cube blanks). Letters outside plain ASCII draw as ?, and text too big for the field is made smaller to fit — Status says so.',
+            'Both send at most 2000 points, the most a frame carries; a bigger file is thinned evenly and Status says how many points were cut. A file that is not an ILDA or SVG, or is cut short, is refused and Status names why. Size and Height can carry a drawing past the edge of the field: what goes past is left dark, never pressed flat against the edge, and Status counts the points that were. Neither node has been seen on the real cubes yet.',
+            'The Hershey fonts were originally created by Dr. A. V. Hershey while working at the U. S. National Bureau of Standards. The format of the font data was originally created by James Hurt, Cognition, Inc.'
+        ],
+        tags: ['raw', 'nodes', 'laser', 'lasercube', 'ilda', 'svg', 'file', 'text', 'hershey', 'font', 'import'],
+        updated: '2026-10-21'
+    },
+    {
+        id: 'visitor-and-tilt-nodes',
+        category: 'Editing',
+        title: 'Visitor and Tilt — what the phone or screen is, as wires',
+        summary: 'Visitor tells the graph whether the screen is a phone, asks for reduced motion, stands in portrait, how wide and tall it is, its language and whether it is embedded; it also keeps a Name, Hue and Id in this browser. Tilt turns how the phone is tipped into X and Y from -1 to 1.',
+        body: [
+            'Visitor has no window. Its outputs are Phone (a touch screen whose short side is under 600 pixels, so a tablet is not a phone), Reduced motion (the person asked their device for less movement), Portrait (taller than wide), Width and Height in pixels, Language (the first part of the browser language, such as en or hy) and Embedded (the page is in a frame, or its address has embed=1 or preview=1). They change as the screen turns or resizes. Wire Phone into a Route to draw fewer things on a phone, or Reduced motion into a Mix to slow an Oscillator down.',
+            'Name, Hue and Id belong to the person, not the project: they are kept in this browser, so two people see their own. Id and Hue (0 to 1, the Hue of a Colour Split) are made on the first visit. Wire a text into New name and it is kept; an empty New name keeps the old one. Where the browser refuses to keep anything, they last until the page is closed.',
+            'Tilt gives X (the right edge dipping is plus) and Y (the top edge dipping is plus), from -1 to 1. Level is however the phone was held at the first reading, and Range is how many degrees reach 1 (30 unless changed). Live says a reading has arrived. On an iPhone the browser asks first, and only after a tap: Tilt asks at the first tap anywhere on the page, and stays at 0 and not Live if the answer is no. On a computer it stays at 0.',
+            'Both work where the Nodes editor runs, on the desk and in Perform. The published page and /out do not run them yet: there they answer their plain values (not a phone, 0 wide, level).'
+        ],
+        tags: ['raw', 'nodes', 'visitor', 'phone', 'mobile', 'reduced motion', 'portrait', 'language', 'embed', 'tilt', 'orientation', 'gyro'],
+        updated: '2026-10-21'
+    },
+    {
+        id: 'cue-node',
+        category: 'Editing',
+        title: 'Cue — the cue list on a wire',
+        summary: 'The Cue node reads the project\'s cue list: which cue is on, its name and look, how far into its fade and hold it is. Go, Back and Jump move it.',
+        body: [
+            'A project\'s cue list is the one the Projection desk, the Perform window\'s Cues and the cards page edit: each cue has a name, a fade, a hold and, if it lights the rig, a look. The Cue node puts that list on wires. Index is the cue that is on, counted from 0 (-1 before the first cue). Name and Look are its name and its look. Progress runs from 0 to 1 over the cue\'s hold, or over its fade when the fade is longer. Fading is on while the fade runs. Fired changes each time a cue fires.',
+            'The timing is the desk\'s: a cue fades in from the moment it fires, its hold counts from the same moment, and when the hold is served the next cue fires. A hold of 0 waits for Go. Loop takes the list from its last cue back to the first; unwired, it follows the cue list\'s own loop switch.',
+            'When the project has a show started on the show clock, the node reads the cue every room is on. Wire a Button\'s Presses, a Keyboard or Time\'s Beat into Go to move to the next cue, the same into Back for the one before, and a number into Jump to fire that cue. A cue you move to this way is fired as the Perform window fires it: its surfaces change and its look is called up on the Light desk when one is running here.',
+            'Presses are counted in the window you press them in. A window opened later starts from the cue list as it finds it. Two editors open on one project both fire the cue a press moves to.'
+        ],
+        tags: ['raw', 'nodes', 'cue', 'cue list', 'show', 'go', 'fade', 'hold', 'look', 'perform'],
+        updated: '2026-10-21'
     },
     {
         id: 'build-zones',

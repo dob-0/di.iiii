@@ -12,8 +12,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { TIERS, resolveToken } from '../../sdk/credentials.js'
-import { SITES, credentialsFile, loginKeyFor, originOf, readLogin, removeLogin, writeLogin } from './loginStore.mjs'
+import { SITE_ALIASES as SDK_SITE_ALIASES, TIERS, resolveToken } from '../../sdk/credentials.js'
+import { SITES, SITE_ALIASES, credentialsFile, loginKeyFor, originOf, readLogin, removeLogin, writeLogin } from './loginStore.mjs'
 
 let home
 beforeEach(() => { home = fs.mkdtempSync(path.join(os.tmpdir(), 'di-loginstore-')) })
@@ -49,8 +49,15 @@ describe('loginKeyFor — where a login is filed', () => {
         expect(loginKeyFor({ to: 'https://dev.diiii.xyz' })).toBe('dev')
         expect(loginKeyFor({ to: 'https://dev.diiii.xyz/' })).toBe('dev')
         expect(loginKeyFor({ to: 'https://DEV.diiii.xyz/serverXR/' })).toBe('dev')
-        expect(loginKeyFor({ to: 'https://di-studio.xyz/' })).toBe('prod')
+        expect(loginKeyFor({ to: 'https://diiii.xyz/' })).toBe('prod')
         expect(loginKeyFor({ to: 'http://localhost:4000/' })).toBe('local')
+    })
+
+    // di-studio.xyz was prod's address until 2026-10-21 and forwards to diiii.xyz.
+    it('files the old prod address under prod, not under a second origin', () => {
+        expect(loginKeyFor({ to: 'https://di-studio.xyz/' })).toBe('prod')
+        expect(loginKeyFor({ to: 'https://www.di-studio.xyz/serverXR' })).toBe('prod')
+        expect(SITE_ALIASES).toEqual(SDK_SITE_ALIASES)
     })
 
     it('files any other host under its origin: scheme, host and a port that is not the default', () => {
@@ -221,6 +228,12 @@ describe('the SDK reads what is written here — the two halves of one file', ()
     it('finds a tier\'s login by its site too, when only the base is given', () => {
         writeLogin({ home, key: loginKeyFor({ to: 'https://dev.diiii.xyz' }), entry: entry('dii_cli_sdkdev01') })
         expect(resolveToken({ env: {}, home, base: 'https://dev.diiii.xyz/serverXR' })).toBe('dii_cli_sdkdev01')
+    })
+
+    it('finds the prod login from a base on the old prod address', () => {
+        writeLogin({ home, key: loginKeyFor({ tier: 'prod' }), entry: entry('dii_cli_sdkprd00') })
+        expect(resolveToken({ env: {}, home, base: 'https://di-studio.xyz/serverXR' })).toBe('dii_cli_sdkprd00')
+        expect(resolveToken({ env: {}, home, base: 'https://diiii.xyz/serverXR' })).toBe('dii_cli_sdkprd00')
     })
 
     it('never offers one host\'s login to another host', () => {

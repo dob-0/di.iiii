@@ -194,7 +194,7 @@ workflows sync tracked config from git and reload Caddy as needed. See
 `docs/deploy/VPS_DOCKER_DEPLOY.md` for the full setup this relies on.
 
 `npm run deploy:*` (`scripts/deploy.mjs`) is the older cPanel-era path, kept only as a documented
-fallback (see `docs/deploy/legacy/`) — it is not how `di-studio.xyz` is deployed today.
+fallback (see `docs/deploy/legacy/`) — it is not how `diiii.xyz` is deployed today.
 
 Rules:
 
@@ -216,7 +216,7 @@ flowchart LR
     branchDev --> ghcrDev["GHCR build<br/>deploy-vps-dev.yml"]
     branchMain --> ghcrProd["GHCR build<br/>deploy-vps.yml"]
     ghcrDev --> vpsDev["Hetzner VPS<br/>dev tier Compose project<br/>→ dev.diiii.xyz"]
-    ghcrProd --> vpsProd["Hetzner VPS<br/>production Compose project<br/>→ di-studio.xyz"]
+    ghcrProd --> vpsProd["Hetzner VPS<br/>production Compose project<br/>→ diiii.xyz"]
     branchMain -.disabled fallback.-> release["cpanel-* release branches"]
     release -.-> hosting["cPanel hosting<br/>(legacy, workflow_dispatch-only)"]
 ```

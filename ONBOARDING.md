@@ -7,7 +7,7 @@ inline.
 
 > **Wrong door?** If you were invited to *collaborate on a space* — build scenes,
 > upload work, edit projects — you need none of this. That path is a browser tab
-> and nothing else: [di-studio.xyz/wiki#joining-a-space](https://di-studio.xyz/wiki#joining-a-space).
+> and nothing else: [diiii.xyz/wiki#joining-a-space](https://diiii.xyz/wiki#joining-a-space).
 > This page is for running and changing the platform itself.
 
 > TL;DR for the impatient: install prerequisites → fork & clone → `npm install`

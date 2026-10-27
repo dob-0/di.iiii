@@ -43,6 +43,22 @@ Found by `scripts/audit/rig-show-pages.cjs` (headless Chromium + axe-core 4.13, 
   and 24 / 44 px in Perform (`touchTargets.test.js`), the visualiser title 2.89 → 5.28:1
   (`visualiserContrast.test.js`), and a production name out of the Perform save box's placeholder.
 
+## Laser File pressed what left the field onto its edge, drawing lines the file never had (Raw, 2026-10-21)
+
+Symptom (review of PR #1071, before merge): a 400-vertex ILDA circle (radius 0.8) at Size 10 put 400/400 vertices on the field's edge and 340 on its corners, a full-field square with ~21 % of the frame on each corner; `M0 0 L1 1` at Height 9 drew a lit line along y = 1. The server's `stillBeams` passed both (each corner under the 0.5 dwell share).
+Cause: `laserFile.js` clamped each coordinate to -1..1 after Size and Height.
+Fix: `src/project/nodes/laser.file/clipField.js` `clipToField` cuts every path at the field edge (Liang–Barsky per segment), drops what is outside, never makes a dot from a corner graze, and Status counts the blanked points. Guard: `clipField.test.js` (5) and two cases in `laserFile.test.js` (circle at Size 10: 0 corner vertices, every vertex on the circle; line at Height 9: no path).
+
+## New links, defaults and pages still named the old address di-studio.xyz (repo-wide, 2026-10-21)
+
+Symptom: five weeks after `diiii.xyz` went live (2026-09-11), dev named the old address in 222 files (539 times): README and wiki links, `DEFAULT_LIVE_URL` in six space scripts, the prod tier of `sdk/credentials.js` and `di login`, the `$schema` and server URL of every space manifest, the brand guide's bio line, `verify:surfaces`' default base. Nothing failed, because the old name still answers.
+Cause: "new links name diiii.xyz" was a sentence in CONTRIBUTING and LIVE_DEPLOY with no check behind it. Fix: every place that uses it AS the public address names `diiii.xyz`; the host allowlists, CORS, OAuth callbacks registered with the providers, tests of the alias and dated history keep it; `SITE_ALIASES` in `sdk/credentials.js` and `scripts/di/loginStore.mjs` keep a login aimed at the old address filed under prod. Guard: `scripts/oldAddress.test.js` counts the old name per tracked text file; dated logs are exempt by path, every other file has an exact allowed count with a reason, and a count above OR below its row fails. Note: `docs/ai/sessions/cloud-one-public-address-2026-10-21.md`.
+
+## The Spaces map's lit view button and arrange/filter buttons showed no fill; the Studio slider was a 4 px target (2026-10-21)
+
+Symptom: on `/studio` → MAP the button you are on had no visible "on" fill, nor the lit arrange / filter buttons or the hovered list row; measured `rgba(77,249,255, 0.0014)` on the lit toggle. The Inspector's slider took clicks only on a 274 × 4 px input (WCAG 2.2 SC 2.5.8 asks 24 × 24) and its round thumb's edge stood 1.82 : 1 against the filled cyan line (SC 1.4.11 asks 3 : 1).
+Cause: six `color-mix(in srgb, var(--di-cyan) 0.14%, transparent)` in `space-constellation.css`, an alpha written as a percent (0.14 → `0.14%`, meant 14 %). The slider drew its line as the input's own 4 px height. Fix: the six read 12 / 6 / 14 / 14 / 40 / 5 %; the slider's input is 24 px tall with the line as a centred 4 px background, the thumb an 8 × 18 rectangle with a 2 px dark rim (13.28 : 1). Guard: `src/studio/studioFrame.test.js` ("whole percent", seen red on `dev`). Pictures and numbers: `docs/ai/handover/brand-studio-frame/`.
+
 ## Front pages appended words to `di.iiii` and named the retired Beta editor (2026-10-21)
 
 Symptom: six headings fused a word onto the platform name (`di.iiii Control Server`, `di.iiii Deck Context`, `di.iiii Ecosystem Map`, `di.iiii AI Engineering Collective`, `The di.iiii SDK`, `The di.iiii Visual Identity — Complete Spec`); `serverXR/README.md` listed `Beta` as a supported editor three times, eleven weeks after the lane was deleted (2026-08-06); `docs/deck/README.md` said "lane", `ONBOARDING.md` said "Raw" as a name; and `sdk/README.md` told a reader to `import { connect } from 'di.iiii/sdk'`, a package that does not exist (the root package is private and named otherwise; there is no `sdk/package.json`).
@@ -1143,6 +1159,16 @@ rule `floor`, as before #1050); open sky is a ray that does not go down; the lam
 and a first hit of 0 m is a row (`inside_slab` / `on_floor`, `hidden: true`, counted, exit 1, never fixed); a hidden lamp outside the hall is not a row (only the 0 m result is checked).
 Guard: `physics_check_test.py` `FloorIsTheHallFloor`, `HiddenBeamStillChecksTheLamp`; `hall-reach.test.js` (v13 gate reach 8 m, epic-build -> physics_check row, parity).
 
+## Beat's Clock and Tempo from took wires that did nothing; Oscillator Reset ignored a rising count; a tap before the clock stamp wrote a window-local epoch (2026-10-21, review of #1073)
+
+Symptom (four minor findings of the review of PR #1073, none on dev): (1) Beat's `role` and (2) `source` were ports, but `findMasterBeatNode`, the runtime and RawEditor's
+desk poll read `node.values`, so a wire there was accepted and silently ignored (a wired 'light' gave "no Light desk answers" from a desk that was never asked);
+(3) the Oscillator's Reset used `risingEdge` (false→true only) while Beat's Tap and Reset fire on a change while truthy too, so a Counter restarted a Beat on every count and an Oscillator once;
+(4) BeatFeed converted a tap or Reset made before `showState.clockEpoch` was stamped with this window's `performance.timeOrigin` and wrote that epoch into the op log.
+Fix: (1–2) `role` and `source` are `configInputs` (select fields, defaults in `defaultValues`), like DMX Out's Rig; the runtime and BeatFeed read `node.values.source`;
+(3) `edge.js` `signalFired` / `firedEdge` is the one rule; Oscillator Reset and BeatFeed both use it; (4) BeatFeed holds the tap/Reset in wall-clock ms until `clockEpoch > 0`, then writes it once.
+Guard: `beat.test.js` "no wire can reach role or source"; `oscillator.test.js` "Reset fires on a rising count too"; `BeatFeed.test.jsx` "a wire cannot set Tempo from", "held, then written in document time".
+
 ## `di update` on the dev channel failed on any 429 from the hub, and the error did not say who answered (2026-10-21)
 
 Symptom: `could not read the hub's health (https://dev.diiii.xyz: 429)`. Measured on one install 10-19..10-21: 5 of 12 update runs failed with 429, four in a row 23:30-00:16 +04;
@@ -1156,6 +1182,12 @@ timeout is unchanged; (b) when it still fails the one error line names status, `
 scripts/di has no shared request helper; the other hub requests in `scripts/di` still send Node's default User-Agent.
 Guard: `scripts/di/channels.test.js` "the health read waits out a 429 or 503…" (7 cases, injected `fetchImpl` and `sleep`) and "di names itself to the hub…" (2 cases, one runs serverXR's own `classifyUserAgent`); all 9 fail on the old code.
 
+## Scene editor fields were read by other names than the words beside them; four Raw handles had no role (2026-10-21)
+
+Symptom: 17 jsx-a11y warnings (CI run 39482426718), never a failure because the four rules were at `warn`. In the Studio scene editor each `<label>` wrapped a `Field` that set its own `aria-label`, which wins over the label: "fade s" was read as "Cue fade", "hold s" as "Cue hold", "period s" as "period", "pan°" as "pan", "tilt°" as "tilt" (WCAG 2.5.3, label in name). In Raw the window title bar was a role-less focusable `<header>` taking the arrow keys, the file-drop section was a nameless `<section>`, and the port dots were announced handles inside a node card that is itself a button.
+Fix: `<label htmlFor>` + `Field id` (useId), and no `aria-label` when a visible label names the field; title bar `role="toolbar"`; drop section `aria-label="Canvas"` (a region); port dots `aria-hidden="true"` (the row label names the port; wiring by keyboard does not exist, an OPEN finding in `docs/ai/audits/2026-10-21-a11y-perf.md`); the test video `muted`, as `WebcamSourcePanel`'s is. The four rules are `error` in `eslint.config.js`, so a new one fails lint.
+Guard: `src/a11y.lint.test.js` (rules at error; the five files report 0 jsx-a11y problems), and one case each in `SceneEditor.test.jsx`, `DesktopWindow.test.jsx`, `RawEditor.test.jsx`, `RawGraphSurface.test.jsx` — all six red before the fix.
+
 ## An old space's address opened an empty space after its front door moved away (2026-10-20)
 
 Symptom: `di move PROJECT --to SPACE --unpublish` moved a space's front door; the old project links already forwarded (`/old-space/old-project` → `/new-space/p/old-project`, via `project_moves` and `GET /api/resolve/:space/:project` → `{ movedTo }`), but `/old-space` itself opened an empty space: nothing in `project_moves` said which move was the front door's, and nothing asked. Fix: `project_moves.forwards_space_root` (1 when the move took the front door, `projectMove.js`); a sqlite trigger (`db.js`) sets it to 0 for every move out of a space the moment that space gets a front door again, whoever writes the row, so a later unpublish does not bring the old forward back; a second trigger sets it to 0 when the space row is deleted for good (purge, the stale sweep), because a purge frees the name and a new space made under it never had a move (found in review: before it, a re-made space's address forwarded to the old space's project); `GET /api/resolve/:spaceSegment` answers `{ movedTo }` (the project's CURRENT space and id) only when the space has no front door, a flagged move exists, and the caller could open the destination — project not private (or caller a member), not a draft or archived (or caller a member), destination space public (or caller a member). Anything else is a 404 and the space opens as before. Client: `RootApp.jsx` `SpaceRootRoute` follows it with the same `replace()` and kept query/hash `SlugProjectRoute` uses — not on a space's own domain (`getHostSpace()`), where `/{other}/p/{id}` reads back as a project slug of the host space; there the space opens as before (found in review). Limits: moves recorded before the column existed stay 0 and do not forward; an own-domain visitor is not sent on to the platform (a separate decision). Guards: `serverXR/src/projectMove.test.js` (flag, both triggers), `serverXR/src/projectMoveContracts.test.js` (forward, no move, private space, private project, draft, new front door, a purged name made again), `src/RootApp.test.jsx` ("RootApp space root forward", own domain included).
@@ -1167,6 +1199,12 @@ The file chase (`serverXR/src/follow/assets.js`) learned names from `upsertAsset
 ## OPEN: Follow: a host restored from an older backup that passes the old version number is skipped over (audit F13, 2026-10-21)
 
 Confirmed by test, not fixed. A cursor is a bare version number and the follower notices a rebuilt log only when its cursor is past the log's end (`follower.js` `runStream`, `behind`). Host restored from v3 to its v1 copy, three edits to v4, follower resumes from saved cursor 3: v4 arrives, v2 and v3 never do (`['op-after-1', 'op-after-2']` missing). **Guard:** `followRaces.test.js` "F13" asserts the two missing ops exactly — when the fix lands it goes red and must then assert none missing. **Fix owed (protocol):** a `logEpoch` minted when a log is created or restored, returned with the ops, saved beside each cursor; a changed epoch resets that cursor to null. Sketch in `docs/ai/audits/follow-audit-2026-10-04.md` F13.
+
+## The mesh hub's WebSocket library was declared nowhere; it arrived only through socket.io (2026-10-21)
+
+Symptom: none yet — a latent break. `serverXR/src/meshHub.js` requires `ws` at the top of the file, but `git grep '"ws"'` over every `package.json` found 0 hits on origin/dev 55a5d963. `ws` was installed only because socket.io's engine.io depends on it (`"ws": "~8.21.0"` in its lock entry), so an engine.io release that dropped or re-pinned it would have changed or removed the hub's library with no change in this repo, and the two installs already differ (serverXR's lock holds 8.21.0, the root's 8.21.1).
+Fix: `ws` declared at an exact version in `serverXR/package.json` (8.21.0, what serverXR's own lockfile installs) and in the root `devDependencies` (8.21.1, what the root lockfile installs; the browser mesh-client test speaks to the real hub through it). Licence MIT, listed in `src/kit/kitStack.js`.
+Guard: `serverXR/src/meshHub.test.js` "serverXR/package.json names ws at an exact version, matching its lockfile" — fails with the declaration removed (shown once, 1 failed / 21 passed).
 
 ## di.iiii's own requests to another di.iiii were counted there as an anonymous program (30 API reads a minute, not 300) (2026-10-21)
 

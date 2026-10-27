@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { cwd } from 'node:process'
 import { describe, expect, it } from 'vitest'
 import { NODE_RUNTIMES } from './index.js'
+import { changeTimes, worstFlashesPerSecond } from './flashRule.js'
 import { createEdge, createNode, getNodeType, isNodeTypeImplemented } from '../nodeRegistry.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeOutput } from '../graph/nodeGraphRuntime.js'
 
@@ -214,6 +215,99 @@ describe('signal.lag', () => {
         const later = at(2000)
         expect(later).toBeLessThan(10 * Math.exp(-2))
         expect(later).toBeGreaterThan(0)
+    })
+})
+
+describe('signal.flash (Flash Guard, WCAG 2.2 SC 2.3.1)', () => {
+    // Drives one guard frame by frame at 60 fps with a square wave of
+    // `perSecond` flashes, and measures what it SENDS with the same count the
+    // offline checks use.
+    const drive = (perSecond, { seconds = 4, low = 0, high = 1, values = {}, wired = false } = {}) => {
+        const memory = createFrameMemory()
+        const src = node('v', 'value.number', { value: low })
+        const guard = node('g', 'signal.flash', values)
+        const nodes = wired ? [src, guard] : [guard]
+        const edges = wired ? [edge('v', 'out', 'g', 'value')] : []
+        const frames = []
+        for (let i = 0; i * 1000 / 60 < seconds * 1000; i++) {
+            const now = i * 1000 / 60
+            const v = perSecond ? (Math.floor(now / 1000 * perSecond * 2) % 2 ? high : low) : high
+            if (wired) src.values = { value: v }
+            else guard.values = { ...guard.values, value: v }
+            const context = createNodeGraphContext({ nodes, edges }, { now, frameMemory: memory })
+            frames.push({ at: now, in: v, out: evaluateNodeOutput(guard, 'out', context),
+                rate: evaluateNodeOutput(guard, 'rate', context), limited: evaluateNodeOutput(guard, 'limited', context) })
+        }
+        const full = values.full || 1
+        const sent = worstFlashesPerSecond(changeTimes(frames.map((f) => ({ at: f.at, value: f.out / full }))))
+        return { frames, sent, memory, guard, nodes, edges }
+    }
+
+    it('bare: passes its value, rate 0, not limited', () => {
+        const doc = { nodes: [node('g', 'signal.flash', { value: 0.4 })], edges: [] }
+        expect(evalPort(doc, 'g', 'out')).toBe(0.4)
+        expect(evalPort(doc, 'g', 'rate')).toBe(0)
+        expect(evalPort(doc, 'g', 'limited')).toBe(false)
+    })
+
+    it('2 flashes a second pass untouched', () => {
+        const { frames, sent } = drive(2)
+        expect(frames.every((f) => f.out === f.in)).toBe(true)
+        expect(frames.some((f) => f.limited)).toBe(false)
+        expect(sent).toBe(2)
+        expect(frames.at(-1).rate).toBe(2)
+    })
+
+    it('a 10-a-second strobe leaves it at no more than 3, and says so', () => {
+        const { frames, sent } = drive(10, { wired: true })
+        expect(sent).toBeLessThanOrEqual(3)
+        expect(sent).toBeGreaterThan(0)
+        expect(frames.at(-1).rate).toBe(10)
+        expect(frames.at(-1).limited).toBe(true)
+        // it holds about a third of the frames (78 of 240 measured): 7 changes
+        // a second still pass, which is 3 flashes
+        expect(frames.filter((f) => f.out !== f.in).length).toBeGreaterThan(frames.length / 4)
+    })
+
+    it('4 a second is limited; a 9 % swing at 10 a second is not a flash', () => {
+        const four = drive(4)
+        expect(four.sent).toBeLessThanOrEqual(3)
+        expect(four.frames.some((f) => f.limited)).toBe(true)
+        const small = drive(10, { low: 0.5, high: 0.59 })
+        expect(small.frames.every((f) => f.out === f.in)).toBe(true)
+        expect(small.frames.at(-1).rate).toBe(0)
+        expect(small.frames.some((f) => f.limited)).toBe(false)
+    })
+
+    it('the limit cannot be switched off: 0, empty, nonsense or 100 still mean 3', () => {
+        for (const limit of [0, '', 'off', 100, -5]) {
+            expect(drive(10, { values: { limit } }).sent, String(limit)).toBeLessThanOrEqual(3)
+        }
+        expect(drive(10, { values: { limit: 1 } }).sent).toBeLessThanOrEqual(1)
+    })
+
+    it('Full 255: guards a byte wire on the same 10 % of full', () => {
+        const { frames, sent } = drive(10, { high: 255, values: { full: 255 } })
+        expect(sent).toBeLessThanOrEqual(3)
+        expect(Math.max(...frames.map((f) => f.out))).toBe(255)
+    })
+
+    it('one frame read on every port counts that frame once', () => {
+        const { frames } = drive(2, { seconds: 2 })
+        // 2 a second = 4 changes in the last second; counted per port it would read 6.
+        expect(frames.at(-1).rate).toBe(2)
+    })
+
+    it('lets go when the strobe stops: Limited clears, the light reaches its value', () => {
+        const { memory, guard, nodes, edges } = drive(10, { seconds: 2 })
+        guard.values = { ...guard.values, value: 1 }
+        let last
+        for (let now = 2000; now <= 3500; now += 1000 / 60) {
+            const context = createNodeGraphContext({ nodes, edges }, { now, frameMemory: memory })
+            last = { out: evaluateNodeOutput(guard, 'out', context), limited: evaluateNodeOutput(guard, 'limited', context) }
+        }
+        expect(last.out).toBe(1)
+        expect(last.limited).toBe(false)
     })
 })
 
@@ -497,6 +591,95 @@ describe('the state wave (TD audit) — frameMemory operators', () => {
     })
 })
 
+describe('signal.cue — the cue list as wires', () => {
+    const CUES = [
+        { id: 'c1', name: 'Open', fade: 2, hold: 8, lightLook: 'rig-a' },
+        { id: 'c2', name: 'Middle', fade: 4, hold: 10, lightLook: 'rig-b' },
+        { id: 'c3', name: 'Close', fade: 0, hold: 5, lightLook: 'rig-c' }
+    ]
+    const PORTS = ['index', 'name', 'look', 'progress', 'fading', 'fired']
+    const read = (doc, now, memory) => {
+        const context = createNodeGraphContext(doc, { now, frameMemory: memory })
+        const cue = doc.nodes.find((n) => n.typeId === 'signal.cue')
+        return Object.fromEntries(PORTS.map((port) => [port, evaluateNodeOutput(cue, port, context)]))
+    }
+
+    it('bare, with no cue list, says nothing is on: index -1, empty name and look', () => {
+        expect(read({ nodes: [node('q', 'signal.cue')], edges: [] }, 1000, createFrameMemory()))
+            .toEqual({ index: -1, name: '', look: '', progress: 0, fading: false, fired: 0 })
+    })
+
+    it('a document with a show reads the cue the show\'s clock puts every room on', async () => {
+        const { showOf, showStateAt } = await import('../../rigbuild/showClock.js')
+        const clockEpoch = 1_700_000_000_000
+        const doc = {
+            nodes: [node('q', 'signal.cue')],
+            edges: [],
+            mappingState: { cues: CUES, showEpoch: clockEpoch + 5000 },
+            showState: { clockEpoch }
+        }
+        const show = showOf(doc)
+        for (const now of [5000, 6000, 13000, 14000, 23000, 30000, 99000]) {
+            const out = read(doc, now, null)
+            const room = showStateAt(show, clockEpoch + now)
+            expect(out.index).toBe(room.index)
+            expect(out.look).toBe(CUES[room.index].lightLook) // the document's own id; the room reads it without its rig- prefix
+        }
+        expect(read(doc, 14000, null)).toMatchObject({ index: 1, name: 'Middle', look: 'rig-b', fading: true, progress: 0.1, fired: 13000 })
+    })
+
+    it('Go takes a Button\'s press count, Back a Keyboard\'s edge, Jump a changed index', () => {
+        const memory = createFrameMemory()
+        const presses = node('p', 'value.number', { value: 3 })
+        const key = node('k', 'value.boolean', { value: false })
+        const jump = node('j', 'value.number', { value: 0 })
+        const doc = {
+            nodes: [presses, key, jump, node('q', 'signal.cue')],
+            edges: [edge('p', 'out', 'q', 'go'), edge('k', 'out', 'q', 'back'), edge('j', 'out', 'q', 'jump')],
+            mappingState: { cues: CUES }
+        }
+        const at = (now, { go = presses.values.value, back = false, to = jump.values.value } = {}) => {
+            presses.values = { value: go }; key.values = { value: back }; jump.values = { value: to }
+            return read(doc, now, memory)
+        }
+        expect(at(0).index).toBe(-1) // the count it finds is where it starts, not three presses
+        expect(at(100, { go: 4 })).toMatchObject({ index: 0, name: 'Open', fired: 100 })
+        expect(at(200, { go: 5 })).toMatchObject({ index: 1, fired: 200 })
+        expect(at(300, { back: true })).toMatchObject({ index: 0, fired: 300 })
+        expect(at(400, { back: true }).index).toBe(0) // a held key is one press
+        expect(at(500, { to: 2 })).toMatchObject({ index: 2, look: 'rig-c', fired: 500 })
+        expect(at(5600)).toMatchObject({ index: 2, progress: 1 }) // past the last, no loop: it holds
+    })
+
+    it('Loop, unwired, is the document\'s switch; wired, the wire wins', () => {
+        const loopDoc = (wired) => {
+            const go = node('g', 'value.boolean', { value: true })
+            const flag = node('f', 'value.boolean', { value: false })
+            return {
+                nodes: [go, flag, node('q', 'signal.cue')],
+                edges: [edge('g', 'out', 'q', 'go'), ...(wired ? [edge('f', 'out', 'q', 'loop')] : [])],
+                mappingState: { cues: CUES, loop: true }
+            }
+        }
+        for (const [wired, index] of [[false, 0], [true, 2]]) {
+            const memory = createFrameMemory()
+            const doc = loopDoc(wired)
+            read(doc, 0, memory) // GO at 0: cue 1
+            expect(read(doc, 24000, memory).index).toBe(index)
+        }
+    })
+
+    it('a pass\'s ports agree, and reading every port does not press GO again', () => {
+        const memory = createFrameMemory()
+        const go = node('g', 'value.number', { value: 0 })
+        const doc = { nodes: [go, node('q', 'signal.cue')], edges: [edge('g', 'out', 'q', 'go')], mappingState: { cues: CUES } }
+        read(doc, 0, memory)
+        go.values = { value: 1 }
+        expect(read(doc, 10, memory).index).toBe(0)
+        expect(read(doc, 20, memory).index).toBe(0)
+    })
+})
+
 describe('the vector/colour wave (TD audit)', () => {
     it('Split and Combine are inverses; Distance answers both questions', () => {
         const doc = {
@@ -602,6 +785,37 @@ describe('the operator hands wave (TD audit)', () => {
         const out = createNodeGraphContext({ nodes: [keys], edges: [] })
         expect(evaluateNodeOutput(keys, 'pressed', out)).toBe(false)
         expect(evaluateNodeOutput(keys, 'count', out)).toBe(0)
+    })
+
+    it('Visitor reads the feed, quiet where no feed publishes', () => {
+        const visitor = node('v', 'device.visitor')
+        const live = createNodeGraphContext({ nodes: [visitor], edges: [] }, { liveOutputs: new Map([
+            ['v:phone', true], ['v:reducedMotion', true], ['v:portrait', true], ['v:width', 390], ['v:height', 844],
+            ['v:language', 'hy'], ['v:embedded', true], ['v:name', 'Ani'], ['v:hue', 0.5], ['v:visitorId', 'id-1'],
+        ]) })
+        expect(evaluateNodeOutput(visitor, 'phone', live)).toBe(true)
+        expect(evaluateNodeOutput(visitor, 'width', live)).toBe(390)
+        expect(evaluateNodeOutput(visitor, 'language', live)).toBe('hy')
+        expect(evaluateNodeOutput(visitor, 'hue', live)).toBe(0.5)
+        expect(evaluateNodeOutput(visitor, 'visitorId', live)).toBe('id-1')
+        const out = createNodeGraphContext({ nodes: [visitor], edges: [] })
+        expect(evaluateNodeOutput(visitor, 'phone', out)).toBe(false)
+        expect(evaluateNodeOutput(visitor, 'reducedMotion', out)).toBe(false)
+        expect(evaluateNodeOutput(visitor, 'width', out)).toBe(0)
+        expect(evaluateNodeOutput(visitor, 'language', out)).toBe('')
+        expect(evaluateNodeOutput(visitor, 'name', out)).toBe('')
+    })
+
+    it('Tilt reads the feed, level and not live where no feed publishes', () => {
+        const tilt = node('t', 'device.tilt')
+        const live = createNodeGraphContext({ nodes: [tilt], edges: [] }, { liveOutputs: new Map([['t:x', 0.5], ['t:y', -1], ['t:live', true]]) })
+        expect(evaluateNodeOutput(tilt, 'x', live)).toBe(0.5)
+        expect(evaluateNodeOutput(tilt, 'y', live)).toBe(-1)
+        expect(evaluateNodeOutput(tilt, 'live', live)).toBe(true)
+        const out = createNodeGraphContext({ nodes: [tilt], edges: [] })
+        expect(evaluateNodeOutput(tilt, 'x', out)).toBe(0)
+        expect(evaluateNodeOutput(tilt, 'y', out)).toBe(0)
+        expect(evaluateNodeOutput(tilt, 'live', out)).toBe(false)
     })
 })
 
@@ -768,6 +982,31 @@ describe('device.midi.out status', () => {
         const live = new Map([['mo:status', 'Sending to 2 devices']])
         const context = createNodeGraphContext(doc, { liveOutputs: live })
         expect(evaluateNodeOutput(target, 'status', context)).toBe('Sending to 2 devices')
+    })
+})
+
+describe('device.mesh.in and device.mesh.out', () => {
+    it('read nothing heard and the link down when no feed is mounted', () => {
+        const doc = { nodes: [node('mi', 'device.mesh.in'), node('mo', 'device.mesh.out')], edges: [] }
+        expect(['value', 'from', 'time', 'signal', 'up', 'status'].map((port) => evalPort(doc, 'mi', port)))
+            .toEqual(['', '', 0, 0, 0, ''])
+        expect(evalPort(doc, 'mo', 'up')).toBe(0)
+        expect(evalPort(doc, 'mo', 'status')).toBe('')
+        expect(evalPort(doc, 'mi', 'nope')).toBeUndefined()
+    })
+
+    it('read the feed reports back from the live side channel', () => {
+        const doc = { nodes: [node('mi', 'device.mesh.in'), node('mo', 'device.mesh.out')], edges: [] }
+        const live = new Map([
+            ['mi:value', { x: 0.5 }], ['mi:from', 'web-phone'], ['mi:time', 1700], ['mi:signal', 3], ['mi:up', 1],
+            ['mo:up', 1], ['mo:status', 'Up in g, 1 other here'],
+        ])
+        const context = createNodeGraphContext(doc, { liveOutputs: live })
+        expect(evaluateNodeOutput(doc.nodes[0], 'value', context)).toEqual({ x: 0.5 })
+        expect(evaluateNodeOutput(doc.nodes[0], 'from', context)).toBe('web-phone')
+        expect(evaluateNodeOutput(doc.nodes[0], 'signal', context)).toBe(3)
+        expect(evaluateNodeOutput(doc.nodes[1], 'up', context)).toBe(1)
+        expect(evaluateNodeOutput(doc.nodes[1], 'status', context)).toBe('Up in g, 1 other here')
     })
 })
 

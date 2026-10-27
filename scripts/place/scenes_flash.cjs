@@ -8,28 +8,25 @@
 //   node scripts/place/scenes_flash.cjs SCENES.json [--max 3] [--json]      exit 0 = every scene within the limit, 1 = one or more over, 2 = bad input
 const fs = require('node:fs')
 const path = require('node:path')
+const { pathToFileURL } = require('node:url')
 const fx = require(path.join(__dirname, '../../serverXR/src/lighting/fx.js'))
 const args = process.argv.slice(2)
 const file = args.find((a) => !a.startsWith('--'))
 if (!file) { console.error('usage: scenes_flash.cjs SCENES.json [--max N] [--json]'); process.exit(2) }
 const doc = JSON.parse(fs.readFileSync(file, 'utf8'))
 const iMax = args.indexOf('--max')
-const MAX = iMax >= 0 ? Number(args[iMax + 1]) : 3
 const N = 12, STEP = 25, T = 120000
 const lamps = Array.from({ length: N }, (_, i) => ({ x: -1 + 3 * i / (N - 1), y: 0.5 + 0.1 * (i % 3) }))
+// The counting and the default limit are src/project/nodes/flashRule.js, the Flash Guard node's own rule (one source).
+import(pathToFileURL(path.join(__dirname, '../../src/project/nodes/flashRule.js')).href).then((rule) => {
+const MAX = iMax >= 0 ? Number(args[iMax + 1]) : rule.FLASH_LIMIT_PER_SECOND
 function worst(mode, bpm, depth, spatial) {
     const cfg = { mode, bpm, depth, spatial, enabled: true, epoch: 0 }
     let worst1 = 0
     for (let i = 0; i < N; i++) {
-        let hi = null, lo = null, dir = 0; const tr = []
-        for (let t = 0; t < T; t += STEP) {
-            const v = fx.fxLevel(cfg, lamps[i], i, N, t) / 255
-            if (hi === null) { hi = lo = v; continue }
-            hi = Math.max(hi, v); lo = Math.min(lo, v)
-            if (dir !== -1 && hi - v >= 0.1) { tr.push(t); dir = -1; lo = v } else if (dir !== 1 && v - lo >= 0.1) { tr.push(t); dir = 1; hi = v }
-        }
-        let a = 0
-        for (let b = 0; b < tr.length; b++) { while (tr[b] - tr[a] >= 1000) a++; worst1 = Math.max(worst1, b - a + 1) }
+        const samples = []
+        for (let t = 0; t < T; t += STEP) samples.push({ at: t, value: fx.fxLevel(cfg, lamps[i], i, N, t) / 255 })
+        worst1 = Math.max(worst1, rule.mostChangesInWindow(rule.changeTimes(samples)))
     }
     return Math.floor(worst1 / 2)
 }
@@ -45,3 +42,4 @@ else {
     console.log(`${rows.length} scenes, ${over.length} over ${MAX} flashes a second`)
 }
 process.exit(over.length ? 1 : 0)
+})

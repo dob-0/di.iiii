@@ -26,10 +26,11 @@ it home, and install a local of its own. Sync passes through here when the
 internet exists; the show never depends on it.
 
 The address moved 2026-09-11: the platform is `diiii.xyz`, `thedi.studio` is
-the studio's own address on it, and `di-studio.xyz` keeps serving the same
-square forever — the QR hanging in the room and the `curl .../get | sh` line on
-the workshop handouts both name it, so it is never redirected and never
-repurposed. Second tier: `dev.diiii.xyz`.
+the studio's own address on it. `diiii.xyz` is the one public address (owner,
+2026-10-21: "diiii.xyz main public"); `di-studio.xyz` is the old address and is
+to forward to it. The QR hanging in the room and the `curl .../get | sh` line on
+the workshop handouts both name the old address, so the forward must keep both
+working, and the old name is never repurposed. Second tier: `dev.diiii.xyz`.
 
 ## Why the walls we hit are actually the architecture
 

@@ -1,0 +1,118 @@
+{
+  "laptop-dark": {
+    "card": {
+      "background-color": "rgba(77, 249, 255, 0.06)"
+    },
+    "liveUrl": {
+      "color": "rgba(255, 255, 255, 0.5)"
+    },
+    "liveBadge": {
+      "color": "rgb(77, 249, 192)"
+    },
+    "viewToggleBtn": {
+      "transition-property": "background-color, color",
+      "transition-duration": "0.18s, 0.18s"
+    },
+    "rowFocus": {
+      "focusVisible": true,
+      "background": "color(srgb 0.301961 0.976471 1 / 0.05)"
+    },
+    "label": {
+      "transition-property": "opacity",
+      "transition-duration": "0.2s"
+    },
+    "satLabel": null,
+    "codeCard": {
+      "radius": "2px"
+    },
+    "switchRadius": {
+      "thumb": "0px",
+      "track": "0px"
+    },
+    "presenceDot": {
+      "border-top-left-radius": "50%"
+    }
+  },
+  "laptop-light": {
+    "card": {
+      "background-color": "rgba(77, 249, 255, 0.06)"
+    },
+    "liveUrl": {
+      "color": "rgba(255, 255, 255, 0.5)"
+    },
+    "liveBadge": {
+      "color": "rgb(77, 249, 192)"
+    },
+    "viewToggleBtn": {
+      "transition-property": "background-color, color",
+      "transition-duration": "0.18s, 0.18s"
+    },
+    "rowFocus": {
+      "focusVisible": true,
+      "background": "color(srgb 0.301961 0.976471 1 / 0.05)"
+    },
+    "label": {
+      "transition-property": "opacity",
+      "transition-duration": "0.2s"
+    },
+    "satLabel": null,
+    "codeCard": {
+      "radius": "2px"
+    },
+    "switchRadius": {
+      "thumb": "0px",
+      "track": "0px"
+    },
+    "presenceDot": {
+      "border-top-left-radius": "50%"
+    }
+  },
+  "phone-dark": {
+    "card": {
+      "background-color": "rgba(77, 249, 255, 0.1)"
+    },
+    "liveUrl": {
+      "color": "rgba(255, 255, 255, 0.5)"
+    },
+    "liveBadge": {
+      "color": "rgb(77, 249, 192)"
+    },
+    "viewToggleBtn": {
+      "transition-property": "background-color, color",
+      "transition-duration": "0.18s, 0.18s"
+    },
+    "rowFocus": {
+      "focusVisible": true,
+      "background": "color(srgb 0.301961 0.976471 1 / 0.05)"
+    },
+    "label": {
+      "transition-property": "opacity",
+      "transition-duration": "0.2s"
+    },
+    "satLabel": null
+  },
+  "phone-light": {
+    "card": {
+      "background-color": "rgba(77, 249, 255, 0.1)"
+    },
+    "liveUrl": {
+      "color": "rgba(255, 255, 255, 0.5)"
+    },
+    "liveBadge": {
+      "color": "rgb(77, 249, 192)"
+    },
+    "viewToggleBtn": {
+      "transition-property": "background-color, color",
+      "transition-duration": "0.18s, 0.18s"
+    },
+    "rowFocus": {
+      "focusVisible": true,
+      "background": "color(srgb 0.301961 0.976471 1 / 0.05)"
+    },
+    "label": {
+      "transition-property": "opacity",
+      "transition-duration": "0.2s"
+    },
+    "satLabel": null
+  }
+}
