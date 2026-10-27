@@ -147,6 +147,7 @@ const COPY_FILES = [
     'src/project/jam/jamPresence.js',
     'src/project/nodeRegistry.js',
     'src/scan/ScanSurface.jsx',
+    'src/scan/ar/ArScan.jsx',
     'src/raw/components/AgentRunPanel.jsx',
     'src/raw/components/CreatePanelWindow.jsx',
     'src/raw/components/DesktopWindow.jsx',

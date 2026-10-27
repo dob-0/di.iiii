@@ -428,10 +428,11 @@ export const carryReviewParams = (href, search) => {
     const from = new URLSearchParams(search || '')
     const carried = ['entryslow'].filter((key) => from.has(key))
     if (!carried.length) return href
-    const [path, query = ''] = String(href).split('?')
+    const [rest, hash = ''] = String(href).split('#')   // a door's #anchor stays at the end (N1248)
+    const [path, query = ''] = rest.split('?')
     const to = new URLSearchParams(query)
     carried.forEach((key) => { if (!to.has(key)) to.set(key, from.get(key)) })
-    return `${path}?${to.toString()}`
+    return `${path}?${to.toString()}${hash ? `#${hash}` : ''}`
 }
 
 const isVisibleColour = (value) => {

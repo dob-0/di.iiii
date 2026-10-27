@@ -347,6 +347,14 @@ export const buildWikiPath = () => {
     return `${prefix}/${APP_PAGE_WIKI}`.replace(/\/{2,}/g, '/')
 }
 
+// One wiki article at its own address, /wiki/{id} (G25, 2026-10-21): before,
+// every article was a #hash on one 250,000-character page, so a search engine
+// and a share card only ever saw the one page.
+export const buildWikiArticlePath = (articleId) => {
+    const id = String(articleId || '').trim()
+    return id ? `${buildWikiPath()}/${encodeURIComponent(id)}` : buildWikiPath()
+}
+
 export const getAppLocationState = (locationLike = null) => {
     const resolvedLocation = locationLike || (typeof window !== 'undefined' ? window.location : null)
     if (!resolvedLocation) {
@@ -366,9 +374,13 @@ export const getAppLocationState = (locationLike = null) => {
             }
         }
         if (isWikiPageSegment(segment)) {
+            // A malformed escape (/wiki/%E0) is a miss, not a thrown render.
+            let articleId = relative.split('/')[1] || ''
+            try { articleId = decodeURIComponent(articleId) } catch { articleId = '' }
             return {
                 page: APP_PAGE_WIKI,
-                spaceId: null
+                spaceId: null,
+                ...(articleId ? { wikiArticleId: articleId } : {})
             }
         }
         // /privacy and /terms are plain top-level routes for now; the URL
