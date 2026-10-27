@@ -51,7 +51,7 @@ const BarAccount = lazy(() => import('./BarAccount.jsx'))
 import SurfaceBar from '../../components/SurfaceBar.jsx'
 import { useProjectLayers } from '../../project/useProjectLayers.js'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
-import useSpaceName from '../../hooks/useSpaceName.js'
+import useSpaceIdentity from '../../hooks/useSpaceIdentity.js'
 import { isEmbedRequest, isPreviewRequest, signalPreviewReady } from '../../utils/previewMode.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
@@ -416,7 +416,7 @@ export default function RawEditor({
     const localInstall = useLocalInstall()
     // A preview hides the same navigation an embedded window does.
     const [isEmbed] = useState(() => isEmbedRequest() || isPreviewRequest())
-    const spaceName = useSpaceName(isLocalWorkspace ? null : resolvedSpaceId)
+    const spaceIdentity = useSpaceIdentity(isLocalWorkspace ? null : resolvedSpaceId)
     // The node canvas is cards, not a WebGL canvas, so the app-wide paint
     // watcher (index.jsx) has nothing to see; the picture says itself when
     // the project it shows has arrived.
@@ -3074,7 +3074,8 @@ export default function RawEditor({
                 <SurfaceBar
                     float
                     space={resolvedSpaceId}
-                    spaceLabel={spaceName}
+                    spaceLabel={spaceIdentity.spaceLabel}
+                    spaceAddress={spaceIdentity.spaceAddress}
                     project={projectId}
                     projectLabel={document.projectMeta?.title}
                     isLocalInstall={localInstall.isLocal}
@@ -3123,7 +3124,8 @@ export default function RawEditor({
                 float
                 here="raw"
                 space={resolvedSpaceId}
-                spaceLabel={spaceName}
+                spaceLabel={spaceIdentity.spaceLabel}
+                spaceAddress={spaceIdentity.spaceAddress}
                 project={projectId}
                 projectLabel={document.projectMeta?.title}
                 isLocalInstall={localInstall.isLocal}

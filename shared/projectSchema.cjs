@@ -1092,6 +1092,9 @@ const normalizeEntity = (entity = {}) => {
       projectId: ensureString(refSource.projectId, refDefault.projectId || ''),
       mode: ['embed', 'portal'].includes(refMode) ? refMode : 'portal',
       label: ensureString(refSource.label, refDefault.label || ''),
+      // A part of the destination page (a section id): /dilijan#works. Optional; a door without one
+      // is unchanged. Only a plain id survives (N1248).
+      ...(/^[A-Za-z][\w:.-]{0,63}$/.test(String(refSource.anchor || '').replace(/^#/, '')) ? { anchor: String(refSource.anchor).replace(/^#/, '') } : {}),
       // Label styling. Defaults reproduce the original look exactly (white
       // type on a dark plate, renderer's built-in font), so a portal
       // authored before these existed is untouched.
@@ -1100,7 +1103,9 @@ const normalizeEntity = (entity = {}) => {
       labelFont: LABEL_FONT_NAMES.includes(refSource.labelFont) ? refSource.labelFont : 'default',
       // Door shape. 'gateway' reproduces the ring exactly, so an
       // unknown or absent value leaves an existing portal untouched.
-      style: PORTAL_STYLES.includes(refSource.style) ? refSource.style : 'gateway'
+      style: PORTAL_STYLES.includes(refSource.style) ? refSource.style : 'gateway',
+      // a door that invites (portalInvite.js); only `true` is kept
+      ...(refSource.invite === true ? { invite: true } : {})
     }
   }
   if (sourceComponents.runtime || defaultComponents.runtime) {
