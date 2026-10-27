@@ -48,6 +48,7 @@ import { PREVIEW_POSTER_MESSAGE, PREVIEW_READY_MESSAGE, PREVIEW_STUB_MESSAGE } f
 import '../styles/studio-space-hub.css'
 import { SPACE_BLURB_MAX } from '../utils/spaceBlurb.js'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
+import { spaceAddressOf } from '../../utils/spaceAddress.js'
 
 // Every space card embeds the SAME app at a different route, and browsers
 // coalesce overlapping requests for the same module: twelve cards booting
@@ -1740,7 +1741,7 @@ export default function SpaceHub() {
                                     {(space.isPublic || canEnter(space)) && (
                                         <p className="ssh-space-inside">
                                             <a
-                                                href={buildSpaceContentsPath(space.id)}
+                                                href={buildSpaceContentsPath(spaceAddressOf(space))}
                                                 onClick={e => e.stopPropagation()}
                                             >Everything inside</a>
                                         </p>

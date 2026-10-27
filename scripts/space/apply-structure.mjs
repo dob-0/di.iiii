@@ -7,7 +7,7 @@
 import fs from 'node:fs'
 import crypto from 'node:crypto'
 import path from 'node:path'
-import { editHtml, extendDoorSet, relinkHtml, relinkPortals, upsertDoors, upsertEntities, userAgent } from './pages-lib.mjs'
+import { absoluteAssets, editHtml, extendDoorSet, moveAddressHtml, moveAddressPortals, relinkHtml, relinkPortals, upsertDoors, toRelativeAssets, upsertEntities, userAgent, saveDocument } from './pages-lib.mjs'
 
 const args = process.argv.slice(2)
 const flag = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined }
@@ -127,18 +127,36 @@ for (const id of s.private || []) {
 // Every project is read once and written once; the link is repointed in href AND window.open, also inside a combined page.
 // Then each page's exact text edits (`edits`) and each scene's doors (`doors`), in the same one read and one write (N1250).
 const relinks = Object.entries(s.relink || {})
-if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).length || Object.keys(s.doorSets || {}).length || Object.keys(s.entities || {}).length || Object.keys(s.remove || {}).length) {
+if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).length || Object.keys(s.doorSets || {}).length || Object.keys(s.entities || {}).length || Object.keys(s.remove || {}).length || s.address || s.relativeAssets) {
   for (const p of before.projects) {
     const res = await call('GET', `/api/projects/${p.id}/document`); const doc = res.document || res
+    const read = structuredClone(res) // the page as read: the steps below change `doc`, and the edits are what differs from this
     let html = doc.presentationState?.codeHtml
+    // a page made of several files keeps its HTML in codeFiles, not codeHtml: every HTML step runs on those files too
+    // (di-iiii/di-landing linked /main and the suite page named an old domain, 2026-10-26)
+    let codeFiles = Array.isArray(doc.presentationState?.codeFiles) ? doc.presentationState.codeFiles : null
+    let filesChanged = false
+    const inHtmlFiles = (fn) => {
+      if (!codeFiles) return { count: 0, notes: [] }
+      let count = 0; const found = []
+      codeFiles = codeFiles.map((f) => {
+        if (!/\.html?$/i.test(f?.name || f?.path || '') || typeof f.content !== 'string') return f
+        const r = fn(f.content); count += r.count; if (r.notes) found.push(...r.notes)
+        return r.count ? { ...f, content: r.html } : f
+      })
+      if (count) filesChanged = true
+      return { count, notes: found }
+    }
     let entities = doc.entities
     const notes = []
     for (const [from, to] of relinks) {
       if (html) { const r = relinkHtml(html, from, to); if (r.count) { notes.push(`${r.count} × ${from} -> ${to}`); html = r.html } }
+      { const r = inHtmlFiles((c) => relinkHtml(c, from, to)); if (r.count) notes.push(`${r.count} × ${from} -> ${to} in code files`) }
       // a scene's doors too (N1248): the hall kept a door to a hidden project after every page was repointed
       if (Array.isArray(entities)) { const r = relinkPortals(entities, from, to, s.space); if (r.count) { notes.push(`${r.count} door(s) ${from} -> ${to}`); entities = r.entities } }
     }
     if (html && (s.edits || []).length) { const r = editHtml(html, s.edits, p.id); if (r.count) { notes.push(...r.notes); html = r.html } }
+    if ((s.edits || []).length) { const r = inHtmlFiles((c) => editHtml(c, s.edits, p.id)); if (r.count) notes.push(...r.notes.map((n) => `${n} (code files)`)) }
     if (s.doors?.[p.id]) { const r = upsertDoors(Array.isArray(entities) ? entities : [], s.doors[p.id]); if (r.count) { notes.push(...r.notes); entities = r.entities } }
     // each new door's parts, carried on from the scene's own last two sets (doorSets: project -> [{ match, prev, src, next, ... }])
     for (const set of s.doorSets?.[p.id] || []) { const r = upsertEntities(entities, extendDoorSet(entities, set)); if (r.count) { notes.push(`${r.count} part(s) of ${set.doorNext}`); entities = r.entities } }
@@ -147,9 +165,24 @@ if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).lengt
     if (s.entities?.[p.id]) { const list = []; for (const e of s.entities[p.id]) { const r = await resolveMedia(p.id, doc, e); const cur = (Array.isArray(entities) ? entities : []).find((x) => x?.id === r.id); list.push(cur ? { ...r, components: mergeComponents(cur.components, r.components) } : r) }; const r = upsertEntities(entities, list, 'entity'); if (r.count) { notes.push(...r.notes); entities = r.entities } }
     // entities taken out of this project (s.remove: project -> [entity id]); the server's space history keeps the page before
     if (s.remove?.[p.id] && Array.isArray(entities)) { const gone = new Set(s.remove[p.id]); const kept = entities.filter((e) => !gone.has(e?.id)); if (kept.length < entities.length) { notes.push(`${entities.length - kept.length} entit(ies) removed`); entities = kept } }
+    // the space's address (s.address, its slug): every link and door into the space names it, last, so nothing above undoes it
+    if (s.address && s.address !== s.space) {
+      if (html) { const r = moveAddressHtml(html, s.space, s.address); if (r.count) { notes.push(`${r.count} link(s) /${s.space} -> /${s.address}`); html = r.html } }
+      if (Array.isArray(entities)) { const r = moveAddressPortals(entities, s.space, s.address); if (r.count) { notes.push(`${r.count} door(s) -> /${s.address}`); entities = r.entities } }
+      { const r = inHtmlFiles((c) => moveAddressHtml(c, s.space, s.address)); if (r.count) notes.push(`${r.count} link(s) in code files /${s.space} -> /${s.address}`) }
+    }
+    // a page that loads its files from a fixed host (prod) works only while it answers: relative, where this server has them
+    if (s.relativeAssets && html) {
+      const found = absoluteAssets(html)
+      const here = []
+      for (const rel of found) { const r = await fetch(`${api}${rel.replace(/^\/serverXR/, '')}`, { method: 'HEAD', headers }).catch(() => null); if (r?.ok) here.push(rel) }
+      const r = toRelativeAssets(html, here)
+      if (r.count) { notes.push(`${r.count} file link(s) made relative`); html = r.html }
+      if (found.length > here.length) console.log(`note ${p.id}: ${found.length - here.length} file(s) not on this server, kept as they are`)
+    }
     if (!notes.length) continue
-    const next = { ...doc, ...(doc.assets ? { assets: doc.assets } : {}), ...(Array.isArray(entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}) } }
-    await step(`page ${p.id}: ${notes.join(', ')}`, () => call('PUT', `/api/projects/${p.id}/document`, next))
+    const next = { ...doc, ...(doc.assets ? { assets: doc.assets } : {}), ...(Array.isArray(entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}), ...(filesChanged ? { codeFiles } : {}) } }
+    await step(`page ${p.id}: ${notes.join(', ')}`, () => saveDocument(call, p.id, next, { from: read }))
   }
 }
 // the space's shown name (its address, s.space, never changes)
@@ -157,6 +190,12 @@ if (typeof s.label === 'string' && s.label.trim()) {
   const cur = await call('GET', `/api/spaces/${s.space}`)
   const now = cur.space?.label ?? cur.label
   if (now !== s.label) await step(`space name "${now}" -> "${s.label}"`, () => call('PATCH', `/api/spaces/${s.space}`, { label: s.label }))
+}
+// the space's address: its slug; the old address (its id) still opens it, so links already shared keep working
+if (typeof s.address === 'string' && s.address !== s.space) {
+  const cur = await call('GET', `/api/spaces/${s.space}`)
+  const now = cur.space?.slug ?? cur.slug ?? null
+  if (now !== s.address) await step(`space address /${now || s.space} -> /${s.address}`, () => call('PATCH', `/api/spaces/${s.space}`, { slug: s.address }))
 }
 if (s.order) await step('order', () => call('PUT', `/api/spaces/${s.space}/projects/order`, { ids: [...s.order, ...unplaced] }))
 if (s.shelves) {

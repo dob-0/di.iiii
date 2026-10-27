@@ -956,6 +956,34 @@ describe('a project made empty on either side appears on both', () => {
         expect(row.title).toBe('The Studio')
     })
 
+    // A project made before the create route refused reserved words: `privacy` in
+    // the space `main` on dev is one. The follower makes a project the other side
+    // has through the RECEIVING server's own create route (follower.js, makeMissing),
+    // so that route has to let it keep the id it already has. Without that, a new
+    // install following the space is refused the project (400, said once in the log)
+    // and never gets it. `carried: true` here stands for the older create.
+    const makeOlderProject = async (server, slug, title) => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug, title, carried: true })
+        })
+        expect(response.status).toBe(201)
+    }
+
+    it('carries a project whose id is a reserved word, made on the host before the rule, to the follower', async () => {
+        await makeOlderProject(hosting, 'privacy', 'Privacy Policy')
+        const row = await settle('the reserved-id host project reaching the follower', projectRow(following, 'privacy'), { timeout: 10_000 })
+        expect(row.title).toBe('Privacy Policy')
+        expect(warned.filter(line => line.includes('privacy'))).toEqual([])
+    })
+
+    it('carries a project whose id is a reserved word, made on the follower before the rule, to the host', async () => {
+        await makeOlderProject(following, 'terms', 'Terms')
+        follower.wake()
+        const row = await settle('the reserved-id follower project reaching the host', projectRow(hosting, 'terms'), { timeout: 10_000 })
+        expect(row.title).toBe('Terms')
+        expect(warned.filter(line => line.includes('terms'))).toEqual([])
+    })
+
     // A trash is never undone by the other side's copy: a project in one side's
     // trash is not made there again.
     const trash = async (server, slug) => {
@@ -1540,6 +1568,33 @@ describe('a project\'s life crosses a follow: trash, restore, rename, private, m
     it('the host\'s space label still reaches this install (space settings, measured)', async () => {
         await timed('space label host->follower', () => api(hosting, `/api/spaces/${SPACE}`, { method: 'PATCH', body: { label: 'Renamed room' } }),
             async () => (await api(following, `/api/spaces/${SPACE}`)).payload?.space?.label === 'Renamed room')
+    })
+
+    it('a page tool\'s save on the host reaches this install: edits, not a whole replace (N1282)', async () => {
+        const { saveDocument } = await import('../../../scripts/space/pages-lib.mjs')
+        const call = async (method, route, body) => {
+            const answer = await api(hosting, route, { method, body })
+            if (answer.status >= 300) throw new Error(`${method} ${route}: ${answer.status}`)
+            return answer.payload
+        }
+        const read = await call('GET', '/api/projects/to-rename/document')
+        const page = read.document
+        const html = '<a href="/moved-room/hall">into the hall</a>'
+        const door = { id: 'door-n1282', name: 'Into the hall', type: 'portal', components: {} }
+        await timed('tool save host->follower', () => saveDocument(call, 'to-rename', {
+            ...page,
+            entities: [...(page.entities || []), door],
+            presentationState: { ...page.presentationState, codeHtml: html }
+        }, { from: read }), async () => {
+            const there = (await api(following, '/api/projects/to-rename/document')).payload?.document
+            return there?.presentationState?.codeHtml === html && (there.entities || []).some(e => e.id === 'door-n1282')
+        })
+        expect(followers.every(f => !f.state.lastError)).toBe(true)
+    })
+
+    it('the host\'s space address reaches this install too (N1279)', async () => {
+        await timed('space address host->follower', () => api(hosting, `/api/spaces/${SPACE}`, { method: 'PATCH', body: { slug: 'moved-room' } }),
+            async () => (await api(following, `/api/spaces/${SPACE}`)).payload?.space?.slug === 'moved-room')
     })
 })
 
