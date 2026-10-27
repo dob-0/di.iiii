@@ -23,6 +23,7 @@ import { fileURLToPath } from 'node:url'
 import { parseArgs } from './args.mjs'
 import { cleanText, cmdLogin, cmdLogout, cmdWhoami, hasDisplay, labelFor, mcpArgs, moveToken, openInBrowser } from './login.mjs'
 import { credentialsFile, readLogin, writeLogin } from './loginStore.mjs'
+import { DI_USER_AGENT } from './userAgent.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const CLI = path.join(HERE, 'cli.mjs')
@@ -321,6 +322,16 @@ describe('di login — the flow', () => {
         expect(r.code).toBe(1)
         expect(r.err).toContain('answered with a redirect to https://elsewhere.example/x')
         expect(seenInit.every((init) => init.redirect === 'manual')).toBe(true)
+    })
+
+    it('names itself to the hub on every request, so its polling is not throttled as an anonymous program', async () => {
+        S.polls = [PENDING, approved()]
+        const agents = []
+        const fetchImpl = (url, init) => { agents.push(init?.headers?.['user-agent']); return fetch(url, init) }
+        const r = await login(['--no-open'], { fetchImpl })
+        expect(r.code).toBe(0)
+        expect(agents.length).toBeGreaterThan(1)
+        expect(new Set(agents)).toEqual(new Set([DI_USER_AGENT]))
     })
 
     it('Ctrl-C ends the wait at once, says nothing was saved, and writes nothing (exit 130)', async () => {

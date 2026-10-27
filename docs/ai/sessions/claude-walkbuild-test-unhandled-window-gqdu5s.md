@@ -1,0 +1,6 @@
+## 2026-10-20 — the walk hand's late fetches no longer set state after it is gone (CI "window is not defined")
+
+- Cause of the node-22-compat red with every test green (run 39427738675): `InventoryPanel`'s unguarded `probeLightingDesk().then(setDeskHere)`, started by the E key in `StudioWalkBuild.test.jsx`'s last test. Measured with a fetch spy: 1 `/light/api/summary` call, 0 piece GLB calls, so hypotheses (a)/(b) (`walkBuilder` awaiting `ensureAsset`) did not run in that file. (c) `useHotbar`/`useEquipment` have no async code; the walk's rAF writes the camera and sets no state. (d) the afterEach `requestWalk` only dispatches an event.
+- Fixed both paths: a `live` guard in `Inventory.jsx`, and `alive`-gated hand setters in `StudioWalkBuild.jsx`. `apply` is still called after unmount, because the Studio's writer outlives the hand and the asset a placed piece names must land.
+- 3 new tests: 2 red on dev with the CI's own message, green after; each goes red again when its half of the fix is reverted. 20/20 single-file runs on Node 22.22.0, 0 errors. A single-file loop cannot prove a fix for a flake that hits about 1 in 25 full-suite runs. Only further CI runs can.
+- Not checked: CI itself, and a real browser. The fix changes no screen: the inventory's desk link still appears when a desk answers.

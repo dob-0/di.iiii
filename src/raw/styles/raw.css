@@ -9,7 +9,7 @@
     --card-scale: 1;
     --card-family: var(--di-cyan);
     --family-color: transparent;
-    --window-accent: rgba(255, 255, 255, 0.42);
+    --window-accent: rgba(255, 255, 255, 0.5); /* 4.5:1 on #0a0a0a (audit 2026-10-21 NR-07) */
     --raw-scaffold-top: 64px;
     --raw-bottom-chrome: 0px;
     --raw-sheet-inset: 0px;
@@ -285,7 +285,9 @@
 }
 
 .raw-node-palette-item-title span {
-    color: rgba(255, 255, 255, 0.36);
+    /* 0.5: 4.5:1 on the row (#111114) and the active row (#17282c); 0.36 was
+       3.33 (audit 2026-10-21 NR-07). */
+    color: rgba(255, 255, 255, 0.5);
     font-size: var(--di-text-2);
     font-family: var(--di-mono);
     white-space: nowrap;
@@ -357,7 +359,7 @@
 }
 
 .raw-node-palette-group-count {
-    color: rgba(255, 255, 255, 0.28);
+    color: rgba(255, 255, 255, 0.5); /* was 0.28, 2.41:1 (audit 2026-10-21 NR-07) */
     letter-spacing: 0;
 }
 
@@ -1713,7 +1715,7 @@
     font-size: var(--di-text-2);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: rgba(255, 255, 255, 0.36);
+    color: rgba(255, 255, 255, 0.5); /* was 0.36, 3.24:1 (audit 2026-10-21 NR-07) */
     font-family: var(--di-mono);
     margin: 0 0 var(--di-space-3);
 }
@@ -4422,7 +4424,15 @@
    the way home — a link wearing the same ambient clothes. */
 .raw-surface-wordmark {
     position: fixed;
-    bottom: 18px;
+    /* 24px of target (WCAG 2.5.8): the bare text was 33x17, measured at
+       820x1180 (audit 2026-10-21 NR-04). The line box is pinned at the 17px
+       Chromium measured for it, so 14.5px + (24 - 17) / 2 puts the letters
+       exactly where they sat at bottom 18px; at 14px they moved 0.5px down. */
+    bottom: 14.5px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    line-height: 17px;
     /* Bottom-left, beside the zoom cluster. At bottom-centre it was drawn over
        the cards (Bar, Studio, owner 2026-10-05); under them it vanished behind
        the opaque canvas. The corner is the one place no fit puts a card. */

@@ -95,6 +95,20 @@ const emitInstallScriptsPlugin = () => ({
     }
 })
 
+// dist/sitemap.xml — written by the build from the wiki, the network roster
+// and the public spaces list (scripts/sitemap.mjs), so it lists every article
+// and every room without anyone keeping it. A local install names no public
+// address, so its build writes none.
+const emitSitemapPlugin = () => ({
+    name: 'emit-sitemap',
+    apply: 'build',
+    async generateBundle() {
+        if (LOCAL_PROFILE) return
+        const { buildSitemap } = await import('./scripts/sitemap.mjs')
+        this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: await buildSitemap(ROOT_DIR) })
+    }
+})
+
 /**
  * dist/build-profile.json — what this artifact IS, written by the build that
  * made it.
@@ -486,9 +500,11 @@ export default {
     root: 'src/',
     // An include-list, not a delete-list: under the local profile the public
     // directory is copied by localPublicDirPlugin, which names what a copy of
-    // the program needs (fonts, draco, basis, suite, unicode-fonts, vendor)
+    // the program needs (PROGRAM_PUBLIC_DIRS in src/works/buildProfile.js)
     // plus each work's own media, and therefore cannot silently start shipping
-    // whatever gets dropped into public/ next.
+    // whatever gets dropped into public/ next. The same list cannot silently
+    // drop it either: src/works/localProfile.test.js fails on an entry of
+    // public/ that is neither in the list nor named there as left out.
     publicDir: LOCAL_PROFILE ? false : '../public/',
     envDir: '../',
     // Keep the dep-optimizer cache in the WORKTREE, not in node_modules.
@@ -542,6 +558,9 @@ export default {
 
         // Publish install.sh / install.ps1 as /get.sh and /get.ps1
         emitInstallScriptsPlugin(),
+
+        // dist/sitemap.xml — every article, room and public page (G25/G27/G28)
+        emitSitemapPlugin(),
 
         // dist/build-profile.json — which of the three shapes this dist is
         emitBuildProfilePlugin(),

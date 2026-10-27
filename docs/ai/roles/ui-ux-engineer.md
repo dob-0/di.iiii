@@ -43,7 +43,7 @@ If a task requires touching any of these files, stop, identify the correct role,
 
 ---
 
-## The di.iiii Visual Identity — Complete Spec
+## Visual Identity — Complete Spec
 
 ### CSS Custom Properties (defined in `src/styles/base.css`)
 

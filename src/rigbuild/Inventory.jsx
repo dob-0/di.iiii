@@ -567,7 +567,12 @@ export function InventoryPanel({ eq, library, readOnly = false, phone = false, h
     const [ofl, setOfl] = useState(null)
     const [itemSheet, setItemSheet] = useState(null)
     const [deskHere, setDeskHere] = useState(false)
-    useEffect(() => { probeLightingDesk().then(setDeskHere) }, [])
+    useEffect(() => {
+        // The probe may settle after the panel closed (or a test's jsdom is gone): no setState then.
+        let live = true
+        probeLightingDesk().then((here) => { if (live) setDeskHere(here) })
+        return () => { live = false }
+    }, [])
     const tiles = useMemo(() => eq.tiles.filter((t) => (only === 'all' || t.taken) && matchTile(t, q)), [eq.tiles, only, q])
     const groups = useMemo(() => byGroup(tiles, GROUPS), [tiles])
     const open = openId ? eq.tiles.find((t) => t.id === openId) || null : null
