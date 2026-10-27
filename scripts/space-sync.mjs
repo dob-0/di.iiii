@@ -127,7 +127,7 @@ const normalizeTiers = (tiers) => {
 
 // Fields the repo is master for. Kept in one list so the reconcile, the audit
 // and the docs cannot disagree about what "declared" means.
-const SPACE_FIELDS = ['label', 'slug', 'isPublic']
+const SPACE_FIELDS = ['label', 'slug', 'isPublic', 'blurb']
 const TIER_FIELDS = ['openInscriptions']
 
 const loadEnvFile = async (filePath) => {

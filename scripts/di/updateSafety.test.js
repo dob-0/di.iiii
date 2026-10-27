@@ -25,9 +25,11 @@ import { paths } from './paths.mjs'
 const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite')
 
 const homes = []
+let lastHome = null
 const makeHome = ({ schema = null, files = {} } = {}) => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'di-safety-'))
     homes.push(home)
+    lastHome = home
     const p = paths(home)
     fs.mkdirSync(p.data, { recursive: true })
     if (schema !== null) {
@@ -105,6 +107,43 @@ describe('the rehearsal', () => {
         await fsp.rm(scratch, { recursive: true, force: true })
     })
 
+    it('does not copy snapshots/, and says what it did copy', async () => {
+        const home = makeHome({
+            schema: 1,
+            files: {
+                'spaces/open/scene.json': '{"v":1}',
+                'snapshots/open/2026-10-01T00-00-00-000Z.json': 'x'.repeat(1024 * 1024),
+                // Only the top-level backup folder is skipped, not any folder so named.
+                'spaces/open/snapshots/keep.txt': 'inside a space'
+            }
+        })
+        const scratch = await rehearseAgainst({ home })
+        expect(fs.existsSync(path.join(scratch, 'snapshots'))).toBe(false)
+        expect(fs.readFileSync(path.join(scratch, 'spaces/open/scene.json'), 'utf8')).toBe('{"v":1}')
+        expect(fs.readFileSync(path.join(scratch, 'spaces/open/snapshots/keep.txt'), 'utf8')).toBe('inside a space')
+        // The real backups are untouched.
+        expect(fs.existsSync(path.join(paths(home).data, 'snapshots/open/2026-10-01T00-00-00-000Z.json'))).toBe(true)
+        await fsp.rm(scratch, { recursive: true, force: true })
+    })
+
+    it('makes its scratch under the di home, never in os.tmpdir()', async () => {
+        const home = makeHome({ schema: 1 })
+        const savedTmp = process.env.TMPDIR
+        const canary = fs.mkdtempSync(path.join(os.tmpdir(), 'di-canary-'))
+        process.env.TMPDIR = canary
+        try {
+            const scratch = await rehearseAgainst({ home })
+            expect(path.dirname(scratch)).toBe(paths(home).scratch)
+            expect(paths(home).scratch.startsWith(home + path.sep)).toBe(true)
+            expect(fs.readdirSync(canary)).toEqual([])
+            await fsp.rm(scratch, { recursive: true, force: true })
+        } finally {
+            if (savedTmp === undefined) delete process.env.TMPDIR
+            else process.env.TMPDIR = savedTmp
+            fs.rmSync(canary, { recursive: true, force: true })
+        }
+    })
+
     it('has nothing to rehearse on a first install, and says so rather than passing', async () => {
         const home = fs.mkdtempSync(path.join(os.tmpdir(), 'di-safety-'))
         homes.push(home)
@@ -127,7 +166,11 @@ describe('the rehearsal copy never outlives its run', () => {
         else process.env.TMPDIR = savedTmp
         fs.rmSync(tmp, { recursive: true, force: true })
     })
-    const leftovers = () => fs.readdirSync(tmp).filter(name => name.startsWith('di-rehearsal-'))
+    // The copy lives under the di home now; tmp stays as a canary that nothing lands in os.tmpdir().
+    const leftovers = () => [
+        ...fs.readdirSync(tmp).filter(name => /^di-(rehearsal|runtime|smoke)-/.test(name)),
+        ...(lastHome && fs.existsSync(paths(lastHome).scratch) ? fs.readdirSync(paths(lastHome).scratch) : [])
+    ]
 
     it('removes the copy after a run that works, having had it during the run', async () => {
         const home = makeHome({ schema: 1, files: { 'spaces/open/scene.json': '{"v":1}' } })

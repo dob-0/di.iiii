@@ -60,6 +60,7 @@ import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
 import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
 import { classifyArchitecture, parseLayersParam } from '../../project/viewport/smartView/smartViewGeometry.js'
 import { resolveViews } from '../../project/viewport/smartView/viewData.js'
+import { tourDoors } from '../../project/viewport/autoFly.js'
 import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { KICK_AFTER_INPUT_MS, RenderDemandProvider, useHoldFrames, useFrameloopMode, useStableDemand } from '../utils/renderDemand.jsx'
@@ -1223,7 +1224,13 @@ export default function StudioViewport({
         classifyArchitecture(entitiesForView || []).ids.size > 0
         || (entitiesForView || []).some((e) => e?.type === 'model')
     ), [entitiesForView])
-    const smartOn = Boolean(smartView) && !lowPower && hasBuilding
+    // A room without a building but with doors still flies (the tour, autoFly.js): the smart view comes on for the
+    // flight and stays mounted after it, so it can hand the camera back where the flight left it.
+    const hasDoors = useMemo(() => tourDoors(entitiesForView || []).length >= 2, [entitiesForView])
+    const [flownOnce, setFlownOnce] = useState(false)
+    const flyRequested = typeof smartView?.onFlyChange === 'function' && Boolean(smartView?.flyOn)
+    useEffect(() => { if (flyRequested) setFlownOnce(true) }, [flyRequested])
+    const smartOn = Boolean(smartView) && !lowPower && (hasBuilding || (hasDoors && (flyRequested || flownOnce)))
     const studioBar = smartView?.bar === 'studio'
     const cues = document.mappingState?.cues
     const reservedKeys = useMemo(() => (
