@@ -226,10 +226,11 @@ export const WIKI_ARTICLES = [
             'The Trash button appears on the Spaces page once something is in it. Each row shows how many projects went with the space and how many days are left. Restore brings the space back with exactly the projects that went with it; a project you had deleted on its own earlier stays in that project trash. Delete forever… asks twice and is the only way the files go before the 30 days are up.',
             'A space marked permanent is not deleted: the box says so, and an admin can unmark it there first. The front room, the shared global space and a sandbox are never deleted. While a space is in the Trash its name is held, so a new space cannot take it by accident.',
             'A project can move to another space you own: on a project card in Studio, "move to…" lists them. Its link keeps working. A project that is its space\u2019s front door asks first, because moving it leaves that space with no front door. Once moved, the old space\u2019s own address sends visitors on to the project in its new space, until that space is given a new front door. Someone who could not open the project where it went is not sent there: they see the old space as it is.',
-            'Not yet carried: a space that is followed from another copy (di follow) does nothing special when it is trashed — the copy that follows simply stops finding it. A delete does not travel to the copies that follow.'
+            'Not yet carried: a space that is followed from another copy (di follow) does nothing special when it is trashed — the copy that follows simply stops finding it. A delete does not travel to the copies that follow.',
+            'Spaces nobody touches. A space that is not permanent and has not been edited for 30 days (a guest sandbox: 7 days) is cleared by the server\u2019s half-hour sweep — and cleared means moved to the Trash, the same as a delete: it can be restored for 30 days. A space that is published, listed publicly, linked from the site, reachable by its own address or domain, or holds a project with saved work is never cleared: it is kept, and the sweep says so. A guest who comes back to a cleared sandbox inside the 30 days gets it back. Admins see every space due in the next 14 days, and what the sweep will do to each, under Manage → Due for the sweep.'
         ],
-        tags: ['delete', 'trash', 'restore', 'space', 'permanent', 'move', 'undo'],
-        updated: '2026-10-20'
+        tags: ['delete', 'trash', 'restore', 'space', 'permanent', 'move', 'undo', 'sweep', 'idle'],
+        updated: '2026-10-21'
     },
     {
         id: 'your-space-your-word',

@@ -99,6 +99,125 @@ describe('spaceStore kind', () => {
     })
 })
 
+describe('the idle sweep never destroys a space someone can reach', () => {
+    const DAY = 24 * 60 * 60 * 1000
+    const TTL = 30 * DAY
+    let lines
+    let sweeper
+
+    // A space last touched `daysAgo` days before now (the sweep reads
+    // last_touched_at; set it directly rather than wait 30 days).
+    const spaceIdleFor = async (id, daysAgo, meta = {}) => {
+        await sweeper.upsertSpaceMeta(id, { permanent: false, touch: false, ...meta })
+        getDb().prepare('UPDATE spaces SET last_touched_at = ? WHERE id = ?').run(Date.now() - daysAgo * DAY, id)
+    }
+    const trashedIds = async () => (await sweeper.listTrashedSpaces()).map((space) => space.id)
+
+    beforeEach(() => {
+        lines = []
+        sweeper = createSpaceStore({
+            spacesDir: tmpDir,
+            blankScene: { objects: [] },
+            defaultTtlMs: TTL,
+            sandboxTtlMs: 7 * DAY,
+            linkedSpaceIds: () => ['support'],
+            log: { info: (line) => lines.push(line) }
+        })
+    })
+
+    it('keeps a published space idle 40 days, and reports the skip once a day', async () => {
+        await spaceIdleFor('gallery', 40, { publishedProjectId: 'front' })
+        expect(await sweeper.pruneSpaces()).toEqual([])
+        expect(await sweeper.loadSpaceMeta('gallery')).not.toBeNull()
+        expect(await trashedIds()).toEqual([])
+        expect(lines).toEqual(['[sweep] skipped space=gallery reason="published" owner=none'])
+        // The half-hour timer runs again: no second line inside a day.
+        await sweeper.pruneSpaces()
+        expect(lines).toHaveLength(1)
+        await sweeper.pruneSpaces({ now: Date.now() + DAY + 1 })
+        expect(lines).toHaveLength(2)
+        expect(sweeper.listSweepLog().map((row) => row.action)).toEqual(['skipped', 'skipped'])
+    })
+
+    it('keeps the 2026-10-20 case: a site-linked space no one edited since it was made', async () => {
+        await spaceIdleFor('support', 31)
+        expect(await sweeper.pruneSpaces()).toEqual([])
+        expect(await sweeper.loadSpaceMeta('support')).not.toBeNull()
+        expect(lines).toEqual(['[sweep] skipped space=support reason="linked from the site" owner=none'])
+    })
+
+    it('keeps a listed space, a named one, and one holding a saved project', async () => {
+        await spaceIdleFor('listed', 40, { isPublic: true })
+        await spaceIdleFor('named', 40, { slug: 'named-room' })
+        await spaceIdleFor('worked', 40)
+        await projectStore.ensureProject(tmpDir, 'worked', 'p1', { title: 'Piece' })
+        getDb().prepare('UPDATE projects SET document_version = 3 WHERE id = ?').run('p1')
+        getDb().prepare('UPDATE spaces SET last_touched_at = ? WHERE id = ?').run(Date.now() - 40 * DAY, 'worked')
+        expect(await sweeper.pruneSpaces()).toEqual([])
+        expect(lines.sort()).toEqual([
+            '[sweep] skipped space=listed reason="publicly listed" owner=none',
+            '[sweep] skipped space=named reason="linked: named address" owner=none',
+            '[sweep] skipped space=worked reason="holds 1 project(s) with content" owner=none'
+        ])
+    })
+
+    it('moves an empty unpublished space to the trash, restorable, and only the trash empties it', async () => {
+        await sweeper.ensureSpaceScene('abandoned')
+        await spaceIdleFor('abandoned', 31, { ownerUserId: 'user-7' })
+        expect(await sweeper.pruneSpaces()).toEqual(['abandoned'])
+        expect(await sweeper.loadSpaceMeta('abandoned')).toBeNull()
+        expect(await trashedIds()).toEqual(['abandoned'])
+        expect(fs.existsSync(path.join(tmpDir, 'abandoned'))).toBe(true)
+        expect(lines).toEqual(['[sweep] trashed space=abandoned reason="idle 31 days" owner=user-7'])
+        expect(sweeper.listSweepLog()[0]).toMatchObject({ spaceId: 'abandoned', action: 'trashed', reason: 'idle 31 days', owner: 'user-7' })
+
+        // The same restore a manual delete gets.
+        const back = await sweeper.restoreSpace('abandoned')
+        expect(back.space.id).toBe('abandoned')
+        expect(await sweeper.loadSpaceMeta('abandoned')).not.toBeNull()
+
+        // Trashed again and left past the hold: now, and only now, it is gone.
+        getDb().prepare('UPDATE spaces SET last_touched_at = ? WHERE id = ?').run(Date.now() - 31 * DAY, 'abandoned')
+        await sweeper.pruneSpaces()
+        expect(await sweeper.purgeSpaceTrash()).toEqual([])
+        expect(await sweeper.purgeSpaceTrash({ now: Date.now() + 31 * DAY })).toEqual(['abandoned'])
+        expect(fs.existsSync(path.join(tmpDir, 'abandoned'))).toBe(false)
+        expect(lines.at(-1)).toBe('[sweep] purged space=abandoned reason="trash hold over" owner=user-7')
+    })
+
+    it('still clears abandoned guest sandboxes on the shorter sandbox clock', async () => {
+        await spaceIdleFor('sandbox-guest-a', 8, { kind: 'sandbox' })
+        await spaceIdleFor('sandbox-guest-b', 3, { kind: 'sandbox' })
+        await spaceIdleFor('quiet', 8)
+        expect(await sweeper.pruneSpaces()).toEqual(['sandbox-guest-a'])
+        expect(await trashedIds()).toEqual(['sandbox-guest-a'])
+        expect(await sweeper.loadSpaceMeta('sandbox-guest-b')).not.toBeNull()
+        expect(await sweeper.loadSpaceMeta('quiet')).not.toBeNull()
+        expect(lines).toEqual(['[sweep] trashed space=sandbox-guest-a reason="idle 8 days" owner=guest'])
+    })
+
+    it('lists what comes due in the next 14 days, with what the sweep will do to each', async () => {
+        await spaceIdleFor('overdue', 35)
+        await spaceIdleFor('soon', 20, { isPublic: true })
+        await spaceIdleFor('later', 10)
+        await spaceIdleFor('kept-forever', 60, { permanent: true })
+        await spaceIdleFor('sandbox-guest', 1, { kind: 'sandbox' })
+        const now = Date.now()
+        const due = sweeper.sweepPlan({ now, horizonMs: 14 * DAY })
+        expect(due.map((entry) => [entry.spaceId, entry.action, entry.reason])).toEqual([
+            ['overdue', 'trash', 'idle 35 days'],
+            ['sandbox-guest', 'trash', 'idle 1 days'],
+            ['soon', 'skip', 'publicly listed']
+        ])
+        // dueAt is the day the sweep reaches it: idle-since + its clock.
+        const soon = due.find((entry) => entry.spaceId === 'soon')
+        expect(Math.round((soon.dueAt - now) / DAY)).toBe(10)
+        // The list is what the sweep then does: nothing more, nothing less.
+        expect(await sweeper.pruneSpaces({ now })).toEqual(['overdue'])
+        expect(await sweeper.pruneSpaces({ now: now + 14 * DAY })).toEqual(['sandbox-guest'])
+    })
+})
+
 describe('spaceStore moveSpace', () => {
     it('re-homes the row, its children, and the directory under the new id', async () => {
         await store.upsertSpaceMeta('sandbox-guest1', { kind: 'sandbox', label: 'Guest Sandbox', sceneVersion: 3 })

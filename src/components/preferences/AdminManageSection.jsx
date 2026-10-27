@@ -7,6 +7,7 @@ import {
     updateServerSpace,
     deleteServerSpace,
     getServerConfig,
+    getSweepReport,
     patchServerConfig,
     listCommonsAssets,
     removeCommonsAsset
@@ -411,6 +412,56 @@ export function TrafficSection() {
     )
 }
 
+const formatDay = (ms) => new Date(ms).toISOString().slice(0, 10)
+
+// The idle sweep runs every half hour. A space it will reach shows here two
+// weeks ahead, with what it will do: "trash" (restorable for 30 days from the
+// Trash) or "keep" and the reason. Below, the last things it did.
+export function SweepSection() {
+    const [state, setState] = useState({ loading: true, error: '', report: null })
+    useEffect(() => {
+        let alive = true
+        getSweepReport()
+            .then((report) => { if (alive) setState({ loading: false, error: '', report }) })
+            .catch((err) => { if (alive) setState({ loading: false, error: err.message || 'Could not load the sweep.', report: null }) })
+        return () => { alive = false }
+    }, [])
+    const { loading, error, report } = state
+    const days = Math.round((report?.horizonMs || 0) / (24 * 60 * 60 * 1000)) || 14
+    return (
+        <ModuleSection title="Due for the sweep" subtitle={`Idle spaces the sweep reaches in the next ${days} days`}>
+            {loading && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading the sweep" text="loading the sweep" /></div>}
+            {error && <div className="preferences-empty">{error}</div>}
+            {report && (
+                <>
+                    {report.due.length === 0 && <div className="preferences-empty">Nothing comes due in the next {days} days.</div>}
+                    {report.due.map((entry) => (
+                        <InfoPair
+                            key={entry.spaceId}
+                            label={`${entry.spaceId} · ${entry.owner}`}
+                            value={`${formatDay(entry.dueAt)} · ${entry.action === 'skip' ? `keep (${entry.reason})` : `trash (${entry.reason})`}`}
+                            mono
+                        />
+                    ))}
+                    {report.log.length > 0 && (
+                        <>
+                            <div className="preferences-info-label">What the sweep did</div>
+                            {report.log.slice(0, 20).map((row) => (
+                                <InfoPair
+                                    key={`${row.at}-${row.spaceId}-${row.action}`}
+                                    label={`${formatDay(row.at)} ${row.action} ${row.spaceId}`}
+                                    value={`${row.reason} · ${row.owner}`}
+                                    mono
+                                />
+                            ))}
+                        </>
+                    )}
+                </>
+            )}
+        </ModuleSection>
+    )
+}
+
 function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, onCreateSpace, onPatchUser, spaceLimit }) {
     return (
         <>
@@ -428,6 +479,8 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
             </ModuleSection>
 
             <TrafficSection />
+
+            <SweepSection />
 
             <ModuleSection
                 title="New space"

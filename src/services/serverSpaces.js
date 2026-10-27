@@ -319,6 +319,13 @@ export const getServerConfig = async () => {
     return data.config || {}
 }
 
+// The idle-space sweep, as an admin reads it: what comes due in the next 14
+// days (and whether it will be trashed or kept, and why), and what it did.
+export const getSweepReport = async () => {
+    const data = await apiFetch('/api/admin/sweep')
+    return { due: data.due || [], log: data.log || [], horizonMs: data.horizonMs || 0 }
+}
+
 export const patchServerConfig = async (updates = {}) => {
     const data = await apiFetch('/api/config', { method: 'PATCH', body: updates })
     return data.config || {}

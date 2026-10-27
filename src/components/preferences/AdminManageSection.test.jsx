@@ -9,6 +9,7 @@ vi.mock('../../services/serverSpaces.js', () => ({
     updateServerSpace: vi.fn(),
     deleteServerSpace: vi.fn(),
     getServerConfig: vi.fn(),
+    getSweepReport: vi.fn(() => Promise.resolve({ due: [], log: [], horizonMs: 0 })),
     patchServerConfig: vi.fn(),
     getSpaceGithubLink: vi.fn(() => Promise.resolve(null)),
     connectSpaceGithub: vi.fn(() => Promise.resolve({ link: null, initialSync: null })),
@@ -37,8 +38,9 @@ vi.mock('../../utils/spaceRouting.js', () => ({
     buildPublicProjectPath: (s, p) => `/${s}/p/${p}`
 }))
 
-import AdminManageSection from './AdminManageSection.jsx'
+import AdminManageSection, { SweepSection } from './AdminManageSection.jsx'
 import {
+    getSweepReport,
     listServerSpaces,
     getServerConfig,
     updateServerSpace,
@@ -212,5 +214,30 @@ describe('AdminManageSection', () => {
         fireEvent.click(row)
         expect(row.getAttribute('aria-expanded')).toBe('false')
         expect((await axe.run(container, { runOnly: ['nested-interactive'] })).violations).toEqual([])
+    })
+})
+
+describe('SweepSection', () => {
+    it('shows each space coming due, the day, and what the sweep will do to it', async () => {
+        const day = Date.UTC(2026, 10, 6)
+        getSweepReport.mockResolvedValueOnce({
+            horizonMs: 14 * 24 * 60 * 60 * 1000,
+            due: [
+                { spaceId: 'old-room', owner: 'none', dueAt: day, action: 'trash', reason: 'idle 31 days' },
+                { spaceId: 'gallery', owner: 'user-2', dueAt: day, action: 'skip', reason: 'published' }
+            ],
+            log: [{ at: day, spaceId: 'sandbox-x', action: 'trashed', reason: 'idle 8 days', owner: 'guest' }]
+        })
+        render(<SweepSection />)
+        expect(await screen.findByText('old-room · none')).toBeInTheDocument()
+        expect(screen.getByText('2026-11-06 · trash (idle 31 days)')).toBeInTheDocument()
+        expect(screen.getByText('2026-11-06 · keep (published)')).toBeInTheDocument()
+        expect(screen.getByText('2026-11-06 trashed sandbox-x')).toBeInTheDocument()
+        expect(screen.getByText('Idle spaces the sweep reaches in the next 14 days')).toBeInTheDocument()
+    })
+
+    it('says so when nothing comes due', async () => {
+        render(<SweepSection />)
+        expect(await screen.findByText('Nothing comes due in the next 14 days.')).toBeInTheDocument()
     })
 })
