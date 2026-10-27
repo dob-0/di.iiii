@@ -366,42 +366,75 @@ export const createHttpDoor = ({ base, tier = null, sdk, connectImpl = connect, 
         { McpServer, fromJsonSchema },
         { rig: false }
     ), { onerror })
+    // Path and key, judged from the head alone: the adapter asks this before
+    // it reads a byte of the body, so a stranger cannot make the door buffer.
+    const precheck = (url, headers) => {
+        const { pathname } = new URL(url)
+        if (pathname !== mount && pathname !== `${mount}/`) return refuse(404, 'not_found', `the door is at ${mount}`)
+        const token = bearerOf(headers)
+        if (!token) return refuse(401, 'auth_required', 'Send Authorization: Bearer <act token>.')
+        if (!token.startsWith(ACT_TOKEN_PREFIX)) return refuse(401, 'act_token_required', 'This door takes a di.bo act token (dii_tgact_…), nothing else.')
+        return null
+    }
     return {
+        precheck,
         fetch: async (request) => {
-            const url = new URL(request.url)
-            if (url.pathname !== mount && url.pathname !== `${mount}/`) return refuse(404, 'not_found', `the door is at ${mount}`)
-            const token = bearerOf(request.headers)
-            if (!token) return refuse(401, 'auth_required', 'Send Authorization: Bearer <act token>.')
-            if (!token.startsWith(ACT_TOKEN_PREFIX)) return refuse(401, 'act_token_required', 'This door takes a di.bo act token (dii_tgact_…), nothing else.')
-            return handler.fetch(request, { authInfo: { token, clientId: 'di.bo', scopes: [] } })
+            const refused = precheck(request.url, request.headers)
+            if (refused) return refused
+            return handler.fetch(request, { authInfo: { token: bearerOf(request.headers), clientId: 'di.bo', scopes: [] } })
         },
         close: () => handler.close()
     }
 }
 
+// The most a request body may be: the SDK's own default bound (4 MiB). Over it
+// is a 413, decided from Content-Length when there is one and by counting when
+// there is not, and reading stops there.
+export const MAX_BODY_BYTES = 4 * 1024 * 1024
+
+const sendResponse = async (res, response) => {
+    res.writeHead(response.status, Object.fromEntries(response.headers))
+    if (response.body) {
+        for await (const chunk of response.body) res.write(chunk)
+    }
+    res.end()
+}
+
 // node:http in, web Request/Response through, node:http out — streaming, so
-// an SSE answer reaches the client as it is written.
-export const toNodeListener = (door) => async (req, res) => {
+// an SSE answer reaches the client as it is written. The door's precheck runs
+// on the head before the body is read.
+export const toNodeListener = (door, { maxBodyBytes = MAX_BODY_BYTES } = {}) => async (req, res) => {
     try {
-        const chunks = []
-        for await (const chunk of req) chunks.push(chunk)
-        const body = chunks.length ? Buffer.concat(chunks) : null
         const headers = new Headers()
         for (const [name, value] of Object.entries(req.headers)) {
             if (Array.isArray(value)) value.forEach((v) => headers.append(name, v))
             else if (value !== undefined) headers.set(name, value)
         }
         const url = `http://${req.headers.host || 'localhost'}${req.url}`
-        const response = await door.fetch(new Request(url, {
+        const refused = door.precheck ? door.precheck(url, headers) : null
+        if (refused) {
+            res.setHeader('connection', 'close')
+            return await sendResponse(res, refused)
+        }
+        const tooBig = () => {
+            res.writeHead(413, { 'content-type': 'application/json', connection: 'close' })
+            res.end(JSON.stringify({ error: 'too_large', message: `at most ${maxBodyBytes} bytes` }))
+            req.destroy()
+        }
+        if (Number(req.headers['content-length'] || 0) > maxBodyBytes) return tooBig()
+        const chunks = []
+        let size = 0
+        for await (const chunk of req) {
+            size += chunk.length
+            if (size > maxBodyBytes) return tooBig()
+            chunks.push(chunk)
+        }
+        const body = chunks.length ? Buffer.concat(chunks) : null
+        await sendResponse(res, await door.fetch(new Request(url, {
             method: req.method,
             headers,
             ...(body && req.method !== 'GET' && req.method !== 'HEAD' ? { body } : {})
-        }))
-        res.writeHead(response.status, Object.fromEntries(response.headers))
-        if (response.body) {
-            for await (const chunk of response.body) res.write(chunk)
-        }
-        res.end()
+        })))
     } catch (error) {
         if (!res.headersSent) res.writeHead(500, { 'content-type': 'application/json' })
         res.end(JSON.stringify({ error: 'door_error', message: String(error?.message || error) }))
@@ -415,7 +448,9 @@ export const serveHttp = async ({ port = 8787, host = '127.0.0.1', base = null, 
         base, tier, sdk, connectImpl,
         onerror: (error) => process.stderr.write(`[di mcp http] ${error?.message || error}\n`)
     })
-    const server = createServer(toNodeListener(door))
+    // Slow clients do not hold a socket open: the head in 10 s, the whole
+    // request in 30 s.
+    const server = createServer({ headersTimeout: 10_000, requestTimeout: 30_000 }, toNodeListener(door))
     await new Promise((resolve) => server.listen(port, host, resolve))
     return { server, door, url: `http://${host}:${server.address().port}/mcp` }
 }

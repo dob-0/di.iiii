@@ -136,6 +136,29 @@ describe('the remote door: who gets in', () => {
         expect(JSON.parse(res.text).error).toBe('act_token_required')
     })
 
+    it('a body over the bound is a 413 and is not read through', async () => {
+        const res = await fetch(door.url, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', authorization: 'Bearer dii_tgact_member.s' },
+            body: 'x'.repeat(4 * 1024 * 1024 + 1)
+        }).catch((error) => ({ status: 'reset', error }))
+        // Either the 413 arrives, or the socket is closed under a body still
+        // being sent; both mean the door stopped reading.
+        if (res.status !== 'reset') expect(res.status).toBe(413)
+        expect(fakeDi.seen).toEqual([])
+    })
+
+    it('without a key, the door answers before the body is read', async () => {
+        const { request } = await import('node:http')
+        const status = await new Promise((resolve, reject) => {
+            const req = request(door.url, { method: 'POST', headers: { 'content-type': 'application/json', 'content-length': 1_000_000 } }, (res) => resolve(res.statusCode))
+            req.on('error', reject)
+            req.write('{')
+            // The rest of the promised body never comes: the answer must not wait for it.
+        })
+        expect(status).toBe(401)
+    })
+
     it('anywhere but /mcp is a 404', async () => {
         const res = await rpc('initialize', INIT, { url: door.url.replace('/mcp', '/other') })
         expect(res.status).toBe(404)
