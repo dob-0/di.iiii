@@ -1398,6 +1398,9 @@ describe('a pinch never selects (audit 2026-10-21 NR-08)', () => {
         onSelectNode.mockClear()
         fireEvent.pointerDown(card, { button: 0, pointerId: 3, pointerType: 'mouse', clientX: 40, clientY: 20 })
         expect(onSelectNode).toHaveBeenCalledWith('a')
+    })
+})
+
 // A port dot is a pointer handle inside the card, and the card is the button: a
 // focusable or announced child would be a control nested in a control. The row's
 // label names the port; the dot is hidden from the reader (2026-10-21).
