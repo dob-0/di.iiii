@@ -41,7 +41,7 @@ import { useNavigationPreference } from '../navigation/preference.js'
 import { useCameraNavigation, entityRoots } from '../navigation/useCameraNavigation.js'
 import { contentBoundary } from '../navigation/autoDepth.js'
 import { useFocusUnderPointer } from '../navigation/useFocusUnderPointer.js'
-import { clipPlanesFor, controlSpeedsFor, maxPolarAboveFloor, useCameraSettings } from '../navigation/cameraSettings.js'
+import { clipPlanesFor, controlSpeedsFor, maxPolarAboveFloor, truckBoost, MIN_DISTANCE_M, useCameraSettings } from '../navigation/cameraSettings.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
@@ -598,6 +598,7 @@ function StudioOrbit({ controlsRef, cameraView, lensFov = null, onCameraChange, 
             const box = contentBoundary(entityRoots(scene))
             if (box) cc.setBoundary(box)
         }
+        cc.truckSpeed = speeds.truckSpeed * truckBoost(cc.distance)
         const { near, far } = clipPlanesFor(cc.distance, authoredFar.current)
         let dirty = false
         if (Math.abs(cam.near - near) > near * 0.05) { cam.near = near; dirty = true }
@@ -646,7 +647,7 @@ function StudioOrbit({ controlsRef, cameraView, lensFov = null, onCameraChange, 
             // Past the minimum the wheel carries the pivot forward instead of stopping
             // dead (owner, Cascade club, 2026-09-02; branch fix/orbit-infinity-dolly).
             infinityDolly
-            minDistance={0.05}
+            minDistance={MIN_DISTANCE_M}
             maxDistance={800}
             dollySpeed={speeds.dollySpeed}
             truckSpeed={speeds.truckSpeed}

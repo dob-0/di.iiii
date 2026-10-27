@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
     CAMERA_SETTINGS_KEY, DEFAULT_CAMERA_SETTINGS, FOV_RANGE, LENS_PRESETS_MM, SPEED_RANGE,
     clampFov, clipPlanesFor, controlSpeedsFor, fovToLensMm, getCameraSettings, lensMmToFov,
-    maxPolarAboveFloor, normalizeCameraSettings, resetCameraSettingsMemory, setCameraSettings,
+    MIN_DISTANCE_M, PAN_BOOST_MAX, maxPolarAboveFloor, truckBoost, normalizeCameraSettings, resetCameraSettingsMemory, setCameraSettings,
 } from './cameraSettings.js'
 
 beforeEach(() => {
@@ -106,5 +106,20 @@ describe('keep above the floor', () => {
     it('junk gives no limit', () => {
         expect(maxPolarAboveFloor(NaN, 5)).toBe(Math.PI)
         expect(maxPolarAboveFloor(1, 0)).toBe(Math.PI)
+    })
+})
+
+describe('pan close up', () => {
+    it('no boost at or beyond the floor distance', () => {
+        expect(truckBoost(5)).toBe(1)
+        expect(truckBoost(50)).toBe(1)
+    })
+    it('a pan at the minimum distance moves the view as far as one at 5 m', () => {
+        expect(truckBoost(MIN_DISTANCE_M) * MIN_DISTANCE_M).toBeCloseTo(5, 6)
+    })
+    it('is capped and survives junk', () => {
+        expect(truckBoost(0.01)).toBe(PAN_BOOST_MAX)
+        expect(truckBoost(NaN)).toBe(1)
+        expect(truckBoost(0)).toBe(1)
     })
 })

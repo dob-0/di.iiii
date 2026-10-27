@@ -56,6 +56,16 @@ export function normalizeCameraSettings(raw) {
     }
 }
 
+// Panning scales with the distance to the pivot, so close up (zoomed in on a thing)
+// a 300 px drag moved the view 1 cm at 5 cm (measured 2026-10-07: "I zoom in and then
+// I can't move"). Below PAN_FLOOR_M the pan is sped up as if the pivot were that far (measured after the fix: 300 px = 0.49 m at 0.32 m with a 3 m floor, was 0.01 m).
+export const PAN_FLOOR_M = 5
+export const PAN_BOOST_MAX = 30
+export const MIN_DISTANCE_M = 0.3
+export const truckBoost = (distance) => (
+    Number.isFinite(distance) && distance > 0 ? clamp(PAN_FLOOR_M / distance, 1, PAN_BOOST_MAX) : 1
+)
+
 export function controlSpeedsFor(settings) {
     const s = normalizeCameraSettings(settings)
     return {
