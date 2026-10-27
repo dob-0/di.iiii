@@ -50,3 +50,24 @@ describe('wiki.css', () => {
         expect(wiki).not.toMatch(/grid-floor-background[^{]*\{[^}]*pointer-events:\s*none\s*!important/)
     })
 })
+
+// Audit D03/D27 (2026-10-21): the wiki's three eyebrows were sans with a
+// hand-made tracking (.2em, .14em, .14em) while every other label on the
+// platform is mono at --di-label-tracking. Rhythm and sizes are guarded by
+// src/styles/spine.test.js, which no longer exempts this file.
+describe('wiki.css eyebrows and links', () => {
+    it.each(['.wiki-eyebrow', '.wiki-sidebar-category', '.wiki-article-category'])(
+        '%s is mono at the label tracking',
+        (selector) => {
+            const block = rule(selector)
+            expect(block).toMatch(/font-family:\s*var\(--di-mono\)/)
+            expect(block).toMatch(/letter-spacing:\s*var\(--di-label-tracking\)/)
+        },
+    )
+
+    it('draws sidebar links in --di-text, not dimmed by an opacity off the scale', () => {
+        const block = rule('.wiki-sidebar-link')
+        expect(block).toMatch(/color:\s*var\(--di-text\)/)
+        expect(block).not.toMatch(/opacity/)
+    })
+})
