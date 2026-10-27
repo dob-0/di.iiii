@@ -18,7 +18,7 @@
 // The arithmetic — which cue GO fires next, how far into its fade and hold a cue is — is the shared
 // cue clock's (shared/cueClock.cjs), the same lines the show's clock and the Cue node run.
 
-const { nextCueIndex, cueProgressAt } = require('../../../shared/cueClock.cjs');
+const { nextCueIndex, cueProgressAt } = require('./cueClock');
 
 const MAX_CUES = 200;
 const STR = 60;

@@ -76,6 +76,7 @@ const ALLOWED = {
     'serverXR/src/googleOAuth.test.js': [1, 'the registered Drive callback'],
     'src/utils/hostSpace.test.js': [1, 'the old name is a platform host'],
     'src/utils/deployMode.test.js': [2, 'the old name reads as hosted; the `dev.` first-label rule holds on it'],
+    'src/positioningLine.test.js': [1, 'comment: the README link that named the old address'],
     'src/components/ModeMark.test.jsx': [1, 'no mode mark on the old name either'],
 
     // Words about the old address itself.
@@ -84,7 +85,6 @@ const ALLOWED = {
     'docs/architecture/THREE_DISTANCES.md': [1, 'the address decision'],
     'MANIFESTO.md': [1, 'owner text: the old name keeps answering for everything already printed'],
     'docs/architecture/SPEC_space_own_domain.md': [1, 'lists our own platform names, both'],
-    'src/wiki/wikiContent.js': [1, 'tells people the old address still reaches the same place'],
     'spaces/open/tools/set-jam-qr.mjs': [1, 'what the printed QR in the room encodes'],
 
     // A past incident or a past state, recorded with its date or as "used to".

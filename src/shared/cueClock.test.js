@@ -45,6 +45,10 @@ describe('the cue clock (shared/cueClock.cjs and its browser twin)', () => {
         const { buildTwin } = await import('../../scripts/rigbuild/cue-clock-twin.mjs')
         expect(fs.readFileSync(path.join(dir, 'cueClock.js'), 'utf8')).toBe(buildTwin(fs.readFileSync(path.join(dir, '../../shared/cueClock.cjs'), 'utf8')))
     })
+    it('the light desk directory carries a byte-for-byte copy, so it stands alone', async () => {
+        const { buildDeskCopy } = await import('../../scripts/rigbuild/cue-clock-twin.mjs')
+        expect(fs.readFileSync(path.join(dir, '../../serverXR/src/lighting/cueClock.js'), 'utf8')).toBe(buildDeskCopy(fs.readFileSync(path.join(dir, '../../shared/cueClock.cjs'), 'utf8')))
+    })
     it.each([
         [{ list, epoch: 0, now: 9000 }],
         [{ list, epoch: 0, loop: true, now: 7 * 24 * 3600 * 1000 + 12345 }],
