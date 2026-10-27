@@ -13,12 +13,12 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the desk's Touch page plays looks and the cue list
-- a followed space stays one space: no lost edits, copies agree, restarts resume
-- Studio stands inside a Geo
-- MOXIR: the area stage, the corrected hall, the realism renderer, and the audit fixes
-- MOXIR previs: the haze worked out from the hazers, real beam fall-off, real bloom
-- …and 27 more notes, each in full in PROGRESS.md
+- physics: every beam stops at the first surface it meets, measured at run time along its current aim
+- the desk's API is written down, and a server can be held to it
+- `npm run desk:bundle`: one command writes what a node build consumes
+- the desk says when it cannot draw a state, reads caps, and the node console is inventoried
+- "This node": the Setup section a hardware node adds (plan step D5)
+- …and 98 more notes, each in full in PROGRESS.md
 
 Full detail: `PROGRESS.md`.
 
