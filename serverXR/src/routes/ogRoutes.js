@@ -126,7 +126,7 @@ function ogHtml({ url, title, description, image }) {
 </head><body><a href="${u}">${t}</a></body></html>`
 }
 
-function registerOgRoutes(router, { loadSpaceMeta, resolveProject = null, siteOrigin, spaceIdForHost = null }) {
+function registerOgRoutes(router, { loadSpaceMeta, resolveProject = null, siteOrigin, spaceIdForHost = null, loadWikiArticles = null }) {
   // Express 5's router (path-to-regexp v8) rejects a bare '*' — it throws at
   // REGISTRATION, so this would not have failed a request, it would have stopped
   // serverXR from booting at all. Named wildcard, and params.splat is an array.
@@ -167,6 +167,25 @@ function registerOgRoutes(router, { loadSpaceMeta, resolveProject = null, siteOr
       // reservedSegments.cjs) and asking would only cost a round trip to
       // learn what is already known.
       const staticPage = hostSpaceId ? null : STATIC_PAGES[handle.toLowerCase()]
+
+      // One wiki article, /wiki/{id} (G25, 2026-10-21): its own title,
+      // description and canonical, so a link to one article previews and
+      // indexes as that article, not as the whole 250,000-character wiki. An
+      // id the wiki does not have falls through to the wiki's own card below,
+      // with the wiki's address as canonical — not the address that missed.
+      if (staticPage && handle.toLowerCase() === 'wiki' && segments[1] && typeof loadWikiArticles === 'function') {
+        const articles = await loadWikiArticles().catch(() => null)
+        const article = articles?.get(segments[1])
+        if (article) {
+          return res.type('html').send(ogHtml({
+            url: origin ? `${origin}/wiki/${encodeURIComponent(article.id)}` : undefined,
+            title: `${article.title} — Wiki — di.iiii`,
+            description: article.summary || staticPage.description,
+            image: origin ? origin + DEFAULT_IMAGE : undefined,
+          }))
+        }
+      }
+
       if (staticPage) {
         return res.type('html').send(ogHtml({
           url: origin ? `${origin}/${handle}` : undefined,
@@ -239,7 +258,10 @@ function registerOgRoutes(router, { loadSpaceMeta, resolveProject = null, siteOr
       res.type('html').send(ogHtml({
         url,
         title: spaceTitle,
-        description: meta.ogDescription || meta.description
+        // The space's own line for visitors (shared/spaceBlurb.cjs) before the
+        // generic sentence, which said nothing a reader could not guess from
+        // the name (G23, 2026-10-21).
+        description: meta.ogDescription || meta.blurb || meta.description
           || (own ? FRONT_DOOR.description : `${meta.label || handle} — a space on di.iiii.`),
         image: origin + cardFor(handle),
       }))

@@ -30,6 +30,26 @@ const { CONVERGE_CLIENT } = require('./followConverge')
 
 /** How many ops we will carry in one direction per tick. */
 const BATCH = 200
+/**
+ * And how many bytes: a batch is also cut by its size, so it fits the other
+ * side's body limit (express.json 10 mb, index.js) and the request timeout.
+ * Measured 2026-10-26 (N1291): MOXIR's laser cubes wrote 360 ops of ~265 KB
+ * (95 MB) on show night; 200 of them (53 MB) in one request timed out on
+ * every tick for nine days, and dev never got them. One op always goes, however
+ * big, so nothing is ever stuck behind its own size.
+ */
+const BATCH_BYTES = 2 * 1024 * 1024
+const bySize = (ops) => {
+    let bytes = 0
+    let n = 0
+    for (const op of ops) {
+        bytes += Buffer.byteLength(JSON.stringify(op))
+        if (n > 0 && bytes > BATCH_BYTES) break
+        n += 1
+        if (n >= BATCH) break
+    }
+    return n
+}
 
 /**
  * The ops from `theirs` that this side has not seen, in order.
@@ -47,14 +67,19 @@ const BATCH = 200
 // carries edits; a whole-scene replacement is a conversation between people.
 const WHOLE_WORK_OPS = new Set(['replaceScene', 'replaceDocument'])
 
-const unseen = (ops = [], seen = new Set()) => ops
+const carryable = (ops = [], seen = new Set()) => ops
     .filter(op => op && op.opId && !seen.has(op.opId) && !WHOLE_WORK_OPS.has(op.type))
-    .slice(0, BATCH)
+
+const unseen = (ops = [], seen = new Set()) => {
+    const all = carryable(ops, seen)
+    return all.slice(0, bySize(all))
+}
 
 /** Did we stop short of the end — i.e. is there more to carry right now? */
-const moreToCarry = (ops = [], seen = new Set()) => ops
-    .filter(op => op && op.opId && !seen.has(op.opId) && !WHOLE_WORK_OPS.has(op.type))
-    .length > BATCH
+const moreToCarry = (ops = [], seen = new Set()) => {
+    const all = carryable(ops, seen)
+    return all.length > bySize(all)
+}
 
 /**
  * Whether a batch contained a whole-work op we refused to carry. The follower's
@@ -161,4 +186,4 @@ const describeWriteFailure = ({ stream, direction, status, error = null, retryIn
     return `${who} ${what} (${code}${words})${look}${later}`
 }
 
-module.exports = { BATCH, WHOLE_WORK_OPS, accountedThrough, unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval, failureDelay, isStuckRefusal, describeWriteFailure, FAILURE_FLOOR_MS, FAILURE_CEILING_MS }
+module.exports = { BATCH, BATCH_BYTES, WHOLE_WORK_OPS, accountedThrough, unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval, failureDelay, isStuckRefusal, describeWriteFailure, FAILURE_FLOOR_MS, FAILURE_CEILING_MS }
