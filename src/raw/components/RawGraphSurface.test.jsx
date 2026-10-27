@@ -1398,5 +1398,16 @@ describe('a pinch never selects (audit 2026-10-21 NR-08)', () => {
         onSelectNode.mockClear()
         fireEvent.pointerDown(card, { button: 0, pointerId: 3, pointerType: 'mouse', clientX: 40, clientY: 20 })
         expect(onSelectNode).toHaveBeenCalledWith('a')
+// A port dot is a pointer handle inside the card, and the card is the button: a
+// focusable or announced child would be a control nested in a control. The row's
+// label names the port; the dot is hidden from the reader (2026-10-21).
+describe('port dots and the reader', () => {
+    it('every port dot is hidden from assistive tech; the port label stays', () => {
+        const text = makeNode('view.text', { id: 't1' })
+        const { container } = render(<RawGraphSurface nodes={[text]} edges={[]} initialZoom={1} />)
+        const dots = [...container.querySelectorAll('.raw-graph-port-dot')]
+        expect(dots).toHaveLength(2)
+        for (const dot of dots) expect(dot.getAttribute('aria-hidden')).toBe('true')
+        expect(container.querySelector('.raw-graph-port-label').textContent).toBe('Content')
     })
 })

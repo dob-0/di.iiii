@@ -286,13 +286,14 @@ export default function DesktopWindow({
             }}
         >
             {/* The title bar is the drag handle AND the keyboard handle for
-                moving; a landmark element carrying focus is what the rule
-                objects to, and a div would lose the header semantics the
-                dialog reads out. The static-element-interactions warning is
-                the same one already accepted on RawEditor's and
-                RawGraphSurface's own non-native interactive elements. */}
-            {/* eslint-disable jsx-a11y/no-noninteractive-tabindex */}
+                moving. role="toolbar": it is a focusable bar that holds the
+                window's buttons and answers the arrow keys, which is what a
+                toolbar is; inside a <section> a <header> carries no landmark,
+                so nothing the dialog reads out is lost (2026-10-21, it was a
+                role-less focusable element, jsx-a11y no-static-element-
+                interactions). */}
             <header
+                role="toolbar"
                 className="raw-window-header"
                 onPointerDown={startDrag}
                 onKeyDown={handleHeaderKeyDown}
@@ -355,7 +356,6 @@ export default function DesktopWindow({
                     </button>
                 </div>
             </header>
-            {/* eslint-enable jsx-a11y/no-noninteractive-tabindex */}
             {!windowState.minimized && <div className="raw-window-body">{children}</div>}
             {!windowState.minimized && RESIZE_DIRS.map((dir) => (
                 <div
