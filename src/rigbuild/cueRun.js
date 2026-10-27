@@ -12,13 +12,9 @@ export const deskCueList = (cues = []) => cues
     .filter((c) => c && typeof c.lightLook === 'string' && c.lightLook)
     .map((c) => ({ id: c.id, name: c.name || c.lightLook, lookId: c.lightLook, hold: Number(c.hold) || 0, fade: Number(c.fade) || 0 }))
 
-/** The cue GO fires after `current`: past the last, cue 1 while looping, else none (-1). */
-export const nextCueIndex = (current, n, loop) => {
-    if (!n) return -1
-    const next = current + 1
-    if (next < n) return next
-    return loop ? 0 : -1
-}
+/** The cue GO fires after `current`: past the last, cue 1 while looping, else none (-1). One rule
+ * with the desk's runner and the show's clock: shared/cueClock.cjs. */
+export { nextCueIndex } from '../shared/cueClock.js'
 
 /** A signature of what the desk would be told, to tell a real change from a re-render. */
 export const cueListSignature = (cues) => JSON.stringify(deskCueList(cues))

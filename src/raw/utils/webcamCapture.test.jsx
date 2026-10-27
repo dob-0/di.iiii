@@ -7,7 +7,8 @@ function Probe({ onValue }) {
     const videoRef = useRef(null)
     const state = useWebcamCapture(videoRef)
     onValue(state)
-    return <video ref={videoRef} />
+    // muted as WebcamSourcePanel's is: a camera preview has no sound to caption.
+    return <video ref={videoRef} muted />
 }
 
 const makeTrack = () => ({ stop: vi.fn() })

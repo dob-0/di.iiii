@@ -66,7 +66,7 @@ const setup = ({ users = [], mailConfigured = true } = {}) => {
 
     const mailer = {
         isConfigured: () => mailConfigured,
-        readConfig: () => ({ siteUrl: 'https://di-studio.xyz' }),
+        readConfig: () => ({ siteUrl: 'https://diiii.xyz' }),
         sendMail: async (message) => { sent.push(message); return { ok: true } }
     }
 
@@ -74,7 +74,7 @@ const setup = ({ users = [], mailConfigured = true } = {}) => {
     const issued = []
     registerPasswordAuthRoutes(router, {
         issueSessionForUser: (res, user) => { issued.push(user); return { authenticated: true, subject: user.id, label: user.display_name } },
-        frontendUrl: 'https://di-studio.xyz',
+        frontendUrl: 'https://diiii.xyz',
         deps: { store, mailer, tokens }
     })
     return { router, rows, sent, minted, issued, store }

@@ -203,6 +203,16 @@ export const EXTRA_PLACES = {
         file: 'src/project/graph/useGraphClock.js',
         symbol: 'useGraphClock',
         sentence: 'It only moves because something outside it keeps a clock — useGraphClock.js.'
+    },
+    // Laser File reads the live side channel for an INPUT (the file's bytes), not for an output: its
+    // outputs are computed from what LaserFileFeed published under `<node>:bytes`. `liveInput` names that
+    // key and `probeValues` the values a node needs before it reads it (nodeAnatomy.test.js probes both).
+    'laser.file': {
+        file: 'src/raw/components/LaserFileFeed.jsx',
+        symbol: 'LaserFileFeed',
+        sentence: 'It draws nothing until the editor fetches its file — LaserFileFeed.jsx puts the bytes on the live side channel.',
+        liveInput: 'bytes',
+        probeValues: { src: 'probe' }
     }
 }
 

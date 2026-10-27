@@ -12,6 +12,11 @@ const portToInspectorField = (port, node = null) => {
     if (port.id === 'src' && ASSET_PICKERS[node?.typeId]) {
         return { label, path, type: 'asset', portType: 'string', assetKind: ASSET_PICKERS[node.typeId] }
     }
+    // Laser File reads an ILDA (.ild) or an SVG: no media kind names both, so every asset is offered and
+    // the node says what it made of the bytes on its Status port.
+    if (port.id === 'src' && node?.typeId === 'laser.file') {
+        return { label, path, type: 'asset', portType: 'string' }
+    }
     // A doorway's `portType` decides what its socket on the container will
     // carry, so it must be CHOSEN from the real list rather than typed — a typo
     // yields a port type nothing is compatible with, and the only symptom is a
@@ -58,7 +63,7 @@ const portToInspectorField = (port, node = null) => {
         }
     }
     if (port.type === 'vec3') return { label, path, type: 'vec3', portType: 'vec3', default: port.default }
-    if (port.type === 'geometry' || port.type === 'texture' || port.type === 'signal' || port.type === 'laser') {
+    if (port.type === 'geometry' || port.type === 'texture' || port.type === 'signal' || port.type === 'laser' || port.type === 'clock') {
         return { label, path, type: 'connection', portType: port.type }
     }
     return { label, path, type: 'text', portType: port.type || 'any' }

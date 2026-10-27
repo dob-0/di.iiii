@@ -16,7 +16,7 @@ import { join } from 'node:path'
 const args = process.argv.slice(2)
 const [base, token] = args
 const apply = args.includes('--apply')
-const url = (args.find((a) => a.startsWith('--url=')) || '--url=https://di-studio.xyz/open_jam/scene').slice(6)
+const url = (args.find((a) => a.startsWith('--url=')) || '--url=https://diiii.xyz/open_jam/scene').slice(6)
 const H = { Authorization: `Bearer ${token}` }
 const J = { ...H, 'Content-Type': 'application/json' }
 

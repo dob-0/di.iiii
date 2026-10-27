@@ -110,7 +110,8 @@
         "playwright": "^1.64.1",
         "prettier": "^3.9.6",
         "vite": "^8.3.2",
-        "vitest": "^5.0.2"
+        "vitest": "^5.0.2",
+        "ws": "8.21.1"
     },
     "dependencies": {
         "@emotion/react": "^11.14.0",
