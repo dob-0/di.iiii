@@ -592,6 +592,15 @@ function initDb(dbPath) {
   ensureColumn(db, 'projects', 'visibility_at', 'INTEGER')
   // The second key of a move made with two manage keys (§13.6), so that key's undo sees it too.
   ensureColumn(db, 'sync_key_actions', 'also_key_id', 'TEXT')
+  // The sync-key panel (SPEC_space_sync_keys.md §14, 2026-10-07): the machine a
+  // key is for, named by the owner (machine_name), the hostname the follower
+  // says it has (host_hint — a hint for the owner's eye, never read for auth),
+  // when the owner last renewed it (renewed_at), and who did a logged action.
+  ensureColumn(db, 'space_sync_keys', 'machine_name', 'TEXT')
+  ensureColumn(db, 'space_sync_keys', 'host_hint', 'TEXT')
+  ensureColumn(db, 'space_sync_keys', 'host_hint_at', 'INTEGER')
+  ensureColumn(db, 'space_sync_keys', 'renewed_at', 'INTEGER')
+  ensureColumn(db, 'sync_key_actions', 'by_subject', 'TEXT')
   ensureColumn(db, 'spaces', 'deleted_at', 'INTEGER')
   ensureColumn(db, 'spaces', 'position', 'INTEGER NOT NULL DEFAULT 0')
   db.exec('CREATE INDEX IF NOT EXISTS idx_projects_collection ON projects(collection_id, position)')

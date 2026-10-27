@@ -29,7 +29,9 @@ const LIMITS = Object.freeze({
   private: Object.freeze({ hour: 30, day: 100, says: 'made {n} projects private' })
 })
 
-const ACTIONS = ['trash', 'restore', 'private', 'move', 'undo-restore', 'undo-public', 'undo-move', 'undo-revoke']
+// 'renew' and 'machine-name' are the owner's own acts on a key (the panel, §14), logged
+// with who did them (`by`), so the key's history says who kept it alive and who named it.
+const ACTIONS = ['trash', 'restore', 'private', 'move', 'undo-restore', 'undo-public', 'undo-move', 'undo-revoke', 'renew', 'machine-name']
 
 let lastPrune = 0
 const prune = (now) => {
@@ -72,14 +74,14 @@ const checkBudget = ({ keyId, action, now = Date.now() }) => {
 }
 
 /** One row. Never throws into the route that called it: the log must not break the action. */
-const recordAction = ({ keyId, keyLabel = '', spaceId, action, projectId = null, toSpaceId = null, alsoKeyId = null, outcome = 'done', reason = null, now = Date.now() }) => {
+const recordAction = ({ keyId, keyLabel = '', spaceId, action, projectId = null, toSpaceId = null, alsoKeyId = null, outcome = 'done', reason = null, by = null, now = Date.now() }) => {
   if (!keyId || !spaceId || !action) return
   try {
     const db = getDb()
     db.prepare(
-      `INSERT INTO sync_key_actions (key_id, key_label, space_id, action, project_id, to_space_id, also_key_id, outcome, reason, at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(String(keyId), String(keyLabel || '').slice(0, 80), String(spaceId), String(action), projectId, toSpaceId, alsoKeyId, String(outcome), reason ? String(reason).slice(0, 300) : null, now)
+      `INSERT INTO sync_key_actions (key_id, key_label, space_id, action, project_id, to_space_id, also_key_id, outcome, reason, at, by_subject)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(String(keyId), String(keyLabel || '').slice(0, 80), String(spaceId), String(action), projectId, toSpaceId, alsoKeyId, String(outcome), reason ? String(reason).slice(0, 300) : null, now, by ? String(by).slice(0, 120) : null)
     if (outcome !== 'done') {
       db.prepare(
         `DELETE FROM sync_key_actions WHERE id IN (
@@ -105,6 +107,7 @@ const rowToPublic = (row) => ({
   alsoKeyId: row.also_key_id || null,
   outcome: row.outcome,
   reason: row.reason || null,
+  by: row.by_subject || null,
   at: row.at
 })
 

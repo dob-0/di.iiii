@@ -272,6 +272,20 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     let keyScope = null
     let keyExpiresAt = null
     let keyScopeAt = 0
+    // Tell the host what this machine is called, once per follow run, so the
+    // owner's key panel can show "says it is: <hostname>" beside the name the
+    // owner gave the key (SPEC_space_sync_keys.md §14.2). A hint for a person,
+    // never an identity; best-effort; DI_FOLLOW_NO_HOST_HINT=1 keeps it unsaid.
+    // Only to a host that answered /self (an older host has no such route).
+    let saidHostname = false
+    const sayHostname = () => {
+        if (saidHostname || process.env.DI_FOLLOW_NO_HOST_HINT === '1') return
+        saidHostname = true
+        let hostname = ''
+        try { hostname = require('node:os').hostname() } catch { return }
+        request(remote.url('/api/sync-keys/self/hint'), { method: 'POST', token: remote.token, body: { hostname }, servername: remote.servername, address: remote.address })
+            .catch(() => { /* a hint; never a reason to stop */ })
+    }
     const readKeyScope = async () => {
         if (keyScope && Date.now() - keyScopeAt < KEY_SCOPE_EVERY_MS) return keyScope
         const answer = await request(remote.url('/api/sync-keys/self'), { token: remote.token, servername: remote.servername, address: remote.address })
@@ -279,6 +293,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             keyScope = answer.payload.key.scope === 'manage' ? 'manage' : 'edit'
             keyExpiresAt = Number.isFinite(answer.payload.key.expiresAt) ? answer.payload.key.expiresAt : null
             keyScopeAt = Date.now()
+            sayHostname()
         } else if ([401, 403, 404].includes(answer.status)) {
             keyScope = 'edit'
             keyScopeAt = Date.now()

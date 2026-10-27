@@ -88,7 +88,7 @@ const {
   getUserTokenVersion,
   bumpUserTokenVersion
 } = require('./userStore')
-const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, getSyncKey, otherLiveKeys, TTL_MS: SYNC_KEY_TTL_MS, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
+const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, getSyncKey, otherLiveKeys, renewSyncKey, setMachineName, noteHostHint, cleanMachineName, TTL_MS: SYNC_KEY_TTL_MS, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
 const syncKeyActions = require('./syncKeyActions')
 // Said once, where the operator reads the log (review R2-C).
 if (config.requireAuth && !config.auth.sessionSecretSeparate) {
@@ -1080,6 +1080,9 @@ const issueGuestSession = async (res) => {
 const guestSessionLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, name: 'new guest sessions' })
 const authAttemptLimiter = createRateLimiter({ windowMs: 60_000, max: 10, name: 'auth attempts' })
 const syncKeyMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'sync-key mints' })
+// Renewing is rare by design (once per key per 90 days); this caps how fast
+// one address can ask at all, so a scripted loop meets 429 before the log fills.
+const syncKeyRenewLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 10, name: 'sync-key renews' })
 const inviteMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite mints' })
 const inviteRedeemLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite redeems' })
 // A separate multer from `upload`: the asset filter is an allow-list of media
@@ -2330,7 +2333,11 @@ router.post('/api/spaces/:spaceId/sync-keys', syncKeyMintLimiter, async (req, re
   try {
     const ctx = await requireSpaceOwnerOrAdmin(req, res)
     if (!ctx) return
-    const label = String(req.body?.label || 'github-actions').slice(0, 80)
+    // The machine it is for (§14.2): the owner's words. The label stays the
+    // key's short name; a key minted by the panel gets one made from the
+    // machine's name when none is sent.
+    const machineName = cleanMachineName(req.body?.machineName)
+    const label = String(req.body?.label || machineName || 'github-actions').slice(0, 80)
     const manage = req.body?.manage === true
     // An edit key lives a year, a manage key 90 days (owner, 2026-10-07).
     const ttlMs = manage ? SYNC_KEY_TTL_MS.manage : SYNC_KEY_TTL_MS.edit
@@ -2353,7 +2360,7 @@ router.post('/api/spaces/:spaceId/sync-keys', syncKeyMintLimiter, async (req, re
         code: 'manage_needs_session'
       })
     }
-    const { token, key } = mintSyncKey({ spaceId: ctx.spaceId, ownerUserId, label, ttlMs, scope: manage ? 'manage' : 'edit' })
+    const { token, key } = mintSyncKey({ spaceId: ctx.spaceId, ownerUserId, label, ttlMs, scope: manage ? 'manage' : 'edit', machineName })
     res.status(201).json({
       ok: true,
       token,
@@ -2367,7 +2374,8 @@ router.get('/api/spaces/:spaceId/sync-keys', async (req, res, next) => {
   try {
     const ctx = await requireSpaceOwnerOrAdmin(req, res)
     if (!ctx) return
-    res.json({ keys: listSyncKeys(ctx.spaceId) })
+    // ?include=revoked adds the revoked keys (the panel's Keys view shows them as history).
+    res.json({ keys: listSyncKeys(ctx.spaceId, { includeRevoked: req.query.include === 'revoked' }) })
   } catch (error) { next(error) }
 })
 
@@ -2390,7 +2398,11 @@ router.get('/api/spaces/:spaceId/sync-keys/actions', async (req, res, next) => {
     const ctx = await requireSpaceOwnerOrAdmin(req, res)
     if (!ctx) return
     const keyId = typeof req.query.key === 'string' && req.query.key ? req.query.key : null
-    res.json({ actions: syncKeyActions.listActions(ctx.spaceId, { keyId, limit: req.query.limit }), limits: syncKeyActions.LIMITS })
+    const actions = syncKeyActions.listActions(ctx.spaceId, { keyId, limit: req.query.limit })
+    // The project's title as it is now, for the owner's eye (the panel's log
+    // reads "trash “Cast list”", not an id). Null once a project is purged.
+    const titles = projectTitlesOf(actions.map(row => row.projectId))
+    res.json({ actions: actions.map(row => (row.projectId ? { ...row, projectTitle: titles.has(row.projectId) ? titles.get(row.projectId) : null } : row)), limits: syncKeyActions.LIMITS })
   } catch (error) { next(error) }
 })
 
@@ -2398,6 +2410,87 @@ router.get('/api/spaces/:spaceId/sync-keys/actions', async (req, res, next) => {
 // restore what it trashed, make public again what it made private, and move
 // back what it moved out of this space — each only while it is still where the
 // key left it. A person's action, so session-only like minting a manage key.
+//
+// The plan and the doing are one function (planKeyUndo), so the panel's
+// preview (GET, §14.3) and the undo itself (POST) cannot disagree about what
+// comes back: the POST plans again after revoking and does exactly that plan.
+const projectTitlesOf = (ids) => {
+  const list = [...new Set(ids.filter(Boolean))]
+  if (!list.length) return new Map()
+  const rows = getDb().prepare(`SELECT id, title FROM projects WHERE id IN (${list.map(() => '?').join(',')})`).all(...list)
+  return new Map(rows.map(row => [row.id, row.title || '']))
+}
+
+const planKeyUndo = async (ctx, key) => {
+  const done = syncKeyActions.doneByKey(key.id)
+  // The last thing the key did to each project is the one to undo.
+  const last = new Map()
+  for (const row of done) if (row.projectId && ['trash', 'private', 'move'].includes(row.action)) last.set(`${row.action === 'move' ? 'move' : row.action}|${row.projectId}`, row)
+  // What the project's row says NOW, including when its visibility last
+  // changed and when it was last trashed — read straight from the database,
+  // never from the public meta.
+  const rowNow = (id) => getDb().prepare('SELECT id, space_id, visibility, visibility_at, deleted_at FROM projects WHERE id = ?').get(id) || null
+  const steps = []
+  const no = (row, why) => steps.push({ projectId: row.projectId, action: row.action, will: false, why, row })
+  for (const row of last.values()) {
+    const id = row.projectId
+    const now = rowNow(id)
+    if (row.action === 'trash' && row.spaceId === ctx.spaceId) {
+      // Only while it is still in the trash where the key put it, and not
+      // trashed again since by someone else (review M1, the restore half).
+      if (!now || now.space_id !== ctx.spaceId || !now.deleted_at) { no(row, 'no longer in this space\'s trash'); continue }
+      if (now.deleted_at > row.at) { no(row, 'trashed again since — left in the trash'); continue }
+      steps.push({ projectId: id, action: 'trash', will: true, undo: 'restore', row })
+    } else if (row.action === 'private' && row.spaceId === ctx.spaceId) {
+      // Never more public than the owner's own latest choice (review M1):
+      // only while it is private, here, and nobody changed who sees it
+      // after the key did.
+      if (!now || now.deleted_at || now.space_id !== ctx.spaceId || now.visibility !== 'private') { no(row, 'no longer private here'); continue }
+      if ((now.visibility_at || 0) !== row.at) { no(row, 'who sees it was changed after the key — left as it is'); continue }
+      steps.push({ projectId: id, action: 'private', will: true, undo: 'public', row })
+    } else if (row.action === 'move' && row.toSpaceId) {
+      // A move the key made out of this space (it was the bearer), or into
+      // it (it was the second key): back to where it came from, while it
+      // is still where the key put it. Both spaces have one owner (C1).
+      if (row.spaceId !== ctx.spaceId && row.toSpaceId !== ctx.spaceId) continue
+      if (!now || now.deleted_at || now.space_id !== row.toSpaceId) { no(row, `no longer in ${row.toSpaceId}`); continue }
+      const [fromMeta, toMeta] = await Promise.all([loadSpaceMeta(row.spaceId), loadSpaceMeta(row.toSpaceId)])
+      if (!isSpaceOwnerOrAdminState(ctx.state, fromMeta) || !isSpaceOwnerOrAdminState(ctx.state, toMeta)) { no(row, `you do not own both ${row.spaceId} and ${row.toSpaceId}`); continue }
+      steps.push({ projectId: id, action: 'move', will: true, undo: 'move-back', row })
+    }
+  }
+  return steps
+}
+
+// What an undo of this key would do, read-only (§14.3): the panel shows it
+// before the owner presses the button — what comes back, and what stays as it
+// is and why. Owner or admin, like the key list and the log.
+router.get('/api/spaces/:spaceId/sync-keys/:id/undo', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    const key = getSyncKey(ctx.spaceId, req.params.id)
+    if (!key) return res.status(404).json({ error: 'Key not found.' })
+    const steps = await planKeyUndo(ctx, key)
+    const titles = projectTitlesOf(steps.map(step => step.projectId))
+    const shape = (step) => ({
+      projectId: step.projectId,
+      title: titles.has(step.projectId) ? titles.get(step.projectId) : null,
+      action: step.action,
+      ...(step.will ? { undo: step.undo } : { why: step.why }),
+      ...(step.action === 'move' ? { fromSpaceId: step.row.spaceId, toSpaceId: step.row.toSpaceId } : {})
+    })
+    res.json({
+      key,
+      revokes: !key.revoked,
+      comesBack: steps.filter(step => step.will).map(shape),
+      staysAsIs: steps.filter(step => !step.will).map(shape),
+      // The trash keeps a project 30 days; after that nothing brings it back.
+      windowDays: 30
+    })
+  } catch (error) { next(error) }
+})
+
 router.post('/api/spaces/:spaceId/sync-keys/:id/undo', async (req, res, next) => {
   try {
     const ctx = await requireSpaceOwnerOrAdmin(req, res)
@@ -2408,56 +2501,33 @@ router.post('/api/spaces/:spaceId/sync-keys/:id/undo', async (req, res, next) =>
     const key = getSyncKey(ctx.spaceId, req.params.id)
     if (!key) return res.status(404).json({ error: 'Key not found.' })
     const revoked = revokeSyncKey(ctx.spaceId, key.id)
-    const by = { keyId: key.id, keyLabel: key.label, spaceId: ctx.spaceId }
+    const by = { keyId: key.id, keyLabel: key.label, spaceId: ctx.spaceId, by: ctx.state.subject || null }
     if (revoked) syncKeyActions.recordAction({ ...by, action: 'undo-revoke', outcome: 'done' })
     const report = { revoked, restored: [], madePublic: [], movedBack: [], notUndone: [] }
-    const done = syncKeyActions.doneByKey(key.id)
-    // The last thing the key did to each project is the one to undo.
-    const last = new Map()
-    for (const row of done) if (row.projectId && ['trash', 'private', 'move'].includes(row.action)) last.set(`${row.action === 'move' ? 'move' : row.action}|${row.projectId}`, row)
-    // What the project's row says NOW, including when its visibility last
-    // changed and when it was last trashed — read straight from the database,
-    // never from the public meta.
-    const rowNow = (id) => getDb().prepare('SELECT id, space_id, visibility, visibility_at, deleted_at FROM projects WHERE id = ?').get(id) || null
     const touched = new Set()
-    for (const row of last.values()) {
-      const id = row.projectId
+    // Planned AFTER the revoke, so nothing the key does can slip in between.
+    for (const step of await planKeyUndo(ctx, key)) {
+      const id = step.projectId
+      if (!step.will) { report.notUndone.push({ projectId: id, action: step.action, why: step.why }); continue }
       try {
-        const now = rowNow(id)
-        if (row.action === 'trash' && row.spaceId === ctx.spaceId) {
-          // Only while it is still in the trash where the key put it, and not
-          // trashed again since by someone else (review M1, the restore half).
-          if (!now || now.space_id !== ctx.spaceId || !now.deleted_at) { report.notUndone.push({ projectId: id, action: 'trash', why: 'no longer in this space\'s trash' }); continue }
-          if (now.deleted_at > row.at) { report.notUndone.push({ projectId: id, action: 'trash', why: 'trashed again since — left in the trash' }); continue }
+        if (step.undo === 'restore') {
           await restoreProject(id)
           report.restored.push(id)
           touched.add(ctx.spaceId)
           syncKeyActions.recordAction({ ...by, action: 'undo-restore', projectId: id })
-        } else if (row.action === 'private' && row.spaceId === ctx.spaceId) {
-          // Never more public than the owner's own latest choice (review M1):
-          // only while it is private, here, and nobody changed who sees it
-          // after the key did.
-          if (!now || now.deleted_at || now.space_id !== ctx.spaceId || now.visibility !== 'private') { report.notUndone.push({ projectId: id, action: 'private', why: 'no longer private here' }); continue }
-          if ((now.visibility_at || 0) !== row.at) { report.notUndone.push({ projectId: id, action: 'private', why: 'who sees it was changed after the key — left as it is' }); continue }
+        } else if (step.undo === 'public') {
           await setProjectVisibility(id, 'public')
           report.madePublic.push(id)
           touched.add(ctx.spaceId)
           syncKeyActions.recordAction({ ...by, action: 'undo-public', projectId: id })
-        } else if (row.action === 'move' && row.toSpaceId) {
-          // A move the key made out of this space (it was the bearer), or into
-          // it (it was the second key): back to where it came from, while it
-          // is still where the key put it. Both spaces have one owner (C1).
-          if (row.spaceId !== ctx.spaceId && row.toSpaceId !== ctx.spaceId) continue
-          if (!now || now.deleted_at || now.space_id !== row.toSpaceId) { report.notUndone.push({ projectId: id, action: 'move', why: `no longer in ${row.toSpaceId}` }); continue }
-          const [fromMeta, toMeta] = await Promise.all([loadSpaceMeta(row.spaceId), loadSpaceMeta(row.toSpaceId)])
-          if (!isSpaceOwnerOrAdminState(ctx.state, fromMeta) || !isSpaceOwnerOrAdminState(ctx.state, toMeta)) { report.notUndone.push({ projectId: id, action: 'move', why: `you do not own both ${row.spaceId} and ${row.toSpaceId}` }); continue }
-          await moveProjectBetweenSpaces({ db: getDb(), spacesDir: SPACES_DIR, projectId: id, toSpaceId: row.spaceId })
+        } else if (step.undo === 'move-back') {
+          await moveProjectBetweenSpaces({ db: getDb(), spacesDir: SPACES_DIR, projectId: id, toSpaceId: step.row.spaceId })
           report.movedBack.push(id)
-          touched.add(row.spaceId).add(row.toSpaceId)
-          syncKeyActions.recordAction({ ...by, action: 'undo-move', projectId: id, toSpaceId: row.spaceId })
+          touched.add(step.row.spaceId).add(step.row.toSpaceId)
+          syncKeyActions.recordAction({ ...by, action: 'undo-move', projectId: id, toSpaceId: step.row.spaceId })
         }
       } catch (error) {
-        report.notUndone.push({ projectId: id, action: row.action, why: error?.message || String(error) })
+        report.notUndone.push({ projectId: id, action: step.action, why: error?.message || String(error) })
       }
     }
     for (const spaceId of touched) {
@@ -2465,6 +2535,51 @@ router.post('/api/spaces/:spaceId/sync-keys/:id/undo', async (req, res, next) =>
       try { require('./follow/waiters').noteChange(spaceId) } catch { /* nobody waiting */ }
     }
     res.json({ ok: true, key: { ...key, revoked: true }, ...report })
+  } catch (error) { next(error) }
+})
+
+// Renew one key (owner, 2026-10-07; SPEC_space_sync_keys.md §14.1): the same
+// key, one more term — no new secret, the machine keeps working. A person's
+// act, like minting a manage key: a session stamped by a sign-in door (R2-B),
+// never a bearer token, a sync key or a session made from a token. Opens in the
+// key's last 14 days, at most once every 90 days, a dead key stays dead.
+// Every attempt, done or refused, is a row in the key's log, with who.
+router.post('/api/spaces/:spaceId/sync-keys/:id/renew', syncKeyRenewLimiter, async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    const known = getSyncKey(ctx.spaceId, req.params.id)
+    if (!known) return res.status(404).json({ error: 'Key not found.' })
+    const by = { keyId: known.id, keyLabel: known.label, spaceId: ctx.spaceId, action: 'renew', by: ctx.state.subject || null }
+    if (!mayMintManageKey(ctx.state)) {
+      syncKeyActions.recordAction({ ...by, outcome: 'refused', reason: 'not a person who signed in' })
+      return res.status(403).json({ error: "A key is renewed from a signed-in session of the space's owner (or an admin), never with a token. Sign in again and renew.", code: 'renew_needs_session' })
+    }
+    const result = renewSyncKey(ctx.spaceId, known.id)
+    if (!result.ok) {
+      syncKeyActions.recordAction({ ...by, outcome: 'refused', reason: result.code })
+      return res.status(result.status || 409).json({ error: result.reason, code: result.code, ...(result.opensAt ? { opensAt: result.opensAt } : {}), key: result.key })
+    }
+    syncKeyActions.recordAction({ ...by, outcome: 'done', reason: `ends ${new Date(result.key.expiresAt).toISOString().slice(0, 10)} (was ${new Date(result.previousExpiresAt).toISOString().slice(0, 10)})` })
+    res.json({ ok: true, key: result.key })
+  } catch (error) { next(error) }
+})
+
+// Name the machine a key is for (§14.2). The owner's words, shown on the
+// panel's card. Owner or admin, like the key list; a sync key never (it is
+// refused by requireSpaceOwnerOrAdmin, its own key included). The name is a
+// label for people and is never read for authorisation.
+router.patch('/api/spaces/:spaceId/sync-keys/:id', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    if (typeof req.body?.machineName !== 'string') {
+      return res.status(400).json({ error: 'Send { machineName }: the name of the machine this key is for.', code: 'machine_name_missing' })
+    }
+    const key = setMachineName(ctx.spaceId, req.params.id, req.body.machineName)
+    if (!key) return res.status(404).json({ error: 'Key not found.' })
+    syncKeyActions.recordAction({ keyId: key.id, keyLabel: key.label, spaceId: ctx.spaceId, action: 'machine-name', outcome: 'done', reason: key.machineName || '(cleared)', by: ctx.state.subject || null })
+    res.json({ ok: true, key })
   } catch (error) { next(error) }
 })
 
@@ -2480,6 +2595,21 @@ router.get('/api/sync-keys/self', (req, res) => {
   const { keyId, label, spaceId, scope, expiresAt } = state.syncKey
   // expiresAt: the follower warns 14 days before (owner, 2026-10-07).
   res.json({ key: { id: keyId, label, spaceId, scope, expiresAt: expiresAt || null }, limits: scope === 'manage' ? syncKeyActions.LIMITS : null })
+})
+
+// A follower says what its machine is called (§14.2), so the owner's panel can
+// show "says it is: aylmo" beside the name the owner gave. Only a sync key may
+// say it, only of itself (the key id comes from the auth state, never from the
+// body), and it is a HINT: shown to the owner as the machine's own words,
+// never read for any decision. Not a hostname → 400, nothing stored.
+router.post('/api/sync-keys/self/hint', (req, res) => {
+  const state = req.authState || {}
+  if (!state.authenticated || state.type !== 'sync-key' || !state.syncKey) {
+    return res.status(404).json({ error: 'Not a sync key.' })
+  }
+  const hint = noteHostHint(state.syncKey.keyId, req.body?.hostname)
+  if (!hint) return res.status(400).json({ error: 'Not a hostname.', code: 'host_hint_invalid' })
+  res.json({ ok: true, hostHint: hint })
 })
 
 // Space invites — owner-minted share links. Management mirrors sync keys
