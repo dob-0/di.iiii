@@ -45,7 +45,7 @@ describe('di follows — files', () => {
     it('tells a new follower which files travel and which do not', () => {
         const text = ui.following('room', 'http://host:4000/serverXR', true)
         expect(text).toContain('files in its projects travel too')
-        expect(text).toContain('files placed straight in the room itself are not carried yet')
+        expect(text).toContain('files placed straight in the space itself are not carried yet')
     })
 })
 

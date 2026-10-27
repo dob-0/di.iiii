@@ -956,6 +956,34 @@ describe('a project made empty on either side appears on both', () => {
         expect(row.title).toBe('The Studio')
     })
 
+    // A project made before the create route refused reserved words: `privacy` in
+    // the space `main` on dev is one. The follower makes a project the other side
+    // has through the RECEIVING server's own create route (follower.js, makeMissing),
+    // so that route has to let it keep the id it already has. Without that, a new
+    // install following the space is refused the project (400, said once in the log)
+    // and never gets it. `carried: true` here stands for the older create.
+    const makeOlderProject = async (server, slug, title) => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug, title, carried: true })
+        })
+        expect(response.status).toBe(201)
+    }
+
+    it('carries a project whose id is a reserved word, made on the host before the rule, to the follower', async () => {
+        await makeOlderProject(hosting, 'privacy', 'Privacy Policy')
+        const row = await settle('the reserved-id host project reaching the follower', projectRow(following, 'privacy'), { timeout: 10_000 })
+        expect(row.title).toBe('Privacy Policy')
+        expect(warned.filter(line => line.includes('privacy'))).toEqual([])
+    })
+
+    it('carries a project whose id is a reserved word, made on the follower before the rule, to the host', async () => {
+        await makeOlderProject(following, 'terms', 'Terms')
+        follower.wake()
+        const row = await settle('the reserved-id follower project reaching the host', projectRow(hosting, 'terms'), { timeout: 10_000 })
+        expect(row.title).toBe('Terms')
+        expect(warned.filter(line => line.includes('terms'))).toEqual([])
+    })
+
     // A trash is never undone by the other side's copy: a project in one side's
     // trash is not made there again.
     const trash = async (server, slug) => {
@@ -1541,6 +1569,33 @@ describe('a project\'s life crosses a follow: trash, restore, rename, private, m
         await timed('space label host->follower', () => api(hosting, `/api/spaces/${SPACE}`, { method: 'PATCH', body: { label: 'Renamed room' } }),
             async () => (await api(following, `/api/spaces/${SPACE}`)).payload?.space?.label === 'Renamed room')
     })
+
+    it('a page tool\'s save on the host reaches this install: edits, not a whole replace (N1282)', async () => {
+        const { saveDocument } = await import('../../../scripts/space/pages-lib.mjs')
+        const call = async (method, route, body) => {
+            const answer = await api(hosting, route, { method, body })
+            if (answer.status >= 300) throw new Error(`${method} ${route}: ${answer.status}`)
+            return answer.payload
+        }
+        const read = await call('GET', '/api/projects/to-rename/document')
+        const page = read.document
+        const html = '<a href="/moved-room/hall">into the hall</a>'
+        const door = { id: 'door-n1282', name: 'Into the hall', type: 'portal', components: {} }
+        await timed('tool save host->follower', () => saveDocument(call, 'to-rename', {
+            ...page,
+            entities: [...(page.entities || []), door],
+            presentationState: { ...page.presentationState, codeHtml: html }
+        }, { from: read }), async () => {
+            const there = (await api(following, '/api/projects/to-rename/document')).payload?.document
+            return there?.presentationState?.codeHtml === html && (there.entities || []).some(e => e.id === 'door-n1282')
+        })
+        expect(followers.every(f => !f.state.lastError)).toBe(true)
+    })
+
+    it('the host\'s space address reaches this install too (N1279)', async () => {
+        await timed('space address host->follower', () => api(hosting, `/api/spaces/${SPACE}`, { method: 'PATCH', body: { slug: 'moved-room' } }),
+            async () => (await api(following, `/api/spaces/${SPACE}`)).payload?.space?.slug === 'moved-room')
+    })
 })
 
 describe('a follow never empties this copy, and keeps a project moved to a space it does not follow', () => {
@@ -1946,5 +2001,109 @@ describe('a host that only says it trashed a project never undoes this install\'
         expect(await inTrash(following, 'lie-a')).toBe(true)
         expect(await live(following, 'lie-a')).toBe(null)
         expect(await live(hosting, 'lie-a')).toBeTruthy()
+    })
+})
+
+/**
+ * An HTTP proxy to `target` that writes down every request, and can rewrite a
+ * JSON answer on its way back. The follow cannot tell it from the server.
+ */
+const startRecordingProxy = async (target, rewrite = null) => {
+    const seen = []
+    const upstream = new URL(target.baseUrl)
+    const server = http.createServer((req, res) => {
+        const chunks = []
+        req.on('data', chunk => chunks.push(chunk))
+        req.on('end', () => {
+            const body = Buffer.concat(chunks)
+            seen.push({ method: req.method, url: req.url, body: body.toString('utf8') })
+            const forward = http.request({ host: upstream.hostname, port: upstream.port, path: req.url, method: req.method, headers: req.headers }, (answer) => {
+                const change = rewrite && req.method === 'GET' ? rewrite(req.url) : null
+                if (!change || answer.statusCode !== 200) {
+                    res.writeHead(answer.statusCode, answer.headers)
+                    answer.pipe(res)
+                    return
+                }
+                const parts = []
+                answer.on('data', chunk => parts.push(chunk))
+                answer.on('end', () => {
+                    const changed = Buffer.from(JSON.stringify(change(JSON.parse(Buffer.concat(parts).toString('utf8')))))
+                    const headers = { ...answer.headers, 'content-length': String(changed.length) }
+                    delete headers.etag
+                    res.writeHead(200, headers)
+                    res.end(changed)
+                })
+            })
+            forward.on('error', () => { res.destroy() })
+            forward.end(body)
+        })
+    })
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+    return {
+        baseUrl: `http://127.0.0.1:${server.address().port}${upstream.pathname}`,
+        seen,
+        stop: () => new Promise(resolve => { server.closeAllConnections?.(); server.close(() => resolve()) })
+    }
+}
+
+// Follow audit F18: an id the host lists becomes a path on both machines.
+// '..' survives encodeURIComponent and new URL dot-normalises it, so
+// /api/projects/../ops is /api/ops. A host that lists one makes no request.
+describe('a project id the host lists that this server would never make', () => {
+    const ROOM = 'dots-room'
+    let hosting = null
+    let following = null
+    let hostProxy = null
+    let hereProxy = null
+    let follower = null
+    const warned = []
+    const dotRow = { id: '..', spaceId: ROOM, title: 'Dots', slug: null, visibility: 'public' }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, ROOM)
+        await createSpace(following, ROOM)
+        const made = await fetch(`${hosting.baseUrl}/api/spaces/${ROOM}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: 'real-piece', title: 'Real' })
+        })
+        expect(made.status).toBe(201)
+        // The host lists '..' live AND in its trash, every time it is asked.
+        hostProxy = await startRecordingProxy(hosting, (url) => {
+            if (url.startsWith(`/serverXR/api/spaces/${ROOM}/projects`) || url.startsWith('/serverXR/api/trash')) {
+                return (payload) => ({ ...payload, projects: [...(payload.projects || []), dotRow] })
+            }
+            return null
+        })
+        hereProxy = await startRecordingProxy(following)
+        follower = startFollowing({
+            local: side({ base: hereProxy.baseUrl, spaceId: ROOM, token: API_TOKEN }),
+            remote: side({ base: hostProxy.baseUrl, spaceId: ROOM, token: API_TOKEN }),
+            log: { warn: message => warned.push(message), info: () => {} }
+        })
+        await settle('the real project reaching the follower', async () => (await fetch(`${following.baseUrl}/api/projects/real-piece/ops`, { headers: authHeaders })).status === 200)
+        // Two more passes, each of which reads both lists again.
+        follower.wake(); await wait(1500)
+        follower.wake(); await wait(1500)
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hostProxy?.stop(), hereProxy?.stop()])
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('sends no request for it, on either machine, and counts it as refused', () => {
+        const all = [...hostProxy.seen, ...hereProxy.seen]
+        // The paths '..' turns into once new URL has read them, and the id itself.
+        const forDots = all.filter(({ url, body }) => /\/api\/(ops|document|restore)(\?|$)/.test(url)
+            || /\/api\/projects\/(\.\.|%2e%2e)/i.test(url)
+            || /\/api\/projects(\?|$)/.test(url)
+            || /"slug":"\.\."/.test(body))
+        expect(forDots.map(({ method, url }) => `${method} ${url}`)).toEqual([])
+        // The real project was carried, so the follow did run.
+        expect(all.some(({ url }) => url.includes('/api/projects/real-piece/ops'))).toBe(true)
+        expect(follower.state.projects.refusedIds['bad id']).toBe(1)
+        expect(warned.some(line => /1 bad id/.test(line))).toBe(true)
     })
 })

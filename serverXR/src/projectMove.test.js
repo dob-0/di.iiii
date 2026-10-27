@@ -144,3 +144,46 @@ describe('moveProjectBetweenSpaces', () => {
     expect(w.db.prepare('SELECT space_id FROM projects WHERE id = ?').get('p1').space_id).toBe('src')
   })
 })
+
+describe('the space root forward (project_moves.forwards_space_root)', () => {
+  const flag = (w) => w.db.prepare('SELECT forwards_space_root AS f FROM project_moves WHERE project_id = ?').get('p1').f
+  const { findSpaceRootMove } = require('./projectStore.js')
+
+  it('is set only when the move took the front door', async () => {
+    const w = world()
+    w.project('src', 'p1')
+    await mv(w)
+    expect(flag(w)).toBe(0)
+    expect(findSpaceRootMove('src')).toBeNull()
+  })
+
+  it('is set for a front-door move, and a new front door clears it for good', async () => {
+    const w = world()
+    w.project('src', 'p1')
+    w.project('src', 'p2')
+    w.db.prepare("UPDATE spaces SET published_project_id = 'p1' WHERE id = 'src'").run()
+    await mv(w, { unpublish: true })
+    expect(flag(w)).toBe(1)
+    expect(findSpaceRootMove('src')).toEqual({ projectId: 'p1', toSpace: 'dst' })
+    // Another space's front door changing touches nothing here.
+    w.db.prepare("UPDATE spaces SET published_project_id = 'p1' WHERE id = 'dst'").run()
+    expect(flag(w)).toBe(1)
+    w.db.prepare("UPDATE spaces SET published_project_id = 'p2' WHERE id = 'src'").run()
+    expect(flag(w)).toBe(0)
+    w.db.prepare("UPDATE spaces SET published_project_id = NULL WHERE id = 'src'").run()
+    expect(findSpaceRootMove('src')).toBeNull()
+  })
+
+  it('a space deleted for good forwards nothing, so a new space of that name starts clean', async () => {
+    const w = world()
+    w.project('src', 'p1')
+    w.db.prepare("UPDATE spaces SET published_project_id = 'p1' WHERE id = 'src'").run()
+    await mv(w, { unpublish: true })
+    // The Trash is a soft delete (an UPDATE): the forward waits for a restore.
+    w.db.prepare("UPDATE spaces SET deleted_at = ? WHERE id = 'src'").run(Date.now())
+    expect(flag(w)).toBe(1)
+    w.db.prepare("DELETE FROM spaces WHERE id = 'src'").run()
+    expect(flag(w)).toBe(0)
+    expect(findSpaceRootMove('src')).toBeNull()
+  })
+})

@@ -175,7 +175,12 @@ describe('join, then leave', () => {
         await addFollow(path.join(home, 'data'), 'stage', { remote: 'https://earlier', token: 'old-key' })
         const before = walk(home)
 
-        await join(home, { into: 'stage' })
+        // Another remote with no key would drop old-key while the stage is
+        // joined (2026-10-20): refused, nothing touched.
+        expect(await join(home, { into: 'stage' })).toMatchObject({ ok: false, reason: 'follow', why: 'remote-differs' })
+        expect(diff(before, walk(home))).toEqual([])
+
+        await join(home, { into: 'stage', key: 'stage-key' })
         expect(readFollows(path.join(home, 'data')).stage.remote).toContain('127.0.0.1')
 
         await leaveStage({ home, run: recorder().run })

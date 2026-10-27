@@ -26,6 +26,7 @@ import process from 'node:process'
 import { isTrustedCleartext } from './follow.mjs'
 import { SITES, loginKeyFor, originOf, readLogin, removeLogin, tierOfOrigin, writeLogin } from './loginStore.mjs'
 import { fail as printFail, ui, warn as printWarn } from './ui.mjs'
+import { DI_USER_AGENT } from './userAgent.mjs'
 
 const REQUEST_MS = 15_000
 const GIVE_UP_AFTER = 5
@@ -139,7 +140,7 @@ const envWins = (env) => (String(env?.DI_TOKEN || '').trim() ? ui.loginEnvWins()
 
 /** Never throws: `{ down: true }` for a network error or a timeout, else `{ status, body, retryAfter, location }`. */
 const ask = async (d, method, url, { body = null, token = null } = {}) => {
-    const headers = { accept: 'application/json' }
+    const headers = { accept: 'application/json', 'user-agent': DI_USER_AGENT }
     if (body) headers['content-type'] = 'application/json'
     // The token goes in the header and nowhere else.
     if (token) headers.authorization = `Bearer ${token}`

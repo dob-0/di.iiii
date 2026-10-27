@@ -244,6 +244,22 @@ const SCHEMA = `
     PRIMARY KEY (user_id, provider)
   );
 
+  CREATE TABLE IF NOT EXISTS share_posts (
+    id TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    text TEXT NOT NULL DEFAULT '',
+    link TEXT NOT NULL DEFAULT '',
+    media TEXT NOT NULL DEFAULT '[]',
+    channels TEXT NOT NULL DEFAULT '[]',
+    results TEXT NOT NULL DEFAULT '{}',
+    created_by TEXT,
+    approved_by TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    approved_at INTEGER,
+    sent_at INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS ai_chats (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -724,6 +740,30 @@ function initDb(dbPath) {
   // Per-space trusted list: JSON array of account ids (spaceStore.trustedUserIds).
   ensureColumn(db, 'spaces', 'trusted_user_ids', 'TEXT')
   ensureColumn(db, 'projects', 'slug', 'TEXT')
+  // A move that took a space's front door with it (projectMove.js, --unpublish)
+  // forwards the OLD space's bare address to where that project went, until
+  // the space is given a front door again — the trigger below clears it then,
+  // whoever writes the row (spaceStore upsert, space-bundle, a hand edit).
+  // Moves recorded before this column existed stay 0: nothing then said which
+  // move was the front door's, and a forward guessed from timing could point
+  // a space at the wrong work.
+  ensureColumn(db, 'project_moves', 'forwards_space_root', 'INTEGER NOT NULL DEFAULT 0')
+  db.exec(`CREATE TRIGGER IF NOT EXISTS project_moves_space_root_ends
+    AFTER UPDATE OF published_project_id ON spaces
+    WHEN NEW.published_project_id IS NOT NULL
+    BEGIN
+      UPDATE project_moves SET forwards_space_root = 0 WHERE from_space = NEW.id AND forwards_space_root = 1;
+    END`)
+  // A space row deleted for good (purge, the stale sweep, a sandbox re-homed)
+  // forwards nothing. A space id is its name and a purge frees the name, so a
+  // NEW space made under it never had a move and must not inherit the old
+  // space's forward (project_moves has no foreign key to spaces). A soft delete
+  // (the Trash) is an UPDATE and keeps the forward for a restore.
+  db.exec(`CREATE TRIGGER IF NOT EXISTS project_moves_space_root_gone
+    AFTER DELETE ON spaces
+    BEGIN
+      UPDATE project_moves SET forwards_space_root = 0 WHERE from_space = OLD.id AND forwards_space_root = 1;
+    END`)
   // Which shelf it sits on, where on the shelf, and what it IS to a visitor.
   // `state` replaces the only archive the platform had: five titles with
   // "[archived]" typed in front of them, which filtered nothing.
@@ -751,6 +791,9 @@ function initDb(dbPath) {
   // invisible to an older build (no SCHEMA_VERSION bump). Not the trash: no TTL.
   ensureColumn(db, 'spaces', 'archived_at', 'INTEGER')
   ensureColumn(db, 'spaces', 'position', 'INTEGER NOT NULL DEFAULT 0')
+  // The space's one line for visitors (shared/spaceBlurb.cjs). Nullable,
+  // invisible to an older build, like archived_at above.
+  ensureColumn(db, 'spaces', 'blurb', 'TEXT')
   db.exec('CREATE INDEX IF NOT EXISTS idx_projects_collection ON projects(collection_id, position)')
   ensureColumn(db, 'users', 'spaces', 'TEXT')
   ensureColumn(db, 'users', 'is_unrestricted', 'INTEGER NOT NULL DEFAULT 0')
