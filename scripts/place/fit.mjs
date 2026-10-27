@@ -20,6 +20,7 @@
  *                                     as a GUESS rather than a measurement
  *
  *     --door-guess
+ *     --scale-from <scale.json>   the walk's own metres (scripts/place/poses.mjs --scale-out)
  *
  * The first is MEASURED and place.json says so. The second is a GUESS and
  * place.json says that too, loudly, because a guessed room is the wrong size
@@ -48,7 +49,7 @@ const args = parseArgs()
 
 export const DOOR_HEIGHT_METRES = 2.1
 
-export const chooseScale = ({ bounds, door, scaleEdge, edge, doorGuess, stated }) => {
+export const chooseScale = ({ bounds, door, scaleEdge, edge, doorGuess, stated, posed = null }) => {
     const size = [
         bounds.max[0] - bounds.min[0],
         bounds.max[1] - bounds.min[1],
@@ -76,6 +77,16 @@ export const chooseScale = ({ bounds, door, scaleEdge, edge, doorGuess, stated }
                 source: 'measured',
                 note: `${scaleEdge} m across the room's ${edge || 'longest side'}, measured`
             }
+    }
+    // The walk carried its own size (an AR scan: src/scan/ar/, scale from
+    // scripts/place/poses.mjs). Below a tape, above any guess.
+    if (posed && Number.isFinite(posed.scale) && posed.scale > 0) {
+        const spread = Number.isFinite(posed.spread) ? `, pairwise spread ${(100 * posed.spread).toFixed(1)} %` : ''
+        return {
+            scale: posed.scale,
+            source: posed.source === 'webxr-tracking' ? 'measured' : 'guess',
+            note: `the walk's own AR tracking, ${posed.cameras} cameras${spread} — measured by the phone, not by a tape`
+        }
     }
     if (doorGuess) {
         if (!door) {
@@ -183,7 +194,8 @@ const main = async () => {
         scaleEdge: args['scale-edge'] === undefined ? null : num(args['scale-edge'], null),
         edge: args.edge ? String(args.edge) : null,
         doorGuess: Boolean(args['door-guess']),
-        stated: Boolean(args.guess)
+        stated: Boolean(args.guess),
+        posed: args['scale-from'] ? JSON.parse(fs.readFileSync(String(args['scale-from']), 'utf8')) : null
     })
 
     const fit = fitTransform({

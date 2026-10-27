@@ -479,6 +479,10 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // same id: ids are global in di.iiii, so the same project is the same
         // project on both machines. Title as made; born private when private
         // at the source — never public for a moment. Deletions are not carried.
+        // `carried: true` says the id is not a new choice: the create route refuses
+        // a reserved word as the id of a NEW project (2026-10-26), and a project made
+        // before that rule (`privacy` in the space `main`) must still reach an install
+        // that follows the space, and the host, under the id it has.
         const makeMissing = async (from, toProjects, toSide, toTrash) => {
             // A project deleted on a side is still in that side's trash, and a
             // create there would take it out again (ensureProject restores a
@@ -511,7 +515,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 const title = typeof row?.title === 'string' && row.title.trim() ? row.title.trim() : projectId
                 const made = await request(toSide.url(path), {
                     method: 'POST', token: toSide.token, servername: toSide.servername, address: toSide.address,
-                    body: { slug: projectId, title, ...(row?.visibility === 'private' ? { visibility: 'private' } : {}) }
+                    body: { slug: projectId, title, carried: true, ...(row?.visibility === 'private' ? { visibility: 'private' } : {}) }
                 })
                 // Made EMPTY on the host from this side's listing: its content has to
                 // follow by comparison, whatever ops there are or are not.
@@ -786,28 +790,32 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             request(local.url(`${path}/projects`), { token: local.token, servername: local.servername, address: local.address })
         ])
         if (!there.ok || !here.ok) return
-        const { patch, notes } = planSettings({
+        const { patch, slug, notes } = planSettings({
             host: readSettings(there.payload),
             local: readSettings(here.payload),
             localProjects: Array.isArray(mine.payload?.projects) ? mine.payload.projects : []
         })
         settingsNotes = notes
-        if (!Object.keys(patch).length) return
-        // The same change asked twice in a row and refused is said once.
-        const attempt = JSON.stringify(patch)
-        const answer = await request(local.url(path), { method: 'PATCH', token: local.token, servername: local.servername, address: local.address, body: patch })
-        if (answer.ok && answer.status === 200) {
-            settingsAttempted.delete(attempt)
-            settingsCarried += 1
-            log.info?.(`[follow] ${local.spaceId}: took the host's space settings (${Object.keys(patch).join(', ')})`)
-            return
+        // The address goes on its own: a name taken here (409) must not hold back the rest.
+        for (const body of [patch, slug ? { slug } : {}]) {
+            if (!Object.keys(body).length) continue
+            const what = Object.keys(body).join(', ')
+            // The same change asked twice in a row and refused is said once.
+            const attempt = JSON.stringify(body)
+            const answer = await request(local.url(path), { method: 'PATCH', token: local.token, servername: local.servername, address: local.address, body })
+            if (answer.ok && answer.status === 200) {
+                settingsAttempted.delete(attempt)
+                settingsCarried += 1
+                log.info?.(`[follow] ${local.spaceId}: took the host's space settings (${what})`)
+                continue
+            }
+            if (!settingsAttempted.has(attempt)) {
+                settingsAttempted.add(attempt)
+                const why = answer.status === 202 ? 'it waits for approval here' : `${answer.status || 'no answer'}: ${answer.payload?.error || answer.error || 'refused'}`
+                log.warn?.(`[follow] ${local.spaceId}: could not take the host's space settings (${what}) — ${why}`)
+            }
+            settingsNotes = [...settingsNotes, `the host's ${what} could not be set here`]
         }
-        if (!settingsAttempted.has(attempt)) {
-            settingsAttempted.add(attempt)
-            const why = answer.status === 202 ? 'it waits for approval here' : `${answer.status || 'no answer'}: ${answer.payload?.error || answer.error || 'refused'}`
-            log.warn?.(`[follow] ${local.spaceId}: could not take the host's space settings (${Object.keys(patch).join(', ')}) — ${why}`)
-        }
-        settingsNotes = [...notes, `the host's ${Object.keys(patch).join(', ')} could not be set here`]
     }
 
     // Project short names (followSlugs.js), both ways: a name chosen on one side and not on

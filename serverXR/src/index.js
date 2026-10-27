@@ -12,6 +12,7 @@ const http = require('http')
 const https = require('https')
 const cors = require('cors')
 const morgan = require('morgan')
+const { accessLogSkip } = require('./accessLog')
 const multer = require('multer')
 const fs = require('node:fs')
 const { isOwnerAtTheMachine } = require('./localOwner')
@@ -68,6 +69,7 @@ const { createKeyedLock } = require('./asyncLock')
 const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerOgRoutes } = require('./routes/ogRoutes')
+const { loadWikiArticles } = require('./wikiIndex')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { TRUST_PROXY } = require('./proxyTrust')
 const { registerWorkStatusRoutes } = require('./routes/workStatusRoutes')
@@ -597,8 +599,11 @@ if (hasLocalRuntime() && scanAtBootFrom()) {
   try { ndi.startScan() } catch (error) { logger.warn(`[ndi] autoscan did not start: ${error?.message || error}`) }
 }
 
+// A log line only for answers that went wrong (400 and up) or never came; DI_ACCESS_LOG=1 for
+// every one. Why: accessLog.js. Ahead of express.json, so a body that fails to parse (400) or
+// is too large (413) still gets its line; after the NDI routes on purpose (see above).
+app.use(morgan('tiny', { skip: accessLogSkip() }))
 app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
-app.use(morgan('tiny'))
 app.use((req, res, next) => {
   pushEvent('request', { method: req.method, url: req.url })
   next()
@@ -2322,6 +2327,7 @@ const sceneWriter = createSceneWriter({
 // platform tile. Same resolver the /api/resolve middleware above uses: slug
 // first, then the normalized id.
 registerOgRoutes(router, {
+  loadWikiArticles,
   loadSpaceMeta: async (segment) =>
     (await findSpaceBySlug(segment)) || (await loadSpaceMeta(normalizeSpaceId(segment) || segment)),
   // Same slug-then-id resolution the /api/resolve/:spaceSegment/:projectSegment

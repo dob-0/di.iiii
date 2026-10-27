@@ -35,6 +35,11 @@ COPY scripts/project-move.mjs ./scripts/project-move.mjs
 # sharedRuntime.js resolves these at /shared — no mount needed
 COPY shared/ /shared/
 
+# The wiki's articles, read by the og route for the card of each /wiki/{id}
+# (serverXR/src/wikiIndex.js). Same relative path as in the repo: /app/src is
+# serverXR/src, so ../../src/wiki resolves to /src/wiki here as it does there.
+COPY src/wiki/wikiContent.js /src/wiki/wikiContent.js
+
 # Release metadata for GET /api/health -- lets a deployed host self-report
 # what commit is actually running (releaseInfo.js reads this from the
 # WORKDIR). Defaults are placeholders for local `docker build` without

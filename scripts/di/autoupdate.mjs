@@ -143,10 +143,15 @@ export const runAutoUpdate = async ({
         } else {
             const before = state.version || null
             const result = await update({ channel })
-            const text = String(result.output || '').trim().split('\n').filter(Boolean).pop() || ''
+            // eslint-disable-next-line no-control-regex -- strips the colour codes `fail()` wraps a reason in
+            const lines = String(result.output || '').replace(/\u001b\[[0-9;]*m/g, '').split('\n').map(l => l.trim()).filter(Boolean)
+            const text = lines.pop() || ''
             if (result.code !== 0) {
                 outcome = 'failed'
-                error = text || `di update exited ${result.code}`
+                // `di update` ends a failure on a boilerplate line ("update failed,
+                // still on X"); the reason is the line it printed just before.
+                const reason = [text, ...lines.reverse()].find(l => !/^update failed, still on /.test(l))
+                error = reason || text || `di update exited ${result.code}`
                 detail = `channel=${channel} ${error}`
             } else if (/already the newest|up to date|nothing to update to/i.test(text)) {
                 outcome = 'up-to-date'

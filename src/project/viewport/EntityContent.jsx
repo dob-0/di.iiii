@@ -255,7 +255,8 @@ export default function EntityContent({ entity, assetMap, screens = null }) {
         )
     }
     case 'portal':
-        return <PortalObject entity={entity} />
+        // a door's picture of the world behind it (components.media.assetId), shown in its opening
+        return <PortalObject entity={entity} preview={asset || null} />
     case 'group':
         // pure transform node — children render via the caller's hierarchy walk
         // (without this, embedded groups fell to default and drew a phantom box)
