@@ -8,6 +8,8 @@ import { changeTimes, worstFlashesPerSecond } from './flashRule.js'
 import { encodeQr, rasterQr } from './view.qrcode/qrCode.js'
 import { createEdge, createNode, getNodeType, isNodeTypeImplemented } from '../nodeRegistry.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeOutput } from '../graph/nodeGraphRuntime.js'
+import { lampDmx } from '../../shared/lampDmx.js'
+import { lampModeOf, lampTypeOf } from './light.lamp/lampType.js'
 
 // Vitest roots at src/ but node resolves from the repo — try both, the same
 // dance nodeRegistry.test.js does for its own source scan.
@@ -1240,5 +1242,54 @@ describe('number → vector, converted at the link', () => {
             edges: [edge('n', 'out', 'c', 'opacity')]
         }
         expect(evaluateNodeOutput(doc.nodes[1], 'geometry', createNodeGraphContext(doc)).size).toEqual([1, 1, 1])
+    })
+})
+
+describe('light.lamp — a stage lamp: patch and DMX', () => {
+    it('bare, it has no type: it sends nothing and says so', () => {
+        const doc = { nodes: [node('l', 'light.lamp')], edges: [] }
+        expect(evalPort(doc, 'l', 'dmx')).toBeNull()
+        expect(evalPort(doc, 'l', 'patch')).toBe('no type: drawn only, sends nothing')
+    })
+
+    it('typed, it sends its mode at its universe and address — the bytes of shared/lampDmx', () => {
+        const doc = { nodes: [node('l', 'light.lamp', { type: 'up-pl5403', universe: 2, address: 10, dimmer: 0.5, color: '#ff8000' })], edges: [] }
+        const mode = lampModeOf(lampTypeOf('up-pl5403'), '')
+        const frame = evalPort(doc, 'l', 'dmx')
+        expect(frame).toEqual({ universe: 2, address: 10, values: lampDmx(mode, { dimmer: 0.5, colour: '#ff8000', pan: 0.5, tilt: 0.5 }).bytes })
+        // the par's 8ch chart: dimmer, red, green, blue, white, strobe, …
+        expect(frame.values.slice(0, 4)).toEqual([128, 255, 128, 0])
+        expect(evalPort(doc, 'l', 'patch')).toBe(`UP-PL5403 ${mode.name} · U2.010-017`)
+    })
+
+    it('reads its ports through the wire, so a wire wins over the stored value', () => {
+        const doc = {
+            nodes: [node('v', 'value.number', { value: 0.25 }), node('l', 'light.lamp', { type: 'up-pl5403', dimmer: 1 })],
+            edges: [edge('v', 'out', 'l', 'dimmer')]
+        }
+        expect(evalPort(doc, 'l', 'dmx').values[0]).toBe(64)
+    })
+
+    it('a moving head pans 16-bit: Pan 0.25 is 0x4000 across pan and pan fine', () => {
+        const doc = { nodes: [node('l', 'light.lamp', { type: 'up-b380f', mode: '16ch', pan: 0.25 })], edges: [] }
+        // 16ch chart: pan ch1, tilt ch2, pan fine ch3, tilt fine ch4
+        const values = evalPort(doc, 'l', 'dmx').values
+        expect([values[0], values[2]]).toEqual([64, 0])
+        expect([values[1], values[3]]).toEqual([128, 0])
+    })
+
+    it('an unknown type, and a lamp that runs past 512, send nothing and say why', () => {
+        const unknown = { nodes: [node('l', 'light.lamp', { type: 'no-such-lamp' })], edges: [] }
+        expect(evalPort(unknown, 'l', 'dmx')).toBeNull()
+        expect(evalPort(unknown, 'l', 'patch')).toBe('no type "no-such-lamp" in the fixture library')
+        const off = { nodes: [node('l', 'light.lamp', { type: 'up-b380f', address: 500 })], edges: [] }
+        expect(evalPort(off, 'l', 'dmx')).toBeNull()
+        expect(evalPort(off, 'l', 'patch')).toMatch(/16 channels from 500 run past 512/)
+    })
+
+    it('says when a mode has no channel list (ch1 … chN at rest)', () => {
+        const doc = { nodes: [node('l', 'light.lamp', { type: 'up-250bsw', mode: '24ch' })], edges: [] }
+        expect(evalPort(doc, 'l', 'patch')).toMatch(/channel list owed/)
+        expect(evalPort(doc, 'l', 'dmx').values).toHaveLength(24)
     })
 })

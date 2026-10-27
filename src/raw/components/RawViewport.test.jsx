@@ -34,6 +34,8 @@ vi.mock('../../objectComponents/Text3DObject.jsx', () => ({ default: () => null 
 vi.mock('../../objectComponents/ImageObject.jsx', () => ({ default: () => null }))
 vi.mock('../../objectComponents/VideoObject.jsx', () => ({ default: () => null }))
 vi.mock('../../objectComponents/AudioObject.jsx', () => ({ default: () => null }))
+const spotLightSpy = vi.fn(() => null)
+vi.mock('../../objectComponents/SpotLightObject.jsx', () => ({ default: (props) => spotLightSpy(props) }))
 vi.mock('../../objectComponents/ModelObject.jsx', () => ({ default: () => null }))
 const boxObjectSpy = vi.fn(() => null)
 vi.mock('../../objectComponents/BoxObject.jsx', () => ({ default: (props) => boxObjectSpy(props) }))
@@ -461,6 +463,31 @@ describe('the Light split', () => {
         expect(ambient?.getAttribute('intensity')).toBe('0.33')
         const directional = container.querySelector('directionallight')
         expect(directional?.getAttribute('intensity')).toBe('2.5')
+    })
+})
+
+describe('the Lamp (light.lamp)', () => {
+    const drawn = (values) => {
+        spotLightSpy.mockClear()
+        render(<>{renderNodeBody({ id: 'lamp', typeId: 'light.lamp' }, values)}</>)
+        expect(spotLightSpy).toHaveBeenCalledTimes(1)
+        return spotLightSpy.mock.calls[0][0]
+    }
+
+    it("stands with Studio's spot and its beam in the air — the one beam, whose reach probe stops it", () => {
+        const props = drawn({ dimmer: 1, color: '#ff0000' })
+        expect(props.beam).toEqual({ visible: true })
+        expect(props.intensity).toBe(6)
+        expect(props.color).toBe('#ff0000')
+        expect(props.angle).toBeCloseTo(12.5 * Math.PI / 180, 10)
+        expect(props.fitted).toBe(false)
+    })
+
+    it("a typed lamp draws its type's beam, dimmed by Dimmer", () => {
+        const props = drawn({ type: 'up-b380f', dimmer: 0.5 })
+        expect(props.intensity).toBe(3)
+        expect(props.angle).toBeCloseTo(0.9 * Math.PI / 180, 10)
+        expect(props.fitted).toBe(true)
     })
 })
 

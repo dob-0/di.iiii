@@ -30,7 +30,11 @@ const NO_PREVIEW = new Set([
     'geom.model',
     // Controls, not things made: a camera gizmo and a desk shell.
     'world.camera',
-    'universe.desk.3d'
+    'universe.desk.3d',
+    // A stage lamp's beam is metres long and stops at the first surface in
+    // the scene: framed on a card, the body is a dot at the tip of a cone,
+    // and the card has no scene for the beam to stop on.
+    'light.lamp'
 ])
 
 const LIGHT_TYPES = new Set(['world.light', 'light.point', 'world.environment'])

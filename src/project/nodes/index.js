@@ -8,6 +8,7 @@ import { computeOutput as deviceKeyboard } from './device.keyboard/runtime.js'
 import { computeOutput as deviceVisitor } from './device.visitor/runtime.js'
 import { computeOutput as deviceTilt } from './device.tilt/runtime.js'
 import { computeOutput as deviceDmxOut } from './device.dmx.out/runtime.js'
+import { computeOutput as lightLamp } from './light.lamp/runtime.js'
 import { computeOutput as deviceLaserOut } from './device.laser.out/runtime.js'
 import { computeOutput as streamRecorder } from './stream.recorder/runtime.js'
 import { computeOutput as streamStill } from './stream.still/runtime.js'
@@ -86,6 +87,7 @@ export const NODE_RUNTIMES = new Map([
     ['device.visitor', deviceVisitor],
     ['device.tilt', deviceTilt],
     ['device.dmx.out', deviceDmxOut],
+    ['light.lamp', lightLamp],
     ['device.laser.out', deviceLaserOut],
     ['laser.shape', laserShape],
     ['laser.trace', laserTrace],
