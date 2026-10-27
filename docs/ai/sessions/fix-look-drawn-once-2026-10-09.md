@@ -20,3 +20,7 @@
     spread's stage faders and wing peak; B tuned's T5; v2 planes / lines plane 3; the work-light and motion layers set by
     eye) are listed for the lead to decide, in the MOXIR lead's report `look-level.md`. Nothing was re-tuned here;
   - the renderer's lamp list re-read on moxir-test after the fix is folded, then the owner's look.
+
+## Clean branch for dev (2026-10-09, MOXIR lead)
+
+The same fix (c78a9fdd + a22a2e1b from fix/look-level-2026-10-09, which was cut from the MOXIR integration) cherry-picked onto origin/dev 5b37c82f as fix/look-drawn-once-2026-10-09, so it lands on dev without MOXIR one. On dev: src/rigbuild/lookLevel.test.jsx 9/9 pass. The known-fixes row kept alone (the other rows in that hunk belong to MOXIR branches not on dev).
