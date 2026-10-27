@@ -1924,22 +1924,6 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-14'
     },
     {
-        id: 'lamp-node',
-        category: 'Editing',
-        title: 'Lamp — one stage lamp in the Nodes scene',
-        summary: 'The Lamp node is one stage lamp: pick its type and mode from the fixture library, give it a universe and an address, and it answers the DMX the lighting desk would send for it, standing in the scene with its beam.',
-        body: [
-            'Add a Lamp node. Type is a lamp type from the fixture library, by its id (up-b380f, up-pl5403 and the rest of the library); Mode is one of that type’s modes — leave it empty for the type’s own default. Universe and Address say where the lamp sits on the rig, counted from 1 as every crew counts.',
-            'Dimmer, Pan, Tilt, Strobe and Zoom take 0 to 1, the way every wire in Nodes does; Colour takes a colour. Pan and Tilt rest at 0.5, the lamp’s home. A lamp whose chart has a fine channel for pan, tilt or dimmer gets 16-bit movement. Strobe and Zoom send the chart’s own byte (what 0 and 1 mean is the lamp’s chart), and left unwired they leave their channel where the chart rests it — so a shutter that is closed at 0 stays open.',
-            'Colour reaches a lamp with red, green and blue channels. A lamp with a colour wheel is not driven by Colour, and its beam in the scene stays white rather than show a colour the lamp would never make.',
-            'DMX answers the lamp’s bytes with its universe and address. They are the bytes this di.iiii’s lighting desk sends for the same lamp told the same thing — a test patches every mode of the library on the desk and compares them byte for byte. Patch answers where the lamp sits (for example “UP-PL5403 8ch · U2.010-017”), or why it sends nothing: no type, a type the library does not have, or a lamp whose channels would run past 512.',
-            'In the scene the Lamp stands with a body of its type’s published size, turned by Pan and Tilt over the type’s own range, and a beam of the type’s published angle that stops at the first solid shape it meets (a Cube, a Plane, a Model and the other solid shapes). A Lamp with no type draws a 25° beam that Zoom opens from 10° to 50°, and sends nothing.',
-            'Not yet: DMX Out does not take a Lamp’s DMX wire, so a Lamp’s bytes do not leave the graph on their own; the body is a plain box, not the type’s model; Strobe does not flash the beam in the scene.'
-        ],
-        tags: ['raw', 'nodes', 'lamp', 'fixture', 'dmx', 'patch', 'beam', 'stage', 'light', 'moving head'],
-        updated: '2026-10-21'
-    },
-    {
         id: 'drive-lasercubes',
         category: 'Editing',
         title: 'Drive LaserCubes from your di',

@@ -455,12 +455,6 @@ extra **clocks** can be added. The rows for **master clock** and **clock** are i
 | **Bias** (Oscillator) | Leans the cycle: −1 … 1 moves the half-way point (a triangle's peak, a square's edge) from the middle toward an end; on a square it is the duty. TouchDesigner's word. |
 | **Sample & hold** | The wave that holds one random value for a whole cycle and jumps at the next. The `/light` desk calls the same wave **random**. **Random glide** walks from one cycle's value to the next instead of jumping. |
 
-## Amended 2026-10-21 — the Lamp node
-
-| Type id | Label | Its one job |
-|---|---|---|
-| `light.lamp` (new, the scene) | **Lamp** | One stage lamp — **lamp** in the sense above (a stage fixture) — with its patch, its picture and its DMX in one card. Its **Type** and **Mode** come from the fixture library (`src/rigbuild/types/library/`); **Universe** and **Address** place it. Ports: Dimmer, Colour, Pan, Tilt, Strobe, Zoom; it answers **DMX** (the lamp's bytes, the same the lighting desk sends for it — `shared/lampDmx.cjs`) and **Patch** (where it sits, or why it sends nothing). It stands in the scene with a body and a beam that stops at the first surface. Not **Light**: that card is a 3D scene light joined to nothing on the rig. |
-
 ## Amended 2026-10-21 — Recorder and Still (keep what the show looked like)
 
 The owner, 2026-10-21: "yes build all 12" — this is one of the twelve. The reserved word above was

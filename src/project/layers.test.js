@@ -243,9 +243,9 @@ describe('layers — the holds line says what the project holds (P1, 2026-10-13)
 })
 
 describe('layers — the server twin stays in lockstep (shared/layers.cjs)', () => {
-    it('lists the same 18 standing kinds as the registry', () => {
+    it('lists the same 17 standing kinds as the registry', () => {
         const registry = Object.values(NODE_TYPES).filter((type) => type.render === 'spatial-3d').map((type) => type.id).sort()
-        expect(registry).toHaveLength(18)
+        expect(registry).toHaveLength(17)
         expect([...serverTwin.STANDING_NODE_KINDS].sort()).toEqual(registry)
         expect([...STANDING_NODE_KINDS].sort()).toEqual(registry)
     })

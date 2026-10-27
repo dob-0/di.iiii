@@ -175,7 +175,6 @@ export const FAMILY_BY_TYPE = {
     'world.light': 'room',
     'world.environment': 'room',
     'light.point': 'room',
-    'light.lamp': 'room',
     'world.camera': 'room',
     'world.background': 'room',
     'world.grid': 'room',
@@ -3367,45 +3366,6 @@ export const NODE_TYPES = {
         ],
         outputs: [],
         defaultValues: {},
-        render: 'spatial-3d',
-    },
-
-    // A stage lamp (docs/ai/vocabulary.md: a stage fixture), patch, picture and
-    // DMX in one: its type and mode come from the fixture library
-    // (src/rigbuild/types/library/), its bytes from shared/lampDmx.cjs — the
-    // ones the lighting desk sends for the same lamp — and it stands in the
-    // scene with a body and a beam that stops at the first surface it meets
-    // (SpotLightObject's reach probe). Strobe and Zoom have no default: an
-    // unwired one leaves its channel where the chart rests it.
-    'light.lamp': {
-        id: 'light.lamp',
-        label: 'Lamp',
-        category: 'world',
-        runtime: 'any',
-        keywords: ['lamp', 'fixture', 'stage', 'moving head', 'par', 'beam', 'spot', 'dmx', 'patch', 'rig', 'pan', 'tilt', 'dimmer'],
-        inputs: [
-            { id: 'dimmer',   type: 'number', label: 'Dimmer', default: 1 },
-            { id: 'color',    type: 'color',  label: 'Colour', default: '#ffffff' },
-            { id: 'pan',      type: 'number', label: 'Pan',    default: 0.5 },
-            { id: 'tilt',     type: 'number', label: 'Tilt',   default: 0.5 },
-            { id: 'strobe',   type: 'number', label: 'Strobe' },
-            { id: 'zoom',     type: 'number', label: 'Zoom' },
-            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 3, 0] },
-        ],
-        outputs: [
-            { id: 'dmx',   type: 'any',    label: 'DMX' },
-            { id: 'patch', type: 'string', label: 'Patch' },
-        ],
-        // Type, mode, universe and address are set once for the rig, like
-        // DMX Out's Rig: nothing upstream should re-patch a lamp mid-graph.
-        // An empty mode is the type's default mode.
-        defaultValues: { type: '', mode: '', universe: 1, address: 1 },
-        configInputs: [
-            { id: 'type',     type: 'string', label: 'Type' },
-            { id: 'mode',     type: 'string', label: 'Mode' },
-            { id: 'universe', type: 'number', label: 'Universe' },
-            { id: 'address',  type: 'number', label: 'Address' },
-        ],
         render: 'spatial-3d',
     },
 

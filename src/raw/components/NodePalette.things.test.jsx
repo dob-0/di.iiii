@@ -60,17 +60,10 @@ describe('NodePalette — things', () => {
         expect(rows[1]).toMatch(/^Sphere.*a thing/)
     })
 
-    // "lamp" is a stage fixture (docs/ai/vocabulary.md), so the Lamp node is
-    // the first row since it exists; the point light is still found by name.
-    it('"lamp" places the Lamp node first; "point light" still finds the point light', () => {
+    it('"lamp" finds the point light first', () => {
         const onCreateThing = vi.fn()
-        const onCreate = vi.fn()
-        open({ onCreateThing, onCreate })
+        open({ onCreateThing })
         fireEvent.change(input(), { target: { value: 'lamp' } })
-        fireEvent.keyDown(input(), { key: 'Enter' })
-        expect(onCreateThing).not.toHaveBeenCalled()
-        expect(onCreate.mock.calls[0][0].definition.id).toBe('light.lamp')
-        fireEvent.change(input(), { target: { value: 'point light' } })
         fireEvent.keyDown(input(), { key: 'Enter' })
         expect(onCreateThing).toHaveBeenCalledWith({ type: 'pointLight', placement })
     })
