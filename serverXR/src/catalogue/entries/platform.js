@@ -2,6 +2,21 @@
 
 module.exports = [
   {
+    route: "GET /llms.txt",
+    summary: "what di.iiii is, for language models: the llmstxt.org file from the public bundle (docs/ai/public/), linking the /ai/*.md pages",
+    reach: "read",
+    role: "guest",
+    agent: true,
+    note: "nginx sends /llms.txt here; /ai/*.md is served beside it from the same folder (aiPublic.js)."
+  },
+  {
+    route: "GET /llms-full.txt",
+    summary: "always a 404 in plain text naming /llms.txt: di.iiii keeps one file for language models",
+    reach: "read",
+    role: "guest",
+    agent: false
+  },
+  {
     route: "GET /api/catalogue",
     summary: "the catalogue itself: every route this server answers, filtered to what the caller's role and agent access can reach",
     reach: "read",
