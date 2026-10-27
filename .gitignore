@@ -56,6 +56,13 @@ serverXR/.data-*
 .verify-surfaces/
 # verify-capture.mjs screenshots (local artefact)
 .verify-capture/
+# a worker's own check: screenshots and one-off driver scripts, left in the worktree and
+# never committed (PROGRESS.md says so each time it names the folder). The daily "only on this
+# machine" watch sets the same name aside (scripts/unsaved-lib.mjs SCRATCH_DIRS) for worktrees
+# on older branches that predate this line.
+.verify/
+# Python bytecode (scripts/place runs under CPython and Blender)
+__pycache__/
 
 # Self-signed certs for `npm run dev:xr` (headset-reachable HTTPS). Machine-
 # specific and regenerated on demand — never commit them.

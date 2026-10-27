@@ -15,6 +15,10 @@
  *
  * Nothing here decides for anyone. It names each thing and the command that
  * puts it on a remote; the person pushes.
+ *
+ * One thing it does set aside, and counts instead of listing: a wholly untracked
+ * scratch folder (SCRATCH_DIRS below). It is not work worth saving, so it is not
+ * "only here" in the sense this file exists for, and listing it buried the real items.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -79,6 +83,34 @@ export const parseWorktrees = (out) => {
   return trees
 }
 
+/** The path of one `git status --porcelain` line: unquoted, and the new name of a rename. */
+export const statusPath = (line) => {
+  let rel = line.slice(3)
+  if (rel.includes(' -> ')) rel = rel.split(' -> ').pop()
+  return rel.replace(/^"|"$/g, '')
+}
+
+/**
+ * Folders a check or a build leaves in a worktree and nobody means to keep:
+ *   .verify       a worker's screenshots and one-off driver scripts ("not committed" every time
+ *                 PROGRESS.md names it; the repo already ignores .verify-surfaces/ and its kin)
+ *   __pycache__   Python's bytecode cache (scripts/place runs under CPython and Blender)
+ * Named, not pattern-matched: a folder joins this list only with a source that says it is scratch.
+ */
+export const SCRATCH_DIRS = ['.verify', '__pycache__']
+
+/**
+ * True for the porcelain line of a WHOLLY UNTRACKED scratch folder — `?? .verify/`. Nothing else
+ * is set aside: a file with that name, an untracked file inside a folder git already tracks, or
+ * a tracked file that was edited all keep their line, because those can be work.
+ */
+export const isScratchEntry = (line) => {
+  if (!line.startsWith('?? ')) return false
+  const rel = statusPath(line)
+  if (!rel.endsWith('/')) return false
+  return SCRATCH_DIRS.includes(rel.slice(0, -1).split('/').pop())
+}
+
 /**
  * When the oldest of these uncommitted changes was made, from the files' mtimes.
  * git keeps no time for uncommitted work, so the file system is the only witness;
@@ -87,9 +119,7 @@ export const parseWorktrees = (out) => {
 export const oldestChange = (treePath, porcelainLines) => {
   let oldest = null
   for (const line of porcelainLines) {
-    let rel = line.slice(3)
-    if (rel.includes(' -> ')) rel = rel.split(' -> ').pop()
-    rel = rel.replace(/^"|"$/g, '')
+    const rel = statusPath(line)
     try {
       const { mtimeMs } = fs.statSync(path.join(treePath, rel))
       oldest = oldest === null ? mtimeMs : Math.min(oldest, mtimeMs)
@@ -117,15 +147,18 @@ export const olderThan = (r, hours, now = Date.now()) => {
  * Everything in one repo that exists only on this machine.
  *   unpushed: [{ branch, commits, oldestMs }]   commits on no remote
  *   dirty:    [{ path, branch, files, oldestMs }] worktrees with uncommitted or untracked files
+ *   scratch:  [{ path, branch, entries }]       untracked scratch folders set aside (see SCRATCH_DIRS);
+ *                                               not part of isClean, counted by the report
  *   stashes:  number                            stashes never leave the machine
  *   noRemote: boolean                           a repo with no remote at all — all of it is here only
  *   error:    string|null                       git could not answer; never read as clean
  *
  * `allWorktrees: false` checks only `repoPath` itself (start-check's fast path;
  * a checkout with dozens of worktrees would spend seconds on `git status` each).
+ * `includeScratch: true` lists the scratch folders as uncommitted files again.
  */
-export const scanRepo = (repoPath, { git = makeGit(repoPath), allWorktrees = true } = {}) => {
-  const result = { repo: repoPath, unpushed: [], dirty: [], stashes: 0, noRemote: false, error: null }
+export const scanRepo = (repoPath, { git = makeGit(repoPath), allWorktrees = true, includeScratch = false } = {}) => {
+  const result = { repo: repoPath, unpushed: [], dirty: [], scratch: [], stashes: 0, noRemote: false, error: null }
 
   const remotes = git(['remote'])
   if (remotes === null) return { ...result, error: 'git could not read this repo' }
@@ -147,8 +180,12 @@ export const scanRepo = (repoPath, { git = makeGit(repoPath), allWorktrees = tru
   for (const tree of trees) {
     const status = makeGit(tree.path)(['status', '--porcelain'])
     if (status === null) continue // a missing worktree dir; `git worktree prune` territory, not unsaved work
-    const lines = status.split('\n').filter(Boolean)
+    const all = status.split('\n').filter(Boolean)
+    const lines = includeScratch ? all : all.filter((line) => !isScratchEntry(line))
     if (lines.length) result.dirty.push({ path: tree.path, branch: tree.branch, files: lines.length, oldestMs: oldestChange(tree.path, lines) })
+    if (lines.length < all.length) {
+      result.scratch.push({ path: tree.path, branch: tree.branch, entries: all.filter(isScratchEntry).map(statusPath) })
+    }
   }
   return result
 }

@@ -12,6 +12,8 @@
  *   --notify              also raise a desktop notification when something is only here, or a repo
  *                         could not be read (Linux notify-send, Windows toast, macOS osascript)
  *   --log <file>          append the report, with a timestamp, to this file — the one place to look
+ *   --include-scratch     list untracked scratch folders (.verify/, __pycache__/) as uncommitted files too;
+ *                         by default they are set aside and counted in one line (see SCRATCH_DIRS)
  *
  * Exit code: 0 when nothing is only-here, 1 when something is, 2 when a repo could
  * not be read. See scripts/unsaved-lib.mjs for what counts and why.
@@ -27,13 +29,14 @@ import { findRepos, formatRepo, isClean, olderThan, scanRepo } from './unsaved-l
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 export const parseArgs = (argv) => {
-  const args = { json: false, notify: false, olderThan: 0, log: null, dirs: [] }
+  const args = { json: false, notify: false, olderThan: 0, log: null, includeScratch: false, dirs: [] }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--json') args.json = true
     else if (a === '--notify') args.notify = true
     else if (a === '--older-than') args.olderThan = Number(argv[++i]) || 0
     else if (a === '--log') args.log = argv[++i]
+    else if (a === '--include-scratch') args.includeScratch = true
     else if (!a.startsWith('--')) args.dirs.push(a)
   }
   return args
@@ -48,6 +51,17 @@ export const summaryLine = (onlyHere, errors) => {
 }
 
 export const logPreamble = (platform) => (platform === 'win32' ? '\uFEFF' : '')
+
+// The one line that stands for every scratch folder the report did not list. Counted, never hidden:
+// what it set aside, how many, and the flag that lists them. null when nothing was set aside.
+export const scratchSummary = (results) => {
+  const rows = results.flatMap((r) => r.scratch || [])
+  if (!rows.length) return null
+  const entries = rows.flatMap((row) => row.entries)
+  const names = [...new Set(entries.map((e) => `${e.replace(/\/$/, '').split('/').pop()}/`))]
+  const s = (n) => (n === 1 ? '' : 's')
+  return `Set aside: ${entries.length} untracked scratch folder${s(entries.length)} (${names.join(', ')}) in ${rows.length} worktree${s(rows.length)} — not work to keep; --include-scratch lists them`
+}
 
 const notify = (title, body) => {
   // A notification that cannot be shown must never hide the finding: the log and
@@ -79,7 +93,7 @@ const notify = (title, body) => {
 const main = () => {
   const args = parseArgs(process.argv.slice(2))
   const repos = args.dirs.length ? [...new Set(args.dirs.flatMap((d) => findRepos(d)))] : [ROOT_DIR]
-  const results = repos.map((repo) => olderThan(scanRepo(repo), args.olderThan))
+  const results = repos.map((repo) => olderThan(scanRepo(repo, { includeScratch: args.includeScratch }), args.olderThan))
 
   const onlyHere = results.filter((r) => !r.error && !isClean(r))
   const errors = results.filter((r) => r.error)
@@ -95,6 +109,8 @@ const main = () => {
       lines.push(...formatRepo(r))
     }
   }
+  const setAside = scratchSummary(results)
+  if (setAside) lines.push('', `  ${setAside}`)
 
   if (args.json) console.log(JSON.stringify({ checkedAt: new Date().toISOString(), olderThanHours: args.olderThan, repos: results }, null, 2))
   else console.log(lines.join('\n'))

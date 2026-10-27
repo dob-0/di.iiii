@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -214,7 +214,11 @@ describe('the daily watch: only what has sat here a while', () => {
   })
 
   it('parses the watch flags and folders', () => {
-    expect(parseArgs(['--older-than', '24', '--notify', '--log', '/l', '/a', '/b'])).toEqual({ json: false, notify: true, olderThan: 24, log: '/l', dirs: ['/a', '/b'] })
+    expect(parseArgs(['--older-than', '24', '--notify', '--log', '/l', '/a', '/b'])).toEqual({ json: false, notify: true, olderThan: 24, log: '/l', includeScratch: false, dirs: ['/a', '/b'] })
+  })
+
+  it('reads --include-scratch', () => {
+    expect(parseArgs(['--include-scratch', '/a']).includeScratch).toBe(true)
   })
 
   it('says in one line what a notification can hold', () => {
@@ -228,5 +232,148 @@ describe('the watch log on Windows', () => {
     expect(logPreamble('win32')).toBe('\uFEFF')
     expect(logPreamble('linux')).toBe('')
     expect(logPreamble('darwin')).toBe('')
+  })
+})
+
+// 2026-10-09: 23 of the 59 worktrees the daily report listed held nothing but an untracked
+// `.verify/` folder (a worker's screenshots and one-off check scripts) and the report told a
+// person to "commit them on a branch and push" 23 times, so the 35 lines that were real work
+// (and 5 branches with commits on no remote) sat in a list of 65. Real git, as above.
+describe('scratch folders a verification run leaves untracked', () => {
+  const UNSAVED = path.resolve(import.meta.dirname, 'unsaved.mjs')
+  const withScratch = (name) => {
+    const repo = makeRepoWithRemote(name)
+    fs.mkdirSync(path.join(repo, '.verify'))
+    fs.writeFileSync(path.join(repo, '.verify', 'shot.png'), 'png')
+    return repo
+  }
+
+  it('is clean when the only untracked thing is a .verify/ folder, and says what it set aside', () => {
+    const repo = withScratch('scratch-only')
+    const r = scanRepo(repo)
+    expect(r.dirty).toEqual([])
+    expect(r.scratch).toEqual([{ path: repo, branch: 'dev', entries: ['.verify/'] }])
+    expect(isClean(r)).toBe(true)
+  })
+
+  it('still reports real files next to it, and does not count the folder among them', () => {
+    const repo = withScratch('scratch-and-work')
+    fs.writeFileSync(path.join(repo, 'work.txt'), 'w\n')
+    const r = scanRepo(repo)
+    expect(r.dirty).toEqual([{ path: repo, branch: 'dev', files: 1, oldestMs: expect.any(Number) }])
+    expect(r.scratch.map((s) => s.entries)).toEqual([['.verify/']])
+    expect(isClean(r)).toBe(false)
+  })
+
+  it('lists the folder again when asked (the report as it was before 2026-10-10)', () => {
+    const repo = withScratch('scratch-included')
+    const r = scanRepo(repo, { includeScratch: true })
+    expect(r.dirty).toEqual([{ path: repo, branch: 'dev', files: 1, oldestMs: expect.any(Number) }])
+    expect(r.scratch).toEqual([])
+    expect(isClean(r)).toBe(false)
+  })
+
+  it('sets aside only a wholly untracked folder: a tracked file in it, edited, is still work', () => {
+    const repo = makeRepoWithRemote('scratch-tracked')
+    fs.mkdirSync(path.join(repo, '.verify'))
+    fs.writeFileSync(path.join(repo, '.verify', 'kept.txt'), 'v1\n')
+    run(repo, 'add', '.')
+    run(repo, 'commit', '-q', '-m', 'committed by mistake')
+    run(repo, 'push', '-q', 'origin', 'dev')
+    fs.writeFileSync(path.join(repo, '.verify', 'kept.txt'), 'v2\n')       //  M .verify/kept.txt
+    fs.writeFileSync(path.join(repo, '.verify', 'new.txt'), 'n\n')         // ?? .verify/new.txt
+    const r = scanRepo(repo)
+    expect(r.dirty.map((d) => d.files)).toEqual([2])
+    expect(r.scratch).toEqual([])
+  })
+
+  it('does not take a FILE named .verify for the folder', () => {
+    const repo = makeRepoWithRemote('scratch-file')
+    fs.writeFileSync(path.join(repo, '.verify'), 'a file, not the folder\n')
+    const r = scanRepo(repo)
+    expect(r.dirty.map((d) => d.files)).toEqual([1])
+    expect(r.scratch).toEqual([])
+  })
+
+  it('sets aside a __pycache__/ inside a tracked folder (Python bytecode of scripts/place)', () => {
+    const repo = makeRepoWithRemote('scratch-pycache')
+    fs.mkdirSync(path.join(repo, 'scripts', 'place'), { recursive: true })
+    fs.writeFileSync(path.join(repo, 'scripts', 'place', 'hall.py'), 'print(1)\n')
+    run(repo, 'add', '.')
+    run(repo, 'commit', '-q', '-m', 'hall')
+    run(repo, 'push', '-q', 'origin', 'dev')
+    fs.mkdirSync(path.join(repo, 'scripts', 'place', '__pycache__'))
+    fs.writeFileSync(path.join(repo, 'scripts', 'place', '__pycache__', 'hall.cpython-312.pyc'), 'x')
+    const r = scanRepo(repo)
+    expect(r.dirty).toEqual([])
+    expect(r.scratch.map((s) => s.entries)).toEqual([['scripts/place/__pycache__/']])
+  })
+
+  it('keeps the set-aside folders in what the watch hands to another script (--json)', () => {
+    const repo = withScratch('scratch-json')
+    fs.writeFileSync(path.join(repo, 'work.txt'), 'w\n')
+    const out = spawnSync('node', [UNSAVED, '--json', repo], { encoding: 'utf8' })
+    const [row] = JSON.parse(out.stdout).repos
+    expect(row.scratch.map((s) => s.entries)).toEqual([['.verify/']])
+    expect(row.dirty.map((d) => d.files)).toEqual([1])
+  })
+
+  describe('the report itself (node scripts/unsaved.mjs)', () => {
+    const report = (folder, ...flags) => {
+      const r = spawnSync('node', [UNSAVED, ...flags, folder], { encoding: 'utf8' })
+      return { code: r.status, text: r.stdout }
+    }
+    const folderWith = (name, build) => {
+      const folder = path.join(tmp, name)
+      fs.mkdirSync(folder)
+      const repo = path.join(folder, 'one')
+      const remote = path.join(folder, 'one.git')
+      run(folder, 'init', '-q', '--bare', '-b', 'dev', remote)
+      run(folder, 'init', '-q', '-b', 'dev', repo)
+      run(repo, 'remote', 'add', 'origin', remote)
+      fs.writeFileSync(path.join(repo, 'a.txt'), 'a\n')
+      run(repo, 'add', '.')
+      run(repo, 'commit', '-q', '-m', 'first')
+      run(repo, 'push', '-q', 'origin', 'dev')
+      build(repo)
+      return folder
+    }
+
+    it('says SAVED and exits 0 when the only thing left is a scratch folder, and still counts it', () => {
+      const folder = folderWith('report-scratch-only', (repo) => {
+        fs.mkdirSync(path.join(repo, '.verify'))
+        fs.writeFileSync(path.join(repo, '.verify', 'shot.png'), 'png')
+      })
+      const { code, text } = report(folder)
+      expect(text).toContain('SAVED')
+      expect(text).not.toContain('commit them on a branch and push')
+      expect(text).toContain('Set aside: 1 untracked scratch folder (.verify/) in 1 worktree')
+      expect(code).toBe(0)
+    })
+
+    it('with --include-scratch it is the old report: ONLY ON THIS MACHINE, exit 1', () => {
+      const folder = folderWith('report-scratch-included', (repo) => {
+        fs.mkdirSync(path.join(repo, '.verify'))
+        fs.writeFileSync(path.join(repo, '.verify', 'shot.png'), 'png')
+      })
+      const { code, text } = report(folder, '--include-scratch')
+      expect(text).toContain('ONLY ON THIS MACHINE')
+      expect(text).toContain('1 uncommitted file')
+      expect(text).not.toContain('Set aside')
+      expect(code).toBe(1)
+    })
+
+    it('real work next to a scratch folder is still reported, and the folder is not one of its files', () => {
+      const folder = folderWith('report-scratch-and-work', (repo) => {
+        fs.mkdirSync(path.join(repo, '.verify'))
+        fs.writeFileSync(path.join(repo, '.verify', 'shot.png'), 'png')
+        fs.writeFileSync(path.join(repo, 'work.txt'), 'w\n')
+      })
+      const { code, text } = report(folder)
+      expect(text).toContain('ONLY ON THIS MACHINE')
+      expect(text).toContain('1 uncommitted file in')
+      expect(text).toContain('Set aside: 1 untracked scratch folder (.verify/) in 1 worktree')
+      expect(code).toBe(1)
+    })
   })
 })
