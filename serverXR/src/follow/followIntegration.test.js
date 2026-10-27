@@ -1480,3 +1480,170 @@ describe('a follow whose other side stops answering waits as one, and carries on
         }
     }, 60_000)
 })
+
+// A32 (2026-10-09 06:05, aylmo following dev.diiii.xyz): page-push made a NEW
+// project on the follower and PUT a page into it (presentationState.codeFiles).
+// The follow made the project on the host — empty — and 3 s later its
+// comparison wrote that empty host copy over the page (project op v2,
+// replaceDocument, clientId di-follow-converge). A second push 40 s later stayed
+// on the follower but never reached the host. Here the push is the same three
+// calls page-push makes: create, read, PUT the whole document.
+describe('a first push into a new project of a followed space reaches the host and survives the comparison', () => {
+    let hosting = null
+    let following = null
+    let follower = null
+    const warned = []
+    const PAGE = '<!doctype html><title>overview</title><h1>MOXIR overview</h1>'
+
+    const documentOf = async (server, projectId) => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${projectId}/document`, { headers: authHeaders })
+        return response.status === 200 ? (await response.json()).document : null
+    }
+    const pageOf = async (server, projectId) => {
+        const files = (await documentOf(server, projectId))?.presentationState?.codeFiles || []
+        return files.find(file => file.name === 'index.html')?.content || null
+    }
+    const entityIdsOf = async (server, projectId) => ((await documentOf(server, projectId))?.entities || []).map(entity => entity.id).sort()
+    const projectOpsOf = async (server, projectId) => (await (await fetch(`${server.baseUrl}/api/projects/${projectId}/ops`, { headers: authHeaders })).json()).ops || []
+    const makeProject = async (server, projectId) => {
+        const made = await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: projectId, title: projectId })
+        })
+        expect(made.status).toBe(201)
+    }
+    /** What page-push does once the project exists: read the document, put the page in it, PUT it whole. */
+    const putPage = async (server, projectId, html = PAGE) => {
+        const doc = await documentOf(server, projectId)
+        const put = await fetch(`${server.baseUrl}/api/projects/${projectId}/document`, {
+            method: 'PUT', headers: authHeaders,
+            body: JSON.stringify({ ...doc, presentationState: { ...(doc?.presentationState || {}), mode: 'code', entryView: 'code', codeFiles: [{ name: 'index.html', content: html }] } })
+        })
+        expect(put.status).toBe(200)
+    }
+    const putEntities = async (server, projectId, ids) => {
+        const doc = await documentOf(server, projectId)
+        const put = await fetch(`${server.baseUrl}/api/projects/${projectId}/document`, {
+            method: 'PUT', headers: authHeaders, body: JSON.stringify({ ...doc, entities: ids.map(id => ({ id, name: id })) })
+        })
+        expect(put.status).toBe(200)
+    }
+    const projectRow = (server, projectId) => async () => {
+        const { projects } = await (await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, { headers: authHeaders })).json()
+        return projects.some(project => project.id === projectId)
+    }
+    // A few whole passes of the follow, each woken so none of them sits out a park.
+    const passes = async (count) => {
+        for (let n = 0; n < count; n += 1) { follower.wake(); await wait(1200) }
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: line => warned.push(String(line)), info: () => {} }
+        })
+        await passes(2)
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('a page PUT the moment the project is made reaches the host, and the follower keeps it', async () => {
+        await makeProject(following, 'first-page')
+        await putPage(following, 'first-page')
+        await passes(5)
+        // The follower's own copy is the page, and the follow never replaced it.
+        expect((await projectOpsOf(following, 'first-page')).filter(op => op.clientId === CONVERGE_CLIENT).map(op => op.type)).toEqual([])
+        expect(await pageOf(following, 'first-page')).toBe(PAGE)
+        await settle('the page reaching the host', async () => (await pageOf(hosting, 'first-page')) === PAGE, { timeout: 15_000 })
+    })
+
+    it('a page PUT after the follow made (and compared) the host\'s empty copy still reaches the host', async () => {
+        await makeProject(following, 'later-page')
+        follower.wake()
+        await settle('the empty project on the host', projectRow(hosting, 'later-page'), { timeout: 10_000 })
+        await passes(3)
+        await putPage(following, 'later-page')
+        follower.wake()
+        await settle('the later page reaching the host', async () => (await pageOf(hosting, 'later-page')) === PAGE, { timeout: 15_000 })
+        await passes(3)
+        expect(await pageOf(following, 'later-page')).toBe(PAGE)
+        await settle('the follow saying nothing is wrong', () => follower.state.lastError === null, { timeout: 10_000 })
+    })
+
+    it('a whole document of entities PUT after the host\'s empty copy was made reaches the host, not a stall', async () => {
+        await makeProject(following, 'later-scene')
+        follower.wake()
+        await settle('the empty project on the host', projectRow(hosting, 'later-scene'), { timeout: 10_000 })
+        await passes(3)
+        await putEntities(following, 'later-scene', ['chair', 'table'])
+        follower.wake()
+        await settle('the entities reaching the host', async () => (await entityIdsOf(hosting, 'later-scene')).length === 2, { timeout: 15_000 })
+        expect(await entityIdsOf(following, 'later-scene')).toEqual(['chair', 'table'])
+    })
+
+    it('the other way: a page PUT on the host into a new project reaches the follower\'s empty copy', async () => {
+        await makeProject(hosting, 'host-page')
+        await settle('the empty project on the follower', projectRow(following, 'host-page'), { timeout: 10_000 })
+        await passes(3)
+        await putPage(hosting, 'host-page')
+        follower.wake()
+        await settle('the host page reaching the follower', async () => (await pageOf(following, 'host-page')) === PAGE, { timeout: 15_000 })
+        expect(await pageOf(hosting, 'host-page')).toBe(PAGE)
+    })
+})
+
+// The same blind spot, with no new project: the follower holds a page the
+// host's copy lacks when the follow starts. The comparison counted only
+// entities, nodes and assets, so a page looked like nothing and the host's
+// empty copy was written over it. Real work only here is refused, never erased.
+describe('a page only the follower holds is never erased by the host\'s empty copy', () => {
+    let hosting = null
+    let following = null
+    const warned = []
+    const PIECE = 'page-only-here'
+    const PAGE = '<!doctype html><h1>only here</h1>'
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        for (const server of [hosting, following]) {
+            await createSpace(server, SPACE)
+            const made = await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, {
+                method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: PIECE, title: PIECE })
+            })
+            expect(made.status).toBe(201)
+        }
+        const put = await fetch(`${following.baseUrl}/api/projects/${PIECE}/document`, {
+            method: 'PUT', headers: authHeaders,
+            body: JSON.stringify({ presentationState: { mode: 'code', entryView: 'code', codeFiles: [{ name: 'index.html', content: PAGE }] } })
+        })
+        expect(put.status).toBe(200)
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('keeps the page, and says the host\'s copy is empty', async () => {
+        const follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: line => warned.push(String(line)), info: () => {} }
+        })
+        try {
+            for (let n = 0; n < 5; n += 1) { follower.wake(); await wait(1200) }
+            const doc = (await (await fetch(`${following.baseUrl}/api/projects/${PIECE}/document`, { headers: authHeaders })).json()).document
+            expect(doc.presentationState.codeFiles).toEqual([{ name: 'index.html', content: PAGE }])
+            await settle('the follow saying the host copy is empty', () => /empty and this one is not/.test(follower.state.lastError || ''), { timeout: 15_000 })
+        } finally {
+            follower.stop()
+        }
+    })
+})
