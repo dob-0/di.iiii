@@ -110,6 +110,8 @@ export const FAMILY_BY_TYPE = {
     'geom.transform': 'make',
     'view.button': 'bring-in',
     'device.keyboard': 'bring-in',
+    'device.visitor': 'bring-in',
+    'device.tilt': 'bring-in',
     'geom.constructor': 'make',
     'view.text': 'make',
     'view.list': 'make',
@@ -3000,6 +3002,58 @@ export const NODE_TYPES = {
         outputs: [
             { id: 'pressed', type: 'boolean', label: 'Pressed' },
             { id: 'count',   type: 'number',  label: 'Count'   },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // What the person's phone or screen is, as wires — the facts every work
+    // used to re-derive by hand (halve the particles on a phone, slow down
+    // for reduced motion, lay out for portrait, speak their language). Name,
+    // Hue and Id are kept in THIS browser; where storage refuses they last
+    // the visit. The browser is read by VisitorFeed, not by the runtime.
+    'device.visitor': {
+        id: 'device.visitor',
+        label: 'Visitor',
+        category: 'device',
+        runtime: 'any',
+        keywords: ['visitor', 'device', 'phone', 'mobile', 'screen', 'reduced motion', 'portrait', 'language', 'embed', 'name', 'presence'],
+        inputs: [
+            { id: 'newName', type: 'string', label: 'New name' },
+        ],
+        outputs: [
+            { id: 'phone',         type: 'boolean', label: 'Phone'          },
+            { id: 'reducedMotion', type: 'boolean', label: 'Reduced motion' },
+            { id: 'portrait',      type: 'boolean', label: 'Portrait'       },
+            { id: 'width',         type: 'number',  label: 'Width'          },
+            { id: 'height',        type: 'number',  label: 'Height'         },
+            { id: 'language',      type: 'string',  label: 'Language'       },
+            { id: 'embedded',      type: 'boolean', label: 'Embedded'       },
+            { id: 'name',          type: 'string',  label: 'Name'           },
+            { id: 'hue',           type: 'number',  label: 'Hue'            },
+            { id: 'visitorId',     type: 'string',  label: 'Id'             },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // How the phone is tipped: deviceorientation's beta and gamma as x and y
+    // in -1..1, level being however it was held when the first reading came.
+    // iOS asks permission, and only inside a tap — TiltFeed asks on the
+    // person's first tap anywhere on the page.
+    'device.tilt': {
+        id: 'device.tilt',
+        label: 'Tilt',
+        category: 'device',
+        runtime: 'any',
+        keywords: ['tilt', 'gyro', 'orientation', 'accelerometer', 'phone', 'lean', 'deviceorientation'],
+        inputs: [
+            { id: 'range', type: 'number', label: 'Range', default: 30 },
+        ],
+        outputs: [
+            { id: 'x',    type: 'number',  label: 'X'    },
+            { id: 'y',    type: 'number',  label: 'Y'    },
+            { id: 'live', type: 'boolean', label: 'Live' },
         ],
         defaultValues: {},
         render: 'hidden',

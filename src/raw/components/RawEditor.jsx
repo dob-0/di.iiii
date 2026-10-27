@@ -31,6 +31,9 @@ import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
 import LaserFileFeed from './LaserFileFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
+import VisitorFeed from './VisitorFeed.jsx'
+import TiltFeed from './TiltFeed.jsx'
+import { VISITOR_DEFAULTS } from '../../project/nodes/device.visitor/runtime.js'
 import MidiOutFeed from './MidiOutFeed.jsx'
 import BeatFeed from './BeatFeed.jsx'
 import ButtonPanelWindow from './ButtonPanelWindow.jsx'
@@ -1801,6 +1804,17 @@ export default function RawEditor({
         handleLiveOutputChange(nodeId, 'pressed', pressed)
         handleLiveOutputChange(nodeId, 'count', count)
     }, [handleLiveOutputChange])
+    // null facts (the feed unmounting) clear every port back to the defaults.
+    const handleVisitor = useCallback((nodeId, facts) => {
+        for (const portId of Object.keys(VISITOR_DEFAULTS)) {
+            handleLiveOutputChange(nodeId, portId, facts ? facts[portId] : null)
+        }
+    }, [handleLiveOutputChange])
+    const handleTilt = useCallback((nodeId, reading) => {
+        handleLiveOutputChange(nodeId, 'x', reading ? reading.x : null)
+        handleLiveOutputChange(nodeId, 'y', reading ? reading.y : null)
+        handleLiveOutputChange(nodeId, 'live', reading ? reading.live : null)
+    }, [handleLiveOutputChange])
     const handleMidiOutStatus = useCallback((nodeId, status) => {
         handleLiveOutputChange(nodeId, 'status', status)
     }, [handleLiveOutputChange])
@@ -2782,6 +2796,26 @@ export default function RawEditor({
                     .filter((node) => node.typeId === 'device.keyboard')
                     .map((node) => (
                         <KeyboardFeed key={node.id} node={node} onKeyState={handleKeyState} />
+                    ))}
+                {nodes
+                    .filter((node) => node.typeId === 'device.visitor')
+                    .map((node) => (
+                        <VisitorFeed
+                            key={node.id}
+                            node={node}
+                            newName={evaluateNodeInputs(node, graphContext).newName}
+                            onVisitor={handleVisitor}
+                        />
+                    ))}
+                {nodes
+                    .filter((node) => node.typeId === 'device.tilt')
+                    .map((node) => (
+                        <TiltFeed
+                            key={node.id}
+                            node={node}
+                            range={evaluateNodeInputs(node, graphContext).range}
+                            onTilt={handleTilt}
+                        />
                     ))}
                 {nodes
                     .filter((node) => node.typeId === 'device.midi.out')
