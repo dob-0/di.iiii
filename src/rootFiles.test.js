@@ -73,7 +73,8 @@ describe('root addresses are files, not the app shell (nginx.conf)', () => {
         // Already right before 2026-10-21; held here so a refactor cannot lose them.
         ['/robots.txt', 'text/plain', 'public'],
         ['/llms.txt', 'text/plain', 'public'],
-        ['/sitemap.xml', 'application/xml', 'public']
+        // Built by vite.config.js (scripts/sitemap.mjs) since #1092, no public/ file: only the location is checked.
+        ['/sitemap.xml', 'application/xml', 'built']
     ]
 
     it.each(cases)('%s is answered by its own location as %s, never the SPA', (uri, type, source) => {
