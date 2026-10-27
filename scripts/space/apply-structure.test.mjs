@@ -142,3 +142,26 @@ describe('the address in a page made of several files', () => {
     expect(api.log.filter((l) => l.endsWith('/ops'))).toEqual([])
   })
 })
+
+describe('text edits and relinks in a page made of several files', () => {
+  it('edits and relinks its HTML files only, saved as edits; a re-run sends nothing', async () => {
+    doc.d = { version: 1, entities: [], presentationState: { mode: 'code', codeFiles: [
+      { name: 'index.html', content: '<p>The software, the spaces, di-studio.xyz.</p><a href="/s/old">old</a>' },
+      { name: 'notes.js', content: '// di-studio.xyz stays in a script' }
+    ] } }
+    fs.writeFileSync(path.join(dir, 's.json'), JSON.stringify({
+      space: 's',
+      edits: [{ from: 'the spaces, di-studio.xyz.', to: 'the spaces, diiii.xyz.', why: 'the address' }],
+      relink: { '/s/old': '/s/new' }
+    }))
+    const r = await run()
+    expect(r.code, r.stderr).toBe(0)
+    const [html, js] = doc.d.presentationState.codeFiles
+    expect(html.content).toBe('<p>The software, the spaces, diiii.xyz.</p><a href="/s/new">old</a>')
+    expect(js.content).toBe('// di-studio.xyz stays in a script')
+    expect(r.stdout).toMatch(/the address \(code files\)/)
+    api.log.length = 0
+    await run()
+    expect(api.log.filter((l) => l.endsWith('/ops'))).toEqual([])
+  })
+})

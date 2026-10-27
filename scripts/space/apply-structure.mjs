@@ -132,15 +132,31 @@ if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).lengt
     const res = await call('GET', `/api/projects/${p.id}/document`); const doc = res.document || res
     const read = structuredClone(res) // the page as read: the steps below change `doc`, and the edits are what differs from this
     let html = doc.presentationState?.codeHtml
-    let codeFiles = null
+    // a page made of several files keeps its HTML in codeFiles, not codeHtml: every HTML step runs on those files too
+    // (di-iiii/di-landing linked /main and the suite page named an old domain, 2026-10-26)
+    let codeFiles = Array.isArray(doc.presentationState?.codeFiles) ? doc.presentationState.codeFiles : null
+    let filesChanged = false
+    const inHtmlFiles = (fn) => {
+      if (!codeFiles) return { count: 0, notes: [] }
+      let count = 0; const found = []
+      codeFiles = codeFiles.map((f) => {
+        if (!/\.html?$/i.test(f?.name || f?.path || '') || typeof f.content !== 'string') return f
+        const r = fn(f.content); count += r.count; if (r.notes) found.push(...r.notes)
+        return r.count ? { ...f, content: r.html } : f
+      })
+      if (count) filesChanged = true
+      return { count, notes: found }
+    }
     let entities = doc.entities
     const notes = []
     for (const [from, to] of relinks) {
       if (html) { const r = relinkHtml(html, from, to); if (r.count) { notes.push(`${r.count} × ${from} -> ${to}`); html = r.html } }
+      { const r = inHtmlFiles((c) => relinkHtml(c, from, to)); if (r.count) notes.push(`${r.count} × ${from} -> ${to} in code files`) }
       // a scene's doors too (N1248): the hall kept a door to a hidden project after every page was repointed
       if (Array.isArray(entities)) { const r = relinkPortals(entities, from, to, s.space); if (r.count) { notes.push(`${r.count} door(s) ${from} -> ${to}`); entities = r.entities } }
     }
     if (html && (s.edits || []).length) { const r = editHtml(html, s.edits, p.id); if (r.count) { notes.push(...r.notes); html = r.html } }
+    if ((s.edits || []).length) { const r = inHtmlFiles((c) => editHtml(c, s.edits, p.id)); if (r.count) notes.push(...r.notes.map((n) => `${n} (code files)`)) }
     if (s.doors?.[p.id]) { const r = upsertDoors(Array.isArray(entities) ? entities : [], s.doors[p.id]); if (r.count) { notes.push(...r.notes); entities = r.entities } }
     // each new door's parts, carried on from the scene's own last two sets (doorSets: project -> [{ match, prev, src, next, ... }])
     for (const set of s.doorSets?.[p.id] || []) { const r = upsertEntities(entities, extendDoorSet(entities, set)); if (r.count) { notes.push(`${r.count} part(s) of ${set.doorNext}`); entities = r.entities } }
@@ -153,16 +169,7 @@ if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).lengt
     if (s.address && s.address !== s.space) {
       if (html) { const r = moveAddressHtml(html, s.space, s.address); if (r.count) { notes.push(`${r.count} link(s) /${s.space} -> /${s.address}`); html = r.html } }
       if (Array.isArray(entities)) { const r = moveAddressPortals(entities, s.space, s.address); if (r.count) { notes.push(`${r.count} door(s) -> /${s.address}`); entities = r.entities } }
-      // a page made of several files keeps its HTML in codeFiles, not codeHtml (di-iiii/di-landing linked /main, 2026-10-26)
-      if (Array.isArray(doc.presentationState?.codeFiles)) {
-        let moved = 0
-        const files = doc.presentationState.codeFiles.map((f) => {
-          if (!/\.html?$/i.test(f?.name || f?.path || '') || typeof f.content !== 'string') return f
-          const r = moveAddressHtml(f.content, s.space, s.address); moved += r.count
-          return r.count ? { ...f, content: r.html } : f
-        })
-        if (moved) { notes.push(`${moved} link(s) in code files /${s.space} -> /${s.address}`); codeFiles = files }
-      }
+      { const r = inHtmlFiles((c) => moveAddressHtml(c, s.space, s.address)); if (r.count) notes.push(`${r.count} link(s) in code files /${s.space} -> /${s.address}`) }
     }
     // a page that loads its files from a fixed host (prod) works only while it answers: relative, where this server has them
     if (s.relativeAssets && html) {
@@ -174,7 +181,7 @@ if (relinks.length || (s.edits || []).length || Object.keys(s.doors || {}).lengt
       if (found.length > here.length) console.log(`note ${p.id}: ${found.length - here.length} file(s) not on this server, kept as they are`)
     }
     if (!notes.length) continue
-    const next = { ...doc, ...(doc.assets ? { assets: doc.assets } : {}), ...(Array.isArray(entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}), ...(codeFiles ? { codeFiles } : {}) } }
+    const next = { ...doc, ...(doc.assets ? { assets: doc.assets } : {}), ...(Array.isArray(entities) ? { entities } : {}), presentationState: { ...doc.presentationState, ...(html ? { codeHtml: html } : {}), ...(filesChanged ? { codeFiles } : {}) } }
     await step(`page ${p.id}: ${notes.join(', ')}`, () => saveDocument(call, p.id, next, { from: read }))
   }
 }
