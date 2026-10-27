@@ -896,6 +896,31 @@ describe('device.midi.out status', () => {
     })
 })
 
+describe('device.mesh.in and device.mesh.out', () => {
+    it('read nothing heard and the link down when no feed is mounted', () => {
+        const doc = { nodes: [node('mi', 'device.mesh.in'), node('mo', 'device.mesh.out')], edges: [] }
+        expect(['value', 'from', 'time', 'signal', 'up', 'status'].map((port) => evalPort(doc, 'mi', port)))
+            .toEqual(['', '', 0, 0, 0, ''])
+        expect(evalPort(doc, 'mo', 'up')).toBe(0)
+        expect(evalPort(doc, 'mo', 'status')).toBe('')
+        expect(evalPort(doc, 'mi', 'nope')).toBeUndefined()
+    })
+
+    it('read the feed reports back from the live side channel', () => {
+        const doc = { nodes: [node('mi', 'device.mesh.in'), node('mo', 'device.mesh.out')], edges: [] }
+        const live = new Map([
+            ['mi:value', { x: 0.5 }], ['mi:from', 'web-phone'], ['mi:time', 1700], ['mi:signal', 3], ['mi:up', 1],
+            ['mo:up', 1], ['mo:status', 'Up in g, 1 other here'],
+        ])
+        const context = createNodeGraphContext(doc, { liveOutputs: live })
+        expect(evaluateNodeOutput(doc.nodes[0], 'value', context)).toEqual({ x: 0.5 })
+        expect(evaluateNodeOutput(doc.nodes[0], 'from', context)).toBe('web-phone')
+        expect(evaluateNodeOutput(doc.nodes[0], 'signal', context)).toBe(3)
+        expect(evaluateNodeOutput(doc.nodes[1], 'up', context)).toBe(1)
+        expect(evaluateNodeOutput(doc.nodes[1], 'status', context)).toBe('Up in g, 1 other here')
+    })
+})
+
 describe('device.laser.out status', () => {
     it('reads the panel report from the live side channel, empty when unmounted', () => {
         const doc = { nodes: [node('lo', 'device.laser.out')], edges: [] }

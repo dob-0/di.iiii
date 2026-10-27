@@ -36,6 +36,7 @@ import TiltFeed from './TiltFeed.jsx'
 import { VISITOR_DEFAULTS } from '../../project/nodes/device.visitor/runtime.js'
 import MidiOutFeed from './MidiOutFeed.jsx'
 import BeatFeed from './BeatFeed.jsx'
+import { MeshInFeed, MeshOutFeed } from './MeshFeeds.jsx'
 import ButtonPanelWindow from './ButtonPanelWindow.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
@@ -2840,6 +2841,22 @@ export default function RawEditor({
                             onTempo={handleBeatTempo}
                         />
                     ))}
+                {/* One socket per Mesh In / Mesh Out — see MeshFeeds.jsx. An
+                    empty Group meets in this project's own group. */}
+                {nodes
+                    .filter((node) => node.typeId === 'device.mesh.in' || node.typeId === 'device.mesh.out')
+                    .map((node) => {
+                        const Feed = node.typeId === 'device.mesh.in' ? MeshInFeed : MeshOutFeed
+                        return (
+                            <Feed
+                                key={node.id}
+                                node={node}
+                                inputs={evaluateNodeInputs(node, graphContext)}
+                                fallbackGroup={`${resolvedSpaceId}/${projectId || 'local'}`}
+                                onLiveOutput={handleLiveOutputChange}
+                            />
+                        )
+                    })}
         </>
     )
 

@@ -1189,6 +1189,12 @@ The file chase (`serverXR/src/follow/assets.js`) learned names from `upsertAsset
 
 Confirmed by test, not fixed. A cursor is a bare version number and the follower notices a rebuilt log only when its cursor is past the log's end (`follower.js` `runStream`, `behind`). Host restored from v3 to its v1 copy, three edits to v4, follower resumes from saved cursor 3: v4 arrives, v2 and v3 never do (`['op-after-1', 'op-after-2']` missing). **Guard:** `followRaces.test.js` "F13" asserts the two missing ops exactly — when the fix lands it goes red and must then assert none missing. **Fix owed (protocol):** a `logEpoch` minted when a log is created or restored, returned with the ops, saved beside each cursor; a changed epoch resets that cursor to null. Sketch in `docs/ai/audits/follow-audit-2026-10-04.md` F13.
 
+## The mesh hub's WebSocket library was declared nowhere; it arrived only through socket.io (2026-10-21)
+
+Symptom: none yet — a latent break. `serverXR/src/meshHub.js` requires `ws` at the top of the file, but `git grep '"ws"'` over every `package.json` found 0 hits on origin/dev 55a5d963. `ws` was installed only because socket.io's engine.io depends on it (`"ws": "~8.21.0"` in its lock entry), so an engine.io release that dropped or re-pinned it would have changed or removed the hub's library with no change in this repo, and the two installs already differ (serverXR's lock holds 8.21.0, the root's 8.21.1).
+Fix: `ws` declared at an exact version in `serverXR/package.json` (8.21.0, what serverXR's own lockfile installs) and in the root `devDependencies` (8.21.1, what the root lockfile installs; the browser mesh-client test speaks to the real hub through it). Licence MIT, listed in `src/kit/kitStack.js`.
+Guard: `serverXR/src/meshHub.test.js` "serverXR/package.json names ws at an exact version, matching its lockfile" — fails with the declaration removed (shown once, 1 failed / 21 passed).
+
 ## di.iiii's own requests to another di.iiii were counted there as an anonymous program (30 API reads a minute, not 300) (2026-10-21)
 
 Symptom: seen 2026-10-20 on one install: 204 files a follow did not carry, and the auto-update failing with 429. The visitor bouncer (`createVisitorBouncer`, `serverXR/src/appVisitors.js`)

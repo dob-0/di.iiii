@@ -83,6 +83,7 @@ export const FAMILY_BY_TYPE = {
     'source.webcam': 'bring-in',
     'source.mic': 'bring-in',
     'device.midi.in': 'bring-in',
+    'device.mesh.in': 'bring-in',
     'device.osc.in': 'bring-in',
     'source.ar': 'bring-in',
     'source.insta360': 'bring-in',
@@ -190,6 +191,7 @@ export const FAMILY_BY_TYPE = {
     'device.dmx.out': 'send-out',
     'device.laser.out': 'send-out',
     'device.midi.out': 'send-out',
+    'device.mesh.out': 'send-out',
     'device.osc.out': 'send-out',
     'stream.output': 'send-out',
     'stream.recorder': 'send-out',
@@ -790,6 +792,40 @@ export const NODE_TYPES = {
         defaultFrame: { width: 380, height: 340 },
     },
 
+    'device.mesh.in': {
+        id: 'device.mesh.in',
+        label: 'Mesh In',
+        category: 'device',
+        // A browser WebSocket to serverXR's mesh hub (src/raw/utils/meshClient.js):
+        // every screen and phone in one group hears what the others publish.
+        runtime: 'web',
+        singleton: false,
+        keywords: ['mesh', 'phone', 'phones', 'screens', 'sync', 'remote', 'wall', 'crowd', 'websocket', 'network', 'receive', 'listen'],
+        inputs: [
+            // Empty Group = this project's own group, so every screen that
+            // opens the same project meets without anyone typing a name.
+            { id: 'group',     type: 'string', label: 'Group',      default: '' },
+            { id: 'channel',   type: 'string', label: 'Channel',    default: 'value' },
+            // The checks the walls ran by hand. Each is off until set; a range
+            // is on when Min < Max, so a fresh node's 0/0 admits everything.
+            { id: 'min',       type: 'number', label: 'Min',        default: 0 },
+            { id: 'max',       type: 'number', label: 'Max',        default: 0 },
+            { id: 'allowed',   type: 'string', label: 'Allowed',    default: '' },
+            { id: 'maxLength', type: 'number', label: 'Max Length', default: 0 },
+        ],
+        outputs: [
+            { id: 'value',  type: 'any',    label: 'Value'  },
+            { id: 'from',   type: 'string', label: 'From'   },
+            { id: 'time',   type: 'number', label: 'Time'   },
+            // A rising count, the MIDI In idiom: an event is the number changing.
+            { id: 'signal', type: 'signal', label: 'Signal' },
+            { id: 'up',     type: 'number', label: 'Up'     },
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
     'device.dmx.out': {
         id: 'device.dmx.out',
         label: 'DMX Out',
@@ -903,6 +939,29 @@ export const NODE_TYPES = {
         defaultValues: {
             channel: 1,
         },
+        render: 'hidden',
+    },
+
+    'device.mesh.out': {
+        id: 'device.mesh.out',
+        label: 'Mesh Out',
+        category: 'device',
+        runtime: 'web',
+        singleton: false,
+        keywords: ['mesh', 'phone', 'phones', 'screens', 'sync', 'remote', 'wall', 'crowd', 'websocket', 'network', 'send', 'publish'],
+        inputs: [
+            { id: 'group',    type: 'string', label: 'Group',    default: '' },
+            { id: 'channel',  type: 'string', label: 'Channel',  default: 'value' },
+            { id: 'value',    type: 'any',    label: 'Value' },
+            // ms between sends; the latest value wins. 200 is the 5 Hz the
+            // hand-built phone pages settled on; under 50 is raised to 50.
+            { id: 'interval', type: 'number', label: 'Interval', default: 200 },
+        ],
+        outputs: [
+            { id: 'up',     type: 'number', label: 'Up'     },
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
         render: 'hidden',
     },
 
