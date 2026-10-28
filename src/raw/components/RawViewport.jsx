@@ -11,6 +11,9 @@ import SphereObject from '../../objectComponents/SphereObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
 import AudioObject from '../../objectComponents/AudioObject.jsx'
+import SpotLightObject from '../../objectComponents/SpotLightObject.jsx'
+import { lampModeOf, lampPicture, lampTypeOf } from '../../project/nodes/light.lamp/lampType.js'
+import { beamStopUserData } from '../utils/beamStops.js'
 import { detectModelFormatFromMeta } from '../../utils/modelFormats.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
@@ -584,6 +587,39 @@ export function renderNodeBody(node, values, assetMap = null) {
                     </mesh>
                 </group>
             )
+        case 'light.lamp': {
+            // A stage lamp: its body (the type's published size), turned by
+            // Pan about Y and Tilt about X, and Studio's own spot with a beam
+            // in the air (SpotLightObject) — whose reach probe stops the beam
+            // at the first surface it meets. No second beam is drawn here.
+            const type = lampTypeOf(values.type)
+            const look = lampPicture(type, lampModeOf(type, values.mode), values)
+            const [w, d, h] = look.size
+            return (
+                <group rotation={[0, look.pan, 0]}>
+                    <group rotation={[look.tilt, 0, 0]}>
+                        <mesh position={[0, h / 2 - 0.02, 0]}>
+                            <boxGeometry args={[w, h, d]} />
+                            <meshStandardMaterial color="#2b2b30" roughness={0.6} metalness={0.3} />
+                        </mesh>
+                        <mesh position={[0, -0.015, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                            <circleGeometry args={[Math.min(w, d) * 0.35, 24]} />
+                            <meshBasicMaterial color={look.color} side={2} />
+                        </mesh>
+                        <group position={[0, -0.03, 0]}>
+                            <SpotLightObject
+                                color={look.color}
+                                intensity={look.intensity}
+                                angle={look.angle}
+                                penumbra={0.2}
+                                beam={{ visible: true }}
+                                fitted={look.fitted}
+                            />
+                        </group>
+                    </group>
+                </group>
+            )
+        }
         case 'world.camera': {
             // The eye you can pick up: a small housing with a lens cone aimed
             // at its Look At. Only INACTIVE cameras are drawn — the active one
@@ -716,6 +752,8 @@ export function NodeVisual({
     return (
         <group
             ref={groupRef || undefined}
+            // a solid shape is where a Lamp's beam stops (utils/beamStops.js)
+            userData={beamStopUserData(node.typeId)}
             position={asVec3(values.position, [0, 0, 0])}
             rotation={asVec3(values.rotation, [0, 0, 0])}
             scale={nodeScaleFactor}

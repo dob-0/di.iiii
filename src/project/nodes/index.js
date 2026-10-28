@@ -11,6 +11,7 @@ import { computeOutput as deviceTilt } from './device.tilt/runtime.js'
 import { computeOutput as deviceDmxOut } from './device.dmx.out/runtime.js'
 import { computeOutput as deviceOscIn } from './device.osc.in/runtime.js'
 import { computeOutput as deviceOscOut } from './device.osc.out/runtime.js'
+import { computeOutput as lightLamp } from './light.lamp/runtime.js'
 import { computeOutput as deviceLaserOut } from './device.laser.out/runtime.js'
 import { computeOutput as streamRecorder } from './stream.recorder/runtime.js'
 import { computeOutput as streamStill } from './stream.still/runtime.js'
@@ -94,6 +95,7 @@ export const NODE_RUNTIMES = new Map([
     ['device.dmx.out', deviceDmxOut],
     ['device.osc.in', deviceOscIn],
     ['device.osc.out', deviceOscOut],
+    ['light.lamp', lightLamp],
     ['device.laser.out', deviceLaserOut],
     ['laser.shape', laserShape],
     ['laser.trace', laserTrace],
