@@ -636,6 +636,14 @@ export default {
                 xfwd: true,
                 ws: true
             },
+            // The one context at the caller's level (serverXR/src/aiContext.js), as
+            // nginx sends it on the hosted tiers.
+            '^/ai/context$': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true,
+                rewrite: (path) => `/serverXR${path}`
+            },
             // The lighting desk lives on the backend at /light (app-level, no /serverXR
             // prefix) — its interface is plain files the desk serves itself.
             //

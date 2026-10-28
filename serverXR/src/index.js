@@ -122,6 +122,7 @@ const { serverActor } = require('./opActor')
 const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
+const { registerAiContextRoutes } = require('./aiContext')
 const { registerPasswordAuthRoutes } = require('./routes/passwordAuthRoutes')
 const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerDomainRoutes } = require('./routes/domainRoutes')
@@ -1587,6 +1588,22 @@ const isKnownCaller = (req) => {
     && !isGuestSubject(state.subject)
 }
 router.use(createVisitorBouncer({ guestBook, isKnownCaller, log: logger }))
+
+// The one context at the caller's level (aiContext.js): no key = public, a key
+// maps to its level, a higher level asked for is a 403. After the auth-state
+// middleware above, because the level is read from req.authState and nowhere else.
+registerAiContextRoutes(router, {
+  contextDir: config.directories.aiContextDir,
+  isGuestSubject,
+  // The account's access group (the di-bo repo's groups design brief §2.1). The
+  // column does not exist yet; until it does this is null and member means
+  // registered.
+  groupOf: (userId) => {
+    try {
+      return getDb().prepare('SELECT access_group AS g FROM users WHERE id = ?').get(String(userId || ''))?.g || null
+    } catch { return null }
+  }
+})
 
 // Private conversations: the public-key phone book. Registered here, after the
 // middleware above, because every handler reads `req.authState` — and the whole
