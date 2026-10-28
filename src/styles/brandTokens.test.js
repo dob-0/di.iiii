@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -176,5 +176,24 @@ describe('shared sizes: the type ladder and the target floor', () => {
             expect(m, `${sel} must stay in legal.css`).toBeTruthy()
             expect(m[1], `${sel} must not drop the underline`).toMatch(/text-decoration\s*:\s*underline/)
         }
+    })
+
+    it('a label on the tracking token takes its case from --di-label-case, never a literal uppercase', () => {
+        const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+            const p = resolve(dir, e.name)
+            if (e.isDirectory()) return walk(p)
+            return e.name.endsWith('.css') ? [p] : []
+        })
+        const offenders = []
+        for (const file of walk(resolve(HERE, '..'))) {
+            const text = readFileSync(file, 'utf8')
+            for (const m of text.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+                if (/letter-spacing\s*:\s*var\(--di-label-tracking\)/.test(m[2])
+                    && /text-transform\s*:\s*uppercase/.test(m[2])) {
+                    offenders.push(`${file.slice(resolve(HERE, '../..').length + 1)} ${m[1].trim().split('\n').pop()}`)
+                }
+            }
+        }
+        expect(offenders).toEqual([])
     })
 })
