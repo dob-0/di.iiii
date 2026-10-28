@@ -2,8 +2,7 @@
 
 Method and data model: `docs/architecture/RIG_BUILD.md`. Code the views use: `src/rigbuild/`.
 
-**Doing a venue or event job (MOXIR first)? Read the runbook first: `.claude/skills/venue-show/SKILL.md`** — where
-each fact lives, the command for each job, which agent per layer (`.claude/agents/`), and the traps already paid for.
+**Doing a venue or event job (MOXIR first)? Read `.claude/skills/venue/SKILL.md` first** (it points to `docs/ai/skills/venue-to-show.md`: the steps, the traps already paid for, gear, paper and safety in §7).
 
 | command | what it does |
 |---|---|

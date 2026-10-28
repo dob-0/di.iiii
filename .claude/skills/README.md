@@ -6,13 +6,16 @@ One index of every skill under `.claude/skills/`. A skill is a recipe: when to u
 |---|---|
 | `open-call` | applications are collected, reviewed and closed out for a linked space (apply form, /admin board, transform to exhibition) |
 | `run-di-iiii` | the app must be built, run and driven (sign in, screenshot, two-person flow, tests) to see a change working (`driver.mjs`; on aylmo start servers with `di-dev up <tree>`, not `npm run dev`) |
-| `venue` | a place (hall) goes from photos to a rig and a show; the index of the six venue-* skills below, in order |
+| `venue` | a place (hall) goes from photos to a rig and a show; the index of the venue-* skills below, in order |
 | `venue-paint-plan` | the areas the owner will paint are planned |
 | `venue-read-paint` | the owner's painted areas are read back as data |
 | `venue-layout` | a rig is laid out against the painted areas |
 | `venue-render` | the rig is rendered in the scene and measured on the real GPU |
 | `venue-integrate` | the result is put into the place's project |
 | `venue-review` | the result is shown back and reviewed |
+| `venue-gear-check` | a rental list arrives: makers verified, each code confirmed / probable / equivalent / unknown |
+| `venue-paper` | the patch, the crew's paper and the rental order draft are made |
+| `venue-safety-packet` | the rigging safety packet and site checklist are drafted for the humans who sign |
 | `show-scenes-job` | a show's light scenes are designed or rebuilt (safe `epic-build` flags by default) |
 | `show-checkpoint` | before ANY change to a live or approved show: snapshot, RESTORE.md, the owner's yes, change, measure |
 | `hall-compare` | before any lamp check: compare the project and the desk with the place's hall reference (`--ref`) |
