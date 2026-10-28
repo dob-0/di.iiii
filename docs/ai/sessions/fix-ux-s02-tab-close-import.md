@@ -1,0 +1,6 @@
+## 2026-10-28 — Code window: closing a tab never deletes; import asks first (UX fix S02)
+
+- Depends on #1167 (S01: AskDialog and Undo notice); this branch starts from it.
+- `FilesPanel`: the tab x only closes the tab; "Closed tabs" reopens; "Delete file" asks (AskDialog, danger) and then offers Undo. Import (files, zip, folder) asks "Add them" then "Replace all / Keep my files" when the project has files, says what was added or left out, and offers Undo. A broken zip shows its reason in an alert. The start page is marked "opens first" and renaming it asks first. Import buttons are now "Add files" (files and zips together), "Add folder", "Download all". Pure helpers live in `src/utils/codeFilesBundle.js` (`startPageFile`, `readZipFiles`, `mergeImported`, `undoImported`, `restoreDeleted`).
+- Tests: seven new cases in `FilesPanel.test.jsx`, five describe blocks in `codeFilesBundle.test.js`; known-fixes entry and the wiki article "How content flows" updated.
+- Not done: before/after pictures at 1440 and 390 on a cinema-house copy (agent-screen run owed); the Delete and import questions are two-button (a three-way "Add / Replace / Cancel" would need a third button in AskDialog, an S01 change); with every tab closed the Add files row is hidden until a tab is reopened.

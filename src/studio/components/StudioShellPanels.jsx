@@ -46,9 +46,15 @@ import {
 } from '../utils/timelinePreview.js'
 import {
     isSupportedFile,
+    mergeImported,
     normalizeFileName,
-    SUPPORTED_EXTENSIONS
+    readZipFiles,
+    restoreDeleted,
+    startPageFile,
+    SUPPORTED_EXTENSIONS,
+    undoImported
 } from '../../utils/codeFilesBundle.js'
+import { useAsk, useUndoNotice } from '../../components/ui/useAsk.js'
 import { useDriveImport } from '../../hooks/useDriveImport.js'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import { getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
@@ -1497,7 +1503,6 @@ export function FilesPanel({
     onViewportChoice = null
 }) {
     const singleFileInputRef = useRef(null)
-    const zipInputRef = useRef(null)
     const folderInputRef = useRef(null)
     const editorInputRef = useRef(null)
     const [activeFileName, setActiveFileName] = useState('index.html')
@@ -1508,6 +1513,11 @@ export function FilesPanel({
     const [insertNotice, setInsertNotice] = useState('')
     const [embedOpen, setEmbedOpen] = useState(false)
     const [urlDraft, setUrlDraft] = useState(presentationState?.codeUrl || '')
+    // Tabs the person closed. Closing only hides the tab; the file stays in the project.
+    const [closedNames, setClosedNames] = useState([])
+    const [importNotice, setImportNotice] = useState('')
+    const { ask, askDialog } = useAsk()
+    const { notify, undoNotice } = useUndoNotice()
 
     const storedFiles = presentationState?.codeFiles || []
     // Projects authored before the file list kept their whole page in `codeHtml`.
@@ -1516,7 +1526,19 @@ export function FilesPanel({
     // write moves it into codeFiles for good.
     const legacyHtml = storedFiles.length === 0 ? (presentationState?.codeHtml || '') : ''
     const files = legacyHtml ? [{ name: 'index.html', content: legacyHtml }] : storedFiles
-    const activeFile = files.find((f) => f.name === activeFileName) || files[0] || null
+    const openFiles = files.filter((f) => !closedNames.includes(f.name))
+    const closedFiles = files.filter((f) => closedNames.includes(f.name))
+    const activeFile = openFiles.find((f) => f.name === activeFileName) || openFiles[0] || null
+    const startName = startPageFile(files)?.name || ''
+    // The newest file list, for answers that arrive after a question or an Undo.
+    const filesRef = useRef(files)
+    useEffect(() => { filesRef.current = files })
+
+    // Select a file and make sure its tab is open.
+    const showFile = (name) => {
+        setClosedNames((names) => names.filter((n) => n !== name))
+        setActiveFileName(name)
+    }
 
     const setFiles = (nextFiles) => onPresentationPatch(
         legacyHtml ? { codeFiles: nextFiles, codeHtml: '' } : { codeFiles: nextFiles }
@@ -1538,73 +1560,122 @@ export function FilesPanel({
         const name = newFileName.trim()
         if (!name || files.find((f) => f.name === name)) return
         setFiles([...files, { name, content: '' }])
-        setActiveFileName(name)
+        showFile(name)
         setNewFileName('')
         setShowAddFile(false)
     }
 
-    const removeFile = (name) => {
-        const next = files.filter((f) => f.name !== name)
-        setFiles(next)
-        if (activeFileName === name) setActiveFileName(next[0]?.name || '')
+    // The tab x only closes the tab. Deleting is its own action, with a question and an Undo.
+    const closeTab = (name) => setClosedNames((names) => (names.includes(name) ? names : [...names, name]))
+
+    const deleteActiveFile = async () => {
+        const file = activeFile
+        if (!file) return
+        const sure = await ask({
+            title: `Delete ${file.name}?`,
+            body: 'The file is removed from this project. You can undo it for 10 seconds.',
+            confirmLabel: 'Delete file',
+            cancelLabel: 'Keep it',
+            danger: true
+        })
+        if (!sure) return
+        const current = filesRef.current
+        const index = Math.max(0, current.findIndex((f) => f.name === file.name))
+        setFiles(current.filter((f) => f.name !== file.name))
+        setClosedNames((names) => names.filter((n) => n !== file.name))
+        notify(`Deleted ${file.name}`, () => {
+            setFiles(restoreDeleted(filesRef.current, file, index))
+            setActiveFileName(file.name)
+        })
     }
 
-    const handleImportSingle = async (event) => {
-        const file = event.target.files?.[0]
-        event.target.value = ''
-        if (!file) return
-        const content = await file.text()
-        const name = normalizeFileName(file.name)
-        const existing = files.find((f) => f.name === name)
-        if (existing) {
-            setFiles(files.map((f) => (f.name === name ? { ...f, content } : f)))
-        } else {
-            setFiles([...files, { name, content }])
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+
+    // Bring files in: when the project already has files, ask add or replace
+    // (never one without the other), then say what came in.
+    const importFiles = async (incoming, skipped, rootName) => {
+        setImportNotice('')
+        if (incoming.length === 0) {
+            setImportNotice(skipped.length
+                ? `Nothing was added. ${plural(skipped.length, 'file')} (${skipped.slice(0, 3).join(', ')}) are not kinds the Code window holds.`
+                : 'Nothing was added. No files were found.')
+            return
         }
-        setActiveFileName(name)
+        const before = filesRef.current
+        let mode = 'replace'
+        if (before.length > 0) {
+            const clash = incoming.filter((f) => before.some((b) => b.name === f.name)).map((f) => f.name)
+            const add = await ask({
+                title: `Add ${plural(incoming.length, 'file')} to your ${plural(before.length, 'file')}?`,
+                body: clash.length
+                    ? `${clash.slice(0, 3).join(', ')} already exist${clash.length === 1 ? 's' : ''} and will be replaced by the new ${clash.length === 1 ? 'one' : 'ones'}. Your other files stay.`
+                    : 'Nothing you have now is removed.',
+                confirmLabel: 'Add them',
+                cancelLabel: 'No'
+            })
+            if (add) {
+                mode = 'add'
+            } else {
+                const replace = await ask({
+                    title: `Replace your ${plural(before.length, 'file')}?`,
+                    body: `Your files are swapped for the ${plural(incoming.length, 'new file')}. You can undo it for 10 seconds.`,
+                    confirmLabel: 'Replace all',
+                    cancelLabel: 'Keep my files',
+                    danger: true
+                })
+                if (!replace) return
+            }
+        }
+        const current = filesRef.current
+        setFiles(mergeImported(current, incoming, mode))
+        showFile(rootName)
+        const names = incoming.map((f) => f.name)
+        const left = skipped.length ? ` (${skipped.length} left out: ${skipped.slice(0, 2).join(', ')}${skipped.length > 2 ? ', …' : ''})` : ''
+        notify(
+            `${mode === 'add' ? 'Added' : 'Replaced your files with'} ${plural(incoming.length, 'file')}${left}`,
+            () => setFiles(undoImported(current, filesRef.current, names))
+        )
     }
 
-    const handleImportZip = async (event) => {
-        const file = event.target.files?.[0]
+    const pickRoot = (list) => (list.find((f) => f.name.endsWith('index.html')) || list[0])?.name || ''
+
+    // One "Add files" picker: single files and .zip archives, together.
+    const handleAddFiles = async (event) => {
+        const picked = Array.from(event.target.files || [])
         event.target.value = ''
-        if (!file) return
-        try {
-            const zip = await JSZip.loadAsync(file)
-            const entries = []
-            zip.forEach((relativePath, entry) => {
-                if (!entry.dir && isSupportedFile(relativePath)) entries.push({ relativePath, entry })
-            })
-            const loaded = await Promise.all(
-                entries.map(async ({ relativePath, entry }) => ({
-                    name: normalizeFileName(relativePath),
-                    content: await entry.async('text')
-                }))
-            )
-            if (loaded.length > 0) {
-                setFiles(loaded)
-                const root = loaded.find((f) => f.name === 'index.html') || loaded[0]
-                setActiveFileName(root.name)
+        if (!picked.length) return
+        const incoming = []
+        const skipped = []
+        for (const file of picked) {
+            if (/\.zip$/i.test(file.name)) {
+                const result = await readZipFiles(JSZip, file)
+                if (result.error) {
+                    setImportNotice(`${file.name}: ${result.error}`)
+                    if (picked.length === 1) return
+                    continue
+                }
+                incoming.push(...result.files)
+                skipped.push(...result.skipped)
+            } else {
+                incoming.push({ name: normalizeFileName(file.name), content: await file.text() })
             }
-        } catch { /* ignore malformed zips */ }
+        }
+        await importFiles(incoming, skipped, pickRoot(incoming))
     }
 
     const handleImportFolder = async (event) => {
         const fileList = Array.from(event.target.files || [])
         event.target.value = ''
         if (!fileList.length) return
-        const loaded = await Promise.all(
-            fileList
-                .filter((f) => isSupportedFile(f.name))
-                .map(async (f) => ({
-                    name: normalizeFileName(f.webkitRelativePath || f.name),
-                    content: await f.text()
-                }))
+        const usable = fileList.filter((f) => isSupportedFile(f.name))
+        const skipped = fileList.filter((f) => !isSupportedFile(f.name)).map((f) => f.name)
+        const incoming = await Promise.all(
+            usable.map(async (f) => ({
+                name: normalizeFileName(f.webkitRelativePath || f.name),
+                content: await f.text()
+            }))
         )
-        if (loaded.length > 0) {
-            setFiles(loaded)
-            const root = loaded.find((f) => f.name.endsWith('index.html')) || loaded[0]
-            setActiveFileName(root.name)
-        }
+        await importFiles(incoming, skipped, pickRoot(incoming))
     }
 
     const handleExportZip = async () => {
@@ -1627,14 +1698,32 @@ export function FilesPanel({
         if (!oldName || !name || name === oldName || files.find((f) => f.name === name)) return
         const escaped = oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
         const pattern = new RegExp(`(["'])${escaped}\\1`, 'g')
-        setFiles(files.map((f) => {
+        const nextFiles = files.map((f) => {
             const renamed = f.name === oldName ? { ...f, name } : f
             if (/\.html?$/i.test(renamed.name)) {
                 return { ...renamed, content: (renamed.content || '').replace(pattern, `$1${name}$1`) }
             }
             return renamed
-        }))
-        setActiveFileName(name)
+        })
+        const apply = () => {
+            setFiles(nextFiles)
+            setClosedNames((names) => names.map((n) => (n === oldName ? name : n)))
+            setActiveFileName(name)
+        }
+        const nextStart = startPageFile(nextFiles)?.name || ''
+        if (oldName === startName && nextStart !== oldName) {
+            ask({
+                title: `Rename ${oldName}?`,
+                body: nextStart
+                    ? `${oldName} is the page visitors see first. After this, ${nextStart} opens first instead.`
+                    : `${oldName} is the page visitors see first. After this no file opens first, so visitors see an empty page. Name it index.html to keep it first.`,
+                confirmLabel: 'Rename anyway',
+                cancelLabel: 'Keep the name',
+                danger: true
+            }).then((ok) => { if (ok) apply() })
+            return
+        }
+        apply()
     }
 
     // Write the asset's URL at the cursor of the active file; fall back to the
@@ -1699,15 +1788,25 @@ export function FilesPanel({
                             scrollButtons="auto"
                             sx={{ flex: 1, minWidth: 0, '& .MuiTab-root': { minWidth: 0, px: 1.5, py: 0.5, fontSize: '0.72rem' } }}
                         >
-                            {files.map((f) => (
+                            {openFiles.map((f) => (
                                 <Tab
                                     key={f.name}
                                     value={f.name}
                                     label={
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                             <span>{f.name}</span>
-                                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); removeFile(f.name) }} sx={{ p: 0, ml: 0.25 }}>
-                                                <CloseIcon sx={{ fontSize: 11 }} />
+                                            {f.name === startName && (
+                                                <Box component="span" sx={{ fontSize: 12, textTransform: 'none', color: 'text.secondary' }}>opens first</Box>
+                                            )}
+                                            <IconButton
+                                                component="span"
+                                                size="small"
+                                                aria-label={`Close ${f.name} tab`}
+                                                title="Close tab (the file stays in your project)"
+                                                onClick={(e) => { e.stopPropagation(); closeTab(f.name) }}
+                                                sx={{ p: 0, ml: 0.25, width: 24, height: 24 }}
+                                            >
+                                                <CloseIcon sx={{ fontSize: 14 }} />
                                             </IconButton>
                                         </Box>
                                     }
@@ -1729,6 +1828,16 @@ export function FilesPanel({
                             <Button size="small" variant="contained" onClick={addFile} disabled={!newFileName.trim()}>Add</Button>
                         </Stack>
                     )}
+                    {closedFiles.length > 0 && (
+                        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap alignItems="center" sx={{ px: 1, pb: 0.75 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12 }}>Closed tabs (still in your project):</Typography>
+                            {closedFiles.map((f) => (
+                                <Button key={f.name} size="small" variant="text" onClick={() => showFile(f.name)} sx={{ textTransform: 'none', fontSize: 12 }}>
+                                    Open {f.name}
+                                </Button>
+                            ))}
+                        </Stack>
+                    )}
                 </Box>
             ) : (
                 <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
@@ -1745,9 +1854,8 @@ export function FilesPanel({
                         ))}
                     </Box>
                     <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                        <Button size="small" variant="outlined" onClick={() => singleFileInputRef.current?.click()}>+ File</Button>
-                        <Button size="small" variant="outlined" onClick={() => zipInputRef.current?.click()}>+ .zip</Button>
-                        <Button size="small" variant="outlined" onClick={() => folderInputRef.current?.click()}>+ folder</Button>
+                        <Button size="small" variant="outlined" onClick={() => singleFileInputRef.current?.click()}>Add files</Button>
+                        <Button size="small" variant="outlined" onClick={() => folderInputRef.current?.click()}>Add folder</Button>
                         <Button size="small" variant="outlined" onClick={() => { setFiles([{ name: 'index.html', content: '' }]); setActiveFileName('index.html') }}>blank index.html</Button>
                     </Stack>
                 </Box>
@@ -1775,10 +1883,10 @@ export function FilesPanel({
                     )}
                     <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.75, mb: 1 }}>
                         <Button size="small" variant="outlined" onClick={() => setRenameValue(activeFile.name)}>Rename</Button>
-                        <Button size="small" variant="outlined" onClick={() => singleFileInputRef.current?.click()}>↑ Import</Button>
-                        <Button size="small" variant="outlined" onClick={() => zipInputRef.current?.click()}>↑ .zip</Button>
-                        <Button size="small" variant="outlined" onClick={() => folderInputRef.current?.click()}>↑ folder</Button>
-                        <Button size="small" variant="outlined" onClick={handleExportZip}>↓ Export</Button>
+                        <Button size="small" variant="outlined" onClick={() => singleFileInputRef.current?.click()}>Add files</Button>
+                        <Button size="small" variant="outlined" onClick={() => folderInputRef.current?.click()}>Add folder</Button>
+                        <Button size="small" variant="outlined" onClick={handleExportZip}>Download all</Button>
+                        <Button size="small" variant="outlined" color="error" onClick={deleteActiveFile}>Delete file</Button>
                     </Stack>
                 </Box>
             )}
@@ -1838,9 +1946,13 @@ export function FilesPanel({
                 )}
             </Box>
 
-            <input ref={singleFileInputRef} type="file" accept={SUPPORTED_EXTENSIONS.map((e) => `.${e}`).join(',')} aria-label="Import single file" style={{ display: 'none' }} onChange={handleImportSingle} />
-            <input ref={zipInputRef} type="file" accept=".zip,application/zip" aria-label="Import zip" style={{ display: 'none' }} onChange={handleImportZip} />
-            <input ref={folderInputRef} type="file" webkitdirectory="" aria-label="Import folder" style={{ display: 'none' }} onChange={handleImportFolder} />
+            <input ref={singleFileInputRef} type="file" multiple accept={[...SUPPORTED_EXTENSIONS.map((e) => `.${e}`), '.zip', 'application/zip'].join(',')} aria-label="Add files" style={{ display: 'none' }} onChange={handleAddFiles} />
+            <input ref={folderInputRef} type="file" webkitdirectory="" aria-label="Add folder" style={{ display: 'none' }} onChange={handleImportFolder} />
+            {importNotice && (
+                <Typography role="alert" variant="caption" color="error" display="block" sx={{ px: 1.5, pb: 1, fontSize: 12 }}>{importNotice}</Typography>
+            )}
+            {askDialog}
+            {undoNotice}
         </Stack>
     )
 }

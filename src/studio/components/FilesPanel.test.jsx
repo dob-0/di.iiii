@@ -1,4 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { useState } from 'react'
+import JSZip from 'jszip'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { FilesPanel } from './StudioShellPanels.jsx'
 
@@ -105,5 +107,125 @@ describe('FilesPanel', () => {
         fireEvent.change(urlInput, { target: { value: 'https://diiii.xyz' } })
         fireEvent.click(screen.getByRole('button', { name: 'Use URL' }))
         expect(onPresentationPatch).toHaveBeenCalledWith({ codeUrl: 'https://diiii.xyz', codeSourceType: 'url' })
+    })
+
+    // A panel that keeps its own project, so Undo and "files stay" can be seen.
+    const Harness = ({ initial = codeFiles, spy }) => {
+        const [state, setState] = useState({ mode: 'code', codeFiles: initial })
+        spy.current = state
+        return <FilesPanel presentationState={state} onPresentationPatch={(patch) => setState((prev) => ({ ...prev, ...patch }))} />
+    }
+    const names = (spy) => spy.current.codeFiles.map((f) => f.name)
+
+    it('closing a tab only hides it: the file stays in the project and can be opened again', () => {
+        const spy = { current: null }
+        render(<Harness spy={spy} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Close style.css tab' }))
+
+        expect(screen.queryByRole('tab', { name: /style\.css/ })).toBeNull()
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+        fireEvent.click(screen.getByRole('button', { name: 'Open style.css' }))
+        expect(screen.getByRole('tab', { name: /style\.css/ })).toBeInTheDocument()
+    })
+
+    it('marks the start page, and Delete asks first, removes the file, and Undo brings it back', async () => {
+        const spy = { current: null }
+        render(<Harness spy={spy} />)
+        expect(screen.getByRole('tab', { name: /index\.html.*opens first/ })).toBeInTheDocument()
+
+        fireEvent.click(screen.getByRole('tab', { name: /style\.css/ }))
+        fireEvent.click(screen.getByRole('button', { name: 'Delete file' }))
+        const dialog = screen.getByRole('alertdialog')
+        expect(within(dialog).getByText('Delete style.css?')).toBeInTheDocument()
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Delete file' }))
+        await waitFor(() => expect(names(spy)).toEqual(['index.html']))
+
+        fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+        expect(spy.current.codeFiles[1].content).toBe('h1 { color: red }')
+    })
+
+    it('Delete answered "Keep it" removes nothing', () => {
+        const spy = { current: null }
+        render(<Harness spy={spy} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Delete file' }))
+        fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Keep it' }))
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+    })
+
+    const zipOf = async (entries) => {
+        const zip = new JSZip()
+        for (const [name, content] of Object.entries(entries)) zip.file(name, content)
+        return new File([await zip.generateAsync({ type: 'uint8array' })], 'site.zip', { type: 'application/zip' })
+    }
+    const addFiles = async (file) => {
+        await act(async () => { fireEvent.change(screen.getByLabelText('Add files'), { target: { files: [file] } }) })
+    }
+
+    it('importing a zip into a project with files asks, and "Add them" keeps the old files', async () => {
+        const spy = { current: null }
+        render(<Harness spy={spy} />)
+        await addFiles(await zipOf({ 'about.html': '<p>about</p>', 'logo.png': 'x' }))
+
+        const dialog = await screen.findByRole('alertdialog')
+        expect(within(dialog).getByText('Add 1 file to your 2 files?')).toBeInTheDocument()
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Add them' }))
+        await waitFor(() => expect(names(spy)).toEqual(['index.html', 'style.css', 'about.html']))
+        expect(screen.getByRole('status').textContent).toMatch(/Added 1 file \(1 left out: logo\.png\)/)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+    })
+
+    it('importing a zip: "No" then "Replace all" replaces; "Keep my files" changes nothing', async () => {
+        const spy = { current: null }
+        render(<Harness spy={spy} />)
+        await addFiles(await zipOf({ 'only.html': '<p>only</p>' }))
+        fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'No' }))
+        fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Keep my files' }))
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+
+        await addFiles(await zipOf({ 'only.html': '<p>only</p>' }))
+        fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'No' }))
+        fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Replace all' }))
+        await waitFor(() => expect(names(spy)).toEqual(['only.html']))
+        fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+    })
+
+    it('a zip that cannot be read says so instead of doing nothing', async () => {
+        const spy = { current: null }
+        render(<Harness spy={spy} />)
+        await addFiles(new File(['this is not a zip'], 'broken.zip', { type: 'application/zip' }))
+        const alert = await screen.findByRole('alert')
+        expect(alert.textContent).toMatch(/broken\.zip: This zip could not be read/)
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+    })
+
+    it('renaming the start page warns first and does nothing if the person keeps the name', async () => {
+        const spy = { current: null }
+        render(<Harness spy={spy} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Rename' }))
+        const input = screen.getByPlaceholderText('index.html')
+        fireEvent.change(input, { target: { value: 'home.html' } })
+        fireEvent.keyDown(input, { key: 'Enter' })
+
+        const dialog = await screen.findByRole('alertdialog')
+        expect(dialog.textContent).toMatch(/home\.html opens first instead|visitors see first/)
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Keep the name' }))
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+
+        fireEvent.click(screen.getByRole('button', { name: 'Rename' }))
+        const again = screen.getByPlaceholderText('index.html')
+        fireEvent.change(again, { target: { value: 'home.html' } })
+        fireEvent.keyDown(again, { key: 'Enter' })
+        fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Rename anyway' }))
+        await waitFor(() => expect(names(spy)).toEqual(['home.html', 'style.css']))
     })
 })
