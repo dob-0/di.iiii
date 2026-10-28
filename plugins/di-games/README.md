@@ -65,8 +65,8 @@ carries the heat rules (brief template items 16 and 19: `di-cool`, pinned tests,
 **On, in `.mcp.json`: Blender MCP**, pinned `mcp-for-blender==2.1.9` (through `uvx`) with
 `BLENDER_MCP_SAFE_MODE=1`, `DISABLE_TELEMETRY=true` and `BLENDER_HOST=localhost`.
 
-- Why this version: the newest release at least 14 days old on 2026-10-28 (released 2026-10-06; 2.2.6 came
-  out the same day). The 14-day rule is ours and unvalidated.
+- Why this version: the newest release at least 14 days old on 2026-10-28 (released 2026-10-06; the newest,
+  2.2.6, came out on 2026-10-28 itself). The 14-day rule is ours and unvalidated.
 - Checked 2026-10-28: PyPI lists it as MIT and not yanked; the wheel's sha256 matches PyPI's; the wheel's
   source reads `BLENDER_MCP_SAFE_MODE` (`safe_mode.py:72`) and `DISABLE_TELEMETRY` (`telemetry.py:110`) and
   has the `install-addon` command. The server was NOT started in this test; the `uvx --from` form was
