@@ -55,6 +55,9 @@ const cameThroughAProxy = (req) => PROXY_MARKS.some(header => Boolean(req?.heade
  */
 const isOwnerAtTheMachine = (req, { isLocal = process.env.DI_LOCAL === '1', interfaces } = {}) => {
   if (!isLocal) return false
+  // The wifi door (wifiDoor.js) serves the wifi: whoever comes through it is a guest, even
+  // from this machine's own wifi address.
+  if (req?.diWifiDoor) return false
   if (cameThroughAProxy(req)) return false
   const address = req?.socket?.remoteAddress || ''
   if (!address) return false

@@ -92,7 +92,7 @@ describe('LocalHome: the door to the panel', () => {
     it('closed at first; the bar button opens and closes it', async () => {
         apiFetch.mockResolvedValue({ guest: READY })
         render(<LocalHome />)
-        const door = screen.getByRole('button', { name: /Phones & headsets/ })
+        const door = screen.getByRole('button', { name: /^Wifi$/ })
         expect(door).toHaveAttribute('aria-expanded', 'false')
         expect(screen.queryByRole('heading', { name: 'Phones and headsets in this place' })).toBeNull()
         fireEvent.click(door)
