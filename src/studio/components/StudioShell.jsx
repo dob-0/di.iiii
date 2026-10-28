@@ -20,6 +20,7 @@ import { isEmbedRequest, isPreviewRequest } from '../../utils/previewMode.js'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
 import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
+import { setViewportChoice, useViewportMode } from '../utils/viewportMode.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import { useRigMirrorSwitch } from '../hooks/useRigMirrorSwitch.js'
 import { useSendRigPositions } from '../hooks/useSendRigPositions.js'
@@ -341,6 +342,30 @@ export default function StudioShell({
     // `?open=files` (the plain project view's "Write code"): the Code window is drawn even while the project is bare,
     // since that is the project the choice is offered on.
     const codeAskedFor = typeof window !== 'undefined' && panelFromAddress(window.location.search) === 'files'
+    // A project that is a web page opens its page in the viewport (utils/viewportMode.js), and Create — primitives
+    // and lights, 3D only — does not open by itself on top of it. Decided once the project has loaded. The person
+    // can still open Create from the control cluster; the stored window layout is not changed.
+    const viewportMode = useViewportMode(document)
+    const codeFirst = viewportMode === 'code' && (layers ? layers.loaded : true)
+    const [createAsked, setCreateAsked] = useState(false)
+    // `?open=create` (the "Add pages or pictures" door) asked for Create by name: it is never held back then.
+    const createAskedFor = typeof window !== 'undefined' && panelFromAddress(window.location.search) === 'create'
+    const createHeldBack = codeFirst && !createAsked && !createAskedFor
+    const shownOpen = useMemo(() => {
+        if (!createHeldBack || !open.has('create')) return open
+        const next = new Set(open)
+        next.delete('create')
+        return next
+    }, [open, createHeldBack])
+    const handleTogglePanelFor = useCallback((id) => {
+        if (id === 'create' && createHeldBack) {
+            setCreateAsked(true)
+            if (!open.has('create')) handleTogglePanel('create')
+            return
+        }
+        handleTogglePanel(id)
+    }, [createHeldBack, open, handleTogglePanel])
+    const isShown = (id) => shownOpen.has(id)
     // Studio's own jump buttons to Nodes and Projection (the control cluster, the phone
     // header) follow the bar: offered once the project has reached that tool's layer,
     // never before (2026-09-27 — the phone offered Projection before the first wire).
@@ -704,7 +729,7 @@ export default function StudioShell({
         ),
         files: (
             <>
-                            <FilesPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} libraryItems={libraryItems} />
+                            <FilesPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} libraryItems={libraryItems} viewportMode={viewportMode} onViewportChoice={(mode) => setViewportChoice(document?.projectMeta?.id, mode)} />
             </>
         ),
         publish: (
@@ -767,7 +792,7 @@ export default function StudioShell({
 
             {!uiHidden && !isMobile && (
                 <>
-                    {(isOpen('create') || bare) && (
+                    {(isShown('create') || (bare && !createHeldBack)) && (
                         // Bare, Create is the one window: always drawn, and not
                         // closable, or the first screen would have nothing on it.
                         <StudioFloatingPanel key={`create-${layoutKey}`} title="Create" onClose={bare ? undefined : () => toggle('create')} initialWidth={280} {...panelChrome('create')}>
@@ -823,8 +848,8 @@ export default function StudioShell({
                         onSetGizmoMode={selectGizmoMode}
                         gizmoSpace={viewportGizmoSpace}
                         onSetGizmoSpace={setViewportGizmoSpace}
-                        openPanels={open}
-                        onTogglePanel={handleTogglePanel}
+                        openPanels={shownOpen}
+                        onTogglePanel={handleTogglePanelFor}
                         onFullscreen={handleFullscreen}
                         onHideUI={() => setUiHidden(true)}
                         onBackToHub={onBackToHub}
@@ -964,7 +989,7 @@ export default function StudioShell({
                     onCreateEntity={onCreateEntity}
                     onCreateFromAsset={onCreateFromAsset}
                     assets={libraryItems.filter(canPlaceInScene)}
-                    onOpenCreate={() => { if (!isOpen('create')) handleTogglePanel('create') }}
+                    onOpenCreate={() => { if (!isShown('create')) handleTogglePanelFor('create') }}
                     palette={jamMinimal ? JAM_PRIMITIVES : null}
                     moreLabel={jamMinimal ? 'More ▸' : undefined}
                 />
@@ -980,7 +1005,7 @@ export default function StudioShell({
                     selectTicks={selectTicks}
                     covered={isMobile && Boolean(mobileSheet)}
                     shareOpen={isOpen('publish') || mobileSheet === 'publish'}
-                    createOpen={isOpen('create') || mobileSheet === 'create'}
+                    createOpen={isShown('create') || mobileSheet === 'create'}
                     isOpenJam={isJam}
                 />
             )}
