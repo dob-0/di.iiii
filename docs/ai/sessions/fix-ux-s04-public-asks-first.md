@@ -6,3 +6,10 @@
 - One delete: `useSpaceDelete` in `SpaceTrash.jsx`, used by the Spaces page and the admin Directory. Same box, then a notice "“Name” is in the Trash for N days." with Undo (restores from the Trash). The admin project delete asks in the di.iiii question box.
 - Native-dialog budget 112 → 109.
 - Not done: `useSpaceActions.handleDeleteSpace` (old editor space list) keeps its `window.confirm` and `alert()`s; the admin Directory's own Public/Private button still flips in one click; the children's lab lock on the switch is S30.
+
+## 2026-10-29 — check of 6fcdd33cf (fix round, builder)
+
+- Tests on the new code: `npx vitest run --maxWorkers=2` on SpaceHub.test.jsx, AdminManageSection.test.jsx, hubTouch.test.js, nativeDialogs.budget.test.js, copyVocabulary.test.js, landingPromises.test.js and src/wiki: 9 files, 209 passed.
+- eslint on the 9 changed JS/JSX files: exit 0, no warnings.
+- Old code (the four source files of 6fcdd33cf^ restored, `spaceVisibility.js` moved out, new tests kept): 11 failed of 83 — the 10 new regression tests plus the budget guard (112 > 109). Source restored afterwards; tree clean.
+- Owed: the proof pictures (Manage on a space card, desktop and phone, before and after) were not taken in this round.
