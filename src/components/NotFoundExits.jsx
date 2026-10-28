@@ -31,7 +31,7 @@ export function ExitButton({ href, children, variant = 'outlined', testId }) {
 export function BrandHomeLink() {
     const href = buildFrontPagePath()
     return (
-        <Link href={href} onClick={go(href)} underline="none" aria-label="di.iiii front page" data-testid="not-found-brand">
+        <Link href={href} onClick={go(href)} underline="none" aria-label="di.iiii front page" data-testid="not-found-brand" sx={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>
             <Typography component="span" variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
                 di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
             </Typography>

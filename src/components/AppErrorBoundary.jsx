@@ -71,7 +71,8 @@ export function ViewFailed({ error }) {
             {/* The raw error is for whoever helps, folded away by default. */}
             {message && (
                 <details data-testid="view-failed-details" style={{ color: ink.muted, fontSize: 13 }}>
-                    <summary style={{ cursor: 'pointer' }}>Details for helpers</summary>
+                    {/* lineHeight 44: the hit-target floor (docs/ai/golden_rules.md); keeps the disclosure marker. */}
+                    <summary style={{ cursor: 'pointer', lineHeight: '44px' }}>Details for helpers</summary>
                     <code style={{ display: 'block', marginTop: 8, fontFamily: ink.mono, fontSize: 12, wordBreak: 'break-word' }}>{message}</code>
                 </details>
             )}
