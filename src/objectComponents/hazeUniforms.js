@@ -30,10 +30,17 @@ const createHazeUniforms = () => ({
     uHazePos: { value: Array.from({ length: MAX_HAZE_SOURCES }, () => new Vector3()) },
     uHazeDir: { value: Array.from({ length: MAX_HAZE_SOURCES }, () => new Vector3(0, 0, 1)) },
     uHazeJet: { value: Array.from({ length: MAX_HAZE_SOURCES }, () => new Vector4(0, 0.05, 0.11, 1)) },
+    // the near field's blob around each jet's nozzle (two-zone model, hazeZones.js): σ at its centre, radius
+    uHazeNear: { value: Array.from({ length: MAX_HAZE_SOURCES }, () => new Vector4(0, 1, 0, 0)) },
     uHazeNoise: { value: hazeNoiseTexture() },
     uPatch: { value: 0 },
     uDrift: { value: new Vector3() },
     uHazeTime: { value: 0 },
+    // THE BUILDING'S BOX (beamReach.js): haze is air inside the building, none outside it, so a beam scatters no
+    // light where it has left the hall. uHazeBoxOn 0 (no building found): the air has no bounds, as before.
+    uHazeBoxOn: { value: 0 },
+    uHazeBoxMin: { value: new Vector3() },
+    uHazeBoxMax: { value: new Vector3() },
     // 1 = draw the beams' glare veil; 0 while the room is drawn with real bloom
     // (HdrBloom.jsx), which shows the same glow the veil was standing in for
     uGlareOn: { value: 1 },
@@ -79,6 +86,20 @@ export const writeHazeUniforms = (u, atmosphere, field) => {
         u.uHazePos.value[i].set(j.position[0], j.position[1], j.position[2])
         u.uHazeDir.value[i].set(j.direction[0], j.direction[1], j.direction[2])
         u.uHazeJet.value[i].set(j.sigma0, j.nozzle, j.spread, j.reach)
+        const b = field.blobs?.[i]
+        u.uHazeNear.value[i].set(b ? b.sigma : 0, b ? b.radius : 1, 0, 0)
     }
     u.uHazeCount.value = n
+}
+
+/** Bound this renderer's haze to the building's box (a three Box3, or null: unbounded, as before). */
+export const setHazeBox = (u, box) => {
+    if (!u) return
+    if (!box || box.isEmpty?.()) {
+        u.uHazeBoxOn.value = 0
+        return
+    }
+    u.uHazeBoxOn.value = 1
+    u.uHazeBoxMin.value.copy(box.min)
+    u.uHazeBoxMax.value.copy(box.max)
 }

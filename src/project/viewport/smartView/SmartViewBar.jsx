@@ -1,4 +1,5 @@
-// The view switcher: the six presets and X-ray, one quiet row.
+import { VIEW_LAYER_IDS, VIEW_LAYER_LABELS } from './smartViewGeometry.js'
+// The view switcher: the project's views (viewData.js) and X-ray, one quiet row.
 //
 // Two dresses, both borrowed, none new (feedback: preserve the existing UI):
 //   'visitor' — the published room's own chrome: the rig's version row
@@ -40,6 +41,9 @@ const visitorButton = (current) => ({
     fontSize: '0.9rem',
     fontFamily: 'inherit',
     whiteSpace: 'nowrap',
+    // Never shrink: on a 390 px phone seven labels squeezed into each other ("SideRig - FOH z 29Crane");
+    // the row scrolls sideways instead (overflowX on the row).
+    flex: '0 0 auto',
     cursor: 'pointer',
     color: current ? '#05070a' : '#f5f7fa',
     background: current ? '#f5f7fa' : 'transparent'
@@ -73,10 +77,10 @@ const studioButton = (current, compact = false) => ({
     padding: '5px 9px',
     borderRadius: '2px',
     ...(compact ? { minHeight: '44px', padding: '0 12px' } : {}),
-    border: current ? '1px solid #4fd6ff' : '1px solid rgba(255,255,255,0.12)',
-    background: current ? 'rgba(79,214,255,0.28)' : 'rgba(15,23,34,0.82)',
-    color: current ? '#4fd6ff' : '#c8d8e8',
-    boxShadow: current ? '0 0 8px rgba(79,214,255,0.35)' : 'none',
+    border: current ? '1px solid var(--di-cyan)' : '1px solid rgba(255,255,255,0.12)',
+    background: current ? 'rgba(var(--di-cyan-rgb),0.28)' : 'rgba(var(--di-surface-2-rgb),0.82)',
+    color: current ? 'var(--di-cyan)' : '#c8d8e8',
+    boxShadow: current ? '0 0 8px rgba(var(--di-cyan-rgb),0.35)' : 'none',
     fontSize: '12px',
     fontWeight: 600,
     fontFamily: 'inherit',
@@ -86,24 +90,33 @@ const studioButton = (current, compact = false) => ({
     whiteSpace: 'nowrap'
 })
 
-export default function SmartViewBar({ presets = [], activeId = null, xray = false, onPreset, onXray, variant = 'visitor', compact = false }) {
+// The building switches (Roof · Walls · Machines · Outside) sit in this bar when `onLayer` is given — the Studio's case
+// (owner 2026-10-13: "the floor is hidden but I can't see the place where I turn the walls on and off"); the visitor page
+// draws its own group next to the SceneBar and passes none. `layers[id] === false` hides a layer, anything else shows it.
+export default function SmartViewBar({ presets = [], activeId = null, xray = false, onPreset, onXray, variant = 'visitor', compact = false, layers = null, onLayer = null, flying = false, onFly = null }) {
     if (!presets.length) return null
     const studio = variant === 'studio'
     const button = studio ? (current) => studioButton(current, compact) : visitorButton
     return (
         <div role="toolbar" aria-label="views" style={studio ? studioRow : visitorRow(compact)} data-smart-view-bar>
-            {presets.map((p) => (
-                <button
-                    key={p.id}
-                    type="button"
-                    aria-pressed={activeId === p.id}
-                    title={`${p.title} (${p.key})`}
-                    style={button(activeId === p.id)}
-                    onClick={() => onPreset?.(p.id)}
-                >
-                    {p.label}
-                </button>
-            ))}
+            {presets.map((p) => {
+                // A work view (viewData.js: `live: false`) is the Studio's only: dashed, and its title says so.
+                const work = studio && p.live === false
+                const title = p.key ? `${p.title} (${p.key})` : p.title
+                return (
+                    <button
+                        key={p.id}
+                        type="button"
+                        aria-pressed={activeId === p.id}
+                        data-live={p.live === undefined ? undefined : String(p.live)}
+                        title={work ? `${title} — work view: visitors do not see it` : title}
+                        style={work ? { ...button(activeId === p.id), borderStyle: 'dashed' } : button(activeId === p.id)}
+                        onClick={() => onPreset?.(p.id)}
+                    >
+                        {p.label}
+                    </button>
+                )
+            })}
             <button
                 type="button"
                 aria-pressed={xray}
@@ -113,6 +126,34 @@ export default function SmartViewBar({ presets = [], activeId = null, xray = fal
             >
                 X-ray
             </button>
+            {typeof onFly === 'function' ? (
+                <button
+                    type="button"
+                    data-autofly
+                    aria-pressed={flying}
+                    title="Auto fly — an FPV drone flight through the room; touch anything to take the controls (Esc stops)"
+                    style={button(flying)}
+                    onClick={() => onFly(!flying)}
+                >
+                    Auto fly
+                </button>
+            ) : null}
+            {typeof onLayer === 'function' ? VIEW_LAYER_IDS.map((id) => {
+                const shown = layers?.[id] !== false
+                return (
+                    <button
+                        key={id}
+                        type="button"
+                        aria-pressed={shown}
+                        data-layer={id}
+                        title={id === 'cut' ? `${shown ? 'Whole building: stop cutting' : 'Cut'} the roof and the walls that face you from outside` : `${shown ? 'Hide' : 'Show'} the ${VIEW_LAYER_LABELS[id].toLowerCase()}`}
+                        style={{ ...button(shown), textDecoration: shown ? 'none' : 'line-through' }}
+                        onClick={() => onLayer(id, !shown)}
+                    >
+                        {VIEW_LAYER_LABELS[id]}
+                    </button>
+                )
+            }) : null}
         </div>
     )
 }

@@ -44,4 +44,6 @@ run_gate "lint" npm run lint
 run_gate "schema-sync tests" npm run test:schema-sync
 run_gate "wiki/user-facing docs check" npm run docs:wiki:check
 run_gate "AI docs (CURRENT.md limit + derived facts + freshness)" npm run docs:ai:check
+# CI runs it and the gate did not: #724 and #811 each lost a CI round to it on 2026-10-20.
+run_gate "silent fallback patterns" npm run check:fallback-patterns
 exit 0

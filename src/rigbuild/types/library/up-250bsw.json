@@ -1,0 +1,428 @@
+{
+  "id": "up-250bsw",
+  "code": "UP-250BSW",
+  "identified": "EXACT",
+  "identifiedNote": "EXACT",
+  "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+  "model": "UP-250BSW",
+  "modelledOn": null,
+  "product": "UPlight UP-250BSW (also written UP-BSW250), 250 W LED beam/spot/wash moving head",
+  "category": "moving-head",
+  "modes": [
+    {
+      "name": "24ch",
+      "footprint": 24,
+      "channels": null,
+      "channelsSource": null,
+      "src": "B",
+      "basis": "EXACT"
+    },
+    {
+      "name": "30ch",
+      "footprint": 30,
+      "channels": null,
+      "channelsSource": null,
+      "src": "B",
+      "basis": "EXACT"
+    },
+    {
+      "name": "17ch-assumed",
+      "footprint": 17,
+      "channels": [
+        {
+          "role": "pan",
+          "label": "Pan (X)",
+          "default": 128
+        },
+        {
+          "role": "panFine",
+          "label": "Pan fine",
+          "default": 0
+        },
+        {
+          "role": "tilt",
+          "label": "Tilt (Y)",
+          "default": 128
+        },
+        {
+          "role": "tiltFine",
+          "label": "Tilt fine",
+          "default": 0
+        },
+        {
+          "role": "speed",
+          "label": "XY speed"
+        },
+        {
+          "role": "strobe",
+          "label": "Shutter / strobe",
+          "default": 255,
+          "cap": {
+            "shutter": [
+              {
+                "from": 0,
+                "to": 3,
+                "open": false
+              },
+              {
+                "from": 4,
+                "to": 103,
+                "strobe": [
+                  1,
+                  20
+                ]
+              },
+              {
+                "from": 104,
+                "to": 107,
+                "open": true
+              },
+              {
+                "from": 108,
+                "to": 207,
+                "strobe": [
+                  1,
+                  20
+                ]
+              },
+              {
+                "from": 208,
+                "to": 212,
+                "open": true
+              },
+              {
+                "from": 213,
+                "to": 251,
+                "strobe": [
+                  2,
+                  12
+                ]
+              },
+              {
+                "from": 252,
+                "to": 255,
+                "open": true
+              }
+            ]
+          }
+        },
+        {
+          "role": "dimmer",
+          "label": "Dimmer"
+        },
+        {
+          "role": "color",
+          "label": "Colour wheel",
+          "default": 0,
+          "cap": {
+            "wheel": [
+              {
+                "from": 0,
+                "to": 9,
+                "name": "Open (white)",
+                "colour": "#ffffff"
+              },
+              {
+                "from": 10,
+                "to": 19,
+                "half": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "from": 20,
+                "to": 29,
+                "name": "Red",
+                "colour": "#c41c1a"
+              },
+              {
+                "from": 30,
+                "to": 39,
+                "half": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "from": 40,
+                "to": 49,
+                "name": "Orange",
+                "colour": "#ed8229"
+              },
+              {
+                "from": 50,
+                "to": 59,
+                "half": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "from": 60,
+                "to": 69,
+                "name": "Aquamarine",
+                "colour": "#7abd82"
+              },
+              {
+                "from": 70,
+                "to": 79,
+                "half": [
+                  3,
+                  4
+                ]
+              },
+              {
+                "from": 80,
+                "to": 89,
+                "name": "Green",
+                "colour": "#05822b"
+              },
+              {
+                "from": 90,
+                "to": 99,
+                "half": [
+                  4,
+                  5
+                ]
+              },
+              {
+                "from": 100,
+                "to": 109,
+                "name": "Light Green",
+                "colour": "#9ec233"
+              },
+              {
+                "from": 110,
+                "to": 119,
+                "half": [
+                  5,
+                  6
+                ]
+              },
+              {
+                "from": 120,
+                "to": 129,
+                "name": "Lavender",
+                "colour": "#8f73ad"
+              },
+              {
+                "from": 130,
+                "to": 139,
+                "half": [
+                  6,
+                  7
+                ]
+              },
+              {
+                "from": 140,
+                "to": 149,
+                "name": "Pink",
+                "colour": "#ed8080"
+              },
+              {
+                "from": 150,
+                "to": 159,
+                "half": [
+                  7,
+                  0
+                ]
+              },
+              {
+                "from": 160,
+                "to": 205,
+                "spin": "forward"
+              },
+              {
+                "from": 206,
+                "to": 209,
+                "spin": "stop"
+              },
+              {
+                "from": 210,
+                "to": 255,
+                "spin": "reverse"
+              }
+            ]
+          }
+        },
+        {
+          "role": "gobo",
+          "label": "Gobo wheel",
+          "cap": {
+            "gobo": true
+          }
+        },
+        {
+          "role": "gobo2",
+          "label": "Rotating gobo",
+          "cap": {
+            "gobo": true
+          }
+        },
+        {
+          "role": "rotation",
+          "label": "Gobo rotation"
+        },
+        {
+          "role": "zoom",
+          "label": "Zoom",
+          "cap": {
+            "zoom": {
+              "from": 0,
+              "to": 255,
+              "deg": [
+                10,
+                30
+              ]
+            }
+          }
+        },
+        {
+          "role": "focus",
+          "label": "Focus"
+        },
+        {
+          "role": "frost",
+          "label": "Frost"
+        },
+        {
+          "role": "prism",
+          "label": "Prism",
+          "cap": {
+            "prism": true
+          }
+        },
+        {
+          "role": "aux1",
+          "label": "Prism rotation"
+        },
+        {
+          "role": "control",
+          "label": "Reset"
+        }
+      ],
+      "channelsSource": {
+        "basis": "ASSUMED",
+        "grade": "STILL ASSUMED",
+        "gradeWhy": "searched 2026-09-29 (all 11 UP-250BSW listings, 125 description images, both maker sites, QLC+, OFL, Google): no 24ch or 30ch chart anywhere. The Aolait unit is a DIFFERENT fixture (no LED ring, other base and yoke, 17/20ch) — kept only so the desk can test; never patch the rental unit by it",
+        "fixture": "Aolait \"250W LED 3IN1 BSW Moving Head Light\" (250 W white LED, pan 540° / tilt 270° + fine, 3-facet prism)",
+        "url": "https://aolait.com/wp-content/uploads/2020/11/250W-LED-SPOT-Moving-Head-Light-user-manual.pdf",
+        "title": "250W LED SPOT moving head user manual",
+        "pages": "13–17",
+        "sha256": "251282d3b67d69ccf87b43ef92dc302ca1eb87be9d00797b3bd165ff1ffde062",
+        "accessed": "2026-09-28",
+        "fill": [
+          "the equivalent has 17/20ch modes, not UP-250BSW's 24/30: its 17ch is used as its own mode, so the footprint is 17",
+          "colour wheel slots numbered, not named: Clay Paky Sharpy wheel order (OFL) — ASSUMED",
+          "strobe rates are not printed: 4–103 drawn as 1–20 Hz (ASSUMED)",
+          "zoom 0–255 drawn 10°→30° (the type's published zoom); which end is narrow is ASSUMED",
+          "pan/tilt: DMX centre is home; range 540°/270° (the type's, itself ASSUMED for the class)"
+        ]
+      },
+      "assumed": "ASSUMED from Aolait 250W LED BSW manual p.13–17 (its 17ch mode — UP-250BSW publishes 24/30ch) — verify on the rental unit",
+      "src": null,
+      "basis": "ASSUMED"
+    }
+  ],
+  "defaultMode": "24ch",
+  "modesOwed": false,
+  "assumedMode": "17ch-assumed",
+  "power_w": {
+    "value": 280,
+    "src": "B",
+    "basis": "EXACT"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 13.5,
+    "src": "B",
+    "basis": "EXACT"
+  },
+  "size_mm": {
+    "value": [
+      330,
+      257,
+      536
+    ],
+    "src": "B",
+    "basis": "EXACT",
+    "order": "L x W x H as published"
+  },
+  "pan_tilt_deg": {
+    "value": [
+      540,
+      270
+    ],
+    "src": null,
+    "basis": "ASSUMED",
+    "note": "not stated by the maker; typical of the class"
+  },
+  "ip": {
+    "value": "IP20",
+    "src": "B",
+    "basis": "EXACT",
+    "note": "INDOOR fixture — note for an outdoor or damp venue"
+  },
+  "optics": {
+    "beam_deg": 13,
+    "zoom_deg": [
+      10,
+      30
+    ],
+    "lux": 14557,
+    "at_m": 5,
+    "photometrySrc": "CHAUVET-475ZX",
+    "photometryBasis": "EQUIVALENT",
+    "note": "a 250 W LED spot, not a beam/spot/wash hybrid; the UP-250BSW zooms 10-30 deg"
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": null,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/bsw250.glb",
+    "sidecar": "scripts/place/fixtures/glb/bsw250.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": 0.13,
+    "tiltY": 0.33,
+    "lensY": 0.544,
+    "sizeAtHome_mm": {
+      "width_x": 330,
+      "depth_z": 261,
+      "height_y": 542
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "B": {
+      "url": "https://www.pro-uplight.com/250W-BSW-LED-MOVING-HEAD-pd576927868.html",
+      "what": "UPlight UP-250BSW, maker's site"
+    },
+    "CHAUVET-475ZX": {
+      "url": "https://www.chauvetdj.com/products/intimidator-spot-475zx/",
+      "what": "Chauvet DJ Intimidator Spot 475ZX (250 W cool-white LED, 13-28 deg zoom) — photometric equivalent for UP-250BSW"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "bsw250",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "exact",
+    "date": "2026-09-28",
+    "sources": [
+      "B",
+      "CHAUVET-475ZX"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 0,
+      "datasheet": 6,
+      "equivalent": 1,
+      "assumed": 3,
+      "unknown": 0
+    }
+  }
+}

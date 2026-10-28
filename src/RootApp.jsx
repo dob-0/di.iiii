@@ -9,11 +9,14 @@ import {
     isRawLocation,
     RAW_PAGE_OUT,
     RAW_PAGE_PROJECT,
-    RAW_PAGE_PROJECTS
+    RAW_PAGE_PROJECTS,
+    rawShowsFloatingAccount,
 } from './raw/utils/rawRouting.js'
 import AuthReturnNotice from './components/AuthReturnNotice.jsx'
 import ModeMark from './components/ModeMark.jsx'
+import TreeChip from './components/TreeChip.jsx'
 import LaneDefaultSpace from './components/LaneDefaultSpace.jsx'
+import AppErrorBoundary, { RouteErrorBoundary } from './components/AppErrorBoundary.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 import useDocumentTitle from './hooks/useDocumentTitle.js'
@@ -22,8 +25,10 @@ import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
 import useAuthSession from './hooks/useAuthSession.js'
 import { hasServerApi } from './services/apiClient.js'
 import { isSpaceInSessionScope } from './utils/sessionScope.js'
+import { getHostSpace } from './utils/hostSpace.js'
 import { rigToolAccess } from './rigbuild/rigToolAccess.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
+import useResolveSpaceRoot from './hooks/useResolveSpaceRoot.js'
 import { buildStudioProjectPath, getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
 import { getJamLocationState, isJamLocation } from './project/routing/jamRouting.js'
 import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
@@ -36,12 +41,13 @@ import TouchForward from './rigbuild/TouchForward.jsx'
 import { getPlotLocationState, isPlotLocation } from './rigbuild/plotRouting.js'
 import { getCardsLocationState, isCardsLocation } from './rigbuild/cardsRouting.js'
 import { getScenesLocationState, isScenesLocation } from './rigbuild/scenesRouting.js'
+import { getShowLocationState, isShowLocation } from './rigbuild/showRouting.js'
 import { getEquipmentLocationState, isEquipmentLocation } from './rigbuild/equipmentRouting.js'
 import { getBuildLocationState, isBuildLocation } from './rigbuild/buildRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
-import { APP_PAGE_EDITOR, APP_PAGE_FOR_APPS, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SCAN, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildPublicProjectPath, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
+import { APP_PAGE_DEVICE, APP_PAGE_EDITOR, APP_PAGE_FOR_APPS, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SHOOT, APP_PAGE_SCAN, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildPublicProjectPath, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 import ReservedAddressCard, { hasReservedAddressCard } from './components/ReservedAddressCard.jsx'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
@@ -72,6 +78,8 @@ const VisualiserSurface = lazy(() => import('./rigbuild/VisualiserSurface.jsx'))
 const PlotSurface = lazy(() => import('./rigbuild/PlotSurface.jsx'))
 const CardsSurface = lazy(() => import('./rigbuild/CardsSurface.jsx'))
 const ScenesSurface = lazy(() => import('./rigbuild/ScenesSurface.jsx'))
+// The show page: its own small chunk, no WebGL — a phone in a dark hall opens it.
+const ShowSurface = lazy(() => import('./rigbuild/ShowSurface.jsx'))
 const EquipmentSurface = lazy(() => import('./rigbuild/EquipmentSurface.jsx'))
 const BuildSurface = lazy(() => import('./rigbuild/BuildSurface.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
@@ -95,6 +103,8 @@ const SpaceContentsPage = lazy(() => import('./pages/SpaceContentsPage.jsx'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'))
 const TermsPage = lazy(() => import('./pages/TermsPage.jsx'))
 const ForAppsPage = lazy(() => import('./pages/ForAppsPage.jsx'))
+const ShootPage = lazy(() => import('./pages/shoot/ShootPage.jsx'))
+const DeviceLoginPage = lazy(() => import('./pages/DeviceLoginPage.jsx'))
 // AuthGate pulls in MUI + AccountButton -- lazy so public routes (landing,
 // wiki, any public space) that never render a gate don't pay for MUI in
 // their eager bundle (2026-07-17 perf audit).
@@ -152,7 +162,7 @@ function RawSurfaceRoute({ rawState, spaceId }) {
             requiredSpaceId={spaceId}
             outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
             // The floating account chip must not hang over the show.
-            showAccountButton={rawState.page !== RAW_PAGE_OUT}
+            showAccountButton={rawShowsFloatingAccount(rawState)}
         >
             {surface}
         </ProtectedSurface>
@@ -329,6 +339,31 @@ function SlugProjectRoute({ appState }) {
     return <SpaceSurfaceRoute appState={{ page: appState.page, spaceId: appState.spaceId }} />
 }
 
+// The bare /{space} address. When the space's front door was moved to another
+// space (di move … --unpublish) and nothing has been put on its door since,
+// the server names where that project lives now and the visitor is sent on —
+// the same pointer and the same replace() SlugProjectRoute gives an old
+// project link, so an old space address never opens onto an empty space. The
+// server only names a destination this visitor could open. No forward, or the
+// question failing: the space opens exactly as it did before.
+function SpaceRootRoute({ appState }) {
+    const rrNavigate = useNavigate()
+    const { search, hash } = useLocation()
+    const { result } = useResolveSpaceRoot(appState.spaceId)
+    const movedTo = result?.movedTo || null
+
+    useEffect(() => {
+        if (!movedTo?.spaceId || !movedTo?.projectId) return
+        const keep = `${search || ''}${hash || ''}`
+        rrNavigate(`${buildPublicProjectPath(movedTo.spaceId, movedTo.projectId)}${keep}`, { replace: true })
+    }, [movedTo?.spaceId, movedTo?.projectId, search, hash, rrNavigate])
+
+    if (result === undefined || (movedTo?.spaceId && movedTo?.projectId)) {
+        return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+    return <SpaceSurfaceRoute appState={appState} />
+}
+
 // The doorway on the /{space}/p/{id} form: ids are already real, so this is a heal
 // with no resolve step. Kept as its own component because the redirect must run in an
 // effect, and the dispatch site it is called from is not a component boundary.
@@ -407,6 +442,7 @@ function AppRouter() {
     const plotState = getPlotLocationState(location)
     const cardsState = getCardsLocationState(location)
     const scenesState = getScenesLocationState(location)
+    const showState = getShowLocationState(location)
     const equipmentState = getEquipmentLocationState(location)
     const buildState = getBuildLocationState(location)
     const chatState = getChatLocationState(location)
@@ -650,6 +686,20 @@ function AppRouter() {
         return <RigToolRoute spaceId={scenesState.spaceId} surface={(readOnly) => <ScenesSurface spaceId={scenesState.spaceId} projectId={scenesState.projectId} readOnly={readOnly} />} />
     }
 
+    // `/{space}/show/{project}` — the show page (src/rigbuild/ShowSurface.jsx, RIG_BUILD.md §24):
+    // the live cue and the cue list as cards, for everyone in the space; who may CHOOSE is
+    // the server's answer (serverXR/src/routes/showRoutes.js), never this route's. No gate
+    // here: the page asks the server, and a private show answers 401/403 there, which the page
+    // says in one sentence. (RigToolRoute is not used on purpose: on a `di up --guests`
+    // install it reads `session.local` as "everyone edits" and handed a guest the sign-in card.)
+    if (isShowLocation(showState)) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading the show" detail="" />}>
+                <ShowSurface spaceId={showState.spaceId} projectId={showState.projectId} />
+            </Suspense>
+        )
+    }
+
     // `/{space}/equipment/{projectId}` — the show's equipment list (src/rigbuild/): the
     // inventory of devices with their item cards, take or skip, and the order with its cost.
     // Members edit it, a visitor to a public space reads it — the plot's rule (RigToolRoute).
@@ -776,7 +826,7 @@ function AppRouter() {
     if (appState.page === APP_PAGE_WIKI) {
         return (
             <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
-                <WikiPage />
+                <WikiPage articleId={appState.wikiArticleId} />
             </Suspense>
         )
     }
@@ -819,6 +869,26 @@ function AppRouter() {
         )
     }
 
+    // `/shoot/{key}` — a crew's shared shoot sheet, opened by its link.
+    if (appState.page === APP_PAGE_SHOOT) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Opening the shoot sheet" detail="" />}>
+                <ShootPage sheetKey={appState.shootKey} />
+            </Suspense>
+        )
+    }
+
+    // `/device` — the browser half of `di login` (src/pages/DeviceLoginPage.jsx).
+    // Not behind the gate: it asks for an account itself, and a person who arrives
+    // signed out needs the sign-in surface on this very address, not a redirect.
+    if (appState.page === APP_PAGE_DEVICE) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <DeviceLoginPage />
+            </Suspense>
+        )
+    }
+
     const isRootLanding = !appState.spaceId
         && appState.page !== APP_PAGE_PREFERENCES
         && appState.page !== APP_PAGE_WIKI
@@ -826,6 +896,8 @@ function AppRouter() {
         && appState.page !== APP_PAGE_TERMS
         && appState.page !== APP_PAGE_TOOLS
         && appState.page !== APP_PAGE_FOR_APPS
+        && appState.page !== APP_PAGE_SHOOT
+        && appState.page !== APP_PAGE_DEVICE
 
     if (isRootLanding) {
         // ?tour=1 keeps the landing reachable on a local install, where `/` is
@@ -908,15 +980,29 @@ function AppRouter() {
         return <ReservedAddressCard word={bareReserved} />
     }
 
+    // Not on a space's own domain: there the host IS the space, a project of
+    // another space has no address (buildPublicProjectPath stays domain-relative
+    // and /{other}/p/{id} reads back as a project slug of the host space), so the
+    // space opens as it did before. Sending that visitor on to the platform is a
+    // separate decision.
+    if (pathSegments.length === 1 && appState.page === APP_PAGE_EDITOR && !appState.projectId && !getHostSpace()) {
+        return <SpaceRootRoute appState={appState} />
+    }
+
     return <SpaceSurfaceRoute appState={appState} />
 }
 
 export default function RootApp() {
     return (
-        <BrowserRouter>
-            <AuthReturnNotice />
-            <ModeMark />
-            <AppRouter />
-        </BrowserRouter>
+        <AppErrorBoundary name="AppErrorBoundary">
+            <BrowserRouter>
+                <AuthReturnNotice />
+                <ModeMark />
+                <TreeChip />
+                <RouteErrorBoundary>
+                    <AppRouter />
+                </RouteErrorBoundary>
+            </BrowserRouter>
+        </AppErrorBoundary>
     )
 }

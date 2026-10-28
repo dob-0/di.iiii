@@ -1,14 +1,14 @@
 {
   "tool": "scripts/place/hall.py",
   "version": 2,
-  "createdAt": "2026-10-02T02:21:10.676214+00:00",
+  "createdAt": "2026-10-04T22:47:57.263032+00:00",
   "what": "A clean parametric model of a Soviet multi-span crane hall with a flat space-frame roof (MOXIR, Charentsavan). Not a scan. Frame: Y up, metres, the entry end at +Z, the far end at -Z, the nave centred on x = 0, +x to the right looking from the entry.",
   "dims": {
     "span_m": 24.0,
     "pitch_m": 6.0,
     "bays": 18,
     "length_m": 108.0,
-    "crane_rail_h_m": 7.6,
+    "crane_rail_h_m": 8.1,
     "truss_bottom_h_m": 10.8,
     "truss_top_h_m": 13.3,
     "ridge_h_m": 16.5,
@@ -21,9 +21,9 @@
     "column_head_width_m": 1.9,
     "crane_girders_each_row": 2,
     "crane_girder_depth_m": 0.9,
-    "crane_bridge_bottom_h_m": 8.15,
-    "crane_bridge_depth_m": 1.5,
-    "crane_cab_h_m": 2.2,
+    "crane_bridge_bottom_h_m": 7.95,
+    "crane_bridge_depth_m": 0.8,
+    "crane_cab_h_m": 2.1,
     "crane_cab_side": "right",
     "runway_handrail_rows": [
       "left"
@@ -574,7 +574,7 @@
     "pitch_m": "estimate (moxir-hall-dims-2026-09-28.json; confidence medium-high)",
     "bays": "estimate (moxir-hall-dims-2026-09-28.json; confidence medium (satellite roof 106.5 m, grid-snapped to 18 x 6)) range [17, 18]",
     "length_m": "estimate (moxir-hall-dims-2026-09-28.json; confidence medium) range [105, 109]",
-    "crane_rail_h_m": "estimate (moxir-hall-dims-2026-09-28.json; confidence low-medium (disputed)) range [6.6, 8.4]",
+    "crane_rail_h_m": "estimate (moxir-hall-dims-2026-10-02.json; confidence medium-high: top of rail where the far crane's end trucks sit, photo 007: fronto-parallel two-depth metrology (Criminisi et al. 2000) \u2014 the crane's own rail span (GOST 534-78: 24 m - 2*lambda = 22.0-23.0 m) gives its depth (69 m), the floor at the far end wall is the reference, the horizon cancels; Monte Carlo over focal, camera place/height, wall position, rail span and +-6 px reading: median 8.08, 5-95 % 7.81-8.36. Agrees with the 2026-09-27 perspective estimate (runway top 8.2 m) and with the Soviet unified crane-rail level 8.15 m for 24 m spans; the VGGT cloud's 6.6-7.4 is rejected (VGGT compresses telephoto/far depth). Scale check in the same photo: the end wall's steel double door reads 2.01 x 2.39 m (a standard 2.0 x 2.4 m industrial door).) range [7.8, 8.4]",
     "truss_bottom_h_m": "estimate (moxir-hall-dims-2026-10-02.json; confidence medium: the Soviet height series for such halls is 8.4 / 9.6 / 10.8 / 12.0 m floor to roof underside; 10.8 is the series value next to the earlier photo fit of 11.0 (+-0.4)) range [10.6, 11.2]",
     "truss_top_h_m": "estimate (moxir-hall-dims-2026-10-02.json; confidence medium: bottom chord + the 2.5 m space-frame depth kept) range [13.1, 13.7]",
     "ridge_h_m": "estimate (moxir-hall-dims-2026-10-02.json; confidence low-medium: the lantern top = deck + lantern height, 13.3 + 3.2)",
@@ -587,9 +587,9 @@
     "column_head_width_m": "estimate (moxir-hall-dims-2026-09-28.json; confidence GUESS (form seen, size not measured)) range [1.6, 2.2]",
     "crane_girders_each_row": "estimate (moxir-hall-dims-2026-09-28.json)",
     "crane_girder_depth_m": "estimate (moxir-hall-dims-2026-09-28.json; confidence GUESS) range [0.8, 1.2]",
-    "crane_bridge_bottom_h_m": "derived: crane rail + 0.55 m (the v2 assumption, unmeasured)",
-    "crane_bridge_depth_m": "placeholder",
-    "crane_cab_h_m": "placeholder",
+    "crane_bridge_bottom_h_m": "estimate (moxir-hall-dims-2026-10-02.json; confidence medium: underside of the bridge girders at mid-span, photo 007 (edge profile at x 1750/2250): 7.96 m, 5-95 % 7.69-8.24; 0.12 m (0.05-0.20) BELOW the rail head \u2014 the box girders hang between the end trucks and are shallower at their ends (end underside rail +0.27). Measured on the FAR crane; the entry-end crane (the one to park over the DJ) is ASSUMED the same type: same runway, same yellow double-girder bridge with the same slotted side plates (photos 004/010/012/032 from under it); its own underside is not measured.) range [7.7, 8.25]",
+    "crane_bridge_depth_m": "estimate (moxir-hall-dims-2026-10-02.json; confidence medium: bridge girder side plate at mid-span, photo 007: top 8.73 m - underside 7.96 m = 0.77 m (was 1.5 m GUESS)) range [0.7, 0.9]",
+    "crane_cab_h_m": "estimate (moxir-hall-dims-2026-10-02.json; confidence medium: operator's cab (yellow-black stripes) under the far crane's right end, photo 007: its bottom 5.85 m (5.56-6.15) = 2.1 m under the girders) range [2.0, 2.3]",
     "crane_cab_side": "estimate (moxir-hall-dims-2026-10-02.json; confidence medium-high: the orange cab hangs at the +x end in photos 002, 003, 004, 005, 009, 013)",
     "runway_handrail_rows": "estimate (moxir-hall-dims-2026-10-02.json; confidence medium: the left runway is a plate girder WITH a handrail (004, 009); the right one is a darker box girder with ladders and heavy duct pipes and NO handrail (009, 004))",
     "roof_type": "estimate (moxir-hall-dims-2026-09-28.json)",
@@ -655,7 +655,8 @@
       "notes": [
         "2026-10-02 hall corrections, each with its source: (1) the LEFT low wall is 2 closed bays, not 5 (the 09-28 features file said bays 3-7 from photo 032, wrong): from_door_m [24, 36]. (2) the RIGHT low wall (a GUESS in the 09-28 file, [60, 84]) is deleted: the right row is open (003, 005, 006, 009, 027: machinery and pipes between the columns). (3) the crane cab hangs at the RIGHT (+x) end (002, 003, 004, 005, 009, 013), x 8.35-10.35 in the nave crane's frame. (4) the roof underside 11.0 -> 10.8 m (Soviet height series 8.4 / 9.6 / 10.8 / 12.0) and the top chord 13.5 -> 13.3 (2.5 m depth kept). (5) the lantern 3.5 -> 3.2 m (standard lantern for a 24 m span: 2.77 or 3.22 m). (6) the right runway girder has no handrail; the left one keeps it.",
         "Left unchanged on purpose: the crane rail (7.6 m in this layer set; the standards give 7.75 for 16-20 t or 8.15 for <= 10 t cranes and the crane's capacity is unknown, so measure on site); the 6 x 6 x 2.5 m space frame (photo-derived; it is NOT the 'Kislovodsk' series, which is 3 x 3 x 2.12 m for low buildings); the expansion joint (the lantern gap is the evidence); the floor-rail gauge (unmeasured).",
-        "2026-10-02, permanent objects near the stage (emily-41, from a researcher's pass over all 36 photos; the transformer (021) and the press pedestal (024) checked by hand): the 11 massing_add items are the things that stay when the hall is cleared (transformer, column-foot cabinets, press pedestal, press-side cabinets, blower, lean-to canopy, drum tank, prefab cabin, right-row pipe rack). Ignored on purpose, being loose and due to be cleared: the five 5-6 m pressure vessels at x -6..0, z -2..+8, gas cylinders, scrap, bags, boards. Corrected: the far crane at 76.2 m from the door (was 95.0); the floor rails are one track at x about 0 in the entry zone (z 20 to the door) plus two transverse lines at z 38 and 46, all LOW confidence. HELD for the originals or a site check: the machine line's length (it may run on to z 10-14), the transformer's exact z, and whether the pedestal and cabinets are bolted."
+        "2026-10-02, permanent objects near the stage (emily-41, from a researcher's pass over all 36 photos; the transformer (021) and the press pedestal (024) checked by hand): the 11 massing_add items are the things that stay when the hall is cleared (transformer, column-foot cabinets, press pedestal, press-side cabinets, blower, lean-to canopy, drum tank, prefab cabin, right-row pipe rack). Ignored on purpose, being loose and due to be cleared: the five 5-6 m pressure vessels at x -6..0, z -2..+8, gas cylinders, scrap, bags, boards. Corrected: the far crane at 76.2 m from the door (was 95.0); the floor rails are one track at x about 0 in the entry zone (z 20 to the door) plus two transverse lines at z 38 and 46, all LOW confidence. HELD for the originals or a site check: the machine line's length (it may run on to z 10-14), the transformer's exact z, and whether the pedestal and cabinets are bolted.",
+        "2026-10-05 (audit A-01, dob-0/di.iiii docs/ai/audits/moxir-2026-10-05/A): the crane is the 09-29 PHOTO-MEASURED one, not the 09-28 guess this layer sat on \u2014 rail top 8.1 m, bridge girder underside 7.95 m (was 8.15, 'crane rail + 0.55, unmeasured'), girder depth 0.8 m (was 1.5), cab 2.1 m high (was a placeholder). Carried here from moxir-hall-dims-2026-09-29.json so the 10-02 hall, and every hang derived from it, uses the measured girder; at 8.15 the cut's high pick drew 119 deg, at the real 7.95 the old trim would be a 144 deg bridle."
       ]
     }
   ],
@@ -681,15 +682,15 @@
       "span_m": 24.0
     },
     "end_wall_inner_y_m": 54.5,
-    "runway_top_m": 7.46,
-    "runway_bottom_m": 6.56,
+    "runway_top_m": 7.96,
+    "runway_bottom_m": 7.06,
     "crane_rail_x_m": 11.35,
     "cranes": [
       {
         "z_m": 4.8,
         "from_entry_m": 49.2,
-        "girder_bottom_m": 8.15,
-        "girder_top_m": 9.65,
+        "girder_bottom_m": 7.95,
+        "girder_top_m": 8.75,
         "girders_dz_m": [
           -1.1,
           1.1
@@ -705,8 +706,8 @@
             1.6
           ],
           "y_m": [
-            9.65,
-            10.65
+            8.75,
+            9.75
           ]
         },
         "cab": {
@@ -719,16 +720,16 @@
             1.0
           ],
           "y_m": [
-            5.95,
-            8.15
+            5.85,
+            7.95
           ]
         }
       },
       {
         "z_m": -22.2,
         "from_entry_m": 76.2,
-        "girder_bottom_m": 8.15,
-        "girder_top_m": 9.65,
+        "girder_bottom_m": 7.95,
+        "girder_top_m": 8.75,
         "girders_dz_m": [
           -1.1,
           1.1
@@ -744,8 +745,8 @@
             1.6
           ],
           "y_m": [
-            9.65,
-            10.65
+            8.75,
+            9.75
           ]
         },
         "cab": {
@@ -758,8 +759,8 @@
             1.0
           ],
           "y_m": [
-            5.95,
-            8.15
+            5.85,
+            7.95
           ]
         }
       }
@@ -770,8 +771,8 @@
       "machine": 0.1583
     },
     "column_head": {
-      "flare_start_m": 5.71,
-      "head_top_m": 6.56,
+      "flare_start_m": 6.21,
+      "head_top_m": 7.06,
       "head_w_m": 1.9,
       "girder_offset_m": 0.65,
       "upper_d_m": 0.45

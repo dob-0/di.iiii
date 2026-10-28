@@ -50,7 +50,7 @@
     "safety": "a secondary safety steel at every pick from the top chords to its OWN clamp on the back girder, independent of bridle and hoist (DGUV Vorschrift 17/18, BGV C1 practice: a secondary suspension for every load over people)",
     "tieoffs": [
       { "id": "hl", "u_m": -6.25, "side": -1, "y_m": "end", "what": "house-left end to the nave column at x −11.6 (inner face) on grid line z 6.0, at the end's own height — a 2 t LC ratchet strap (EN 12195-2) or a 6 mm steel with a turnbuckle" },
-      { "id": "hr", "u_m": 5.75, "side": 1, "y_m": 5.5, "what": "house-right end down to the nave column at x +11.6 on grid line z 6.0, at 5.5 m — under the crane runway beam (6.56–7.46 m on the column line); same strap or steel" }
+      { "id": "hr", "u_m": 5.75, "side": 1, "y_m": 4.6, "what": "house-right end down to the nave column at x +11.6 on grid line z 6.0, at 4.6 m — UNDER the crane cab (audit A-02, 2026-10-05: at 5.5 m the strap ran through the cab; at 4.6 m it passes 0.23 m under the cab's 5.85 m bottom) and well under the crane runway beam (6.56–7.46 m on the column line); same strap or steel" }
     ],
     "tieoffs_why": "the V bridles hold the line across the bridge; ALONG the line (x) each V still swings from its leg tops, and slings on a sloped chord want to creep downhill. Two opposed tie-offs, tensioned against each other (hand-tight, ~50 daN, ESTIMATE), hold it along x; each sling is choked against a node (a vertical brace) so it cannot slide down the slope (Prolyte user manual: loads applied at the nodes).",
     "truss_kg_per_m": 6.3,

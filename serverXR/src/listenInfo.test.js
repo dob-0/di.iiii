@@ -59,7 +59,7 @@ describe('describeListen', () => {
   })
 
   it('keeps a hosted server\'s addresses to itself', () => {
-    // A hosted di-studio.xyz also binds 0.0.0.0; its container addresses are not
+    // A hosted diiii.xyz also binds 0.0.0.0; its container addresses are not
     // for an unauthenticated config endpoint to hand out.
     expect(describeListen({ host: '0.0.0.0', local: false, interfaces: TABLE }))
       .toEqual({ lan: true, addresses: [] })

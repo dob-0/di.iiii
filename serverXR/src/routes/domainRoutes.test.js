@@ -89,6 +89,36 @@ describe('GET /api/host', () => {
     })
 })
 
+describe('GET /api/domain-check (Caddy’s on-demand TLS ask)', () => {
+    // Caddy calls the endpoint with ?domain=<name> and reads only the status:
+    // https://caddyserver.com/docs/caddyfile/options#on-demand-tls
+    const ask = (query) => fetch(`${base}/api/domain-check${query}`)
+        .then(async (res) => ({ status: res.status, body: await res.json(), cache: res.headers.get('cache-control') }))
+
+    it('says yes to a live domain of a public space', async () => {
+        store.insertDomain({ hostname: 'yokozo.xyz', spaceId: 'taronx', state: 'active' })
+        expect(await ask('?domain=yokozo.xyz')).toEqual({ status: 200, body: { domain: 'yokozo.xyz', serve: true }, cache: 'no-store' })
+        expect((await ask('?domain=YOKOZO.xyz.')).status).toBe(200)
+    })
+
+    it('says no to everything else, so no certificate is issued for it', async () => {
+        store.insertDomain({ hostname: 'pending.xyz', spaceId: 'taronx', state: 'pending' })
+        store.insertDomain({ hostname: 'unmanaged.xyz', spaceId: 'taronx', state: 'unmanaged' })
+        store.insertDomain({ hostname: 'secret.xyz', spaceId: 'hidden', state: 'active' })
+        for (const query of ['?domain=pending.xyz', '?domain=unmanaged.xyz', '?domain=secret.xyz', '?domain=random.example',
+            '?domain=diiii.xyz', '?domain=127.0.0.1', '', '?domain=', '?domain=yokozo.xyz&domain=pending.xyz']) {
+            expect((await ask(query)).status, query).toBe(404)
+        }
+    })
+
+    it('a domain stops getting certificates the moment it is removed', async () => {
+        store.insertDomain({ hostname: 'yokozo.xyz', spaceId: 'taronx', state: 'active' })
+        expect((await ask('?domain=yokozo.xyz')).status).toBe(200)
+        await call('/api/spaces/taronx/domains/yokozo.xyz', { method: 'DELETE', user: 'taron' })
+        expect((await ask('?domain=yokozo.xyz')).status).toBe(404)
+    })
+})
+
 describe('the owner’s routes', () => {
     it('only the owner can add, and gets the domain back with its state', async () => {
         expect((await call('/api/spaces/taronx/domains', { method: 'POST', user: 'stranger', body: { hostname: 'yokozo.xyz' } })).status).toBe(403)

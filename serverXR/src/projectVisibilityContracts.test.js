@@ -10,13 +10,13 @@
 // as it always did. One real server process, the same harness the other
 // *Contracts.test.js files use.
 
-import { spawn, execFileSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 vi.setConfig({ testTimeout: 25_000, hookTimeout: 40_000 })
 
@@ -29,26 +29,13 @@ const STRANGER = 'vis-stranger-viewer-token' // signed in, scoped to another spa
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const getFreePort = () => new Promise((resolve, reject) => {
-    const server = net.createServer()
-    server.on('error', reject)
-    server.listen(0, '127.0.0.1', () => {
-        const { port } = server.address()
-        server.close((error) => (error ? reject(error) : resolve(port)))
-    })
-})
-
 let server = null
 
 const startServer = async () => {
     const cwd = await mkdtemp(path.join(os.tmpdir(), 'dii-vis-cwd-'))
     const dataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-vis-data-'))
-    const port = await getFreePort()
-    const child = spawn(process.execPath, [SERVER_ENTRY], {
-        cwd,
-        env: {
+    const { child, port, logs: readLogs } = await spawnServerUntilReady({ entry: SERVER_ENTRY, cwd, env: {
             ...process.env,
-            PORT: String(port),
             NODE_ENV: 'production',
             APP_BASE_PATH: '/serverXR',
             DATA_ROOT: dataRoot,
@@ -62,23 +49,12 @@ const startServer = async () => {
             AUTH_SESSION_SECRET: 'vis-session-secret',
             AUTH_SESSION_COOKIE_SECURE: 'false',
             AUTH_HUB_URL: 'off'
-        },
-        stdio: ['ignore', 'pipe', 'pipe']
-    })
-    let logs = ''
-    child.stdout.on('data', (chunk) => { logs += chunk })
-    child.stderr.on('data', (chunk) => { logs += chunk })
+        } })
     const baseUrl = `http://127.0.0.1:${port}/serverXR`
-    const deadline = Date.now() + 15000
-    while (Date.now() < deadline) {
-        if (child.exitCode !== null) throw new Error(`server exited early\n${logs}`)
-        try { if ((await fetch(`${baseUrl}/api/health`)).ok) break } catch { /* booting */ }
-        await wait(200)
-    }
     return {
         baseUrl,
         dataRoot,
-        logs: () => logs,
+        logs: readLogs,
         stop: async () => {
             if (child.exitCode === null) {
                 child.kill('SIGTERM')

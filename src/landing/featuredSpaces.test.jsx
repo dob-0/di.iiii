@@ -22,7 +22,7 @@ describe('the featured row on a local install', () => {
     })
 
     it('still drops the spaces a fresh install does not have', () => {
-        // br_id_ge and beyond-form are database rows on di-studio.xyz, not code.
+        // br_id_ge and beyond-form are database rows on diiii.xyz, not code.
         // Nothing in a local build can make those chips lead anywhere.
         expect(ids({ isLocalInstall: true })).not.toContain('br-id-ge')
         expect(ids({ isLocalInstall: true })).not.toContain('beyond-form')

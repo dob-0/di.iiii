@@ -87,7 +87,18 @@ export const bodyPoses = (lamps, library) => {
 
 const partOf = (mesh, parts) => (parts.includes(mesh.name) ? mesh.name : parts.includes(mesh.parent?.name) ? mesh.parent.name : null)
 
-function KindBodies({ kind, poses }) {
+export function instancePick(poses, onPick) {
+    // A click on instance k of a kind's mesh is lamp poses[k] -- the same array the matrices were set from.
+    if (!onPick) return undefined
+    return (e) => {
+        const id = poses[e.instanceId]?.id
+        if (id == null) return
+        e.stopPropagation()
+        onPick(id, e)
+    }
+}
+
+function KindBodies({ kind, poses, onPick }) {
     const { url, geo } = KINDS[kind]
     const { scene } = useGLTF(url)
     // Every mesh of the model, with the part it belongs to. Geometry and materials
@@ -120,13 +131,13 @@ function KindBodies({ kind, poses }) {
     useEffect(() => () => {
         for (const m of meshes) if (m.lens) m.material.dispose()
     }, [meshes])
-    return meshes.map((m) => <PartInstances key={m.key} mesh={m} poses={poses} />)
+    return meshes.map((m) => <PartInstances key={m.key} mesh={m} poses={poses} onPick={onPick} />)
 }
 
 const tmp = new THREE.Matrix4()
 const tint = new THREE.Color()
 
-function PartInstances({ mesh, poses }) {
+function PartInstances({ mesh, poses, onPick }) {
     const ref = useRef(null)
     const count = poses.length
     // A lens carries two per-instance values of its own (lensMaterial.js): its glow and its
@@ -165,10 +176,10 @@ function PartInstances({ mesh, poses }) {
     }, [poses, mesh, geometry])
     if (!count) return null
     // A new count needs a new InstancedMesh (its buffers are sized at creation).
-    return <instancedMesh key={count} ref={ref} args={[geometry, mesh.material, count]} frustumCulled={false} userData={{ noShadow: true, rigBody: true }} />
+    return <instancedMesh key={count} ref={ref} args={[geometry, mesh.material, count]} frustumCulled={false} userData={{ noShadow: true, rigBody: true, lampIds: poses.map((p) => p.id) }} onClick={instancePick(poses, onPick)} />
 }
 
-export default function FixtureBodies({ lamps, library }) {
+export default function FixtureBodies({ lamps, library, onPick }) {
     const byKind = useMemo(() => bodyPoses(lamps, library), [lamps, library])
-    return [...byKind.entries()].map(([kind, poses]) => <KindBodies key={kind} kind={kind} poses={poses} />)
+    return [...byKind.entries()].map(([kind, poses]) => <KindBodies key={kind} kind={kind} poses={poses} onPick={onPick} />)
 }

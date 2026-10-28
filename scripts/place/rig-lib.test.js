@@ -224,16 +224,20 @@ describe('the MOXIR rig', () => {
         }
     })
 
-    it('gives a real lamp a light distance past the surface it lands on, so the surface is lit', () => {
+    it('gives a real lamp NO cutoff (inverse square only) and draws its beam past the surface it lands on', () => {
         const real = lamps.filter((e) => !e.components.beam.only)
+        expect(real.length).toBeGreaterThan(0)
         for (const e of real) {
             const d = spotAimDirection(e.components.transform.rotation)
             const cls = rig.classes[rig.groups.find((gr) => e.id.startsWith(`${RIG_PREFIX}${gr.id}-`)).class]
             const hit = surfaceHit(e.components.transform.position, d, hall, 200)
-            expect(e.components.light.distance).toBeGreaterThanOrEqual(Math.min(hit, cls.reach_m) * 1.99 - 0.3)
+            // three.js: distance 0 = no window, the light falls as 1/d² everywhere (MOXIR sim audit §2.2)
+            expect(e.components.light.distance).toBe(0)
+            // the drawn beam is its own field, still running on behind the surface the lamp lands on
+            expect(e.components.beam.length).toBeGreaterThanOrEqual(Math.min(hit, cls.reach_m) * 1.99 - 0.3)
         }
-        // three.js cutoff (1 - (d/cutoff)^4)^2 at the surface: 88 % of the uncut light.
-        expect((1 - (1 / lightDistance(1)) ** 4) ** 2).toBeCloseTo(0.879, 2)
+        for (const e of lamps.filter((x) => x.components.beam.only)) expect(e.components.beam.length).toBeGreaterThan(0)
+        expect(lightDistance(12)).toBe(0)
     })
 
     it('picks real lamps by the budget\'s rule', () => {
@@ -328,12 +332,12 @@ describe('every look is a design, not a scatter', () => {
         const classOf = (e) => rig.classes[rig.groups.find((g) => e.id.startsWith(`${RIG_PREFIX}${g.id}-`)).class]
         for (const e of lamps) {
             const from = e.components.transform.position
-            const reach = e.components.light.distance
+            const reach = e.components.beam.length
             const d = spotAimDirection(e.components.transform.rotation)
             // The beam ends ON a surface (one step further is outside the room),
             // or at the class's drawing reach if that comes first.
             const hit = surfaceHit(from, d, hall, 200)
-            // A real lamp's distance is its light cutoff (twice the throw), see buildRig.
+            // A real lamp's drawn beam runs on to twice the throw (beam.length, rig-lib beamLength).
             const drawn = e.components.beam.only ? reach : reach / 2
             expect(Math.abs(drawn - Math.min(hit, classOf(e).reach_m))).toBeLessThan(0.15)
         }
@@ -467,7 +471,7 @@ describe('a look\'s levels (RIG_BUILD.md §15: darkness is part of a look)', () 
     it('puts a group at 0 out: no light, an unseen cone, still beam-only, nothing baked', () => {
         const e = lamp(built, 'rig-beam380-columns-01')
         expect(e.components.light.intensity).toBe(0)
-        expect(e.components.beam).toEqual({ visible: true, haze: 0, only: true })
+        expect(e.components.beam).toEqual({ visible: true, haze: 0, length: e.components.beam.length, only: true })
         expect(built.washes.some((w) => w.id.startsWith('par-columns-'))).toBe(false)
         expect(full.washes.some((w) => w.id.startsWith('par-columns-'))).toBe(true)
     })

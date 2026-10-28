@@ -24,7 +24,8 @@ describe('StudioCoachMarks', () => {
 
             // Selecting completes step 1 and baselines the entity count.
             rerender(<StudioCoachMarks {...baseProps} hasSelection />)
-            expect(screen.getByText('Open Create and add something')).toBeTruthy()
+            // "Add something" is true only of an empty scene: with objects in it the pill waits.
+            expect(screen.queryByText('Open Create and add something')).toBeNull()
 
             // Adding an entity (count above the baseline) completes step 2.
             rerender(<StudioCoachMarks {...baseProps} hasSelection entityCount={4} />)
@@ -66,6 +67,20 @@ describe('StudioCoachMarks', () => {
 
         // The tap.
         rerender(<StudioCoachMarks {...baseProps} entityCount={1} hasSelection selectTicks={1} />)
+        expect(screen.getByText('Open Share to keep what you made')).toBeTruthy()
+    })
+
+    it('shows a hint only while it is true (P7): not "Tap an object" with one selected, not "Add something" while the scene holds objects', () => {
+        // a selection that was already there when the coach armed: the tap hint would be untrue
+        const first = render(<StudioCoachMarks {...baseProps} entityCount={2} hasSelection />)
+        expect(screen.queryByText('Tap an object to select it')).toBeNull()
+        first.unmount()
+
+        const { rerender } = render(<StudioCoachMarks {...baseProps} entityCount={2} />)
+        rerender(<StudioCoachMarks {...baseProps} entityCount={2} hasSelection />)
+        expect(screen.queryByText('Open Create and add something')).toBeNull()
+        expect(screen.queryByRole('status')).toBeNull()
+        rerender(<StudioCoachMarks {...baseProps} entityCount={3} hasSelection />)
         expect(screen.getByText('Open Share to keep what you made')).toBeTruthy()
     })
 

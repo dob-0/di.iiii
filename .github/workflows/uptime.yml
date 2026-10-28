@@ -18,6 +18,7 @@ on:
 permissions:
   actions: read
   contents: read
+  issues: write
 
 concurrency:
   group: uptime
@@ -25,7 +26,7 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
       - name: Check the public addresses
@@ -39,6 +40,8 @@ jobs:
             "https://diiii.xyz/"
             "https://diiii.xyz/serverXR/api/health"
             "https://di-studio.xyz/serverXR/api/health"
+            "https://dev.diiii.xyz/serverXR/api/health"
+            "https://yokozo.xyz/"
           )
           probe() { # url -> prints "code content-type"
             curl -sS -o /dev/null -m 20 -w '%{http_code} %{content_type}' "$1" 2>/dev/null || echo "000 -"
@@ -87,13 +90,40 @@ jobs:
             exit 0
           fi
           if [[ $STATE == down ]]; then
-            text="di.iiii is DOWN from outside: $DOWN — checked from GitHub, $(date -u '+%H:%M UTC')"
+            text="DOWN from outside:$DOWN — checked from GitHub, $(date -u '+%H:%M UTC')"
           else
-            text="di.iiii is back up from outside — $(date -u '+%H:%M UTC')"
+            text="All sites back up from outside —$(date -u '+%H:%M UTC')"
           fi
           curl -sS -m 20 -o /dev/null -w 'telegram %{http_code}\n' \
             --data-urlencode "chat_id=$TG_CHAT" --data-urlencode "text=$text" \
             "https://api.telegram.org/bot${TG_TOKEN}/sendMessage"
+
+      - name: Open or update one issue when down
+        if: steps.probe.outputs.state == 'down'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DOWN: ${{ steps.probe.outputs.down }}
+          PREV: ${{ steps.prev.outputs.state }}
+        shell: bash
+        run: |
+          title="uptime: site down"
+          num=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "in:title $title" \
+                  --json number,title -q ".[] | select(.title == \"$title\") | .number" | head -n1)
+          # Sites only (no status codes): a 503 turning into a timeout is not a new site.
+          sites=$(sed -E 's/ \([^)]*\)//g' <<<"$DOWN")
+          body="Down from GitHub's runners at $(date -u '+%Y-%m-%d %H:%M UTC'): $DOWN
+          <!-- sites: $sites -->"
+          if [[ -n $num ]]; then
+            # One outage is one issue. Comment when the state turns to down
+            # (up or unknown -> down) or when the SET of down sites differs from
+            # the one in the newest marker (issue body or last comment).
+            last=$(gh issue view "$num" -R "$GITHUB_REPOSITORY" --json body,comments \
+                     -q '([.body] + [.comments[].body]) | map(select(test("<!-- sites: "))) | last // ""' \
+                   | sed -nE 's/.*<!-- sites: (.*) -->.*/\1/p' | head -n1)
+            if [[ $PREV != down || $last != "$sites" ]]; then gh issue comment "$num" -R "$GITHUB_REPOSITORY" -b "$body"; fi
+          else
+            gh issue create -R "$GITHUB_REPOSITORY" --title "$title" --body "$body"
+          fi
 
       - name: Fail when down
         if: steps.probe.outputs.state == 'down'

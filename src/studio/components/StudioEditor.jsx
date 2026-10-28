@@ -1,3 +1,4 @@
+import { playScene } from '../utils/playScene.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMediaQuery, useTheme } from '@mui/material'
 import { Vector3 } from 'three'
@@ -6,10 +7,14 @@ import { currentAuthor } from '../../project/authorship.js'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
+import { isTypingTarget, lockFromKey, undoRedoFromKey } from '../utils/editKeys.js'
+import { unitMembersOf } from '../utils/laserTest.js'
+import { clearFromKey, clearTransformOps } from '../utils/clearTransform.js'
+import { hallEntityIds, lockOps, movableEntities, selectionWithout } from '../utils/selectionTools.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { isPreviewRequest } from '../../utils/previewMode.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
-import { DEFAULT_PROJECT_SPACE_ID, buildProjectAssetUrl, deleteProjectAsset, uploadProjectAsset } from '../../project/services/projectsApi.js'
+import { DEFAULT_PROJECT_SPACE_ID, buildProjectAssetUrl, deleteProjectAsset, getProject, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { mountRelativeApiUrl } from '../../services/assetSources.js'
 import { isHtmlLikeMimeType } from '../../utils/assetContentType.js'
 import { createStudioProjectBundle, readStudioProjectBundle } from '../../project/transfer/studioProjectBundle.js'
@@ -17,14 +22,19 @@ import { defaultWorldState, normalizeProjectDocument } from '../../shared/projec
 import useXrAr from '../../hooks/useXrAr.js'
 import useSpaceAssets from '../../hooks/useSpaceAssets.js'
 import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAssets, importDriveSelection, listServerSpaces, setAssetShared, updateServerSpace } from '../../services/serverSpaces.js'
+import { spaceAddressOf } from '../../utils/spaceAddress.js'
 import { buildAppSpacePath, buildPublicProjectPath, buildShareUrl } from '../../utils/spaceRouting.js'
+import { buildStudioPreviewUrl } from '../utils/previewUrl.js'
 import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { buildMapPath } from '../../map/mapRouting.js'
 import { useStudioCues } from '../hooks/useStudioCues.js'
+import useProjectViews from '../hooks/useProjectViews.js'
+import useLightEnvPicker from '../hooks/useLightEnvPicker.js'
 import { frameEntities, runViewCommand } from '../utils/viewCommands.js'
 import { resolveViewKey } from '../../utils/viewAxisPose.js'
 import StudioShell from './StudioShell.jsx'
+import StudioWalkBuild from '../walkBuild/StudioWalkBuild.jsx'
 import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
 import { formatAssetSize, optimizeGlbAsset, shouldSuggestGlbOptimization } from '../utils/assetOptimization.js'
 import { canPlaceInScene, isPdfAsset, pdfToImageFiles } from '../utils/assetFormats.js'
@@ -36,6 +46,7 @@ import { useRigAutoPatch } from '../hooks/useRigAutoPatch.js'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { readGeoIdFromSearch, withGeoQuery } from '../utils/geoScopeAddress.js'
 import { isJamProject } from '../utils/jamMode.js'
+import { movedTransforms, transformChange } from '../utils/transformDelta.js'
 import { LIGHTS, PRIMITIVES } from '../../project/entityPalette.js'
 import {
     GEO_ADD_TYPES,
@@ -292,6 +303,9 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         get current() { return paneControlsRef.current?.current ?? null }
     }), [])
     const [spaceMeta, setSpaceMeta] = useState(null)
+    // The project's own record, for its public handle (slug): the Studio's document does not carry it
+    // (projectMeta is { id, spaceId, title, … }). Keyed by id, so a slug is never shown for another project.
+    const [projectRecord, setProjectRecord] = useState(null)
     // Spaces list powers the portal entity's Space dropdown (pick by name instead
     // of typing a raw id). Projects for the chosen space are fetched on demand
     // inside the inspector field itself.
@@ -337,13 +351,13 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         // whole-document replace would revert their concurrent edits too
         // (see docs/ai/known-fixes.md).
         const handler = (event) => {
-            const tag = event.target?.tagName?.toLowerCase?.()
-            if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
-            const isUndo = (event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey
-            const isRedo = (event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))
-            if (!isUndo && !isRedo) return
+            if (isTypingTarget(event.target)) return
+            // By the key's place as well as its letter: Shift makes it 'Z', and the
+            // Armenian layout makes it '\u0566' — both used to fall through (utils/editKeys.js).
+            const command = undoRedoFromKey(event)
+            if (!command) return
             event.preventDefault()
-            if (isUndo) undo()
+            if (command === 'undo') undo()
             else redo()
         }
         window.addEventListener('keydown', handler)
@@ -367,6 +381,24 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             cancelled = true
         }
     }, [resolvedSpaceId])
+
+    useEffect(() => {
+        if (!projectId) return undefined
+        let cancelled = false
+        getProject(projectId)
+            .then((result) => {
+                if (cancelled) return
+                setProjectRecord({ id: projectId, slug: result?.project?.slug || null })
+            })
+            .catch(() => {
+                // Best effort: without the record the Preview button falls back to the permanent /p/{id} address.
+                if (cancelled) return
+                setProjectRecord(null)
+            })
+        return () => {
+            cancelled = true
+        }
+    }, [projectId])
 
     const xr = useXrAr({
         default3DView: document.worldState?.savedView || defaultWorldState.savedView,
@@ -706,7 +738,28 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             type: 'updateComponent',
             payload: { entityId, component: 'runtime', patch: { locked: nextLocked } }
         }, { activityMessage: `${nextLocked ? 'Locked' : 'Unlocked'} ${entity.name}.` })
+        // A locked object leaves the selection — from the outliner's padlock as from L and
+        // the Inspector's button (N581: the padlock kept it selected, and X on that selection
+        // armed a transform nothing could run).
+        if (nextLocked && selectedEntityIds.includes(entityId)) {
+            dispatch({ type: 'select-entities', entityIds: selectionWithout(selectedEntityIds, [entityId]) })
+        }
     }
+
+    // Lock / unlock several at once (the Inspector's toggle, "Lock the hall", "Unlock all"):
+    // one batch, so one Ctrl+Z puts it back.
+    const handleSetEntitiesLocked = (ids, locked) => {
+        const ops = lockOps(entities, ids, locked)
+        if (!ops.length) return
+        applyLocalOps(ops, { activityMessage: `${locked ? 'Locked' : 'Unlocked'} ${ops.length} object${ops.length === 1 ? '' : 's'}.` })
+        // A locked object leaves the selection: it can no longer be picked or moved.
+        if (locked) {
+            const out = new Set(ids)
+            dispatch({ type: 'select-entities', entityIds: selectedEntityIds.filter((id) => !out.has(id)) })
+        }
+    }
+    const handleLockHall = () => handleSetEntitiesLocked(hallEntityIds(entities), true)
+    const handleUnlockAll = () => handleSetEntitiesLocked(entities.map((entity) => entity.id), false)
 
     const handleGroupSelected = () => {
         const targets = selectedEntities.length > 1
@@ -838,6 +891,36 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 return
             }
 
+            // Select grouped (Shift+G, Blender's): every line of the laser unit(s) the selection touches, so the
+            // multi-selection gizmo moves the whole unit by hand (utils/laserTest.js unitMembersOf; Alt+click does it too).
+            if (!meta && !event.altKey && event.shiftKey && (key === 'G' || event.code === 'KeyG')) {
+                event.preventDefault()
+                const current = selectedEntities.map((entity) => entity.id)
+                const grouped = unitMembersOf(entities, current)
+                if (grouped.length !== current.length) dispatch({ type: 'select-entities', entityIds: grouped })
+                return
+            }
+
+            // Lock the selection (L) / unlock everything (Alt+L) -- our own rule (Blender has no lock
+            // key; its hide is H / Alt+H). The same batch as the Inspector button: one Ctrl+Z undoes it.
+            const lockCommand = lockFromKey(event)
+            if (lockCommand && !isTypingTarget(event.target)) {
+                event.preventDefault()
+                if (lockCommand === 'unlock-all') handleUnlockAll()
+                else if (selectedEntities.length) handleSetEntitiesLocked(selectedEntities.map((entity) => entity.id), true)
+                return
+            }
+
+            // Clear Location / Rotation / Scale (Alt+G / Alt+R / Alt+S, Blender): the selection back to
+            // the rest value in one batch (one Ctrl+Z); locked objects are left where they are.
+            const clearCommand = clearFromKey(event)
+            if (clearCommand && !isTypingTarget(event.target)) {
+                event.preventDefault()
+                const ops = clearTransformOps(entities, selectedEntities.map((entity) => entity.id), clearCommand)
+                if (ops.length) applyLocalOps(ops, { activityMessage: `Cleared the ${clearCommand} of ${ops.length} object${ops.length === 1 ? '' : 's'}.` })
+                return
+            }
+
             // Clipboard — Copy (Ctrl/Cmd+C), Paste (Ctrl/Cmd+V), Cut (Ctrl/Cmd+X)
             if (meta && (key === 'c' || key === 'C')) {
                 if (!selectedEntity && !selectedEntities.length) return
@@ -870,11 +953,13 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 return
             }
 
-            // Duplicate — Shift+D (Blender) or Ctrl/Cmd+D
+            // Duplicate — Shift+D (Blender) or Ctrl/Cmd+D. Shift+D then moves the copy at once (Blender's
+            // Duplicate Objects: a grab follows; Esc leaves the copy where the original stands). Ctrl+D only copies.
             if ((event.shiftKey || meta) && (key === 'd' || key === 'D')) {
                 if (!selectedEntity) return
                 event.preventDefault()
                 handleDuplicateSelected()
+                if (event.shiftKey && !meta) handleStartTransform('translate', null)
                 return
             }
             // Delete / Backspace. Bare X is reserved for gizmo axis constraint.
@@ -957,12 +1042,17 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             if (component === 'transform' && isTimelinePreviewPosed(selectedEntity.id)) {
                 setTimelinePreview({ playing: false, hold: false })
             }
+            // A transform edit carries only what moved (transformDelta.js): a re-typed or re-spelled value writes nothing.
+            const patch = component === 'transform'
+                ? transformChange(selectedEntity.components?.transform, nextValue)
+                : nextValue
+            if (!patch) return
             applyLocalOps({
                 type: 'updateComponent',
                 payload: {
                     entityId: selectedEntity.id,
                     component,
-                    patch: nextValue
+                    patch
                 }
             })
             return
@@ -972,11 +1062,18 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         }
     }
 
+    // Every gizmo / modal commit passes transformChange against the STORED transform: nothing that did not
+    // move is written, whatever the caller sent (a selection never writes — transformDelta.js).
+    const entitiesRef = useRef(entities)
+    useEffect(() => { entitiesRef.current = document.entities || [] }, [document.entities])
     const handleTransformCommit = useCallback((entityId, transform) => {
         if (!entityId) return
+        const stored = entitiesRef.current.find((entity) => entity.id === entityId)?.components?.transform
+        const patch = transformChange(stored, transform)
+        if (!patch) return
         applyLocalOps({
             type: 'updateComponent',
-            payload: { entityId, component: 'transform', patch: transform }
+            payload: { entityId, component: 'transform', patch }
         })
     }, [applyLocalOps])
 
@@ -1029,8 +1126,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     // per session (once per mode-switch via commitIfMoved), so clearing here
     // would prematurely unmount ModalTransform. Session ends via onCancel→handleTransformCancel.
     const handleTransformCommitMany = useCallback((list) => {
-        const ops = (list || [])
-            .filter((entry) => entry?.id && entry.transform)
+        const ops = movedTransforms(entitiesRef.current, (list || []).filter((entry) => entry?.id && entry.transform))
             .map((entry) => ({
                 type: 'updateComponent',
                 payload: { entityId: entry.id, component: 'transform', patch: entry.transform }
@@ -1038,7 +1134,16 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         if (ops.length) applyLocalOps(ops)
     }, [applyLocalOps])
 
+    // The operator is armed only while something can move. StudioSceneContent mounts
+    // ModalTransform for the movable part of the selection and nothing else cancels the
+    // op, so an op armed for a selection that cannot move (every object locked) stayed set
+    // for the rest of the page: the keyboard handler above returned on transformOpRef, the
+    // gizmo stayed hidden, Escape could not deselect (N581, 2026-10-15).
+    const selectedEntitiesRef = useRef(selectedEntities)
+    useEffect(() => { selectedEntitiesRef.current = selectedEntities })
     const handleStartTransform = useCallback((mode, axis = null) => {
+        const movable = movableEntities(selectedEntitiesRef.current, selectedEntitiesRef.current.map((entity) => entity.id))
+        if (!movable.length) return
         setTransformOp({ mode, axis, seq: Date.now() })
     }, [])
 
@@ -1076,6 +1181,28 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             message: 'Saved current camera as the editor default view.'
         })
     }
+
+    // Views as data (src/project/viewport/smartView/viewData.js): live or work, hide a built-in, add this camera.
+    const logViews = useCallback((level, message) => dispatch({ type: 'append-activity', level, message }), [dispatch])
+    const projectViews = useProjectViews({ projectId, document, applyLocalOps, log: logViews })
+    const handleAddCurrentView = (label) => {
+        const snapshot = readCurrentCameraSnapshot(controlsRef, null)
+        if (!snapshot) {
+            logViews('warning', 'No camera to add: open the 3D view first.')
+            return null
+        }
+        return projectViews.addCamera({ position: snapshot.position, target: snapshot.target, fov: snapshot.fov }, label)
+    }
+    const lightEnvPicker = useLightEnvPicker({ projectId, spaceId: resolvedSpaceId, document, applyLocalOps })
+    const viewsPanel = { ...projectViews, onAddCurrent: handleAddCurrentView }
+
+    // The Studio's Preview button: this project's VIEW page, as a visitor opens it (see utils/previewUrl.js).
+    const previewUrl = buildStudioPreviewUrl({
+        spaceSlug: spaceMeta?.slug,
+        spaceId: resolvedSpaceId,
+        projectSlug: projectRecord?.id === projectId ? projectRecord.slug : null,
+        projectId
+    })
 
     const handleViewLive = () => {
         const url = `${window.location.origin}${buildAppSpacePath(resolvedSpaceId)}`
@@ -1286,6 +1413,18 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         <>
             <StudioShell
             document={document}
+            walkBuild={(uiHidden) => (
+                <StudioWalkBuild
+                    spaceId={resolvedSpaceId}
+                    projectId={projectId}
+                    document={document}
+                    entities={entities}
+                    applyLocalOps={applyLocalOps}
+                    undo={undo}
+                    redo={redo}
+                    uiHidden={uiHidden}
+                />
+            )}
             layers={layers}
             loading={state.loading}
             loadError={state.loadError}
@@ -1333,6 +1472,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onRenameEntity={insideGeo ? handleRenameGeoChild : handleRenameEntity}
             onToggleEntityVisible={insideGeo ? undefined : handleToggleEntityVisible}
             onToggleEntityLocked={insideGeo ? undefined : handleToggleEntityLocked}
+            onSetEntitiesLocked={insideGeo ? undefined : handleSetEntitiesLocked}
+            onLockHall={insideGeo ? undefined : handleLockHall}
+            onUnlockAll={insideGeo ? undefined : handleUnlockAll}
+            onSelectEntities={insideGeo ? undefined : (entityIds) => dispatch({ type: 'select-entities', entityIds })}
             onReparentEntity={insideGeo ? undefined : handleReparentEntity}
             onViewportDropFiles={importAssetFiles}
             onDuplicateSelected={insideGeo ? undefined : handleDuplicateSelected}
@@ -1349,8 +1492,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onPresentationPatch={handlePresentationPatch}
             onPublishPatch={handlePublishPatch}
             onSaveCurrentCamera={handleSaveCurrentCamera}
+            views={viewsPanel}
+            lightEnv={lightEnvPicker}
             onCopyShareLink={handleCopyShareLink}
             onViewLive={handleViewLive}
+            previewUrl={previewUrl}
             onExportProject={handleExportProject}
             exportStatus={exportStatus}
             onImportProjectFile={handleImportProjectFile}
@@ -1362,6 +1508,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             cues={cues}
             liveCueId={liveCueId}
             onFireCue={fireCue}
+            onSceneOps={applyLocalOps}
+            onPlayScene={(cue) => playScene(document, cue)}
             onCameraViewChange={handleCameraViewChange}
             onTransformCommit={handleTransformCommit}
             transformOp={transformOp}
@@ -1370,7 +1518,9 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onTransformCancel={handleTransformCancel}
             liveProjectState={{
                 spaceId: resolvedSpaceId,
-                spaceLabel: spaceMeta?.label || resolvedSpaceId,
+                // the space's name, else its address: the one word every surface of the space says (utils/oneNamePerSpace.js)
+                spaceLabel: spaceMeta?.label || spaceAddressOf(spaceMeta, resolvedSpaceId),
+                spaceAddress: spaceAddressOf(spaceMeta, resolvedSpaceId),
                 currentLiveProjectId: spaceMeta?.publishedProjectId || null,
                 isLiveProject: spaceMeta?.publishedProjectId === projectId,
                 // null until space meta loads, so the panel doesn't flash a

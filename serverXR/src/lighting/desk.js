@@ -25,14 +25,18 @@ const { STYLES: FAN_STYLES, fanValues } = require('./fan');
 const { rigPatch, rigList } = require('./rigpatch');
 const library = require('./library');
 const { SACN, cidFor } = require('./sacn');
+const { busStatus } = require('./outputStatus');
+const { backupShowFile } = require('./showBackup');
 const { DmxInput } = require('./dmxin-net');
-const { sanitizeInputConfig, artNetFromDesk, sacnFromDesk, cidString } = require('./dmxin');
+const { sanitizeInputConfig, artNetFromDesk, sacnFromDesk, cidString, inputLevels } = require('./dmxin');
 const {
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
   KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, SPATIAL: LOOK_SPATIAL, kindAllows,
 } = require('./looks');
 const { createCueRunner, sanitizeCues } = require('./cuerun');
+const strips = require('./pixelstrip');
 const { createDmxStream } = require('./dmxstream');
+const holds = require('./holds');
 
 // The desk as a module. `createDesk` builds one lighting desk — state, engine, the 40 Hz
 // output loop, the HTTP routes and the interface files — and hands back `handle`, which
@@ -76,8 +80,12 @@ function createDesk(opts = {}) {
     master: 255,
     blackout: false,
     fixtures: [],
+    // Pixel strips (pixelstrip.js): a line of N pixels patched as one lamp over several universes.
+    strips: [],
     groups: [],
     raw: {},
+    // Who holds each manual channel, keyed like raw (holds.js).
+    rawOwners: {},
     scenes: [],
     activeScene: null,
     chase: { enabled: false, sceneIds: [], holdMs: 2000, fadeMs: 800,
@@ -284,6 +292,7 @@ function createDesk(opts = {}) {
       s.looks = sanitizeLooks(disk.looks) || [];
       s.layers = sanitizeLayers(disk.layers) || [];
       s.cues = sanitizeCues(disk.cues);
+      s.strips = strips.sanitizeStrips(disk.strips);
 
       // Custom profiles MUST be registered before the fixtures are built. makeFixture falls
       // back to `rgb` for a profile it does not know, so loading them in the other order
@@ -302,6 +311,7 @@ function createDesk(opts = {}) {
         .map((g) => ({ id: g.id, name: String(g.name || 'Group').slice(0, 24), ids: g.ids.filter((id) => typeof id === 'string') }));
       s.scenes = (Array.isArray(disk.scenes) ? disk.scenes : []).map(sanitizeScene).filter(Boolean);
       s.raw = sanitizeRaw(disk.raw);
+      s.rawOwners = holds.sanitizeRawOwners(disk.rawOwners, s.raw);
       s.master = Number.isFinite(+disk.master) ? Math.max(0, Math.min(255, Math.round(+disk.master))) : 255;
       s.blackout = !!disk.blackout;
       return s;
@@ -434,6 +444,9 @@ function createDesk(opts = {}) {
     // (sanitizeLayer drops them): a fade in progress does not survive a restart.
     const before = layer.lookId;
     layer.fromLookId = before && before !== look.id ? before : (before === look.id ? layer.fromLookId || null : null);
+    // The beat the replaced look keeps through the crossfade: its own firedAt (lookMotion.js motionFrame blends the two
+    // looks' level motion over fadeMs, the old on its beat, the new on this one). In memory only, like fromLookId.
+    layer.fromFiredAt = before && before !== look.id ? (Number.isFinite(layer.firedAt) ? layer.firedAt : null) : (before === look.id ? layer.fromFiredAt || null : null);
     layer.fadeMs = body.fadeMs != null && Number.isFinite(+body.fadeMs) ? Math.max(0, Math.min(60000, Math.round(+body.fadeMs))) : 0;
     layer.firedAt = Date.now();
     layer.lookId = look.id;
@@ -528,12 +541,14 @@ function createDesk(opts = {}) {
   // The driver for one extra send, built or rebuilt when what it points at changes.
   function extraDriver(send) {
     const held = extraDrivers.get(send.id);
-    const sig = [send.driver, send.serialPort, send.targets.join(), send.priority].join('|');
+    const sig = [send.driver, send.serialPort, send.targets.join(), send.priority, send.universes.join()].join('|');
     if (held && held.sig !== sig) { held.drv.close(); extraDrivers.delete(send.id); }
     const again = extraDrivers.get(send.id);
     if (again) return again.drv;
     let drv = null;
-    if (send.driver === 'enttec') drv = new Enttec({ port: send.serialPort, maxHz: state.output.refreshHz, offline });
+    // A widget carries ONE line: the universe it was told to (sendExtras sends that one). Built without it, the
+    // widget kept its default 0 and refused every other universe as unreachable — a U2 widget sent nothing (MOXIR 2026-10-17).
+    if (send.driver === 'enttec') drv = new Enttec({ port: send.serialPort, maxHz: state.output.refreshHz, offline, universe: send.universes.length ? send.universes[0] : 0 });
     else if (send.driver === 'sacn') drv = new SACN({ offline, targets: send.targets, priority: send.priority, sourceName: 'di.iiii lighting desk' });
     // Art-Net needs no instance: one socket carries every destination, so an extra
     // Art-Net send is a list of addresses to also send each frame to, nothing more.
@@ -548,7 +563,7 @@ function createDesk(opts = {}) {
 
   // Anything holding a device for a send that is gone or switched off lets it go.
   function pruneExtra() {
-    const live = new Set((state.output.extra || []).filter((s) => s.enabled).map((s) => s.id));
+    const live = new Set(allExtras().filter((s) => s.enabled).map((s) => s.id));
     for (const id of [...extraDrivers.keys()]) if (!live.has(id)) closeExtra(id);
   }
 
@@ -707,6 +722,42 @@ function createDesk(opts = {}) {
   // right values (2026-09-24). Measured on an ENTTEC DMX USB PRO with full frames: 34
   // frames/s, 4.5ms average write. See docs/ai/known-fixes.md.
   const FULL_FRAME = 512;
+  // The channels the strips take in one universe, shaped like a fixture so the patch checks can name them.
+  function stripOccupants(universe) {
+    const out = [];
+    for (const st of state.strips) {
+      const p = strips.planStrip(st);
+      if (!p.ok) continue;
+      for (const r of strips.claimedRanges(p.plan)) {
+        if (r.universe === universe) out.push({ from: r.from, to: r.to, as: { id: st.id, index: 'strip', profile: st.name, address: r.from } });
+      }
+    }
+    return out;
+  }
+
+  // A strip that names its own receiver (artnet|sacn + IPv4) is one more send beside the desk's: its universes, that
+  // address. It rides the same extra-device machinery, so one route exists, not two. Built each frame from the strips.
+  function stripSends() {
+    const out = [];
+    for (const st of state.strips) {
+      if (!st.output || !st.output.driver || !st.on) continue;
+      const p = strips.planStrip(st);
+      if (!p.ok) continue;
+      out.push({ id: 'strip:' + st.id, driver: st.output.driver, targets: [st.output.host], universes: p.plan.universes, serialPort: null, priority: state.output.priority != null ? state.output.priority : 100, enabled: true });
+    }
+    return out;
+  }
+  const allExtras = () => (state.output.extra || []).concat(stripSends());
+  // Universes that only a strip with its own receiver uses: they do not also go out of the desk's main output.
+  function ownRoute() {
+    const own = new Set();
+    for (const send of stripSends()) for (const u of send.universes) own.add(u);
+    for (const f of state.fixtures) own.delete(f.universe);
+    for (const k of Object.keys(state.raw)) own.delete(Number(k.split(':')[0]));
+    for (const st of state.strips) if (!st.output || !st.output.driver) { const p = strips.planStrip(st); if (p.ok) for (const u of p.plan.universes) own.delete(u); }
+    return own;
+  }
+
   function footprints() {
     const out = new Map();
     const bump = (u, ch) => { if (ch > (out.get(u) || 0)) out.set(u, ch); };
@@ -747,7 +798,8 @@ function createDesk(opts = {}) {
       // is no footprint to trim and no empty-desk special case — the universe goes out,
       // zeros and all, which is what stops a node's own timeout firing and its fixtures
       // falling into their built-in programs.
-      for (const [universe, buf] of frames) if (!echoBlocked('sacn', universe)) stream.send(universe, buf);
+      const own = ownRoute();
+      for (const [universe, buf] of frames) if (!own.has(universe) && !echoBlocked('sacn', universe)) stream.send(universe, buf);
       if (!frames.size) stream.send(0, Buffer.alloc(512));
       sendExtras(frames, fp);
       stats.lastSend = Date.now();
@@ -774,8 +826,9 @@ function createDesk(opts = {}) {
       if (!frames.has(wire.universe)) wire.send(wire.universe, Buffer.alloc(FULL_FRAME));
     } else {
       const targets = targetsFor();
+      const own = ownRoute();
       for (const [universe, buf] of frames) {
-        if (echoBlocked('artnet', universe)) continue;
+        if (own.has(universe) || echoBlocked('artnet', universe)) continue;
         for (const t of targets) artnet.send(t, universe, buf.subarray(0, fp.get(universe) || FULL_FRAME));
       }
     }
@@ -787,7 +840,7 @@ function createDesk(opts = {}) {
   // universes it was told to carry — empty means all of them, which is right for a second
   // node mirroring the rig and wrong for a widget, which is one DMX line.
   function sendExtras(frames, fp) {
-    const list = state.output.extra || [];
+    const list = allExtras();
     if (!list.length) { if (extraDrivers.size) pruneExtra(); return; }
     pruneExtra();
     for (const send of list) {
@@ -953,12 +1006,18 @@ function createDesk(opts = {}) {
   // One manual channel override. Out-of-range channels are dropped rather than stored:
   // render ignores them anyway, and letting them accumulate would quietly bloat show.json
   // with keys that can never do anything.
-  function setRaw(universe, channel, value) {
+  // `owner` is the caller's tag (holds.js): a value takes the channel for it, a release
+  // lets go only of a channel it holds. Returns the holder a release was refused for.
+  function setRaw(universe, channel, value, owner, all) {
     const ch = channel | 0;
-    if (ch < 1 || ch > 512) return;
+    if (ch < 1 || ch > 512) return null;
     const key = Math.max(0, Math.min(32767, universe | 0)) + ':' + ch;
-    if (value == null || value < 0) delete state.raw[key];
-    else state.raw[key] = Math.max(0, Math.min(255, value | 0));
+    if (value == null || value < 0) {
+      const r = holds.release(state, key, owner, all);
+      return r === 'released' || r === 'free' ? null : r;
+    }
+    holds.hold(state, key, Math.max(0, Math.min(255, value | 0)), owner);
+    return null;
   }
 
   function snapshot() {
@@ -989,6 +1048,27 @@ function createDesk(opts = {}) {
     return body.replace(SCENES_TOKEN, scenesJson());
   }
 
+  // One answer per route (outputStatus.js): ok | unreachable | off, with the reason in words, for the
+  // main output and every extra device. The page shows it; nothing sends into a dead route in silence.
+  function outputBus() {
+    const o = state.output;
+    const main = o.driver === 'enttec' ? { serial: enttec ? enttec.status() : null, serialPort: o.serialPort }
+      : o.driver === 'sacn' ? { ready: offline || !!(sacn && sacn.ready), lastError: sacn && sacn.lastError, lastErrorAt: sacn && sacn.lastErrorAt, targets: o.targets }
+      : { ready: offline || !!artnet.ready, lastError: artnet.lastError, lastErrorAt: artnet.lastErrorAt, targets: o.mode === 'unicast' ? o.targets : [] };
+    const routes = [{ id: 'main', name: 'Output', driver: o.driver, enabled: !!o.enabled, ...main }];
+    for (const s of allExtras()) {
+      const held = extraDrivers.get(s.id);
+      const d = held ? held.drv : null;
+      const st = d && d.status ? d.status() : null;
+      routes.push({
+        id: s.id, name: s.name || s.id, driver: s.driver, enabled: !!s.enabled, targets: s.targets, serialPort: s.serialPort,
+        ...(s.driver === 'enttec' ? { serial: st } : s.driver === 'sacn' ? { ready: offline || !!(d && d.ready), lastError: d && d.lastError, lastErrorAt: d && d.lastErrorAt }
+          : { ready: offline || !!artnet.ready, lastError: artnet.lastError, lastErrorAt: artnet.lastErrorAt })
+      });
+    }
+    return busStatus(routes, nodeList());
+  }
+
   function summary() {
     const active = state.activeScene ? state.scenes.find((s) => s.id === state.activeScene) : null;
     const ser = enttec ? enttec.status() : null;
@@ -1001,6 +1081,7 @@ function createDesk(opts = {}) {
       fx: { mode: state.fx.mode, bpm: state.fx.bpm, depth: state.fx.depth, enabled: !!state.fx.enabled },
       chase: { enabled: !!state.chase.enabled, index: engine.chase.index, count: state.chase.sceneIds.length },
       fixtures: state.fixtures.length,
+      strips: state.strips.length,
       scenes: state.scenes.length,
       looks: state.looks.length,
       layers: state.layers.map((l) => ({ id: l.id, name: l.name, on: l.on, level: l.level, lookId: l.lookId })),
@@ -1017,6 +1098,7 @@ function createDesk(opts = {}) {
         packetsSent: enttec ? enttec.packetsSent : sacn ? sacn.packetsSent : artnet.packetsSent,
         lastError: enttec ? enttec.lastError : sacn ? sacn.lastError : artnet.lastError,
         lanAllowed,
+        bus: outputBus(),
       },
       input: inputSummary(),
     };
@@ -1073,6 +1155,8 @@ function createDesk(opts = {}) {
     const patched = new Set(state.fixtures.map((f) => f.id));
     return Object.assign({}, state, {
       now: nowOnDesk(),
+      // Who holds each manual channel (holds.js), filled in for a show that predates tags.
+      rawOwners: holds.sanitizeRawOwners(state.rawOwners, state.raw),
       // How much of each scene still exists. Recall skips fixtures that have been unpatched,
       // so a scene saved against a rig that has since been repatched recalls silently and
       // does nothing at all — which reads as a broken button. The counts let the interface
@@ -1085,6 +1169,8 @@ function createDesk(opts = {}) {
       // `custom` tells the interface which ones can be edited or deleted; the built-ins
       // cannot be, so the library can hide those controls rather than offering them and
       // then refusing.
+      // The strips with their plan (which universes, which channels) so the page can draw them from the live DMX it already holds.
+      strips: state.strips.map(strips.describe),
       profiles: Object.fromEntries(Object.entries(PROFILES).map(([k, v]) =>
         [k, { label: v.label, channels: v.channels, cat: v.cat, custom: !!v.custom, labels: v.labels }])),
       // What each channel role IS, so the interface can ask rather than keep its own copy.
@@ -1126,6 +1212,7 @@ function createDesk(opts = {}) {
         driver: state.output.driver,
         sacn: sacn ? sacn.status() : null,
         outputEnabled: !!state.output.enabled,
+        bus: outputBus(),
         lanAllowed,
         listen: listen ? listen() : null,
         serial: enttec ? enttec.status() : null,
@@ -1513,6 +1600,7 @@ function createDesk(opts = {}) {
       json(res, { ...r, cues: cueRunner.full() }, r.error ? 400 : 200);
     },
     'POST /api/cues/stop': (req, res) => json(res, { ...cueRunner.stop(), cues: cueRunner.full() }),
+    'POST /api/cues/autoplay': (req, res, body) => json(res, { ...cueRunner.setAutoplay(body.autoplay === true), cues: cueRunner.full() }),
     'POST /api/cues/loop': (req, res, body) => json(res, { ...cueRunner.setLoop(body.loop === true), cues: cueRunner.full() }),
 
     'POST /api/master': (req, res, body) => {
@@ -1639,6 +1727,68 @@ function createDesk(opts = {}) {
       json(res, { fixtures: rigList({ state, PROFILES }, project) });
     },
 
+    // ---- pixel strips (pixelstrip.js) ----------------------------------------------------------
+    'GET /api/strips': (req, res) => json(res, { strips: state.strips.map(strips.describe), type: strips.PIXEL_STRIP_TYPE }),
+
+    'POST /api/strips/add': (req, res, body) => {
+      if (state.strips.length >= 64) return json(res, { error: 'a show holds at most 64 strips' }, 400);
+      const made = strips.makeStrip(body || {});
+      if (!made.ok) return json(res, { error: made.error }, 400);
+      const clash = strips.findConflict(made.plan, { fixtures: state.fixtures, widthOf: (f) => (PROFILES[f.profile] || PROFILES.rgb).channels.length, strips: state.strips });
+      if (clash && !(body && body.force)) return json(res, { error: clash }, 409);
+      state.strips.push(made.strip);
+      save(); pushFrame();
+      json(res, { ok: true, strip: strips.describe(made.strip) });
+    },
+
+    'POST /api/strips/update': (req, res, body) => {
+      const cur = state.strips.find((x) => x.id === (body && body.id));
+      if (!cur) return json(res, { error: 'no such strip: ' + (body && body.id) }, 404);
+      const patch = { ...body };
+      delete patch.id;
+      const made = strips.makeStrip({ ...patch, id: cur.id }, cur);
+      if (!made.ok) return json(res, { error: made.error }, 400);
+      const clash = strips.findConflict(made.plan, { fixtures: state.fixtures, widthOf: (f) => (PROFILES[f.profile] || PROFILES.rgb).channels.length, strips: state.strips, ignoreId: cur.id });
+      if (clash && !body.force) return json(res, { error: clash }, 409);
+      state.strips[state.strips.indexOf(cur)] = made.strip;
+      save(); pushFrame();
+      json(res, { ok: true, strip: strips.describe(made.strip) });
+    },
+
+    'POST /api/strips/remove': (req, res, body) => {
+      const cur = state.strips.find((x) => x.id === (body && body.id));
+      if (!cur) return json(res, { error: 'no such strip: ' + (body && body.id) }, 404);
+      state.strips = state.strips.filter((x) => x !== cur);
+      engine.dropStripFrame(cur.id);
+      engine.cancelFade(); save(); pushFrame();
+      json(res, { ok: true });
+    },
+
+    // A live frame for one strip: `pixels` as [[r,g,b(,w)], ...] or `data` as base64 of r,g,b,w per pixel.
+    // Fewer pixels than the strip leaves the rest dark; more are refused.
+    'POST /api/strips/pixels': (req, res, body) => {
+      const cur = state.strips.find((x) => x.id === (body && body.id));
+      if (!cur) return json(res, { error: 'no such strip: ' + (body && body.id) }, 404);
+      let data;
+      if (typeof body.data === 'string') {
+        const raw = Buffer.from(body.data, 'base64');
+        const per = body.channels === 4 ? 4 : 3;
+        if (raw.length % per) return json(res, { error: `data holds ${raw.length} bytes, not a whole number of ${per}-channel pixels` }, 400);
+        const n = raw.length / per;
+        if (n > cur.pixels) return json(res, { error: `${n} pixels sent to a strip of ${cur.pixels}` }, 400);
+        data = new Uint8Array(cur.pixels * 4);
+        for (let i = 0; i < n; i++) for (let c = 0; c < per; c++) data[i * 4 + c] = raw[i * per + c];
+      } else if (Array.isArray(body.pixels)) {
+        if (body.pixels.length > cur.pixels) return json(res, { error: `${body.pixels.length} pixels sent to a strip of ${cur.pixels}` }, 400);
+        data = new Uint8Array(cur.pixels * 4);
+        body.pixels.forEach((px, i) => { for (let c = 0; c < 4; c++) data[i * 4 + c] = Math.max(0, Math.min(255, Math.round(+(Array.isArray(px) ? px[c] : 0) || 0))); });
+      } else {
+        return json(res, { error: 'send pixels as a list of [r,g,b] or data as base64' }, 400);
+      }
+      engine.setStripFrame(cur.id, data);
+      json(res, { ok: true, pixels: cur.pixels });
+    },
+
     'POST /api/fixtures/add': (req, res, body) => {
       const count = Math.max(1, Math.min(128, body.count || 1));
       const profile = PROFILES[body.profile] ? body.profile : 'rgb';
@@ -1658,6 +1808,7 @@ function createDesk(opts = {}) {
           const w = (PROFILES[f.profile] || PROFILES.rgb).channels.length;
           for (let c = f.address; c < f.address + w && c <= 512; c++) occupied.set(c, f);
         }
+        for (const hit of stripOccupants(universe)) for (let c = hit.from; c <= hit.to; c++) occupied.set(c, hit.as);
         for (let i = 0; i < count; i++) {
           const start = addr + i * width;
           if (start + width - 1 > 512) break;
@@ -1728,6 +1879,13 @@ function createDesk(opts = {}) {
         for (const f of state.fixtures) {
           if (moving.has(f.id)) continue;
           for (let c = f.address; c < f.address + widthOf(f) && c <= 512; c++) occupied.set(f.universe + ':' + c, f);
+        }
+        for (const st of state.strips) {
+          const p = strips.planStrip(st);
+          if (!p.ok) continue;
+          for (const r of strips.claimedRanges(p.plan)) {
+            for (let c = r.from; c <= r.to; c++) occupied.set(r.universe + ':' + c, { id: st.id, index: 'strip', profile: st.name, address: r.from });
+          }
         }
         const claimed = new Map();
         const blockers = new Map();
@@ -1846,24 +2004,42 @@ function createDesk(opts = {}) {
     // one request — a fader panel drags across a dozen channels at a time, and one request
     // each would be a burst of round trips racing the 400ms debounced save. A null or
     // negative value releases the channel back to whatever the fixtures are rendering.
+    //
+    // Every hold is OWNED (holds.js): `owner` names the caller (a session or client id; none
+    // = "owner", the desk's own interface). A release — a negative value or {clear:true} —
+    // lets go of the caller's own channels only; somebody else's stay held and the reply
+    // says whose (`kept`, `refused`). {clear:true, all:true} is the explicit release-all.
+    // Old callers that name no owner are "owner": they hold as before, and their clear still
+    // empties the desk of "owner" holds — but no longer of a tagged caller's.
     'POST /api/raw': (req, res, body) => {
+      const owner = holds.holdOwner(body.owner);
+      if (!owner) return json(res, { error: 'owner must be 1-40 letters, digits or . _ : @ -' }, 400);
+      const all = body.all === true;
+      const out = { ok: true };
       if (body.clear) {
-        // {clear:true} releases every manual channel; {clear:true, universe:N} releases just
-        // that one. "Reset all" on a fader page means the universe in front of you — wiping
-        // held channels on universes you cannot see would be a nasty surprise on a big rig.
-        if (body.universe != null) {
-          const prefix = (body.universe | 0) + ':';
-          for (const key of Object.keys(state.raw)) if (key.startsWith(prefix)) delete state.raw[key];
-        } else {
-          state.raw = {};
-        }
-      } else if (Array.isArray(body.channels)) {
-        for (const c of body.channels) setRaw(c && c.universe, c && c.channel, c && c.value);
-      } else if (body.channel) {
-        setRaw(body.universe, body.channel, body.value);
+        // {clear:true} releases the caller's manual channels; {clear:true, universe:N} just
+        // that universe's. "Reset all" on a fader page means the universe in front of you —
+        // wiping held channels on universes you cannot see would be a nasty surprise on a big rig.
+        const r = holds.releaseHolds(state, { owner, all, universe: body.universe != null ? body.universe : null });
+        out.released = r.released;
+        if (Object.keys(r.kept).length) out.kept = r.kept;
+      } else {
+        const refused = {};
+        const one = (u, ch, v) => { const by = setRaw(u, ch, v, owner, all); if (by) refused[by] = (refused[by] || 0) + 1; };
+        if (Array.isArray(body.channels)) for (const c of body.channels) one(c && c.universe, c && c.channel, c && c.value);
+        else if (body.channel) one(body.universe, body.channel, body.value);
+        if (Object.keys(refused).length) out.refused = refused;
       }
-      engine.cancelFade(); save(); pushFrame(); json(res, { ok: true, raw: state.raw });
+      engine.cancelFade(); save(); pushFrame();
+      json(res, Object.assign(out, { raw: state.raw, rawOwners: state.rawOwners, holders: holds.holdsByOwner(state) }));
     },
+
+    // Who holds what, without the rest of the state: every held channel with its value and
+    // its holder, and the count per holder.
+    'GET /api/raw': (req, res) => json(res, {
+      holds: Object.keys(state.raw).map((key) => ({ key, value: state.raw[key], owner: holds.ownerOf(state, key) })),
+      holders: holds.holdsByOwner(state),
+    }, 200, req),
 
     'POST /api/scenes/save': (req, res, body) => {
       const scene = engine.captureScene(body.name);
@@ -1971,11 +2147,14 @@ function createDesk(opts = {}) {
       const scene = state.scenes.find((s) => s.id === body.id);
       // Same grid as a look: hold the recall until the next beat or bar when asked to.
       const wait = scene ? quantiseWait(body.quantize) : 0;
+      // The hand recalling it: the scene's holds replace that hand's own (holds.js).
+      const recallOwner = holds.holdOwner(body.owner);
+      if (!recallOwner) return json(res, { error: 'owner must be 1-40 letters, digits or . _ : @ -' }, 400);
       if (wait > 0) {
         const at = Date.now() + wait;
         pending.push(setTimeout(() => {
           if (state.chase.enabled) { state.chase.enabled = false; engine.chase.running = false; }
-          engine.recallScene(scene, body.fadeMs);
+          engine.recallScene(scene, body.fadeMs, recallOwner);
           save(); pushFrame();
         }, wait));
         return json(res, { ok: true, quantized: body.quantize, at, inMs: wait });
@@ -1995,7 +2174,7 @@ function createDesk(opts = {}) {
       // otherwise invisible until something looks wrong.
       const fxWasOn = fxActive(state.fx);
       const rawBefore = Object.keys(state.raw);
-      const ok = engine.recallScene(scene, body.fadeMs);
+      const ok = engine.recallScene(scene, body.fadeMs, recallOwner);
       const out = { ok };
       if (chasePaused) out.chasePaused = true;
       if (ok) {
@@ -2104,6 +2283,12 @@ function createDesk(opts = {}) {
       json(res, Object.assign(input.status(), { summary: inputSummary(), lanAllowed }));
     },
     // A held look (loss = hold) let go of: the desk has the rig again until signal returns.
+    // One universe's input levels for a reader outside the desk (the Nodes editor's DMX In,
+    // 2026-10-21): ?universe=<desk universe, 0 = U1>. Read-only; it never switches input on.
+    'GET /api/input/levels': (req, res) => {
+      const u = Number(new URL(req.url, 'http://localhost').searchParams.get('universe'));
+      json(res, Object.assign(inputLevels(input.merger, u, Date.now()), { lanAllowed }));
+    },
     'POST /api/input/release': (req, res) => { input.merger.release(); pushFrame(); json(res, { ok: true }); },
 
     'POST /api/output': (req, res, body) => {
@@ -2276,8 +2461,11 @@ function createDesk(opts = {}) {
   // Load another show in place of this one. The one being left is saved whole first;
   // the rig carries over untouched; the profile registry is emptied of the old show's
   // own fixture types and filled with the new one's (each show carries its own).
+  const backupShow = (reason) => backupShowFile(showFile(), reason);
+
   function switchShow(next) {
     writeShow();
+    try { backupShow('before-switch'); } catch (e) { log('could not back up the show before leaving it: ' + e.message); }
     cancelPending();
     cueRunner.close();
     const rig = state.output;
@@ -2393,6 +2581,11 @@ function createDesk(opts = {}) {
   // them: a caller holding the desk (the rig's blackout mirror) must reach the live one.
   return {
     handle, close, engine, writeShow, summary, input,
+    // The cue runner itself, for a caller in this process that drives the list on a
+    // person's behalf (the show page, routes/showRoutes.js) — the same go/load the
+    // /api/cues routes call, so there is still ONE clock.
+    cueRunner,
+    hasLook: (id) => state.looks.some((l) => l.id === id),
     get state() { return state; },
     get showFile() { return showFile(); },
     get show() { return showInfo(); },

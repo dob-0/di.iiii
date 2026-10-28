@@ -2,56 +2,53 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import RawHelpDialog from './RawHelpDialog.jsx'
 
-describe('RawHelpDialog', () => {
-    it('opens on the one truthful section — no surface prop, no surface teaching', () => {
-        render(<RawHelpDialog open onClose={() => {}} />)
-
-        expect(screen.getByRole('heading', { name: 'Start small' })).toBeTruthy()
-        // The retired product must not be taught here.
-        expect(screen.queryByText(/Switch View|Open View\.|Open World/)).toBeNull()
-        expect(screen.queryByRole('tab', { name: 'World' })).toBeNull()
-        expect(screen.queryByRole('tab', { name: 'View' })).toBeNull()
+describe('RawHelpDialog: one true sheet (audit row 8)', () => {
+    it('is one page: no tabs, no steps, no second heading level of sections', () => {
+        const { container } = render(<RawHelpDialog open onClose={() => {}} nodeCount={5} wireCount={0} />)
+        expect(screen.queryAllByRole('tab')).toHaveLength(0)
+        expect(container.querySelector('[role="tablist"]')).toBeNull()
+        expect([...container.querySelectorAll('.raw-help-line b')].map((el) => el.textContent))
+            .toEqual(['Make', 'Wire', 'Open', 'Back', 'Move', 'Zoom', 'Delete'])
     })
 
-    // The "For Visitors / Look first" and "For Creators / Build small" cards
-    // were the old Nodes project list's door, repeated here. That door went
-    // 2026-09-23; a person reading this help is already inside a project.
-    it('teaches the canvas, and offers no look-or-build door', () => {
-        render(<RawHelpDialog open onClose={() => {}} />)
+    it('says what is on THIS canvas, and never "starts empty" over five cards', () => {
+        render(<RawHelpDialog open onClose={() => {}} nodeCount={5} wireCount={0} />)
+        expect(screen.getByRole('heading', { name: '5 nodes · nothing wired yet' })).toBeTruthy()
+        expect(screen.queryByText(/starts empty/i)).toBeNull()
+        expect(screen.queryByText(/^Empty canvas/)).toBeNull()
+    })
 
-        for (const gone of ['For Visitors', 'For Creators', 'Look first', 'Build small']) {
+    it('says it is empty only when it is', () => {
+        render(<RawHelpDialog open onClose={() => {}} nodeCount={0} />)
+        expect(screen.getByRole('heading').textContent).toMatch(/^Empty canvas/)
+    })
+
+    it('offers no look-or-build door', () => {
+        render(<RawHelpDialog open onClose={() => {}} nodeCount={2} wireCount={1} />)
+        for (const gone of ['For Visitors', 'For Creators', 'Look first', 'Build small', 'Switch View']) {
             expect(screen.queryByText(gone)).toBeNull()
         }
-        expect(screen.getByText('The canvas starts empty.')).toBeTruthy()
     })
 
-    // 2026-09-28: the footer's contents were retired and the empty <footer>
-    // stayed, drawn as a bordered 33px strip at the foot of Help on every
-    // screen. The dialog ends with its last section, nothing after it.
+    // 2026-09-28: an empty <footer> stayed drawn as a bordered strip.
     it('ends with its content, not an empty footer strip', () => {
-        const { container } = render(<RawHelpDialog open onClose={() => {}} />)
+        const { container } = render(<RawHelpDialog open onClose={() => {}} nodeCount={1} />)
         const dialog = container.querySelector('section')
         for (const el of dialog.querySelectorAll('footer, .raw-help-footer')) {
             expect(el.textContent.trim(), 'an empty footer').not.toBe('')
         }
-        expect(dialog.querySelector('.raw-help-footer')).toBeNull()
     })
 
-    it('switches to the compact controls view', () => {
-        render(<RawHelpDialog open onClose={() => {}} />)
-
-        fireEvent.click(screen.getByRole('tab', { name: 'All Controls' }))
-
-        expect(screen.getAllByText('Wire').length).toBeGreaterThan(0)
-        expect(screen.getAllByText(/Double-click or double-tap/).length).toBeGreaterThan(0)
+    it('lists every key and mouse action under the one sheet', () => {
+        const { container } = render(<RawHelpDialog open onClose={() => {}} nodeCount={1} />)
+        expect(container.querySelector('.raw-help-keys dt')).toBeTruthy()
+        expect(screen.getAllByText(/Double-click or right-click empty canvas/).length).toBeGreaterThan(0)
     })
 
     it('closes when escape is pressed', () => {
         const onClose = vi.fn()
         render(<RawHelpDialog open onClose={onClose} />)
-
         fireEvent.keyDown(window, { key: 'Escape' })
-
         expect(onClose).toHaveBeenCalledTimes(1)
     })
 })

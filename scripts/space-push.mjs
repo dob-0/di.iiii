@@ -8,7 +8,7 @@
  *   node scripts/space-push.mjs <spaceId> [options]
  *
  * Options:
- *   --to     <url>    Live server API base (default: $LIVE_API_URL or https://di-studio.xyz/serverXR)
+ *   --to     <url>    Live server API base (default: $LIVE_API_URL or https://diiii.xyz/serverXR)
  *   --token  <token>  Bearer token for the live server (default: $LIVE_API_TOKEN) — required
  *   --dry-run         Print what would happen without making changes
  *   --force           Push even if the destination changed since this scene's
@@ -42,7 +42,7 @@ import { fileURLToPath } from 'node:url'
 const { diffDocumentLoss, describeLoss, parseAcceptLoss, lossGate } = createRequire(import.meta.url)('../shared/documentLoss.cjs')
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
+const DEFAULT_LIVE_URL = 'https://diiii.xyz/serverXR'
 const DEFAULT_LOCAL_URL = 'http://localhost:4000/serverXR'
 
 // Production is the one host this script must never reach by inheritance.
@@ -294,7 +294,7 @@ const main = async () => {
         throw new Error(`HTTP ${putResponse.status} from ${livePutUrl}: ${text.slice(0, 200)}`)
     }
     console.log(`  ok — scene pushed to live`)
-    console.log(`\nLive: https://di-studio.xyz/${spaceId}/`)
+    console.log(`\nLive: https://diiii.xyz/${spaceId}/`)
 }
 
 // Only run when invoked as a script, so the guard above can be unit-tested.

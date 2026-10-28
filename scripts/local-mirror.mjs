@@ -54,7 +54,7 @@ const DEFAULT_LOCAL_URL = 'http://localhost:4000/serverXR'
 // DEV_API_TOKEN (legacy alias LIVE_API_TOKEN) for the dev tier. Order matters — production is walked first so a
 // space both tiers hold is taken from production.
 const TIERS = {
-    prod: { urlEnv: 'PROD_API_URL', tokenEnv: 'PROD_API_TOKEN', fallbackUrl: 'https://di-studio.xyz/serverXR' },
+    prod: { urlEnv: 'PROD_API_URL', tokenEnv: 'PROD_API_TOKEN', fallbackUrl: 'https://diiii.xyz/serverXR' },
     dev: { urlEnv: 'DEV_API_URL', tokenEnv: 'DEV_API_TOKEN', legacyUrlEnv: 'LIVE_API_URL', legacyTokenEnv: 'LIVE_API_TOKEN', fallbackUrl: 'https://dev.diiii.xyz/serverXR' },
 }
 

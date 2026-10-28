@@ -11,18 +11,23 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const run = (file) => spawnSync(process.execPath, [path.join(here, 'tests', file)], {
+const run = (file, ...args) => spawnSync(process.execPath, [path.join(here, 'tests', file), ...args], {
   env: { ...process.env, ARTNET_OFFLINE: '1' },
   encoding: 'utf8',
   timeout: 180000
 })
 
 describe('the lighting desk', () => {
-  for (const file of ['test.js', 'test-wiring.js', 'test-http.js', 'test-rigpatch.js', 'test-dmxin.js', 'test-cues.js', 'test-stream.js']) {
+  for (const file of ['test.js', 'test-holds.js', 'test-wiring.js', 'test-http.js', 'test-rigpatch.js', 'test-pixelstrip.js', 'test-dmxin.js', 'test-cues.js', 'test-stream.js', 'test-bundle.js', 'test-outputs.js', 'test-touch-colours.js', 'lint-api-contract.js']) {
     it(`${file} passes`, () => {
       const r = run(file)
       const tail = (r.stdout || '').split('\n').filter((l) => !l.startsWith('  ok')).join('\n')
       expect(r.status, tail + (r.stderr || '')).toBe(0)
     }, 200000)
   }
+
+  it('test-http.js --class a holds the routes every node must answer to the contract', () => {
+    const r = run('test-http.js', '--class', 'a')
+    expect(r.status, (r.stdout || '') + (r.stderr || '')).toBe(0)
+  }, 200000)
 })

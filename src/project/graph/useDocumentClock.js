@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from 'react'
+import { heldClockMs, subscribeClockHold } from './clockSeek.js'
 import { hasClockNode, useGraphClock } from './useGraphClock.js'
 
 // One show has ONE clock. `time` used to read each window's own
@@ -10,10 +12,15 @@ import { hasClockNode, useGraphClock } from './useGraphClock.js'
 // changes until the editor stamps it.
 //
 // The rAF gate lives in useGraphClock: no Time node, no per-frame work.
+//
+// A held clock (clockSeek.js — a test browser's __seek) wins over both: the
+// document reads exactly the held moment until __play.
 export function useDocumentClock(document) {
     const active = hasClockNode(document?.nodes)
     const frameNow = useGraphClock(active)
+    const held = useSyncExternalStore(subscribeClockHold, heldClockMs, heldClockMs)
     const epoch = document?.showState?.clockEpoch || 0
+    if (held !== null) return held
     if (!active) return 0
     // timeOrigin + frameNow IS this frame's wall-clock ms, written so render
     // stays pure: the origin is a constant, frameNow is hook state. Every

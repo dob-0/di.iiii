@@ -6,26 +6,16 @@
 // runner and most installs — and it must boot, answer /api/health, and answer /ndi
 // honestly without ever loading a native library.
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { spawn } from 'node:child_process'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const SERVER_ENTRY = path.join(HERE, 'index.js')
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
-const getFreePort = () => new Promise((resolve, reject) => {
-  const probe = net.createServer()
-  probe.on('error', reject)
-  probe.listen(0, '127.0.0.1', () => {
-    const { port } = probe.address()
-    probe.close((error) => (error ? reject(error) : resolve(port)))
-  })
-})
 
 // A --require preload that makes koffi unfindable, whatever is in node_modules.
 const NO_KOFFI = `
@@ -57,11 +47,9 @@ const startServer = async () => {
   const dataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-ndi-data-'))
   const preload = path.join(cwd, 'no-koffi.cjs')
   await writeFile(preload, NO_KOFFI)
-  const port = await getFreePort()
 
   const env = {
     ...process.env,
-    PORT: String(port),
     NODE_ENV: 'test',
     APP_BASE_PATH: '/serverXR',
     DATA_ROOT: dataRoot,
@@ -73,26 +61,13 @@ const startServer = async () => {
   delete env.SPACES_DIR
   delete env.UPLOADS_DIR
 
-  const child = spawn(process.execPath, ['--require', preload, SERVER_ENTRY], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] })
-  let logs = ''
-  child.stdout.on('data', (c) => { logs += c.toString() })
-  child.stderr.on('data', (c) => { logs += c.toString() })
+  const { child, port, logs: readLogs } = await spawnServerUntilReady({ entry: SERVER_ENTRY, cwd, env, nodeArgs: ['--require', preload] })
 
   const baseUrl = `http://127.0.0.1:${port}/serverXR`
-  const deadline = Date.now() + 20000
-  for (;;) {
-    if (child.exitCode !== null) throw new Error(`the server exited while booting (code ${child.exitCode})\n${logs}`)
-    try {
-      const res = await fetch(`${baseUrl}/api/health`)
-      if (res.ok) break
-    } catch { /* not up yet */ }
-    if (Date.now() > deadline) throw new Error(`the server never became healthy\n${logs}`)
-    await wait(200)
-  }
 
   return {
     baseUrl,
-    getLogs: () => logs,
+    getLogs: readLogs,
     stop: async () => {
       if (child.exitCode === null) {
         child.kill('SIGTERM')

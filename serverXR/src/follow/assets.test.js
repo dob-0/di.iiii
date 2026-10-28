@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createHash } from 'node:crypto'
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
@@ -23,13 +23,17 @@ const remove = (id) => ({ type: 'deleteAsset', payload: { assetId: id } })
  * Two machines that exist only as maps, behind the same three calls the chase
  * makes on real ones. The fake PUT deliberately does NOT check the hash: what
  * is under test is that the chase never offers it bytes it has not checked.
+ *
+ * `status` stands for something in front of a machine answering FOR it, to
+ * every request — a Cloudflare tunnel's 530 while the machine behind it is off.
+ * `metaStatus` is one file's own answer (id → status) while the rest are fine.
  */
 const twoMachines = () => {
     const machines = {
-        'http://here': { files: new Map(), docs: new Map(), serves: new Map(), down: false, putStatus: 200 },
-        'http://there': { files: new Map(), docs: new Map(), serves: new Map(), down: false, putStatus: 200 }
+        'http://here': { files: new Map(), docs: new Map(), serves: new Map(), down: false, putStatus: 200, status: null, metaStatus: new Map() },
+        'http://there': { files: new Map(), docs: new Map(), serves: new Map(), down: false, putStatus: 200, status: null, metaStatus: new Map() }
     }
-    const calls = { downloads: [], uploads: [], tokens: [] }
+    const calls = { downloads: [], uploads: [], tokens: [], requests: [] }
     const parse = (url) => {
         const u = new URL(url)
         const machine = machines[u.origin]
@@ -39,12 +43,16 @@ const twoMachines = () => {
     const answer = (status, body = {}) => ({ status, ok: status >= 200 && status < 300, headers: {}, text: JSON.stringify(body), json: () => body })
     const io = {
         request: async (url, { headers = {} } = {}) => {
-            const { machine, projectId, kind, id } = parse(url)
+            const { u, machine, projectId, kind, id } = parse(url)
             calls.tokens.push(headers.Authorization || null)
+            calls.requests.push({ to: u.origin, path: u.pathname })
             if (machine.down) throw new Error('connect ECONNREFUSED')
+            if (machine.status) return answer(machine.status)
+            if (u.pathname === '/api/health') return answer(200, { ok: true })
             if (kind === 'document') {
                 return machine.docs.has(projectId) ? answer(200, { document: machine.docs.get(projectId) }) : answer(404)
             }
+            if (machine.metaStatus.has(id)) return answer(machine.metaStatus.get(id))
             return machine.files.has(id)
                 ? answer(200, { asset: { id, name: 'clip.mp4', mimeType: 'video/mp4', size: machine.files.get(id).length } })
                 : answer(404)
@@ -53,6 +61,7 @@ const twoMachines = () => {
             const { machine, id } = parse(url)
             calls.downloads.push(id)
             if (machine.down) throw new Error('connect ECONNREFUSED')
+            if (machine.status) return { ok: false, status: machine.status, headers: {}, size: 0, sha256: null }
             const bytes = machine.serves.get(id) || machine.files.get(id)
             if (bytes.length > maxBytes) throw Object.assign(new Error('too large'), { code: 'TOO_LARGE' })
             await writeFile(destPath, bytes)
@@ -62,6 +71,7 @@ const twoMachines = () => {
             const { u, machine, id } = parse(url)
             calls.uploads.push({ to: u.origin, id, name: u.searchParams.get('name'), mimeType: u.searchParams.get('mimeType'), token: headers.Authorization || null })
             if (machine.down) throw new Error('connect ECONNREFUSED')
+            if (machine.status) return answer(machine.status)
             if (machine.putStatus !== 200) return answer(machine.putStatus, machine.putBody || {})
             machine.files.set(id, await readFile(filePath))
             return answer(200, { ok: true })
@@ -179,6 +189,45 @@ describe('the chase', () => {
         chase.noteProjects(['show'])
         await drain()
         expect(world.there.files.get(sha(bytes)).equals(bytes)).toBe(true)
+    })
+
+    // Follow audit F10 (2026-10-04): a document was read once per process, so a
+    // file named only by a document a converge brought in (the upsertAsset op
+    // long gone from the host's window) was never asked for. The follower hands
+    // every project to noteProjects on every tick (follower.js tick()), so the
+    // file is asked for at the first tick one period after the last comparison.
+    // Red on the code before ccd00a91; this is its guard.
+    it('fetches a file named only by a document a converge brought in, within one period (audit F10)', async () => {
+        const world = twoMachines()
+        const bytes = Buffer.from('placed on the host before this follow, its op out of the window')
+        world.there.files.set(sha(bytes), bytes)
+        world.here.docs.set('show', { assets: [] })
+        world.there.docs.set('show', { assets: [] })
+        let clock = 0
+        await make(world, { now: () => clock, reconcileEveryMs: 1000 })
+
+        chase.noteProjects(['show'])
+        await drain()
+        expect(world.calls.downloads).toEqual([])
+
+        // The converge writes the host's document over this one: it names the
+        // file, and no op about it is ever seen by the chase.
+        clock = 10
+        const named = { assets: [{ id: sha(bytes), name: 'clip.mp4', size: bytes.length }] }
+        world.here.docs.set('show', structuredClone(named))
+        world.there.docs.set('show', structuredClone(named))
+
+        // Inside the period the document is not read again: that wait is the limit.
+        clock = 999
+        chase.noteProjects(['show'])
+        await drain()
+        expect(world.here.files.has(sha(bytes))).toBe(false)
+
+        clock = 1000
+        chase.noteProjects(['show'])
+        await drain()
+        expect(world.here.files.get(sha(bytes))?.equals(bytes)).toBe(true)
+        expect(chase.files).toMatchObject({ listed: 1, carried: 1, missing: 0 })
     })
 
     it('says how many files are listed and how many a machine still lacks', async () => {
@@ -396,5 +445,297 @@ describe('the chase', () => {
         chase.stop()
         await chase.run()
         expect(world.calls.downloads).toEqual([])
+    })
+})
+
+// 2026-10-09, aylmo: dev.diiii.xyz moved house and Cloudflare answered every
+// request for it with 530, for hours. The chase went on asking about every file
+// of every project, again and again: 1,400 "could not be carried" lines and
+// 5,100 GETs on this install's own file routes a minute, di-server at 94 % CPU,
+// and not one of those asks could have succeeded. An outage is one fact about
+// the other machine, not one per file: said once, waited out as one, asked
+// about once per wait, and ended the moment the other side answers again.
+describe('when the other di.iiii stops answering', () => {
+    const PROJECTS = ['p1', 'p2', 'p3']
+    const PER_PROJECT = 20
+    const FILES = PROJECTS.length * PER_PROJECT
+    const local = side({ base: 'http://here', spaceId: 'room', token: 'self-token' })
+    const remote = side({ base: 'http://there', spaceId: 'room', token: 'dii_sync_key' })
+    let tmpDir = null
+    let chase = null
+
+    afterEach(async () => {
+        chase?.stop()
+        chase = null
+        vi.useRealTimers()
+        if (tmpDir) await rm(tmpDir, { recursive: true, force: true })
+        tmpDir = null
+    })
+
+    /** Every file on this install only, named in both documents: the ops had crossed, the bytes not yet. */
+    const showWorld = (projects = PROJECTS, perProject = PER_PROJECT) => {
+        const world = twoMachines()
+        for (const projectId of projects) {
+            const assets = Array.from({ length: perProject }, (_, n) => {
+                const bytes = Buffer.from(`${projectId}, file ${n}`)
+                world.here.files.set(sha(bytes), bytes)
+                return { id: sha(bytes), name: `${projectId}-${n}.glb`, size: bytes.length }
+            })
+            world.here.docs.set(projectId, { assets })
+            world.there.docs.set(projectId, { assets })
+        }
+        return world
+    }
+
+    // No backoffMs, retryFailedAfterMs or reconcileEveryMs: the numbers that ran on aylmo.
+    const start = async (world, lines) => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+        tmpDir = await mkdtemp(path.join(os.tmpdir(), 'dii-chase-down-'))
+        chase = createAssetChase({
+            local,
+            remote,
+            tmpDir,
+            io: world.io,
+            log: { warn: (line) => lines.warn.push(line), info: (line) => lines.info.push(line) }
+        })
+    }
+
+    // What the follower does every five seconds while the other side does not
+    // answer (follower.js tick()): hand over the projects, kick a pass, walk on.
+    // `idle()` lets a pass that moves real bytes through tmpDir finish.
+    const follow = async (ms, projects = PROJECTS, until = () => false) => {
+        for (let at = 0; at < ms && !until(); at += 5000) {
+            chase.noteProjects(projects)
+            chase.run()
+            await vi.advanceTimersByTimeAsync(5000)
+            await chase.idle()
+        }
+    }
+
+    const counts = (world, lines) => ({
+        downloads: world.calls.downloads.length,
+        warns: lines.warn.length,
+        localFileAsks: world.calls.requests.filter(r => r.to === 'http://here' && r.path.includes('/assets/')).length,
+        localDocumentReads: world.calls.requests.filter(r => r.to === 'http://here' && r.path.endsWith('/document')).length,
+        remoteAsks: world.calls.requests.filter(r => r.to === 'http://there').length + world.calls.uploads.filter(u => u.to === 'http://there').length
+    })
+
+    it('says so once, waits as one, downloads nothing, asks once per wait — and carries every file once it answers', async () => {
+        const world = showWorld()
+        const lines = { warn: [], info: [] }
+        await start(world, lines)
+
+        world.there.status = 530
+        await follow(10 * 60_000)
+        const outage = counts(world, lines)
+        // Bounds, and why. Found out by the asks that were due anyway — at most
+        // three in a row that get no answer (three documents here). Then one
+        // small question per wait: 5 s doubling to 5 min is six in ten minutes
+        // (at 5, 15, 35, 75, 155 and 315 s). Nothing of this install's is read
+        // or downloaded for a machine that cannot take it.
+        expect.soft(outage.downloads, 'files downloaded while nothing could be carried').toBe(0)
+        expect.soft(outage.warns, 'lines said about one outage').toBeLessThanOrEqual(2)
+        expect.soft(outage.localFileAsks, "asks on this install's own file routes").toBeLessThanOrEqual(3)
+        expect.soft(outage.localDocumentReads, "this install's documents read").toBeLessThanOrEqual(3)
+        expect.soft(outage.remoteAsks, 'asks of a machine that is not answering').toBeLessThanOrEqual(12)
+        console.info(`[outage, 10 simulated minutes, ${FILES} files] ${JSON.stringify(outage)}`)
+
+        // It answers again: every file crosses, without anybody's help.
+        world.there.status = null
+        await follow(2 * 60_000, PROJECTS, () => world.there.files.size === FILES)
+        expect(world.there.files.size).toBe(FILES)
+        expect(chase.files).toMatchObject({ carried: FILES, pending: 0, failed: 0, missing: 0 })
+        expect(lines.warn.filter(line => /not answering \(530\)/.test(line))).toHaveLength(1)
+        expect(lines.warn.filter(line => /could not be carried/.test(line))).toEqual([])
+        expect(lines.info.filter(line => /answers again/.test(line))).toHaveLength(1)
+    })
+
+    it('carries at once when the op loop hears the other side again, not at the end of its longest wait', async () => {
+        const world = showWorld(['p1'], 5)
+        const lines = { warn: [], info: [] }
+        await start(world, lines)
+
+        // One project: three passes 2 s apart find it out (at ~4 s); then asked
+        // at ~9, 19, 39, 79, 159, 319, 619, 919 and 1219 s, next at ~1519 s.
+        world.there.status = 530
+        await follow(1300_000, ['p1'])
+        world.there.status = null
+        // A minute on, the chase has not asked again by itself: the wait is long now.
+        await follow(60_000, ['p1'])
+        expect(world.there.files.size).toBe(0)
+
+        // The op loop's read of the other side came back (follower.js refreshStreams).
+        chase.noteAnswered()
+        await chase.idle()
+        expect(world.there.files.size).toBe(5)
+        expect(lines.info.filter(line => /answers again/.test(line))).toHaveLength(1)
+    })
+
+    it("one file's trouble stays that file's: no outage is declared for it", async () => {
+        const world = twoMachines()
+        const [refused, blip, fine] = ['refused', 'blip', 'fine'].map(text => Buffer.from(text))
+        for (const bytes of [refused, blip, fine]) world.here.files.set(sha(bytes), bytes)
+        // A 500 is the machine answering, about this one file. One 530 alone is
+        // a lost answer, not an outage.
+        world.there.metaStatus.set(sha(refused), 500)
+        world.there.metaStatus.set(sha(blip), 530)
+        const lines = { warn: [], info: [] }
+        await start(world, lines)
+
+        chase.noteOps('show', [upsert(sha(refused), 'refused.glb'), upsert(sha(blip), 'blip.glb'), upsert(sha(fine), 'fine.glb')])
+        await chase.run()
+        world.there.metaStatus.delete(sha(blip))
+        await follow(60_000, [])
+
+        expect([...world.there.files.keys()].sort()).toEqual([sha(blip), sha(fine)].sort())
+        expect(chase.files).toMatchObject({ carried: 2, pending: 0, failed: 1 })
+        expect(lines.warn).toEqual(['[follow] room: refused.glb could not be carried — the other di.iiii answered 500'])
+        expect(lines.info).toEqual([])
+    })
+})
+
+// A file NEITHER machine holds (DSC-2, aylmo 2026-10-26): two checkpoint projects
+// named 28 files no disk had, and every round of tries that ran out said a line in
+// the log again (56 lines per 10 min). It is still asked about on the same clock;
+// only what is said changes: one line when it starts, one when it ends.
+describe('a file held on neither machine', () => {
+    let tmpDir = null
+    let chase = null
+    const lines = { warn: [], info: [] }
+
+    const make = async (world, options = {}) => {
+        tmpDir = await mkdtemp(path.join(os.tmpdir(), 'dii-nowhere-'))
+        lines.warn = []
+        lines.info = []
+        chase = createAssetChase({
+            local: side({ base: 'http://here', spaceId: 'room', token: 'self-token' }),
+            remote: side({ base: 'http://there', spaceId: 'room', token: 'dii_sync_key' }),
+            tmpDir,
+            backoffMs: [1, 1],
+            io: world.io,
+            log: { warn: (line) => lines.warn.push(line), info: (line) => lines.info.push(line) },
+            ...options
+        })
+        return chase
+    }
+    afterEach(async () => {
+        chase?.stop()
+        if (tmpDir) await rm(tmpDir, { recursive: true, force: true })
+    })
+    // A clock that does not move: no tries within a round (backoffMs: []) in those tests.
+    const settle = async () => {
+        const deadline = Date.now() + 3000
+        do {
+            await chase.run()
+            await chase.idle()
+            if (!chase.files.pending) return
+            await new Promise(resolve => setTimeout(resolve, 5))
+        } while (Date.now() < deadline)
+        throw new Error(`never settled: ${JSON.stringify(chase.files)}`)
+    }
+    const missingFiles = (n) => Array.from({ length: n }, (_, i) => Buffer.from(`file ${i} that no disk holds`))
+
+    it('a file that turns up later is carried in the pass after the op that names it, as before', async () => {
+        const world = twoMachines()
+        const [bytes] = missingFiles(1)
+        const doc = { assets: [{ id: sha(bytes), name: 'late.glb', size: bytes.length }] }
+        world.here.docs.set('show', doc)
+        world.there.docs.set('show', doc)
+        let clock = 0
+        await make(world, { backoffMs: [], now: () => clock })
+        chase.noteProjects(['show'])
+        await settle()
+        expect(chase.files.heldNowhere).toBe(1)
+
+        // It is added again on the host a minute later: the upload's op names it.
+        clock = 60_000
+        world.there.files.set(sha(bytes), bytes)
+        chase.noteOps('show', [upsert(sha(bytes), 'late.glb', bytes.length)])
+        await settle()
+        expect(world.here.files.get(sha(bytes))?.equals(bytes)).toBe(true)
+        expect(chase.files).toMatchObject({ carried: 1, failed: 0, heldNowhere: 0 })
+    })
+
+    // Old cadence, step by step: a fake clock moved 1 s at a time, the comparison asked
+    // for on every step as the follower's tick does. Each try asks both machines once.
+    const drive = async (world, { untilS, at = {} }) => {
+        let clock = 0
+        const tries = []
+        const request = world.io.request
+        world.io.request = async (url, options) => {
+            if (url.startsWith('http://here/') && url.endsWith('/meta')) tries.push(clock / 1000)
+            return request(url, options)
+        }
+        await make(world, { now: () => clock, backoffMs: [2000, 10_000, 30_000] })
+        for (let s = 0; s <= untilS; s += 1) {
+            clock = s * 1000
+            at[s]?.()
+            chase.noteProjects(['show'])
+            await chase.run()
+            await chase.idle()
+        }
+        return tries
+    }
+    // origin/dev before PR #1143: 4 tries (0, +2, +10, +30 s), again 5 min after the
+    // last, and again whenever the 10-minute comparison names it.
+    const OLD_CADENCE = [0, 2, 12, 42, 342, 344, 354, 384, 600, 602, 612, 642, 942, 944, 954, 984]
+
+    it('is still tried at the old cadence, and said once across all those tries (review of #1143)', async () => {
+        const world = twoMachines()
+        const [bytes] = missingFiles(1)
+        const doc = { assets: [{ id: sha(bytes), name: 'lost.glb', size: bytes.length }] }
+        world.here.docs.set('show', doc)
+        world.there.docs.set('show', doc)
+        const tries = await drive(world, { untilS: 1000 })
+        expect(tries).toEqual(OLD_CADENCE)
+        expect(chase.files).toMatchObject({ heldNowhere: 1, failed: 1, carried: 0 })
+        // 16 tries, 4 rounds that ran out: one line (before: one per round, 4 here).
+        expect(lines.warn).toHaveLength(1)
+        expect(lines.warn[0]).toMatch(/lost\.glb could not be carried — neither machine holds this file; still asked again every 5 min/)
+    })
+
+    it('the op reached the host before the bytes: carried on the first try after they arrive there', async () => {
+        // The review's case: install C uploads a big file, its op reaches the host on the
+        // op loop while the bytes still cross (about 6 min here); this follower sees the op first.
+        const world = twoMachines()
+        const [bytes] = missingFiles(1)
+        const doc = { assets: [{ id: sha(bytes), name: 'big.glb', size: bytes.length }] }
+        world.here.docs.set('show', doc)
+        world.there.docs.set('show', doc)
+        const tries = await drive(world, {
+            untilS: 660,
+            at: {
+                0: () => chase.noteOps('show', [upsert(sha(bytes), 'big.glb', bytes.length)]),
+                400: () => world.there.files.set(sha(bytes), bytes)
+            }
+        })
+        // Two rounds found it nowhere; the next try, the 10-minute comparison's, carries it
+        // (with the back-off of the first version of #1143: not before 942 s).
+        expect(tries).toEqual([0, 2, 12, 42, 342, 344, 354, 384, 600])
+        expect(world.here.files.get(sha(bytes))?.equals(bytes)).toBe(true)
+        expect(chase.files).toMatchObject({ carried: 1, failed: 0, heldNowhere: 0 })
+        expect(lines.warn).toHaveLength(1)
+        expect(lines.info).toEqual(['[follow] room: big.glb is held again and was carried'])
+    })
+
+    it('bytes that appear later on either side are carried on the first try after, at the old cadence', async () => {
+        for (const [where, other, appearS, carriedS] of [['there', 'here', 1000, 1200], ['here', 'there', 700, 942]]) {
+            const world = twoMachines()
+            const [bytes] = missingFiles(1)
+            const doc = { assets: [{ id: sha(bytes), name: 'late.glb', size: bytes.length }] }
+            world.here.docs.set('show', doc)
+            world.there.docs.set('show', doc)
+            const tries = await drive(world, { untilS: carriedS + 60, at: { [appearS]: () => world[where].files.set(sha(bytes), bytes) } })
+            // Every try before the bytes came, as before; then exactly one more, which carries it.
+            expect(tries, where).toEqual([...OLD_CADENCE.filter(s => s < appearS), carriedS])
+            expect(world[other].files.get(sha(bytes))?.equals(bytes), where).toBe(true)
+            expect(chase.files, where).toMatchObject({ carried: 1, failed: 0, heldNowhere: 0 })
+            // One line in, one line out.
+            expect(lines.warn, where).toHaveLength(1)
+            expect(lines.info, where).toEqual(['[follow] room: late.glb is held again and was carried'])
+            chase.stop()
+            await rm(tmpDir, { recursive: true, force: true })
+            tmpDir = null
+        }
     })
 })

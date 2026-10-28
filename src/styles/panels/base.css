@@ -128,27 +128,45 @@
     flex: 1;
     width: 100%;
     min-width: 0;
-    height: 6px;
+    /* The hit box is the input, not the 6px track: 24px tall meets WCAG 2.2
+       SC 2.5.8 (target size, minimum 24x24 CSS px). The track is drawn inside it. */
+    height: 24px;
+    margin: 0;
     border-radius: 0;
     appearance: none;
-    background: linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+    background: transparent;
     outline: none;
 }
+.floating-panel input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: var(--di-radius);
+    background: linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+}
+.floating-panel input[type="range"]::-moz-range-track {
+    height: 6px;
+    border-radius: var(--di-radius);
+    background: linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+}
+/* A rectangle, not a disc: 10x20 in --di-text. 13.4:1 against the brightest end
+   of the track and 19.8:1 against the panel ground (SC 1.4.11 asks 3:1;
+   measured in src/styles/squareCorners.test.js). The black edge keeps it
+   separate from the track where the two meet. */
 .floating-panel input[type="range"]::-webkit-slider-thumb {
     appearance: none;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: radial-gradient(circle, var(--di-text) 0%, var(--ui-accent) 55%, var(--ui-accent-strong) 100%);
-    box-shadow: 0 0 0 2px rgba(0,0,0,0.4);
+    width: 10px;
+    height: 20px;
+    /* (6px track - 20px thumb) / 2 = -7px, centred on the track; --di-space-2 is 7px. */
+    margin-top: calc(var(--di-space-2) * -1);
+    border: 1px solid var(--di-black);
+    border-radius: var(--di-radius);
+    background: var(--di-text);
 }
 .floating-panel input[type="range"]::-moz-range-thumb {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: radial-gradient(circle, var(--di-text) 0%, var(--ui-accent) 55%, var(--ui-accent-strong) 100%);
-    border: none;
-    box-shadow: 0 0 0 2px rgba(0,0,0,0.4);
+    width: 10px;
+    height: 20px;
+    border: 1px solid var(--di-black);
+    border-radius: var(--di-radius);
+    background: var(--di-text);
 }
 .floating-panel .toggle-button-small {
     padding: var(--di-space-1) var(--di-space-3);

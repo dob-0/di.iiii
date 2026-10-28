@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Language switch — concept C</title>
+<style>
+:root {
+    --di-cyan: #4df9ff;
+    --di-cyan-dim: rgba(77, 249, 255, 0.1);
+    --di-cyan-border: rgba(77, 249, 255, 0.3);
+    --di-cyan-line: rgba(77, 249, 255, 0.35);
+    --di-cyan-wash: rgba(77, 249, 255, 0.06);
+    --di-black: #000;
+    --di-surface: #0a0a0a;
+    --di-text: #fff;
+    --di-text-muted: rgba(255, 255, 255, 0.5);
+    --di-note-ink: rgba(255, 196, 140, 0.62);
+    --di-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --di-sans: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --di-space-1: 3px;
+    --di-space-2: 7px;
+    --di-space-3: 12px;
+    --di-space-4: 16px;
+    --di-space-5: 22px;
+    --di-space-6: 30px;
+    --di-space-7: 40px;
+    --di-text-2: 0.625rem;
+    --di-text-3: 0.76rem;
+    --di-text-4: 0.9rem;
+    --di-text-5: 1.0625rem;
+    --di-text-6: 1.25rem;
+    --di-label-tracking: 0.16em;
+    --di-touch-target: 44px;
+}
+* { box-sizing: border-box; border-radius: 0; }
+body { margin: 0; background: var(--di-black); color: var(--di-text); font: var(--di-text-4)/1.5 var(--di-sans); }
+main { max-width: 1320px; margin: 0 auto; padding: var(--di-space-6) var(--di-space-4); }
+h1 { font-size: var(--di-text-6); font-weight: 600; margin: 0 0 var(--di-space-2); }
+h2 { font: 500 var(--di-text-2)/1 var(--di-mono); letter-spacing: var(--di-label-tracking); text-transform: uppercase; color: var(--di-text-muted); margin: 0 0 var(--di-space-3); }
+p { margin: 0 0 var(--di-space-3); }
+.lede { color: var(--di-text-muted); max-width: 70ch; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--di-space-5); margin: var(--di-space-6) 0; }
+.panel { border: 1px solid var(--di-cyan-border); background: var(--di-surface); padding: var(--di-space-4); min-width: 0; }
+.mock { border: 1px solid var(--di-cyan-line); background: var(--di-black); }
+.bar { display: flex; align-items: center; gap: var(--di-space-3); padding: var(--di-space-2) var(--di-space-3); border-bottom: 1px solid var(--di-cyan-line); font: var(--di-text-3) var(--di-mono); }
+.bar .grow { flex: 1; }
+.brand { color: var(--di-cyan); font-weight: 600; }
+.muted { color: var(--di-text-muted); }
+.sw { display: inline-flex; border: 1px solid var(--di-cyan); font: 600 var(--di-text-3) var(--di-mono); }
+.sw span { padding: var(--di-space-1) var(--di-space-2); }
+.sw .on { background: var(--di-cyan); color: var(--di-black); }
+.acct { width: 22px; height: 22px; border: 1px solid var(--di-cyan-border); }
+.hero { padding: var(--di-space-6) var(--di-space-4); }
+.hero b { font-size: var(--di-text-6); font-weight: 600; display: block; margin-bottom: var(--di-space-2); }
+.work { margin: var(--di-space-3); padding: var(--di-space-4); min-height: 120px; border: 1px dashed var(--di-note-ink);
+    background: repeating-linear-gradient(135deg, transparent 0 10px, var(--di-cyan-wash) 10px 11px); }
+.work .tag { font: var(--di-text-2) var(--di-mono); letter-spacing: var(--di-label-tracking); text-transform: uppercase; color: var(--di-note-ink); }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--di-space-3); margin-top: var(--di-space-2); }
+.studio { display: grid; grid-template-columns: 90px 1fr 110px; min-height: 150px; }
+.studio > div { border-right: 1px solid var(--di-cyan-line); padding: var(--di-space-2); font: var(--di-text-2) var(--di-mono); color: var(--di-text-muted); }
+.studio > div:last-child { border-right: 0; }
+.phone { width: 230px; margin: 0 auto; border: 1px solid var(--di-cyan); background: var(--di-black); min-height: 360px; display: flex; flex-direction: column; }
+.phone .hero { padding: var(--di-space-5) var(--di-space-3); flex: 1; }
+.phone .sw span { min-width: var(--di-touch-target); min-height: var(--di-touch-target); display: inline-flex; align-items: center; justify-content: center; }
+.callout { margin-top: var(--di-space-3); color: var(--di-cyan); font: var(--di-text-3) var(--di-mono); }
+.note { border-left: 2px solid var(--di-note-ink); color: var(--di-note-ink); padding: var(--di-space-2) var(--di-space-3); margin: var(--di-space-3); font-size: var(--di-text-3); }
+dl { display: grid; grid-template-columns: 200px 1fr; gap: var(--di-space-3) var(--di-space-5); border-top: 1px solid var(--di-cyan-border); padding-top: var(--di-space-5); }
+dt { font: 500 var(--di-text-2)/1.6 var(--di-mono); letter-spacing: var(--di-label-tracking); text-transform: uppercase; color: var(--di-cyan); }
+dd { margin: 0; max-width: 80ch; }
+code { font: var(--di-text-3) var(--di-mono); color: var(--di-cyan); }
+@media (max-width: 800px) {
+    .grid { grid-template-columns: 1fr; }
+    dl { grid-template-columns: 1fr; gap: var(--di-space-1); }
+    dd { margin-bottom: var(--di-space-3); }
+    .studio { grid-template-columns: 60px 1fr 70px; }
+}
+</style>
+</head>
+<body>
+<main>
+<h2>di.iiii · language switch · concept C of 3 · sketch, not built</h2>
+<h1>C — In the account button, carried by <code>?lang=</code></h1>
+<p class="lede">The switch lives in the corner where di.iiii already keeps its floating account button, bottom-right: a two-word chip on the button's edge, and the first row of its menu. Today that button is drawn only on signed-in surfaces; public routes (landing, wiki, a public space) do not load it, so this concept puts a light chip in the same corner there. A shared link carries <code>?lang=hy</code>; otherwise the choice is the person's, kept on their account or their device. No new header element anywhere.</p>
+
+<div class="grid">
+    <section class="panel" data-surface="landing">
+        <h2>1 · Landing page header</h2>
+        <div class="mock" style="position:relative;min-height:200px">
+            <div class="bar"><span class="brand">di.iiii</span><span class="muted">Spaces</span><span class="muted">Wiki</span><span class="grow"></span></div>
+            <div class="hero"><b>A place for spaces.</b><span class="muted">The header is unchanged.</span></div>
+            <div style="position:absolute;right:var(--di-space-3);bottom:var(--di-space-3);display:flex;align-items:flex-end;gap:var(--di-space-2)">
+                <span class="sw"><span>ՀԱՅ</span><span class="on">EN</span></span><span class="acct" style="border-color:var(--di-cyan)"></span>
+            </div>
+        </div>
+        <p class="callout">↘ bottom-right: the language sits on the account button's edge (open: first row of its menu).</p>
+    </section>
+
+    <section class="panel" data-surface="space">
+        <h2>2 · Inside a space's front page</h2>
+        <div class="mock" style="position:relative">
+            <div class="work" data-work translate="no" lang="und" style="margin:0;border:0;min-height:170px">
+                <span class="tag">the work · fills the page · not switched</span>
+                <div class="cols"><span>Հայերեն տեքստ, ինչպես արվեստագետը գրել է։</span><span>English text, as the artist wrote it.</span></div>
+            </div>
+            <div style="position:absolute;right:var(--di-space-3);bottom:var(--di-space-3);border:1px solid var(--di-cyan);background:var(--di-black);font:var(--di-text-3) var(--di-mono);min-width:150px">
+                <div style="padding:var(--di-space-2);border-bottom:1px solid var(--di-cyan-line)">Լեզու · <b style="color:var(--di-cyan)">ՀԱՅ</b> | EN</div>
+                <div style="padding:var(--di-space-2)" class="muted">Մուտք · Sign in</div>
+            </div>
+        </div>
+        <p class="callout">↑ a front page has no header, so the corner chip is the only frame there. Opened, it shows the language first.</p>
+    </section>
+
+    <section class="panel" data-surface="studio">
+        <h2>3 · Inside the Studio</h2>
+        <div class="mock" style="position:relative">
+            <div class="bar"><span class="brand">Studio</span><span class="muted">sample-space / first-project</span><span class="grow"></span></div>
+            <div class="studio"><div>Օբյեկտներ</div><div>scene</div><div>Հատկություններ<br><br>Preferences → Լեզու</div></div>
+        </div>
+        <p class="callout">↑ in the Studio the chip sits on the account button as everywhere; the same row is also in Preferences, for surfaces that hide the button.</p>
+    </section>
+
+    <section class="panel" data-surface="phone">
+        <h2>4 · On a phone (390 wide)</h2>
+        <div class="phone" style="position:relative">
+            <div class="bar"><span class="brand">di.iiii</span><span class="grow"></span></div>
+            <div class="hero"><b>A place for spaces.</b><span class="muted">The bottom-right button is already a 44 px thumb target; the menu opens upward.</span></div>
+            <div style="position:absolute;right:var(--di-space-3);bottom:var(--di-space-3);display:flex;gap:var(--di-space-2);align-items:center"><span class="sw"><span>ՀԱՅ</span><span class="on">EN</span></span><span class="acct" style="width:var(--di-touch-target);height:var(--di-touch-target);border-color:var(--di-cyan)"></span></div>
+        </div>
+        <p class="callout">↑ in thumb reach, but it can cover the end of a long page — the reason <code>--di-account-btn-clear</code> exists.</p>
+    </section>
+</div>
+
+<dl>
+    <dt data-answer="where">Where it sits</dt>
+    <dd>Bottom-right, on the floating account button (<code>src/components/AccountButton.jsx</code>): a two-word chip on its edge, and the first row of its menu. That button is rendered by <code>AuthGate</code>, which public routes do not load (it pulls in MUI; kept off the public bundle since the 2026-07-17 perf audit), and 5 routes in <code>src/RootApp.jsx</code> pass <code>showAccountButton={false}</code>. So C needs a light, MUI-free chip in the same corner on those routes, and the same row in Preferences. Nothing is added to any header.</dd>
+
+    <dt data-answer="remembers">What it remembers, and how</dt>
+    <dd>Signed in: the account (serverXR user preferences), on every device. Signed out: <code>localStorage["di.lang"]</code> on this device. A <code>?lang=hy</code> in an address wins for that visit only and is not saved unless the visitor then presses the switch.</dd>
+
+    <dt data-answer="address">What the address does</dt>
+    <dd>Normally nothing. The share and copy-link actions add <code>?lang=hy</code> when the sender is in Armenian, so the receiver opens it in Armenian. Routes, space names and existing links are untouched; no slug has to be reserved.</dd>
+
+    <dt data-answer="search">What it means for search</dt>
+    <dd>Google Search Central lists URL parameters (its example <code>?loc=</code>) as a possible structure but <em>not recommended</em>; hreflang can point at <code>?lang=hy</code> addresses and the same bidirectional set (en, hy, x-default) is required. It works, at the weakest of the three shapes Google names; and any internal link that forgets the parameter drops a crawler back into English, so every link the frame draws has to carry it.</dd>
+
+    <dt data-answer="missing">A page with no Armenian yet</dt>
+    <dd>Frame in Armenian, body in English under the same one line: <span class="note" style="display:inline-block;margin:0">Այս էջը դեռ հայերեն չունի։ Ստորև՝ անգլերեն։</span> The page leaves <code>hy</code> out of its hreflang set until it has an Armenian body.</dd>
+
+    <dt data-answer="work">How the work is left untouched</dt>
+    <dd>The parameter is consumed by the frame and removed from what the work is loaded with, so a work that reads its own query string never sees <code>lang</code>. No message, no attribute; the container carries <code>translate="no"</code>; the work's <code>lang</code> is the artist's. Because the switch floats over the page, it is the one concept whose button sits <em>over</em> the work — it must never be drawn into a capture of it.</dd>
+</dl>
+<p class="muted" style="margin-top:var(--di-space-5)">Typeface: the platform's Inter is a latin subset (48,256 bytes) with no Armenian glyphs, so Armenian here falls back to the system font, as it would on the live site today. All Armenian copy in this sketch needs a native speaker's check.</p>
+</main>
+</body>
+</html>

@@ -6,7 +6,10 @@ const { cameThroughAProxy } = require('../localOwner')
 function registerStatusRoutes(router, {
   recentEvents,
   startedAt,
-  releaseInfo
+  releaseInfo,
+  // One cheap read that proves the database answers. Injected so a test can
+  // break it; the default is the live handle.
+  checkDb = () => require('../db').getDb().prepare('SELECT 1 AS ok').get()
 }) {
   // What this install is following on other di.iiii, and whether the ops are
   // moving. Read-only and loopback-only: it names other machines and is nobody
@@ -20,8 +23,12 @@ function registerStatusRoutes(router, {
       return
     }
     try {
-      const { followStates } = require('../follow')
-      res.json({ follows: followStates() })
+      // On a server that shares its data folder with another, only one of the
+      // two carries the follows (follow/lease.js); the other answers with an
+      // empty list AND says who does, so `di follows` never reads as "nothing
+      // is running" when something is.
+      const { followStates, followCarrier } = require('../follow')
+      res.json({ follows: followStates(), ...followCarrier() })
     } catch {
       res.json({ follows: [] })
     }
@@ -29,8 +36,23 @@ function registerStatusRoutes(router, {
 
   router.get('/api/health', (req, res) => {
     const memory = process.memoryUsage()
+    // Whose server is this? `npm run dev` attaches to a server already on its port
+    // only if it is this checkout's own (scripts/dev-stack-lib.mjs, classifyAttach),
+    // never the installed di's or another tree's. Paths are nobody else's business,
+    // so only a direct loopback caller (no proxy marks) is told.
+    const address = req.socket?.remoteAddress || ''
+    const direct = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address) && !cameThroughAProxy(req)
+    // Liveness without the database is not health: a server whose SQLite file is
+    // locked, unreadable or closed answers 503, so a supervisor restarts it.
+    let dbOk = true
+    let dbError = null
+    try { checkDb() } catch (error) { dbOk = false; dbError = error?.message || String(error) }
+    if (!dbOk) res.status(503)
     res.json({
-      ok: true,
+      ...(direct ? { serverRoot: config.root, dataRoot: config.dataDir } : {}),
+      ok: dbOk,
+      database: dbOk ? 'ok' : 'unavailable',
+      ...(dbOk || !direct ? {} : { databaseError: dbError }),
       nodeVersion: process.version,
       uptimeSeconds: process.uptime(),
       startedAt,

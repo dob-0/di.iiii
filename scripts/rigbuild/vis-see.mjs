@@ -128,7 +128,7 @@ try {
         const ms = await room.evaluate(async ({ id, U, ch, fine, value, wantPan }) => {
             const hit = window.__diVis.expect(id, (d) => Math.abs(d.pan - wantPan) < 0.6, { timeoutMs: 3000, label: 'api' })
             const t0 = performance.now()
-            await fetch('/light/api/raw', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ channels: [{ universe: U, channel: ch, value }, { universe: U, channel: fine, value: 0 }] }) })
+            await fetch('/light/api/raw', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ owner: 'vis-see', channels: [{ universe: U, channel: ch, value }, { universe: U, channel: fine, value: 0 }] }) })
             const r = await hit
             return r.at - t0
         }, { id: head.id, U, ch: chan('pan'), fine: chan('panFine'), value, wantPan })
@@ -140,7 +140,7 @@ try {
 
     // ---- frames: pan sweep, tilt, colour wheel, strobe -----------------------------
     if (arg('frames')) {
-        const set = (pairs) => desk('/api/raw', { channels: heads.flatMap((h) => pairs.map(([role, value]) => ({ universe: h.universe - 1, channel: h.address + roles.indexOf(role), value }))) })
+        const set = (pairs) => desk('/api/raw', { owner: 'vis-see', channels: heads.flatMap((h) => pairs.map(([role, value]) => ({ universe: h.universe - 1, channel: h.address + roles.indexOf(role), value }))) })
         await desk('/api/cues/stop', {}) // the show's own looks off the heads while we hold them (restarted after)
         report.showStopped = true
         await set([['dimmer', 255], ['strobe', 255], ['color', 0], ['tilt', 160], ['tiltFine', 0]])
@@ -180,13 +180,13 @@ try {
             console.log('strobe: desk rate', strobe[0], 'Hz; cone pulses counted', peaks / 2, '/s over 2 s of drawn frames')
         }
         for (let k = 0; k < 6; k++) { await page.screenshot({ path: path.join(out, `${String(n++).padStart(2, '0')}-strobe-${k}.png`) }); await page.waitForTimeout(37) }
-        await desk('/api/raw', { clear: true })
+        await desk('/api/raw', { owner: 'vis-see', clear: true })
     }
 
     // ---- the show's cues through the patch -----------------------------------------
     if (arg('cues')) {
         const list = (await desk('/api/cues')).cues?.list || []
-        await desk('/api/raw', { clear: true })
+        await desk('/api/raw', { owner: 'vis-see', clear: true })
         await desk('/api/cues/stop', {})
         report.showStopped = true
         report.cues = []
@@ -267,7 +267,7 @@ try {
         report.inputAfter = { enabled: off.config?.enabled }
         console.log('input OFF again:', off.config?.enabled === false)
     }
-    await desk('/api/raw', { clear: true }).catch(() => {})
+    await desk('/api/raw', { owner: 'vis-see', clear: true }).catch(() => {})
     if (report.showStopped) {
         // The looping show back on, from its first cue (it was running before).
         const go = await desk('/api/cues/go', { index: 0 }).catch(() => null)

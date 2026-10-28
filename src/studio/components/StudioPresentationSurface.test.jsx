@@ -134,4 +134,13 @@ describe('StudioPresentationSurface', () => {
             })
         }))
     })
+
+    // Brief 2026-10-13 item 2: the view bar's gate was setEditMode, which nothing hands this
+    // surface, so the bar looked wired and was dead. The contract is explicit now.
+    it('hands the viewport an explicit "no view bar" and a wired Scenes picker', () => {
+        render(<StudioPresentationSurface document={buildDocument()} />)
+        const props = viewportPropsSpy.mock.calls.at(-1)[0]
+        expect(props.viewBar).toBe(false)
+        expect(typeof props.onRigLook).toBe('function')
+    })
 })

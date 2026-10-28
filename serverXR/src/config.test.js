@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { createRequire } from 'node:module'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const { isCorsOriginAllowed } = require('./config.js')

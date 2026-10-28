@@ -1,0 +1,243 @@
+/* The sync light on a space's bar, its panel, the invite and the join form.
+   Written in the spine: tokens only, rectangles only (0 or 2px), a finger-sized
+   target wherever a finger is the pointer. The look is the owner-approved
+   sketch's (2026-10-01): a small chip with a square lamp, a panel of rows. */
+
+.sbar-sync {
+    display: flex;
+    align-items: center;
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.slight {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    max-width: 100%;
+    min-width: 0;
+    padding: var(--di-space-2) var(--di-space-3);
+    background: var(--di-surface-2);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    color: var(--di-ink);
+    font: inherit;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.slight:hover,
+.slight[aria-expanded="true"] { border-color: var(--di-cyan-border); }
+
+/* A square lamp — never round. */
+.slight-lamp {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    background: var(--di-success);
+}
+
+.slight--warn .slight-lamp { background: var(--di-warning); }
+
+.slight-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The bar on a phone grows a second row for the light when it is there, so the
+   chip can say all of itself and stay a finger tall (src/components/SurfaceBar.jsx
+   keeps --sbar-h equal to the bar's real height). */
+@media (max-width: 720px) {
+    .sbar.sbar--sync {
+        flex-wrap: wrap;
+        overflow: visible;
+    }
+
+    .sbar.sbar--sync .sbar-links { flex: 1 1 0; }
+
+    .sbar.sbar--sync .sbar-sync {
+        order: 99;
+        flex: 1 0 100%;
+        padding-bottom: var(--di-space-2);
+    }
+
+    .sbar.sbar--sync .slight { width: 100%; }
+}
+
+@media (max-width: 720px), (pointer: coarse) {
+    .slight { min-height: var(--di-touch-target); }
+}
+
+.spanel {
+    position: fixed;
+    z-index: 80;
+    width: min(26rem, calc(100vw - var(--di-space-4) * 2));
+    max-height: calc(100dvh - var(--di-space-6));
+    overflow-y: auto;
+    padding: var(--di-space-3);
+    background: var(--di-surface-2);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    color: var(--di-ink);
+    font-family: var(--di-sans);
+    font-size: var(--di-text-3);
+    line-height: 1.45;
+    letter-spacing: normal;
+    text-transform: none;
+}
+
+@media (max-width: 720px) {
+    /* Four words must fit a 390px panel on two lines at most, not wrap mid-dot. */
+    .scode { font-size: var(--di-text-5); letter-spacing: 0.06em; }
+
+    .spanel {
+        left: var(--di-space-4);
+        right: var(--di-space-4);
+        width: auto;
+    }
+}
+
+.spanel-label {
+    margin: 0 0 var(--di-space-2);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: var(--di-label-tracking);
+    color: var(--di-dim);
+    text-transform: uppercase;
+}
+
+.spanel-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--di-space-3);
+    padding: var(--di-space-2) 0;
+    border-bottom: 1px solid var(--di-line);
+}
+
+.spanel-row:last-of-type { border-bottom: 0; }
+
+.spanel-row > span:last-child { text-align: right; color: var(--di-ink); }
+
+.spanel-note {
+    margin: var(--di-space-2) 0 0;
+    padding: var(--di-space-3);
+    background: var(--di-bg);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    color: var(--di-dim);
+}
+
+.spanel-error { color: var(--di-danger); margin: var(--di-space-2) 0 0; }
+
+.spanel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--di-space-3);
+    margin-top: var(--di-space-3);
+}
+
+.sbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--di-touch-target);
+    min-width: var(--di-touch-target);
+    padding: 0 var(--di-space-3);
+    background: transparent;
+    border: 1px solid var(--di-ink);
+    border-radius: var(--di-radius);
+    color: var(--di-ink);
+    font: inherit;
+    cursor: pointer;
+}
+
+.sbtn:hover:not(:disabled) { background: var(--di-cyan-wash); }
+.sbtn:disabled { opacity: 0.5; cursor: default; }
+.sbtn--quiet { border-color: var(--di-line); color: var(--di-dim); }
+
+/* The four words, as big as the sketch has them. */
+.scode {
+    margin: var(--di-space-2) 0;
+    padding: var(--di-space-3);
+    background: var(--di-bg);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-6);
+    line-height: 1.25;
+    letter-spacing: 0.12em;
+    text-align: center;
+    overflow-wrap: anywhere;
+    user-select: all;
+}
+
+.scode--input {
+    width: 100%;
+    text-align: left;
+    color: var(--di-ink);
+    text-transform: uppercase;
+}
+
+.sfield { display: block; margin: 0 0 var(--di-space-3); }
+
+.sfield > span {
+    display: block;
+    margin: 0 0 var(--di-space-1);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: var(--di-label-tracking);
+    color: var(--di-dim);
+    text-transform: uppercase;
+}
+
+.sinput {
+    width: 100%;
+    min-height: var(--di-touch-target);
+    padding: 0 var(--di-space-3);
+    background: var(--di-bg);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    color: var(--di-ink);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-4);
+}
+
+.sinput:focus { outline: 1px solid var(--di-cyan-border); }
+
+.saddress {
+    display: block;
+    margin: var(--di-space-1) 0;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    color: var(--di-ink);
+    overflow-wrap: anywhere;
+    user-select: all;
+}
+
+.sdim { color: var(--di-dim); }
+
+/* The join form on the home of an install. */
+.sjoin {
+    margin: 0 auto;
+    max-width: 30rem;
+    padding: var(--di-space-4);
+    background: var(--di-surface-2);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    font-family: var(--di-sans);
+    font-size: var(--di-text-4);
+    color: var(--di-ink);
+}
+
+.sjoin-wrap { padding: var(--di-space-4); }
+
+.sjoin h2 {
+    margin: 0 0 var(--di-space-3);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    letter-spacing: var(--di-label-tracking);
+    text-transform: uppercase;
+    font-weight: 500;
+}

@@ -6,6 +6,8 @@ import { buildStudioHubPath, buildStudioProjectPath } from '../studio/utils/stud
 import { buildRawProjectPath, buildRawProjectsPath } from '../raw/utils/rawRouting.js'
 import { buildMapPath } from '../map/mapRouting.js'
 import { useAllTools } from '../studio/utils/jamMode.js'
+import SyncLight from '../sync/SyncLight.jsx'
+import { spaceWordFor } from '../utils/oneNamePerSpace.js'
 
 /**
  * The one strip that is on every surface.
@@ -135,14 +137,16 @@ export const fitDestinations = ({ widths, gap, more, avail }) => {
 
 export default function SurfaceBar({
     here = null,           // which destination is the current one
-    space = null,          // space id, when the surface belongs to one
-    spaceLabel = null,     // what to call it in words
+    space = null,          // the space, as this surface was reached (its id or its address): the tools below are built from it
+    spaceLabel = null,     // the space's NAME (its label), when it has one
+    spaceAddress = null,   // the address a visitor reaches the space by (utils/spaceAddress.js); `space` until it is known
     project = null,        // project id, when the surface is one project's
     projectLabel = null,   // its title
     isLocalInstall = false,
     hidden = false,        // presentation / embed / XR
     float = false,         // the surface below is a full-bleed canvas
     children = null,       // one surface-specific control, at most
+    trail = null,          // where you are inside the project (Nodes: › node, ← Back), after its name
     layers = null,         // inside a project: which layers are open (src/project/layers.js)
 }) {
     // "⚒ All tools", kept in this browser, brings every name back.
@@ -165,6 +169,11 @@ export default function SurfaceBar({
     // of the row spilling leftward over them.
     const [floor, setFloor] = useState(0)
     const [menuOpen, setMenuOpen] = useState(false)
+    // The sync light (src/sync): on only when this install follows the space or
+    // is followed by someone. On a phone it takes a second row, so everything
+    // under the bar clears the bar's REAL height while it is there.
+    const barRef = useRef(null)
+    const [syncShown, setSyncShown] = useState(false)
     const [menuTop, setMenuTop] = useState(0)
     const keys = destinations.map(d => d.key).join(' ')
 
@@ -200,6 +209,26 @@ export default function SurfaceBar({
         return () => observer.disconnect()
     }, [hidden, keys, measure])
 
+    useLayoutEffect(() => {
+        const bar = barRef.current
+        if (!syncShown || !bar || typeof window.matchMedia !== 'function') return undefined
+        const root = document.documentElement
+        const narrow = window.matchMedia('(max-width: 720px)')
+        const follow = () => {
+            if (narrow.matches) root.style.setProperty('--sbar-h', `${bar.offsetHeight}px`)
+            else root.style.removeProperty('--sbar-h')
+        }
+        follow()
+        narrow.addEventListener?.('change', follow)
+        const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(follow) : null
+        observer?.observe(bar)
+        return () => {
+            observer?.disconnect()
+            narrow.removeEventListener?.('change', follow)
+            root.style.removeProperty('--sbar-h')
+        }
+    }, [syncShown])
+
     // The menu closes on a choice, a tap anywhere else, Escape, or a resize.
     useEffect(() => {
         if (!menuOpen) return undefined
@@ -224,6 +253,13 @@ export default function SurfaceBar({
     const overflow = destinations.slice(shown)
     const hereInMore = overflow.some(d => d.key === here)
 
+    // One name per space (owner, 2026-09-14; docs/ai/vocabulary.md): the bar says the space's NAME, or its address when
+    // nobody named it, and its link goes to that address — the same word on every surface of the space, whatever address
+    // was typed to reach it. No space is special here: the platform's own space is named in data like any other
+    // (spaces/main/di-space.space.json, "Home"), so the bar reads "di.iiii · Home" and links to /di-iiii.
+    const address = spaceAddress || space
+    const spaceWord = space ? spaceWordFor(spaceLabel, address) : ''
+
     const linkFor = (d, className = 'sbar-link') => (
         <a
             key={d.key}
@@ -244,12 +280,12 @@ export default function SurfaceBar({
     }
 
     return (
-        <nav className={`sbar${float ? ' sbar--float' : ''}`} aria-label="di.iiii">
+        <nav ref={barRef} className={`sbar${float ? ' sbar--float' : ''}${syncShown ? ' sbar--sync' : ''}`} aria-label="di.iiii">
             <a className="sbar-home" href="/spaces">di.iiii</a>
             {space && (
                 <>
                     <span className="sbar-sep" aria-hidden="true">·</span>
-                    <a className="sbar-where" href={`/${space}`}>{spaceLabel || space}</a>
+                    <a className="sbar-where" href={`/${address}`}>{spaceWord}</a>
                 </>
             )}
             {space && project && (
@@ -258,6 +294,7 @@ export default function SurfaceBar({
                     <a className="sbar-where sbar-where--project" href={buildStudioProjectPath(project, space)}>{projectLabel || project}</a>
                 </>
             )}
+            {trail}
             <div className="sbar-links" ref={linksRef} style={floor ? { minWidth: floor } : undefined}>
                 {visible.map(d => linkFor(d))}
                 {overflow.length > 0 && (
@@ -278,6 +315,7 @@ export default function SurfaceBar({
                     </span>
                 </span>
             </div>
+            {space && <SyncLight space={space} onShown={setSyncShown} />}
             {menuOpen && overflow.length > 0 && typeof document !== 'undefined' && createPortal(
                 <div className="sbar-menu" style={{ top: menuTop }} role="menu" aria-label="More destinations">
                     {overflow.map(d => linkFor(d, 'sbar-link sbar-menu-link'))}

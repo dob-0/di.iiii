@@ -55,6 +55,24 @@ const DEVICE_KINDS = new Set(['camera', 'mic', 'speaker', 'screen', 'midi-in', '
 // 27 KB — small beside the body limit, and a fixed number either way.
 const MAX_DEVICES = 32
 const MAX_DEVICES_TOTAL = 96
+// The projects a page runs picture operators for, and whether it can open a
+// camera at all (a page on plain http from another address cannot). A viewer
+// asks THAT page for a project's pictures — before 2026-10-02 it asked the
+// machine's newest page, and a projector kiosk showing another project
+// answered nothing. `null` = not said (an older page): the viewer falls back.
+const MAX_PROJECTS = 32
+const cleanProjects = (list) => {
+    if (!Array.isArray(list)) return null
+    const out = []
+    for (const id of list) {
+        const clean = cleanText(id, 128)
+        if (clean && !out.includes(clean)) out.push(clean)
+        if (out.length >= MAX_PROJECTS) break
+    }
+    return out
+}
+const cleanCapture = (value) => (typeof value === 'boolean' ? value : null)
+
 const cleanDevices = (list) => {
     const perKind = new Map()
     const out = []
@@ -136,6 +154,9 @@ const createMachineHub = ({
         role: peer.role,
         scripts: peer.scripts === true,
         devices: peer.devices || [],
+        projects: peer.projects ?? null,
+        capture: peer.capture ?? null,
+        away: peer.away === true,
         seenAt: peer.seenAt,
         via: peer.via
     })
@@ -144,7 +165,7 @@ const createMachineHub = ({
      * A tab on this server says it is here. Refreshes a peer that already is.
      * @returns {{ peer } | { error, status }}
      */
-    const hello = (spaceId, { peerId, role = null, devices = [], machine }) => {
+    const hello = (spaceId, { peerId, role = null, devices = [], projects = null, capture = null, away = false, machine }) => {
         if (!isPeerId(peerId)) return { error: 'peerId must be 1-128 letters, digits, _ . : -', status: 400 }
         prune(spaceId)
         const space = spaceFor(spaceId, true)
@@ -157,7 +178,12 @@ const createMachineHub = ({
             machineName: machine.name,
             role: cleanText(role, 40),
             scripts: machine.scripts === true,
-            devices: cleanDevices(devices),
+            // A page whose browser is on another computer (onThisMachine.js)
+            // lists none of this machine's devices: they are not here.
+            devices: away === true ? [] : cleanDevices(devices),
+            projects: cleanProjects(projects),
+            capture: cleanCapture(capture),
+            away: away === true,
             seenAt: now(),
             via: LOCAL
         }
@@ -218,6 +244,9 @@ const createMachineHub = ({
                 role: cleanText(raw.role, 40),
                 scripts: raw.scripts === true,
                 devices: cleanDevices(raw.devices),
+                projects: cleanProjects(raw.projects),
+                capture: cleanCapture(raw.capture),
+                away: raw.away === true,
                 seenAt: now(),
                 via
             })
@@ -226,6 +255,32 @@ const createMachineHub = ({
         if (!space.peers.size && !space.mailboxes.size && !space.servers.size) spaces.delete(spaceId)
         return recorded
     }
+
+    /**
+     * Which machines follow this space, and when each last called in — for the
+     * sync light on the HOST (the host is never told anything else about them).
+     * Kept apart from `spaces`, which prunes a machine nobody has heard from in
+     * thirty seconds: "ponyo has not answered for two minutes" needs the machine
+     * to be remembered after it went quiet. In memory, so a restart forgets;
+     * bounded, so a space cannot grow it.
+     */
+    const followers = new Map()
+    const MAX_FOLLOWERS = 32
+    const noteFollower = (spaceId, machineId, name = null) => {
+        if (!isPeerId(machineId)) return false
+        let known = followers.get(spaceId)
+        if (!known) { known = new Map(); followers.set(spaceId, known) }
+        if (!known.has(machineId) && known.size >= MAX_FOLLOWERS) {
+            const oldest = [...known.entries()].sort((a, b) => a[1].seenAt - b[1].seenAt)[0]
+            if (oldest) known.delete(oldest[0])
+        }
+        known.set(machineId, { machineId, name: cleanText(name, 80), seenAt: now() })
+        return true
+    }
+    const followersOf = (spaceId) => [...(followers.get(spaceId)?.values() || [])]
+        .map((entry) => ({ ...entry }))
+        .sort((a, b) => b.seenAt - a.seenAt)
+    const forgetFollower = (spaceId, machineId) => followers.get(spaceId)?.delete(machineId) || false
 
     /** A follower server called in — its mailbox stays alive while it does. */
     const noteServer = (spaceId, machineId) => {
@@ -310,6 +365,9 @@ const createMachineHub = ({
         localPeers,
         recordRemotePeers,
         noteServer,
+        noteFollower,
+        followersOf,
+        forgetFollower,
         route,
         checkPayload,
         deliver,

@@ -24,8 +24,16 @@ module.exports = [
     agent: false
   },
   {
+    route: "GET /api/admin/sweep",
+    summary: "the idle-space sweep: every space it reaches in the next 14 days and what it will do (trash, or skip with the reason), plus the last 200 things it did",
+    reach: "read",
+    role: "admin",
+    agent: false,
+    note: "names spaces nobody listed and their owners — admin only."
+  },
+  {
     route: "POST /api/admin/sandboxes/purge",
-    summary: "remove guest sandboxes past their TTL and archive idle account sandboxes, on demand instead of waiting for the periodic sweep",
+    summary: "move guest sandboxes past their TTL into the space trash and archive idle account sandboxes, on demand instead of waiting for the periodic sweep",
     reach: "private",
     role: "admin",
     agent: false
@@ -83,6 +91,14 @@ module.exports = [
     note: "the `listen` field can include this machine's LAN address(es) — not a plain status read for the agent door."
   },
   {
+    route: "GET /api/guest-address",
+    summary: "this machine's https place address for devices without di (a phone, a headset, a guest's laptop): the name in the certificate it serves, its port, whether this start is on the network, and where the name points as this machine looks it up",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "local runtimes only (404 on a hosted server, 403 from the network unless di up --lan). Can include this machine's LAN addresses. No address without a certificate or with a wildcard one — never an invented one; pointsHere says whether the name resolves to this machine (null when the lookup failed)."
+  },
+  {
     route: "PATCH /api/config",
     summary: "change the default space and/or the global shared space every guest without one lands in",
     reach: "public",
@@ -107,6 +123,51 @@ module.exports = [
     note: "names real machine addresses. 404 when ESTATE_MAP_PATH is unset (nothing is committed here), 404 when set but the file was never placed on this host."
   },
   {
+    route: "GET /api/share/channels",
+    summary: "the share channels (Telegram, Bluesky, Mastodon): connected or missing, and what each can carry",
+    reach: "read",
+    role: "admin",
+    agent: false,
+    note: "never returns a token; tokens come from SHARE_* environment variables only."
+  },
+  {
+    route: "GET /api/share/posts",
+    summary: "drafted and sent posts of the share door, newest first",
+    reach: "read",
+    role: "admin",
+    agent: false
+  },
+  {
+    route: "GET /api/share/posts/:id",
+    summary: "one share-door post with its per-channel results and preview address",
+    reach: "read",
+    role: "admin",
+    agent: false
+  },
+  {
+    route: "GET /share/posts/:id/preview",
+    summary: "HTML page: a post as each chosen channel will show it (length against the limit, media, link)",
+    reach: "read",
+    role: "admin",
+    agent: false,
+    note: "a page, not JSON; admin only because a draft is private."
+  },
+  {
+    route: "POST /api/share/posts",
+    summary: "draft a post { text, link, media[], channels[] } for the share door; nothing is sent",
+    reach: "private",
+    role: "admin",
+    agent: false
+  },
+  {
+    route: "POST /api/share/posts/:id/send",
+    summary: "approve a draft and send it to its channels; a channel that already posted is skipped",
+    reach: "public",
+    role: "admin",
+    agent: false,
+    note: "outward and cannot be unsent: only after the owner's word on the preview."
+  },
+  {
     route: "GET /api/events",
     summary: "the server's recent internal event log",
     reach: "read",
@@ -120,7 +181,7 @@ module.exports = [
     reach: "read",
     role: "guest",
     agent: false,
-    note: "loopback-only (127.0.0.1/::1) — a 404 to anything else, names other machines."
+    note: "loopback-only (127.0.0.1/::1) — a 404 to anything else, names other machines. One server per data folder carries the follows (follow/lease.js): on any other server on the same folder the list is empty and `carriedHere: false` + `carriedBy` {pid, port} + `message` say which one does."
   },
   {
     route: "GET /api/health",
@@ -175,6 +236,46 @@ module.exports = [
     note: "public, unauthenticated, rate-limited — registered ahead of the /api auth gates; the rate limiter's per-IP key is the only guard and is never persisted."
   },
   {
+    route: "GET /api/shoot/:key",
+    summary: "a film crew's shared shoot sheet (?rev= answers {unchanged:true} for pollers)",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "public, unauthenticated, rate-limited — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
+    route: "POST /api/shoot/:key/ops",
+    summary: "apply crew edits to a shoot sheet: tick, note, link, add or remove a prop, set a cast member's details",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "anyone holding the link may edit — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
+    route: "PUT /api/shoot/:key/plan",
+    summary: "write a shoot sheet's whole plan (the seed); this replaces the crew's ticks",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "anyone holding the link may rewrite it — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
+    route: "GET /api/shoot/:key/files/:name",
+    summary: "one costume or prop picture of a shoot sheet (webp, jpg or png)",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "serves image bytes, not JSON — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
+    route: "PUT /api/shoot/:key/files/:name",
+    summary: "upload one picture (webp, jpg or png, up to 5 MB) to a shoot sheet",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "body is the raw image bytes — the key in the path is the only credential and a sheet exists only when sha256(key) is listed; a wrong key and a missing sheet are the same 404."
+  },
+  {
     route: "GET /api/trash",
     summary: "trashed (soft-deleted) projects, optionally filtered to one space, with the trash TTL",
     reach: "read",
@@ -213,5 +314,22 @@ module.exports = [
     role: "guest",
     agent: true,
     note: "answers from the request's own host; `space` is null for di.iiii's own addresses and for any domain that is not live on a public space. Cached for 60 s."
+  },
+  {
+    route: "GET /api/domain-check",
+    summary: "may this hostname have a certificate? Caddy's on-demand TLS `ask` endpoint for a space's own domain",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    input: {
+      query: {
+        type: "object",
+        required: ["domain"],
+        properties: {
+          domain: { type: "string", description: "the hostname Caddy is about to get a certificate for, e.g. yokozo.xyz" }
+        }
+      }
+    },
+    note: "answers 200 only when the hostname is a live domain of a public space, 404 for anything else; Caddy reads only the status (https://caddyserver.com/docs/caddyfile/options#on-demand-tls). Never cached."
   },
 ]

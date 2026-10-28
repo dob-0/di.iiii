@@ -259,73 +259,103 @@ describe('RawGraphSurface', () => {
         expect(zoom).toBeLessThanOrEqual(1)
     })
 
-    // Owner 2026-10-02: six cards covered ~9 % of a 2560-wide canvas because
-    // the fit never magnified. It may now, up to 2 — and no further.
-    it('magnifies a small graph on a big screen, but no further than 2', () => {
+    // Audit 2026-10-05 §3.7 (row 7). The opening view: everything in view, top-left
+    // aligned 24px in, never magnified past 100 % (it opened at 141 % and sat under the bar).
+    const transformOf = (container) => {
+        const [panX, panY, zoom] = /translate\(([-\d.]+)px,\s*([-\d.]+)px\) scale\(([-\d.]+)\)/
+            .exec(container.querySelector('.raw-graph-stage').style.transform).slice(1).map(Number)
+        return { panX, panY, zoom }
+    }
+    const withRect = (width, height, fn) => {
         const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-            x: 0, y: 0, left: 0, top: 0, right: 2560, bottom: 1250, width: 2560, height: 1250, toJSON: () => ({})
+            x: 0, y: 0, left: 0, top: 0, right: width, bottom: height, width, height, toJSON: () => ({})
         })
-        try {
+        try { fn() } finally { rect.mockRestore() }
+    }
+
+    it('opens a small graph at 100 % at most, its first card 24px from the top-left', () => {
+        withRect(2560, 1250, () => {
             const small = [
-                makeNode('value.number', { id: 'a', graphX: 0, graphY: 0 }),
-                makeNode('value.number', { id: 'b', graphX: 300, graphY: 0 })
+                makeNode('value.number', { id: 'a', graphX: 120, graphY: 60 }),
+                makeNode('value.number', { id: 'b', graphX: 420, graphY: 60 })
             ]
             const { container } = render(<RawGraphSurface nodes={small} edges={[]} />)
-            const stage = container.querySelector('.raw-graph-stage')
-            const zoom = Number(/scale\(([-\d.]+)\)/.exec(stage.style.transform)[1])
-            expect(zoom).toBeCloseTo(2, 5)
-        } finally {
+            const { panX, panY, zoom } = transformOf(container)
+            expect(zoom).toBe(1)
+            expect(120 * zoom + panX).toBeCloseTo(24, 5)
+            expect(60 * zoom + panY).toBeCloseTo(24, 5)
+        })
+    })
+
+    it('opens the same view on every load (same cards, same box, same zoom within 1 %)', () => {
+        withRect(1440, 805, () => {
+            const cards = [120, 349, 560, 780].map((x, i) => makeNode('value.number', { id: `c${i}`, graphX: x, graphY: 40 + i * 30 }))
+            const zooms = [1, 2, 3, 4, 5].map(() => {
+                const view = render(<RawGraphSurface nodes={cards} edges={[]} />)
+                const { zoom } = transformOf(view.container)
+                view.unmount()
+                return zoom
+            })
+            zooms.forEach((z) => expect(Math.abs(z / zooms[0] - 1)).toBeLessThan(0.01))
+        })
+    })
+
+    it('waits for the card font before the first fit, then fits once', async () => {
+        let done
+        const ready = new Promise((resolve) => { done = resolve })
+        const fonts = { status: 'loading', ready, addEventListener() {}, removeEventListener() {} }
+        Object.defineProperty(document, 'fonts', { value: fonts, configurable: true })
+        try {
+            withRect(1440, 805, () => {})
+            const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+                x: 0, y: 0, left: 0, top: 0, right: 1440, bottom: 805, width: 1440, height: 805, toJSON: () => ({})
+            })
+            const cards = [120, 349].map((x, i) => makeNode('value.number', { id: `f${i}`, graphX: x, graphY: 40 }))
+            const { container } = render(<RawGraphSurface nodes={cards} edges={[]} />)
+            // Still loading: no fit yet (the view is where a fresh canvas starts).
+            const beforeFonts = transformOf(container).panX
+            expect(120 * transformOf(container).zoom + beforeFonts).not.toBeCloseTo(24, 0)
+            fonts.status = 'loaded'
+            await act(async () => { done() })
+            expect(120 * transformOf(container).zoom + transformOf(container).panX).toBeCloseTo(24, 5)
             rect.mockRestore()
+        } finally {
+            delete document.fonts
         }
     })
 
-    // F7, 2026-10-02: a List docking on the right re-fit eight cards to 50 %
-    // at 1200 × 760. The re-fit nobody asked for keeps them readable instead.
-    it('keeps cards readable when a docked window narrows the view', () => {
-        const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-            x: 0, y: 0, left: 0, top: 0, right: 1200, bottom: 760, width: 1200, height: 760, toJSON: () => ({})
-        })
-        try {
+    // F7, 2026-10-02: a List docking on the right re-fit eight cards to 50 % at
+    // 1200 x 760. The fit now keeps EVERY card in the free band, and says so with
+    // a smaller card (the summary tier), not with "showing 3 of 8".
+    it('keeps every card in view beside a docked window, with no "showing N of M"', () => {
+        withRect(1200, 760, () => {
             const grid = [0, 400, 800].flatMap((x, col) => [0, 260].map((y, row) => (
                 makeNode('value.number', { id: `n${col}${row}`, graphX: x, graphY: y })
             )))
-            const zoomOf = (container) => Number(/scale\(([-\d.]+)\)/.exec(container.querySelector('.raw-graph-stage').style.transform)[1])
             const { container, rerender } = render(<RawGraphSurface nodes={grid} edges={[]} selectedNodeId="n00" />)
-            expect(zoomOf(container)).toBeGreaterThan(0.9)
             rerender(<RawGraphSurface nodes={grid} edges={[]} selectedNodeId="n00" contentInsets={{ left: 0, right: 520, top: 0, bottom: 0 }} />)
-            expect(zoomOf(container)).toBeGreaterThanOrEqual(0.8)
-            // and says honestly that some cards are now behind the window
-            const notice = container.textContent.match(/showing (\d+) of (\d+)/)
-            expect(notice).not.toBeNull()
-            expect(Number(notice[1])).toBeLessThan(Number(notice[2]))
-        } finally {
-            rect.mockRestore()
-        }
+            const { panX, zoom } = transformOf(container)
+            expect(container.textContent).not.toMatch(/showing \d+ of \d+/)
+            // the right-most card ends inside the free band (1200 - 520)
+            expect((800 + 200) * zoom + panX).toBeLessThanOrEqual(680)
+        })
     })
 
-    // 2026-10-03, NOPA on a 390 × 844 phone: the graph was too wide to fit
-    // legibly but short, and the partial view left it in the lower half under
-    // a blank band — the axis that fits was never centred.
-    it('centres a short, too-wide graph vertically on a phone', () => {
-        const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-            x: 0, y: 0, left: 0, top: 0, right: 390, bottom: 760, width: 390, height: 760, toJSON: () => ({})
-        })
-        try {
+    // A phone opens at the larger of fit-to-width and the 11 px-legible zoom (11/13),
+    // first card top-left.
+    it('opens on a phone at the larger of fit-to-width and the 11 px-legible zoom, first card top-left', () => {
+        withRect(390, 760, () => {
             const row = [0, 600, 1200, 1800].flatMap((x) => [
                 makeNode('value.number', { id: `t${x}`, graphX: x, graphY: 0 }),
                 makeNode('value.number', { id: `b${x}`, graphX: x, graphY: 240 })
             ])
             const { container } = render(<RawGraphSurface nodes={row} edges={[]} />)
-            const [, panY, zoom] = /translate\(([-\d.]+)px,([-\d.]+)px\) scale\(([-\d.]+)\)/
-                .exec(container.querySelector('.raw-graph-stage').style.transform).slice(1).map(Number)
-            expect(container.textContent).toMatch(/showing \d+ of 8/)
-            const bottom = (240 + cardHeight(row[1])) * zoom + panY
-            const top = panY
-            // the blank band above equals the one below
-            expect(Math.abs(top - (760 - bottom))).toBeLessThan(2)
-        } finally {
-            rect.mockRestore()
-        }
+            const { panX, panY, zoom } = transformOf(container)
+            expect(container.textContent).not.toMatch(/showing \d+ of 8/)
+            expect(zoom).toBeCloseTo(11 / 13, 6)
+            expect(panX).toBeCloseTo(24, 5)
+            expect(panY).toBeCloseTo(24, 5)
+        })
     })
 
     // 2026-10-03, owner's screen: a new window opened at 800 × 600 and was
@@ -1035,6 +1065,48 @@ describe('wheel policy', () => {
         fireEvent.wheel(surface.querySelector('.raw-window-header'), { deltaY: -100 })
         expect(readZoom()).not.toBe(mid)
     })
+
+    // A touchpad's two-finger swipe is a wheel with pixel deltas on BOTH
+    // axes. Its deltaX pans; it was dropped, and a pure sideways swipe
+    // (deltaY 0) zoomed the desk out by the minimum step instead (audit
+    // 2026-10-21 NR-01, measured 1 -> 0.984 in Chromium).
+    it('a touchpad swipe pans by its deltaX, and a sideways swipe never zooms', () => {
+        const { container } = render(<RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} initialZoom={1} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        const stage = () => /translate\(([-\d.]+)px,([-\d.]+)px\) scale\(([-\d.]+)\)/.exec(container.querySelector('.raw-graph-stage').style.transform).slice(1).map(Number)
+        const [x0, y0, z0] = stage()
+        for (let i = 0; i < 10; i++) fireEvent.wheel(surface, { deltaX: 40, deltaY: 0, deltaMode: 0 })
+        const [x1, y1, z1] = stage()
+        expect(z1).toBe(z0)
+        expect(y1).toBe(y0)
+        expect(x1).toBeCloseTo(x0 - 400, 5)
+        fireEvent.wheel(surface, { deltaX: 30, deltaY: -10, deltaMode: 0, ctrlKey: true })
+        const [x2, , z2] = stage()
+        expect(z2).toBeGreaterThan(z1)
+        expect(x2).not.toBeCloseTo(x1 - 30, 1)
+    })
+
+    // A vertical swipe drifts sideways a little. With both deltas applied the
+    // desk crept sideways while it zoomed (review of NR-01): one axis per
+    // event, the larger one.
+    it('a diagonal swipe moves one axis only: the larger delta wins', () => {
+        const { container } = render(<RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} initialZoom={1} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        const stage = () => /translate\(([-\d.]+)px,([-\d.]+)px\) scale\(([-\d.]+)\)/.exec(container.querySelector('.raw-graph-stage').style.transform).slice(1).map(Number)
+        const [x0, y0, z0] = stage()
+        // Mostly vertical: zoom about the cursor, exactly as a pure vertical wheel would.
+        fireEvent.wheel(surface, { deltaX: 6, deltaY: -40, deltaMode: 0, clientX: 0, clientY: 0 })
+        const [x1, y1, z1] = stage()
+        expect(z1).toBeGreaterThan(z0)
+        expect(x1).toBeCloseTo(x0 * (z1 / z0), 5)
+        expect(y1).toBeCloseTo(y0 * (z1 / z0), 5)
+        // Mostly sideways: pan by deltaX, no zoom.
+        fireEvent.wheel(surface, { deltaX: 40, deltaY: 6, deltaMode: 0 })
+        const [x2, y2, z2] = stage()
+        expect(z2).toBe(z1)
+        expect(y2).toBe(y1)
+        expect(x2).toBeCloseTo(x1 - 40, 5)
+    })
 })
 
 describe('RawGraphSurface wires follow portScopeNodes', () => {
@@ -1202,5 +1274,143 @@ describe('the card menu names what happens', () => {
         fireEvent.contextMenu(container.querySelector('[data-card-id="t"]'), { clientX: 500, clientY: 100 })
         expect([...document.querySelectorAll('[role="menuitem"]')].some((el) => el.textContent.includes('Open'))).toBe(true)
         expect([...document.querySelectorAll('[role="menuitem"]')].some((el) => /Go inside|Open its window/.test(el.textContent))).toBe(false)
+    })
+})
+
+describe('RawGraphSurface zoom strip (audit row 6, §3.8)', () => {
+    it('is [−] [100%] [+] [Fit] with no frame button, and the value resets to 100%', () => {
+        const node = makeNode('value.color', { id: 'color-1' })
+        const { container } = render(<RawGraphSurface nodes={[node]} edges={[]} initialZoom={1.5} selectedNodeId="color-1" />)
+        const strip = container.querySelector('.raw-graph-zoom-controls')
+        expect([...strip.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'))).toEqual([
+            'Zoom out', 'Reset zoom to 100%', 'Zoom in', 'Fit graph'
+        ])
+        expect(strip.querySelector('.raw-graph-zoom-value').textContent).toBe('150%')
+        fireEvent.click(strip.querySelector('.raw-graph-zoom-value'))
+        expect(strip.querySelector('.raw-graph-zoom-value').textContent).toBe('100%')
+    })
+})
+
+describe('the canvas in the accessibility tree', () => {
+    // The canvas was role="button" ("Create a graph node") around every card.
+    // A button's children are presentational, so a screen reader flattened
+    // the whole graph into one button; axe in Chromium: nested-interactive,
+    // serious (audit 2026-10-21 NR-02). It is a named group now, still
+    // focusable, and Enter on it still creates a node.
+    it('is a focusable named group, not a button holding the cards (axe nested-interactive)', async () => {
+        const axe = (await import('axe-core')).default
+        const onDoubleClick = vi.fn()
+        const { container } = render(<RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} initialZoom={1} onDoubleClick={onDoubleClick} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        expect(surface.getAttribute('role')).toBe('group')
+        expect(surface.getAttribute('aria-label')).toMatch(/node canvas/i)
+        expect(surface.tabIndex).toBe(0)
+        const result = await axe.run(container, { runOnly: ['nested-interactive', 'aria-allowed-role', 'aria-prohibited-attr'] })
+        expect(result.violations.map((v) => v.id)).toEqual([])
+        fireEvent.keyDown(surface, { key: 'Enter' })
+        expect(onDoubleClick).toHaveBeenCalledTimes(1)
+        expect(surface.getAttribute('aria-keyshortcuts')).toBe('Enter')
+    })
+
+    // Studio's read-only StudioGraphSurface passes no onDoubleClick, so Enter
+    // does nothing there; announcing it promised a key that did nothing.
+    it('announces Enter only when Enter creates a node', () => {
+        const { container } = render(<RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} initialZoom={1} />)
+        expect(container.querySelector('.raw-graph-surface').hasAttribute('aria-keyshortcuts')).toBe(false)
+    })
+})
+
+describe('moving a card without dragging (WCAG 2.1.1, 2.5.7)', () => {
+    // A card moved by a drag only; no key and no single pointer could place
+    // it (audit 2026-10-21 NR-05). Arrow keys on the canvas move the
+    // selected card 10 graph px, Shift ×5, one move op per press.
+    it('arrow keys move the selected card; Shift moves it 50; nothing selected moves nothing', () => {
+        const onMoveNode = vi.fn()
+        const card = makeNode('value.color', { id: 'c', graphX: 100, graphY: 40 })
+        const { container, rerender } = render(<RawGraphSurface nodes={[card]} edges={[]} initialZoom={1} onMoveNode={onMoveNode} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        fireEvent.keyDown(surface, { key: 'ArrowRight' })
+        expect(onMoveNode).not.toHaveBeenCalled()
+        rerender(<RawGraphSurface nodes={[card]} edges={[]} initialZoom={1} onMoveNode={onMoveNode} selectedNodeId="c" />)
+        fireEvent.keyDown(surface, { key: 'ArrowRight' })
+        expect(onMoveNode).toHaveBeenLastCalledWith('c', 110, 40)
+        fireEvent.keyDown(container.querySelector('.raw-graph-node-card'), { key: 'ArrowUp', shiftKey: true })
+        expect(onMoveNode).toHaveBeenLastCalledWith('c', 100, -10)
+        expect(onMoveNode).toHaveBeenCalledTimes(2)
+    })
+
+    // In the editor, selecting sends focus to the settings column and Escape
+    // hands it back to the card with nothing selected (measured in Chromium:
+    // the selected-only rule moved nothing). The focused card is the one.
+    it('the focused card moves even with nothing selected', () => {
+        const onMoveNode = vi.fn()
+        const a = makeNode('value.color', { id: 'a', graphX: 0, graphY: 0 })
+        const b = makeNode('value.color', { id: 'b', graphX: 300, graphY: 0 })
+        const { container } = render(<RawGraphSurface nodes={[a, b]} edges={[]} initialZoom={1} onMoveNode={onMoveNode} />)
+        fireEvent.keyDown(container.querySelector('[data-card-id="b"]'), { key: 'ArrowDown' })
+        expect(onMoveNode).toHaveBeenLastCalledWith('b', 300, 10)
+    })
+
+    // The context menu stops ↑ and ↓ but lets ← and → through when no
+    // submenu is open; they moved the card the menu was opened on.
+    it('arrow keys inside an open context menu never move the card behind it', () => {
+        const onMoveNode = vi.fn()
+        const card = makeNode('value.color', { id: 'c', graphX: 100, graphY: 40 })
+        const { container } = render(<RawGraphSurface nodes={[card]} edges={[]} initialZoom={1} onMoveNode={onMoveNode} selectedNodeId="c" onSelectNode={() => {}} onDuplicateNode={() => {}} />)
+        fireEvent.contextMenu(container.querySelector('[data-card-id="c"]'), { clientX: 400, clientY: 200 })
+        const row = document.querySelector('[role="menuitem"]')
+        fireEvent.keyDown(row, { key: 'ArrowRight' })
+        fireEvent.keyDown(row, { key: 'ArrowLeft' })
+        fireEvent.keyDown(container.querySelector('[data-card-id="c"]'), { key: 'ArrowRight' })
+        expect(onMoveNode).not.toHaveBeenCalled()
+    })
+})
+
+describe('a pinch never selects (audit 2026-10-21 NR-08)', () => {
+    // Measured at 390x844 in Chromium: a pinch whose first finger landed on a
+    // card selected it on the press, and the settings sheet rose over half
+    // the phone. A touch selects on release, and only if no pinch began.
+    const setup = () => {
+        const onSelectNode = vi.fn()
+        const a = makeNode('value.color', { id: 'a', graphX: 0, graphY: 0 })
+        const utils = render(<RawGraphSurface nodes={[a]} edges={[]} initialZoom={1} onSelectNode={onSelectNode} />)
+        utils.container.querySelector('[data-card-id="a"]').setPointerCapture = () => {}
+        const card = utils.container.querySelector('[data-card-id="a"] .raw-graph-node-header')
+        return { ...utils, onSelectNode, card, surface: utils.container.querySelector('.raw-graph-surface') }
+    }
+
+    it('a two-finger pinch that starts on a card leaves the selection alone', () => {
+        const { onSelectNode, card, surface } = setup()
+        fireEvent.pointerDown(card, { button: 0, pointerId: 1, pointerType: 'touch', clientX: 40, clientY: 20 })
+        fireEvent.pointerDown(surface, { pointerId: 2, pointerType: 'touch', clientX: 240, clientY: 100 })
+        fireEvent.pointerMove(window, { pointerId: 2, pointerType: 'touch', clientX: 340, clientY: 100 })
+        fireEvent.pointerUp(window, { pointerId: 1 })
+        fireEvent.pointerUp(window, { pointerId: 2 })
+        expect(onSelectNode).not.toHaveBeenCalled()
+    })
+
+    it('one finger on a card still selects it, on release; a mouse selects on press', () => {
+        const { onSelectNode, card } = setup()
+        fireEvent.pointerDown(card, { button: 0, pointerId: 1, pointerType: 'touch', clientX: 40, clientY: 20 })
+        expect(onSelectNode).not.toHaveBeenCalled()
+        fireEvent.pointerUp(window, { pointerId: 1, pointerType: 'touch', clientX: 40, clientY: 20 })
+        expect(onSelectNode).toHaveBeenCalledWith('a')
+        onSelectNode.mockClear()
+        fireEvent.pointerDown(card, { button: 0, pointerId: 3, pointerType: 'mouse', clientX: 40, clientY: 20 })
+        expect(onSelectNode).toHaveBeenCalledWith('a')
+    })
+})
+
+// A port dot is a pointer handle inside the card, and the card is the button: a
+// focusable or announced child would be a control nested in a control. The row's
+// label names the port; the dot is hidden from the reader (2026-10-21).
+describe('port dots and the reader', () => {
+    it('every port dot is hidden from assistive tech; the port label stays', () => {
+        const text = makeNode('view.text', { id: 't1' })
+        const { container } = render(<RawGraphSurface nodes={[text]} edges={[]} initialZoom={1} />)
+        const dots = [...container.querySelectorAll('.raw-graph-port-dot')]
+        expect(dots).toHaveLength(2)
+        for (const dot of dots) expect(dot.getAttribute('aria-hidden')).toBe('true')
+        expect(container.querySelector('.raw-graph-port-label').textContent).toBe('Content')
     })
 })

@@ -26,6 +26,9 @@ const scanRoot = path.join(repoRoot, 'serverXR/src')
 // [file, line-content-substring] pairs already reviewed and confirmed safe.
 // A match here is suppressed; anything else trips the check.
 const ALLOWLIST = [
+  // join.js: the space id the host's join-code peek answered. '' is not used as a
+  // value: the very next line refuses with 'invalid-code' when it is empty.
+  ['join.js', "const spaceId = String(peek.payload?.spaceId || '')"],
   // OAuth token-response `scope` string — not an identity/access-scope value,
   // just the space-delimited permissions string Google returns; '' is a
   // correct empty-permissions default, not a fallback masking a real scope.
@@ -33,7 +36,19 @@ const ALLOWLIST = [
   // Optional request-body field on chat creation: null means "chat is not
   // linked to a project", a legal state — not a masked lookup failure. The
   // chat's real ownership gate is user_id, enforced in every store query.
-  ['aiChatRoutes.js', "projectId: typeof projectId === 'string' ? projectId : null"]
+  ['aiChatRoutes.js', "projectId: typeof projectId === 'string' ? projectId : null"],
+  // 'bundle' is the fixed name of the open-a-file route (POST /api/spaces/bundle),
+  // matched so the route is NOT read as a space id — a route name, not a
+  // fallback standing in for a real space. The scope check runs for all else.
+  ['index.js', "req.params.spaceId === 'bundle'"],
+  // A sync key's scope is a two-value enum ('edit' | 'manage',
+  // SPEC_space_sync_keys.md §13). These compare against the enum's privileged
+  // value, so anything unknown or missing falls to the LESS powerful 'edit' —
+  // fail closed, the opposite of the bug class (a default granting access).
+  ['follow/follower.js', "keyScope = answer.payload.key.scope === 'manage' ? 'manage' : 'edit'"],
+  ['index.js', "manageSpaces: sk.scope === 'manage' ? [sk.spaceId] : []"],
+  ['index.js', "limits: scope === 'manage' ? syncKeyActions.LIMITS : null"],
+  ['routes/projectRoutes.js', "also.scope === 'manage' && also.spaceId === toMeta.id"]
 ]
 
 const FALLBACK_PATTERN = /\b(spaceId|scope|tenant|projectId)\b\s*(\|\||\?\?)\s*['"]/

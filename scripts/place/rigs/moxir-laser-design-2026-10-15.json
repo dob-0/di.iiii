@@ -1,0 +1,522 @@
+{
+ "what": "LaserCube design per scene of the 50-scene show (2026-10-17): the `laser` field of each scene, keyed by scene id",
+ "source": "laser_design.py (designer agent, 2026-10-15; migrated N811.4); references t4/t5 teaser frames, the 10-14 jam; pattern names from Pangolin BEYOND / ILDA beam-show practice",
+ "licence": "di.iiii project data (the owner's)",
+ "date": "2026-10-15",
+ "schema": "scripts/place/laser_frames.py validate_laser",
+ "design": {
+  "first-light": {
+   "pattern": "single-scan",
+   "cubes": "inner",
+   "colour": "#eefdfd",
+   "colour_key": "CW",
+   "level": 0.06,
+   "tempo": {
+    "clock": "master",
+    "bpm": 20,
+    "beats": 32
+   },
+   "phase": "mirror",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 0,
+   "amplitude_deg": 2.5,
+   "breathe": null,
+   "hits": null,
+   "refs": [
+    "t5",
+    "Pangolin: beam sweep"
+   ],
+   "why": "one line wakes on each side of the DJ axis, a slow mirrored sweep into the roof"
+  },
+  "first-net": {
+   "pattern": "net",
+   "cubes": "all",
+   "colour": "#00ff00",
+   "colour_key": "G",
+   "level": 0.16,
+   "tempo": {
+    "clock": "master",
+    "bpm": 33,
+    "beats": 16
+   },
+   "phase": "unison",
+   "pitch_deg": 0,
+   "yaw_deg": 0,
+   "spread_deg": 0,
+   "amplitude_deg": 0.5,
+   "breathe": null,
+   "hits": null,
+   "refs": [
+    "t5",
+    "ILDA: beam net / lattice"
+   ],
+   "why": "the 36 green lines cross and part, breathing: the net over the floor (t5 lines in haze)"
+  },
+  "left-right": {
+   "pattern": "single-scan",
+   "cubes": "outer",
+   "colour": "#eefdfd",
+   "colour_key": "CW",
+   "level": 0.1,
+   "tempo": {
+    "clock": "master",
+    "bpm": 66,
+    "beats": 8
+   },
+   "phase": "mirror",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 0,
+   "amplitude_deg": 2.5,
+   "breathe": null,
+   "hits": null,
+   "refs": [
+    "Pangolin: beam sweep"
+   ],
+   "why": "the two outer cubes answer each other like the walls, mirrored"
+  },
+  "scissors": {
+   "pattern": "fan-sweep",
+   "cubes": "all",
+   "colour": "#eefdfd",
+   "colour_key": "CW",
+   "level": 0.1,
+   "tempo": {
+    "clock": "master",
+    "bpm": 33,
+    "beats": 8
+   },
+   "phase": "mirror",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 2,
+   "amplitude_deg": 1.5,
+   "breathe": null,
+   "hits": null,
+   "refs": [
+    "t4",
+    "Pangolin: fan"
+   ],
+   "why": "both sides open and close like the scissors of the beams"
+  },
+  "green-comb": {
+   "pattern": "comb",
+   "cubes": "all",
+   "colour": "#00ff00",
+   "colour_key": "G",
+   "level": 0.16,
+   "tempo": {
+    "clock": "master",
+    "bpm": 66,
+    "beats": 2
+   },
+   "phase": "unison",
+   "pitch_deg": 0,
+   "yaw_deg": 0,
+   "spread_deg": 0,
+   "amplitude_deg": 0,
+   "breathe": null,
+   "hits": {
+    "per_beat": 0.5,
+    "duty": 0.5
+   },
+   "refs": [
+    "t5",
+    "jam"
+   ],
+   "why": "the comb pulses at half time (0.55 hits/s)"
+  },
+  "riser": {
+   "pattern": "comb",
+   "cubes": "all",
+   "colour": "#eefdfd",
+   "colour_key": "CW",
+   "level": 0.12,
+   "tempo": {
+    "clock": "master",
+    "bpm": 132,
+    "beats": 4
+   },
+   "phase": "unison",
+   "pitch_deg": 0,
+   "yaw_deg": 0,
+   "spread_deg": 0,
+   "amplitude_deg": 0,
+   "breathe": null,
+   "hits": {
+    "per_beat": 1,
+    "duty": 0.4
+   },
+   "refs": [
+    "t5"
+   ],
+   "why": "before the drop: the comb hits every beat (2.2 /s, under 3)"
+  },
+  "white-cathedral": {
+   "pattern": "fan",
+   "cubes": "all",
+   "colour": "#eefdfd",
+   "colour_key": "CW",
+   "level": 0.16,
+   "tempo": {
+    "clock": "master",
+    "bpm": 132,
+    "beats": 16
+   },
+   "phase": "unison",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 2.5,
+   "amplitude_deg": 0,
+   "breathe": null,
+   "hits": null,
+   "refs": [
+    "t4 frame 5 (blue-white fans)",
+    "Pangolin: fan"
+   ],
+   "why": "the drop: two still white fans rise from the back crane, a cathedral roof of lines"
+  },
+  "red-room": {
+   "pattern": "fan-sweep",
+   "cubes": "all",
+   "colour": "#ff3a12",
+   "colour_key": "E",
+   "level": 0.16,
+   "tempo": {
+    "clock": "master",
+    "bpm": 132,
+    "beats": 8
+   },
+   "phase": "mirror",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 2,
+   "amplitude_deg": 1.5,
+   "breathe": null,
+   "hits": {
+    "per_beat": 1,
+    "duty": 0.5
+   },
+   "refs": [
+    "t4 frames 1, 6 (red fans)"
+   ],
+   "why": "red fans pump on the beat (no green in this scene: no red-green pair)"
+  },
+  "the-storm": {
+   "pattern": "fan-sweep",
+   "cubes": "all",
+   "colour": "#00ff00",
+   "colour_key": "G",
+   "level": 0.16,
+   "tempo": {
+    "clock": "master",
+    "bpm": 132,
+    "beats": 8
+   },
+   "phase": "chase",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 2,
+   "amplitude_deg": 1.5,
+   "breathe": null,
+   "hits": {
+    "per_beat": 1,
+    "duty": 0.5
+   },
+   "refs": [
+    "t4",
+    "t5"
+   ],
+   "why": "green fans chase across the six cubes, hits on the beat"
+  },
+  "matrix": {
+   "pattern": "comb",
+   "cubes": "all",
+   "colour": "#00ff00",
+   "colour_key": "G",
+   "level": 0.16,
+   "tempo": {
+    "clock": "master",
+    "bpm": 66,
+    "beats": 16
+   },
+   "phase": "unison",
+   "pitch_deg": 0,
+   "yaw_deg": 0,
+   "spread_deg": 0,
+   "amplitude_deg": 0,
+   "breathe": {
+    "min": 0.4
+   },
+   "hits": null,
+   "refs": [
+    "t5",
+    "rig v2.8 MATRIX comb"
+   ],
+   "why": "the comb at its cap, breathing (intensity 0.4–1)"
+  },
+  "radar": {
+   "pattern": "single-scan",
+   "cubes": "all",
+   "colour": "#b699ff",
+   "colour_key": "LV",
+   "level": 0.1,
+   "tempo": {
+    "clock": "master",
+    "bpm": 66,
+    "beats": 16
+   },
+   "phase": "chase",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 0,
+   "amplitude_deg": 2.5,
+   "breathe": null,
+   "hits": null,
+   "refs": [
+    "Pangolin: beam sweep"
+   ],
+   "why": "one lavender line per cube, a radar chase west → east"
+  },
+  "sparkle-peak": {
+   "pattern": "tunnel",
+   "cubes": "all",
+   "colour": "#b699ff",
+   "colour_key": "LV",
+   "level": 0.1,
+   "tempo": {
+    "clock": "master",
+    "bpm": 20,
+    "beats": 32
+   },
+   "phase": "unison",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 2,
+   "amplitude_deg": 0,
+   "breathe": null,
+   "hits": null,
+   "refs": [
+    "Pangolin: tunnel (upper half only)"
+   ],
+   "why": "six dots run round a half ring on each side: a slow vault, never below the cubes"
+  },
+  "blue-wave": {
+   "pattern": "sky",
+   "cubes": "all",
+   "colour": "#26bcff",
+   "colour_key": "DS",
+   "level": 0.1,
+   "tempo": {
+    "clock": "master",
+    "bpm": 33,
+    "beats": 16
+   },
+   "phase": "unison",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 3,
+   "amplitude_deg": 0.75,
+   "breathe": null,
+   "hits": null,
+   "refs": [
+    "Pangolin: liquid sky"
+   ],
+   "why": "a deep-sea sheet waves under the roof, two wings"
+  },
+  "deep-tent": {
+   "pattern": "tunnel",
+   "cubes": "all",
+   "colour": "#66faff",
+   "colour_key": "PT",
+   "level": 0.1,
+   "tempo": {
+    "clock": "master",
+    "bpm": 33,
+    "beats": 16
+   },
+   "phase": "unison",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 2,
+   "amplitude_deg": 0,
+   "breathe": null,
+   "hits": null,
+   "refs": [
+    "Pangolin: tunnel (upper half only)"
+   ],
+   "why": "petrol vaults over the floor: the tent"
+  },
+  "green-breath": {
+   "pattern": "net",
+   "cubes": "all",
+   "colour": "#00ff00",
+   "colour_key": "G",
+   "level": 0.16,
+   "tempo": {
+    "clock": "master",
+    "bpm": 20,
+    "beats": 16
+   },
+   "phase": "unison",
+   "pitch_deg": 0,
+   "yaw_deg": 0,
+   "spread_deg": 0,
+   "amplitude_deg": 0.5,
+   "breathe": null,
+   "hits": null,
+   "refs": [
+    "t5"
+   ],
+   "why": "the net alone, breathing very slowly"
+  },
+  "riser-two": {
+   "pattern": "comb",
+   "cubes": "all",
+   "colour": "#eefdfd",
+   "colour_key": "CW",
+   "level": 0.12,
+   "tempo": {
+    "clock": "master",
+    "bpm": 132,
+    "beats": 4
+   },
+   "phase": "unison",
+   "pitch_deg": 0,
+   "yaw_deg": 0,
+   "spread_deg": 0,
+   "amplitude_deg": 0,
+   "breathe": null,
+   "hits": {
+    "per_beat": 1,
+    "duty": 0.4
+   },
+   "refs": [
+    "t5"
+   ],
+   "why": "the second riser, as the first"
+  },
+  "second-drop": {
+   "pattern": "fan",
+   "cubes": "all",
+   "colour": "#eefdfd",
+   "colour_key": "CW",
+   "level": 0.16,
+   "tempo": {
+    "clock": "master",
+    "bpm": 132,
+    "beats": 16
+   },
+   "phase": "unison",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 2.5,
+   "amplitude_deg": 0,
+   "breathe": null,
+   "hits": {
+    "per_beat": 1,
+    "duty": 0.5
+   },
+   "refs": [
+    "t4 frame 5"
+   ],
+   "why": "white-out: the still fans hit on every beat"
+  },
+  "cathedral-turns": {
+   "pattern": "fan-sweep",
+   "cubes": "all",
+   "colour": "#eefdfd",
+   "colour_key": "CW",
+   "level": 0.12,
+   "tempo": {
+    "clock": "master",
+    "bpm": 66,
+    "beats": 16
+   },
+   "phase": "chase",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 2,
+   "amplitude_deg": 1.5,
+   "breathe": null,
+   "hits": null,
+   "refs": [
+    "t4"
+   ],
+   "why": "the white fans turn in a ripple, like the beams circling"
+  },
+  "red-fans": {
+   "pattern": "fan-sweep",
+   "cubes": "all",
+   "colour": "#ff3a12",
+   "colour_key": "E",
+   "level": 0.16,
+   "tempo": {
+    "clock": "master",
+    "bpm": 132,
+    "beats": 8
+   },
+   "phase": "mirror",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 2,
+   "amplitude_deg": 1.5,
+   "breathe": null,
+   "hits": {
+    "per_beat": 1,
+    "duty": 0.6
+   },
+   "refs": [
+    "t4 frames 1, 6 (red fans)"
+   ],
+   "why": "the red fans of teaser t4, opening on the bar, hits on the beat"
+  },
+  "afterglow": {
+   "pattern": "sky",
+   "cubes": "all",
+   "colour": "#ff9180",
+   "colour_key": "RC",
+   "level": 0.08,
+   "tempo": {
+    "clock": "master",
+    "bpm": 33,
+    "beats": 32
+   },
+   "phase": "unison",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 3,
+   "amplitude_deg": 0.75,
+   "breathe": null,
+   "hits": null,
+   "refs": [
+    "Pangolin: liquid sky"
+   ],
+   "why": "a rose-copper sheet breathes down"
+  },
+  "one-beam-loop": {
+   "pattern": "single-scan",
+   "cubes": "inner",
+   "colour": "#eefdfd",
+   "colour_key": "CW",
+   "level": 0.06,
+   "tempo": {
+    "clock": "master",
+    "bpm": 20,
+    "beats": 32
+   },
+   "phase": "mirror",
+   "pitch_deg": 4,
+   "yaw_deg": 9,
+   "spread_deg": 0,
+   "amplitude_deg": 2.5,
+   "breathe": null,
+   "hits": null,
+   "refs": [
+    "t5"
+   ],
+   "why": "back to the start: the one line of first-light"
+  }
+ }
+}

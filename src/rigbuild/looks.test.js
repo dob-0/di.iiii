@@ -124,6 +124,8 @@ describe('the room between two looks (useRigLookEntities)', () => {
             const doc = dealt()
             const snapshot = { present: true, fixtures: [], looks: [deskLookId('cross')], lookFade: { lookId: deskLookId('cross'), from: deskLookId('up'), fadeMs: 4000, firedAt: 99_000 } }
             const { result, rerender } = renderHook(({ d }) => useRigLookEntities(d, { mirror: mirrorOf(snapshot) }), { initialProps: { d: doc } })
+            // the project's lamp types come in a moment after the first render; the room is drawn from them, not before
+            await act(async () => { await (await import('./types/projectTypes.js')).loadProjectLibrary(doc.entities) })
             const first = result.current.entities
             expect(result.current.fading).toBe(true)
             vi.setSystemTime(100_050) // the clock moves; the fade's own tick has not fired
@@ -163,5 +165,26 @@ describe('a desk swap takes the other room\'s looks away', () => {
         expect(staleDeskLooks(desk, ['rig-gs-red-room', 'rig-k-tunnel'])).toEqual(['rig-k-doors'])
         expect(staleDeskLooks([], ['rig-x'])).toEqual([])
         expect(staleDeskLooks(undefined, [])).toEqual([])
+    })
+})
+
+describe('a lamp the playing look gives no pose (3D = hall, with or without a desk)', () => {
+    it('draws a rig lamp no look group holds at level 0, and leaves a lamp with no fixture as saved', async () => {
+        const { posedEntities } = await import('./looks.js')
+        const lamp = (id, extra = {}) => ({ id, type: 'spotLight', components: { transform: { position: [1, 2, 3], rotation: [0, 0, 0] }, light: { color: '#ff3a12', intensity: 609.56 }, beam: { visible: true, haze: 0.5 }, ...extra } })
+        const posed = lamp('posed', { fixture: { type: 'x' } })
+        const unposed = lamp('unposed', { fixture: { type: 'x' } })
+        const plain = lamp('plain')
+        const poses = new Map([['posed', { position: [0, 1, 0], rotation: [0, 0, 0], color: '#00ff00', level: 1 }]])
+        const out = posedEntities([posed, unposed, plain], poses)
+        const dark = out.find((e) => e.id === 'unposed')
+        expect(dark.components.light.intensity).toBe(0)
+        expect(dark.components.beam.haze).toBe(0)
+        expect(dark.components.rigShown).toEqual({ level: 0 })
+        expect(dark.components.transform.position).toEqual([1, 2, 3])
+        expect(out.find((e) => e.id === 'posed').components.light.intensity).toBe(609.56)
+        expect(out.find((e) => e.id === 'plain')).toBe(plain)
+        expect(unposed.components.light.intensity).toBe(609.56) // the document is untouched
+        expect(posedEntities([unposed], new Map())[0]).toBe(unposed) // no look playing: as saved
     })
 })

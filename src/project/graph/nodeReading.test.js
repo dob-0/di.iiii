@@ -250,7 +250,7 @@ describe('readNode', () => {
     })
 
     it('marks a type that is registered but not built', () => {
-        const unbuilt = createNode('stream.recorder')
+        const unbuilt = createNode('stream.output')
         const document = docOf([unbuilt].filter(Boolean))
         if (!unbuilt) return
         const reading = readNode(unbuilt, { allNodes: document.nodes, context: ctxOf(document), document })

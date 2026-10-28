@@ -57,13 +57,19 @@ export const parseKeeperReply = (payload) => {
 
 // A bare host is the most likely thing to be pasted ("http://localhost:11434"),
 // and it is not a chat endpoint. Complete it to Ollama's, since that is what a
-// local box runs; leave anything with a path alone.
+// local box runs; leave anything with a path alone — except ".../v1", below.
 export const resolveKeeperEndpoint = (endpoint) => resolveKeeperEndpoints(endpoint)[0] ?? ''
 
 // Every chat URL a pasted value could mean, in the order to try them. A bare
 // host is Ollama's /api/chat first and OpenAI's /v1/chat/completions second —
 // llama.cpp and LM Studio only answer the second, and a 404 on the first is
 // how askKeeper finds that out instead of the person having to know it.
+//
+// A path ending in /v1 is the OpenAI *base* URL: what the client examples of
+// llama.cpp, vLLM and LM Studio say to use, so it is what gets pasted. It is not
+// a chat route — a POST to it 404s, and the panel said "The keeper answered 404
+// Not Found" about a server that was answering fine. Complete it to the chat
+// route; there is no second guess to make, the person already named the family.
 export const resolveKeeperEndpoints = (endpoint) => {
     const trimmed = String(endpoint || '').trim().replace(/\/+$/, '')
     if (!trimmed) return []
@@ -72,6 +78,7 @@ export const resolveKeeperEndpoints = (endpoint) => {
         if (url.pathname === '' || url.pathname === '/') {
             return [`${trimmed}/api/chat`, `${trimmed}/v1/chat/completions`]
         }
+        if (/\/v1$/.test(url.pathname)) return [`${trimmed}/chat/completions`]
         return [trimmed]
     } catch {
         return [trimmed]

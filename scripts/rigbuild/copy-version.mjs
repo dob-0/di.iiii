@@ -9,7 +9,7 @@
  *
  *   node scripts/rigbuild/copy-version.mjs --api https://local.thedi.studio/serverXR --token-file ~/.di/di.env \
  *       --space moxir --from moxir-hall-minimal --to moxir-hall-minimal-oldhall-0929 --label "old hall 09-29" \
- *       [--suffix oldhall-0929] [--siblings <file>] [--dry-run]
+ *       [--suffix oldhall-0929] [--id <the copy's own version id, ≤ 48 chars>] [--siblings <file>] [--dry-run]
  *   node scripts/rigbuild/copy-version.mjs … --undo --to moxir-hall-minimal-oldhall-0929   # delete the copy (only it)
  *   node scripts/rigbuild/copy-version.mjs --api https://dev.diiii.xyz/serverXR --token-file <dev token> \
  *       --from-api http://<ponyo>:4100/serverXR --from-token-file <a DUMMY token file, never the dev key> \
@@ -80,12 +80,14 @@ export const repointProjectUrls = (value, from, to) => {
  * The copy's entities: identical, except the version mark on the show entity — its id and title
  * labelled, where it came from, and (when given) the buttons it lists. Pure.
  */
-export const copiedEntities = (entities, { from, to, label, suffix, siblings = null }) => entities.map((e) => {
+export const copiedEntities = (entities, { from, to, label, suffix, siblings = null, id = null }) => entities.map((e) => {
     const v = e?.components?.rigVariant
     if (!v) return e
     const mark = {
         ...v,
-        id: `${v.id}-${suffix}`,
+        // `id`: the copy's own version id, when `<source id>-<suffix>` would pass the server's 48-character cap
+        // (2026-10-07: a copy of a copy of a copy — "…-flip-only-10-07-stage24-backflip" — was refused)
+        id: id || `${v.id}-${suffix}`,
         title: labelled(v.title, label),
         copyOf: { projectId: from, id: v.id, label },
         ...(siblings ? { siblings } : {})
@@ -285,7 +287,7 @@ export const freshMarkProblem = (entities) => {
 }
 
 /** Every flag this script reads; anything else is a typo, and a typo must never fall through to a write (`--dryrun`). */
-export const KNOWN_FLAGS = ['api', 'token-file', 'from-api', 'from-token-file', 'to', 'undo', 'adopt', 'from', 'label', 'suffix', 'siblings', 'dry-run', 'space']
+export const KNOWN_FLAGS = ['api', 'token-file', 'from-api', 'from-token-file', 'to', 'undo', 'adopt', 'from', 'label', 'suffix', 'siblings', 'dry-run', 'space', 'id']
 /** The arguments this script does not know: unknown --keys and stray words (an em dash pasted for `--`). Pure. */
 export const unknownArgs = (args) => [...Object.keys(args).filter((k) => k !== '_' && !KNOWN_FLAGS.includes(k)).map((k) => `--${k}`), ...(args._ || [])]
 
@@ -361,7 +363,8 @@ const main = async () => {
     const title = `${meta.body.project?.title || source.projectMeta?.title || from} · ${label}`
     say(`${from}${where} (version ${src.body.version}, ${source.entities.length} entities, ${source.assets.length} assets) → ${to} "${title}"`)
     // the new mark must survive the server's normaliser — before anything is created, not after "written"
-    const problem = freshMarkProblem(copiedEntities(source.entities, { from, to, label, suffix, siblings }))
+    const markId = args.id ? String(args.id) : null
+    const problem = freshMarkProblem(copiedEntities(source.entities, { from, to, label, suffix, siblings, id: markId }))
     if (problem) die(`${to}: the copy's version mark would be lost — nothing created: ${problem}`)
     if (dry) { say('--dry-run: nothing written'); return }
 
@@ -389,7 +392,7 @@ const main = async () => {
     // 5. the document: the source's, pointed at the copy, its version mark labelled
     let document = { ...source, projectMeta: { ...source.projectMeta, id: to, title }, assets }
     document = repointProjectUrls(remapAssetIds(document, remap), from, to)
-    document.entities = copiedEntities(document.entities, { from, to, label, suffix, siblings })
+    document.entities = copiedEntities(document.entities, { from, to, label, suffix, siblings, id: markId })
     const put = await client.put(`/api/projects/${to}/document`, document)
     if (!put.ok) die(`writing ${to}'s document: ${put.status} ${put.text.slice(0, 300)}`)
 
@@ -398,7 +401,7 @@ const main = async () => {
     const same = back.ok && back.body.document.entities.length === source.entities.length && back.body.document.assets.length === source.assets.length
     if (!same) die(`${to}: read back ${back.body?.document?.entities?.length} entities / ${back.body?.document?.assets?.length} assets, the source has ${source.entities.length} / ${source.assets.length}`)
     const backMark = back.body.document.entities.find((e) => e?.id === RIG_SHOW_ID)?.components?.rigVariant
-    if (freshMarkProblem(copiedEntities(source.entities, { from, to, label, suffix, siblings })) === null && source.entities.some((e) => e?.components?.rigVariant) && !backMark?.copyOf) die(`${to}: written, but the version mark did not stay (no rigVariant.copyOf on ${RIG_SHOW_ID} read back) — run --adopt to repair it`)
+    if (freshMarkProblem(copiedEntities(source.entities, { from, to, label, suffix, siblings, id: markId })) === null && source.entities.some((e) => e?.components?.rigVariant) && !backMark?.copyOf) die(`${to}: written, but the version mark did not stay (no rigVariant.copyOf on ${RIG_SHOW_ID} read back) — run --adopt to repair it`)
     say(`${to}: written (version ${back.body.version}) — ${source.entities.length} entities, ${assets.length} assets; ${from}${where} was only read`)
 }
 
