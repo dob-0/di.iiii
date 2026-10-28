@@ -57,7 +57,7 @@ with it; the certificate's name is one line `phones and headsets: …`, `scripts
 - **BUILT (PR 2, branch `feat/di-name-2026-10-28`, tested against a fake broker and a fake ACME client only):** `di name` / `--status` /
   `--renew` / `--forget` in `scripts/di/networkName.mjs` + `nameStore.mjs`; files in `~/.di/name/`; `di status` prints the name line;
   `di up` and `di autoupdate run` renew at < 30 days, at most once a day (the CLI exits after `di up`, so the timer's tick is the daily
-  check). Zone `di-studio.xyz`; ACME through `acme-client` 5.4.0 pinned in `serverXR/package.json` (what a packed install runs `npm ci` for).
+  check). Zone `l.thedi.studio`; ACME through `acme-client` 5.4.0 pinned in `serverXR/package.json` (what a packed install runs `npm ci` for).
   Not yet run against the real broker or Let's Encrypt. `scripts/di/name.mjs` is the older mDNS (`di.local`) file, unrelated.
 - What a person types: the label only — `di follow show --from ponyo-k7q2`. The CLI adds the zone.
 - The address stays `http://diiii.localhost/` for yourself; the network name is for **other** machines.
