@@ -1,4 +1,4 @@
-import { Suspense, useMemo } from 'react'
+import { Suspense, useEffect, useMemo } from 'react'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { getCodeSpace } from '../utils/codeSpaces.js'
 import { WORK_DIRECTOR_SURFACES } from '../../works/routes.jsx'
@@ -34,25 +34,19 @@ export default function StudioCodeSpaceDirector({ spaceId }) {
     const Surface = WORK_DIRECTOR_SURFACES[spaceId] ?? null
 
     // A space id that is not a code space, or is one this build has no surface
-    // for. Says which, and offers the way out — a blank page here would read as
-    // a broken editor rather than a wrong address.
-    if (!codeSpace || !Surface) {
+    // for. There is no director to show, so the address sends the visitor on to
+    // the space's Projects, where the work of that space is (audit F154,
+    // 2026-10-28). Before, a routed page existed only to say "no director here".
+    // replace(), so Back does not bounce through the dead address.
+    const hasSurface = Boolean(codeSpace && Surface)
+    useEffect(() => {
+        if (!hasSurface) appNavigate(buildStudioHubPath(spaceId), { replace: true })
+    }, [hasSurface, spaceId])
+
+    if (!hasSurface) {
         return (
             <div className="studio-shell-root scsd-root">
-                <div className="scsd-head">
-                    <p className="sh-space-context">Space: {spaceId}</p>
-                    <h1 className="sh-title">no director here</h1>
-                </div>
-                <div className="scsd-empty">
-                    <p>
-                        {codeSpace
-                            ? 'This space is built from code, and there is no editor for it here yet.'
-                            : 'This space keeps its work as projects. Open one from Projects.'}
-                    </p>
-                    <button className="sh-link" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>
-                        ← Projects
-                    </button>
-                </div>
+                <div className="scsd-loading"><LoadingScreen variant="inline" label="Opening Projects" text="opening projects" /></div>
             </div>
         )
     }

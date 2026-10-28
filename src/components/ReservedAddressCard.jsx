@@ -35,6 +35,14 @@ const ADDRESSES = {
         alsoArticle: 'di-cli-local',
         alsoLabel: 'Run di.iiii on your own machine'
     },
+    // `/scan` alone (audit F154, 2026-10-28): the camera page is
+    // /{space}/scan, and the bare word fell through to "Not found". Plain
+    // steps, no /{space}/ pattern: a child does not read a template (S07 review).
+    scan: {
+        body: 'Scanning happens inside a space. Open the space first, then add /scan to the end of its address. This address names no space, so there is nothing to scan here.',
+        article: 'spaces-and-projects',
+        articleLabel: 'Spaces and projects'
+    },
     projects: {
         body: 'A project list belongs to a space: /{space}/projects. On its own the word names no space, so there is nothing here to list.',
         article: 'spaces-and-projects',
