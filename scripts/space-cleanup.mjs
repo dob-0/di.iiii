@@ -108,7 +108,7 @@ export const repoMentions = async (repo, id, { exclude = SELF_FILES } = {}) => {
         return { count: files.length, files: files.slice(0, 3) }
     } catch (error) {
         if (error.code === 1 && !error.stderr) return { count: 0, files: [] } // git grep: 1 = no match
-        throw new Error(`git grep failed in ${repo}: ${String(error.stderr || error.message).slice(0, 200)}`)
+        throw new Error(`git grep failed in ${repo}: ${String(error.stderr || error.message).slice(0, 200)}`, { cause: error })
     }
 }
 
@@ -523,7 +523,7 @@ export const run = async (argv, { client = null, env = process.env, log = consol
 
     if (args.mode === 'undo') {
         let journal
-        try { journal = JSON.parse(fs.readFileSync(args.undoFile, 'utf8')) } catch (error) { throw new Error(`cannot read the journal ${args.undoFile}: ${error.message} — nothing was done`) }
+        try { journal = JSON.parse(fs.readFileSync(args.undoFile, 'utf8')) } catch (error) { throw new Error(`cannot read the journal ${args.undoFile}: ${error.message} — nothing was done`, { cause: error }) }
         if (journal?.format !== JOURNAL_FORMAT || !Array.isArray(journal.steps)) throw new Error(`${args.undoFile} is not a space-cleanup journal — nothing was done`)
         if (String(journal.api).replace(/\/+$/, '') !== args.api) throw new Error(`this journal was written for ${journal.api}, not ${args.api}; give the same --api — nothing was done`)
         log(`space-cleanup — undo${args.dry ? ' (dry run: nothing is written)' : ''} on ${args.api}, journal ${args.undoFile}`)
