@@ -25,6 +25,26 @@ describe('FilesPanel', () => {
         expect(onPresentationPatch).toHaveBeenCalledWith({ mode: 'code' })
     })
 
+    it('labels the toggle "Scene" (the vocabulary word, not "3D room"), shows the mode it is given, and reports a pick', () => {
+        const onPresentationPatch = vi.fn()
+        const onViewportChoice = vi.fn()
+        render(
+            <FilesPanel
+                presentationState={{ mode: 'scene', codeFiles }}
+                viewportMode="code"
+                onViewportChoice={onViewportChoice}
+                onPresentationPatch={onPresentationPatch}
+            />
+        )
+
+        expect(screen.queryByRole('button', { name: '3D room' })).toBeNull()
+        // the page is what the viewport shows: Code view is the filled button
+        expect(screen.getByRole('button', { name: 'Code view' }).className).toContain('MuiButton-contained')
+        fireEvent.click(screen.getByRole('button', { name: 'Scene' }))
+        expect(onViewportChoice).toHaveBeenCalledWith('scene')
+        expect(onPresentationPatch).toHaveBeenCalledWith({ mode: 'scene' })
+    })
+
     it('renames the active file and rewrites references in html files', () => {
         const onPresentationPatch = vi.fn()
         render(

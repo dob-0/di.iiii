@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import StudioViewport from './StudioViewport.jsx'
+import { useViewportMode } from '../utils/viewportMode.js'
 import { buildPresentationPreviewDocument } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 
@@ -76,7 +77,8 @@ export default function StudioPresentationSurface({
     const [rigLook, setRigLook] = useState(undefined)
     const [laserTest, setLaserTest] = useState(false)
     const presentationState = document.presentationState || {}
-    const previewMode = presentationState.mode || 'scene'
+    const viewportMode = useViewportMode(document)
+    const previewMode = viewportMode
     const isFixedCamera = previewMode === 'fixed-camera'
     // The composed shot is where the camera STARTS; it holds the camera still only when
     // the author locked it (`fixedCamera.locked === true`) — the published viewer's own
