@@ -73,9 +73,9 @@
 }
 .rigbuild-undo button + button { border-left: 0; }
 .rigbuild-undo button:disabled { opacity: 0.4; cursor: default; }
-.rigbuild.is-phone .rigbuild-undo { top: 58px; left: 176px; }
+.rigbuild.is-phone .rigbuild-undo { top: 110px; left: 8px; }   /* a row under BUILD: beside ITEMS it sat on the totals panel (seen at 390 px) */
 .rigbuild.has-rigbar .rigbuild-undo { top: calc(var(--rigbar-h) + 64px); }
-.rigbuild.has-rigbar.is-phone .rigbuild-undo { top: calc(var(--rigbar-h) + 58px); }
+.rigbuild.has-rigbar.is-phone .rigbuild-undo { top: calc(var(--rigbar-h) + 110px); }
 
 /* the hand: status line + hotbar, bottom centre (above the walk hint line) */
 .rigbuild-hand {

@@ -69,4 +69,10 @@ describe('build: the same two buttons, for the builder only', () => {
         expect(src).toMatch(/<div className="rigbuild-undo"[\s\S]*?onClick=\{undo\} disabled=\{!canUndo\(\)\}[\s\S]*?onClick=\{redo\} disabled=\{!canRedo\(\)\}/)
         expect(src).toMatch(/\{!crew \? \(\s*<div className="rigbuild-undo"/)
     })
+
+    it('on a phone the buttons sit in a row under BUILD, not beside ITEMS where they covered the totals panel', () => {
+        const css = readFileSync(join(ROOT, 'src/rigbuild/build.css'), 'utf8')
+        expect(css).toMatch(/\.rigbuild\.is-phone \.rigbuild-undo \{ top: 110px; left: 8px; \}/)
+        expect(css).toMatch(/\.rigbuild\.has-rigbar\.is-phone \.rigbuild-undo \{ top: calc\(var\(--rigbar-h\) \+ 110px\); \}/)
+    })
 })
