@@ -7,9 +7,21 @@
  * docs/ai/team-sync-by-network-name.md §8). So a forged or stale beacon costs a
  * failed handshake, nothing more.
  *
- * Announce and listen live together so the share door (`di share`) and the
- * follower speak one shape: `{ v: 1, kind: 'di-name', label, port }`. The sender's
- * address is the packet's source address, never a field in it.
+ * ONE module, two importers. The server (follow/nameResolver.js) requires it; the CLI
+ * (scripts/di/nameResolve.mjs) imports it, as the pack ships serverXR/src beside
+ * scripts/di. There is no second copy of the port or the payload.
+ *
+ *   port     UDP 41767 (BEACON_PORT)
+ *   payload  { v: 1, kind: 'di-name', label, port } as JSON. The sender's address is
+ *            the packet's source address, never a field in it.
+ *   API      announce({ label, port }) -> Promise<boolean>   say it once, to the wifi
+ *            listen({ label, timeoutMs }) -> Promise<{ address, port } | null>
+ *            encode / decode / isLabel / BEACON_PORT (the pieces, for tests)
+ *
+ * Who calls announce: the wifi door of PR #1160 (`di share`) calls
+ * `announce({ label, port })` when it opens, and again every few seconds while it
+ * stays open, with the door's own label and HTTPS port. It must not send a beacon
+ * of its own; a second port or payload would be invisible to this listener.
  */
 
 const dgram = require('node:dgram')

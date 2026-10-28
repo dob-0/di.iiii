@@ -65,6 +65,7 @@ describe('the two resolvers are one behaviour', () => {
         expect(twin.zoneFrom({ env: {} })).toBe(server.zoneFrom({ env: {} }))
         expect(twin.encode({ label: 'a-b1', port: 7 })).toEqual(serverBeacon.encode({ label: 'a-b1', port: 7 }))
         expect(twin.BEACON_PORT).toBe(serverBeacon.BEACON_PORT)
+        expect(serverBeacon.BEACON_PORT).toBe(41767)
         for (const v of ['a-b1', 'a.b', 'https://x', 'x']) expect(twin.isLabelInput(v), v).toBe(server.isLabelInput(v))
     })
 })

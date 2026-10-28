@@ -1,84 +1,27 @@
 /**
- * The CLI's twin of serverXR/src/follow/nameResolver.js + beacon.js: where is the
- * install called `ponyo-k7q2`? beacon on this wifi, then DNS of `<label>.<zone>`,
- * then the last address that worked; every route probed under the name before it
- * is believed. Kept in step by scripts/di/nameResolveParity.test.js, because the
- * packed CLI (`cli/`) cannot import the server (`serverXR/`). Edit both together.
+ * The CLI's twin of serverXR/src/follow/nameResolver.js: where is the install called
+ * `ponyo-k7q2`? beacon on this wifi, then DNS of `<label>.<zone>`, then the last
+ * address that worked; every route probed under the name before it is believed.
+ * The beacon itself is not a twin: both sides import serverXR/src/follow/beacon.js.
  */
 
-import dgram from 'node:dgram'
 import dns from 'node:dns'
 import net from 'node:net'
+import { createRequire } from 'node:module'
 
-
-
-export const BEACON_PORT = 41767
-const KIND = 'di-name'
-// A label is `<handle>-<4 chars>`: lowercase letters, digits, one dash inside.
-const LABEL = /^[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/
-
-export const isLabel = (value) => typeof value === 'string' && LABEL.test(value) && !value.includes('.')
-
-/** The packet for a label and a port, or null when either is not one. */
-export const encode = ({ label, port }) => {
-    if (!isLabel(label) || !Number.isInteger(port) || port < 1 || port > 65535) return null
-    return Buffer.from(JSON.stringify({ v: 1, kind: KIND, label, port }))
-}
-
-/** What a packet says, or null — anything else on the port is ignored, never thrown at. */
-export const decode = (buffer) => {
-    try {
-        const body = JSON.parse(String(buffer))
-        if (body?.kind !== KIND || body.v !== 1 || !isLabel(body.label)) return null
-        if (!Number.isInteger(body.port) || body.port < 1 || body.port > 65535) return null
-        return { label: body.label, port: body.port }
-    } catch { return null }
-}
-
-/**
- * Say it once, to the whole wifi. Resolves true when the datagram left.
- * `socketFactory` and `target` exist for tests; a real call needs neither.
- */
-export const announce = ({ label, port, beaconPort = BEACON_PORT, target = '255.255.255.255', socketFactory = dgram.createSocket } = {}) => new Promise((resolve) => {
-    const packet = encode({ label, port })
-    if (!packet) { resolve(false); return }
-    const socket = socketFactory({ type: 'udp4', reuseAddr: true })
-    const done = (sent) => { try { socket.close() } catch { /* already closed */ } resolve(sent) }
-    socket.once('error', () => done(false))
-    socket.bind(0, () => {
-        try { socket.setBroadcast(true) } catch { /* a loopback test target needs none */ }
-        socket.send(packet, beaconPort, target, (error) => done(!error))
-    })
-})
-
-/**
- * Wait up to `timeoutMs` for a beacon from `label`. Resolves
- * `{ address, port }` at the first one, or null at the end of the wait (also
- * when the port cannot be opened: no beacon is "not heard", never a crash).
- */
-export const listenBeacon = ({ label, timeoutMs = 2000, beaconPort = BEACON_PORT, socketFactory = dgram.createSocket } = {}) => new Promise((resolve) => {
-    if (!isLabel(label)) { resolve(null); return }
-    let finished = false
-    let timer = null
-    const socket = socketFactory({ type: 'udp4', reuseAddr: true })
-    const done = (heard) => {
-        if (finished) return
-        finished = true
-        clearTimeout(timer)
-        try { socket.close() } catch { /* already closed */ }
-        resolve(heard)
+// ONE beacon module, shared with the server: serverXR/src/follow/beacon.js (CJS). The CLI sits
+// at scripts/di in a checkout and at <root>/cli in a pack, serverXR beside it in both, so the
+// path is tried in each layout (no single static import resolves in both).
+const requireHere = createRequire(import.meta.url)
+const beacon = (() => {
+    for (const rel of ['../../serverXR/src/follow/beacon.js', '../serverXR/src/follow/beacon.js']) {
+        try { return requireHere(rel) } catch (error) { if (error?.code !== 'MODULE_NOT_FOUND') throw error }
     }
-    socket.on('error', () => done(null))
-    socket.on('message', (buffer, info) => {
-        const body = decode(buffer)
-        if (body && body.label === label && info?.address) done({ address: info.address, port: body.port })
-    })
-    timer = setTimeout(() => done(null), timeoutMs)
-    try { socket.bind(beaconPort) } catch { done(null) }
-})
+    throw new Error('serverXR/src/follow/beacon.js not found beside the CLI (checkout or pack)')
+})()
 
-
-
+export const { BEACON_PORT, isLabel, encode, decode, announce } = beacon
+export const listenBeacon = beacon.listen
 
 export const DEFAULT_ZONE = 'l.thedi.studio'
 export const ROUTES = ['beacon', 'dns', 'last']
