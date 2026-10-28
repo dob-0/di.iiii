@@ -107,12 +107,11 @@ export default function StudioControlCluster({
                     </span>
                     {syncState && (
                         <span
-                            className={`scc-sync-dot scc-sync-dot--${syncState.pendingSyncError ? 'error' : (syncState.sceneStreamState || 'idle')}`}
-                            // "retrying" was a lie on the path that matters most: a 401
-                            // clearTimeout()s the retry and breaks, so nothing is retrying
-                            // and the queued edits sit in memory until a reload drops them.
-                            // The message the sync layer already wrote says what to do.
-                            title={syncState.pendingSyncError || syncState.sceneStreamState}
+                            className={`scc-sync-dot scc-sync-dot--${syncState.sceneStreamState || 'idle'}`}
+                            // The dot is the live scene connection only. Whether work is stored is the
+                            // save line below, in words (F089); the red dot and its raw-error tooltip
+                            // said the same thing a second time.
+                            title={syncState.sceneStreamState}
                         />
                     )}
                     {onUndo && (

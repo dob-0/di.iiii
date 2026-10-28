@@ -41,6 +41,7 @@ vi.mock('./StudioShell.jsx', () => ({
             <button type="button" onClick={() => props.onCreateEntity('box')}>create-entity</button>
             <button type="button" onClick={props.onUndo}>shell-undo</button>
             <button type="button" onClick={props.onRedo}>shell-redo</button>
+            <span data-testid="shell-sync" data-has-loaded={String(props.syncState?.hasLoaded)} data-load-error={String(props.syncState?.loadError)} />
         </>
     )
 }))
@@ -115,5 +116,14 @@ describe('StudioEditor undo/redo', () => {
         render(<StudioEditor projectId="proj-1" />)
         fireEvent.click(screen.getByRole('button', { name: 'shell-undo' }))
         expect(mockApplyLocalOps).not.toHaveBeenCalled()
+    })
+
+    // Review of S03: the save line said "Saved" before the project had loaded. It can only know if the Studio
+    // hands it the store's hasLoaded and loadError, so the Studio must.
+    it('hands the shell hasLoaded and loadError for the save line', () => {
+        render(<StudioEditor projectId="proj-1" />)
+        const probe = screen.getByTestId('shell-sync')
+        expect(probe.dataset.hasLoaded).not.toBe('undefined')
+        expect(probe.dataset.loadError).not.toBe('undefined')
     })
 })

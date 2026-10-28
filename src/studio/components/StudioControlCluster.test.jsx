@@ -158,7 +158,7 @@ describe('Undo and Redo in the cluster header', () => {
 })
 
 describe('the save line', () => {
-    const line = () => screen.getByRole('status')
+    const line = () => document.querySelector('[data-save-state]')
 
     it('says Saved when nothing waits', () => {
         render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 0, sceneStreamState: 'connected' }} />)
@@ -187,7 +187,39 @@ describe('the save line names the real cause', () => {
     // conflict that keeps coming back, so a pro would check a network that was fine.
     it('says offline only when the server could not be reached', () => {
         render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, pendingSyncError: describeUnsaved('sync is stuck behind concurrent edits, retrying shortly', 1) }} />)
-        expect(screen.getByRole('status')).toHaveTextContent('Not saved: trying again, keep this tab open')
-        expect(screen.getByRole('status')).not.toHaveTextContent(/offline/)
+        expect(document.querySelector('[data-save-state]')).toHaveTextContent('Not saved: trying again, keep this tab open')
+        expect(document.querySelector('[data-save-state]')).not.toHaveTextContent(/offline/)
+    })
+})
+
+describe('the save line, review round 2 of S03', () => {
+    const line = () => document.querySelector('[data-save-state]')
+
+    it('says nothing before the project has loaded, and says so if it could not', () => {
+        const { rerender } = render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 0, hasLoaded: false, loadError: null }} />)
+        expect(line()).toBeNull()
+        rerender(<StudioControlCluster {...base} syncState={{ pendingOpCount: 0, hasLoaded: false, loadError: 'Failed to load project.' }} />)
+        expect(line()).toHaveTextContent('Not opened: reload this page')
+        expect(line().dataset.saveState).toBe('error')
+        rerender(<StudioControlCluster {...base} syncState={{ pendingOpCount: 0, hasLoaded: true, loadError: null }} />)
+        expect(line()).toHaveTextContent(/^Saved$/)
+    })
+
+    it('speaks to a screen reader only for a problem, not on every Saving / Saved flip', () => {
+        const { rerender } = render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1 }} />)
+        expect(line().getAttribute('aria-live')).toBe('off')
+        rerender(<StudioControlCluster {...base} syncState={{ pendingOpCount: 0 }} />)
+        expect(line().getAttribute('aria-live')).toBe('off')
+        rerender(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, pendingSyncError: describeUnsaved('server unreachable', 1) }} />)
+        expect(line().getAttribute('aria-live')).toBe('polite')
+        expect(screen.getByRole('status')).toBe(line())
+    })
+
+    it('the sync dot shows the scene connection only; a save failure is the line, not a second red sign', () => {
+        const { container } = render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, sceneStreamState: 'connected', pendingSyncError: describeUnsaved('server unreachable', 1) }} />)
+        const dot = container.querySelector('.scc-sync-dot')
+        expect(dot.className).toContain('scc-sync-dot--connected')
+        expect(dot.className).not.toContain('--error')
+        expect(dot.getAttribute('title')).toBe('connected')
     })
 })

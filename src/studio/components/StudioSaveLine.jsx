@@ -9,6 +9,11 @@ import { useEffect, useRef, useState } from 'react'
 //                 page has sent any, it is just "Saved" (the project came from the server).
 export function saveLineText(syncState, savedAt = null) {
     if (!syncState) return ''
+    // Before the project's own document has arrived there is nothing to call saved. hasLoaded is
+    // false (not just missing) from the store until load-success; callers that do not know pass nothing.
+    if (syncState.hasLoaded === false && !syncState.pendingSyncError && !syncState.authExpired) {
+        return syncState.loadError ? 'Not opened: reload this page' : ''
+    }
     if (syncState.pendingSyncError || syncState.authExpired) {
         if (syncState.authExpired) return 'Not saved: sign in again'
         // "offline" only when the server could not be reached: describeFailure in
@@ -29,7 +34,8 @@ export function saveLineText(syncState, savedAt = null) {
 export default function StudioSaveLine({ syncState, className = '', now = () => new Date() }) {
     const [savedAt, setSavedAt] = useState(null)
     const waiting = (Number(syncState?.pendingOpCount) || 0) > 0
-    const failed = Boolean(syncState?.pendingSyncError || syncState?.authExpired)
+    const loadFailed = syncState?.hasLoaded === false && Boolean(syncState?.loadError)
+    const failed = Boolean(syncState?.pendingSyncError || syncState?.authExpired || loadFailed)
     const wasWaiting = useRef(false)
     useEffect(() => {
         if (wasWaiting.current && !waiting && !failed) setSavedAt(now())
@@ -43,8 +49,9 @@ export default function StudioSaveLine({ syncState, className = '', now = () => 
     return (
         <div
             className={`${className} di-save-line di-save-line--${state}`.trim()}
-            role="status"
-            aria-live="polite"
+            // A screen reader hears a problem, not every slider tick: Saving... and Saved flip on each edit.
+            role={failed ? 'status' : undefined}
+            aria-live={failed ? 'polite' : 'off'}
             data-save-state={state}
             title={syncState?.pendingSyncError || undefined}
         >

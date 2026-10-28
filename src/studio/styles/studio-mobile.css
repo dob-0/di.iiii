@@ -94,6 +94,12 @@
     gap: var(--di-space-1);
 }
 
+.smb-undo-redo .smb-top-btn {
+    /* A finger of 74 years: 44 px, not the bar's 31 (WCAG 2.5.5 target size, the aim; 2.5.8 minimum is 24). */
+    min-height: 44px;
+    min-width: 44px;
+}
+
 .smb-undo-redo .smb-top-btn:disabled {
     opacity: 0.4;
 }
