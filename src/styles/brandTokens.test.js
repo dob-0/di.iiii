@@ -196,4 +196,12 @@ describe('shared sizes: the type ladder and the target floor', () => {
         }
         expect(offenders).toEqual([])
     })
+
+    it('the local-home door row wraps whole doors at 12 px (390 px phone), it never clips or breaks one', () => {
+        const home = readFileSync(resolve(HERE, '../landing/localHome.css'), 'utf8')
+        const row = home.match(/\.lh-doors\s*\{([^}]*)\}/)
+        expect(row, '.lh-doors must stay in localHome.css').toBeTruthy()
+        expect(row[1]).toMatch(/flex-wrap\s*:\s*wrap/)
+        expect(home).toMatch(/\.lh-doors\s*>\s*\*\s*\{[^}]*white-space\s*:\s*nowrap/)
+    })
 })

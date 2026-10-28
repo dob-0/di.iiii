@@ -30,10 +30,16 @@
 
 .lh-doors {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: var(--di-space-3);
+    gap: var(--di-space-1) var(--di-space-3);
     margin-left: auto;
 }
+
+/* Each door stays one piece: when the row is too narrow the row wraps, a door
+   never breaks in the middle ("Phones & / headsets"). The 12 px rung made the
+   row wider than a 390 px phone; at 8 px it had just fitted. */
+.lh-doors > * { white-space: nowrap; }
 
 .lh-doors a {
     color: var(--di-cyan);
