@@ -9,7 +9,8 @@ import { describe, expect, it } from 'vitest'
 // src/**/*.js and *.jsx, skipping *.test.* files, comment lines, src/algoVrithm/
 // and src/wccSite/. When a slice removes some, lower BASELINE to the new count.
 // Measured at build time on origin/dev db7d9c667: 112 (the plan judge counted 109 with its own run of the rule; this guard uses what it measures itself). S47 and S48 take it to 0.
-export const BASELINE = 112
+// S04 (2026-10-28) removed 3: SpaceHub's public-switch alert and the admin Directory's two delete confirms -> 109.
+export const BASELINE = 109
 
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const SKIP_DIRS = new Set([path.join(SRC, 'algoVrithm'), path.join(SRC, 'wccSite'), path.join(SRC, 'node_modules')])

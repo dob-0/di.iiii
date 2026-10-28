@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
     getSpaceFootprint,
     updateServerSpace,
@@ -7,6 +7,8 @@ import {
     purgeServerSpace
 } from '../../services/serverSpaces.js'
 import { spaceName } from '../utils/spaceNames.js'
+import { useUndoNotice } from '../../components/ui/useAsk.js'
+import '../styles/studio-space-hub.css'
 
 // Delete a space, and the Trash it goes to. Same promise a project's delete
 // makes (StudioHub): nothing is removed, everything waits 30 days, and the
@@ -131,6 +133,46 @@ export function SpaceDeleteDialog({ space, isAdmin = false, onClose, onDone }) {
             </div>
         </div>
     )
+}
+
+// One delete for a space, wherever it starts (the Spaces page, the admin
+// directory): the same box that names what goes and the 30 days in the Trash,
+// then a notice with Undo, which brings the space back from the Trash.
+// onChanged() reloads the caller's lists; onMessage(text) shows a line in the
+// caller's own notice (a pending approval, a restore that failed).
+export function useSpaceDelete({ isAdmin = false, onChanged, onMessage } = {}) {
+    const [deleting, setDeleting] = useState(null)
+    const { notify, undoNotice } = useUndoNotice()
+    const startDelete = useCallback((space) => setDeleting(space), [])
+
+    const done = async (receipt) => {
+        const space = deleting
+        setDeleting(null)
+        await onChanged?.()
+        if (receipt?.status === 'pending_approval') {
+            onMessage?.('Waiting for approval before it moves to the Trash.')
+            return
+        }
+        const days = receipt?.restorableUntil ? daysLeft(receipt.restorableUntil) : 30
+        notify(`“${spaceName(space)}” is in the Trash for ${days} days.`, async () => {
+            try {
+                await restoreServerSpace(space.id)
+                await onChanged?.()
+            } catch (e) {
+                onMessage?.(`Could not bring “${spaceName(space)}” back: ${e.message || 'try the Trash'}.`)
+            }
+        })
+    }
+
+    const deleteUi = (
+        <>
+            {deleting && (
+                <SpaceDeleteDialog space={deleting} isAdmin={isAdmin} onClose={() => setDeleting(null)} onDone={done} />
+            )}
+            {undoNotice}
+        </>
+    )
+    return { startDelete, deleteUi }
 }
 
 export function SpaceTrashPanel({ trash, onChanged, onClose }) {
