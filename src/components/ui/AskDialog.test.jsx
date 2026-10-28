@@ -103,7 +103,7 @@ describe('UndoNotice', () => {
 
         onDismiss.mockClear()
         render(<UndoNotice message="Held" onUndo={vi.fn()} onDismiss={onDismiss} />)
-        fireEvent.mouseEnter(screen.getAllByRole('status')[1])
+        fireEvent.mouseEnter(screen.getAllByRole('group')[1])
         act(() => { vi.advanceTimersByTime(30000) })
         expect(onDismiss).not.toHaveBeenCalled()
     })
@@ -134,10 +134,13 @@ describe('useAsk and useUndoNotice', () => {
             return <>{undoNotice}<button type="button" onClick={() => notify('Removed', undo)}>go</button></>
         }
         render(<Probe />)
+        // The live region is there before the message, so it is read out.
+        expect(screen.getByRole('status')).toBeEmptyDOMElement()
         fireEvent.click(screen.getByText('go'))
+        expect(screen.getByRole('status')).toHaveTextContent('Removed')
         fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
         expect(undo).toHaveBeenCalledTimes(1)
-        expect(screen.queryByRole('status')).toBeNull()
+        expect(screen.getByRole('status')).toBeEmptyDOMElement()
     })
 
     it('a second ask answers the first with no and shows its own field', async () => {
@@ -168,7 +171,7 @@ describe('useAsk and useUndoNotice', () => {
         act(() => { vi.advanceTimersByTime(6000) })
         expect(screen.getByRole('status')).toHaveTextContent('Deleted “Cube”')
         act(() => { vi.advanceTimersByTime(4000) })
-        expect(screen.queryByRole('status')).toBeNull()
+        expect(screen.getByRole('status')).toBeEmptyDOMElement()
         vi.useRealTimers()
     })
 })
