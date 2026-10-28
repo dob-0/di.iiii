@@ -148,7 +148,7 @@ export function useControlButtons({
                 ...(liveSyncFeatureEnabled
                     ? [{
                         key: 'live-toggle',
-                        label: isLiveSyncEnabled ? 'Live Sync On' : 'Live Sync Off',
+                        label: isLiveSyncEnabled ? 'Live sync on' : 'Live sync off',
                         onClick: () => setIsLiveSyncEnabled(!isLiveSyncEnabled),
                         disabled: !canSyncServerScene,
                         variant: isLiveSyncEnabled ? 'success' : undefined

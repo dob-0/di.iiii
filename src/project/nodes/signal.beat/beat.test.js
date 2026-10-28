@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createNode } from '../../nodeRegistry.js'
+import { createNode, getNodeType } from '../../nodeRegistry.js'
+import { deriveNodeInspectorSections } from '../../graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeOutput } from '../../graph/nodeGraphRuntime.js'
 import { DEFAULT_MASTER_CLOCK, findMasterBeatNode, resolveClock, wallToDocumentMs } from '../../graph/beatClock.js'
 
@@ -92,5 +93,20 @@ describe('Beat — the /light desk only when chosen', () => {
     it('wall time to document time: minus the stamped clock epoch, or the page origin before the stamp', () => {
         expect(wallToDocumentMs(1_700_000_005_000, 1_700_000_000_000)).toBe(5000)
         expect(wallToDocumentMs(1_700_000_005_000, 0, 1_700_000_004_000)).toBe(1000)
+    })
+})
+
+describe('Beat — Clock and Tempo from are settings, not ports', () => {
+    // findMasterBeatNode and RawEditor's desk poll read node.values; a port
+    // there would take a wire that silently does nothing.
+    it('no wire can reach role or source; the inspector still offers both as choices', () => {
+        const type = getNodeType('signal.beat')
+        expect(type.inputs.map((port) => port.id)).toEqual(['bpm', 'period', 'tap', 'reset'])
+        expect(type.configInputs.map((port) => port.id)).toEqual(['role', 'source'])
+        const fields = deriveNodeInspectorSections(beat('b')).flatMap((section) => section.fields || [])
+        const byPath = Object.fromEntries(fields.map((field) => [field.path.join('.'), field]))
+        expect(byPath.role).toMatchObject({ type: 'select', options: [{ value: 'master' }, { value: 'extra' }] })
+        expect(byPath.source).toMatchObject({ type: 'select', options: [{ value: 'own' }, { value: 'light' }] })
+        expect(beat('b').values).toMatchObject({ role: 'master', source: 'own' })
     })
 })

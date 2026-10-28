@@ -299,11 +299,12 @@
     gap: var(--di-space-2);
 }
 
+/* status dot, not a control: square like every light (owner rule, rectangles only). */
 .perform-beat {
     width: 14px;
     height: 14px;
     border: 1px solid var(--di-dim);
-    border-radius: 50%;
+    border-radius: var(--di-radius);
 }
 
 .perform-beat.is-on {
@@ -333,12 +334,28 @@
 
 .perform-master-row input[type='range'] {
     width: 100%;
+    min-height: 24px;
+    accent-color: var(--di-ink);
+}
+
+/* WCAG 2.5.8: the box was the browser's 13 px. */
+.perform-toggle input {
+    width: 24px;
+    height: 24px;
+    margin: 0;
     accent-color: var(--di-ink);
 }
 
 @media (pointer: coarse), (max-width: 600px) {
     .perform-strip-button,
     .perform-action {
+        min-height: 44px;
+    }
+    /* On touch the whole label is the 44 px target; the box inside it stays 24 px. */
+    .perform-toggle {
+        min-height: 44px;
+    }
+    .perform-master-row input[type='range'] {
         min-height: 44px;
     }
 }

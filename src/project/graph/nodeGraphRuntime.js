@@ -113,7 +113,12 @@ export const createNodeGraphContext = (document = {}, { now = 0, liveOutputs = n
         outputCache: new Map(),
         now: Number.isFinite(now) ? now : 0,
         liveOutputs,
-        frameMemory
+        frameMemory,
+        // The cue list and the show's start, for the Cue node (signal.cue): read,
+        // never written, by a pass. clockEpoch is what `now` counts from when the
+        // document clock is stamped (useDocumentClock), 0 when it is not.
+        mappingState: document.mappingState || null,
+        clockEpoch: Number(document.showState?.clockEpoch) || 0
     }
 }
 

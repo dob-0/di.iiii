@@ -107,7 +107,7 @@ const main = async () => {
     if (!target) {
         console.error('Error: no target. Pass --to <url> or set LIVE_API_URL / DEV_API_URL.')
         console.error('  dev:     https://dev.diiii.xyz/serverXR')
-        console.error('  prod:    https://di-studio.xyz/serverXR')
+        console.error('  prod:    https://diiii.xyz/serverXR')
         process.exitCode = 1
         return
     }

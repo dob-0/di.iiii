@@ -12,6 +12,7 @@ UPlight rental units, the three planning types and the LaserCube — are the **s
 | File | What it holds |
 |---|---|
 | `index.json` | the order, and each type's `id`, `code`, `category`: what a reader needs before it loads a type |
+| `all.json` | every type in one file, for the Studio's work tools (one request, not one per type) |
 | `<id>.json` | one type: identity, modes and channel lists, power, weight, size, optics, the 3D body, its `sources`, and its `provenance` |
 
 All of it is **generated** by `node scripts/rigbuild/types.mjs` from
@@ -19,7 +20,7 @@ All of it is **generated** by `node scripts/rigbuild/types.mjs` from
 `src/rigbuild/fixtureTypes.test.js` regenerates and compares. The old one-file copy `types/moxir.json` is retired (split of PR #914, part 3); a test fails if anything reads it.
 
 Who reads what: the Studio's work tools (hotbar, plot, cards, patch sheet) read the whole
-library (`../index.js`); the room and the viewer load **only the types their project uses**
+library (`../index.js`, from `all.json`); the room and the viewer load **only the types their project uses**
 (`../projectTypes.js`); node scripts read it through `scripts/rigbuild/library.mjs`. A
 project's own extra types travel in its document (`components.rentalList.types`, joined by
 `rental.js` `libraryWithShow`) and never enter this folder.

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { proposeLightTempo } from '../../map/lightingLink.js'
 import { localTimeline, tapTempo } from '../../timeline/showClock.js'
 import { wallToDocumentMs } from '../../project/graph/beatClock.js'
+import { signalFired } from '../../project/nodes/edge.js'
 
 // The Beat node's hands (the MidiOutFeed shape: no window, no mesh, one per
 // Beat). The runtime is pure, so what a Beat DOES lives here:
@@ -15,10 +16,13 @@ import { wallToDocumentMs } from '../../project/graph/beatClock.js'
 //   moment as its beat), exactly as the deck's Tap does. Otherwise the tapped
 //   tempo is written into the node (bpm, epoch) so every window agrees.
 // - Reset: beat 0 lands now, tempo kept; on the desk or in the node likewise.
+// - Before showState.clockEpoch is stamped, a document-clock epoch would be
+//   this window's own performance.now() origin, and writing it would leave a
+//   value in the op log no other window can read. So a tap or Reset made then
+//   is held (in wall-clock ms) and written the moment the stamp arrives.
 //
-// A signal "fires" when it turns truthy, or changes while truthy (a rising
-// count from a Counter or MIDI In) — MidiOutFeed's rule.
-const fired = (was, now) => Boolean(now) && (!was || now !== was)
+// Tap and Reset fire on edge.js's signalFired: truthy, or a change while
+// truthy (a rising count) — the Oscillator's Reset uses the same rule.
 
 export default function BeatFeed({
     node,
@@ -30,7 +34,8 @@ export default function BeatFeed({
     sendTempo = proposeLightTempo,
     wallNow = () => Date.now()
 }) {
-    const fromDesk = inputs?.source === 'light'
+    // Tempo from is a setting (configInputs), read from the node, never a wire.
+    const fromDesk = node.values?.source === 'light'
     const light = fromDesk && showClock?.light?.up ? showClock.light : null
     const offset = Number(showClock?.offset?.offset) || 0
 
@@ -46,34 +51,50 @@ export default function BeatFeed({
     }, [node.id, reading, onLiveOutput])
     useEffect(() => () => onLiveOutput?.(node.id, 'light', null), [node.id, onLiveOutput])
 
+    const pending = useRef(null)
+    const writeTempo = useCallback((wallPatch) => {
+        if (!(clockEpoch > 0)) {
+            pending.current = { ...pending.current, ...wallPatch }
+            return
+        }
+        const { epoch, ...rest } = wallPatch
+        onTempo?.(node.id, { ...rest, epoch: wallToDocumentMs(epoch, clockEpoch) })
+    }, [clockEpoch, node.id, onTempo])
+    useEffect(() => {
+        if (!(clockEpoch > 0) || !pending.current) return
+        const held = pending.current
+        pending.current = null
+        writeTempo(held)
+    }, [clockEpoch, writeTempo])
+
     const taps = useRef([])
     const lastTap = useRef(inputs?.tap)
     const tap = inputs?.tap
     useEffect(() => {
         const was = lastTap.current
         lastTap.current = tap
-        if (!fired(was, tap)) return
+        if (!signalFired(was, tap)) return
         const state = tapTempo(taps.current, wallNow())
         taps.current = state.taps
         // One tap is a beat with no tempo yet; the deck's Tap waits for two as well.
         if (state.bpm === null || state.ignored) return
         if (light) sendTempo({ bpm: state.bpm, epoch: state.epoch + offset })
-        else onTempo?.(node.id, { bpm: state.bpm, epoch: wallToDocumentMs(state.epoch, clockEpoch) })
-    }, [tap, light, offset, clockEpoch, node.id, onTempo, sendTempo, wallNow])
+        else writeTempo({ bpm: state.bpm, epoch: state.epoch })
+    }, [tap, light, offset, writeTempo, sendTempo, wallNow])
 
     const lastReset = useRef(inputs?.reset)
     const reset = inputs?.reset
     useEffect(() => {
         const was = lastReset.current
         lastReset.current = reset
-        if (!fired(was, reset)) return
+        if (!signalFired(was, reset)) return
         const wall = wallNow()
         if (light) {
             sendTempo({ bpm: Number(light.bpm), epoch: wall + offset })
             return
         }
-        onTempo?.(node.id, { epoch: wallToDocumentMs(wall, clockEpoch) })
-    }, [reset, light, offset, clockEpoch, node.id, onTempo, sendTempo, wallNow])
+        writeTempo({ epoch: wall })
+    }, [reset, light, offset, writeTempo, sendTempo, wallNow])
 
     return null
 }

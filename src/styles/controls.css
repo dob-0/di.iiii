@@ -197,10 +197,11 @@
     gap: var(--di-space-2);
 }
 
+/* status dot, not a control: square like every light (owner rule, rectangles only). */
 .collaboration-cursor-dot {
     width: 12px;
     height: 12px;
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     border: 2px solid rgba(255,255,255,0.92);
     background: linear-gradient(135deg, var(--ui-accent), var(--ui-success));
     box-shadow: 0 0 0 4px rgba(var(--di-cyan-rgb), 0.16);
@@ -209,7 +210,7 @@
 .collaboration-cursor-label {
     padding: var(--di-space-1) var(--di-space-2);
     border: 1px solid rgba(255,255,255,0.12);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     background: var(--di-scrim-strong);
     color: var(--ui-text-primary);
     font-size: var(--di-text-2);

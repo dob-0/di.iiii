@@ -276,7 +276,7 @@ function EntityVisual({ entity, assetMap }) {
         // children render via the hierarchy walk in AnimatedEntity
         return null
     case 'portal':
-        return <PortalObject entity={entity} />
+        return <PortalObject entity={entity} preview={asset || null} />
     case 'text': {
         const tc = entity.components?.text || {}
         const value = (tc.value || '').replace(/\\n/g, '\n')
@@ -1921,7 +1921,7 @@ export default function LiveProjectScene({
     // approach. The frame they are looking at is what the curtain holds.
     const handlePortalReached = useCallback((entity, frameState = null) => {
         const reference = entity?.components?.reference || {}
-        const href = portalHref(reference.spaceId, reference.projectId)
+        const href = portalHref(reference.spaceId, reference.projectId, reference.anchor)
         if (!href || isEntryInProgress()) return
         markArriveWalking()
         const three = frameState && frameState.gl ? frameState : null
@@ -1986,7 +1986,10 @@ export default function LiveProjectScene({
                 shadows={renderSettings.shadows !== false ? 'percentage' : false}
                 gl={rendererWithFallback({ antialias: renderSettings.antialias !== false })}
                 onCreated={({ gl }) => bindContextGuard(gl)}
-                style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none' }}
+                // R3F writes pointer-events:auto on this element inline, which beats any
+                // stylesheet below it: a decorative scene (interactive off) must say none
+                // here, or a wheel over the landing/wiki background never reaches the page.
+                style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none', pointerEvents: interactive ? 'auto' : 'none' }}
             >
                 <XR store={xr.xrStore}>
                 <RenderSettingsEffect renderSettings={renderSettings} />

@@ -195,4 +195,12 @@ module.exports = [
     agent: true,
     note: "404 for both 'does not exist' and 'exists but private' — existence of a private space is not revealed."
   },
+  {
+    route: "GET /api/resolve/:spaceSegment",
+    summary: "where a space's bare address forwards: { movedTo } when its front door left in a recorded move and none was set since",
+    reach: "read",
+    role: "viewer",
+    agent: true,
+    note: "404 when there is nothing to forward, and when the caller could not open the destination project or its space — a private destination is never named."
+  },
 ]

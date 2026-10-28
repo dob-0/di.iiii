@@ -12,7 +12,7 @@ import { PULSE_WIDTH } from '../../../shared/waves.js'
 // Period is in beats (fractions allowed): Ramp climbs 0..1 over one period,
 // Pulse is true for its first tenth, Count is periods since beat 0.
 const clockOf = (node, input, asNumber, context) => {
-    const desk = input('source') === 'light' ? readDeskClock(context, node.id) : null
+    const desk = node.values?.source === 'light' ? readDeskClock(context, node.id) : null
     const master = findMasterBeatNode(context)?.id === node.id
     return {
         kind: 'clock',
@@ -29,7 +29,7 @@ const statusOf = (node, clock, input) => {
     const role = clock.master ? 'master clock' : 'extra clock'
     const note = !clock.master && node.values?.role !== 'extra' ? ' (another Beat is the master)' : ''
     const tempo = clock.source === 'light' ? `${clock.bpm} bpm from the Light desk`
-        : input('source') === 'light' ? `${clock.bpm} bpm (no Light desk answers)` : `${clock.bpm} bpm`
+        : node.values?.source === 'light' ? `${clock.bpm} bpm (no Light desk answers)` : `${clock.bpm} bpm`
     return `${role}${note} · ${tempo}`
 }
 

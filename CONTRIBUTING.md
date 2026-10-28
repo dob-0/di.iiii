@@ -13,7 +13,7 @@ while testing it. Treat them as two things you sync separately, not one.
 **The addresses today:** `dev.diiii.xyz` is the rehearsal tier, and its only address —
 the old name `staging.di-studio.xyz` was switched off on 2026-09-16, and the scripts say
 `dev` (`--tier dev`). `diiii.xyz` is the only host for anything you write down as a new link;
-`di-studio.xyz` is the old production name and still answers the same way.
+`di-studio.xyz` is the old production name; it still answers and is to forward to `diiii.xyz`.
 
 ## Every hand, one flow
 

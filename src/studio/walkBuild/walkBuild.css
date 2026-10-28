@@ -2,6 +2,6 @@
    The wrapper takes no clicks; the hand and the inventory do. Rectangles 0-2 px (build.css). */
 .studio-walkbuild { position: fixed; inset: 0; z-index: 40; pointer-events: none; background: transparent; overflow: visible; }
 .studio-walkbuild .rigbuild-hand, .studio-walkbuild .rigbuild-inventory { pointer-events: auto; }
-.studio-walkbuild .rigbuild-inventory { background: rgba(10, 17, 24, 0.82); }
+.studio-walkbuild .rigbuild-inventory { background: rgba(var(--di-surface-rgb), 0.82); }
 /* H: every panel hides and the hand with them; the crosshair stays */
 .studio-walkbuild.is-ui-hidden .rigbuild-hand { display: none; }

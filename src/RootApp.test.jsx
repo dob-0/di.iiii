@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import RootApp from './RootApp.jsx'
+import { setHostSpace } from './utils/hostSpace.js'
 
 const mockUseAuthSession = vi.fn(() => ({
     requireAuth: false,
@@ -17,6 +18,8 @@ vi.mock('./hooks/useAuthSession.js', () => ({
 
 const mockSpacePublicOverrides = {}
 const mockVanityResolutions = {}
+// What GET /api/resolve/:space answers for a bare space address, by space.
+const mockSpaceRootResolutions = {}
 // Every id the app asked the server about. A reserved word can never BE a
 // space, so asking is itself the defect — the answer is 404 by construction.
 const mockSpaceLookups = vi.hoisted(() => [])
@@ -37,7 +40,8 @@ vi.mock('./services/serverSpaces.js', () => ({
         })
     },
     resolveVanityProjectLink: (spaceSegment, projectSegment) =>
-        Promise.resolve(mockVanityResolutions[`${spaceSegment}/${projectSegment}`] || null)
+        Promise.resolve(mockVanityResolutions[`${spaceSegment}/${projectSegment}`] || null),
+    resolveSpaceRoot: (spaceSegment) => Promise.resolve(mockSpaceRootResolutions[spaceSegment] || null)
 }))
 
 vi.mock('./components/AuthGate.jsx', () => ({
@@ -454,6 +458,60 @@ describe('RootApp vanity project links', () => {
         render(<RootApp />)
 
         expect(await screen.findByText('space-surface-app:editor:somespace')).toBeInTheDocument()
+    })
+})
+
+// The old space's bare address after its front door moved to another space:
+// the server's { movedTo } is followed with the same replace() an old project
+// link gets (SlugProjectRoute). No answer: the space opens as before.
+describe('RootApp space root forward', () => {
+    afterEach(() => {
+        window.history.pushState({}, '', '/')
+        for (const key of Object.keys(mockSpaceRootResolutions)) delete mockSpaceRootResolutions[key]
+    })
+
+    it('sends /old-space on to its front door\'s new address, query and hash kept', async () => {
+        mockSpaceRootResolutions['old-space'] = { movedTo: { spaceId: 'new-space', projectId: 'old-door' } }
+        window.history.pushState({}, '', '/old-space?embed=1#top')
+        render(<RootApp />)
+
+        expect(await screen.findByText('space-surface-app:editor:new-space')).toBeInTheDocument()
+        expect(window.location.pathname).toBe('/new-space/p/old-door')
+        expect(window.location.search).toBe('?embed=1')
+        expect(window.location.hash).toBe('#top')
+    })
+
+    it('opens a space with nothing to forward exactly as before', async () => {
+        window.history.pushState({}, '', '/quiet-space')
+        render(<RootApp />)
+
+        expect(await screen.findByText('space-surface-app:editor:quiet-space')).toBeInTheDocument()
+        expect(window.location.pathname).toBe('/quiet-space')
+    })
+
+    it('asks only for the bare address: a project link inside the old space stays put', async () => {
+        mockSpaceRootResolutions['old-space'] = { movedTo: { spaceId: 'new-space', projectId: 'old-door' } }
+        window.history.pushState({}, '', '/old-space/p/kept')
+        render(<RootApp />)
+
+        expect(await screen.findByText('space-surface-app:editor:old-space')).toBeInTheDocument()
+        expect(window.location.pathname).toBe('/old-space/p/kept')
+    })
+
+    it('on the space\'s own domain the space opens as before: another space has no address there', async () => {
+        // `/` on the domain IS the space. /new-space/p/old-door stays domain-relative
+        // and reads back as a project slug of the host space (spaceRouting withHostSpace).
+        mockSpaceRootResolutions['old-space'] = { movedTo: { spaceId: 'new-space', projectId: 'old-door' } }
+        setHostSpace({ id: 'old-space', slug: 'old-space', platformOrigin: 'https://diiii.xyz' })
+        try {
+            window.history.pushState({}, '', '/')
+            render(<RootApp />)
+
+            expect(await screen.findByText('space-surface-app:editor:old-space')).toBeInTheDocument()
+            expect(window.location.pathname).toBe('/')
+        } finally {
+            setHostSpace(null)
+        }
     })
 })
 

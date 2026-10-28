@@ -15,6 +15,7 @@ const { createKeyedLock } = require('../asyncLock')
 const { SENSITIVE_SPACE_PATCH_FIELDS } = require('../approvalGate')
 const { actorFromAuthState } = require('../opActor')
 const { isSpaceMember } = require('../projectVisibility')
+const { SPACE_BLURB_MAX, normalizeSpaceBlurb } = require('../../../shared/spaceBlurb.cjs')
 
 const defaultWithSpaceOpsLock = createKeyedLock()
 
@@ -394,7 +395,17 @@ function registerSpaceRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId, openInscriptions, slug, ownerUserId, trustedUserIds, archived } = req.body || {}
+      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId, openInscriptions, slug, ownerUserId, trustedUserIds, archived, blurb } = req.body || {}
+      // The one line for visitors (shared/spaceBlurb.cjs). Refused, never
+      // trimmed to fit: a line cut mid-word on a share card is worse than a
+      // 400 the owner can read.
+      let nextBlurb
+      if (blurb !== undefined) {
+        nextBlurb = normalizeSpaceBlurb(blurb)
+        if (nextBlurb === undefined) {
+          return res.status(400).json({ error: `blurb must be one line of at most ${SPACE_BLURB_MAX} characters.` })
+        }
+      }
       if (kind !== undefined && !['normal', 'global', 'sandbox'].includes(kind)) {
         return res.status(400).json({ error: 'kind must be one of: normal, global, sandbox.' })
       }
@@ -533,6 +544,7 @@ function registerSpaceRoutes(router, {
         ...(previewImageAssetId !== undefined ? { previewImageAssetId: nextPreviewImageAssetId } : {}),
         ...(openInscriptions !== undefined ? { openInscriptions: Boolean(openInscriptions) } : {}),
         ...(archived !== undefined ? { archived: Boolean(archived) } : {}),
+        ...(blurb !== undefined ? { blurb: nextBlurb } : {}),
         ...(slug !== undefined ? { slug: nextSlug } : {}),
         ...(ownerUserId !== undefined ? { ownerUserId: nextOwnerUserId } : {}),
         ...(trustedUserIds !== undefined ? { trustedUserIds: nextTrustedUserIds } : {})

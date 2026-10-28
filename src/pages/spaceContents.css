@@ -99,7 +99,7 @@
     margin-left: var(--di-space-3);
     padding: var(--di-space-1) var(--di-space-2);
     border: 1px solid var(--di-cyan-border);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     color: var(--di-cyan);
     font-family: var(--di-mono);
     font-size: var(--di-text-2);

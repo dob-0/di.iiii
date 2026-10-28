@@ -15,7 +15,7 @@
  * What stays out: the root dependency tree (~1 GB with three.js, MUI, pdfjs and
  * playwright), every test, every doc, .git. An artist installs a product.
  *
- * The build runs under DI_PROFILE=local, which leaves out di-studio.xyz's
+ * The build runs under DI_PROFILE=local, which leaves out diiii.xyz's
  * hosting furniture — the install scripts, the OpenGraph images, the cPanel
  * php shims — and keeps the studio's own pieces, because an install that
  * cannot open the owner's own exhibition offline is not an offline install.
@@ -94,7 +94,7 @@ const main = async () => {
     // --no-build reuses whatever dist/ happens to be there, and all three
     // profiles produce the same filenames. `npm run dev` or a deploy build
     // leaves the hosted shape behind, so without this check `--no-build` would
-    // quietly pack di-studio.xyz's hosting furniture into an artist's install
+    // quietly pack diiii.xyz's hosting furniture into an artist's install
     // and report the local profile in release.json.
     //
     // Sniffing for dist/wcc used to answer this. It cannot any more: a local

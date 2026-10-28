@@ -1,4 +1,4 @@
-# di.iiii AI Engineering Collective
+# AI Engineering Collective
 
 This is the role system for AI agents working in di.iiii. Every task has an owner. Every owner has a locked scope. Scope isolation is what keeps UI from breaking when you fix the backend, and what keeps the schema safe when you style a button.
 

@@ -189,7 +189,7 @@ describe('SpaceHub', () => {
     it('names /spaces itself in the tab, not the platform', async () => {
         listServerSpaces.mockResolvedValue([])
         render(<SpaceHub />)
-        await screen.findByText('Spaces')
+        await screen.findByRole('heading', { name: 'spaces' })
         expect(document.title).toBe('Spaces — di.iiii')
     })
 
@@ -389,6 +389,51 @@ describe('SpaceHub', () => {
         // A public space outside the session scope goes straight to the live view.
         fireEvent.click(screen.getByText('Beyond Form'))
         expect(mockEnter).toHaveBeenCalledWith('/beyond-form')
+    })
+
+    // Audit 2026-10-21, G23: 10 of 11 public cards said nothing about what the
+    // space holds. A space that wrote its line shows it; one that did not
+    // shows nothing in its place (no placeholder pretending to be a line).
+    it('a card shows the space\'s one line for visitors, only when it has one', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'told', label: 'Told', isPublic: true, blurb: 'Nineteen films made by children in one town.' },
+            { id: 'silent', label: 'Silent', isPublic: true }
+        ])
+
+        render(<SpaceHub />)
+
+        await findCard('told')
+        expect(cardOf('told').querySelector('.ssh-space-blurb')?.textContent)
+            .toBe('Nineteen films made by children in one town.')
+        expect(cardOf('silent').querySelector('.ssh-space-blurb')).toBeNull()
+    })
+
+    it('the owner sets the line from Manage, and an empty answer clears it', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'mine', label: 'Mine', isOwner: true, isPublic: true, blurb: 'Old line.' }
+        ])
+        updateServerSpace.mockResolvedValue({})
+        const prompt = vi.spyOn(window, 'prompt')
+
+        render(<SpaceHub />)
+
+        await findCard('mine')
+        openManageFor('mine')
+        prompt.mockReturnValueOnce('  A new\nline.  ')
+        fireEvent.click(screen.getByRole('button', { name: 'One line for visitors' }))
+        await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('mine', { blurb: 'A new line.' }))
+        expect(prompt.mock.calls[0][1]).toBe('Old line.')
+
+        prompt.mockReturnValueOnce('')
+        fireEvent.click(screen.getByRole('button', { name: 'One line for visitors' }))
+        await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('mine', { blurb: '' }))
+
+        // Cancel writes nothing.
+        updateServerSpace.mockClear()
+        prompt.mockReturnValueOnce(null)
+        fireEvent.click(screen.getByRole('button', { name: 'One line for visitors' }))
+        expect(updateServerSpace).not.toHaveBeenCalled()
+        prompt.mockRestore()
     })
 
     it('shows the live public link with a copy action on public spaces', async () => {

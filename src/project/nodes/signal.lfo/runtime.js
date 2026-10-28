@@ -1,4 +1,4 @@
-import { risingEdge } from '../edge.js'
+import { firedEdge } from '../edge.js'
 import { clockBeatMs, resolveClock } from '../../graph/beatClock.js'
 import { seedOf, waveUnit } from '../../../shared/waves.js'
 
@@ -10,9 +10,10 @@ import { seedOf, waveUnit } from '../../../shared/waves.js'
 // from the module the /light desk's LFOs run (src/shared/waves.js). Beats
 // > 0 sets the cycle in beats of a clock instead of Frequency in Hz: the clock
 // wired into Clock, else the project's master clock. Amplitude and Offset
-// scale every output; Bias leans Out's cycle; Reset restarts it now (per window,
-// it lives in frameMemory). With all of these unwired the four old outputs are
-// the old ones to the last bit — an existing document does not move.
+// scale every output; Bias leans Out's cycle; Reset restarts it now when it
+// fires (edge.js signalFired, the Beat's rule too; per window, it lives in
+// frameMemory). With all of these unwired the four old outputs are the old
+// ones to the last bit — an existing document does not move.
 const LEGACY = {
     sine: (t) => Math.sin(t * Math.PI * 2),
     square: (t, cycle) => (cycle < 0.5 ? 1 : -1),
@@ -27,7 +28,7 @@ export const computeOutput = (node, portId, { input, asNumber, context, output }
     const now = asNumber(context?.now, 0)
     const memory = context?.frameMemory
     const resetKey = `${node.id}:resetAt`
-    if (risingEdge(memory, `${node.id}:reset`, input('reset'))) memory.set(resetKey, now)
+    if (firedEdge(memory, `${node.id}:reset`, input('reset'))) memory.set(resetKey, now)
     const resetAt = memory?.get(resetKey)
     const phase = asNumber(input('phase'), 0)
     const beats = asNumber(input('beats'), 0)

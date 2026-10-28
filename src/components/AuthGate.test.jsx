@@ -336,6 +336,21 @@ describe('AuthGate sign-in card priority', () => {
         expect(field).toHaveAttribute('type', 'password')
         expect(field).toHaveFocus()
     })
+
+    // Design audit D16: the card drew MUI's 8 px corner, the field and the
+    // button its 4 px one. Owner, 2026-10-21: 0 px for every control.
+    it('draws the card, the field and the button square', async () => {
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        const { container } = render(<AuthGate>editor</AuthGate>)
+        await screen.findByLabelText('Access token')
+        const round = [...container.querySelectorAll('*')]
+            .filter((el) => !['', '0px'].includes(getComputedStyle(el).borderRadius))
+            .map((el) => `${el.tagName.toLowerCase()}.${[...el.classList].find((c) => c.startsWith('Mui')) || ''} ${getComputedStyle(el).borderRadius}`)
+        expect(round).toEqual([])
+        for (const button of screen.getAllByRole('button', { name: 'Sign in' })) {
+            expect(getComputedStyle(button).borderRadius).toBe('0px')
+        }
+    })
 })
 
 // F17: the raw error was the message.

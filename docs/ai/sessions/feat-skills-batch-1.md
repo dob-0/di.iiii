@@ -1,0 +1,3 @@
+## Skills batch 1: show-scenes-job, show-checkpoint, hall-compare, release, job-end-gate and a skills index
+
+Ledger N1311.1. Adds five agent skills under `.claude/skills/` and `.claude/skills/README.md` (one index of all skills on dev). Safe `epic-build` flags are the default in `show-scenes-job`; the full rebuild is named destructive and opt-in. `docs/ai/skills/show-scenes-job.md` now points to the skill. No script was changed. Known limits: no checkpoint script exists yet (the skill is the written method, unvalidated as a script); `tools/lint-words.sh` is not in the repo; commands not run in the session are marked UNVERIFIED in `release` and `job-end-gate`.

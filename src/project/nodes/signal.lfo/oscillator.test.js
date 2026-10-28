@@ -95,6 +95,16 @@ describe('Oscillator — the cycle in beats of a clock', () => {
         expect(read({ nodes: nodes(true), edges: [] }, 'o', 'sine', 300, { frameMemory: memory })).toBe(0)
         expect(read({ nodes: nodes(true), edges: [] }, 'o', 'sine', 550, { frameMemory: memory })).toBe(1)
     })
+
+    it('Reset fires on a rising count too, the Beat\'s rule: a Counter wired in restarts it on every count', () => {
+        const memory = createFrameMemory()
+        const at = (reset, now) => read({ nodes: [lfo('o', { frequency: 1, reset })], edges: [] }, 'o', 'saw', now, { frameMemory: memory })
+        expect(at(0, 100)).toBeCloseTo(-0.8, 12)
+        expect(at(1, 200)).toBe(-1)            // 0 → 1: restart at 200
+        expect(at(1, 450)).toBeCloseTo(-0.5, 12) // held at 1: no restart
+        expect(at(2, 700)).toBe(-1)            // 1 → 2 while truthy: restart at 700
+        expect(at(2, 950)).toBeCloseTo(-0.5, 12)
+    })
 })
 
 describe('Oscillator — an existing document does not move', () => {

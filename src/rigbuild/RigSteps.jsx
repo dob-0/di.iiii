@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import SurfaceBar, { navigateInApp } from '../components/SurfaceBar.jsx'
+import useSpaceIdentity from '../hooks/useSpaceIdentity.js'
 import { RIG_STEPS, rigNeighbours, rigRow } from './rigTools.js'
 import '../components/surfaceBar.css'
 import './rigSteps.css'
@@ -171,11 +172,14 @@ export function RigSteps({ spaceId, projectId, projectLabel = null, here = null,
  * and under it the steps row. `float` over a room (build, crew); the paper pages give
  * it a row of their own. `layout="flow"` for a page that scrolls (the patch sheet).
  */
-export default function RigBar({ spaceId, spaceLabel = null, projectId, projectLabel = null, here, progress = null, isLocalInstall = false, hidden = false, float = false, layout = 'fixed' }) {
+export default function RigBar({ spaceId, projectId, projectLabel = null, here, progress = null, isLocalInstall = false, hidden = false, float = false, layout = 'fixed' }) {
+    // The space's name and address, so this bar says the same word as every other surface of the space
+    // (utils/oneNamePerSpace.js). Not asked for while the bar is hidden.
+    const identity = useSpaceIdentity(hidden ? null : spaceId)
     if (hidden) return null
     return (
         <div className={`rigbar rigbar--${layout}${float ? ' rigbar--float' : ''}`}>
-            <SurfaceBar space={spaceId} spaceLabel={spaceLabel} project={projectId} projectLabel={projectLabel} isLocalInstall={isLocalInstall} />
+            <SurfaceBar space={spaceId} spaceLabel={identity.spaceLabel} spaceAddress={identity.spaceAddress} project={projectId} projectLabel={projectLabel} isLocalInstall={isLocalInstall} />
             <RigSteps spaceId={spaceId} projectId={projectId} projectLabel={projectLabel} here={here} progress={progress} isLocalInstall={isLocalInstall} />
         </div>
     )

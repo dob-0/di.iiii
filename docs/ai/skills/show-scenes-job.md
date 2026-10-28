@@ -1,6 +1,6 @@
 # Show scenes job — one documented method for a show's light scenes
 
-Skill text, 2026-10-17. Drafted from the MOXIR v6 scenes job (session note `docs/ai/sessions/feat-moxir-scenes-v5-pr-2026-10-17.md`),
+Skill text, 2026-10-17. **The skill `.claude/skills/show-scenes-job/SKILL.md` (2026-10-26) is the entry point and holds the safe-flag defaults and the rules that must never be skipped; this file stays the long source for the steps and traps (one source for each text).** Drafted from the MOXIR v6 scenes job (session note `docs/ai/sessions/feat-moxir-scenes-v5-pr-2026-10-17.md`),
 where several agents designed and wrote the scenes over hours. Owner: *"learn for future that we can work fast"* — *learn once, optimise forever.*
 This is steps 4–6 of [venue-to-show.md](venue-to-show.md) as one job. **Read it before any scenes job; fix it in the same branch as the work that proves it wrong.**
 Words (`docs/ai/vocabulary.md`): **space** = the owner's domain on the platform · **project** = the thing you make (a version of a show) · **scene** (a designed
@@ -115,5 +115,5 @@ Times per step against the budgets above · tokens per executor and lead · defe
 5. **"Lasers later" read as "lasers at 0".** A scope word ("later", "not now") leaves a thing as it is; it never removes it. Dropping them made the cubes vanish from the 3D.
 6. **Taking a file from another session's branch at the moment you branch** gave v4 lasers while they already ran v5. Before landing anything that carries another session's part, re-read THEIR current file and compare.
 7. Beam colours only from the seen wheel slots (a hex off the wheel makes the desk's nearest slot pick another colour); no beam at eye level; lasers untouched unless their owner signs off.
-8. `epic-build.mjs` without a `--…-only` flag deletes and re-creates every unit (hand moves and `beam.laser.frames` lost): scenes work uses `--looks-only` only. `--lasers-only` writes even without `--apply`.
+8. `epic-build.mjs` without a `--…-only` flag deletes and re-creates every unit (hand moves and `beam.laser.frames` lost): scenes work uses `--looks-only` only. Since 2026-10-21 the tool refuses that mode on a project that holds rig units (exit 1, before any write) unless `--rebuild-all` (with `--apply`, also `--out <dir>` for the backup), and `--lasers-only` is a dry run unless `--apply`.
 9. A green run is not evidence the product works: look at the pictures, desktop AND phone (`npm run verify:surfaces`) for anything the owner will see.

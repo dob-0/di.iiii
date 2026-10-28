@@ -19,6 +19,7 @@
     z-index: 9999;
 }
 
+/* a drawing, not a control: stays round (owner, 2026-10-21). */
 .loading-screen-spinner {
     width: 34px;
     height: 34px;

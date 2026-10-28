@@ -1,10 +1,10 @@
-# The di.iiii SDK
+# SDK
 
 Everything di.iiii can be told to do, written once, and handed out three ways:
 
 | face | who uses it | how |
 |---|---|---|
-| a library | a project, a script, you | `import { connect } from 'di.iiii/sdk'` |
+| a library | a project, a script, you | `import { connect } from './sdk/index.js'` |
 | an MCP server | Claude, or any agent that speaks MCP | `di mcp`, or `node sdk/mcp.mjs` |
 | the `di` command | you, typing | *not yet on this core — see Honest limits* |
 
@@ -102,9 +102,10 @@ Each of these cost real damage before it was a line of code.
 - **A space made by a token belongs to nobody.** `canAccessSpace` ignores
   `ownerUserId`, so without an invite or a scope entry even the person who asked
   for it gets "Access restricted". `space.ensure` says so as it happens.
-- **Spaces delete themselves.** `pruneSpaces` removes any non-permanent space
-  untouched for 30 days — and a *read* is not a touch. Everything is born
-  `permanent: true`.
+- **Idle spaces go to the trash.** `pruneSpaces` moves any non-permanent space
+  untouched for 30 days to the space trash (restorable 30 days; purged after)
+  unless it is published, listed, linked or holds a saved project — and a
+  *read* is not a touch. Everything is still born `permanent: true`.
 
 ## The agent face
 

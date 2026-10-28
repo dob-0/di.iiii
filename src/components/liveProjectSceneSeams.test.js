@@ -105,3 +105,15 @@ describe('walk look: the view page drags, /build and Jam still lock', () => {
         expect(scene).toMatch(/ESC · release/)
     })
 })
+
+describe('a decorative scene takes no pointer events', () => {
+    // R3F spreads the caller's style AFTER its own pointer-events:auto, so the
+    // Canvas style is the one place that can say none; a stylesheet cannot
+    // beat the inline value without !important. Measured 2026-10-21 at
+    // 1440x900: 66 % of the landing's first screen and 25 % of the wiki's moved
+    // the page 0 px under a wheel.
+    it('sets the Canvas pointerEvents from `interactive`', () => {
+        const canvas = SOURCE.slice(SOURCE.indexOf('<Canvas'), SOURCE.indexOf('<XR store'))
+        expect(canvas).toMatch(/pointerEvents:\s*interactive \? 'auto' : 'none'/)
+    })
+})
