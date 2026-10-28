@@ -4,3 +4,4 @@
 - Added `nativeDialogs.budget.test.js`: counts `alert(` / `confirm(` / `prompt(` calls with the plan's one rule and lets the count only go down. Measured 112 on origin/dev db7d9c667 (the plan judge got 109 with its own run; the guard uses its own measure). S47 and S48 take it to 0; each slice that removes calls lowers `BASELINE`.
 - No user of the primitive yet, so no screen picture and no wiki line: the first users (S02, S04) bring both. Nothing here is a bug fix, so no known-fixes entry.
 - Not done: no app uses it yet; the AskDialog is not mounted anywhere (each user renders `{askDialog}` from `useAsk()`).
+- Review fix: each question and each notice now starts fresh. `AskDialog` mounts its box only while open, and `useAsk` / `useUndoNotice` key every ask and notice, so a field never shows text typed into an earlier question and the same message twice gets its own full 10 s. Three tests cover it; they fail on the first version of the branch.

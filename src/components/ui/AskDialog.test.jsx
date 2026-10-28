@@ -59,6 +59,16 @@ describe('AskDialog', () => {
         expect(props.onConfirm).toHaveBeenCalledWith('Tower')
     })
 
+    it('a question opened again starts fresh, not with the text typed last time', async () => {
+        const user = userEvent.setup()
+        const props = { onConfirm: vi.fn(), onCancel: vi.fn() }
+        const { rerender } = open({ ...props, input: { label: 'Name', defaultValue: 'Cube' } })
+        await user.type(screen.getByLabelText('Name'), ' half typed')
+        rerender(<AskDialog open={false} title="Rename" onConfirm={props.onConfirm} onCancel={props.onCancel} />)
+        rerender(<AskDialog open title="Rename" input={{ label: 'Name', defaultValue: 'Tower' }} onConfirm={props.onConfirm} onCancel={props.onCancel} />)
+        expect(screen.getByLabelText('Name')).toHaveValue('Tower')
+    })
+
     it('gives focus back to what had it', () => {
         const trigger = document.createElement('button')
         document.body.appendChild(trigger)
@@ -128,5 +138,37 @@ describe('useAsk and useUndoNotice', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
         expect(undo).toHaveBeenCalledTimes(1)
         expect(screen.queryByRole('status')).toBeNull()
+    })
+
+    it('a second ask answers the first with no and shows its own field', async () => {
+        const answers = []
+        function Probe() {
+            const { ask, askDialog } = useAsk()
+            const go = (value) => async () => answers.push(await ask({ title: 'Name?', input: { label: 'Name', defaultValue: value } }))
+            return <>{askDialog}<button type="button" onClick={go('Cube')}>one</button><button type="button" onClick={go('Tower')}>two</button></>
+        }
+        render(<Probe />)
+        fireEvent.click(screen.getByText('one'))
+        fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Cube half typed' } })
+        fireEvent.click(screen.getByText('two'))
+        await vi.waitFor(() => expect(answers).toEqual([null]))
+        expect(screen.getByLabelText('Name')).toHaveValue('Tower')
+    })
+
+    it('the same message twice gives the second one its own full 10 seconds', () => {
+        vi.useFakeTimers()
+        function Probe() {
+            const { notify, undoNotice } = useUndoNotice()
+            return <>{undoNotice}<button type="button" onClick={() => notify('Deleted “Cube”', vi.fn())}>go</button></>
+        }
+        render(<Probe />)
+        fireEvent.click(screen.getByText('go'))
+        act(() => { vi.advanceTimersByTime(6000) })
+        fireEvent.click(screen.getByText('go'))
+        act(() => { vi.advanceTimersByTime(6000) })
+        expect(screen.getByRole('status')).toHaveTextContent('Deleted “Cube”')
+        act(() => { vi.advanceTimersByTime(4000) })
+        expect(screen.queryByRole('status')).toBeNull()
+        vi.useRealTimers()
     })
 })
