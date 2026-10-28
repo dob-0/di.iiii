@@ -28,6 +28,7 @@
         "state:sweep": "node scripts/repo-state.mjs --sweep",
         "state:prune": "node scripts/repo-state.mjs --prune",
         "land": "node scripts/session-land.mjs",
+        "land:branch": "node scripts/fold-notes-branch.mjs",
         "check:fallback-patterns": "node scripts/check-fallback-patterns.mjs",
         "docs:wiki:check": "node scripts/check-wiki-sync.mjs",
         "deploy": "node scripts/deploy.mjs",

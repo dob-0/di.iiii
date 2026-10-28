@@ -289,3 +289,69 @@ page comes from steps 3–4's JSON — the page itself is layout only.
 
 MOXIR is this step's worked case: its production-named scripts are owed a move into di.iiii features (see the index `venue`, "MOXIR is the worked case").
 
+
+## 7. Gear, paper, safety, capture (folded 2026-10-28 from the nine event agents of PR #808)
+
+Owner, 2026-10-27 (N1356): fold the 10-07 event agents into the venue skills, do not add beside them. What sections 1–6 lacked is here;
+the agent files and the `venue-show` runbook are gone. Layers and refusals: `docs/architecture/EVENT_LAYERS.md`. Words: `docs/ai/vocabulary.md`.
+
+### Rules that hold on every job
+- **One show version per production.** The version list's `for-the-show` entry is the only one built, patched, put on Light and shown; every
+  other version is archived and private with `scripts/production/archive-versions.mjs` (dry run by default, undo file first, nothing deleted).
+  Never make a version project to try an idea: change the git file, rebuild (`node scripts/rigbuild/versions.mjs`, then `--check` exits 0).
+- **The owner runs every server write** (archive `--apply`, `tier-sync`, `di sync`, `di follow`, page pushes, merges): do the dry run, then
+  give him the exact line in his window (`di-ask`). A local space that follows dev syncs both ways, so a local write to it IS a dev write:
+  work offline (`--report <dir>`, `--out <dir>`) or in a throwaway space.
+- **No software-GL render** (SwiftShader/llvmpipe froze the workstation: load 23, 100 °C). Prove the renderer string is the GPU; stop at 88 °C.
+- **Every figure has value, method and source**; an assumption is written `ASSUMED:` and never enters a document as a fact. Before any write
+  that replaces something, keep a labelled copy (`scripts/rigbuild/copy-version.mjs`, or `~/di-backups/`).
+- **Nobody but a human writes a LOOK, a SIGN or a waiver.** The owner looks; a rigging/structural engineer, a laser safety officer
+  (IEC 60825-1) and an electrician sign. An agent never writes "safe", "approved" or "cleared".
+
+### 7a Capture (step 1)
+Record the job: pin, date, client's ask, who owns each file, licence, consent. Per file: did EXIF survive (a Telegram "photo" strips it —
+ask for files). Footage of people stays private until consent is recorded per file; never commit a photo, phone number or chat id.
+VGGT weights are CC BY-NC: use on a paid job is the owner's call. Sparse handheld footage needs a slow walk, nobody in frame, exposure
+locked; the footage is the limit, not the tool. Frames step: `scripts/place/place.mjs`; report frame counts, blur, walls without a frame.
+
+### 7b Gear check (step 3, before a rig counts the kit)
+From the rental house's list build `components.rentalList` (`rental.mjs`), regenerate types (`types.mjs --check`), and set each code's
+status in `src/rigbuild/items/media.json`: **confirmed / probable / equivalent / unknown**, with the maker's URL and the date. Specs from
+the maker's page, cited; a search that finds nothing can still return a confident paragraph — no URL, no fact. Unknown stays `unknown`;
+a test DMX mode goes only in the ASSUMED file (`src/rigbuild/assumedProfiles.js` pattern), labelled. Keep a maker file only if the maker
+offers it for download, and then only on the local install (GDTF Share forbids derivative and commercial use: bodies are our own models).
+Supplier prices are private: never in a public file or page.
+
+### 7c Patch (step 5/14)
+`<show>.patch.json` blocks select lamps by type, position, height, side, so a re-hang survives; apply to a LOCAL desk with `patch-plan.mjs`,
+sheet and CSVs `patch-sheet.mjs`, MVR `export-mvr.mjs` + `validate-mvr.mjs`. The desk runs one patch per space: say which version is on it,
+and Light holds the show version and nothing else. Modes the rental house has not confirmed stay unpatched and are listed. A real console
+has never imported our MVR: say so. Probe read-only endpoints only (`/light/api/show` once restarted the loop). `showEpoch` must be set on
+the show version for the hosted clock (setting it on dev is the owner's line).
+
+### 7d Paper and rentals (step 5, after the patch)
+Patch sheet PDF + CSVs, the crew link, the rental order draft (`rental.mjs`, `patch-sheet.mjs`, `rig-links.mjs`). Check: the total equals
+the sum of rate × quantity and the day rule; the paper says which version and date it is for. Open the PDF at A4 and count pages (a sheet
+once printed 1 page of 4). Prices only from the house's own quote file, kept outside the repo; unpublished rates stay unknown. A person
+sends the order or any paper, never an agent.
+
+### 7e Rigging safety packet (step 6, owed list)
+Collect from the documents (`RIG_BUILD.md` 15.7 loads, the laser list, power per circuit, `scripts/rigbuild/safety.mjs` geometry) a packet for
+the rigging/structural engineer, the laser safety officer and the electrician, plus a site checklist a person runs. Each owed sign-off is
+listed by name and role (it stays owed in RIG_BUILD 8, 9 and 15.7 unless listed). Load figures are ASSUMED until an engineer gives them.
+MOXIR's open items (instance data, 2026-10-05 audit): hang 8.15 m vs measured 7.95 m; bridle ~144° vs a 120° limit (#772); a tie-off through
+the crane cab; hazer 04 and smoke 04 outside the end wall; circuit C6 3200 W > 2944 W. The packet closes none of them.
+
+### 7f Looks and surface check (steps 4, 6, 13)
+Looks: every aim belongs to a named designed look (ad-hoc aims were called "random"); lasers rise and end on steel, never through the DJ or
+a crane — never override a refusal in `scripts/place/rig-lib.mjs`. Timing: `show-clock.mjs --check`. A look is not good because a number
+passed; say "seen" only if a person saw it. Surface check: open room, plot, sheet and crew link at desktop and at 390 px DPR 3 on the GPU,
+open every screenshot at once, measure fps and luma, and say which surface was actually seen (a headless run is not his screen; the
+integrated GPU gave 14–19 fps against 60). Extends `human-verifier`, `docs/ai/verification-charter.md`.
+
+### 7g Traps from the 10-05 run not listed in section 2
+`load-plot` deletes the baked wash; `realism.mjs` and `apply-picture.mjs` write fog back and forth; a re-hang or re-import leaves lamps
+untyped (no bodies, "0 placed", empty patch) and `import.mjs --replace` once dropped `venuePlan` — check both after any import; a new
+model asset needs `upsertAsset`; a hand merge with `setdefault` gave non-lamps an empty `fixture` (copy a field only when the source has it);
+`PATCH /api/projects/<id>` ignores `state` (use `…/shelf`); project ids are global across spaces; dev answers 403 to Python's default
+User-Agent; `scripts/place/` is not packed into a runtime build (`PLACE_SCRIPT` is load-bearing).
