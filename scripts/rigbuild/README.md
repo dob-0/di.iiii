@@ -2,6 +2,8 @@
 
 Method and data model: `docs/architecture/RIG_BUILD.md`. Code the views use: `src/rigbuild/`.
 
+**Doing a venue or event job (MOXIR first)? Read `.claude/skills/venue/SKILL.md` first** (it points to `docs/ai/skills/venue-to-show.md`: the steps, the traps already paid for, gear, paper and safety in §7).
+
 | command | what it does |
 |---|---|
 | `node scripts/rigbuild/types.mjs [--check]` | regenerate `src/rigbuild/types/library/` (one file per type + index) from `scripts/place/fixtures/fixtures.json` (never edit the JSON by hand) |
