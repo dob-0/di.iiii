@@ -8,24 +8,28 @@ import { resolveVanityProjectLink, supportsServerSpaces } from '../services/serv
 // a real project (caller should fall through to a plain space route), or
 // { space, project } on a hit. Errors other than "not found" (e.g. a private
 // space needing auth) are rethrown to the caller via `error`, not swallowed.
+// `notFound` is true only when the server ANSWERED that nothing is at this pair
+// (its 404). A build with no server API also gets result null, but notFound
+// false: it has asked nobody, so it must not tell the visitor "there is no
+// such project" (audit F010, 2026-10-28).
 export default function useResolveSlugProject(spaceSegment, projectSegment) {
-    const [state, setState] = useState({ result: undefined, error: null })
+    const [state, setState] = useState({ result: undefined, error: null, notFound: false })
 
     useEffect(() => {
         if (!spaceSegment || !projectSegment || !supportsServerSpaces) {
-            setState({ result: null, error: null })
+            setState({ result: null, error: null, notFound: false })
             return undefined
         }
         let cancelled = false
-        setState({ result: undefined, error: null })
+        setState({ result: undefined, error: null, notFound: false })
         resolveVanityProjectLink(spaceSegment, projectSegment)
             .then((result) => {
                 if (cancelled) return
-                setState({ result, error: null })
+                setState({ result, error: null, notFound: result === null })
             })
             .catch((error) => {
                 if (cancelled) return
-                setState({ result: null, error })
+                setState({ result: null, error, notFound: false })
             })
         return () => {
             cancelled = true

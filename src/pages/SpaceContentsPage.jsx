@@ -11,6 +11,7 @@ import { listSpaceContents } from '../project/services/projectsApi.js'
 import { getServerSpace } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { buildAppSpacePath, buildPublicProjectPath, buildScanPath, buildVanityProjectPath } from '../utils/spaceRouting.js'
+import { emptySpaceSentence } from '../components/emptySpaceWords.js'
 import { sourcesProjectId } from '../scan/scanSources.js'
 import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
 import { getCodeSpace } from '../studio/utils/codeSpaces.js'
@@ -188,7 +189,7 @@ export default function SpaceContentsPage({ spaceId }) {
                 ) : (
                     <p className="sc-lede">
                         {thingCount === 0
-                            ? 'Nothing is on show in this space yet.'
+                            ? emptySpaceSentence(canEdit)
                             : `Everything in this space — ${thingCount} ${thingCount === 1 ? 'thing' : 'things'}, each one a scene you can be inside or a page you can read.`}
                     </p>
                 )}
