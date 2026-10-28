@@ -318,6 +318,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-28'
     },
     {
+        id: 'install-network-name',
+        category: 'Spaces & access',
+        title: 'Your install\'s network name',
+        summary: 'After di login, one command gives this install a name other machines can use, and a certificate of its own for it that renews itself.',
+        body: [
+            'CLAIM IT. Sign in once with di login, then type di name. The install asks the name broker for a label made of your handle and four letters, like ponyo-k7q2, and keeps its name under l.thedi.studio. An account holds up to three names.',
+            'ITS OWN CERTIFICATE. The same command then asks Let\'s Encrypt for a certificate for the name and everything under it. The key is made on this machine and never leaves it; the broker only writes the one proof record Let\'s Encrypt asks for. Everything lives in the .di/name folder in your home folder, and nothing there touches the certificate di up serves today.',
+            'IT LOOKS AFTER ITSELF. A certificate lasts 90 days. di up checks it when it starts, and the daily update check does too; below 30 days left it renews. A failed renewal leaves the old certificate and writes one line to .di/logs/name.log. Your own address, http://diiii.localhost/, is never touched.',
+            'SEE IT. di status ends with one line: the name and the date the certificate runs until, or "none — run di name". di name --status says the same without asking anyone; di name --renew renews now if it is due; di name --forget removes the local files (the broker keeps the label until it is revoked).',
+            'NOT YET: the name does not carry a space to another machine by itself. Sharing and following by name come next.'
+        ],
+        tags: ['name', 'network name', 'certificate', 'tls', 'https', 'label', 'di name', 'broker', 'renew', 'letsencrypt'],
+        updated: '2026-10-28'
+    },
+    {
         id: 'vj-deck-and-clip-in',
         category: 'Editing',
         title: 'The VJ deck, and Clip In',
@@ -1704,10 +1719,30 @@ export const WIKI_ARTICLES = [
             'A local space can be linked to one on diiii.xyz: di link connects the two, and di sync compares them — what each side has that the other has not, and whether sending work either way would be safe or refused, as it is when both sides have changed. It only looks: it writes nothing on either side. To carry work between them, use di save and di open, di backup, or Save to file on the Spaces page.',
             'A space can also be shared with another artist\u2019s di.iiii directly, over the same wifi, with no internet and no account in the middle — see \u201cTwo artists, two machines, one space\u201d.',
             'If you own a domain, an install can answer on a name of your own with a real certificate: put the certificate at ~/.di/tls/cert.pem and its key beside it, and di up serves https on the name written in the certificate. That padlock is what a browser wants before it will give a page the camera, the microphone, Web MIDI or XR — none of which a phone gets over plain http, however local the machine is.',
-            'Phones and headsets in this place: on the local home, the Phones & headsets button (or http://diiii.localhost/#join) shows that https name as a QR code, for a phone, a headset or a guest\u2019s laptop that has no di of its own. It draws the code only when it is real: a certificate is there, this start is di up --lan, and the name points at this machine as this machine looks it up. Otherwise it says which of those is missing and the setting or command that fixes it. Auth is off on a local di.iiii, so whoever scans it can edit; di up --lan --guests gives each guest their own sandbox instead.'
+            'Phones and headsets in this place: on the local home, the Wifi button (or http://diiii.localhost/#join) shows that https name as a QR code, for a phone, a headset or a guest\u2019s laptop that has no di of its own. It draws the code only when it is real: a certificate is there, this start is di up --lan, and the name points at this machine as this machine looks it up. Otherwise it says which of those is missing and the setting or command that fixes it. Auth is off on a local di.iiii, so whoever scans it can edit; di up --lan --guests gives each guest their own sandbox instead.'
         ],
         tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup', 'https', 'certificate', 'diiii.localhost', 'link', 'address', 'qr', 'phone', 'headset', 'guest'],
         updated: '2026-10-13'
+    },
+    {
+        id: 'wifi-door',
+        category: 'Getting started',
+        title: 'Open your install on the wifi',
+        summary: 'One press opens this install to the people in the room, on its own name with a real certificate; one press closes it.',
+        body: [
+            'An install that has a name (di name) can be opened to the wifi for guests. On the local home, press Wifi (or run di wifi): a door opens on this machine\u2019s wifi address, with the install\u2019s own certificate, and the panel shows a QR code. A phone, a headset or a laptop scans it and gets the padlock, so the camera, the microphone and WebXR work.',
+            'A visitor is always a guest: their own sandbox and the open space, never your spaces. You, at this machine, stay the owner. The door answers the install\u2019s own name only; any other name gets a refusal.',
+            'Another di can follow a space from you: di follow <space> --from <name> (the name is the first part of the address, shown on the panel). Following needs the space\u2019s own key from di invite; the wifi door hands out no keys.',
+            'Close it with Close door (or di wifi --stop). After a restart the install is private again; the name and certificate stay, so the wifi door is one press away. If the wifi address changes (a new router lease), the door follows it within ten seconds.',
+            { list: [
+                'di wifi \u2014 open the door, print the name, the link and the follow line',
+                'di wifi --status \u2014 is it open, and where',
+                'di wifi --stop \u2014 close it'
+            ] },
+            'Limits: the door needs a free port (443, else the install\u2019s port plus one). Some routers drop a name that points at a private address; the phone then cannot open it, and the router needs one setting (see the plan, section 11). The name must be claimed first with di name.'
+        ],
+        tags: ['wifi', 'wifi door', 'guest', 'qr', 'name', 'install', 'phone', 'di wifi'],
+        updated: '2026-10-28'
     },
     {
         id: 'tools-room',

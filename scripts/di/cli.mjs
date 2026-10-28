@@ -21,6 +21,7 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import { isIP } from 'node:net'
+import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
@@ -45,6 +46,7 @@ import {
 import { isWindows, paths } from './paths.mjs'
 import { probeAll, probeCanPublishName, probeHealth, probeLanAddresses, probeListen, probePrettyLocalName, probeRig } from './probe.mjs'
 import { publishName, stopName, updateRoomName } from './name.mjs'
+import { maybeRenewName, runName, statusLine as nameStatusLine } from './networkName.mjs'
 import { getKeeper, keeperPaths, keeperStatus, removeKeeper, startKeeper, stopKeeper, KEEPER_PORT, LLAMA_BUILD, MODEL } from './keeper.mjs'
 import { getNdi, ndiDownloadFor, ndiPaths, ndiStatus, readNdiScan, removeNdi, verifyNdi, watchNdiScanFeed } from './ndi.mjs'
 import * as docker from './runner-docker.mjs'
@@ -62,6 +64,7 @@ import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from '
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
 import { runPost } from './post.mjs'
+import { runWifi } from './wifiCmd.mjs'
 import {
     isStageMachine, joinPlan, joinStage, leaveStage, readManifest,
     restartSupervisor, runSupervisor, stageStatus, startSupervisor
@@ -185,7 +188,8 @@ const cmdUp = async (args) => {
 
     say(ui.starting())
     try {
-        if (guests) await ensureGuestSecrets(home)
+        // Always: the wifi door turns guest mode on at runtime and needs the secrets to exist.
+        await ensureGuestSecrets(home)
         await runner.start({ home, port, host: lan ? '0.0.0.0' : '127.0.0.1', guests, verbose: Boolean(args.flags.verbose) })
     } catch (error) {
         fail(String(error.message || error))
@@ -266,6 +270,7 @@ const cmdUp = async (args) => {
     }
     if (!args.flags['no-open']) openBrowser(address.url)
     await noticeNewVersion(home)
+    await noticeNameRenewal(home)
 }
 
 /**
@@ -305,6 +310,21 @@ const noticeNewVersion = async (home) => {
     }
 }
 
+/**
+ * Renew this install's name certificate when it is under 30 days, at most once a day, after the app is up and printed.
+ * Never touches the server or http://diiii.localhost/; a failure is one line in ~/.di/logs/name.log (and `di status`
+ * keeps saying the date). The daily tick while nobody types `di up` is `di autoupdate run`, below.
+ */
+const noticeNameRenewal = async (home) => {
+    try {
+        const result = await maybeRenewName({
+            home, loginHome: os.homedir(), env: process.env, fetchImpl: globalThis.fetch, now: Date.now, loadAcme: (await import('./networkName.mjs')).loadAcme
+        })
+        if (result.outcome === 'renewed') say(style.dim(`name certificate renewed — until ${String(result.info.notAfter).slice(0, 10)}`))
+        if (result.outcome === 'failed') say(style.dim(`name certificate not renewed: ${result.error} — di status has the date`))
+    } catch { /* never in the way of a running di */ }
+}
+
 const cmdDown = async () => {
     const home = HOME()
     if (!requireInstalled(home)) return
@@ -336,6 +356,7 @@ const cmdStatus = async () => {
     if (!healthy) {
         say(`${ui.notRunning()}  ${style.dim(`${info.version || '?'} · ${info.dataDir}`)}`)
         if (svc) say(ui.supervisorLine(svc, unit))
+        say(style.dim(nameStatusLine(home)))
         autoLines()
         return
     }
@@ -364,6 +385,7 @@ const cmdStatus = async () => {
     const onName = cert ? await probeRig(port, cert.name, '/serverXR', 'https') : null
     const rig = (onName && !onName.refused) ? onName : ((await probeRig(port)) || onName)
     say(ui.rigVisibility(rig))
+    say(style.dim(nameStatusLine(home)))
     if (svc) say(unit.active ? ui.supervisorLine(svc, unit) : ui.unsupervisedWhileInstalled(svc))
     autoLines()
 }
@@ -1232,6 +1254,15 @@ const cmdFollow = async (args) => {
     say(ui.following(spaceId, result.base, result.running, result.address, result.name))
 }
 
+/** `di wifi` / `--stop` / `--status` — open or close this install's door on the wifi. */
+const cmdWifi = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const result = await runWifi({ flags: args.flags, home, base: apiBase(home, resolvePort(home)) })
+    for (const line of result.lines) (result.code ? fail : say)(line)
+    process.exitCode = result.code
+}
+
 /** `di follows` — what this install is following, and whether it is keeping up. */
 const cmdFollows = async () => {
     const home = HOME()
@@ -1628,6 +1659,7 @@ const cmdAutoupdate = async (args) => {
         })
         say(`${outcome} ${detail}`)
         if (outcome === 'failed') process.exitCode = 1
+        await noticeNameRenewal(home)
         return
     }
     if (action === 'status') { for (const l of autoupdate.statusLines(autoupdate.statusOf({ home }))) say(l); return }
@@ -1653,6 +1685,7 @@ const COMMANDS = {
     follow: cmdFollow,
     stage: cmdStage,
     follows: cmdFollows,
+    wifi: cmdWifi,
     post: cmdPost,
     unfollow: cmdUnfollow,
     down: cmdDown,
@@ -1676,6 +1709,7 @@ const COMMANDS = {
     keeper: cmdKeeper,
     ndi: cmdNdi,
     mcp: cmdMcp,
+    name: (args) => runName(args, { home: HOME() }),
     login: (args) => runLogin(args, { version: installedVersion(HOME()) }),
     logout: (args) => runLogout(args),
     whoami: (args) => runWhoami(args),
