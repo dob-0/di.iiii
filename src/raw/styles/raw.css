@@ -5282,7 +5282,7 @@
     position: absolute;
     width: 44px;
     height: 44px;
-    border-radius: 50%;
+    border-radius: 2px;
     transform: translate(-50%, -50%);
     background: rgba(var(--di-success-rgb), 0.45);
     border: 2px solid var(--di-success);

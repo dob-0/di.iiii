@@ -308,6 +308,30 @@ module.exports = [
     note: "serves an HTML page for crawlers, not JSON; a private space's card never distinguishes 'private' from 'does not exist'."
   },
   {
+    route: "GET /page",
+    summary: "the app shell with the front door's own head (title, description, preview card) written in, so an address says what it is before any script runs",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "serves an HTML page, not JSON; the status is the truth of the address."
+  },
+  {
+    route: "GET /page/*splat",
+    summary: "the app shell with the head of the space, project or wiki article at this address written in; a real 404 when nothing answers there",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "serves an HTML page, not JSON; a private space answers 404, never 'private'."
+  },
+  {
+    route: "GET /sitemap.xml",
+    summary: "the sitemap, written from the records: public spaces and their projects, plus the build's wiki articles and network rooms",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "serves XML for crawlers, not JSON; private spaces never appear."
+  },
+  {
     route: "GET /api/host",
     summary: "which space this host shows — how a space's own domain (yokozo.xyz) knows it is that space",
     reach: "read",
