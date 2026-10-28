@@ -117,6 +117,9 @@ export const defaultWorldState = {
     // plus a 22m margin). An array of {minX,maxX,minZ,maxZ} rectangles declares
     // the walkable floor plan, and the walker cannot leave their union.
     walkableAreas: null,
+    // null = off: the walk is the floor rectangles only, as it always was. { enabled: true } makes walk mode stop at the
+    // scene's own walls, tree trunks and other solid models (src/components/solidWalls.js). The switch is all there is.
+    solidWalls: null,
     // null = free space, the historical behaviour. An object turns the room's
     // build zones ON: everything hangable that arrives is put in a numbered slot
     // by the server, so the room stays arranged no matter who edits it or how.
@@ -1289,6 +1292,10 @@ const normalizeWalkableAreas = (areas) => {
     return rects.length ? rects : null
 }
 
+// Solid walls are off (null) unless the document says enabled: true -- exactly true, nothing truthy -- so a malformed
+// value can never change how an existing project walks. Only the switch is kept.
+const normalizeSolidWalls = (value) => (value && typeof value === 'object' && value.enabled === true ? { enabled: true } : null)
+
 const normalizeWorldState = (world = {}) => {
     const source = world && typeof world === 'object' ? world : {}
     return {
@@ -1305,6 +1312,7 @@ const normalizeWorldState = (world = {}) => {
             altY: ensureNumber(source.spawn.altY, 1.6)
         } : null,
         walkableAreas: normalizeWalkableAreas(source.walkableAreas),
+        solidWalls: normalizeSolidWalls(source.solidWalls),
         placement: normalizePlacement(source.placement),
         // Walk-mode atmosphere: null keeps the built-in close fog (8..50m); an
         // authored object opens the distance for VAST scenes — the walker's
