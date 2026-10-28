@@ -1491,7 +1491,10 @@ const CodeEditorArea = forwardRef(function CodeEditorArea({ value, onCommit }, r
 export function FilesPanel({
     presentationState,
     onPresentationPatch,
-    libraryItems = []
+    libraryItems = [],
+    // What the viewport shows now (utils/viewportMode.js) and the way to say what the person picked.
+    viewportMode = null,
+    onViewportChoice = null
 }) {
     const singleFileInputRef = useRef(null)
     const zipInputRef = useRef(null)
@@ -1659,7 +1662,11 @@ export function FilesPanel({
         }
     }
 
-    const previewMode = presentationState?.mode || 'scene'
+    const previewMode = viewportMode || presentationState?.mode || 'scene'
+    const pickViewport = (mode) => {
+        onViewportChoice?.(mode)
+        onPresentationPatch?.({ mode })
+    }
 
     return (
         <Stack spacing={0} sx={{ p: 0, height: '100%' }}>
@@ -1669,14 +1676,14 @@ export function FilesPanel({
                 <Button
                     size="small"
                     variant={previewMode === 'scene' ? 'contained' : 'outlined'}
-                    onClick={() => onPresentationPatch?.({ mode: 'scene' })}
+                    onClick={() => pickViewport('scene')}
                 >
-                    3D room
+                    Scene
                 </Button>
                 <Button
                     size="small"
                     variant={previewMode === 'code' ? 'contained' : 'outlined'}
-                    onClick={() => onPresentationPatch?.({ mode: 'code' })}
+                    onClick={() => pickViewport('code')}
                 >
                     Code view
                 </Button>
@@ -2009,7 +2016,7 @@ export function PublishPanel({
                 <Stack spacing={1.5}>
                     <Typography variant="subtitle2">Presentation</Typography>
                     <Typography variant="caption" color="text.secondary">
-                        The session preview toggle (3D room ↔ Code view) lives in the Code window.
+                        The session preview toggle (Scene ↔ Code view) lives in the Code window.
                     </Typography>
                     <FormControl fullWidth size="small">
                         <InputLabel>Public entry view</InputLabel>
@@ -2018,7 +2025,7 @@ export function PublishPanel({
                             value={presentationState?.entryView || 'scene'}
                             onChange={(event) => onPresentationPatch?.({ entryView: event.target.value })}
                         >
-                            <MenuItem value="scene">3D room</MenuItem>
+                            <MenuItem value="scene">Scene</MenuItem>
                             <MenuItem value="code">Code view</MenuItem>
                         </Select>
                     </FormControl>
