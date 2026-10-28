@@ -352,6 +352,13 @@ export const buildToolsPath = () => {
     return `${prefix}/${APP_PAGE_TOOLS}`.replace(/\/{2,}/g, '/')
 }
 
+// The platform's front page, `/` under the base path. The way out of every
+// "nothing here" card (audit F071, 2026-10-28).
+export const buildFrontPagePath = () => {
+    const prefix = getAppBasePrefix()
+    return prefix ? `${prefix}/` : '/'
+}
+
 export const buildWikiPath = () => {
     const prefix = getAppBasePrefix()
     return `${prefix}/${APP_PAGE_WIKI}`.replace(/\/{2,}/g, '/')

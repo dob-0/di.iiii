@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import RootApp from './RootApp.jsx'
 import { setHostSpace } from './utils/hostSpace.js'
@@ -39,8 +39,12 @@ vi.mock('./services/serverSpaces.js', () => ({
             isPublic: spaceId === 'pub' || Boolean(mockSpacePublicOverrides[spaceId])
         })
     },
-    resolveVanityProjectLink: (spaceSegment, projectSegment) =>
-        Promise.resolve(mockVanityResolutions[`${spaceSegment}/${projectSegment}`] || null),
+    resolveVanityProjectLink: (spaceSegment, projectSegment) => {
+        // An Error entry stands for a failed question (a 401, the network);
+        // no entry is the server's 404, which the real service turns into null.
+        const answer = mockVanityResolutions[`${spaceSegment}/${projectSegment}`]
+        return answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer || null)
+    },
     resolveSpaceRoot: (spaceSegment) => Promise.resolve(mockSpaceRootResolutions[spaceSegment] || null)
 }))
 
@@ -295,6 +299,17 @@ describe('RootApp bare reserved addresses', () => {
         expect(mockSpaceLookups).not.toContain('make')
     })
 
+    // Audit F154 (2026-10-28): bare /scan answered "Not found" — a routed
+    // address that only said it was missing. It now says where scanning lives.
+    it('says where scanning lives at /scan instead of hunting for a space called scan', async () => {
+        window.history.pushState({}, '', '/scan')
+        render(<RootApp />)
+
+        expect(await screen.findByText(/Scanning happens inside a space\. Open the space first/)).toBeInTheDocument()
+        expect(screen.queryByText(/space-surface-app/)).toBeNull()
+        expect(mockSpaceLookups).not.toContain('scan')
+    })
+
     it('says where the lighting desk lives when /light is asked of a hosted tier', async () => {
         mockServerConfig.value = { local: false }
         window.history.pushState({}, '', '/light')
@@ -451,12 +466,43 @@ describe('RootApp vanity project links', () => {
         expect(await screen.findByText('space-surface-app:editor:wcc-space-real-id')).toBeInTheDocument()
     })
 
-    it('falls through to a plain space route when the second segment is not a real project slug', async () => {
+    // Audit F010 (2026-10-28): a mistyped project address used to open the
+    // space's own front page under the wrong address, so a visitor could not
+    // tell the project was missing. The server's 404 now gets its own card.
+    it('says there is no such project when the server answers 404, instead of opening the space', async () => {
         // No entry in mockVanityResolutions for 'somespace/randomtext' — the
         // hook resolves to null (mocked 404), same as production.
         window.history.pushState({}, '', '/somespace/randomtext')
         render(<RootApp />)
 
+        expect(await screen.findByTestId('missing-project-card')).toHaveTextContent(
+            'There is no project called “randomtext” in the space “somespace”.'
+        )
+        expect(screen.queryByText(/space-surface-app/)).toBeNull()
+        expect(screen.getByRole('link', { name: 'See what is in this space' })).toHaveAttribute('href', '/somespace/projects')
+        expect(screen.getByRole('link', { name: 'Go to the front page' })).toHaveAttribute('href', '/')
+        expect(window.location.pathname).toBe('/somespace/randomtext')
+    })
+
+    it('still opens the space when the question failed rather than answered 404', async () => {
+        mockVanityResolutions['somespace/randomtext'] = Object.assign(new Error('Unauthorized'), { status: 401 })
+        window.history.pushState({}, '', '/somespace/randomtext')
+        render(<RootApp />)
+
+        expect(await screen.findByText('space-surface-app:editor:somespace')).toBeInTheDocument()
+        expect(screen.queryByTestId('missing-project-card')).toBeNull()
+    })
+
+    it('a moved project still forwards, and the bare space still opens', async () => {
+        mockVanityResolutions['oldspace/moved'] = { space: null, project: null, movedTo: { spaceId: 'newspace', projectId: 'p-1' } }
+        window.history.pushState({}, '', '/oldspace/moved')
+        const { unmount } = render(<RootApp />)
+        await waitFor(() => expect(window.location.pathname).toBe('/newspace/p/p-1'))
+        expect(screen.queryByTestId('missing-project-card')).toBeNull()
+        unmount()
+
+        window.history.pushState({}, '', '/somespace')
+        render(<RootApp />)
         expect(await screen.findByText('space-surface-app:editor:somespace')).toBeInTheDocument()
     })
 })
