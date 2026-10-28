@@ -42,9 +42,10 @@ export function useUndoNotice() {
     const [note, setNote] = useState(null)
     const notify = useCallback((message, onUndo) => { noteSeq += 1; setNote({ message, onUndo, key: noteSeq }) }, [])
     const dismiss = useCallback(() => setNote(null), [])
-    const undoNotice = note
-        ? createElement(UndoNotice, { key: note.key, message: note.message, onUndo: note.onUndo, onDismiss: dismiss })
-        : null
+    // The live region is always there and only its content changes.
+    const undoNotice = createElement('div', { className: 'di-undo-region', role: 'status' }, note
+        ? createElement(UndoNotice, { key: note.key, message: note.message, onUndo: note.onUndo, onDismiss: dismiss, region: false })
+        : null)
     return { notify, undoNotice }
 }
 

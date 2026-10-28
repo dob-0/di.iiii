@@ -7,7 +7,10 @@ import './ui.css'
 
 export const UNDO_MS = 10000
 
-export default function UndoNotice({ message, undoLabel = 'Undo', onUndo, onDismiss, duration = UNDO_MS }) {
+// region=false when a parent already holds the live region (useUndoNotice does,
+// so screen readers hear the message: a region added together with its text is
+// often not read out).
+export default function UndoNotice({ message, undoLabel = 'Undo', onUndo, onDismiss, duration = UNDO_MS, region = true }) {
     const [held, setHeld] = useState(false)
 
     useEffect(() => {
@@ -16,10 +19,10 @@ export default function UndoNotice({ message, undoLabel = 'Undo', onUndo, onDism
         return () => clearTimeout(timer)
     }, [held, duration, message, onDismiss])
 
-    return (
+    const box = (
         <div
             className="di-undo-notice"
-            role="status"
+            role="group"
             onMouseEnter={() => setHeld(true)}
             onMouseLeave={() => setHeld(false)}
             onFocus={() => setHeld(true)}
@@ -31,4 +34,5 @@ export default function UndoNotice({ message, undoLabel = 'Undo', onUndo, onDism
             </button>
         </div>
     )
+    return region ? <div role="status">{box}</div> : box
 }
