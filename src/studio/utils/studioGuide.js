@@ -137,7 +137,7 @@ export const STUDIO_SHORTCUT_SECTIONS = [
     {
         title: 'View',
         rows: [
-            ['E', 'Toggle Navigate ↔ Edit (Tab too, when "Blender keys" is on below)'],
+            ['E', 'Toggle Navigate ↔ Edit (Tab too, when "Blender keys" is on at the top of this page)'],
             ['Tab', 'Move the focus to the next button or window (Shift+Tab goes back)'],
             ['Esc', 'Close the window you are in'],
             ['Walk / Fly buttons', 'Walk: eye height above the floor, W A S D move. Fly: free, Space up, Q down. Esc leaves'],

@@ -28,6 +28,15 @@ describe('studioKeyPrefs', () => {
         expect(isLetterShortcut({ key: 'Delete' })).toBe(false)
         expect(isLetterShortcut({ key: ' ' })).toBe(false)
     })
+    it('the number keys stay with letter keys off: cues 1-9, numpad views, Shift+1/3/7 (review fix)', () => {
+        writeKeyPrefs({ letters: false })
+        expect(letterKeyIsOff({ key: '1', code: 'Digit1' })).toBe(false)
+        expect(letterKeyIsOff({ key: '7', code: 'Numpad7' })).toBe(false)
+        expect(letterKeyIsOff({ key: '!', code: 'Digit1', shiftKey: true })).toBe(false)
+        expect(letterKeyIsOff({ key: '.', code: 'NumpadDecimal' })).toBe(false)
+        expect(letterKeyIsOff({ key: '3' })).toBe(false)
+        expect(letterKeyIsOff({ key: '.', code: 'Period' })).toBe(true)
+    })
     it('letterKeyIsOff follows the switch', () => {
         expect(letterKeyIsOff({ key: 'e' })).toBe(false)
         writeKeyPrefs({ letters: false })

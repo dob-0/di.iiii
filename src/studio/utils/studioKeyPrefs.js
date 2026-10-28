@@ -31,10 +31,13 @@ export function writeKeyPrefs(patch) {
     return next
 }
 
-/** A shortcut made of one character (a letter, "?", "."): Shift counts, Ctrl / Cmd / Alt make it another kind of shortcut. */
+/** A shortcut made of one character (a letter, "?", "."): Shift counts, Ctrl / Cmd / Alt make it another kind of shortcut.
+ *  The number keys (top row and numpad: cues 1-9, the numpad and Shift+1/3/7 views) are not: the help says they stay. */
 export function isLetterShortcut(event) {
     if (!event || event.ctrlKey || event.metaKey || event.altKey) return false
+    if (/^(Digit|Numpad)/.test(String(event.code ?? ''))) return false
     const key = String(event.key ?? '')
+    if (/^[0-9]$/.test(key)) return false
     return key.length === 1 && key.trim() !== ''
 }
 
