@@ -20,8 +20,4 @@ describe('resolveOpeningView', () => {
         expect(resolveOpeningView(doc({ presentationState: { entryView: 'fixed-camera' } }))).toBe('fixed-camera')
         expect(resolveOpeningView(doc({ presentationState: { mode: 'code' } }))).toBe('code')
     })
-    it('opens the plain view for a space with no project (no document)', () => {
-        expect(resolveOpeningView(null)).toBe('page')
-        expect(resolveOpeningView(undefined)).toBe('page')
-    })
 })

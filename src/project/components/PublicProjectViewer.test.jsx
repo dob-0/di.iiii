@@ -127,9 +127,7 @@ describe('PublicProjectViewer', () => {
 
             expect(await screen.findByTestId('project-plain-view')).toBeInTheDocument()
             const choices = screen.getByTestId('project-choices')
-            expect(choices).toHaveTextContent('Add a scene')
-            expect(choices).toHaveTextContent('Write code')
-            expect(choices).toHaveTextContent('Add pages or pictures')
+            expect(choices).toHaveTextContent('Edit in Studio')
             expect(screen.queryByText(/viewer-scene/)).toBeNull()
         } finally {
             authState.session = { requireAuth: false, authenticated: false, role: null, spaces: null }

@@ -7,9 +7,12 @@ import useDocumentTitle from './hooks/useDocumentTitle.js'
 import { isPreviewRequest } from './utils/previewMode.js'
 import { spaceAddressOf } from './utils/spaceAddress.js'
 import { spaceTabTitle, spaceWordFor } from './utils/oneNamePerSpace.js'
+import { listSpaceContents } from './project/services/projectsApi.js'
 
 const App = lazyWithReload(() => import('./App.jsx'), 'app')
 const BlankNodeWorkspaceApp = lazyWithReload(() => import('./raw/BlankNodeWorkspaceApp.jsx'), 'raw-workspace')
+const EmptySpaceView = lazyWithReload(() => import('./components/EmptySpaceView.jsx'), 'empty-space-view')
+const SpaceContentsPage = lazyWithReload(() => import('./pages/SpaceContentsPage.jsx'), 'space-contents-page')
 const PublicProjectViewer = lazyWithReload(() => import('./project/components/PublicProjectViewer.jsx'), 'public-project-viewer')
 
 const DEFAULT_SPACE_ID = 'main'
@@ -91,6 +94,20 @@ export default function SpaceSurfaceApp({ routeState }) {
 
     const publishedProjectId = surfaceState.space?.publishedProjectId || null
     const routeProjectId = routeState?.projectId || null
+    // A space with no front door is not a scene: it opens what it holds (its only project, its list of projects, or
+    // a plain empty-space view). Only asked when nothing else decides, and only once the space itself has answered.
+    const needsContents = shouldResolvePublishedSurface && surfaceState.status === 'ready' && Boolean(surfaceState.space)
+        && !publishedProjectId && !routeProjectId
+    const [contents, setContents] = useState({ spaceId: null, projects: null })
+    useEffect(() => {
+        if (!needsContents) return undefined
+        let cancelled = false
+        listSpaceContents(spaceId)
+            .then((projects) => { if (!cancelled) setContents({ spaceId, projects: Array.isArray(projects) ? projects : [] }) })
+            .catch(() => { if (!cancelled) setContents({ spaceId, projects: undefined }) })
+        return () => { cancelled = true }
+    }, [needsContents, spaceId])
+    const contentsKnown = needsContents && contents.spaceId === spaceId && Array.isArray(contents.projects)
     // One name per space (docs/ai/vocabulary.md): what the viewer's bar, heading and tab say is the space's name, its address
     // when nobody named it, whichever address was typed (utils/oneNamePerSpace.js).
     const spaceAddress = spaceAddressOf(surfaceState.space, spaceId)
@@ -165,6 +182,32 @@ export default function SpaceSurfaceApp({ routeState }) {
 
     if (page === APP_PAGE_PREFERENCES) {
         return <Suspense fallback={<LoadingScreen label="Loading the admin console" />}><App /></Suspense>
+    }
+
+    if (needsContents && contents.spaceId !== spaceId) {
+        return <LoadingScreen label="Loading space" />
+    }
+
+    if (contentsKnown) {
+        const projects = contents.projects
+        if (projects.length === 1) {
+            return (
+                <Suspense fallback={<LoadingScreen label="Loading space" />}>
+                    <PublicProjectViewer
+                        key={`${spaceId}:${projects[0].id}`}
+                        spaceId={spaceId}
+                        projectId={projects[0].id}
+                        spaceLabel={spaceLabel}
+                        spaceAddress={spaceAddress}
+                        spaceRecordId={surfaceState.space?.id}
+                    />
+                </Suspense>
+            )
+        }
+        if (projects.length > 1) {
+            return <Suspense fallback={<LoadingScreen label="Loading space" />}><SpaceContentsPage spaceId={spaceId} /></Suspense>
+        }
+        return <Suspense fallback={<LoadingScreen label="Loading space" />}><EmptySpaceView spaceId={spaceId} title={spaceLabel} /></Suspense>
     }
 
     return <Suspense fallback={<LoadingScreen label="Loading space" />}><App /></Suspense>

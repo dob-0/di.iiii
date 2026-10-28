@@ -779,17 +779,15 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     </div>
                 )
             ) : document && entryView === 'page' ? (
-                <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: '2rem', overflow: 'auto' }}>
-                    <div style={overlayCardStyle} data-testid="project-plain-view">
+                <div style={{ height: '100%', display: 'grid', placeItems: 'center', padding: '2rem', overflow: 'auto' }}>
+                    <div style={{ ...quietPreviewFallbackStyle, color: '#f5f7fa', textAlign: 'left' }} data-testid="project-plain-view">
                         <strong>{viewerTitle}</strong>
                         {(document.assets || []).filter((a) => /^image\//.test(a.mimeType) && a.url).map((a) => (
                             <img key={a.id} src={a.url} alt={a.name} style={{ display: 'block', maxWidth: '100%', marginTop: '0.75rem' }} />
                         ))}
                         {canEdit ? (
                             <div data-testid="project-choices" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem' }}>
-                                <a href={studioHref(resolvedRouteSpaceId, projectId)} style={barButtonStyle}>Add a scene</a>
-                                <a href={studioHref(resolvedRouteSpaceId, projectId)} style={barButtonStyle}>Write code</a>
-                                <a href={studioHref(resolvedRouteSpaceId, projectId)} style={barButtonStyle}>Add pages or pictures</a>
+                                <a href={studioHref(resolvedRouteSpaceId, projectId)} style={barButtonStyle}>Edit in Studio</a>
                             </div>
                         ) : null}
                     </div>
