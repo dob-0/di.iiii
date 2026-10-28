@@ -198,6 +198,53 @@ describe('CLIENT_DIR set: one process serves both the API and the app', () => {
     })
 })
 
+// Audit 2026-10-21 (G01, G02, G04): the same page route nginx uses on the
+// hosted tiers. Every unknown address used to answer 200 with the one shell,
+// and every address carried the front door's head.
+describe('CLIENT_DIR set: each address carries its own head and its true status', () => {
+    const SHELL = `<!doctype html><html><head><meta charset="utf-8"><title>shell title</title><meta name="description" content="shell line"></head><body>${SPA_MARKER}</body></html>`
+    const withShell = async () => {
+        const dir = await withClientDir()
+        await writeFile(path.join(dir, 'index.html'), SHELL)
+        return dir
+    }
+
+    it('an address nothing answers to is a 404 that still carries the app', async () => {
+        const server = await startServer({ clientDir: await withShell(), extraEnv: { SITE_ORIGIN: 'https://diiii.test' } })
+
+        const response = await fetch(`${server.origin}/no-such-space-zz9`)
+
+        expect(response.status).toBe(404)
+        const body = await response.text()
+        expect(body).toContain(SPA_MARKER)
+        expect(body).toContain('<meta name="robots" content="noindex">')
+    })
+
+    it('a real address keeps its 200 and gets its own head, said once', async () => {
+        const server = await startServer({ clientDir: await withShell(), extraEnv: { SITE_ORIGIN: 'https://diiii.test' } })
+
+        for (const route of ['/', '/terms']) {
+            const response = await fetch(`${server.origin}${route}`)
+            expect(response.status, route).toBe(200)
+            const body = await response.text()
+            expect(body).toContain(SPA_MARKER)
+            expect(body).not.toContain('shell title')
+            expect(body.match(/<title>/g), route).toHaveLength(1)
+            expect(body).toContain(`<link rel="canonical" href="https://diiii.test${route === '/' ? '' : route}">`)
+        }
+    })
+
+    it('/sitemap.xml is written from the records', async () => {
+        const server = await startServer({ clientDir: await withShell(), extraEnv: { SITE_ORIGIN: 'https://diiii.test' } })
+
+        const response = await fetch(`${server.origin}/sitemap.xml`)
+
+        expect(response.status).toBe(200)
+        expect(response.headers.get('content-type')).toMatch(/^application\/xml/)
+        expect(await response.text()).toContain('<loc>https://diiii.test/terms</loc>')
+    })
+})
+
 describe('CLIENT_DIR unset: the deployed topology is untouched', () => {
     it('does not serve an SPA — a non-API path is still a 404, as nginx expects', async () => {
         const server = await startServer()

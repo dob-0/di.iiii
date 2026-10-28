@@ -180,7 +180,9 @@ describe('the origin a card advertises', () => {
       'x-forwarded-host': 'dev.diiii.xyz',
       'x-forwarded-proto': 'https',
     })
-    expect(r.body).toContain('content="https://dev.diiii.xyz/br_id_ge"')
+    // The space's own handle (its id here, no slug), not the spelling the
+    // link used: /br_id_ge and /br-id-ge are one page (audit G11, 2026-10-21).
+    expect(r.body).toContain('content="https://dev.diiii.xyz/br-id-ge"')
   })
 
   it('an explicit SITE_ORIGIN wins over anything the request claims', async () => {
@@ -188,7 +190,7 @@ describe('the origin a card advertises', () => {
       host: 'evil.example',
       'x-forwarded-host': 'evil.example',
     })
-    expect(r.body).toContain('content="https://diiii.xyz/br_id_ge"')
+    expect(r.body).toContain('content="https://diiii.xyz/br-id-ge"')
     expect(r.body).not.toContain('evil.example')
   })
 

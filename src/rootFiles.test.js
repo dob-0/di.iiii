@@ -72,10 +72,21 @@ describe('root addresses are files, not the app shell (nginx.conf)', () => {
         ['/llms-full.txt', 'text/plain', 'build'],
         // Already right before 2026-10-21; held here so a refactor cannot lose them.
         ['/robots.txt', 'text/plain', 'public'],
-        ['/llms.txt', 'text/plain', 'public'],
-        // Built by vite.config.js (scripts/sitemap.mjs) since #1092, no public/ file: only the location is checked.
-        ['/sitemap.xml', 'application/xml', 'built']
+        ['/llms.txt', 'text/plain', 'public']
     ]
+
+    // /sitemap.xml is written by serverXR on top of the file the build makes
+    // (vite.config.js, scripts/sitemap.mjs, since #1092): the build's file
+    // stays served, under its own name, so the wiki and network URLs are kept.
+    it('/sitemap.xml has its own location (serverXR, on top of the build\'s file), never the SPA', () => {
+        const loc = pick('/sitemap.xml')
+        expect(loc.pattern).not.toBe('/')
+        expect(loc.body).toMatch(/proxy_pass http:\/\/server:4000\/serverXR\/sitemap\.xml;/)
+        expect(loc.body).not.toMatch(/dii_crawler/)
+        const built = pick('/sitemap-built.xml')
+        expect(servedType(built)).toBe('application/xml')
+        expect(built.body).toMatch(/alias \/usr\/share\/nginx\/html\/sitemap\.xml;/)
+    })
 
     it.each(cases)('%s is answered by its own location as %s, never the SPA', (uri, type, source) => {
         const loc = pick(uri)

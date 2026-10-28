@@ -68,7 +68,8 @@ const { createSpaceIdParam } = require('./routes/spaceIdParam')
 const { createKeyedLock } = require('./asyncLock')
 const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
-const { registerOgRoutes } = require('./routes/ogRoutes')
+const { registerOgRoutes, createShellSource } = require('./routes/ogRoutes')
+const { registerSitemapRoutes, createBuiltSitemapSource } = require('./routes/sitemapRoutes')
 const { loadWikiArticles } = require('./wikiIndex')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { TRUST_PROXY } = require('./proxyTrust')
@@ -2295,7 +2296,7 @@ const sceneWriter = createSceneWriter({
 // og route resolved nothing for the one link this was built for and served the
 // platform tile. Same resolver the /api/resolve middleware above uses: slug
 // first, then the normalized id.
-registerOgRoutes(router, {
+const { renderPage } = registerOgRoutes(router, {
   loadWikiArticles,
   loadSpaceMeta: async (segment) =>
     (await findSpaceBySlug(segment)) || (await loadSpaceMeta(normalizeSpaceId(segment) || segment)),
@@ -2318,6 +2319,33 @@ registerOgRoutes(router, {
   // A space on its own domain: the crawler card for yokozo.xyz/ is the card of
   // the space that domain shows, not the platform's.
   spaceIdForHost: domainStore.findActiveSpaceIdForHost,
+  // The built shell the page route writes each address's head into. A `di`
+  // install reads it from its own CLIENT_DIR; the hosted tiers fetch it from
+  // the client container's nginx (SHELL_URL, docker-compose.yml). Neither set:
+  // the page route answers 503 and nginx serves the static shell, as before.
+  loadShell: createShellSource({
+    readShell: config.directories.clientDir
+      ? () => fs.promises.readFile(path.join(config.directories.clientDir, 'index.html'), 'utf8')
+      : null,
+    shellUrl: process.env.SHELL_URL || '',
+  }),
+})
+
+// /sitemap.xml from the records themselves (audit G04): public spaces, and
+// their live, non-private projects, with lastmod. nginx proxies the root
+// /sitemap.xml here.
+const sitemapHandler = registerSitemapRoutes(router, {
+  listSpaces,
+  listProjects: (spaceId) => listProjectsInSpace(SPACES_DIR, spaceId),
+  siteOrigin: process.env.SITE_ORIGIN || '',
+  // The build's own sitemap (wiki articles, network rooms): the records add to
+  // it, they do not replace it.
+  loadBuilt: createBuiltSitemapSource({
+    readBuilt: config.directories.clientDir
+      ? () => fs.promises.readFile(path.join(config.directories.clientDir, 'sitemap.xml'), 'utf8')
+      : null,
+    builtUrl: process.env.SITEMAP_BUILT_URL || '',
+  }),
 })
 
 registerInscriptionRoutes(router, {
@@ -3351,6 +3379,23 @@ mountTargets.forEach((targetPath) => {
 // so /serverXR/api/* is already answered and can never fall through to index.html.
 const CLIENT_DIR = config.directories.clientDir
 if (CLIENT_DIR) {
+  // Before express.static: a stale sitemap.xml left in an older build's dist/
+  // must not shadow the one written from the records.
+  app.get('/sitemap.xml', sitemapHandler)
+  // The shell with this address's own head, and a 404 when nothing answers
+  // to it (audit G01) — the same page route nginx uses on the hosted tiers.
+  const servePage = (req, res, next) => {
+    renderPage(req, req.path).then((page) => {
+      if (page) {
+        res.set('Cache-Control', 'no-cache')
+        res.status(page.status).type('html').send(page.html)
+        return
+      }
+      res.sendFile('index.html', { root: CLIENT_DIR })
+    }).catch(next)
+  }
+  // `/` first: express.static would otherwise answer it with the bare shell.
+  app.get('/', servePage)
   app.use(express.static(CLIENT_DIR, { setHeaders: allowNullOrigin }))
 
   // Digital asset links — how Android decides that the installed studio-chat
@@ -3406,7 +3451,7 @@ if (CLIENT_DIR) {
     // send applies its dotfiles:'ignore' rule to every segment of the absolute
     // path — and the default install lives in ~/.di, so a hidden directory in
     // the path 404s the entire app. Relative to root, there is no dot segment.
-    res.sendFile('index.html', { root: CLIENT_DIR })
+    servePage(req, res, next)
   })
 
   logger.info(`[client] serving the built app from ${CLIENT_DIR}`)
