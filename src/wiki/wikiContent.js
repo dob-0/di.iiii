@@ -946,13 +946,13 @@ export const WIKI_ARTICLES = [
                 'Files: the Create window lists every file in one place — uploads, Google Drive imports, and Commons pulls. Each row shows where it lives (project / space), a “placed ×N” badge when objects use it, and “public” when it is shared to the commons.',
                 'Files are stored by content: re-importing a file the project already has (same bytes, any name) skips the upload and finishes instantly, and identical files across a space’s projects are stored only once.',
                 '+ Add places a file into the scene as an object. Deleting a file warns you when objects still use it — in this project or in other projects of the space.',
-                'Code: the Code window edits HTML/CSS/JS files stored inside the project. The toggle at its top switches the viewport between the scene and the code view, and the “Project file” picker inserts any file’s URL straight into your code.',
+                'Code: the Code window edits HTML/CSS/JS files stored inside the project. A project that holds a page and no scene opens with the viewport on the page, and the Create window (3D shapes and lights) stays closed until you open it. The toggle at its top, Scene or Code view, switches the viewport either way, and the “Project file” picker inserts any file’s URL straight into your code.',
                 'Instead of local files, the Code window can embed an external site (Embed external URL).',
                 'Share controls what visitors see: the public entry view (the scene or the code) and the live route are set in the Share window.'
             ] }
         ],
         tags: ['studio', 'files', 'assets', 'code', 'content'],
-        updated: '2026-08-19'
+        updated: '2026-10-28'
     },
     {
         id: 'studio-inside-a-geo',
