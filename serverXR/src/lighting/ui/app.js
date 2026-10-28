@@ -1360,7 +1360,7 @@ async function patchProfile(profile, { universe, address, x, y, count = 1 }) {
 async function unpatchSelection() {
   const ids = [...sel];
   if (!ids.length) { $('#patchHint').textContent = 'nothing selected'; return; }
-  if (ids.length > 1 && !(await deskAsk.ask(`Unpatch ${ids.length} fixtures? This cannot be undone.`, 'Unpatch'))) return;
+  if (ids.length > 1 && !(await window.deskAsk.ask(`Unpatch ${ids.length} fixtures? This cannot be undone.`, 'Unpatch'))) return;
   // one request, not one per fixture — a burst of them races the server's debounced save
   const r = await post('api/fixtures/remove', { ids });
   const removed = r.removed != null ? r.removed : ids.length;
@@ -1726,7 +1726,7 @@ async function offerReleaseOthers(replies, universes) {
   for (const r of replies) for (const [who, n] of Object.entries((r && r.kept) || {})) kept[who] = (kept[who] || 0) + n;
   if (!Object.keys(kept).length) return;
   const where = `universe${universes.length === 1 ? '' : 's'} ${universes.map((u) => u + 1).join(', ')}`;
-  if (!(await deskAsk.ask(`Still held on ${where}: ${holdersText(kept)}.\n\nThose are not yours. Release them too?`, 'Release them'))) {
+  if (!(await window.deskAsk.ask(`Still held on ${where}: ${holdersText(kept)}.\n\nThose are not yours. Release them too?`, 'Release them'))) {
     say(`released yours; still held on ${where}: ${holdersText(kept)}`);
     return;
   }
@@ -1768,7 +1768,7 @@ async function setAllFaders(value) {
   if (risky.length) {
     const names = risky.slice(0, 4).map((f) => `${f.index}.${f.profile}`).join(', ');
     const more = risky.length > 4 ? ', …' : '';
-    const okGo = await deskAsk.ask(
+    const okGo = await window.deskAsk.ask(
       `Set every channel in universe ${fUni + 1} to ${value}?\n\n`
       + `This also drives pan, tilt and control channels on ${risky.length} fixture`
       + `${risky.length === 1 ? '' : 's'} (${names}${more}). Moving heads will swing hard to one extreme.`, 'Set all');
@@ -2459,7 +2459,7 @@ function popScene() { return (S && S.scenes.find((s) => s.id === bindSceneId)) |
 // The old "Sure?" two-step button and the native confirm() box are gone; this is the one helper
 // the buttons that destroy a scene, a layer or a look go through.
 async function askThen(message, okLabel, fn) {
-  if (await deskAsk.ask(message, okLabel)) fn();
+  if (await window.deskAsk.ask(message, okLabel)) fn();
 }
 
 function setPopMode(mode) {
@@ -4898,7 +4898,7 @@ $('#miWizard').addEventListener('click', () => {
 });
 $('#miByNum').addEventListener('click', midiMapByNumber);
 $('#miClearMap').addEventListener('click', async () => {
-  if (!(await deskAsk.ask('Clear the whole MIDI map? Every surface on this desk loses it.', 'Clear map'))) return;
+  if (!(await window.deskAsk.ask('Clear the whole MIDI map? Every surface on this desk loses it.', 'Clear map'))) return;
   midiMap = {};
   for (const k of Object.keys(midiPickup)) delete midiPickup[k];
   for (const k of Object.keys(midiLastVal)) delete midiLastVal[k];
@@ -5332,7 +5332,7 @@ $('#fAllZero').addEventListener('click', () => setAllFaders(0));
 // plain washes the existing confirm does not fire at all — it only asks when the universe
 // holds position or control channels. Ask every time.
 $('#fAllFull').addEventListener('click', async () => {
-  if (!(await deskAsk.ask('Hold every channel in this universe at full? That is a whiteout, and there is no undo.', 'Whiteout'))) return;
+  if (!(await window.deskAsk.ask('Hold every channel in this universe at full? That is a whiteout, and there is no undo.', 'Whiteout'))) return;
   setAllFaders(255);
 });
 
@@ -6029,7 +6029,7 @@ $('#sbRen').addEventListener('click', () => {
 $('#sbDel').addEventListener('click', async () => {
   const st = currentSet();
   if (!st) { say('pick a set to delete'); return; }
-  if (!(await deskAsk.ask(`Delete the set "${st.name}"? The scenes themselves are untouched.`, 'Delete set'))) return;
+  if (!(await window.deskAsk.ask(`Delete the set "${st.name}"? The scenes themselves are untouched.`, 'Delete set'))) return;
   const sets = getSets().filter((s) => s.id !== st.id);
   liveSet.setId = null; liveSet.pos = -1; saveLiveSetPos();
   saveSets(sets);

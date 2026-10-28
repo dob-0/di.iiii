@@ -22,15 +22,17 @@
   function createAsk(doc, timers) {
     // arrows, not bare references: a browser's setTimeout throws 'Illegal invocation' when called as t.set()
     const t = timers || { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h), now: () => Date.now() };
-    let open = null;                       // { bar, done }
+    let open = null;                       // { bar, done, timer, onKey, back }
 
     function close(answer) {
       if (!open) return;
-      const { bar, done, timer, onKey } = open;
+      const { bar, done, timer, onKey, back } = open;
       open = null;
       t.clear(timer);
       doc.removeEventListener('keydown', onKey, true);
       if (bar.parentNode) bar.parentNode.removeChild(bar);
+      // a keyboard user goes back to the button they pressed; a mouse press stays blurred, as the desk wants
+      if (back && back.isConnected && typeof back.focus === 'function') back.focus();
       done(answer);
     }
 
@@ -42,7 +44,9 @@
         bar.className = 'deskask';
         bar.setAttribute('role', 'alertdialog');
         bar.setAttribute('aria-live', 'assertive');
+        bar.setAttribute('aria-labelledby', 'deskAskText');   // a screen reader says the question, not "dialog"
         const text = doc.createElement('span');
+        text.id = 'deskAskText';
         text.className = 'deskask-text';
         text.textContent = message;
         const no = doc.createElement('button');
@@ -51,12 +55,16 @@
         yes.type = 'button'; yes.className = 'deskask-yes'; yes.textContent = okLabel || 'OK';
         bar.append(text, no, yes);
         const openedAt = t.now();
+        let back = null;
+        try { const a = doc.activeElement; if (a && a !== doc.body && a.matches(':focus-visible')) back = a; } catch (_) { back = null; }
         no.addEventListener('click', () => close(false));
         yes.addEventListener('click', () => { if (t.now() - openedAt >= GUARD_MS) close(true); });
-        const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(false); } };
+        // Esc answers the bar and goes no further: without the stop it also reached the desk's own Esc
+        // (clear the selection, close the builder), so cancelling "Unpatch 12?" dropped the 12 selected.
+        const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(false); } };
         doc.addEventListener('keydown', onKey, true);
         const timer = t.set(() => close(false), STAND_DOWN_MS);
-        open = { bar, done, timer, onKey };
+        open = { bar, done, timer, onKey, back };
         doc.body.appendChild(bar);
         no.focus();
       });

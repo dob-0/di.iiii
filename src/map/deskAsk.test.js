@@ -69,6 +69,27 @@ describe('deskAsk: the one way the desk asks', () => {
         document.dispatchEvent(ev)
         expect(ev.defaultPrevented).toBe(false); expect(bar()).not.toBeNull()
     })
+
+    it('Esc stops at the bar: the desk\'s own Esc (clear the selection) does not also fire', async () => {
+        const c = clock(); const { ask } = createAsk(document, c)
+        let deskEsc = 0
+        const desk = (e) => { if (e.key === 'Escape') deskEsc++ }
+        document.addEventListener('keydown', desk)
+        const p = ask('Unpatch 12 fixtures?', 'Unpatch')
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+        expect(await p).toBe(false)
+        expect(deskEsc).toBe(0)
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+        expect(deskEsc).toBe(1)                                         // closed: the desk has its Esc back
+        document.removeEventListener('keydown', desk)
+    })
+
+    it('the bar is named by its question', () => {
+        const { ask } = createAsk(document, clock())
+        ask('Delete this look?', 'Delete')
+        const id = bar().getAttribute('aria-labelledby')
+        expect(document.getElementById(id).textContent).toBe('Delete this look?')
+    })
 })
 
 describe('the desk has one confirm path', () => {
