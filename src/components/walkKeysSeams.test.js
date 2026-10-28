@@ -87,3 +87,34 @@ describe('the head light button and its words', () => {
         expect(text).not.toMatch(/\bG\b|Fly moves|Light button|press F\b/)
     })
 })
+
+// The phone layout, as numbers in the stylesheet (the executable contract that looks at real boxes in a real browser is
+// scripts/head-light/phone-layout.cjs; this is the part that runs in CI). The heights are what that script measured on
+// 2026-10-28 (hint line 12 px, Fly 28, Head light 44, up/down pair 96); measure again if a button's padding or font changes.
+describe('the phone layout: the hint line has its own line, under every control', () => {
+    const css = read('liveProjectScene.css')
+    const phone = css.slice(css.indexOf('@media (max-width: 720px)'), css.indexOf('/* ── First-visit movement hint'))
+    const edge = (source, selector, side) => {
+        const found = new RegExp(`${selector.replace(/\./g, '\\.')}\\s*\\{[^}]*?\\b${side}:\\s*(\\d+)px`).exec(source)
+        return found ? Number(found[1]) : Number.NaN
+    }
+    const HINT_LINE = 14
+    const FLY_HEIGHT = 28
+    const LIGHT_HEIGHT = 44
+
+    it('the hint sits under the joystick\'s resting place and under the Fly button', () => {
+        const hint = edge(phone, '.live-scene-hint', 'bottom')
+        expect(hint).toBeGreaterThan(0)
+        expect(hint + HINT_LINE).toBeLessThanOrEqual(edge(css, '.live-scene-joystick', 'bottom'))
+        expect(hint + HINT_LINE).toBeLessThanOrEqual(edge(phone, '.live-scene-fly-btn', 'bottom'))
+    })
+
+    it('the Head light button stacks on Fly, at the same right edge', () => {
+        expect(edge(phone, '.live-scene-light-btn', 'bottom')).toBeGreaterThanOrEqual(edge(phone, '.live-scene-fly-btn', 'bottom') + FLY_HEIGHT)
+        expect(edge(phone, '.live-scene-light-btn', 'right')).toBe(edge(css, '.live-scene-fly-btn', 'right'))
+    })
+
+    it('the up/down buttons clear the Head light button when the project has one', () => {
+        expect(edge(phone, '.live-scene-vert-controls--above-head-light', 'bottom')).toBeGreaterThanOrEqual(edge(phone, '.live-scene-light-btn', 'bottom') + LIGHT_HEIGHT)
+    })
+})
