@@ -690,6 +690,16 @@ export default {
                 xfwd: true,
                 ws: true
             },
+            // What di.iiii tells a language model: /llms.txt, /llms-full.txt (a 404)
+            // and /ai/*.md, answered by serverXR (serverXR/src/aiPublic.js), as nginx
+            // sends them on the hosted tiers. Anchored like /ndi above; /ai/setup is
+            // a page of the app and stays here.
+            '^/(llms\\.txt|llms-full\\.txt)$|^/ai(/(?!setup/?$)|$)': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true,
+                rewrite: (path) => `/serverXR${path}`
+            },
             // Project documents store asset/API URLs as bare `/api/...` (no
             // `/serverXR` prefix) because in production Express serves both
             // frontend and API from one origin, mounted at APP_BASE_PATH. In

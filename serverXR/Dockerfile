@@ -45,6 +45,11 @@ COPY docs/ai/public/context.md /docs/ai/public/context.md
 # serverXR/src, so ../../src/wiki resolves to /src/wiki here as it does there.
 COPY src/wiki/wikiContent.js /src/wiki/wikiContent.js
 
+# The public bundle of the one context: llms.txt and the /ai/*.md files
+# (serverXR/src/aiPublic.js). Same relative path as in the repo: /app/src is
+# serverXR/src, so ../../docs/ai/public resolves to /docs/ai/public here.
+COPY docs/ai/public/ /docs/ai/public/
+
 # Release metadata for GET /api/health -- lets a deployed host self-report
 # what commit is actually running (releaseInfo.js reads this from the
 # WORKDIR). Defaults are placeholders for local `docker build` without

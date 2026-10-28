@@ -123,6 +123,7 @@ const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerAiContextRoutes } = require('./aiContext')
+const { registerAiPublicRoutes } = require('./aiPublic')
 const { registerPasswordAuthRoutes } = require('./routes/passwordAuthRoutes')
 const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerDomainRoutes } = require('./routes/domainRoutes')
@@ -3351,6 +3352,10 @@ registerGuestAddressRoute(router, {
   requireAuth: config.requireAuth
 })
 
+// /llms.txt and /ai/*.md, read from the public bundle (aiPublic.js). Last on
+// the router so nothing above can be shadowed by its /ai catch-all.
+registerAiPublicRoutes(router, { logger })
+
 const mountTargets = new Set([config.mountPath])
 if (!mountTargets.has('/serverXR')) {
   mountTargets.add('/serverXR')
@@ -3368,6 +3373,9 @@ mountTargets.forEach((targetPath) => {
 // so /serverXR/api/* is already answered and can never fall through to index.html.
 const CLIENT_DIR = config.directories.clientDir
 if (CLIENT_DIR) {
+  // Before the built app's files and its fallback: under /ai/ the shell must
+  // never answer for a file the bundle does not have (aiPublic.js).
+  registerAiPublicRoutes(app, { logger, appPages: true })
   app.use(express.static(CLIENT_DIR, { setHeaders: allowNullOrigin }))
 
   // Digital asset links — how Android decides that the installed studio-chat

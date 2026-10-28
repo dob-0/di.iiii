@@ -217,3 +217,54 @@ describe('CLIENT_DIR unset: the deployed topology is untouched', () => {
         expect(response.headers.get('content-type')).toContain('application/json')
     })
 })
+
+// What di.iiii tells a language model (serverXR/src/aiPublic.js). Until
+// 2026-10-27 /llms-full.txt and every /ai/… address answered 200 with the
+// app's HTML shell, and an assistant fetching one read the shell as content.
+describe('/llms.txt and /ai/: answered by the server, never by the shell', () => {
+    it('CLIENT_DIR set: /llms-full.txt is a 404, not 200 html', async () => {
+        const server = await startServer({ clientDir: await withClientDir() })
+
+        const response = await fetch(`${server.origin}/llms-full.txt`)
+
+        expect(response.status).not.toBe(200)
+        expect(response.headers.get('content-type')).not.toContain('text/html')
+        expect(await response.text()).not.toContain(SPA_MARKER)
+    })
+
+    it('CLIENT_DIR set: an unknown /ai/ address is a 404, not the app', async () => {
+        const server = await startServer({ clientDir: await withClientDir() })
+
+        for (const url of ['/ai/context', '/ai/no-such-file.md', '/ai/']) {
+            const response = await fetch(`${server.origin}${url}`)
+            expect(response.status, url).toBe(404)
+            expect(await response.text(), url).not.toContain(SPA_MARKER)
+        }
+    })
+
+    it('CLIENT_DIR set: the shell still answers everything outside /ai/', async () => {
+        const server = await startServer({ clientDir: await withClientDir() })
+
+        const response = await fetch(`${server.origin}/aim`)
+
+        expect(response.status).toBe(200)
+        expect(await response.text()).toContain(SPA_MARKER)
+    })
+
+    it('CLIENT_DIR unset: nginx\'s targets answer — /serverXR/llms.txt and /serverXR/ai/*.md', async () => {
+        const server = await startServer()
+
+        const llms = await fetch(`${server.baseUrl}/llms.txt`)
+        expect(llms.status).toBe(200)
+        expect(llms.headers.get('content-type')).toContain('text/plain')
+        expect(await llms.text()).toMatch(/^# di\.iiii\n/)
+
+        const about = await fetch(`${server.baseUrl}/ai/about.md`)
+        expect(about.status).toBe(200)
+        expect(about.headers.get('content-type')).toContain('text/markdown')
+
+        const full = await fetch(`${server.baseUrl}/llms-full.txt`)
+        expect(full.status).toBe(404)
+        expect(full.headers.get('content-type')).not.toContain('text/html')
+    })
+})

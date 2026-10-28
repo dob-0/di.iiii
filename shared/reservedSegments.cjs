@@ -83,6 +83,11 @@ const STATIC_SEGMENTS = [
     // licensed photos, docs/architecture/RIG_BUILD.md §13). Checked 2026-09-28: no space
     // "rigbuild" on diiii.xyz, dev.diiii.xyz or the local install.
     'rigbuild',
+    // What di.iiii tells a language model: /ai/*.md from the public bundle, sent
+    // to serverXR by nginx before the app (serverXR/src/aiPublic.js), 2026-10-27.
+    // NOT checked against the tiers before reserving: the session that added it
+    // could not reach them. A space "ai" made before this would be shadowed.
+    'ai',
     // The studio chat's manifest and icons. Named `chat-app` and not `chat`
     // ON PURPOSE: a directory that matches the ROUTE shadows it — nginx serves
     // the directory before the SPA fallback and express.static redirects the
