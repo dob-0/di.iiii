@@ -20,8 +20,9 @@ vi.mock('../utils/appNavigate.js', () => ({
     setAppNavigate: () => {}
 }))
 
+const mockSessionRole = vi.hoisted(() => ({ value: 'viewer' }))
 vi.mock('../hooks/useAuthSession.js', () => ({
-    default: () => ({ role: 'viewer', spaces: [], openSpaceId: 'open', sandboxSpaceId: null, requireAuth: true })
+    default: () => ({ role: mockSessionRole.value, spaces: [], openSpaceId: 'open', sandboxSpaceId: null, requireAuth: true })
 }))
 
 vi.mock('../hooks/useLocalInstall.js', () => ({
@@ -164,6 +165,18 @@ describe('a space\'s contents page', () => {
         listSpaceContentsMock.mockResolvedValue([])
         render(<SpaceContentsPage spaceId="br_id_ge" />)
         expect(await screen.findByText(/Nothing here yet\. The owner has not shown anything\./)).toBeTruthy()
+    })
+
+    it('does not tell the owner that "the owner" has not shown anything', async () => {
+        mockSessionRole.value = 'admin'
+        try {
+            listSpaceContentsMock.mockResolvedValue([])
+            render(<SpaceContentsPage spaceId="br_id_ge" />)
+            expect(await screen.findByText('Nothing here yet.')).toBeTruthy()
+            expect(screen.queryByText(/The owner has not shown anything/)).toBeNull()
+        } finally {
+            mockSessionRole.value = 'viewer'
+        }
     })
     // The bug this page was reported for: the owner opened the WCC space,
     // counted eleven artist rooms and asked where the landing page was. It is

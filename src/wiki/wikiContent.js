@@ -121,7 +121,7 @@ export const WIKI_ARTICLES = [
                 '/<space> — the public viewer for a space’s published project',
                 '/<space>/p/<id> — the public viewer for any single project (on a public space, no login needed — share a draft or a second project without moving the published pointer)'
             ] },
-            'A wrong address says so. A project name that is not in the space opens a card that says “There is no project called … in this space”, with a button to what is in the space; it never opens some other project under the wrong address. An address with no space behind it says “We could not find …”, and every such card has the same three ways out: Go to the front page, See spaces, Get help. A space with nothing in it says “Nothing here yet. The owner has not shown anything.” If a page stops working while it draws, it says so, and the technical detail for whoever helps you sits under Details for helpers.'
+            'A wrong address says so. A project name that is not in the space opens a card that says “There is no project called … in the space …”, naming the space, with a button to what is in the space; it never opens some other project under the wrong address. An address with no space behind it says “We could not find …”, and every such card has the same three ways out: Go to the front page, See spaces, Get help. A space with nothing in it says “Nothing here yet.”; a visitor also reads “The owner has not shown anything.”, and the owner reads the way to make the first project instead. If a page stops working while it draws, it says so, and the technical detail for whoever helps you sits under Details for helpers.'
         ],
         tags: ['spaces', 'projects', 'basics', 'contents'],
         updated: '2026-10-28'

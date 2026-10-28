@@ -305,7 +305,7 @@ describe('RootApp bare reserved addresses', () => {
         window.history.pushState({}, '', '/scan')
         render(<RootApp />)
 
-        expect(await screen.findByText(/Scanning a place happens inside its space/)).toBeInTheDocument()
+        expect(await screen.findByText(/Scanning happens inside a space\. Open the space first/)).toBeInTheDocument()
         expect(screen.queryByText(/space-surface-app/)).toBeNull()
         expect(mockSpaceLookups).not.toContain('scan')
     })
@@ -476,7 +476,7 @@ describe('RootApp vanity project links', () => {
         render(<RootApp />)
 
         expect(await screen.findByTestId('missing-project-card')).toHaveTextContent(
-            'There is no project called “randomtext” in this space.'
+            'There is no project called “randomtext” in the space “somespace”.'
         )
         expect(screen.queryByText(/space-surface-app/)).toBeNull()
         expect(screen.getByRole('link', { name: 'See what is in this space' })).toHaveAttribute('href', '/somespace/projects')

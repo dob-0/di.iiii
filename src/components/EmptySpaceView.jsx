@@ -3,13 +3,13 @@ import { isSpaceInSessionScope } from '../utils/sessionScope.js'
 import { canEditSession } from '../shared/visitorChrome.js'
 import { buildSpacesPath, buildStudioHubPath } from '../studio/utils/studioRouting.js'
 import { buildFrontPagePath } from '../utils/spaceRouting.js'
-import { EMPTY_SPACE_SENTENCE } from './emptySpaceWords.js'
+import { emptySpaceSentence } from './emptySpaceWords.js'
 
 // What a space with nothing in it opens: its name, one sentence that says it
 // is empty (not broken), the way out, and for a session that can edit here,
 // the way to start. Not the 3D editor — a new space is not a scene.
 //
-// The sentence is EMPTY_SPACE_SENTENCE, the same words the space's own list
+// The sentence is emptySpaceSentence(), the same words the space's own list
 // (/{space}/projects) says when it has nothing in it: one empty state, one
 // voice (audit F070, 2026-10-28). Before, a visitor saw a black page with one
 // bold word and nothing to click.
@@ -27,7 +27,7 @@ export default function EmptySpaceView({ spaceId, title }) {
         <div style={wrapStyle}>
             <div style={cardStyle} data-testid="empty-space-view">
                 <strong>{title || spaceId}</strong>
-                <p style={textStyle}>{EMPTY_SPACE_SENTENCE}</p>
+                <p style={textStyle}>{emptySpaceSentence(canEdit)}</p>
                 {canEdit ? (
                     <div>
                         <a href={buildStudioHubPath(spaceId)} style={linkStyle}>Make the first project in Studio</a>

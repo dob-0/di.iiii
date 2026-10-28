@@ -26,6 +26,9 @@ describe('EmptySpaceView', () => {
         mockSession.value = { canEdit: true }
         render(<EmptySpaceView spaceId="quiet" title="Quiet Room" />)
         expect(screen.getByRole('link', { name: 'Make the first project in Studio' })).toHaveAttribute('href', '/quiet/studio')
-        expect(screen.getByTestId('empty-space-view')).toHaveTextContent('Nothing here yet.')
+        const card = screen.getByTestId('empty-space-view')
+        expect(card).toHaveTextContent('Nothing here yet.')
+        // The owner is not told that "the owner" has not shown anything.
+        expect(card).not.toHaveTextContent('The owner has not shown anything.')
     })
 })
