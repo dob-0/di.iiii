@@ -20,6 +20,12 @@ describe('resolveViewportMode — what the Studio viewport shows', () => {
         expect(resolveViewportMode(d)).toBe('scene')
     })
 
+    it('a scene project whose public entry view is Code still opens its scene in the Studio, as before', () => {
+        const d = doc({ entities: [entity], presentationState: { mode: 'scene', entryView: 'code', codeHtml: '<p>hi</p>' } })
+        expect(resolveViewportMode(d)).toBe('scene')
+        expect(resolveViewportMode(doc({ nodes: [{ id: 'n1' }], presentationState: { entryView: 'code' } }))).toBe('scene')
+    })
+
     it('a project that holds nothing opens the scene, as before', () => {
         expect(resolveViewportMode(doc())).toBe('scene')
         expect(resolveViewportMode(doc({ presentationState: { mode: 'scene' } }))).toBe('scene')
