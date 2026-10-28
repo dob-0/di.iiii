@@ -25,6 +25,7 @@ import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.
 import { CIRCLE_SEGMENTS } from '../../objectComponents/primitiveSegments.js'
 import { createTapTracker } from '../utils/useDoubleTap.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
+import { useLampTypeVersion } from '../../project/nodes/light.lamp/useLampTypeVersion.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
@@ -855,13 +856,14 @@ function SceneContent({
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
     // must not survive a tick or the clock would freeze at its first sample.
     const clockNow = useDocumentClock(document)
+    const lampTypes = useLampTypeVersion()
     // Between-pass node state (a Lag's last answer) — this window's own,
     // never React state, dropped whole when the document changes.
     const [frameMemory] = useState(() => createFrameMemory())
     useEffect(() => { frameMemory.clear() }, [frameMemory, document.projectMeta?.id])
     const graphContext = useMemo(
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
-        [document, clockNow, liveOutputs, frameMemory]
+        [document, clockNow, lampTypes, liveOutputs, frameMemory]
     )
     // scopeId undefined = unscoped, matches the old document-wide behavior; a real
     // scope (including root, `null`) only renders/uses siblings of that scope — see

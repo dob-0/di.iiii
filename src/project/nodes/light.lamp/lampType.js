@@ -46,6 +46,9 @@ export const loadLampType = (id) => {
 /** Call `fn(id)` whenever a type's file arrives; returns the unsubscribe. */
 export const onLampTypeLoaded = (fn) => { listeners.add(fn); return () => listeners.delete(fn) }
 
+/** How many type files are in; a number that changes exactly when a graph that read a Lamp must be read again. */
+export const lampTypesLoadedCount = () => loaded.size
+
 // A Lamp with no type: a moving head's range, 540° pan and 270° tilt (what the library's moving heads publish:
 // up-b380f and up-250bsw, pan_tilt_deg), a 25° beam that Zoom opens from 10° to 50°, and a 0.3 m body.
 export const UNTYPED_PAN_TILT_DEG = [540, 270]
