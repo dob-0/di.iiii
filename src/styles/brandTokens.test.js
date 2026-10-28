@@ -179,9 +179,12 @@ describe('shared sizes: the type ladder and the target floor', () => {
     })
 
     it('a label on the tracking token takes its case from --di-label-case, never a literal uppercase', () => {
+        // Artists' works keep their own design (AGENTS.md): this sweep never
+        // asks src/algoVrithm/ or src/wccSite/ to change.
+        const ARTISTS = new Set(['algoVrithm', 'wccSite'])
         const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
             const p = resolve(dir, e.name)
-            if (e.isDirectory()) return walk(p)
+            if (e.isDirectory()) return ARTISTS.has(e.name) ? [] : walk(p)
             return e.name.endsWith('.css') ? [p] : []
         })
         const offenders = []
