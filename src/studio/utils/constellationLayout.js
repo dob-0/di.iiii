@@ -1,5 +1,6 @@
 // Layout + view-model for the Spaces constellation: pure functions so the
 // R3F surface stays a thin renderer and this stays unit-testable in jsdom.
+import { DI_CYAN } from '../../styles/brandColors.js'
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
 
@@ -25,10 +26,12 @@ export const nodeStatus = (space, { defaultSpaceId } = {}) => {
     return 'private'
 }
 
+// live is the house cyan; public is light grey, so cyan means live and nothing else.
+// Hex, not var(): Three.js reads these.
 export const NODE_COLORS = {
     main: '#ffb347',
-    live: '#4fd6ff',
-    public: '#7fc4e8',
+    live: DI_CYAN,
+    public: '#d5d9e2',
     private: '#8a93a6',
     sandbox: '#5f6b7a'
 }

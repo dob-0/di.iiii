@@ -1,5 +1,5 @@
 {
-  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "$schema": "https://diiii.xyz/schemas/di-space.schema.json",
   "spaceId": "network",
   "projectId": "network-grig-gevorgyan",
   "slug": "grig-gevorgyan",

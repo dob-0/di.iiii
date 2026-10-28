@@ -5,7 +5,7 @@ import './legal.css'
 
 // The door sign for programs — apps, scripts, crawlers and AIs. The server's 429
 // and 403 answers to programs point here (serverXR/src/appVisitors.js), and so do
-// public/robots.txt and public/llms.txt. Same shell as /terms: short, plain, read.
+// public/robots.txt and /llms.txt (docs/ai/public/llms.txt). Same shell as /terms: short, plain, read.
 
 const CONTACT_EMAIL = 'info@thedi.studio'
 

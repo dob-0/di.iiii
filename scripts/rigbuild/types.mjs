@@ -9,8 +9,8 @@
  *
  * The library is di.iiii's one shared fixture library (decision 4, 2026-10-13): ONE FILE PER
  * TYPE (`<id>.json`, with its provenance) so a viewer loads only the types its project uses
- * (src/rigbuild/types/projectTypes.js), and `index.json`: the order, and each type's code and
- * category, small enough for anything to read first. The rule for adding a type: the README.
+ * (src/rigbuild/types/projectTypes.js), `index.json`: the order, and each type's code and
+ * category, small enough for anything to read first, and `all.json`: all of them in one file, for the tools. The rule for adding a type: the README.
  *
  * The output is generated, never edited by hand; src/rigbuild/fixtureTypes.test.js
  * regenerates it and compares.
@@ -44,6 +44,7 @@ export const serialise = (library) => `${JSON.stringify(library, null, 2)}\n`
 
 export const LIBRARY_DIR = 'src/rigbuild/types/library'
 export const INDEX_FILE = 'index.json'
+export const WHOLE_FILE = 'all.json'
 
 /** The library's index: the order, and per type the little a reader needs before it loads one. Pure. */
 export const indexOf = (library) => ({
@@ -59,7 +60,9 @@ export const indexOf = (library) => ({
  * @param {{ dir?: string }} [where]
  */
 export const libraryFiles = (library, { dir = LIBRARY_DIR } = {}) => {
-    const files = { [`${dir}/${INDEX_FILE}`]: serialise(indexOf(library)) }
+    // all.json: the whole library as ONE file, for the Studio's work tools, which offer every type. A bundler turns the
+    // per-type files into one request each; the tools would pay 15 requests for what was one (measured 2026-10-20).
+    const files = { [`${dir}/${INDEX_FILE}`]: serialise(indexOf(library)), [`${dir}/${WHOLE_FILE}`]: serialise(library) }
     for (const t of library.types) files[`${dir}/${t.id}.json`] = serialise(t)
     return files
 }

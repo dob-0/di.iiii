@@ -5,7 +5,7 @@ a web manifest, and — for people who want a file to send rather than a link to
 open — an Android APK that wraps the same address.
 
 Nothing here is a second copy of the chat. Both routes open
-`https://di-studio.xyz/chat`; the app is a window, not a client.
+`https://diiii.xyz/chat`; the app is a window, not a client.
 
 ## The web half (ships with the repo)
 

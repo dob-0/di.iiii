@@ -2223,6 +2223,12 @@ export default function RawGraphSurface({
                                                 className={`raw-graph-port-dot raw-graph-port-dot--in${pendingWire ? (arePortsCompatible(pendingWire.fromPortType, port.type) ? ' is-compatible' : ' is-incompatible') : ''}`}
                                                 data-node-id={node.id}
                                                 data-port-id={port.id}
+                                                // A pointer handle inside the card, which is itself
+                                                // the button: a focusable child of a button is a
+                                                // nested control, and the row's label already names
+                                                // the port. Hidden from the reader; wiring by
+                                                // keyboard does not exist yet (audit 2026-10-21).
+                                                aria-hidden="true"
                                                 onPointerDown={(event) => armLongPress(event, node, port, 'in')}
                                                 onContextMenu={(event) => {
                                                     if (!onPromotePort) return
@@ -2256,6 +2262,7 @@ export default function RawGraphSurface({
                                                 className="raw-graph-port-dot raw-graph-port-dot--out"
                                                 data-node-id={node.id}
                                                 data-port-id={port.id}
+                                                aria-hidden="true"
                                                 onPointerDown={(event) => {
                                                     armLongPress(event, node, port, 'out')
                                                     handleOutputPointerDown(event, node, port)

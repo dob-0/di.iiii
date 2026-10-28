@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 // Plain data, no imports of its own — see the note at the top of that file.
 import { resolveBuildProfile } from './src/works/buildProfile.js'
 import { isMeasuredFile } from './scripts/node-anatomy-lib.mjs'
+import { llmsFullPlugin } from './scripts/llmsFull.mjs'
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const XR_EMULATE_STUB = path.resolve(ROOT_DIR, 'src/xr/emulateStub.js')
@@ -84,7 +85,7 @@ const emitInstallScriptsPlugin = () => ({
     name: 'emit-install-scripts',
     apply: 'build',
     generateBundle() {
-        // The install scripts are how a stranger reaches di-studio.xyz. Inside
+        // The install scripts are how a stranger reaches diiii.xyz. Inside
         // an install they would offer to install what is already installed.
         if (LOCAL_PROFILE) return
         for (const [source, fileName] of [['install.sh', 'get.sh'], ['install.ps1', 'get.ps1']]) {
@@ -137,7 +138,7 @@ const emitBuildProfilePlugin = () => ({
 //
 // `DI_PROFILE=local` builds di.iiii for an artist's own machine: the program
 // and the studio's own pieces, without the hosting furniture that only means
-// anything on di-studio.xyz. `DI_LOCAL_SLIM=1` alongside it builds the program
+// anything on diiii.xyz. `DI_LOCAL_SLIM=1` alongside it builds the program
 // ALONE — which is what `local` used to mean, and no longer does.
 //
 // Why it changed. The strip was measured and correct and it broke the one
@@ -539,7 +540,7 @@ export default {
     plugins:
     [
         // DI_PROFILE=local — di.iiii for an artist's own machine: the program
-        // and the works, without di-studio.xyz's hosting furniture.
+        // and the works, without diiii.xyz's hosting furniture.
         ...(LOCAL_PROFILE ? [localPublicDirPlugin()] : []),
         // …and DI_LOCAL_SLIM=1 on top of it — the program alone. This is the
         // plugin that cuts the works out, so on a plain local build it is not
@@ -564,6 +565,10 @@ export default {
 
         // dist/build-profile.json — which of the three shapes this dist is
         emitBuildProfilePlugin(),
+
+        // dist/llms-full.txt — llms.txt plus the whole wiki. Hosted only, like
+        // llms.txt itself: it names diiii.xyz, which a laptop install is not.
+        ...(LOCAL_PROFILE ? [] : [llmsFullPlugin({ rootDir: ROOT_DIR })]),
 
         // Save from the algovrithm director panel (dev only)
         algoVrithmSavePlugin(),
@@ -631,6 +636,14 @@ export default {
                 xfwd: true,
                 ws: true
             },
+            // The one context at the caller's level (serverXR/src/aiContext.js), as
+            // nginx sends it on the hosted tiers.
+            '^/ai/context$': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true,
+                rewrite: (path) => `/serverXR${path}`
+            },
             // The lighting desk lives on the backend at /light (app-level, no /serverXR
             // prefix) — its interface is plain files the desk serves itself.
             //
@@ -662,6 +675,13 @@ export default {
                 changeOrigin: true,
                 xfwd: true
             },
+            // OSC — the same shape: serverXR answers /osc itself on a local install
+            // (serverXR/src/routes/oscRoutes.js), the OSC In and OSC Out nodes' UDP.
+            '^/osc(/|$)': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true
+            },
             // Live AI — a WebSocket to the image model on this machine, relayed by
             // serverXR (serverXR/src/liveAi/relay.js). Anchored like /ndi above.
             '^/liveai(/|$)': {
@@ -669,6 +689,16 @@ export default {
                 changeOrigin: true,
                 xfwd: true,
                 ws: true
+            },
+            // What di.iiii tells a language model: /llms.txt, /llms-full.txt (a 404)
+            // and /ai/*.md, answered by serverXR (serverXR/src/aiPublic.js), as nginx
+            // sends them on the hosted tiers. Anchored like /ndi above; /ai/setup is
+            // a page of the app and stays here.
+            '^/(llms\\.txt|llms-full\\.txt)$|^/ai(/(?!setup/?$)|$)': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true,
+                rewrite: (path) => `/serverXR${path}`
             },
             // Project documents store asset/API URLs as bare `/api/...` (no
             // `/serverXR` prefix) because in production Express serves both

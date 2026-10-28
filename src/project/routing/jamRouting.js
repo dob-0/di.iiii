@@ -28,6 +28,15 @@ const { getBasePrefix, stripBasePath } = createBasePathHelpers(import.meta.env.B
 
 export const buildJamScenePath = () => joinPath(getBasePrefix(), OPEN_JAM_ALIAS_SEGMENT, JAM_SCENE_SEGMENT)
 
+// The address to hand out. The bare space lands in the identical jam scene as
+// the alias above (getJamLocationState), and it is the one canonical address
+// the server's head names for all three (`/open`, `/open_jam`,
+// `/open_jam/scene`; serverXR/src/routes/ogRoutes.js CANONICAL_ALIASES): a
+// link offered on the site should be the address search engines are told to
+// keep, not one of its copies (audit G12, 2026-10-21). The alias stays valid
+// for the QR codes and flyers already printed with it.
+export const buildJamPublicPath = () => joinPath(getBasePrefix(), OPEN_JAM_SPACE_ID)
+
 // The way out — the full editor, at the address it has always had. A phone has
 // never been offered this link, and the "All tools" escape inside Studio lives
 // behind the desktop-only control cluster, so on the device the QR code targets

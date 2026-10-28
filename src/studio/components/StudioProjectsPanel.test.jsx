@@ -54,7 +54,7 @@ describe('StudioProjectsPanel', () => {
         expect(navigateToStudioPath).not.toHaveBeenCalled()
     })
 
-    it('creates a project and opens it', async () => {
+    it('creates a project and opens its project view, not the 3D editor', async () => {
         listProjects.mockResolvedValue([])
         getServerSpace.mockResolvedValue({ publishedProjectId: null })
         createProject.mockResolvedValue({ project: { id: 'fresh' } })
@@ -67,7 +67,7 @@ describe('StudioProjectsPanel', () => {
         await waitFor(() => {
             expect(createProject).toHaveBeenCalledWith('br-id-ge', { title: 'sketch', slug: 'sketch', source: 'studio-v3' })
         })
-        expect(navigateToStudioPath).toHaveBeenCalledWith('/br-id-ge/studio/projects/fresh')
+        expect(navigateToStudioPath).toHaveBeenCalledWith('/br-id-ge/p/fresh')
     })
 
     it('renames a project in place', async () => {

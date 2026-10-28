@@ -68,7 +68,8 @@ const { createSpaceIdParam } = require('./routes/spaceIdParam')
 const { createKeyedLock } = require('./asyncLock')
 const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
-const { registerOgRoutes } = require('./routes/ogRoutes')
+const { registerOgRoutes, createShellSource } = require('./routes/ogRoutes')
+const { registerSitemapRoutes, createBuiltSitemapSource } = require('./routes/sitemapRoutes')
 const { loadWikiArticles } = require('./wikiIndex')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { TRUST_PROXY } = require('./proxyTrust')
@@ -122,6 +123,8 @@ const { serverActor } = require('./opActor')
 const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
+const { registerAiContextRoutes } = require('./aiContext')
+const { registerAiPublicRoutes } = require('./aiPublic')
 const { registerPasswordAuthRoutes } = require('./routes/passwordAuthRoutes')
 const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerDomainRoutes } = require('./routes/domainRoutes')
@@ -133,6 +136,7 @@ const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { registerLaserRoutes } = require('./routes/laserRoutes')
+const { registerOscRoutes } = require('./routes/oscRoutes')
 const { registerNdiRoutes, scanAtBootFrom } = require('./routes/ndiRoutes')
 const { hasLocalRuntime } = require('./localRuntimeGuard')
 const { registerPlaceRoutes } = require('./routes/placeRoutes')
@@ -213,42 +217,7 @@ const MAX_OP_HISTORY = 500
 // guard in POST /ops has to recognise.
 const MAX_OP_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const DEFAULT_SPACE_ID = 'main'
-const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'model/']
-const ALLOWED_MIME_TYPES = new Set([
-  'application/json',
-  'application/octet-stream',
-  'application/pdf',
-  'application/zip',
-  'application/x-zip-compressed',
-  'application/gzip',
-  'text/plain'
-])
-const ALLOWED_EXTENSIONS = new Set([
-  '.glb',
-  '.gltf',
-  '.obj',
-  '.mtl',
-  '.stl',
-  '.fbx',
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.gif',
-  '.webp',
-  '.svg',
-  '.mp4',
-  '.mov',
-  '.webm',
-  '.mp3',
-  '.wav',
-  '.ogg',
-  '.m4a',
-  '.zip',
-  '.bin',
-  '.hdr',
-  '.exr'
-])
-
+const { isAllowedUpload } = require('./uploadPolicy')
 const releaseInfo = loadReleaseInfo(config.directories.root)
 
 const {
@@ -285,6 +254,8 @@ const {
   normalizeSpaceSlug,
   pruneSpaces,
   pruneStaleSandboxes,
+  sweepPlan,
+  listSweepLog,
   listSpaceSnapshots,
   readLatestSpaceSnapshot,
   readSpaceSnapshot,
@@ -307,6 +278,8 @@ const {
   accountSandboxTtlMs: config.accountSandboxTtlMs,
   // Read each sweep, so `di follow` / `di unfollow` count without a restart.
   keptSpaceIds: () => Object.keys(require('./follow/followStore').readFollows(config.directories.dataDir)),
+  linkedSpaceIds: () => require('./siteLinkedSpaces').SITE_LINKED_SPACE_IDS,
+  log: logger,
   blankScene: BLANK_SCENE
 })
 
@@ -331,21 +304,6 @@ const stampImportedOpsActor = (spaceId, actor) => {
     .run(actor.actor, actor.type, actor.label, spaceId)
   db.prepare('UPDATE project_ops SET actor = ?, actor_type = ?, actor_label = ? WHERE actor IS NULL AND project_id IN (SELECT id FROM projects WHERE space_id = ?)')
     .run(actor.actor, actor.type, actor.label, spaceId)
-}
-
-const isAllowedUpload = (file) => {
-  const mime = (file?.mimetype || '').toLowerCase()
-  const name = (file?.originalname || '').toLowerCase()
-  const ext = path.extname(name)
-  if (ALLOWED_MIME_PREFIXES.some(prefix => mime.startsWith(prefix))) return true
-  if (ALLOWED_MIME_TYPES.has(mime)) {
-    if (mime === 'application/octet-stream' && ext) {
-      return ALLOWED_EXTENSIONS.has(ext)
-    }
-    return true
-  }
-  if (ext && ALLOWED_EXTENSIONS.has(ext)) return true
-  return false
 }
 
 const upload = multer({
@@ -566,6 +524,14 @@ const lasers = registerLaserRoutes(app, {
     return project ? readProjectDocument(SPACES_DIR, project.spaceId, project.projectId) : null
   }
 })
+
+// OSC (serverXR/src/osc) at /osc — the OSC In and OSC Out nodes' UDP, which a page cannot
+// open: the lasers' twin in shape (built on first use, local-only, 404 hosted).
+const osc = registerOscRoutes(app, {
+  mountPaths: [...new Set(['/osc', `${config.mountPath || ''}/osc`.replace(/\/+/g, '/')])],
+  log: logger
+})
+process.once('exit', () => { try { osc.close() } catch { /* going down anyway */ } })
 
 // NDI® in (serverXR/src/ndi) at /ndi — the lighting desk's twin: a local-runtime lane,
 // built on first use, 404 on a hosted server. Nothing native loads here or at boot: the
@@ -1191,6 +1157,12 @@ const isOwnSandbox = (state, spaceId) => {
 const ensureOwnSandbox = async (state, spaceId) => {
   if (!isOwnSandbox(state, spaceId)) return
   if (await spaceExists(spaceId)) return
+  // The idle sweep trashes a guest sandbox (no person can): a guest back
+  // inside the hold gets their room back instead of a refused name.
+  if (await loadTrashedSpaceMeta(spaceId)) {
+    await restoreSpace(spaceId)
+    return
+  }
   const isGuest = state.type === 'guest' || isGuestSubject(state.subject)
   await ensureSpaceScene(spaceId)
   // Account sandboxes are permanent (one per user, survives the sweep);
@@ -1619,6 +1591,22 @@ const isKnownCaller = (req) => {
 }
 router.use(createVisitorBouncer({ guestBook, isKnownCaller, log: logger }))
 
+// The one context at the caller's level (aiContext.js): no key = public, a key
+// maps to its level, a higher level asked for is a 403. After the auth-state
+// middleware above, because the level is read from req.authState and nowhere else.
+registerAiContextRoutes(router, {
+  contextDir: config.directories.aiContextDir,
+  isGuestSubject,
+  // The account's access group (the di-bo repo's groups design brief §2.1). The
+  // column does not exist yet; until it does this is null and member means
+  // registered.
+  groupOf: (userId) => {
+    try {
+      return getDb().prepare('SELECT access_group AS g FROM users WHERE id = ?').get(String(userId || ''))?.g || null
+    } catch { return null }
+  }
+})
+
 // Private conversations: the public-key phone book. Registered here, after the
 // middleware above, because every handler reads `req.authState` — and the whole
 // access rule ("somebody you share a space with") is written in terms of it.
@@ -1917,7 +1905,7 @@ approvalGate.registerReauthorizer('spaces.purge', async (args, subject, actorTyp
 // ── One-click GitHub sync: webhook receiver (signature-authed, pre-gate) ──────
 // Default loopback works on a normal TCP listen; under Passenger (cPanel) the app
 // is fronted by a Unix socket and nothing binds config.port, so SELF_API_URL must
-// point at the server's own public origin (e.g. https://di-studio.xyz/serverXR).
+// point at the server's own public origin (e.g. https://diiii.xyz/serverXR).
 const internalApiBase = () =>
   process.env.SELF_API_URL?.replace(/\/$/, '') || `http://127.0.0.1:${config.port}${config.basePath || ''}`
 const internalHeaders = () => ({ 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${config.internalApiToken}` })
@@ -2326,7 +2314,7 @@ const sceneWriter = createSceneWriter({
 // og route resolved nothing for the one link this was built for and served the
 // platform tile. Same resolver the /api/resolve middleware above uses: slug
 // first, then the normalized id.
-registerOgRoutes(router, {
+const { renderPage } = registerOgRoutes(router, {
   loadWikiArticles,
   loadSpaceMeta: async (segment) =>
     (await findSpaceBySlug(segment)) || (await loadSpaceMeta(normalizeSpaceId(segment) || segment)),
@@ -2349,6 +2337,33 @@ registerOgRoutes(router, {
   // A space on its own domain: the crawler card for yokozo.xyz/ is the card of
   // the space that domain shows, not the platform's.
   spaceIdForHost: domainStore.findActiveSpaceIdForHost,
+  // The built shell the page route writes each address's head into. A `di`
+  // install reads it from its own CLIENT_DIR; the hosted tiers fetch it from
+  // the client container's nginx (SHELL_URL, docker-compose.yml). Neither set:
+  // the page route answers 503 and nginx serves the static shell, as before.
+  loadShell: createShellSource({
+    readShell: config.directories.clientDir
+      ? () => fs.promises.readFile(path.join(config.directories.clientDir, 'index.html'), 'utf8')
+      : null,
+    shellUrl: process.env.SHELL_URL || '',
+  }),
+})
+
+// /sitemap.xml from the records themselves (audit G04): public spaces, and
+// their live, non-private projects, with lastmod. nginx proxies the root
+// /sitemap.xml here.
+const sitemapHandler = registerSitemapRoutes(router, {
+  listSpaces,
+  listProjects: (spaceId) => listProjectsInSpace(SPACES_DIR, spaceId),
+  siteOrigin: process.env.SITE_ORIGIN || '',
+  // The build's own sitemap (wiki articles, network rooms): the records add to
+  // it, they do not replace it.
+  loadBuilt: createBuiltSitemapSource({
+    readBuilt: config.directories.clientDir
+      ? () => fs.promises.readFile(path.join(config.directories.clientDir, 'sitemap.xml'), 'utf8')
+      : null,
+    builtUrl: process.env.SITEMAP_BUILT_URL || '',
+  }),
 })
 
 registerInscriptionRoutes(router, {
@@ -3324,6 +3339,24 @@ router.post('/api/admin/sandboxes/purge', requireAdminAlways, async (req, res, n
   }
 })
 
+// What the idle sweep will reach in the next 14 days (and what it will do to
+// each: trash, or skip and say why), plus what it already did — so a person
+// sees a space coming due before it goes, not after.
+const SWEEP_DUE_HORIZON_MS = 14 * 24 * 60 * 60 * 1000
+router.get('/api/admin/sweep', requireAdminAlways, (req, res, next) => {
+  try {
+    const now = Date.now()
+    res.json({
+      now,
+      horizonMs: SWEEP_DUE_HORIZON_MS,
+      due: sweepPlan({ now, horizonMs: SWEEP_DUE_HORIZON_MS }),
+      log: listSweepLog({ limit: 200 })
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 registerConfigRoutes(router, {
   requireAdminAlways,
   configStore,
@@ -3347,6 +3380,10 @@ registerGuestAddressRoute(router, {
   requireAuth: config.requireAuth
 })
 
+// /llms.txt and /ai/*.md, read from the public bundle (aiPublic.js). Last on
+// the router so nothing above can be shadowed by its /ai catch-all.
+registerAiPublicRoutes(router, { logger })
+
 const mountTargets = new Set([config.mountPath])
 if (!mountTargets.has('/serverXR')) {
   mountTargets.add('/serverXR')
@@ -3364,6 +3401,26 @@ mountTargets.forEach((targetPath) => {
 // so /serverXR/api/* is already answered and can never fall through to index.html.
 const CLIENT_DIR = config.directories.clientDir
 if (CLIENT_DIR) {
+  // Before express.static: a stale sitemap.xml left in an older build's dist/
+  // must not shadow the one written from the records.
+  app.get('/sitemap.xml', sitemapHandler)
+  // The shell with this address's own head, and a 404 when nothing answers
+  // to it (audit G01) — the same page route nginx uses on the hosted tiers.
+  const servePage = (req, res, next) => {
+    renderPage(req, req.path).then((page) => {
+      if (page) {
+        res.set('Cache-Control', 'no-cache')
+        res.status(page.status).type('html').send(page.html)
+        return
+      }
+      res.sendFile('index.html', { root: CLIENT_DIR })
+    }).catch(next)
+  }
+  // `/` first: express.static would otherwise answer it with the bare shell.
+  app.get('/', servePage)
+  // Before the built app's files and its fallback: under /ai/ the shell must
+  // never answer for a file the bundle does not have (aiPublic.js).
+  registerAiPublicRoutes(app, { logger, appPages: true })
   app.use(express.static(CLIENT_DIR, { setHeaders: allowNullOrigin }))
 
   // Digital asset links — how Android decides that the installed studio-chat
@@ -3380,6 +3437,15 @@ if (CLIENT_DIR) {
     }, (error) => {
       // A build without the file is not an error worth a 500 — it is a 404,
       // the same answer nginx gives.
+      if (error) next()
+    })
+  })
+
+  // iOS asks the root for its home-screen icon under two names without reading
+  // the page's <head>; the file lives once, in the suite. nginx.conf carries the
+  // same alias for the hosted tiers (gap G49, 2026-10-21).
+  app.get(['/apple-touch-icon.png', '/apple-touch-icon-precomposed.png'], (req, res, next) => {
+    res.sendFile('suite/apple-touch-icon.png', { root: CLIENT_DIR }, (error) => {
       if (error) next()
     })
   })
@@ -3410,7 +3476,7 @@ if (CLIENT_DIR) {
     // send applies its dotfiles:'ignore' rule to every segment of the absolute
     // path — and the default install lives in ~/.di, so a hidden directory in
     // the path 404s the entire app. Relative to root, there is no dot segment.
-    res.sendFile('index.html', { root: CLIENT_DIR })
+    servePage(req, res, next)
   })
 
   logger.info(`[client] serving the built app from ${CLIENT_DIR}`)
@@ -3516,9 +3582,9 @@ initStorage()
     // Buffered guest-book counts land every 30s; the timer is unref'd, so it
     // never holds the process open.
     guestBook.start()
-    // The sweep deletes for good: say which spaces it took.
+    // The sweep trashes (restorable for 30 days) and skips anything published,
+    // listed, linked or holding work; it logs one line per act itself.
     const pruneAndSay = () => pruneSpaces()
-      .then((removed) => { if (removed.length) logger.info(`[spaces] removed ${removed.length} space(s) idle past their time: ${removed.join(', ')}`) })
       .catch((error) => logger.warn('Failed to prune spaces', error))
     pruneAndSay()
     // Spent and expired Telegram sign-in tokens. They are already worthless —

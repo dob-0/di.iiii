@@ -61,7 +61,11 @@ const APP_SEGMENTS = [
     // order (docs/architecture/RIG_BUILD.md §13). Checked on all three tiers before
     // reserving (2026-09-28): /serverXR/api/spaces/equipment and /projects/equipment
     // answer 404 on diiii.xyz, dev.diiii.xyz and the local install.
-    'equipment'
+    'equipment',
+    // `/ai/setup` — how a person connects an assistant (src/pages/AiSetupPage.jsx);
+    // the rest of /ai/ is serverXR's. NOT checked against the tiers before
+    // reserving (2026-10-27): the session that added it could not reach them.
+    'ai'
 ]
 
 // Real directories under public/, plus the build's own output prefixes, served

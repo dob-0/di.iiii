@@ -58,7 +58,7 @@ describe('the front page routes', () => {
     it('Open Space goes through the entering move instead of reloading the site', () => {
         render(<LandingPage />)
         const call = pressed(/^Open Space$/)
-        expect(call.href).toMatch(/open_jam\/scene$/)
+        expect(call.href).toMatch(/\/open$/)
         expect(call.options).toEqual({ holdPage: true })
     })
 })

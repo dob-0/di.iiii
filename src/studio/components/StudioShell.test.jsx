@@ -191,6 +191,15 @@ describe('StudioShell — a new project opens bare', () => {
 
     afterEach(() => {
         window.localStorage.removeItem(ALL_TOOLS_KEY)
+        window.history.replaceState(null, '', '/')
+        // the shell saves the windows it had open; a later test must not inherit them
+        window.localStorage.clear()
+    })
+
+    it('draws the Code window on an empty project when the address asks for it (?open=files)', () => {
+        window.history.replaceState(null, '', '/?open=files')
+        renderShell({ ...inProject, layers: NEW })
+        expect(panels()).toContain('Code')
     })
 
     it('shows the bar, the room and Create alone — no cluster, no other window, no Drive or Commons, no empty Files list', () => {
@@ -262,6 +271,12 @@ describe('StudioShell — a new project opens bare', () => {
         expect(document.querySelector('.sbar')).toBeNull()
     })
 
+    it('on a phone, ?open=files opens the Code sheet on an empty project', () => {
+        window.history.replaceState(null, '', '/?open=files')
+        renderShell({ ...inProject, layers: NEW, isMobile: true })
+        expect(document.querySelector('.smb-sheet-head')?.textContent).toContain('Code')
+    })
+
     it('on a phone: Create alone until the first thing, then the full phone bar', () => {
         const { rerender } = renderShell({ ...inProject, layers: NEW, isMobile: true })
         const nav = () => [...screen.getByRole('navigation', { name: 'Studio windows' }).querySelectorAll('button')].map((b) => b.textContent)
@@ -329,5 +344,53 @@ describe('StudioShell transform shortcuts and a locked selection', () => {
         fireEvent.keyDown(window, { key: 'x' })
 
         expect(onStartTransform).toHaveBeenCalledWith('translate', 'x')
+    })
+})
+
+// Owner 2026-10-28 (cinema-house): a project that is a web page opened Studio on the empty 3D grid with Create
+// (primitives, lights) open on top. Studio now opens the page and leaves Create to the person.
+describe('StudioShell — a code project does not open Create by itself', () => {
+    const OPEN = { space: true, things: true, connections: false, wall: false, lamps: false, handover: false }
+    const PAGE = { loaded: true, empty: false, held: true, open: OPEN }
+    const codeDoc = { projectMeta: { id: 'code-p', title: 'Page' }, assets: [], presentationState: { mode: 'scene', entryView: 'scene', codeFiles: [{ name: 'index.html', content: '<p>hi</p>' }] } }
+    const sceneDoc = { projectMeta: { id: 'scene-p', title: 'Room' }, assets: [], entities: [{ id: 'e1', type: 'box' }], presentationState: { mode: 'scene' } }
+    const panels = () => [...document.querySelectorAll('[data-panel]')].map((el) => el.dataset.panel)
+
+    afterEach(() => {
+        window.history.replaceState(null, '', '/')
+        window.localStorage.clear()
+    })
+
+    it('a project holding a page opens without the Create window', () => {
+        renderShell({ document: codeDoc, layers: PAGE })
+        expect(panels()).not.toContain('Create')
+        expect(panels()).toContain('Objects')
+    })
+
+    it('a project holding a page still opens Create when the address asks for it (?open=create)', () => {
+        window.history.replaceState(null, '', '/?open=create')
+        renderShell({ document: codeDoc, layers: PAGE })
+        expect(panels()).toContain('Create')
+    })
+
+    it('a scene project keeps Create open, as before', () => {
+        renderShell({ document: sceneDoc, layers: PAGE })
+        expect(panels()).toEqual(['Create', 'Objects'])
+    })
+
+    it('a project with a page and nothing decided yet (loading) keeps today\'s screen', () => {
+        renderShell({ document: codeDoc, layers: { loaded: false, empty: null, held: false, open: null } })
+        expect(panels()).toContain('Create')
+    })
+
+    it('the "Write code" door on a bare project shows the Code window and no Create', () => {
+        window.history.replaceState(null, '', '/?open=files')
+        renderShell({ document: { projectMeta: { id: 'fresh', title: 'first' }, assets: [] }, layers: { loaded: true, empty: true, held: false, open: OPEN } })
+        expect(panels()).toEqual(['Code'])
+    })
+
+    it('the same bare project opened for a scene (no ?open=files) still shows Create alone', () => {
+        renderShell({ document: { projectMeta: { id: 'fresh2', title: 'first' }, assets: [] }, layers: { loaded: true, empty: true, held: false, open: OPEN } })
+        expect(panels()).toEqual(['Create'])
     })
 })

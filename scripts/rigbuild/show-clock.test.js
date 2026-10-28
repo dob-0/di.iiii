@@ -15,7 +15,7 @@ describe('show-clock.mjs', () => {
     })
     it('refuses production hosts, never the dev tier', () => {
         expect(isProductionApi('https://diiii.xyz/serverXR')).toBe(true)
-        expect(isProductionApi('https://di-studio.xyz/serverXR')).toBe(true)
+        expect(isProductionApi('https://diiii.xyz/serverXR')).toBe(true)
         expect(isProductionApi('https://dev.diiii.xyz/serverXR')).toBe(false)
         expect(isProductionApi('https://local.thedi.studio/serverXR')).toBe(false)
     })
@@ -24,7 +24,7 @@ describe('show-clock.mjs', () => {
     it('picks the key that belongs to the server --api names', () => {
         expect(tokenKeysFor('https://dev.diiii.xyz/serverXR')[0]).toBe('LIVE_API_TOKEN')
         expect(tokenKeysFor('https://diiii.xyz/serverXR')).toEqual(['PROD_API_TOKEN'])
-        expect(tokenKeysFor('https://di-studio.xyz/serverXR')).toEqual(['PROD_API_TOKEN'])
+        expect(tokenKeysFor('https://diiii.xyz/serverXR')).toEqual(['PROD_API_TOKEN'])
         expect(tokenKeysFor('https://local.thedi.studio/serverXR')).toEqual(['ADMIN_API_TOKEN', 'API_TOKEN'])
         expect(tokenKeysFor('http://localhost:4000/serverXR')).toEqual(['ADMIN_API_TOKEN', 'API_TOKEN'])
         expect(tokenKeysFor('https://dev.diiii.xyz/serverXR')).not.toContain('API_TOKEN')

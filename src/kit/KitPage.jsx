@@ -188,7 +188,7 @@ export default function KitPage({ isLocalInstall = false }) {
 
             <main className="kit-page">
                 <header className="kit-intro">
-                    <h1 className="kit-title">Tools</h1>
+                    <h1 className="kit-title">tools</h1>
                     <p className="kit-lede">
                         Everything di.iiii does, one card each. Watch it run, try it without an account, and see what it is built from.
                     </p>

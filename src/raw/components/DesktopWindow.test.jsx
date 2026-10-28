@@ -199,4 +199,14 @@ describe('DesktopWindow resize — every edge and corner', () => {
         fireEvent.keyDown(container.querySelector('.raw-window-header'), { key: 'ArrowDown', shiftKey: true })
         expect(onPatch).toHaveBeenLastCalledWith({ x: 100, y: 101, width: 316, height: 200 })
     })
+
+    // The title bar takes focus and the arrow keys, so it says what it is: a
+    // toolbar named for moving (it was a role-less focusable <header>, 2026-10-21).
+    it('the title bar is a toolbar named for moving, and its arrow keys move the window', () => {
+        const { onPatch } = setup()
+        const bar = screen.getByRole('toolbar', { name: /arrow keys to move/ })
+        expect(bar.tabIndex).toBe(0)
+        fireEvent.keyDown(bar, { key: 'ArrowDown', shiftKey: true })
+        expect(onPatch).toHaveBeenLastCalledWith(expect.objectContaining({ y: 101 }))
+    })
 })

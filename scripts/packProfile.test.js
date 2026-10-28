@@ -12,7 +12,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { PROGRAM_PUBLIC_DIRS, resolveBuildProfile } from '../src/works/buildProfile.js'
+import { PROGRAM_PUBLIC_DIRS, PROGRAM_PUBLIC_FILES, resolveBuildProfile } from '../src/works/buildProfile.js'
 import { workPublicDirs } from '../src/works/works.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -66,8 +66,12 @@ describe('the local build profile still cuts where it thinks it does', () => {
         for (const name of [...PROGRAM_PUBLIC_DIRS, ...workPublicDirs()]) {
             expect(() => readFileSync(join(ROOT, 'public', name))).toThrow(/EISDIR|illegal operation on a directory/)
         }
+        // …and the root files the shell links, which must be files.
+        for (const name of PROGRAM_PUBLIC_FILES) {
+            expect(readFileSync(join(ROOT, 'public', name)).length).toBeGreaterThan(0)
+        }
         expect(resolveBuildProfile({ DI_PROFILE: 'local' }).publicInclude)
-            .toEqual([...PROGRAM_PUBLIC_DIRS, ...workPublicDirs()])
+            .toEqual([...PROGRAM_PUBLIC_DIRS, ...PROGRAM_PUBLIC_FILES, ...workPublicDirs()])
     })
 })
 

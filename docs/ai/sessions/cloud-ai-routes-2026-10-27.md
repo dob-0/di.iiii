@@ -1,0 +1,5 @@
+## 2026-10-27 — /llms.txt and /ai/*.md served by serverXR from docs/ai/public/; no app shell under /ai/
+
+- serverXR answers `/llms.txt`, `/llms-full.txt` (404 in text) and `/ai/*.md` from the public bundle `docs/ai/public/` (`serverXR/src/aiPublic.js`), mounted on the API router (nginx sends the paths there) and at the root on a local install. Anything under `/ai/` the bundle lacks is a 404, never the app's HTML. `public/llms.txt` moved into the bundle; it gained links to `/ai/about.md` and `/ai/words.md`, and its API lines became links so the file parses per llmstxt.org (`serverXR/src/llmsTxt.js`, refused at serve time if it does not).
+- nginx, vite's dev proxy and the server image follow; `ai` reserved as a space name — NOT checked against the tiers first (this session could not reach them).
+- Slice 8 of the one-context audit (di-bo `docs/briefs/one-context-audit.md`). Not done: a local pack still carries no bundle (addresses are the hosted site's, same decision as before); no `Link: rel="describedby"` on app pages; the bundle is hand-written until the context build exists.

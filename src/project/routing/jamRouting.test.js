@@ -3,6 +3,7 @@ import {
     JAM_PROJECT_ID,
     JAM_SPACE_ID,
     buildJamEditorPath,
+    buildJamPublicPath,
     buildJamScenePath,
     getJamLocationState,
     isJamLocation
@@ -85,6 +86,15 @@ describe('the jam surface address', () => {
 describe('the paths it hands out', () => {
     it('builds its own address', () => {
         expect(buildJamScenePath()).toBe('/open_jam/scene')
+    })
+
+    // Audit G12 (2026-10-21): three addresses for one room, and the site's own
+    // button handed out a copy. The link offered is the canonical one, and it
+    // must still open the jam itself, not the generic viewer.
+    it('hands out the canonical /open, which opens the same jam', () => {
+        expect(buildJamPublicPath()).toBe('/open')
+        expect(isJamLocation(at(buildJamPublicPath()))).toBe(true)
+        expect(at(buildJamPublicPath())).toEqual(at(buildJamScenePath()))
     })
 
     // The link a phone has never had. The "All tools" escape lives in the

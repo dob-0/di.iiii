@@ -1,6 +1,7 @@
 import { nextRaiseOf } from '../utils/cardOrder.js'
 import { Fragment, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PropertyInspector from './PropertyInspector.jsx'
+import { useCueNodeFiring } from './useCueNodeFiring.js'
 import { COLUMN_OPEN_DELAY_MS, clampColumnWidth, isPhoneWidth, readColumnWidth, writeColumnWidth } from '../utils/settingsColumn.js'
 import DesktopWindow from './DesktopWindow.jsx'
 import NodeAnatomyPanel from './NodeAnatomyPanel.jsx'
@@ -29,16 +30,29 @@ import { isTopType } from '../../project/tops/topOperators.js'
 import { DECK_INPUTS, VJ_DECK_TYPE, isPictureType, normalizeDeck, pictureIdOf, setBpm } from '../../project/tops/vjDeck.js'
 import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
+import LaserFileFeed from './LaserFileFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
+import VisitorFeed from './VisitorFeed.jsx'
+import TiltFeed from './TiltFeed.jsx'
+import { VISITOR_DEFAULTS } from '../../project/nodes/device.visitor/runtime.js'
 import MidiOutFeed from './MidiOutFeed.jsx'
+import BeatFeed from './BeatFeed.jsx'
+import { MeshInFeed, MeshOutFeed } from './MeshFeeds.jsx'
 import ButtonPanelWindow from './ButtonPanelWindow.jsx'
+import PadPanelWindow from './PadPanelWindow.jsx'
+import SliderPanelWindow from './SliderPanelWindow.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
 import AgentRunPanel from './AgentRunPanel.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
 import KeeperPanelWindow from './KeeperPanelWindow.jsx'
 import DmxOutPanelWindow from './DmxOutPanelWindow.jsx'
+import DmxInPanelWindow from './DmxInPanelWindow.jsx'
+import OscInPanelWindow from './OscInPanelWindow.jsx'
+import OscOutPanelWindow from './OscOutPanelWindow.jsx'
 import LaserOutPanelWindow from './LaserOutPanelWindow.jsx'
+import RecorderPanelWindow from './RecorderPanelWindow.jsx'
+import StillPanelWindow from './StillPanelWindow.jsx'
 import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import VjDeckView from './vjDeck/VjDeckView.jsx'
@@ -69,6 +83,7 @@ import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateN
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode } from '../../project/graph/useGraphClock.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
+import { installClockSeek } from '../../project/graph/clockSeek.js'
 import { isNodeInScope, useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
@@ -1751,6 +1766,9 @@ export default function RawEditor({
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
     // must not survive a tick or the clock would freeze at its first sample.
     const clockNow = useDocumentClock(document)
+    // A test browser cuts any project frame-exact: __seek(t), __ready, __play
+    // (clockSeek.js). Nothing is held until a script asks.
+    useEffect(() => installClockSeek(typeof window === 'undefined' ? null : window), [])
     // Stamp the show clock ONCE, the first time a Time node lands in the
     // document. From then on every window — editor, second tab, /out —
     // derives the same elapsed time from the document instead of its own
@@ -1799,9 +1817,38 @@ export default function RawEditor({
         handleLiveOutputChange(nodeId, 'pressed', pressed)
         handleLiveOutputChange(nodeId, 'count', count)
     }, [handleLiveOutputChange])
+    // null facts (the feed unmounting) clear every port back to the defaults.
+    const handleVisitor = useCallback((nodeId, facts) => {
+        for (const portId of Object.keys(VISITOR_DEFAULTS)) {
+            handleLiveOutputChange(nodeId, portId, facts ? facts[portId] : null)
+        }
+    }, [handleLiveOutputChange])
+    const handleTilt = useCallback((nodeId, reading) => {
+        handleLiveOutputChange(nodeId, 'x', reading ? reading.x : null)
+        handleLiveOutputChange(nodeId, 'y', reading ? reading.y : null)
+        handleLiveOutputChange(nodeId, 'live', reading ? reading.live : null)
+    }, [handleLiveOutputChange])
     const handleMidiOutStatus = useCallback((nodeId, status) => {
         handleLiveOutputChange(nodeId, 'status', status)
     }, [handleLiveOutputChange])
+    // A Laser File's bytes (LaserFileFeed.jsx). Stable for the same reason as the Frame handler above.
+    const handleLaserFileBytes = useCallback((nodeId, bytes) => {
+        handleLiveOutputChange(nodeId, 'bytes', bytes)
+    }, [handleLiveOutputChange])
+
+    // Recorder and Still: their windows report what they did, and hand over
+    // the file they made. The file takes the same road a dropped file does —
+    // the project's own upload when there is a project, this browser's store
+    // when there is not — and lands as a project file (upsertAsset).
+    const handleTakeReport = useCallback((nodeId, report) => {
+        for (const [portId, value] of Object.entries(report || {})) handleLiveOutputChange(nodeId, portId, value)
+    }, [handleLiveOutputChange])
+    const handleTakeSave = useCallback(async (nodeId, file) => {
+        const asset = projectId ? await uploadProjectAsset(projectId, file) : await saveAssetFromFile(file)
+        if (!asset?.id) return null
+        applyLocalOps({ type: 'upsertAsset', payload: { asset } }, { activityMessage: `Saved ${file.name}.` })
+        return asset
+    }, [applyLocalOps, projectId])
     const handleSoundOutputChange = useCallback((nodeId, levels) => {
         handleLiveOutputChange(nodeId, 'volume', levels?.volume ?? null)
         handleLiveOutputChange(nodeId, 'low', levels?.low ?? null)
@@ -1958,6 +2005,9 @@ export default function RawEditor({
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
         [document, clockNow, liveOutputs, frameMemory]
     )
+    // A Cue node a person presses fires its cues the way the Perform window does.
+    // Not from a preview card (a picture on someone else's page acts on nothing).
+    useCueNodeFiring({ document, context: graphContext, applyOps: applySharedOps, enabled: !isPreview })
 
     // The sheet's own context, built from the SAME three inputs as the one the
     // room draws with — evaluation is pure, so same document + same clock +
@@ -2150,6 +2200,51 @@ export default function RawEditor({
                 />
             )
         }
+        if (node.typeId === 'device.dmx.in') {
+            return (
+                <DmxInPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onLevelChange={(nodeId, ports) => {
+                        // null clears both at once (unmount): the graph then reads
+                        // the runtime's bare 0 and ''.
+                        handleLiveOutputChange(nodeId, 'value', ports === null ? null : ports.value)
+                        handleLiveOutputChange(nodeId, 'status', ports === null ? null : ports.status)
+                    }}
+                />
+            )
+        }
+        if (node.typeId === 'device.osc.in') {
+            return (
+                <OscInPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onSignalChange={(nodeId, ports) => {
+                        for (const portId of ['address', 'value', 'signal', 'status']) {
+                            handleLiveOutputChange(nodeId, portId, ports === null ? null : ports[portId])
+                        }
+                    }}
+                    // Port and Filter are set in the card itself, like DMX Out's host.
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
+        if (node.typeId === 'device.osc.out') {
+            return (
+                <OscOutPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onStatus={handleMidiOutStatus}
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
         if (node.typeId === 'device.dmx.out') {
             return (
                 <DmxOutPanelWindow
@@ -2178,6 +2273,24 @@ export default function RawEditor({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
                     })}
+                />
+            )
+        }
+        if (node.typeId === 'stream.recorder' || node.typeId === 'stream.still') {
+            // The take is named after what feeds its picture: the source's
+            // own label, else its type's.
+            const port = node.typeId === 'stream.recorder' ? 'video' : 'picture'
+            const wire = (document.edges || []).find((edge) => edge?.toNodeId === node.id && edge.toPort === port)
+            const from = wire ? (document.nodes || []).find((candidate) => candidate.id === wire.fromNodeId) : null
+            const sourceLabel = from ? (from.label || getNodeType(from.typeId)?.label || '') : ''
+            const Panel = node.typeId === 'stream.recorder' ? RecorderPanelWindow : StillPanelWindow
+            return (
+                <Panel
+                    node={node}
+                    values={resolvedValues}
+                    sourceLabel={sourceLabel}
+                    onSave={handleTakeSave}
+                    onReport={handleTakeReport}
                 />
             )
         }
@@ -2223,6 +2336,41 @@ export default function RawEditor({
                     onPress={(nodeId) => applyLocalOps({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, presses: (Number(node.values?.presses) || 0) + 1 } } }
+                    })}
+                />
+            )
+        }
+        // The thumb controls keep Button's split: the finger is this
+        // window's (live side channel), the level lands as an op on release.
+        if (node.typeId === 'view.slider') {
+            return (
+                <SliderPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onLive={(nodeId, value, held) => {
+                        handleLiveOutputChange(nodeId, 'value', value)
+                        handleLiveOutputChange(nodeId, 'held', held)
+                    }}
+                    onCommit={(nodeId, value) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, value } } }
+                    })}
+                />
+            )
+        }
+        if (node.typeId === 'view.pad') {
+            return (
+                <PadPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onLive={(nodeId, point, held) => {
+                        handleLiveOutputChange(nodeId, 'x', point?.x)
+                        handleLiveOutputChange(nodeId, 'y', point?.y)
+                        handleLiveOutputChange(nodeId, 'held', held)
+                    }}
+                    onCommit={(nodeId, point) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, x: point.x, y: point.y } } }
                     })}
                 />
             )
@@ -2705,11 +2853,23 @@ export default function RawEditor({
             payload: { nodeId: deckNode.id, patch: { values: { ...deckNode.values, deck: setBpm(deckNode.values?.deck, bpm, epoch) } } }
         })
     }, [applyLocalOps])
+    // A Beat whose Tempo from is the Light desk asks for the desk's clock too —
+    // and only then: a Beat on its own tempo never reads the desk.
+    const beatWantsDesk = useMemo(() => nodes.some((node) => node.typeId === 'signal.beat' && node.values?.source === 'light'), [nodes])
     const showClock = useShowClock({
         deck: deckTempo,
         onDeckTempo: firstDeck ? handleDeckTempo : null,
-        enabled: Boolean(firstDeck) || Boolean(perform)
+        enabled: Boolean(firstDeck) || Boolean(perform) || beatWantsDesk
     })
+    // A tap or Reset on a Beat with its own tempo writes bpm/epoch into the
+    // node, so the op log carries it and every window keeps one beat.
+    const nodesNowRef = useRef(nodes)
+    useEffect(() => { nodesNowRef.current = nodes }, [nodes])
+    const handleBeatTempo = useCallback((nodeId, patch) => {
+        const beatNode = nodesNowRef.current.find((node) => node.id === nodeId)
+        if (!beatNode) return
+        applyLocalOps({ type: 'updateNode', payload: { nodeId, patch: { values: { ...beatNode.values, ...patch } } } })
+    }, [applyLocalOps])
     // Perform's "Add a VJ deck": a deck at the root of the project, the same
     // node the palette makes, so Nodes shows it as a card beside the rest.
     const handleAddDeck = useCallback(() => {
@@ -2751,9 +2911,39 @@ export default function RawEditor({
                         />
                     ))}
                 {nodes
+                    .filter((node) => node.typeId === 'laser.file' && node.values?.src && assetMap.has(node.values.src))
+                    .map((node) => (
+                        <LaserFileFeed
+                            key={node.id}
+                            node={node}
+                            asset={assetMap.get(node.values.src)}
+                            onBytesChange={handleLaserFileBytes}
+                        />
+                    ))}
+                {nodes
                     .filter((node) => node.typeId === 'device.keyboard')
                     .map((node) => (
                         <KeyboardFeed key={node.id} node={node} onKeyState={handleKeyState} />
+                    ))}
+                {nodes
+                    .filter((node) => node.typeId === 'device.visitor')
+                    .map((node) => (
+                        <VisitorFeed
+                            key={node.id}
+                            node={node}
+                            newName={evaluateNodeInputs(node, graphContext).newName}
+                            onVisitor={handleVisitor}
+                        />
+                    ))}
+                {nodes
+                    .filter((node) => node.typeId === 'device.tilt')
+                    .map((node) => (
+                        <TiltFeed
+                            key={node.id}
+                            node={node}
+                            range={evaluateNodeInputs(node, graphContext).range}
+                            onTilt={handleTilt}
+                        />
                     ))}
                 {nodes
                     .filter((node) => node.typeId === 'device.midi.out')
@@ -2765,6 +2955,35 @@ export default function RawEditor({
                             onStatus={handleMidiOutStatus}
                         />
                     ))}
+                {nodes
+                    .filter((node) => node.typeId === 'signal.beat')
+                    .map((node) => (
+                        <BeatFeed
+                            key={node.id}
+                            node={node}
+                            inputs={evaluateNodeInputs(node, graphContext)}
+                            showClock={showClock}
+                            clockEpoch={showClockEpoch}
+                            onLiveOutput={handleLiveOutputChange}
+                            onTempo={handleBeatTempo}
+                        />
+                    ))}
+                {/* One socket per Mesh In / Mesh Out — see MeshFeeds.jsx. An
+                    empty Group meets in this project's own group. */}
+                {nodes
+                    .filter((node) => node.typeId === 'device.mesh.in' || node.typeId === 'device.mesh.out')
+                    .map((node) => {
+                        const Feed = node.typeId === 'device.mesh.in' ? MeshInFeed : MeshOutFeed
+                        return (
+                            <Feed
+                                key={node.id}
+                                node={node}
+                                inputs={evaluateNodeInputs(node, graphContext)}
+                                fallbackGroup={`${resolvedSpaceId}/${projectId || 'local'}`}
+                                onLiveOutput={handleLiveOutputChange}
+                            />
+                        )
+                    })}
         </>
     )
 
@@ -3188,8 +3407,14 @@ export default function RawEditor({
                 floating button sat over content on dev and under the column
                 on #769. */}
             <div className={`raw-workbench${regionOccupant && !columnPhone ? ' has-column' : ''}`} data-testid="raw-workbench">
+            {/* Named, so it is the canvas region a screen reader can jump to
+                rather than a nameless section carrying drop handlers (jsx-a11y
+                no-static-element-interactions, 2026-10-21). Dropping files is
+                pointer-only; the inspector's file field is the keyboard way to
+                give a node a file. */}
             <section
                 className={`raw-surface-shell${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
+                aria-label="Canvas"
                 onDragEnter={handleSurfaceDragEnter}
                 onDragOver={handleSurfaceDragOver}
                 onDragLeave={handleSurfaceDragLeave}
@@ -3206,7 +3431,7 @@ export default function RawEditor({
                     href="/"
                     aria-label="di.iiii — home"
                     onClick={(e) => { e.preventDefault(); navigateToRawPath('/') }}
-                >di<span>.</span>iiii</a>
+                >di<span className="dot">.</span>iiii</a>
             {/* THE DESK IS CLEAR — always. The backdrop room lived here from
                 2026-08-19 to 2026-08-20: first always-on, then only when
                 something stood in it, and the owner's verdict stayed the

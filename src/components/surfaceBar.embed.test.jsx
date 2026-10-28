@@ -24,7 +24,7 @@ vi.mock('../project/services/projectsApi.js', () => ({
         document: {
             projectMeta: { id: 'p', title: 'A room' },
             presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
-            entities: []
+            entities: [{ id: 'e1', type: 'cube' }]
         }
     })),
     listProjectOps: vi.fn(async () => ({ ops: [], latestVersion: 1 })),

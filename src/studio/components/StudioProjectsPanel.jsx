@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createProject, deleteProject, listProjects, updateProject } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { newProjectDestination } from '../utils/newProjectEntry.js'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 // The Projects window: hop between the space's projects and do light
@@ -57,7 +58,8 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
         setStatus('creating...')
         try {
             const res = await createProject(spaceId, { title: name, slug: name, source: 'studio-v3' })
-            navigateToStudioPath(buildStudioProjectPath(res.project.id, spaceId))
+            // a new project is empty: it opens its project view, not the 3D editor
+            navigateToStudioPath(newProjectDestination({ projectId: res.project.id, spaceId }))
         } catch (err) {
             setStatus(err.message || 'create failed')
             setBusy(false)

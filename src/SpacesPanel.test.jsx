@@ -48,12 +48,12 @@ describe('SpacesPanel', () => {
             />
         )
 
-        expect(screen.getByLabelText('Open After Create')).toBeInTheDocument()
+        expect(screen.getByLabelText('Open after create')).toBeInTheDocument()
         expect(screen.getByRole('option', { name: 'Public route' })).toBeInTheDocument()
         expect(screen.getByRole('option', { name: 'Studio' })).toBeInTheDocument()
         expect(screen.getByRole('option', { name: 'Admin page' })).toBeInTheDocument()
 
-        fireEvent.change(screen.getByLabelText('Open After Create'), {
+        fireEvent.change(screen.getByLabelText('Open after create'), {
             target: { value: 'admin' }
         })
 
@@ -132,10 +132,10 @@ describe('SpacesPanel', () => {
 
         expect(screen.getByText('live')).toBeInTheDocument()
         expect(screen.getByText(/\/gallery$/)).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'View Live' })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Copy Live Link' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'View live' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Copy live link' })).toBeInTheDocument()
 
-        fireEvent.click(screen.getByRole('button', { name: 'Make Private' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Make private' }))
 
         expect(handleTogglePublic).toHaveBeenCalledWith('gallery', false)
     })
@@ -176,7 +176,7 @@ describe('SpacesPanel', () => {
 
         expect(screen.queryByText('live')).not.toBeInTheDocument()
 
-        fireEvent.click(screen.getByRole('button', { name: 'Make Public' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Make public' }))
 
         expect(handleTogglePublic).toHaveBeenCalledWith('gallery', true)
     })
@@ -213,11 +213,11 @@ describe('SpacesPanel', () => {
             />
         )
 
-        expect(screen.getByRole('button', { name: 'View Live' })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Copy Live Link' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'View live' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Copy live link' })).toBeInTheDocument()
         expect(screen.queryByRole('button', { name: 'Rename' })).not.toBeInTheDocument()
-        expect(screen.queryByRole('button', { name: 'Make Temp' })).not.toBeInTheDocument()
-        expect(screen.queryByRole('button', { name: 'Make Private' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Make temp' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Make private' })).not.toBeInTheDocument()
         expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
     })
 })

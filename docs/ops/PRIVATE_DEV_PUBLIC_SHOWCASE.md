@@ -12,7 +12,7 @@ This document replaces the old "private dev + public mirror" model.
 flowchart LR
     dev["dob-0/di.iiii:dev"] --> devtier_env["dev.diiii.xyz"]
     dev --> main["dob-0/di.iiii:main"]
-    main --> host["di-studio.xyz"]
+    main --> host["diiii.xyz"]
 ```
 
 ## Rules

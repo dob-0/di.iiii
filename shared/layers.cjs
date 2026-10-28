@@ -12,11 +12,11 @@
 // are OPEN is decided in the browser, once the project has loaded; nothing
 // here stores a count or a kind (serverXR/src/routes/projectRoutes.js).
 
-// The 17 node kinds that stand in the room (render: 'spatial-3d').
+// The 18 node kinds that stand in the room (render: 'spatial-3d').
 const STANDING_NODE_KINDS = new Set([
   'geom.circle', 'geom.cone', 'geom.constructor', 'geom.cube', 'geom.cylinder',
   'geom.geo', 'geom.line', 'geom.model', 'geom.plane', 'geom.sphere', 'geom.torus',
-  'light.point', 'media.audio', 'media.video', 'universe.desk.3d', 'world.camera',
+  'light.lamp', 'light.point', 'media.audio', 'media.video', 'universe.desk.3d', 'world.camera',
   'world.light'
 ])
 

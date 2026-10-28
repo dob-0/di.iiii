@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('./apiClient.js', () => ({
-    apiBaseUrl: 'https://di-studio.xyz/serverXR'
+    apiBaseUrl: 'https://diiii.xyz/serverXR'
 }))
 
 import {
@@ -19,7 +19,7 @@ describe('assetSources', () => {
 
     it('remounts relative /api asset urls onto the API base (blank prod images bug)', () => {
         expect(mountRelativeApiUrl('/api/projects/main-dii-project/assets/a1'))
-            .toBe('https://di-studio.xyz/serverXR/api/projects/main-dii-project/assets/a1')
+            .toBe('https://diiii.xyz/serverXR/api/projects/main-dii-project/assets/a1')
     })
 
     it('leaves absolute and non-api urls alone in mountRelativeApiUrl', () => {
@@ -34,7 +34,7 @@ describe('assetSources', () => {
             url: '/api/spaces/main/assets/asset-1'
         })
 
-        expect(candidates[0]).toBe('https://di-studio.xyz/serverXR/api/spaces/main/assets/asset-1')
+        expect(candidates[0]).toBe('https://diiii.xyz/serverXR/api/spaces/main/assets/asset-1')
         expect(candidates).not.toContain('/api/spaces/main/assets/asset-1')
     })
 
@@ -44,7 +44,7 @@ describe('assetSources', () => {
             '/api/spaces/main/assets'
         )
 
-        expect(candidates[0]).toBe('https://di-studio.xyz/serverXR/api/spaces/main/assets/asset-2')
+        expect(candidates[0]).toBe('https://diiii.xyz/serverXR/api/spaces/main/assets/asset-2')
         expect(candidates).not.toContain('/api/spaces/main/assets/asset-2')
     })
 
@@ -54,26 +54,26 @@ describe('assetSources', () => {
             ''
         )
 
-        expect(getAssetSourceUrl('asset-3')).toBe('https://di-studio.xyz/serverXR/api/spaces/main/assets/asset-3')
+        expect(getAssetSourceUrl('asset-3')).toBe('https://diiii.xyz/serverXR/api/spaces/main/assets/asset-3')
     })
 
     it('canonicalizes legacy underscore and mixed-case space ids in absolute asset urls', () => {
         const candidates = getAssetUrlCandidates({
             id: 'asset-4',
-            url: 'https://di-studio.xyz/serverXR/api/spaces/platform_recordAR/assets/asset-4'
+            url: 'https://diiii.xyz/serverXR/api/spaces/platform_recordAR/assets/asset-4'
         })
 
-        expect(candidates[0]).toBe('https://di-studio.xyz/serverXR/api/spaces/platform-recordar/assets/asset-4')
-        expect(candidates).toContain('https://di-studio.xyz/serverXR/api/spaces/platform_recordAR/assets/asset-4')
+        expect(candidates[0]).toBe('https://diiii.xyz/serverXR/api/spaces/platform-recordar/assets/asset-4')
+        expect(candidates).toContain('https://diiii.xyz/serverXR/api/spaces/platform_recordAR/assets/asset-4')
     })
 
     it('canonicalizes legacy underscore and mixed-case space ids in asset bases', () => {
         const candidates = getAssetUrlCandidates(
             { id: 'asset-5' },
-            'https://di-studio.xyz/serverXR/api/spaces/platform_recordAR/assets'
+            'https://diiii.xyz/serverXR/api/spaces/platform_recordAR/assets'
         )
 
-        expect(candidates[0]).toBe('https://di-studio.xyz/serverXR/api/spaces/platform-recordar/assets/asset-5')
-        expect(candidates).toContain('https://di-studio.xyz/serverXR/api/spaces/platform_recordAR/assets/asset-5')
+        expect(candidates[0]).toBe('https://diiii.xyz/serverXR/api/spaces/platform-recordar/assets/asset-5')
+        expect(candidates).toContain('https://diiii.xyz/serverXR/api/spaces/platform_recordAR/assets/asset-5')
     })
 })

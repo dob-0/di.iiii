@@ -1,0 +1,396 @@
+{
+  "laptop-light": {
+    "eyebrow": {
+      "letterSpacing": "2.432px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "sectionEyebrow": {
+      "letterSpacing": "2.432px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "exampleCap": {
+      "letterSpacing": "1.4592px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "aiBlockTitle": {
+      "letterSpacing": "1.7024px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "featuredLabel": {
+      "letterSpacing": "1.6px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "enterNote": {
+      "letterSpacing": "1.7024px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "enterNoteLink": {
+      "letterSpacing": "1.7024px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "footerNote": {
+      "letterSpacing": "0.7296px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "footerNoteLink": {
+      "letterSpacing": "0.7296px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "spacesCta": {
+      "letterSpacing": "0.288px",
+      "textTransform": "none",
+      "color": "rgb(77, 249, 255)",
+      "transition": "background, color 0.1s, 0.1s",
+      "border": "1px",
+      "radius": "0px"
+    },
+    "heroInner": {
+      "letterSpacing": "normal",
+      "textTransform": "none",
+      "color": "rgb(255, 255, 255)",
+      "transition": "opacity 0.5s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "navLogo": {
+      "letterSpacing": "-0.34px",
+      "textTransform": "none",
+      "color": "rgb(255, 255, 255)",
+      "transition": "color 0.15s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "navLogoHover": "rgb(77, 249, 255)"
+  },
+  "laptop-dark": {
+    "eyebrow": {
+      "letterSpacing": "2.432px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "sectionEyebrow": {
+      "letterSpacing": "2.432px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "exampleCap": {
+      "letterSpacing": "1.4592px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "aiBlockTitle": {
+      "letterSpacing": "1.7024px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "featuredLabel": {
+      "letterSpacing": "1.6px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "enterNote": {
+      "letterSpacing": "1.7024px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "enterNoteLink": {
+      "letterSpacing": "1.7024px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "footerNote": {
+      "letterSpacing": "0.7296px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "footerNoteLink": {
+      "letterSpacing": "0.7296px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "spacesCta": {
+      "letterSpacing": "0.288px",
+      "textTransform": "none",
+      "color": "rgb(77, 249, 255)",
+      "transition": "background, color 0.1s, 0.1s",
+      "border": "1px",
+      "radius": "0px"
+    },
+    "heroInner": {
+      "letterSpacing": "normal",
+      "textTransform": "none",
+      "color": "rgb(255, 255, 255)",
+      "transition": "opacity 0.5s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "navLogo": {
+      "letterSpacing": "-0.34px",
+      "textTransform": "none",
+      "color": "rgb(255, 255, 255)",
+      "transition": "color 0.15s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "navLogoHover": "rgb(77, 249, 255)"
+  },
+  "phone-light": {
+    "eyebrow": {
+      "letterSpacing": "2.432px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "sectionEyebrow": {
+      "letterSpacing": "2.432px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "exampleCap": {
+      "letterSpacing": "1.4592px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "aiBlockTitle": {
+      "letterSpacing": "1.7024px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "featuredLabel": {
+      "letterSpacing": "1.6px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "enterNote": {
+      "letterSpacing": "1.7024px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "enterNoteLink": {
+      "letterSpacing": "1.7024px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "footerNote": {
+      "letterSpacing": "0.7296px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "footerNoteLink": {
+      "letterSpacing": "0.7296px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "spacesCta": {
+      "letterSpacing": "0.288px",
+      "textTransform": "none",
+      "color": "rgb(77, 249, 255)",
+      "transition": "background, color 0.1s, 0.1s",
+      "border": "1px",
+      "radius": "0px"
+    },
+    "heroInner": {
+      "letterSpacing": "normal",
+      "textTransform": "none",
+      "color": "rgb(255, 255, 255)",
+      "transition": "opacity 0.5s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "navLogo": {
+      "letterSpacing": "-0.34px",
+      "textTransform": "none",
+      "color": "rgb(255, 255, 255)",
+      "transition": "color 0.15s",
+      "border": "0px",
+      "radius": "0px"
+    }
+  },
+  "phone-dark": {
+    "eyebrow": {
+      "letterSpacing": "2.432px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "sectionEyebrow": {
+      "letterSpacing": "2.432px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "exampleCap": {
+      "letterSpacing": "1.4592px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "aiBlockTitle": {
+      "letterSpacing": "1.7024px",
+      "textTransform": "uppercase",
+      "color": "rgb(77, 249, 255)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "featuredLabel": {
+      "letterSpacing": "1.6px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "enterNote": {
+      "letterSpacing": "1.7024px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "enterNoteLink": {
+      "letterSpacing": "1.7024px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "footerNote": {
+      "letterSpacing": "0.7296px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "footerNoteLink": {
+      "letterSpacing": "0.7296px",
+      "textTransform": "uppercase",
+      "color": "rgba(255, 255, 255, 0.5)",
+      "transition": "all 0s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "spacesCta": {
+      "letterSpacing": "0.288px",
+      "textTransform": "none",
+      "color": "rgb(77, 249, 255)",
+      "transition": "background, color 0.1s, 0.1s",
+      "border": "1px",
+      "radius": "0px"
+    },
+    "heroInner": {
+      "letterSpacing": "normal",
+      "textTransform": "none",
+      "color": "rgb(255, 255, 255)",
+      "transition": "opacity 0.5s",
+      "border": "0px",
+      "radius": "0px"
+    },
+    "navLogo": {
+      "letterSpacing": "-0.34px",
+      "textTransform": "none",
+      "color": "rgb(255, 255, 255)",
+      "transition": "color 0.15s",
+      "border": "0px",
+      "radius": "0px"
+    }
+  }
+}

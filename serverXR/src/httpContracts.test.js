@@ -1182,6 +1182,21 @@ describe('server write contracts', () => {
         expect(guestProbe.status).toBe(404)
         const accountProbe = await fetch(`${server.baseUrl}/api/spaces/${sessionState.sandboxSpaceId}`, { headers: withAuth(server.apiToken) })
         expect(accountProbe.status).toBe(200)
+
+        // The purge trashed the guest sandbox, it did not destroy it, and it
+        // said so where an admin reads it. An editor may not read that list.
+        const sweep = await fetch(`${server.baseUrl}/api/admin/sweep`, { headers: withAuth(server.apiToken) })
+        expect(sweep.status).toBe(200)
+        const sweepBody = await sweep.json()
+        expect(sweepBody.log).toContainEqual(expect.objectContaining({ spaceId: guestState.sandboxSpaceId, action: 'trashed', owner: 'guest' }))
+        expect(Array.isArray(sweepBody.due)).toBe(true)
+        const editorSweep = await fetch(`${server.baseUrl}/api/admin/sweep`, { headers: { Cookie: accountCookie } })
+        expect(editorSweep.status).toBe(403)
+
+        // The guest comes back inside the hold: their room is restored, not
+        // refused as a name that sits in the trash.
+        const guestBack = await fetch(`${server.baseUrl}/api/spaces/${guestState.sandboxSpaceId}/scene`, { headers: { Cookie: guestCookie } })
+        expect(guestBack.status).toBe(200)
     })
 
     it('archives a long-idle account sandbox to a snapshot and revives it when the owner returns', async () => {
@@ -2563,7 +2578,7 @@ describe('open-call application contracts', () => {
     })
 
     it('answers submission preflights permissively for sandboxed (Origin: null) iframes', async () => {
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://diiii.xyz' } })
 
         const preflight = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications`, {
             method: 'OPTIONS',
@@ -2595,7 +2610,7 @@ describe('open-call application contracts', () => {
         await writeFile(path.join(clientDir, 'index.html'), '<!doctype html><title>x</title>')
         await writeFile(path.join(clientDir, 'fonts', 'inter-regular.woff'), 'not-really-a-font')
         await writeFile(path.join(clientDir, 'plain.txt'), 'no header for this one')
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://diiii.xyz' } })
         const origin = new URL(server.baseUrl).origin
 
         const font = await fetch(`${origin}/fonts/inter-regular.woff`, { headers: { Origin: 'null' } })
@@ -2618,7 +2633,7 @@ describe('open-call application contracts', () => {
         await mkdir(path.join(clientDir, 'wcc', 'process'), { recursive: true })
         await writeFile(path.join(clientDir, 'index.html'), '<!doctype html><title>x</title>')
         await writeFile(path.join(clientDir, 'wcc', 'process', 'process-01.jpeg'), 'not-really-a-jpeg')
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://diiii.xyz' } })
         const origin = new URL(server.baseUrl).origin
 
         const photo = await fetch(`${origin}/wcc/process/process-01.jpeg`, { headers: { Origin: 'null' } })
@@ -2627,7 +2642,7 @@ describe('open-call application contracts', () => {
     })
 
     it('serves project asset reads with permissive CORS for sandboxed iframes', async () => {
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://diiii.xyz' } })
 
         const preflight = await fetch(`${server.baseUrl}/api/projects/some-project/assets/some-asset`, {
             method: 'OPTIONS',
@@ -3700,6 +3715,74 @@ describe('di.bo acting as a person (act-token)', () => {
         const lines = () => server.logs().split('\n').filter((l) => l.includes('[act-token] write'))
         for (let i = 0; i < 40 && !lines().some((l) => l.includes('"tier":"root"')); i += 1) await wait(50)
         expect(lines().map((l) => JSON.parse(l.slice(l.indexOf('{'))))).toContainEqual(expect.objectContaining({ subject: 'u-root', tier: 'root', method: 'DELETE', path: '/api/spaces/tg-c' }))
+    })
+})
+
+// GET /ai/context at the caller's level (aiContext.js), against a real server
+// with auth ON and real act tokens of each tier: no key = public; root =
+// owner, admin = core, member = registered (no group column yet); a level
+// above the caller's is a 403, never a lower one handed back.
+describe('the one context, by level (GET /ai/context)', () => {
+    const SECRET = 'test-bot-secret'
+    const LEVELS = ['public', 'registered', 'partner', 'crew', 'core', 'owner']
+
+    it('serves each caller its own level and refuses every level above it', async () => {
+        const server = await startServer({
+            requireAuth: true,
+            extraEnv: {
+                TELEGRAM_LOGIN_SECRET: SECRET,
+                OAUTH_CALLBACK_BASE_URL: 'https://example.test',
+                ACT_TOKEN_ROOT_TELEGRAM_IDS: '911111',
+                ACT_TOKEN_ADMIN_TELEGRAM_IDS: '922222'
+            }
+        })
+        // The non-public bundles live in the data folder, never the repo.
+        for (const level of LEVELS.slice(1)) {
+            fs.mkdirSync(path.join(server.dataRoot, 'ai-context', level), { recursive: true })
+            fs.writeFileSync(path.join(server.dataRoot, 'ai-context', level, 'CONTEXT.md'), `# context — ${level}\n`)
+        }
+        const db = new DatabaseSync(path.join(server.dataRoot, 'di.db'))
+        const now = Date.now()
+        try {
+            for (const [id, tg] of [['ctx-root', '911111'], ['ctx-admin', '922222'], ['ctx-member', '933333']]) {
+                db.prepare(`
+                    INSERT INTO users (id, provider, provider_id, email, display_name, role, spaces, created_at, updated_at)
+                    VALUES (?, 'telegram', ?, NULL, ?, 'admin', '[]', ?, ?)
+                `).run(id, tg, id, now, now)
+            }
+        } finally { db.close() }
+        const tokenFor = async (telegramId) => (await (await fetch(`${server.baseUrl}/api/auth/telegram/act-token`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-telegram-login-secret': SECRET },
+            body: JSON.stringify({ telegramId })
+        })).json()).token
+        const callers = [
+            ['no key', null, 'public'],
+            ['act token, member', await tokenFor('933333'), 'registered'],
+            ['act token, admin', await tokenFor('922222'), 'core'],
+            ['act token, root', await tokenFor('911111'), 'owner'],
+            ['the API key', server.apiToken, 'core']
+        ]
+        for (const [who, token, yours] of callers) {
+            const headers = token ? { Authorization: `Bearer ${token}` } : {}
+            const own = await fetch(`${server.baseUrl}/ai/context`, { headers })
+            expect(own.status, `${who}: own level`).toBe(200)
+            expect(own.headers.get('x-di-context-level'), who).toBe(yours)
+            expect(own.headers.get('content-type'), who).toContain('text/markdown')
+            expect(own.headers.get('cache-control'), who).toContain('no-store')
+            const text = await own.text()
+            if (yours === 'public') expect(text).toMatch(/context, public level/)
+            else expect(text).toBe(`# context — ${yours}\n`)
+            for (const level of LEVELS) {
+                const res = await fetch(`${server.baseUrl}/ai/context?level=${level}`, { headers })
+                const allowed = LEVELS.indexOf(level) <= LEVELS.indexOf(yours)
+                expect(res.status, `${who} asking ${level}`).toBe(allowed ? 200 : 403)
+                if (!allowed) expect(await res.json()).toMatchObject({ error: 'level_refused', level, yours })
+            }
+        }
+        // A token that does not resolve is refused, not read as public.
+        const dead = await fetch(`${server.baseUrl}/ai/context`, { headers: { Authorization: 'Bearer dii_tgact_nope.nope' } })
+        expect(dead.status).toBe(401)
     })
 })
 

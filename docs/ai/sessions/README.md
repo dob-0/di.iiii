@@ -52,6 +52,10 @@ Append to your own file across a session; don't touch anyone else's.
    branch protection may reject it — the job says so as a warning, and then
    `npm run land` by hand is still the fallback). `npm run land` locally still owns
    the worktree sweep — CI cannot see your disk — and runs it even with nothing to fold.
+   **Workaround for GH006** (CI's `land` job cannot push to protected `dev`): `npm run land:branch`
+   (`scripts/fold-notes-branch.mjs`) does the same fold from a clean `dev` onto a `chore/fold-notes-<date>`
+   branch (`--new`) or in place on one, commits, and does not push; push it and open the PR into `dev`.
+   **Owed (rule 6):** the real fix — CI opens the fold PR itself instead of pushing to `dev`.
 4. `docs/ai/sessions/` must be **empty** on `dev`/`main` — enforced by `docs:ai:check`,
    which is what makes step 3 non-optional instead of a courtesy nobody gets to.
 
