@@ -141,7 +141,7 @@
 .sbar-measure-item {
     color: var(--di-dim);
     text-decoration: none;
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     letter-spacing: var(--di-label-tracking);
     transition: color var(--di-motion-base) ease;
 }

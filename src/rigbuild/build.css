@@ -214,7 +214,7 @@
     max-width: 340px;
 }
 .rigbuild-legend__head { display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-3); margin-bottom: var(--di-space-2); }
-.rigbuild-legend__head b { text-transform: uppercase; letter-spacing: var(--di-label-tracking); font-size: var(--di-text-2); }
+.rigbuild-legend__head b { text-transform: var(--di-label-case); letter-spacing: var(--di-label-tracking); font-size: var(--di-text-2); }
 .rigbuild-legend__close {
     font: var(--di-text-4) var(--di-mono); line-height: 1; color: var(--di-ink); background: transparent;
     border: 1px solid var(--di-cyan-line); border-radius: var(--di-radius); width: 32px; height: 32px; cursor: pointer;

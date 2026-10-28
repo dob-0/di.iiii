@@ -27,7 +27,7 @@ const seconds = (value) => [...value.matchAll(/(\d*\.?\d+)(ms|s)\b/g)]
 
 describe('landing brand (spec v2)', () => {
     it('M16: an uppercase label tracks by the token, never a literal', () => {
-        const labels = rules.filter((r) => /text-transform:\s*uppercase/.test(r.body))
+        const labels = rules.filter((r) => /text-transform:\s*(?:uppercase|var\(--di-label-case\))/.test(r.body))
         expect(labels.length).toBeGreaterThanOrEqual(8)
         const literal = labels
             .filter((r) => /letter-spacing:(?!\s*var\(--di-label-tracking\))/.test(r.body))

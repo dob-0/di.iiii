@@ -56,7 +56,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius);
     cursor: pointer;

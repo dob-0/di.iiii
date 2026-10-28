@@ -384,7 +384,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     color: var(--di-cyan);
     font-weight: 500;
     margin: 0;

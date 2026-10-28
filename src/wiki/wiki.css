@@ -69,7 +69,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-3);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
 }
 
 .wiki-title {
@@ -131,7 +131,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
 }
 
 .wiki-sidebar-link {
@@ -159,7 +159,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
 }
 
 .wiki-article-title {

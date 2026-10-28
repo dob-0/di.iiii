@@ -126,7 +126,7 @@
     font-size: var(--di-text-2);
     font-weight: 600;
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     color: var(--di-text-muted);
 }
 
