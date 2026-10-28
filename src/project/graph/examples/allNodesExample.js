@@ -208,6 +208,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('circle', 'geom.circle', { label: 'Circle', col: 3, row: 14, values: { position: [-5.5, 0.5, -2] } })
     add('go', 'view.button', { label: 'Go', col: 4, row: 0 })
     add('keys', 'device.keyboard', { label: 'Keyboard', col: 4, row: 1 })
+    add('slider', 'view.slider', { label: 'Slider', col: 4, row: 11 })
+    add('pad', 'view.pad', { label: 'Pad', col: 4, row: 12 })
     add('visitor', 'device.visitor', { label: 'Visitor', col: 4, row: 20 })
     add('tilt', 'device.tilt', { label: 'Tilt', col: 4, row: 21 })
     add('midiOut', 'device.midi.out', { label: 'MIDI Out', col: 4, row: 2 })
@@ -235,6 +237,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('background', 'world.background', { label: 'Background', col: 2, row: 1 })
     add('grid', 'world.grid', { label: 'Grid', col: 2, row: 2 })
     add('lamp', 'light.point', { label: 'Light', col: 2, row: 3, values: { position: [1.5, 1.6, 0.5] } })
+    // A stage lamp with no type: drawn with its beam, sends nothing (`dmx` null, `patch` says why).
+    add('stageLamp', 'light.lamp', { label: 'Lamp', col: 2, row: 22, values: { position: [-1.5, 3, -1] } })
 
     // --- column 3: geometry ----------------------------------------------------
     add('cube', 'geom.cube', { label: 'Cube', col: 3, row: 0 })

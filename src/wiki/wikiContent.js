@@ -442,13 +442,14 @@ export const WIKI_ARTICLES = [
             'The Open Jam opens in a simple mode: one Create window with file upload and a few basic shapes — the full editor’s other windows and import options stay out of the way. Tapping an object opens a small Edit window (change your text, pick a colour, or remove it). Anyone who wants the complete toolset can press “⚒ All tools” in the toolbar (and “◱ Simple” switches back); the choice is remembered on that device.',
             'For admins: Ops Graph → Manage can repoint the communal space (the guest entry), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.',
             'Ops Graph → Manage also shows the site’s own traffic for the last 30 days under Traffic: page views, sign-ups, the busiest day, the most viewed pages and the sites visitors came from. These are counted here, one per page load, with no cookie and no third party — the same counting the privacy page describes.',
+            'Every address now says what it is before any script runs. A search engine, a link preview or a reader that skips JavaScript gets that page’s own title, one-line description, card picture and canonical address (on diiii.xyz) — not the front door’s on every page — and an address nothing answers to is a real “not found” (404) instead of the front page in disguise. The Open Space has one canonical address, diiii.xyz/open; /open_jam and /open_jam/scene still work, and the front page’s Open Space button now hands out /open. diiii.xyz/sitemap.xml is written from the public spaces and their public projects each time it is asked for, so nothing private is ever in it and a new page appears in it the moment it is public.',
             'A room carries its own text for anything that reads instead of looking. A space drawn on a canvas used to be an empty page to a screen reader, a search engine, or a browser whose 3D failed; every published room now also carries its name, its lines and its doors as ordinary links, out of sight but reachable — tab through a room and each door becomes a visible link you can follow without a mouse.',
             'The front door is the landing page, and the scene is behind it: on a wide screen the page is ordinary HTML over the scene, and a phone loads the scene only when you press “Step inside”. Pressing it turns the page’s pieces into objects in that scene while the camera flies in, instead of a new page loading. The scene holds the name, the one line and a door to each featured work, all things you can walk past. ?room=1 opens the scene bare, without the page. That scene is the live project of di.iiii’s own front space, which has its own address, /di-iiii; an old /main link still resolves and heals to /?room=1, so the bare name “main” never stays in the address bar. The addresses inside that space — /main/studio, /main/raw, a project deep-link — keep their names. On a local install, / is your own home, the landing page is at /?tour=1, and /main is not rewritten.',
             'The landing page names three routes, in order of weight: “Step inside” walks into the scene behind the page, “The Spaces” opens the Spaces page, and “Open Space” opens the shared Open Jam. The quiet “Already have spaces? Open your Spaces →” line further down is the return path for people who already have work of their own.',
             'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page.'
         ],
         tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr', 'telegram', 'sign in'],
-        updated: '2026-10-26'
+        updated: '2026-10-28'
     },
     {
         id: 'space-history',
@@ -1925,6 +1926,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-14'
     },
     {
+        id: 'lamp-node',
+        category: 'Editing',
+        title: 'Lamp — one stage lamp in the Nodes scene',
+        summary: 'The Lamp node is one stage lamp: pick its type and mode from the fixture library, give it a universe and an address, and it answers the DMX the lighting desk would send for it, standing in the scene with its beam.',
+        body: [
+            'Add a Lamp node. Type is a lamp type from the fixture library, by its id (up-b380f, up-pl5403 and the rest of the library); Mode is one of that type’s modes — leave it empty for the type’s own default. Universe and Address say where the lamp sits on the rig, counted from 1 as every crew counts.',
+            'Dimmer, Pan, Tilt, Strobe and Zoom take 0 to 1, the way every wire in Nodes does; Colour takes a colour. Pan and Tilt rest at 0.5, the lamp’s home. A lamp whose chart has a fine channel for pan, tilt or dimmer gets 16-bit movement. Strobe and Zoom send the chart’s own byte (what 0 and 1 mean is the lamp’s chart), and left unwired they leave their channel where the chart rests it — so a shutter that is closed at 0 stays open.',
+            'Colour reaches a lamp with red, green and blue channels. A lamp with a colour wheel is not driven by Colour, and its beam in the scene stays white rather than show a colour the lamp would never make.',
+            'DMX answers the lamp’s bytes with its universe and address. They are the bytes this di.iiii’s lighting desk sends for the same lamp told the same thing — a test patches every mode of the library on the desk and compares them byte for byte. Patch answers where the lamp sits (for example “UP-PL5403 8ch · U2.010-017”), or why it sends nothing: no type, a type the library does not have, or a lamp whose channels would run past 512.',
+            'In the scene the Lamp stands with a body of its type’s published size, turned by Pan and Tilt over the type’s own range, and a beam of the type’s published angle that stops at the first solid shape it meets (a Cube, a Plane, a Model and the other solid shapes). A Lamp with no type draws a 25° beam that Zoom opens from 10° to 50°, and sends nothing.',
+            'Not yet: DMX Out does not take a Lamp’s DMX wire, so a Lamp’s bytes do not leave the graph on their own; the body is a plain box, not the type’s model; Strobe does not flash the beam in the scene.'
+        ],
+        tags: ['raw', 'nodes', 'lamp', 'fixture', 'dmx', 'patch', 'beam', 'stage', 'light', 'moving head'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'drive-lasercubes',
         category: 'Editing',
         title: 'Drive LaserCubes from your di',
@@ -1957,6 +1974,20 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'nodes', 'laser', 'lasercube', 'trace', 'outline', 'wireframe', 'points', 'merge', 'budget', 'geometry', 'touchdesigner'],
         updated: '2026-10-14'
+    },
+    {
+        id: 'slider-pad-nodes',
+        category: 'Editing',
+        title: 'Slider and Pad — a fader and a stick for the thumb',
+        summary: 'Slider is a fader (Value between Min and Max); Pad is a two-axis stick (X and Y from -1 to 1). Both open as windows sized for a thumb, in the editor and in Perform.',
+        body: [
+            'Slider and Pad sit next to Button in the bring in family. Each opens as a window you drag in with a finger or a mouse, on a desk or on a phone, and in Perform as well as in the editor.',
+            'They work like Button. While your finger is down, the window you are touching follows it: Value (or X and Y) moves with the finger and Held is true. When you let go, the level is written into the project, and every other window and every node downstream agrees on it. The other windows see the new level when you let go, not while you drag.',
+            'Slider: Min and Max set the range (0 to 1 unless changed), and Direction picks Vertical (top is Max) or Horizontal (right is Max). With the slider focused, the arrow keys move it by a hundredth of the range.',
+            'Pad: X runs left to right and Y bottom to top, both from -1 to 1, with 0, 0 in the centre. With Spring back on (the default) it is a stick: letting go returns it to the centre. Off, the pad keeps the point where you let go.'
+        ],
+        tags: ['raw', 'nodes', 'slider', 'fader', 'pad', 'joystick', 'touch', 'phone', 'perform', 'held'],
+        updated: '2026-10-21'
     },
     {
         id: 'beat-and-oscillator',

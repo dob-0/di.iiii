@@ -11,6 +11,7 @@ import { computeOutput as deviceTilt } from './device.tilt/runtime.js'
 import { computeOutput as deviceDmxOut } from './device.dmx.out/runtime.js'
 import { computeOutput as deviceOscIn } from './device.osc.in/runtime.js'
 import { computeOutput as deviceOscOut } from './device.osc.out/runtime.js'
+import { computeOutput as lightLamp } from './light.lamp/runtime.js'
 import { computeOutput as deviceLaserOut } from './device.laser.out/runtime.js'
 import { computeOutput as streamRecorder } from './stream.recorder/runtime.js'
 import { computeOutput as streamStill } from './stream.still/runtime.js'
@@ -55,6 +56,8 @@ import { computeOutput as signalTimer } from './signal.timer/runtime.js'
 import { computeOutput as signalTrigger } from './signal.trigger/runtime.js'
 import { computeOutput as viewButton } from './view.button/runtime.js'
 import { computeOutput as viewList } from './view.list/runtime.js'
+import { computeOutput as viewPad } from './view.pad/runtime.js'
+import { computeOutput as viewSlider } from './view.slider/runtime.js'
 import { computeOutput as viewQrCode } from './view.qrcode/runtime.js'
 import { computeOutput as viewText } from './view.text/runtime.js'
 import { computeOutput as viewTimeline } from './view.timeline/runtime.js'
@@ -93,6 +96,7 @@ export const NODE_RUNTIMES = new Map([
     ['device.dmx.out', deviceDmxOut],
     ['device.osc.in', deviceOscIn],
     ['device.osc.out', deviceOscOut],
+    ['light.lamp', lightLamp],
     ['device.laser.out', deviceLaserOut],
     ['laser.shape', laserShape],
     ['laser.trace', laserTrace],
@@ -150,6 +154,8 @@ export const NODE_RUNTIMES = new Map([
     ['vector.split', vectorSplit],
     ['view.button', viewButton],
     ['view.list', viewList],
+    ['view.pad', viewPad],
+    ['view.slider', viewSlider],
     ['view.qrcode', viewQrCode],
     ['view.text', viewText],
     ['view.timeline', viewTimeline],

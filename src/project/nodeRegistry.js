@@ -121,6 +121,8 @@ export const FAMILY_BY_TYPE = {
     'geom.transform': 'make',
     'view.button': 'bring-in',
     'device.keyboard': 'bring-in',
+    'view.slider': 'bring-in',
+    'view.pad': 'bring-in',
     'device.visitor': 'bring-in',
     'device.tilt': 'bring-in',
     'geom.constructor': 'make',
@@ -177,6 +179,7 @@ export const FAMILY_BY_TYPE = {
     'world.light': 'room',
     'world.environment': 'room',
     'light.point': 'room',
+    'light.lamp': 'room',
     'world.camera': 'room',
     'world.background': 'room',
     'world.grid': 'room',
@@ -3285,6 +3288,64 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    // The continuous hands (works audit, 2026-10-21): a fader and a
+    // two-axis pad, sized for a thumb. Button's split: the authored value
+    // (node.values, written through an op on release) is what every window
+    // agrees on; while THIS window's finger is down, Value follows the
+    // finger through the live side channel and Held is true.
+    'view.slider': {
+        id: 'view.slider',
+        label: 'Slider',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['slider', 'fader', 'level', 'dimmer', 'knob', 'range', 'touch', 'phone', 'remote'],
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Level' },
+            { id: 'min',   type: 'number', label: 'Min',   default: 0 },
+            { id: 'max',   type: 'number', label: 'Max',   default: 1 },
+            { id: 'direction', type: 'string', label: 'Direction', default: 'vertical', options: [
+                { value: 'vertical',   label: 'Vertical' },
+                { value: 'horizontal', label: 'Horizontal' },
+            ] },
+        ],
+        outputs: [
+            { id: 'value', type: 'number',  label: 'Value' },
+            { id: 'held',  type: 'boolean', label: 'Held'  },
+        ],
+        defaultValues: {
+            value: 0,
+        },
+        defaultFrame: { width: 160, height: 320 },
+        render: 'panel-2d',
+    },
+
+    'view.pad': {
+        id: 'view.pad',
+        label: 'Pad',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['pad', 'joystick', 'stick', 'xy', 'twist', 'steer', 'touch', 'phone', 'remote'],
+        inputs: [
+            { id: 'title',  type: 'string',  label: 'Title',       default: 'Pad' },
+            // On: letting go returns X and Y to the centre (a stick).
+            // Off: the pad keeps where the finger left it (a position).
+            { id: 'spring', type: 'boolean', label: 'Spring back', default: true },
+        ],
+        outputs: [
+            { id: 'x',    type: 'number',  label: 'X'    },
+            { id: 'y',    type: 'number',  label: 'Y'    },
+            { id: 'held', type: 'boolean', label: 'Held' },
+        ],
+        defaultValues: {
+            x: 0,
+            y: 0,
+        },
+        defaultFrame: { width: 300, height: 340 },
+        render: 'panel-2d',
+    },
+
     // What the person's phone or screen is, as wires — the facts every work
     // used to re-derive by hand (halve the particles on a phone, slow down
     // for reduced motion, lay out for portrait, speak their language). Name,
@@ -3404,6 +3465,45 @@ export const NODE_TYPES = {
         ],
         outputs: [],
         defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    // A stage lamp (docs/ai/vocabulary.md: a stage fixture), patch, picture and
+    // DMX in one: its type and mode come from the fixture library
+    // (src/rigbuild/types/library/), its bytes from shared/lampDmx.cjs — the
+    // ones the lighting desk sends for the same lamp — and it stands in the
+    // scene with a body and a beam that stops at the first surface it meets
+    // (SpotLightObject's reach probe). Strobe and Zoom have no default: an
+    // unwired one leaves its channel where the chart rests it.
+    'light.lamp': {
+        id: 'light.lamp',
+        label: 'Lamp',
+        category: 'world',
+        runtime: 'any',
+        keywords: ['lamp', 'fixture', 'stage', 'moving head', 'par', 'beam', 'spot', 'dmx', 'patch', 'rig', 'pan', 'tilt', 'dimmer'],
+        inputs: [
+            { id: 'dimmer',   type: 'number', label: 'Dimmer', default: 1 },
+            { id: 'color',    type: 'color',  label: 'Colour', default: '#ffffff' },
+            { id: 'pan',      type: 'number', label: 'Pan',    default: 0.5 },
+            { id: 'tilt',     type: 'number', label: 'Tilt',   default: 0.5 },
+            { id: 'strobe',   type: 'number', label: 'Strobe' },
+            { id: 'zoom',     type: 'number', label: 'Zoom' },
+            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 3, 0] },
+        ],
+        outputs: [
+            { id: 'dmx',   type: 'any',    label: 'DMX' },
+            { id: 'patch', type: 'string', label: 'Patch' },
+        ],
+        // Type, mode, universe and address are set once for the rig, like
+        // DMX Out's Rig: nothing upstream should re-patch a lamp mid-graph.
+        // An empty mode is the type's default mode.
+        defaultValues: { type: '', mode: '', universe: 1, address: 1 },
+        configInputs: [
+            { id: 'type',     type: 'string', label: 'Type' },
+            { id: 'mode',     type: 'string', label: 'Mode' },
+            { id: 'universe', type: 'number', label: 'Universe' },
+            { id: 'address',  type: 'number', label: 'Address' },
+        ],
         render: 'spatial-3d',
     },
 
