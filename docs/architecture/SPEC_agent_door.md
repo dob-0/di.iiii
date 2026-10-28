@@ -134,10 +134,24 @@ spaces per key, a reach ceiling the person chooses, a shorter expiry the person 
 
 ## 7. Remote door (phase 3)
 
-The same catalogue served over MCP Streamable HTTP from serverXR itself, so a person connects
-from claude.ai with nothing installed. It requires the OAuth 2.1 flow in the MCP Authorization
+The same catalogue served over MCP Streamable HTTP, so a person connects from an assistant that
+can only add a door by URL. The full shape needs the OAuth 2.1 flow in the MCP Authorization
 spec, with the agent key as the access token's substance. It is written here so phase 2 does not
-build anything phase 3 must undo, and it is not started.
+build anything phase 3 must undo.
+
+**Built 2026-10-27 (one-context slice 10), the bearer half only:** `node sdk/mcp.mjs --http
+<port> --base <api>` serves `/mcp` (`serveHttp` / `createHttpDoor` in `sdk/mcp.mjs`, the SDK's
+`createMcpHandler`, 2025-era stateless and 2026-07-28 traffic). Every request must carry
+`Authorization: Bearer <di.bo act token>` (`dii_tgact_…`); anything else is a 401 with a Bearer
+challenge, and the door never falls back to a key of its own. Each request's door acts with that
+token, so the server judges it by tier exactly as for di.bo (`actTokenTier.js`). Left out of the
+remote door on purpose: the rig tools (they read the host's checkout) and public moves, refused
+whatever the host's `DI_MCP_ALLOW_PUBLIC` says. Tests: `sdk/mcpRemote.test.js`.
+
+**Still owed:** the OAuth 2.1 layer (protected-resource metadata, an authorization server, token
+exchange), without which claude.ai and other connector UIs that expect OAuth cannot add the door;
+serving it from serverXR at `https://diiii.xyz/mcp` (the server image carries no `sdk/`, and
+nginx has no `/mcp` block); a key longer-lived than a 15-minute act token for a person to paste.
 
 ## 8. Measured, not claimed
 

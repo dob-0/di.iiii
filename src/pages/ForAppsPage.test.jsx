@@ -25,8 +25,8 @@ describe('/for-apps — the door sign for programs', () => {
     it('quotes the same limits the server enforces', () => {
         expect(ANONYMOUS_READS_PER_MINUTE).toBe(server.ANONYMOUS_READS_PER_MINUTE)
         expect(IDENTIFIED_READS_PER_MINUTE).toBe(server.IDENTIFIED_READS_PER_MINUTE)
-        expect(read('public/llms.txt')).toContain(`${server.IDENTIFIED_READS_PER_MINUTE} API reads a minute`)
-        expect(read('public/llms.txt')).toContain(`get ${server.ANONYMOUS_READS_PER_MINUTE}.`)
+        expect(read('docs/ai/public/llms.txt')).toContain(`${server.IDENTIFIED_READS_PER_MINUTE} API reads a minute`)
+        expect(read('docs/ai/public/llms.txt')).toContain(`get ${server.ANONYMOUS_READS_PER_MINUTE}.`)
     })
 
     // Sentence case, not the lowercase the tab used to carry —

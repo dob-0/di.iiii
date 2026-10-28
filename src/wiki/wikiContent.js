@@ -1202,11 +1202,12 @@ export const WIKI_ARTICLES = [
                 'GET /serverXR/api/projects/:id/document — a project as JSON'
             ] },
             'Reading a public space needs no sign-in. Changing anything does: a browser session, or the token a terminal login (di login) gives — and a terminal login is refused anything public (publish, delete, invites). On a local install with sign-in off, nothing needs one. Name your program in the User-Agent; the rate limits are in “Apps, scripts and AIs”.',
-            'To hand di.iiii to an agent, run di mcp from an install (node sdk/mcp.mjs from a checkout). It is an MCP server with four tools whatever the server can do — di_find, di_describe, di_call and di_run — and it reads the catalogue of the server it talks to. The server stays the protection: it refuses what the token may not do, and public moves are refused unless the person who launched the server allows them and each call carries a confirmation.',
+            'To hand di.iiii to an agent, run di mcp from an install (node sdk/mcp.mjs from a checkout). It is an MCP server with four tools whatever the server can do — di_find, di_describe, di_call and di_run — and it reads the catalogue of the server it talks to. The server stays the protection: it refuses what the token may not do, and public moves are refused unless the person who launched the server allows them and each call carries a confirmation. A fifth tool, di_context, returns what di.iiii is and the words it uses, at the level your key reaches.',
+            'The same door can run over HTTP for an assistant that adds tools by address: node sdk/mcp.mjs --http 8787 --base <the server’s /serverXR address>. Each request must carry its own di.bo act token as Authorization: Bearer; without one the door answers 401 and does nothing. Over HTTP it never makes anything public, and it leaves out the rig tools.',
             'Realtime updates are delivered over WebSocket (socket.io) and SSE.'
         ],
-        tags: ['api', 'developers', 'agents', 'mcp', 'catalogue', 'openapi'],
-        updated: '2026-10-26'
+        tags: ['api', 'developers', 'agents', 'mcp', 'catalogue', 'openapi', 'context', 'remote', 'http'],
+        updated: '2026-10-27'
     },
     {
         id: 'dev-copy-label',
@@ -1258,7 +1259,7 @@ export const WIKI_ARTICLES = [
         title: 'Apps, scripts and AIs',
         summary: 'Programs are welcome to read public di.iiii. Name yourself in the User-Agent and you get more room — /for-apps has the rules.',
         body: [
-            'Anything a visitor without an account can open — public spaces, published pages, /spaces, this wiki, and the API reads behind them — is open to programs too: apps, scripts, search engines and AI crawlers, for answering and for training alike. robots.txt welcomes them all, and /llms.txt describes di.iiii for language models; /llms-full.txt is the same file with every article of this wiki after it, so one fetch reads them all.',
+            'Anything a visitor without an account can open — public spaces, published pages, /spaces, this wiki, and the API reads behind them — is open to programs too: apps, scripts, search engines and AI crawlers, for answering and for training alike. robots.txt welcomes them all, and /llms.txt describes di.iiii for language models: what it is, in markdown at /ai/about.md, and what each word means, at /ai/words.md.',
             'Say who you are with a User-Agent carrying your program’s name, version and a contact in parentheses, the way MusicBrainz asks: “SpaceMirror/1.4 ( ops@example.org )” or “my-bot/0.2 (+https://example.org/bot)”.',
             { list: [
                 'Identified apps and crawlers: 300 API reads a minute from one address.',
@@ -1269,8 +1270,8 @@ export const WIKI_ARTICLES = [
             'A name is only what a program claims, so the per-address limits hold whatever the header says. di.iiii keeps a count per day per program name and the contact it published — no addresses, no pages read — for 90 days. Admins see that guest book in Ops Graph → Visitors, and can turn a program away by name; it then gets a 403 pointing back to /for-apps. Nothing is counted on a local install.',
             'For a higher allowance or a block you think is a mistake: info@thedi.studio. A security problem goes to the same address; /.well-known/security.txt says so in the form security tools read.'
         ],
-        tags: ['api', 'apps', 'ai', 'crawlers', 'bots', 'user-agent', 'rate limit', 'llms.txt', 'llms-full.txt', 'robots.txt', 'security.txt', 'developers'],
-        updated: '2026-10-21'
+        tags: ['api', 'apps', 'ai', 'crawlers', 'bots', 'user-agent', 'rate limit', 'llms.txt', 'llms-full.txt', 'robots.txt', 'security.txt', 'developers', 'markdown', 'assistant'],
+        updated: '2026-10-27'
     },
     {
         id: 'github-sync',
@@ -2462,6 +2463,20 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['studio', 'scene', 'scenes', 'light', 'cue', 'motion', 'heads', 'edit'],
         updated: '2026-10-15'
+    },
+    {
+        id: 'connect-your-assistant',
+        category: 'For developers',
+        title: 'Connect your assistant',
+        summary: 'Any assistant can read what di.iiii shows the public by its address; a key lets it read at your level. The steps are at /ai/setup.',
+        body: [
+            'An assistant on the web (Claude, ChatGPT, duck.ai, Gemini) can read di.iiii if you give it an address: https://diiii.xyz/llms.txt is the map, and https://diiii.xyz/ai/context is what di.iiii is and the words it uses, in one page. Without a key it reads only what anyone can.',
+            'di.iiii keeps that context at six levels: public, registered, partner, crew, core and owner. The server reads your level from your key, and you can ask for a lower one but never a higher one. A key comes from signing in from a terminal once (di login).',
+            'An assistant on your own machine that speaks MCP, such as Claude Code, can use di.iiii as tools: claude mcp add di -- di mcp. One of the tools, di_context, reads the context at your level.',
+            'Every step, with the lines to copy, is on the page /ai/setup, and the same words for an assistant are at /ai/setup.md.'
+        ],
+        tags: ['ai', 'assistant', 'claude', 'chatgpt', 'duck.ai', 'mcp', 'context', 'levels', 'setup', 'llms.txt'],
+        updated: '2026-10-27'
     }
 ]
 
