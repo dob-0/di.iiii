@@ -845,7 +845,8 @@ export default {
             '../scripts/**/*.{test,spec}.{js,mjs}',
             '../shared/**/*.{test,spec}.{js,mjs}',
             '../sdk/**/*.{test,spec}.{js,mjs}',
-            '../spaces/**/*.{test,spec}.{js,mjs}'
+            '../spaces/**/*.{test,spec}.{js,mjs}',
+            '../services/**/*.{test,spec}.{js,mjs}'
         ],
         environment: 'jsdom',
         setupFiles: './setupTests.js',
