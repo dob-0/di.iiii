@@ -821,6 +821,66 @@ describe('the operator hands wave (TD audit)', () => {
     })
 })
 
+describe('the thumb controls (works audit, 2026-10-21)', () => {
+    const live = (entries) => ({ liveOutputs: new Map(entries) })
+
+    it('Slider: bare answers Min and is not held', () => {
+        const slider = node('s', 'view.slider')
+        const ctx = createNodeGraphContext({ nodes: [slider], edges: [] })
+        expect(evaluateNodeOutput(slider, 'value', ctx)).toBe(0)
+        expect(evaluateNodeOutput(slider, 'held', ctx)).toBe(false)
+    })
+
+    it('Slider: Value is the authored level, kept inside Min..Max', () => {
+        const slider = node('s', 'view.slider', { value: 7, min: 2, max: 5 })
+        const ctx = createNodeGraphContext({ nodes: [slider], edges: [] })
+        expect(evaluateNodeOutput(slider, 'value', ctx)).toBe(5)
+        const reversed = node('r', 'view.slider', { value: -3, min: 10, max: 0 })
+        expect(evaluateNodeOutput(reversed, 'value', createNodeGraphContext({ nodes: [reversed], edges: [] }))).toBe(0)
+    })
+
+    it('Slider: this window\'s finger wins only while held', () => {
+        const slider = node('s', 'view.slider', { value: 0.2 })
+        const held = createNodeGraphContext({ nodes: [slider], edges: [] }, live([['s:value', 0.8], ['s:held', true]]))
+        expect(evaluateNodeOutput(slider, 'value', held)).toBe(0.8)
+        expect(evaluateNodeOutput(slider, 'held', held)).toBe(true)
+        // A stale finger left in the side channel without Held is ignored:
+        // another window, or this one after release, reads the authored level.
+        const stale = createNodeGraphContext({ nodes: [slider], edges: [] }, live([['s:value', 0.8]]))
+        expect(evaluateNodeOutput(slider, 'value', stale)).toBe(0.2)
+    })
+
+    it('Slider: a wired Max is read through the wire', () => {
+        const doc = {
+            nodes: [node('m', 'value.number', { value: 10 }), node('s', 'view.slider', { value: 6 })],
+            edges: [edge('m', 'out', 's', 'max')]
+        }
+        expect(evalPort(doc, 's', 'value')).toBe(6)
+    })
+
+    it('Pad: bare is the centre, authored point otherwise, each axis inside -1..1', () => {
+        const bare = node('p', 'view.pad')
+        const ctx = createNodeGraphContext({ nodes: [bare], edges: [] })
+        expect(evaluateNodeOutput(bare, 'x', ctx)).toBe(0)
+        expect(evaluateNodeOutput(bare, 'y', ctx)).toBe(0)
+        expect(evaluateNodeOutput(bare, 'held', ctx)).toBe(false)
+        const kept = node('k', 'view.pad', { x: 0.5, y: -4 })
+        const keptCtx = createNodeGraphContext({ nodes: [kept], edges: [] })
+        expect(evaluateNodeOutput(kept, 'x', keptCtx)).toBe(0.5)
+        expect(evaluateNodeOutput(kept, 'y', keptCtx)).toBe(-1)
+    })
+
+    it('Pad: the finger wins only while held', () => {
+        const pad = node('p', 'view.pad', { x: 0, y: 0 })
+        const held = createNodeGraphContext({ nodes: [pad], edges: [] }, live([['p:x', -0.25], ['p:y', 0.75], ['p:held', true]]))
+        expect(evaluateNodeOutput(pad, 'x', held)).toBe(-0.25)
+        expect(evaluateNodeOutput(pad, 'y', held)).toBe(0.75)
+        expect(evaluateNodeOutput(pad, 'held', held)).toBe(true)
+        const stale = createNodeGraphContext({ nodes: [pad], edges: [] }, live([['p:x', -0.25]]))
+        expect(evaluateNodeOutput(pad, 'x', stale)).toBe(0)
+    })
+})
+
 describe('the second vector wave (TD audit)', () => {
     const vec = (id, value) => node(id, 'value.vec3', { value })
     const num = (id, value) => node(id, 'value.number', { value })

@@ -39,6 +39,8 @@ import MidiOutFeed from './MidiOutFeed.jsx'
 import BeatFeed from './BeatFeed.jsx'
 import { MeshInFeed, MeshOutFeed } from './MeshFeeds.jsx'
 import ButtonPanelWindow from './ButtonPanelWindow.jsx'
+import PadPanelWindow from './PadPanelWindow.jsx'
+import SliderPanelWindow from './SliderPanelWindow.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
 import AgentRunPanel from './AgentRunPanel.jsx'
@@ -2334,6 +2336,41 @@ export default function RawEditor({
                     onPress={(nodeId) => applyLocalOps({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, presses: (Number(node.values?.presses) || 0) + 1 } } }
+                    })}
+                />
+            )
+        }
+        // The thumb controls keep Button's split: the finger is this
+        // window's (live side channel), the level lands as an op on release.
+        if (node.typeId === 'view.slider') {
+            return (
+                <SliderPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onLive={(nodeId, value, held) => {
+                        handleLiveOutputChange(nodeId, 'value', value)
+                        handleLiveOutputChange(nodeId, 'held', held)
+                    }}
+                    onCommit={(nodeId, value) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, value } } }
+                    })}
+                />
+            )
+        }
+        if (node.typeId === 'view.pad') {
+            return (
+                <PadPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onLive={(nodeId, point, held) => {
+                        handleLiveOutputChange(nodeId, 'x', point?.x)
+                        handleLiveOutputChange(nodeId, 'y', point?.y)
+                        handleLiveOutputChange(nodeId, 'held', held)
+                    }}
+                    onCommit={(nodeId, point) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, x: point.x, y: point.y } } }
                     })}
                 />
             )

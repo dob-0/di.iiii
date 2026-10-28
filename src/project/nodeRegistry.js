@@ -119,6 +119,8 @@ export const FAMILY_BY_TYPE = {
     'geom.transform': 'make',
     'view.button': 'bring-in',
     'device.keyboard': 'bring-in',
+    'view.slider': 'bring-in',
+    'view.pad': 'bring-in',
     'device.visitor': 'bring-in',
     'device.tilt': 'bring-in',
     'geom.constructor': 'make',
@@ -3245,6 +3247,64 @@ export const NODE_TYPES = {
         ],
         defaultValues: {},
         render: 'hidden',
+    },
+
+    // The continuous hands (works audit, 2026-10-21): a fader and a
+    // two-axis pad, sized for a thumb. Button's split: the authored value
+    // (node.values, written through an op on release) is what every window
+    // agrees on; while THIS window's finger is down, Value follows the
+    // finger through the live side channel and Held is true.
+    'view.slider': {
+        id: 'view.slider',
+        label: 'Slider',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['slider', 'fader', 'level', 'dimmer', 'knob', 'range', 'touch', 'phone', 'remote'],
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Level' },
+            { id: 'min',   type: 'number', label: 'Min',   default: 0 },
+            { id: 'max',   type: 'number', label: 'Max',   default: 1 },
+            { id: 'direction', type: 'string', label: 'Direction', default: 'vertical', options: [
+                { value: 'vertical',   label: 'Vertical' },
+                { value: 'horizontal', label: 'Horizontal' },
+            ] },
+        ],
+        outputs: [
+            { id: 'value', type: 'number',  label: 'Value' },
+            { id: 'held',  type: 'boolean', label: 'Held'  },
+        ],
+        defaultValues: {
+            value: 0,
+        },
+        defaultFrame: { width: 160, height: 320 },
+        render: 'panel-2d',
+    },
+
+    'view.pad': {
+        id: 'view.pad',
+        label: 'Pad',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['pad', 'joystick', 'stick', 'xy', 'twist', 'steer', 'touch', 'phone', 'remote'],
+        inputs: [
+            { id: 'title',  type: 'string',  label: 'Title',       default: 'Pad' },
+            // On: letting go returns X and Y to the centre (a stick).
+            // Off: the pad keeps where the finger left it (a position).
+            { id: 'spring', type: 'boolean', label: 'Spring back', default: true },
+        ],
+        outputs: [
+            { id: 'x',    type: 'number',  label: 'X'    },
+            { id: 'y',    type: 'number',  label: 'Y'    },
+            { id: 'held', type: 'boolean', label: 'Held' },
+        ],
+        defaultValues: {
+            x: 0,
+            y: 0,
+        },
+        defaultFrame: { width: 300, height: 340 },
+        render: 'panel-2d',
     },
 
     // What the person's phone or screen is, as wires — the facts every work
