@@ -30,19 +30,21 @@ function Studio({ uiHidden = false }) {
     seen.entities = () => doc.entities
     return <StudioWalkBuild spaceId="s" projectId="p" document={doc} entities={doc.entities} applyLocalOps={applyLocalOps} undo={undo} redo={redo} uiHidden={uiHidden} />
 }
+// the hand is its own chunk (WalkHand.jsx): a walk starts, the hand arrives a tick later
+const walk = async (mode) => { act(() => requestWalk(mode)); await screen.findByLabelText('Hotbar') }
 const key = (k, extra = {}) => act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: k, code: /^\d$/.test(k) ? `Digit${k}` : `Key${k.toUpperCase()}`, bubbles: true, ...extra })) })
 const click = (button = 0) => act(async () => { document.dispatchEvent(new MouseEvent('pointerdown', { button, bubbles: true, cancelable: true })); await new Promise((r) => setTimeout(r, 0)) })
 
 describe('the Studio walk builds', () => {
     afterEach(() => { seen.ops = []; act(() => requestWalk('walk')); vi.unstubAllGlobals() })
 
-    it('shows the hotbar only while walking or flying', () => {
+    it('shows the hotbar only while walking or flying', async () => {
         controlsRef.current = fakeControls()
         render(<Studio />)
         expect(screen.queryByLabelText('Hotbar')).toBeNull()
-        act(() => requestWalk('walk'))
+        await walk('walk')
         expect(screen.getByLabelText('Hotbar')).toBeTruthy()
-        act(() => requestWalk('fly'))
+        await walk('fly')
         expect(screen.getByLabelText('Hotbar')).toBeTruthy()
         act(() => requestWalk('fly')) // the same button leaves
         expect(screen.queryByLabelText('Hotbar')).toBeNull()
@@ -51,7 +53,7 @@ describe('the Studio walk builds', () => {
     it('a click places ONE op (the walk stays on), Ctrl+Z removes it, right-click removes what you aim at', async () => {
         controlsRef.current = fakeControls()
         render(<Studio />)
-        act(() => requestWalk('walk'))
+        await walk('walk')
         key('6') // a lamp slot
         expect(screen.getByLabelText('Hotbar').querySelector('.is-on .rigbuild-slot__key').textContent).toBe('6')
         const before = seen.entities().length
@@ -66,14 +68,14 @@ describe('the Studio walk builds', () => {
         expect(seen.ops).toHaveLength(2) // the undo is the inverse op through the same path
     })
 
-    it('H asks the shell to hide the panels (and the hand hides with it); E opens the inventory', () => {
+    it('H asks the shell to hide the panels (and the hand hides with it); E opens the inventory', async () => {
         controlsRef.current = fakeControls()
         const leaked = vi.fn()
         const toggled = vi.fn()
         window.addEventListener('keydown', leaked)
         document.addEventListener(UI_TOGGLE_EVENT, toggled)
         const { rerender } = render(<Studio />)
-        act(() => requestWalk('walk'))
+        await walk('walk')
         key('h')
         expect(toggled).toHaveBeenCalledTimes(1)
         expect(leaked).not.toHaveBeenCalled()

@@ -637,7 +637,7 @@ function LandingPageInner() {
             <Box className="lp-section" component="section" id="who">
                 <Box className="lp-section-inner">
                     <Typography className="lp-section-eyebrow">Audience</Typography>
-                    <Typography className="lp-section-title" component="h2">Made for everyone</Typography>
+                    <Typography className="lp-section-title" component="h2">Who uses it, and for what</Typography>
                     <Typography className="lp-section-body">
                         di.iiii works for artists, developers, organizers, and automated systems.
                     </Typography>
