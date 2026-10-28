@@ -1,11 +1,31 @@
-import { describe, expect, it } from 'vitest'
-import { FULL_INTENSITY, lampModeOf, lampPicture, lampTypeOf, lampTypes, UNTYPED_BEAM_DEG } from './lampType.js'
+import { beforeAll, describe, expect, it } from 'vitest'
+import { FULL_INTENSITY, lampModeOf, lampPicture, lampTypeKnown, lampTypeOf, lampTypes, loadLampType, onLampTypeLoaded, UNTYPED_BEAM_DEG } from './lampType.js'
 
 const DEG = Math.PI / 180
 
+const IDS = ['up-b380f', 'up-cob200', 'up-pl5403', 'up-250bsw']
+beforeAll(() => Promise.all(IDS.map(loadLampType)))
+
+describe('the lamp type, loaded on demand', () => {
+    it('is not there until its file is in, then loaded once and cached', async () => {
+        expect(lampTypeKnown('up-yz31p')).toBe(true)
+        expect(lampTypeKnown('no-such-lamp')).toBe(false)
+        expect(lampTypeOf('up-yz31p')).toBeNull() // asks for it; not in yet
+        const seen = []
+        const off = onLampTypeLoaded((id) => seen.push(id))
+        const first = await loadLampType('up-yz31p')
+        expect(first?.id).toBe('up-yz31p')
+        expect(lampTypeOf('up-yz31p')).toBe(first)
+        expect(await loadLampType('up-yz31p')).toBe(first)
+        expect(seen).toEqual(['up-yz31p']) // one load, announced once
+        off()
+        expect(await loadLampType('no-such-lamp')).toBeNull()
+    })
+})
+
 describe('the lamp type, read from the fixture library', () => {
     it('finds a type by id, and nothing for an empty or unknown one', () => {
-        expect(lampTypes().length).toBeGreaterThanOrEqual(10)
+        expect(lampTypes().length).toBeGreaterThanOrEqual(IDS.length)
         expect(lampTypeOf('up-b380f')?.code).toBe('UP-B380F')
         expect(lampTypeOf('')).toBeNull()
         expect(lampTypeOf('no-such-lamp')).toBeNull()
