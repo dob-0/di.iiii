@@ -180,9 +180,12 @@ export const shadowScore = (light) => {
  * lights' shadows and spot-light maps, one spare. Past the units the material fails to
  * link and the room draws black (seen 2026-10-01 on ANGLE D3D11, 16 units).
  *
+ * `lamps: false`: dress the solid meshes only and leave every lamp as it is -- for a surface
+ * where one lamp keeps its own shadow (the head light) and the room did not ask for lamp shadows.
+ *
  * @returns {{ meshes: number, lights: number }} for tests
  */
-export const dressForShadows = (root, mapSize = defaultShadowCasting.mapSize, { maxLights = Infinity, maxTextures = Infinity } = {}) => {
+export const dressForShadows = (root, mapSize = defaultShadowCasting.mapSize, { maxLights = Infinity, maxTextures = Infinity, lamps = true } = {}) => {
     let meshes = 0
     let busiest = 0
     let otherShadows = 0
@@ -190,7 +193,12 @@ export const dressForShadows = (root, mapSize = defaultShadowCasting.mapSize, { 
     const environment = root?.environment || null
     const walk = (object) => {
         const role = shadowRoleOf(object)
-        if (role === 'skip-subtree') return
+        if (role === 'skip-subtree') {
+            // A lamp that keeps its own shadow (the head light) is not dressed, but its shadow
+            // map still takes a texture unit in every lit material: count it against the cap.
+            if (object?.isLight && object.castShadow) otherShadows += 1
+            return
+        }
         if (role === 'wear') {
             rememberShadowFlags(object)
             object.castShadow = true
@@ -204,6 +212,7 @@ export const dressForShadows = (root, mapSize = defaultShadowCasting.mapSize, { 
         if (Array.isArray(children)) children.forEach(walk)
     }
     walk(root)
+    if (!lamps) return { meshes, lights: 0 }
     const units = Number(maxTextures)
     if (Number.isFinite(units) && units > 0) {
         const spotMaps = spots.filter((light) => light.map?.isTexture).length

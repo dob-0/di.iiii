@@ -44,6 +44,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-25'
     },
     {
+        id: 'head-light',
+        category: 'Editing',
+        title: 'Head light: a flashlight that follows your view',
+        summary: 'A project can give people who walk in it a flashlight. It points where they look, starts off, and is switched with F on a computer or a square Light button on a phone.',
+        body: [
+            'The head light is a warm white cone about 35 degrees wide that reaches about 10 m and fades with distance. It sits at the visitor\'s eye and points where the eye points, so it is the visitor\'s own light and nobody else sees it. It is off when they start walking.',
+            'On a computer press F to switch it on and off. On a phone tap the square Light button beside Fly. In a project with a head light, Fly moves from F to G; its button is where it was.',
+            'A project turns it on in its document: worldState.headLight = { enabled: true } (a setWorldState op). Without it nothing changes: no light, no button, F still flies.',
+            'In High quality the light casts a shadow. On a phone (Low quality) there are no shadows, so the beam also reaches things behind a wall; the visitor cannot see them, because the light sits at their eye. It has not been tried in a headset, and a headset has no key or button to switch it on.'
+        ],
+        tags: ['head light', 'flashlight', 'torch', 'walk', 'dark', 'light', 'phone', 'keyboard', 'quality'],
+        updated: '2026-10-28'
+    },
+    {
         id: 'view-page-controls',
         category: 'Editing',
         title: 'What visitors see on the view page',
