@@ -2,16 +2,22 @@ import { useEffect, useRef, useState } from 'react'
 
 // "Is my work stored?" in words, not a colour (UX audit F089, Nielsen H1 visibility of system status).
 // Three states, read from what the sync layer already knows (useProjectDocumentSync):
-//   Not saved  - a sync failure is waiting (offline, or the sign-in ran out); what to do is said beside it.
+//   Not saved  - a sync failure is waiting (offline, the sign-in ran out, or the server refused and it retries);
+//                what to do is said beside it.
 //   Saving...  - edits are on their way to the server and not yet acknowledged.
 //   Saved 14:32 - nothing waits. The time is the last moment waiting edits were acknowledged; before this
 //                 page has sent any, it is just "Saved" (the project came from the server).
 export function saveLineText(syncState, savedAt = null) {
     if (!syncState) return ''
     if (syncState.pendingSyncError || syncState.authExpired) {
-        return syncState.authExpired
-            ? 'Not saved: sign in again'
-            : 'Not saved: offline, keep this tab open'
+        if (syncState.authExpired) return 'Not saved: sign in again'
+        // "offline" only when the server could not be reached: describeFailure in
+        // src/project/hooks/useProjectDocumentSync.js words that case 'server unreachable'.
+        // Any other failure (a refusal, a conflict that keeps coming back) is retried
+        // by the sync layer, and the line must not send a pro to check the network.
+        return /server unreachable/i.test(String(syncState.pendingSyncError || ''))
+            ? 'Not saved: offline, keep this tab open'
+            : 'Not saved: trying again, keep this tab open'
     }
     if ((Number(syncState.pendingOpCount) || 0) > 0) return 'Saving…'
     if (!savedAt) return 'Saved'

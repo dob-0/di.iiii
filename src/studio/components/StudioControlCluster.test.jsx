@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import StudioControlCluster from './StudioControlCluster.jsx'
 import { buildStudioPreviewUrl } from '../utils/previewUrl.js'
+import { describeUnsaved } from '../../project/hooks/useProjectDocumentSync.js'
 
 const base = {
     spaceName: 'MOXIR',
@@ -173,7 +174,7 @@ describe('the save line', () => {
     })
 
     it('says Not saved, in words, when a sync failure waits', () => {
-        const { rerender } = render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, pendingSyncError: '1 edit waiting: offline' }} />)
+        const { rerender } = render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, pendingSyncError: describeUnsaved('server unreachable', 1) }} />)
         expect(line()).toHaveTextContent('Not saved: offline, keep this tab open')
         expect(line().dataset.saveState).toBe('error')
         rerender(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, pendingSyncError: 'session expired', authExpired: true }} />)
@@ -181,3 +182,12 @@ describe('the save line', () => {
     })
 })
 
+describe('the save line names the real cause', () => {
+    // Review of S03: every sync failure used to read "offline", also a refusal or a
+    // conflict that keeps coming back, so a pro would check a network that was fine.
+    it('says offline only when the server could not be reached', () => {
+        render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, pendingSyncError: describeUnsaved('sync is stuck behind concurrent edits, retrying shortly', 1) }} />)
+        expect(screen.getByRole('status')).toHaveTextContent('Not saved: trying again, keep this tab open')
+        expect(screen.getByRole('status')).not.toHaveTextContent(/offline/)
+    })
+})
