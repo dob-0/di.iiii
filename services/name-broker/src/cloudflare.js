@@ -19,7 +19,7 @@ export function createDns({ token, zoneId, fetchImpl = fetch }) {
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body)
     })
-    let data = null
+    let data
     try {
       data = await response.json()
     } catch {
