@@ -47,13 +47,18 @@ with it; the certificate's name is one line `phones and headsets: …`, `scripts
 | Rebind protection | OpenWrt dnsmasq drops public answers that point at private addresses unless the domain is in `rebind_domain`; dnsmasq 2.93 (OpenWrt 25.12.5) also counts 100.64/10, which broke `*.ts.net` until listed. FRITZ!Box: "Domain name exceptions", cannot be turned off. | [OpenWrt DHCP/DNS](https://openwrt.org/docs/guide-user/base-system/dhcp), [OpenWrt forum 251494](https://forum.openwrt.org/t/dnsmasq-2-93-openwrt-25-12-5-tailscale-split-dns-broken-by-new-100-64-0-0-10-rebind-protection/251494), [AVM KB 663](https://en.avm.de/service/knowledge-base/dok/FRITZ-Box-4020/663_No-DNS-resolution-of-private-IP-addresses) |
 | mDNS | `.local` is not a potentially trustworthy origin, so plain http there has no camera/mic/WebXR; no public CA issues `.local`; name conflicts rename hosts. | [W3C Secure Contexts §3.1](https://www.w3.org/TR/secure-contexts/#is-origin-trustworthy), [RFC 6762 §9](https://www.rfc-editor.org/rfc/rfc6762.html#section-9) |
 
-## 4. The name (PROPOSAL)
+## 4. The name (PROPOSAL; claim and certificate BUILT 2026-10-28, PR 2)
 
 - **Label:** `<who>-<4 chars>`, e.g. `ponyo-k7q2`, `dob-a3f9`. `<who>` comes from the `di login` account; the
   4 chars are random and make it unguessable-enough and unique per machine (one person, two laptops, two names).
 - **Network name:** `ponyo-k7q2.<zone>`; `<zone>` is `l.thedi.studio` or a separate domain (Q1).
 - **Certificate:** one per install, names `ponyo-k7q2.<zone>` **and** `*.ponyo-k7q2.<zone>`. The wildcard also
   covers the address-in-name form `192-168-15-53.ponyo-k7q2.<zone>` (atlas decision) if §5 B is ever turned on.
+- **BUILT (PR 2, branch `feat/di-name-2026-10-28`, tested against a fake broker and a fake ACME client only):** `di name` / `--status` /
+  `--renew` / `--forget` in `scripts/di/networkName.mjs` + `nameStore.mjs`; files in `~/.di/name/`; `di status` prints the name line;
+  `di up` and `di autoupdate run` renew at < 30 days, at most once a day (the CLI exits after `di up`, so the timer's tick is the daily
+  check). Zone `di-studio.xyz`; ACME through `acme-client` 5.4.0 pinned in `serverXR/package.json` (what a packed install runs `npm ci` for).
+  Not yet run against the real broker or Let's Encrypt. `scripts/di/name.mjs` is the older mDNS (`di.local`) file, unrelated.
 - What a person types: the label only — `di follow show --from ponyo-k7q2`. The CLI adds the zone.
 - The address stays `http://diiii.localhost/` for yourself; the network name is for **other** machines.
 
