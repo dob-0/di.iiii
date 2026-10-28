@@ -123,6 +123,8 @@ const { serverActor } = require('./opActor')
 const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
+const { registerAiContextRoutes } = require('./aiContext')
+const { registerAiPublicRoutes } = require('./aiPublic')
 const { registerPasswordAuthRoutes } = require('./routes/passwordAuthRoutes')
 const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerDomainRoutes } = require('./routes/domainRoutes')
@@ -1588,6 +1590,22 @@ const isKnownCaller = (req) => {
     && !isGuestSubject(state.subject)
 }
 router.use(createVisitorBouncer({ guestBook, isKnownCaller, log: logger }))
+
+// The one context at the caller's level (aiContext.js): no key = public, a key
+// maps to its level, a higher level asked for is a 403. After the auth-state
+// middleware above, because the level is read from req.authState and nowhere else.
+registerAiContextRoutes(router, {
+  contextDir: config.directories.aiContextDir,
+  isGuestSubject,
+  // The account's access group (the di-bo repo's groups design brief §2.1). The
+  // column does not exist yet; until it does this is null and member means
+  // registered.
+  groupOf: (userId) => {
+    try {
+      return getDb().prepare('SELECT access_group AS g FROM users WHERE id = ?').get(String(userId || ''))?.g || null
+    } catch { return null }
+  }
+})
 
 // Private conversations: the public-key phone book. Registered here, after the
 // middleware above, because every handler reads `req.authState` — and the whole
@@ -3362,6 +3380,10 @@ registerGuestAddressRoute(router, {
   requireAuth: config.requireAuth
 })
 
+// /llms.txt and /ai/*.md, read from the public bundle (aiPublic.js). Last on
+// the router so nothing above can be shadowed by its /ai catch-all.
+registerAiPublicRoutes(router, { logger })
+
 const mountTargets = new Set([config.mountPath])
 if (!mountTargets.has('/serverXR')) {
   mountTargets.add('/serverXR')
@@ -3396,6 +3418,9 @@ if (CLIENT_DIR) {
   }
   // `/` first: express.static would otherwise answer it with the bare shell.
   app.get('/', servePage)
+  // Before the built app's files and its fallback: under /ai/ the shell must
+  // never answer for a file the bundle does not have (aiPublic.js).
+  registerAiPublicRoutes(app, { logger, appPages: true })
   app.use(express.static(CLIENT_DIR, { setHeaders: allowNullOrigin }))
 
   // Digital asset links — how Android decides that the installed studio-chat

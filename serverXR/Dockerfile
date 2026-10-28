@@ -35,10 +35,20 @@ COPY scripts/project-move.mjs ./scripts/project-move.mjs
 # sharedRuntime.js resolves these at /shared — no mount needed
 COPY shared/ /shared/
 
+# The public level of the one context, served at /ai/context with no key
+# (serverXR/src/aiContext.js). /app/src is serverXR/src, so
+# ../../docs/ai/public resolves to /docs/ai/public here as it does in the repo.
+COPY docs/ai/public/context.md /docs/ai/public/context.md
+
 # The wiki's articles, read by the og route for the card of each /wiki/{id}
 # (serverXR/src/wikiIndex.js). Same relative path as in the repo: /app/src is
 # serverXR/src, so ../../src/wiki resolves to /src/wiki here as it does there.
 COPY src/wiki/wikiContent.js /src/wiki/wikiContent.js
+
+# The public bundle of the one context: llms.txt and the /ai/*.md files
+# (serverXR/src/aiPublic.js). Same relative path as in the repo: /app/src is
+# serverXR/src, so ../../docs/ai/public resolves to /docs/ai/public here.
+COPY docs/ai/public/ /docs/ai/public/
 
 # Release metadata for GET /api/health -- lets a deployed host self-report
 # what commit is actually running (releaseInfo.js reads this from the

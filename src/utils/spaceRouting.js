@@ -44,6 +44,14 @@ export const APP_PAGE_SHOOT = 'shoot'
 // /serverXR/api/spaces/device and /serverXR/api/projects/device answer 404 on prod
 // (diiii.xyz) and on the dev tier (the local install was not running to ask).
 export const APP_PAGE_DEVICE = 'device'
+// How a person connects an assistant to di.iiii — /ai/setup (src/pages/AiSetupPage.jsx).
+// The rest of /ai/ is serverXR's (the markdown files and the context an assistant
+// reads, serverXR/src/aiPublic.js and aiContext.js), so only /ai/setup is a page here.
+// NOT checked against the tiers before reserving: the session that added it
+// could not reach them.
+export const APP_PAGE_AI = 'ai'
+export const AI_SETUP_SEGMENT = 'setup'
+export const APP_PAGE_AI_SETUP = 'ai-setup'
 export const RESERVED_APP_SEGMENTS = [
     ...APP_PAGE_PREFERENCES_ALIASES,
     APP_PAGE_WIKI,
@@ -57,6 +65,7 @@ export const RESERVED_APP_SEGMENTS = [
     // /serverXR/api/resolve/shoot 404 on diiii.xyz and dev.diiii.xyz.
     APP_PAGE_SHOOT,
     APP_PAGE_DEVICE,
+    APP_PAGE_AI,
     'beta',
     'raw',
     'seed',
@@ -320,6 +329,7 @@ export const isToolsPageSegment = (value = '') => (value || '').trim().toLowerCa
 export const isForAppsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_FOR_APPS
 export const isShootPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_SHOOT
 export const isDevicePageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_DEVICE
+export const isAiPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_AI
 export const isSpaceContentsSegment = (value = '') => (value || '').trim().toLowerCase() === SPACE_CONTENTS_SEGMENT
 export const isScanSegment = (value = '') => (value || '').trim().toLowerCase() === SCAN_SEGMENT
 
@@ -423,6 +433,12 @@ export const getAppLocationState = (locationLike = null) => {
         if (isDevicePageSegment(segment)) {
             return {
                 page: APP_PAGE_DEVICE,
+                spaceId: null
+            }
+        }
+        if (isAiPageSegment(segment) && (relative.split('/')[1] || '').toLowerCase() === AI_SETUP_SEGMENT && !relative.split('/')[2]) {
+            return {
+                page: APP_PAGE_AI_SETUP,
                 spaceId: null
             }
         }

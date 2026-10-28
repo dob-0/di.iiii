@@ -110,6 +110,8 @@ const COPY_FILES = [
     'src/index.html',
     'src/Menu.jsx',
     'src/RootApp.jsx',
+    'src/pages/AiSetupPage.jsx',
+    'docs/ai/public/setup.md',
     'src/pages/shoot/ShootPage.jsx',
     'src/SpaceSurfaceApp.jsx',
     'src/SpacesPanel.jsx',
