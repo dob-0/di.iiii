@@ -49,6 +49,7 @@
 /* title, then when and where */
 .shoot-hero { display: grid; grid-template-columns: 1fr minmax(240px, 390px); align-items: center; gap: 40px; margin-bottom: 22px; }
 .shoot-eyebrow { font-size: 12px; letter-spacing: 2px; color: var(--shoot-muted); }
+.shoot-panel > .shoot-eyebrow { text-transform: uppercase; } /* a panel's eyebrow reads in capitals; its words are written in sentence case (the hero's eyebrow is the sheet's own data and keeps its case) */
 .shoot-hero h1 { font: 400 clamp(40px, 4.5vw, 64px)/1.15 Georgia, 'Times New Roman', serif; letter-spacing: -2px; margin: 12px 0 0; }
 .shoot-hero h1 span { color: var(--shoot-accent); font-size: .8em; }
 .shoot-hero figure { margin: 0; }

@@ -987,6 +987,51 @@ describe('device.midi.out status', () => {
     })
 })
 
+describe('device.osc.in', () => {
+    it('answers Address, Value, Signal and Status bare, then the panel report', () => {
+        const doc = { nodes: [node('oi', 'device.osc.in')], edges: [] }
+        expect(['address', 'value', 'signal', 'status'].map((p) => evalPort(doc, 'oi', p))).toEqual(['', 0, 0, ''])
+        const live = new Map([['oi:address', '/fader/1'], ['oi:value', 0.5], ['oi:signal', 3], ['oi:status', '/fader/1 0.5 · 3 heard']])
+        const context = createNodeGraphContext(doc, { liveOutputs: live })
+        expect(['address', 'value', 'signal', 'status'].map((p) => evaluateNodeOutput(doc.nodes[0], p, context)))
+            .toEqual(['/fader/1', 0.5, 3, '/fader/1 0.5 · 3 heard'])
+    })
+    it('carries a word as Value, and answers nothing on a port it does not have', () => {
+        const doc = { nodes: [node('oi', 'device.osc.in')], edges: [] }
+        const context = createNodeGraphContext(doc, { liveOutputs: new Map([['oi:value', 'go']]) })
+        expect(evaluateNodeOutput(doc.nodes[0], 'value', context)).toBe('go')
+        expect(evaluateNodeOutput(doc.nodes[0], 'frame', context)).toBeUndefined()
+    })
+    it('drives a wire: a Math node reads Value through the edge', () => {
+        const doc = {
+            nodes: [node('oi', 'device.osc.in'), node('m', 'math.op', { operation: 'multiply', b: 2 })],
+            edges: [edge('oi', 'value', 'm', 'a')]
+        }
+        const context = createNodeGraphContext(doc, { liveOutputs: new Map([['oi:value', 0.25]]) })
+        expect(evaluateNodeOutput(doc.nodes[1], 'out', context)).toBe(0.5)
+    })
+})
+
+describe('device.osc.out status', () => {
+    it('reads the panel report from the live side channel, empty when unmounted', () => {
+        const doc = { nodes: [node('oo', 'device.osc.out')], edges: [] }
+        expect(evalPort(doc, 'oo', 'status')).toBe('')
+        const context = createNodeGraphContext(doc, { liveOutputs: new Map([['oo:status', '/go → 127.0.0.1:53000 · 1 sent']]) })
+        expect(evaluateNodeOutput(doc.nodes[0], 'status', context)).toBe('/go → 127.0.0.1:53000 · 1 sent')
+    })
+})
+
+describe('device.dmx.in', () => {
+    it('answers Value 0 and Status empty bare, then the panel\'s held or live level', () => {
+        const doc = { nodes: [node('di', 'device.dmx.in')], edges: [] }
+        expect(evalPort(doc, 'di', 'value')).toBe(0)
+        expect(evalPort(doc, 'di', 'status')).toBe('')
+        const context = createNodeGraphContext(doc, { liveOutputs: new Map([['di:value', 128 / 255], ['di:status', 'universe 1, channel 1: 128 (50%)']]) })
+        expect(evaluateNodeOutput(doc.nodes[0], 'value', context)).toBeCloseTo(0.502, 3)
+        expect(evaluateNodeOutput(doc.nodes[0], 'status', context)).toMatch(/channel 1/)
+    })
+})
+
 describe('device.mesh.in and device.mesh.out', () => {
     it('read nothing heard and the link down when no feed is mounted', () => {
         const doc = { nodes: [node('mi', 'device.mesh.in'), node('mo', 'device.mesh.out')], edges: [] }

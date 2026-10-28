@@ -205,6 +205,23 @@ describe('a look\'s level is drawn once: level × nominal (MOXIR 2026-10-09)', (
         }
     })
 
+    // The project's types arrive a moment after the first render (types/projectTypes.js). A drawing made before
+    // they are in has no lamp types: it must not be handed out as the desk's (the first frames drew 304.78 for 305.98).
+    it('the desk drives only once the project\'s lamp types are in: no frame of the desk is drawn from an empty library', async () => {
+        const entities = roomAt(0.5)
+        const set = Object.fromEntries(beams(entities).map((e) => [e.id, { dimmer: 128 }]))
+        const frames = []
+        const { result } = renderHook(() => {
+            const look = useRigLookEntities({ entities }, { mirror: deskPlaying('up', deskOf(entities, set)) })
+            frames.push(look)
+            return look
+        })
+        await waitFor(() => expect(result.current.driver).toBe('desk'))
+        expect(result.current.lookId).toBe('up')
+        const wrong = frames.filter((f) => f.driver === 'desk' && Math.abs(lightOf(f.entities, beams(entities)[0].id) - NOMINAL * 128 / 255) > 0.5)
+        expect(wrong).toEqual([])
+    })
+
     it('the renderer takes the entity\'s number as it is: the spot light\'s intensity, the flat cone\'s opacity once', () => {
         const entities = roomAt(0.5)
         const shown = posedEntities(entities, lookPoses({ entities, library: TYPE_LIBRARY, lookId: 'up' }))

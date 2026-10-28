@@ -28,7 +28,7 @@ const { SACN, cidFor } = require('./sacn');
 const { busStatus } = require('./outputStatus');
 const { backupShowFile } = require('./showBackup');
 const { DmxInput } = require('./dmxin-net');
-const { sanitizeInputConfig, artNetFromDesk, sacnFromDesk, cidString } = require('./dmxin');
+const { sanitizeInputConfig, artNetFromDesk, sacnFromDesk, cidString, inputLevels } = require('./dmxin');
 const {
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
   KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, SPATIAL: LOOK_SPATIAL, kindAllows,
@@ -2283,6 +2283,12 @@ function createDesk(opts = {}) {
       json(res, Object.assign(input.status(), { summary: inputSummary(), lanAllowed }));
     },
     // A held look (loss = hold) let go of: the desk has the rig again until signal returns.
+    // One universe's input levels for a reader outside the desk (the Nodes editor's DMX In,
+    // 2026-10-21): ?universe=<desk universe, 0 = U1>. Read-only; it never switches input on.
+    'GET /api/input/levels': (req, res) => {
+      const u = Number(new URL(req.url, 'http://localhost').searchParams.get('universe'));
+      json(res, Object.assign(inputLevels(input.merger, u, Date.now()), { lanAllowed }));
+    },
     'POST /api/input/release': (req, res) => { input.merger.release(); pushFrame(); json(res, { ok: true }); },
 
     'POST /api/output': (req, res, body) => {

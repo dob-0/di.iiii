@@ -584,9 +584,9 @@ export default function ScenesDeck({ doc, applyOps, projectId, readOnly = false,
                 })}
             </div>
             <div className="rigscenes-row">
-                <button type="button" aria-pressed={playing !== null} onClick={() => setPlaying(playing === null ? Date.now() : null)}>{playing === null ? 'PLAY THE LOOP' : 'STOP'}</button>
-                <button type="button" onClick={next}>NEXT SCENE</button>
-                <button type="button" aria-pressed={loop} onClick={() => setLoop((l) => !l)}>LOOP: {loop ? 'ON' : 'OFF'}</button>
+                <button type="button" aria-pressed={playing !== null} onClick={() => setPlaying(playing === null ? Date.now() : null)}>{playing === null ? 'Play the loop' : 'Stop'}</button>
+                <button type="button" onClick={next}>Next scene</button>
+                <button type="button" aria-pressed={loop} onClick={() => setLoop((l) => !l)}>Loop: {loop ? 'on' : 'off'}</button>
             </div>
             <p className="rigscenes-dim">Play runs the loop in this preview only. The hall plays the show clock.</p>
         </div>
