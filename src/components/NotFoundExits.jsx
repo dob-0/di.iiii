@@ -10,7 +10,8 @@ import { buildSpacesPath } from '../studio/utils/studioRouting.js'
 //
 // Real links (href), so they open in a new tab too; a plain click stays inside
 // the app through appNavigate.
-const buttonSx = { textTransform: 'none', borderColor: 'var(--ui-border)', color: 'var(--ui-text-primary)', borderRadius: 0 }
+// minHeight 44: the hit-target floor (docs/ai/golden_rules.md, "Hit targets ≥44px").
+const buttonSx = { textTransform: 'none', borderColor: 'var(--ui-border)', color: 'var(--ui-text-primary)', borderRadius: 0, minHeight: 44 }
 
 const go = (path) => (event) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return

@@ -15,7 +15,8 @@ import { EMPTY_SPACE_SENTENCE } from './emptySpaceWords.js'
 // bold word and nothing to click.
 const wrapStyle = { height: '100dvh', overflow: 'auto', display: 'grid', placeItems: 'center', padding: '2rem', background: '#05070a', color: '#f5f7fa' }
 const cardStyle = { border: '1px solid rgba(255,255,255,0.08)', borderRadius: 0, padding: '1rem 1.1rem', maxWidth: '28rem', textAlign: 'center', background: 'rgba(6, 9, 13, 0.6)' }
-const linkStyle = { display: 'inline-block', marginTop: '1rem', color: 'inherit', textDecoration: 'underline' }
+// minHeight 44: the hit-target floor (docs/ai/golden_rules.md, "Hit targets ≥44px").
+const linkStyle = { display: 'inline-flex', alignItems: 'center', minHeight: 44, marginTop: '1rem', color: 'inherit', textDecoration: 'underline' }
 const textStyle = { margin: '0.75rem 0 0', fontSize: 14, lineHeight: 1.5, opacity: 0.75 }
 const exitsStyle = { display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }
 
