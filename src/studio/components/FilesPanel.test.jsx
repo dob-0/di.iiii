@@ -207,6 +207,19 @@ describe('FilesPanel', () => {
         expect(names(spy)).toEqual(['index.html', 'style.css'])
     })
 
+    it('a broken zip picked together with a good file still says why, and the good file comes in', async () => {
+        const spy = { current: null }
+        render(<Harness spy={spy} />)
+        const broken = new File(['this is not a zip'], 'broken.zip', { type: 'application/zip' })
+        const good = new File(['h1 { color: red }'], 'extra.css', { type: 'text/css' })
+        await act(async () => { fireEvent.change(screen.getByLabelText('Add files'), { target: { files: [broken, good] } }) })
+        const dialog = await screen.findByRole('alertdialog')
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Add them' }))
+        await waitFor(() => expect(names(spy)).toEqual(['index.html', 'style.css', 'extra.css']))
+        const alert = await screen.findByRole('alert')
+        expect(alert.textContent).toMatch(/broken\.zip: This zip could not be read/)
+    })
+
     it('renaming the start page warns first and does nothing if the person keeps the name', async () => {
         const spy = { current: null }
         render(<Harness spy={spy} />)

@@ -1593,9 +1593,13 @@ export function FilesPanel({
 
     // Bring files in: when the project already has files, ask add or replace
     // (never one without the other), then say what came in.
-    const importFiles = async (incoming, skipped, rootName) => {
-        setImportNotice('')
+    // `problems` are messages from files that could not be read (a broken zip);
+    // they stay on screen next to whatever else came in.
+    const importFiles = async (incoming, skipped, rootName, problems = []) => {
+        const said = problems.join(' ')
+        setImportNotice(said)
         if (incoming.length === 0) {
+            if (said) return
             setImportNotice(skipped.length
                 ? `Nothing was added. ${plural(skipped.length, 'file')} (${skipped.slice(0, 3).join(', ')}) are not kinds the Code window holds.`
                 : 'Nothing was added. No files were found.')
@@ -1646,12 +1650,12 @@ export function FilesPanel({
         if (!picked.length) return
         const incoming = []
         const skipped = []
+        const problems = []
         for (const file of picked) {
             if (/\.zip$/i.test(file.name)) {
                 const result = await readZipFiles(JSZip, file)
                 if (result.error) {
-                    setImportNotice(`${file.name}: ${result.error}`)
-                    if (picked.length === 1) return
+                    problems.push(`${file.name}: ${result.error}`)
                     continue
                 }
                 incoming.push(...result.files)
@@ -1660,7 +1664,7 @@ export function FilesPanel({
                 incoming.push({ name: normalizeFileName(file.name), content: await file.text() })
             }
         }
-        await importFiles(incoming, skipped, pickRoot(incoming))
+        await importFiles(incoming, skipped, pickRoot(incoming), problems)
     }
 
     const handleImportFolder = async (event) => {
