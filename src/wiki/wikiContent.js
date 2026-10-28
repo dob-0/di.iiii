@@ -983,12 +983,12 @@ export const WIKI_ARTICLES = [
                 'Code: the Code window edits HTML/CSS/JS files stored inside the project. A project that holds a page and no scene opens with the viewport on the page, and the Create window (3D shapes and lights) stays closed until you open it. The toggle at its top, Scene or Code view, switches the viewport either way, and the “Project file” picker inserts any file’s URL straight into your code.',
                 'Code tabs: the small x on a tab (or Delete on the focused tab) only closes the tab; the file stays in your project, and “Closed tabs” under the row opens it again. To remove a file, choose “Delete file”: it asks first, and Undo brings the file back for 10 seconds. Adding files or a zip to a project that has files asks once: Cancel, Replace all or Add them. The file that visitors see first is marked “opens first” (index.html, else the first .html file); renaming it asks before it stops being the start page.',
                 'Add files brings in single files and .zip archives together, Add folder a whole folder. If the project already has files, it asks whether to add the new ones to yours or replace yours; either can be undone for 10 seconds. A zip that cannot be read says why, and files the Code window cannot hold are listed as left out.',
-                'Instead of local files, the Code window can embed an external site (Embed external URL).',
+                'Instead of local files, the Code window can embed an external site: “Use a web address” in a new project, or Embed external URL at the bottom.',
                 'Share controls what visitors see: the public entry view (the scene or the code) and the live route are set in the Share window.'
             ] }
         ],
         tags: ['studio', 'files', 'assets', 'code', 'content'],
-        updated: '2026-10-28'
+        updated: '2026-10-29'
     },
     {
         id: 'studio-inside-a-geo',
@@ -2373,7 +2373,7 @@ export const WIKI_ARTICLES = [
             'The Scene window\'s Light environment rows (haze, ambient, exposure, bloom, surfaces) are what Show and the Studio draw. Tech keeps only the exposure, so the crew reads the same schematic in every version.'
         ],
         tags: ['render', 'tech', 'show', 'studio', 'preview', 'display', 'schematic', 'crew', 'live', 'showcase', 'lasers', 'beams', 'room'],
-        updated: '2026-10-28'
+        updated: '2026-10-15'
     },
     {
         id: 'room-quality-lite-full',

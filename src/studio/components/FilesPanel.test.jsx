@@ -110,6 +110,13 @@ describe('FilesPanel', () => {
         expect(onPresentationPatch).toHaveBeenCalledWith({ codeUrl: 'https://diiii.xyz', codeSourceType: 'url' })
     })
 
+    it('a project with no files offers a web address as a first choice, next to Add files', () => {
+        render(<FilesPanel presentationState={{ mode: 'code', codeFiles: [] }} onPresentationPatch={vi.fn()} />)
+        expect(screen.queryByPlaceholderText('https://example.com')).not.toBeInTheDocument()
+        fireEvent.click(screen.getByRole('button', { name: 'Use a web address' }))
+        expect(screen.getByPlaceholderText('https://example.com')).toBeInTheDocument()
+    })
+
     // A panel that keeps its own project, so Undo and "files stay" can be seen.
     const Harness = ({ initial = codeFiles, spy }) => {
         const [state, setState] = useState({ mode: 'code', codeFiles: initial })

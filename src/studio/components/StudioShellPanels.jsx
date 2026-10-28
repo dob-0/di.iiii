@@ -1857,6 +1857,8 @@ export function FilesPanel({
                         <Button size="small" variant="outlined" onClick={() => singleFileInputRef.current?.click()}>Add files</Button>
                         <Button size="small" variant="outlined" onClick={() => folderInputRef.current?.click()}>Add folder</Button>
                         <Button size="small" variant="outlined" onClick={() => { setFiles([{ name: 'index.html', content: '' }]); setActiveFileName('index.html') }}>blank index.html</Button>
+                        {/* F144: a site at an outside address is a first choice too, not only a line at the bottom. */}
+                        <Button size="small" variant="outlined" onClick={() => setEmbedOpen(true)}>Use a web address</Button>
                     </Stack>
                 </Box>
             )}
