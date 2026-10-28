@@ -20,4 +20,14 @@ describe('phone Undo and Redo tap size', () => {
         expect(rule, 'rule for .smb-status-row').toBeTruthy()
         expect(rule[1]).toMatch(/flex:\s*1 0 100%/)
     })
+
+    it('let a touch through the empty part of their row to the scene, as the rest of the bar does', () => {
+        const css = readFileSync(fileURLToPath(new URL('./studio-mobile.css', import.meta.url)), 'utf8')
+        const row = css.match(/\.smb-topbar > \.smb-status-row\s*\{([^}]*)\}/)
+        expect(row, 'rule for .smb-topbar > .smb-status-row').toBeTruthy()
+        expect(row[1]).toMatch(/pointer-events:\s*none/)
+        const kids = css.match(/\.smb-status-row > \*\s*\{([^}]*)\}/)
+        expect(kids, 'rule for .smb-status-row > *').toBeTruthy()
+        expect(kids[1]).toMatch(/pointer-events:\s*auto/)
+    })
 })

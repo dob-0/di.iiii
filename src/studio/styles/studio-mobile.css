@@ -99,6 +99,16 @@
     min-width: 0;
 }
 
+/* The row is the bar's full width but holds two buttons and a short line: its empty part must let a
+   touch through to the scene, like the rest of the bar (.smb-topbar is pointer-events: none). */
+.smb-topbar > .smb-status-row {
+    pointer-events: none;
+}
+
+.smb-status-row > * {
+    pointer-events: auto;
+}
+
 .smb-undo-redo {
     display: inline-flex;
     gap: var(--di-space-1);
