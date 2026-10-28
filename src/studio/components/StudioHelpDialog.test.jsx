@@ -32,7 +32,7 @@ describe('StudioHelpDialog', () => {
         fireEvent.click(screen.getByRole('tab', { name: 'Shortcuts' }))
         expect(screen.getByText('Move: with a selection the drag starts at once (Blender grab); without, picks the gizmo mode')).toBeInTheDocument()
         expect(screen.getByText(/Toggle Navigate ↔ Edit/)).toBeInTheDocument()
-        expect(screen.getByText('Close the window you are in')).toBeInTheDocument()
+        expect(screen.getByText('Close the window you are in (else the one opened last)')).toBeInTheDocument()
         expect(screen.getByText('Quick insert')).toBeInTheDocument()
     })
 

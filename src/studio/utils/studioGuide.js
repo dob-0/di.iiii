@@ -139,7 +139,7 @@ export const STUDIO_SHORTCUT_SECTIONS = [
         rows: [
             ['E', 'Toggle Navigate ↔ Edit (Tab too, when "Blender keys" is on at the top of this page)'],
             ['Tab', 'Move the focus to the next button or window (Shift+Tab goes back)'],
-            ['Esc', 'Close the window you are in'],
+            ['Esc', 'Close the window you are in (else the one opened last)'],
             ['Walk / Fly buttons', 'Walk: eye height above the floor, W A S D move. Fly: free, Space up, Q down. Esc leaves'],
             ['Building (walking or flying)', 'The hotbar: 1 to 0 pick a slot, E the inventory, left click places where the crosshair aims, right click removes, R turns, Ctrl+Z undoes each'],
             ['H (walking)', 'Hide every panel but the crosshair; H again brings them back'],

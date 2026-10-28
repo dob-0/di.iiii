@@ -454,13 +454,22 @@ export default function StudioShell({
                 || e.target.isContentEditable
             if (inInput) return
 
-            // Esc closes what is on top: Quick Insert, then Help, then the window the focus is in (WCAG 2.1.2 / Nielsen H3).
+            // Esc closes what is on top: Quick Insert, then Help, then the window the focus is in, else the window opened last (WCAG 2.1.2 / Nielsen H3).
             // Not while a transform runs (its own Esc cancels it) or something is selected (the editor's Esc deselects first), and never by a letter, so it works with letter keys off.
             if (e.key === 'Escape') {
                 if (quickInsert) setQuickInsert(null)
                 setShowHelp(false)
                 if (!quickInsert && !transformOp && selectedEntityIds.length === 0) {
-                    const panel = e.target?.closest?.('.sfp-shell')
+                    // The window the focus is in; with the focus on the page or the scene, the window opened last (the top one).
+                    let panel = e.target?.closest?.('.sfp-shell')
+                    if (!panel) {
+                        const doc = e.target?.ownerDocument || document
+                        const keys = [...openRef.current].reverse()
+                        for (const k of keys) {
+                            const candidate = doc.querySelector(`.sfp-shell[data-window-key="${k}"]`)
+                            if (candidate?.querySelector('.sfp-close')) { panel = candidate; break }
+                        }
+                    }
                     const closeButton = panel?.querySelector?.('.sfp-close')
                     if (closeButton) {
                         // Keep the place in the Tab order (WCAG 2.4.3): the close button is about to go, so the focus moves to the

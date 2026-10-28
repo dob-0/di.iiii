@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import StudioShell from './StudioShell.jsx'
 import { ALL_TOOLS_KEY, saveAllTools } from '../utils/jamMode.js'
 
+const WORKSPACE_KEY = 'dii.studio.workspace.v1'
+
 vi.mock('./StudioViewportLayout.jsx', () => ({
     default: ({ shared }) => <output data-testid="gizmo-axis" data-edit-mode={shared.editMode}>{shared.gizmoAxis || 'all'}</output>
 }))
@@ -468,5 +470,17 @@ describe('StudioShell keyboard: Tab, letter keys, Esc', () => {
         expect(onClick2).toHaveBeenCalledTimes(1)
         // WCAG 2.4.3: the focus goes to the button that opens that window again, not to <body>
         expect(document.activeElement).toBe(document.querySelector('.scc-wrap [data-window-key="scene"]'))
+    })
+
+    it('Esc with the focus on the page (not in a window) closes the window opened last, one per press', () => {
+        window.localStorage.setItem(WORKSPACE_KEY, JSON.stringify({ open: ['scene', 'world', 'projects'] }))
+        renderShell()
+        const shells = () => [...document.querySelectorAll('.sfp-shell[data-window-key]')].map((el) => el.dataset.windowKey)
+        expect(shells().sort()).toEqual(['projects', 'scene', 'world'])
+        document.body.focus()
+        fireEvent.keyDown(document.body, { key: 'Escape' })
+        expect(shells().sort()).toEqual(['scene', 'world'])
+        fireEvent.keyDown(document.body, { key: 'Escape' })
+        expect(shells()).toEqual(['scene'])
     })
 })
