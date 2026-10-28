@@ -7,10 +7,13 @@ T=scripts/tools.sh
 
 step() { echo; echo "==> $*"; }
 
+step "tools: installed binaries match tools.sha256"
+python3 -I scripts/verify_tools.py
+
 step "greybox: map files match map/plan.json"
 python3 -I scripts/gen_greybox.py --check
 
-step "assets: assets.csv is complete and every licence is allowed"
+step "assets: every row of assets.csv is valid and its licence allowed (an asset with no row is the verifier's gate, skill game-look)"
 python3 -I scripts/check_assets.py
 
 step "json: every .json parses"

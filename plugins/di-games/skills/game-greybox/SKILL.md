@@ -14,7 +14,7 @@ description: "Stage 2 of the di-games routine. Use when the design is approved a
 
 - Prototype the cheapest thing that can be played and tested, then playtest it (the playcentric loop;
   Fullerton, *Game Design Workshop*, 5th ed., CRC Press, 2024, where a paper prototype is fine). Plain grey
-  blocks are that prototype for a space. Art comes later (stage 5), so that stage 4 judges the rules and
+  blocks are that prototype for an area. Art comes later (stage 5), so that stage 4 judges the rules and
   not the look.
 - Rules live in pure logic with no engine calls, so they can be tested without the engine; the engine code
   stays thin. This is the pattern of `game-build-roblox`.

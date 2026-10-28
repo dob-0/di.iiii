@@ -2,8 +2,21 @@
 # Starts a new Roblox game repo from the di-games template.
 # Usage: new-game.sh <name> <dir>     name: kebab-case, for example haunted-school; dir: new or empty
 # Copies ../template to <dir>, fills in the name, adds the design page (skill game-design) and the asset
-# check (skill game-look), and runs `git init`. Writes nothing outside <dir>. Needs: bash and git.
+# check (skill game-look), and runs `git init`. Writes nothing outside <dir>.
+# Needs: Linux with GNU tools (grep, sed), bash 4 or newer, and git. It uses ${p^} (bash 4), `grep -Z` and `sed -i`
+# (GNU forms). On bash 3 (the macOS default) or a grep or sed that is not GNU it stops with a message before it
+# creates anything. The port to macOS is owed (plugin README, Owed).
 set -euo pipefail
+
+# Fail early and clearly, before anything is created.
+if (( BASH_VERSINFO[0] < 4 )); then
+  echo "new-game.sh: needs bash 4 or newer (this is bash $BASH_VERSION); it also needs GNU grep and sed, so it runs on Linux only for now. The macOS port is owed." >&2
+  exit 1
+fi
+for tool in grep sed; do
+  version_text="$("$tool" --version 2>/dev/null || true)"
+  [[ "$version_text" == *GNU* ]] || { echo "new-game.sh: needs GNU $tool, and this $tool is not GNU; it runs on Linux only for now. The macOS port is owed." >&2; exit 1; }
+done
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPLATE="$HERE/../template"

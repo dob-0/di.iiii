@@ -25,7 +25,7 @@ description: "Stage 4 of the di-games routine. Use when a playable v1 passes its
    players, which devices (PC and phone).
 2. Ask before you play. Each tester says yes, and a parent or guardian too when the tester is under 18.
    Write the yes in the session notes. Use first names or handles only. No personal data in the repo.
-3. Play in private first: publish to a private place and invite the testers (game-release, step 4).
+3. Play in private first: publish to a private experience and invite the testers (game-release, step 4).
 4. Run a session. The observer watches and writes; does not help or explain unless the round cannot go on.
    Note what happened, not opinions.
 5. At the end ask the same questions every time (the template lists them), and write the answers in the

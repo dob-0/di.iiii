@@ -8,8 +8,8 @@ description: "Stage 3 of the di-games routine for a di.iiii target. A stub: the 
 Status: **stub. Do not use this skill to build.**
 
 The parts plan, "Escape the Haunted School in di.iiii: the parts plan" (draft of 2026-10-28, ledger N1424 and
-N1429, facts from `di-iiii-route.md` at dev `bfc508bf0`), lists seven parts. The plan lists all seven as still
-to build; this stub did not check that against the code. In di.iiii a game is a **project** in a **space**;
+N1429, facts from `di-iiii-route.md`, a research-job file that is not in this repo, at dev `bfc508bf0`), lists seven parts. The plan lists all seven as still
+to build; this stub did not check that against the code. In di.iiii a **project** is one thing made inside a **space**;
 the place you walk in is its **scene**; each new ability is a **part** that loads only in projects that
 use it (`docs/ai/vocabulary.md`; the Lego decision, di-atlas `decisions/2026-09-28-lego-core-and-parts.md`).
 Nothing is made for one game alone: every part works for any project.
@@ -29,8 +29,9 @@ after pictures (light and dark theme). Light parts also pass the physics check (
 measured on a phone. It merges through the owner's merge window. Parts 1 and 2 start first, because every
 walk in di.iiii gains from them; parts 3 to 7 follow what the Roblox playtests teach.
 
-Open in the plan: which space holds the game; and a word for a project you play (the vocabulary has "game"
-only as an installed app, so this needs a words decision before the first public page).
+Open in the plan: which space holds the game, and how a game made in di.iiii relates to a project. The word is not
+open: "game" is defined (`docs/ai/vocabulary.md`, amended 2026-10-21: "An app made to be played. A type of app, never a
+separate thing"). Use it as defined.
 
 Until the parts exist, use `game-concept`, `game-design` and `game-playtest` as they are (they are
 engine-neutral), and build on Roblox with `game-build-roblox`.

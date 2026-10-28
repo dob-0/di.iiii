@@ -10,9 +10,11 @@ description: "Stage 6 of the di-games routine. Use when playtests are done and a
 - **Who:** the owner and game-builder. The owner does anything with money, an ID or a consent click.
 - **Needs:** stage 4 passed, and the provenance check of stage 5 green (`scripts/check.sh`).
 
-Source of every rule below: the research job's file `roblox-route.md` (2026-10-28), which read the pages
-named under "Sources". This plugin did not fetch them again. Most Roblox pages show no date, only the
-year. They change: re-read before you release and write the date. HYPOTHESIS means not checked.
+Source of every rule below: the Roblox pages named under "Sources", read by the research job on 2026-10-28. The
+PR verifier re-read two of them the same day: source 2 (the 1,000 Robux fee and the account age of 2 days) and source 5
+(250 unique plays in a 60-day window and the 50,000 Robux fee). The rest was not re-read for this plugin. Most Roblox
+pages show no date, only the year. They change: re-read before you release and write the date. HYPOTHESIS means not
+checked.
 
 ## Steps
 
@@ -61,11 +63,11 @@ Cashing out later (DevEx): age 13+ and at least 30,000 Earned Robux at 0.0038 US
 - Never put an API key in git, a chat or a log.
 - Do not copy another game's characters, art, music or names.
 
-## Sources (all create.roblox.com/docs/)
+## Sources (every link answered on 2026-10-28)
 
-1. projects/collaboration
-2. production/publishing/publish-experiences-and-places
-3. cloud/open-cloud/usage-place-publishing
-4. production/promotion/content-maturity (en-us)
-5. production/publishing/kids-and-select
-6. production/monetization/developer-exchange
+1. https://create.roblox.com/docs/projects/collaboration
+2. https://create.roblox.com/docs/production/publishing/publish-experiences-and-places
+3. https://create.roblox.com/docs/cloud/open-cloud/usage-place-publishing
+4. https://create.roblox.com/docs/production/promotion/content-maturity
+5. https://create.roblox.com/docs/production/publishing/kids-and-select
+6. https://create.roblox.com/docs/production/monetization/developer-exchange

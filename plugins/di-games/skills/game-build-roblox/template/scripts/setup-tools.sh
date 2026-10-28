@@ -2,6 +2,8 @@
 # Installs Rokit v1.2.0 (Linux x86_64) and then every tool in rokit.toml.
 # Rokit home: ROKIT_ROOT (named in Rokit's source, lib/storage/home.rs); default $HOME/tools/rokit.
 # This script NEVER edits ~/.bashrc or any shell profile. Run it again any time: it skips finished steps.
+# After the install it records the sha256 of every tool binary in tools.sha256 (first install) or checks it
+# (scripts/verify_tools.py --record). The first install trusts the GitHub release and the version pin.
 # Use --dry-run to print the steps only.
 set -euo pipefail
 
@@ -47,5 +49,11 @@ fi
 
 step "rokit install (every tool in rokit.toml; Rokit's own home is set by ROKIT_ROOT)"
 # No 'rokit self-install': it edits shell profiles. The tools are run through scripts/tools.sh.
+# --no-trust-check skips Rokit's own prompt about untrusted tools (meant for CI). The version is pinned in rokit.toml and
+# the hash lock below takes the place of that check.
 run bash -c "cd '$REPO' && PATH='$ROKIT_ROOT/bin':\"\$PATH\" '$ROKIT_ROOT/bin/rokit' install --no-trust-check"
+
+step "tools.sha256: record each tool's hash at its first install, check it on every later run"
+run python3 -I "$REPO/scripts/verify_tools.py" --record
+
 step "Done. Run a tool with: scripts/tools.sh rojo --version"

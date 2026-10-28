@@ -22,6 +22,11 @@ cd <dir> && scripts/setup-tools.sh && scripts/check.sh
 page from `game-design` and the asset check from `game-look`, fills in the name, and runs `git init`. It
 writes nothing outside `<dir>`. Each game is its own repo.
 
+It needs Linux with GNU tools and bash 4 or newer. On bash 3 (the macOS default) or a `grep` or `sed` that is not GNU it
+stops with a message before it creates anything, and `setup-tools.sh` downloads for Linux x86_64 only. The macOS port is
+owed. `setup-tools.sh` also records `tools.sha256`, the sha256 of each installed tool binary (trusted on the first install:
+the GitHub release and the version pin), and `scripts/check.sh` checks every binary against it first, on every run.
+
 ## The toolchain, pinned in `rokit.toml`
 
 | Tool | Job | Version (date) |
@@ -33,7 +38,7 @@ writes nothing outside `<dir>`. Each game is its own repo.
 | luau-lsp | editor help and types | 1.70.1 (2026-09-27) |
 | Lune | runs Luau outside Roblox, for the tests | 0.11.1 (2026-10-21) |
 
-Versions and dates: each project's GitHub release API, read 2026-10-28 (`roblox-route.md` D2). Not chosen:
+Versions and dates: each project's GitHub release API, read 2026-10-28. Not chosen:
 Wally (last release 2023-06-05; add it when a package is needed) and Jest Lua (runs only inside Roblox).
 
 ## The layout
@@ -60,7 +65,7 @@ assets.csv                   provenance of every asset (skill game-look)
 - Numbers live in `Config`. A number written anywhere else is a defect.
 - Write the test first. Test names read as sentences. `Round` in the template is the worked example.
 - Monster pathfinding uses `PathfindingService:CreatePath`, `path:ComputeAsync` and a `path.Blocked` handler;
-  it runs where the NPC logic runs, and the docs give no distance or cost limits (`roblox-route.md` D2).
+  it runs where the NPC logic runs, and the docs give no distance or cost limits (UNCHECKED: from the research job's notes, which are not in this repo; read the PathfindingService page before relying on it).
 
 ## Rules for the builder
 
@@ -84,5 +89,5 @@ assets.csv                   provenance of every asset (skill game-look)
 Once: `scripts/tools.sh rojo plugin install`. Then `scripts/tools.sh rojo serve` and Connect in the Rojo
 plugin. Studio officially runs on Windows 10+ and macOS 10.14+ (create.roblox.com/docs/studio/setup); Linux
 is not listed. Vinegar (Studio through Wine, v1.9.4 of 2026-06-24) exists but had open crash and login
-issues dated 2026-10 (`roblox-route.md` D1), so on Linux treat Studio as unproven and use a Windows or
+issues dated 2026-10 (UNCHECKED: from the research job's notes, which are not in this repo; the Vinegar issue tracker was not re-read), so on Linux treat Studio as unproven and use a Windows or
 macOS machine for the walk and the playtests.

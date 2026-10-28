@@ -26,7 +26,7 @@ reference and marketplaces, read 2026-10-28) and the CLI's own help.
 | 2 | Greybox | game-greybox | A map of plain blocks and the core loop | One round can be won | builder, then verifier |
 | 3 | Playable v1 | game-build-roblox (game-build-dii is a stub) | Every v1 rule working, all checks green | The done-when list passes | builder, then verifier |
 | 4 | Playtest | game-playtest | A test plan, sessions with friends, notes, fixes | Players ask for another round | verifier and the owner |
-| 5 | Look | game-look | Art, light and sound; each asset keeps its source and licence | Provenance file complete; light stops at walls | builder and asset-scout, then verifier |
+| 5 | Look | game-look | Art, light and sound; each asset keeps its source and licence | Every asset has a row and every row is valid; light stops at walls | builder and asset-scout, then verifier |
 | 6 | Release | game-release | The rating questionnaire; private, then public | Label set; live; the owner's money and ID steps done | the owner and builder |
 
 Method: the playcentric loop (Fullerton, *Game Design Workshop*, 5th ed., CRC Press, 2024), one-page designs
@@ -48,17 +48,34 @@ game's toolchain and layout, made generic, adds the design page and the asset ch
 Tested 2026-10-28 on Linux x86_64 with the tools from Rokit: a copy made into a scratch directory ended its
 `scripts/check.sh` with `13 passed, 0 failed` and `ALL CHECKS PASSED`.
 
+`new-game.sh` needs Linux with GNU tools (`grep`, `sed`) and bash 4 or newer: it uses `${p^}`, `grep -Z` and `sed -i`.
+On bash 3 (the macOS default) or a `grep` or `sed` that is not GNU it stops with a message before it creates anything.
+`setup-tools.sh` downloads for Linux x86_64 only. The macOS port is owed.
+
+The tools are pinned by version in `rokit.toml` and by hash in `tools.sha256`: `setup-tools.sh` records the sha256 of
+each installed binary on the first install, and `scripts/check.sh` checks every binary against it on every run
+(`scripts/verify_tools.py`). The first install trusts the GitHub release and the version pin: Rokit keeps the unpacked
+binary, not the archive that GitHub publishes a digest for. Later runs only detect a change.
+
 ## Agents (`agents/`)
 
 | Agent | Model | Does | Tools |
 |---|---|---|---|
 | game-designer | Opus | Reads the concept, writes the design, returns only the picks | read, write, web |
-| game-builder | Sonnet | Writes code and maps, runs every check, never signs off | read, write, bash |
+| game-builder | Sonnet | Writes code and maps, runs every check, never signs off | read, write, bash, Blender MCP |
 | game-verifier | Opus | Fresh context. Checks the gate itself; signs off or sends back | read, bash, writes only its verdict file |
 | asset-scout | Haiku | Finds CC0 assets and proposes their licence rows | read-only, web |
 
 Each agent stops on an open owner decision, keeps to about 60 tool calls and then hands over by a file, and
 carries the heat rules (brief template items 16 and 19: `di-cool`, pinned tests, never detached).
+
+Only game-builder has the Blender tools: `mcp__plugin_di-games_blender__*` is in its `tools:` list. An agent's `tools:`
+list is an allow-list, so an agent that does not name MCP tools has none, and a plugin agent's own `mcpServers:` field is
+ignored: the plugin's `.mcp.json` is the only door (code.claude.com/docs/en/sub-agents, "Restrict which tools a subagent
+can use" and "Choose the subagent scope"; the name form `mcp__plugin_<plugin>_<server>__<tool>` is from
+code.claude.com/docs/en/mcp, "Plugin MCP tool names"; all read 2026-10-28). NOT RUN: the Blender server was never started
+here, so no agent's tool list with the Blender tools in it has been seen. If the builder reports that it has no Blender
+tools, the main session runs the Blender step.
 
 ## Tools (MCP)
 
@@ -135,7 +152,12 @@ Template files are copied into a game, never linked, so a game keeps working whe
 
 ## Owed
 
-The publish script and key store; the Studio MCP hookup once a Studio machine is settled; `game-build-dii`
-(waits for the di.iiii parts); other platforms in `setup-tools.sh` and a type-check step in `check.sh`; the
-asset fetchers; reading the Creator Store terms and Roblox's IP policy; a words decision for a project you
-play (the vocabulary has "game" only as an installed app); evals for the skills.
+The asset scanner: a check that fails when an asset the game uses has no row in `assets.csv` (`rbxassetid://` ids
+in `src/`, ids in `Config.SOUNDS`, asset files). Today `check_assets.py` checks only the rows that exist, and the
+verifier checks completeness by hand (game-look, gate and step 4). The archive digests of the tools (GitHub's
+`digest` of each release zip), so the first install is checked too. A macOS port of `new-game.sh` and
+`setup-tools.sh` (GNU `grep` and `sed`, bash 4, a Linux x86_64 download). A runtime test that the builder sees the
+Blender tools. The publish script and key store; the Studio MCP hookup once a Studio machine is settled;
+`game-build-dii` (waits for the di.iiii parts, and for how a game made in di.iiii relates to a project; the word
+"game" is settled, see the vocabulary entry of 2026-10-21); a type-check step in `check.sh`; the asset fetchers;
+reading the Creator Store terms and Roblox's IP policy; evals for the skills.
