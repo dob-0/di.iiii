@@ -19,13 +19,13 @@ import localOwner from './localOwner.js'
 const { createShareDoor, defaultRouteAddress, hostIsOwnName, readName } = shareDoor
 const loadBroker = () => import('../../scripts/di/brokerClient.mjs')
 
-const NAME = 'dob-a3f9.di-studio.xyz'
+const NAME = 'dob-a3f9.l.thedi.studio'
 const { privateKey, publicKey } = crypto.generateKeyPairSync('ed25519')
 const cleanups = []
 let dir
 
 const writeName = (extra = {}) => {
-    fs.writeFileSync(path.join(dir, 'name.json'), JSON.stringify({ label: 'dob-a3f9', zone: 'di-studio.xyz', name: NAME, claimedAt: 1, brokerUrl: 'https://broker.test', ...extra }))
+    fs.writeFileSync(path.join(dir, 'name.json'), JSON.stringify({ label: 'dob-a3f9', zone: 'l.thedi.studio', name: NAME, claimedAt: 1, brokerUrl: 'https://broker.test', ...extra }))
     fs.writeFileSync(path.join(dir, 'cert.pem'), 'CERT')
     fs.writeFileSync(path.join(dir, 'key.pem'), 'KEY')
     fs.writeFileSync(path.join(dir, 'install.key'), privateKey.export({ type: 'pkcs8', format: 'pem' }))

@@ -6,8 +6,8 @@ vi.mock('../services/apiClient.js', () => ({ apiFetch: vi.fn(() => Promise.resol
 
 import SharePanel from './SharePanel.jsx'
 
-const PRIVATE = { shared: false, name: 'dob-a3f9.di-studio.xyz', address: null, port: null, since: null }
-const SHARED = { shared: true, name: 'dob-a3f9.di-studio.xyz', address: '192.168.1.20', port: 443, since: 'now' }
+const PRIVATE = { shared: false, name: 'dob-a3f9.l.thedi.studio', address: null, port: null, since: null }
+const SHARED = { shared: true, name: 'dob-a3f9.l.thedi.studio', address: '192.168.1.20', port: 443, since: 'now' }
 const qr = () => document.querySelector('svg.qr-code')
 
 describe('SharePanel', () => {
@@ -23,13 +23,13 @@ describe('SharePanel', () => {
         fireEvent.click(await screen.findByRole('button', { name: 'Share' }))
         expect(await screen.findByRole('button', { name: 'Unshare' })).toBeInTheDocument()
         expect(open).toHaveBeenCalled()
-        expect(qr().getAttribute('data-qr-value')).toBe('https://dob-a3f9.di-studio.xyz/')
+        expect(qr().getAttribute('data-qr-value')).toBe('https://dob-a3f9.l.thedi.studio/')
         expect(screen.getByText('di follow <space> --from dob-a3f9')).toBeInTheDocument()
     })
     it('shared with another port: the code holds the port', async () => {
         render(<SharePanel load={() => Promise.resolve({ ...SHARED, port: 4001 })} />)
         await screen.findByRole('button', { name: 'Unshare' })
-        expect(qr().getAttribute('data-qr-value')).toBe('https://dob-a3f9.di-studio.xyz:4001/')
+        expect(qr().getAttribute('data-qr-value')).toBe('https://dob-a3f9.l.thedi.studio:4001/')
     })
     it('Unshare closes it: back to private, no code', async () => {
         const close = vi.fn(() => Promise.resolve(PRIVATE))
