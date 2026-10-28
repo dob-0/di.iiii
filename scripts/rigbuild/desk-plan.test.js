@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import library from '../../src/rigbuild/types/moxir.json'
+import library from '../../src/rigbuild/types/library/all.json'
 import { exactProblems, planDesk } from './desk-plan.mjs'
 
 // desk-plan.mjs (RIG_BUILD.md §19.6): the chosen version goes on its desk at EXACTLY the
