@@ -163,7 +163,7 @@ describe('a space\'s contents page', () => {
     it('says so plainly when a space has nothing on show', async () => {
         listSpaceContentsMock.mockResolvedValue([])
         render(<SpaceContentsPage spaceId="br_id_ge" />)
-        expect(await screen.findByText(/Nothing is on show in this space yet/)).toBeTruthy()
+        expect(await screen.findByText(/Nothing here yet\. The owner has not shown anything\./)).toBeTruthy()
     })
     // The bug this page was reported for: the owner opened the WCC space,
     // counted eleven artist rooms and asked where the landing page was. It is

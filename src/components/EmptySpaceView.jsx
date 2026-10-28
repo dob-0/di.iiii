@@ -1,13 +1,23 @@
 import useAuthSession from '../hooks/useAuthSession.js'
 import { isSpaceInSessionScope } from '../utils/sessionScope.js'
 import { canEditSession } from '../shared/visitorChrome.js'
-import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
+import { buildSpacesPath, buildStudioHubPath } from '../studio/utils/studioRouting.js'
+import { buildFrontPagePath } from '../utils/spaceRouting.js'
+import { EMPTY_SPACE_SENTENCE } from './emptySpaceWords.js'
 
-// What a space with nothing in it opens: its name, and for a session that can
-// edit here, the way to start. Not the 3D editor — a new space is not a scene.
+// What a space with nothing in it opens: its name, one sentence that says it
+// is empty (not broken), the way out, and for a session that can edit here,
+// the way to start. Not the 3D editor — a new space is not a scene.
+//
+// The sentence is EMPTY_SPACE_SENTENCE, the same words the space's own list
+// (/{space}/projects) says when it has nothing in it: one empty state, one
+// voice (audit F070, 2026-10-28). Before, a visitor saw a black page with one
+// bold word and nothing to click.
 const wrapStyle = { height: '100dvh', overflow: 'auto', display: 'grid', placeItems: 'center', padding: '2rem', background: '#05070a', color: '#f5f7fa' }
 const cardStyle = { border: '1px solid rgba(255,255,255,0.08)', borderRadius: 0, padding: '1rem 1.1rem', maxWidth: '28rem', textAlign: 'center', background: 'rgba(6, 9, 13, 0.6)' }
 const linkStyle = { display: 'inline-block', marginTop: '1rem', color: 'inherit', textDecoration: 'underline' }
+const textStyle = { margin: '0.75rem 0 0', fontSize: 14, lineHeight: 1.5, opacity: 0.75 }
+const exitsStyle = { display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }
 
 export default function EmptySpaceView({ spaceId, title }) {
     const session = useAuthSession()
@@ -16,11 +26,16 @@ export default function EmptySpaceView({ spaceId, title }) {
         <div style={wrapStyle}>
             <div style={cardStyle} data-testid="empty-space-view">
                 <strong>{title || spaceId}</strong>
+                <p style={textStyle}>{EMPTY_SPACE_SENTENCE}</p>
                 {canEdit ? (
                     <div>
                         <a href={buildStudioHubPath(spaceId)} style={linkStyle}>Make the first project in Studio</a>
                     </div>
                 ) : null}
+                <nav aria-label="Leave this space" style={exitsStyle}>
+                    <a href={buildFrontPagePath()} style={linkStyle}>Go to the front page</a>
+                    <a href={buildSpacesPath()} style={linkStyle}>See spaces</a>
+                </nav>
             </div>
         </div>
     )
