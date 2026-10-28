@@ -207,7 +207,7 @@ export const makeBuilding = (hall) => {
         try {
             hit = hallFirstSurface(from, d, hall.dims)
         } catch (error) {
-            throw new Error(`footprints.mjs: the lamp at ${from.map((v) => v.toFixed(2)).join(', ')} stands outside the hall's open volume; ${error.message}`)
+            throw new Error(`footprints.mjs: the lamp at ${from.map((v) => v.toFixed(2)).join(', ')} stands outside the hall's open volume; ${error.message}`, { cause: error })
         }
         if (!(hit.t <= maxReach)) return null
         if (hit.name === 'floor') return { cls: 'floor', detail: 'floor', normal: [0, 1, 0], t: hit.t }

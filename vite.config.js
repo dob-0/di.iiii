@@ -636,6 +636,14 @@ export default {
                 xfwd: true,
                 ws: true
             },
+            // The one context at the caller's level (serverXR/src/aiContext.js), as
+            // nginx sends it on the hosted tiers.
+            '^/ai/context$': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true,
+                rewrite: (path) => `/serverXR${path}`
+            },
             // The lighting desk lives on the backend at /light (app-level, no /serverXR
             // prefix) — its interface is plain files the desk serves itself.
             //
@@ -667,6 +675,13 @@ export default {
                 changeOrigin: true,
                 xfwd: true
             },
+            // OSC — the same shape: serverXR answers /osc itself on a local install
+            // (serverXR/src/routes/oscRoutes.js), the OSC In and OSC Out nodes' UDP.
+            '^/osc(/|$)': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true
+            },
             // Live AI — a WebSocket to the image model on this machine, relayed by
             // serverXR (serverXR/src/liveAi/relay.js). Anchored like /ndi above.
             '^/liveai(/|$)': {
@@ -674,6 +689,16 @@ export default {
                 changeOrigin: true,
                 xfwd: true,
                 ws: true
+            },
+            // What di.iiii tells a language model: /llms.txt, /llms-full.txt (a 404)
+            // and /ai/*.md, answered by serverXR (serverXR/src/aiPublic.js), as nginx
+            // sends them on the hosted tiers. Anchored like /ndi above; /ai/setup is
+            // a page of the app and stays here.
+            '^/(llms\\.txt|llms-full\\.txt)$|^/ai(/(?!setup/?$)|$)': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true,
+                rewrite: (path) => `/serverXR${path}`
             },
             // Project documents store asset/API URLs as bare `/api/...` (no
             // `/serverXR` prefix) because in production Express serves both

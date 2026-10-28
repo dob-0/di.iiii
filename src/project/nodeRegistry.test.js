@@ -351,8 +351,9 @@ describe('unimplemented node types', () => {
         const offered = listNodeTypes().map((type) => type.id)
         // device.midi.in left this list on 2026-08-08 — Web MIDI is real in the
         // page, so it is implemented. Same for device.midi.out since 2026-08-21.
-        // device.osc.out stands in their place: no UDP without the bridge.
-        for (const id of ['source.ar', 'device.osc.out', 'stream.compositor', 'universe.link']) {
+        // device.osc.in and device.osc.out left it on 2026-10-21 (the /osc bridge);
+        // device.ptz.osc stands in their place: no video path behind its Frame.
+        for (const id of ['source.ar', 'device.ptz.osc', 'stream.compositor', 'universe.link']) {
             expect(offered).not.toContain(id)
         }
     })
@@ -382,7 +383,7 @@ describe('unimplemented node types', () => {
         // the palette offers Environment and Light (light.point) instead.
         for (const id of [
             'value.number', 'math.op', 'geom.cube', 'light.point',
-            'device.midi.out',
+            'device.midi.out', 'device.osc.in', 'device.osc.out', 'device.dmx.in',
             'world.environment', 'universe.world', 'view.image', 'view.browser', 'time',
             'source.webcam', 'source.mic', 'agent.keeper', 'device.midi.in'
         ]) {

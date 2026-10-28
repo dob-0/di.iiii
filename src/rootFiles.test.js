@@ -71,11 +71,21 @@ describe('root addresses are files, not the app shell (nginx.conf)', () => {
         ['/.well-known/security.txt', 'text/plain', 'public'],
         ['/llms-full.txt', 'text/plain', 'build'],
         // Already right before 2026-10-21; held here so a refactor cannot lose them.
-        ['/robots.txt', 'text/plain', 'public'],
-        ['/llms.txt', 'text/plain', 'public'],
-        // Built by vite.config.js (scripts/sitemap.mjs) since #1092, no public/ file: only the location is checked.
-        ['/sitemap.xml', 'application/xml', 'built']
+        ['/robots.txt', 'text/plain', 'public']
     ]
+
+    // /sitemap.xml is written by serverXR on top of the file the build makes
+    // (vite.config.js, scripts/sitemap.mjs, since #1092): the build's file
+    // stays served, under its own name, so the wiki and network URLs are kept.
+    it('/sitemap.xml has its own location (serverXR, on top of the build\'s file), never the SPA', () => {
+        const loc = pick('/sitemap.xml')
+        expect(loc.pattern).not.toBe('/')
+        expect(loc.body).toMatch(/proxy_pass http:\/\/server:4000\/serverXR\/sitemap\.xml;/)
+        expect(loc.body).not.toMatch(/dii_crawler/)
+        const built = pick('/sitemap-built.xml')
+        expect(servedType(built)).toBe('application/xml')
+        expect(built.body).toMatch(/alias \/usr\/share\/nginx\/html\/sitemap\.xml;/)
+    })
 
     it.each(cases)('%s is answered by its own location as %s, never the SPA', (uri, type, source) => {
         const loc = pick(uri)
@@ -88,6 +98,12 @@ describe('root addresses are files, not the app shell (nginx.conf)', () => {
         const file = servedFile(loc, uri)
         if (source === 'public') expect(existsSync(path.join(ROOT, 'public', file))).toBe(true)
         else expect(file).toBe(uri)
+    })
+
+    it('/llms.txt is proxied to serverXR (docs/ai/public/llms.txt), never the SPA', () => {
+        const loc = pick('/llms.txt')
+        expect(loc.pattern).not.toBe('/')
+        expect(loc.body).toMatch(/proxy_pass\s+http:\/\/server:4000\/serverXR\/llms\.txt;/)
     })
 
     it('the matcher is not vacuous: an app route still falls through to the SPA', () => {
@@ -211,7 +227,7 @@ describe('/.well-known/security.txt (G51, RFC 9116)', () => {
 })
 
 describe('llms-full.txt (G54)', () => {
-    const llms = read('public/llms.txt').toString('utf8')
+    const llms = read('docs/ai/public/llms.txt').toString('utf8')
     const full = renderLlmsFull({ llms, categories: WIKI_CATEGORIES, articles: WIKI_ARTICLES })
 
     it('starts with llms.txt, verbatim', () => {

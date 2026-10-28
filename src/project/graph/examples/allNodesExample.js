@@ -208,6 +208,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('circle', 'geom.circle', { label: 'Circle', col: 3, row: 14, values: { position: [-5.5, 0.5, -2] } })
     add('go', 'view.button', { label: 'Go', col: 4, row: 0 })
     add('keys', 'device.keyboard', { label: 'Keyboard', col: 4, row: 1 })
+    add('slider', 'view.slider', { label: 'Slider', col: 4, row: 11 })
+    add('pad', 'view.pad', { label: 'Pad', col: 4, row: 12 })
     add('visitor', 'device.visitor', { label: 'Visitor', col: 4, row: 20 })
     add('tilt', 'device.tilt', { label: 'Tilt', col: 4, row: 21 })
     add('midiOut', 'device.midi.out', { label: 'MIDI Out', col: 4, row: 2 })
@@ -219,6 +221,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('laserTrace', 'laser.trace', { label: 'Laser Trace', col: 4, row: 18 })
     add('laserMerge', 'laser.merge', { label: 'Laser Merge', col: 4, row: 19 })
     add('beat', 'signal.beat', { label: 'Beat', col: 0, row: 20 })
+    add('beatGrid', 'signal.beatgrid', { label: 'Beat Grid', col: 0, row: 21 })
     add('laserFile', 'laser.file', { label: 'Laser File', col: 4, row: 20 })
     add('laserText', 'laser.text', { label: 'Laser Text', col: 4, row: 21 })
     add('recorder', 'stream.recorder', { label: 'Recorder', col: 4, row: 22 })
@@ -234,6 +237,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('background', 'world.background', { label: 'Background', col: 2, row: 1 })
     add('grid', 'world.grid', { label: 'Grid', col: 2, row: 2 })
     add('lamp', 'light.point', { label: 'Light', col: 2, row: 3, values: { position: [1.5, 1.6, 0.5] } })
+    // A stage lamp with no type: drawn with its beam, sends nothing (`dmx` null, `patch` says why).
+    add('stageLamp', 'light.lamp', { label: 'Lamp', col: 2, row: 22, values: { position: [-1.5, 3, -1] } })
 
     // --- column 3: geometry ----------------------------------------------------
     add('cube', 'geom.cube', { label: 'Cube', col: 3, row: 0 })
@@ -369,6 +374,11 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // than channel 1 would otherwise look broken in the one graph that exists
     // to show what works.
     add('midiIn', 'device.midi.in', { label: 'MIDI In', col: 7, row: 3, values: { channel: 0 } })
+    // The show-network trio beside MIDI In: OSC both ways through this
+    // machine's di.iiii, and one channel of the lighting desk's input.
+    add('oscIn', 'device.osc.in', { label: 'OSC In', col: 7, row: 4 })
+    add('oscOut', 'device.osc.out', { label: 'OSC Out', col: 7, row: 5 })
+    add('dmxIn', 'device.dmx.in', { label: 'DMX In', col: 7, row: 6 })
 
     const id = (key) => made.get(key)?.id || ''
     const wire = (fromKey, fromPort, toKey, toPort) => {

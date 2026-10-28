@@ -5194,6 +5194,101 @@
     text-align: center;
 }
 
+/* The thumb controls (Slider, Pad): every touch target is at least 64px on
+   its short side, and touch-action: none keeps a drag from scrolling the
+   page under the finger on a phone. */
+.raw-slider-panel,
+.raw-pad-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--di-space-2);
+    height: 100%;
+    padding: var(--di-space-3);
+    box-sizing: border-box;
+}
+
+.raw-slider-panel-title,
+.raw-pad-panel-title,
+.raw-slider-panel-value,
+.raw-pad-panel-value {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: var(--di-text-2);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.raw-slider-panel-track {
+    position: relative;
+    flex: 1;
+    align-self: center;
+    width: 100%;
+    max-width: 96px;
+    min-width: 64px;
+    min-height: 120px;
+    overflow: hidden;
+    border: 1px solid rgba(var(--di-success-rgb), 0.4);
+    border-radius: var(--di-radius);
+    background: rgba(var(--di-success-rgb), 0.08);
+    cursor: ns-resize;
+    touch-action: none;
+}
+
+.raw-slider-panel.is-horizontal .raw-slider-panel-track {
+    flex: 0 0 auto;
+    align-self: stretch;
+    max-width: none;
+    min-height: 64px;
+    height: 64px;
+    margin: auto 0;
+    cursor: ew-resize;
+}
+
+.raw-slider-panel-fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(var(--di-success-rgb), 0.35);
+    pointer-events: none;
+}
+
+.raw-slider-panel.is-horizontal .raw-slider-panel-fill {
+    top: 0;
+    right: auto;
+    height: auto;
+}
+
+.raw-slider-panel-track.is-held,
+.raw-pad-panel-area.is-held {
+    border-color: var(--di-success);
+}
+
+.raw-pad-panel-area {
+    position: relative;
+    flex: 1;
+    min-height: 160px;
+    border: 1px solid rgba(var(--di-success-rgb), 0.4);
+    border-radius: var(--di-radius);
+    background:
+        linear-gradient(rgba(var(--di-success-rgb), 0.25), rgba(var(--di-success-rgb), 0.25)) center / 1px 100% no-repeat,
+        linear-gradient(rgba(var(--di-success-rgb), 0.25), rgba(var(--di-success-rgb), 0.25)) center / 100% 1px no-repeat,
+        rgba(var(--di-success-rgb), 0.08);
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.raw-pad-panel-dot {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--di-radius);
+    transform: translate(-50%, -50%);
+    background: rgba(var(--di-success-rgb), 0.45);
+    border: 2px solid var(--di-success);
+    pointer-events: none;
+}
+
 /* A wire that died on release says why, where it died. */
 .raw-wire-remove {
     position: fixed;

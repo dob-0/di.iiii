@@ -55,7 +55,7 @@ export default [
         },
         settings: {
             react: {
-                version: 'detect'
+                version: '18.3'
             }
         },
         rules: {
@@ -184,5 +184,10 @@ export default [
     {
         files: ['shared/**/*.cjs'],
         languageOptions: { sourceType: 'commonjs' }
+    },
+    {
+        // New in the ESLint 10 recommended set: 107 hits in ~75 files, each needs a read of its control flow.
+        // Held at warn until a sweep PR clears them (owed, then back to error). Do not copy this to other rules.
+        rules: { 'no-useless-assignment': 'warn' }
     }
 ]

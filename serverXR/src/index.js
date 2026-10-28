@@ -68,7 +68,8 @@ const { createSpaceIdParam } = require('./routes/spaceIdParam')
 const { createKeyedLock } = require('./asyncLock')
 const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
-const { registerOgRoutes } = require('./routes/ogRoutes')
+const { registerOgRoutes, createShellSource } = require('./routes/ogRoutes')
+const { registerSitemapRoutes, createBuiltSitemapSource } = require('./routes/sitemapRoutes')
 const { loadWikiArticles } = require('./wikiIndex')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { TRUST_PROXY } = require('./proxyTrust')
@@ -122,6 +123,8 @@ const { serverActor } = require('./opActor')
 const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
+const { registerAiContextRoutes } = require('./aiContext')
+const { registerAiPublicRoutes } = require('./aiPublic')
 const { registerPasswordAuthRoutes } = require('./routes/passwordAuthRoutes')
 const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerDomainRoutes } = require('./routes/domainRoutes')
@@ -133,6 +136,7 @@ const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { registerLaserRoutes } = require('./routes/laserRoutes')
+const { registerOscRoutes } = require('./routes/oscRoutes')
 const { registerNdiRoutes, scanAtBootFrom } = require('./routes/ndiRoutes')
 const { hasLocalRuntime } = require('./localRuntimeGuard')
 const { registerPlaceRoutes } = require('./routes/placeRoutes')
@@ -520,6 +524,14 @@ const lasers = registerLaserRoutes(app, {
     return project ? readProjectDocument(SPACES_DIR, project.spaceId, project.projectId) : null
   }
 })
+
+// OSC (serverXR/src/osc) at /osc — the OSC In and OSC Out nodes' UDP, which a page cannot
+// open: the lasers' twin in shape (built on first use, local-only, 404 hosted).
+const osc = registerOscRoutes(app, {
+  mountPaths: [...new Set(['/osc', `${config.mountPath || ''}/osc`.replace(/\/+/g, '/')])],
+  log: logger
+})
+process.once('exit', () => { try { osc.close() } catch { /* going down anyway */ } })
 
 // NDI® in (serverXR/src/ndi) at /ndi — the lighting desk's twin: a local-runtime lane,
 // built on first use, 404 on a hosted server. Nothing native loads here or at boot: the
@@ -1579,6 +1591,22 @@ const isKnownCaller = (req) => {
 }
 router.use(createVisitorBouncer({ guestBook, isKnownCaller, log: logger }))
 
+// The one context at the caller's level (aiContext.js): no key = public, a key
+// maps to its level, a higher level asked for is a 403. After the auth-state
+// middleware above, because the level is read from req.authState and nowhere else.
+registerAiContextRoutes(router, {
+  contextDir: config.directories.aiContextDir,
+  isGuestSubject,
+  // The account's access group (the di-bo repo's groups design brief §2.1). The
+  // column does not exist yet; until it does this is null and member means
+  // registered.
+  groupOf: (userId) => {
+    try {
+      return getDb().prepare('SELECT access_group AS g FROM users WHERE id = ?').get(String(userId || ''))?.g || null
+    } catch { return null }
+  }
+})
+
 // Private conversations: the public-key phone book. Registered here, after the
 // middleware above, because every handler reads `req.authState` — and the whole
 // access rule ("somebody you share a space with") is written in terms of it.
@@ -2286,7 +2314,7 @@ const sceneWriter = createSceneWriter({
 // og route resolved nothing for the one link this was built for and served the
 // platform tile. Same resolver the /api/resolve middleware above uses: slug
 // first, then the normalized id.
-registerOgRoutes(router, {
+const { renderPage } = registerOgRoutes(router, {
   loadWikiArticles,
   loadSpaceMeta: async (segment) =>
     (await findSpaceBySlug(segment)) || (await loadSpaceMeta(normalizeSpaceId(segment) || segment)),
@@ -2309,6 +2337,33 @@ registerOgRoutes(router, {
   // A space on its own domain: the crawler card for yokozo.xyz/ is the card of
   // the space that domain shows, not the platform's.
   spaceIdForHost: domainStore.findActiveSpaceIdForHost,
+  // The built shell the page route writes each address's head into. A `di`
+  // install reads it from its own CLIENT_DIR; the hosted tiers fetch it from
+  // the client container's nginx (SHELL_URL, docker-compose.yml). Neither set:
+  // the page route answers 503 and nginx serves the static shell, as before.
+  loadShell: createShellSource({
+    readShell: config.directories.clientDir
+      ? () => fs.promises.readFile(path.join(config.directories.clientDir, 'index.html'), 'utf8')
+      : null,
+    shellUrl: process.env.SHELL_URL || '',
+  }),
+})
+
+// /sitemap.xml from the records themselves (audit G04): public spaces, and
+// their live, non-private projects, with lastmod. nginx proxies the root
+// /sitemap.xml here.
+const sitemapHandler = registerSitemapRoutes(router, {
+  listSpaces,
+  listProjects: (spaceId) => listProjectsInSpace(SPACES_DIR, spaceId),
+  siteOrigin: process.env.SITE_ORIGIN || '',
+  // The build's own sitemap (wiki articles, network rooms): the records add to
+  // it, they do not replace it.
+  loadBuilt: createBuiltSitemapSource({
+    readBuilt: config.directories.clientDir
+      ? () => fs.promises.readFile(path.join(config.directories.clientDir, 'sitemap.xml'), 'utf8')
+      : null,
+    builtUrl: process.env.SITEMAP_BUILT_URL || '',
+  }),
 })
 
 registerInscriptionRoutes(router, {
@@ -3325,6 +3380,10 @@ registerGuestAddressRoute(router, {
   requireAuth: config.requireAuth
 })
 
+// /llms.txt and /ai/*.md, read from the public bundle (aiPublic.js). Last on
+// the router so nothing above can be shadowed by its /ai catch-all.
+registerAiPublicRoutes(router, { logger })
+
 const mountTargets = new Set([config.mountPath])
 if (!mountTargets.has('/serverXR')) {
   mountTargets.add('/serverXR')
@@ -3342,6 +3401,26 @@ mountTargets.forEach((targetPath) => {
 // so /serverXR/api/* is already answered and can never fall through to index.html.
 const CLIENT_DIR = config.directories.clientDir
 if (CLIENT_DIR) {
+  // Before express.static: a stale sitemap.xml left in an older build's dist/
+  // must not shadow the one written from the records.
+  app.get('/sitemap.xml', sitemapHandler)
+  // The shell with this address's own head, and a 404 when nothing answers
+  // to it (audit G01) — the same page route nginx uses on the hosted tiers.
+  const servePage = (req, res, next) => {
+    renderPage(req, req.path).then((page) => {
+      if (page) {
+        res.set('Cache-Control', 'no-cache')
+        res.status(page.status).type('html').send(page.html)
+        return
+      }
+      res.sendFile('index.html', { root: CLIENT_DIR })
+    }).catch(next)
+  }
+  // `/` first: express.static would otherwise answer it with the bare shell.
+  app.get('/', servePage)
+  // Before the built app's files and its fallback: under /ai/ the shell must
+  // never answer for a file the bundle does not have (aiPublic.js).
+  registerAiPublicRoutes(app, { logger, appPages: true })
   app.use(express.static(CLIENT_DIR, { setHeaders: allowNullOrigin }))
 
   // Digital asset links — how Android decides that the installed studio-chat
@@ -3397,7 +3476,7 @@ if (CLIENT_DIR) {
     // send applies its dotfiles:'ignore' rule to every segment of the absolute
     // path — and the default install lives in ~/.di, so a hidden directory in
     // the path 404s the entire app. Relative to root, there is no dot segment.
-    res.sendFile('index.html', { root: CLIENT_DIR })
+    servePage(req, res, next)
   })
 
   logger.info(`[client] serving the built app from ${CLIENT_DIR}`)

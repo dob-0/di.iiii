@@ -62,7 +62,7 @@ export const crewRows = ({ model, plan, planned, library }) => {
     })
 }
 
-const COLUMNS = [
+export const COLUMNS = [
     { label: 'fixture #', value: (r) => r.index ?? '' },
     { label: 'universe', value: (r) => r.universe ?? '' },
     { label: 'address', value: (r) => r.address ?? '' },
@@ -83,7 +83,7 @@ const COLUMNS = [
     { label: 'watts', value: (r) => r.watts ?? '' },
     { label: 'watts basis', value: (r) => r.wattsBasis || '' },
     { label: 'flags', value: (r) => [...r.flags.map((f) => FLAG_WORDS[f] || f), ...r.drift].join('; ') },
-    { label: 'entity', value: (r) => r.id }
+    { label: 'object', value: (r) => r.id }
 ]
 
 const NODE_COLUMNS = [

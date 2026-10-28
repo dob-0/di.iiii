@@ -357,7 +357,7 @@ export const unpackInno = async (archive, into, { sdkDir }) => {
     try {
         await run(archive, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', `/DIR=${sdkDir}`], { cwd: into })
     } catch (error) {
-        throw new Error(`the NDI installer would not run unattended (${error.message}). install it yourself from ndi.video, then run this again — it will find it.`)
+        throw new Error(`the NDI installer would not run unattended (${error.message}). install it yourself from ndi.video, then run this again — it will find it.`, { cause: error })
     }
     const wanted = (await walk(sdkDir)).find((f) => f.name.toLowerCase() === LIB_NAME.win32.toLowerCase())
     if (!wanted) throw new Error('the installer ran but left no Processing.NDI.Lib.x64.dll')

@@ -78,6 +78,17 @@ services:
       # secret sat in the host .env while the container never saw it.
       TELEGRAM_LOGIN_SECRET: ${TELEGRAM_LOGIN_SECRET:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+
+      # The page route (serverXR/src/routes/ogRoutes.js) writes each address's
+      # own head into the app's shell and answers 404 for an address nothing
+      # answers to. It reads the shell from the client container, which holds
+      # the build. Empty = the route answers 503 and nginx serves the static
+      # shell instead, as before.
+      SHELL_URL: ${SHELL_URL:-http://client:8080/index.html}
+      SITEMAP_BUILT_URL: ${SITEMAP_BUILT_URL:-http://client:8080/sitemap-built.xml}
+      # The one public address canonical links, cards and the sitemap name.
+      # Empty = whatever host the request arrived on (a copy, a `di` install).
+      SITE_ORIGIN: ${SITE_ORIGIN:-}
       # di.bo act tokens: lifetime and tiers (serverXR/src/actTokenTier.js).
       TELEGRAM_ACT_TOKEN_TTL_MINUTES: ${TELEGRAM_ACT_TOKEN_TTL_MINUTES:-}
       ACT_TOKEN_ROOT_TELEGRAM_IDS: ${ACT_TOKEN_ROOT_TELEGRAM_IDS:-}

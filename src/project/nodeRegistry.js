@@ -92,6 +92,7 @@ export const FAMILY_BY_TYPE = {
     'device.midi.in': 'bring-in',
     'device.mesh.in': 'bring-in',
     'device.osc.in': 'bring-in',
+    'device.dmx.in': 'bring-in',
     'source.ar': 'bring-in',
     'source.insta360': 'bring-in',
     'source.stereo': 'bring-in',
@@ -104,6 +105,8 @@ export const FAMILY_BY_TYPE = {
     'laser.merge': 'make',
     // laser Phase 2 (a clock; numbers, beside Oscillator)
     'signal.beat': 'numbers',
+    // music to wires: a baked beat analysis read at a time (beside Beat)
+    'signal.beatgrid': 'numbers',
     'laser.file': 'bring-in',
     'laser.text': 'make',
     'geom.sphere': 'make',
@@ -118,6 +121,8 @@ export const FAMILY_BY_TYPE = {
     'geom.transform': 'make',
     'view.button': 'bring-in',
     'device.keyboard': 'bring-in',
+    'view.slider': 'bring-in',
+    'view.pad': 'bring-in',
     'device.visitor': 'bring-in',
     'device.tilt': 'bring-in',
     'geom.constructor': 'make',
@@ -174,6 +179,7 @@ export const FAMILY_BY_TYPE = {
     'world.light': 'room',
     'world.environment': 'room',
     'light.point': 'room',
+    'light.lamp': 'room',
     'world.camera': 'room',
     'world.background': 'room',
     'world.grid': 'room',
@@ -721,23 +727,39 @@ export const NODE_TYPES = {
         id: 'device.osc.in',
         label: 'OSC In',
         category: 'device',
+        // The page cannot open a UDP socket: it asks this machine's di.iiii,
+        // which listens for it (serverXR/src/osc, /osc/api/in). A hosted page
+        // has no such server, and Status says so.
         runtime: 'local',
-        authoringOnly: true,
         singleton: false,
+        keywords: ['osc', 'open sound control', 'udp', 'network', 'receive', 'touchdesigner', 'resolume', 'qlab', 'cardinal', 'vcv', 'console', 'show control'],
         inputs: [],
         outputs: [
             { id: 'address', type: 'string', label: 'Address' },
+            // The first argument of the latest matching message: a number, a
+            // word, true/false. What OSC calls an int and a float both arrive
+            // here as a number.
             { id: 'value',   type: 'any',    label: 'Value'   },
+            // A rising count of matching messages, the MIDI In idiom: a
+            // consumer sees a message because the number changed.
             { id: 'signal',  type: 'signal', label: 'Signal'  },
+            { id: 'status',  type: 'string', label: 'Status'  },
         ],
+        // Port and Filter are config, not ports: a wire repointing the
+        // listener mid-graph would open and close sockets at frame rate.
         defaultValues: {
-            hostHint: 'windows',
             port: 8000,
+            pattern: '',
         },
         configInputs: [
             { id: 'port', type: 'number', label: 'Listen Port' },
+            { id: 'pattern', type: 'string', label: 'Address Filter' },
         ],
-        render: 'hidden',
+        // panel-2d for the capture-family reason: "no local bridge", "port
+        // taken" and "nothing heard yet" are normal states that each need
+        // somewhere to be said.
+        render: 'panel-2d',
+        defaultFrame: { width: 340, height: 300 },
     },
 
     'device.osc.out': {
@@ -745,26 +767,39 @@ export const NODE_TYPES = {
         label: 'OSC Out',
         category: 'device',
         runtime: 'local',
-        authoringOnly: true,
         singleton: false,
+        keywords: ['osc', 'open sound control', 'udp', 'network', 'send', 'touchdesigner', 'resolume', 'qlab', 'cardinal', 'vcv', 'console', 'show control'],
         inputs: [
             { id: 'address', type: 'string', label: 'Address', default: '/control' },
+            // A number, a word, true/false, or a list (each item one argument).
             { id: 'value',   type: 'any',    label: 'Value'                        },
-            { id: 'trigger', type: 'signal', label: 'Trigger'                      },
+            // `any`, the MIDI Out idiom: a Button, a Compare, a Toggle send the
+            // message again; MIDI In's or OSC In's rising count re-sends.
+            { id: 'trigger', type: 'any',    label: 'Trigger'                      },
         ],
         outputs: [
             { id: 'status', type: 'string', label: 'Status' },
         ],
         defaultValues: {
-            hostHint: 'windows',
             targetHost: '127.0.0.1',
             targetPort: 9000,
+            numbers: 'float',
         },
         configInputs: [
             { id: 'targetHost', type: 'string', label: 'Target Host' },
             { id: 'targetPort', type: 'number', label: 'Target Port' },
+            {
+                id: 'numbers',
+                type: 'string',
+                label: 'Numbers As',
+                options: [
+                    { value: 'float', label: 'Float (32-bit)' },
+                    { value: 'int',   label: 'Whole number (int32)' },
+                ],
+            },
         ],
-        render: 'hidden',
+        render: 'panel-2d',
+        defaultFrame: { width: 340, height: 300 },
     },
 
     'device.midi.in': {
@@ -800,6 +835,32 @@ export const NODE_TYPES = {
         // last-message line below the fold. Matches the keeper's width so the
         // header fits on one line.
         defaultFrame: { width: 380, height: 340 },
+    },
+
+    'device.dmx.in': {
+        id: 'device.dmx.in',
+        label: 'DMX In',
+        category: 'device',
+        // Read from this di.iiii's lighting desk, which receives Art-Net and
+        // sACN from a console (serverXR/src/lighting/dmxin.js); the page asks
+        // it at /light/api/input/levels. Same reach as DMX Out.
+        runtime: 'web',
+        singleton: false,
+        keywords: ['dmx', 'artnet', 'art-net', 'sacn', 'e1.31', 'console', 'desk', 'lighting desk', 'input', 'receive', 'fader', 'light', 'lights'],
+        inputs: [
+            // Universe 1 is the desk's U1 (Art-Net 0:0:0, sACN universe 1).
+            { id: 'universe', type: 'number', label: 'Universe', default: 1 },
+            { id: 'channel',  type: 'number', label: 'Channel',  default: 1 },
+        ],
+        outputs: [
+            // 0..1, the LFO/Range convention DMX Out takes back. On loss of
+            // signal it holds the last value it read; Status says so.
+            { id: 'value',  type: 'number', label: 'Value'  },
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
+        render: 'panel-2d',
+        defaultFrame: { width: 320, height: 260 },
     },
 
     'device.mesh.in': {
@@ -2481,6 +2542,42 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    // Music to wires (owner 2026-10-21): beats, bars and three bands read
+    // from a BAKED analysis at a time in the track, never a live analyser, so
+    // a piece built on it can be seeked. Format and bake method:
+    // docs/ai/decisions/2026-10-21-beat-bake-method.md.
+    'signal.beatgrid': {
+        id: 'signal.beatgrid',
+        label: 'Beat Grid',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['beat', 'grid', 'music', 'song', 'track', 'bar', 'downbeat', 'bands', 'bass', 'low', 'mid', 'high', 'analysis', 'seek', 'tempo', 'bpm'],
+        inputs: [
+            // The baked analysis as JSON text (paste it, or wire a Text in).
+            { id: 'analysis', type: 'string', label: 'Analysis', default: '' },
+            // Seconds into the track. Unwired: the document clock.
+            { id: 'time',     type: 'number', label: 'Time' },
+        ],
+        outputs: [
+            { id: 'beat',   type: 'number',  label: 'Beat'   },
+            { id: 'phase',  type: 'number',  label: 'Phase'  },
+            { id: 'age',    type: 'number',  label: 'Age'    },
+            { id: 'bar',    type: 'number',  label: 'Bar'    },
+            { id: 'count',  type: 'number',  label: 'Count'  },
+            { id: 'pulse',  type: 'boolean', label: 'Pulse'  },
+            { id: 'strong', type: 'boolean', label: 'Strong' },
+            { id: 'low',    type: 'number',  label: 'Low'    },
+            { id: 'mid',    type: 'number',  label: 'Mid'    },
+            { id: 'high',   type: 'number',  label: 'High'   },
+            { id: 'bpm',    type: 'number',  label: 'BPM'    },
+            { id: 'clock',  type: 'clock',   label: 'Clock'  },
+            { id: 'status', type: 'string',  label: 'Status' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
     'signal.lfo': {
         id: 'signal.lfo',
         label: 'Oscillator',
@@ -3191,6 +3288,64 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    // The continuous hands (works audit, 2026-10-21): a fader and a
+    // two-axis pad, sized for a thumb. Button's split: the authored value
+    // (node.values, written through an op on release) is what every window
+    // agrees on; while THIS window's finger is down, Value follows the
+    // finger through the live side channel and Held is true.
+    'view.slider': {
+        id: 'view.slider',
+        label: 'Slider',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['slider', 'fader', 'level', 'dimmer', 'knob', 'range', 'touch', 'phone', 'remote'],
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Level' },
+            { id: 'min',   type: 'number', label: 'Min',   default: 0 },
+            { id: 'max',   type: 'number', label: 'Max',   default: 1 },
+            { id: 'direction', type: 'string', label: 'Direction', default: 'vertical', options: [
+                { value: 'vertical',   label: 'Vertical' },
+                { value: 'horizontal', label: 'Horizontal' },
+            ] },
+        ],
+        outputs: [
+            { id: 'value', type: 'number',  label: 'Value' },
+            { id: 'held',  type: 'boolean', label: 'Held'  },
+        ],
+        defaultValues: {
+            value: 0,
+        },
+        defaultFrame: { width: 160, height: 320 },
+        render: 'panel-2d',
+    },
+
+    'view.pad': {
+        id: 'view.pad',
+        label: 'Pad',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['pad', 'joystick', 'stick', 'xy', 'twist', 'steer', 'touch', 'phone', 'remote'],
+        inputs: [
+            { id: 'title',  type: 'string',  label: 'Title',       default: 'Pad' },
+            // On: letting go returns X and Y to the centre (a stick).
+            // Off: the pad keeps where the finger left it (a position).
+            { id: 'spring', type: 'boolean', label: 'Spring back', default: true },
+        ],
+        outputs: [
+            { id: 'x',    type: 'number',  label: 'X'    },
+            { id: 'y',    type: 'number',  label: 'Y'    },
+            { id: 'held', type: 'boolean', label: 'Held' },
+        ],
+        defaultValues: {
+            x: 0,
+            y: 0,
+        },
+        defaultFrame: { width: 300, height: 340 },
+        render: 'panel-2d',
+    },
+
     // What the person's phone or screen is, as wires — the facts every work
     // used to re-derive by hand (halve the particles on a phone, slow down
     // for reduced motion, lay out for portrait, speak their language). Name,
@@ -3310,6 +3465,45 @@ export const NODE_TYPES = {
         ],
         outputs: [],
         defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    // A stage lamp (docs/ai/vocabulary.md: a stage fixture), patch, picture and
+    // DMX in one: its type and mode come from the fixture library
+    // (src/rigbuild/types/library/), its bytes from shared/lampDmx.cjs — the
+    // ones the lighting desk sends for the same lamp — and it stands in the
+    // scene with a body and a beam that stops at the first surface it meets
+    // (SpotLightObject's reach probe). Strobe and Zoom have no default: an
+    // unwired one leaves its channel where the chart rests it.
+    'light.lamp': {
+        id: 'light.lamp',
+        label: 'Lamp',
+        category: 'world',
+        runtime: 'any',
+        keywords: ['lamp', 'fixture', 'stage', 'moving head', 'par', 'beam', 'spot', 'dmx', 'patch', 'rig', 'pan', 'tilt', 'dimmer'],
+        inputs: [
+            { id: 'dimmer',   type: 'number', label: 'Dimmer', default: 1 },
+            { id: 'color',    type: 'color',  label: 'Colour', default: '#ffffff' },
+            { id: 'pan',      type: 'number', label: 'Pan',    default: 0.5 },
+            { id: 'tilt',     type: 'number', label: 'Tilt',   default: 0.5 },
+            { id: 'strobe',   type: 'number', label: 'Strobe' },
+            { id: 'zoom',     type: 'number', label: 'Zoom' },
+            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 3, 0] },
+        ],
+        outputs: [
+            { id: 'dmx',   type: 'any',    label: 'DMX' },
+            { id: 'patch', type: 'string', label: 'Patch' },
+        ],
+        // Type, mode, universe and address are set once for the rig, like
+        // DMX Out's Rig: nothing upstream should re-patch a lamp mid-graph.
+        // An empty mode is the type's default mode.
+        defaultValues: { type: '', mode: '', universe: 1, address: 1 },
+        configInputs: [
+            { id: 'type',     type: 'string', label: 'Type' },
+            { id: 'mode',     type: 'string', label: 'Mode' },
+            { id: 'universe', type: 'number', label: 'Universe' },
+            { id: 'address',  type: 'number', label: 'Address' },
+        ],
         render: 'spatial-3d',
     },
 
@@ -3514,12 +3708,11 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
     'source.insta360',
     'source.stereo',
     'source.realsense.d405',
-    // devices — no OSC client (UDP, needs the local bridge).
-    // device.midi.in came off this list on 2026-08-08, device.midi.out on
-    // 2026-08-21: Web MIDI is real in the page in BOTH directions now.
+    // devices — device.midi.in came off this list on 2026-08-08, device.midi.out
+    // on 2026-08-21 (Web MIDI), device.osc.in and device.osc.out on 2026-10-21
+    // (UDP through this machine's di.iiii, serverXR/src/osc). The PTZ camera
+    // still has no video path behind its Frame.
     'device.ptz.osc',
-    'device.osc.in',
-    'device.osc.out',
     // streaming — no compositor, no transport
     'stream.compositor',
     'stream.switcher',

@@ -139,7 +139,9 @@ describe('LandingPage three routes', () => {
         const jam = screen.getByRole('link', { name: 'Open Space' })
         expect(stepInside.getAttribute('href')).toBe('/spaces')
         expect(spaces.getAttribute('href')).toBe('/spaces')
-        expect(jam.getAttribute('href')).toMatch(/jam/i)
+        // The canonical address of the jam (audit G12): /open lands in the same
+        // room as /open_jam/scene, and is the one search engines are told to keep.
+        expect(jam.getAttribute('href')).toBe('/open')
         expect(spaces.className).toMatch(/landing-cta-spaces/)
     })
 

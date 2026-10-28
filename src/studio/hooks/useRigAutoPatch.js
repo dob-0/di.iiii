@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { lightingApiUrl } from '../../map/lightingLink.js'
 import { getSharedLightingMirror } from '../../rigMirror/useLightingMirror.js'
 import { addressMap, autoPatch, lampSignature, rigKeyOf, typedMoves } from '../../rigbuild/autoPatch.js'
-import { TYPE_LIBRARY } from '../../rigbuild/types/index.js'
+import { loadProjectLibrary } from '../../rigbuild/types/projectTypes.js'
 import { libraryWithShow } from '../../rigbuild/rental.js'
 
 // AUTO-PATCH in the Studio (docs/architecture/RIG_BUILD.md §4): when the person on THIS
@@ -30,7 +30,7 @@ const post = (route, body) => fetch(lightingApiUrl(route), {
     body: JSON.stringify(body)
 })
 
-export function useRigAutoPatch({ projectId, entities = [], applyOps, edits = 0, library = TYPE_LIBRARY, mirror, debounceMs = AUTO_PATCH_DEBOUNCE_MS, postImpl = post } = {}) {
+export function useRigAutoPatch({ projectId, entities = [], applyOps, edits = 0, library = null, mirror, debounceMs = AUTO_PATCH_DEBOUNCE_MS, postImpl = post } = {}) {
     const [state, setState] = useState({ flags: [], message: '', at: 0 })
     const signature = useMemo(() => lampSignature(entities), [entities])
     const latest = useRef({ entities, applyOps })
@@ -53,8 +53,11 @@ export function useRigAutoPatch({ projectId, entities = [], applyOps, edits = 0,
             if (!(await store.probe())) return { ok: false, message: 'no desk on this machine' }
             const { entities: now, applyOps: apply } = latest.current
             const moved = known.current ? typedMoves(now, known.current) : new Set()
-            // The show's own types (RIG_BUILD.md §13) patch like the library's.
-            const out = await autoPatch({ projectId, entities: now, library: libraryWithShow(library, now), post: postImpl, applyOps: apply, moved, ...options })
+            // The types this room hangs, loaded when the patch runs (types/projectTypes.js; cached per type, so a
+            // lamp of a kind just placed is in before the desk is asked). The show's own types (RIG_BUILD.md §13)
+            // patch like the library's.
+            const typed = library || await loadProjectLibrary(now)
+            const out = await autoPatch({ projectId, entities: now, library: libraryWithShow(typed, now), post: postImpl, applyOps: apply, moved, ...options })
             if (out.ok && out.result) {
                 const agreed = addressMap(now)
                 for (const a of out.result.assignments || []) {

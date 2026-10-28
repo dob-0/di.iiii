@@ -110,6 +110,8 @@ const COPY_FILES = [
     'src/index.html',
     'src/Menu.jsx',
     'src/RootApp.jsx',
+    'src/pages/AiSetupPage.jsx',
+    'docs/ai/public/setup.md',
     'src/pages/shoot/ShootPage.jsx',
     'src/SpaceSurfaceApp.jsx',
     'src/SpacesPanel.jsx',
@@ -190,7 +192,14 @@ const COPY_FILES = [
     'src/kit/KitPreview.jsx',
     'src/kit/kitCatalogue.js',
     'src/kit/kitStack.js',
-    'src/utils/presentationTemplates.js'
+    'src/utils/presentationTemplates.js',
+    // Added 2026-10-21 with the brand-words pass, which fixed copy in each of them.
+    'serverXR/src/lighting/ui/index.html',
+    'src/AssetPanel.jsx',
+    'src/WorldPanel.jsx',
+    'src/hooks/useSceneArchiveIO.js',
+    'src/rigbuild/ScenesDeck.jsx',
+    'src/rigbuild/sheet.js'
 ]
 
 // Survivors, each with the reason it survives. A row here is a decision on the
@@ -388,6 +397,75 @@ describe('the product says only the words the contract sanctions', () => {
             expect(row.why, `ALLOWLIST row for ${row.file} has no reason`).toBeTruthy()
             expect(row.why.length, `ALLOWLIST reason for ${row.file} is too short to be a reason`).toBeGreaterThan(30)
         }
+    })
+})
+
+// --- retired strings --------------------------------------------------------
+//
+// The banned words above catch a noun wherever it lands. What they cannot catch
+// is a sentence that breaks the dictionary's other rules (the 2026-10-21 rows of
+// docs/ai/vocabulary.md): Title Case on a label,
+// capitals typed into the source, an exclamation mark outside the jam, a
+// lowercase "rooms" (the hole the Room rule states), a metaphor the dictionary
+// says to replace with the true thing, a headline capitalised in the source.
+// The brand-words pass of 2026-10-21 fixed each of those strings by hand; this
+// list keeps each one from coming back in the file it left. A headline is
+// written with its markup (`>Spaces</h1>`), because the same word as a link
+// label elsewhere in the file keeps its case.
+
+const RETIRED_COPY = [
+    // Title Case → sentence case.
+    { file: 'src/AssetPanel.jsx', string: 'Optimize This Asset' },
+    { file: 'src/SpacesPanel.jsx', string: 'Open After Create' },
+    { file: 'src/SpacesPanel.jsx', string: 'New Temp Space' },
+    { file: 'src/SpacesPanel.jsx', string: 'Copy Live Link' },
+    { file: 'src/SpacesPanel.jsx', string: 'Copy Link' },
+    { file: 'src/WorldPanel.jsx', string: 'Grid Cell Size' },
+    { file: 'src/WorldPanel.jsx', string: 'Grid Section Size' },
+    { file: 'src/WorldPanel.jsx', string: 'Grid Fade Distance' },
+    { file: 'src/WorldPanel.jsx', string: 'Grid Fade Strength' },
+    { file: 'src/WorldPanel.jsx', string: 'Reset to Defaults' },
+    { file: 'src/hooks/useControlButtons.js', string: 'Live Sync' },
+    // Capitals typed into the source; CSS draws them where the design wants caps.
+    { file: 'src/pages/shoot/ShootPage.jsx', string: 'KEEP EVERYTHING HERE' },
+    { file: 'src/rigbuild/ScenesDeck.jsx', string: 'PLAY THE LOOP' },
+    // Exclamations outside the jam.
+    { file: 'src/hooks/useSceneActions.js', string: 'View saved!' },
+    { file: 'src/hooks/useSceneArchiveIO.js', string: 'successfully!' },
+    { file: 'src/SpacesPanel.jsx', string: 'Copied!' },
+    // Retired words and a metaphor.
+    { file: 'src/landing/LandingPage.jsx', string: 'a room on the same desk' },
+    { file: 'src/landing/LandingPage.jsx', string: 'Made for everyone' },
+    // Headlines lowercase in the source (names keep their case).
+    { file: 'src/studio/components/SpaceHub.jsx', string: '>Spaces</h1>' },
+    { file: 'src/kit/KitPage.jsx', string: '>Tools</h1>' },
+    { file: 'src/pages/DeviceLoginPage.jsx', string: 'Sign a terminal in' },
+    { file: 'src/studio/components/StudioCodeSpaceDirector.jsx', string: 'No director here' },
+    { file: 'src/studio/components/StudioHub.jsx', string: '>Projects</h1>' },
+    // British spelling (docs/ai/vocabulary.md, Spelling): the label a person reads.
+    { file: 'src/WorldPanel.jsx', string: 'Ambient color' },
+    { file: 'src/WorldPanel.jsx', string: 'Sun color' },
+    // One row, one casing: the Spaces panel's buttons and labels.
+    { file: 'src/SpacesPanel.jsx', string: 'Space Name' },
+    { file: 'src/SpacesPanel.jsx', string: 'Permanent Space' },
+    { file: 'src/SpacesPanel.jsx', string: 'View Live' },
+    { file: 'src/SpacesPanel.jsx', string: 'Make Temp' },
+    { file: 'src/SpacesPanel.jsx', string: 'Keep Forever' },
+    { file: 'src/SpacesPanel.jsx', string: 'Make Private' },
+    { file: 'src/SpacesPanel.jsx', string: 'Make Public' }
+]
+
+describe('retired strings stay retired', () => {
+    // Matched against the file's plain text, not the extracted strings: the
+    // extraction skips JSX text that wraps onto its own line, and its comment
+    // stripper reads the `/*` in `accept="image/*"` as a comment opening, which
+    // hid SpaceHub's headline. A retired string must not survive in either.
+    it.each(RETIRED_COPY)('$file no longer says "$string"', ({ file, string }) => {
+        const hits = readFileSync(join(repoDir, file), 'utf8').split('\n')
+            .map((text, index) => ({ line: index + 1, text }))
+            .filter(({ text }) => text.includes(string))
+            .map(({ line, text }) => `line ${line}: ${text.trim()}`)
+        expect(hits, `${file} says a retired string again — docs/ai/vocabulary.md`).toEqual([])
     })
 })
 

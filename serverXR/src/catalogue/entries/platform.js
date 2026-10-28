@@ -2,6 +2,21 @@
 
 module.exports = [
   {
+    route: "GET /llms.txt",
+    summary: "what di.iiii is, for language models: the llmstxt.org file from the public bundle (docs/ai/public/), linking the /ai/*.md pages",
+    reach: "read",
+    role: "guest",
+    agent: true,
+    note: "nginx sends /llms.txt here; /ai/*.md is served beside it from the same folder (aiPublic.js)."
+  },
+  {
+    route: "GET /llms-full.txt",
+    summary: "always a 404 in plain text naming /llms.txt: di.iiii keeps one file for language models",
+    reach: "read",
+    role: "guest",
+    agent: false
+  },
+  {
     route: "GET /api/catalogue",
     summary: "the catalogue itself: every route this server answers, filtered to what the caller's role and agent access can reach",
     reach: "read",
@@ -306,6 +321,30 @@ module.exports = [
     role: "guest",
     agent: false,
     note: "serves an HTML page for crawlers, not JSON; a private space's card never distinguishes 'private' from 'does not exist'."
+  },
+  {
+    route: "GET /page",
+    summary: "the app shell with the front door's own head (title, description, preview card) written in, so an address says what it is before any script runs",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "serves an HTML page, not JSON; the status is the truth of the address."
+  },
+  {
+    route: "GET /page/*splat",
+    summary: "the app shell with the head of the space, project or wiki article at this address written in; a real 404 when nothing answers there",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "serves an HTML page, not JSON; a private space answers 404, never 'private'."
+  },
+  {
+    route: "GET /sitemap.xml",
+    summary: "the sitemap, written from the records: public spaces and their projects, plus the build's wiki articles and network rooms",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "serves XML for crawlers, not JSON; private spaces never appear."
   },
   {
     route: "GET /api/host",

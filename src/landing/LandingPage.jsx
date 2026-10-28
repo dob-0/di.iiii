@@ -9,7 +9,7 @@ import { buildSpacesPath } from '../studio/utils/studioRouting.js'
 import { flyInside, REST_POSE } from './enterFlight.js'
 import PageDebris from './PageDebris.jsx'
 import { enterFromElement } from '../components/entryTransition/entryTransition.js'
-import { buildJamScenePath } from '../project/routing/jamRouting.js'
+import { buildJamPublicPath } from '../project/routing/jamRouting.js'
 import { WORK_IDS } from '../works/works.js'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
@@ -499,7 +499,7 @@ function LandingPageInner() {
                         <Button className="landing-cta-spaces" variant="outlined" size="large" href={studioHref} onClick={goThrough(studioHref)}>
                             The Spaces
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={buildJamScenePath()} onClick={goThrough(buildJamScenePath())}>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={buildJamPublicPath()} onClick={goThrough(buildJamPublicPath())}>
                             Open Space
                         </Button>
                     </Stack>
@@ -637,7 +637,7 @@ function LandingPageInner() {
             <Box className="lp-section" component="section" id="who">
                 <Box className="lp-section-inner">
                     <Typography className="lp-section-eyebrow">Audience</Typography>
-                    <Typography className="lp-section-title" component="h2">Made for everyone</Typography>
+                    <Typography className="lp-section-title" component="h2">Who uses it, and for what</Typography>
                     <Typography className="lp-section-body">
                         di.iiii works for artists, developers, organizers, and automated systems.
                     </Typography>
@@ -768,7 +768,7 @@ function LandingPageInner() {
                         that vanishes because a server did.
                     </Typography>
                     <Stack direction="row" sx={{ gap: '16px', flexWrap: 'wrap', justifyContent: 'center', mb: 2, mt: 3 }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href={buildJamScenePath()} onClick={goThrough(buildJamScenePath())}>
+                        <Button className="landing-cta-primary" variant="contained" size="large" href={buildJamPublicPath()} onClick={goThrough(buildJamPublicPath())}>
                             walk into the Open Space →
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref} onClick={openDoor}>

@@ -524,7 +524,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                 <div className="sh-top-row">
                     <div>
                         <p className="sh-space-context">Space: {spaceLabel}</p>
-                        <h1 className="sh-title">Projects</h1>
+                        <h1 className="sh-title">projects</h1>
                     </div>
                     {creatingTitle === null ? (
                         <div className="sh-top-actions">

@@ -5,9 +5,13 @@ import { computeOutput as colourCombine } from './colour.combine/runtime.js'
 import { computeOutput as colourRamp } from './colour.ramp/runtime.js'
 import { computeOutput as colourSplit } from './colour.split/runtime.js'
 import { computeOutput as deviceKeyboard } from './device.keyboard/runtime.js'
+import { computeOutput as deviceDmxIn } from './device.dmx.in/runtime.js'
 import { computeOutput as deviceVisitor } from './device.visitor/runtime.js'
 import { computeOutput as deviceTilt } from './device.tilt/runtime.js'
 import { computeOutput as deviceDmxOut } from './device.dmx.out/runtime.js'
+import { computeOutput as deviceOscIn } from './device.osc.in/runtime.js'
+import { computeOutput as deviceOscOut } from './device.osc.out/runtime.js'
+import { computeOutput as lightLamp } from './light.lamp/runtime.js'
 import { computeOutput as deviceLaserOut } from './device.laser.out/runtime.js'
 import { computeOutput as streamRecorder } from './stream.recorder/runtime.js'
 import { computeOutput as streamStill } from './stream.still/runtime.js'
@@ -15,6 +19,7 @@ import { computeOutput as laserShape } from './laser.shape/runtime.js'
 import { computeOutput as laserTrace } from './laser.trace/runtime.js'
 import { computeOutput as laserMerge } from './laser.merge/runtime.js'
 import { computeOutput as signalBeat } from './signal.beat/runtime.js'
+import { computeOutput as signalBeatGrid } from './signal.beatgrid/runtime.js'
 import { computeOutput as laserFile } from './laser.file/runtime.js'
 import { computeOutput as laserText } from './laser.text/runtime.js'
 import { computeOutput as deviceMidiOut } from './device.midi.out/runtime.js'
@@ -51,6 +56,8 @@ import { computeOutput as signalTimer } from './signal.timer/runtime.js'
 import { computeOutput as signalTrigger } from './signal.trigger/runtime.js'
 import { computeOutput as viewButton } from './view.button/runtime.js'
 import { computeOutput as viewList } from './view.list/runtime.js'
+import { computeOutput as viewPad } from './view.pad/runtime.js'
+import { computeOutput as viewSlider } from './view.slider/runtime.js'
 import { computeOutput as viewQrCode } from './view.qrcode/runtime.js'
 import { computeOutput as viewText } from './view.text/runtime.js'
 import { computeOutput as viewTimeline } from './view.timeline/runtime.js'
@@ -83,14 +90,19 @@ export const NODE_RUNTIMES = new Map([
     ['colour.ramp', colourRamp],
     ['colour.split', colourSplit],
     ['device.keyboard', deviceKeyboard],
+    ['device.dmx.in', deviceDmxIn],
     ['device.visitor', deviceVisitor],
     ['device.tilt', deviceTilt],
     ['device.dmx.out', deviceDmxOut],
+    ['device.osc.in', deviceOscIn],
+    ['device.osc.out', deviceOscOut],
+    ['light.lamp', lightLamp],
     ['device.laser.out', deviceLaserOut],
     ['laser.shape', laserShape],
     ['laser.trace', laserTrace],
     ['laser.merge', laserMerge],
     ['signal.beat', signalBeat],
+    ['signal.beatgrid', signalBeatGrid],
     ['laser.file', laserFile],
     ['laser.text', laserText],
     ['device.midi.out', deviceMidiOut],
@@ -142,6 +154,8 @@ export const NODE_RUNTIMES = new Map([
     ['vector.split', vectorSplit],
     ['view.button', viewButton],
     ['view.list', viewList],
+    ['view.pad', viewPad],
+    ['view.slider', viewSlider],
     ['view.qrcode', viewQrCode],
     ['view.text', viewText],
     ['view.timeline', viewTimeline],

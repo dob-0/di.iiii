@@ -92,7 +92,14 @@ a lit camera light the user cannot explain.
 `device.osc.in` · `device.osc.out` · `device.ptz.osc` · `device.midi.in` ·
 `device.midi.out`
 
-**`requestMIDIAccess` appears zero times.** OSC appears only inside
+**Update 2026-10-21:** MIDI In/Out are real (Web MIDI), and so are OSC In and
+OSC Out: the relay below exists as `serverXR/src/osc` (an OSC 1.0 codec written
+from the spec, UDP sockets) mounted at `/osc` on a local di.iiii — the page polls
+and posts over HTTP, not a WebSocket. DMX In (`device.dmx.in`) joined them,
+reading the lighting desk's input. Only `device.ptz.osc` is left here: it still
+has no video path behind its Frame.
+
+Written before that: **`requestMIDIAccess` appears zero times.** OSC appears only inside
 `nodeRegistry.js` — there is no client, no socket, nothing.
 
 MIDI is the cheaper pair: Web MIDI is a browser API, so `device.midi.in`/`out`
