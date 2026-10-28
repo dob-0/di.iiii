@@ -40,3 +40,11 @@ describe('build-runtime.sh network commands are bounded', () => {
         expect(SCRIPT).toMatch(/for attempt in 1 2 3; do\s*\n\s*if git [^\n]*fetch/)
     })
 })
+
+describe('build-runtime.sh mirrors the Dockerfile layout', () => {
+    it('copies the one context public bundle and the wiki articles beside app/ (serverXR/Dockerfile:41-51)', () => {
+        const cps = lines.filter((l) => /^\s*cp\b/.test(l))
+        expect(cps.some((l) => l.includes('docs/ai/public') && l.includes('$rel.tmp/docs/ai/public'))).toBe(true)
+        expect(cps.some((l) => l.includes('src/wiki/wikiContent.js') && l.includes('$rel.tmp/src/wiki/'))).toBe(true)
+    })
+})
