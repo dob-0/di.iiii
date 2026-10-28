@@ -1,0 +1,8 @@
+## 2026-10-28 — Studio opens a code project on its page, not the empty 3D grid
+
+- The owner, looking at his space cinema-house on dev after #1153: the Studio still opened a web-page project with the Code window's toggle on "3D room", an empty 3D grid and the Create window (primitives, lights) open, and he called the code view a mess.
+- Cause: #1153 taught only the public view to open what a project holds. The Studio viewport and the Code window toggle read `presentationState.mode || 'scene'` (the default for every document), and the shell drew Create on every bare project.
+- Fix: `src/studio/utils/viewportMode.js` decides from what the project holds, reusing `resolveOpeningView` and `holdsScene` from `src/shared/openingView.js`. A page project opens on its page and Create does not open by itself (`?open=create` and the control cluster still open it). A project that holds a scene opens its scene as before, even when its public entry view is Code. The toggle says "Scene" instead of "3D room" (vocabulary.md).
+- Reviewed independently (Opus): MERGE-READY; the reviewer added the `?open=create` guard. Its one open behaviour question (scene projects with a Code entry view) was settled the conservative way: they open their scene as before.
+- Still messy on a page project, left for the UX audit and redesign (ledger N1391, N1392): the Objects window opens behind the Code window; the H V N W buttons, the axis gizmo, the Walk/Fly tools and the "Perspective" camera label stay on a page; an "Add something" hint shows over the page; on a phone the Code sheet covers about two thirds of the page.
+- A Scene pick on a page project with no objects lasts for the page only (a stored 'scene' cannot be told from the default); written in known-fixes.
