@@ -292,7 +292,7 @@ describe('/llms.txt and /ai/: answered by the server, never by the shell', () =>
     it('CLIENT_DIR set: the shell still answers everything outside /ai/', async () => {
         const server = await startServer({ clientDir: await withClientDir() })
 
-        const response = await fetch(`${server.origin}/aim`)
+        const response = await fetch(`${server.origin}/main`)
 
         expect(response.status).toBe(200)
         expect(await response.text()).toContain(SPA_MARKER)
