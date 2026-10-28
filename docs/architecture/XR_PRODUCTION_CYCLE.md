@@ -17,8 +17,8 @@ This builds on three documents and does not repeat them:
 
 | document | what it already settles | where |
 |---|---|---|
-| `EVENT_LAYERS.md` | the layers L0 to L10, CHECK / LOOK / SIGN, the nine agent roles, the 12-step runbook | `origin/docs/event-layers-agents-mcp`; being activated in PR #808 (`feat/event-agents-2026-10-07`) |
-| `TOOLS_MAP_2026-10-05.md` | every MOXIR tool, the mess ranked, and the rule *git = design, one build command, everything else derived* | commit `88261e7e`, the `moxir` docs folder on that commit (not on dev) |
+| the event layers (L0 to L10), CHECK / LOOK / SIGN, the agent roles, the runbook | the layers, the checks, the nine roles, the 12-step runbook | the venue skill family: `docs/ai/skills/venue-to-show.md` and the `venue-*` skills; PR #808 (`feat/event-agents-2026-10-07`) folds the roles in (section 7). The layer text is cited below as *event layers §n*; its standalone file is not on dev |
+| the MOXIR tool map (the mess ranked, and the rule *git = design, one build command, everything else derived*) | every MOXIR tool and the rule | `docs/ai/skills/venue-to-show.md` §5-§6 and `docs/moxir/MOXIR.md`; the original `TOOLS_MAP_2026-10-05.md` is only on commit `88261e7e`, not on dev. Cited below as *tool map §n* |
 | `RIG_BUILD.md` | the data model, the standards, the patch plan, MVR export, the picture (§20, §23) | `docs/architecture/RIG_BUILD.md` (2,375 lines) |
 
 Every claim is tagged **CONFIRMED** (seen: file:line, a command, a PR) or **SUSPECTED** (inferred or not
@@ -39,7 +39,7 @@ session it says so.
 ```
 
 The loop closes: the place model after the show is the input of the next production in the same place.
-The owner's rule for the whole loop (TOOLS_MAP §4.1, CONFIRMED): **git holds the design; one build command
+The owner's rule for the whole loop (tool map §4.1, CONFIRMED): **git holds the design; one build command
 makes the show project; everything else reads it.** This document adds the stages that were missing from
 the layer model: the picture, the full map, the network plan, the connect step, strike and re-capture.
 
@@ -48,13 +48,13 @@ the layer model: the picture, the full map, the network plan, the connect step, 
 ## 1. The cycle, stage by stage
 
 Who: **owner** (decides by looking: LOOK), **Emilya** (content and scenes, PONYO), an **agent role** from
-`EVENT_LAYERS.md` §2.1, a **signer** (rigging engineer, laser safety officer, electrician: SIGN). A stage is
-done only with its CHECK and its LOOK; the on-site stages also need SIGN (EVENT_LAYERS §0).
+event layers §2.1, a **signer** (rigging engineer, laser safety officer, electrician: SIGN). A stage is
+done only with its CHECK and its LOOK; the on-site stages also need SIGN (event layers §0).
 
 | # | stage | input | output (the one source) | tool today | check that proves it | who |
 |---|---|---|---|---|---|---|
 | 1 | **Capture** (L1) | phone walk at `/{space}/scan`; files sent to di.bo; photos as FILES (Telegram "photo" strips EXIF) | the space's `sources` project (the wall) + EXIF table | CONFIRMED `src/scan/ScanSurface.jsx`, `src/scan/sourceWall.js`, `scripts/place/add-sources.mjs`, `photo_meta.py`; di.bo inbox pull every 15 min (`di-inbox-pull.timer`, CONFIRMED `systemctl --user list-timers`) | frame count and sharp count (`frame-stats.py`); every file has a licence and consent line | owner / Emilya shoot; `venue-capture` sorts |
-| 2 | **Place model** (L2) | frames + one tape-measured edge + the map pin (OSM, ODbL) | `scripts/place/rigs/<place>-hall-dims-<date>.json`, `-features-<date>.json`; the hall GLB **pinned by sha256** (TOOLS_MAP §4.2) | CONFIRMED `scripts/place/place.mjs --from-space`, `reconstruct.py`, `fit.mjs`, `hall.py` (Blender, parametric), `import.mjs --replace` | `hall-crane.test.js`, `hall-show.test.js`; each dimension carries value, range, method, confidence | `hall-modeller`; owner LOOK element by element (the "arcs" lesson) |
+| 2 | **Place model** (L2) | frames + one tape-measured edge + the map pin (OSM, ODbL) | `scripts/place/rigs/<place>-hall-dims-<date>.json`, `-features-<date>.json`; the hall GLB **pinned by sha256** (tool map §4.2) | CONFIRMED `scripts/place/place.mjs --from-space`, `reconstruct.py`, `fit.mjs`, `hall.py` (Blender, parametric), `import.mjs --replace` | `hall-crane.test.js`, `hall-show.test.js`; each dimension carries value, range, method, confidence | `hall-modeller`; owner LOOK element by element (the "arcs" lesson) |
 | 3 | **Virtual environment** (the picture) | the rig file's `night` block; reference photographs (RIG_BUILD §20.1) | a `picture` block in the rig file (see §3 below) | PARTLY: `apply-picture.mjs` writes `night` (CONFIRMED RIG_BUILD §23); exposure and haze are written by hand by `realism.mjs` (CONFIRMED §23: "in no rig file") | luma per cue within the §20.1 target (`luma.mjs`); a light-meter and photo test on site (owed, §23) | `scene-writer`; owner LOOK |
 | 4 | **Items on hand** (L3) | the rental list (xlsx), what the studio owns, makers' pages | `src/rigbuild/types/<place>.json` (generated), `scripts/place/fixtures/fixtures.json`, the private source list in di-atlas | CONFIRMED `rental.mjs`, `types.mjs --check`, `fetch-equipment-media.mjs`; `/{space}/equipment/{project}` | every code has status (confirmed / probable / equivalent / unknown) + URL + date; prices never in this repo (`noSupplierPrices.test.js`) | `equipment-verifier`; rental house confirms modes |
 | 5 | **Design** (L4–L7) | hall + types + the versions file | `scripts/place/rigs/<place>-versions-<date>.json` → one generated rig file per version + `.show.json` | CONFIRMED `scripts/rigbuild/versions.mjs`, `load-version.mjs`, `copy-version.mjs`, `looks.mjs`, `show-cues.mjs`; lasers: PR #776 (Nodes editor, `/laser`, OPEN); video: Raw nodes + `docs/architecture/NDI.md` (file exists, not read here); **sound positions: MISSING** (SUSPECTED: no sound in any rig file) | `versions.test.js`, `bridle-limit.test.js`, policy (L5, not built), `show-clock.test.js` | `rig-planner`, `scene-writer`, Emilya (scenes); owner picks by looking |
@@ -67,7 +67,7 @@ done only with its CHECK and its LOOK; the on-site stages also need SIGN (EVENT_
 | 12 | **Strike** | the built rig | the rental return list; the "as built" diff | **MISSING**: no return list script; `rental.mjs` prints the order, not the return | counts out = counts in; damages listed | crew; `rental-and-paper` |
 | 13 | **Update the place** (re-capture) | a second walk, now with the room empty and the lights off | new dims / features JSON, a new hall GLB sha256; the old one kept as a labelled copy | the same as stage 1 and 2; `copy-version.mjs` keeps the old | the new hall differs from the old by a stated number per edge | `hall-modeller`; owner LOOK |
 
-The runbook in EVENT_LAYERS §4 covers stages 1, 2, 4, 5, 7, 8, 9. Stages 3, 6, 10, 12, 13 are this
+The runbook in event layers §4 covers stages 1, 2, 4, 5, 7, 8, 9. Stages 3, 6, 10, 12, 13 are this
 document's additions.
 
 ---
@@ -93,19 +93,19 @@ on a model, the network is planned on paper, and on site the console **discovers
 node scripts/production/connect.mjs --production moxir-2026-10-17 --version known-full [--dry-run]
 ```
 
-1. **Lock.** Refuse unless the show lock (TOOLS_MAP §4.2: rig blob, patch blob, hall sha256, commit) matches
+1. **Lock.** Refuse unless the show lock (tool map §4.2: rig blob, patch blob, hall sha256, commit) matches
    the project on this install. A mismatch names the file.
-2. **Light.** Put the version on the desk exact-or-fail (`desk-plan.mjs`, PR #766), output untouched.
+2. **Light.** Put the version on the desk exact-or-fail (`desk-plan.mjs`, PR #766, not on dev yet), output untouched.
 3. **Network.** Set the desk's interface and unicast targets from the network file; `artnet.poll`.
 4. **Compare.** For every planned node: answered (IP) · identity (MAC equal) · ports (`SwOut` equals the
    plan). For every laser: `GET /laser/state` shows the cube at its IP. Unplanned responders are listed too.
 5. **Show the list** in the terminal and on the page: green / red / unplanned, with the plan's value beside
    the found value. Exit 1 on any red.
 6. **Offer output ON** only when all green, or when the owner waives a red line by name (the waiver rule of
-   EVENT_LAYERS §1.1: reason, by, date; a waiver never turns red into green, it prints WAIVED).
+   event layers §1.1: reason, by, date; a waiver never turns red into green, it prints WAIVED).
 7. **Lasers stay disarmed.** Arming is the LSO's phrase in `/laser` (PR #776), never part of the click.
 
-**Why it then equals the virtual.** The room on the visualiser is drawn from the same DMX the desk sends
+**Why it then equals the virtual.** The scene on the visualiser is drawn from the same DMX the desk sends
 (`RIG_BUILD.md` §18, CONFIRMED). If the plan matched the discovered network, the universe and address a lamp
 receives on site is the one the visualiser drew. What the click cannot prove: the lamp's **mode switch** on
 its own menu (RDM later), the **hang and aim** (the crew and the owner's LOOK), and the **haze** (by hand,
@@ -120,7 +120,7 @@ its own menu (RDM later), the **hang and aim** (the crew and the owner's LOOK), 
 | Art-Net 4 (Artistic Licence, V1.4) | ArtPoll / ArtPollReply (node identity), ArtDmx, two-source merge limit | cited `LIGHTING_DESK.md:215`; the desk implements poll and reply (`dmxin.js`, `desk.js`) |
 | GDTF 1.2 (DIN SPEC 15800:2022), MVR 1.6 (DIN SPEC 15801:2023) | fixture types and the scene for a console; our export validates against the pinned XSDs | `RIG_BUILD.md` §1, §6, CONFIRMED; a real console import is **owed** since §8 |
 | ILDA IDN (IDN-Hello, IDN-Stream) and ILDA ISP-DB25 | the laser industry's network and analog interfaces | not opened here. **Not used:** the LaserCube Ultra MK2 speaks its maker's own UDP protocol (ports 45457/45458, written from `lasercube-core`'s source, PR #776). IDN matters only when a projector with an IDN or ISP interface is rented |
-| IEC 60825-1 (laser safety) | classes, the keep-in zone, the LSO | cited in `EVENT_LAYERS.md`; the zone and the arm phrase are in #776 |
+| IEC 60825-1 (laser safety) | classes, the keep-in zone, the LSO | cited in event layers; the zone and the arm phrase are in #776 |
 | grandMA3 / Eos network setup; pre-visualisation in Capture, Vectorworks Vision, disguise Designer | the practice: plan on the model, import MVR, discover on site, compare | product documentation, not opened; the method, not the products, is what we take |
 
 ---
@@ -128,7 +128,7 @@ its own menu (RDM later), the **hang and aim** (the crew and the owner's LOOK), 
 ## 3. The virtual environment — its parameters and where they live
 
 Owner: *"in the virtual we work with the environment and change many parameters there: the haze state, light
-places, global lights, and so on."* Today the picture is held in six places that drift (TOOLS_MAP §2,
+places, global lights, and so on."* Today the picture is held in six places that drift (tool map §2,
 "Picture" row, CONFIRMED). The fix in one line: **one `picture` block in the rig file, written by
 `apply-picture.mjs`, read by nothing else.**
 
@@ -140,7 +140,7 @@ places, global lights, and so on."* Today the picture is held in six places that
 | exposure | the camera's exposure; the "porthole" defect came from exposure 3.5 against fog 32 | `toneMappingExposure` 3.5 by `realism.mjs:179`; never in a rig file (§23) | `picture.exposure` (one number, 1.0 unless measured) |
 | time of night | which preset is on when | `showEpoch` (the show clock, `RIG_BUILD.md` §16) is the only clock; no "time of night" | `picture.presets` keyed by cue or clock time: `work` before doors, `show` from the first cue |
 | crowd | bodies that block beams and take light | **none** (grep of rig files and `src/rigbuild`: only an aim named `at-the-crowd-low`, `moxir-2026-10-17-full.json:443`) | later: `picture.crowd {density, height}` drawn as a dark layer at 1.7 m; not for 17 Oct |
-| light places | where the fixtures hang | the versions file → the rig file → the document (TOOLS_MAP §2) | unchanged: the versions file is the source |
+| light places | where the fixtures hang | the versions file → the rig file → the document (tool map §2) | unchanged: the versions file is the source |
 
 Rule: `realism.mjs` keeps only what the note in §23 gives it (the hall copy and the beam apertures) and stops
 writing picture values. `apply-picture.mjs --dry-run` prints `before → after`; `--undo` exists (§23).
@@ -190,12 +190,12 @@ resolves to the mesh router address; a phone on the Ucom wifi cannot reach it (m
 
 | workaround | why it is one | the real fix (owed) |
 |---|---|---|
-| Light runs Minimal's loop with 241 lamps of 7 versions; Known · full is not on it (TOOLS_MAP §3 #1, CONFIRMED 10-05; SUSPECTED unchanged today) | the crew would patch the wrong show | land PR #766 (`desk-plan.mjs` + `known-full.patch.json`), then `patch-sheet.mjs` exit 0 |
+| Light runs Minimal's loop with 241 lamps of 7 versions; Known · full is not on it (tool map §3 #1, CONFIRMED 10-05; SUSPECTED unchanged today) | the crew would patch the wrong show | land PR #766 (`desk-plan.mjs` + `known-full.patch.json`), then `patch-sheet.mjs` exit 0 |
 | exposure 3.5 and haze σ set by `realism.mjs` on some projects only | the picture drifts per project | the `picture` block (§3) |
 | hazers and smoke by hand (no DMX) | the haze state in the virtual cannot be sent; it is matched by eye | a hazer with DMX in the next rental; until then a timed hand-cue sheet beside the cue list |
 | `laser.json` with the six cube IPs typed on site (PR #776 "not done") | the lasers are outside the plan until the night | the network file (§2.1) holds the six IPs; cubes get static addresses |
-| the hall GLB outside git, one per project (TOOLS_MAP §3 #9) | the scene can differ from the design | sha256 in the show lock; a copy in `~/di-backups/` |
-| the show built by scripts outside git (`migrate-moxir.sh` and friends, TOOLS_MAP §1.4) | nobody else can rebuild it | `build-show.mjs` (TOOLS_MAP §4.3) |
+| the hall GLB outside git, one per project (tool map §3 #9) | the scene can differ from the design | sha256 in the show lock; a copy in `~/di-backups/` |
+| the show built by scripts outside git (`migrate-moxir.sh` and friends, tool map §1.4) | nobody else can rebuild it | `build-show.mjs` (tool map §4.3) |
 | sACN sends universe 0 for U1 (`RIG_BUILD.md` §4.5) | an sACN node set to 1 gets nothing | offset by one in the desk; until then Art-Net only, written on the sheet |
 | the inbox pull script in `~/.local/share` | hand-made state | move it into di-bo or di-atlas with its timer unit |
 
@@ -205,7 +205,7 @@ resolves to the mesh router address; a phone on the Ucom wifi cannot reach it (m
 |---|---|---|
 | 10-07 | land the truss flip (`feat/moxir-truss-flip-2026-10-07`: Known · full hangs the cut flipped, `archive-versions.mjs`), PR #808 (agents), PR #766 (desk plan) | `bridle-limit.test.js`, `archive-versions.test.js`, `desk-plan.test.js` green; one version left visible |
 | 10-08 | **site visit** (§5.3); photos as files and the slow walk into `moxir-sources` | the capture list ticked; EXIF survived; the tape numbers typed |
-| 10-09 | hall corrections: new `moxir-hall-dims-2026-10-08.json` / features; rebuild Known · full from git (`versions.mjs` → `load-version.mjs` after `copy-version.mjs`); `apply-picture.mjs --dry-run` then apply | hall tests green; `rebuild-compare.mjs` (PR #767) equal; owner LOOK |
+| 10-09 | hall corrections: new `moxir-hall-dims-2026-10-08.json` / features; rebuild Known · full from git (`versions.mjs` → `load-version.mjs` after `copy-version.mjs`); `apply-picture.mjs --dry-run` then apply | hall tests green; `rebuild-compare.mjs` (PR #767, not on dev yet) equal; owner LOOK |
 | 10-10 | the network file: node IPs, Port-Addresses, the six cube IPs, the desk's IP, the switch; `patch-plan.mjs`, `patch-sheet.mjs --pdf`, `export-mvr.mjs` + `validate-mvr.mjs` | all exit 0; the sheet shows "Art-Net only" |
 | 10-11–12 | Known · full onto Light (`desk-plan.mjs`); cues (`show-loop.mjs`); rehearse in `/moxir/visualise/…`; `connect.mjs --dry-run` against the plan (no network yet: every line red by design) | `show-clock.test.js`; luma per cue in target; the red list reads right |
 | 10-13–14 | the full map (§1 stage 6) as objects: FOH, VJ, laser op, hazer positions, power runs per circuit; rental order confirmed; the safety packet drafted (`rigging-safety-checklist`) | sum per circuit ≤ rating; every laser in the packet with its zone |
@@ -221,7 +221,7 @@ who.
 
 | what | how | why |
 |---|---|---|
-| one long tape edge (≥ 20 m) and the hall width at the DJ end | tape or laser measure, twice | the scale anchor (`--scale-edge`); the 8.15 vs 7.95 m hang question (TOOLS_MAP §2) |
+| one long tape edge (≥ 20 m) and the hall width at the DJ end | tape or laser measure, twice | the scale anchor (`--scale-edge`); the 8.15 vs 7.95 m hang question (tool map §2) |
 | the crane bridge: height under it, its rolled position, the tie-off path, what the hook can hold (plate) | tape, photo of the rating plate | the rigging SIGN |
 | the low walls' tops and the press, with heights | tape, photo | the cut and the movers (ground only) |
 | **power**: the board's location, phases, each MCB rating, socket types, the run to the truss and to FOH | photos of the board and labels; paces for the runs | the electrician SIGN; `power.csv` per circuit |
@@ -240,7 +240,7 @@ who.
 |---|---|---|---|---|
 | 1 | **`picture` block** in the rig file; `apply-picture.mjs` reads it; `realism.mjs` stops writing picture values | small (one script, one field rename, one test) | the six-place drift that cost the 10-04 "porthole" night | every scene reads one source; the owner's "environment parameters" get one home |
 | 2 | **network file + `connect.mjs` + the red/green page** (§2.2) | medium (a JSON schema, a script over `artnet.poll`, one page) | the get-in hours spent typing IPs and guessing which node is which | this IS the one click; the first run on 10-16 measures it |
-| 3 | **`build-show.mjs` + the show lock** (TOOLS_MAP §4.3) | medium | re-building a version by hand from scripts outside git | the next place starts from git, not from PONYO |
+| 3 | **`build-show.mjs` + the show lock** (tool map §4.3) | medium | re-building a version by hand from scripts outside git | the next place starts from git, not from PONYO |
 | 4 | **the full map**: people, devices, cable and power paths as objects with a `role`; printed on the plot | medium (a schema in `src/rigbuild/`, the plot layer, `power.csv` joins) | the "where does the VJ sit" questions on site | the owner asked for it by name |
 | 5 | **di.bo → wall**: the inbox step + `/place <space>` (§4.2); the pull script into a repo | small | the manual copy from the inbox to `add-sources.mjs` | the footage, not the tool, is still the limit, so this is 5th, not 1st |
 | 6 | **the job record** (L0) and `job.get` | small | nothing holds a production today | needed before an agent can run the runbook unattended |
@@ -266,7 +266,7 @@ in this session; the split, not the products, is what we take.
 | piece | what it does | measured |
 |---|---|---|
 | **Output mode, Full/Lite** (`src/project/viewport/outputMode.js`, commit `d10b500c`; PR #745 was closed, the code landed) | Lite keeps every beam cone and lens and the haze; pools the real lights to 4 (`OUTPUT_POOL_SLOTS`); drops shadows, bloom, reflections, antialias; DPR 1. `?quality=full\|lite` wins, then the Full/Lite button (remembered per browser), else Lite unless the work machine with a fine pointer | known-full, 68 lamps, AMD 860M: full 57 fps and the hall unlit for 18 s of shader compiles; Lite 264–355 fps (`outputMode.js:8-11`) |
-| **the visualiser** `/{space}/visualise/{project}` (RIG_BUILD §18) | the room drawn from the desk's DMX, beside the desk | desk API → drawn lamp **33.8 ms** median at 60 fps; Art-Net on loopback → drawn lamp 37.8 ms; two windows 30.8 ms (`RIG_BUILD.md` §18 table). The 3080 holds 60 fps (the cap); the owner's Intel iGPU in Flatpak Chromium 14–19 fps, a frame 50–70 ms (§18) |
+| **the visualiser** `/{space}/visualise/{project}` (RIG_BUILD §18) | the scene drawn from the desk's DMX, beside the desk | desk API → drawn lamp **33.8 ms** median at 60 fps; Art-Net on loopback → drawn lamp 37.8 ms; two windows 30.8 ms (`RIG_BUILD.md` §18 table). The 3080 holds 60 fps (the cap); the owner's Intel iGPU in Flatpak Chromium 14–19 fps, a frame 50–70 ms (§18) |
 | `renderSettings` in the document (`src/shared/sceneSchema.js:9`; `atmosphere.haze` tested in `projectSchema.test.js:853`) | the scene's render parameters, per project | the picture drift of §3 |
 | the Walk / Free view buttons on `/moxir` (version row, `RigVersionSwitch.jsx`) | camera modes, not quality | SUSPECTED: not re-read here |
 
@@ -295,9 +295,9 @@ the fallback on the night (Lite already holds 60 fps on weaker hardware than the
 ## 8. Fast fixture placement — move it fast, and it lands in the one source
 
 Owner: *"change the device places easily and fast."* The tension: the fastest hand tool writes ops into the
-show project (five pages do: Equipment, Build, Plot, Cards, ScenesDeck, TOOLS_MAP §3 #5, CONFIRMED), and the
+show project (five pages do: Equipment, Build, Plot, Cards, ScenesDeck, tool map §3 #5, CONFIRMED), and the
 design lives in git (the versions file → the rig file). Today a hand move on the page and a re-run of a script
-fight over the same project ("whatever ran last", TOOLS_MAP §3 #2).
+fight over the same project ("whatever ran last", tool map §3 #2).
 
 ### 8.1 What exists (CONFIRMED)
 
@@ -307,9 +307,9 @@ fight over the same project ("whatever ran last", TOOLS_MAP §3 #2).
 | Plot page (plan view, drag) | `/{space}/plot/{project}`; writes ops | the plan the crew reads |
 | Cards page (positions, looks, cues) | `/{space}/cards/{project}`; writes ops | aims and looks per position |
 | snap and clamp points | `src/rigbuild/pieces.js:6,29,101` (a clamp every 0.5 m along a truss; `snap.js` joins pieces by their points; a lamp's own position follows its clamp) | a move lands on a legal point, never floating |
-| the rig file and the versions file | `scripts/place/rigs/<place>-versions-<date>.json`, generated rig files, `versions.mjs` | the design; `rebuild-compare.mjs` (PR #767) proves a project equals its file |
+| the rig file and the versions file | `scripts/place/rigs/<place>-versions-<date>.json`, generated rig files, `versions.mjs` | the design; `rebuild-compare.mjs` (PR #767, not on dev yet) proves a project equals its file |
 | restore copies | `copy-version.mjs` | a labelled copy before a replacing write |
-| the proposal operations | `rig.version.propose` / `rig.proposal.apply` with `expectedHash`, `dry_run`, restore point (EVENT_LAYERS §3.3, designed, not built) | an agent's move as a diff first |
+| the proposal operations | `rig.version.propose` / `rig.proposal.apply` with `expectedHash`, `dry_run`, restore point (event layers §3.3, designed, not built) | an agent's move as a diff first |
 
 ### 8.2 The rule: the page proposes, the file decides
 
@@ -323,7 +323,7 @@ fight over the same project ("whatever ran last", TOOLS_MAP §3 #2).
 3. **An agent's move is text to the same file.** *"Move group `wash-left` 2 m house left"* = edit the versions
    file (a group's `offset` or one override), regenerate, compare, propose. Through the door it is
    `rig.version.propose` with `change: {ops|versionSpec}` and `dry_run: true`, then `rig.proposal.apply` with
-   `expectedHash` (EVENT_LAYERS §3.3). On the terminal it is the `rig-planner` agent (`.claude/agents/
+   `expectedHash` (event layers §3.3). On the terminal it is the `rig-planner` agent (`.claude/agents/
    rig-planner.md`, PR #808, allowed `versions.mjs`, `load-version.mjs`, `copy-version.mjs`) with the
    `venue-show` skill (`.claude/skills/venue-show/SKILL.md`) that already names where each fact lives.
 4. **Snap always.** Every write path (page, script, agent) passes `pieces.js` clamp points; a position off
@@ -331,10 +331,10 @@ fight over the same project ("whatever ran last", TOOLS_MAP §3 #2).
 5. **The policy gate runs on every keep** (L5: `policy-check.mjs`, not built), so a fast move cannot hang a
    mover above 0.6 m by accident.
 
-| part | md | agent | MCP entry (EVENT_LAYERS §3.3) | skill |
+| part | md | agent | MCP entry (event layers §3.3) | skill |
 |---|---|---|---|---|
 | hand move + Keep | `RIG_BUILD.md` §12 (Build) and §10 (Plot) gain a "Keep / Discard" paragraph | none (a person) | `rig.version.get` to show the diff | none |
-| text move | `EVENT_LAYERS.md` §2.1 rig-planner row | `rig-planner` (#808) | `rig.version.propose`, `rig.proposal.apply` | `venue-show` (#808): add the override syntax and the two commands |
+| text move | event layers §2.1 rig-planner row | `rig-planner` (#808) | `rig.version.propose`, `rig.proposal.apply` | `venue-show` (#808): add the override syntax and the two commands |
 | snap refusal | `pieces.js` header comment | none | the propose answer's `refused` list | none |
 | keep-moves.mjs | `scripts/rigbuild/README.md` | `patch-planner` re-runs the patch after a keep | `rig.patch.propose` | `venue-show` |
 
@@ -361,7 +361,7 @@ source; the files a tool reads are derived; a check fails when they drift.
 
 | derived file | generated from | generator (NEW) | drift check (CI) |
 |---|---|---|---|
-| `.claude/agents/<role>.md` **frontmatter** (`allowed-tools`, `model`) | a roles table `docs/ai/roles/event-roles.json` (NEW: role, layer, scripts, model, budget: the EVENT_LAYERS §2.1 table as data) + the scripts that exist on disk | `scripts/gen-agents.mjs` writes the frontmatter and keeps the hand-written body below a marker | fails when an allowed script path does not exist, or the frontmatter differs from the table |
+| `.claude/agents/<role>.md` **frontmatter** (`allowed-tools`, `model`) | a roles table `docs/ai/roles/event-roles.json` (NEW: role, layer, scripts, model, budget: the event layers §2.1 table as data) + the scripts that exist on disk | `scripts/gen-agents.mjs` writes the frontmatter and keeps the hand-written body below a marker | fails when an allowed script path does not exist, or the frontmatter differs from the table |
 | `.claude/skills/venue-show/SKILL.md` "where each fact lives" and "the command for each job" tables | `scripts/rigbuild/README.md`, `scripts/place/README.md` and the `--help` of each script | the same generator, one section | fails when a command in the skill is not a script on disk |
 | `AGENTS.md` sections (the role router, the validation commands) | `docs/ai/roles/*.md` and `package.json` scripts | `sync-agent-docs.mjs` already owns `docs/ai/`; extend it | `docs:ai:check` already runs |
 | the MCP tool list | the catalogue (already) | exists | the contract test (already) |
@@ -371,7 +371,7 @@ source; the files a tool reads are derived; a check fails when they drift.
 
 | format | who publishes it | stability | what we pin |
 |---|---|---|---|
-| **MCP** (Model Context Protocol) | open protocol, JSON-RPC, versioned by date; our door cites the 2026-07-28 revision (`EVENT_LAYERS.md` sources) | moving yearly, with a negotiated `protocolVersion` | the revision string in the door's handshake; the SDK version in `package.json` |
+| **MCP** (Model Context Protocol) | open protocol, JSON-RPC, versioned by date; our door cites the 2026-07-28 revision (event layers sources) | moving yearly, with a negotiated `protocolVersion` | the revision string in the door's handshake; the SDK version in `package.json` |
 | **OpenAPI 3.1 / JSON Schema 2020-12** | OpenAPI Initiative / IETF drafts | stable for years | the `openapi: 3.1.0` string; the XSD-style sha256 habit for anything downloaded |
 | **AGENTS.md** | a cross-tool convention (agents.md), read by several coding agents; Claude Code reads it through `CLAUDE.md`'s `@AGENTS.md` | a convention, not a spec; its only rule is "a Markdown file at the root" | nothing to pin; keep it the only hand-written router |
 | **Agent Skills** (`SKILL.md` with YAML frontmatter `name`, `description`) | an open format published by Anthropic (agentskills.io; not opened here) | young (2025); the frontmatter is the contract | the two frontmatter keys; everything else is prose |
