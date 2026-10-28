@@ -22,6 +22,7 @@ import {
     listProjectOps
 } from '../services/projectsApi.js'
 import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectSchema.js'
+import { resolveOpeningView } from '../../shared/openingView.js'
 import {
     buildPresentationPreviewDocument,
     PREVIEW_ENTER_EXHIBITION_KIND,
@@ -35,7 +36,7 @@ import { buildAppSpacePath, buildSpaceContentsPath } from '../../utils/spaceRout
 import { isEmbedRequest } from '../../utils/previewMode.js'
 import { hasRig } from '../../rigbuild/hasRigLamps.js'
 import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
-import SceneBar, { EditInStudio, barButtonStyle } from '../../rigbuild/SceneBar.jsx'
+import SceneBar, { EditInStudio, barButtonStyle, studioHref } from '../../rigbuild/SceneBar.jsx'
 import { VIEW_LAYER_IDS, VIEW_LAYER_LABELS, parseLayersParam } from '../viewport/smartView/smartViewGeometry.js'
 import { rigVariantOf } from '../../rigbuild/rigVariant.js'
 import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement } from '../../rigbuild/rigVersionLayout.js'
@@ -321,7 +322,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const hasSound = useMemo(() => roomHasSound(document?.entities), [document?.entities])
     const publishState = document?.publishState || {}
     const presentationState = document?.presentationState || {}
-    const entryView = viewMode || presentationState.entryView || 'scene'
+    // Decided from what the project holds (shared/openingView.js), not from the schema default.
+    const entryView = viewMode || (document ? resolveOpeningView(document) : 'scene')
     const showCodeView = entryView === 'code'
     // Work in the node lane. The renderer that can show it is not the one walk
     // mode uses — see the Walk / Fly control below. Only a graph that draws in the room counts (graphRoom.js): a VJ
@@ -776,6 +778,22 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         </div>
                     </div>
                 )
+            ) : document && entryView === 'page' ? (
+                <div style={{ height: '100%', display: 'grid', placeItems: 'center', padding: '2rem', overflow: 'auto' }}>
+                    <div style={{ ...quietPreviewFallbackStyle, color: '#f5f7fa', textAlign: 'left' }} data-testid="project-plain-view">
+                        <strong>{viewerTitle}</strong>
+                        {(document.assets || []).filter((a) => /^image\//.test(a.mimeType) && a.url).map((a) => (
+                            <img key={a.id} src={a.url} alt={a.name} style={{ display: 'block', maxWidth: '100%', marginTop: '0.75rem' }} />
+                        ))}
+                        {canEdit ? (
+                            <div data-testid="project-choices" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem' }}>
+                                <a href={studioHref(resolvedRouteSpaceId, projectId)} data-testid="choice-scene" style={barButtonStyle}>Add a scene</a>
+                                <a href={`${studioHref(resolvedRouteSpaceId, projectId)}?open=files`} data-testid="choice-code" style={barButtonStyle}>Write code</a>
+                                <a href={`${studioHref(resolvedRouteSpaceId, projectId)}?open=create`} data-testid="choice-pictures" style={barButtonStyle}>Add pages or pictures</a>
+                            </div>
+                        ) : null}
+                    </div>
+                </div>
             ) : document ? (
                 <Suspense fallback={<LiveStallRing />}>
                     <PublicProjectSceneSurface

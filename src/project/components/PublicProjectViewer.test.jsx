@@ -101,6 +101,43 @@ describe('PublicProjectViewer', () => {
         buildProjectEventsUrlMock.mockClear()
     })
 
+    it('opens the plain project view, not an empty 3D room, for a project with no scene and no code', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: { projectMeta: { id: 'cinema', title: 'Cinema House' }, entities: [] }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="cinema-house" projectId="cinema" spaceLabel="Cinema House" />)
+
+        expect(await screen.findByTestId('project-plain-view')).toHaveTextContent('Cinema House')
+        expect(screen.queryByText(/viewer-scene/)).toBeNull()
+    })
+
+    it('opening a space whose one project is empty lands in the project view, with the choices for an editor', async () => {
+        authState.session = { requireAuth: true, authenticated: true, role: 'admin', spaces: null }
+        try {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: { projectMeta: { id: 'only', title: 'Only' }, entities: [], nodes: [] }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            render(<PublicProjectViewer spaceId="cinema-house" projectId="only" spaceLabel="Cinema House" />)
+
+            expect(await screen.findByTestId('project-plain-view')).toBeInTheDocument()
+            const choices = screen.getByTestId('project-choices')
+            // Each choice goes where it is done: the scene to the editor, code to the Code panel, pictures to Create.
+            expect(screen.getByTestId('choice-scene').getAttribute('href')).toMatch(/\/studio$/)
+            expect(screen.getByTestId('choice-code').getAttribute('href')).toMatch(/\/studio\?open=files$/)
+            expect(screen.getByTestId('choice-pictures').getAttribute('href')).toMatch(/\/studio\?open=create$/)
+            expect(choices).toHaveTextContent('Add a scene')
+            expect(screen.queryByText(/viewer-scene/)).toBeNull()
+        } finally {
+            authState.session = { requireAuth: false, authenticated: false, role: null, spaces: null }
+        }
+    })
+
     it('updates the public surface live when Studio changes the presentation entry view', async () => {
         getProjectDocumentMock.mockResolvedValue({
             version: 1,
@@ -114,7 +151,7 @@ describe('PublicProjectViewer', () => {
                     entryView: 'scene',
                     codeHtml: ''
                 },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({
@@ -170,7 +207,7 @@ describe('PublicProjectViewer', () => {
             document: {
                 projectMeta: { id: 'code-only', title: 'Code Only' },
                 presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>page</main>' },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -197,7 +234,7 @@ describe('PublicProjectViewer', () => {
                 document: {
                     projectMeta: { id: 'landing', title: 'the landing — the door' },
                     presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>door</main>' },
-                    entities: []
+                    entities: [{ id: 'e1', type: 'cube' }]
                 }
             })
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -236,7 +273,7 @@ describe('PublicProjectViewer', () => {
                     codeHtml: '<main>the lamp</main>',
                     deviceAccess: true
                 },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -268,7 +305,7 @@ describe('PublicProjectViewer', () => {
                     entryView: 'code',
                     codeHtml: '<button onclick="diiEnterExhibition()">Enter</button>'
                 },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({
@@ -315,7 +352,7 @@ describe('PublicProjectViewer', () => {
         document: {
             projectMeta: { id: 'live-project', title: 'Live Project' },
             presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
-            entities: []
+            entities: [{ id: 'e1', type: 'cube' }]
         }
     }
 
@@ -358,7 +395,7 @@ describe('PublicProjectViewer', () => {
                 document: {
                     projectMeta: { id: 'heavy-piece', title: 'Heavy Piece' },
                     presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>the piece</main>' },
-                    entities: []
+                    entities: [{ id: 'e1', type: 'cube' }]
                 }
             })
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -387,7 +424,7 @@ describe('PublicProjectViewer', () => {
                 document: {
                     projectMeta: { id: 'heavy-piece', title: 'Heavy Piece' },
                     presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>INITIALIZING SPACE... 0%</main>' },
-                    entities: []
+                    entities: [{ id: 'e1', type: 'cube' }]
                 }
             })
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -443,7 +480,7 @@ describe('PublicProjectViewer', () => {
                 document: {
                     projectMeta: { id: 'br-id-ge', title: 'br_id_ge' },
                     presentationState: { mode: 'code', entryView: 'code', codeHtml: '<h1>a bridge between worlds</h1>' },
-                    entities: []
+                    entities: [{ id: 'e1', type: 'cube' }]
                 }
             })
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -493,7 +530,7 @@ describe('PublicProjectViewer', () => {
             document: {
                 projectMeta: { id: 'heavy-piece', title: 'Heavy Piece' },
                 presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>the piece</main>' },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -541,7 +578,7 @@ describe('PublicProjectViewer', () => {
                 document: {
                     projectMeta: { id: 'live-project', title: 'Live Project' },
                     presentationState: { mode: 'code', entryView: 'code', codeHtml: '<p>the field</p>' },
-                    entities: []
+                    entities: [{ id: 'e1', type: 'cube' }]
                 }
             })
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -1066,7 +1103,7 @@ describe('PublicProjectViewer', () => {
                 document: {
                     projectMeta: { id: 'the-yard', title: 'The Yard' },
                     presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>yard</main>' },
-                    entities: []
+                    entities: [{ id: 'e1', type: 'cube' }]
                 }
             })
             await readyPromise
@@ -1169,7 +1206,7 @@ describe('document title', () => {
             document: {
                 projectMeta: { id: 'front-page', title: 'Front Page' },
                 presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -1187,7 +1224,7 @@ describe('document title', () => {
             document: {
                 projectMeta: { id: 'mery-petrosyan', title: 'Mery Petrosyan' },
                 presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -1210,7 +1247,7 @@ describe('document title', () => {
             document: {
                 projectMeta: { id: 'room', title: 'The Room' },
                 presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -1229,7 +1266,7 @@ describe('document title', () => {
             document: {
                 projectMeta: { id: 'room', title: 'The Room' },
                 presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -1251,7 +1288,7 @@ describe('document title', () => {
             document: {
                 projectMeta: { id: 'room', title: 'The Room' },
                 presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })

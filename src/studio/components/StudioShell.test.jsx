@@ -191,6 +191,15 @@ describe('StudioShell — a new project opens bare', () => {
 
     afterEach(() => {
         window.localStorage.removeItem(ALL_TOOLS_KEY)
+        window.history.replaceState(null, '', '/')
+        // the shell saves the windows it had open; a later test must not inherit them
+        window.localStorage.clear()
+    })
+
+    it('draws the Code window on an empty project when the address asks for it (?open=files)', () => {
+        window.history.replaceState(null, '', '/?open=files')
+        renderShell({ ...inProject, layers: NEW })
+        expect(panels()).toContain('Code')
     })
 
     it('shows the bar, the room and Create alone — no cluster, no other window, no Drive or Commons, no empty Files list', () => {
@@ -260,6 +269,12 @@ describe('StudioShell — a new project opens bare', () => {
         expect(screen.getByTestId('gizmo-mode')).toBeInTheDocument()
         expect(panels()).toEqual(['Create'])
         expect(document.querySelector('.sbar')).toBeNull()
+    })
+
+    it('on a phone, ?open=files opens the Code sheet on an empty project', () => {
+        window.history.replaceState(null, '', '/?open=files')
+        renderShell({ ...inProject, layers: NEW, isMobile: true })
+        expect(document.querySelector('.smb-sheet-head')?.textContent).toContain('Code')
     })
 
     it('on a phone: Create alone until the first thing, then the full phone bar', () => {

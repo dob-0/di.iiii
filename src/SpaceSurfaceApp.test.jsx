@@ -1,8 +1,25 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 
 const getServerSpace = vi.fn()
+const listSpaceContents = vi.fn()
+
+vi.mock('./project/services/projectsApi.js', () => ({
+    listSpaceContents: (...args) => listSpaceContents(...args)
+}))
+
+vi.mock('./components/EmptySpaceView.jsx', () => ({
+    default: function MockEmptySpaceView({ spaceId }) {
+        return <div>empty-space-view:{spaceId}</div>
+    }
+}))
+
+vi.mock('./pages/SpaceContentsPage.jsx', () => ({
+    default: function MockSpaceContentsPage({ spaceId }) {
+        return <div>space-contents-page:{spaceId}</div>
+    }
+}))
 
 vi.mock('./App.jsx', () => ({
     default: function MockApp() {
@@ -29,8 +46,14 @@ vi.mock('./services/serverSpaces.js', () => ({
 }))
 
 describe('SpaceSurfaceApp', () => {
+    beforeEach(() => {
+        listSpaceContents.mockResolvedValue([])
+    })
+
     afterEach(() => {
         getServerSpace.mockReset()
+        listSpaceContents.mockReset()
+        listSpaceContents.mockResolvedValue([])
         vi.useRealTimers()
     })
 
@@ -88,17 +111,50 @@ describe('SpaceSurfaceApp', () => {
         expect(getServerSpace).not.toHaveBeenCalled()
     })
 
-    it('falls back to the legacy editor when no published project is configured', async () => {
-        getServerSpace.mockResolvedValue({
-            id: 'main',
-            label: 'Main Space',
-            publishedProjectId: null
+    describe('a space with no front door opens what it holds, never the 3D editor', () => {
+        const noDoor = { id: 'cinema-house', label: 'Cinema House', publishedProjectId: null }
+
+        it('opens its only project', async () => {
+            getServerSpace.mockResolvedValue(noDoor)
+            listSpaceContents.mockResolvedValue([{ id: 'only' }])
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'cinema-house' }} />)
+            expect(await screen.findByText(/public-project-viewer:cinema-house:only/)).toBeInTheDocument()
+            expect(screen.queryByText('legacy-app')).toBeNull()
         })
 
-        render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'main' }} />)
+        it('lists its projects when it holds several', async () => {
+            getServerSpace.mockResolvedValue(noDoor)
+            listSpaceContents.mockResolvedValue([{ id: 'a' }, { id: 'b' }])
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'cinema-house' }} />)
+            expect(await screen.findByText('space-contents-page:cinema-house')).toBeInTheDocument()
+        })
 
-        await waitFor(() => {
-            expect(screen.getByText('legacy-app')).toBeInTheDocument()
+        it('does not swap in the editor when a later poll of the space fails', async () => {
+            vi.useFakeTimers()
+            getServerSpace.mockResolvedValueOnce(noDoor).mockRejectedValue(new Error('network down'))
+            listSpaceContents.mockResolvedValue([])
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'cinema-house' }} />)
+            await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+            expect(screen.getByText(/empty-space-view/)).toBeInTheDocument()
+            await act(async () => { await vi.advanceTimersByTimeAsync(2100) })
+            expect(screen.queryByText('legacy-app')).toBeNull()
+            expect(screen.getByText(/empty-space-view/)).toBeInTheDocument()
+        })
+
+        it('shows the empty-space view, not the editor, when the contents cannot be read', async () => {
+            getServerSpace.mockResolvedValue(noDoor)
+            listSpaceContents.mockRejectedValue(new Error('boom'))
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'cinema-house' }} />)
+            expect(await screen.findByText(/empty-space-view/)).toBeInTheDocument()
+            expect(screen.queryByText('legacy-app')).toBeNull()
+        })
+
+        it('shows the plain empty-space view when it holds no project', async () => {
+            getServerSpace.mockResolvedValue(noDoor)
+            listSpaceContents.mockResolvedValue([])
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'cinema-house' }} />)
+            expect(await screen.findByText('empty-space-view:cinema-house')).toBeInTheDocument()
+            expect(screen.queryByText('legacy-app')).toBeNull()
         })
     })
 
@@ -120,8 +176,10 @@ describe('SpaceSurfaceApp', () => {
 
         await act(async () => {
             await Promise.resolve()
+            await Promise.resolve()
+            await Promise.resolve()
         })
-        expect(screen.getByText('legacy-app')).toBeInTheDocument()
+        expect(screen.getByText(/empty-space-view/)).toBeInTheDocument()
 
         await act(async () => {
             await vi.advanceTimersByTimeAsync(2100)
@@ -178,7 +236,7 @@ describe('SpaceSurfaceApp', () => {
 
             render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'dilijan' }} />)
 
-            await screen.findByText('legacy-app')
+            await screen.findByText(/empty-space-view/)
             await waitFor(() => expect(document.title).toBe('Dilijan Camp — di.iiii'))
         })
 
@@ -188,7 +246,7 @@ describe('SpaceSurfaceApp', () => {
 
             render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'main' }} />)
 
-            await screen.findByText('legacy-app')
+            await screen.findByText(/empty-space-view/)
             expect(document.title).toBe('di.iiii — public spaces on the open web')
         })
 
@@ -200,7 +258,7 @@ describe('SpaceSurfaceApp', () => {
 
             render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'di-iiii' }} />)
 
-            await screen.findByText('legacy-app')
+            await screen.findByText(/empty-space-view/)
             expect(document.title).toBe('di.iiii — public spaces on the open web')
         })
 
@@ -210,7 +268,7 @@ describe('SpaceSurfaceApp', () => {
 
             render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'queerlab' }} />)
 
-            await screen.findByText('legacy-app')
+            await screen.findByText(/empty-space-view/)
             await waitFor(() => expect(document.title).toBe('queer-lab — di.iiii'))
         })
     })
