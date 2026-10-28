@@ -86,7 +86,7 @@ const writeFollows = async (dataDir, follows) => {
     return follows
 }
 
-export const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null, direction = null, start = null }) => {
+export const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null, direction = null, start = null, name = null, via = null, lastAddress = null }) => {
     const follows = followsForWrite(dataDir)
     follows[spaceId] = {
         remote: String(remote || '').replace(/\/$/, ''),
@@ -98,6 +98,14 @@ export const addFollow = async (dataDir, spaceId, { remote, token, label = null,
         // no pin must serialise byte-identically to one from before this
         // existed (scripts/di/follows.test.js holds that line).
         ...(address ? { address } : {}),
+        // Followed by NETWORK NAME (`--from <label>`): the label and zone it was
+        // found by, the route that found it (beacon | dns | last) and the last
+        // address that worked. Not a pin: the address is looked up again when a
+        // request fails (serverXR/src/follow/nameResolve.js). Absent when the
+        // follow was typed as a URL, like `address`.
+        ...(name ? { name: { label: name.label, zone: name.zone } } : {}),
+        ...(name && via ? { via } : {}),
+        ...(name && lastAddress ? { lastAddress } : {}),
         // `--take-host` / `--take-mine`: spent by the server on the first
         // comparison of each stream, then cleared. `start: 'replay'` is the
         // explicit `--replay`; absent means start from now. Both absent when

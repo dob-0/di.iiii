@@ -9,7 +9,8 @@
  */
 
 const { startFollowing, side } = require('./follower')
-const { readFollows, readFollowState, writeFollowState, clearDirection } = require('./followStore')
+const { readFollows, readFollowState, writeFollowState, clearDirection, recordResolved } = require('./followStore')
+const { reresolver } = require('./nameResolve')
 
 const running = new Map()
 // The direction each running follower was started with. A new one in
@@ -80,7 +81,12 @@ const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null,
         const local = side({ base: selfBase(port, basePath, tlsName), spaceId, token: selfToken, servername: tlsName })
         // entry.address is the ADDRESS PIN written by `di follow --at` — the
         // name in entry.remote keeps doing its job, the socket goes here.
-        const remote = side({ base: entry.remote, spaceId: entry.spaceId || spaceId, token: entry.token, address: entry.address || null })
+        // A follow typed as a NETWORK NAME has no pin of its own: it starts at the
+        // last address that worked and finds the host again when a request fails
+        // (nameResolve.js reresolver). An explicit `--at` still wins.
+        const named = entry.name?.label && !entry.address ? entry.name : null
+        const remote = side({ base: entry.remote, spaceId: entry.spaceId || spaceId, token: entry.token, address: entry.address || (named ? entry.lastAddress || null : null) })
+        if (named) remote.reresolve = reresolver({ side: remote, name: named, log, record: (found) => recordResolved(dataDir, spaceId, found) })
         // The space has to exist here or every write lands on nothing. `di
         // follow` makes it when the install is running, but a follow written
         // while it was down — or restored from a backup onto a fresh machine —

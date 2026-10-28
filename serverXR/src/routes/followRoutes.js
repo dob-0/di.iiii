@@ -34,6 +34,7 @@ const { inspectJoin, joinSpace } = require('../follow/join')
 const JOIN_MESSAGES = {
     'bad-address': 'That is not an address — type it as shown on the other machine.',
     unreachable: 'That di.iiii did not answer. Same network, or Tailscale?',
+    'not-found': 'Could not find an install by that name — nobody announced it on this wifi and its name does not resolve. Is it shared, and on this network?',
     'invalid-code': 'That code is not valid — it may have been used, or it ran out after ten minutes. Ask for a new one.',
     throttled: 'Too many wrong tries. Wait a few minutes and ask for a new code.',
     'host-too-old': 'That di.iiii is older and has no join codes. Update it, or use di follow.',
@@ -47,6 +48,7 @@ const JOIN_MESSAGES = {
 const refusalStatus = (reason) => ({
     'bad-address': 400,
     unreachable: 502,
+    'not-found': 502,
     'invalid-code': 404,
     throttled: 429,
     'host-too-old': 502,

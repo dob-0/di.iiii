@@ -455,7 +455,12 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // answers and refuses, which the next reads say in words. Only silence
         // is "not answering".
         if (there.status > 0) answered = { at: Date.now(), latencyMs: there.ok ? there.tookMs : answered.latencyMs, down: false }
-        else answered = { ...answered, down: true }
+        else {
+            answered = { ...answered, down: true }
+            // A host followed by NAME may have moved: look it up again, in the
+            // order nameResolve.js says; the next tick goes to where it is now.
+            await remote.reresolve?.().catch(() => {})
+        }
         // The other side answered: files waiting out its silence (assets.js)
         // go on this tick, not at the end of a wait of up to five minutes.
         if (there.ok) chase.noteAnswered()

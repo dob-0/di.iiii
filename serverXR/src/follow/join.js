@@ -24,16 +24,18 @@
 
 const { httpRequest } = require('../httpClient')
 const { DI_USER_AGENT } = require('../diUserAgent')
+const names = require('./nameResolve')
 
 const PROBE_TIMEOUT_MS = 4000
 const CALL_TIMEOUT_MS = 8000
 
-const call = async (url, { method = 'GET', token = null, body = null, timeoutMs = CALL_TIMEOUT_MS, send = httpRequest } = {}) => {
+const call = async (url, { method = 'GET', token = null, body = null, timeoutMs = CALL_TIMEOUT_MS, send = httpRequest, address = null } = {}) => {
     const text = body ? JSON.stringify(body) : null
     try {
         const response = await send(url, {
             method,
             timeoutMs,
+            ...(address ? { address } : {}),
             headers: {
                 Accept: 'application/json',
                 // Named here as well as in httpClient: `send` may be any client.
@@ -80,8 +82,25 @@ const candidateBases = (input) => {
     return out
 }
 
-/** @returns {Promise<{ base: string } | { base: null, reason: 'bad-address' | 'unreachable' }>} */
-const findHost = async (address, { send } = {}) => {
+/**
+ * The host a person typed. A bare LABEL is a network name: it is found by the
+ * one resolver `di follow` uses (beacon, DNS, last address — nameResolve.js) and
+ * asked at that address, keeping the name for the certificate check.
+ * @returns {Promise<{ base: string, pin?: string, name?: {label, zone}, via?: string }
+ *                  | { base: null, reason: 'bad-address' | 'unreachable' | 'not-found' }>}
+ */
+const findHost = async (address, { send, resolveNamed = names.resolveName, zone = null } = {}) => {
+    if (names.isLabel(address)) {
+        const name = { label: String(address).trim(), zone: zone || names.readZone() }
+        const found = await resolveNamed({ label: name.label, zone: name.zone })
+        if (!found.ok) return { base: null, reason: 'not-found' }
+        const root = names.nameBase(name.label, name.zone, found.port)
+        for (const base of [`${root}/serverXR`, root]) {
+            const health = await call(`${base}/api/health`, { timeoutMs: PROBE_TIMEOUT_MS, send, address: found.address })
+            if (health.ok) return { base, pin: found.address, name, via: found.route }
+        }
+        return { base: null, reason: 'unreachable' }
+    }
     const candidates = candidateBases(address)
     if (!candidates.length) return { base: null, reason: 'bad-address' }
     for (const base of candidates) {
@@ -108,13 +127,13 @@ const refusal = (answer) => {
  * @param {(spaceId: string) => Promise<boolean>} deps.spaceExistsHere
  * @returns {Promise<{ok: true, base, spaceId, label, projects, hostName, hostId, localExists} | {ok: false, reason}>}
  */
-const inspectJoin = async ({ address, code, dataDir, machine, readFollows, spaceExistsHere, send }) => {
+const inspectJoin = async ({ address, code, dataDir, machine, readFollows, spaceExistsHere, send, resolveNamed, zone }) => {
     if (!String(code || '').trim()) return { ok: false, reason: 'invalid-code' }
-    const found = await findHost(address, { send })
+    const found = await findHost(address, { send, resolveNamed, zone })
     if (!found.base) return { ok: false, reason: found.reason }
     const base = found.base
 
-    const peek = await call(`${base}/api/join-codes/peek`, { method: 'POST', body: { code }, send })
+    const peek = await call(`${base}/api/join-codes/peek`, { method: 'POST', body: { code }, send, address: found.pin })
     if (!peek.ok) return refusal(peek)
     const spaceId = String(peek.payload?.spaceId || '')
     if (!spaceId) return { ok: false, reason: 'invalid-code' }
@@ -129,6 +148,9 @@ const inspectJoin = async ({ address, code, dataDir, machine, readFollows, space
     return {
         ok: true,
         base,
+        pin: found.pin || null,
+        name: found.name || null,
+        via: found.via || null,
         spaceId,
         label: peek.payload?.label || spaceId,
         projects: Number.isFinite(peek.payload?.projects) ? peek.payload.projects : null,
@@ -142,15 +164,15 @@ const inspectJoin = async ({ address, code, dataDir, machine, readFollows, space
  * Join: inspect, spend the code, check the key, make the space, write the follow.
  * `into` is the person's "yes, merge" for a same-named space already here.
  */
-const joinSpace = async ({ address, code, into = false, dataDir, machine, readFollows, addFollow, spaceExistsHere, ensureSpace, send }) => {
-    const seen = await inspectJoin({ address, code, dataDir, machine, readFollows, spaceExistsHere, send })
+const joinSpace = async ({ address, code, into = false, dataDir, machine, readFollows, addFollow, spaceExistsHere, ensureSpace, send, resolveNamed, zone }) => {
+    const seen = await inspectJoin({ address, code, dataDir, machine, readFollows, spaceExistsHere, send, resolveNamed, zone })
     if (!seen.ok) return seen
     // A space of that name already here is somebody's work: wiring a stranger's
     // log into it, and pushing its contents out to them, must be asked for.
     if (seen.localExists && !into) return { ok: false, reason: 'merge', spaceId: seen.spaceId }
 
     const redeemed = await call(`${seen.base}/api/join-codes/redeem`, {
-        method: 'POST', body: { code, machine: { id: machine().id, name: machine().name } }, send
+        method: 'POST', body: { code, machine: { id: machine().id, name: machine().name } }, send, address: seen.pin
     })
     if (!redeemed.ok) return refusal(redeemed)
     const { token } = redeemed.payload || {}
@@ -158,7 +180,7 @@ const joinSpace = async ({ address, code, into = false, dataDir, machine, readFo
     if (!token) return { ok: false, reason: 'invalid-code' }
 
     // From here the code is spent. Anything that fails says so.
-    const ops = await call(`${seen.base}/api/spaces/${encodeURIComponent(spaceId)}/ops?since=0`, { token, send })
+    const ops = await call(`${seen.base}/api/spaces/${encodeURIComponent(spaceId)}/ops?since=0`, { token, send, address: seen.pin })
     if (!ops.ok) return { ok: false, reason: 'spent-denied', spaceId }
 
     try {
@@ -170,7 +192,7 @@ const joinSpace = async ({ address, code, into = false, dataDir, machine, readFo
     // an empty log has nothing to flood the host with. Since dev's from-now start (follower.js)
     // it must ask for the replay, or the joiner stays empty. A merge into a space already here
     // starts from now and is compared once (converge), as any follow.
-    await addFollow(dataDir, spaceId, { remote: seen.base, token, label: seen.hostName, start: seen.localExists ? null : 'replay' })
+    await addFollow(dataDir, spaceId, { remote: seen.base, token, label: seen.hostName, start: seen.localExists ? null : 'replay', name: seen.name, via: seen.via, lastAddress: seen.pin })
     return { ok: true, spaceId, base: seen.base, hostName: seen.hostName, label: seen.label, merged: seen.localExists }
 }
 

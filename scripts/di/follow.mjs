@@ -15,6 +15,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { isIP } from 'node:net'
+import { createRequire } from 'node:module'
 
 import { addFollow, FollowsCorruptError, inspectFollows, readFollows } from './follows.mjs'
 import { paths } from './paths.mjs'
@@ -60,6 +61,10 @@ export const manageKeyMayTravel = (url, address = null) => {
     return host === 'localhost' || host === '::1' || /^127\./.test(host)
 }
 
+// One resolver for this command, the running follower and the join flow; the CLI
+// ships in the same tree as serverXR/src (scripts/pack-runtime.mjs).
+const names = createRequire(import.meta.url)('../../serverXR/src/follow/nameResolve.js')
+
 /**
  * Is there already a space of that name in the data folder of an install that is
  * NOT running? Spaces live in di.db. Anything unreadable counts as "yes": the
@@ -86,7 +91,7 @@ export const localSpaceOnDisk = async (home, spaceId) => {
  * cert-mismatch, missing, denied, local-space, itself, merge, no-from, and
  * remote-differs (which also carries `stored` and `base`, the two remotes).
  */
-export const followSpace = async ({ home, spaceId, from = null, key = null, into = null, address = null, port, insecure = false, direction = null, start = null }) => {
+export const followSpace = async ({ home, spaceId, from = null, key = null, into = null, address = null, port, insecure = false, direction = null, start = null, zone = null, resolveNamed = names.resolveName }) => {
     if (direction && direction !== 'take-host' && direction !== 'take-mine') return { ok: false, reason: 'direction' }
     if (inspectFollows(paths(home).data).state === 'corrupt') return { ok: false, reason: 'corrupt' }
 
@@ -100,6 +105,29 @@ export const followSpace = async ({ home, spaceId, from = null, key = null, into
         from = stored.remote
         address = address || stored.address || null
         into = into || spaceId
+    }
+    // A NETWORK NAME: a bare label (no scheme, no dot) is another install on the
+    // same wifi or the same zone. Found by beacon, then DNS, then the last address
+    // that worked; the name stays for Host, SNI and the certificate check, the
+    // address is the pin (serverXR/src/follow/nameResolve.js). A typed `--at`
+    // wins and makes it an ordinary pinned follow.
+    let name = null
+    let via = null
+    let lastAddress = null
+    const typedLabel = names.isLabel(from)
+    // The short form (`--take-mine` alone) re-finds a follow that was found by name.
+    const wanted = typedLabel
+        ? { label: String(from).trim(), zone: zone || names.readZone() }
+        : (stored?.name && from === stored.remote ? stored.name : null)
+    if (wanted && !address) {
+        const known = stored?.name?.label === wanted.label ? stored : null
+        const found = await resolveNamed({ label: wanted.label, zone: wanted.zone, last: known?.lastAddress || null })
+        if (!found.ok) return { ok: false, reason: 'not-found', name: found.name, tried: found.tried }
+        name = wanted
+        via = found.route
+        lastAddress = found.address
+        address = found.address
+        from = typedLabel ? names.nameBase(wanted.label, wanted.zone, found.port) : from
     }
     // Refuse before touching anything: a key must not travel in clear to a public
     // host, and a follows.json that does not parse must not be written over.
@@ -164,10 +192,10 @@ export const followSpace = async ({ home, spaceId, from = null, key = null, into
     const hadFile = Object.keys(all).length > 0
 
     try {
-        await addFollow(paths(home).data, spaceId, { remote: base, token: key, label, address, direction, start })
+        await addFollow(paths(home).data, spaceId, { remote: base, token: key, label, address: name ? null : address, direction, start, name, via, lastAddress })
     } catch (error) {
         if (error instanceof FollowsCorruptError) return { ok: false, reason: 'corrupt' }
         throw error
     }
-    return { ok: true, base, running, address: address || null, previous, hadFile, keptKey }
+    return { ok: true, base, running, address: address || null, previous, hadFile, keptKey, name, via }
 }

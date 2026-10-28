@@ -1199,7 +1199,7 @@ const cmdFollow = async (args) => {
     // `--take-mine` / `--take-host` alone may name a space already followed:
     // followSpace takes that follow's remote. Anything else needs --from.
     if (!spaceId || (!from && !takeHost && !takeMine)) {
-        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
+        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…  (or --from <their-name> on the same wifi)`)
         process.exitCode = 1
         return
     }
@@ -1221,6 +1221,7 @@ const cmdFollow = async (args) => {
         const where = from || stored?.remote
         const pin = at || stored?.address || null
         if (result.reason === 'no-from') fail(ui.followNotFollowed(spaceId))
+        else if (result.reason === 'not-found') fail(ui.followNameNotFound(result.name, result.tried))
         else if (result.reason === 'remote-differs') fail(ui.followRemoteDiffers(spaceId, result.stored, result.base))
         else sayFollowRefusal(result.reason, { spaceId, url: where }, pin)
         process.exitCode = 1
@@ -1228,7 +1229,7 @@ const cmdFollow = async (args) => {
     }
     if (result.keptKey) say(ui.followKeptKey())
     // result.address is the pin used: typed with --at, or the stored follow's.
-    say(ui.following(spaceId, result.base, result.running, result.address))
+    say(ui.following(spaceId, result.base, result.running, result.address, result.name ? { name: result.name, via: result.via } : null))
 }
 
 /** `di follows` — what this install is following, and whether it is keeping up. */

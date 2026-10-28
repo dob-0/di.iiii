@@ -69,7 +69,7 @@ const writeFollows = async (dataDir, follows) => {
     return follows
 }
 
-const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null, direction = null, start = null }) => {
+const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null, direction = null, start = null, name = null, via = null, lastAddress = null }) => {
     const follows = followsForWrite(dataDir)
     follows[spaceId] = {
         remote: String(remote || '').replace(/\/$/, ''),
@@ -80,6 +80,14 @@ const addFollow = async (dataDir, spaceId, { remote, token, label = null, addres
         // entirely rather than null, so a record with no pin serialises
         // byte-identically to one written before this existed.
         ...(address ? { address } : {}),
+        // Followed by NETWORK NAME (`--from <label>`): the label and zone it was
+        // found by, the route that found it (beacon | dns | last) and the last
+        // address that worked. Not a pin: the address is looked up again when a
+        // request fails (serverXR/src/follow/nameResolve.js). Absent when the
+        // follow was typed as a URL, like `address`.
+        ...(name ? { name: { label: name.label, zone: name.zone } } : {}),
+        ...(name && via ? { via } : {}),
+        ...(name && lastAddress ? { lastAddress } : {}),
         // `di follow --take-host | --take-mine`: the answer to a refusal, spent
         // on the first comparison of each stream and then cleared by the
         // server (clearDirection). `start: 'replay'` is the explicit opt-in to
@@ -89,6 +97,23 @@ const addFollow = async (dataDir, spaceId, { remote, token, label = null, addres
         ...(start === 'replay' ? { start } : {})
     }
     return writeFollows(dataDir, follows)
+}
+
+/**
+ * A named follow found its host: remember where (and by which route). Changes
+ * only those fields, and writes only when something differs. `remote` moves
+ * when the host announced another port. Nothing happens for a follow that is
+ * gone or was never typed as a name.
+ */
+const recordResolved = async (dataDir, spaceId, { address, via, remote = null }) => {
+    const follows = followsForWrite(dataDir)
+    const entry = follows[spaceId]
+    if (!entry?.name) return false
+    const nextRemote = remote ? String(remote).replace(/\/$/, '') : entry.remote
+    if (entry.lastAddress === address && entry.via === via && entry.remote === nextRemote) return false
+    follows[spaceId] = { ...entry, remote: nextRemote, via, lastAddress: address }
+    await writeFollows(dataDir, follows)
+    return true
 }
 
 /** Spend a direction: the first comparison happened, later edits sync the ordinary way. */
@@ -139,4 +164,4 @@ const writeFollowState = async (dataDir, spaceId, state) => {
     await writeFileAtomic(file, JSON.stringify({ format: STATE_FORMAT, version: 1, savedAt: new Date().toISOString(), state }))
 }
 
-module.exports = { readFollows, writeFollows, addFollow, clearDirection, removeFollow, readFollowState, writeFollowState, filePath, statePath, FORMAT }
+module.exports = { readFollows, writeFollows, addFollow, recordResolved, clearDirection, removeFollow, readFollowState, writeFollowState, filePath, statePath, FORMAT }

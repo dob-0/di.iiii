@@ -114,6 +114,9 @@ export const followKeyLines = (spaceId, entry, key, now = Date.now()) => {
     return [style.yellow(`key: ${key.scope || 'edit'} key ${days === 0 ? 'expires today' : `expires in ${days} ${days === 1 ? 'day' : 'days'}`} — ask the host's owner for a new one, then: ${CMD} follow ${spaceId} --from ${from} --key - --into ${spaceId}`)]
 }
 
+// The routes nameResolve.js finds a host by, in the words `di follow` and `di follows` use.
+const ROUTE_WORDS = { beacon: 'its beacon on this wifi', dns: 'its name in DNS', last: 'the last address that worked' }
+
 export const ui = {
     phonesLine,
     oneAddressWhy,
@@ -266,6 +269,13 @@ export const ui = {
             : message
     },
 
+    // `tried` is the order nameResolve.js asked in; say each, so "not found"
+    // names what was looked at and not only that nothing answered.
+    followNameNotFound: (name, tried = []) => [
+        `could not find ${name} — nobody announced it on this wifi, its name does not resolve, and no address of it is stored.`,
+        style.dim(`tried: ${tried.map(route => ROUTE_WORDS[route] || route).join(', ')}. is it shared (di share) and on this network? or say where it is: --at <address>`)
+    ].join('\n'),
+
     followKeptKey: () => 'kept the stored edit key — no --key was given, and the remote is the same.',
     followRemoteDiffers: (spaceId, stored, base) =>
         `${spaceId} is followed from ${stored}, with an edit key; ${base} is another remote, and no --key was given — nothing was changed.\n` +
@@ -277,9 +287,9 @@ export const ui = {
 
     badAddress: (value) => `${value} is not an address — --at wants an IPv4 or IPv6 literal, like --at 100.87.4.12`,
 
-    following: (spaceId, remote, running, at = null) => [
+    following: (spaceId, remote, running, at = null, found = null) => [
         `following ${style.cyan(spaceId)} on ${remote.replace(/\/serverXR$/, '')}.`,
-        at ? style.dim(`the name stays — the socket goes to ${at}.`) : null,
+        found?.name ? style.dim(`found ${found.name.label} by ${ROUTE_WORDS[found.via] || found.via}, at ${at} — the name stays for the certificate check.`) : (at ? style.dim(`the name stays — the socket goes to ${at}.`) : null),
         style.dim('edits travel both ways — the space and every project in it. your copy stays on your disk.'),
         // Said plainly rather than discovered. Files named by a PROJECT are
         // carried (serverXR/src/follow/assets.js); files placed straight into
@@ -303,7 +313,9 @@ export const ui = {
         return [...head, ...ids.map((id) => {
             const entry = follows[id]
             const state = byId.get(id)
-            const where = String(entry.remote || '').replace(/\/serverXR$/, '')
+            const where = entry.name
+                ? `${entry.name.label}.${entry.name.zone}${entry.via ? ` ${style.dim(`(${entry.via}${entry.lastAddress ? ` ${entry.lastAddress}` : ''})`)}` : ''}`
+                : String(entry.remote || '').replace(/\/serverXR$/, '')
             if (!state && elsewhere) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim(`(carried by ${by})`)}`
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
             // The key's scope (SPEC_space_sync_keys.md §13): manage carries this
