@@ -4,7 +4,7 @@
  * Three artifacts come out of this repo, and they differ by exactly one thing —
  * whether the works (src/works/works.js) are in them:
  *
- *   hosted        di-studio.xyz. Everything, plus the hosting furniture that
+ *   hosted        diiii.xyz. Everything, plus the hosting furniture that
  *                 only means something on that domain. ~128 MB of dist.
  *   local         DI_PROFILE=local — an artist's own machine. The program and
  *                 the works, without the furniture.
@@ -60,12 +60,19 @@ import { WORK_IDS, workAssetDirs, workEntries, workPublicDirs } from './works.js
 export const PROGRAM_PUBLIC_DIRS = ['fonts', 'draco', 'basis', 'suite', 'unicode-fonts', 'vendor', 'rigbuild', 'kit']
 
 /**
+ * Single files at the root of public/ that src/index.html links on every page:
+ * without them an install answers the shell's manifest link and the root icon
+ * probe with a 404 (gaps G49, G50, 2026-10-21).
+ */
+export const PROGRAM_PUBLIC_FILES = ['favicon.ico', 'manifest.webmanifest']
+
+/**
  * @param {Record<string, string|undefined>} env  usually process.env
  */
 export const resolveBuildProfile = (env = {}) => {
     const local = env.DI_PROFILE === 'local'
     // Slim is only a thing a local build can be. `DI_LOCAL_SLIM=1` on a hosted
-    // build would be a request to ship di-studio.xyz without its exhibitions,
+    // build would be a request to ship diiii.xyz without its exhibitions,
     // which is not a shape anyone wants and not one this returns.
     const slim = local && env.DI_LOCAL_SLIM === '1'
     return {
@@ -83,7 +90,7 @@ export const resolveBuildProfile = (env = {}) => {
         stubEntries: slim ? workEntries() : [],
         stubAssetDirs: slim ? workAssetDirs() : [],
         // null on the hosted build: it copies public/ wholesale and needs no list.
-        publicInclude: local ? [...PROGRAM_PUBLIC_DIRS, ...(slim ? [] : workPublicDirs())] : null,
+        publicInclude: local ? [...PROGRAM_PUBLIC_DIRS, ...PROGRAM_PUBLIC_FILES, ...(slim ? [] : workPublicDirs())] : null,
         // Belt and braces for the slim build: if a work's directory ever gets
         // typed into PROGRAM_PUBLIC_DIRS by hand, the registry says it does not
         // belong in a copy of the program alone.

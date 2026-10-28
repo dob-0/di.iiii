@@ -30,6 +30,7 @@
 //
 // Pure: no React, no timers, no fetch. `now` is always passed in.
 
+import { cueClockAt } from '../shared/cueClock.js'
 import { deskLookId, lookIdOfDesk } from './looks.js'
 
 /** The show a document carries, or null. Only cues that fire a RIG look count. */
@@ -72,48 +73,30 @@ export const showTimeline = (show) => {
     return { steps, lengthMs: at, loops, n: show.cues.length }
 }
 
-const mod = (a, n) => ((a % n) + n) % n
-
 /**
  * Where the show is at `now` (ms since 1970 UTC, already corrected to the server).
  * Returns { index, n, lookId, name, firedAt, fadeMs, fromLookId, nextInMs, cycle, ended }
  * — `firedAt` on the same clock as `now`; `fromLookId` is the look the fade comes from
- * (null for the very first cue of a list that does not loop).
+ * (null for the very first cue of a list that does not loop). The arithmetic is the
+ * shared cue clock's (shared/cueClock.cjs), the one the desk's runner and the Cue node
+ * read too; `ended` here also covers a cue that waits for GO: no one presses it here.
  */
 export const showStateAt = (show, now) => {
-    const line = showTimeline(show)
-    if (!line) return null
-    const { steps, lengthMs, loops, n } = line
-    const t = now - show.epoch
-    let cycle = 0
-    let tt = t
-    if (loops) {
-        cycle = Math.floor(t / lengthMs)
-        tt = mod(t, lengthMs)
-    }
-    let i = 0
-    if (tt >= 0) {
-        while (i + 1 < steps.length && steps[i + 1].startMs <= tt) i += 1
-    }
-    const step = steps[i]
-    const last = steps[steps.length - 1]
-    const ended = !loops && i === steps.length - 1 && (step.holdMs <= 0 || tt >= step.startMs + step.holdMs)
-    let from = null
-    if (i > 0) from = steps[i - 1].lookId
-    else if (loops) from = last.lookId
-    const firedAt = show.epoch + (loops ? cycle * lengthMs : 0) + step.startMs
-    const nextInMs = ended || step.holdMs <= 0 ? null : Math.max(0, step.startMs + step.holdMs - tt)
+    if (!show?.cues?.length) return null
+    const state = cueClockAt({ list: show.cues, epoch: show.epoch, loop: show.loop === true, now })
+    if (!state) return null
+    const from = state.from >= 0 ? show.cues[state.from].lookId : null
     return {
-        index: step.index,
-        n,
-        lookId: step.lookId,
-        name: step.name,
-        firedAt,
-        fadeMs: step.fadeMs,
-        fromLookId: from && from !== step.lookId ? from : null,
-        nextInMs,
-        cycle,
-        ended
+        index: state.index,
+        n: state.n,
+        lookId: state.lookId,
+        name: state.name,
+        firedAt: state.firedAt,
+        fadeMs: state.fadeMs,
+        fromLookId: from && from !== state.lookId ? from : null,
+        nextInMs: state.nextInMs,
+        cycle: state.cycle,
+        ended: state.ended || state.waiting
     }
 }
 

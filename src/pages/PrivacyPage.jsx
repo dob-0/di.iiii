@@ -261,9 +261,16 @@ export default function PrivacyPage() {
                 <section className="legal-section">
                     <h2>retention and backups</h2>
                     <ul>
-                        <li>Idle spaces expire after 30 days. Guest sandboxes after 7. Account
-                            sandboxes archive to a snapshot after 180 days and revive on your next
+                        <li>Idle spaces expire after 30 days: the sweep moves them to the trash,
+                            where they can be restored for another 30 days before they are
+                            deleted. Guest sandboxes expire after 7 days, with the same 30 days
+                            in the trash. A space that is published, listed, linked from the
+                            site or reachable by its own address is not swept. Account sandboxes
+                            archive to a snapshot after 180 days and revive on your next
                             visit.</li>
+                        <li>The sweep keeps a log of what it did (<code>sweep_log</code>: the
+                            time, the space, the action, the reason and the owner&apos;s account
+                            id, or guest). Nothing deletes those rows automatically.</li>
                         <li>Edit history keeps at most the last 500 changes of each space and each
                             project.</li>
                         <li>Accounts, open-call applications, published assets, mail-link records

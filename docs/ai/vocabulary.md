@@ -38,6 +38,7 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **lamp** | A stage fixture: the real device on the rig (a moving head, a par, a strip). In a scene it is a light that carries a fixture: a typed one from the rig builder, or a join to a fixture of the lighting desk. A project's card counts these: "74 lamps". Owner, 2026-10-13: *"lamp" = a stage fixture.* Added 2026-10-13. |
 | **light** | A 3D scene light: the sun, a point, a spot, an ambient light, joined to nothing on the rig. Written with a small l; the lighting desk is **Light** with a capital. A project's card counts these: "2 lights". Owner, 2026-10-13: *"light" = a 3D scene light (sun, point…).* Added 2026-10-13. |
 | **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
+| **mesh** | serverXR's live hub at `/serverXR/mesh`, where every screen and phone in one **group** hears what the others publish on a **channel**. Spoken in Nodes through Mesh In and Mesh Out. The hub's own protocol calls a group a `room`; copy says **group**, because Room is banned copy. Added 2026-10-21. |
 | **post** | A short message the share door sends out about a space or a project: words, one link, pictures or a video. A draft until it is approved; then sent to the channels it names. Never a project and never a page. Added 2026-10-21. |
 | **share channel** | An outside place a **post** can go: a Telegram channel, Bluesky, Mastodon. Not a release channel (`dev`, `stable`) and not a lighting-desk channel. Where the context is clear, "channel". Added 2026-10-21. |
 | **share door** | The part of di.iiii that drafts a post, shows its preview and sends it to the share channels (`serverXR/src/share/`, `di post`). Added 2026-10-21. |
@@ -214,21 +215,23 @@ answering forever like any printed link.
 **The world is `diiii.xyz`.** MANIFESTO's three distances named thedi.studio as the public
 distance. The public distance is the platform, and the platform's address is now `diiii.xyz`
 (live 2026-09-11). `thedi.studio` is the studio's own address on it — one space, eventually
-served under its own domain. `di-studio.xyz` keeps serving, unchanged and forever: it is the
-name printed on the QR in the room and on the workshop handouts, and its job is never to mean
-anything new again.
+served under its own domain. `diiii.xyz` is the one public address (owner, 2026-10-21:
+"diiii.xyz main public"): every new link, default and page names it. `di-studio.xyz` is the old
+address and is to forward to `diiii.xyz`; it is the name printed on the QR in the room and on
+the workshop handouts, so it keeps answering, and its job is never to mean anything new again.
+`scripts/oldAddress.test.js` fails when new code names it outside its allowlist.
 
 ## One open product call
 
 **The creator host must not be named `studio.`** The URL spec (DRAFT, unsigned) proposes
-`studio.di-studio.xyz` for the authoring host. That would make Studio the name of the entire
+`studio.diiii.xyz` for the authoring host. That would make Studio the name of the entire
 authoring side of di.iiii — which is the exact one-word-two-sizes disease this file exists
 to cure, and a hostname in every creator's URL bar teaches it harder than any copy can undo.
 
 The ratified direction is the opposite: MANIFESTO §6 states that "Studio's own role is being
 drawn into Raw's node model as a container node — one palette entry you enter to find its
 subgraph." Ratified beats unsigned, so **Studio is one place inside the product, not the product**. If Stage 0 of the URL spec ever
-ships, give the host a name that is not a product noun — `edit.di-studio.xyz` — or reopen this.
+ships, give the host a name that is not a product noun — `edit.diiii.xyz` — or reopen this.
 
 ## Spelling
 
@@ -270,12 +273,12 @@ Changed by this table:
 | `node.null` | `Node` | **Null** | TD's exact term for the blank pass-through primitive; "Node" named it after its whole category. (Still a shell, hidden from the palette.) |
 
 Confirmed as they stand (the census found no better professional word):
-- **make**: Cube · Sphere · Plane · Cylinder · Cone · Torus *(the TD-audit geometry wave, 2026-08-20 — primitives the entity system always had, finally spoken as nodes)* · Merge · Array *(shipped 2026-08-20 — repeats what arrives, Count × Offset)* · Transform *(re-frames one copy — Array's sibling)* · Constructor · Text · Browser · Image · Create *(paletteHidden in the node editor — objects belong to Studio)* · Line · Circle *(2026-08-21 — Line is a stroke between two wirable endpoints, drawn as a thin cylinder; Circle is a flat disc facing +Z like Plane; both answer Geometry descriptors so Array and Transform can repeat them)*
-- **numbers**: Number · Colour · Vector · Boolean · String · Time · **Math** *(the operator family, 2026-09-01 — one card with an operation menu, wearing the name of the operation it is set to: Add · Subtract · Multiply · Divide · Modulo · Power · Sin · Absolute. Those eight labels survive as OPERATION names, not type names, so nothing a person had learned to read on a card changed)* · Mix · Clamp · **Route** *(Gate and Switch, merged the same day — same menu idea; Gate is the operation it is born in)* · Compare *(stayed its own card: it is wire-first, three boolean outputs, and an operation menu can only answer one question at a time)* · Lag · Noise *(shipped 2026-08-20; Noise's variation input is Variant — "seed" is banned copy)* · Range · Oscillator · Logic · Extremes · Absolute · Round · Ease *(the TD-audit numbers wave, 2026-08-20 — wire-first: Oscillator speaks Sine/Square/Triangle/Saw, Logic answers Both/Either/One/Neither, Ease shapes Smooth/Ease In/Ease Out/Bounce)* · Counter · Hold · Delay · Timer · Trigger · Speed · Toggle *(the state wave — every one remembers through frameMemory and reacts to rising edges)* · Split · Combine · Channels · Compose · Distance · Ramp *(the vector/colour wave — pure taps and joins for the two compound wire types)* · Dot · Cross · Direction · Rotation · Aim · Random *(the second vector wave, 2026-08-21 — Dot's Angle and Rotation's Angle input speak degrees; Aim's output is a rotation ready for any shape's Rotation port; Random is one fixed draw per Variant, Noise is the one that wanders)*
+- **make**: Cube · Sphere · Plane · Cylinder · Cone · Torus *(the TD-audit geometry wave, 2026-08-20 — primitives the entity system always had, finally spoken as nodes)* · Merge · Array *(shipped 2026-08-20 — repeats what arrives, Count × Offset)* · Transform *(re-frames one copy — Array's sibling)* · Constructor · Text · Browser · Image · QR Code *(2026-10-21 — draws an address as a picture wire)* · Create *(paletteHidden in the node editor — objects belong to Studio)* · Line · Circle *(2026-08-21 — Line is a stroke between two wirable endpoints, drawn as a thin cylinder; Circle is a flat disc facing +Z like Plane; both answer Geometry descriptors so Array and Transform can repeat them)*
+- **numbers**: Number · Colour · Vector · Boolean · String · Time · **Math** *(the operator family, 2026-09-01 — one card with an operation menu, wearing the name of the operation it is set to: Add · Subtract · Multiply · Divide · Modulo · Power · Sin · Absolute. Those eight labels survive as OPERATION names, not type names, so nothing a person had learned to read on a card changed)* · Mix · Clamp · **Route** *(Gate and Switch, merged the same day — same menu idea; Gate is the operation it is born in)* · Compare *(stayed its own card: it is wire-first, three boolean outputs, and an operation menu can only answer one question at a time)* · Lag · Noise *(shipped 2026-08-20; Noise's variation input is Variant — "seed" is banned copy)* · Range · Oscillator · Logic · Extremes · Absolute · Round · Ease *(the TD-audit numbers wave, 2026-08-20 — wire-first: Oscillator speaks Sine/Square/Triangle/Saw, Logic answers Both/Either/One/Neither, Ease shapes Smooth/Ease In/Ease Out/Bounce)* · Counter · Hold · Delay · Timer · Trigger · Speed · Toggle *(the state wave — every one remembers through frameMemory and reacts to rising edges)* · Flash Guard *(2026-10-21 — WCAG 2.2 SC 2.3.1, three flashes or below: holds a light or picture value back so no more than three flashes a second pass; Rate and Limited say when it acted; the count is `src/project/nodes/flashRule.js`, shared with the offline flash checks; Limit only goes stricter)* · Cue *(2026-10-21 — the project's cue list as wires: Index, Name, Look, Progress, Fading, Fired out; Go, Back, Jump, Loop in. Where the list is comes from the shared cue clock, `shared/cueClock.cjs`, the same lines the desk's cue runner and the show's clock run)* · Split · Combine · Channels · Compose · Distance · Ramp *(the vector/colour wave — pure taps and joins for the two compound wire types)* · Dot · Cross · Direction · Rotation · Aim · Random *(the second vector wave, 2026-08-21 — Dot's Angle and Rotation's Angle input speak degrees; Aim's output is a rotation ready for any shape's Rotation port; Random is one fixed draw per Variant, Noise is the one that wanders)*
 - **the scene**: Scene · Kiosk · Geo · Constructor's siblings 3D Desk / 2D Desk *(deliberate survivors — see the 2026-08-19 note; 3D Desk retires from the palette with the container pass)* · Light *(splits into Light + Environment in the Light pass — reserved below)* · Camera · Background · Grid · In · Out · Studio · Node 0 / Activate Node / Universe Link *(shells, hidden)*
 - **watch**: Monitor · Inspector · Outliner · Timeline · Director
-- **bring in**: Button · Keyboard *(the operator's hands, 2026-08-20 — the desk's Go and a chosen key; Keyboard ignores keys typed into fields)* · Slider · Pad *(the thumb controls, 2026-10-21 — Button's split: the level every window agrees on is written when the finger lifts, the finger itself is this window's while Held; Slider has Min, Max and a Direction, Pad answers X and Y in -1..1 and springs back to the centre unless Spring back is off)* · Model · Video · Sound *(kept over "Audio": a Sound is a thing standing in the scene, matching Blender's Speaker idea; "audio" is reserved for the analysis outputs coming with the show operators)* · Webcam · Microphone · MIDI In · the capture shells (AR Camera, Insta360 Camera, Stereo Camera, RealSense D405, OSC In, PTZ Camera)
-- **send out**: MIDI Out *(REAL since 2026-08-21 — Web MIDI send: Trigger holds the note, a change while held re-strikes, a changed Value goes out as CC; Status answers what it is doing)* · OSC Out *(shell — no UDP without the bridge)* — and the streaming four keep their labels until built
+- **bring in**: Button · Keyboard *(the operator's hands, 2026-08-20 — the desk's Go and a chosen key; Keyboard ignores keys typed into fields)* · Slider · Pad *(the thumb controls, 2026-10-21 — Button's split: the level every window agrees on is written when the finger lifts, the finger itself is this window's while Held; Slider has Min, Max and a Direction, Pad answers X and Y in -1..1 and springs back to the centre unless Spring back is off)* · Visitor *(what the person's phone or screen is, 2026-10-21 — Phone, Reduced motion, Portrait, Width, Height, Language, Embedded, and a Name, Hue and Id kept in that browser; "visitor" because it describes whoever opens the page, the word this file already uses for them)* · Tilt *(how the phone is tipped, X and Y in -1..1, 2026-10-21; not "Gyro" — the reading is deviceorientation, not the gyroscope's rate)* · Model · Video · Sound *(kept over "Audio": a Sound is a thing standing in the scene, matching Blender's Speaker idea; "audio" is reserved for the analysis outputs coming with the show operators)* · Mesh In *(2026-10-21 — what other screens and phones in the group publish on one channel: Value, From, Time, a Signal count per event, Up, Status; optional Min/Max, Allowed and Max Length checks)* · Webcam · Microphone · MIDI In · the capture shells (AR Camera, Insta360 Camera, Stereo Camera, RealSense D405, OSC In, PTZ Camera)
+- **send out**: MIDI Out *(REAL since 2026-08-21 — Web MIDI send: Trigger holds the note, a change while held re-strikes, a changed Value goes out as CC; Status answers what it is doing)* · Mesh Out *(2026-10-21 — publishes Value on a channel to the group, at most once per Interval (200 ms by default, 50 ms floor), the latest value winning, only while Up)* · OSC Out *(shell — no UDP without the bridge)* — and the streaming four keep their labels until built
 - **agents**: Agent · Keeper · Agent Run · Work Status *(dev-local, low-stakes; renamed only if they ever ship)*
 
 Reserved names — settle NOW so the build waves don't invent their own:
@@ -283,7 +286,7 @@ Reserved names — settle NOW so the build waves don't invent their own:
 | --- | --- | --- |
 | `world.environment` (Light split) | **Environment** | TD Environment Light; the scene's ambient/directional settings |
 | `light.point` (Light split) | **Light** | the lamp you place; the legacy dual-identity `world.light` goes paletteHidden with a non-colliding label decided in that pass |
-| streaming four, when built | **Composite · Switch (texture) · Output · Record** | TD TOP names; if number-Switch and texture-Switch would meet in one palette, the texture one ships as **Composite**'s sibling and the collision is resolved in that PR, not silently |
+| streaming four, when built | **Composite · Switch (texture) · Output** · ~~Record~~ **Recorder** (built 2026-10-21, see the amendment below) | TD TOP names; if number-Switch and texture-Switch would meet in one palette, the texture one ships as **Composite**'s sibling and the collision is resolved in that PR, not silently |
 
 Guard: `src/nodeLabelVocabulary.test.js` — labels must carry no banned word, no
 parenthetical, no leading article, and stay within two words. The prose guard
@@ -416,6 +419,13 @@ Still open for the owner (no word is settled here, so nothing changed): the fami
 sits on Kiosk, Studio, In and Out as well as on the scene's own cards; and **kiosk** names both the
 node and the projector appliance in the wiki. The questions are in PR "Nodes: names".
 
+## Amended 2026-10-21 — QR Code
+
+| Word | Its one job |
+|---|---|
+| **QR Code** | The node that draws an address as a QR code (ISO/IEC 18004) on a picture wire, for a plane, an Image panel or Picture Out. Text left empty encodes this tier's own address, so a project moved between tiers never shows a dead code. "QR" is the standard's own name, kept in capitals; not "barcode", which is the one-dimensional kind. |
+| **Correction** (QR Code) | How much of the code may be worn or covered and still read: **L** about 7 %, **M** 15 % (default), **Q** 25 %, **H** 30 %. The standard calls it the error correction level; the port says the one word. |
+
 ## Amended 2026-10-14 — the laser nodes (Phase 1 of the laser workflow)
 
 Design: the raw laser workflow decision of 2026-10-14 (lands in docs/ai/decisions with docs PR #933). The rows for **master clock**, **clock**, **cube group**,
@@ -428,6 +438,35 @@ Design: the raw laser workflow decision of 2026-10-14 (lands in docs/ai/decision
 | **Laser** (port type) | The wire type laser nodes speak: a set of paths (below). Green on the canvas. Not to be confused with the **Laser** node (`laser.shape`), which keeps its name. |
 | **path** (laser) | One unbroken stroke the beam draws, lit all along. A **path set** (frame v2 in code) is what flows between laser nodes; Laser Out turns it into the wire's points, putting the dark moves between paths. Developer word; the card says "Frame". |
 | **Auto** (Laser Out's budget) | The point budget sized from the drawn length instead of a number. The checkbox beside Laser Out's Points slider; 0 on the Budget port means the same. |
+| **Laser File** | The node (`laser.file`, Phase 9, 2026-10-20) that draws a file as laser paths: an ILDA file (formats 0, 1, 4, 5) or SVG path data, told apart by its bytes. Its File is a project asset. Not "ILDA node" or "SVG node": one node reads both. |
+| **Laser Text** | The node (`laser.text`, Phase 9, 2026-10-20) that writes a string as single-stroke laser paths in Hershey Roman Simplex. Not "Text": that card shows text in the scene. |
+
+## Amended 2026-10-21 — Beat and Oscillator v2 (Phase 2 of the laser workflow)
+
+Decision 3 of `docs/ai/decisions/2026-10-14-raw-laser-workflow.md` (owner 2026-10-14): one **master clock** runs, LFOs follow it,
+extra **clocks** can be added. The rows for **master clock** and **clock** are in the dictionary above; these are the words Phase 2 adds.
+
+| Word | Its one job |
+|---|---|
+| **Beat** | The node that is a **clock** (TouchDesigner's Beat CHOP): a tempo in BPM and the moment of beat 0. Outputs Clock, Ramp, Pulse, Count, Beat, Bar, Ramp bar, BPM. Its **Clock** setting is **Master** (the first Beat set to Master is the project's master clock) or **Extra**. Not "Time": that card counts seconds. |
+| **Tempo from** | A Beat's choice of whose tempo it keeps: **This node** (its BPM and its own taps) or **Light desk** (the `/light` desk's clock and tap, an optional source; with no desk answering, the Beat keeps its own). |
+| **Clock** (port type) | The wire a Beat's Clock output speaks; wired into an Oscillator's Clock, that Oscillator follows that clock instead of the master. |
+| **Beats** (Oscillator) | How many beats of its clock one cycle lasts, ¼ … 64. 0 keeps the cycle in Hz (Frequency), which is what every Oscillator made before Phase 2 does. |
+| **Bias** (Oscillator) | Leans the cycle: −1 … 1 moves the half-way point (a triangle's peak, a square's edge) from the middle toward an end; on a square it is the duty. TouchDesigner's word. |
+| **Sample & hold** | The wave that holds one random value for a whole cycle and jumps at the next. The `/light` desk calls the same wave **random**. **Random glide** walks from one cycle's value to the next instead of jumping. |
+
+## Amended 2026-10-21 — Recorder and Still (keep what the show looked like)
+
+The owner, 2026-10-21: "yes build all 12" — this is one of the twelve. The reserved word above was
+**Record**; the brief named the card **Recorder**, the noun for the thing that records (a verb on a
+card reads as a button). Type id unchanged: `stream.recorder`.
+
+| Word | Its one job |
+|---|---|
+| **Recorder** (`stream.recorder`) | The node that records a picture wire (a Scene's Picture, a Picture Out), and a sound if one is wired, to a WebM file between **Start** and **Stop**. Its outputs: **Recording**, **Seconds**, **Status**, **File**. The file lands in the project's files. |
+| **Still** (`stream.still`) | The node that saves one PNG of a picture wire on **Take** (its button, or a rising signal). Outputs **Status** and **File**. |
+| **take** | One thing a Recorder or a Still kept: one recording, or one still. Its file is named `<kind>-<source>-<date>`, e.g. `still-scene-2026-10-21T14-03-07.png`, because a project file carries a name and a date and nothing else. |
+| **seek** (the clock) | Holding the document clock at one moment so a test browser can cut a project frame-exact: `__seek(t)` (seconds), `__ready`, `__play`. Developer words; no card shows them. |
 
 ## Proposed 2026-10-13 — a lighting look, and the Dilijan words (owner's pick, nothing renamed)
 

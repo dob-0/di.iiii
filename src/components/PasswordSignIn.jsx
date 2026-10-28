@@ -56,11 +56,19 @@ const field = {
     width: '100%',
     px: 1.5,
     py: 1,
-    fontSize: 14,
+    // 16 px or more, or iOS Safari zooms the page into the field on focus.
+    fontSize: 16,
     borderRadius: 1,
     border: '1px solid var(--ui-border)',
     color: 'var(--ui-text-primary)',
-    background: 'var(--ui-bg)'
+    background: 'var(--ui-bg)',
+    // The field with focus has to look different from the one without: with
+    // InputBase's defaults nothing changed at all (WCAG 2.4.7).
+    '&.Mui-focused': {
+        borderColor: 'var(--ui-accent)',
+        outline: '2px solid var(--ui-accent)',
+        outlineOffset: 1
+    }
 }
 
 export default function PasswordSignIn({ onSignedIn, resetToken = null, canMail = true }) {
@@ -141,11 +149,13 @@ export default function PasswordSignIn({ onSignedIn, resetToken = null, canMail 
                 />
             )}
 
+            {/* Said out loud as well as printed: a refusal that only appears
+                is one a screen reader never hears (WCAG 4.1.3). */}
             {error && (
-                <Typography variant="caption" sx={{ color: 'var(--ui-danger)' }}>{error}</Typography>
+                <Typography variant="caption" role="alert" sx={{ color: 'var(--ui-danger)' }}>{error}</Typography>
             )}
             {said && (
-                <Typography variant="caption" sx={{ color: 'var(--ui-text-muted)' }}>{said}</Typography>
+                <Typography variant="caption" role="status" sx={{ color: 'var(--ui-text-muted)' }}>{said}</Typography>
             )}
 
             <Button

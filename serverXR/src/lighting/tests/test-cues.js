@@ -103,6 +103,22 @@ check('a pressed scene HOLDS: no auto-advance, no countdown, no loop, even with 
   assert.strictEqual((await onLayer(d)).lookId, 'rig-b');
 });
 
+check('the cue summary says how far into its fade and hold the cue is (shared/cueClock.cjs)', async () => {
+  const timed = LOOKS.map((l, i) => ({ id: 'cue-' + i, name: l.name, lookId: l.id, hold: 0.3, fade: 0.1 }));
+  await d.POST('/api/cues/load', { project: 'p', list: timed, loop: false });
+  await d.POST('/api/cues/go', { index: 0 });
+  let { body } = await d.GET('/api/cues');
+  assert.strictEqual(body.cues.fading, true, 'inside its 0.1 s fade');
+  assert.ok(body.cues.progress >= 0 && body.cues.progress < 1 / 3, `progress ${body.cues.progress} is under fade/hold`);
+  await sleep(150);
+  ({ body } = await d.GET('/api/cues'));
+  assert.strictEqual(body.cues.fading, false, 'the fade is served');
+  assert.ok(body.cues.progress > 0.4 && body.cues.progress < 1, `progress ${body.cues.progress} over the 0.3 s hold`);
+  await d.POST('/api/cues/stop', {});
+  ({ body } = await d.GET('/api/cues'));
+  assert.strictEqual(body.cues.progress, 0, 'stopped: no progress');
+});
+
 check('play in order is one switch; the next press of a scene turns it off', async () => {
   await d.POST('/api/cues/load', { project: 'p', list: list(0.05), loop: false });
   await d.POST('/api/cues/go', { index: 0 });

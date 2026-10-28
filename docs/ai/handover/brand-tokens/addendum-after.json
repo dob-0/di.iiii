@@ -1,0 +1,124 @@
+{
+  "perform-laptop-light": {
+    "rootScheme": "dark",
+    "rootAccent": "rgb(77, 249, 255)",
+    "natives": 2,
+    "tally": {
+      "checkbox:dark:rgb(77, 249, 255)": 1,
+      "range:dark:rgb(255, 255, 255)": 1
+    },
+    "pill": "999px"
+  },
+  "studio-inspector-laptop-light": {
+    "rootScheme": "dark",
+    "rootAccent": "rgb(77, 249, 255)",
+    "natives": 10,
+    "tally": {
+      "color:dark:rgb(77, 249, 255)": 2,
+      "range:dark:rgb(77, 249, 255)": 4,
+      "checkbox:dark:rgb(77, 249, 255)": 2,
+      "select-one:dark:rgb(77, 249, 255)": 2
+    },
+    "pill": "999px"
+  },
+  "equipment-order-laptop-light": {
+    "rootScheme": "dark",
+    "rootAccent": "rgb(77, 249, 255)",
+    "natives": 2,
+    "tally": {
+      "date:light:rgb(0, 151, 163)": 2
+    },
+    "pill": "999px"
+  },
+  "perform-laptop-dark": {
+    "rootScheme": "dark",
+    "rootAccent": "rgb(77, 249, 255)",
+    "natives": 2,
+    "tally": {
+      "checkbox:dark:rgb(77, 249, 255)": 1,
+      "range:dark:rgb(255, 255, 255)": 1
+    },
+    "pill": "999px"
+  },
+  "studio-inspector-laptop-dark": {
+    "rootScheme": "dark",
+    "rootAccent": "rgb(77, 249, 255)",
+    "natives": 10,
+    "tally": {
+      "color:dark:rgb(77, 249, 255)": 2,
+      "range:dark:rgb(77, 249, 255)": 4,
+      "checkbox:dark:rgb(77, 249, 255)": 2,
+      "select-one:dark:rgb(77, 249, 255)": 2
+    },
+    "pill": "999px"
+  },
+  "equipment-order-laptop-dark": {
+    "rootScheme": "dark",
+    "rootAccent": "rgb(77, 249, 255)",
+    "natives": 2,
+    "tally": {
+      "date:light:rgb(0, 151, 163)": 2
+    },
+    "pill": "999px"
+  },
+  "perform-phone-light": {
+    "rootScheme": "dark",
+    "rootAccent": "rgb(77, 249, 255)",
+    "natives": 1,
+    "tally": {
+      "checkbox:dark:rgb(77, 249, 255)": 1
+    },
+    "pill": "999px"
+  },
+  "studio-inspector-phone-light": {
+    "rootScheme": "dark",
+    "rootAccent": "rgb(77, 249, 255)",
+    "natives": 10,
+    "tally": {
+      "color:dark:rgb(77, 249, 255)": 2,
+      "range:dark:rgb(77, 249, 255)": 4,
+      "checkbox:dark:rgb(77, 249, 255)": 2,
+      "select-one:dark:rgb(77, 249, 255)": 2
+    },
+    "pill": "999px"
+  },
+  "equipment-order-phone-light": {
+    "rootScheme": "dark",
+    "rootAccent": "rgb(77, 249, 255)",
+    "natives": 2,
+    "tally": {
+      "date:light:rgb(0, 151, 163)": 2
+    },
+    "pill": "999px"
+  },
+  "perform-phone-dark": {
+    "rootScheme": "dark",
+    "rootAccent": "rgb(77, 249, 255)",
+    "natives": 1,
+    "tally": {
+      "checkbox:dark:rgb(77, 249, 255)": 1
+    },
+    "pill": "999px"
+  },
+  "studio-inspector-phone-dark": {
+    "rootScheme": "dark",
+    "rootAccent": "rgb(77, 249, 255)",
+    "natives": 10,
+    "tally": {
+      "color:dark:rgb(77, 249, 255)": 2,
+      "range:dark:rgb(77, 249, 255)": 4,
+      "checkbox:dark:rgb(77, 249, 255)": 2,
+      "select-one:dark:rgb(77, 249, 255)": 2
+    },
+    "pill": "999px"
+  },
+  "equipment-order-phone-dark": {
+    "rootScheme": "dark",
+    "rootAccent": "rgb(77, 249, 255)",
+    "natives": 2,
+    "tally": {
+      "date:light:rgb(0, 151, 163)": 2
+    },
+    "pill": "999px"
+  }
+}

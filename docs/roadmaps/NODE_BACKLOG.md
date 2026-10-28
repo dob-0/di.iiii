@@ -114,6 +114,12 @@ nothing to composite is meaningless. `stream.recorder` is the exception worth
 pulling forward: `MediaRecorder` is already used in `src/hooks/useAssetPipeline.js`,
 so recording a canvas to an asset is mostly wiring that exists.
 
+**Built 2026-10-21:** `stream.recorder` is now **Recorder** (off the gate list),
+and **Still** (`stream.still`) sits beside it. Both are `panel-2d`: the window
+owns the canvas and the `MediaRecorder` (vp9 → vp8 → WebM, 6 Mbps, 30 fps),
+the runtime reads its report back. Files land as project files. The graph clock
+has a seek contract for test browsers (`src/project/graph/clockSeek.js`).
+
 Note `stream.monitor` and `stream.controller` are `panel-2d`, so they hit the
 trap in §"Known trap" below.
 
@@ -133,6 +139,18 @@ built**. Decide intent before writing code:
 - `universe.link` overlaps the URL/tree addressing work in
   `docs/architecture/SPEC_url_architecture_and_tree_addressing.md` — do not build
   it before that spec is signed off, or it will be built against the wrong model.
+  `src/project/nodeRegistry.test.js` ("offers no Link node while the URL/tree
+  addressing spec is a draft") holds this until the spec's Status line changes.
+  Need measured 2026-10-21: 11 projects paste variants of one snippet, because a
+  srcdoc frame resolves links against its parent: internal links go to
+  `window.diiPageOrigin + href` in a real tab, back links use `target=_top`, and
+  the scene door calls `window.diiEnterExhibition` or posts
+  `{type: 'dii-preview', kind: 'enter-exhibition'}`
+  (`src/utils/presentationPreviewDocument.js`). Agreed shape once signed: a new
+  Link node (not `universe.link` finished) with Address (a URL, or a space/project
+  address per the spec), Target (this tab, new tab, enter scene) and a Go signal,
+  over one pure tested resolver (address → URL against `diiPageOrigin`) shared
+  with `presentationPreviewDocument.js`.
 - `node.null` is the pass-through/reroute node; `getNodeInputs` already has an
   `isNull` branch for it, so it is closer to done than it looks.
 

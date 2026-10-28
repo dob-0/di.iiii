@@ -24,5 +24,6 @@ Identified apps and crawlers get 300 API reads a minute per address; anonymous p
 
 ## Optional
 
+- [Full text](https://diiii.xyz/llms-full.txt): this file followed by every wiki article, in one file
 - [Source code](https://github.com/dob-0/di.iiii): the whole platform, AGPL-3.0
 - Contact: info@thedi.studio

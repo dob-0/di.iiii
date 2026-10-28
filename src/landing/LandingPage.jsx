@@ -1,7 +1,7 @@
 /* global __APP_VERSION__, __DI_WORKS__ */
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, ThemeProvider, Typography } from '@mui/material'
-import { diFontTheme } from '../styles/muiTheme.js'
+import { diTheme } from '../styles/muiTheme.js'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { buildWikiPath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
@@ -72,7 +72,7 @@ const NETWORK_PEOPLE = 65
 // WHICH OF THOSE FOUR IS A DOOR ONTO SOMETHING, HERE.
 //
 // Two are works — code in this repo, compiled into the artifact (see
-// src/works/works.js). Two are spaces — rows on di-studio.xyz's database,
+// src/works/works.js). Two are spaces — rows on diiii.xyz's database,
 // which a fresh install does not have. The row used to be hidden whole on any
 // local install, and that was right for both halves at the time: the works
 // were stripped out of the local build and the spaces were never there.
@@ -830,7 +830,7 @@ function LandingPageInner() {
 // eagerly by the router (2026-07-17 perf audit).
 export default function LandingPage() {
     return (
-        <ThemeProvider theme={diFontTheme}>
+        <ThemeProvider theme={diTheme}>
             <LandingPageInner />
         </ThemeProvider>
     )

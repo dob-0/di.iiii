@@ -195,7 +195,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const resolvedRouteSpaceId = spaceId || DEFAULT_PROJECT_SPACE_ID
     // Standing in a room, the only way out was one badge to the whole Spaces
     // grid — and inside `main` not even that, because the badge assumes `/`
-    // already IS this room. True for a visitor to di-studio.xyz, false on an
+    // already IS this room. True for a visitor to diiii.xyz, false on an
     // install, where `/` is the Spaces list. So: on a machine that is running
     // di.iiii, the room carries the bar and the space you are in stays named.
     const localInstall = useLocalInstall()
@@ -746,7 +746,10 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                             border: 0,
                             width: '100%',
                             height: '100dvh',
-                            background: isEmbed ? 'transparent' : '#05070a'
+                            background: isEmbed ? 'transparent' : '#05070a',
+                            // the page inside is an ordinary (normal-scheme) document; a
+                            // dark-scheme frame around it gets an opaque Canvas (base.css)
+                            colorScheme: 'normal'
                         }}
                     />
                 ) : rawHtml ? (
@@ -760,7 +763,10 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                             border: 0,
                             width: '100%',
                             height: '100dvh',
-                            background: isEmbed ? 'transparent' : '#05070a'
+                            background: isEmbed ? 'transparent' : '#05070a',
+                            // the page inside is an ordinary (normal-scheme) document; a
+                            // dark-scheme frame around it gets an opaque Canvas (base.css)
+                            colorScheme: 'normal'
                         }}
                     />
                 ) : (
