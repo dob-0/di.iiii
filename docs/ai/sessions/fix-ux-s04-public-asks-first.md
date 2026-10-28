@@ -13,3 +13,8 @@
 - eslint on the 9 changed JS/JSX files: exit 0, no warnings.
 - Old code (the four source files of 6fcdd33cf^ restored, `spaceVisibility.js` moved out, new tests kept): 11 failed of 83 — the 10 new regression tests plus the budget guard (112 > 109). Source restored afterwards; tree clean.
 - Owed: the proof pictures (Manage on a space card, desktop and phone, before and after) were not taken in this round.
+
+## 2026-10-29 — independent review (judge)
+
+- Re-ran: vitest on 10 related files, 222 passed; eslint on the changed JS/JSX, exit 0; old code (four sources of 6fcdd33cf^, spaceVisibility.js out): 11 failed, as the builder said.
+- Fixed in review: the delete box (`SpaceDeleteDialog`) now takes the keyboard (focus on Cancel, Tab stays inside, focus back on close; WAI-ARIA APG modal dialog). New test in `AdminManageSection.test.jsx` fails on a3c8fca12, passes now (3 files, 77 passed).

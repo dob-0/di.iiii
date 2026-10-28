@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
     getSpaceFootprint,
     updateServerSpace,
@@ -44,8 +44,37 @@ export function SpaceDeleteDialog({ space, isAdmin = false, onClose, onDone }) {
         return () => { cancelled = true }
     }, [space.id])
 
+    // Keyboard: focus starts on Cancel (the safe button), Tab stays inside the
+    // box, and closing it gives focus back to what opened it (WAI-ARIA APG,
+    // modal dialog pattern; the same as AskDialog).
+    const dialogRef = useRef(null)
+    const cancelRef = useRef(null)
     useEffect(() => {
-        const onKey = (event) => { if (event.key === 'Escape' && !busy) onClose?.() }
+        const before = document.activeElement
+        cancelRef.current?.focus()
+        return () => { if (before && before.isConnected) before.focus?.() }
+    }, [])
+
+    useEffect(() => {
+        const onKey = (event) => {
+            if (event.key === 'Escape' && !busy) { onClose?.(); return }
+            if (event.key !== 'Tab') return
+            const nodes = [...(dialogRef.current?.querySelectorAll('button:not([disabled])') || [])]
+            if (!nodes.length) return
+            const first = nodes[0]
+            const last = nodes[nodes.length - 1]
+            const active = document.activeElement
+            if (!dialogRef.current?.contains(active)) {
+                event.preventDefault()
+                first.focus()
+            } else if (event.shiftKey && active === first) {
+                event.preventDefault()
+                last.focus()
+            } else if (!event.shiftKey && active === last) {
+                event.preventDefault()
+                first.focus()
+            }
+        }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
     }, [busy, onClose])
@@ -86,6 +115,7 @@ export function SpaceDeleteDialog({ space, isAdmin = false, onClose, onDone }) {
     return (
         <div className="ssh-dialog-scrim" role="presentation" onClick={(event) => { if (event.target === event.currentTarget && !busy) onClose?.() }}>
             <div
+                ref={dialogRef}
                 className="ssh-dialog"
                 role="dialog"
                 aria-modal="true"
@@ -117,7 +147,7 @@ export function SpaceDeleteDialog({ space, isAdmin = false, onClose, onDone }) {
                 )}
                 {error && <p className="ssh-dialog-body ssh-dialog-error" role="alert">{error}</p>}
                 <div className="ssh-dialog-actions">
-                    <button type="button" className="ssh-card-btn" onClick={onClose} disabled={busy}>Cancel</button>
+                    <button ref={cancelRef} type="button" className="ssh-card-btn" onClick={onClose} disabled={busy}>Cancel</button>
                     {reason === 'permanent' && isAdmin && (
                         <button type="button" className="ssh-card-btn" onClick={unmarkPermanent} disabled={busy}>Unmark permanent</button>
                     )}

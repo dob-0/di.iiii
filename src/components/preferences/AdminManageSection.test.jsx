@@ -283,6 +283,21 @@ describe('AdminManageSection delete', () => {
         }
     })
 
+    it('the delete box takes the keyboard: focus starts on Cancel, Escape closes it and gives focus back', async () => {
+        getSpaceFootprint.mockResolvedValue({ projects: 1, bytes: 1024, protected: null, holdMs: 30 * 24 * 3600 * 1000 })
+        render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+        const opener = await screen.findByRole('button', { name: 'Delete' })
+        opener.focus()
+        fireEvent.click(opener)
+        await screen.findByRole('dialog')
+        expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
+        fireEvent.keyDown(window, { key: 'Escape' })
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+        expect(document.activeElement).toBe(opener)
+        expect(deleteServerSpace).not.toHaveBeenCalled()
+    })
+
     it('a project asks in the di.iiii question box, not a browser confirm', async () => {
         const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
         try {
