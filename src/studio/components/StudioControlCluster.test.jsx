@@ -126,3 +126,58 @@ describe('the Walk and Fly buttons', () => {
         expect(screen.queryByRole('button', { name: 'Fly' })).toBeNull()
     })
 })
+
+// UX audit F025 + F089: undo was a key (a tablet has none) and saving was a 6 px dot. Both are words and buttons now.
+describe('Undo and Redo in the cluster header', () => {
+    it('draws no buttons until the Studio gives an undo call', () => {
+        render(<StudioControlCluster {...base} />)
+        expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull()
+        expect(screen.queryByRole('button', { name: 'Redo' })).toBeNull()
+    })
+
+    it('calls onUndo and onRedo, and is disabled at the ends of the history', () => {
+        const onUndo = vi.fn()
+        const onRedo = vi.fn()
+        const { rerender } = render(<StudioControlCluster {...base} onUndo={onUndo} onRedo={onRedo} canUndo canRedo={false} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+        expect(onUndo).toHaveBeenCalledTimes(1)
+        expect(screen.getByRole('button', { name: 'Redo' })).toBeDisabled()
+        rerender(<StudioControlCluster {...base} onUndo={onUndo} onRedo={onRedo} canUndo={false} canRedo />)
+        expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()
+        fireEvent.click(screen.getByRole('button', { name: 'Redo' }))
+        expect(onRedo).toHaveBeenCalledTimes(1)
+    })
+
+    it('stays visible when the cluster is collapsed', () => {
+        render(<StudioControlCluster {...base} onUndo={() => {}} onRedo={() => {}} canUndo canRedo />)
+        fireEvent.click(screen.getByTitle('Collapse'))
+        expect(screen.queryByText('Tools')).toBeNull()
+        expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
+    })
+})
+
+describe('the save line', () => {
+    const line = () => screen.getByRole('status')
+
+    it('says Saved when nothing waits', () => {
+        render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 0, sceneStreamState: 'connected' }} />)
+        expect(line()).toHaveTextContent(/^Saved$/)
+        expect(line().dataset.saveState).toBe('saved')
+    })
+
+    it('says Saving… while edits wait, then Saved with the time they were acknowledged', () => {
+        const { rerender } = render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 2 }} />)
+        expect(line()).toHaveTextContent('Saving\u2026')
+        rerender(<StudioControlCluster {...base} syncState={{ pendingOpCount: 0 }} />)
+        expect(line()).toHaveTextContent(/^Saved \d\d:\d\d$/)
+    })
+
+    it('says Not saved, in words, when a sync failure waits', () => {
+        const { rerender } = render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, pendingSyncError: '1 edit waiting: offline' }} />)
+        expect(line()).toHaveTextContent('Not saved: offline, keep this tab open')
+        expect(line().dataset.saveState).toBe('error')
+        rerender(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, pendingSyncError: 'session expired', authExpired: true }} />)
+        expect(line()).toHaveTextContent('Not saved: sign in again')
+    })
+})
+

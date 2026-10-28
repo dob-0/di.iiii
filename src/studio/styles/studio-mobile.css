@@ -89,6 +89,21 @@
     cursor: pointer;
 }
 
+.smb-undo-redo {
+    display: inline-flex;
+    gap: var(--di-space-1);
+}
+
+.smb-undo-redo .smb-top-btn:disabled {
+    opacity: 0.4;
+}
+
+.smb-save-line {
+    color: rgba(255, 255, 255, 0.75);
+    padding: var(--di-space-1) var(--di-space-2);
+    background: var(--di-scrim);
+}
+
 .smb-top-btn.is-active {
     color: var(--di-cyan);
     border-color: var(--di-cyan);

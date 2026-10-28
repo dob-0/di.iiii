@@ -412,6 +412,33 @@
     color: var(--di-cyan);
 }
 
+/* Undo and Redo sit in the cluster's header, so they are there even when it is collapsed. Words, 12 px. */
+.scc-undo-btn {
+    font-size: var(--di-text-3);
+    min-height: 28px;
+}
+
+.scc-undo-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* "Saved 14:32" / "Saving..." / "Not saved: ...": the state in words, never only a colour. */
+.di-save-line {
+    font-size: var(--di-text-3);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.scc-save-line {
+    padding: var(--di-space-1) var(--di-space-3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.di-save-line--error {
+    color: var(--di-danger);
+    font-weight: 600;
+}
+
 .scc-btn--icon {
     padding: var(--di-space-1) var(--di-space-2);
     min-width: 28px;

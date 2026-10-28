@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { usePanelDrag } from '../../hooks/usePanelDrag.js'
+import StudioSaveLine from './StudioSaveLine.jsx'
 
 // Five scene windows, one per job: add things, edit the scene, configure the
 // world, ship it, write code — plus Projects, the space-level window for
@@ -42,6 +43,11 @@ export default function StudioControlCluster({
     onOpenProjection,
     xrState,
     syncState,
+    // Undo and Redo: the same calls as Ctrl+Z. Null onUndo draws no buttons; canUndo / canRedo say the ends.
+    onUndo = null,
+    onRedo = null,
+    canUndo = false,
+    canRedo = false,
     presence,
     snapEdges = false,
     onToggleSnap,
@@ -109,10 +115,18 @@ export default function StudioControlCluster({
                             title={syncState.pendingSyncError || syncState.sceneStreamState}
                         />
                     )}
+                    {onUndo && (
+                        <button type="button" className="scc-btn scc-undo-btn" onClick={onUndo} disabled={!canUndo} aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
+                    )}
+                    {onRedo && (
+                        <button type="button" className="scc-btn scc-undo-btn" onClick={onRedo} disabled={!canRedo} aria-label="Redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+                    )}
                     <button className="scc-collapse-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand' : 'Collapse'}>
                         {collapsed ? '▸' : '▾'}
                     </button>
                 </div>
+
+                {syncState && <StudioSaveLine syncState={syncState} className="scc-save-line" />}
 
                 {!collapsed && (
                     <>

@@ -4,6 +4,7 @@ import StudioInspector from './StudioInspector.jsx'
 import StudioViewportLayout from './StudioViewportLayout.jsx'
 import StudioFloatingPanel from './StudioFloatingPanel.jsx'
 import StudioControlCluster from './StudioControlCluster.jsx'
+import StudioSaveLine from './StudioSaveLine.jsx'
 import StudioCueStrip from './StudioCueStrip.jsx'
 import StudioProjectsPanel from './StudioProjectsPanel.jsx'
 import StudioQuickInsert from './StudioQuickInsert.jsx'
@@ -179,6 +180,10 @@ export default function StudioShell({
     onTransformCancel,
     editHistory = null,
     onHistoryJump,
+    // Undo and Redo, the same calls as Ctrl+Z (useOpHistory's undo and redo, which replay inverse ops
+    // through applyLocalOps). Null draws no buttons. The ends come from editHistory's cursor.
+    onUndo = null,
+    onRedo = null,
     // mappingState.cues, and the one way to fire one. The same cues the
     // projection tool lists; firing from here reaches the wall and the
     // lighting desk by exactly the same path.
@@ -857,6 +862,10 @@ export default function StudioShell({
                         onOpenProjection={offerProjection ? onOpenProjection : undefined}
                         xrState={xrState}
                         syncState={syncState}
+                        onUndo={onUndo}
+                        onRedo={onRedo}
+                        canUndo={Boolean(editHistory && editHistory.cursor > 0)}
+                        canRedo={Boolean(editHistory && editHistory.cursor < editHistory.steps.length)}
                         presence={presence}
                         snapEdges={snapEdges}
                         onToggleSnap={() => setSnapEdges((v) => !v)}
@@ -925,6 +934,14 @@ export default function StudioShell({
                                 Projection
                             </button>
                         )}
+                        {/* Undo and Redo, and the save line: the phone has no Ctrl key. */}
+                        {!bare && onUndo && onRedo && (
+                            <span className="smb-undo-redo">
+                                <button type="button" className="smb-top-btn" onClick={onUndo} disabled={!(editHistory && editHistory.cursor > 0)} aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
+                                <button type="button" className="smb-top-btn" onClick={onRedo} disabled={!(editHistory && editHistory.cursor < editHistory.steps.length)} aria-label="Redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+                            </span>
+                        )}
+                        {!bare && syncState && <StudioSaveLine syncState={syncState} className="smb-save-line" />}
                         {/* Nothing to edit in an empty room. */}
                         {!bare && (
                             <button

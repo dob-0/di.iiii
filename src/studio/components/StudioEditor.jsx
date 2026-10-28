@@ -1406,7 +1406,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         activity: state.activity,
         sceneStreamState: state.sceneStreamState,
         sceneStreamError: state.sceneStreamError,
-        pendingSyncError: state.pendingSyncError
+        pendingSyncError: state.pendingSyncError,
+        // Edits not yet acknowledged, and whether the sign-in ran out: the save line reads both.
+        pendingOpCount: state.pendingOpCount,
+        authExpired: state.authExpired
     }
 
     return (
@@ -1430,6 +1433,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             loadError={state.loadError}
             editHistory={history()}
             onHistoryJump={jumpTo}
+            onUndo={undo}
+            onRedo={redo}
             displayName={displayName}
             onDisplayNameChange={setDisplayName}
             selectedEntity={insideGeo ? geoSelectedRow : selectedEntity}
