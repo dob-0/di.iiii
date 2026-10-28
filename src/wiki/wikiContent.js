@@ -1972,6 +1972,19 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-21'
     },
     {
+        id: 'beat-grid-node',
+        category: 'Editing',
+        title: 'Beat Grid — music to wires',
+        summary: 'Beat Grid reads a baked analysis of a track (its beat times and three bands) at a time in the track, so things move on the music and the piece can still be seeked.',
+        body: [
+            'Paste a baked beat analysis into Beat Grid\u2019s Analysis (JSON: a list of beat times in seconds, and optional Low, Mid and High bands), or wire a Text holding it. Leave Time unwired and it reads the project\u2019s clock in seconds; wire a number in to read any other second of the track.',
+            'It gives Beat (1 to 4 in the bar), Phase (0 to 1 toward the next beat), Age (seconds since the last beat), Bar, Count, Pulse (the first tenth of each beat), Strong (Pulse, on a strong beat only: the bar downbeats unless the analysis lists its own), Low, Mid and High, BPM (from the gap around now) and a Clock: wire it into an Oscillator with Beats set and the Oscillator moves in time with the music, even where the tempo drifts.',
+            'The same second always gives the same numbers, which is why it reads a baked analysis rather than listening live. For live levels use Sound or Microphone. The bake method is written down but not built or measured yet; until it is, an analysis has to come from elsewhere.'
+        ],
+        tags: ['raw', 'nodes', 'beat', 'grid', 'music', 'bands', 'bass', 'bar', 'tempo', 'clock', 'oscillator', 'seek'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'laser-file-text-nodes',
         category: 'Editing',
         title: 'Laser File and Laser Text — draw a file or a word with the LaserCubes',

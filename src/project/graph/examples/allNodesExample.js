@@ -219,6 +219,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('laserTrace', 'laser.trace', { label: 'Laser Trace', col: 4, row: 18 })
     add('laserMerge', 'laser.merge', { label: 'Laser Merge', col: 4, row: 19 })
     add('beat', 'signal.beat', { label: 'Beat', col: 0, row: 20 })
+    add('beatGrid', 'signal.beatgrid', { label: 'Beat Grid', col: 0, row: 21 })
     add('laserFile', 'laser.file', { label: 'Laser File', col: 4, row: 20 })
     add('laserText', 'laser.text', { label: 'Laser Text', col: 4, row: 21 })
     add('recorder', 'stream.recorder', { label: 'Recorder', col: 4, row: 22 })
