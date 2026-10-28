@@ -62,11 +62,19 @@ export function ViewFailed({ error }) {
             }}
         >
             <strong>This view stopped working.</strong>
+            {/* What is known, and nothing more (audit F142, 2026-10-28). The old
+                line, "Work saved, nothing changed", was printed on every failure
+                whatever the state of the save: this boundary cannot know it. */}
             <span style={{ color: ink.muted }}>
-                Failed while drawing. Work saved, nothing changed.
+                Something went wrong while drawing this page. Reload to try again, or go to another page.
             </span>
+            {/* The raw error is for whoever helps, folded away by default. */}
             {message && (
-                <code style={{ color: ink.muted, fontFamily: ink.mono, fontSize: 12, wordBreak: 'break-word' }}>{message}</code>
+                <details data-testid="view-failed-details" style={{ color: ink.muted, fontSize: 13 }}>
+                    {/* lineHeight 44: the hit-target floor (docs/ai/golden_rules.md); keeps the disclosure marker. */}
+                    <summary style={{ cursor: 'pointer', lineHeight: '44px' }}>Details for helpers</summary>
+                    <code style={{ display: 'block', marginTop: 8, fontFamily: ink.mono, fontSize: 12, wordBreak: 'break-word' }}>{message}</code>
+                </details>
             )}
             <button
                 type="button"
