@@ -1,0 +1,166 @@
+{
+  "ClassName": "Folder",
+  "Children": [
+    {
+      "Name": "Wall_001",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          100,
+          14,
+          1
+        ],
+        "Position": [
+          50.0,
+          7.0,
+          0
+        ],
+        "Color": [
+          0.55,
+          0.55,
+          0.52
+        ],
+        "Material": "Concrete"
+      }
+    },
+    {
+      "Name": "Wall_002",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          100,
+          14,
+          1
+        ],
+        "Position": [
+          50.0,
+          7.0,
+          30
+        ],
+        "Color": [
+          0.55,
+          0.55,
+          0.52
+        ],
+        "Material": "Concrete"
+      }
+    },
+    {
+      "Name": "Wall_003",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          1,
+          14,
+          30
+        ],
+        "Position": [
+          0,
+          7.0,
+          15.0
+        ],
+        "Color": [
+          0.55,
+          0.55,
+          0.52
+        ],
+        "Material": "Concrete"
+      }
+    },
+    {
+      "Name": "Wall_004",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          1,
+          14,
+          30
+        ],
+        "Position": [
+          100,
+          7.0,
+          15.0
+        ],
+        "Color": [
+          0.55,
+          0.55,
+          0.52
+        ],
+        "Material": "Concrete"
+      }
+    },
+    {
+      "Name": "Wall_005",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          1,
+          14,
+          11.0
+        ],
+        "Position": [
+          40,
+          7.0,
+          5.5
+        ],
+        "Color": [
+          0.55,
+          0.55,
+          0.52
+        ],
+        "Material": "Concrete"
+      }
+    },
+    {
+      "Name": "Wall_006",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          1,
+          4,
+          8.0
+        ],
+        "Position": [
+          40,
+          12.0,
+          15.0
+        ],
+        "Color": [
+          0.55,
+          0.55,
+          0.52
+        ],
+        "Material": "Concrete"
+      }
+    },
+    {
+      "Name": "Wall_007",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          1,
+          14,
+          11.0
+        ],
+        "Position": [
+          40,
+          7.0,
+          24.5
+        ],
+        "Color": [
+          0.55,
+          0.55,
+          0.52
+        ],
+        "Material": "Concrete"
+      }
+    }
+  ]
+}

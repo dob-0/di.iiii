@@ -1,0 +1,106 @@
+{
+  "ClassName": "Folder",
+  "Children": [
+    {
+      "Name": "PlayerSpawn",
+      "ClassName": "SpawnLocation",
+      "Properties": {
+        "Anchored": true,
+        "Neutral": true,
+        "Duration": 0,
+        "Size": [
+          6,
+          1,
+          6
+        ],
+        "Position": [
+          20,
+          0.5,
+          15
+        ],
+        "Transparency": 0.5
+      }
+    },
+    {
+      "Name": "Item_01",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          1,
+          1,
+          1
+        ],
+        "Position": [
+          70,
+          1,
+          8
+        ],
+        "Color": [
+          1,
+          1,
+          1
+        ],
+        "Material": "Concrete",
+        "Transparency": 1,
+        "CanCollide": false,
+        "CanQuery": false,
+        "CanTouch": false
+      }
+    },
+    {
+      "Name": "Item_02",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          1,
+          1,
+          1
+        ],
+        "Position": [
+          70,
+          1,
+          22
+        ],
+        "Color": [
+          1,
+          1,
+          1
+        ],
+        "Material": "Concrete",
+        "Transparency": 1,
+        "CanCollide": false,
+        "CanQuery": false,
+        "CanTouch": false
+      }
+    },
+    {
+      "Name": "Item_03",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          1,
+          1,
+          1
+        ],
+        "Position": [
+          90,
+          1,
+          15
+        ],
+        "Color": [
+          1,
+          1,
+          1
+        ],
+        "Material": "Concrete",
+        "Transparency": 1,
+        "CanCollide": false,
+        "CanQuery": false,
+        "CanTouch": false
+      }
+    }
+  ]
+}

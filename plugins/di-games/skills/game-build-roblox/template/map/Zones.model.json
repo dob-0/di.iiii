@@ -1,0 +1,32 @@
+{
+  "ClassName": "Folder",
+  "Children": [
+    {
+      "Name": "GoalZone",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          10,
+          8,
+          20
+        ],
+        "Position": [
+          90.0,
+          4.0,
+          15.0
+        ],
+        "Color": [
+          1,
+          1,
+          1
+        ],
+        "Material": "Concrete",
+        "Transparency": 1,
+        "CanCollide": false,
+        "CanQuery": false,
+        "CanTouch": true
+      }
+    }
+  ]
+}

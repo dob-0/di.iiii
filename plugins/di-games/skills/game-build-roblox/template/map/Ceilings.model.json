@@ -1,0 +1,51 @@
+{
+  "ClassName": "Folder",
+  "Children": [
+    {
+      "Name": "Ceiling_Start",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          40,
+          1,
+          30
+        ],
+        "Position": [
+          20.0,
+          14.5,
+          15.0
+        ],
+        "Color": [
+          0.22,
+          0.22,
+          0.22
+        ],
+        "Material": "Concrete"
+      }
+    },
+    {
+      "Name": "Ceiling_Hall",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          60,
+          1,
+          30
+        ],
+        "Position": [
+          70.0,
+          14.5,
+          15.0
+        ],
+        "Color": [
+          0.22,
+          0.22,
+          0.22
+        ],
+        "Material": "Concrete"
+      }
+    }
+  ]
+}

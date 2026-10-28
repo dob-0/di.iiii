@@ -1,0 +1,5 @@
+std = "roblox"
+
+[lints]
+# Test files build tables of unused helper values on purpose.
+unused_variable = "warn"

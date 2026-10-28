@@ -1,0 +1,51 @@
+{
+  "ClassName": "Folder",
+  "Children": [
+    {
+      "Name": "Floor_Start",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          40,
+          1,
+          30
+        ],
+        "Position": [
+          20.0,
+          -0.5,
+          15.0
+        ],
+        "Color": [
+          0.3,
+          0.28,
+          0.26
+        ],
+        "Material": "Concrete"
+      }
+    },
+    {
+      "Name": "Floor_Hall",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          60,
+          1,
+          30
+        ],
+        "Position": [
+          70.0,
+          -0.5,
+          15.0
+        ],
+        "Color": [
+          0.3,
+          0.28,
+          0.26
+        ],
+        "Material": "Concrete"
+      }
+    }
+  ]
+}
