@@ -156,11 +156,20 @@ describe('GET /ai/context', () => {
     expect(res.headers.get('x-di-context-built')).toBe('2026-10-27T22:00:00Z')
   })
 
-  it('a level with no bundle on this server is a 404, not another level', async () => {
+  it('a level with no bundle answers 200 with the public context and says why', async () => {
     const get = await start({ contextDir: await contextDirWith(['core']) })
     const res = await get('?level=crew', 'owner')
-    expect(res.status).toBe(404)
-    expect(await res.json()).toEqual({ error: 'no_bundle', level: 'crew' })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('x-di-context-level')).toBe('public')
+    expect(res.headers.get('x-di-context-level-served')).toBe('public')
+    expect(res.headers.get('x-di-context-note')).toBe("your level's build is not ready yet")
+    const body = await res.text()
+    expect(body.startsWith("levelServed: public\nnote: your level's build is not ready yet\n")).toBe(true)
+  })
+
+  it('a bad key stays 403, never the fallback', async () => {
+    const get = await start({ contextDir: await contextDirWith([]) })
+    expect((await get('?level=core')).status).toBe(403)
   })
 
   it('an unknown level is a 400 that lists the real ones', async () => {
@@ -175,6 +184,6 @@ describe('GET /ai/context', () => {
   it('with no data folder configured, only public answers', async () => {
     const get = await start({ contextDir: null })
     expect((await get()).status).toBe(200)
-    expect((await get('', 'core')).status).toBe(404)
+    expect((await get('', 'core')).headers.get('x-di-context-level-served')).toBe('public')
   })
 })

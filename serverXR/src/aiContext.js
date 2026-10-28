@@ -32,7 +32,8 @@
 // because the repo is public and so is that level. Every other level is in the
 // server's data folder (<data>/ai-context/<level>/CONTEXT.md, or AI_CONTEXT_DIR),
 // written there by the context build and never by this server; a level with no
-// file is a 404. The repo never holds a non-public bundle.
+// file answers 200 with the public context and a note saying so (never a 404 to a
+// valid key). The repo never holds a non-public bundle.
 
 const fs = require('node:fs/promises')
 const path = require('node:path')
@@ -116,9 +117,22 @@ function registerAiContextRoutes(router, {
             : 'Your key reaches a lower level than the one asked for.'
         })
       }
-      const { text, stamp } = await readBundle(asked, { publicFile, contextDir })
+      let served = asked
+      let { text, stamp } = await readBundle(asked, { publicFile, contextDir })
+      let note = null
+      if (text === null && asked !== 'public') {
+        // A valid key never meets a 404 because its level's build is missing: it gets the
+        // public context and is told so, in the header and in the first line of the body.
+        served = 'public'
+        note = "your level's build is not ready yet"
+        ;({ text, stamp } = await readBundle('public', { publicFile, contextDir }))
+      }
       if (text === null) return res.status(404).json({ error: 'no_bundle', level: asked })
-      res.set({ 'X-Di-Context-Level': asked, 'X-Di-Context-Yours': yours })
+      res.set({ 'X-Di-Context-Level': served, 'X-Di-Context-Yours': yours })
+      if (note) {
+        res.set({ 'X-Di-Context-Level-Served': served, 'X-Di-Context-Note': note })
+        text = `levelServed: ${served}\nnote: ${note}\n\n${text}`
+      }
       if (stamp?.time) res.set('X-Di-Context-Built', String(stamp.time).slice(0, 40))
       res.type('text/markdown; charset=utf-8').send(text)
     } catch (error) { next(error) }
