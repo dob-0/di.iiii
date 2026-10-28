@@ -28,6 +28,7 @@ import { isSpaceInSessionScope } from './utils/sessionScope.js'
 import { getHostSpace } from './utils/hostSpace.js'
 import { rigToolAccess } from './rigbuild/rigToolAccess.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
+import MissingProjectCard from './components/MissingProjectCard.jsx'
 import useResolveSpaceRoot from './hooks/useResolveSpaceRoot.js'
 import { buildStudioProjectPath, getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
 import { getJamLocationState, isJamLocation } from './project/routing/jamRouting.js'
@@ -267,7 +268,7 @@ function SpaceContentsRoute({ spaceId }) {
 function SlugProjectRoute({ appState }) {
     const rrNavigate = useNavigate()
     const { search, hash } = useLocation()
-    const { result, error } = useResolveSlugProject(appState.spaceId, appState.projectSlugSegment)
+    const { result, error, notFound } = useResolveSlugProject(appState.spaceId, appState.projectSlugSegment)
     const resolvedSpaceId = result?.space?.id || null
     const resolvedProjectId = result?.project?.id || null
     // scripts/project-move.mjs moved this project out of appState.spaceId —
@@ -337,7 +338,29 @@ function SlugProjectRoute({ appState }) {
         )
     }
 
+    // The server answered: nothing of that name is in this space (audit F010,
+    // 2026-10-28). Say so, instead of opening the space's front page under the
+    // wrong address. Any other miss (an error, a private space asking for a
+    // sign-in, a build with no server) still opens the space as before.
+    if (notFound) {
+        return <MissingProjectRoute spaceId={appState.spaceId} projectSegment={appState.projectSlugSegment} />
+    }
+
     return <SpaceSurfaceRoute appState={{ page: appState.page, spaceId: appState.spaceId }} />
+}
+
+// The "no such project here" card, behind the same gate the space has
+// (SpaceContentsRoute's pattern): a public space answers it to anyone; a
+// private or unknown space goes through ProtectedSurface first, so an address
+// whose SPACE does not exist gets the unknown-space card, not this one.
+function MissingProjectRoute({ spaceId, projectSegment }) {
+    const { isPublic, loading } = useSpacePublicFlag(spaceId)
+    if (loading) {
+        return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+    const card = <MissingProjectCard spaceId={spaceId} projectSegment={projectSegment} />
+    if (isPublic) return card
+    return <ProtectedSurface requiredSpaceId={spaceId}>{card}</ProtectedSurface>
 }
 
 // The bare /{space} address. When the space's front door was moved to another
