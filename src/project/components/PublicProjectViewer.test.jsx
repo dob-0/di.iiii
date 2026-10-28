@@ -127,7 +127,11 @@ describe('PublicProjectViewer', () => {
 
             expect(await screen.findByTestId('project-plain-view')).toBeInTheDocument()
             const choices = screen.getByTestId('project-choices')
-            expect(choices).toHaveTextContent('Edit in Studio')
+            // Each choice goes where it is done: the scene to the editor, code to the Code panel, pictures to Create.
+            expect(screen.getByTestId('choice-scene').getAttribute('href')).toMatch(/\/studio$/)
+            expect(screen.getByTestId('choice-code').getAttribute('href')).toMatch(/\/studio\?open=files$/)
+            expect(screen.getByTestId('choice-pictures').getAttribute('href')).toMatch(/\/studio\?open=create$/)
+            expect(choices).toHaveTextContent('Add a scene')
             expect(screen.queryByText(/viewer-scene/)).toBeNull()
         } finally {
             authState.session = { requireAuth: false, authenticated: false, role: null, spaces: null }

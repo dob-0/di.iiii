@@ -787,7 +787,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         ))}
                         {canEdit ? (
                             <div data-testid="project-choices" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem' }}>
-                                <a href={studioHref(resolvedRouteSpaceId, projectId)} style={barButtonStyle}>Edit in Studio</a>
+                                <a href={studioHref(resolvedRouteSpaceId, projectId)} data-testid="choice-scene" style={barButtonStyle}>Add a scene</a>
+                                <a href={`${studioHref(resolvedRouteSpaceId, projectId)}?open=files`} data-testid="choice-code" style={barButtonStyle}>Write code</a>
+                                <a href={`${studioHref(resolvedRouteSpaceId, projectId)}?open=create`} data-testid="choice-pictures" style={barButtonStyle}>Add pages or pictures</a>
                             </div>
                         ) : null}
                     </div>
