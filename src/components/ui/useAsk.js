@@ -4,6 +4,7 @@ import UndoNotice from './UndoNotice.jsx'
 
 // const { ask, askDialog } = useAsk()   render {askDialog} once.
 // const yes = await ask({ title, body, confirmLabel, danger })      -> true | false
+// const pick = await ask({ title, confirmLabel, altLabel })  -> true | 'alt' | false
 // const name = await ask({ title, input: { label, defaultValue } }) -> string | null
 // A second ask while one is open answers the first with "no".
 // Each ask and each notice gets its own key, so a second one remounts: a fresh
@@ -31,7 +32,8 @@ export function useAsk() {
         key,
         open: true,
         onConfirm: (text) => settle(options.input ? text : true),
-        onCancel: () => settle(options.input ? null : false)
+        onCancel: () => settle(options.input ? null : false),
+        onAlt: () => settle('alt')
     })
     return { ask, askDialog }
 }

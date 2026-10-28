@@ -8,6 +8,8 @@ import './ui.css'
 // Props: open, title, body, confirmLabel (a verb, never "OK"), cancelLabel,
 // danger (focus starts on the safe button), input = { label, defaultValue }
 // turns it into a one-line question; onConfirm(value) gets the text then.
+// altLabel + onAlt add a third, middle choice (Cancel / alt / confirm) for a
+// question with two real answers; Esc and the scrim still mean Cancel.
 
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
 
@@ -24,8 +26,10 @@ function AskBox({
     cancelLabel = 'Cancel',
     danger = false,
     input = null,
+    altLabel = '',
     onConfirm,
-    onCancel
+    onCancel,
+    onAlt
 }) {
     const id = useId()
     const dialogRef = useRef(null)
@@ -106,6 +110,11 @@ function AskBox({
                     <button type="button" className="di-ask-button" ref={cancelRef} onClick={() => onCancel?.()}>
                         {cancelLabel}
                     </button>
+                    {altLabel ? (
+                        <button type="button" className="di-ask-button" onClick={() => onAlt?.()}>
+                            {altLabel}
+                        </button>
+                    ) : null}
                     <button type="submit" className={`di-ask-button${danger ? ' is-danger' : ''}`} ref={confirmRef}>
                         {confirmLabel}
                     </button>

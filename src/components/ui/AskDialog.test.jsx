@@ -26,6 +26,17 @@ describe('AskDialog', () => {
         expect(props.onConfirm).not.toHaveBeenCalled()
     })
 
+    it('a third choice sits between Cancel and the confirm, and Esc still means Cancel', () => {
+        const props = { onConfirm: vi.fn(), onCancel: vi.fn(), onAlt: vi.fn(), altLabel: 'Replace all' }
+        open(props)
+        expect(screen.getAllByRole('button').map((b) => b.textContent).filter(Boolean)).toEqual(['Cancel', 'Replace all', 'Delete'])
+        fireEvent.click(screen.getByRole('button', { name: 'Replace all' }))
+        expect(props.onAlt).toHaveBeenCalledTimes(1)
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(props.onCancel).toHaveBeenCalledTimes(1)
+        expect(props.onConfirm).not.toHaveBeenCalled()
+    })
+
     it('a danger question starts on the safe button, a plain one on the confirm', () => {
         const { unmount } = open({ danger: true })
         expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()

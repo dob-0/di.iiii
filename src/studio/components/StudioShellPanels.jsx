@@ -1609,26 +1609,19 @@ export function FilesPanel({
         let mode = 'replace'
         if (before.length > 0) {
             const clash = incoming.filter((f) => before.some((b) => b.name === f.name)).map((f) => f.name)
-            const add = await ask({
+            // One question, three answers. Esc, the dark area and Cancel all stop.
+            const answer = await ask({
                 title: `Add ${plural(incoming.length, 'file')} to your ${plural(before.length, 'file')}?`,
-                body: clash.length
-                    ? `${clash.slice(0, 3).join(', ')} already exist${clash.length === 1 ? 's' : ''} and will be replaced by the new ${clash.length === 1 ? 'one' : 'ones'}. Your other files stay.`
-                    : 'Nothing you have now is removed.',
+                body: (clash.length
+                    ? `${clash.slice(0, 3).join(', ')} already exist${clash.length === 1 ? 's' : ''} and will be replaced by the new ${clash.length === 1 ? 'one' : 'ones'}. Your other files stay. `
+                    : 'Add keeps everything you have now. ')
+                    + `Replace all swaps your ${plural(before.length, 'file')} for the new ${incoming.length === 1 ? 'one' : 'ones'}; you can undo it for 10 seconds.`,
                 confirmLabel: 'Add them',
-                cancelLabel: 'No'
+                altLabel: 'Replace all',
+                cancelLabel: 'Cancel'
             })
-            if (add) {
-                mode = 'add'
-            } else {
-                const replace = await ask({
-                    title: `Replace your ${plural(before.length, 'file')}?`,
-                    body: `Your files are swapped for the ${plural(incoming.length, 'new file')}. You can undo it for 10 seconds.`,
-                    confirmLabel: 'Replace all',
-                    cancelLabel: 'Keep my files',
-                    danger: true
-                })
-                if (!replace) return
-            }
+            if (answer === true) mode = 'add'
+            else if (answer !== 'alt') return
         }
         const current = filesRef.current
         setFiles(mergeImported(current, incoming, mode))
@@ -1796,22 +1789,25 @@ export function FilesPanel({
                                 <Tab
                                     key={f.name}
                                     value={f.name}
+                                    aria-keyshortcuts="Delete"
+                                    onKeyDown={(e) => { if (e.key === 'Delete') { e.preventDefault(); closeTab(f.name) } }}
                                     label={
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                             <span>{f.name}</span>
                                             {f.name === startName && (
                                                 <Box component="span" sx={{ fontSize: 12, textTransform: 'none', color: 'text.secondary' }}>opens first</Box>
                                             )}
-                                            <IconButton
+                                            {/* Not a nested button (axe: nested-interactive): the mouse and touch x is hidden
+                                                from assistive tech; the keyboard way is Delete on the focused tab. */}
+                                            <Box
                                                 component="span"
-                                                size="small"
-                                                aria-label={`Close ${f.name} tab`}
-                                                title="Close tab (the file stays in your project)"
+                                                aria-hidden="true"
+                                                title={`Close ${f.name} tab (the file stays in your project)`}
                                                 onClick={(e) => { e.stopPropagation(); closeTab(f.name) }}
-                                                sx={{ p: 0, ml: 0.25, width: 24, height: 24 }}
+                                                sx={{ ml: 0.25, width: 24, height: 24, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', borderRadius: 0, '&:hover': { bgcolor: 'action.hover' } }}
                                             >
                                                 <CloseIcon sx={{ fontSize: 14 }} />
-                                            </IconButton>
+                                            </Box>
                                         </Box>
                                     }
                                 />
@@ -1885,12 +1881,18 @@ export function FilesPanel({
                             <Button size="small" variant="contained" onClick={renameActiveFile} disabled={!renameValue.trim()}>Rename</Button>
                         </Stack>
                     )}
+                </Box>
+            )}
+
+            {/* The file buttons show whenever the project has files, also with every tab closed. */}
+            {files.length > 0 && (
+                <Box sx={{ px: 1 }}>
                     <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.75, mb: 1 }}>
-                        <Button size="small" variant="outlined" onClick={() => setRenameValue(activeFile.name)}>Rename</Button>
+                        {activeFile && <Button size="small" variant="outlined" onClick={() => setRenameValue(activeFile.name)}>Rename</Button>}
                         <Button size="small" variant="outlined" onClick={() => singleFileInputRef.current?.click()}>Add files</Button>
                         <Button size="small" variant="outlined" onClick={() => folderInputRef.current?.click()}>Add folder</Button>
                         <Button size="small" variant="outlined" onClick={handleExportZip}>Download all</Button>
-                        <Button size="small" variant="outlined" color="error" onClick={deleteActiveFile}>Delete file</Button>
+                        {activeFile && <Button size="small" variant="outlined" color="error" onClick={deleteActiveFile}>Delete file</Button>}
                     </Stack>
                 </Box>
             )}

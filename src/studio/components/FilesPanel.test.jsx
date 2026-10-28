@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import JSZip from 'jszip'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import axe from 'axe-core'
 import { describe, expect, it, vi } from 'vitest'
 import { FilesPanel } from './StudioShellPanels.jsx'
 
@@ -121,12 +122,26 @@ describe('FilesPanel', () => {
         const spy = { current: null }
         render(<Harness spy={spy} />)
 
-        fireEvent.click(screen.getByRole('button', { name: 'Close style.css tab' }))
+        fireEvent.click(screen.getByTitle(/Close style\.css tab/))
 
         expect(screen.queryByRole('tab', { name: /style\.css/ })).toBeNull()
         expect(names(spy)).toEqual(['index.html', 'style.css'])
         fireEvent.click(screen.getByRole('button', { name: 'Open style.css' }))
         expect(screen.getByRole('tab', { name: /style\.css/ })).toBeInTheDocument()
+    })
+
+    it('the keyboard closes a tab with Delete, and that never deletes the file', () => {
+        const spy = { current: null }
+        render(<Harness spy={spy} />)
+        fireEvent.keyDown(screen.getByRole('tab', { name: /style\.css/ }), { key: 'Delete' })
+        expect(screen.queryByRole('tab', { name: /style\.css/ })).toBeNull()
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+    })
+
+    it('the tab x is not a nested button (axe nested-interactive stays clean)', async () => {
+        const { container } = render(<Harness spy={{ current: null }} />)
+        const result = await axe.run(container, { runOnly: ['nested-interactive'] })
+        expect(result.violations.map((v) => v.id)).toEqual([])
     })
 
     it('marks the start page, and Delete asks first, removes the file, and Undo brings it back', async () => {
@@ -182,19 +197,49 @@ describe('FilesPanel', () => {
         expect(names(spy)).toEqual(['index.html', 'style.css'])
     })
 
-    it('importing a zip: "No" then "Replace all" replaces; "Keep my files" changes nothing', async () => {
+    it('importing a zip: one question with Add / Replace all / Cancel; Replace all replaces and Undo brings the files back', async () => {
         const spy = { current: null }
         render(<Harness spy={spy} />)
         await addFiles(await zipOf({ 'only.html': '<p>only</p>' }))
-        fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'No' }))
-        fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Keep my files' }))
+        const dialog = await screen.findByRole('alertdialog')
+        expect(within(dialog).getAllByRole('button').map((b) => b.textContent)).toEqual(['Cancel', 'Replace all', 'Add them'])
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Replace all' }))
+        await waitFor(() => expect(names(spy)).toEqual(['only.html']))
+        expect(screen.queryByRole('alertdialog')).toBeNull()
+        fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+    })
+
+    it('importing a zip: Cancel and Esc both stop, with no second question and nothing changed', async () => {
+        const spy = { current: null }
+        render(<Harness spy={spy} />)
+        await addFiles(await zipOf({ 'only.html': '<p>only</p>' }))
+        fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Cancel' }))
+        await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
         expect(names(spy)).toEqual(['index.html', 'style.css'])
 
         await addFiles(await zipOf({ 'only.html': '<p>only</p>' }))
-        fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'No' }))
-        fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Replace all' }))
-        await waitFor(() => expect(names(spy)).toEqual(['only.html']))
-        fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+        await screen.findByRole('alertdialog')
+        fireEvent.keyDown(window, { key: 'Escape' })
+        await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+        // a second question would have opened by now
+        await act(async () => { await new Promise((r) => setTimeout(r, 30)) })
+        expect(screen.queryByRole('alertdialog')).toBeNull()
+        expect(names(spy)).toEqual(['index.html', 'style.css'])
+    })
+
+    it('with every tab closed the Add files / Add folder / Download all row stays; Rename and Delete wait for an open tab', () => {
+        const spy = { current: null }
+        render(<Harness spy={spy} />)
+        fireEvent.click(screen.getByTitle(/Close index\.html tab/))
+        fireEvent.click(screen.getByTitle(/Close style\.css tab/))
+        expect(screen.queryByRole('tab')).toBeNull()
+        for (const name of ['Add files', 'Add folder', 'Download all']) {
+            expect(screen.getByRole('button', { name })).toBeInTheDocument()
+        }
+        expect(screen.queryByRole('button', { name: 'Delete file' })).toBeNull()
+        fireEvent.click(screen.getByRole('button', { name: 'Open style.css' }))
+        expect(screen.getByRole('button', { name: 'Delete file' })).toBeInTheDocument()
         expect(names(spy)).toEqual(['index.html', 'style.css'])
     })
 
