@@ -5,8 +5,8 @@ main = "src/worker.js"
 compatibility_date = "2026-10-01"
 
 [vars]
-ZONE = "di-studio.xyz"
-# The zone's id: Cloudflare dashboard → di-studio.xyz → Overview → Zone ID. Not a secret.
+ZONE = "l.thedi.studio"
+# The zone's id: Cloudflare dashboard → thedi.studio → Overview → Zone ID. Not a secret.
 CF_ZONE_ID = "SET-BEFORE-DEPLOY"
 DI_API_BASE = "https://dev.diiii.xyz/serverXR"
 

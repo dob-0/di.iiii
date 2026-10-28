@@ -1,7 +1,7 @@
 # di name broker
 
 A Cloudflare Worker that gives each di install its own network name, `<label>.<zone>`
-(zone `di-studio.xyz`, label `<who>-<4 chars>`, e.g. `dob-a3f9.di-studio.xyz`), and moves
+(zone `l.thedi.studio`, label `<who>-<4 chars>`, e.g. `dob-a3f9.l.thedi.studio`), and moves
 that name's records when the install asks, signed with its install key. The install
 makes its TLS key and runs its own ACME client; the broker only writes the DNS-01
 challenge record. The Cloudflare token lives only in this Worker's secret.
@@ -70,21 +70,21 @@ cd services/name-broker
 npm install                                   # pinned wrangler, dev only
 npx wrangler login                            # once per machine
 npx wrangler kv namespace create LABELS       # put the printed id into wrangler.toml
-# CF_ZONE_ID in wrangler.toml: dashboard → di-studio.xyz → Overview → Zone ID
-npx wrangler secret put CF_API_TOKEN          # a token with Zone → DNS → Edit on di-studio.xyz only
+# CF_ZONE_ID in wrangler.toml: dashboard → thedi.studio → Overview → Zone ID
+npx wrangler secret put CF_API_TOKEN          # a token with Zone → DNS → Edit on thedi.studio only
 npx wrangler secret put ADMIN_TOKEN           # a long random string, e.g. openssl rand -hex 32
 npx wrangler deploy
 curl -s https://di-name-broker.<account>.workers.dev/v1/health   # { ok: true, zone, version }
 ```
 
-A custom route (e.g. `names.di-studio.xyz`) can be added later in `wrangler.toml`.
+The broker's address is `https://name.thedi.studio` (owner, 2026-10-28, N1418); add it as a custom route in `wrangler.toml` (`routes = [{ pattern = "name.thedi.studio", custom_domain = true }]`) at deploy. The zone itself is the `ZONE` var in `wrangler.toml`.
 
 Revoke a label: `curl -X DELETE -H "X-Di-Admin: $ADMIN_TOKEN" https://…/v1/labels/<label>`.
 
 ## Rollback
 
 `npx wrangler delete` removes the Worker; the DNS records it wrote stay until deleted
-in the dashboard (each is `<label>.di-studio.xyz` or `_acme-challenge.<label>.di-studio.xyz`).
+in the dashboard (each is `<label>.l.thedi.studio` or `_acme-challenge.<label>.l.thedi.studio`).
 Installs keep `http://diiii.localhost/` either way.
 
 ## Tests
