@@ -271,6 +271,12 @@ describe('StudioShell — a new project opens bare', () => {
         expect(document.querySelector('.sbar')).toBeNull()
     })
 
+    it('on a phone, ?open=files opens the Code sheet on an empty project', () => {
+        window.history.replaceState(null, '', '/?open=files')
+        renderShell({ ...inProject, layers: NEW, isMobile: true })
+        expect(document.querySelector('.smb-sheet-head')?.textContent).toContain('Code')
+    })
+
     it('on a phone: Create alone until the first thing, then the full phone bar', () => {
         const { rerender } = renderShell({ ...inProject, layers: NEW, isMobile: true })
         const nav = () => [...screen.getByRole('navigation', { name: 'Studio windows' }).querySelectorAll('button')].map((b) => b.textContent)

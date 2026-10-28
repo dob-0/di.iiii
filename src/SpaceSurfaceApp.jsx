@@ -210,5 +210,10 @@ export default function SpaceSurfaceApp({ routeState }) {
         return <Suspense fallback={<LoadingScreen label="Loading space" />}><EmptySpaceView spaceId={spaceId} title={spaceLabel} /></Suspense>
     }
 
+    // The contents list could not be read: the plain empty-space view, never the 3D editor.
+    if (needsContents) {
+        return <Suspense fallback={<LoadingScreen label="Loading space" />}><EmptySpaceView spaceId={spaceId} title={spaceLabel} /></Suspense>
+    }
+
     return <Suspense fallback={<LoadingScreen label="Loading space" />}><App /></Suspense>
 }

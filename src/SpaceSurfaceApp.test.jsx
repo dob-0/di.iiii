@@ -141,6 +141,14 @@ describe('SpaceSurfaceApp', () => {
             expect(screen.getByText(/empty-space-view/)).toBeInTheDocument()
         })
 
+        it('shows the empty-space view, not the editor, when the contents cannot be read', async () => {
+            getServerSpace.mockResolvedValue(noDoor)
+            listSpaceContents.mockRejectedValue(new Error('boom'))
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'cinema-house' }} />)
+            expect(await screen.findByText(/empty-space-view/)).toBeInTheDocument()
+            expect(screen.queryByText('legacy-app')).toBeNull()
+        })
+
         it('shows the plain empty-space view when it holds no project', async () => {
             getServerSpace.mockResolvedValue(noDoor)
             listSpaceContents.mockResolvedValue([])

@@ -295,7 +295,8 @@ export default function StudioShell({
         toggle(id)
     }, [toggle])
     const [showHelp, setShowHelp] = useState(false)
-    const [mobileSheet, setMobileSheet] = useState(null)
+    // `?open=files|create` (the plain project view's choices) opens that sheet on a phone, where the floating-panel set is not drawn.
+    const [mobileSheet, setMobileSheet] = useState(() => (isMobile && typeof window !== 'undefined' ? panelFromAddress(window.location.search) : null))
     // How many times the person has picked something, for the first-run coach:
     // placing a thing already selects it, so "Tap it" is done by a tap, not by
     // there being a selection.
@@ -352,7 +353,7 @@ export default function StudioShell({
     const mobilePanels = jamMinimal
         ? [...MOBILE_PANELS.filter(([id]) => id === 'create'), ['jamedit', 'Edit']]
         : bare
-            ? MOBILE_PANELS.filter(([id]) => id === 'create')
+            ? MOBILE_PANELS.filter(([id]) => id === 'create' || (id === 'files' && codeAskedFor))
             : MOBILE_PANELS
 
     // The one bar, carrying this project across to Nodes, Projection and Light.
