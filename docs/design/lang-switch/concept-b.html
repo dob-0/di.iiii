@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Language switch — concept B</title>
+<style>
+:root {
+    --di-cyan: #4df9ff;
+    --di-cyan-dim: rgba(77, 249, 255, 0.1);
+    --di-cyan-border: rgba(77, 249, 255, 0.3);
+    --di-cyan-line: rgba(77, 249, 255, 0.35);
+    --di-cyan-wash: rgba(77, 249, 255, 0.06);
+    --di-black: #000;
+    --di-surface: #0a0a0a;
+    --di-text: #fff;
+    --di-text-muted: rgba(255, 255, 255, 0.5);
+    --di-note-ink: rgba(255, 196, 140, 0.62);
+    --di-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --di-sans: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --di-space-1: 3px;
+    --di-space-2: 7px;
+    --di-space-3: 12px;
+    --di-space-4: 16px;
+    --di-space-5: 22px;
+    --di-space-6: 30px;
+    --di-space-7: 40px;
+    --di-text-2: 0.625rem;
+    --di-text-3: 0.76rem;
+    --di-text-4: 0.9rem;
+    --di-text-5: 1.0625rem;
+    --di-text-6: 1.25rem;
+    --di-label-tracking: 0.16em;
+    --di-touch-target: 44px;
+}
+* { box-sizing: border-box; border-radius: 0; }
+body { margin: 0; background: var(--di-black); color: var(--di-text); font: var(--di-text-4)/1.5 var(--di-sans); }
+main { max-width: 1320px; margin: 0 auto; padding: var(--di-space-6) var(--di-space-4); }
+h1 { font-size: var(--di-text-6); font-weight: 600; margin: 0 0 var(--di-space-2); }
+h2 { font: 500 var(--di-text-2)/1 var(--di-mono); letter-spacing: var(--di-label-tracking); text-transform: uppercase; color: var(--di-text-muted); margin: 0 0 var(--di-space-3); }
+p { margin: 0 0 var(--di-space-3); }
+.lede { color: var(--di-text-muted); max-width: 70ch; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--di-space-5); margin: var(--di-space-6) 0; }
+.panel { border: 1px solid var(--di-cyan-border); background: var(--di-surface); padding: var(--di-space-4); min-width: 0; }
+.mock { border: 1px solid var(--di-cyan-line); background: var(--di-black); }
+.bar { display: flex; align-items: center; gap: var(--di-space-3); padding: var(--di-space-2) var(--di-space-3); border-bottom: 1px solid var(--di-cyan-line); font: var(--di-text-3) var(--di-mono); }
+.bar .grow { flex: 1; }
+.brand { color: var(--di-cyan); font-weight: 600; }
+.muted { color: var(--di-text-muted); }
+.sw { display: inline-flex; border: 1px solid var(--di-cyan); font: 600 var(--di-text-3) var(--di-mono); }
+.sw span { padding: var(--di-space-1) var(--di-space-2); }
+.sw .on { background: var(--di-cyan); color: var(--di-black); }
+.acct { width: 22px; height: 22px; border: 1px solid var(--di-cyan-border); }
+.hero { padding: var(--di-space-6) var(--di-space-4); }
+.hero b { font-size: var(--di-text-6); font-weight: 600; display: block; margin-bottom: var(--di-space-2); }
+.work { margin: var(--di-space-3); padding: var(--di-space-4); min-height: 120px; border: 1px dashed var(--di-note-ink);
+    background: repeating-linear-gradient(135deg, transparent 0 10px, var(--di-cyan-wash) 10px 11px); }
+.work .tag { font: var(--di-text-2) var(--di-mono); letter-spacing: var(--di-label-tracking); text-transform: uppercase; color: var(--di-note-ink); }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--di-space-3); margin-top: var(--di-space-2); }
+.studio { display: grid; grid-template-columns: 90px 1fr 110px; min-height: 150px; }
+.studio > div { border-right: 1px solid var(--di-cyan-line); padding: var(--di-space-2); font: var(--di-text-2) var(--di-mono); color: var(--di-text-muted); }
+.studio > div:last-child { border-right: 0; }
+.phone { width: 230px; margin: 0 auto; border: 1px solid var(--di-cyan); background: var(--di-black); min-height: 360px; display: flex; flex-direction: column; }
+.phone .hero { padding: var(--di-space-5) var(--di-space-3); flex: 1; }
+.phone .sw span { min-width: var(--di-touch-target); min-height: var(--di-touch-target); display: inline-flex; align-items: center; justify-content: center; }
+.callout { margin-top: var(--di-space-3); color: var(--di-cyan); font: var(--di-text-3) var(--di-mono); }
+.note { border-left: 2px solid var(--di-note-ink); color: var(--di-note-ink); padding: var(--di-space-2) var(--di-space-3); margin: var(--di-space-3); font-size: var(--di-text-3); }
+dl { display: grid; grid-template-columns: 200px 1fr; gap: var(--di-space-3) var(--di-space-5); border-top: 1px solid var(--di-cyan-border); padding-top: var(--di-space-5); }
+dt { font: 500 var(--di-text-2)/1.6 var(--di-mono); letter-spacing: var(--di-label-tracking); text-transform: uppercase; color: var(--di-cyan); }
+dd { margin: 0; max-width: 80ch; }
+code { font: var(--di-text-3) var(--di-mono); color: var(--di-cyan); }
+@media (max-width: 800px) {
+    .grid { grid-template-columns: 1fr; }
+    dl { grid-template-columns: 1fr; gap: var(--di-space-1); }
+    dd { margin-bottom: var(--di-space-3); }
+    .studio { grid-template-columns: 60px 1fr 70px; }
+}
+</style>
+</head>
+<body>
+<main>
+<h2>di.iiii · language switch · concept B of 3 · sketch, not built</h2>
+<h1>B — The address carries it</h1>
+<p class="lede">Armenian lives at its own address: <code>/hy/…</code> in front of any path. The switch is a link to the same page in the other language, shown in the frame's top-left beside the name di.iiii, so it reads as part of where you are. A link you send carries the language with it, and search can index both.</p>
+
+<div class="grid">
+    <section class="panel" data-surface="landing">
+        <h2>1 · Landing page header</h2>
+        <div class="mock">
+            <div class="bar"><span class="brand">di.iiii</span><span class="sw"><span class="on">EN</span><span>ՀԱՅ</span></span><span class="grow"></span><span class="muted">Spaces</span><span class="muted">Wiki</span><span class="acct"></span></div>
+            <div class="hero"><b>A place for spaces.</b><span class="muted">diiii.xyz/ → ՀԱՅ is a plain link to diiii.xyz/hy/</span></div>
+        </div>
+        <p class="callout">↑ top-left, glued to the name: “di.iiii EN | ՀԱՅ”.</p>
+    </section>
+
+    <section class="panel" data-surface="space">
+        <h2>2 · Inside a space's front page</h2>
+        <div class="mock">
+            <div class="bar"><span class="brand">di.iiii</span><span class="sw"><span>EN</span><span class="on">ՀԱՅ</span></span><span class="muted">/hy/sample-space</span><span class="grow"></span><span class="acct"></span></div>
+            <div class="work" data-work translate="no" lang="und">
+                <span class="tag">the work · same bytes at /sample-space and /hy/sample-space</span>
+                <div class="cols"><span>Հայերեն տեքստ, ինչպես արվեստագետը գրել է։</span><span>English text, as the artist wrote it.</span></div>
+            </div>
+        </div>
+        <p class="callout">↑ /hy/ changes the frame strip only. The work is served identically under both addresses.</p>
+    </section>
+
+    <section class="panel" data-surface="studio">
+        <h2>3 · Inside the Studio</h2>
+        <div class="mock">
+            <div class="bar"><span class="brand">di.iiii</span><span class="sw"><span>EN</span><span class="on">ՀԱՅ</span></span><span class="muted">/hy/sample-space/studio/first-project</span><span class="grow"></span><span class="acct"></span></div>
+            <div class="studio"><div>Օբյեկտներ</div><div>scene</div><div>Հատկություններ</div></div>
+        </div>
+        <p class="callout">↑ same place in the Studio. Studio addresses are not indexed, so here the prefix is only about links between collaborators.</p>
+    </section>
+
+    <section class="panel" data-surface="phone">
+        <h2>4 · On a phone (390 wide)</h2>
+        <div class="phone">
+            <div class="bar"><span class="brand">di.iiii</span><span class="sw"><span>EN</span><span class="on">ՀԱՅ</span></span><span class="grow"></span><span class="muted">≡</span></div>
+            <div class="hero"><b>Տարածքներ</b><span class="muted">diiii.xyz/hy/spaces — the switch stays next to the name; each half is a 44 px target.</span></div>
+        </div>
+        <p class="callout">↑ the menu (≡) holds the rest; the language never goes into it.</p>
+    </section>
+</div>
+
+<dl>
+    <dt data-answer="where">Where it sits</dt>
+    <dd>Top-left, directly after the name di.iiii, in every frame: landing, /spaces, a space's frame strip, the Studio bar, the wiki. It is two links, not a toggle: <code>EN</code> → the path without <code>/hy</code>, <code>ՀԱՅ</code> → the same path with it. Query and hash are kept.</dd>
+
+    <dt data-answer="remembers">What it remembers, and how</dt>
+    <dd>The address is the memory: every link drawn inside a <code>/hy/</code> page stays inside <code>/hy/</code>. A first-party cookie <code>di_lang=hy</code> (1 year, <code>SameSite=Lax</code>, set only when the visitor presses the switch) is read in exactly one place, the bare root <code>/</code>, which then <em>offers</em> “Հայերեն →” as a line under the header — it never redirects on its own. Signed in: the account also stores it, so emails and invitations di.iiii sends use the person's language.</dd>
+
+    <dt data-answer="address">What the address does</dt>
+    <dd><code>/hy/</code> prefix on every route: <code>/hy/spaces</code>, <code>/hy/sample-space</code>, <code>/hy/sample-space/studio/…</code>. English stays where it is today, unprefixed, so no existing link or printed QR code changes. Cost, plainly: <code>hy</code> must become a reserved space name (checked against the live spaces table before this ships), and the router has one more segment to strip on every route.</dd>
+
+    <dt data-answer="search">What it means for search</dt>
+    <dd>A subdirectory per language is one of the URL structures Google Search Central lists in “Managing multi-regional and multilingual sites” (beside country domains and subdomains; URL parameters it marks “not recommended”), and it is the only one of the three concepts that gives each language its own URL without a new domain. Each public page lists every version of itself in <code>&lt;link rel="alternate" hreflang="en" …&gt;</code>, <code>hreflang="hy"</code> and <code>hreflang="x-default"</code> → the English address; each version lists all the others and itself, as the “Tell Google about localized versions of your page” guide requires, or Google ignores the pair. Studio and other signed-in pages stay <code>noindex</code>.</dd>
+
+    <dt data-answer="missing">A page with no Armenian yet</dt>
+    <dd><code>/hy/that-page</code> still answers 200: frame in Armenian, body in English under one line: <span class="note" style="display:inline-block;margin:0">Այս էջը դեռ հայերեն չունի։ Ստորև՝ անգլերեն։</span> Until it has an Armenian body it is left out of the hreflang set and its canonical points at the English address, so search never shows an English page as “the Armenian one”.</dd>
+
+    <dt data-answer="work">How the work is left untouched</dt>
+    <dd>The prefix is read and stripped by the frame before anything else; the work is resolved from the remaining path and served byte-for-byte the same under both addresses. It is never told the language (no parameter, no message, no attribute), its container carries <code>translate="no"</code> against browser translation, and its own <code>lang</code> is the artist's. A space's front page that is already bilingual stays bilingual at both addresses.</dd>
+</dl>
+<p class="muted" style="margin-top:var(--di-space-5)">Typeface: the platform's Inter is a latin subset (48,256 bytes) with no Armenian glyphs, so Armenian here falls back to the system font, as it would on the live site today. All Armenian copy in this sketch needs a native speaker's check.</p>
+</main>
+</body>
+</html>

@@ -273,7 +273,7 @@ Changed by this table:
 | `node.null` | `Node` | **Null** | TD's exact term for the blank pass-through primitive; "Node" named it after its whole category. (Still a shell, hidden from the palette.) |
 
 Confirmed as they stand (the census found no better professional word):
-- **make**: Cube · Sphere · Plane · Cylinder · Cone · Torus *(the TD-audit geometry wave, 2026-08-20 — primitives the entity system always had, finally spoken as nodes)* · Merge · Array *(shipped 2026-08-20 — repeats what arrives, Count × Offset)* · Transform *(re-frames one copy — Array's sibling)* · Constructor · Text · Browser · Image · Create *(paletteHidden in the node editor — objects belong to Studio)* · Line · Circle *(2026-08-21 — Line is a stroke between two wirable endpoints, drawn as a thin cylinder; Circle is a flat disc facing +Z like Plane; both answer Geometry descriptors so Array and Transform can repeat them)*
+- **make**: Cube · Sphere · Plane · Cylinder · Cone · Torus *(the TD-audit geometry wave, 2026-08-20 — primitives the entity system always had, finally spoken as nodes)* · Merge · Array *(shipped 2026-08-20 — repeats what arrives, Count × Offset)* · Transform *(re-frames one copy — Array's sibling)* · Constructor · Text · Browser · Image · QR Code *(2026-10-21 — draws an address as a picture wire)* · Create *(paletteHidden in the node editor — objects belong to Studio)* · Line · Circle *(2026-08-21 — Line is a stroke between two wirable endpoints, drawn as a thin cylinder; Circle is a flat disc facing +Z like Plane; both answer Geometry descriptors so Array and Transform can repeat them)*
 - **numbers**: Number · Colour · Vector · Boolean · String · Time · **Math** *(the operator family, 2026-09-01 — one card with an operation menu, wearing the name of the operation it is set to: Add · Subtract · Multiply · Divide · Modulo · Power · Sin · Absolute. Those eight labels survive as OPERATION names, not type names, so nothing a person had learned to read on a card changed)* · Mix · Clamp · **Route** *(Gate and Switch, merged the same day — same menu idea; Gate is the operation it is born in)* · Compare *(stayed its own card: it is wire-first, three boolean outputs, and an operation menu can only answer one question at a time)* · Lag · Noise *(shipped 2026-08-20; Noise's variation input is Variant — "seed" is banned copy)* · Range · Oscillator · Logic · Extremes · Absolute · Round · Ease *(the TD-audit numbers wave, 2026-08-20 — wire-first: Oscillator speaks Sine/Square/Triangle/Saw, Logic answers Both/Either/One/Neither, Ease shapes Smooth/Ease In/Ease Out/Bounce)* · Counter · Hold · Delay · Timer · Trigger · Speed · Toggle *(the state wave — every one remembers through frameMemory and reacts to rising edges)* · Flash Guard *(2026-10-21 — WCAG 2.2 SC 2.3.1, three flashes or below: holds a light or picture value back so no more than three flashes a second pass; Rate and Limited say when it acted; the count is `src/project/nodes/flashRule.js`, shared with the offline flash checks; Limit only goes stricter)* · Cue *(2026-10-21 — the project's cue list as wires: Index, Name, Look, Progress, Fading, Fired out; Go, Back, Jump, Loop in. Where the list is comes from the shared cue clock, `shared/cueClock.cjs`, the same lines the desk's cue runner and the show's clock run)* · Split · Combine · Channels · Compose · Distance · Ramp *(the vector/colour wave — pure taps and joins for the two compound wire types)* · Dot · Cross · Direction · Rotation · Aim · Random *(the second vector wave, 2026-08-21 — Dot's Angle and Rotation's Angle input speak degrees; Aim's output is a rotation ready for any shape's Rotation port; Random is one fixed draw per Variant, Noise is the one that wanders)*
 - **the scene**: Scene · Kiosk · Geo · Constructor's siblings 3D Desk / 2D Desk *(deliberate survivors — see the 2026-08-19 note; 3D Desk retires from the palette with the container pass)* · Light *(splits into Light + Environment in the Light pass — reserved below)* · Camera · Background · Grid · In · Out · Studio · Node 0 / Activate Node / Universe Link *(shells, hidden)*
 - **watch**: Monitor · Inspector · Outliner · Timeline · Director
@@ -286,7 +286,7 @@ Reserved names — settle NOW so the build waves don't invent their own:
 | --- | --- | --- |
 | `world.environment` (Light split) | **Environment** | TD Environment Light; the scene's ambient/directional settings |
 | `light.point` (Light split) | **Light** | the lamp you place; the legacy dual-identity `world.light` goes paletteHidden with a non-colliding label decided in that pass |
-| streaming four, when built | **Composite · Switch (texture) · Output · Record** | TD TOP names; if number-Switch and texture-Switch would meet in one palette, the texture one ships as **Composite**'s sibling and the collision is resolved in that PR, not silently |
+| streaming four, when built | **Composite · Switch (texture) · Output** · ~~Record~~ **Recorder** (built 2026-10-21, see the amendment below) | TD TOP names; if number-Switch and texture-Switch would meet in one palette, the texture one ships as **Composite**'s sibling and the collision is resolved in that PR, not silently |
 
 Guard: `src/nodeLabelVocabulary.test.js` — labels must carry no banned word, no
 parenthetical, no leading article, and stay within two words. The prose guard
@@ -419,6 +419,13 @@ Still open for the owner (no word is settled here, so nothing changed): the fami
 sits on Kiosk, Studio, In and Out as well as on the scene's own cards; and **kiosk** names both the
 node and the projector appliance in the wiki. The questions are in PR "Nodes: names".
 
+## Amended 2026-10-21 — QR Code
+
+| Word | Its one job |
+|---|---|
+| **QR Code** | The node that draws an address as a QR code (ISO/IEC 18004) on a picture wire, for a plane, an Image panel or Picture Out. Text left empty encodes this tier's own address, so a project moved between tiers never shows a dead code. "QR" is the standard's own name, kept in capitals; not "barcode", which is the one-dimensional kind. |
+| **Correction** (QR Code) | How much of the code may be worn or covered and still read: **L** about 7 %, **M** 15 % (default), **Q** 25 %, **H** 30 %. The standard calls it the error correction level; the port says the one word. |
+
 ## Amended 2026-10-14 — the laser nodes (Phase 1 of the laser workflow)
 
 Design: the raw laser workflow decision of 2026-10-14 (lands in docs/ai/decisions with docs PR #933). The rows for **master clock**, **clock**, **cube group**,
@@ -447,6 +454,19 @@ extra **clocks** can be added. The rows for **master clock** and **clock** are i
 | **Beats** (Oscillator) | How many beats of its clock one cycle lasts, ¼ … 64. 0 keeps the cycle in Hz (Frequency), which is what every Oscillator made before Phase 2 does. |
 | **Bias** (Oscillator) | Leans the cycle: −1 … 1 moves the half-way point (a triangle's peak, a square's edge) from the middle toward an end; on a square it is the duty. TouchDesigner's word. |
 | **Sample & hold** | The wave that holds one random value for a whole cycle and jumps at the next. The `/light` desk calls the same wave **random**. **Random glide** walks from one cycle's value to the next instead of jumping. |
+
+## Amended 2026-10-21 — Recorder and Still (keep what the show looked like)
+
+The owner, 2026-10-21: "yes build all 12" — this is one of the twelve. The reserved word above was
+**Record**; the brief named the card **Recorder**, the noun for the thing that records (a verb on a
+card reads as a button). Type id unchanged: `stream.recorder`.
+
+| Word | Its one job |
+|---|---|
+| **Recorder** (`stream.recorder`) | The node that records a picture wire (a Scene's Picture, a Picture Out), and a sound if one is wired, to a WebM file between **Start** and **Stop**. Its outputs: **Recording**, **Seconds**, **Status**, **File**. The file lands in the project's files. |
+| **Still** (`stream.still`) | The node that saves one PNG of a picture wire on **Take** (its button, or a rising signal). Outputs **Status** and **File**. |
+| **take** | One thing a Recorder or a Still kept: one recording, or one still. Its file is named `<kind>-<source>-<date>`, e.g. `still-scene-2026-10-21T14-03-07.png`, because a project file carries a name and a date and nothing else. |
+| **seek** (the clock) | Holding the document clock at one moment so a test browser can cut a project frame-exact: `__seek(t)` (seconds), `__ready`, `__play`. Developer words; no card shows them. |
 
 ## Proposed 2026-10-13 — a lighting look, and the Dilijan words (owner's pick, nothing renamed)
 

@@ -9,6 +9,8 @@ import { computeOutput as deviceVisitor } from './device.visitor/runtime.js'
 import { computeOutput as deviceTilt } from './device.tilt/runtime.js'
 import { computeOutput as deviceDmxOut } from './device.dmx.out/runtime.js'
 import { computeOutput as deviceLaserOut } from './device.laser.out/runtime.js'
+import { computeOutput as streamRecorder } from './stream.recorder/runtime.js'
+import { computeOutput as streamStill } from './stream.still/runtime.js'
 import { computeOutput as laserShape } from './laser.shape/runtime.js'
 import { computeOutput as laserTrace } from './laser.trace/runtime.js'
 import { computeOutput as laserMerge } from './laser.merge/runtime.js'
@@ -49,6 +51,7 @@ import { computeOutput as signalTimer } from './signal.timer/runtime.js'
 import { computeOutput as signalTrigger } from './signal.trigger/runtime.js'
 import { computeOutput as viewButton } from './view.button/runtime.js'
 import { computeOutput as viewList } from './view.list/runtime.js'
+import { computeOutput as viewQrCode } from './view.qrcode/runtime.js'
 import { computeOutput as viewText } from './view.text/runtime.js'
 import { computeOutput as viewTimeline } from './view.timeline/runtime.js'
 import { computeOutput as geomCircle } from './geom.circle/runtime.js'
@@ -93,6 +96,9 @@ export const NODE_RUNTIMES = new Map([
     ['device.midi.out', deviceMidiOut],
     ['device.mesh.in', deviceMeshIn],
     ['device.mesh.out', deviceMeshOut],
+
+    ['stream.recorder', streamRecorder],
+    ['stream.still', streamStill],
     ['geom.array', geomArray],
     ['geom.cone', geomCone],
     ['geom.cylinder', geomCylinder],
@@ -136,6 +142,7 @@ export const NODE_RUNTIMES = new Map([
     ['vector.split', vectorSplit],
     ['view.button', viewButton],
     ['view.list', viewList],
+    ['view.qrcode', viewQrCode],
     ['view.text', viewText],
     ['view.timeline', viewTimeline],
 ])

@@ -221,6 +221,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('beat', 'signal.beat', { label: 'Beat', col: 0, row: 20 })
     add('laserFile', 'laser.file', { label: 'Laser File', col: 4, row: 20 })
     add('laserText', 'laser.text', { label: 'Laser Text', col: 4, row: 21 })
+    add('recorder', 'stream.recorder', { label: 'Recorder', col: 4, row: 22 })
+    add('still', 'stream.still', { label: 'Still', col: 4, row: 23 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 
@@ -290,6 +292,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // with no network, where an iframe of diiii.xyz is a dead panel.
     add('browser', 'view.browser', { label: 'Browser panel', col: 4, row: 4, values: { url: '/wiki' } })
     add('image', 'view.image', { label: 'Image panel', col: 4, row: 5 })
+    add('qrcode', 'view.qrcode', { label: 'QR Code', col: 4, row: 11 })
     add('publish', 'view.publish', { label: 'Public page panel', col: 4, row: 6, values: { title: 'The example project' } })
     add('list', 'view.list', { label: 'List panel', col: 4, row: 7, values: {
         groups: ['Core', 'Would be good'],

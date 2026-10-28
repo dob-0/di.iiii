@@ -1,7 +1,7 @@
 /* global __APP_VERSION__, __DI_WORKS__ */
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, ThemeProvider, Typography } from '@mui/material'
-import { diFontTheme } from '../styles/muiTheme.js'
+import { diTheme } from '../styles/muiTheme.js'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { buildWikiPath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
@@ -830,7 +830,7 @@ function LandingPageInner() {
 // eagerly by the router (2026-07-17 perf audit).
 export default function LandingPage() {
     return (
-        <ThemeProvider theme={diFontTheme}>
+        <ThemeProvider theme={diTheme}>
             <LandingPageInner />
         </ThemeProvider>
     )

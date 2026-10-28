@@ -985,11 +985,21 @@
  },
  "graphics": {
   "what": "UP-LA40WF built-in graphics on ch 3 (and ch 20, the second graphic in 32 ch) — the same on both units: U2.137 ch 139/156, U2.169 ch 171/188.",
-  "source": "owner 2026-10-17: 'i don like heart one … and also the numberes and arrows, so dont use that values … you can make it approx'. Values read from his 86 s sweep video (di.bo video-1490) with the desk's wire log under every frame (sheets la40wf-shapes-by-value-1..3). Then 11:5x: 'in 40w i told what values is bad to not use … dont make it aprox other is ok' — only the exact values he named are banned; no approximate extras.",
+  "source": "owner 2026-10-17: 'i don like heart one … and also the numberes and arrows, so dont use that values … you can make it approx'. Values read from his 86 s sweep video (di.bo video-1490) with the desk's wire log under every frame (sheets la40wf-shapes-by-value-1..3). Then 11:5x: 'in 40w i told what values is bad to not use … dont make it aprox other is ok' — only the exact values he named are banned; no approximate extras. Then 2026-10-17 05:04Z (recovered 2026-10-21): 72-81, 88, 89, 146-168 never; 181 is the test pattern — see each entry's source.",
   "testPattern": {
-   "value": 24,
-   "shape": "square",
-   "basis": "the square shows from 23 to 25 in the video; the owner's photo at the same value agrees"
+   "value": 181,
+   "source": {
+    "who": "the owner",
+    "when": "2026-10-17 05:04Z",
+    "words": "don't use from 72-81,88,89,146-168, and 181 is the test pattern add in chart to not use this values",
+    "recovered": "dropped by the old di.bo, recovered 2026-10-21 (filed in a cloud session)",
+    "basis": "the owner's word (eye on the unit); not measured on the wire log"
+   },
+   "replaces": {
+    "value": 24,
+    "shape": "square",
+    "basis": "the square shows from 23 to 25 in the sweep video; the owner's photo at the same value agrees (2026-10-17, measured)"
+   }
   },
   "neverUse": {
    "heart": {
@@ -998,13 +1008,15 @@
      79,
      166,
      167
-    ]
+    ],
+    "source": "measured: the owner's sweep video 2026-10-17 (di.bo video-1490) with the desk's wire log, sheets la40wf-shapes-by-value-1..3"
    },
    "arrow": {
     "values": [
      74,
      75
-    ]
+    ],
+    "source": "measured: the owner's sweep video 2026-10-17 (di.bo video-1490) with the desk's wire log, sheets la40wf-shapes-by-value-1..3"
    },
    "number": {
     "values": [
@@ -1016,16 +1028,117 @@
      251,
      252,
      253
-    ]
+    ],
+    "source": "measured: the owner's sweep video 2026-10-17 (di.bo video-1490) with the desk's wire log, sheets la40wf-shapes-by-value-1..3"
+   },
+   "owner-72-81": {
+    "values": [
+     72,
+     73,
+     74,
+     75,
+     76,
+     77,
+     78,
+     79,
+     80,
+     81
+    ],
+    "source": {
+     "who": "the owner",
+     "when": "2026-10-17 05:04Z",
+     "words": "don't use from 72-81,88,89,146-168, and 181 is the test pattern add in chart to not use this values",
+     "recovered": "dropped by the old di.bo, recovered 2026-10-21 (filed in a cloud session)",
+     "basis": "the owner's word (eye on the unit); not measured on the wire log"
+    },
+    "overlaps": "holds the measured arrows 74-75 and hearts 78-79"
+   },
+   "owner-88-89": {
+    "values": [
+     88,
+     89
+    ],
+    "source": {
+     "who": "the owner",
+     "when": "2026-10-17 05:04Z",
+     "words": "don't use from 72-81,88,89,146-168, and 181 is the test pattern add in chart to not use this values",
+     "recovered": "dropped by the old di.bo, recovered 2026-10-21 (filed in a cloud session)",
+     "basis": "the owner's word (eye on the unit); not measured on the wire log"
+    },
+    "overlaps": "none"
+   },
+   "owner-146-168": {
+    "values": [
+     146,
+     147,
+     148,
+     149,
+     150,
+     151,
+     152,
+     153,
+     154,
+     155,
+     156,
+     157,
+     158,
+     159,
+     160,
+     161,
+     162,
+     163,
+     164,
+     165,
+     166,
+     167,
+     168
+    ],
+    "source": {
+     "who": "the owner",
+     "when": "2026-10-17 05:04Z",
+     "words": "don't use from 72-81,88,89,146-168, and 181 is the test pattern add in chart to not use this values",
+     "recovered": "dropped by the old di.bo, recovered 2026-10-21 (filed in a cloud session)",
+     "basis": "the owner's word (eye on the unit); not measured on the wire log"
+    },
+    "overlaps": "holds the measured hearts 166-167 and the dot range 146-165 (safety.dotValueRanges)"
    }
   },
   "neverUseValues": [
+   72,
+   73,
    74,
    75,
+   76,
+   77,
    78,
    79,
+   80,
+   81,
+   88,
+   89,
+   146,
+   147,
+   148,
+   149,
+   150,
+   151,
+   152,
+   153,
+   154,
+   155,
+   156,
+   157,
+   158,
+   159,
+   160,
+   161,
+   162,
+   163,
+   164,
+   165,
    166,
    167,
+   168,
    246,
    247,
    248,
@@ -1036,17 +1149,45 @@
    253
   ],
   "safety": {
-  "dotValueRanges": [[146, 165], [185, 187]],
+   "dotValueRanges": [
+    [
+     146,
+     165
+    ],
+    [
+     185,
+     187
+    ]
+   ],
    "points": "single dots and blobs (about 146-165, 185-187): all 40 W in one spot — never toward people; only for an aim test on a surface",
    "basis": "physics, not the owner's list"
   },
-  "useTheRest": "every other value 1-255 is usable (owner 11:5x: 'other is ok'), one shape about every two values (sheets).",
-  "limit": "exact by the owner's word: only the values he named are banned; nothing around them is added.",
+  "useTheRest": "every value 0-255 not in neverUseValues is usable (owner 11:5x: 'other is ok'); 0-9 is one look (looks.oneLook).",
+  "limit": "exact by the owner's word: only the values the owner named (2026-10-17 measured lists and the 05:04Z ranges) are banned; nothing around them is added.",
   "sheets": [
    "docs/moxir/devices/photos/la40wf-shapes-by-value-1-2026-10-17.jpg",
    "docs/moxir/devices/photos/la40wf-shapes-by-value-2-2026-10-17.jpg",
    "docs/moxir/devices/photos/la40wf-shapes-by-value-3-2026-10-17.jpg"
   ],
-  "date": "2026-10-17"
+  "date": "2026-10-17 (05:04Z entries recovered 2026-10-21)",
+  "looks": {
+   "oneLook": [
+    0,
+    9
+   ],
+   "rule": "values 0-9 are ONE look (the same graphic); the next look starts at 10. Do not photograph or list 0-9 as separate shapes.",
+   "source": {
+    "who": "the owner",
+    "when": "2026-10-17, same thread as 05:04Z",
+    "words": [
+     "this is 0",
+     "and it goes till the 9 so don't photo",
+     "and this is the after 9",
+     "this 166"
+    ],
+    "recovered": "dropped by the old di.bo, recovered 2026-10-21 (filed in a cloud session)"
+   },
+   "limit": "contradicts 'one graphic for every two values' (the manual) for 0-9 only; the rest of the range is not re-walked, so above 9 the two-values rule still stands as the manual says."
+  }
  }
 }

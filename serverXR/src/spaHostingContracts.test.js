@@ -28,6 +28,8 @@ const SERVER_ENTRY = path.join(SERVER_ROOT, 'src/index.js')
 
 const SPA_MARKER = '<div id="root"></div><!-- spa fixture -->'
 const ASSET_BODY = 'export const marker = "real asset file"\n'
+// The PNG signature and a marker: enough for "this is the icon, not the shell".
+const ICON_BODY = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from('icon fixture')])
 
 const activeServers = []
 
@@ -50,6 +52,8 @@ const makeClientDir = async () => {
     await writeFile(path.join(dir, 'index.html'), SPA_MARKER)
     await mkdir(path.join(dir, 'assets'), { recursive: true })
     await writeFile(path.join(dir, 'assets', 'app-abc123.js'), ASSET_BODY)
+    await mkdir(path.join(dir, 'suite'), { recursive: true })
+    await writeFile(path.join(dir, 'suite', 'apple-touch-icon.png'), ICON_BODY)
     return { dir, base }
 }
 
@@ -166,6 +170,19 @@ describe('CLIENT_DIR set: one process serves both the API and the app', () => {
 
         expect(response.status).toBe(200)
         expect(await response.text()).toBe(ASSET_BODY)
+    })
+
+    it('answers both root apple-touch-icon names with the suite icon, not the shell (G49)', async () => {
+        // iOS probes the root without reading <head>; the shell answered both
+        // with 200 text/html before the alias existed.
+        const server = await startServer({ clientDir: await withClientDir() })
+
+        for (const name of ['apple-touch-icon.png', 'apple-touch-icon-precomposed.png']) {
+            const response = await fetch(`${server.origin}/${name}`)
+            expect(response.status).toBe(200)
+            expect(response.headers.get('content-type')).toBe('image/png')
+            expect(Buffer.from(await response.arrayBuffer()).equals(ICON_BODY)).toBe(true)
+        }
     })
 
     it('404s a missing asset instead of returning index.html with a 200', async () => {

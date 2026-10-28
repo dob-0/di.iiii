@@ -226,10 +226,11 @@ export const WIKI_ARTICLES = [
             'The Trash button appears on the Spaces page once something is in it. Each row shows how many projects went with the space and how many days are left. Restore brings the space back with exactly the projects that went with it; a project you had deleted on its own earlier stays in that project trash. Delete forever… asks twice and is the only way the files go before the 30 days are up.',
             'A space marked permanent is not deleted: the box says so, and an admin can unmark it there first. The front room, the shared global space and a sandbox are never deleted. While a space is in the Trash its name is held, so a new space cannot take it by accident.',
             'A project can move to another space you own: on a project card in Studio, "move to…" lists them. Its link keeps working. A project that is its space\u2019s front door asks first, because moving it leaves that space with no front door. Once moved, the old space\u2019s own address sends visitors on to the project in its new space, until that space is given a new front door. Someone who could not open the project where it went is not sent there: they see the old space as it is.',
-            'Not yet carried: a space that is followed from another copy (di follow) does nothing special when it is trashed — the copy that follows simply stops finding it. A delete does not travel to the copies that follow.'
+            'Not yet carried: a space that is followed from another copy (di follow) does nothing special when it is trashed — the copy that follows simply stops finding it. A delete does not travel to the copies that follow.',
+            'Spaces nobody touches. A space that is not permanent and has not been edited for 30 days (a guest sandbox: 7 days) is cleared by the server\u2019s half-hour sweep — and cleared means moved to the Trash, the same as a delete: it can be restored for 30 days. A space that is published, listed publicly, linked from the site, reachable by its own address or domain, or holds a project with saved work is never cleared: it is kept, and the sweep says so. A guest who comes back to a cleared sandbox inside the 30 days gets it back. Admins see every space due in the next 14 days, and what the sweep will do to each, under Manage → Due for the sweep.'
         ],
-        tags: ['delete', 'trash', 'restore', 'space', 'permanent', 'move', 'undo'],
-        updated: '2026-10-20'
+        tags: ['delete', 'trash', 'restore', 'space', 'permanent', 'move', 'undo', 'sweep', 'idle'],
+        updated: '2026-10-21'
     },
     {
         id: 'your-space-your-word',
@@ -1258,7 +1259,7 @@ export const WIKI_ARTICLES = [
         title: 'Apps, scripts and AIs',
         summary: 'Programs are welcome to read public di.iiii. Name yourself in the User-Agent and you get more room — /for-apps has the rules.',
         body: [
-            'Anything a visitor without an account can open — public spaces, published pages, /spaces, this wiki, and the API reads behind them — is open to programs too: apps, scripts, search engines and AI crawlers, for answering and for training alike. robots.txt welcomes them all, and /llms.txt describes di.iiii for language models.',
+            'Anything a visitor without an account can open — public spaces, published pages, /spaces, this wiki, and the API reads behind them — is open to programs too: apps, scripts, search engines and AI crawlers, for answering and for training alike. robots.txt welcomes them all, and /llms.txt describes di.iiii for language models; /llms-full.txt is the same file with every article of this wiki after it, so one fetch reads them all.',
             'Say who you are with a User-Agent carrying your program’s name, version and a contact in parentheses, the way MusicBrainz asks: “SpaceMirror/1.4 ( ops@example.org )” or “my-bot/0.2 (+https://example.org/bot)”.',
             { list: [
                 'Identified apps and crawlers: 300 API reads a minute from one address.',
@@ -1267,10 +1268,10 @@ export const WIKI_ARTICLES = [
                 'Off-limits: /admin, /preferences, private spaces, anything behind sign-in, and sending forms automatically.'
             ] },
             'A name is only what a program claims, so the per-address limits hold whatever the header says. di.iiii keeps a count per day per program name and the contact it published — no addresses, no pages read — for 90 days. Admins see that guest book in Ops Graph → Visitors, and can turn a program away by name; it then gets a 403 pointing back to /for-apps. Nothing is counted on a local install.',
-            'For a higher allowance or a block you think is a mistake: info@thedi.studio.'
+            'For a higher allowance or a block you think is a mistake: info@thedi.studio. A security problem goes to the same address; /.well-known/security.txt says so in the form security tools read.'
         ],
-        tags: ['api', 'apps', 'ai', 'crawlers', 'bots', 'user-agent', 'rate limit', 'llms.txt', 'robots.txt', 'developers'],
-        updated: '2026-09-13'
+        tags: ['api', 'apps', 'ai', 'crawlers', 'bots', 'user-agent', 'rate limit', 'llms.txt', 'llms-full.txt', 'robots.txt', 'security.txt', 'developers'],
+        updated: '2026-10-21'
     },
     {
         id: 'github-sync',
@@ -1871,6 +1872,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-21'
     },
     {
+        id: 'recorder-and-still-nodes',
+        category: 'Editing',
+        title: 'Recorder and Still — keep what the show looked like',
+        summary: 'Recorder records a picture, and a sound if you wire one, to a WebM file between Start and Stop; Still saves one PNG of a picture. Both land in the project’s files.',
+        body: [
+            'Add a Recorder in the node editor and wire a picture into its Picture socket: a Scene’s Picture, a Picture Out, or a camera’s Frame. Press Start to record and Stop to finish, or wire signals into Start and Stop — a Button, a Trigger or a Timer — so the show records itself. Holding a signal high starts once; it has to fall and rise again to act again.',
+            'The file is a WebM video. Recorder asks the browser for VP9 first, then VP8, then any WebM it can write, at 6 Mbps and 30 frames a second. When it stops, the file lands in the project’s files, named after what fed its picture and the moment recording began, for example recording-scene-2026-10-21T14-03-07.webm. On a project that is not saved to a server, the file stays in this browser.',
+            'Wire a sound into Sound to record it with the picture. Sound takes a live sound stream; without one the recording is picture only, and Recorder says so while it records.',
+            'Recorder answers four things the graph can read: Recording (true while it records), Seconds, Status (what it is doing, in words) and File (the name of the last file it kept).',
+            'Add a Still and wire a picture into Picture. Press Take, or send a signal into Take, and Still saves one PNG at the picture’s own size, named the same way: still-scene-2026-10-21T14-03-07.png. Its Status and File outputs say what it kept.',
+            'Both need their window open: a Scene gives its Picture only while its own window draws it, and a closed Recorder window stops and keeps what it recorded. If no picture is arriving, neither makes an empty file; each says that nothing is arriving.',
+            'For people who cut films of a project in a test browser: the editor and the output page answer window.__seek(seconds), which holds the clock at that moment and resolves once the frame is drawn (window.__ready is true then); window.__play() lets the clock run again.'
+        ],
+        tags: ['raw', 'nodes', 'record', 'recording', 'video', 'still', 'png', 'webm', 'documentation', 'show'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'laser-out-node',
         category: 'Editing',
         title: 'Laser and Laser Out — draw for the LaserCubes',
@@ -1977,6 +1995,20 @@ export const WIKI_ARTICLES = [
             'Presses are counted in the window you press them in. A window opened later starts from the cue list as it finds it. Two editors open on one project both fire the cue a press moves to.'
         ],
         tags: ['raw', 'nodes', 'cue', 'cue list', 'show', 'go', 'fade', 'hold', 'look', 'perform'],
+        updated: '2026-10-21'
+    },
+    {
+        id: 'qr-code-node',
+        category: 'Editing',
+        title: 'QR Code — a live code phones can scan',
+        summary: 'QR Code draws an address as a code people scan with a phone. Left empty, it shows this tier\u2019s own address, so it never goes stale.',
+        body: [
+            'Add a QR Code and wire its Picture into a Plane\u2019s Texture, an Image panel or Picture Out. Phones in the room scan it and open the address it holds.',
+            'Text is the address. Left empty, it is this tier\u2019s own address, read again every time the graph runs: move the project to another tier and the code changes with it, instead of pointing at a host that is gone. Type an address into Text, or wire in a String, to send phones to one page.',
+            'Correction says how much of the code can be covered or worn and still read: L about 7 %, M 15 % (the default), Q 25 %, H 30 %. A higher level makes a denser code for the same address, so keep M for a screen and use H for a print that people will lean on.',
+            'The code is redrawn only when the address or the level changes. An address longer than a QR code can hold (about 2,900 characters at L, 1,270 at H) draws nothing rather than a broken picture.'
+        ],
+        tags: ['raw', 'nodes', 'qr', 'qrcode', 'scan', 'phone', 'address', 'link', 'picture', 'texture'],
         updated: '2026-10-21'
     },
     {

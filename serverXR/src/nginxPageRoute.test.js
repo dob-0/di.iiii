@@ -58,6 +58,11 @@ describe('nginx.conf: the page route', () => {
     expect(existsSync(path.join(root, 'public/sitemap.xml'))).toBe(false)
   })
 
+  it('the build\'s sitemap (wiki, network) stays reachable for serverXR to build on', () => {
+    expect(block('= /sitemap-built.xml')).toMatch(/alias \/usr\/share\/nginx\/html\/sitemap\.xml;/)
+    expect(readFileSync(path.join(root, 'docker-compose.yml'), 'utf8')).toMatch(/SITEMAP_BUILT_URL:.*\/sitemap-built\.xml/)
+  })
+
   it('the page and the fallback shell are never cached long and keep the dev tier out of search', () => {
     for (const selector of ['@page', '@shell']) {
       expect(block(selector), selector).toMatch(/add_header Cache-Control "no-cache" always;/)
