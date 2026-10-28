@@ -140,7 +140,7 @@ describe('brand tokens v2 addendum', () => {
     })
 })
 
-// 2026-10-28, UX audit F140 / F128 (owner's answers Q1 A): the type ladder
+// 2026-10-28, UX audit F140 / F128 (Q1 A, the plan default the owner took with "ok fix everything"): the type ladder
 // starts at 12 px, labels are written in normal letters, links in running text
 // are underlined, and 24 px is the smallest target (WCAG 2.2 SC 2.5.8).
 describe('shared sizes: the type ladder and the target floor', () => {

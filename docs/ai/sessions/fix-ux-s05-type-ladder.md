@@ -11,3 +11,9 @@
 - Proof (outside the repo, `agent-reports-2026-10-28/ux-fix/S05-round2/`): after pictures of `/`, `/wiki`, `/terms`, `/for-apps` at 1440 and 390 (`after-fixed/`, door-row bug in `after/`); before pictures are the audit capture at 4ef52d1b7 (`ux-audit/capture/shots/wiki/phone.png` and others). `metrics.log` holds the numbers.
 - `scripts/verify-surfaces.mjs --mobile-only` (the body of `npm run verify:surfaces:mobile`, run through a CDP adapter on the agent-screen browser, pages `/ /wiki /terms /for-apps`, 5 devices): 15/20 ok, overflow 0 on all 20; the 5 problems are 404s of `/serverXR/api/resolve/<slug>` on `/` (the installed di answers the same 404, `curl .../resolve/main`), not CSS.
 - Not seen: Studio hub and rig build (the dev stack's data has no `cinema-house` / `scene-house`, both pages say Not found); `/spaces` (hangs the agent browser, ledger N1413); the owner's look at `--ui-border` .30 to .42 (brighter control edges on 245 uses) is still owed to him.
+
+## 2026-10-29 — independent review (judge)
+
+- `.device-code` (`src/pages/deviceLogin.css`) is a code to copy, not a label: it keeps its 0.16em spacing; the 0.02em label tracking had reached it through the token. No case change needed (the letters are capitals already).
+- Provenance: Q1 A is the UX plan's default the owner took with "ok fix everything", not a separate answer; the comments in `base.css`, `brandTokens.test.js` and the known-fixes line now say so.
+- Checked: the 8 new tests fail on the origin/dev stylesheets (8 failed, 25 passed) and pass on this branch.

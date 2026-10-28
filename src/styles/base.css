@@ -218,7 +218,8 @@
     /* Small text is 12px at the least: WCAG 2.2 SC 1.4.4 asks that text can be
        read and resized, and NN/g's research on older adults names tiny type as
        the first barrier. The two lowest rungs keep their names so the 300 call
-       sites do not change, and read 12px. Owner's answer Q1 A (2026-10-28):
+       sites do not change, and read 12px. Q1 A, the UX plan's default the owner took with "ok fix
+       everything" (2026-10-28; B is the one line below set to uppercase):
        labels are written in normal letters; capitals stay for the brand line and
        big signs only (those set their own text-transform and tracking). */
     --di-label-tracking: 0.02em;
