@@ -42,12 +42,16 @@ describe('deskAsk: the one way the desk asks', () => {
         expect(await q).toBe(false)
     })
 
-    it('Esc says no, ten seconds of nothing says no, and a second question replaces the first', async () => {
+    it('Esc says no, a second question replaces the first, and the bar never answers by itself', async () => {
         const c = clock(); const { ask, isOpen } = createAsk(document, c)
         const a = ask('one?'); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
         expect(await a).toBe(false); expect(isOpen()).toBe(false)
-        const b = ask('two?'); c.advance(10001)
-        expect(await b).toBe(false); expect(bar()).toBeNull()
+        // FIX 1 (round 2 review, WCAG 2.2.1): no time limit - ten minutes later the question still stands
+        let answered = false
+        const b = ask('two?'); b.then(() => { answered = true }); c.advance(600000)
+        await Promise.resolve()
+        expect(answered).toBe(false); expect(bar()).not.toBeNull(); expect(isOpen()).toBe(true)
+        press('.deskask-no'); expect(await b).toBe(false); expect(bar()).toBeNull()
         const d = ask('three?'); const e = ask('four?')
         expect(await d).toBe(false)
         expect(document.querySelectorAll('#deskAsk')).toHaveLength(1)
@@ -55,7 +59,7 @@ describe('deskAsk: the one way the desk asks', () => {
         expect(await e).toBe(true)
     })
 
-    it('works on the real timers, called as a method (a browser setTimeout throws if it is not bound)', async () => {
+    it('works on the real clock, called as a method', async () => {
         const { ask } = createAsk(document)
         const p = ask('real timers?')
         press('.deskask-no')
@@ -82,6 +86,14 @@ describe('deskAsk: the one way the desk asks', () => {
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
         expect(deskEsc).toBe(1)                                         // closed: the desk has its Esc back
         document.removeEventListener('keydown', desk)
+    })
+
+    it('the bar is a non-modal dialog, named once (no aria-live on top of the name)', () => {
+        const { ask } = createAsk(document, clock())
+        ask('Delete this look?', 'Delete')
+        expect(bar().getAttribute('role')).toBe('dialog')
+        expect(bar().getAttribute('aria-modal')).toBe('false')
+        expect(bar().hasAttribute('aria-live')).toBe(false)
     })
 
     it('the bar is named by its question', () => {

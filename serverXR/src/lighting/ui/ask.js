@@ -5,30 +5,29 @@
 // nothing at all. A native box freezes the page (the poll, the stage repaint and the panic key
 // stop until someone finds the dialog); the two-step button only works where there is a button.
 // Everything now goes through ask(): a bar at the foot of the page that never blocks anything,
-// answers a Promise, and stands down by itself.
+// answers a Promise, and waits for an answer.
 //
 //   if (!(await deskAsk.ask('Unpatch 12 fixtures? This cannot be undone.', 'Unpatch'))) return;
 //
 // Cancel has the focus and Esc says no, so a stray Enter or tap loses nothing. An OK pressed in
 // the first 350 ms is ignored (a double-tap or a bouncing touch that opened the bar must not
-// also confirm it), and ten seconds of nothing counts as no. Asking again replaces the bar and
-// answers the first question no.
+// also confirm it). The bar has NO time limit: a reader who needs a minute has it (WCAG 2.2.1 Timing
+// Adjustable), and the question is never answered no behind his back. Asking again replaces the bar
+// and answers the first question no.
 //
 // Plain script, like from.js: the page loads it; src/map/deskAsk.test.js holds the behaviour.
 (function (root) {
   const GUARD_MS = 350;
-  const STAND_DOWN_MS = 10000;
 
   function createAsk(doc, timers) {
-    // arrows, not bare references: a browser's setTimeout throws 'Illegal invocation' when called as t.set()
-    const t = timers || { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h), now: () => Date.now() };
-    let open = null;                       // { bar, done, timer, onKey, back }
+    // an arrow, not a bare reference, so a clock can be swapped in and called as t.now()
+    const t = timers || { now: () => Date.now() };
+    let open = null;                       // { bar, done, onKey, back }
 
     function close(answer) {
       if (!open) return;
-      const { bar, done, timer, onKey, back } = open;
+      const { bar, done, onKey, back } = open;
       open = null;
-      t.clear(timer);
       doc.removeEventListener('keydown', onKey, true);
       if (bar.parentNode) bar.parentNode.removeChild(bar);
       // a keyboard user goes back to the button they pressed; a mouse press stays blurred, as the desk wants
@@ -42,8 +41,8 @@
         const bar = doc.createElement('div');
         bar.id = 'deskAsk';
         bar.className = 'deskask';
-        bar.setAttribute('role', 'alertdialog');
-        bar.setAttribute('aria-live', 'assertive');
+        bar.setAttribute('role', 'dialog');
+        bar.setAttribute('aria-modal', 'false');                // the bar does not trap Tab; the page stays usable
         bar.setAttribute('aria-labelledby', 'deskAskText');   // a screen reader says the question, not "dialog"
         const text = doc.createElement('span');
         text.id = 'deskAskText';
@@ -63,14 +62,13 @@
         // (clear the selection, close the builder), so cancelling "Unpatch 12?" dropped the 12 selected.
         const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(false); } };
         doc.addEventListener('keydown', onKey, true);
-        const timer = t.set(() => close(false), STAND_DOWN_MS);
-        open = { bar, done, timer, onKey, back };
+        open = { bar, done, onKey, back };
         doc.body.appendChild(bar);
         no.focus();
       });
     }
 
-    return { ask, isOpen: () => !!open, GUARD_MS, STAND_DOWN_MS };
+    return { ask, isOpen: () => !!open, GUARD_MS };
   }
 
   const api = { createAsk };
