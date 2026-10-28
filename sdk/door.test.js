@@ -225,7 +225,7 @@ describe('an older server, with no catalogue', () => {
 })
 
 describe('over a real stdio pipe', () => {
-    it('serves the 2025-era handshake, the four door tools and the four read-only rig tools', async () => {
+    it('serves the 2025-era handshake, the four door tools, di_context and the four read-only rig tools', async () => {
         const entry = path.join(path.dirname(fileURLToPath(import.meta.url)), 'mcp.mjs')
         const child = spawn(process.execPath, [entry, '--base', 'http://127.0.0.1:1/serverXR'], { stdio: ['pipe', 'pipe', 'pipe'] })
         const lines = []
@@ -249,7 +249,7 @@ describe('over a real stdio pipe', () => {
         child.kill()
         expect(lines[0].result.protocolVersion).toBe('2025-11-25')
         const tools = lines[1].result.tools
-        expect(tools.map((t) => t.name)).toEqual(['di_find', 'di_describe', 'di_call', 'di_run', 'di_rig_versions', 'di_rig_check', 'di_rig_truss', 'di_production_archive_plan'])
+        expect(tools.map((t) => t.name)).toEqual(['di_find', 'di_describe', 'di_call', 'di_run', 'di_context', 'di_rig_versions', 'di_rig_check', 'di_rig_truss', 'di_production_archive_plan'])
         for (const t of tools.filter((x) => /^di_(rig|production)_/.test(x.name))) expect(t.annotations, t.name).toMatchObject({ readOnlyHint: true, destructiveHint: false })
     }, 15000)
 

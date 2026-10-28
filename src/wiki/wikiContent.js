@@ -1202,11 +1202,12 @@ export const WIKI_ARTICLES = [
                 'GET /serverXR/api/projects/:id/document — a project as JSON'
             ] },
             'Reading a public space needs no sign-in. Changing anything does: a browser session, or the token a terminal login (di login) gives — and a terminal login is refused anything public (publish, delete, invites). On a local install with sign-in off, nothing needs one. Name your program in the User-Agent; the rate limits are in “Apps, scripts and AIs”.',
-            'To hand di.iiii to an agent, run di mcp from an install (node sdk/mcp.mjs from a checkout). It is an MCP server with four tools whatever the server can do — di_find, di_describe, di_call and di_run — and it reads the catalogue of the server it talks to. The server stays the protection: it refuses what the token may not do, and public moves are refused unless the person who launched the server allows them and each call carries a confirmation.',
+            'To hand di.iiii to an agent, run di mcp from an install (node sdk/mcp.mjs from a checkout). It is an MCP server with four tools whatever the server can do — di_find, di_describe, di_call and di_run — and it reads the catalogue of the server it talks to. The server stays the protection: it refuses what the token may not do, and public moves are refused unless the person who launched the server allows them and each call carries a confirmation. A fifth tool, di_context, returns what di.iiii is and the words it uses, at the level your key reaches.',
+            'The same door can run over HTTP for an assistant that adds tools by address: node sdk/mcp.mjs --http 8787 --base <the server’s /serverXR address>. Each request must carry its own di.bo act token as Authorization: Bearer; without one the door answers 401 and does nothing. Over HTTP it never makes anything public, and it leaves out the rig tools.',
             'Realtime updates are delivered over WebSocket (socket.io) and SSE.'
         ],
-        tags: ['api', 'developers', 'agents', 'mcp', 'catalogue', 'openapi'],
-        updated: '2026-10-26'
+        tags: ['api', 'developers', 'agents', 'mcp', 'catalogue', 'openapi', 'context', 'remote', 'http'],
+        updated: '2026-10-27'
     },
     {
         id: 'dev-copy-label',
