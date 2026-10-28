@@ -125,8 +125,27 @@
     padding: var(--di-space-1) var(--di-space-1);
 }
 
+/* A command to copy (the AI setup page): one block. A long line wraps where
+   it must instead of hiding past the edge; a soft wrap copies as one line. */
+.legal-section pre {
+    margin: 0 0 var(--di-space-3);
+    max-width: 66ch;
+    background: var(--di-cyan-dim);
+    padding: var(--di-space-2) var(--di-space-3);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.legal-section pre code {
+    background: none;
+    padding: 0;
+}
+
 .legal-section a { color: var(--di-cyan); text-decoration: none; }
 .legal-section a:hover { text-decoration: underline; }
+
+.legal-updated a { color: var(--di-cyan); text-decoration: none; }
+.legal-updated a:hover { text-decoration: underline; }
 
 .legal-updated {
     margin: 0 0 var(--di-space-6);

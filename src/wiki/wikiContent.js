@@ -2450,6 +2450,20 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['studio', 'scene', 'scenes', 'light', 'cue', 'motion', 'heads', 'edit'],
         updated: '2026-10-15'
+    },
+    {
+        id: 'connect-your-assistant',
+        category: 'For developers',
+        title: 'Connect your assistant',
+        summary: 'Any assistant can read what di.iiii shows the public by its address; a key lets it read at your level. The steps are at /ai/setup.',
+        body: [
+            'An assistant on the web (Claude, ChatGPT, duck.ai, Gemini) can read di.iiii if you give it an address: https://diiii.xyz/llms.txt is the map, and https://diiii.xyz/ai/context is what di.iiii is and the words it uses, in one page. Without a key it reads only what anyone can.',
+            'di.iiii keeps that context at six levels: public, registered, partner, crew, core and owner. The server reads your level from your key, and you can ask for a lower one but never a higher one. A key comes from signing in from a terminal once (di login).',
+            'An assistant on your own machine that speaks MCP, such as Claude Code, can use di.iiii as tools: claude mcp add di -- di mcp. One of the tools, di_context, reads the context at your level.',
+            'Every step, with the lines to copy, is on the page /ai/setup, and the same words for an assistant are at /ai/setup.md.'
+        ],
+        tags: ['ai', 'assistant', 'claude', 'chatgpt', 'duck.ai', 'mcp', 'context', 'levels', 'setup', 'llms.txt'],
+        updated: '2026-10-27'
     }
 ]
 
