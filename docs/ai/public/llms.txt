@@ -11,6 +11,8 @@ Identified apps and crawlers get 300 API reads a minute per address; anonymous p
 
 ## Start here
 
+- [What di.iiii is](https://diiii.xyz/ai/about.md): the spaces, the editor, who makes it, in one page of markdown
+- [Words](https://diiii.xyz/ai/words.md): what each word in di.iiii means, and only that
 - [For apps](https://diiii.xyz/for-apps): how to identify, the limits, what is off-limits, how to ask for more
 - [Spaces](https://diiii.xyz/spaces): every public space, one card each
 - [Wiki](https://diiii.xyz/wiki): what di.iiii is and how it works, in plain words
@@ -19,11 +21,11 @@ Identified apps and crawlers get 300 API reads a minute per address; anonymous p
 
 ## Public API
 
-- `GET https://diiii.xyz/serverXR/api/spaces/{space}`: a public space's metadata
-- `GET https://diiii.xyz/serverXR/api/spaces/{space}/scene`: a public space's scene
+- [A space's metadata](https://diiii.xyz/serverXR/api/spaces/main): `GET /serverXR/api/spaces/{space}`, for any public space
+- [A space's scene](https://diiii.xyz/serverXR/api/spaces/main/scene): `GET /serverXR/api/spaces/{space}/scene`, for any public space
 
 ## Optional
 
 - [Full text](https://diiii.xyz/llms-full.txt): this file followed by every wiki article, in one file
-- [Source code](https://github.com/dob-0/di.iiii): the whole platform, AGPL-3.0
-- Contact: info@thedi.studio
+- [Source code](https://github.com/dob-0/di.iiii): the whole of di.iiii, AGPL-3.0
+- [Contact](mailto:info@thedi.studio): info@thedi.studio

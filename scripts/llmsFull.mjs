@@ -5,7 +5,7 @@
  * index, followed by the text itself, so a program can read the site in one
  * fetch instead of crawling a single-page app whose articles exist only after
  * JavaScript runs. Generated at build time from the two sources it repeats —
- * public/llms.txt and src/wiki/wikiContent.js — so it cannot drift from them.
+ * docs/ai/public/llms.txt and src/wiki/wikiContent.js — so it cannot drift from them.
  * Nothing is written by hand here.
  */
 import fs from 'node:fs'
@@ -48,7 +48,7 @@ export const llmsFullPlugin = ({ rootDir }) => ({
     name: 'emit-llms-full',
     apply: 'build',
     async generateBundle() {
-        const llms = fs.readFileSync(path.join(rootDir, 'public/llms.txt'), 'utf8')
+        const llms = fs.readFileSync(path.join(rootDir, 'docs/ai/public/llms.txt'), 'utf8')
         const { WIKI_CATEGORIES, WIKI_ARTICLES } = await import(pathToFileURL(path.join(rootDir, 'src/wiki/wikiContent.js')).href)
         this.emitFile({
             type: 'asset',

@@ -329,7 +329,10 @@ const config = {
     spacesDir,
     uploadsDir,
     dbPath,
-    estateMapPath
+    estateMapPath,
+    // The non-public levels of the one context (aiContext.js), written here by
+    // the context build. Never in the repo: only the public level is.
+    aiContextDir: process.env.AI_CONTEXT_DIR ? path.resolve(process.env.AI_CONTEXT_DIR) : path.join(dataDir, 'ai-context')
   },
   defaultTtlMs: Number(process.env.SPACE_TTL_MS || 1000 * 60 * 60 * 24 * 30),
   // Guest sandboxes are throwaway by contract (the hub banner says so) — idle
