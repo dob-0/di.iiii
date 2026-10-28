@@ -166,6 +166,8 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     onCursorLeave={shared.onCursorLeave}
                     xrStore={shared.xrStore}
                     editMode={shared.editMode}
+                    boxSelect={shared.boxSelect}
+                    onSelectEntities={shared.onSelectEntities}
                     setEditMode={shared.setEditMode}
                     gizmoMode={shared.gizmoMode}
                     setGizmoMode={shared.setGizmoMode}
@@ -173,6 +175,8 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     gizmoVisible={shared.gizmoVisible}
                     transformOp={shared.transformOp}
                     onTransformCommit={shared.onTransformCommit}
+                    onSceneOps={shared.onSceneOps}
+                    onPlayScene={shared.onPlayScene}
                     onTransformCommitMany={shared.onTransformCommitMany}
                     onTransformCancel={shared.onTransformCancel}
                     cameraView={cameraView}

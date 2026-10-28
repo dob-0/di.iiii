@@ -79,7 +79,7 @@ export default function SpacesPanel({
             </div>
             <div className="panel-content spaces-panel-content">
                 <div className="space-name-field">
-                    <label htmlFor="space-name-input">Space Name</label>
+                    <label htmlFor="space-name-input">Space name</label>
                     <input
                         id="space-name-input"
                         type="text"
@@ -99,7 +99,7 @@ export default function SpacesPanel({
                     )}
                 </div>
                 <div className="space-name-field">
-                    <label htmlFor="space-open-target-input">Open After Create</label>
+                    <label htmlFor="space-open-target-input">Open after create</label>
                     <select
                         id="space-open-target-input"
                         value={openAfterCreateTarget}
@@ -118,7 +118,7 @@ export default function SpacesPanel({
                         onClick={onCreateSpace}
                         disabled={!canCreateSpace}
                     >
-                        {isCreatingSpace ? 'Creating...' : 'New Temp Space'}
+                        {isCreatingSpace ? 'Creating...' : 'New temp space'}
                     </button>
                     <button
                         type="button"
@@ -126,7 +126,7 @@ export default function SpacesPanel({
                         onClick={onCreatePermanentSpace}
                         disabled={!canCreateSpace}
                     >
-                        {isCreatingSpace ? 'Please wait...' : 'Permanent Space'}
+                        {isCreatingSpace ? 'Please wait...' : 'Permanent space'}
                     </button>
                 </div>
                 {onCreateGroup && (
@@ -142,7 +142,7 @@ export default function SpacesPanel({
                     </div>
                 )}
                 <p className="panel-subtext">
-                    Temporary spaces auto-delete after {ttlHours}h of inactivity unless marked “Keep Forever”.
+                    Temporary spaces auto-delete after {ttlHours}h of inactivity unless marked “Keep forever”.
                 </p>
                 <div className="space-list">
                     {spaces.length === 0 ? (
@@ -181,10 +181,10 @@ export default function SpacesPanel({
                                 )}
                                 <div className="space-row-actions">
                                     <button type="button" onClick={() => onOpenSpace?.(space.id)}>
-                                        {isLive ? 'View Live' : 'Open'}
+                                        {isLive ? 'View live' : 'Open'}
                                     </button>
                                     <button type="button" onClick={() => handleCopy(space.id)}>
-                                        {copiedId === space.id ? 'Copied!' : (isLive ? 'Copy Live Link' : 'Copy Link')}
+                                        {copiedId === space.id ? 'Copied' : (isLive ? 'Copy live link' : 'Copy link')}
                                     </button>
                                     {isOwned && (
                                         <>
@@ -195,14 +195,14 @@ export default function SpacesPanel({
                                                 type="button"
                                                 onClick={() => onTogglePermanent?.(space.id, !space.isPermanent)}
                                             >
-                                                {space.isPermanent ? 'Make Temp' : 'Keep Forever'}
+                                                {space.isPermanent ? 'Make temp' : 'Keep forever'}
                                             </button>
                                             {onTogglePublic && (
                                                 <button
                                                     type="button"
                                                     onClick={() => onTogglePublic(space.id, !isLive)}
                                                 >
-                                                    {isLive ? 'Make Private' : 'Make Public'}
+                                                    {isLive ? 'Make private' : 'Make public'}
                                                 </button>
                                             )}
                                             <button

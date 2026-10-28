@@ -194,6 +194,14 @@ const authIdentityLookup = new Map(authIdentities.map(identity => [identity.toke
 // one isn't a new escalation the way falling back to a lower-role one would be.
 const adminFallbackToken = authIdentities.find(identity => identity.role === 'admin')?.token
 const authSessionSecret = (process.env.AUTH_SESSION_SECRET || apiToken || adminFallbackToken || '').trim()
+// Is the cookie key its OWN secret, not one of the API tokens? When it falls
+// back to a token, whoever holds that token can forge a session for any
+// account, so a "person signed in" stamp proves nothing: manage sync keys are
+// then not minted from a session at all (SPEC_space_sync_keys.md §13.4, review
+// R2-C). index.js says so once at startup.
+const authSessionSecretSeparate = Boolean(authSessionSecret) &&
+  Boolean((process.env.AUTH_SESSION_SECRET || '').trim()) &&
+  !authIdentities.some(identity => identity.token === authSessionSecret)
 // The token the server uses to call ITSELF (GitHub space-sync pulls a repo and
 // then writes it back through its own HTTP routes). Docker passes only
 // ADMIN_API_TOKEN, never API_TOKEN, so without this fallback every webhook and
@@ -307,7 +315,8 @@ const config = {
   auth: {
     identities: authIdentities.map(({ token, ...identity }) => ({ ...identity })),
     resolveIdentity: (token = '') => authIdentityLookup.get(String(token || '').trim()) || null,
-    sessionSecret: authSessionSecret
+    sessionSecret: authSessionSecret,
+    sessionSecretSeparate: authSessionSecretSeparate
   },
   directories: {
     root: ROOT_DIR,
@@ -381,14 +390,44 @@ const config = {
     // di.bo proves who someone is (Telegram delivered a message to them) and
     // asks us for a one-time link. `loginSecret` is what lets it ask — it is a
     // shared secret with the bot and NOTHING else, deliberately not the admin
-    // API token, so a compromised bot cannot also write spaces.
+    // API token, so a compromised bot cannot act as the platform. It can act as
+    // any Telegram-bound PERSON, within their own access (sign-in links, and
+    // the act tokens of docs/architecture/TELEGRAM_ACT_TOKEN.md).
     //
     // botUsername is advertised so a client can offer "open di.bo" without
     // hardcoding the bot's name; empty just means the button names no bot.
     telegram: {
       loginSecret: (process.env.TELEGRAM_LOGIN_SECRET || '').trim(),
       botUsername: (process.env.TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, ''),
-      enabled: Boolean((process.env.TELEGRAM_LOGIN_SECRET || '').trim())
+      enabled: Boolean((process.env.TELEGRAM_LOGIN_SECRET || '').trim()),
+      // How long a di.bo act token lives (POST /api/auth/telegram/act-token).
+      // Minutes, 15 by default; telegramActTokenStore clamps it to 1..60 so a
+      // typo in an env file can never mint a day-long key.
+      actTokenTtlMs: (Number(process.env.TELEGRAM_ACT_TOKEN_TTL_MINUTES) || 15) * 60 * 1000,
+      // Who acts through di.bo at which tier (actTokenTier.js): comma-separated
+      // Telegram ids. Anyone not listed — and everyone, when both are unset —
+      // is a member. A tier never reaches past the account's own role.
+      actTokenRootIds: require('./actTokenTier').parseTelegramIds(process.env.ACT_TOKEN_ROOT_TELEGRAM_IDS),
+      actTokenAdminIds: require('./actTokenTier').parseTelegramIds(process.env.ACT_TOKEN_ADMIN_TELEGRAM_IDS)
+    }
+  },
+  // The share door (docs/ai/publishing.md): channels a post can be sent to.
+  // Tokens come ONLY from the environment — never the database, never a
+  // response. Unset = that channel reads "missing" in /api/share/channels.
+  share: {
+    telegram: {
+      botToken: (process.env.SHARE_TELEGRAM_BOT_TOKEN || '').trim(),
+      chat: (process.env.SHARE_TELEGRAM_CHAT || '').trim(),
+      apiBase: (process.env.SHARE_TELEGRAM_API || 'https://api.telegram.org').replace(/\/+$/, '')
+    },
+    bluesky: {
+      handle: (process.env.SHARE_BLUESKY_HANDLE || '').trim().replace(/^@/, ''),
+      appPassword: (process.env.SHARE_BLUESKY_APP_PASSWORD || '').trim(),
+      pds: (process.env.SHARE_BLUESKY_PDS || 'https://bsky.social').replace(/\/+$/, '')
+    },
+    mastodon: {
+      url: (process.env.SHARE_MASTODON_URL || '').trim().replace(/\/+$/, ''),
+      token: (process.env.SHARE_MASTODON_TOKEN || '').trim()
     }
   },
   // Human-approval gate for admin-level writes (see approvalGate.js). Unset
@@ -418,9 +457,14 @@ const config = {
     proposalTtlMs: Number(process.env.CONTENT_PROPOSAL_TTL_MS || 3 * 24 * 60 * 60 * 1000)
   },
   // A space on its own domain — docs/architecture/SPEC_space_own_domain.md.
-  // Without the three CLOUDFLARE_SAAS_* values a domain can still be saved, but
-  // nothing switches it on except an admin; the settings page says so.
+  // Without a provider a domain can still be saved, but nothing switches it on
+  // except an admin; the settings page says so.
   customDomains: {
+    // Who switches a domain on: 'cloudflare' (Cloudflare for SaaS) or 'caddy'
+    // (Caddy's on-demand TLS, on a machine with its own public IP). Unset keeps
+    // the first behaviour: Cloudflare when the three values below are set.
+    // domainService.chooseDomainProvider() decides, and says why when it can't.
+    provider: (process.env.DOMAINS_PROVIDER || '').trim().toLowerCase(),
     // Where editing lives. An editor path opened on a space's domain goes here.
     platformOrigin: (process.env.PLATFORM_ORIGIN || '').trim().replace(/\/+$/, '') ||
       (authHubConfig.url ? new URL(authHubConfig.url).origin : 'https://diiii.xyz'),
@@ -430,6 +474,13 @@ const config = {
       apiToken: (process.env.CLOUDFLARE_SAAS_API_TOKEN || '').trim(),
       // The name a domain's CNAME points at (domains.diiii.xyz).
       cnameTarget: (process.env.CLOUDFLARE_SAAS_CNAME_TARGET || '').trim().toLowerCase()
+    },
+    caddy: {
+      // The name a domain's CNAME points at (domains.diiii.xyz), resolving to
+      // this machine.
+      publicTarget: (process.env.DOMAINS_PUBLIC_TARGET || '').trim().toLowerCase().replace(/\.$/, ''),
+      // The A/AAAA addresses a domain's root may point at, comma-separated.
+      publicIps: String(process.env.DOMAINS_PUBLIC_IPS || '').split(',').map((ip) => ip.trim()).filter(Boolean)
     },
     // Our own names; no space may claim one or anything under it.
     platformSuffixes: [

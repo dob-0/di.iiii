@@ -38,8 +38,22 @@
     font-size: var(--di-text-4);
     line-height: 1;
     padding: 0 var(--di-space-1);
+    /* WCAG 2.5.8: the bare "×" measured 15.5 x 14.4 px. */
+    min-width: 24px;
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .auth-return-notice button:hover {
     color: var(--di-text);
+}
+
+/* A finger, not a cursor: 44 px, the size the device matrix holds touch to. */
+@media (pointer: coarse) {
+    .auth-return-notice button {
+        min-width: 44px;
+        min-height: 44px;
+    }
 }

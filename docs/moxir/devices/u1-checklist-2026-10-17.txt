@@ -1,0 +1,50 @@
+# MOXIR universe 1 — every lamp, its place in the 3D, and its check state (2026-10-17 ~08:1x, doc v553, desk 61 fixtures)
+# 08:2x every universe-1 lamp lit in colours by area: owner "all right" — all places match the 3D.
+# address kind place-in-3D name position status
+  1 beam  truss                              side line right  x 0.4 z 3.4     OK
+ 17 wash  truss                              dj kicker        x -0.7 z 3.3    OK
+ 25 wash  truss                              cut down         x -1.7 z 3.3    OK
+ 33 wash  truss                              cut up           x -2.2 z 3.3    OK
+ 41 wash  truss                              cut down         x -3.1 z 3.3    OK
+ 49 wash  truss                              cut up           x -5.1 z 3.3    OK
+ 57 wash  truss                              dj back          x -6.5 z 3.3    OK
+ 65 wash  truss                              cut down         x -7.0 z 3.3    OK
+ 73 wash  truss                              cut up           x -8.0 z 3.3    OK
+ 81 wash  truss                              cut down         x -8.9 z 3.3    OK
+ 89 wash  truss                              cut up           x -9.9 z 3.3    OK
+ 97 beam  truss                              side line left   x -10.6 z 3.3   OK
+113 wash  floor, left, by the dance floor    line L           x -10.3 z 12.1  OK
+121 wash  floor, left, by the dance floor    line B           x -11.3 z 19.6  OK
+129 wash  floor, left, by the dance floor    line L           x -11.1 z 29.0  OK
+137 wash  floor, left, by the dance floor    line A           x -10.7 z 36.4  OK
+145 wash  floor, left, by the dance floor    line L           x -10.3 z 44.1  OK
+153 beam  left side line                     side line left   x -22.9 z -26.7 OK
+169 beam  left side line                     side line left   x -22.9 z -14.7 OK
+185 beam  left side line                     side line left   x -23.4 z -4.1  OK
+201 beam  left side line                     side line left   x -23.1 z 4.8   OK
+217 beam  left side line                     side line left   x -23.2 z 13.3  OK
+233 beam  behind the DJ                      plane 1          x -10.4 z -5.2  OK
+249 beam  behind the DJ                      plane 1          x -6.2 z -5.2   OK
+265 beam  behind the DJ                      plane 1          x -2.1 z -5.2   OK
+281 beam  behind the DJ                      plane 1          x 2.1 z -5.2    OK
+297 beam  behind the DJ                      plane 1          x 6.2 z -5.2    OK
+313 beam  behind the DJ                      plane 1          x 10.4 z -5.2   OK
+329 wash  floor, left, by the DJ             dj back          x -11.2 z 5.8   OK
+337 wash  floor, right, behind the stage     line C           x 2.1 z -29.0   OK
+345 wash  floor, left, behind the stage      line D           x -2.1 z -29.0  OK
+361 wash  floor, right, behind the stage     line A           x 10.5 z -42.5  OK
+369 wash  floor, left, behind the stage      line C           x -10.4 z -17.1 OK
+377 wash  floor, left, behind the stage      line D           x -6.2 z -29.0  OK
+385 wash  floor, right, behind the stage     line A           x 6.2 z -29.0   OK
+393 wash  floor, right, behind the stage     line D           x 10.4 z -29.0  OK
+401 wash  floor, left, behind the stage      line B           x -10.4 z -29.0 OK
+409 wash  floor, left wall/entrance, behind the stage entrance         x -39.6 z -42.1 OK
+417 wash  floor, left wall/entrance, behind the stage road             x -31.8 z -15.9 OK
+425 wash  floor, left wall/entrance, behind the stage road             x -31.8 z -27.9 OK
+433 wash  floor, left wall/entrance, behind the stage road             x -31.8 z -3.9  OK
+441 wash  floor, left wall/entrance, by the dance floor road             x -31.8 z 8.1   OK
+449 wash  floor, left wall/entrance, by the dance floor road             x -31.8 z 32.1  OK
+457 wash  floor, left wall/entrance, by the dance floor road             x -31.8 z 20.1  OK
+465 wash  floor, left wall/entrance, behind the stage entrance         x -39.6 z -55.1 OK
+481 UP-YZ31P floor, left, behind the stage      smoke machine (v2.5 gathered layout (moxir_v2_5_gathered.py): on the DJ axis, behind the booth. v2.5 gathered layout (moxir_v2_5_gathered.py): on the DJ axis, behind the booth. v2.2 symmetric x -5.3 z -6.1   OK
+482 wash  high                               stage key        x -21.9 z -9.5  OK

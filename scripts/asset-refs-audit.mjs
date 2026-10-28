@@ -46,7 +46,7 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 export const TIERS = {
     local: { url: 'http://localhost:4000/serverXR', tokenEnv: 'API_TOKEN' },
     dev: { url: 'https://dev.diiii.xyz/serverXR', tokenEnv: 'LIVE_API_TOKEN' },
-    prod: { url: 'https://di-studio.xyz/serverXR', tokenEnv: 'PROD_API_TOKEN' },
+    prod: { url: 'https://diiii.xyz/serverXR', tokenEnv: 'PROD_API_TOKEN' },
 }
 
 // The dev tier's old key is refused outright, not mapped: one name per tier.

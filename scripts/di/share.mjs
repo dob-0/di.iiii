@@ -16,6 +16,8 @@ import http from 'node:http'
 import https from 'node:https'
 import net from 'node:net'
 
+import { withUserAgent } from './userAgent.mjs'
+
 const TIMEOUT_MS = 8000
 
 /**
@@ -57,11 +59,11 @@ const pinnedRequest = (url, { method = 'GET', token = null, body = null, address
             // second. These are one-shot pre-checks, not a long-running
             // follower, so there is nothing worth pooling for.
             agent: false,
-            headers: {
+            headers: withUserAgent({
                 Accept: 'application/json',
                 ...(payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {}),
                 ...(token ? { Authorization: `Bearer ${token}` } : {})
-            }
+            })
         }, (res) => {
             const chunks = []
             res.on('data', (chunk) => chunks.push(chunk))
@@ -98,11 +100,11 @@ const request = async (url, { method = 'GET', token = null, body = null, address
         const response = await fetch(url, {
             method,
             signal: controller.signal,
-            headers: {
+            headers: withUserAgent({
                 Accept: 'application/json',
                 ...(body ? { 'Content-Type': 'application/json' } : {}),
                 ...(token ? { Authorization: `Bearer ${token}` } : {})
-            },
+            }),
             ...(body ? { body: JSON.stringify(body) } : {})
         })
         let payload = null
@@ -158,11 +160,13 @@ export const resolveBase = async (input, { address = null } = {}) => {
 const isHealth = (answer) => Boolean(answer?.ok && answer.payload && answer.payload.ok === true)
 
 /** Mint a key for one space on THIS install, for someone else to follow with. */
-export const mintInvite = async ({ base, spaceId, token, label = 'follow' }) => {
+export const mintInvite = async ({ base, spaceId, token, label = 'follow', manage = false }) => {
     const answer = await request(`${base}/api/spaces/${encodeURIComponent(spaceId)}/sync-keys`, {
         method: 'POST',
         token,
-        body: { label }
+        // `manage` only when asked: the server mints it only for the owner at
+        // the machine or a signed-in session (SPEC_space_sync_keys.md §13.4).
+        body: { label, ...(manage ? { manage: true } : {}) }
     })
     if (!answer.ok) return { ok: false, status: answer.status, reason: answer.payload?.error || answer.error || null }
     const key = answer.payload?.token || answer.payload?.key?.token || null
@@ -196,6 +200,18 @@ export const instanceOf = async (base, { address = null } = {}) => {
     if (!health.ok) return null
     const { startedAt = null, port = null } = health.payload || {}
     return `${startedAt}:${port}`
+}
+
+/** What the space's keys did (SPEC_space_sync_keys.md §13.6). */
+export const listKeyActions = async ({ base, spaceId, token }) => {
+    const answer = await request(`${base}/api/spaces/${encodeURIComponent(spaceId)}/sync-keys/actions`, { token })
+    return answer.ok ? { ok: true, actions: answer.payload?.actions || [] } : { ok: false, status: answer.status, reason: answer.payload?.error || answer.error || null }
+}
+
+/** Take a key back and undo what it did (SPEC_space_sync_keys.md §13.7). */
+export const undoKey = async ({ base, spaceId, keyId, token }) => {
+    const answer = await request(`${base}/api/spaces/${encodeURIComponent(spaceId)}/sync-keys/${encodeURIComponent(keyId)}/undo`, { method: 'POST', token })
+    return answer.ok ? { ok: true, ...answer.payload } : { ok: false, status: answer.status, reason: answer.payload?.error || answer.error || null }
 }
 
 /** Revoke a key minted by `di invite`. */

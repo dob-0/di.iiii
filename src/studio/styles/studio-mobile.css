@@ -83,7 +83,7 @@
     border: 1px solid var(--di-cyan-border);
     background: var(--di-scrim);
     color: rgba(255, 255, 255, 0.8);
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
     font-size: var(--di-text-3);
     padding: var(--di-space-2) var(--di-space-3);
     cursor: pointer;

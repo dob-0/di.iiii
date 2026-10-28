@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { getSharedLightingMirror } from '../rigMirror/useLightingMirror.js'
-import { TYPE_LIBRARY } from './types/index.js'
+import { useProjectLibrary } from './types/projectTypes.js'
 import { libraryWithShow } from './rental.js'
 import { blendEntities, flashEntities, lookIdOfDesk, lookPoses, posedEntities, rigLooksOf, washLevelOf, withLookWash, withWashLevel } from './looks.js'
 import { clockFadeOf, showDriver, showOf, showStateAt } from './showClock.js'
 import { dmxEntities } from './dmxPose.js'
+import { createLaserShowStore, hasNetworkLasers, NOT_PLAYING } from './laserShowState.js'
+import { laserApiBase } from '../raw/utils/dmxRigClient.js'
 import { isAssumedMode, typeById } from './fixtureTypes.js'
 import { getServerOffset } from './serverClock.js'
+import { djCentre, motionFrame, motionOf, motionPlan, serverNowOf, withMotion } from './lookMotion.js'
+import { headFrame, headPlan, headsOf, withHeads } from './headMotion.js'
 
 // THE ROOM FOLLOWS THE LOOK (docs/architecture/RIG_BUILD.md §11.4). While the desk plays
 // one of the room's designed looks on a layer — fired by a cue, by the desk itself, or by
@@ -28,8 +32,18 @@ import { getServerOffset } from './serverClock.js'
 
 const NONE = ''
 const FADE_FRAME_MS = 33
+// A moving look redraws the lamps this often (about 30 Hz; the desk's own frame grid is 40 Hz, fx.js FRAME_MS 25).
+const MOTION_FRAME_MS = 33
 const NO_FIXTURES = Object.freeze([])
 const NO_DRIVEN = new Map()
+const noSubscribe = () => () => {}
+const noLaserShow = () => NOT_PLAYING
+// The page's one poll of the laser server (same origin as the page: /laser/api/state), made on first use.
+let pageLaserStore = null
+const laserStoreOfPage = () => {
+    if (!pageLaserStore) pageLaserStore = createLaserShowStore({ url: () => `${laserApiBase()}/state` })
+    return pageLaserStore
+}
 
 /** Does the room hold a lamp a desk could drive — joined to a fixture, of a type with a channel list? */
 export const hasDmxLamps = (entities = [], library) => entities.some((e) => {
@@ -60,9 +74,13 @@ export const fadeProgress = (fade, now = Date.now()) => {
     return Math.min(1, Math.max(0, (now - fade.firedAt) / fade.fadeMs))
 }
 
-export function useRigLookEntities(document, { explicit, mirror, library: baseLibrary = TYPE_LIBRARY } = {}) {
+// `library` absent: the project's own types alone, loaded on demand (types/projectTypes.js) — a viewer never
+// downloads the whole fixture library for a room that hangs three kinds of lamp.
+export function useRigLookEntities(document, { explicit, mirror, laserShowStore, library: givenLibrary = null, now: clockNow = () => Date.now() } = {}) {
     const list = document?.entities
     const entities = useMemo(() => list || [], [list])
+    const projectLibrary = useProjectLibrary(givenLibrary ? null : list || null)
+    const baseLibrary = givenLibrary || projectLibrary
     const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
     const looks = useMemo(() => rigLooksOf(entities), [entities])
     const store = mirror || getSharedLightingMirror()
@@ -92,13 +110,18 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
 
     const mapping = document?.mappingState
     const show = useMemo(() => (looks ? showOf({ mappingState: mapping }) : null), [looks, mapping])
-    const driver = showDriver({ explicit, deskChecked, deskPresent, show })
+    // The project's lamp types are on their way (types/projectTypes.js): nothing is posed or driven from a library that
+    // lacks them. The room is the document as it is until they are in; 'pending' is the driver's own word for "not yet".
+    const typesPending = !givenLibrary && Boolean(projectLibrary.pending)
+    const driver = typesPending ? 'pending' : showDriver({ explicit, deskChecked, deskPresent, show })
     const clock = useShowClockState(show, driver === 'clock')
 
-    const lookId = explicit !== undefined
-        ? explicit
-        : driver === 'desk' ? deskLook
-            : driver === 'clock' && clock.state ? clock.state.lookId : NONE
+    const lookId = typesPending
+        ? NONE
+        : explicit !== undefined
+            ? explicit
+            : driver === 'desk' ? deskLook
+                : driver === 'clock' && clock.state ? clock.state.lookId : NONE
     const fade = explicit !== undefined
         ? null
         : driver === 'desk'
@@ -132,21 +155,61 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
     const assets = document?.assets
     const blended = useMemo(() => withLookWash(faded, { fromLookId: shownFrom ? fromId : '', toLookId: lookId, t: shownFrom ? t : 1, assets }), [faded, shownFrom, fromId, lookId, t, assets])
     const flashed = useMemo(() => flashEntities(blended, library), [blended, library])
+    // A MOVING LOOK (lookMotion.js): the look's `motion` is played on the lit lamps of its kinds, a level multiplier per lamp
+    // from the SERVER's time (the clock offset measured once for the page) counted from the moment the scene was fired, so
+    // every viewer is on the same beat. Level only: no lamp is moved or turned. Redrawn ~30 times a second, and not at all
+    // for a look that holds still (the same array passes through).
+    const playing = lookId && looks ? looks.looks.find((l) => l.id === lookId) || null : null
+    const plan = useMemo(() => {
+        if (!playing || !motionOf(playing)) return null
+        const level = new Map(shownTo.map((e) => [e.id, e.components?.rigShown?.level ?? 1]))
+        return motionPlan({ entities: shownTo, look: playing, levelOf: (id) => level.get(id) ?? 1, centre: djCentre(entities) })
+    }, [playing, shownTo, entities])
+    // MOVING HEADS (headMotion.js): the look's `heads` turn the lit moving heads of its kinds, from the same server clock and the same epoch.
+    const headsPlan = useMemo(() => {
+        if (!playing || !headsOf(playing)) return null
+        const level = new Map(shownTo.map((e) => [e.id, e.components?.rigShown?.level ?? 1]))
+        return headPlan({ entities: shownTo, library, look: playing, levelOf: (id) => level.get(id) ?? 1 })
+    }, [playing, shownTo, library])
+    const [beat, setBeat] = useState(0)
+    useEffect(() => {
+        if (!plan && !headsPlan) return undefined
+        const timer = setInterval(() => setBeat((n) => n + 1), MOTION_FRAME_MS)
+        return () => clearInterval(timer)
+    }, [plan, headsPlan])
+    const epoch = explicit !== undefined ? 0 : driver === 'clock' ? clock.state?.firedAt || 0 : (fade?.firedAt || 0)
+    const offsetMs = driver === 'clock' ? clock.offset?.offset || 0 : 0
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `beat` is the clock's tick; the time is read inside the memo
+    const frame = useMemo(() => (plan ? motionFrame(plan, serverNowOf(clockNow(), offsetMs), epoch) : null), [plan, epoch, offsetMs, beat])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `beat` is the clock's tick; the time is read inside the memo
+    const headsNow = useMemo(() => (headsPlan ? headFrame(headsPlan, serverNowOf(clockNow(), offsetMs), epoch) : null), [headsPlan, epoch, offsetMs, beat])
     // DMX WINS (RIG_BUILD.md §18.4): while the desk is live, every lamp joined to a patched
     // fixture with a known channel list is drawn from what the desk sends, attribute by
     // attribute. A page's own GO (`explicit`) means no desk is being followed.
     const dmxOn = explicit === undefined && deskPresent && dmxLamps && deskFixtures.length > 0
+    // The cubes are not the desk's: while the room follows the desk, a network laser's lines follow the laser server
+    // (laserShowState.js: drawn while the show plays on the line's armed cube, else dark). One poll for the page, and
+    // only while this room holds a network laser.
+    const networkLasers = useMemo(() => hasNetworkLasers(entities), [entities])
+    const laserStore = dmxOn && networkLasers ? (laserShowStore || laserStoreOfPage()) : null
+    const laserShow = useSyncExternalStore(laserStore ? laserStore.subscribe : noSubscribe, laserStore ? laserStore.getSnapshot : noLaserShow, noLaserShow)
     const dmx = useMemo(() => (dmxOn
-        ? dmxEntities({ shown: flashed, document: entities, fixtures: deskFixtures, library })
-        : { entities: flashed, driven: NO_DRIVEN }), [dmxOn, flashed, entities, deskFixtures, library])
-    const shown = dmx.entities
+        ? dmxEntities({ shown: flashed, document: entities, fixtures: deskFixtures, library, laserShow })
+        : { entities: flashed, driven: NO_DRIVEN }), [dmxOn, flashed, entities, deskFixtures, library, laserShow])
+    // Motion rides on top of whatever draws the lamps, DMX included: the desk's values are the level, the look's motion is the beat.
+    const shown = useMemo(() => withMotion(dmx.entities, frame), [dmx.entities, frame])
+    // Heads ride on top the same way, except a head the desk MOVES (its DMX decodes pan/tilt): the desk's DMX already holds the
+    // offsets, so the room does not add them a second time.
+    const deskMoves = useMemo(() => new Set([...dmx.driven].filter(([, d]) => d.pan != null || d.tilt != null).map(([id]) => id)), [dmx.driven])
+    const shownHeads = useMemo(() => withHeads(shown, headsNow, { library, skip: deskMoves }), [shown, headsNow, library, deskMoves])
     const lit = Boolean(looks && lookId && looks.looks.some((l) => l.id === lookId))
     return {
-        entities: shown,
+        entities: shownHeads,
         driven: dmx.driven,
         lookId: lit ? lookId : NONE,
         fromDesk: driver === 'desk' && Boolean(deskLook),
         fading: Boolean(shownFrom && t < 1),
+        moving: Boolean(plan || headsPlan),
         driver,
         show: driver === 'clock' ? show : null,
         clock: driver === 'clock' ? clock.state : null,

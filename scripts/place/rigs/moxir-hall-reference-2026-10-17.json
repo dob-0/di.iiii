@@ -1,0 +1,1606 @@
+{
+ "what": "the hall's real patch and places, set by the owner in the v2 Plot and called final ('here i all set so this is final', 2026-10-17 19:23)",
+ "source": "project moxir-scenes-v2-0 document v272",
+ "lamps": [
+  {
+   "id": "rig-par-cut-01",
+   "index": 201,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 89,
+   "dmx": true,
+   "position": [
+    -9.9,
+    2.91,
+    3.31
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 cut up (used)"
+  },
+  {
+   "id": "rig-par-cut-02",
+   "index": 202,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 81,
+   "dmx": true,
+   "position": [
+    -8.937,
+    3.157,
+    3.312
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 cut down (used)"
+  },
+  {
+   "id": "rig-par-cut-03",
+   "index": 203,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 73,
+   "dmx": true,
+   "position": [
+    -7.97,
+    3.43,
+    3.31
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 cut up (used)"
+  },
+  {
+   "id": "rig-par-cut-04",
+   "index": 204,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 65,
+   "dmx": true,
+   "position": [
+    -7.005,
+    3.674,
+    3.312
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 cut down (used)"
+  },
+  {
+   "id": "rig-par-cut-05",
+   "index": 205,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 57,
+   "dmx": true,
+   "position": [
+    -6.52,
+    4.53,
+    3.31
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 dj back (used)"
+  },
+  {
+   "id": "rig-par-cut-06",
+   "index": 206,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 49,
+   "dmx": true,
+   "position": [
+    -5.07,
+    4.18,
+    3.31
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 cut up (used)"
+  },
+  {
+   "id": "rig-par-cut-07",
+   "index": 207,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 329,
+   "dmx": true,
+   "position": [
+    -11.2,
+    0.322,
+    5.8
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 dj back (used)"
+  },
+  {
+   "id": "rig-par-cut-08",
+   "index": 208,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 41,
+   "dmx": true,
+   "position": [
+    -3.141,
+    4.71,
+    3.312
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 cut down (used)"
+  },
+  {
+   "id": "rig-par-cut-09",
+   "index": 209,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 33,
+   "dmx": true,
+   "position": [
+    -2.175,
+    5.688,
+    3.312
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 cut up (used)"
+  },
+  {
+   "id": "rig-par-cut-10",
+   "index": 210,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 25,
+   "dmx": true,
+   "position": [
+    -1.692,
+    5.098,
+    3.312
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 cut down (used)"
+  },
+  {
+   "id": "rig-par-cut-11",
+   "index": 211,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 17,
+   "dmx": true,
+   "position": [
+    -0.726,
+    5.357,
+    3.312
+   ],
+   "rotation": [
+    -0.3169,
+    0,
+    -0.912
+   ],
+   "name": "UP-PL5403 dj kicker (used)"
+  },
+  {
+   "id": "rig-smoke-planes",
+   "index": 261,
+   "type": "up-yz31p",
+   "mode": "1ch-assumed",
+   "universe": 1,
+   "address": 481,
+   "dmx": true,
+   "position": [
+    -5.273,
+    1.012,
+    -6.088
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "name": "UP-YZ31P smoke machine (v2.5 gathered layout (moxir_v2_5_gathered.py): on the DJ axis, behind the booth. v2.5 gathered layout (moxir_v2_5_gathered.py): on the DJ axis, behind the booth. v2.2 symmetric"
+  },
+  {
+   "id": "rig-laser-1a",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -3.998,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0171
+   ],
+   "name": "LaserCube 1 beam 1a (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-1b",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -3.998,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0009
+   ],
+   "name": "LaserCube 1 beam 1b (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-1c",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -3.998,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.019
+   ],
+   "name": "LaserCube 1 beam 1c (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-1d",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -3.998,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0371
+   ],
+   "name": "LaserCube 1 beam 1d (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-1e",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -3.998,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0551
+   ],
+   "name": "LaserCube 1 beam 1e (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-1f",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -3.998,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0731
+   ],
+   "name": "LaserCube 1 beam 1f (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-2a",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -2.628,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0284
+   ],
+   "name": "LaserCube 2 beam 2a (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-2b",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -2.628,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0103
+   ],
+   "name": "LaserCube 2 beam 2b (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-2c",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -2.628,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0078
+   ],
+   "name": "LaserCube 2 beam 2c (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-2d",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -2.628,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0259
+   ],
+   "name": "LaserCube 2 beam 2d (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-2e",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -2.628,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0439
+   ],
+   "name": "LaserCube 2 beam 2e (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-2f",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -2.628,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0619
+   ],
+   "name": "LaserCube 2 beam 2f (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-5a",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -1.258,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0396
+   ],
+   "name": "LaserCube 3 beam 5a (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-5b",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -1.258,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0215
+   ],
+   "name": "LaserCube 3 beam 5b (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-5c",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -1.258,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0034
+   ],
+   "name": "LaserCube 3 beam 5c (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-5d",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -1.258,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0146
+   ],
+   "name": "LaserCube 3 beam 5d (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-5e",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -1.258,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0327
+   ],
+   "name": "LaserCube 3 beam 5e (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-5f",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    -1.258,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0508
+   ],
+   "name": "LaserCube 3 beam 5f (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-3a",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    0.112,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0508
+   ],
+   "name": "LaserCube 4 beam 3a (ember red) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-3b",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    0.112,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0327
+   ],
+   "name": "LaserCube 4 beam 3b (ember red) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-3c",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    0.112,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0146
+   ],
+   "name": "LaserCube 4 beam 3c (ember red) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-3d",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    0.112,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0034
+   ],
+   "name": "LaserCube 4 beam 3d (ember red) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-3e",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    0.112,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0215
+   ],
+   "name": "LaserCube 4 beam 3e (ember red) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-3f",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    0.112,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0396
+   ],
+   "name": "LaserCube 4 beam 3f (ember red) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-4a",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    1.482,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0619
+   ],
+   "name": "LaserCube 5 beam 4a (ember red) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-4b",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    1.482,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0439
+   ],
+   "name": "LaserCube 5 beam 4b (ember red) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-4c",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    1.482,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0259
+   ],
+   "name": "LaserCube 5 beam 4c (ember red) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-4d",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    1.482,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0078
+   ],
+   "name": "LaserCube 5 beam 4d (ember red) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-4e",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    1.482,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0103
+   ],
+   "name": "LaserCube 5 beam 4e (ember red) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-4f",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    1.482,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0284
+   ],
+   "name": "LaserCube 5 beam 4f (ember red) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-6a",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    2.852,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0731
+   ],
+   "name": "LaserCube 6 beam 6a (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-6b",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    2.852,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0551
+   ],
+   "name": "LaserCube 6 beam 6b (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-6c",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    2.852,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0371
+   ],
+   "name": "LaserCube 6 beam 6c (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-6d",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    2.852,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.019
+   ],
+   "name": "LaserCube 6 beam 6d (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-6e",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    2.852,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    -0.0009
+   ],
+   "name": "LaserCube 6 beam 6e (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-6f",
+   "index": null,
+   "type": "ext-lc-ultra-mk2",
+   "mode": null,
+   "universe": null,
+   "address": null,
+   "dmx": false,
+   "position": [
+    2.852,
+    8.822,
+    -53.4
+   ],
+   "rotation": [
+    -1.5795,
+    0,
+    0.0171
+   ],
+   "name": "LaserCube 6 beam 6f (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-par-planes-26",
+   "index": 230,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 2,
+   "address": 97,
+   "dmx": true,
+   "position": [
+    10.628,
+    0.322,
+    20.967
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0.2635
+   ],
+   "name": "UP-PL5403 road (used)"
+  },
+  {
+   "id": "rig-par-planes-34",
+   "index": 236,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 2,
+   "address": 105,
+   "dmx": true,
+   "position": [
+    11.158,
+    0.322,
+    28.904
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 line R (used)"
+  },
+  {
+   "id": "rig-par-planes-17",
+   "index": 222,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 121,
+   "dmx": true,
+   "position": [
+    -11.29,
+    0.322,
+    19.635
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 line B (used)"
+  },
+  {
+   "id": "rig-par-planes-33",
+   "index": 235,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 113,
+   "dmx": true,
+   "position": [
+    -10.338,
+    0.322,
+    12.112
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 line L (used)"
+  },
+  {
+   "id": "rig-par-planes-35",
+   "index": 237,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 2,
+   "address": 81,
+   "dmx": true,
+   "position": [
+    3.469,
+    0.322,
+    12.406
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 line R (used)"
+  },
+  {
+   "id": "rig-par-planes-28",
+   "index": 231,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 145,
+   "dmx": true,
+   "position": [
+    -10.338,
+    0.322,
+    44.112
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 line L (used)"
+  },
+  {
+   "id": "rig-par-planes-06",
+   "index": 214,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 2,
+   "address": 129,
+   "dmx": true,
+   "position": [
+    10.358,
+    0.32,
+    47.02
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0.2635
+   ],
+   "name": "UP-PL5403 road (used)"
+  },
+  {
+   "id": "rig-par-planes-24",
+   "index": 229,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 129,
+   "dmx": true,
+   "position": [
+    -11.128,
+    0.322,
+    29.02
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 line L (used)"
+  },
+  {
+   "id": "rig-par-planes-19",
+   "index": 224,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 1,
+   "address": 137,
+   "dmx": true,
+   "position": [
+    -10.721,
+    0.322,
+    36.447
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 line A (used)"
+  },
+  {
+   "id": "rig-par-planes-38",
+   "index": 240,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 2,
+   "address": 113,
+   "dmx": true,
+   "position": [
+    10.529,
+    0.322,
+    36.906
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 line R (used)"
+  },
+  {
+   "id": "rig-beam-planes-01",
+   "index": 101,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 1,
+   "address": 233,
+   "dmx": true,
+   "position": [
+    -10.36,
+    0.7,
+    -5.21
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F plane 1 (used)"
+  },
+  {
+   "id": "rig-beam-planes-02",
+   "index": 102,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 1,
+   "address": 249,
+   "dmx": true,
+   "position": [
+    -6.22,
+    0.7,
+    -5.21
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F plane 1 (used)"
+  },
+  {
+   "id": "rig-beam-planes-03",
+   "index": 103,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 1,
+   "address": 265,
+   "dmx": true,
+   "position": [
+    -2.07,
+    0.7,
+    -5.21
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F plane 1 (used)"
+  },
+  {
+   "id": "rig-beam-planes-04",
+   "index": 104,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 1,
+   "address": 281,
+   "dmx": true,
+   "position": [
+    2.07,
+    0.7,
+    -5.21
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F plane 1 (used)"
+  },
+  {
+   "id": "rig-beam-planes-05",
+   "index": 105,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 1,
+   "address": 297,
+   "dmx": true,
+   "position": [
+    6.22,
+    0.7,
+    -5.21
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F plane 1 (used)"
+  },
+  {
+   "id": "rig-beam-planes-06",
+   "index": 106,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 1,
+   "address": 313,
+   "dmx": true,
+   "position": [
+    10.36,
+    0.7,
+    -5.21
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F plane 1 (used)"
+  },
+  {
+   "id": "rig-beam-planes-16",
+   "index": 116,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 2,
+   "address": 1,
+   "dmx": true,
+   "position": [
+    21.114,
+    0.7,
+    -26.727
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F side line right (used)"
+  },
+  {
+   "id": "rig-beam-planes-18",
+   "index": 118,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 2,
+   "address": 17,
+   "dmx": true,
+   "position": [
+    21.114,
+    0.7,
+    -14.727
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F side line right (used)"
+  },
+  {
+   "id": "rig-beam-planes-09",
+   "index": 109,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 2,
+   "address": 33,
+   "dmx": true,
+   "position": [
+    21.114,
+    0.7,
+    -2.727
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F side line right (used)"
+  },
+  {
+   "id": "rig-beam-planes-10",
+   "index": 110,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 1,
+   "address": 97,
+   "dmx": true,
+   "position": [
+    -10.55,
+    2.686,
+    3.312
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "name": "UP-B380F side line left (used)"
+  },
+  {
+   "id": "rig-beam-planes-13",
+   "index": 113,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 1,
+   "address": 169,
+   "dmx": true,
+   "position": [
+    -22.897,
+    0.7,
+    -14.727
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F side line left (used)"
+  },
+  {
+   "id": "rig-beam-planes-07",
+   "index": 107,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 1,
+   "address": 1,
+   "dmx": true,
+   "position": [
+    0.443,
+    5.5,
+    3.379
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "name": "UP-B380F side line right (used)"
+  },
+  {
+   "id": "rig-beam-planes-15",
+   "index": 115,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 2,
+   "address": 49,
+   "dmx": true,
+   "position": [
+    20.594,
+    0.7,
+    6.953
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F side line right (used)"
+  },
+  {
+   "id": "rig-beam-planes-11",
+   "index": 111,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 2,
+   "address": 65,
+   "dmx": true,
+   "position": [
+    20.594,
+    0.7,
+    18.953
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F side line right (used)"
+  },
+  {
+   "id": "rig-beam-planes-17",
+   "index": 117,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 1,
+   "address": 153,
+   "dmx": true,
+   "position": [
+    -22.897,
+    0.7,
+    -26.727
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F side line left (used)"
+  },
+  {
+   "id": "rig-beam-planes-14",
+   "index": 114,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 1,
+   "address": 217,
+   "dmx": true,
+   "position": [
+    -23.188,
+    0.7,
+    13.297
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F side line left (used)"
+  },
+  {
+   "id": "rig-beam-planes-12",
+   "index": 112,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 1,
+   "address": 201,
+   "dmx": true,
+   "position": [
+    -23.069,
+    0.7,
+    4.834
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F side line left (used)"
+  },
+  {
+   "id": "rig-beam-planes-08",
+   "index": 108,
+   "type": "up-b380f",
+   "mode": "16ch",
+   "universe": 1,
+   "address": 185,
+   "dmx": true,
+   "position": [
+    -23.353,
+    0.7,
+    -4.064
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-B380F side line left (used)"
+  },
+  {
+   "id": "rig-laser-41",
+   "index": 251,
+   "type": "up-la40wf",
+   "mode": "32ch",
+   "universe": 2,
+   "address": 137,
+   "dmx": true,
+   "position": [
+    3.906,
+    6.399,
+    53.543
+   ],
+   "rotation": [
+    1.6896,
+    0,
+    -0.2455
+   ],
+   "name": "UP-LA40WF 1 beam 41 (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-laser-42",
+   "index": 252,
+   "type": "up-la40wf",
+   "mode": "32ch",
+   "universe": 2,
+   "address": 169,
+   "dmx": true,
+   "position": [
+    -4.096,
+    6.4,
+    53.536
+   ],
+   "rotation": [
+    1.6894,
+    0,
+    0.112
+   ],
+   "name": "UP-LA40WF 2 beam 42 (ash white) \u2014 previs, never emitted from here"
+  },
+  {
+   "id": "rig-par-planes-u2a",
+   "index": 262,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 2,
+   "address": 89,
+   "dmx": true,
+   "position": [
+    10.5,
+    0.3,
+    15.5
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 line R (U2, placed by the owner's word 2026-10-17)"
+  },
+  {
+   "id": "rig-par-planes-u2b",
+   "index": 263,
+   "type": "up-pl5403",
+   "mode": "8ch",
+   "universe": 2,
+   "address": 121,
+   "dmx": true,
+   "position": [
+    10.5,
+    0.3,
+    42
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ],
+   "name": "UP-PL5403 line R (U2, placed by the owner's word 2026-10-17)"
+  }
+ ]
+}

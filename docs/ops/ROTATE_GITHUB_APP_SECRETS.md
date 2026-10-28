@@ -87,7 +87,7 @@ just the fast path.
 ### 5. Verify — configured first, then end-to-end
 ```bash
 # signed in as an admin (the route requires a session):
-curl -s https://di-studio.xyz/serverXR/api/github/app          # -> {"configured": true, …}
+curl -s https://diiii.xyz/serverXR/api/github/app          # -> {"configured": true, …}
 curl -s https://dev.diiii.xyz/serverXR/api/github/app
 ```
 `{"configured": false}` means the id or the key never reached the process —
@@ -124,5 +124,5 @@ The current br_id_ge workflow syncs by script/CI push, not through App links.
 Do **not** verify via `br_id_ge` — its `sync-space.yml` CI sync would race the
 webhook.
 
-> The webhook only reaches **prod** (`di-studio.xyz`). On the dev tier, force a sync
+> The webhook only reaches **prod** (`diiii.xyz`). On the dev tier, force a sync
 > with Disconnect/Connect in `/admin → Manage → space → GitHub sync`.

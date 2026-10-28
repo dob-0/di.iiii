@@ -1,9 +1,12 @@
+import { IN_PLACE_DISTANCE } from '../../../studio/navigation/freeMove.js'
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 import { fitCameraToAspect, getFovForArm } from '../../../utils/cameraFraming.js'
 import { venueOf } from '../../../rigbuild/venuePlan.js'
+import { doorsFrame, flightPath, flightPois, sampleFlight, tourDoors, tourPath } from '../autoFly.js'
+import useAutoFlyStop from '../useAutoFlyStop.js'
 import { hazeFogBase, setCameraOutside } from '../../../objectComponents/atmosphereStore.js'
 import {
     approach,
@@ -12,6 +15,14 @@ import {
     computeViewPresets,
     cutawayPlan,
     emptyBox,
+    occlusionFadeMode,
+    nearFadeMeters,
+    NEAR_FADE_FLOOR,
+    NEAR_FADE_RAMP_M,
+    meshLayer,
+    isOutsideEntityId,
+    planWithLayers,
+    keptByPlan,
     farthestCornerDistance,
     enclosingModelIds,
     firstDrawnHit,
@@ -40,7 +51,19 @@ import {
 // functions in smartViewGeometry.js; this file only measures the scene and applies them.
 // Method and sources: docs/architecture/SMART_VIEW.md.
 //
-//   occlusion fade   a raycast (three-mesh-bvh, 15 Hz, five rays ≈ a sphere-cast) decides
+//   near fade        (default since 2026-10-12, presentationState.smartView.occlusionFade 'near') the building's
+//                    fragments within nearFadeM (2.5 m) of the lens are cut from the opaque pass (discard: depth
+//                    stays true, beams and haze behind draw as before) and drawn again by a ghost twin of the mesh in
+//                    the transparent pass at NEAR_FADE_FLOOR (15 %), rising smoothly to full over the last metre. No
+//                    circle, no dots. The twin is shown only while some building surface is that near (BVH
+//                    closestPointToPoint, 15 Hz). Source: Cinemachine Deoccluder's occluder transparency.
+//   collision        free orbit too (not only "Inside"): camera-controls' colliderMeshes = the building, through
+//                    proxies that ignore what the cutaway or a layer took away; the camera stops INSIDE_STANDOFF
+//                    short of the first drawn surface between it and its target (Unreal Spring Arm, Cinemachine
+//                    Deoccluder push). Presets in flight and at rest are exempt.
+//   layers           Roof / Walls / Machines / Outside (SceneBar): material groups hidden, and the merged shell's
+//                    parts taken by the cutaway planes held in place (smartViewGeometry.planWithLayers).
+//   occlusion fade   ('circle', the 2026-09-29 fade) a raycast (three-mesh-bvh, 15 Hz, five rays ≈ a sphere-cast) decides
 //                    whether the building stands between the camera and its target; when
 //                    it does, the building's fragments inside a circle around the target and
 //                    nearer than it are screen-door dithered away (≈ 85 % gone). Discard,
@@ -53,6 +76,26 @@ import {
 //   constraints      camera-controls' own maxPolarAngle (floor), maxDistance and
 //                    setBoundary (target) — only where the surface asks (a visitor's view).
 //
+
+// What a tour must not fly through: the box of every mesh that stands up from the floor and is smaller than
+// the room (the floor, walls, sky lines and the building are larger and are the frame's, not obstacles).
+const scratchObstacle = new THREE.Box3()
+function flightObstacles(scene, frame) {
+    const span = frame.bounds.max.map((v, i) => v - frame.bounds.min[i])
+    const floorY = Number.isFinite(frame.floorY) ? frame.floorY : frame.bounds.min[1]
+    const out = []
+    scene?.traverseVisible?.((o) => {
+        if (!o.isMesh || !o.geometry) return
+        scratchObstacle.setFromObject(o)
+        if (scratchObstacle.isEmpty()) return
+        const size = [0, 1, 2].map((i) => scratchObstacle.max.getComponent(i) - scratchObstacle.min.getComponent(i))
+        if (size.some((v, i) => v > span[i] * 0.5)) return
+        if (scratchObstacle.max.y < floorY + 0.3) return
+        out.push({ min: scratchObstacle.min.toArray(), max: scratchObstacle.max.toArray() })
+    })
+    return out
+}
+
 // Only the BUILDING is ever touched: entities that isArchitectureEntity names, or a big
 // model that holds the room (enclosingModelIds). Lamps, beams, rig pieces never.
 
@@ -78,7 +121,7 @@ const INSIDE_MIN_DISTANCE = 2
 // stands in the way of the stage, yet it is nearer than the target over the whole circle, so the cut used to
 // open a black disc of night sky above the rig (2026-10-02, /moxir Free view). From outside, the cutaway's
 // roof plane already clips it.
-const SV_VERTEX_HEAD = 'varying float vSvDepth;\nvarying float vSvWorldY;\n'
+const SV_VERTEX_HEAD = 'varying float vSvDepth;\nvarying float vSvWorldY;\nvarying float vSvDist;\n'
 export const SV_VERTEX_BODY = `
 vec4 svWorld = vec4(transformed, 1.0);
 #ifdef USE_INSTANCING
@@ -89,6 +132,8 @@ vSvWorldY = (modelMatrix * svWorld).y;
 const SV_FRAGMENT_HEAD = `
 varying float vSvDepth;
 varying float vSvWorldY;
+varying float vSvDist;
+uniform float uSvNear;
 uniform float uSvStrength;
 uniform vec2 uSvCenter;
 uniform float uSvRadius;
@@ -102,6 +147,7 @@ float svBayer4(vec2 p) {
 }
 `
 export const SV_FRAGMENT_BODY = `
+if (uSvNear > 0.0 && vSvDist < uSvNear) discard;
 if (uSvStrength > 0.001 && vSvWorldY < uSvCeiling) {
     float svD = length(gl_FragCoord.xy - uSvCenter);
     float svInside = 1.0 - smoothstep(uSvRadius * 0.7, uSvRadius, svD);
@@ -111,6 +157,68 @@ if (uSvStrength > 0.001 && vSvWorldY < uSvCeiling) {
     if (svK > ${(CUT_AT - CUT_BAND).toFixed(2)} && svBayer4(gl_FragCoord.xy) < (svK - ${(CUT_AT - CUT_BAND).toFixed(2)}) / ${CUT_BAND.toFixed(2)}) discard;
 }
 `
+
+// The ghost twin draws only what the opaque pass cut for being near the lens, at the near fade's opacity
+// (smartViewGeometry.nearFadeOpacity: the same curve).
+export const SV_GHOST_BODY = `
+if (uSvNear <= 0.0 || vSvDist >= uSvNear) discard;
+float svGhostA = ${NEAR_FADE_FLOOR.toFixed(3)} + ${(1 - NEAR_FADE_FLOOR).toFixed(3)} * smoothstep(uSvNear - min(${NEAR_FADE_RAMP_M.toFixed(3)}, uSvNear), uSvNear, vSvDist);
+`
+const PROJECT_VERTEX = `#include <project_vertex>\nvSvDepth = -mvPosition.z;\nvSvDist = length(mvPosition.xyz);\n${SV_VERTEX_BODY}`
+
+// A transparent twin of a building material for the near fade: cloned before the material is patched, so it carries
+// the material as authored (colour, maps, lighting) and none of the opaque pass's cut.
+function makeGhostMaterial(material, uniforms, planes) {
+    const ghost = material.clone()
+    ghost.name = `${material.name || ''}:sv-ghost`
+    ghost.transparent = true
+    ghost.depthWrite = false
+    ghost.clippingPlanes = planes
+    ghost.clipShadows = true
+    ghost.onBeforeCompile = (shader) => {
+        Object.assign(shader.uniforms, uniforms)
+        shader.vertexShader = shader.vertexShader
+            .replace('#include <common>', `#include <common>\n${SV_VERTEX_HEAD}`)
+            .replace('#include <project_vertex>', PROJECT_VERTEX)
+        shader.fragmentShader = shader.fragmentShader
+            .replace('#include <common>', `#include <common>\n${SV_FRAGMENT_HEAD}`)
+            .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>\n${SV_GHOST_BODY}`)
+            .replace('#include <dithering_fragment>', '#include <dithering_fragment>\ngl_FragColor.a *= svGhostA;')
+    }
+    ghost.customProgramCacheKey = () => 'smartview-ghost'
+    ghost.needsUpdate = true
+    return ghost
+}
+
+// The collision sees the building as it is drawn: a hit on a part the cutaway or a layer took away is no wall.
+function makeCollider(mesh, state) {
+    const proxy = new THREE.Object3D()
+    proxy.name = `sv-collider:${mesh.name || mesh.uuid}`
+    const hits = []
+    proxy.raycast = (raycaster, intersects) => {
+        if (!mesh.visible) return
+        hits.length = 0
+        mesh.raycast(raycaster, hits)
+        for (const hit of hits) {
+            if (keptByPlan(hit.point.toArray(), state.drawPlan, state.section)) intersects.push(hit)
+        }
+    }
+    return proxy
+}
+
+// Layers: a mesh in a hidden group goes; the outside's entities go. What each was before is kept to give back.
+function applyLayers(state, layers) {
+    for (const mesh of state.walls) {
+        const layer = mesh.userData.svLayer
+        if (!layer) continue
+        if (mesh.userData.svShown === undefined) mesh.userData.svShown = mesh.visible
+        mesh.visible = layers?.[layer] === false ? false : mesh.userData.svShown
+    }
+    for (const group of state.outsideGroups) {
+        if (group.userData.svShown === undefined) group.userData.svShown = group.visible
+        group.visible = layers?.outside === false ? false : group.userData.svShown
+    }
+}
 
 function patchMaterial(material, uniforms, planes) {
     if (!material || material.userData.svPatched) return
@@ -132,13 +240,13 @@ function patchMaterial(material, uniforms, planes) {
         Object.assign(shader.uniforms, uniforms)
         shader.vertexShader = shader.vertexShader
             .replace('#include <common>', `#include <common>\n${SV_VERTEX_HEAD}`)
-            .replace('#include <project_vertex>', `#include <project_vertex>\nvSvDepth = -mvPosition.z;\n${SV_VERTEX_BODY}`)
+            .replace('#include <project_vertex>', PROJECT_VERTEX)
         shader.fragmentShader = shader.fragmentShader
             .replace('#include <common>', `#include <common>\n${SV_FRAGMENT_HEAD}`)
             .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>\n${SV_FRAGMENT_BODY}`)
     }
     const previousKey = material.customProgramCacheKey?.bind(material)
-    material.customProgramCacheKey = () => `smartview2|${previousKey ? previousKey() : ''}`
+    material.customProgramCacheKey = () => `smartview3|${previousKey ? previousKey() : ''}`
     material.needsUpdate = true
 }
 
@@ -207,6 +315,9 @@ const worldBox = (object) => {
  * @param {boolean}  props.lockInside    keep the camera (and its target) inside the building (the "Inside" toggle)
  * @param {Function} props.onBuilding    (true) once the room has a building to lock inside
  * @param {Function} props.onLockPaused  (bool) a preset whose camera stands outside the building pauses the lock
+ * @param {object}   props.layers        { roof, walls, machines, outside } — false hides that layer (SceneBar, ?layers=)
+ * @param {boolean}  props.fly           the Auto fly flight is on (autoFly.js); any input ends it through onFlyEnd
+ * @param {Function} props.onFlyEnd      () the visitor took the controls (pointer, wheel, key, touch) — hand the camera back
  */
 export default function SmartView({
     document,
@@ -220,14 +331,19 @@ export default function SmartView({
     onUserMove,
     lockInside = false,
     onBuilding,
-    onLockPaused
+    onLockPaused,
+    layers = null,
+    fly = false,
+    onFlyEnd
 }) {
-    const { scene, camera, gl, size } = useThree()
+    const { scene, camera, gl, size, invalidate } = useThree()
     const entities = useMemo(() => document?.entities || [], [document?.entities])
     const classified = useMemo(() => classifyArchitecture(entities), [entities])
     const entityById = useMemo(() => new Map(entities.map((e) => [e.id, e])), [entities])
     const venueOutline = useMemo(() => venueOf(entities).plan?.outline || null, [entities])
     const authored = useMemo(() => sanitizeViewPresets(document?.presentationState?.viewPresets), [document?.presentationState?.viewPresets])
+    const fadeMode = occlusionFadeMode(document?.presentationState)   // 'near' (default) | 'circle' | false
+    const nearM = nearFadeMeters(document?.presentationState)
     const openingView = document?.presentationState?.fixedCamera?.position ? document.presentationState.fixedCamera : document?.worldState?.savedView || null
     const opening = openingView?.position || null
     const referenceDistance = useMemo(() => {
@@ -239,6 +355,7 @@ export default function SmartView({
 
     const uniforms = useMemo(() => ({
         uSvStrength: { value: 0 },
+        uSvNear: { value: 0 },
         uSvCenter: { value: new THREE.Vector2() },
         uSvRadius: { value: 200 },
         uSvDepth: { value: 10 },
@@ -278,6 +395,12 @@ export default function SmartView({
         colliding: false,
         startDistance: 0,
         edges: new Map(),
+        ghosts: new Map(),
+        colliders: [],
+        collidersSet: null,
+        drawPlan: null,
+        nearOn: false,
+        outsideGroups: [],
         boundaryKey: ''
     })
 
@@ -341,6 +464,15 @@ export default function SmartView({
                 lines.material.dispose()
             }
             state.edges.clear()
+            for (const ghost of state.ghosts.values()) {
+                ghost.parent?.remove(ghost)
+                for (const material of materialsOf(ghost)) material.dispose()
+            }
+            state.ghosts.clear()
+            for (const object of [...state.walls, ...state.outsideGroups]) {
+                if (object.userData.svShown !== undefined) object.visible = object.userData.svShown
+                delete object.userData.svShown
+            }
             const base = hazeFogBase(gl, fogBase)
             if (scene.fog && base) {
                 scene.fog.near = base.near
@@ -359,6 +491,7 @@ export default function SmartView({
             const id = object.userData?.svEntityId
             if (id && !groups.has(id)) groups.set(id, object)
         })
+        state.outsideGroups = [...groups].filter(([id]) => isOutsideEntityId(id)).map(([, group]) => group)
         let archIds = classified.ids
         if (!archIds.size) {
             // The bounds fallback: a model that holds most of the room is the room.
@@ -386,7 +519,7 @@ export default function SmartView({
             if (!group) continue
             group.updateWorldMatrix(true, true)
             group.traverse((object) => {
-                if (!object.isMesh || object.userData.svEdge) return
+                if (!object.isMesh || object.userData.svEdge || object.userData.svGhost) return
                 meshes.push(object)
             })
         }
@@ -400,15 +533,33 @@ export default function SmartView({
             const name = `${mesh.name || ''} ${materialsOf(mesh).map((m) => m.name || '').join(' ')}`
             const role = meshRole(name, box, floorY)
             mesh.userData.svRole = role
+            mesh.userData.svLayer = role === 'floor' ? null : meshLayer(name)
             if (role === 'floor') continue
             if (role === 'roof' && box) roofMinY = Math.min(roofMinY, box.min[1])
             walls.push(mesh)
             occluders.push(mesh)
         }
         const signature = walls.map((m) => `${m.uuid}:${materialsOf(m).map((x) => x.uuid).join(',')}`).join('|')
-        if (signature === state.signature && state.frame) return
+        if (signature === state.signature && state.frame) {
+            applyLayers(state, layersRef.current)
+            return
+        }
         state.signature = signature
         for (const mesh of walls) {
+            if (!state.ghosts.has(mesh.uuid) && !mesh.isInstancedMesh && !mesh.isSkinnedMesh && mesh.geometry
+                && materialsOf(mesh).every((m) => !m.userData?.svPatched)) {
+                const ghostMaterials = materialsOf(mesh).map((m) => makeGhostMaterial(m, uniforms, planes))
+                const ghost = new THREE.Mesh(mesh.geometry, Array.isArray(mesh.material) ? ghostMaterials : ghostMaterials[0])
+                ghost.name = `${mesh.name || ''}:sv-ghost`
+                ghost.userData.svGhost = true
+                ghost.raycast = () => {}
+                ghost.castShadow = false
+                ghost.receiveShadow = mesh.receiveShadow
+                ghost.frustumCulled = mesh.frustumCulled
+                ghost.visible = state.nearOn
+                mesh.add(ghost)
+                state.ghosts.set(mesh.uuid, ghost)
+            }
             for (const material of materialsOf(mesh)) patchMaterial(material, uniforms, planes)
             if (mesh.geometry && !mesh.geometry.boundsTree) {
                 try { computeBoundsTree.call(mesh.geometry) } catch { /* no index / tiny: plain raycast */ }
@@ -417,6 +568,8 @@ export default function SmartView({
         }
         state.walls = walls
         state.occluders = occluders
+        state.colliders = occluders.map((mesh) => makeCollider(mesh, state))
+        applyLayers(state, layersRef.current)
         if (xrayRef.current) applyXray(state, true, planes)
 
         // The rig: lamps by where they are, pieces (truss, riser) by their bodies, kept to
@@ -546,12 +699,20 @@ export default function SmartView({
         live.current.lockPaused = false
         onLockPausedRef.current?.(false)
     }, [lockInside])
+    // Auto fly: any input ends the flight where it is (useAutoFlyStop); the camera goes back to camera-controls in the frame loop.
+    const flyRef = useRef(fly)
+    useEffect(() => { flyRef.current = fly; invalidate() }, [fly, invalidate])
+    useAutoFlyStop(fly, onFlyEnd)
     const onUserMoveRef = useRef(onUserMove)
     useEffect(() => { onUserMoveRef.current = onUserMove }, [onUserMove])
     const bindControls = (cc) => {
         const state = live.current
         if (state.boundControls === cc) return
-        if (state.boundControls && state.onControlStart) state.boundControls.removeEventListener('controlstart', state.onControlStart)
+        if (state.boundControls && state.onControlStart) {
+            state.boundControls.removeEventListener('controlstart', state.onControlStart)
+            state.wheelElement?.removeEventListener('wheel', state.onControlStart)
+            state.wheelElement = null
+        }
         state.boundControls = cc || null
         if (!cc) return
         state.onControlStart = () => {
@@ -560,8 +721,20 @@ export default function SmartView({
             onUserMoveRef.current?.()
         }
         cc.addEventListener('controlstart', state.onControlStart)
+        // camera-controls 2.10 sends controlstart on a drag only, never on the wheel: a visitor who only scrolls in from
+        // a preset would keep the preset's exemptions (no collision, 2026-10-12 measured: 0 colliders after a wheel).
+        state.wheelElement = cc._domElement || null
+        state.wheelElement?.addEventListener('wheel', state.onControlStart, { passive: true })
     }
     useEffect(() => () => bindControls(null), [])
+
+    // Layers on and off (SceneBar, ?layers=).
+    const layersRef = useRef(layers)
+    useEffect(() => {
+        layersRef.current = layers
+        applyLayers(live.current, layers)
+        invalidate()
+    }, [layers, invalidate])
 
     // X-ray on and off.
     useEffect(() => {
@@ -579,11 +752,19 @@ export default function SmartView({
         buffer: new THREE.Vector2(),
         view: new THREE.Vector3(),
         raycaster: new THREE.Raycaster(),
-        boundary: new THREE.Box3()
+        boundary: new THREE.Box3(),
+        local: new THREE.Vector3(),
+        inverse: new THREE.Matrix4(),
+        box: new THREE.Box3(),
+        closest: {}
     }), [])
 
-    useFrame((_, delta) => {
+    useFrame((frameState, delta) => {
         const state = live.current
+        // On-demand frame loop (Studio): this callback keeps asking for the next frame only while
+        // something here is still moving — a model that may still be loading, the cutaway, the fog,
+        // the occlusion fade. At rest it asks for none.
+        let moving = false
         state.sinceScan += delta
         // Fast while a model may still be loading, slow once measured, and slower still in
         // a room that turns out to hold no building at all.
@@ -592,14 +773,54 @@ export default function SmartView({
             measure()
             state.misses = state.frame ? 0 : (state.misses || 0) + 1
         }
-        const frame = state.frame
-        if (!frame) return
-        if (!state.building) {
+        // A room with doors and no building has no measured frame: while it flies (and for the frame that hands
+        // the camera back) the tour flies in the box its doors span; nothing else here runs on that box.
+        const real = state.frame
+        const frame = real || ((flyRef.current || state.flight) ? doorsFrame(tourDoors(entities)) : null)
+        if (import.meta.env.DEV && typeof window !== 'undefined') window.__diFlyState = { frame: Boolean(frame), fly: flyRef.current, misses: state.misses || 0, entities: entities.length }
+        if (!frame) { if ((state.misses || 0) <= 20) frameState.invalidate(); return }
+        if (real && !state.building) {
             state.building = true
             onBuildingRef.current?.(true)
         }
         const cc = controlsRef?.current
         bindControls(cc)
+        // --- Auto fly: the camera follows autoFly.js's path while the flight is on --------
+        if (flyRef.current && !state.flight) {
+            // A room with doors and no stage gets the tour (level, slow, door to door); a show room the drone lap.
+            const doors = state.stageBox ? [] : tourDoors(entities)
+            state.flight = {
+                path: doors.length >= 2
+                    ? tourPath(frame, doors, { obstacles: flightObstacles(scene, frame) })
+                    : flightPath(frame, flightPois(frame, { stageBox: state.stageBox, rigBox: state.rigBox })),
+                t: 0
+            }
+            if (cc) cc.enabled = false
+            // DEV ONLY, for the harness's physics check (window.__diRoom is the Full renderer's; Lite has none): the frame, the path, the camera.
+            if (import.meta.env.DEV && typeof window !== 'undefined' && window) window.__diFly = { frame, path: state.flight.path, camera, scene }
+        }
+        if (state.flight) {
+            const flight = state.flight
+            if (flyRef.current && flight.path) {
+                flight.t += Math.min(delta, 0.1)
+                const shot = sampleFlight(flight.path, flight.t)
+                cc?.setLookAt?.(...shot.eye, ...shot.at, false)
+                camera.position.set(...shot.eye)
+                camera.up.set(0, 1, 0)
+                camera.lookAt(...shot.at)
+                camera.rotateZ(shot.roll)   // the bank: a quad leans into the turn
+                state.flightShot = shot
+                moving = true
+            } else {
+                // handed back where it is: camera-controls re-aims from the last eye and look-ahead, level
+                state.flight = null
+                camera.up.set(0, 1, 0)
+                if (cc) { cc.enabled = true }
+                if (state.flightShot) cc?.setLookAt?.(...state.flightShot.eye, ...state.flightShot.at, false)
+                state.flightShot = null
+            }
+        }
+        if (!real) { if (moving) frameState.invalidate(); return }
         const target = scratch.target
         if (cc?.getTarget) cc.getTarget(target)
         else target.set(...frame.center)
@@ -608,7 +829,10 @@ export default function SmartView({
         // --- the cutaway ------------------------------------------------------------
         const plan = cutawayPlan(cam.toArray(), frame)
         setCameraOutside(gl, plan.roof !== null)
-        const goals = [plan.roof, plan.xMax, plan.xMin, plan.zMax, plan.zMin]
+        // what is drawn: the camera's cutaway plus the authored layers (Roof off, Walls off)
+        const drawn = planWithLayers(plan, frame, layersRef.current)
+        state.drawPlan = drawn
+        const goals = [drawn.roof, drawn.xMax, drawn.xMin, drawn.zMax, drawn.zMin]
         const edges = [frame.roofTop + 0.5, frame.bounds.max[0] + 0.5, frame.bounds.min[0] - 0.5, frame.bounds.max[2] + 0.5, frame.bounds.min[2] - 0.5]
         for (let i = 0; i < 5; i += 1) {
             const goal = goals[i]
@@ -616,6 +840,7 @@ export default function SmartView({
                 state.slots[i] = null
             } else {
                 state.slots[i] = approach(state.slots[i] ?? edges[i], goal, delta, 0.1)
+                if (Math.abs(state.slots[i] - goal) > 0.01) moving = true
             }
         }
         const s = state.slots
@@ -648,6 +873,7 @@ export default function SmartView({
             // a haze worked out from its machines, seen from outside: no veil on the surfaces (farthestCornerDistance)
             if (base !== fogBase && plan.roof !== null) goal = Math.max(goal, farthestCornerDistance(cam.toArray(), frame.bounds))
             state.fogOffset = approach(state.fogOffset, goal, delta, 0.15)
+            if (Math.abs(state.fogOffset - goal) > 0.01) moving = true
             scene.fog.near = base.near + state.fogOffset
             scene.fog.far = base.far + state.fogOffset
         }
@@ -658,7 +884,7 @@ export default function SmartView({
         if (state.sinceRay >= 1 / RAYCAST_HZ) {
             state.sinceRay = 0
             let blocked = false
-            if (state.occluders.length && toTarget > 0.5) {
+            if (fadeMode === 'circle' && state.colliders.length && toTarget > 0.5) {
                 const rc = scratch.raycaster
                 rc.firstHitOnly = false
                 scratch.dir.subVectors(target, cam).normalize()
@@ -671,14 +897,37 @@ export default function SmartView({
                     const length = dir.length()
                     rc.set(cam, dir.normalize())
                     rc.far = length
-                    const hits = rc.intersectObjects(state.occluders, false)
-                    const hit = firstDrawnHit(hits.map((h) => ({ distance: h.distance, point: h.point.toArray() })), plan, section)
+                    const hits = rc.intersectObjects(state.colliders, false)
+                    const hit = firstDrawnHit(hits.map((h) => ({ distance: h.distance, point: h.point.toArray() })), drawn, section)
                     if (hit && isOccluding(hit.distance, length)) { blocked = true; break }
                 }
             }
-            state.goal = blocked && !state.atPreset ? 1 : 0
+            state.goal = blocked && !state.atPreset && fadeMode === 'circle' ? 1 : 0
+            // the near fade: is any shown building surface within nearM of the lens? (box first, then the BVH)
+            let near = false
+            if (fadeMode === 'near' && !xrayRef.current) {
+                for (const mesh of state.occluders) {
+                    if (!mesh.visible || !mesh.geometry) continue
+                    if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox()
+                    scratch.box.copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld)
+                    if (scratch.box.distanceToPoint(cam) >= nearM) continue
+                    const tree = mesh.geometry.boundsTree
+                    if (!tree) { near = true; break }
+                    scratch.inverse.copy(mesh.matrixWorld).invert()
+                    scratch.local.copy(cam).applyMatrix4(scratch.inverse)
+                    const scale = mesh.matrixWorld.getMaxScaleOnAxis() || 1
+                    if (tree.closestPointToPoint(scratch.local, scratch.closest, 0, nearM / scale)) { near = true; break }
+                }
+            }
+            if (near !== state.nearOn) {
+                state.nearOn = near
+                for (const ghost of state.ghosts.values()) ghost.visible = near
+                moving = true
+            }
+            uniforms.uSvNear.value = near ? nearM : 0
         }
         state.strength = approach(state.strength, state.goal, delta, state.goal > state.strength ? 0.08 : 0.2)
+        if (Math.abs(state.strength - state.goal) > 0.002) moving = true
         uniforms.uSvStrength.value = state.strength < 0.002 ? 0 : state.strength
         if (uniforms.uSvStrength.value > 0) {
             gl.getDrawingBufferSize(scratch.buffer)
@@ -690,12 +939,34 @@ export default function SmartView({
         }
 
         // --- the camera's limits (a visitor's view) -------------------------------------
-        if (constraints && cc) {
+        // Free (owner, 2026-10-13: "the Free/Inside button decides"): a visitor goes everywhere, through walls and under the
+        // floor, with no distance cap, boundary or collision, at the standard move's speed (useCameraNavigation). Inside keeps
+        // the hall and keeps the camera out of solids, as before.
+        if (constraints && cc && !lockRef.current) {
+            if (cc.userData) cc.userData.diLockBox = null
+            if (!state.freeApplied) {
+                state.freeApplied = true
+                cc.maxPolarAngle = Math.PI
+                cc.maxDistance = Infinity
+                // never Number.EPSILON: a radius that small loses the view direction to rounding (review-move F12)
+                if (cc.minDistance === INSIDE_MIN_DISTANCE) cc.minDistance = state.baseMinDistance ?? IN_PLACE_DISTANCE / 2
+                if (cc.setBoundary) cc.setBoundary()
+                state.boundaryKey = null
+                if ('colliderMeshes' in cc) cc.colliderMeshes = []
+                state.colliding = false
+                state.collidersSet = null
+            }
+        } else if (constraints && cc) {
+            state.freeApplied = false
             const distance = typeof cc.distance === 'number' ? cc.distance : toTarget
             cc.maxPolarAngle = floorMaxPolar(target.y, distance, frame.floorY, 0.3)
             cc.maxDistance = orbitMaxDistance(frame, state.presetDistance)
             // "Inside": the target and the camera both stay in the interior box; otherwise today's limits.
             const lockBox = lockRef.current && !state.lockPaused ? insideBox(frame) : null
+            // The standard move clamps its own moves to this box, camera and turning point together, so a notch out stops at the
+            // wall instead of the camera stopping while its turning point runs on (the direction workflow, 2026-10-13).
+            cc.userData = cc.userData || {}
+            cc.userData.diLockBox = lockBox
             if (state.atPreset) state.startDistance = toTarget
             if (lockBox) cc.maxDistance = Math.min(cc.maxDistance, Math.max(INSIDE_MAX_DISTANCE, state.startDistance))
             if (lockBox) cc.minDistance = INSIDE_MIN_DISTANCE
@@ -711,22 +982,25 @@ export default function SmartView({
             }
             // Inside: camera-controls' own collision pulls the camera in front of whatever building mesh (column,
             // wall, press, girder) stands between it and its target, instead of letting it pass through. The BVH
-            // trees the occlusion raycast built make it cheap. Off with the lock, and while a preset is in flight.
-            const collide = Boolean(lockBox) && !state.atPreset && performance.now() > state.flyUntil
-            if (collide !== state.colliding && 'colliderMeshes' in cc) {
+            // trees the occlusion raycast built make it cheap. Off while a preset is in flight or the camera rests at one.
+            // Since 2026-10-12 in free orbit too (owner: "the camera never enters a solid"), through the colliders that
+            // see only what is drawn (makeCollider: the cutaway's and the layers' cuts are open air).
+            const collide = !state.atPreset && performance.now() > state.flyUntil
+            if ((collide !== state.colliding || state.collidersSet !== state.colliders) && 'colliderMeshes' in cc) {
                 state.colliding = collide
-                cc.colliderMeshes = collide ? state.occluders : []
+                state.collidersSet = state.colliders
+                cc.colliderMeshes = collide ? state.colliders : []
             }
             // …and stops INSIDE_STANDOFF short of the surface it would otherwise press against.
-            if (collide && state.occluders.length) {
+            if (collide && state.colliders.length) {
                 const rc = scratch.raycaster
-                rc.firstHitOnly = true
+                rc.firstHitOnly = false
                 scratch.dir.subVectors(camera.position, target)
                 const dist = scratch.dir.length()
                 if (dist > 0.5) {
                     rc.set(target, scratch.dir.normalize())
                     rc.far = dist + INSIDE_STANDOFF
-                    const hit = rc.intersectObjects(state.occluders, false).find((h) => h.distance > 0.5)
+                    const hit = rc.intersectObjects(state.colliders, false).find((h) => h.distance > 0.5)
                     if (hit && hit.distance < dist + INSIDE_STANDOFF) {
                         const want = Math.max(1, hit.distance - INSIDE_STANDOFF)
                         if (want < dist - 0.01) cc.dollyTo(want, false)
@@ -739,6 +1013,7 @@ export default function SmartView({
                 cc.setPosition(c[0], c[1], c[2], false)
             }
         }
+        if (moving) frameState.invalidate()
     })
 
     // Give BVH memory back with the geometry's owner — the model disposes geometry itself;

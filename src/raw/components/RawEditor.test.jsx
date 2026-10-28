@@ -464,7 +464,8 @@ describe('RawEditor delete/reset confirmations', () => {
         window.localStorage.setItem('dii.raw.zen.p1', 'off')
         render(<RawEditor projectId="p1" spaceId="gallery" />)
 
-        fireEvent.click(screen.getByRole('button', { name: 'Back to projects' }))
+        fireEvent.click(screen.getByText('⋯'))
+        fireEvent.click(screen.getByRole('button', { name: 'Projects' }))
 
         expect(navigate).toHaveBeenCalledWith('/gallery/raw/projects', { replace: false })
         expect(navigate).not.toHaveBeenCalledWith('/gallery/projects', expect.anything())
@@ -1199,7 +1200,7 @@ describe('RawEditor view.browser panel', () => {
             BROWSER_STORAGE_KEY,
             makeWorkspaceDoc(
                 [
-                    { id: 'url-1', typeId: 'value.string', label: 'URL', parentId: null, values: { value: 'https://di-studio.xyz' } },
+                    { id: 'url-1', typeId: 'value.string', label: 'URL', parentId: null, values: { value: 'https://diiii.xyz' } },
                     { id: 'browser-1', typeId: 'view.browser', label: 'Browser', parentId: null, values: {} }
                 ]
             ).replace('"edges":[]', '"edges":[{"id":"e1","fromNodeId":"url-1","fromPort":"out","toNodeId":"browser-1","toPort":"url"}]')
@@ -1208,7 +1209,7 @@ describe('RawEditor view.browser panel', () => {
 
         const iframe = document.querySelector('iframe')
         expect(iframe).toBeTruthy()
-        expect(iframe.getAttribute('src')).toBe('https://di-studio.xyz')
+        expect(iframe.getAttribute('src')).toBe('https://diiii.xyz')
         expect(screen.queryByText('This panel is ready for authored UI.')).toBeNull()
     })
 })
@@ -1234,6 +1235,36 @@ describe('RawEditor stream.monitor panel', () => {
 
         expect(screen.getByText(/Wire a texture into Source/)).toBeInTheDocument()
         expect(screen.queryByText('This panel is ready for authored UI.')).toBeNull()
+    })
+})
+
+describe('RawEditor Recorder and Still windows', () => {
+    const TAKE_STORAGE_KEY = 'test-recorder-still'
+
+    afterEach(() => {
+        window.localStorage.removeItem(TAKE_STORAGE_KEY)
+        delete window.__seek
+    })
+
+    // Both were the generic text-panel trap until 2026-10-21 (Recorder was a
+    // gated shell). Each opens its own window, saying what to wire.
+    it('opens each in its own window with its own buttons, not the text-panel fallback', () => {
+        window.localStorage.setItem(
+            TAKE_STORAGE_KEY,
+            makeWorkspaceDoc([
+                { id: 'rec-1', typeId: 'stream.recorder', label: 'Recorder', parentId: null, values: {} },
+                { id: 'still-1', typeId: 'stream.still', label: 'Still', parentId: null, values: {} }
+            ])
+        )
+        render(<RawEditor localStorageKey={TAKE_STORAGE_KEY} />)
+
+        expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Stop' })).toBeDisabled()
+        expect(screen.getByRole('button', { name: 'Take' })).toBeInTheDocument()
+        expect(screen.getAllByText(/Wire a picture into Picture/)).toHaveLength(2)
+        expect(screen.queryByText('This panel is ready for authored UI.')).toBeNull()
+        // The editor puts the clock seek contract on the page.
+        expect(typeof window.__seek).toBe('function')
     })
 })
 
@@ -1805,7 +1836,7 @@ describe('RawEditor toolbar names the project, not the space', () => {
         mockLoadOnMount = null
     })
 
-    it('shows the project title in the toolbar when the bar above names the space', async () => {
+    it('names the project once: the bar says it, there is no second bar', async () => {
         mockLoadOnMount = {
             document: {
                 nodes: [{ id: 'n1', typeId: 'geom.geo', label: 'Geo', values: {} }],
@@ -1815,13 +1846,13 @@ describe('RawEditor toolbar names the project, not the space', () => {
             version: 3
         }
         const { container } = render(<RawEditor projectId="p-title" spaceId="hayfilm" />)
-        await waitFor(() => expect(container.querySelector('.raw-topbar-name')).toBeTruthy())
-        const name = container.querySelector('.raw-topbar-name')
-        expect(name.textContent).toBe('NOPA x MOCT · 3 Oct')
-        expect(name.querySelector('.raw-topbar-name-space')).toBeNull()
-        // The space is still one hover away, and still in the bar above.
-        expect(name.getAttribute('title')).toBe('hayfilm · NOPA x MOCT · 3 Oct')
+        await waitFor(() => expect(container.querySelector('.sbar-where--project')?.textContent).toBe('NOPA x MOCT · 3 Oct'))
+        // One bar (the surface bar); the second 49px header and its copy of the name are gone.
+        expect(container.querySelector('.raw-topbar')).toBeNull()
+        expect(container.querySelector('.raw-topbar-name')).toBeNull()
+        expect(container.textContent.split('NOPA x MOCT · 3 Oct').length - 1).toBe(1)
     })
+
 })
 
 // NOPA audit F8 (2026-10-02): every List opened on its saved spot, one over
@@ -1906,5 +1937,100 @@ describe('RawEditor: Open means the inside, every time', () => {
         fireEvent.click(screen.getByRole('button', { name: /^Open/ }))
         expect(screen.getByRole('navigation', { name: 'Node scope' })).toBeTruthy()
         expect(screen.queryByText('Enter ›')).toBeNull()
+    })
+})
+
+// Row 5 of the 2026-10-05 Nodes audit: ONE 40px bar. The Nodes tools are cells
+// in the surface bar's slot, Help is the `?` cell, the account is the last
+// square cell, and the project is named once.
+describe('RawEditor: one bar (audit row 5)', () => {
+    afterEach(() => {
+        mockLoadOnMount = null
+    })
+    const open = async () => {
+        mockLoadOnMount = {
+            document: {
+                nodes: [{ id: 'n1', typeId: 'view.text', label: 'The night', values: {} }],
+                edges: [],
+                projectMeta: { title: 'MOCT club night', spaceId: 'hayfilm' }
+            },
+            version: 1
+        }
+        const view = render(<RawEditor projectId="p-bar" spaceId="hayfilm" />)
+        await waitFor(() => expect(view.container.querySelector('.sbar')).toBeTruthy())
+        return view
+    }
+
+    it('puts Scene, the count, Help and ⋯ in the surface bar and leaves no second bar', async () => {
+        const { container } = await open()
+        const bar = container.querySelector('.sbar')
+        expect(container.querySelector('.raw-topbar')).toBeNull()
+        const cells = [...bar.querySelectorAll('button.raw-cell')]
+        expect(cells.length).toBeGreaterThanOrEqual(4)
+        expect(within(bar).getByRole('button', { name: 'Help' }).textContent).toBe('?')
+        expect(within(bar).getByRole('button', { name: 'Scene' })).toBeTruthy()
+        expect(within(bar).getByText('⋯')).toBeTruthy()
+        // Every cell is the one cell: no cell carries a size of its own.
+        cells.forEach((cell) => expect(cell.className).toMatch(/\braw-cell\b/))
+    })
+
+    it('carries the account as the last cell of the bar, not a fixed float', async () => {
+        const { container } = await open()
+        const account = await waitFor(() => {
+            const el = container.querySelector('.sbar [data-testid="raw-bar-account"]')
+            expect(el).toBeTruthy()
+            return el
+        })
+        const tools = container.querySelector('.raw-bar-tools')
+        expect(tools.lastElementChild.contains(account)).toBe(true)
+        expect(document.querySelector('.account-btn-wrapper')?.style.position || 'static').not.toBe('fixed')
+    })
+
+    it('Help speaks about the project shown: 1 node, nothing wired, never "starts empty"', async () => {
+        await open()
+        fireEvent.click(screen.getByRole('button', { name: 'Help' }))
+        const dialog = screen.getByRole('region', { name: 'Help' })
+        expect(within(dialog).getByRole('heading').textContent).toBe('1 node · nothing wired yet')
+        expect(dialog.textContent).not.toMatch(/starts empty/i)
+        expect(within(dialog).queryAllByRole('tab')).toHaveLength(0)
+        // In the right region (§3.9), not a modal over the canvas.
+        expect(dialog.closest('[data-testid="raw-settings-column"]')).toBeTruthy()
+        expect(document.querySelector('.raw-help-backdrop')).toBeNull()
+    })
+
+    it('inside a node the bar place line continues "› The night" with ← Back; the name is written once', async () => {
+        const { container } = await open()
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+        const bar = container.querySelector('.sbar')
+        const trail = bar.querySelector('.raw-bar-trail')
+        expect(trail).toBeTruthy()
+        // Left, right after the project's name — not among the tools on the right.
+        expect(trail.previousElementSibling?.className).toMatch(/sbar-where--project/)
+        expect(within(trail).getByRole('button', { name: 'The night' }).getAttribute('aria-current')).toBe('location')
+        expect(within(trail).getByRole('button', { name: '← Back' })).toBeTruthy()
+        expect(bar.querySelector('.raw-bar-tools .raw-bar-back')).toBeNull()
+        // The strip under the bar carries only the meta line: its Back and
+        // name are the phone's copy (display: none above 700px, rawChrome.css).
+        expect(container.querySelector('.raw-inside-crumb').closest('.raw-inside-way--phone')).toBeTruthy()
+        expect(container.querySelector('.raw-inside-meta')).toBeTruthy()
+        fireEvent.click(within(trail).getByRole('button', { name: '← Back' }))
+        expect(bar.querySelector('.raw-bar-trail')).toBeNull()
+    })
+
+    it('opens Help on the ? key', async () => {
+        await open()
+        expect(screen.queryByRole('region', { name: 'Help' })).toBeNull()
+        fireEvent.keyDown(window, { key: '?' })
+        expect(screen.getByRole('region', { name: 'Help' })).toBeTruthy()
+    })
+})
+
+// The section that takes dropped files is the canvas, and is named as the
+// canvas region (it was a nameless section with drop handlers, 2026-10-21).
+describe('RawEditor canvas region', () => {
+    it('the drop surface is a region named Canvas, holding the graph', () => {
+        render(<RawEditor localStorageKey="test-canvas-region" />)
+        const region = screen.getByRole('region', { name: 'Canvas' })
+        expect(region.classList.contains('raw-surface-shell')).toBe(true)
     })
 })

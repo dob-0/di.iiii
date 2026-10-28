@@ -903,3 +903,46 @@ describe('components.beam.optics — prism, honeycomb, frost, gobo', () => {
         expect(lamp({ visible: true })).not.toHaveProperty('optics')
     })
 })
+
+describe('fields this build does not know ride through (audit 2026-10-09 F3)', () => {
+    // Mirror of the CJS case in serverXR/src/schemaSync.test.js: a newer
+    // build's section or object field survives a normalize and an edit here.
+    it('keeps an unknown top-level section and an unknown object field, the same as the CJS twin', () => {
+        const read = normalizeProjectDocument({
+            timelineState: { cues: [{ id: 'c1', at: 3 }] },
+            entities: [{ id: 'e1', type: 'box', futureField: { keep: 'me' } }]
+        })
+        expect(read.timelineState).toEqual({ cues: [{ id: 'c1', at: 3 }] })
+        expect(read.entities[0].futureField).toEqual({ keep: 'me' })
+        const edited = applyProjectOps(read, [{ type: 'updateEntity', payload: { entityId: 'e1', patch: { name: 'Renamed' } } }])
+        expect(edited.timelineState).toEqual({ cues: [{ id: 'c1', at: 3 }] })
+        expect(edited.entities[0]).toMatchObject({ name: 'Renamed', futureField: { keep: 'me' } })
+        expect(normalizeProjectDocument({ version: 99 }).version).toBe(PROJECT_DOCUMENT_VERSION)
+    })
+})
+
+import { createRequire as createRequireForPan } from 'node:module'
+describe('a measured pan correction survives a save on both sides (MOXIR 2026-10-17)', () => {
+    it('the server copy (shared/projectSchema.cjs) and the client copy keep panOffsetDeg and panInvert', async () => {
+        const server = createRequireForPan(import.meta.url)('../../shared/projectSchema.cjs')
+        const client = await import('./projectSchema.js')
+        const doc = { entities: [{ id: 'h', type: 'spotLight', components: { fixture: { type: 'up-b380f', hung: true, panOffsetDeg: -270, panInvert: true } } }] }
+        for (const normalize of [server.normalizeProjectDocument, client.normalizeProjectDocument]) {
+            const f = normalize(doc).entities[0].components.fixture
+            expect(f.panOffsetDeg).toBe(-270)
+            expect(f.panInvert).toBe(true)
+        }
+    })
+})
+
+describe('a door that invites', () => {
+    it('keeps invite: true, and nothing for any other value', () => {
+        const doc = normalizeProjectDocument({ entities: [
+            { id: 'a', type: 'portal', components: { reference: { spaceId: 's', invite: true } } },
+            { id: 'b', type: 'portal', components: { reference: { spaceId: 's', invite: 'yes' } } }
+        ] })
+        expect(doc.entities.find((e) => e.id === 'a').components.reference.invite).toBe(true)
+        expect('invite' in doc.entities.find((e) => e.id === 'b').components.reference).toBe(false)
+    })
+})
+

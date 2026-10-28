@@ -1,0 +1,7 @@
+## 2026-10-20 — the network rooms sign `di.i`; a retired studio name now fails the build
+
+- The owner's search (`git grep -n -I -E 'studio_network|di\.ii XR|di\.i studio|di\.i ստուդիա'`) found 11 lines in 6 files on dev. Live: 3 rows of `spaces/network/people.json` (`"org": "di.iiii XR studio_network"`) and the 3 rooms generated from them (emilya-nikoghosyan, gevorg-grigoryan, syuzi-ginosyan). Each `org` now reads `di.i`; `node spaces/network/build.mjs` rewrote exactly those 3 of 65 rooms.
+- Left as written, being dated history: 5 lines of `PROGRESS.md` (under the 2026-09-24, 2026-09-02, 2026-08-07, 2026-06-22 and 2026-04-24 headings) and `docs/deck/README.md:16`, which records the deck's old tracked file name and the date it was renamed.
+- Guard: `scripts/retiredStudioNames.test.js` (2 cases). On dev's data it fails with the 3 roster rows and 3 room lines; with the fix both pass. `spaces/network/network-pages.test.js` 17/17.
+- Not done: no words check (vale or similar) exists in the repo, so none was run. The three rooms are live pages: they need a republish of the `network` space after merge; nothing was published from here. Not looked at in a browser — the change is one text field in a ledger row.
+- Not in scope, noted: `spaces/n000/scene.json` and `spaces/platform-recordar/scene.json` carry a template page titled "XR Studio / Deploy View" — not one of the retired forms, not the studio's name.

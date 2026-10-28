@@ -13,7 +13,7 @@ while testing it. Treat them as two things you sync separately, not one.
 **The addresses today:** `dev.diiii.xyz` is the rehearsal tier, and its only address —
 the old name `staging.di-studio.xyz` was switched off on 2026-09-16, and the scripts say
 `dev` (`--tier dev`). `diiii.xyz` is the only host for anything you write down as a new link;
-`di-studio.xyz` is the old production name and still answers the same way.
+`di-studio.xyz` is the old production name; it still answers and is to forward to `diiii.xyz`.
 
 ## Every hand, one flow
 
@@ -50,6 +50,10 @@ raises a desktop notification, and appends the full list to one log.
 Push your branch the day you make it, even unfinished; a draft PR is fine. On a fork,
 every pushed branch opens an upstream PR (`auto-pr.yml`) — except `backup/…` and `wip/…`,
 which are for keeping work safe, not for review.
+
+## Starting a dev server
+
+**On aylmo: `di-dev up <tree>` (di-atlas tools/di-dev); never a relative `DATA_ROOT`.** serverXR refuses to start in a git checkout with an unset or relative `DATA_ROOT` (absolute path, or `DI_SCRATCH=1` for a throwaway) — `serverXR/src/dataRootGuard.js`.
 
 ## The start check
 

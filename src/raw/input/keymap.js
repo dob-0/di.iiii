@@ -27,6 +27,7 @@ export const KEYMAP = [
     { id: 'zoomOut', keys: ['Ctrl+-'], mouse: 'Wheel or pinch', does: 'Zoom out', group: 'View' },
     { id: 'pan', keys: [], mouse: 'Drag empty canvas, middle-drag anywhere', does: 'Move around', group: 'View', source: 'TouchDesigner' },
     // ---- edit
+    { id: 'nudge', keys: ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'], mouse: 'Drag the card', does: 'Move the focused or selected node (Shift: 5× further)', group: 'Edit' },
     { id: 'rename', keys: ['N', 'F2'], does: 'Rename the selected node', group: 'Edit', source: 'TouchDesigner (N)' },
     { id: 'duplicate', keys: ['Ctrl+D'], does: 'Duplicate the selected node', group: 'Edit' },
     { id: 'delete', keys: ['Delete', 'Backspace'], does: 'Delete the selected node or marked wire', group: 'Edit', source: 'TouchDesigner' },

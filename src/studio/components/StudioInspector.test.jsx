@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import StudioInspector from './StudioInspector.jsx'
-import { MATERIAL_PRESETS } from '../../project/entityRegistry.js'
+import { MATERIAL_PRESETS, getInspectorSections } from '../../project/entityRegistry.js'
 
 const sections = [{
     id: 'appearance',
@@ -70,5 +70,59 @@ describe('StudioInspector surface picker', () => {
         expect(select.value).toBe('srf-gone')
         fireEvent.change(select, { target: { value: '' } })
         expect(onSectionChange).toHaveBeenCalledWith('surface', { surfaceId: null })
+    })
+})
+
+describe('StudioInspector number display (P10)', () => {
+    const numSections = [{ id: 'transform', label: 'Transform', fields: [{ label: 'Position', component: 'transform', path: ['position', 0], type: 'number', step: 0.1 }] }]
+    it('shows a long stored value rounded and does not write it back unless edited', () => {
+        const onSectionChange = vi.fn()
+        const { container } = render(<StudioInspector title="Box" sections={numSections} values={{ transform: { position: [0.5844327123, 0, 0] } }} onSectionChange={onSectionChange} />)
+        const input = container.querySelector('input[type="number"]')
+        expect(input.value).toBe('0.5844')
+        fireEvent.focus(input)
+        fireEvent.blur(input)
+        expect(onSectionChange).not.toHaveBeenCalled()
+        fireEvent.focus(input)
+        fireEvent.change(input, { target: { value: '0.75' } })
+        expect(onSectionChange).toHaveBeenCalledTimes(1)
+    })
+})
+
+// N581 (2026-10-15): Enter and Escape in a number field kept the focus there, so the editor's
+// own Escape (deselect) and every other shortcut stayed dead after a value was typed — the
+// shortcuts step aside while a field has the focus.
+describe('StudioInspector number field hands the focus back', () => {
+    const numSections = [{ id: 'transform', label: 'Transform', fields: [{ label: 'Position', component: 'transform', path: ['position', 0], type: 'number', step: 0.1 }] }]
+    it.each(['Enter', 'Escape'])('%s leaves the field', (key) => {
+        const { container } = render(<StudioInspector title="Box" sections={numSections} values={{ transform: { position: [0, 0, 0] } }} onSectionChange={() => {}} />)
+        const input = container.querySelector('input[type="number"]')
+        input.focus()
+        expect(document.activeElement).toBe(input)
+        fireEvent.keyDown(input, { key })
+        expect(document.activeElement).not.toBe(input)
+    })
+})
+
+// Owner 2026-10-13, arranging lamps by hand: the Inspector showed rotation in radians (1.5708). Blender's
+// Transform panel shows degrees; the document keeps radians.
+describe('StudioInspector rotation in degrees (Blender: Object Properties › Transform)', () => {
+    const transformSections = () => {
+        // the real registry fields, so a regression in either file shows here
+        const box = getInspectorSections({ type: 'box' }).find((section) => section.id === 'transform')
+        return [box]
+    }
+    it('shows π/2 as 90 and writes a typed 45 back as π/4 radians; position stays in metres', () => {
+        const onSectionChange = vi.fn()
+        const { container } = render(<StudioInspector title="Box" sections={transformSections()} values={{ transform: { position: [1.5, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: [1, 1, 1] } }} onSectionChange={onSectionChange} />)
+        expect(screen.getByText('Rotation °')).toBeTruthy()
+        const inputs = [...container.querySelectorAll('input.insp-num-input')]
+        expect(inputs[0].value).toBe('1.5')
+        expect(inputs[3].value).toBe('90')
+        expect(inputs[3].step).toBe('1')
+        fireEvent.change(inputs[3], { target: { value: '45' } })
+        const [component, next] = onSectionChange.mock.calls.at(-1)
+        expect(component).toBe('transform')
+        expect(next.rotation[0]).toBeCloseTo(Math.PI / 4, 12)
     })
 })

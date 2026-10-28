@@ -34,6 +34,16 @@ export const APP_PAGE_TOOLS = 'tools'
 // app, a script or an AI should identify itself, and the limits it meets. The
 // server's 429 and 403 answers point here, so no space may take the word.
 export const APP_PAGE_FOR_APPS = 'for-apps'
+// The shoot sheet — /shoot/{key} (src/pages/shoot/ShootPage.jsx): a film crew's shared
+// plan for one shoot day, opened by its link. The key is the second segment and
+// the only credential (serverXR/src/routes/shootRoutes.js).
+export const APP_PAGE_SHOOT = 'shoot'
+// The browser half of `di login` — /device (src/pages/DeviceLoginPage.jsx): a
+// terminal shows a code, the person types it here and approves it. Reserved so no
+// space or project can take the word. Checked before reserving, 2026-10-07:
+// /serverXR/api/spaces/device and /serverXR/api/projects/device answer 404 on prod
+// (diiii.xyz) and on the dev tier (the local install was not running to ask).
+export const APP_PAGE_DEVICE = 'device'
 export const RESERVED_APP_SEGMENTS = [
     ...APP_PAGE_PREFERENCES_ALIASES,
     APP_PAGE_WIKI,
@@ -43,6 +53,10 @@ export const RESERVED_APP_SEGMENTS = [
     // Checked before reserving: /serverXR/api/spaces/for-apps 404s on prod and
     // on staging (2026-09-13), so nothing holds the word.
     APP_PAGE_FOR_APPS,
+    // Checked before reserving (2026-10-07): /serverXR/api/spaces/shoot and
+    // /serverXR/api/resolve/shoot 404 on diiii.xyz and dev.diiii.xyz.
+    APP_PAGE_SHOOT,
+    APP_PAGE_DEVICE,
     'beta',
     'raw',
     'seed',
@@ -304,6 +318,8 @@ export const isPrivacyPageSegment = (value = '') => (value || '').trim().toLower
 export const isTermsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TERMS
 export const isToolsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TOOLS
 export const isForAppsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_FOR_APPS
+export const isShootPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_SHOOT
+export const isDevicePageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_DEVICE
 export const isSpaceContentsSegment = (value = '') => (value || '').trim().toLowerCase() === SPACE_CONTENTS_SEGMENT
 export const isScanSegment = (value = '') => (value || '').trim().toLowerCase() === SCAN_SEGMENT
 
@@ -331,6 +347,14 @@ export const buildWikiPath = () => {
     return `${prefix}/${APP_PAGE_WIKI}`.replace(/\/{2,}/g, '/')
 }
 
+// One wiki article at its own address, /wiki/{id} (G25, 2026-10-21): before,
+// every article was a #hash on one 250,000-character page, so a search engine
+// and a share card only ever saw the one page.
+export const buildWikiArticlePath = (articleId) => {
+    const id = String(articleId || '').trim()
+    return id ? `${buildWikiPath()}/${encodeURIComponent(id)}` : buildWikiPath()
+}
+
 export const getAppLocationState = (locationLike = null) => {
     const resolvedLocation = locationLike || (typeof window !== 'undefined' ? window.location : null)
     if (!resolvedLocation) {
@@ -350,9 +374,13 @@ export const getAppLocationState = (locationLike = null) => {
             }
         }
         if (isWikiPageSegment(segment)) {
+            // A malformed escape (/wiki/%E0) is a miss, not a thrown render.
+            let articleId = relative.split('/')[1] || ''
+            try { articleId = decodeURIComponent(articleId) } catch { articleId = '' }
             return {
                 page: APP_PAGE_WIKI,
-                spaceId: null
+                spaceId: null,
+                ...(articleId ? { wikiArticleId: articleId } : {})
             }
         }
         // /privacy and /terms are plain top-level routes for now; the URL
@@ -379,6 +407,22 @@ export const getAppLocationState = (locationLike = null) => {
         if (isForAppsPageSegment(segment)) {
             return {
                 page: APP_PAGE_FOR_APPS,
+                spaceId: null
+            }
+        }
+        // `/shoot/{key}` — the key is case-sensitive, so it is read from the
+        // original path, never lowercased. A bare `/shoot` has no sheet to show
+        // and gets the page's own "this link is incomplete" answer.
+        if (isShootPageSegment(segment)) {
+            return {
+                page: APP_PAGE_SHOOT,
+                spaceId: null,
+                shootKey: relative.split('/')[1] || ''
+            }
+        }
+        if (isDevicePageSegment(segment)) {
+            return {
+                page: APP_PAGE_DEVICE,
                 spaceId: null
             }
         }

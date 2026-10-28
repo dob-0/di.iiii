@@ -46,6 +46,21 @@ export const isTrustedCleartext = (url, address = null) => {
 }
 
 /**
+ * A manage key (its id starts with 'm': serverXR/src/syncKeyStore.js) is never
+ * sent over plain http to another machine — not on a LAN, not on Tailscale,
+ * not with --insecure (SPEC_space_sync_keys.md §13.4; review L2). Loopback only.
+ */
+export const isManageKey = (key) => /^dii_sync_m/.test(String(key || '').trim())
+export const manageKeyMayTravel = (url, address = null) => {
+    let parsed
+    try { parsed = new URL(url) } catch { return false }
+    if (parsed.protocol === 'https:') return true
+    if (parsed.protocol !== 'http:') return false
+    const host = (address || parsed.hostname).replace(/^\[|\]$/g, '').toLowerCase()
+    return host === 'localhost' || host === '::1' || /^127\./.test(host)
+}
+
+/**
  * Is there already a space of that name in the data folder of an install that is
  * NOT running? Spaces live in di.db. Anything unreadable counts as "yes": the
  * refusal is a flag away (--into), an overwrite is not.
@@ -64,22 +79,51 @@ export const localSpaceOnDisk = async (home, spaceId) => {
 }
 
 /**
- * @returns {Promise<{ok: true, base: string, running: boolean, address: string|null, previous: object|null}
- *                  | {ok: false, reason: string}>}
+ * @returns {Promise<{ok: true, base: string, running: boolean, address: string|null, previous: object|null, keptKey: boolean}
+ *                  | {ok: false, reason: string, stored?: string, base?: string}>}
  *
  * `reason` is one of the words ui.followRefused already knows: unreachable,
- * cert-mismatch, missing, denied, local-space, itself, merge.
+ * cert-mismatch, missing, denied, local-space, itself, merge, no-from, and
+ * remote-differs (which also carries `stored` and `base`, the two remotes).
  */
-export const followSpace = async ({ home, spaceId, from, key = null, into = null, address = null, port, insecure = false, direction = null, start = null }) => {
+export const followSpace = async ({ home, spaceId, from = null, key = null, into = null, address = null, port, insecure = false, direction = null, start = null }) => {
     if (direction && direction !== 'take-host' && direction !== 'take-mine') return { ok: false, reason: 'direction' }
+    if (inspectFollows(paths(home).data).state === 'corrupt') return { ok: false, reason: 'corrupt' }
+
+    // `di follow <space> --take-mine` alone, on a space already followed: the
+    // answer to that follow's refusal, so it means THAT follow — its remote, its
+    // pin, its key. The space is already wired to it, so it is not a merge.
+    // Without a direction a bare name is still a question (2026-10-20).
+    const stored = readFollows(paths(home).data)[spaceId] ?? null
+    if (!from) {
+        if (!direction || !stored?.remote) return { ok: false, reason: 'no-from' }
+        from = stored.remote
+        address = address || stored.address || null
+        into = into || spaceId
+    }
     // Refuse before touching anything: a key must not travel in clear to a public
     // host, and a follows.json that does not parse must not be written over.
     if (!insecure && !isTrustedCleartext(from, address)) return { ok: false, reason: 'cleartext' }
-    if (inspectFollows(paths(home).data).state === 'corrupt') return { ok: false, reason: 'corrupt' }
+    if (isManageKey(key) && !manageKeyMayTravel(from, address)) return { ok: false, reason: 'manage-cleartext' }
 
     const resolved = await resolveBase(from, { address })
     if (!resolved.base) return { ok: false, reason: resolved.reason }
     const base = resolved.base
+
+    // No --key is "I did not say", never "no key" (2026-10-20: a re-run without
+    // --key wrote "token": null over a key minted 10-04, and the host refused
+    // every edit after). Same remote: the stored key and label stay. Another
+    // remote: its key cannot be the stored one, and dropping that one silently
+    // is the defect — refused, the record untouched, until --key is said.
+    let label = null
+    let keptKey = false
+    if (!key && stored?.token) {
+        if (stored.remote !== base) return { ok: false, reason: 'remote-differs', stored: stored.remote, base }
+        key = stored.token
+        label = stored.label ?? null
+        keptKey = true
+    }
+    if (keptKey && isManageKey(key) && !manageKeyMayTravel(base, address)) return { ok: false, reason: 'manage-cleartext' }
 
     const check = await checkFollowable({ base, spaceId, key, address })
     if (!check.ok) return { ok: false, reason: check.reason }
@@ -120,10 +164,10 @@ export const followSpace = async ({ home, spaceId, from, key = null, into = null
     const hadFile = Object.keys(all).length > 0
 
     try {
-        await addFollow(paths(home).data, spaceId, { remote: base, token: key, address, direction, start })
+        await addFollow(paths(home).data, spaceId, { remote: base, token: key, label, address, direction, start })
     } catch (error) {
         if (error instanceof FollowsCorruptError) return { ok: false, reason: 'corrupt' }
         throw error
     }
-    return { ok: true, base, running, address: address || null, previous, hadFile }
+    return { ok: true, base, running, address: address || null, previous, hadFile, keptKey }
 }

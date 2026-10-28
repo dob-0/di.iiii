@@ -26,6 +26,12 @@ const { viaLink } = require('./hub')
 
 const SYNC_EVERY_MS = 3000
 const BACKOFF_CEILING_MS = 30_000
+// The host answered and REFUSED this machine's key (401/403): asking again in 30 s
+// will not change its mind. Each loop waits 30 s, then 1, 2, 4 … at most 10 min,
+// and it is said once, in the log and in this link's state (DSC-9, aylmo
+// 2026-10-26: a 401 said 40 times in 10 min, the two loops each asking).
+const REFUSED_CEILING_MS = 10 * 60_000
+const REFUSED = new Set([401, 403])
 const WAIT_SECONDS = 20
 const TIMEOUT_MS = 8000
 
@@ -60,13 +66,20 @@ const request = async (url, { method = 'GET', token = null, body = null, timeout
  * @param {object} options.hub            this server's machine hub
  * @param {() => {id, name}} options.machine
  */
-const startMachineLink = ({ spaceId, link, hub, machine, log = console, syncEveryMs = SYNC_EVERY_MS, waitSeconds = WAIT_SECONDS, send = request }) => {
+const startMachineLink = ({ spaceId, link, hub, machine, log = console, syncEveryMs = SYNC_EVERY_MS, waitSeconds = WAIT_SECONDS, send = request, backoffCeilingMs = BACKOFF_CEILING_MS, refusedCeilingMs = REFUSED_CEILING_MS }) => {
     let stopped = false
     const inflight = new Set()
     const timers = new Set()
     const via = viaLink(link.base)
     const spacePath = `/api/spaces/${encodeURIComponent(link.spaceId)}`
-    const state = { synced: 0, delivered: 0, lastError: null }
+    // `host` is who answered: the host's own id and name, which it sends back
+    // on every sync — the sync light says "PONYO", not an address.
+    // `refused`: the host refuses this machine's key — { status, since }, said once.
+    const state = { synced: 0, delivered: 0, lastError: null, host: null, refused: null }
+    // Each loop's own last failure. One shared field made the two loops' messages
+    // differ every time, so a repeating failure was "new" and logged each time.
+    const lastErrors = { sync: null, signal: null }
+    const refusedBy = new Set() // the loops whose last answer was a refusal
 
     hub.setLink(spaceId, link)
 
@@ -87,9 +100,30 @@ const startMachineLink = ({ spaceId, link, hub, machine, log = console, syncEver
 
     const noteFailure = (what, answer) => {
         const message = `${what}: ${answer.status || answer.error || 'unreachable'}`
-        if (message !== state.lastError) log.warn?.(`[machines] ${spaceId}: ${message}`)
+        if (REFUSED.has(answer.status)) {
+            refusedBy.add(what)
+            if (!state.refused) {
+                state.refused = { status: answer.status, since: Date.now() }
+                log.warn?.(`[machines] ${spaceId}: the host refuses this machine's key (${answer.status}) — asking again less often, at most every ${Math.round(refusedCeilingMs / 60_000)} min`)
+            }
+        } else {
+            refusedBy.delete(what)
+            if (!refusedBy.size) state.refused = null
+            if (message !== lastErrors[what]) log.warn?.(`[machines] ${spaceId}: ${message}`)
+        }
+        lastErrors[what] = message
         state.lastError = message
     }
+    const noteSuccess = (what) => {
+        lastErrors[what] = null
+        refusedBy.delete(what)
+        if (!refusedBy.size) state.refused = null
+        state.lastError = lastErrors.sync || lastErrors.signal
+    }
+    // The next wait after a failure: a refusal waits far longer than a silence.
+    const nextDelay = (delay, answer) => (REFUSED.has(answer?.status)
+        ? Math.min(Math.max(delay * 2, backoffCeilingMs), refusedCeilingMs)
+        : Math.min(Math.max(delay * 2, 1000), backoffCeilingMs))
 
     const syncLoop = async () => {
         let delay = syncEveryMs
@@ -103,15 +137,16 @@ const startMachineLink = ({ spaceId, link, hub, machine, log = console, syncEver
                 if (answer.ok) {
                     hub.recordRemotePeers(spaceId, via, Array.isArray(answer.payload?.peers) ? answer.payload.peers : [])
                     state.synced += 1
-                    state.lastError = null
+                    if (answer.payload?.machine?.id) state.host = { id: answer.payload.machine.id, name: answer.payload.machine.name || null }
+                    noteSuccess('sync')
                     delay = syncEveryMs
                 } else {
                     noteFailure('sync', answer)
-                    delay = Math.min(delay * 2, BACKOFF_CEILING_MS)
+                    delay = nextDelay(delay, answer)
                 }
             } catch (error) {
                 noteFailure('sync', { error: String(error?.message || error) })
-                delay = Math.min(delay * 2, BACKOFF_CEILING_MS)
+                delay = nextDelay(delay, null)
             }
             if (!stopped) await sleep(delay)
         }
@@ -130,6 +165,7 @@ const startMachineLink = ({ spaceId, link, hub, machine, log = console, syncEver
                 if (stopped) break
                 if (answer.ok) {
                     backoff = 0
+                    noteSuccess('signal')
                     const messages = Array.isArray(answer.payload?.messages) ? answer.payload.messages : []
                     for (const message of messages) {
                         // Only to a tab that is still here. A tab that closed
@@ -144,12 +180,12 @@ const startMachineLink = ({ spaceId, link, hub, machine, log = console, syncEver
                     if (!messages.length && Date.now() - startedAt < 200) pause = 1000
                 } else {
                     noteFailure('signal', answer)
-                    backoff = Math.min(Math.max(backoff * 2, 1000), BACKOFF_CEILING_MS)
+                    backoff = nextDelay(backoff, answer)
                     pause = backoff
                 }
             } catch (error) {
                 noteFailure('signal', { error: String(error?.message || error) })
-                backoff = Math.min(Math.max(backoff * 2, 1000), BACKOFF_CEILING_MS)
+                backoff = nextDelay(backoff, null)
                 pause = backoff
             }
             if (pause && !stopped) await sleep(pause)

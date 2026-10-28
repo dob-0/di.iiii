@@ -367,7 +367,7 @@ export const PATCH_COLUMNS = [
     { label: 'watts', value: (r) => r.watts ?? '' },
     { label: 'watts basis', value: (r) => r.wattsBasis || '' },
     { label: 'flags', value: flagText },
-    { label: 'entity', value: (r) => r.id }
+    { label: 'object', value: (r) => r.id }
 ]
 
 export const POWER_COLUMNS = [
@@ -401,6 +401,7 @@ export const SHEET_CSS = `
 .rigsheet dl.block dt { color: var(--soft); }
 .rigsheet dl.block dd { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .rigsheet .wrap { overflow-x: auto; }
+.rigsheet .wrap:focus-visible { outline: 2px solid #111; outline-offset: 2px; }
 .rigsheet table { border-collapse: collapse; width: 100%; font-size: 12px; }
 .rigsheet th { text-align: left; font-weight: 600; border-bottom: 1px solid var(--rule); padding: 3px 6px; white-space: nowrap; }
 .rigsheet td { padding: 2px 6px; border-bottom: 1px solid #ddd; vertical-align: top; white-space: nowrap; }
@@ -428,6 +429,10 @@ export const SHEET_CSS = `
 // A mode whose channel list is ASSUMED says so wherever it is printed (once, not twice).
 const modeLabel = (r) => `${r.mode ? `${r.mode}` : '?'}${r.modeAssumed && !/assumed/i.test(r.mode || '') ? ' (assumed)' : ''}`
 
+// A table that may scroll sideways (a phone): its box takes focus and is named, so a keyboard can scroll it
+// (WCAG 2.1.1; axe-core scrollable-region-focusable).
+const wrap = (label, table) => `<div class="wrap" role="region" tabindex="0" aria-label="${esc(label)}">${table}</div>`
+
 const patchTable = (model) => {
     const head = '<tr><th>#</th><th>type</th><th>mode</th><th>position</th><th>unit</th><th>univ</th><th>address</th><th>ch</th><th>circuit</th><th>W</th><th>flags</th></tr>'
     const body = []
@@ -445,7 +450,7 @@ const patchTable = (model) => {
         const flags = [...r.flags.map((f) => FLAG_WORDS[f] || f), ...r.notes].join('; ')
         body.push(`<tr${cls ? ` class="${cls}"` : ''}><td class="n">${esc(r.index ?? '—')}</td><td>${esc(r.code)}</td><td>${esc(modeLabel(r))}</td><td>${esc(r.position || '—')}</td><td class="n">${esc(r.unit ?? '')}</td><td class="n">${esc(r.universe ?? '—')}</td><td>${addr}</td><td class="n">${esc(r.footprint ?? '?')}</td><td>${esc(r.circuit || '—')}</td><td class="n">${esc(r.watts ?? '?')}${r.wattsBasis === 'ASSUMED' ? '*' : ''}</td><td class="flags">${esc(flags)}</td></tr>`)
     }
-    return `<div class="wrap"><table><thead>${head}</thead><tbody>${body.join('')}</tbody></table></div>`
+    return wrap('Patch table', `<table><thead>${head}</thead><tbody>${body.join('')}</tbody></table>`)
 }
 
 const powerTable = (model) => {
@@ -453,7 +458,7 @@ const powerTable = (model) => {
     const head = '<tr><th>circuit</th><th>lamps</th><th>W</th><th>% of limit</th><th>positions</th></tr>'
     const body = p.circuits.map((c) => `<tr${c.over ? ' class="flagged overlap"' : ''}><td>${esc(c.circuit)}</td><td class="n">${c.lamps}</td><td class="n">${c.watts}${c.assumed ? '*' : ''}</td><td class="n">${c.pct}%${c.over ? ' OVER' : ''}</td><td class="flags">${esc(c.positions.join(', '))}</td></tr>`)
     if (p.unassigned.lamps) body.push(`<tr class="flagged"><td>none</td><td class="n">${p.unassigned.lamps}</td><td class="n">${p.unassigned.watts}</td><td class="n">—</td><td class="flags">lamps with no circuit</td></tr>`)
-    return `<div class="wrap"><table><thead>${head}</thead><tbody>${body.join('')}</tbody></table></div>`
+    return wrap('Power table', `<table><thead>${head}</thead><tbody>${body.join('')}</tbody></table>`)
 }
 
 /**
@@ -491,7 +496,7 @@ ${patchTable(model)}
 </section>
 <section>
 <h2>Fixture types</h2>
-<div class="wrap"><table><thead><tr><th>type</th><th>qty</th><th>mode</th><th>maker</th></tr></thead><tbody>${typeRows}</tbody></table></div>
+${wrap('Fixture types table', `<table><thead><tr><th>type</th><th>qty</th><th>mode</th><th>maker</th></tr></thead><tbody>${typeRows}</tbody></table>`)}
 </section>
 <section class="power" id="power">
 <h2>Power — by circuit</h2>

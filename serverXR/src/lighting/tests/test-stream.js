@@ -9,12 +9,38 @@ const os = require('os');
 const path = require('path');
 const http = require('http');
 const { createDesk } = require('../desk');
-const { deltaRuns, parseUniverses } = require('../dmxstream');
+const { deltaRuns, parseUniverses, createDmxStream, STALL_MS } = require('../dmxstream');
 
 let failures = 0;
 const tests = [];
 function check(name, fn) { tests.push({ name, fn }); }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+check('a page that stops reading is dropped after STALL_MS, freeing its slot (2026-10-08 503s)', async () => {
+  let t = 1000;
+  const stream = createDmxStream({ now: () => t });
+  const res = { writableLength: 0, writeHead() {}, write() { return true; }, end() {}, on() {}, flushHeaders() {} };
+  stream.subscribe({ on() {}, socket: null }, res, {});
+  assert.strictEqual(stream.size, 1);
+  const frames = new Map([[0, Buffer.alloc(512)]]);
+  res.writableLength = 10 * 1024 * 1024;               // the page stopped reading
+  stream.frame(frames, () => null);
+  t += STALL_MS - 1;
+  stream.frame(frames, () => null);
+  assert.strictEqual(stream.size, 1, 'kept while within STALL_MS');
+  t += 2;
+  stream.frame(frames, () => null);
+  assert.strictEqual(stream.size, 0, 'dropped once stalled past STALL_MS');
+  // a client that drains in time is kept
+  const res2 = { ...res, writableLength: 10 * 1024 * 1024 };
+  stream.subscribe({ on() {}, socket: null }, res2, {});
+  stream.frame(frames, () => null);
+  t += STALL_MS / 2; res2.writableLength = 0; stream.frame(frames, () => null);
+  res2.writableLength = 10 * 1024 * 1024; t += STALL_MS / 2 + 10; stream.frame(frames, () => null);
+  assert.strictEqual(stream.size, 1, 'the stall clock restarts after a drain');
+  stream.close();
+});
+
 
 function start(dir) {
   const desk = createDesk({ dataDir: dir, offline: true, bindPort: 0, outputEnabledDefault: false, log: () => {} });

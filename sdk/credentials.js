@@ -18,7 +18,15 @@ import { join } from 'node:path'
 export const TIERS = {
     local: { base: 'http://localhost:4000/serverXR', env: 'DI_TOKEN_LOCAL', site: 'http://localhost:4000' },
     dev: { base: 'https://dev.diiii.xyz/serverXR', env: 'DI_TOKEN_DEV', site: 'https://dev.diiii.xyz' },
-    prod: { base: 'https://di-studio.xyz/serverXR', env: 'DI_TOKEN_PROD', site: 'https://di-studio.xyz' }
+    prod: { base: 'https://diiii.xyz/serverXR', env: 'DI_TOKEN_PROD', site: 'https://diiii.xyz' }
+}
+
+// Old addresses that still reach a tier. di-studio.xyz was prod's address until
+// 2026-10-21 and forwards to diiii.xyz; a script or link file that still names
+// it must find the prod login, not file a second one under the old origin.
+export const SITE_ALIASES = {
+    'https://di-studio.xyz': 'prod',
+    'https://www.di-studio.xyz': 'prod'
 }
 
 export const credentialsPath = (home = homedir()) => join(home, '.config', 'di', 'credentials.json')
@@ -30,21 +38,41 @@ const refuseOldTier = (tier) => {
 }
 
 const readStore = (path) => {
-    try { return JSON.parse(readFileSync(path, 'utf8')) } catch { return {} }
+    try {
+        const parsed = JSON.parse(readFileSync(path, 'utf8'))
+        // Valid JSON that is not an object ("null", a list) used to throw on the first lookup.
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+    } catch { return {} }
+}
+
+const originOf = (base) => {
+    try { return new URL(base).origin } catch { return null }
 }
 
 /**
  * DI_TOKEN wins, then the per-tier variable, then ~/.config/di/credentials.json.
  * Nothing here reads a repository, ever.
+ *
+ * `di login` writes that file (scripts/di/loginStore.mjs, which cannot be
+ * imported from here: an install lays cli/ and sdk/ side by side, a checkout
+ * does not). A login is filed under `dev` / `prod` / `local` for those servers
+ * and under the server's origin for any other, so when the tier has nothing the
+ * entry for the ORIGIN of `base` is the one that fits:
+ * `connect({ base: 'https://example.org/serverXR' })` after `di login --to https://example.org`.
  */
-export const resolveToken = ({ tier, token = null, env = process.env, home = homedir() } = {}) => {
+export const resolveToken = ({ tier, base = null, token = null, env = process.env, home = homedir() } = {}) => {
     refuseOldTier(tier)
     if (token) return token
     if (env.DI_TOKEN) return env.DI_TOKEN
     const known = TIERS[tier]
     if (known && env[known.env]) return env[known.env]
     const store = readStore(credentialsPath(home))
-    return store[tier]?.token || null
+    const filed = (key) => (key && Object.hasOwn(store, key) ? store[key]?.token || null : null)
+    const own = filed(tier)
+    if (own) return own
+    const origin = base ? originOf(base) : null
+    if (!origin) return null
+    return filed(Object.keys(TIERS).find((name) => TIERS[name].site === origin) || SITE_ALIASES[origin] || origin)
 }
 
 export const resolveBase = ({ tier = null, base = null } = {}) => {

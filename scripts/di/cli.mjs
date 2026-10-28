@@ -35,7 +35,7 @@ import {
     listSnapshots,
     pruneVersions,
     releaseFromFile,
-    rehearseAgainst,
+    withRehearsal,
     restoreSnapshot,
     rollback,
     smokeTest,
@@ -52,15 +52,16 @@ import * as node from './runner-node.mjs'
 import { DEFAULT_UNIT, activeService, installService, removeService, systemdUsable, unitStatus, validUnitName } from './service.mjs'
 import {
     alive, apiBase, currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
-    ensureGuestSecrets, lanUrl, localUrl, nameUrl, publicUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
+    ensureGuestSecrets, lanUrl, localUrl, nameUrl, ownBase, printedAddress, publicUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
 } from './state.mjs'
 import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
 import { buildSyncAudit } from './sync-plan.mjs'
 import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
-import { listInvites, mintInvite, revokeInvite } from './share.mjs'
+import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from './share.mjs'
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
+import { runPost } from './post.mjs'
 import {
     isStageMachine, joinPlan, joinStage, leaveStage, readManifest,
     restartSupervisor, runSupervisor, stageStatus, startSupervisor
@@ -68,7 +69,9 @@ import {
 import { parseArgs } from './args.mjs'
 import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './channels.mjs'
 import * as autoupdate from './autoupdate.mjs'
+import { mcpArgs, moveToken, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
+import { withUserAgent } from './userAgent.mjs'
 
 const HOME = () => {
     const override = String(process.env.DI_HOME || '').trim()
@@ -174,7 +177,11 @@ const cmdUp = async (args) => {
     // Refused before the already-running check, or a running docker install
     // would be told it is "on this network too".
     if (lan && runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker()); process.exitCode = 1; return }
-    if (await alive(home, port)) { say(ui.alreadyRunning(publicUrl(home, port), await probeReach(home, port), lan)); return }
+    if (await alive(home, port)) {
+        const address = await printedAddress(home, port)
+        say(ui.alreadyRunning(address.url, await probeReach(home, port), lan, address))
+        return
+    }
 
     say(ui.starting())
     try {
@@ -219,7 +226,8 @@ const cmdUp = async (args) => {
     // mDNS for this start, and it is the same word on this laptop and on a
     // phone in the room — so the card leads with it and everything else becomes
     // the fallback nobody has to read out. Without avahi (or without --lan,
-    // where putting a name on the network would be a lie) we try di.localhost,
+    // where putting a name on the network would be a lie) we try diiii.localhost
+    // — the one local address's own name, with the port while :80 is not ours —
     // which costs nothing and is asked before it is printed, and failing that
     // we print localhost like we always did.
     const addresses = lan ? probeLanAddresses() : []
@@ -230,7 +238,15 @@ const cmdUp = async (args) => {
     const scheme = cert ? 'https' : 'http'
     const prettyUrl = pretty ? `${scheme}://${pretty}${port === 80 || port === 443 ? '' : `:${port}`}` : null
 
-    say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan, prettyUrl, secure: Boolean(cert) }))
+    // THE address (docs/ai/one-local-address.md): http://diiii.localhost/ when it was
+    // asked and answered as this di.iiii, the same link on every machine with di.
+    // Everything above is then only the fallback, and the certificate's name is the
+    // phones' address — which is why ui.onThisNetwork below keeps `prettyUrl`.
+    const address = await printedAddress(home, port, { fallback: prettyUrl || localUrl(port) })
+    say(ui.running(localUrl(port), summary.names, {
+        spaceCount: summary.count, lan, prettyUrl: address.one ? address.url : prettyUrl, secure: Boolean(cert),
+        one: address.one, phones: address.phones, why: address.why
+    }))
     if (lan) {
         // With a certificate the room gets the padlocked name too — its second
         // name, pointed at tonight's address by the owner's own hook. Without
@@ -248,7 +264,7 @@ const cmdUp = async (args) => {
             guests
         ))
     }
-    if (!args.flags['no-open']) openBrowser(prettyUrl || localUrl(port))
+    if (!args.flags['no-open']) openBrowser(address.url)
     await noticeNewVersion(home)
 }
 
@@ -325,13 +341,19 @@ const cmdStatus = async () => {
     }
     const size = info.mode === 'node' ? humanSize(await dirSize(paths(home).data)) : null
     const reach = await probeReach(home, port)
+    // ONE address in what is printed: the one link every machine with di shares when
+    // it was asked and answered as this di.iiii (the certificate's name then moves to
+    // the phones and headsets line); else what this install has always printed, and why.
+    const address = await printedAddress(home, port)
     say([
         `running (${info.mode})`,
         info.version,
-        publicUrl(home, port),
+        address.url,
         reach ? reachText(reach, port) : null,
         `data ${info.dataDir}${size ? ` (${size})` : ''}`
     ].filter(Boolean).join(style.dim(' · ')))
+    if (address.phones) say(ui.phonesLine(address.phones))
+    if (address.why) say(ui.oneAddressWhy(address.why))
     // Whether the other di.iiii on this network can see this one — asked on
     // the same terms as the bind above (the certificate's name over https,
     // else loopback), never inferred from it: a bind to every interface with
@@ -355,8 +377,12 @@ const cmdOpen = async (args) => {
     if (args._[1]) { await cmdOpenFile(args, args._[1]); return }
     const port = resolvePort(home)
     if (!(await alive(home, port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
-    say(publicUrl(home, port))
-    openBrowser(publicUrl(home, port))
+    // The one local address when it is this di.iiii (asked, see oneAddress);
+    // else the address this install has always opened. printedAddress is the one
+    // function that decides, here as in `di status` and `di up`.
+    const { url } = await printedAddress(home, port)
+    say(url)
+    openBrowser(url)
 }
 
 /**
@@ -466,7 +492,7 @@ const cmdOpenFile = async (args, file) => {
         const result = await openThroughServer({ home, port, file: resolved, as: args.flags.as })
         if (result.ok) {
             const opened = result.spaceId || named
-            say(ui.opened(opened, `${publicUrl(home, port)}/${opened}`))
+            say(ui.opened(opened, `${await ownBase(home, port)}/${opened}`))
             return
         }
         if (!result.tooLarge) {
@@ -507,7 +533,7 @@ const cmdOpenFile = async (args, file) => {
         process.exitCode = 1
         return
     }
-    say(ui.opened(named, `${localUrl(resolvePort(home))}/${named}`))
+    say(ui.opened(named, `${await ownBase(home, resolvePort(home))}/${named}`))
 }
 
 const cmdNew = async (args) => {
@@ -530,7 +556,7 @@ const cmdNew = async (args) => {
         const body = await response.json().catch(() => ({}))
         if (!response.ok) { fail(body?.error || `could not make a space called "${name}"`); process.exitCode = 1; return }
         const id = body?.space?.id || name
-        say(ui.made(id, `${publicUrl(home, port)}/${id}`))
+        say(ui.made(id, `${await ownBase(home, port)}/${id}`))
     } catch (error) {
         fail(String(error?.message || error))
         process.exitCode = 1
@@ -560,7 +586,8 @@ const cmdMove = async (args) => {
     const headers = { 'Content-Type': 'application/json' }
     if (from && from !== true) {
         base = `${String(from).replace(/\/+$/, '')}/serverXR`
-        const token = args.flags.token === '-' ? (await readStdin()).trim() : String(process.env.DI_TOKEN || '').trim()
+        // stdin, else DI_TOKEN, else the login `di login` stored for that very address
+        const token = args.flags.token === '-' ? (await readStdin()).trim() : moveToken({ from, env: process.env })
         if (token) headers.Authorization = `Bearer ${token}`
     } else {
         const home = HOME()
@@ -573,7 +600,8 @@ const cmdMove = async (args) => {
     try {
         const response = await fetch(`${base}/api/projects/${encodeURIComponent(project)}/move`, {
             method: 'POST',
-            headers,
+            // `--from` aims this at another di.iiii: it says who it is there too (userAgent.mjs).
+            headers: withUserAgent(headers),
             body: JSON.stringify({ toSpace: to, unpublish: Boolean(args.flags.unpublish), dryRun })
         })
         const body = await response.json().catch(() => ({}))
@@ -586,6 +614,25 @@ const cmdMove = async (args) => {
         fail(String(error?.message || error))
         process.exitCode = 1
     }
+}
+
+/** `di post draft|show|send|channels` — the share door; same address and login rules as `di move`. */
+const cmdPost = async (args) => {
+    const from = args.flags.from
+    const headers = {}
+    let base
+    if (from && from !== true) {
+        base = `${String(from).replace(/\/+$/, '')}/serverXR`
+        const token = args.flags.token === '-' ? (await readStdin()).trim() : moveToken({ from, env: process.env })
+        if (token) headers.Authorization = `Bearer ${token}`
+    } else {
+        const home = HOME()
+        if (!requireInstalled(home)) return
+        const port = resolvePort(home)
+        if (!(await alive(home, port))) { say(ui.notRunning()); return }
+        base = apiBase(home, port)
+    }
+    process.exitCode = await runPost(args, { base, headers: withUserAgent(headers), say, fail })
 }
 
 const cmdSpaces = async () => {
@@ -849,25 +896,27 @@ const cmdUpdate = async (args) => {
 
     say(ui.installing(release.version))
     let staged
-    let rehearsal = null
     try {
         staged = await stageVersion({ home, release, verbose })
         // The rehearsal: the new build opens a COPY of the artist's own data and
         // runs its migrations there. An empty scratch directory only ever proved
-        // the binary starts, which is not what an update risks.
-        rehearsal = await rehearseAgainst({ home })
-        if (rehearsal) say(ui.rehearsing())
-        const healthy = await smokeTest({
-            home,
-            versionDir: staged.partialDir,
-            nodeBinary: node.nodeBinary(home),
-            dataRoot: rehearsal
+        // the binary starts, which is not what an update risks. The copy is
+        // thrown away on every path, success or not; the real database is
+        // migrated afterwards, by the build that has now proved it can.
+        await withRehearsal({ home }, async (rehearsal) => {
+            if (rehearsal) say(ui.rehearsing())
+            const healthy = await smokeTest({
+                home,
+                versionDir: staged.partialDir,
+                nodeBinary: node.nodeBinary(home),
+                dataRoot: rehearsal
+            })
+            if (!healthy) {
+                throw new Error(rehearsal
+                    ? 'the new version could not open your work — nothing has been changed'
+                    : 'the new version did not answer on a test port')
+            }
         })
-        if (!healthy) {
-            throw new Error(rehearsal
-                ? 'the new version could not open your work — nothing has been changed'
-                : 'the new version did not answer on a test port')
-        }
     } catch (error) {
         // Nothing has been stopped and `current` has not moved, so the artist
         // is exactly where they were — say so plainly rather than leaving them
@@ -877,27 +926,33 @@ const cmdUpdate = async (args) => {
         say(ui.updateFailed(from))
         process.exitCode = 1
         return
-    } finally {
-        // The rehearsal was a copy and its migrations are thrown away with it.
-        // The real database is migrated afterwards, by the build that has now
-        // proved it can.
-        if (rehearsal) await fsp.rm(rehearsal, { recursive: true, force: true }).catch(() => {})
-    }
-
-    // Before the flip, not after: if this update moves the schema, `--rollback`
-    // alone cannot undo it, so the way back has to exist first.
-    const dataSchema = dataSchemaVersion(home)
-    const nextSchema = buildSchemaVersion(staged.partialDir)
-    const movesSchema = dataSchema !== null && nextSchema !== null && nextSchema > dataSchema
-    if (movesSchema) {
-        const snapshot = await snapshotData({ home, label: `before-${release.version}` })
-        if (snapshot) say(ui.snapshotTaken(snapshot))
     }
 
     const runner = runnerFor(home)
     const wasRunning = await alive(home, resolvePort(home))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     try { await runner.stop({ home }) } catch { /* already down */ }
+
+    // After the server has stopped (its last write is in the file), before the flip:
+    // if this update moves the schema, `--rollback` alone cannot undo it, so the
+    // way back has to exist first.
+    const dataSchema = dataSchemaVersion(home)
+    const nextSchema = buildSchemaVersion(staged.partialDir)
+    const movesSchema = dataSchema !== null && nextSchema !== null && nextSchema > dataSchema
+    if (movesSchema) {
+        try {
+            const snapshot = await snapshotData({ home, label: `before-${release.version}` })
+            if (snapshot) say(ui.snapshotTaken(snapshot))
+        } catch (error) {
+            // No way back, so no update: the old version is still `current`; bring it back up.
+            await fsp.rm(staged.partialDir, { recursive: true, force: true }).catch(() => {})
+            fail(`could not save a snapshot of your work first — nothing has been changed: ${String(error.message || error)}`)
+            say(ui.updateFailed(from))
+            process.exitCode = 1
+            if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
+            return
+        }
+    }
 
     await activate({ home, ...staged, version: release.version, mode: readState(home).mode })
     await pruneVersions({ home, keep: [release.version, from].filter(Boolean) })
@@ -1005,7 +1060,7 @@ const cmdMcp = async (args) => {
     const entry = candidates.find((p) => fs.existsSync(p))
     if (!entry) { fail('this di.iiii has no sdk/ — it was packed before `di mcp` existed'); process.exitCode = 1; return }
     const port = resolvePort(HOME(), args.flags?.port)
-    const child = spawn(process.execPath, [entry, '--base', `http://localhost:${port}/serverXR`], { stdio: 'inherit' })
+    const child = spawn(process.execPath, [entry, ...mcpArgs({ flags: args.flags, port })], { stdio: 'inherit' })
     await new Promise((resolve) => child.on('exit', resolve))
 }
 
@@ -1049,7 +1104,26 @@ const cmdInvite = async (args) => {
         return
     }
 
-    const minted = await mintInvite({ base, spaceId, token, label: 'follow' })
+    // `--actions` — what this space's keys did to its projects (the key log).
+    if (args.flags.actions) {
+        const answer = await listKeyActions({ base, spaceId, token })
+        if (!answer.ok) { fail(ui.inviteRefused(spaceId, answer.reason)); process.exitCode = 1; return }
+        say(ui.inviteActions(spaceId, answer.actions))
+        return
+    }
+
+    // `--undo KEYID` — take that key back and undo what it did (the key log names the id).
+    if (args.flags.undo) {
+        const answer = await undoKey({ base, spaceId, keyId: String(args.flags.undo), token })
+        if (!answer.ok) { fail(ui.inviteRefused(spaceId, answer.reason)); process.exitCode = 1; return }
+        say(ui.keyUndone(spaceId, answer))
+        return
+    }
+
+    // `--manage` — a key that may also trash, hide and move this space's
+    // projects (SPEC_space_sync_keys.md §13). Off unless asked, every time.
+    const manage = Boolean(args.flags.manage)
+    const minted = await mintInvite({ base, spaceId, token, label: manage ? 'follow (manage)' : 'follow', manage })
     if (!minted.ok) {
         fail(ui.inviteRefused(spaceId, minted.reason))
         process.exitCode = 1
@@ -1062,7 +1136,7 @@ const cmdInvite = async (args) => {
     const from = reach?.lan && reach.addresses[0]
         ? lanUrl(reach.addresses[0], port)
         : base.replace(/\/serverXR$/, '')
-    say(ui.invited(spaceId, from, minted.key))
+    say(ui.invited(spaceId, from, minted.key, { manage }))
 }
 
 /** The bare hostname out of whatever a person typed for --from, for a message
@@ -1117,16 +1191,18 @@ const cmdFollow = async (args) => {
     const at = readAtFlag(args)
     if (at === false) { process.exitCode = 1; return }
 
-    if (!spaceId || !from) {
-        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
-        process.exitCode = 1
-        return
-    }
-
     // The answer to a refusal, never a default (audit F4): at most one.
     const takeHost = Boolean(args.flags['take-host'])
     const takeMine = Boolean(args.flags['take-mine'])
     if (takeHost && takeMine) { fail(ui.followBothDirections()); process.exitCode = 1; return }
+
+    // `--take-mine` / `--take-host` alone may name a space already followed:
+    // followSpace takes that follow's remote. Anything else needs --from.
+    if (!spaceId || (!from && !takeHost && !takeMine)) {
+        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
+        process.exitCode = 1
+        return
+    }
     // `--from-now` is the default start, accepted so it can be said out loud;
     // `--replay` is the old one — read both logs from the beginning.
     if (args.flags['from-now'] && args.flags.replay) { fail(ui.followBothStarts()); process.exitCode = 1; return }
@@ -1139,11 +1215,20 @@ const cmdFollow = async (args) => {
         insecure: Boolean(args.flags.insecure)
     })
     if (!result.ok) {
-        sayFollowRefusal(result.reason, { spaceId, url: from }, at)
+        // The short form asked the stored follow's remote, through its pin:
+        // name those — not "undefined", and no --at hint when a pin was used.
+        const stored = from ? null : (readFollows(paths(home).data)[spaceId] ?? null)
+        const where = from || stored?.remote
+        const pin = at || stored?.address || null
+        if (result.reason === 'no-from') fail(ui.followNotFollowed(spaceId))
+        else if (result.reason === 'remote-differs') fail(ui.followRemoteDiffers(spaceId, result.stored, result.base))
+        else sayFollowRefusal(result.reason, { spaceId, url: where }, pin)
         process.exitCode = 1
         return
     }
-    say(ui.following(spaceId, result.base, result.running, at))
+    if (result.keptKey) say(ui.followKeptKey())
+    // result.address is the pin used: typed with --at, or the stored follow's.
+    say(ui.following(spaceId, result.base, result.running, result.address))
 }
 
 /** `di follows` — what this install is following, and whether it is keeping up. */
@@ -1155,7 +1240,7 @@ const cmdFollows = async () => {
     const live = await fetch(`${apiBase(home, port)}/api/follows`)
         .then(response => (response.ok ? response.json() : null))
         .catch(() => null)
-    say(ui.followList(follows, live?.follows || []))
+    say(ui.followList(follows, live?.follows || [], live))
 }
 
 /** `di unfollow <space>` — stop carrying edits. Your copy of the space is not touched; the follower's saved place is dropped. */
@@ -1567,6 +1652,7 @@ const COMMANDS = {
     follow: cmdFollow,
     stage: cmdStage,
     follows: cmdFollows,
+    post: cmdPost,
     unfollow: cmdUnfollow,
     down: cmdDown,
     stop: cmdDown,
@@ -1589,6 +1675,9 @@ const COMMANDS = {
     keeper: cmdKeeper,
     ndi: cmdNdi,
     mcp: cmdMcp,
+    login: (args) => runLogin(args, { version: installedVersion(HOME()) }),
+    logout: (args) => runLogout(args),
+    whoami: (args) => runWhoami(args),
     help: (args) => say(ui.usageFor(args._[1]) || ui.help())
 }
 

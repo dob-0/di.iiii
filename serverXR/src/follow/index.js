@@ -31,6 +31,9 @@ const entryKey = (spaceId, entry) => JSON.stringify([spaceId, entry.spaceId || s
 // over http got no answer and a follow on that install never wrote a thing.
 // `tlsName` is the certificate's name: the follower still connects to loopback
 // and checks the certificate against that name (see httpClient's servername).
+/** Two follows.json entries that follow the same host. */
+const sameRemote = (one, two) => String(one?.remote || '').replace(/\/$/, '') === String(two?.remote || '').replace(/\/$/, '')
+
 const selfBase = (port, basePath = '/serverXR', tlsName = null) => `${tlsName ? 'https' : 'http'}://127.0.0.1:${port}${basePath}`
 
 /**
@@ -94,7 +97,19 @@ const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null,
             // First start: from now, unless the follow asked to replay (follower.js).
             start: entry.start === 'replay' ? 'replay' : 'now',
             direction: entry.direction || null,
-            onDirectionDone: () => { startedWith.delete(spaceId); return clearDirection(dataDir, spaceId) }
+            onDirectionDone: () => { startedWith.delete(spaceId); return clearDirection(dataDir, spaceId) },
+            // A project the host moved between two spaces moves here only when
+            // both are followed here from the same host (followProjects.js).
+            sameHostFollows: (other) => {
+                const theirs = readFollows(dataDir)[other]
+                return Boolean(theirs && other !== spaceId && running.has(other) && sameRemote(theirs, entry))
+            },
+            // A project moved HERE between two followed spaces is moved on the
+            // host with both spaces' keys, when both are manage keys. The keys
+            // stay in memory, handed to the follower only (SPEC_follow.md).
+            sameHostSides: () => Object.entries(readFollows(dataDir))
+                .filter(([other, theirs]) => other !== spaceId && running.has(other) && theirs?.token && sameRemote(theirs, entry))
+                .map(([other, theirs]) => ({ spaceId: theirs.spaceId || other, token: theirs.token }))
         }))
         startedWith.set(spaceId, entry.direction || null)
         startedKey.set(spaceId, entryKey(spaceId, entry))
@@ -123,4 +138,24 @@ const nudgeFollow = (spaceId) => {
 /** What every follower is doing, for `di follows` and for the interface. */
 const followStates = () => [...running.values()].map(follower => follower.state)
 
-module.exports = { startFollows, stopFollows, followStates, nudgeFollow, selfBase }
+// The lease that says whether THIS server carries the follows of its data
+// folder (lease.js). Set by index.js; absent in tests that drive startFollows
+// directly, which then read as carrying — as every server did before.
+let lease = null
+const setFollowLease = (next) => { lease = next }
+
+/**
+ * Who carries this data folder's follows, for GET /api/follows and `di follows`.
+ * On a server that does not, says so plainly and names the one that does.
+ */
+const followCarrier = () => {
+    if (!lease || lease.held) return { carriedHere: true }
+    const holder = lease.holder()
+    return {
+        carriedHere: false,
+        carriedBy: holder ? { pid: holder.pid, port: holder.port, hostname: holder.hostname, heartbeatAt: holder.heartbeatAt } : null,
+        message: lease.describe()
+    }
+}
+
+module.exports = { startFollows, stopFollows, followStates, followCarrier, setFollowLease, nudgeFollow, selfBase }

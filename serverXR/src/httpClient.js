@@ -6,6 +6,19 @@
 const http = require('node:http')
 const https = require('node:https')
 const net = require('node:net')
+const { withDiUserAgent } = require('./diUserAgent')
+
+// Tie a request to a caller's AbortSignal. A follow shares ONE signal across
+// every request it makes for hours, so the listener must come off when the
+// request is over: { once: true } only removes it on abort, and left on, each
+// finished request (socket, buffers) stays reachable from the signal.
+const linkAbort = (signal, req) => {
+  if (!signal) return
+  if (signal.aborted) { req.destroy(new Error('aborted')); return }
+  const onAbort = () => req.destroy(new Error('aborted'))
+  signal.addEventListener('abort', onAbort, { once: true })
+  req.once('close', () => signal.removeEventListener('abort', onAbort))
+}
 
 // The ADDRESS PIN's dns.lookup replacement — the name stays (Host header, SNI,
 // certificate check all still use the URL's hostname, untouched), the socket
@@ -29,17 +42,27 @@ const pinnedLookup = (address) => (hostname, options, callback) => {
 // a different address, answered 200 from the FIRST address's socket without
 // ever connecting to the second.
 //
-// Each entry gets Node's own Agent defaults — the same ones every unpinned
-// call in this file already gets by passing no `agent` at all — so pinning
-// isolates the pool without changing pooling behaviour. The map itself stays
+// Each entry is built with the options of Node's own global agent — the one
+// every unpinned call in this file gets by passing no `agent` at all — so
+// pinning isolates the pool without changing pooling behaviour. A bare
+// `new Agent()` is NOT that: its keepAlive is false, while http.globalAgent and
+// https.globalAgent use keepAlive with a 5 s idle timeout since Node 19 (Node.js
+// docs, http.globalAgent, "v19.0.0: The agent now uses HTTP Keep-Alive and a 5
+// second timeout by default"). Until 2026-10-26 (DSC-10) a pinned follow opened
+// a new connection, and a new TLS handshake, for every request. The options are
+// exactly what http.globalAgent.options holds on Node 22 (checked on v22.23.2:
+// keepAlive true, scheduling 'lifo', timeout 5000; noDelay true and path null are
+// every Agent's own); httpClient.test.js fails if Node's global agent moves away
+// from them. The map itself stays
 // small in practice: the callers of `address` are follows and machine links,
 // each configured with at most one pinned address, changed rarely.
+const PINNED_AGENT_OPTIONS = Object.freeze({ keepAlive: true, scheduling: 'lifo', timeout: 5000 })
 const pinnedAgents = new Map()
 const agentFor = (protocol, address) => {
   const key = `${protocol}|${address}`
   let agent = pinnedAgents.get(key)
   if (!agent) {
-    agent = protocol === 'https:' ? new https.Agent() : new http.Agent()
+    agent = protocol === 'https:' ? new https.Agent(PINNED_AGENT_OPTIONS) : new http.Agent(PINNED_AGENT_OPTIONS)
     pinnedAgents.set(key, agent)
   }
   return agent
@@ -61,7 +84,9 @@ const httpRequest = (url, { method = 'GET', headers = {}, body = null, timeoutMs
     // a socket some other address already opened.
     const req = lib.request(u, {
       method,
-      headers,
+      // Identified, or another di.iiii counts this as an anonymous program
+      // (diUserAgent.js).
+      headers: withDiUserAgent(headers),
       ...(servername ? { servername } : {}),
       ...(address ? { lookup: pinnedLookup(address), agent: agentFor(u.protocol, address) } : {})
     }, (res) => {
@@ -83,10 +108,7 @@ const httpRequest = (url, { method = 'GET', headers = {}, body = null, timeoutMs
     // A caller may change its mind: a replication read parked on another server
     // for twenty seconds has to be abandonable the instant this machine makes
     // an edit of its own, or the edit waits out someone else's silence.
-    if (signal) {
-      if (signal.aborted) req.destroy(new Error('aborted'))
-      else signal.addEventListener('abort', () => req.destroy(new Error('aborted')), { once: true })
-    }
+    linkAbort(signal, req)
     if (body) req.write(body)
     req.end()
   })
@@ -110,7 +132,7 @@ const open = (url, { method, headers, timeoutMs, signal, servername, address }, 
   const lib = u.protocol === 'https:' ? https : http
   const req = lib.request(u, {
     method,
-    headers,
+    headers: withDiUserAgent(headers),
     ...(servername ? { servername } : {}),
     // The same ADDRESS PIN httpRequest honours: a pinned follow must carry its
     // files over the route its ops take, or the files go where DNS says.
@@ -118,10 +140,7 @@ const open = (url, { method, headers, timeoutMs, signal, servername, address }, 
   }, onResponse)
   req.on('error', reject)
   req.setTimeout(timeoutMs, () => req.destroy(new Error('request timeout')))
-  if (signal) {
-    if (signal.aborted) req.destroy(new Error('aborted'))
-    else signal.addEventListener('abort', () => req.destroy(new Error('aborted')), { once: true })
-  }
+  linkAbort(signal, req)
   return req
 }
 

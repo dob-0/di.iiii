@@ -205,10 +205,10 @@ export const MOVES = {
             // matter what --space said, and every later call 404'd against the
             // name that had been asked for.
             const chosenLabel = label || space.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-            // TRAP 6 — born permanent. pruneSpaces deletes any non-permanent
-            // space untouched for 30 days, row and directory both, and a READ
-            // does not count as a touch: a space nobody happened to open that
-            // month deletes itself while still serving traffic.
+            // TRAP 6 — born permanent. pruneSpaces trashes any non-permanent
+            // space untouched for 30 days that is not published, listed,
+            // linked or holding a saved project, and a READ does not count as
+            // a touch: an empty space nobody opened that month leaves its url.
             const made = asSpace(await ctx.http.post('/api/spaces', { label: chosenLabel, permanent: true, ...(isPublic ? { isPublic: true } : {}) }))
             if (made.id !== space) {
                 throw new DiError(

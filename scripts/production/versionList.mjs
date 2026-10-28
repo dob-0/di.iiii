@@ -307,6 +307,6 @@ export const recordMadeVersion = async ({ client, api, tokenFile = null, space, 
         const entry = had ? (remade ? { ...made, status: had.status } : { ...had, fingerprint: made.fingerprint, listed: made.listed }) : made
         return await putEntry({ client, api, tokenFile, space, production, meta: { id: production, title: title || production, space, codeList }, dry: false, log }, entry)
     } catch (error) {
-        throw new Error(`${projectId} is made, but the version list ${listProjectIdOf(production)} was not written: ${error.message}\n  finish it with: node scripts/production/versions.mjs --api ${api}${tokenFile ? ` --token-file ${tokenFile}` : ''} register ${projectId}`)
+        throw new Error(`${projectId} is made, but the version list ${listProjectIdOf(production)} was not written: ${error.message}\n  finish it with: node scripts/production/versions.mjs --api ${api}${tokenFile ? ` --token-file ${tokenFile}` : ''} register ${projectId}`, { cause: error })
     }
 }

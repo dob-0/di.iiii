@@ -20,7 +20,7 @@ afterEach(async () => {
     while (cleanups.length) await cleanups.pop()()
 })
 
-const boot = async ({ auth = null, forward = async () => ({ status: 200, payload: { ok: true } }) } = {}) => {
+const boot = async ({ auth = null, forward = async () => ({ status: 200, payload: { ok: true } }), onThisMachine } = {}) => {
     const hub = createMachineHub()
     const forwarded = []
     const app = express()
@@ -35,7 +35,8 @@ const boot = async ({ auth = null, forward = async () => ({ status: 200, payload
         canAccessSpace: (state, spaceId) => !state.spaces || state.spaces.includes(spaceId),
         normalizeSpaceId: (value) => value,
         spaceExists: async (spaceId) => spaceId !== 'missing',
-        forward: async (link, body) => { forwarded.push({ link, body }); return forward(link, body) }
+        forward: async (link, body) => { forwarded.push({ link, body }); return forward(link, body) },
+        ...(onThisMachine ? { onThisMachine } : {})
     })
     app.use(router)
     const server = await new Promise((resolve) => {
@@ -63,6 +64,24 @@ describe('machine routes', () => {
         expect(answer.body.machine).toEqual(HERE)
         expect(answer.body.peers.map(peer => [peer.peerId, peer.machineName]).sort()).toEqual([['tab', 'aylmo'], ['there', 'asuz']])
         expect((await call('GET', `/api/spaces/${SPACE}/machines`)).body.peers).toHaveLength(2)
+    })
+
+    // 2026-10-02: aylmo's browser opened asuz's di by address, became "asuz"
+    // with aylmo's screen on asuz's card, and ran asuz's camera itself.
+    it('a page whose browser is on another computer is away: no devices, and it is told so', async () => {
+        const { call } = await boot({ onThisMachine: () => false })
+        const devices = [{ kind: 'screen', id: 'screen-0', label: 'Screen', width: 2561, height: 1440 }]
+        const answer = await call('POST', `/api/spaces/${SPACE}/machines/hello`, { peerId: 'visitor', role: 'runner', devices })
+        expect(answer.body.away).toBe(true)
+        expect(answer.body.peers).toMatchObject([{ peerId: 'visitor', away: true, devices: [] }])
+    })
+
+    it('a page on this machine is not away and keeps its devices', async () => {
+        const { call } = await boot()
+        const devices = [{ kind: 'camera', id: 'cam-1', label: 'USB2.0 HD UVC WebCam' }]
+        const answer = await call('POST', `/api/spaces/${SPACE}/machines/hello`, { peerId: 'kiosk', role: 'runner', devices })
+        expect(answer.body.away).toBe(false)
+        expect(answer.body.peers[0]).toMatchObject({ away: false, devices: [{ kind: 'camera', label: 'USB2.0 HD UVC WebCam' }] })
     })
 
     it('delivers to a local tab, and the tab collects it', async () => {
@@ -120,6 +139,19 @@ describe('machine routes', () => {
             { kind: 'camera', id: 'c1', label: 'OBS Virtual Camera' },
             { kind: 'screen', id: 's1', label: 'Screen', width: 1920, height: 1080 }
         ])
+    })
+
+    it('remembers which machine followed and when — but never on a guest\'s word', async () => {
+        // The host's sync light says "followed by ponyo". An anonymous visitor to a
+        // public space is an editor and may call /machines/sync, so it must not be
+        // able to make machines up.
+        const follower = await boot({ auth: { authenticated: true, type: 'sync-key', role: 'editor', subject: 'sync-key:k1', spaces: [SPACE] } })
+        await follower.call('POST', `/api/spaces/${SPACE}/machines/sync`, { machine: { id: 'f1', name: 'ponyo' }, peers: [] })
+        expect(follower.hub.followersOf(SPACE).map(one => [one.machineId, one.name])).toEqual([['f1', 'ponyo']])
+
+        const guest = await boot({ auth: { authenticated: true, type: 'guest', role: 'editor', subject: 'guest:abc', spaces: [SPACE] } })
+        await guest.call('POST', `/api/spaces/${SPACE}/machines/sync`, { machine: { id: 'made-up', name: 'liar' }, peers: [] })
+        expect(guest.hub.followersOf(SPACE)).toEqual([])
     })
 
     it('says 404 for nobody, 413 for too much, 502 when the host is gone', async () => {

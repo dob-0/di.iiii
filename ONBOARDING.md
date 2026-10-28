@@ -7,7 +7,7 @@ inline.
 
 > **Wrong door?** If you were invited to *collaborate on a space* — build scenes,
 > upload work, edit projects — you need none of this. That path is a browser tab
-> and nothing else: [di-studio.xyz/wiki#joining-a-space](https://di-studio.xyz/wiki#joining-a-space).
+> and nothing else: [diiii.xyz/wiki#joining-a-space](https://diiii.xyz/wiki#joining-a-space).
 > This page is for running and changing the platform itself.
 
 > TL;DR for the impatient: install prerequisites → fork & clone → `npm install`
@@ -22,7 +22,7 @@ inline.
 | Tool | Why | Windows (winget) | macOS (brew) |
 | --- | --- | --- | --- |
 | **Git** | clone / commit / push | `winget install Git.Git` | `brew install git` |
-| **Node 22.x** (24 also works) | runs client + server | `winget install OpenJS.NodeJS.LTS` | `brew install node` |
+| **Node 24.x** (`.nvmrc`; 22.x also supported) | runs client + server | `winget install OpenJS.NodeJS.LTS` | `brew install node` |
 | **GitHub CLI (`gh`)** | auth, open PRs, sync with upstream | `winget install GitHub.cli` | `brew install gh` |
 
 Verify:
@@ -66,8 +66,8 @@ npm install
 npm --prefix serverXR install
 ```
 
-> Node 24 prints an `EBADENGINE` warning (engines ask for 22.x). It's only a
-> warning; the app runs. To silence it: `npm install --engine-strict=false`.
+> `.nvmrc` pins the Node version CI and the Docker images use (24, Active LTS);
+> `engines` accepts 22.x and 24.x, and CI also runs the suite on 22.
 
 ## 5. Create the local server env
 
@@ -117,7 +117,7 @@ This starts **serverXR** (`http://localhost:4000`) and the **Vite client**
 - `http://localhost:5173/spaces` — your spaces
 - `http://localhost:5173/main` — public view
 - `http://localhost:5173/main/studio` — main editor
-- `http://localhost:5173/main/raw/projects` — the node editor (Raw; `beta` was
+- `http://localhost:5173/main/raw/projects` — Nodes, the node editor (`beta` was
   deleted in Aug 2026 and its route is gone)
 - `http://localhost:5173/admin` — ops
 - `http://localhost:4000/serverXR/api/health` — server health check

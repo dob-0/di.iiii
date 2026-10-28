@@ -21,6 +21,8 @@
  *    routes/projectRoutes.js). A file that fails is thrown away and reported.
  *  - One file at a time, through a temp file, never through memory, and never
  *    inside the op loop: ops keep flowing while a 2 GB video crosses.
+ *  - An other di.iiii that is not answering is one fact, not one per file: it
+ *    is said once, waited out as one, and asked about once per wait (below).
  *  - Through httpClient (node:http), as httpContracts.test.js requires of every file here.
  */
 
@@ -29,6 +31,7 @@ const path = require('node:path')
 const crypto = require('node:crypto')
 const fsp = require('node:fs/promises')
 const { httpRequest, httpDownloadToFile, httpUploadFile } = require('../httpClient')
+const { failureDelay, FAILURE_FLOOR_MS, FAILURE_CEILING_MS } = require('./followPlan')
 
 const SHA256 = /^[a-f0-9]{64}$/i
 const PROBE_TIMEOUT_MS = 8000
@@ -40,6 +43,15 @@ const DEFAULT_BACKOFF_MS = [2000, 10_000, 30_000]
 // A file that ran out of tries is looked at again after this long — the other
 // machine may simply have been switched off for the afternoon.
 const DEFAULT_RETRY_FAILED_AFTER_MS = 5 * 60_000
+// A file NEITHER machine holds (named in a document, its bytes on no disk yet) is
+// asked about on the same clock as any other failure: its tries, then again every
+// 5 minutes and whenever the 10-minute comparison names it. Its bytes may simply be
+// on their way: an upload's op reaches the host on the op loop before the bytes do,
+// so a follower can see the name first. A longer wait would make such a file late
+// (review of PR #1143). What changed (DSC-2, aylmo 2026-10-26: 56 lines per 10 min
+// for 28 such files) is only what is SAID: one line when a file is first found held
+// nowhere, one when that ends, nothing on the tries in between.
+const HELD_NOWHERE = 'neither machine holds this file'
 // What the documents list is compared with what each machine can serve again
 // this often, for as long as the follow runs (not only once after a start): a
 // transfer that was interrupted, or a file lost from one disk, is found and
@@ -48,6 +60,37 @@ const DEFAULT_RECONCILE_EVERY_MS = 10 * 60_000
 // A .part a killed install left behind (the `finally` that removes it does not
 // run on a kill). Another follower in the same process may own a younger one.
 const STALE_PART_MS = 60 * 60_000
+
+// THE OTHER DI.IIII AS A WHOLE. When it stops answering — switched off, the
+// link down, or a tunnel in front of it answering in its place — no file can
+// cross, and asking about each one on its own turned one outage into thousands
+// of asks and lines a minute (aylmo, 2026-10-09: Cloudflare answered 530 for
+// dev.diiii.xyz for hours while it moved house; 1,400 "could not be carried"
+// lines and 5,100 asks on this install's own file routes a minute). So once
+// this many asks in a row get no answer of their own, the chase stops, says so
+// once, and asks one small question (GET /api/health) after 5 s, then 10, 20 …
+// at most every 5 minutes — the op loop's numbers for a refused write
+// (followPlan.js failureDelay). Three, not one: a single lost answer on venue
+// wifi is that file's retry, not an outage with two lines in the log. The op
+// loop hearing the other side again ends the wait at once (noteAnswered), so
+// the 5-minute cap is never waited out after it is back. Method: a circuit
+// breaker with a consecutive-failure threshold (M. Nygard, Release It!, 2nd
+// ed., 2018, ch. 5) and capped exponential back-off.
+const MISSES_BEFORE_WAITING = 3
+
+// No answer of its own: none at all (refused, reset, timed out — status 0), or
+// a gateway in front of it answering for it: 502, 503, 504 (RFC 9110 §15.6) and
+// the 52x Cloudflare sends when it cannot reach the machine — 530 while its
+// tunnel is down. A 500 is the machine itself answering about one request, and
+// stays that request's trouble: on 2026-10-02 one project's writes answered
+// 500 for hours while the rest of the space was fine (followPlan.js).
+const notAnswering = (answer) => {
+    if (answer?.ok) return false
+    const status = Number(answer?.status) || 0
+    return !status || status === 502 || status === 503 || status === 504 || (status >= 520 && status <= 530)
+}
+
+const howLong = (ms) => (ms < 90_000 ? `${Math.round(ms / 1000)} s` : ms < 90 * 60_000 ? `${Math.round(ms / 60_000)} min` : `${(ms / 3_600_000).toFixed(1)} h`)
 
 const isCarriableId = (id) => SHA256.test(String(id || ''))
 
@@ -107,6 +150,8 @@ const whyFromStatus = (status, where) => {
  * @param {number} [options.maxBytes]  the largest file this install accepts
  * @param {string} [options.tmpDir]    where a file rests between the two machines
  * @param {object} [options.io]        { request, download, upload } — the tests' seam
+ * @param {number} [options.waitFirstMs]  the first wait once the other di.iiii is not answering
+ * @param {number} [options.waitMostMs]   the longest; each wait doubles the last until it gets here
  */
 const createAssetChase = ({
     local,
@@ -116,6 +161,8 @@ const createAssetChase = ({
     backoffMs = DEFAULT_BACKOFF_MS,
     retryFailedAfterMs = DEFAULT_RETRY_FAILED_AFTER_MS,
     reconcileEveryMs = DEFAULT_RECONCILE_EVERY_MS,
+    waitFirstMs = FAILURE_FLOOR_MS,
+    waitMostMs = FAILURE_CEILING_MS,
     io = { request: httpRequest, download: httpDownloadToFile, upload: httpUploadFile },
     now = () => Date.now(),
     log = console
@@ -128,10 +175,66 @@ const createAssetChase = ({
     const reconciled = new Map()   // projectId → when its documents were last compared with what each side holds
     const known = new Set()        // keys of every file a document or an op has named, carriable or not
     let carried = 0
+    // keys of the files last found held on neither machine: said once on the way
+    // in and once on the way out, never on the tries in between.
+    const heldNowhere = new Set()
+    // The one line on the way out of "held nowhere", whatever ended it.
+    const leftHeldNowhere = (key, fileName, how) => {
+        if (!heldNowhere.delete(key)) return
+        log.info?.(`[follow] ${local.spaceId}: ${fileName} ${how}`)
+    }
     let stopped = false
     let running = null
     let timer = null
     const abort = new AbortController()
+    // While the other di.iiii is not answering: since when, what came back in
+    // its place, how many waits in a row, and when to ask again. Null otherwise.
+    let down = null
+    let misses = 0                 // asks in a row that got no answer of its own
+
+    const waiting = () => Boolean(down) && now() < down.at
+
+    /** An ask of the other di.iiii came back with an answer of its own. */
+    const heard = () => {
+        misses = 0
+        if (!down) return
+        log.info?.(`[follow] ${local.spaceId}: the other di.iiii answers again after ${howLong(now() - down.since)} — files carry`)
+        down = null
+    }
+
+    /** An ask of the other di.iiii came back with none (notAnswering). */
+    const missed = (status, error = null) => {
+        if (stopped) return
+        const why = status ? String(status) : String(error?.message || error || 'no answer')
+        if (down) {
+            // Asked again after a wait, and still nothing: a longer wait, and
+            // nothing new to say.
+            down.waits += 1
+            down.why = why
+            down.at = now() + failureDelay(down.waits, { floor: waitFirstMs, ceiling: waitMostMs })
+            return
+        }
+        misses += 1
+        if (misses < MISSES_BEFORE_WAITING) return
+        down = { since: now(), why, waits: 1, at: now() + waitFirstMs }
+        log.warn?.(`[follow] ${local.spaceId}: the other di.iiii is not answering (${why}) — files wait; asking again in ${howLong(waitFirstMs)}, then less often, at most every ${howLong(waitMostMs)}`)
+    }
+
+    // The one small question asked once a wait is over: on every di.iiii, no
+    // key needed, nothing read from disk. Any answer of its own will do; what
+    // the files themselves get is for the asks that follow it to find out.
+    const probe = async () => {
+        const answer = await io.request(remote.url('/api/health'), {
+            headers: { Accept: 'application/json' },
+            timeoutMs: PROBE_TIMEOUT_MS,
+            signal: abort.signal,
+            servername: remote.servername,
+            address: remote.address
+        }).catch((error) => ({ ok: false, status: 0, error }))
+        if (!notAnswering(answer)) return true
+        missed(answer.status, answer.error)
+        return false
+    }
 
     // A killed install leaves its half-received files behind; they are not
     // resumed (a file is checked whole against its name), only cleared.
@@ -159,6 +262,7 @@ const createAssetChase = ({
 
     const forget = (projectId, id) => {
         const key = keyOf(projectId, id)
+        leftHeldNowhere(key, (pending.get(key) || failed.get(key))?.name || id, 'is no longer named — not looked for any more')
         pending.delete(key)
         failed.delete(key)
         settled.delete(key)
@@ -190,7 +294,14 @@ const createAssetChase = ({
             signal: abort.signal,
             servername: side.servername,
             address: side.address
+        }).catch((error) => {
+            if (side === remote) missed(0, error)
+            throw error
         })
+        if (side === remote) {
+            if (notAnswering(answer)) missed(answer.status)
+            else heard()
+        }
         if (answer.ok) return { held: true, meta: answer.json()?.asset || null }
         if (answer.status === 404) return { held: false, meta: null }
         throw Object.assign(new Error(whyFromStatus(answer.status, side === local ? 'this install' : 'the other di.iiii')), {
@@ -220,7 +331,7 @@ const createAssetChase = ({
             // Named and then taken away again, with the ops read out of order:
             // nothing to chase, and not worth a line in anybody's terminal.
             if (!(await stillNamedHere(item))) return 'dropped'
-            throw Object.assign(new Error('neither machine holds this file'), { final: false })
+            throw Object.assign(new Error(HELD_NOWHERE), { final: false, heldNowhere: true })
         }
         const from = here.held ? local : remote
         const to = here.held ? remote : local
@@ -300,14 +411,28 @@ const createAssetChase = ({
     // document already names everything. Done only when BOTH have answered (a
     // project one side has not made yet is an answer: 404).
     const reconcileOne = async (projectId) => {
+        const [here, there] = await Promise.all([local, remote].map(side => readDocument(side, projectId).catch(error => ({ ok: false, status: 0, error }))))
+        if (notAnswering(there)) {
+            missed(there.status, there.error)
+            return false
+        }
+        heard()
+        // Half a comparison is not one: until both have answered, nothing is
+        // named and nothing settled is asked about again. Until 2026-10-09 a
+        // pass that could not read one side did both anyway — every 2 s for as
+        // long as that side was away — and name() took every file that had run
+        // out of tries straight back into the line, so its 5-minute rest never
+        // came: four asks of each machine and one "could not be carried" line
+        // per file every ~44 s, for every project of every followed space.
+        const answered = (answer) => answer.ok || answer.status === 404
+        if (!answered(here) || !answered(there)) return false
         // A file settled earlier is asked about again: this comparison exists to
         // find what has stopped being true since.
         for (const key of [...settled]) if (key.startsWith(`${projectId}:`)) settled.delete(key)
-        const answers = await Promise.all([local, remote].map(side => readDocument(side, projectId).catch(() => null)))
-        for (const answer of answers) {
-            if (answer?.ok) for (const ref of assetsFromDocument(answer.json()?.document)) name(projectId, ref)
+        for (const answer of [here, there]) {
+            if (answer.ok) for (const ref of assetsFromDocument(answer.json()?.document)) name(projectId, ref)
         }
-        return answers.every(answer => answer && (answer.ok || answer.status === 404))
+        return true
     }
 
     const nextDue = () => {
@@ -321,17 +446,28 @@ const createAssetChase = ({
     const schedule = () => {
         if (stopped || timer) return
         let soonest = Infinity
-        for (const item of pending.values()) soonest = Math.min(soonest, item.notBefore)
-        for (const entry of failed.values()) {
-            if (!entry.final) soonest = Math.min(soonest, entry.at + retryFailedAfterMs)
+        if (down) {
+            // Not answering: its next small question is the only thing due.
+            soonest = down.at
+        } else {
+            for (const item of pending.values()) soonest = Math.min(soonest, item.notBefore)
+            for (const entry of failed.values()) {
+                if (!entry.final) soonest = Math.min(soonest, entry.at + retryFailedAfterMs)
+            }
+            if (toReconcile.size) soonest = Math.min(soonest, now() + (backoffMs[0] || 1000))
         }
-        if (toReconcile.size) soonest = Math.min(soonest, now() + (backoffMs[0] || 1000))
         if (soonest === Infinity) return
         timer = setTimeout(() => { timer = null; run() }, Math.max(50, soonest - now()))
         timer.unref?.()
     }
 
     const work = async () => {
+        if (down) {
+            // Waiting out the other side's silence: nothing is asked, read or
+            // downloaded, however often the op loop kicks. When the wait is
+            // over, one small question before any of the work.
+            if (waiting() || !(await probe())) return
+        }
         // Files that ran out of tries a while ago get another look.
         for (const [key, entry] of failed) {
             if (entry.final || now() - entry.at < retryFailedAfterMs) continue
@@ -339,7 +475,7 @@ const createAssetChase = ({
             pending.set(key, { projectId: entry.projectId, id: entry.id, name: entry.name, size: entry.size || 0, attempts: 0, notBefore: 0 })
         }
         for (const projectId of [...toReconcile]) {
-            if (stopped) return
+            if (stopped || waiting()) return
             try {
                 if (await reconcileOne(projectId)) {
                     toReconcile.delete(projectId)
@@ -347,22 +483,37 @@ const createAssetChase = ({
                 }
             } catch { /* this install not answering — asked again next time */ }
         }
-        while (!stopped) {
+        while (!stopped && !waiting()) {
             const due = nextDue()
-            if (!due) return
+            if (!due) break
             const [key, item] = due
             try {
                 const outcome = await carryOne(item)
                 pending.delete(key)
+                leftHeldNowhere(key, item.name, outcome === 'carried' ? 'is held again and was carried'
+                    : outcome === 'settled' ? 'is held on both machines now'
+                        : 'is no longer named — not looked for any more')
                 if (outcome === 'carried') carried += 1
                 if (outcome !== 'dropped') settled.add(key)
             } catch (error) {
                 if (stopped) return
+                // The other side not answering is not this file's doing: it
+                // keeps its place in the line and every try it has left.
+                if (waiting()) return
                 item.attempts += 1
                 const why = String(error?.message || error)
                 if (error?.final || item.attempts > backoffMs.length) {
                     pending.delete(key)
                     failed.set(key, { projectId: item.projectId, id: item.id, name: item.name, size: item.size, why, final: Boolean(error?.final), at: now() })
+                    if (error?.heldNowhere) {
+                        // Said once, when it starts; its later tries keep the same clock, quietly.
+                        if (heldNowhere.has(key)) continue
+                        heldNowhere.add(key)
+                        log.warn?.(`[follow] ${local.spaceId}: ${item.name} could not be carried — ${why}; still asked again every ${howLong(retryFailedAfterMs)}, said again only when that changes`)
+                        continue
+                    }
+                    // Another reason now: "held nowhere" is over, and this line says why.
+                    heldNowhere.delete(key)
                     log.warn?.(`[follow] ${local.spaceId}: ${item.name} could not be carried — ${why}`)
                 } else {
                     item.notBefore = now() + backoffMs[item.attempts - 1]
@@ -372,6 +523,9 @@ const createAssetChase = ({
                 }
             }
         }
+        // Asked again after a wait, and nothing in this pass needed the other
+        // side: its answer to the small question is enough to say it is back.
+        if (down && !stopped && !waiting()) heard()
     }
 
     /** Start working if not already. Never awaited by the op loop. */
@@ -386,6 +540,18 @@ const createAssetChase = ({
     return {
         noteOps,
         noteProjects,
+        /**
+         * The op loop has just had an answer from the other di.iiii. Files
+         * waiting out its silence go now, not at the end of a wait that may be
+         * five minutes long — after the small question, as always.
+         */
+        noteAnswered() {
+            if (stopped || !down || down.at <= now()) return
+            down.at = now()
+            if (timer) clearTimeout(timer)
+            timer = null
+            run()
+        },
         run,
         /** Resolves when the current pass is over — for tests; the follower never waits. */
         idle: () => running || Promise.resolve(),
@@ -409,6 +575,8 @@ const createAssetChase = ({
                 failed: failed.size,
                 // who and why, for a person: `di follows` prints these
                 failures: [...failed.values()].map(({ id, name: fileName, why }) => ({ id, name: fileName, why })),
+                // how many of those neither machine holds (bytes not arrived, or lost)
+                heldNowhere: heldNowhere.size,
                 notCarried: notCarried.size,
                 bytesPending
             }

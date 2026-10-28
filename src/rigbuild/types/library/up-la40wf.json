@@ -1,0 +1,404 @@
+{
+  "id": "up-la40wf",
+  "code": "UP-LA40WF",
+  "identified": "EXACT",
+  "identifiedNote": "EXACT (identity and optics from the maker's page LA-CN; body size/weight and DMX from an EQUIVALENT)",
+  "maker": "U-Plus Lighting",
+  "model": "UP-LA40WF",
+  "modelledOn": null,
+  "product": "UPlight UP-LA40WF, 40 W full-colour laser (R 10 W 638 nm, G 15 W 520 nm, B 16 W 445 nm, Nichia; ILDA, DMX512, SD card)",
+  "makerModel": "IP-LL40 (manual IP-LL30)",
+  "manual": {
+    "url": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+    "product_page": "https://www.upluslighting.com/product/ip-ll40-waterproof-40w-rgb-animation-laser-light/",
+    "date": "PDF created 2023-06-20 (the IP-LL30 manual, which covers the 40 W column; no upload date known)",
+    "file": "~/Downloads/moxir/devices/IP-LL30.pdf",
+    "read": "2026-10-15, pdftotext, \"DMX-512 Channel function\"",
+    "basis": "APPROVED"
+  },
+  "makerChart": {
+    "file": "scripts/place/fixtures/charts/up-la40wf.json",
+    "modes": {
+      "19": "APPROVED",
+      "32": "APPROVED"
+    }
+  },
+  "category": "laser",
+  "modes": [
+    {
+      "name": "32ch",
+      "footprint": 32,
+      "channels": [
+        {
+          "role": "dimmer",
+          "label": "Ch 1 output (named dimmer so master/blackout reach it)",
+          "default": 0
+        },
+        {
+          "role": "c2",
+          "label": "Mode (0-49 auto, 50-99 voice, 100-149 PRG, 150-199 ILD, built-in graphics 200-255 by the PDF, 250-255 by the printed manual; static beam 250 — inside both)",
+          "default": 250
+        },
+        {
+          "role": "c3",
+          "label": "Graphic select (one graphic per two values; static beam 0 = graphic 1)",
+          "default": 0
+        },
+        {
+          "role": "c4",
+          "label": "Display mode (0 normal, 64 highlight, 128 segmented, 192 point display; static beam 0)",
+          "default": 0
+        },
+        {
+          "role": "c5",
+          "label": "Colour (0-16 white, 17 red, 34 green, 51 blue, 68 yellow, 85 purple, 102 cyan; static beam 8 white)",
+          "default": 8,
+          "cap": {
+            "laserColour": [
+              {
+                "from": 0,
+                "to": 16,
+                "colour": "#ffffff",
+                "name": "white"
+              },
+              {
+                "from": 17,
+                "to": 33,
+                "colour": "#ff0000",
+                "name": "red"
+              },
+              {
+                "from": 34,
+                "to": 50,
+                "colour": "#00ff00",
+                "name": "green"
+              },
+              {
+                "from": 51,
+                "to": 67,
+                "colour": "#0000ff",
+                "name": "blue"
+              },
+              {
+                "from": 68,
+                "to": 84,
+                "colour": "#ffff00",
+                "name": "yellow"
+              },
+              {
+                "from": 85,
+                "to": 101,
+                "colour": "#ff00ff",
+                "name": "purple"
+              },
+              {
+                "from": 102,
+                "to": 118,
+                "colour": "#00ffff",
+                "name": "cyan"
+              }
+            ]
+          }
+        },
+        {
+          "role": "c6",
+          "label": "X position (0-125 by hand, 64 centre)",
+          "default": 64,
+          "cap": {
+            "aim": {
+              "axis": "x",
+              "from": 0,
+              "to": 125,
+              "centre": 64,
+              "halfDeg": 18.5,
+              "basis": "ASSUMED — scan_field_half_deg, fixtures.json"
+            }
+          }
+        },
+        {
+          "role": "c7",
+          "label": "Y position (0-125 by hand, 64 centre)",
+          "default": 64,
+          "cap": {
+            "aim": {
+              "axis": "y",
+              "from": 0,
+              "to": 125,
+              "centre": 64,
+              "halfDeg": 18.5,
+              "basis": "ASSUMED — scan_field_half_deg, fixtures.json"
+            }
+          }
+        },
+        {
+          "role": "c8",
+          "label": "Zoom (0-10 none, 11-87 by hand, 88-150 zoom, 151-200 zoom out, 201-255 loop)"
+        },
+        {
+          "role": "c9",
+          "label": "X rotation (0 none, 1-128 by hand, 129-255 auto)"
+        },
+        {
+          "role": "c10",
+          "label": "Y rotation (0 none, 1-128 by hand, 129-255 auto)"
+        },
+        {
+          "role": "c11",
+          "label": "Centre rotation (0 none, 1-128 by hand, 129-192 clockwise, 193-255 counter-clockwise; 150 = slow clockwise, tested)"
+        },
+        {
+          "role": "c12",
+          "label": "Gradual painting (0-10 none, 10-74 by hand, 75-104 grow, 105-144 fade, 145-184 loop fade, 185-224 / 225-255 end-to-end draw)"
+        },
+        {
+          "role": "c13",
+          "label": "X wave (0-9 none, 10-69 small, 70-129 medium, 130-189 large, 190-255 maximum)"
+        },
+        {
+          "role": "c14",
+          "label": "Y wave (0-9 none, 10-69 small, 70-129 medium, 130-189 large, 190-255 maximum)"
+        },
+        {
+          "role": "c15",
+          "label": "Strobe (0-10 none, 11-199 auto slow to fast, 200-255 by sound)"
+        },
+        {
+          "role": "c16",
+          "label": "Red level (0 brightest)"
+        },
+        {
+          "role": "c17",
+          "label": "Green level (0 brightest)"
+        },
+        {
+          "role": "c18",
+          "label": "Blue level (0 brightest)"
+        },
+        {
+          "role": "c19",
+          "label": "Out-of-bounds (0-49 rebound, 50-99 to a line, 100-149 blanking, 150-255 pass through)"
+        },
+        {
+          "role": "c20",
+          "label": "Graphic 2, ch 20"
+        },
+        {
+          "role": "c21",
+          "label": "Graphic 2, ch 21"
+        },
+        {
+          "role": "c22",
+          "label": "Graphic 2 colour (mirror ch 5)"
+        },
+        {
+          "role": "c23",
+          "label": "Graphic 2, ch 23"
+        },
+        {
+          "role": "c24",
+          "label": "Graphic 2, ch 24"
+        },
+        {
+          "role": "c25",
+          "label": "Graphic 2, ch 25"
+        },
+        {
+          "role": "c26",
+          "label": "Graphic 2, ch 26"
+        },
+        {
+          "role": "c27",
+          "label": "Graphic 2, ch 27"
+        },
+        {
+          "role": "c28",
+          "label": "Graphic 2, ch 28"
+        },
+        {
+          "role": "c29",
+          "label": "Graphic 2, ch 29"
+        },
+        {
+          "role": "c30",
+          "label": "Graphic 2, ch 30"
+        },
+        {
+          "role": "c31",
+          "label": "Graphic 2, ch 31"
+        },
+        {
+          "role": "c32",
+          "label": "Graphic 2, ch 32"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "the rental unit itself (Sevan festival rig, Dilijan camp, 2026)",
+        "url": null,
+        "licence": null,
+        "basis": "TESTED"
+      },
+      "src": "SEVAN",
+      "basis": "TESTED"
+    },
+    {
+      "name": "11ch-assumed",
+      "footprint": 11,
+      "channels": [
+        {
+          "role": "control",
+          "label": "Mode"
+        },
+        {
+          "role": "aux1",
+          "label": "Pattern"
+        },
+        {
+          "role": "aux2",
+          "label": "Circular movement"
+        },
+        {
+          "role": "aux3",
+          "label": "Y rotation"
+        },
+        {
+          "role": "aux4",
+          "label": "X rotation"
+        },
+        {
+          "role": "aux5",
+          "label": "Horizontal movement"
+        },
+        {
+          "role": "aux6",
+          "label": "Vertical movement"
+        },
+        {
+          "role": "zoom",
+          "label": "Manual zoom"
+        },
+        {
+          "role": "aux7",
+          "label": "Pattern buildup"
+        },
+        {
+          "role": "strobe",
+          "label": "Dot effect / strobe"
+        },
+        {
+          "role": "color",
+          "label": "Colour"
+        }
+      ],
+      "channelsSource": {
+        "basis": "ASSUMED",
+        "grade": "STILL ASSUMED",
+        "gradeWhy": "the unit is identified — UPlight's own page (uplight.com.cn pd48855201) names UP-LA40WF, DMX512/ILDA — but publishes no DMX mode or chart (checked 2026-09-29)",
+        "fixture": "Laserworld CS-1000RGB (an RGB animation laser; the Blue Sea BLLO-RGB40 publishes no chart)",
+        "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/laserworld/cs-1000rgb.json",
+        "title": "Open Fixture Library: Laserworld CS-1000RGB, \"11-channel\"",
+        "pages": "mode \"11-channel\"",
+        "licence": "MIT (Open Fixture Library)",
+        "accessed": "2026-09-29",
+        "fill": [
+          "the laser is not drawn in the room; laser safety (IEC 60825-1, audience scanning) is a separate sign-off"
+        ]
+      },
+      "assumed": "ASSUMED from Laserworld CS-1000RGB 11-channel (Open Fixture Library) — verify on the rental unit",
+      "src": null,
+      "basis": "ASSUMED"
+    }
+  ],
+  "defaultMode": "32ch",
+  "modesOwed": false,
+  "assumedMode": "11ch-assumed",
+  "power_w": {
+    "value": 1200,
+    "src": "BLUESEA",
+    "basis": "EQUIVALENT"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 35,
+    "src": "BLUESEA",
+    "basis": "EQUIVALENT"
+  },
+  "size_mm": {
+    "value": [
+      420,
+      555,
+      235
+    ],
+    "src": "BLUESEA",
+    "basis": "EQUIVALENT",
+    "order": "front W x length x front H (published 555 x 420 x 235 without handle)"
+  },
+  "pan_tilt_deg": null,
+  "ip": {
+    "value": "IP65",
+    "src": "BLUESEA",
+    "basis": "EQUIVALENT"
+  },
+  "optics": {
+    "beam_deg": null,
+    "zoom_deg": null,
+    "lux": null,
+    "at_m": null,
+    "photometrySrc": "BLUESEA",
+    "photometryBasis": "EQUIVALENT",
+    "note": "a laser is not a lamp with a candela figure: 40 W optical from a 6-10 mm aperture, divergence < 1.3 mrad (BLUESEA). Its drawn beam's air brightness is set by hand (the rig's airFixed)."
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": null,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/laser.glb",
+    "sidecar": "scripts/place/fixtures/glb/laser.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": 0,
+    "tiltY": 0.33,
+    "lensY": 0.6615,
+    "sizeAtHome_mm": {
+      "width_x": 550,
+      "depth_z": 235,
+      "height_y": 661
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "BLUESEA": {
+      "url": "https://www.bluesealighting.com/waterproof-40w-rgb-animation-laser-light.html",
+      "what": "Blue Sea BLLO-RGB40, 40 W RGB IP65 laser — equivalent for UP-LA40WF"
+    },
+    "LA-CN": {
+      "url": "https://www.uplight.com.cn/pd48855201.html",
+      "what": "UPlight UP-LA40WF '40瓦防水全彩激光灯' on the maker's Chinese site — model field UP-LA40WF; specs text, no DMX chart; checked 2026-09-29"
+    },
+    "SEVAN": {
+      "url": null,
+      "what": "The rental units themselves: the same UPlight rental gear ran live at the Sevan festival (Dilijan camp), 2026, on the studio's own Art-Net desk. Channel maps as patched and run there (the desk's show.json custom profiles 'Beam 16ch', 'Wash 8ch', 'Laser 32ch'; the beam's from its manual). Confirmed as the same units by the owner, 2026-10-01"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "laser",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "exact",
+    "date": "2026-09-29",
+    "sources": [
+      "BLUESEA",
+      "LA-CN",
+      "SEVAN"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 2,
+      "datasheet": 0,
+      "equivalent": 5,
+      "assumed": 4,
+      "unknown": 0
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{"photo": "014-file_66.JPG", "how": "read by eye on crops-014.jpg and sheet-014.jpg; positions from the accepted fit (fit-014.json, rms 7.4 px); the joint pair's z from the held-out edges",
+ "columns": [
+  {"row_x": -12, "z": 12.0, "model_has": true, "what": "A: precast column, Y head under the runway girder"},
+  {"row_x": -12, "z": 6.0, "model_has": true, "what": "B: precast column (foot visible)"},
+  {"row_x": -12, "z": 0.08, "model_has": true, "what": "C: joint pair, +z column; held-out edges put its centre at z 0.08 (model 0.5)"},
+  {"row_x": -12, "z": -1.12, "model_has": true, "what": "D: joint pair, -z column; held-out edges put its centre at z -1.12 (model -0.5)"}
+ ],
+ "not_columns": "between A and B and between B and C: no upright of column size on x -12; the verticals there are the outer wall's posts and window mullions at x -36.4 (40-50 m behind)"}

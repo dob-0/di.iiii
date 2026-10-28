@@ -41,6 +41,17 @@ the document no longer names it → dropped silently; still named → reported.
 - **Retry.** Per file: 2 s, 10 s, 30 s, then it is listed as failed and looked at again every
   5 minutes. Answers that will not change (401/403/413/415/422, over the cap) fail at once and
   are not retried. A stubborn file goes to the back of the line.
+- **The other machine not answering is one fact, not one per file** (2026-10-09). Three asks of
+  it in a row (`/meta`, `/document`) with no answer of its own — none at all, or a gateway
+  answering for it: 502/503/504, Cloudflare 520–530 — and the whole chase waits: one warn line,
+  then nothing asked, read or downloaded, only one `GET /api/health` after 5 s, 10 s, 20 s … at
+  most every 5 minutes (followPlan.js `failureDelay`). The first real answer after it: one info
+  line, and the files carry as before. The op loop hearing the other side (`refreshStreams`)
+  ends the wait at once, so the 5-minute cap is never waited out after it is back. A 500 is the
+  machine answering about one request and stays per-file. A comparison of the two documents
+  changes nothing (settled files, names) until both have answered. Before this, a remote that
+  answered 530 for hours cost 4 asks of each machine and one "could not be carried" line per
+  file every ~44 s (aylmo: 1,400 lines and 5,100 local `/meta` asks a minute).
 - **Stops with the follow** (`stop()` aborts the transfer in flight).
 - **Leftovers.** A process killed mid-transfer leaves `*.verbatim` / `follow-*.part` in the uploads
   dir. Swept once at server start: only those two names, only that directory, only older than

@@ -183,7 +183,11 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                             title={headerCollapsed ? 'Expand header' : 'Collapse header'}
                             onClick={() => setHeaderCollapsed((v) => !v)}
                         >
-                            {headerCollapsed ? '▸' : '▾'}
+                            {/* An SVG chevron: the triangle glyphs this used are not in Inter's subset, so they fell back to
+                                whatever font the device has. Points right when collapsed, down when open. */}
+                            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+                                <path d={headerCollapsed ? 'M3.5 1.5 7 5 3.5 8.5' : 'M1.5 3.5 5 7 8.5 3.5'} fill="none" stroke="currentColor" strokeWidth="1" />
+                            </svg>
                         </button>
                     </div>
                 </div>

@@ -80,7 +80,7 @@ describe('isFirstPartyAssetUrl', () => {
 describe('bundle asset download HTML guard', () => {
     const withFetch = (impl) => {
         vi.stubGlobal('fetch', vi.fn(impl))
-        vi.stubGlobal('window', { location: { origin: 'https://di-studio.xyz' } })
+        vi.stubGlobal('window', { location: { origin: 'https://diiii.xyz' } })
     }
 
     afterEach(() => {

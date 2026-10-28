@@ -13,6 +13,41 @@ import { resolveAnimation, applyAnimation } from './entityAnimation.js'
 import { resolveProximity, applyProximity } from './entityProximity.js'
 import { enterDestination } from '../../components/entryTransition/entryTransition.js'
 import EntryGlideCamera, { captureRendererFrame } from '../../components/entryTransition/EntryGlide.jsx'
+import { useAssetUrl } from '../../hooks/useAssetUrl.js'
+import { coverCrop, PREVIEW_OPACITY, uprightTurn } from './portalPreview.js'
+import { chevronPoints, INVITE, inviteFrame } from './portalInvite.js'
+
+const RING_RADIUS = 1.1
+const reducedMotion = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)
+
+// The door's preview picture as a texture, centre-cropped to the opening's aspect; null until it loads
+// (and on a failed load: the door then simply keeps its plain tint).
+function usePreviewTexture(asset, openingAspect) {
+    // the asset's own url is the fallback, as ImageObject does: a source is registered only for some assets
+    const url = useAssetUrl(asset, { preferRemoteSource: true }) || asset?.url || null
+    const [texture, setTexture] = useState(null)
+    useEffect(() => {
+        const src = typeof url === 'string' ? url.trim() : ''
+        if (!src || src === 'blob:null') { setTexture(null); return () => {} }
+        let cancelled = false
+        let loaded = null
+        const loader = new THREE.TextureLoader()
+        loader.setCrossOrigin('anonymous')
+        loader.load(src, (t) => {
+            if (cancelled) { t.dispose(); return }
+            t.colorSpace = THREE.SRGBColorSpace
+            const img = t.image
+            const crop = coverCrop((img?.naturalWidth || img?.width || 1) / Math.max(img?.naturalHeight || img?.height || 1, 1), openingAspect)
+            t.repeat.set(...crop.repeat)
+            t.offset.set(...crop.offset)
+            t.needsUpdate = true
+            loaded = t
+            setTexture(t)
+        }, undefined, () => { if (!cancelled) setTexture(null) })
+        return () => { cancelled = true; if (loaded) loaded.dispose() }
+    }, [url, openingAspect])
+    return texture
+}
 
 const MAX_EMBED_DEPTH = 3
 
@@ -191,6 +226,10 @@ const getGlowTexture = () => {
 }
 
 const scratchWorldPos = new THREE.Vector3()
+const scratchQuat = new THREE.Quaternion()
+const scratchUp = new THREE.Vector3()
+const AXIS_Y = new THREE.Vector3(0, 1, 0)
+const QUARTER_X = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2)
 
 // The 'frame' door, in the portal's own local units — the entity's transform
 // scale multiplies all of it, exactly as it does the ring.
@@ -253,14 +292,22 @@ export const withGlideCleanup = (resolve, clear) => (frame) => {
     clear()
 }
 
-function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate = true, style = 'gateway' }) {
+function PortalGateway({ spaceId, projectId, anchor, label, color = '#4df9ff', showPlate = true, style = 'gateway', preview = null, invite = false }) {
     const isFrame = style === 'frame'
+    const previewTexture = usePreviewTexture(preview, isFrame ? (PORTAL_FRAME.halfWidth * 2) / PORTAL_FRAME.height : 1)
     const inEditor = typeof window !== 'undefined' && isStudioEditorPath(window.location.pathname)
     const groupRef = useRef(null)
     const labelRef = useRef(null)
     const ringRef = useRef(null)
     const ringMatRef = useRef(null)
     const fillMatRef = useRef(null)
+    const previewRef = useRef(null)
+    const rippleRefs = useRef([])
+    const arrowRefs = useRef([])
+    const inviting = invite && !inEditor && !isFrame
+    const still = useMemo(() => reducedMotion(), [])
+    const chevron = useMemo(() => new THREE.ShapeGeometry(new THREE.Shape(chevronPoints().map(([x, y]) => new THREE.Vector2(x, y)))), [])
+    useEffect(() => () => chevron.dispose(), [chevron])
     const revealRef = useRef(inEditor ? 1 : 0)
     const [hovered, setHovered] = useState(false)
     const { gl, scene, camera } = useThree()
@@ -277,7 +324,7 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
         // project instead. A hub whose doors all point at rooms INSIDE one space
         // therefore went nowhere: every door re-opened the room you were standing
         // in. Route to the project when one is named.
-        const href = portalHref(spaceId, projectId)
+        const href = portalHref(spaceId, projectId, anchor)
         if (!href) return
         const target = ringRef.current || groupRef.current
         enterDestination(href, {
@@ -321,12 +368,36 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
             const s = THREE.MathUtils.damp(ringRef.current.scale.x, hovered ? 1.07 : 1, 8, delta)
             ringRef.current.scale.setScalar(s)
         }
+        // On-demand loop: keep drawing until the reveal has caught up with its target.
+        if (Math.abs(next - target) > 0.01) state.invalidate()
         // A frame cannot answer a hover with a brighter glow, so it answers
         // with a slightly stronger flat fill in the opening — the brand's own
         // hover-fill move, and the same damp curve as the ring's.
+        // keep the preview picture upright while the door turns in its own plane
+        const preview = (previewTexture || inviting) && !isFrame ? previewRef.current : null
+        if (preview?.parent) {
+            preview.parent.getWorldQuaternion(scratchQuat).invert()
+            const turn = uprightTurn(scratchUp.set(0, 1, 0).applyQuaternion(scratchQuat).toArray())
+            if (turn !== null) preview.quaternion.setFromAxisAngle(AXIS_Y, turn).multiply(QUARTER_X)
+        }
+        if (inviting) {
+            const f = inviteFrame(state.clock.elapsedTime, { still })
+            rippleRefs.current.forEach((m, i) => {
+                const r = f.ripples[i]
+                if (!m) return
+                m.visible = Boolean(r)
+                if (r) { m.scale.setScalar(r.scale); m.material.opacity = r.opacity }
+            })
+            arrowRefs.current.forEach((m, i) => {
+                if (!m) return
+                m.position.x = (i === 0 ? -1 : 1) * f.arrow.distance * RING_RADIUS
+                m.material.opacity = f.arrow.opacity
+            })
+            if (!still) state.invalidate()
+        }
         if (fillMatRef.current) {
-            fillMatRef.current.opacity = THREE.MathUtils.damp(
-                fillMatRef.current.opacity, hovered ? FRAME_FILL_HOVER : FRAME_FILL_IDLE, 8, delta)
+            const [idle, hover] = previewTexture ? [PREVIEW_OPACITY.idle, PREVIEW_OPACITY.hover] : [FRAME_FILL_IDLE, FRAME_FILL_HOVER]
+            fillMatRef.current.opacity = THREE.MathUtils.damp(fillMatRef.current.opacity, hovered ? hover : idle, 8, delta)
         }
     })
 
@@ -354,10 +425,13 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
                 >
                     <planeGeometry args={[PORTAL_FRAME.halfWidth * 2, PORTAL_FRAME.height]} />
                     <meshBasicMaterial
+                        key={previewTexture ? 'preview' : 'tint'}
                         ref={fillMatRef}
-                        color={color}
+                        color={previewTexture ? '#ffffff' : color}
+                        map={previewTexture}
+                        toneMapped={!previewTexture}
                         transparent
-                        opacity={FRAME_FILL_IDLE}
+                        opacity={previewTexture ? PREVIEW_OPACITY.idle : FRAME_FILL_IDLE}
                         depthWrite={false}
                         side={THREE.DoubleSide}
                     />
@@ -392,22 +466,58 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
             {/* The membrane doubles the tap target: the torus BAND was the only
                 clickable surface, ~40px on a phone — under the 44px touch
                 minimum, and tapping the hole a door visibly has did nothing. */}
+            {/* A preview picture turns with the ring (+90°) so it faces the way the door faces, and useFrame keeps
+                its top up while the door spins; the plain tint is the same from both sides and keeps its old turn. */}
+            <group ref={previewRef} rotation={[previewTexture || inviting ? Math.PI / 2 : -Math.PI / 2, 0, 0]}>
             <mesh
-                rotation={[-Math.PI / 2, 0, 0]}
                 onClick={inEditor ? undefined : enter}
                 onPointerOver={inEditor ? undefined : hoverOn}
                 onPointerOut={inEditor ? undefined : hoverOff}
             >
                 <circleGeometry args={[1.02, 48]} />
-                <meshBasicMaterial
-                    color={color}
-                    transparent
-                    opacity={0.14}
-                    depthWrite={false}
-                    blending={THREE.AdditiveBlending}
-                    side={THREE.DoubleSide}
-                />
+                {previewTexture ? (
+                    <meshBasicMaterial
+                        key="preview"
+                        ref={fillMatRef}
+                        map={previewTexture}
+                        toneMapped={false}
+                        transparent
+                        opacity={PREVIEW_OPACITY.idle}
+                        depthWrite={false}
+                        side={THREE.DoubleSide}
+                    />
+                ) : (
+                    <meshBasicMaterial
+                        key="tint"
+                        color={color}
+                        transparent
+                        opacity={0.14}
+                        depthWrite={false}
+                        blending={THREE.AdditiveBlending}
+                        side={THREE.DoubleSide}
+                    />
+                )}
             </mesh>
+            {inviting ? Array.from({ length: INVITE.ripples }, (_, i) => (
+                <mesh key={`ripple-${i}`} ref={(m) => { rippleRefs.current[i] = m }}>
+                    <ringGeometry args={[RING_RADIUS + 0.06, RING_RADIUS + 0.13, 64]} />
+                    <meshBasicMaterial color={color} transparent opacity={0} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} />
+                </mesh>
+            )) : null}
+            {inviting ? [0, 1].map((i) => (
+                <mesh
+                    key={`arrow-${i}`}
+                    ref={(m) => { arrowRefs.current[i] = m }}
+                    geometry={chevron}
+                    rotation={[0, 0, i === 0 ? 0 : Math.PI]}
+                    onClick={enter}
+                    onPointerOver={hoverOn}
+                    onPointerOut={hoverOff}
+                >
+                    <meshBasicMaterial color={color} transparent opacity={0} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} />
+                </mesh>
+            )) : null}
+            </group>
             {getGlowTexture() ? (
                 <sprite scale={[3.4, 3.4, 1]}>
                     <spriteMaterial
@@ -434,7 +544,7 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
     )
 }
 
-export default function PortalObject({ entity }) {
+export default function PortalObject({ entity, preview = null }) {
     const reference = entity.components?.reference || {}
     const mode = reference.mode === 'embed' ? 'embed' : 'portal'
 
@@ -472,10 +582,13 @@ export default function PortalObject({ entity }) {
         <PortalGateway
             spaceId={reference.spaceId}
             projectId={reference.projectId}
+            anchor={reference.anchor}
             label={reference.label || reference.projectId || reference.spaceId || 'Portal'}
             color={entity.components?.appearance?.color}
             showPlate={reference.labelPlate !== false}
             style={reference.style === 'frame' ? 'frame' : 'gateway'}
+            preview={preview}
+            invite={reference.invite === true}
         />
     )
 }

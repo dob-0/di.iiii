@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useRigAutoPatch } from './useRigAutoPatch.js'
-import library from '../../rigbuild/types/moxir.json'
+import { TYPE_LIBRARY as library } from '../../rigbuild/types/index.js'
 
 const mirrorOf = (present) => ({ getSnapshot: () => ({ present }), subscribe: () => () => {}, probe: vi.fn(async () => present), watch: vi.fn(() => () => {}) })
 const lamp = (id, fixture) => ({ id, type: 'spotLight', components: { fixture } })
@@ -46,6 +46,23 @@ describe('useRigAutoPatch', () => {
         await flush()
         expect(postImpl).not.toHaveBeenCalled()
         expect(applyOps).not.toHaveBeenCalled()
+    })
+
+    // Part 4 of the fixture library: no whole library in the Studio. A lamp of a kind just placed is patched
+    // with its own type's file, loaded when the patch runs.
+    it('with no library handed in, loads the room\'s own types and patches with them', async () => {
+        vi.useRealTimers()
+        const postImpl = vi.fn(async () => answer({ ok: true, assignments: [], flags: [], removed: [] }))
+        let edits = 0
+        let entities = [lamp('a', { type: 'up-pl5403', index: 1 })]
+        const { rerender } = renderHook(() => useRigAutoPatch({ projectId: 'p', entities, edits, applyOps: vi.fn(), mirror: mirrorOf(true), postImpl, debounceMs: 1 }))
+        entities = [...entities, lamp('b', { type: 'up-b380f', index: 2 })]
+        edits = 1
+        rerender()
+        await vi.waitFor(() => expect(postImpl).toHaveBeenCalled())
+        const sent = JSON.stringify(postImpl.mock.calls[0])
+        expect(sent).toContain('p:b')
+        expect(sent).toContain('up-b380f')
     })
 
     it('an edit of this person that does not touch a lamp asks the desk nothing', async () => {

@@ -1,6 +1,8 @@
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { nextRaiseOf } from '../utils/cardOrder.js'
+import { Fragment, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PropertyInspector from './PropertyInspector.jsx'
-import { COLUMN_DEFAULT_WIDTH, COLUMN_OPEN_DELAY_MS, clampColumnWidth, isPhoneWidth, readColumnWidth, writeColumnWidth } from '../utils/settingsColumn.js'
+import { useCueNodeFiring } from './useCueNodeFiring.js'
+import { COLUMN_OPEN_DELAY_MS, clampColumnWidth, isPhoneWidth, readColumnWidth, writeColumnWidth } from '../utils/settingsColumn.js'
 import DesktopWindow from './DesktopWindow.jsx'
 import NodeAnatomyPanel from './NodeAnatomyPanel.jsx'
 import NodePorts from './NodePorts.jsx'
@@ -28,8 +30,14 @@ import { isTopType } from '../../project/tops/topOperators.js'
 import { DECK_INPUTS, VJ_DECK_TYPE, isPictureType, normalizeDeck, pictureIdOf, setBpm } from '../../project/tops/vjDeck.js'
 import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
+import LaserFileFeed from './LaserFileFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
+import VisitorFeed from './VisitorFeed.jsx'
+import TiltFeed from './TiltFeed.jsx'
+import { VISITOR_DEFAULTS } from '../../project/nodes/device.visitor/runtime.js'
 import MidiOutFeed from './MidiOutFeed.jsx'
+import BeatFeed from './BeatFeed.jsx'
+import { MeshInFeed, MeshOutFeed } from './MeshFeeds.jsx'
 import ButtonPanelWindow from './ButtonPanelWindow.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
@@ -37,6 +45,12 @@ import AgentRunPanel from './AgentRunPanel.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
 import KeeperPanelWindow from './KeeperPanelWindow.jsx'
 import DmxOutPanelWindow from './DmxOutPanelWindow.jsx'
+import DmxInPanelWindow from './DmxInPanelWindow.jsx'
+import OscInPanelWindow from './OscInPanelWindow.jsx'
+import OscOutPanelWindow from './OscOutPanelWindow.jsx'
+import LaserOutPanelWindow from './LaserOutPanelWindow.jsx'
+import RecorderPanelWindow from './RecorderPanelWindow.jsx'
+import StillPanelWindow from './StillPanelWindow.jsx'
 import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import VjDeckView from './vjDeck/VjDeckView.jsx'
@@ -44,10 +58,12 @@ import PerformDesk from '../../perform/PerformDesk.jsx'
 import DeskPerformSwitch from '../../perform/DeskPerformSwitch.jsx'
 import useShowClock, { ShowClockContext } from '../../perform/useShowClock.js'
 import RawHelpDialog from './RawHelpDialog.jsx'
+
+const BarAccount = lazy(() => import('./BarAccount.jsx'))
 import SurfaceBar from '../../components/SurfaceBar.jsx'
 import { useProjectLayers } from '../../project/useProjectLayers.js'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
-import useSpaceName from '../../hooks/useSpaceName.js'
+import useSpaceIdentity from '../../hooks/useSpaceIdentity.js'
 import { isEmbedRequest, isPreviewRequest, signalPreviewReady } from '../../utils/previewMode.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
@@ -65,6 +81,7 @@ import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateN
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode } from '../../project/graph/useGraphClock.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
+import { installClockSeek } from '../../project/graph/clockSeek.js'
 import { isNodeInScope, useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
@@ -87,6 +104,7 @@ const isNarrowViewport = () => typeof window !== 'undefined' && window.innerWidt
 const panelWindowSpace = (frame, viewport) => (frame?.pinned || isNarrowViewport() || !viewport) ? 'screen' : 'world'
 
 import { buildRawOutPath, buildRawProjectPath, buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
+import { buildPerformPath } from '../../perform/performRouting.js'
 import { buildObjectCards, buildScopeItems, thingBandBounds } from '../utils/objectCards.js'
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
@@ -248,7 +266,6 @@ export default function RawEditor({
     const helpOpen = regionPanel === 'help'
     const outlinerOpen = regionPanel === 'outliner'
     const chatOpen = regionPanel === 'chat'
-    const [helpSection, setHelpSection] = useState('start')
     // N / F2 (input/keymap.js): each press opens the panel's name for typing.
     const [renameRequest, setRenameRequest] = useState(0)
     // Zen: nothing resident on the workspace. Read once, from this device's
@@ -412,7 +429,7 @@ export default function RawEditor({
     const localInstall = useLocalInstall()
     // A preview hides the same navigation an embedded window does.
     const [isEmbed] = useState(() => isEmbedRequest() || isPreviewRequest())
-    const spaceName = useSpaceName(isLocalWorkspace ? null : resolvedSpaceId)
+    const spaceIdentity = useSpaceIdentity(isLocalWorkspace ? null : resolvedSpaceId)
     // The node canvas is cards, not a WebGL canvas, so the app-wide paint
     // watcher (index.jsx) has nothing to see; the picture says itself when
     // the project it shows has arrived.
@@ -714,7 +731,8 @@ export default function RawEditor({
     useLayoutEffect(() => {
         const updateWorkspaceTop = () => {
             setWorkspaceTop(getWorkspaceTopInset({
-                topbarRect: topbarRef.current?.getBoundingClientRect?.()
+                topbarRect: (showBar ? window.document.querySelector('.raw-editor-shell > .sbar') : topbarRef.current)?.getBoundingClientRect?.(),
+                padding: showBar ? 0 : 8
             }))
         }
 
@@ -1215,7 +1233,7 @@ export default function RawEditor({
             const spatial = getNodeType(scopeNode?.typeId)?.render === 'spatial-3d'
             return spatial
                 ? `Inside ${label}. What you place here becomes part of it.`
-                : `Inside ${label} — code, no room of its own.`
+                : `Inside ${label}: its code.`
         }
         return `Inside ${label}. ${pointerVerb} to place the first node in it.`
     }, [currentScopeId, isLocalWorkspace, pointerVerb, scopeNode])
@@ -1729,7 +1747,14 @@ export default function RawEditor({
                 </div>
             ) : null}
             {regionOccupant === 'help' ? (
-                <RawHelpDialog inline open onClose={() => setHelpOpen(false)} initialSection={helpSection} />
+                <RawHelpDialog
+                    inline
+                    open
+                    onClose={() => setHelpOpen(false)}
+                    nodeCount={nodeCount}
+                    wireCount={graphCardEdges.length}
+                    thingCount={thingCount}
+                />
             ) : null}
         </aside>
     )
@@ -1739,6 +1764,9 @@ export default function RawEditor({
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
     // must not survive a tick or the clock would freeze at its first sample.
     const clockNow = useDocumentClock(document)
+    // A test browser cuts any project frame-exact: __seek(t), __ready, __play
+    // (clockSeek.js). Nothing is held until a script asks.
+    useEffect(() => installClockSeek(typeof window === 'undefined' ? null : window), [])
     // Stamp the show clock ONCE, the first time a Time node lands in the
     // document. From then on every window — editor, second tab, /out —
     // derives the same elapsed time from the document instead of its own
@@ -1787,9 +1815,38 @@ export default function RawEditor({
         handleLiveOutputChange(nodeId, 'pressed', pressed)
         handleLiveOutputChange(nodeId, 'count', count)
     }, [handleLiveOutputChange])
+    // null facts (the feed unmounting) clear every port back to the defaults.
+    const handleVisitor = useCallback((nodeId, facts) => {
+        for (const portId of Object.keys(VISITOR_DEFAULTS)) {
+            handleLiveOutputChange(nodeId, portId, facts ? facts[portId] : null)
+        }
+    }, [handleLiveOutputChange])
+    const handleTilt = useCallback((nodeId, reading) => {
+        handleLiveOutputChange(nodeId, 'x', reading ? reading.x : null)
+        handleLiveOutputChange(nodeId, 'y', reading ? reading.y : null)
+        handleLiveOutputChange(nodeId, 'live', reading ? reading.live : null)
+    }, [handleLiveOutputChange])
     const handleMidiOutStatus = useCallback((nodeId, status) => {
         handleLiveOutputChange(nodeId, 'status', status)
     }, [handleLiveOutputChange])
+    // A Laser File's bytes (LaserFileFeed.jsx). Stable for the same reason as the Frame handler above.
+    const handleLaserFileBytes = useCallback((nodeId, bytes) => {
+        handleLiveOutputChange(nodeId, 'bytes', bytes)
+    }, [handleLiveOutputChange])
+
+    // Recorder and Still: their windows report what they did, and hand over
+    // the file they made. The file takes the same road a dropped file does —
+    // the project's own upload when there is a project, this browser's store
+    // when there is not — and lands as a project file (upsertAsset).
+    const handleTakeReport = useCallback((nodeId, report) => {
+        for (const [portId, value] of Object.entries(report || {})) handleLiveOutputChange(nodeId, portId, value)
+    }, [handleLiveOutputChange])
+    const handleTakeSave = useCallback(async (nodeId, file) => {
+        const asset = projectId ? await uploadProjectAsset(projectId, file) : await saveAssetFromFile(file)
+        if (!asset?.id) return null
+        applyLocalOps({ type: 'upsertAsset', payload: { asset } }, { activityMessage: `Saved ${file.name}.` })
+        return asset
+    }, [applyLocalOps, projectId])
     const handleSoundOutputChange = useCallback((nodeId, levels) => {
         handleLiveOutputChange(nodeId, 'volume', levels?.volume ?? null)
         handleLiveOutputChange(nodeId, 'low', levels?.low ?? null)
@@ -1887,10 +1944,12 @@ export default function RawEditor({
         if (!projectId) return
         navigateToRawPath(buildStudioGeoPath(projectId, resolvedSpaceId, nodeId))
     }, [projectId, resolvedSpaceId])
+    // One op per drag: the new place AND the raise (graphZ one above the
+    // highest in the project), so a moved card stays on top after a reload.
     const handleMoveNode = useCallback((nodeId, nextX, nextY) => applyLocalOps({
         type: 'updateNode',
-        payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
-    }), [applyLocalOps])
+        payload: { nodeId, patch: { graphX: nextX, graphY: nextY, graphZ: nextRaiseOf(nodes, nodeId) } }
+    }), [applyLocalOps, nodes])
 
     // The card's own size (values.cardSize, graph units) — one op per resize,
     // and null gives the automatic size back.
@@ -1944,6 +2003,9 @@ export default function RawEditor({
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
         [document, clockNow, liveOutputs, frameMemory]
     )
+    // A Cue node a person presses fires its cues the way the Perform window does.
+    // Not from a preview card (a picture on someone else's page acts on nothing).
+    useCueNodeFiring({ document, context: graphContext, applyOps: applySharedOps, enabled: !isPreview })
 
     // The sheet's own context, built from the SAME three inputs as the one the
     // room draws with — evaluation is pure, so same document + same clock +
@@ -2136,6 +2198,51 @@ export default function RawEditor({
                 />
             )
         }
+        if (node.typeId === 'device.dmx.in') {
+            return (
+                <DmxInPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onLevelChange={(nodeId, ports) => {
+                        // null clears both at once (unmount): the graph then reads
+                        // the runtime's bare 0 and ''.
+                        handleLiveOutputChange(nodeId, 'value', ports === null ? null : ports.value)
+                        handleLiveOutputChange(nodeId, 'status', ports === null ? null : ports.status)
+                    }}
+                />
+            )
+        }
+        if (node.typeId === 'device.osc.in') {
+            return (
+                <OscInPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onSignalChange={(nodeId, ports) => {
+                        for (const portId of ['address', 'value', 'signal', 'status']) {
+                            handleLiveOutputChange(nodeId, portId, ports === null ? null : ports[portId])
+                        }
+                    }}
+                    // Port and Filter are set in the card itself, like DMX Out's host.
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
+        if (node.typeId === 'device.osc.out') {
+            return (
+                <OscOutPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onStatus={handleMidiOutStatus}
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
         if (node.typeId === 'device.dmx.out') {
             return (
                 <DmxOutPanelWindow
@@ -2149,6 +2256,39 @@ export default function RawEditor({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
                     })}
+                />
+            )
+        }
+        if (node.typeId === 'device.laser.out') {
+            return (
+                <LaserOutPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onStatus={handleMidiOutStatus}
+                    // The cube's IP (and the serial Find cubes saw) and the point budget
+                    // are set in the card itself, like DMX Out's host.
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
+        if (node.typeId === 'stream.recorder' || node.typeId === 'stream.still') {
+            // The take is named after what feeds its picture: the source's
+            // own label, else its type's.
+            const port = node.typeId === 'stream.recorder' ? 'video' : 'picture'
+            const wire = (document.edges || []).find((edge) => edge?.toNodeId === node.id && edge.toPort === port)
+            const from = wire ? (document.nodes || []).find((candidate) => candidate.id === wire.fromNodeId) : null
+            const sourceLabel = from ? (from.label || getNodeType(from.typeId)?.label || '') : ''
+            const Panel = node.typeId === 'stream.recorder' ? RecorderPanelWindow : StillPanelWindow
+            return (
+                <Panel
+                    node={node}
+                    values={resolvedValues}
+                    sourceLabel={sourceLabel}
+                    onSave={handleTakeSave}
+                    onReport={handleTakeReport}
                 />
             )
         }
@@ -2437,6 +2577,19 @@ export default function RawEditor({
         return () => window.removeEventListener('keydown', handler)
     }, [handleDeleteSelected, scopedSelectedEntity])
 
+    // `?` opens Help, the key behind the bar's `?` cell (audit §3.3).
+    useEffect(() => {
+        const handler = (event) => {
+            if (event.key !== '?' || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return
+            const tag = event.target?.tagName?.toLowerCase?.()
+            if (tag === 'input' || tag === 'textarea' || tag === 'select' || event.target?.isContentEditable) return
+            event.preventDefault()
+            setHelpOpen(true)
+        }
+        window.addEventListener('keydown', handler)
+        return () => window.removeEventListener('keydown', handler)
+    }, [])
+
     // Escape closes the front window the person opened (NOPA audit F8) —
     // before it clears a selection or leaves a level. Capture phase with
     // preventDefault, and it yields to anything that already took the key (an
@@ -2578,7 +2731,7 @@ export default function RawEditor({
         // route in; the audit called its absence critical back when the
         // backdrop still papered over it.
         { id: 'room', label: 'Full screen', hint: 'the 3D view, fullscreen', run: () => setIsWorldFullscreen(true) },
-        { id: 'help', label: 'Help', hint: 'what the keys do', run: () => { setHelpSection('start'); setHelpOpen(true) } },
+        { id: 'help', label: 'Help', hint: 'what the keys do', run: () => { setHelpOpen(true) } },
         { id: 'chat', label: 'Chat', hint: 'talk to whoever is here', run: () => setChatOpen(true) },
         { id: 'outliner', label: 'Outliner', hint: 'every node in the project', run: () => setOutlinerOpen(true) },
         ...hiddenPanelNodes.map((node) => ({
@@ -2663,11 +2816,23 @@ export default function RawEditor({
             payload: { nodeId: deckNode.id, patch: { values: { ...deckNode.values, deck: setBpm(deckNode.values?.deck, bpm, epoch) } } }
         })
     }, [applyLocalOps])
+    // A Beat whose Tempo from is the Light desk asks for the desk's clock too —
+    // and only then: a Beat on its own tempo never reads the desk.
+    const beatWantsDesk = useMemo(() => nodes.some((node) => node.typeId === 'signal.beat' && node.values?.source === 'light'), [nodes])
     const showClock = useShowClock({
         deck: deckTempo,
         onDeckTempo: firstDeck ? handleDeckTempo : null,
-        enabled: Boolean(firstDeck) || Boolean(perform)
+        enabled: Boolean(firstDeck) || Boolean(perform) || beatWantsDesk
     })
+    // A tap or Reset on a Beat with its own tempo writes bpm/epoch into the
+    // node, so the op log carries it and every window keeps one beat.
+    const nodesNowRef = useRef(nodes)
+    useEffect(() => { nodesNowRef.current = nodes }, [nodes])
+    const handleBeatTempo = useCallback((nodeId, patch) => {
+        const beatNode = nodesNowRef.current.find((node) => node.id === nodeId)
+        if (!beatNode) return
+        applyLocalOps({ type: 'updateNode', payload: { nodeId, patch: { values: { ...beatNode.values, ...patch } } } })
+    }, [applyLocalOps])
     // Perform's "Add a VJ deck": a deck at the root of the project, the same
     // node the palette makes, so Nodes shows it as a card beside the rest.
     const handleAddDeck = useCallback(() => {
@@ -2709,9 +2874,39 @@ export default function RawEditor({
                         />
                     ))}
                 {nodes
+                    .filter((node) => node.typeId === 'laser.file' && node.values?.src && assetMap.has(node.values.src))
+                    .map((node) => (
+                        <LaserFileFeed
+                            key={node.id}
+                            node={node}
+                            asset={assetMap.get(node.values.src)}
+                            onBytesChange={handleLaserFileBytes}
+                        />
+                    ))}
+                {nodes
                     .filter((node) => node.typeId === 'device.keyboard')
                     .map((node) => (
                         <KeyboardFeed key={node.id} node={node} onKeyState={handleKeyState} />
+                    ))}
+                {nodes
+                    .filter((node) => node.typeId === 'device.visitor')
+                    .map((node) => (
+                        <VisitorFeed
+                            key={node.id}
+                            node={node}
+                            newName={evaluateNodeInputs(node, graphContext).newName}
+                            onVisitor={handleVisitor}
+                        />
+                    ))}
+                {nodes
+                    .filter((node) => node.typeId === 'device.tilt')
+                    .map((node) => (
+                        <TiltFeed
+                            key={node.id}
+                            node={node}
+                            range={evaluateNodeInputs(node, graphContext).range}
+                            onTilt={handleTilt}
+                        />
                     ))}
                 {nodes
                     .filter((node) => node.typeId === 'device.midi.out')
@@ -2723,6 +2918,35 @@ export default function RawEditor({
                             onStatus={handleMidiOutStatus}
                         />
                     ))}
+                {nodes
+                    .filter((node) => node.typeId === 'signal.beat')
+                    .map((node) => (
+                        <BeatFeed
+                            key={node.id}
+                            node={node}
+                            inputs={evaluateNodeInputs(node, graphContext)}
+                            showClock={showClock}
+                            clockEpoch={showClockEpoch}
+                            onLiveOutput={handleLiveOutputChange}
+                            onTempo={handleBeatTempo}
+                        />
+                    ))}
+                {/* One socket per Mesh In / Mesh Out — see MeshFeeds.jsx. An
+                    empty Group meets in this project's own group. */}
+                {nodes
+                    .filter((node) => node.typeId === 'device.mesh.in' || node.typeId === 'device.mesh.out')
+                    .map((node) => {
+                        const Feed = node.typeId === 'device.mesh.in' ? MeshInFeed : MeshOutFeed
+                        return (
+                            <Feed
+                                key={node.id}
+                                node={node}
+                                inputs={evaluateNodeInputs(node, graphContext)}
+                                fallbackGroup={`${resolvedSpaceId}/${projectId || 'local'}`}
+                                onLiveOutput={handleLiveOutputChange}
+                            />
+                        )
+                    })}
         </>
     )
 
@@ -2730,13 +2954,310 @@ export default function RawEditor({
         <ShowClockContext.Provider value={showClock}>{children}</ShowClockContext.Provider>
     )
 
+    // The Nodes tools as cells in ONE style (audit §3.3, row 5): 28px, a 1px line,
+    // no fill. They live in SurfaceBar's slot when the bar is up — the second
+    // 49px bar and the project's name written twice are gone — and in the old
+    // header only where there is no bar (a browser-only canvas, zen).
+    const sceneCell = (
+    <button
+        type="button"
+        // On a phone the bar cannot hold every cell (measured 390x844: Chat,
+        // ?, ⋯ and the account ran off the right edge), so Scene and Chat
+        // move into ⋯ there (raw-cell--wide-only, rawChrome.css).
+        className={`raw-cell raw-cell--wide-only${isWorldFullscreen ? ' is-active' : ''}`}
+        // The room of the CURRENT scope, fullscreen —
+        // any scope, not only where a World card
+        // stands. The old behaviour toggled the root
+        // World window's frame, which is unmounted in
+        // every other scope: a button that did
+        // nothing, silently, exactly where a person
+        // most needed to see what they were building.
+        onClick={() => setIsWorldFullscreen((current) => !current)}
+        title={isWorldFullscreen
+            ? 'Back to the graph'
+            : roomCount > 0
+                ? `Open the scene — ${roomCount} object${roomCount === 1 ? '' : 's'} standing in it`
+                : 'Open the scene — nothing standing in it yet'}
+    >
+        {isWorldFullscreen
+            ? '← Graph'
+            : roomCount > 0 ? `Scene · ${roomCount}` : 'Scene'}
+    </button>
+    )
+    const helpCell = (
+        <button
+            type="button"
+            className="raw-cell raw-cell--square raw-topbar-help-action"
+            aria-label="Help"
+            title="Help (?)"
+            onClick={() => { setHelpOpen(true) }}
+        >
+            ?
+        </button>
+    )
+    const countCell = (
+        <>
+    {(nodeCount > 0 || thingCount > 0) && (
+        <button
+            type="button"
+            className={`raw-cell raw-cell--wide-only raw-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
+            onClick={() => setOutlinerOpen((v) => !v)}
+            title="Toggle outliner"
+            aria-label={[
+                nodeCount > 0 ? `${nodeCount} ${nodeCount === 1 ? 'node' : 'nodes'}` : '',
+                thingCount > 0 ? `${thingCount} ${thingCount === 1 ? 'object' : 'objects'}` : ''
+            ].filter(Boolean).join(', ')}
+        >
+            <span className="raw-topbar-count-full">
+                {nodeCount > 0 ? (
+                    <>{nodeCount}<span className="raw-topbar-word"> {nodeCount === 1 ? 'node' : 'nodes'}</span></>
+                ) : null}
+                {nodeCount > 0 && thingCount > 0 ? <span aria-hidden="true"> · </span> : null}
+                {thingCount > 0 ? (
+                    <>{thingCount}<span className="raw-topbar-word"> {thingCount === 1 ? 'object' : 'objects'}</span></>
+                ) : null}
+            </span>
+            <span className="raw-topbar-count-compact" aria-hidden="true">
+                {nodeCount + thingCount}
+            </span>
+        </button>
+    )}
+        </>
+    )
+    const chatCell = (
+        <>
+    {(!isLocalWorkspace || presence.users.length > 0 || unreadChatCount > 0) && (
+        <button
+            type="button"
+            // Kept on a phone only while it has something unread to say.
+            className={`raw-cell raw-topbar-node-count${unreadChatCount > 0 ? '' : ' raw-cell--wide-only'}${chatOpen ? ' is-active' : ''}`}
+            onClick={() => setChatOpen((v) => !v)}
+            title="Toggle chat"
+            aria-label="Toggle chat"
+        >
+            Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
+        </button>
+    )}
+        </>
+    )
+    const overflowCell = (
+    <div className="raw-topbar-overflow">
+        <button type="button" className="raw-cell raw-cell--square raw-topbar-overflow-btn" onClick={() => setOverflowOpen((v) => !v)}>⋯</button>
+        {overflowOpen && (
+            <div className="raw-topbar-overflow-menu">
+                <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
+                {/* The phone's copies of the two cells the bar has no room for. */}
+                <button type="button" className="raw-overflow-narrow-only" onClick={() => { setOverflowOpen(false); setIsWorldFullscreen((current) => !current) }}>
+                    {isWorldFullscreen ? '← Graph' : roomCount > 0 ? `Scene · ${roomCount}` : 'Scene'}
+                </button>
+                <button type="button" className="raw-overflow-narrow-only" onClick={() => { setOverflowOpen(false); setChatOpen((v) => !v) }}>
+                    Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
+                </button>
+                {nodeCount + thingCount > 0 ? (
+                    <button type="button" className="raw-overflow-narrow-only" onClick={() => { setOverflowOpen(false); setOutlinerOpen((v) => !v) }}>
+                        Outliner · {nodeCount + thingCount}
+                    </button>
+                ) : null}
+                {!isLocalWorkspace && projectId ? (
+                    <button
+                        type="button"
+                        className="raw-overflow-narrow-only"
+                        onClick={() => { setOverflowOpen(false); navigateToRawPath(buildPerformPath(resolvedSpaceId, projectId, { from: 'raw' })) }}
+                    >
+                        Perform
+                    </button>
+                ) : null}
+                {overflowOpen ? (
+                    <span className="raw-overflow-narrow-only raw-overflow-account">
+                        <Suspense fallback={null}><BarAccount /></Suspense>
+                    </span>
+                ) : null}
+                    {/* The bar has no "← Projects" cell: the way back to the space's
+                        working list is here (it was the second bar's first button). */}
+                    {!isLocalWorkspace && (
+                        <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildRawProjectsPath(resolvedSpaceId)) }}>Projects</button>
+                    )}
+                {/* One project, two editors — this is the
+                    way across. The local canvas has no
+                    Studio twin, so no link there. */}
+                {!isLocalWorkspace && projectId && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setOverflowOpen(false)
+                            navigateToRawPath(buildStudioProjectPath(projectId, resolvedSpaceId))
+                        }}
+                    >
+                        Open in Studio
+                    </button>
+                )}
+                {/* Standing inside a Geo: the same way across, into
+                    Studio standing inside it — the phone's path,
+                    where the card's small ↗ is hard to hit. */}
+                {!isLocalWorkspace && projectId && currentScopeNode?.typeId === 'geom.geo' && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setOverflowOpen(false)
+                            handleOpenGeoInStudio(currentScopeNode.id)
+                        }}
+                    >
+                        Open {currentScopeNode.label} in Studio
+                    </button>
+                )}
+                {/* The projector cable had zero inbound
+                    links — /out was reachable only by
+                    typing the address (doors audit). */}
+                {!isLocalWorkspace && projectId && (
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            setOverflowOpen(false)
+                            const url = `${window.location.origin}${buildRawOutPath(projectId, resolvedSpaceId)}`
+                            try {
+                                if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(url)
+                                else if (typeof window.prompt === 'function') window.prompt('Copy projector link', url)
+                            } catch {
+                                if (typeof window.prompt === 'function') window.prompt('Copy projector link', url)
+                            }
+                        }}
+                    >
+                        Copy projector link
+                    </button>
+                )}
+                {/* The way out of a browser-only canvas
+                    and into a real project. First,
+                    because it is the only thing here
+                    that changes what the work IS. */}
+                {isLocalWorkspace && (
+                    <button
+                        type="button"
+                        disabled={isSavingToSpace}
+                        onClick={() => { setOverflowOpen(false); handleSaveCanvasToSpace() }}
+                    >
+                        {isSavingToSpace ? 'Saving…' : `Save to ${resolvedSpaceId}`}
+                    </button>
+                )}
+                {/* The exits back to di.iiii — the canvas was a
+                    sealed room before the doors audit. */}
+                <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildSpacesPath()) }}>Spaces</button>
+                <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildWikiPath()) }}>Wiki</button>
+                {/* Configuration, not work — the ⋯ is
+                    where the audit sent it. */}
+                <div className="raw-topbar-scale-control">
+                    <label htmlFor="node-scale-select">Size:</label>
+                    <select
+                        id="node-scale-select"
+                        value={nodeScale}
+                        onChange={(e) => setNodeScale(parseFloat(e.target.value))}
+                        title="Adjust node size for mobile, tablet, VR, or desktop viewing"
+                    >
+                        {getAvailableScales().map((s) => (
+                            <option key={s.value} value={s.value}>
+                                {s.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <button type="button" onClick={() => { handleCreateSceneExample(); setOverflowOpen(false) }}>Build an example</button>
+                <button type="button" onClick={() => { handleCreateAllNodesExample(); setOverflowOpen(false) }}>All Nodes Example</button>
+                {isLocalWorkspace && (
+                    <button type="button" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Clear the canvas</button>
+                )}
+                {presence.users.length > 0 && presence.users.map((user) => (
+                    <span key={user.socketId || user.userId} className="raw-user-pill">
+                        {user.userName}
+                    </span>
+                ))}
+            </div>
+        )}
+    </div>
+    )
+    // Standing inside a node the bar says where, and the way back (Esc). The
+    // name is the bar's crumb: no second heading.
+    const insideCells = navStack.length > 1 ? (
+        <>
+            <button
+                type="button"
+                className="raw-cell raw-bar-back"
+                title="Back (Esc)"
+                onClick={() => handleNavigateToScope(navStack.length - 2)}
+            >
+                ← Back<kbd aria-hidden="true">Esc</kbd>
+            </button>
+            <nav className="raw-topbar-breadcrumb" aria-label="Node scope">
+                <button type="button" className="raw-topbar-crumb" onClick={() => handleNavigateToScope(0)}>◈</button>
+                {navStack.slice(1).map((scopeId, i) => {
+                    const crumbNode = authoredNodes.find((n) => n.id === scopeId)
+                    const stackIndex = i + 1
+                    const isLast = stackIndex === navStack.length - 1
+                    return (
+                        <span key={scopeId} className="raw-topbar-crumb-group">
+                            <span className="raw-topbar-crumb-sep">›</span>
+                            <button
+                                type="button"
+                                className={`raw-topbar-crumb${isLast ? ' is-current' : ''}`}
+                                onClick={() => handleNavigateToScope(stackIndex)}
+                            >
+                                {crumbNode?.label || 'Node'}
+                            </button>
+                        </span>
+                    )
+                })}
+            </nav>
+        </>
+    ) : null
+    // In the one bar the place continues where the project's name ends
+    // (audit §3.3): "Hayfilm · MOCT club night › To do", then ← Back.
+    const insideTrail = navStack.length > 1 ? (
+        <span className="raw-bar-trail">
+            {navStack.slice(1).map((scopeId, i) => {
+                const crumbNode = authoredNodes.find((n) => n.id === scopeId)
+                const stackIndex = i + 1
+                const isLast = stackIndex === navStack.length - 1
+                return (
+                    <span key={scopeId} className="raw-topbar-crumb-group">
+                        <span className="sbar-sep" aria-hidden="true">›</span>
+                        <button
+                            type="button"
+                            className={`raw-bar-crumb${isLast ? ' is-current' : ''}`}
+                            aria-current={isLast ? 'location' : undefined}
+                            onClick={() => handleNavigateToScope(stackIndex)}
+                        >
+                            {crumbNode?.label || 'Node'}
+                        </button>
+                    </span>
+                )
+            })}
+            <button
+                type="button"
+                className="raw-cell raw-bar-back"
+                title="Back (Esc)"
+                onClick={() => handleNavigateToScope(navStack.length - 2)}
+            >
+                ← Back<kbd aria-hidden="true">Esc</kbd>
+            </button>
+        </span>
+    ) : null
+    const barTools = (
+        <span className="raw-bar-tools">
+            {sceneCell}
+            {countCell}
+            {chatCell}
+            {helpCell}
+            {overflowCell}
+            {/* On a phone the account is the last row of ⋯ (rawChrome.css). */}
+            <span className="raw-bar-account-slot"><Suspense fallback={null}><BarAccount /></Suspense></span>
+        </span>
+    )
     if (perform && projectId) {
         return clockTree(
             <main className="raw-editor-shell perform-shell">
                 <SurfaceBar
                     float
                     space={resolvedSpaceId}
-                    spaceLabel={spaceName}
+                    spaceLabel={spaceIdentity.spaceLabel}
+                    spaceAddress={spaceIdentity.spaceAddress}
                     project={projectId}
                     projectLabel={document.projectMeta?.title}
                     isLocalInstall={localInstall.isLocal}
@@ -2785,13 +3306,16 @@ export default function RawEditor({
                 float
                 here="raw"
                 space={resolvedSpaceId}
-                spaceLabel={spaceName}
+                spaceLabel={spaceIdentity.spaceLabel}
+                spaceAddress={spaceIdentity.spaceAddress}
                 project={projectId}
                 projectLabel={document.projectMeta?.title}
                 isLocalInstall={localInstall.isLocal}
                 hidden={!showBar}
                 layers={barLayers}
+                trail={insideTrail}
             >
+                {barTools}
                 <DeskPerformSwitch current="desk" space={resolvedSpaceId} project={projectId} from="raw" />
             </SurfaceBar>
             {state.pendingSyncError && (
@@ -2799,259 +3323,46 @@ export default function RawEditor({
                     {state.pendingSyncError}
                 </div>
             )}
-            <header className={`raw-topbar${chromeVisible ? ' is-seeded' : ''}${showBar ? ' is-under-sbar' : ''}`} ref={topbarRef}>
+            {!showBar && (
+            <header className={`raw-topbar${chromeVisible ? ' is-seeded' : ''}`} ref={topbarRef}>
                 {chromeVisible && (
                     <>
                         <div className="raw-topbar-left">
-                            {/* Back to the space's working list, in Nodes' own copy of it —
-                                not /{space}/projects, the visitors' list, where a draft
-                                does not show and a card opens the viewer, not the canvas. */}
                             <button type="button" className="raw-topbar-back" aria-label="Back to projects" onClick={() => {
                                 navigateToRawPath(buildRawProjectsPath(resolvedSpaceId))
                             }}>
                                 ←<span className="raw-topbar-word"> Projects</span>
                             </button>
-                            {/* Name the space, not just the project. Studio's cluster has
-                                always shown "space · project"; Raw showed the project
-                                alone, so nothing on screen told you which space you were
-                                editing in. Folded into the existing element rather than
-                                adding chrome — the id is what the URL says, so it is the
-                                recognisable form. */}
-                            {/* When the one bar is up it already says "Space · Project"
-                                right above, so this names the PROJECT alone — the
-                                narrow rule below used to drop the title and keep the
-                                space, and a 1200px window read "hayfilm" twice and
-                                its project nowhere (NOPA audit F9). With the bar
-                                hidden this is the only place left, so both stay. */}
+                            {/* No bar here, so this header is the only place the
+                                project is named — once. */}
                             <span
-                                className={`raw-topbar-name${showBar && !isLocalWorkspace ? ' is-project-only' : ''}`}
+                                className="raw-topbar-name"
                                 title={isLocalWorkspace ? workspaceTitle : `${resolvedSpaceId} · ${workspaceTitle}`}
                             >
-                                {(isLocalWorkspace || showBar) ? workspaceTitle : (
+                                {isLocalWorkspace ? workspaceTitle : (
                                     <>
                                         <span className="raw-topbar-name-space">{resolvedSpaceId}</span>
-                                        {/* Its own element so the narrow rule can drop the
-                                            title and keep the space: a space id is short
-                                            ("wcc"), a project title is not, and which space
-                                            you are in is the fact you cannot otherwise
-                                            recover from this bar. */}
                                         <span className="raw-topbar-name-project">{` · ${workspaceTitle}`}</span>
                                     </>
                                 )}
                             </span>
                         </div>
                         <div className="raw-topbar-center">
-                            {navStack.length > 1 ? (
-                                <nav className="raw-topbar-breadcrumb" aria-label="Node scope">
-                                    <button type="button" className="raw-topbar-crumb" onClick={() => handleNavigateToScope(0)}>◈</button>
-                                    {navStack.slice(1).map((scopeId, i) => {
-                                        const crumbNode = authoredNodes.find((n) => n.id === scopeId)
-                                        const stackIndex = i + 1
-                                        const isLast = stackIndex === navStack.length - 1
-                                        return (
-                                            <span key={scopeId} className="raw-topbar-crumb-group">
-                                                <span className="raw-topbar-crumb-sep">›</span>
-                                                <button
-                                                    type="button"
-                                                    className={`raw-topbar-crumb${isLast ? ' is-current' : ''}`}
-                                                    onClick={() => handleNavigateToScope(stackIndex)}
-                                                >
-                                                    {crumbNode?.label || 'Node'}
-                                                </button>
-                                            </span>
-                                        )
-                                    })}
-                                </nav>
-                            ) : showEmptyHint ? (
+                            {navStack.length > 1 ? insideCells : showEmptyHint ? (
                                 <span className="raw-topbar-location" aria-live="polite">{topbarLocationText}</span>
                             ) : null}
-                            <div className="raw-topbar-windows">
-                                <button
-                                    type="button"
-                                    className={isWorldFullscreen ? 'is-active' : ''}
-                                    // The room of the CURRENT scope, fullscreen —
-                                    // any scope, not only where a World card
-                                    // stands. The old behaviour toggled the root
-                                    // World window's frame, which is unmounted in
-                                    // every other scope: a button that did
-                                    // nothing, silently, exactly where a person
-                                    // most needed to see what they were building.
-                                    onClick={() => setIsWorldFullscreen((current) => !current)}
-                                    title={isWorldFullscreen
-                                        ? 'Back to the graph'
-                                        : roomCount > 0
-                                            ? `Open the scene — ${roomCount} object${roomCount === 1 ? '' : 's'} standing in it`
-                                            : 'Open the scene — nothing standing in it yet'}
-                                >
-                                    {isWorldFullscreen
-                                        ? '← Graph'
-                                        : roomCount > 0 ? `Scene · ${roomCount}` : 'Scene'}
-                                </button>
-                            </div>
+                            <div className="raw-topbar-windows">{sceneCell}</div>
                         </div>
                         <div className="raw-topbar-right">
-                            <button type="button" className="raw-topbar-help-action" onClick={() => { setHelpSection('start'); setHelpOpen(true) }}>
-                                Help
-                            </button>
-                            {/* Counts BOTH kinds, and appears for either: it
-                                was `nodeCount > 0`, so a project of Studio
-                                things had no outliner button at all — the one
-                                control that lists the work was hidden because
-                                the work was not nodes. "4 nodes · 3 things" on
-                                a desktop. A phone gets ONE number, how many rows
-                                the outliner will list: two numbers and a
-                                separator measured 393px of content in a 390px
-                                bar on the branch this came from (8c58c29a), and
-                                the row's last control is ⋯ — the only way to
-                                Save on a phone. The aria-label keeps the
-                                breakdown for anyone who needs it. */}
-                            {(nodeCount > 0 || thingCount > 0) && (
-                                <button
-                                    type="button"
-                                    className={`raw-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
-                                    onClick={() => setOutlinerOpen((v) => !v)}
-                                    title="Toggle outliner"
-                                    aria-label={[
-                                        nodeCount > 0 ? `${nodeCount} ${nodeCount === 1 ? 'node' : 'nodes'}` : '',
-                                        thingCount > 0 ? `${thingCount} ${thingCount === 1 ? 'object' : 'objects'}` : ''
-                                    ].filter(Boolean).join(', ')}
-                                >
-                                    <span className="raw-topbar-count-full">
-                                        {nodeCount > 0 ? (
-                                            <>{nodeCount}<span className="raw-topbar-word"> {nodeCount === 1 ? 'node' : 'nodes'}</span></>
-                                        ) : null}
-                                        {nodeCount > 0 && thingCount > 0 ? <span aria-hidden="true"> · </span> : null}
-                                        {thingCount > 0 ? (
-                                            <>{thingCount}<span className="raw-topbar-word"> {thingCount === 1 ? 'object' : 'objects'}</span></>
-                                        ) : null}
-                                    </span>
-                                    <span className="raw-topbar-count-compact" aria-hidden="true">
-                                        {nodeCount + thingCount}
-                                    </span>
-                                </button>
-                            )}
-                            {/* No Chat button alone in a local canvas: there
-                                is nobody on the other end (the doc lives in
-                                this browser), and a resident social control in
-                                a single-person room is the audit's definition
-                                of noise. It returns the moment presence shows
-                                anyone, and the ⋯ menu's Chat entry stays as
-                                the always-there path. */}
-                            {(!isLocalWorkspace || presence.users.length > 0 || unreadChatCount > 0) && (
-                                <button
-                                    type="button"
-                                    className={`raw-topbar-node-count${chatOpen ? ' is-active' : ''}`}
-                                    onClick={() => setChatOpen((v) => !v)}
-                                    title="Toggle chat"
-                                    aria-label="Toggle chat"
-                                >
-                                    Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
-                                </button>
-                            )}
-                            <div className="raw-topbar-overflow">
-                                <button type="button" className="raw-topbar-overflow-btn" onClick={() => setOverflowOpen((v) => !v)}>⋯</button>
-                                {overflowOpen && (
-                                    <div className="raw-topbar-overflow-menu">
-                                        <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
-                                        {/* One project, two editors — this is the
-                                            way across. The local canvas has no
-                                            Studio twin, so no link there. */}
-                                        {!isLocalWorkspace && projectId && (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setOverflowOpen(false)
-                                                    navigateToRawPath(buildStudioProjectPath(projectId, resolvedSpaceId))
-                                                }}
-                                            >
-                                                Open in Studio
-                                            </button>
-                                        )}
-                                        {/* Standing inside a Geo: the same way across, into
-                                            Studio standing inside it — the phone's path,
-                                            where the card's small ↗ is hard to hit. */}
-                                        {!isLocalWorkspace && projectId && currentScopeNode?.typeId === 'geom.geo' && (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setOverflowOpen(false)
-                                                    handleOpenGeoInStudio(currentScopeNode.id)
-                                                }}
-                                            >
-                                                Open {currentScopeNode.label} in Studio
-                                            </button>
-                                        )}
-                                        {/* The projector cable had zero inbound
-                                            links — /out was reachable only by
-                                            typing the address (doors audit). */}
-                                        {!isLocalWorkspace && projectId && (
-                                            <button
-                                                type="button"
-                                                onClick={async () => {
-                                                    setOverflowOpen(false)
-                                                    const url = `${window.location.origin}${buildRawOutPath(projectId, resolvedSpaceId)}`
-                                                    try {
-                                                        if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(url)
-                                                        else if (typeof window.prompt === 'function') window.prompt('Copy projector link', url)
-                                                    } catch {
-                                                        if (typeof window.prompt === 'function') window.prompt('Copy projector link', url)
-                                                    }
-                                                }}
-                                            >
-                                                Copy projector link
-                                            </button>
-                                        )}
-                                        {/* The way out of a browser-only canvas
-                                            and into a real project. First,
-                                            because it is the only thing here
-                                            that changes what the work IS. */}
-                                        {isLocalWorkspace && (
-                                            <button
-                                                type="button"
-                                                disabled={isSavingToSpace}
-                                                onClick={() => { setOverflowOpen(false); handleSaveCanvasToSpace() }}
-                                            >
-                                                {isSavingToSpace ? 'Saving…' : `Save to ${resolvedSpaceId}`}
-                                            </button>
-                                        )}
-                                        {/* The exits back to di.iiii — the canvas was a
-                                            sealed room before the doors audit. */}
-                                        <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildSpacesPath()) }}>Spaces</button>
-                                        <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildWikiPath()) }}>Wiki</button>
-                                        {/* Configuration, not work — the ⋯ is
-                                            where the audit sent it. */}
-                                        <div className="raw-topbar-scale-control">
-                                            <label htmlFor="node-scale-select">Size:</label>
-                                            <select
-                                                id="node-scale-select"
-                                                value={nodeScale}
-                                                onChange={(e) => setNodeScale(parseFloat(e.target.value))}
-                                                title="Adjust node size for mobile, tablet, VR, or desktop viewing"
-                                            >
-                                                {getAvailableScales().map((s) => (
-                                                    <option key={s.value} value={s.value}>
-                                                        {s.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <button type="button" onClick={() => { handleCreateSceneExample(); setOverflowOpen(false) }}>Build an example</button>
-                                        <button type="button" onClick={() => { handleCreateAllNodesExample(); setOverflowOpen(false) }}>All Nodes Example</button>
-                                        {isLocalWorkspace && (
-                                            <button type="button" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Clear the canvas</button>
-                                        )}
-                                        {presence.users.length > 0 && presence.users.map((user) => (
-                                            <span key={user.socketId || user.userId} className="raw-user-pill">
-                                                {user.userName}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            {countCell}
+                            {chatCell}
+                            {helpCell}
+                            {overflowCell}
                         </div>
                     </>
                 )}
             </header>
+            )}
 
             {state.loading ? <div className="raw-overlay-message">Loading project…</div> : null}
             {state.loadError ? <div className="raw-overlay-message is-error">{state.loadError}</div> : null}
@@ -3059,8 +3370,14 @@ export default function RawEditor({
                 floating button sat over content on dev and under the column
                 on #769. */}
             <div className={`raw-workbench${regionOccupant && !columnPhone ? ' has-column' : ''}`} data-testid="raw-workbench">
+            {/* Named, so it is the canvas region a screen reader can jump to
+                rather than a nameless section carrying drop handlers (jsx-a11y
+                no-static-element-interactions, 2026-10-21). Dropping files is
+                pointer-only; the inspector's file field is the keyboard way to
+                give a node a file. */}
             <section
                 className={`raw-surface-shell${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
+                aria-label="Canvas"
                 onDragEnter={handleSurfaceDragEnter}
                 onDragOver={handleSurfaceDragOver}
                 onDragLeave={handleSurfaceDragLeave}
@@ -3077,7 +3394,7 @@ export default function RawEditor({
                     href="/"
                     aria-label="di.iiii — home"
                     onClick={(e) => { e.preventDefault(); navigateToRawPath('/') }}
-                >di<span>.</span>iiii</a>
+                >di<span className="dot">.</span>iiii</a>
             {/* THE DESK IS CLEAR — always. The backdrop room lived here from
                 2026-08-19 to 2026-08-20: first always-on, then only when
                 something stood in it, and the owner's verdict stayed the
@@ -3137,7 +3454,6 @@ export default function RawEditor({
                     onShowReading={(nodeId) => openAnatomy(nodeId)}
                     onDuplicateNode={handleDuplicateNode}
                     onShowKeys={() => {
-                        setHelpSection('keys')
                         setHelpOpen(true)
                     }}
                     // A card picked on the canvas takes the right region
@@ -3157,6 +3473,7 @@ export default function RawEditor({
                     onSetActive={(node) => setActiveNodeId(node.typeId, node.parentId || null, node.id)}
                     activeMarkerTypeIds={activeMarkerTypeIds}
                     onViewportChange={handleViewportChange}
+                    followViewportLive={visibleViewNodes.some((node) => windowSpaceFor(frameOf(node)) === 'world')}
                     extraBounds={worldWindowBounds}
                 />
                 </GraphWrap>
@@ -3324,18 +3641,28 @@ export default function RawEditor({
                     aria-label="Inside"
                     style={{ top: `${getScopeMarkerTop({ chromeVisible, workspaceTop })}px` }}
                 >
-                    <button
-                        type="button"
-                        className="raw-inside-back"
-                        onClick={() => handleNavigateToScope(navStack.length - 2)}
-                        title="Back (Esc)"
-                    >
-                        ← Back
-                    </button>
-                    {navStack.length > 2 && (
-                        <button type="button" className="raw-inside-root" onClick={() => handleNavigateToScope(0)} title="All the way out">…</button>
-                    )}
-                    <span className="raw-inside-crumb">› <strong>{scopeNode?.label || 'a node'}</strong></span>
+                    {/* With the bar up, the bar holds ← Back and the crumb
+                        (insideTrail) and this strip only the meta line, so the
+                        name is written once (audit §3.6). A phone's bar has no
+                        room for them (390px: they ran into More), so there, and
+                        with no bar at all (zen), the way out lives here: it is
+                        never hidden. */}
+                    {showBar || !chromeVisible ? (
+                        <span className={showBar ? 'raw-inside-way raw-inside-way--phone' : 'raw-inside-way'}>
+                            <button
+                                type="button"
+                                className="raw-inside-back"
+                                onClick={() => handleNavigateToScope(navStack.length - 2)}
+                                title="Back (Esc)"
+                            >
+                                ← Back
+                            </button>
+                            {navStack.length > 2 && (
+                                <button type="button" className="raw-inside-root" onClick={() => handleNavigateToScope(0)} title="All the way out">…</button>
+                            )}
+                            <span className="raw-inside-crumb">› <strong>{scopeNode?.label || 'a node'}</strong></span>
+                        </span>
+                    ) : null}
                     <span className="raw-inside-meta" role="status" aria-live="polite">
                         {insideMetaLine({ node: scopeNode, reading: insideReading, childCount: childCounts.get(scopeNode?.id) || 0, kind: insideKind })}
                     </span>

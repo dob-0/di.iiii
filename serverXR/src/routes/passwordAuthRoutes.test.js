@@ -66,7 +66,7 @@ const setup = ({ users = [], mailConfigured = true } = {}) => {
 
     const mailer = {
         isConfigured: () => mailConfigured,
-        readConfig: () => ({ siteUrl: 'https://di-studio.xyz' }),
+        readConfig: () => ({ siteUrl: 'https://diiii.xyz' }),
         sendMail: async (message) => { sent.push(message); return { ok: true } }
     }
 
@@ -74,7 +74,7 @@ const setup = ({ users = [], mailConfigured = true } = {}) => {
     const issued = []
     registerPasswordAuthRoutes(router, {
         issueSessionForUser: (res, user) => { issued.push(user); return { authenticated: true, subject: user.id, label: user.display_name } },
-        frontendUrl: 'https://di-studio.xyz',
+        frontendUrl: 'https://diiii.xyz',
         deps: { store, mailer, tokens }
     })
     return { router, rows, sent, minted, issued, store }
@@ -314,5 +314,21 @@ describe('signing in without a password', () => {
         const verifyToken = ctx.minted.find((m) => m.kind === 'verify').token
         const res = await call(ctx.router.routes['get /api/auth/password/magic'], { query: { token: verifyToken } })
         expect(res.redirected).toContain('auth=error')
+    })
+})
+
+// One closing line, in one place (sendToken), for all three mails. It was a
+// sentence of seventeen words until 2026-10-21.
+describe('the mails end the same short way', () => {
+    it('verify, reset and sign-in link all end with the one line', async () => {
+        const ctx = setup({ users: [{ id: 'u9', provider: 'password', email: 'person@example.com', username: 'person', display_name: 'P', password_hash: hashPassword('a good long password'), email_verified_at: null }] })
+        await call(ctx.router.routes['post /api/auth/password/register'], { body: { email: 'new@example.com', password: 'a good long password' } })
+        await call(ctx.router.routes['post /api/auth/password/forgot'], { body: { email: 'person@example.com' } })
+        await call(ctx.router.routes['post /api/auth/password/magic'], { body: { email: 'person@example.com' } })
+        expect(ctx.sent).toHaveLength(3)
+        for (const mail of ctx.sent) {
+            expect(mail.text.endsWith('\n\nNot you? Ignore this. Nothing has changed.')).toBe(true)
+            expect(mail.text).not.toMatch(/nothing has happened/)
+        }
     })
 })

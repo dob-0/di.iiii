@@ -55,7 +55,7 @@ export default [
         },
         settings: {
             react: {
-                version: 'detect'
+                version: '18.3'
             }
         },
         rules: {
@@ -78,11 +78,15 @@ export default [
             // Allow buffer usage in browser code where polyfilled
             'no-undef': ['error', { typeof: true }]
             ,
-            // Relax common a11y rules for editor-like UI components
-            'jsx-a11y/label-has-associated-control': 'warn',
-            'jsx-a11y/media-has-caption': 'warn',
-            'jsx-a11y/click-events-have-key-events': 'warn',
-            'jsx-a11y/no-static-element-interactions': 'warn'
+            // Errors, so CI blocks a new one (2026-10-21: the last 17 warnings were
+            // fixed, docs/ai/audits/2026-10-21-a11y-perf.md). Left without options on
+            // purpose: no-static-element-interactions then counts EVERY handler,
+            // pointer and drag included, which is stricter than the recommended
+            // click/mouse/key list — an editor full of drag handles needs that.
+            'jsx-a11y/label-has-associated-control': 'error',
+            'jsx-a11y/media-has-caption': 'error',
+            'jsx-a11y/click-events-have-key-events': 'error',
+            'jsx-a11y/no-static-element-interactions': 'error'
         }
     },
     {
@@ -180,5 +184,10 @@ export default [
     {
         files: ['shared/**/*.cjs'],
         languageOptions: { sourceType: 'commonjs' }
+    },
+    {
+        // New in the ESLint 10 recommended set: 107 hits in ~75 files, each needs a read of its control flow.
+        // Held at warn until a sweep PR clears them (owed, then back to error). Do not copy this to other rules.
+        rules: { 'no-useless-assignment': 'warn' }
     }
 ]

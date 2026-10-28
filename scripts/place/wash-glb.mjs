@@ -14,7 +14,7 @@
  * a real three.js SpotLight, r155+ physically based lights):
  *   E = I * spot(theta) * cos(incidence) * falloff(d)        illuminance, lux
  *   spot(theta)  = smoothstep(cos(angle), cos(angle * (1 - penumbra)), cos(theta))
- *   falloff(d)   = 1 / d^2 * saturate(1 - (d / cutoff)^4)^2  (decay 2)
+ *   falloff(d)   = 1 / d^2   (decay 2; no cutoff window since 2026-10-09, rig-lib.mjs lightDistance)
  *   L            = albedo / pi * E                           Lambert radiance
  * with I the entity's intensity (candela x the rig's sceneScale), the cutoff a
  * real lamp would get (lightDistance), and the albedo of the surface's
@@ -59,8 +59,10 @@ export const washRadiance = (wash, point, normal, albedo) => {
     const cosTheta = l[0] * wash.dir[0] + l[1] * wash.dir[1] + l[2] * wash.dir[2]
     const spot = smoothstep(Math.cos(wash.angle), Math.cos(wash.angle * (1 - wash.penumbra)), cosTheta)
     const cosInc = Math.max(0, -(l[0] * normal[0] + l[1] * normal[1] + l[2] * normal[2]))
+    // the real lamp's cutoff: 0 since 2026-10-09 (no window, inverse square only — rig-lib.mjs lightDistance)
     const cutoff = lightDistance(wash.distance)
-    const falloff = (1 / Math.max(d * d, 0.01)) * Math.min(1, Math.max(0, 1 - (d / cutoff) ** 4)) ** 2
+    const window = cutoff > 0 ? Math.min(1, Math.max(0, 1 - (d / cutoff) ** 4)) ** 2 : 1
+    const falloff = (1 / Math.max(d * d, 0.01)) * window
     const E = wash.intensity * spot * cosInc * falloff
     return (albedo / Math.PI) * E
 }
