@@ -152,6 +152,11 @@ describe('StudioShell mobile chrome', () => {
             syncState: { pendingOpCount: 1 }
         })
         fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+        // One row of its own inside the bar, so the long save text can never push a third row.
+        const row = document.querySelector('.smb-topbar > .smb-status-row')
+        expect(row, 'status row is a direct child of the phone bar').toBeTruthy()
+        expect(row.querySelector('.smb-undo-redo')).toBeTruthy()
+        expect(row.querySelector('.smb-save-line')).toBeTruthy()
         expect(onUndo).toHaveBeenCalledTimes(1)
         expect(screen.getByRole('button', { name: 'Redo' })).toBeDisabled()
         expect(document.querySelector('[data-save-state]')).toHaveTextContent('Saving\u2026')

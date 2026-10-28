@@ -13,4 +13,11 @@ describe('phone Undo and Redo tap size', () => {
         expect(rule[1]).toMatch(/min-height:\s*44px/)
         expect(rule[1]).toMatch(/min-width:\s*44px/)
     })
+
+    it('sit on a row of their own, so the phone bar is at most one row taller in every save state', () => {
+        const css = readFileSync(fileURLToPath(new URL('./studio-mobile.css', import.meta.url)), 'utf8')
+        const rule = css.match(/\.smb-status-row\s*\{([^}]*)\}/)
+        expect(rule, 'rule for .smb-status-row').toBeTruthy()
+        expect(rule[1]).toMatch(/flex:\s*1 0 100%/)
+    })
 })

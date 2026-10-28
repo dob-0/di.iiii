@@ -89,6 +89,16 @@
     cursor: pointer;
 }
 
+/* Row two of the bar: Undo, Redo and the save line. flex-basis 100% puts it on its own row at 390 px, so the
+   bar is at most two rows (plus the title row) whatever the save state says; the text wraps beside the buttons. */
+.smb-status-row {
+    flex: 1 0 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    min-width: 0;
+}
+
 .smb-undo-redo {
     display: inline-flex;
     gap: var(--di-space-1);
@@ -105,6 +115,9 @@
 }
 
 .smb-save-line {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
     color: rgba(255, 255, 255, 0.75);
     padding: var(--di-space-1) var(--di-space-2);
     background: var(--di-scrim);

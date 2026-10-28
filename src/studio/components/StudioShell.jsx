@@ -934,14 +934,6 @@ export default function StudioShell({
                                 Projection
                             </button>
                         )}
-                        {/* Undo and Redo, and the save line: the phone has no Ctrl key. */}
-                        {!bare && onUndo && onRedo && (
-                            <span className="smb-undo-redo">
-                                <button type="button" className="smb-top-btn" onClick={onUndo} disabled={!(editHistory && editHistory.cursor > 0)} aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
-                                <button type="button" className="smb-top-btn" onClick={onRedo} disabled={!(editHistory && editHistory.cursor < editHistory.steps.length)} aria-label="Redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
-                            </span>
-                        )}
-                        {!bare && syncState && <StudioSaveLine syncState={syncState} className="smb-save-line" />}
                         {/* Nothing to edit in an empty room. */}
                         {!bare && (
                             <button
@@ -951,6 +943,21 @@ export default function StudioShell({
                             >
                                 {viewportEditMode === 'edit' ? 'Editing' : 'Edit'}
                             </button>
+                        )}
+                        {/* Undo and Redo, and the save line: the phone has no Ctrl key. Their own row
+                            (full width, never more than one 44 px button high), so the bar grows by at most
+                            one row in every save state and the long "Not saved: ..." wraps beside the buttons
+                            instead of pushing a third row (UX audit S03 review). */}
+                        {!bare && ((onUndo && onRedo) || syncState) && (
+                            <div className="smb-status-row">
+                                {onUndo && onRedo && (
+                                    <span className="smb-undo-redo">
+                                        <button type="button" className="smb-top-btn" onClick={onUndo} disabled={!(editHistory && editHistory.cursor > 0)} aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
+                                        <button type="button" className="smb-top-btn" onClick={onRedo} disabled={!(editHistory && editHistory.cursor < editHistory.steps.length)} aria-label="Redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+                                    </span>
+                                )}
+                                {syncState && <StudioSaveLine syncState={syncState} className="smb-save-line" />}
+                            </div>
                         )}
                     </div>
                     {mobileSheet && (
