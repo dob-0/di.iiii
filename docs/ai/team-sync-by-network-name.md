@@ -88,7 +88,7 @@ scope to a zone, not a subdomain — a reason for Q1). Flow, Tailscale-style:
 Files: the install's name certificate lives in `~/.di/name/` — **not** `~/.di/tls/`, so aylmo's
 `local.thedi.studio` certificate is never touched (VERIFIED: `~/.di/tls/` is what `di up` serves today, `paths.mjs`).
 
-## 7. SHARE — one command, one button, instant (PROPOSAL)
+## 7. SHARE — one command, one button, instant (BUILT 2026-10-28, PR 3: `serverXR/src/shareDoor.js`, `routes/shareDoorRoutes.js`, `scripts/di/shareCmd.mjs`, `src/landing/SharePanel.jsx`; not yet run on a real phone or a real certificate)
 
 **Prepared ahead, while private** (at `di login` or the first `di up` after it): claim the label, get the
 certificate, record at 127.0.0.1. Nothing listens on the wifi. `di status` says the name is ready.

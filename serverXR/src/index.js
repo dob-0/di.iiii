@@ -77,7 +77,7 @@ const { registerWorkStatusRoutes } = require('./routes/workStatusRoutes')
 const { registerAgentRunRoutes } = require('./routes/agentRunRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
 const { registerAiConnectionRoutes } = require('./routes/aiConnectionRoutes')
-const { registerShareRoutes } = require('./routes/shareRoutes')
+const { registerShareDoorRoutes } = require('./routes/shareDoorRoutes')
 const { createShareService } = require('./share/shareService')
 const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
 const { registerAiChatRoutes } = require('./routes/aiChatRoutes')
@@ -145,6 +145,8 @@ const { registerPlaceRoutes } = require('./routes/placeRoutes')
 const { getSpaceBlobPaths } = require('./blobStore')
 const { describeListen } = require('./listenInfo')
 const { certificateNames, registerGuestAddressRoute } = require('./guestAddress')
+const { createShareDoor } = require('./shareDoor')
+const { registerShareRoutes } = require('./routes/shareRoutes')
 const { startLocalName } = require('./localName')
 const { getMachine } = require('./machineIdentity')
 const { createMachineHub } = require('./machines/hub')
@@ -3380,6 +3382,30 @@ registerGuestAddressRoute(router, {
   requireAuth: config.requireAuth
 })
 
+// The share door (serverXR/src/shareDoor.js): `di share` and the Share button open the install
+// to the wifi for guests, at runtime. Guests are forced by turning auth on while it is open — the
+// person at the machine stays the owner (getPublicAuthState), a visitor never is.
+// config.js reads the secrets whether or not auth is on, so they are there when `di up` made them.
+const shareDoorSlot = { door: null }
+const shareDoor = {
+  open: (...args) => shareDoorSlot.door.open(...args),
+  close: (...args) => shareDoorSlot.door.close(...args),
+  status: () => (shareDoorSlot.door ? shareDoorSlot.door.status() : { shared: false, name: null, address: null, port: null, since: null })
+}
+let requireAuthBeforeShare = null
+const setShareGuests = (on) => {
+  if (on) {
+    if (!config.auth.sessionSecret) return false
+    if (requireAuthBeforeShare === null) requireAuthBeforeShare = config.requireAuth
+    config.requireAuth = true
+    return true
+  }
+  if (requireAuthBeforeShare !== null) config.requireAuth = requireAuthBeforeShare
+  requireAuthBeforeShare = null
+  return true
+}
+registerShareDoorRoutes(router, { door: shareDoor })
+
 // /llms.txt and /ai/*.md, read from the public bundle (aiPublic.js). Last on
 // the router so nothing above can be shadowed by its /ai catch-all.
 registerAiPublicRoutes(router, { logger })
@@ -3753,6 +3779,16 @@ initStorage()
       // into this same server (serverXR/src/localName.js). Personal installs
       // only; stands aside by name when :80 is taken or not allowed.
       startLocalName({ mainServer: httpServer, log: (line) => logger.info(line) })
+      // The share door is built here, where the listening server exists; it opens only when asked.
+      if (hasLocalRuntime()) {
+        shareDoorSlot.door = createShareDoor({
+          mainServer: httpServer,
+          ownPort: PORT,
+          setGuests: setShareGuests,
+          log: (line) => logger.info(line)
+        })
+        process.once('exit', () => { shareDoorSlot.door.close().catch(() => {}) })
+      }
       // `di follow` / `di unfollow` write follows.json while this runs. Polled
       // stat, not fs.watch: the file is replaced by a write and inotify loses
       // it, and two seconds is well inside what the CLI promises.

@@ -62,6 +62,7 @@ import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from '
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
 import { runPost } from './post.mjs'
+import { runShare } from './shareCmd.mjs'
 import {
     isStageMachine, joinPlan, joinStage, leaveStage, readManifest,
     restartSupervisor, runSupervisor, stageStatus, startSupervisor
@@ -185,7 +186,8 @@ const cmdUp = async (args) => {
 
     say(ui.starting())
     try {
-        if (guests) await ensureGuestSecrets(home)
+        // Always: the share door turns guest mode on at runtime and needs the secrets to exist.
+        await ensureGuestSecrets(home)
         await runner.start({ home, port, host: lan ? '0.0.0.0' : '127.0.0.1', guests, verbose: Boolean(args.flags.verbose) })
     } catch (error) {
         fail(String(error.message || error))
@@ -1231,6 +1233,15 @@ const cmdFollow = async (args) => {
     say(ui.following(spaceId, result.base, result.running, result.address))
 }
 
+/** `di share` / `--stop` / `--status` — open or close this install's door on the wifi. */
+const cmdShare = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const result = await runShare({ flags: args.flags, home, base: apiBase(home, resolvePort(home)) })
+    for (const line of result.lines) (result.code ? fail : say)(line)
+    process.exitCode = result.code
+}
+
 /** `di follows` — what this install is following, and whether it is keeping up. */
 const cmdFollows = async () => {
     const home = HOME()
@@ -1652,6 +1663,7 @@ const COMMANDS = {
     follow: cmdFollow,
     stage: cmdStage,
     follows: cmdFollows,
+    share: cmdShare,
     post: cmdPost,
     unfollow: cmdUnfollow,
     down: cmdDown,

@@ -114,6 +114,30 @@ module.exports = [
     note: "local runtimes only (404 on a hosted server, 403 from the network unless di up --lan). Can include this machine's LAN addresses. No address without a certificate or with a wildcard one — never an invented one; pointsHere says whether the name resolves to this machine (null when the lookup failed)."
   },
   {
+    route: "GET /api/share",
+    summary: "whether this install's share door is open on the wifi: { shared, name, address, port, since }",
+    reach: "read",
+    role: "admin",
+    agent: false,
+    note: "the person at this machine only, by a local name (403 from the share door, from the network or through a proxy). Local runtimes only."
+  },
+  {
+    route: "POST /api/share",
+    summary: "open this install's share door: an https listener on the wifi address with the install's own name certificate, serving guests only",
+    reach: "public",
+    role: "admin",
+    agent: false,
+    note: "OPENS A DOOR to everyone on the wifi, as guests with the open space, never the owner's spaces. The person at this machine only; needs a name (di name). Moves the name's record to the wifi address and starts a beacon. Closed again by DELETE; a restart closes it too."
+  },
+  {
+    route: "DELETE /api/share",
+    summary: "close the share door, point the name back at 127.0.0.1 and stop the beacon",
+    reach: "private",
+    role: "admin",
+    agent: false,
+    note: "the person at this machine only. Nothing is deleted: the name and certificate stay."
+  },
+  {
     route: "PATCH /api/config",
     summary: "change the default space and/or the global shared space every guest without one lands in",
     reach: "public",

@@ -19,6 +19,7 @@ const isProductionEnv = () => (process.env.NODE_ENV || '').toLowerCase() === 'pr
 const isLocalInstall = () => process.env.DI_LOCAL === '1'
 
 const isLoopbackRequest = (req) => {
+    if (req.diShareDoor) return false
     const address = req.ip || req.socket?.remoteAddress || ''
     return LOOPBACK_ADDRESSES.has(address)
 }
