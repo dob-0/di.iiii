@@ -105,7 +105,7 @@ certificate, record at 127.0.0.1. Nothing listens on the wifi. `di status` says 
 After a restart the install is private again, like `--lan` today; SHARE is pressed again (the name and certificate are kept).
 The name certificate's CN is the plain name, so `guest-address` reads one address from it (VERIFIED rule: CN first).
 
-## 8. `di follow --from <name>`, peer to peer (PROPOSAL)
+## 8. `di follow --from <name>`, peer to peer (BUILT 2026-10-28, PR 4)
 
 `di follow show --from ponyo-k7q2 --key dii_sync_…` resolves the address in this order, and keeps the name for
 Host, SNI and the certificate check every time (the address pin, VERIFIED):
@@ -113,7 +113,9 @@ Host, SNI and the certificate check every time (the address pin, VERIFIED):
    hint — trust comes from the certificate, which a liar cannot present;
 2. **DNS** of the network name (§5 A/B);
 3. **the last address that worked** (stored with the follow).
-Offline on one wifi: step 1 is enough; certificate checks need no internet. Owed measurement from
+Built in `serverXR/src/follow/nameResolve.js` (one resolver for `di follow`, the running follower and the join
+flow) and `beacon.js` (announce + listen, UDP 47821, `{v:1, kind:'share', label, port}`); proof of the two-machine,
+internet-cut case is still owed (lead: r-di + aylmo). Offline on one wifi: step 1 is enough; certificate checks need no internet. Owed measurement from
 `one-local-address.md` §9.6: two machines, internet cut. Any machine can be the hub: the follow engine already
 carries ops and files both ways (VERIFIED, CURRENT.md "Follow"); a chain dob → ponyo → kiara works because each
 install is both. Across the internet: out of scope — the dev tier, or Tailscale with `--at` (VERIFIED, exists).

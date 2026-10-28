@@ -302,6 +302,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-01'
     },
     {
+        id: 'follow-by-name',
+        category: 'Spaces & access',
+        title: 'Follow by name',
+        summary: 'Follow a space from another install by its name — ponyo-k7q2 — instead of an address. On one wifi it works with the internet cut.',
+        body: [
+            'A NAME, NOT AN ADDRESS. Every install that shares has a name like PONYO-K7Q2. On your machine type: di follow show --from ponyo-k7q2 --key dii_sync_… — the space is the one you want, the key is the one its owner made with di invite. The same name works where Join asks for an address.',
+            'HOW IT IS FOUND. First the install announces itself on the wifi and yours hears it; if not, the name is looked up in DNS; if not, the last address that worked is tried. di follows shows the name and which of the three found it. If the other machine moves to a new address, the follow finds it again on its own.',
+            'WHY IT IS SAFE. The announcement is only a hint about where to look. Whoever answers must show the certificate for that exact name; a machine that cannot is refused. That check needs no internet.',
+            'IF IT IS NOT FOUND. It says what it looked at. Check the other install is shared and on this wifi, or say where it is yourself: --at <address>.'
+        ],
+        tags: ['sync', 'follow', 'name', 'network name', 'label', 'beacon', 'wifi', 'offline', 'join', 'share'],
+        updated: '2026-10-28'
+    },
+    {
         id: 'vj-deck-and-clip-in',
         category: 'Editing',
         title: 'The VJ deck, and Clip In',

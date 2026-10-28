@@ -192,7 +192,7 @@ const joinSpace = async ({ address, code, into = false, dataDir, machine, readFo
     // an empty log has nothing to flood the host with. Since dev's from-now start (follower.js)
     // it must ask for the replay, or the joiner stays empty. A merge into a space already here
     // starts from now and is compared once (converge), as any follow.
-    await addFollow(dataDir, spaceId, { remote: seen.base, token, label: seen.hostName, start: seen.localExists ? null : 'replay', name: seen.name, via: seen.via, lastAddress: seen.pin })
+    await addFollow(dataDir, spaceId, { remote: seen.base, token, label: seen.hostName, start: seen.localExists ? null : 'replay', ...(seen.name ? { name: seen.name, via: seen.via, lastAddress: seen.pin } : {}) })
     return { ok: true, spaceId, base: seen.base, hostName: seen.hostName, label: seen.label, merged: seen.localExists }
 }
 

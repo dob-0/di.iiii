@@ -61,9 +61,17 @@ export const manageKeyMayTravel = (url, address = null) => {
     return host === 'localhost' || host === '::1' || /^127\./.test(host)
 }
 
-// One resolver for this command, the running follower and the join flow; the CLI
-// ships in the same tree as serverXR/src (scripts/pack-runtime.mjs).
-const names = createRequire(import.meta.url)('../../serverXR/src/follow/nameResolve.js')
+// One resolver for this command, the running follower and the join flow. Loaded
+// when first needed, not at import: the CLI starts before serverXR is beside it
+// (bootstrap), and only a typed label needs the resolver (it ships in the same
+// tree as scripts/di — scripts/pack-runtime.mjs).
+let namesModule = null
+const names = new Proxy({}, {
+    get: (_, key) => {
+        namesModule ||= createRequire(import.meta.url)('../../serverXR/src/follow/nameResolve.js')
+        return namesModule[key]
+    }
+})
 
 /**
  * Is there already a space of that name in the data folder of an install that is
@@ -91,7 +99,7 @@ export const localSpaceOnDisk = async (home, spaceId) => {
  * cert-mismatch, missing, denied, local-space, itself, merge, no-from, and
  * remote-differs (which also carries `stored` and `base`, the two remotes).
  */
-export const followSpace = async ({ home, spaceId, from = null, key = null, into = null, address = null, port, insecure = false, direction = null, start = null, zone = null, resolveNamed = names.resolveName }) => {
+export const followSpace = async ({ home, spaceId, from = null, key = null, into = null, address = null, port, insecure = false, direction = null, start = null, zone = null, resolveNamed = null }) => {
     if (direction && direction !== 'take-host' && direction !== 'take-mine') return { ok: false, reason: 'direction' }
     if (inspectFollows(paths(home).data).state === 'corrupt') return { ok: false, reason: 'corrupt' }
 
@@ -114,14 +122,15 @@ export const followSpace = async ({ home, spaceId, from = null, key = null, into
     let name = null
     let via = null
     let lastAddress = null
-    const typedLabel = names.isLabel(from)
+    // The cheap shape test first, so a URL never loads the resolver.
+    const typedLabel = /^[a-z0-9-]+$/.test(String(from ?? '').trim()) && names.isLabel(from)
     // The short form (`--take-mine` alone) re-finds a follow that was found by name.
     const wanted = typedLabel
         ? { label: String(from).trim(), zone: zone || names.readZone() }
         : (stored?.name && from === stored.remote ? stored.name : null)
     if (wanted && !address) {
         const known = stored?.name?.label === wanted.label ? stored : null
-        const found = await resolveNamed({ label: wanted.label, zone: wanted.zone, last: known?.lastAddress || null })
+        const found = await (resolveNamed || names.resolveName)({ label: wanted.label, zone: wanted.zone, last: known?.lastAddress || null })
         if (!found.ok) return { ok: false, reason: 'not-found', name: found.name, tried: found.tried }
         name = wanted
         via = found.route

@@ -30,7 +30,7 @@ const NAME = 'ponyo-k7q2.test-zone.example'
 let tmp
 const servers = []
 const homes = []
-const strip = (text) => text.replace(/\x1b\[[0-9;]*m/g, '')
+const strip = (text) => text.replace(new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g'), '')
 
 const makeCert = (name) => {
     const key = path.join(tmp, `${name}.key`)

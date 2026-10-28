@@ -120,6 +120,18 @@ Guards: `follower.test.js`, `followConverge.test.js`, `followSettings.test.js`, 
 `assets.test.js`, `machines/link.test.js`, `httpClient.test.js`, `scripts/di/followRemote.test.js` (remote), `followIntegration.test.js` ("a followed space stays one
 space"; "a follow starts from now and never silently erases work only the follower has") — each fails without its fix.
 
+## Following by network name (2026-10-28)
+
+`di follow <space> --from <label> --key <key>`: a bare label (no scheme, no dot) is another install's network name; the CLI adds the
+zone (`DI_NAME_ZONE`, else `~/.di/name/name.json`, else `di-studio.xyz`). `nameResolve.js` finds it in a fixed order and returns the
+route: **beacon** (a `{label, port}` UDP announcement heard on this wifi for up to 2 s, `beacon.js`), **dns** (the system resolver for
+`<label>.<zone>`; loopback answers mean "not shared" and are skipped), **last** (the address stored with the follow). Every request goes
+to the found address with `Host`/SNI `<label>.<zone>` and the certificate checked for that name — the address pin, so a beacon is a
+hint a liar on the wifi cannot turn into trust. The follow record keeps `name {label, zone}`, `via` and `lastAddress` and no `address`
+(a name is not a pin; a typed `--at` still wins). The running follower re-resolves, at most every 10 s, when a request to the host
+fails, and `join.js` takes a label wherever it takes an address through the same function. Not carried: signed announcements, IPv6
+beacons, a router that blocks broadcast (design doc §11).
+
 ## Measured
 
 - Loopback, two real servers (PROGRESS.md): ~25 ms host→follower, ~97 ms follower→host.
