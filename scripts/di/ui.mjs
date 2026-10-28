@@ -1022,6 +1022,7 @@ export const ui = {
         '',
         `  ${CMD} login         sign in from the terminal, once — then ${CMD} and Claude act as you`,
         `  ${CMD} whoami        who this terminal is signed in as · ${CMD} logout ends it`,
+        `  ${CMD} name          this install's network name and its own certificate (after ${CMD} login) · --status --renew --forget`,
         '',
         `  ${CMD} stage join SPACE --from URL   make this machine the one under the projector`,
         `  ${CMD} stage status  what it is showing, and why not · ${CMD} stage leave to undo it`,
