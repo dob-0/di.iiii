@@ -449,6 +449,7 @@ extra **clocks** can be added. The rows for **master clock** and **clock** are i
 | Word | Its one job |
 |---|---|
 | **Beat** | The node that is a **clock** (TouchDesigner's Beat CHOP): a tempo in BPM and the moment of beat 0. Outputs Clock, Ramp, Pulse, Count, Beat, Bar, Ramp bar, BPM. Its **Clock** setting is **Master** (the first Beat set to Master is the project's master clock) or **Extra**. Not "Time": that card counts seconds. |
+| **Beat Grid** | The node that reads music from a **baked analysis** (beat times and Low/Mid/High bands, `docs/ai/decisions/2026-10-21-beat-bake-method.md`) at a time in the track: Beat, Phase (0..1 to the next beat), Age (seconds since the last), Bar, Count, Pulse, Strong, Low/Mid/High, BPM and a Clock an Oscillator can follow. Never a live analyser, so it can be seeked. Not "Beat": that one is a clock with a typed tempo. |
 | **Tempo from** | A Beat's choice of whose tempo it keeps: **This node** (its BPM and its own taps) or **Light desk** (the `/light` desk's clock and tap, an optional source; with no desk answering, the Beat keeps its own). |
 | **Clock** (port type) | The wire a Beat's Clock output speaks; wired into an Oscillator's Clock, that Oscillator follows that clock instead of the master. |
 | **Beats** (Oscillator) | How many beats of its clock one cycle lasts, ¼ … 64. 0 keeps the cycle in Hz (Frequency), which is what every Oscillator made before Phase 2 does. |
@@ -467,21 +468,6 @@ card reads as a button). Type id unchanged: `stream.recorder`.
 | **Still** (`stream.still`) | The node that saves one PNG of a picture wire on **Take** (its button, or a rising signal). Outputs **Status** and **File**. |
 | **take** | One thing a Recorder or a Still kept: one recording, or one still. Its file is named `<kind>-<source>-<date>`, e.g. `still-scene-2026-10-21T14-03-07.png`, because a project file carries a name and a date and nothing else. |
 | **seek** (the clock) | Holding the document clock at one moment so a test browser can cut a project frame-exact: `__seek(t)` (seconds), `__ready`, `__play`. Developer words; no card shows them. |
-
-## Amended 2026-10-21 — Beat and Oscillator v2 (Phase 2 of the laser workflow)
-
-Decision 3 of `docs/ai/decisions/2026-10-14-raw-laser-workflow.md` (owner 2026-10-14): one **master clock** runs, LFOs follow it,
-extra **clocks** can be added. The rows for **master clock** and **clock** are in the dictionary above; these are the words Phase 2 adds.
-
-| Word | Its one job |
-|---|---|
-| **Beat** | The node that is a **clock** (TouchDesigner's Beat CHOP): a tempo in BPM and the moment of beat 0. Outputs Clock, Ramp, Pulse, Count, Beat, Bar, Ramp bar, BPM. Its **Clock** setting is **Master** (the first Beat set to Master is the project's master clock) or **Extra**. Not "Time": that card counts seconds. |
-| **Tempo from** | A Beat's choice of whose tempo it keeps: **This node** (its BPM and its own taps) or **Light desk** (the `/light` desk's clock and tap, an optional source; with no desk answering, the Beat keeps its own). |
-| **Beat Grid** | The node that reads music from a **baked analysis** (beat times and Low/Mid/High bands, `docs/ai/decisions/2026-10-21-beat-bake-method.md`) at a time in the track: Beat, Phase (0..1 to the next beat), Age (seconds since the last), Bar, Count, Pulse, Strong, Low/Mid/High, BPM and a Clock an Oscillator can follow. Never a live analyser, so it can be seeked. Not "Beat": that one is a clock with a typed tempo. |
-| **Clock** (port type) | The wire a Beat's Clock output speaks; wired into an Oscillator's Clock, that Oscillator follows that clock instead of the master. |
-| **Beats** (Oscillator) | How many beats of its clock one cycle lasts, ¼ … 64. 0 keeps the cycle in Hz (Frequency), which is what every Oscillator made before Phase 2 does. |
-| **Bias** (Oscillator) | Leans the cycle: −1 … 1 moves the half-way point (a triangle's peak, a square's edge) from the middle toward an end; on a square it is the duty. TouchDesigner's word. |
-| **Sample & hold** | The wave that holds one random value for a whole cycle and jumps at the next. The `/light` desk calls the same wave **random**. **Random glide** walks from one cycle's value to the next instead of jumping. |
 
 ## Proposed 2026-10-13 — a lighting look, and the Dilijan words (owner's pick, nothing renamed)
 

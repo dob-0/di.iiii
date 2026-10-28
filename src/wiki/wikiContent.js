@@ -1982,6 +1982,9 @@ export const WIKI_ARTICLES = [
             'The same second always gives the same numbers, which is why it reads a baked analysis rather than listening live. For live levels use Sound or Microphone. The bake method is written down but not built or measured yet; until it is, an analysis has to come from elsewhere.'
         ],
         tags: ['raw', 'nodes', 'beat', 'grid', 'music', 'bands', 'bass', 'bar', 'tempo', 'clock', 'oscillator', 'seek'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'laser-file-text-nodes',
         category: 'Editing',
         title: 'Laser File and Laser Text — draw a file or a word with the LaserCubes',
