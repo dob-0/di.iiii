@@ -77,7 +77,7 @@ const { registerWorkStatusRoutes } = require('./routes/workStatusRoutes')
 const { registerAgentRunRoutes } = require('./routes/agentRunRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
 const { registerAiConnectionRoutes } = require('./routes/aiConnectionRoutes')
-const { registerShareRoutes } = require('./routes/shareRoutes')
+const { registerWifiDoorRoutes } = require('./routes/wifiDoorRoutes')
 const { createShareService } = require('./share/shareService')
 const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
 const { registerAiChatRoutes } = require('./routes/aiChatRoutes')
@@ -145,6 +145,8 @@ const { registerPlaceRoutes } = require('./routes/placeRoutes')
 const { getSpaceBlobPaths } = require('./blobStore')
 const { describeListen } = require('./listenInfo')
 const { certificateNames, registerGuestAddressRoute } = require('./guestAddress')
+const { createWifiDoor } = require('./wifiDoor')
+const { registerShareRoutes } = require('./routes/shareRoutes')
 const { startLocalName } = require('./localName')
 const { getMachine } = require('./machineIdentity')
 const { createMachineHub } = require('./machines/hub')
@@ -2514,7 +2516,7 @@ registerAgentRunRoutes(router, {})
 registerIntegrationRoutes(router)
 registerAiConnectionRoutes(router)
 
-// The share door: drafts, preview, send to channels (docs/ai/publishing.md).
+// The wifi door: drafts, preview, send to channels (docs/ai/publishing.md).
 registerShareRoutes(router, {
   requireAdminAlways,
   service: createShareService({
@@ -3380,6 +3382,30 @@ registerGuestAddressRoute(router, {
   requireAuth: config.requireAuth
 })
 
+// The wifi door (serverXR/src/wifiDoor.js): `di wifi` and the Wifi button open the install
+// to the wifi for guests, at runtime. Guests are forced by turning auth on while it is open — the
+// person at the machine stays the owner (getPublicAuthState), a visitor never is.
+// config.js reads the secrets whether or not auth is on, so they are there when `di up` made them.
+const wifiDoorSlot = { door: null }
+const wifiDoor = {
+  open: (...args) => wifiDoorSlot.door.open(...args),
+  close: (...args) => wifiDoorSlot.door.close(...args),
+  status: () => (wifiDoorSlot.door ? wifiDoorSlot.door.status() : { open: false, name: null, address: null, port: null, since: null })
+}
+let requireAuthBeforeWifi = null
+const setWifiGuests = (on) => {
+  if (on) {
+    if (!config.auth.sessionSecret) return false
+    if (requireAuthBeforeWifi === null) requireAuthBeforeWifi = config.requireAuth
+    config.requireAuth = true
+    return true
+  }
+  if (requireAuthBeforeWifi !== null) config.requireAuth = requireAuthBeforeWifi
+  requireAuthBeforeWifi = null
+  return true
+}
+registerWifiDoorRoutes(router, { door: wifiDoor })
+
 // /llms.txt and /ai/*.md, read from the public bundle (aiPublic.js). Last on
 // the router so nothing above can be shadowed by its /ai catch-all.
 registerAiPublicRoutes(router, { logger })
@@ -3753,6 +3779,16 @@ initStorage()
       // into this same server (serverXR/src/localName.js). Personal installs
       // only; stands aside by name when :80 is taken or not allowed.
       startLocalName({ mainServer: httpServer, log: (line) => logger.info(line) })
+      // The wifi door is built here, where the listening server exists; it opens only when asked.
+      if (hasLocalRuntime()) {
+        wifiDoorSlot.door = createWifiDoor({
+          mainServer: httpServer,
+          ownPort: PORT,
+          setGuests: setWifiGuests,
+          log: (line) => logger.info(line)
+        })
+        process.once('exit', () => { wifiDoorSlot.door.close().catch(() => {}) })
+      }
       // `di follow` / `di unfollow` write follows.json while this runs. Polled
       // stat, not fs.watch: the file is replaced by a write and inotify loses
       // it, and two seconds is well inside what the CLI promises.
