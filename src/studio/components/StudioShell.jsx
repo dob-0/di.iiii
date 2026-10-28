@@ -3,6 +3,7 @@ import { Plane, Raycaster, Vector2, Vector3 } from 'three'
 import StudioInspector from './StudioInspector.jsx'
 import StudioViewportLayout from './StudioViewportLayout.jsx'
 import StudioFloatingPanel from './StudioFloatingPanel.jsx'
+import { letterKeyIsOff, readKeyPrefs, tabFlipsMode } from '../utils/studioKeyPrefs.js'
 import StudioControlCluster from './StudioControlCluster.jsx'
 import StudioCueStrip from './StudioCueStrip.jsx'
 import StudioProjectsPanel from './StudioProjectsPanel.jsx'
@@ -452,20 +453,38 @@ export default function StudioShell({
                 || e.target.isContentEditable
             if (inInput) return
 
+            // Esc closes what is on top: Quick Insert, then Help, then the window the focus is in (WCAG 2.1.2 / Nielsen H3).
+            // Not while a transform runs (its own Esc cancels it) or something is selected (the editor's Esc deselects first), and never by a letter, so it works with letter keys off.
+            if (e.key === 'Escape') {
+                if (quickInsert) setQuickInsert(null)
+                setShowHelp(false)
+                if (!quickInsert && !transformOp && selectedEntityIds.length === 0) {
+                    const panel = e.target?.closest?.('.sfp-shell')
+                    const closeButton = panel?.querySelector?.('.sfp-close')
+                    if (closeButton) { closeButton.click(); e.preventDefault() }
+                }
+                return
+            }
+
+            const prefs = readKeyPrefs()
+            // Tab is the browser's: it walks the focus. It flips Navigate/Edit only for the "Blender keys" opt-in.
+            if (tabFlipsMode(e, prefs)) {
+                e.preventDefault()
+                setViewportEditMode((m) => (m === 'navigate' ? 'edit' : 'navigate'))
+                setViewportSelectTool(false)
+                return
+            }
+            // Letter keys switched off (Help > Shortcuts): H, E, ?, G, R, S, X, Y, Z, T, Shift+A, Shift+R do nothing.
+            if (letterKeyIsOff(e, prefs)) return
+
             if (e.key === 'h' || e.key === 'H') {
                 e.preventDefault()
                 setUiHidden((v) => !v)
             }
-            if (e.key === 'e' || e.key === 'E' || e.key === 'Tab') {
+            if (e.key === 'e' || e.key === 'E') {
                 e.preventDefault()
                 setViewportEditMode((m) => (m === 'navigate' ? 'edit' : 'navigate'))
                 setViewportSelectTool(false)
-            }
-            if (e.key === 'Escape' && quickInsert) {
-                setQuickInsert(null)
-            }
-            if (e.key === 'Escape') {
-                setShowHelp(false)
             }
             if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault()

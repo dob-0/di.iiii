@@ -4,9 +4,9 @@ import StudioShell from './StudioShell.jsx'
 import { ALL_TOOLS_KEY, saveAllTools } from '../utils/jamMode.js'
 
 vi.mock('./StudioViewportLayout.jsx', () => ({
-    default: ({ shared }) => <output data-testid="gizmo-axis">{shared.gizmoAxis || 'all'}</output>
+    default: ({ shared }) => <output data-testid="gizmo-axis" data-edit-mode={shared.editMode}>{shared.gizmoAxis || 'all'}</output>
 }))
-vi.mock('./StudioFloatingPanel.jsx', () => ({ default: ({ title, onClose, children }) => <div data-panel={title} data-closable={onClose ? 'yes' : 'no'}>{children}</div> }))
+vi.mock('./StudioFloatingPanel.jsx', () => ({ default: ({ title, onClose, children }) => <div className="sfp-shell" data-panel={title} data-closable={onClose ? 'yes' : 'no'}>{onClose && <button className="sfp-close" onClick={onClose}>x</button>}{children}</div> }))
 vi.mock('./StudioControlCluster.jsx', () => ({
     default: ({ gizmoMode, previewUrl }) => <output data-testid="gizmo-mode" data-preview-url={previewUrl || ''}>{gizmoMode}</output>
 }))
@@ -392,5 +392,73 @@ describe('StudioShell — a code project does not open Create by itself', () => 
     it('the same bare project opened for a scene (no ?open=files) still shows Create alone', () => {
         renderShell({ document: { projectMeta: { id: 'fresh2', title: 'first' }, assets: [] }, layers: { loaded: true, empty: true, held: false, open: OPEN } })
         expect(panels()).toEqual(['Create'])
+    })
+})
+
+
+// S58: the Studio keyboard (WCAG 2.1.1 / 2.1.4, ux audit F002 + F127, 2026-10-28)
+describe('StudioShell keyboard: Tab, letter keys, Esc', () => {
+    const mode = () => screen.getByTestId('gizmo-axis').dataset.editMode
+    afterEach(() => { window.localStorage.clear() })
+
+    it('Tab is the browser\'s: it is not stopped and does not flip Navigate/Edit', () => {
+        renderShell()
+        expect(mode()).toBe('navigate')
+        const notStopped = fireEvent.keyDown(window, { key: 'Tab' })
+        expect(notStopped).toBe(true)
+        expect(mode()).toBe('navigate')
+    })
+
+    it('control: with letter keys on, H hides the windows', () => {
+        renderShell()
+        expect(document.querySelectorAll('[data-panel]').length).toBeGreaterThan(0)
+        fireEvent.keyDown(window, { key: 'h' })
+        expect(document.querySelectorAll('[data-panel]').length).toBe(0)
+    })
+
+    it('E still flips Navigate and Edit', () => {
+        renderShell()
+        fireEvent.keyDown(window, { key: 'e' })
+        expect(mode()).toBe('edit')
+        fireEvent.keyDown(window, { key: 'E' })
+        expect(mode()).toBe('navigate')
+    })
+
+    it('"Blender keys" keeps Tab = Navigate/Edit as an opt-in', () => {
+        window.localStorage.setItem('di.studio.keys', JSON.stringify({ blenderTab: true }))
+        renderShell()
+        const notStopped = fireEvent.keyDown(window, { key: 'Tab' })
+        expect(notStopped).toBe(false)
+        expect(mode()).toBe('edit')
+    })
+
+    it('with letter keys switched off, H, E and G do nothing; Esc and Ctrl keys are not letter keys', () => {
+        window.localStorage.setItem('di.studio.keys', JSON.stringify({ letters: false }))
+        const onStartTransform = vi.fn()
+        renderShell({ selectedEntityIds: ['cube-1'], onStartTransform })
+        fireEvent.keyDown(window, { key: 'e' })
+        expect(mode()).toBe('navigate')
+        fireEvent.keyDown(window, { key: 'g' })
+        expect(onStartTransform).not.toHaveBeenCalled()
+        fireEvent.keyDown(window, { key: 'h' })
+        expect(document.querySelectorAll('[data-panel]').length).toBeGreaterThan(0)
+    })
+
+    it('Esc closes the window the focus is in, but not while something is selected (that Esc deselects)', () => {
+        window.localStorage.setItem(ALL_TOOLS_KEY, '1')
+        const { unmount } = renderShell({ selectedEntityIds: ['cube-1'] })
+        const panel = document.querySelector('.sfp-shell[data-panel="Objects"]')
+        const close = panel.querySelector('.sfp-close')
+        const onClick = vi.fn()
+        close.addEventListener('click', onClick)
+        fireEvent.keyDown(close, { key: 'Escape' })
+        expect(onClick).not.toHaveBeenCalled()
+        unmount()
+        renderShell()
+        const close2 = document.querySelector('.sfp-shell[data-panel="Objects"] .sfp-close')
+        const onClick2 = vi.fn()
+        close2.addEventListener('click', onClick2)
+        fireEvent.keyDown(close2, { key: 'Escape' })
+        expect(onClick2).toHaveBeenCalledTimes(1)
     })
 })

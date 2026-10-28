@@ -48,13 +48,13 @@ export const STUDIO_GUIDE_SECTIONS = [
         description: 'Select something, then move, rotate, and scale it in place.',
         icon: '✛',
         callouts: [
-            { icon: '⇄', title: 'Tab', detail: 'Switch between Navigate and Edit mode.' },
+            { icon: '⇄', title: 'E', detail: 'Switch between Navigate and Edit mode (the Navigate / Edit button does the same).' },
             { icon: '✥', title: 'G · R · S', detail: 'Grab, rotate, scale the selection.' },
             { icon: '◫', title: 'Objects window', detail: 'Exact values live in the inspector.' }
         ],
         steps: [
             'Click an object to select it',
-            'Press Tab to enter Edit mode',
+            'Press E to enter Edit mode',
             'G moves · R rotates · S scales',
             'X, Y or Z locks the axis mid-move'
         ]
@@ -137,7 +137,9 @@ export const STUDIO_SHORTCUT_SECTIONS = [
     {
         title: 'View',
         rows: [
-            ['Tab / E', 'Toggle Navigate ↔ Edit'],
+            ['E', 'Toggle Navigate ↔ Edit (Tab too, when "Blender keys" is on below)'],
+            ['Tab', 'Move the focus to the next button or window (Shift+Tab goes back)'],
+            ['Esc', 'Close the window you are in'],
             ['Walk / Fly buttons', 'Walk: eye height above the floor, W A S D move. Fly: free, Space up, Q down. Esc leaves'],
             ['Building (walking or flying)', 'The hotbar: 1 to 0 pick a slot, E the inventory, left click places where the crosshair aims, right click removes, R turns, Ctrl+Z undoes each'],
             ['H (walking)', 'Hide every panel but the crosshair; H again brings them back'],
