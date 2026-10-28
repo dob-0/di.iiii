@@ -114,6 +114,28 @@ describe('PublicProjectViewer', () => {
         expect(screen.queryByText(/viewer-scene/)).toBeNull()
     })
 
+    it('opening a space whose one project is empty lands in the project view, with the choices for an editor', async () => {
+        authState.session = { requireAuth: true, authenticated: true, role: 'admin', spaces: null }
+        try {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: { projectMeta: { id: 'only', title: 'Only' }, entities: [], nodes: [] }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            render(<PublicProjectViewer spaceId="cinema-house" projectId="only" spaceLabel="Cinema House" />)
+
+            expect(await screen.findByTestId('project-plain-view')).toBeInTheDocument()
+            const choices = screen.getByTestId('project-choices')
+            expect(choices).toHaveTextContent('Add a scene')
+            expect(choices).toHaveTextContent('Write code')
+            expect(choices).toHaveTextContent('Add pages or pictures')
+            expect(screen.queryByText(/viewer-scene/)).toBeNull()
+        } finally {
+            authState.session = { requireAuth: false, authenticated: false, role: null, spaces: null }
+        }
+    })
+
     it('updates the public surface live when Studio changes the presentation entry view', async () => {
         getProjectDocumentMock.mockResolvedValue({
             version: 1,

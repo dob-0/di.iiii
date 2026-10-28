@@ -36,7 +36,7 @@ import { buildAppSpacePath, buildSpaceContentsPath } from '../../utils/spaceRout
 import { isEmbedRequest } from '../../utils/previewMode.js'
 import { hasRig } from '../../rigbuild/hasRigLamps.js'
 import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
-import SceneBar, { EditInStudio, barButtonStyle } from '../../rigbuild/SceneBar.jsx'
+import SceneBar, { EditInStudio, barButtonStyle, studioHref } from '../../rigbuild/SceneBar.jsx'
 import { VIEW_LAYER_IDS, VIEW_LAYER_LABELS, parseLayersParam } from '../viewport/smartView/smartViewGeometry.js'
 import { rigVariantOf } from '../../rigbuild/rigVariant.js'
 import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement } from '../../rigbuild/rigVersionLayout.js'
@@ -785,6 +785,13 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         {(document.assets || []).filter((a) => /^image\//.test(a.mimeType) && a.url).map((a) => (
                             <img key={a.id} src={a.url} alt={a.name} style={{ display: 'block', maxWidth: '100%', marginTop: '0.75rem' }} />
                         ))}
+                        {canEdit ? (
+                            <div data-testid="project-choices" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem' }}>
+                                <a href={studioHref(resolvedRouteSpaceId, projectId)} style={barButtonStyle}>Add a scene</a>
+                                <a href={studioHref(resolvedRouteSpaceId, projectId)} style={barButtonStyle}>Write code</a>
+                                <a href={studioHref(resolvedRouteSpaceId, projectId)} style={barButtonStyle}>Add pages or pictures</a>
+                            </div>
+                        ) : null}
                     </div>
                 </div>
             ) : document ? (

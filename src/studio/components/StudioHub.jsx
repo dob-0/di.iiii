@@ -22,6 +22,7 @@ import {
     uploadProjectAsset
 } from '../../project/services/projectsApi.js'
 import { getServerSpace, listServerSpaces, updateServerSpace } from '../../services/serverSpaces.js'
+import { newProjectDestination } from '../utils/newProjectEntry.js'
 import { buildStudioHubPath, buildStudioProjectPath, buildSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { getCodeSpace } from '../utils/codeSpaces.js'
 import { describeProjectLayers } from '../../project/layers.js'
@@ -290,7 +291,10 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
         setStatus('creating...')
         try {
             const res = await createProject(spaceId, { title: name, slug: name, source: tool.source })
-            openProject(res.project.id)
+            // Studio: a new project is empty, so it opens its project view, not the 3D editor.
+            // Nodes keeps its own editor (the person chose that tool).
+            if (openIn === 'nodes') openProject(res.project.id)
+            else navigateToStudioPath(newProjectDestination({ projectId: res.project.id, spaceId }))
         } catch (e) {
             setStatus(e.message || 'error')
             setIsBusy(false)
