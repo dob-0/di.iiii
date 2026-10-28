@@ -1,8 +1,8 @@
 // @vitest-environment node
 //
-// The share door (serverXR/src/shareDoor.js): a runtime listener on the wifi address with the
+// The wifi door (serverXR/src/wifiDoor.js): a runtime listener on the wifi address with the
 // install's name certificate. What it promises — opens and closes with no restart, answers its own
-// names only (421 otherwise), marks every request a share-door request so the owner grant is
+// names only (421 otherwise), marks every request a wifi-door request so the owner grant is
 // refused, moves the broker record with a signed PUT, and follows a changed address.
 // The listener is plain http on 127.0.0.1 here; the certificate files are read and handed over.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -13,10 +13,11 @@ import os from 'node:os'
 import path from 'node:path'
 import { EventEmitter } from 'node:events'
 
-import shareDoor from './shareDoor.js'
+import beaconModule from './follow/beacon.js'
+import wifiDoor from './wifiDoor.js'
 import localOwner from './localOwner.js'
 
-const { createShareDoor, defaultRouteAddress, hostIsOwnName, readName } = shareDoor
+const { createWifiDoor, defaultRouteAddress, hostIsOwnName, readName } = wifiDoor
 const loadBroker = () => import('../../scripts/di/brokerClient.mjs')
 
 const NAME = 'dob-a3f9.l.thedi.studio'
@@ -30,7 +31,7 @@ const writeName = (extra = {}) => {
     fs.writeFileSync(path.join(dir, 'key.pem'), 'KEY')
     fs.writeFileSync(path.join(dir, 'install.key'), privateKey.export({ type: 'pkcs8', format: 'pem' }))
 }
-beforeEach(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'di-share-')); writeName() })
+beforeEach(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'di-wifi-')); writeName() })
 afterEach(async () => {
     for (const c of cleanups.splice(0)) await c()
     fs.rmSync(dir, { recursive: true, force: true })
@@ -40,7 +41,7 @@ afterEach(async () => {
 // A main server that answers with what the door handed it.
 const makeMain = () => {
     const main = new EventEmitter()
-    main.on('request', (req, res) => res.end(JSON.stringify({ shareDoor: req.diShareDoor === true, owner: localOwner.isOwnerAtTheMachine(req, { isLocal: true }) })))
+    main.on('request', (req, res) => res.end(JSON.stringify({ wifiDoor: req.diWifiDoor === true, owner: localOwner.isOwnerAtTheMachine(req, { isLocal: true }) })))
     return main
 }
 const fakeBroker = () => {
@@ -50,15 +51,14 @@ const fakeBroker = () => {
 }
 const makeBeacon = () => {
     const sent = []
-    const socket = { on() {}, bind: (_p, cb) => cb(), setBroadcast() {}, send: (...a) => sent.push(JSON.parse(a[0].toString())), close() { socket.closed = true } }
-    return { sent, socket, createSocket: () => socket }
+    return { sent, announce: async (packet) => { sent.push(packet); return true } }
 }
 const door = (over = {}) => {
     const beacon = makeBeacon()
-    const d = createShareDoor({
+    const d = createWifiDoor({
         mainServer: makeMain(), ownPort: 4000, nameDir: dir, ports: [0], loadBroker,
         getAddress: async () => '127.0.0.1', createServer: () => http.createServer(),
-        createSocket: beacon.createSocket, watchEveryMs: 3600000, beaconEveryMs: 3600000, ...over
+        announce: beacon.announce, watchEveryMs: 3600000, beaconEveryMs: 3600000, ...over
     })
     cleanups.push(() => d.close())
     return { d, beacon }
@@ -96,12 +96,12 @@ describe('open and close, no restart', () => {
         fakeBroker()
         const { d } = door()
         const opened = await d.open()
-        expect(opened).toMatchObject({ ok: true, shared: true, name: NAME, address: '127.0.0.1' })
+        expect(opened).toMatchObject({ ok: true, open: true, name: NAME, address: '127.0.0.1' })
         expect(opened.port).toBeGreaterThan(0)
         expect((await get(opened.port, NAME)).status).toBe(200)
         await d.close()
         expect(await refused(opened.port)).toBe('ECONNREFUSED')
-        expect(d.status()).toMatchObject({ shared: false, address: null, port: null })
+        expect(d.status()).toMatchObject({ open: false, address: null, port: null })
     })
     it('serves 421 for a foreign Host and never reaches the app', async () => {
         fakeBroker()
@@ -121,7 +121,7 @@ describe('open and close, no restart', () => {
         fs.rmSync(path.join(dir, 'name.json'))
         const { d } = door()
         expect(await d.open()).toEqual({ ok: false, reason: 'no-name' })
-        expect(d.status().shared).toBe(false)
+        expect(d.status().open).toBe(false)
     })
     it('refuses off the network', async () => {
         const { d } = door({ getAddress: async () => null })
@@ -149,9 +149,9 @@ describe('open and close, no restart', () => {
         await d.open()
         expect(String(seen[0].cert)).toBe('CERT'); expect(String(seen[0].key)).toBe('KEY')
     })
-    it('names the install while private, so the panel can offer Share', () => {
+    it('names the install while private, so the panel can offer the wifi door', () => {
         const { d } = door()
-        expect(d.status()).toMatchObject({ shared: false, name: NAME })
+        expect(d.status()).toMatchObject({ open: false, name: NAME })
     })
 })
 
@@ -161,12 +161,12 @@ describe('guests, always', () => {
         const { d } = door()
         const { port } = await d.open()
         const body = JSON.parse((await get(port, NAME)).body)
-        expect(body).toEqual({ shareDoor: true, owner: false })
+        expect(body).toEqual({ wifiDoor: true, owner: false })
     })
     it('the same address without the mark would have been the owner', () => {
         const req = { socket: { remoteAddress: '127.0.0.1' }, headers: {} }
         expect(localOwner.isOwnerAtTheMachine(req, { isLocal: true })).toBe(true)
-        expect(localOwner.isOwnerAtTheMachine({ ...req, diShareDoor: true }, { isLocal: true })).toBe(false)
+        expect(localOwner.isOwnerAtTheMachine({ ...req, diWifiDoor: true }, { isLocal: true })).toBe(false)
     })
     it('turns guest mode on while open and off again after', async () => {
         fakeBroker()
@@ -178,7 +178,7 @@ describe('guests, always', () => {
     it('does not open when guest mode cannot be turned on', async () => {
         const { d } = door({ setGuests: () => false })
         expect(await d.open()).toEqual({ ok: false, reason: 'no-guest-secrets' })
-        expect(d.status().shared).toBe(false)
+        expect(d.status().open).toBe(false)
     })
 })
 
@@ -207,15 +207,21 @@ describe('the broker record and the beacon', () => {
         vi.stubGlobal('fetch', async () => ({ status: 401 }))
         const { d } = door()
         const opened = await d.open()
-        expect(opened.shared).toBe(true); expect(opened.error).toMatch(/broker did not take.*401/)
+        expect(opened.open).toBe(true); expect(opened.error).toMatch(/broker did not take.*401/)
     })
     it('announces { label, port } and goes silent on close', async () => {
         fakeBroker()
         const { d, beacon } = door()
         const { port } = await d.open()
-        expect(beacon.sent[0]).toEqual({ di: 1, label: 'dob-a3f9', port })
+        expect(beacon.sent[0]).toEqual({ label: 'dob-a3f9', port })
+        const before = beacon.sent.length
         await d.close()
-        expect(beacon.socket.closed).toBe(true)
+        await d.tick()
+        expect(beacon.sent.length).toBe(before)
+    })
+    it('the packet it sends is the shared one: UDP 41767, { v: 1, kind: \'di-name\', label, port }', () => {
+        expect(beaconModule.BEACON_PORT).toBe(41767)
+        expect(JSON.parse(beaconModule.encode({ label: 'dob-a3f9', port: 443 }))).toEqual({ v: 1, kind: 'di-name', label: 'dob-a3f9', port: 443 })
     })
 })
 
@@ -240,7 +246,7 @@ describe('the address watch', () => {
         expect(JSON.parse(calls.at(-1).body).address).toBe('127.0.0.2')
         expect(beacon.sent.at(-1).port).toBe(d.status().port)
     })
-    it('runs on its own interval while shared, and not after close', async () => {
+    it('runs on its own interval while open, and not after close', async () => {
         fakeBroker()
         vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
         try {

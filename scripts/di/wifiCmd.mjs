@@ -1,8 +1,8 @@
 /**
- * `di share`, `di share --stop`, `di share --status` — the install's door on the wifi.
+ * `di wifi`, `di wifi --stop`, `di wifi --status` — the install's door on the wifi.
  *
- * All the doing is in the running server (serverXR/src/shareDoor.js, routes
- * /api/share); this file calls the three routes and says what came back. The
+ * All the doing is in the running server (serverXR/src/wifiDoor.js, routes
+ * /api/wifi-door); this file calls the three routes and says what came back. The
  * server answers the owner only, and the CLI is the owner by being on loopback.
  * Plan: docs/ai/team-sync-by-network-name.md §7.
  */
@@ -28,28 +28,28 @@ const REFUSED = {
     'no-name': 'run di name first — this install has no name yet.',
     'no-network': 'this machine is not on a network.',
     'no-guest-secrets': 'guest mode needs the install’s secrets: di down, then di up once.',
-    'no-port': 'no port is free for the share door.',
+    'no-port': 'no port is free for the wifi door.',
     'owner-only': 'only the person at this machine can do that.'
 }
 
-const sharedLines = async (state) => {
+const openLines = async (state) => {
     const url = `https://${state.name}${state.port === 443 ? '' : `:${state.port}`}/`
     const qr = await terminalQr(url)
     return [
-        `Shared on the wifi as ${state.name}`,
+        `Open on the wifi as ${state.name}`,
         `  address  ${state.address}:${state.port}`,
         `  open     ${url}   (a guest, with the open space — never your spaces)`,
         ...(qr ? ['', qr.trimEnd(), ''] : []),
         `  follow   di follow <space> --from ${state.name.split('.')[0]}`,
         ...(state.error ? [`  note     ${state.error}`] : []),
-        '  stop     di share --stop'
+        '  stop     di wifi --stop'
     ]
 }
 
-/** { code, lines } for one `di share …`; never prints, so a test reads it. */
-export const runShare = async ({ flags = {}, home, base, fetchImpl = fetch }) => {
+/** { code, lines } for one `di wifi …`; never prints, so a test reads it. */
+export const runWifi = async ({ flags = {}, home, base, fetchImpl = fetch }) => {
     if (!readLabel(home)) return { code: 2, lines: ['Run di name first — this install has no name yet.'] }
-    const url = `${base}/api/share`
+    const url = `${base}/api/wifi-door`
     const stop = Boolean(flags.stop)
     const method = stop ? 'DELETE' : (flags.status ? 'GET' : 'POST')
     let response
@@ -59,8 +59,8 @@ export const runShare = async ({ flags = {}, home, base, fetchImpl = fetch }) =>
         return { code: 1, lines: ['This install is not running. Start it with di up.'] }
     }
     const body = await response.json().catch(() => ({}))
-    if (!response.ok) return { code: 1, lines: [`Not shared: ${REFUSED[body.error] || body.message || `the install answered ${response.status}`}`] }
+    if (!response.ok) return { code: 1, lines: [`Not opened: ${REFUSED[body.error] || body.message || `the install answered ${response.status}`}`] }
     if (stop) return { code: 0, lines: ['Private again: the door is closed and the name points at this machine only.'] }
-    if (!body.shared) return { code: 0, lines: ['Private. Not shared on the wifi. Share it with di share.'] }
-    return { code: 0, lines: await sharedLines(body) }
+    if (!body.open) return { code: 0, lines: ['Private. The wifi door is closed. Open it with di wifi.'] }
+    return { code: 0, lines: await openLines(body) }
 }

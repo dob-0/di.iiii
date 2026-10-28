@@ -1,5 +1,5 @@
 /**
- * The share door: one press puts this install on the wifi for guests, one press takes it off.
+ * The wifi door: one press puts this install on the wifi for guests, one press takes it off.
  * Plan: docs/ai/team-sync-by-network-name.md §7, §10, §12.
  *
  * Like the :80 door (localName.js) it is a SECOND listener that hands every
@@ -9,11 +9,11 @@
  * (~/.di/name/cert.pem + key.pem, written by `di name`). It:
  *   - serves only the install's own names, `<name>` and `*.<name>`; any other
  *     Host gets 421 (RFC 9110 §15.5.20), the DNS-rebinding rule of localName.js;
- *   - marks every request `req.diShareDoor`, which makes localOwner.js refuse
+ *   - marks every request `req.diWifiDoor`, which makes localOwner.js refuse
  *     the owner grant even when the packet comes from this machine's own wifi
  *     address, and turns guest mode on while the door is open (setGuests);
  *   - moves the broker record to the LAN address (signed PUT), starts a UDP
- *     beacon `{ di, label, port }` (a hint for other installs, unsigned), and
+ *     beacon (follow/beacon.js: UDP 41767, `{ v: 1, kind: 'di-name', label, port }`, a hint for other installs, unsigned), and
  *     checks the address every 10 s so a DHCP change rebinds and re-points.
  * Close reverses all of it. Nothing is written down: after a restart the install
  * is private again; the name and certificate stay.
@@ -23,8 +23,8 @@ const os = require('node:os')
 const path = require('node:path')
 const https = require('node:https')
 const dgram = require('node:dgram')
+const beaconModule = require('./follow/beacon')
 
-const BEACON_PORT = 47474
 const BEACON_EVERY_MS = 2000
 const WATCH_EVERY_MS = 10 * 1000
 const LOOPBACK_ADDRESS = '127.0.0.1'
@@ -90,7 +90,7 @@ const loadBrokerClient = async () => {
   throw new Error('brokerClient.mjs not found beside this server')
 }
 
-const createShareDoor = ({
+const createWifiDoor = ({
   mainServer,
   ownPort,
   nameDir = nameDirFor(),
@@ -99,19 +99,18 @@ const createShareDoor = ({
   loadBroker = loadBrokerClient,
   ports,
   createServer = (options) => https.createServer(options),
-  createSocket = () => dgram.createSocket('udp4'),
+  announce = beaconModule.announce,
   watchEveryMs = WATCH_EVERY_MS,
   beaconEveryMs = BEACON_EVERY_MS,
-  beaconPort = BEACON_PORT,
   now = () => Date.now(),
   log = () => {}
 } = {}) => {
-  const state = { shared: false, name: null, label: null, address: null, port: null, since: null, error: null, server: null, beacon: null, watch: null, broker: null, fields: null }
+  const state = { open: false, name: null, label: null, address: null, port: null, since: null, error: null, server: null, beacon: null, watch: null, broker: null, fields: null }
   const preferred = ports || [443, Number(ownPort) + 1]
 
   const listenOn = (server, address) => new Promise((resolve, reject) => {
     const tryPort = (index) => {
-      if (index >= preferred.length) return reject(Object.assign(new Error('no free port for the share door'), { code: 'EADDRINUSE' }))
+      if (index >= preferred.length) return reject(Object.assign(new Error('no free port for the wifi door'), { code: 'EADDRINUSE' }))
       const onError = (error) => {
         server.removeListener('listening', onListening)
         if (['EADDRINUSE', 'EACCES'].includes(error.code)) return tryPort(index + 1)
@@ -132,12 +131,12 @@ const createShareDoor = ({
         res.writeHead(421, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' })
         return res.end(`This door answers ${fields.info.name} only.\n`)
       }
-      req.diShareDoor = true
+      req.diWifiDoor = true
       mainServer.emit('request', req, res)
     })
     door.on('upgrade', (req, socket, head) => {
       if (!hostIsOwnName(req.headers.host, fields.info.name)) return socket.destroy()
-      req.diShareDoor = true
+      req.diWifiDoor = true
       mainServer.emit('upgrade', req, socket, head)
     })
     return door
@@ -150,30 +149,26 @@ const createShareDoor = ({
     const result = await broker.putAddress({ brokerUrl: info.brokerUrl, label: info.label, address, key })
     if (!result.ok) {
       state.error = `the name broker did not take the address (${result.status || result.error || 'no answer'})`
-      log(`[share] ${state.error}`)
+      log(`[wifi] ${state.error}`)
     } else if (state.error?.startsWith('the name broker')) state.error = null
     return result
   }
 
+  // The beacon is follow/beacon.js (one port, one payload, shared with the follower's listener).
   const stopBeacon = () => {
-    if (state.beacon) { clearInterval(state.beacon.timer); try { state.beacon.socket.close() } catch { /* closed */ } }
+    if (state.beacon) clearInterval(state.beacon.timer)
     state.beacon = null
   }
   const startBeacon = () => {
     stopBeacon()
     try {
-      const socket = createSocket()
-      socket.on('error', () => {})
-      const send = () => {
-        const message = Buffer.from(JSON.stringify({ di: 1, label: state.label, port: state.port }))
-        try { socket.send(message, 0, message.length, beaconPort, '255.255.255.255') } catch { /* no network this beat */ }
-      }
-      socket.bind(0, () => { try { socket.setBroadcast(true) } catch { /* not allowed here */ } send() })
+      const send = () => { Promise.resolve(announce({ label: state.label, port: state.port })).catch(() => {}) }
+      send()
       const timer = setInterval(send, beaconEveryMs)
       timer.unref?.()
-      state.beacon = { socket, timer }
+      state.beacon = { timer }
     } catch (error) {
-      log(`[share] beacon not started: ${error?.message || error}`)
+      log(`[wifi] beacon not started: ${error?.message || error}`)
     }
   }
 
@@ -187,7 +182,7 @@ const createShareDoor = ({
 
   /** The address changed: rebind the door, move the record, say it in the beacon. */
   const tick = async () => {
-    if (!state.shared) return state
+    if (!state.open) return state
     const address = await getAddress()
     if (!address || address === state.address) return state
     unbind()
@@ -195,26 +190,26 @@ const createShareDoor = ({
       await bind(address)
       await moveRecord(address)
       startBeacon()
-      log(`[share] address is now ${address}:${state.port}`)
+      log(`[wifi] address is now ${address}:${state.port}`)
     } catch (error) {
       state.error = `could not follow the new address ${address}: ${error?.message || error}`
-      log(`[share] ${state.error}`)
+      log(`[wifi] ${state.error}`)
     }
     return state
   }
 
-  // Private, the name is still said: the panel offers Share only to an install that has one.
+  // Private, the name is still said: the panel offers the wifi door only to an install that has one.
   const status = () => ({
-    shared: state.shared,
+    open: state.open,
     name: state.name || readName(nameDir).info?.name || null,
-    address: state.shared ? state.address : null,
-    port: state.shared ? state.port : null,
+    address: state.open ? state.address : null,
+    port: state.open ? state.port : null,
     since: state.since,
     ...(state.error ? { error: state.error } : {})
   })
 
   const open = async () => {
-    if (state.shared) return { ok: true, ...status() }
+    if (state.open) return { ok: true, ...status() }
     const fields = readName(nameDir)
     if (fields.error) return { ok: false, reason: fields.error }
     const address = await getAddress()
@@ -230,32 +225,32 @@ const createShareDoor = ({
       setGuests(false)
       return { ok: false, reason: 'no-port', detail: String(error?.message || error) }
     }
-    state.shared = true
+    state.open = true
     state.since = new Date(now()).toISOString()
     await moveRecord(address)
     startBeacon()
     state.watch = setInterval(() => { tick().catch(() => {}) }, watchEveryMs)
     state.watch.unref?.()
-    log(`[share] open on ${address}:${state.port} as ${state.name}`)
+    log(`[wifi] open on ${address}:${state.port} as ${state.name}`)
     return { ok: true, ...status() }
   }
 
   const close = async () => {
-    if (!state.shared) return { ok: true, ...status() }
+    if (!state.open) return { ok: true, ...status() }
     clearInterval(state.watch)
     state.watch = null
     stopBeacon()
     unbind()
     setGuests(false)
-    state.shared = false
+    state.open = false
     await moveRecord(LOOPBACK_ADDRESS)
     const done = status()
-    log('[share] closed')
+    log('[wifi] closed')
     state.since = null
-    return { ok: true, ...done, shared: false }
+    return { ok: true, ...done, open: false }
   }
 
   return { open, close, status, tick }
 }
 
-module.exports = { BEACON_PORT, createShareDoor, loadBrokerClient, defaultRouteAddress, hostIsOwnName, nameDirFor, readName }
+module.exports = { createWifiDoor, loadBrokerClient, defaultRouteAddress, hostIsOwnName, nameDirFor, readName }

@@ -90,14 +90,14 @@
     border-bottom-color: var(--di-cyan);
 }
 
-/* The Share button inside the panel: the same square door, set apart a line below the text. */
-.lh-share-press {
+/* The wifi door button inside the panel: the same square door, set apart a line below the text. */
+.lh-wifi-press {
     margin-top: var(--di-space-3);
     padding: var(--di-space-1) var(--di-space-2);
     border: 1px solid var(--di-cyan-border);
 }
 
-.lh-share-press:disabled {
+.lh-wifi-press:disabled {
     opacity: 0.5;
     cursor: default;
 }

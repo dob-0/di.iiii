@@ -5,9 +5,9 @@ import SpaceHub from '../studio/components/SpaceHub.jsx'
 import JoinMachine from '../sync/JoinMachine.jsx'
 import StudioThemeProvider from '../studio/StudioThemeProvider.jsx'
 import { listServerSpaces } from '../services/serverSpaces.js'
-import SharePanel from './SharePanel.jsx'
+import WifiPanel from './WifiPanel.jsx'
 
-// `#join` opens the Share panel straight away, so the address can
+// `#join` opens the Wifi panel straight away, so the address can
 // be handed to a screen (di-show http://diiii.localhost/#join) or a wiki link.
 const JOIN_HASH = '#join'
 
@@ -61,7 +61,7 @@ export default function LocalHome() {
                         aria-controls="lh-guest"
                         onClick={() => setJoinOpen((open) => !open)}
                     >
-                        Share
+                        Wifi
                     </button>
                     <a href="/tools">Tools</a>
                     <a href="/studio">Studio</a>
@@ -79,7 +79,7 @@ export default function LocalHome() {
             )}
             {joinOpen && (
                 <div id="lh-guest">
-                    <SharePanel onClose={() => setJoinOpen(false)} />
+                    <WifiPanel onClose={() => setJoinOpen(false)} />
                 </div>
             )}
             <SpaceHub />

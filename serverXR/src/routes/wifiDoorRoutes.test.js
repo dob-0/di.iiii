@@ -1,39 +1,39 @@
 // @vitest-environment node
-// /api/share is the owner's: the person at the machine, by a local name — never a share-door request.
+// /api/wifi-door is the owner's: the person at the machine, by a local name — never a wifi-door request.
 import { describe, expect, it } from 'vitest'
 import express from 'express'
 import http from 'node:http'
 
-import { registerShareDoorRoutes, isOwnerRequest } from './shareDoorRoutes.js'
+import { registerWifiDoorRoutes, isOwnerRequest } from './wifiDoorRoutes.js'
 
 const fakeDoor = () => {
-    const door = { shared: false, calls: [] }
+    const door = { isOpen: false, calls: [] }
     return Object.assign(door, {
-        open: async () => { door.calls.push('open'); if (door.refuse) return { ok: false, reason: door.refuse }; door.shared = true; return { ok: true } },
-        close: async () => { door.calls.push('close'); door.shared = false; return { ok: true } },
-        status: () => ({ shared: door.shared, name: 'n.z', address: null, port: null, since: null })
+        open: async () => { door.calls.push('open'); if (door.refuse) return { ok: false, reason: door.refuse }; door.isOpen = true; return { ok: true } },
+        close: async () => { door.calls.push('close'); door.isOpen = false; return { ok: true } },
+        status: () => ({ open: door.isOpen, name: 'n.z', address: null, port: null, since: null })
     })
 }
 const run = async (door, isOwner, method, headers = {}) => {
-    const app = express(); const router = express.Router(); registerShareDoorRoutes(router, { door, isOwner }); app.use(router)
+    const app = express(); const router = express.Router(); registerWifiDoorRoutes(router, { door, isOwner }); app.use(router)
     const server = http.createServer(app); await new Promise((r) => server.listen(0, '127.0.0.1', r))
     try {
         return await new Promise((resolve, reject) => {
-            const req = http.request({ host: '127.0.0.1', port: server.address().port, path: '/api/share', method, headers }, (res) => {
+            const req = http.request({ host: '127.0.0.1', port: server.address().port, path: '/api/wifi-door', method, headers }, (res) => {
                 let b = ''; res.on('data', (c) => { b += c }); res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(b || '{}') }))
             }); req.on('error', reject); req.end()
         })
     } finally { server.close() }
 }
 
-describe('/api/share', () => {
+describe('/api/wifi-door', () => {
     it('GET answers the state to the owner', async () => {
-        expect((await run(fakeDoor(), () => true, 'GET')).body).toMatchObject({ shared: false, name: 'n.z' })
+        expect((await run(fakeDoor(), () => true, 'GET')).body).toMatchObject({ open: false, name: 'n.z' })
     })
     it('POST opens, DELETE closes', async () => {
         const door = fakeDoor()
-        expect((await run(door, () => true, 'POST')).body.shared).toBe(true)
-        expect((await run(door, () => true, 'DELETE')).body.shared).toBe(false)
+        expect((await run(door, () => true, 'POST')).body.open).toBe(true)
+        expect((await run(door, () => true, 'DELETE')).body.open).toBe(false)
         expect(door.calls).toEqual(['open', 'close'])
     })
     it('a refusal is a 409 with the reason', async () => {
@@ -55,6 +55,6 @@ describe('who is the owner here', () => {
     it('127.0.0.1 with its own origin: yes', () => expect(isOwnerRequest(req({ host: '127.0.0.1:4000', origin: 'http://diiii.localhost' }), owner)).toBe(true))
     it('a foreign Host (DNS rebinding): no', () => expect(isOwnerRequest(req({ host: 'evil.example' }), owner)).toBe(false))
     it('a foreign Origin: no', () => expect(isOwnerRequest(req({ host: 'diiii.localhost', origin: 'https://evil.example' }), owner)).toBe(false))
-    it('through the share door: no', () => expect(isOwnerRequest(req({ host: 'diiii.localhost' }, { diShareDoor: true }), owner)).toBe(false))
+    it('through the wifi door: no', () => expect(isOwnerRequest(req({ host: 'diiii.localhost' }, { diWifiDoor: true }), owner)).toBe(false))
     it('not at the machine: no', () => expect(isOwnerRequest(req({ host: 'diiii.localhost' }), () => false)).toBe(false))
 })

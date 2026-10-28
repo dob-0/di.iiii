@@ -572,7 +572,7 @@ export const ui = {
         '                  localhost, .local, LAN and Tailscale addresses needs no flag)',
         '',
         style.dim(`  ${CMD} follows          what this install is following`),
-        style.dim(`  ${CMD} share            open this install to the wifi for guests (--stop closes, --status asks)`),
+        style.dim(`  ${CMD} wifi             open this install to the wifi for guests (--stop closes, --status asks)`),
         style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`),
         style.dim(`  ${CMD} post draft|show|send|channels   share a post to Telegram, Bluesky, Mastodon`),
     ].join('\n'),

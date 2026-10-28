@@ -2,7 +2,7 @@
  * The install's signed calls to the name broker (docs/ai/team-sync-by-network-name.md §5, §7).
  *
  * One module for the signing, used by the CLI (`di name`) and by the server's
- * share door (serverXR/src/shareDoor.js loads it with import()). Minimal on
+ * wifi door (serverXR/src/wifiDoor.js loads it with import()). Minimal on
  * purpose: sign a request, move the label's address.
  *
  * The signature is Ed25519 (RFC 8032) over
