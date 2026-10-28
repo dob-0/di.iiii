@@ -303,6 +303,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-01'
     },
     {
+        id: 'follow-by-name',
+        category: 'Spaces & access',
+        title: 'Follow by name',
+        summary: 'Follow a space from another install by its name, like ponyo-k7q2, with no address to type. It works on one wifi even with the internet cut.',
+        body: [
+            'THE NAME. Each install has a name — a label like ponyo-k7q2 (see di status). Type the label, nothing else: di follow show --from ponyo-k7q2 --key dii_sync_… The command finds the other install itself.',
+            'HOW IT FINDS IT. First it listens for two seconds for the other install announcing itself on this wifi (the other install has to be sharing: di share). If nothing is heard it asks the name\'s address in DNS, and last it tries the address that worked the time before. di follows shows which one found it: the beacon, DNS or its last address.',
+            'WHY IT IS SAFE. An announcement is only a hint. Every request goes to the address it found but still asks for the name ponyo-k7q2, and checks the certificate for that name; a machine that is not that install cannot show it, so it is refused.',
+            'WHEN THE OTHER INSTALL MOVES. If it gets a new address (a new wifi, a new router lease) the follow looks for it again by itself and goes on from where it was. Nothing to retype.',
+            'Joining with four words accepts the name in place of the address too. Following from far away, across the internet, still goes through the dev server, or an address you give with --at.'
+        ],
+        tags: ['follow', 'name', 'label', 'share', 'wifi', 'offline', 'beacon', 'sync', 'install'],
+        updated: '2026-10-28'
+    },
+    {
         id: 'install-network-name',
         category: 'Spaces & access',
         title: 'Your install\'s network name',

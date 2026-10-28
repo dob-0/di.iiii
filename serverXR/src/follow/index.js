@@ -9,7 +9,9 @@
  */
 
 const { startFollowing, side } = require('./follower')
-const { readFollows, readFollowState, writeFollowState, clearDirection } = require('./followStore')
+const { readFollows, readFollowState, writeFollowState, clearDirection, noteRoute } = require('./followStore')
+const { httpRequest } = require('../httpClient')
+const { createReresolver, baseOf } = require('./nameResolver')
 
 const running = new Map()
 // The direction each running follower was started with. A new one in
@@ -80,7 +82,21 @@ const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null,
         const local = side({ base: selfBase(port, basePath, tlsName), spaceId, token: selfToken, servername: tlsName })
         // entry.address is the ADDRESS PIN written by `di follow --at` — the
         // name in entry.remote keeps doing its job, the socket goes here.
-        const remote = side({ base: entry.remote, spaceId: entry.spaceId || spaceId, token: entry.token, address: entry.address || null })
+        // A followed NAME (`di follow … --from ponyo-k7q2`): the pin is not stored but
+        // found — first from the last address that worked, and again whenever a
+        // request gets no answer (beacon, DNS, last address; nameResolver.js).
+        const remote = side({ base: entry.remote, spaceId: entry.spaceId || spaceId, token: entry.token, address: entry.address || entry.name?.lastAddress || null })
+        if (entry.name?.label) {
+            remote.reresolve = createReresolver({
+                name: entry.name,
+                remote,
+                // The probe is the pin itself: the name for Host, SNI and the certificate.
+                probe: async ({ address, port }) => {
+                    try { return (await httpRequest(`${baseOf(entry.name.label, entry.name.zone, port)}${new URL(entry.remote).pathname.replace(/\/$/, '')}/api/health`, { timeoutMs: 4000, address })).ok } catch { return false }
+                },
+                onRoute: (found) => noteRoute(dataDir, spaceId, found)
+            })
+        }
         // The space has to exist here or every write lands on nothing. `di
         // follow` makes it when the install is running, but a follow written
         // while it was down — or restored from a backup onto a fresh machine —
