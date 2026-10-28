@@ -5,9 +5,12 @@ import { computeOutput as colourCombine } from './colour.combine/runtime.js'
 import { computeOutput as colourRamp } from './colour.ramp/runtime.js'
 import { computeOutput as colourSplit } from './colour.split/runtime.js'
 import { computeOutput as deviceKeyboard } from './device.keyboard/runtime.js'
+import { computeOutput as deviceDmxIn } from './device.dmx.in/runtime.js'
 import { computeOutput as deviceVisitor } from './device.visitor/runtime.js'
 import { computeOutput as deviceTilt } from './device.tilt/runtime.js'
 import { computeOutput as deviceDmxOut } from './device.dmx.out/runtime.js'
+import { computeOutput as deviceOscIn } from './device.osc.in/runtime.js'
+import { computeOutput as deviceOscOut } from './device.osc.out/runtime.js'
 import { computeOutput as deviceLaserOut } from './device.laser.out/runtime.js'
 import { computeOutput as streamRecorder } from './stream.recorder/runtime.js'
 import { computeOutput as streamStill } from './stream.still/runtime.js'
@@ -83,9 +86,12 @@ export const NODE_RUNTIMES = new Map([
     ['colour.ramp', colourRamp],
     ['colour.split', colourSplit],
     ['device.keyboard', deviceKeyboard],
+    ['device.dmx.in', deviceDmxIn],
     ['device.visitor', deviceVisitor],
     ['device.tilt', deviceTilt],
     ['device.dmx.out', deviceDmxOut],
+    ['device.osc.in', deviceOscIn],
+    ['device.osc.out', deviceOscOut],
     ['device.laser.out', deviceLaserOut],
     ['laser.shape', laserShape],
     ['laser.trace', laserTrace],

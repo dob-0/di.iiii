@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { getSharedLightingMirror } from '../rigMirror/useLightingMirror.js'
-import { TYPE_LIBRARY } from './types/index.js'
+import { useProjectLibrary } from './types/projectTypes.js'
 import { libraryWithShow } from './rental.js'
 import { blendEntities, flashEntities, lookIdOfDesk, lookPoses, posedEntities, rigLooksOf, washLevelOf, withLookWash, withWashLevel } from './looks.js'
 import { clockFadeOf, showDriver, showOf, showStateAt } from './showClock.js'
@@ -74,9 +74,13 @@ export const fadeProgress = (fade, now = Date.now()) => {
     return Math.min(1, Math.max(0, (now - fade.firedAt) / fade.fadeMs))
 }
 
-export function useRigLookEntities(document, { explicit, mirror, laserShowStore, library: baseLibrary = TYPE_LIBRARY, now: clockNow = () => Date.now() } = {}) {
+// `library` absent: the project's own types alone, loaded on demand (types/projectTypes.js) — a viewer never
+// downloads the whole fixture library for a room that hangs three kinds of lamp.
+export function useRigLookEntities(document, { explicit, mirror, laserShowStore, library: givenLibrary = null, now: clockNow = () => Date.now() } = {}) {
     const list = document?.entities
     const entities = useMemo(() => list || [], [list])
+    const projectLibrary = useProjectLibrary(givenLibrary ? null : list || null)
+    const baseLibrary = givenLibrary || projectLibrary
     const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
     const looks = useMemo(() => rigLooksOf(entities), [entities])
     const store = mirror || getSharedLightingMirror()
@@ -106,13 +110,18 @@ export function useRigLookEntities(document, { explicit, mirror, laserShowStore,
 
     const mapping = document?.mappingState
     const show = useMemo(() => (looks ? showOf({ mappingState: mapping }) : null), [looks, mapping])
-    const driver = showDriver({ explicit, deskChecked, deskPresent, show })
+    // The project's lamp types are on their way (types/projectTypes.js): nothing is posed or driven from a library that
+    // lacks them. The room is the document as it is until they are in; 'pending' is the driver's own word for "not yet".
+    const typesPending = !givenLibrary && Boolean(projectLibrary.pending)
+    const driver = typesPending ? 'pending' : showDriver({ explicit, deskChecked, deskPresent, show })
     const clock = useShowClockState(show, driver === 'clock')
 
-    const lookId = explicit !== undefined
-        ? explicit
-        : driver === 'desk' ? deskLook
-            : driver === 'clock' && clock.state ? clock.state.lookId : NONE
+    const lookId = typesPending
+        ? NONE
+        : explicit !== undefined
+            ? explicit
+            : driver === 'desk' ? deskLook
+                : driver === 'clock' && clock.state ? clock.state.lookId : NONE
     const fade = explicit !== undefined
         ? null
         : driver === 'desk'

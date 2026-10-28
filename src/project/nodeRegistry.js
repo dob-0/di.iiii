@@ -92,6 +92,7 @@ export const FAMILY_BY_TYPE = {
     'device.midi.in': 'bring-in',
     'device.mesh.in': 'bring-in',
     'device.osc.in': 'bring-in',
+    'device.dmx.in': 'bring-in',
     'source.ar': 'bring-in',
     'source.insta360': 'bring-in',
     'source.stereo': 'bring-in',
@@ -721,23 +722,39 @@ export const NODE_TYPES = {
         id: 'device.osc.in',
         label: 'OSC In',
         category: 'device',
+        // The page cannot open a UDP socket: it asks this machine's di.iiii,
+        // which listens for it (serverXR/src/osc, /osc/api/in). A hosted page
+        // has no such server, and Status says so.
         runtime: 'local',
-        authoringOnly: true,
         singleton: false,
+        keywords: ['osc', 'open sound control', 'udp', 'network', 'receive', 'touchdesigner', 'resolume', 'qlab', 'cardinal', 'vcv', 'console', 'show control'],
         inputs: [],
         outputs: [
             { id: 'address', type: 'string', label: 'Address' },
+            // The first argument of the latest matching message: a number, a
+            // word, true/false. What OSC calls an int and a float both arrive
+            // here as a number.
             { id: 'value',   type: 'any',    label: 'Value'   },
+            // A rising count of matching messages, the MIDI In idiom: a
+            // consumer sees a message because the number changed.
             { id: 'signal',  type: 'signal', label: 'Signal'  },
+            { id: 'status',  type: 'string', label: 'Status'  },
         ],
+        // Port and Filter are config, not ports: a wire repointing the
+        // listener mid-graph would open and close sockets at frame rate.
         defaultValues: {
-            hostHint: 'windows',
             port: 8000,
+            pattern: '',
         },
         configInputs: [
             { id: 'port', type: 'number', label: 'Listen Port' },
+            { id: 'pattern', type: 'string', label: 'Address Filter' },
         ],
-        render: 'hidden',
+        // panel-2d for the capture-family reason: "no local bridge", "port
+        // taken" and "nothing heard yet" are normal states that each need
+        // somewhere to be said.
+        render: 'panel-2d',
+        defaultFrame: { width: 340, height: 300 },
     },
 
     'device.osc.out': {
@@ -745,26 +762,39 @@ export const NODE_TYPES = {
         label: 'OSC Out',
         category: 'device',
         runtime: 'local',
-        authoringOnly: true,
         singleton: false,
+        keywords: ['osc', 'open sound control', 'udp', 'network', 'send', 'touchdesigner', 'resolume', 'qlab', 'cardinal', 'vcv', 'console', 'show control'],
         inputs: [
             { id: 'address', type: 'string', label: 'Address', default: '/control' },
+            // A number, a word, true/false, or a list (each item one argument).
             { id: 'value',   type: 'any',    label: 'Value'                        },
-            { id: 'trigger', type: 'signal', label: 'Trigger'                      },
+            // `any`, the MIDI Out idiom: a Button, a Compare, a Toggle send the
+            // message again; MIDI In's or OSC In's rising count re-sends.
+            { id: 'trigger', type: 'any',    label: 'Trigger'                      },
         ],
         outputs: [
             { id: 'status', type: 'string', label: 'Status' },
         ],
         defaultValues: {
-            hostHint: 'windows',
             targetHost: '127.0.0.1',
             targetPort: 9000,
+            numbers: 'float',
         },
         configInputs: [
             { id: 'targetHost', type: 'string', label: 'Target Host' },
             { id: 'targetPort', type: 'number', label: 'Target Port' },
+            {
+                id: 'numbers',
+                type: 'string',
+                label: 'Numbers As',
+                options: [
+                    { value: 'float', label: 'Float (32-bit)' },
+                    { value: 'int',   label: 'Whole number (int32)' },
+                ],
+            },
         ],
-        render: 'hidden',
+        render: 'panel-2d',
+        defaultFrame: { width: 340, height: 300 },
     },
 
     'device.midi.in': {
@@ -800,6 +830,32 @@ export const NODE_TYPES = {
         // last-message line below the fold. Matches the keeper's width so the
         // header fits on one line.
         defaultFrame: { width: 380, height: 340 },
+    },
+
+    'device.dmx.in': {
+        id: 'device.dmx.in',
+        label: 'DMX In',
+        category: 'device',
+        // Read from this di.iiii's lighting desk, which receives Art-Net and
+        // sACN from a console (serverXR/src/lighting/dmxin.js); the page asks
+        // it at /light/api/input/levels. Same reach as DMX Out.
+        runtime: 'web',
+        singleton: false,
+        keywords: ['dmx', 'artnet', 'art-net', 'sacn', 'e1.31', 'console', 'desk', 'lighting desk', 'input', 'receive', 'fader', 'light', 'lights'],
+        inputs: [
+            // Universe 1 is the desk's U1 (Art-Net 0:0:0, sACN universe 1).
+            { id: 'universe', type: 'number', label: 'Universe', default: 1 },
+            { id: 'channel',  type: 'number', label: 'Channel',  default: 1 },
+        ],
+        outputs: [
+            // 0..1, the LFO/Range convention DMX Out takes back. On loss of
+            // signal it holds the last value it read; Status says so.
+            { id: 'value',  type: 'number', label: 'Value'  },
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        defaultValues: {},
+        render: 'panel-2d',
+        defaultFrame: { width: 320, height: 260 },
     },
 
     'device.mesh.in': {
@@ -3514,12 +3570,11 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
     'source.insta360',
     'source.stereo',
     'source.realsense.d405',
-    // devices — no OSC client (UDP, needs the local bridge).
-    // device.midi.in came off this list on 2026-08-08, device.midi.out on
-    // 2026-08-21: Web MIDI is real in the page in BOTH directions now.
+    // devices — device.midi.in came off this list on 2026-08-08, device.midi.out
+    // on 2026-08-21 (Web MIDI), device.osc.in and device.osc.out on 2026-10-21
+    // (UDP through this machine's di.iiii, serverXR/src/osc). The PTZ camera
+    // still has no video path behind its Frame.
     'device.ptz.osc',
-    'device.osc.in',
-    'device.osc.out',
     // streaming — no compositor, no transport
     'stream.compositor',
     'stream.switcher',
