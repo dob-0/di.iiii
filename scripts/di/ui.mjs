@@ -114,6 +114,9 @@ export const followKeyLines = (spaceId, entry, key, now = Date.now()) => {
     return [style.yellow(`key: ${key.scope || 'edit'} key ${days === 0 ? 'expires today' : `expires in ${days} ${days === 1 ? 'day' : 'days'}`} — ask the host's owner for a new one, then: ${CMD} follow ${spaceId} --from ${from} --key - --into ${spaceId}`)]
 }
 
+/** The route that found a named install, in words. */
+const routeWords = (route) => ({ beacon: 'the beacon on this wifi', dns: 'DNS', last: 'its last address', typed: '--at' }[route] || 'a stored route')
+
 export const ui = {
     phonesLine,
     oneAddressWhy,
@@ -245,6 +248,12 @@ export const ui = {
     // changes two things here — the "how do I fix this" hint on an ordinary
     // unreachable, and a whole different sentence when the pinned address DID
     // answer but under the wrong certificate.
+    // A bare label that no route could find (beacon, DNS, last address).
+    nameNotFound: (label, zone, tried = []) => [
+        `could not find ${label} — nothing on this wifi announced it, ${label}.${zone} does not point at a shared install, and no earlier address worked${tried.length ? ` (tried: ${tried.join(', ')})` : ''}.`,
+        style.dim(`on their machine: ${CMD} share  # opens the wifi door and announces the name; then try again within a minute`)
+    ].join('\n'),
+
     followRefused: (reason, where, at = null) => {
         if (reason === 'cert-mismatch') return `something answers at ${at}, but not as ${where} — wrong machine.`
         const message = {
@@ -277,9 +286,10 @@ export const ui = {
 
     badAddress: (value) => `${value} is not an address — --at wants an IPv4 or IPv6 literal, like --at 100.87.4.12`,
 
-    following: (spaceId, remote, running, at = null) => [
+    following: (spaceId, remote, running, at = null, name = null) => [
         `following ${style.cyan(spaceId)} on ${remote.replace(/\/serverXR$/, '')}.`,
-        at ? style.dim(`the name stays — the socket goes to ${at}.`) : null,
+        name ? style.dim(`found ${name.label} by ${routeWords(name.route)}${name.lastAddress ? ` at ${name.lastAddress}` : ''}; the name ${name.label}.${name.zone} is checked on every request.`) : null,
+        !name && at ? style.dim(`the name stays — the socket goes to ${at}.`) : null,
         style.dim('edits travel both ways — the space and every project in it. your copy stays on your disk.'),
         // Said plainly rather than discovered. Files named by a PROJECT are
         // carried (serverXR/src/follow/assets.js); files placed straight into
@@ -303,7 +313,7 @@ export const ui = {
         return [...head, ...ids.map((id) => {
             const entry = follows[id]
             const state = byId.get(id)
-            const where = String(entry.remote || '').replace(/\/serverXR$/, '')
+            const where = entry.name ? `${entry.name.label} ${style.dim(`(${routeWords(entry.name.route)}${entry.name.lastAddress ? ` · ${entry.name.lastAddress}` : ''})`)}` : String(entry.remote || '').replace(/\/serverXR$/, '')
             if (!state && elsewhere) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim(`(carried by ${by})`)}`
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
             // The key's scope (SPEC_space_sync_keys.md §13): manage carries this

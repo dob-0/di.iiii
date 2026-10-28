@@ -19,6 +19,7 @@ import { isIP } from 'node:net'
 import { addFollow, FollowsCorruptError, inspectFollows, readFollows } from './follows.mjs'
 import { paths } from './paths.mjs'
 import { apiBase, alive, readEnv } from './state.mjs'
+import { isLabelInput, resolveName, baseOf, zoneFrom, DEFAULT_ZONE } from './nameResolve.mjs'
 import { checkFollowable, createLocalSpace, instanceOf, localSpaceExists, resolveBase } from './share.mjs'
 
 /**
@@ -86,7 +87,35 @@ export const localSpaceOnDisk = async (home, spaceId) => {
  * cert-mismatch, missing, denied, local-space, itself, merge, no-from, and
  * remote-differs (which also carries `stored` and `base`, the two remotes).
  */
-export const followSpace = async ({ home, spaceId, from = null, key = null, into = null, address = null, port, insecure = false, direction = null, start = null }) => {
+/**
+ * This install's own name file (`<home>/name/name.json`, `{ label, zone, name }`,
+ * left by `di name`): the zone every install of the team shares. Absent or
+ * unreadable is "no opinion", never an error.
+ */
+export const readOwnName = (home) => {
+    try { return JSON.parse(fs.readFileSync(path.join(home, 'name', 'name.json'), 'utf8')) } catch { return null }
+}
+
+/**
+ * A bare label (`ponyo-k7q2`) is a network name: find the install by beacon, DNS or its
+ * last address (docs/ai/team-sync-by-network-name.md §8) and probe it under the name.
+ * @returns {Promise<{ok: true, base, address, name} | {ok: false, reason: 'name-not-found', label, tried}>}
+ */
+export const findByName = async ({ home, label, stored = null, env = process.env, resolve = resolveName, probe = null }) => {
+    const zone = zoneFrom({ env, own: readOwnName(home) })
+    const last = stored?.name?.label === label && stored.name.lastAddress
+        ? { address: stored.name.lastAddress, port: stored.name.lastPort || 443 }
+        : null
+    const asked = probe || (async ({ address, port }) => Boolean((await resolveBase(baseOf(label, zone, port), { address })).base))
+    const found = await resolve({ label, zone, last, probe: asked })
+    if (!found.ok) return { ok: false, reason: 'name-not-found', label, zone, tried: found.tried }
+    return {
+        ok: true, base: found.base, address: found.address,
+        name: { label, zone, route: found.route, lastAddress: found.address, lastPort: found.port }
+    }
+}
+
+export const followSpace = async ({ home, spaceId, from = null, key = null, into = null, address = null, port, insecure = false, direction = null, start = null, env = process.env, find = findByName }) => {
     if (direction && direction !== 'take-host' && direction !== 'take-mine') return { ok: false, reason: 'direction' }
     if (inspectFollows(paths(home).data).state === 'corrupt') return { ok: false, reason: 'corrupt' }
 
@@ -97,9 +126,24 @@ export const followSpace = async ({ home, spaceId, from = null, key = null, into
     const stored = readFollows(paths(home).data)[spaceId] ?? null
     if (!from) {
         if (!direction || !stored?.remote) return { ok: false, reason: 'no-from' }
-        from = stored.remote
+        // A named follow asks again by its name: its address may have moved.
+        from = stored.name?.label || stored.remote
         address = address || stored.address || null
         into = into || spaceId
+    }
+    // A bare label: find the install (beacon, DNS, last address) and keep its name
+    // for Host, SNI and the certificate check. The address is the pin of THIS run;
+    // it is not stored (the server re-resolves, so a changed address needs no edit).
+    let named = null
+    if (from && isLabelInput(from)) {
+        const found = address
+            // `--at` typed: the person already says where; the name is still checked.
+            ? { ok: true, base: baseOf(String(from).trim(), zoneFrom({ env, own: readOwnName(home) })), address, name: { label: String(from).trim(), zone: zoneFrom({ env, own: readOwnName(home) }), route: 'typed', lastAddress: address, lastPort: 443 } }
+            : await find({ home, label: String(from).trim(), stored, env })
+        if (!found.ok) return { ok: false, reason: found.reason, label: found.label, zone: found.zone, tried: found.tried }
+        from = found.base
+        address = found.address
+        named = found.name
     }
     // Refuse before touching anything: a key must not travel in clear to a public
     // host, and a follows.json that does not parse must not be written over.
@@ -118,7 +162,8 @@ export const followSpace = async ({ home, spaceId, from = null, key = null, into
     let label = null
     let keptKey = false
     if (!key && stored?.token) {
-        if (stored.remote !== base) return { ok: false, reason: 'remote-differs', stored: stored.remote, base }
+        const sameName = named && stored.name?.label === named.label
+        if (stored.remote !== base && !sameName) return { ok: false, reason: 'remote-differs', stored: stored.remote, base }
         key = stored.token
         label = stored.label ?? null
         keptKey = true
@@ -164,10 +209,10 @@ export const followSpace = async ({ home, spaceId, from = null, key = null, into
     const hadFile = Object.keys(all).length > 0
 
     try {
-        await addFollow(paths(home).data, spaceId, { remote: base, token: key, label, address, direction, start })
+        await addFollow(paths(home).data, spaceId, { remote: base, token: key, label, address: named ? null : address, name: named, direction, start })
     } catch (error) {
         if (error instanceof FollowsCorruptError) return { ok: false, reason: 'corrupt' }
         throw error
     }
-    return { ok: true, base, running, address: address || null, previous, hadFile, keptKey }
+    return { ok: true, base, running, address: address || null, name: named, previous, hadFile, keptKey }
 }
