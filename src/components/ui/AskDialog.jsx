@@ -11,8 +11,13 @@ import './ui.css'
 
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
 
-export default function AskDialog({
-    open,
+// Mounted only while open, so every question starts fresh: the field shows its
+// own defaultValue, never text typed into an earlier question.
+export default function AskDialog({ open, ...props }) {
+    return open ? <AskBox {...props} /> : null
+}
+
+function AskBox({
     title,
     body = '',
     confirmLabel = 'Yes',
@@ -30,16 +35,14 @@ export default function AskDialog({
     const [value, setValue] = useState(input?.defaultValue ?? '')
 
     useEffect(() => {
-        if (!open) return undefined
         const before = document.activeElement
         // Safe default: a danger question starts on the "no" button.
         const first = input ? inputRef.current : (danger ? cancelRef.current : confirmRef.current)
         first?.focus()
         return () => { if (before && before.isConnected) before.focus?.() }
-    }, [open, danger, input])
+    }, [danger, input])
 
     useEffect(() => {
-        if (!open) return undefined
         const onKeyDown = (event) => {
             if (event.key === 'Escape') {
                 event.preventDefault()
@@ -66,9 +69,7 @@ export default function AskDialog({
         }
         window.addEventListener('keydown', onKeyDown, true)
         return () => window.removeEventListener('keydown', onKeyDown, true)
-    }, [open, onCancel])
-
-    if (!open) return null
+    }, [onCancel])
 
     const submit = (event) => {
         event?.preventDefault()
