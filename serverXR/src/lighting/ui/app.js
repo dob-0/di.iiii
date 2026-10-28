@@ -1355,12 +1355,12 @@ async function patchProfile(profile, { universe, address, x, y, count = 1 }) {
   pullState();
 }
 
-// Unpatch whatever is selected. Removing several at once is worth a confirmation —
-// with everything selected by default, a stray Delete would otherwise take the whole rig.
+// Unpatch whatever is selected. One or many asks first: the desk server has no undo, so a stray Delete
+// (everything is selected by default) would be lost for good.
 async function unpatchSelection() {
   const ids = [...sel];
   if (!ids.length) { $('#patchHint').textContent = 'nothing selected'; return; }
-  if (ids.length > 1 && !(await window.deskAsk.ask(`Unpatch ${ids.length} fixtures? This cannot be undone.`, 'Unpatch'))) return;
+  if (!(await window.deskAsk.ask(`Unpatch ${ids.length === 1 ? 'this fixture' : ids.length + ' fixtures'}? This cannot be undone.`, 'Unpatch'))) return;
   // one request, not one per fixture — a burst of them races the server's debounced save
   const r = await post('api/fixtures/remove', { ids });
   const removed = r.removed != null ? r.removed : ids.length;
@@ -6309,7 +6309,7 @@ $('#inDetails').addEventListener('toggle', () => { if ($('#inDetails').open) pul
 // form body for wifi/set and node/set. Facts come from GET status on the same one-second
 // tick as the Input panel (Setup only, tab visible); there is no timer of its own.
 // api-contract.json `node_routes` lists every path here; lint:api-contract holds it.
-const ND = { st: null, manifest: null, peers: null, nets: null, scanPending: false, armed: null, tick: 0, manifestAsked: false };
+const ND = { st: null, manifest: null, peers: null, nets: null, scanPending: false, tick: 0, manifestAsked: false };
 async function nodeGet(path) {
   const r = await fetch(path, { cache: 'no-store' });
   if (!r.ok) throw new Error(path + ' answered ' + r.status);
@@ -6339,30 +6339,12 @@ async function nodeDo(path, what, args, form) {
   pullNode(true);
   return r;
 }
-// Two presses for anything that restarts the node, erases it, or narrows where light goes.
-function nodeArm(btn, armedText, fire) {
-  const step = window.deskCaps.confirmStep(ND.armed, btn.id, Date.now());
-  ND.armed = step.armed;
-  paintArmed();
-  if (step.fire) { fire(); return; }
-  btn.dataset.armedText = armedText;
-  paintArmed();
-}
-function paintArmed() {
-  const live = window.deskCaps.stillArmed(ND.armed, Date.now()) ? ND.armed.key : null;
-  if (!live) ND.armed = null;
-  $$('#ndDetails .sq[data-label]').forEach((b) => {
-    const on = b.id === live;
-    b.classList.toggle('armed', on);
-    b.textContent = on ? b.dataset.armedText : b.dataset.label;
-  });
+// Anything that restarts the node, erases it, or narrows where light goes asks through the desk's one
+// helper (deskAsk, ui/ask.js), the same bar as every other destructive step.
+async function nodeAsk(message, okLabel, fire) {
+  if (await window.deskAsk.ask(message, okLabel)) fire();
 }
 $$('#ndDetails .sq').forEach((b) => { b.dataset.label = b.textContent; });
-// Any other press inside the fold disarms (capture phase: it runs before the button's own handler).
-$('#ndDetails').addEventListener('click', (e) => {
-  const b = e.target.closest('button');
-  if (ND.armed && (!b || b.id !== ND.armed.key)) { ND.armed = null; paintArmed(); }
-}, true);
 
 async function pullNode(force) {
   if (!cap('node') || document.hidden || page !== 'setup') return;
@@ -6394,7 +6376,6 @@ function paintNode() {
   const f = ND.st ? D.nodeFacts(ND.st, ND.manifest) : null;
   $('#ndSummary').textContent = f ? D.nodeSummary(f) : 'not reached: no answer from status';
   $('#ndLamp').className = 'inlamp' + (!f ? ' error' : f.live.artnet || f.live.sacn || f.live.usb ? ' live' : '');
-  paintArmed();
   if (!f) return;
   $('#ndAddr').innerHTML = [
     `access point <b>${esc(f.apIp || 'off')}</b>${f.apName ? ' · ' + esc(f.apName) : ''}${f.apClients !== null ? ' · ' + f.apClients + ' connected' : ''}`,
@@ -6422,7 +6403,7 @@ function paintNode() {
   }
   const burn = $('#ndBurn');
   burn.dataset.label = f.burnSafe ? 'Burn-safe is ON' : 'Burn-safe is OFF';
-  if (!burn.classList.contains('armed')) burn.textContent = burn.dataset.label;
+  burn.textContent = burn.dataset.label;
   burn.classList.toggle('on', !!f.burnSafe);
   $('#ndBurnNums').textContent = `ceiling ${nd(f.ceiling)} of 255 · slew ${nd(f.slew)} per frame`;
   $('#ndPeerCount').textContent = ND.peers ? peers.length + (peers.length === 1 ? ' peer' : ' peers') : (f.peerCount !== null ? f.peerCount + ' peers' : '');
@@ -6435,7 +6416,7 @@ function paintNode() {
 $('#ndDetails').addEventListener('toggle', () => { if ($('#ndDetails').open) pullNode(true); });
 $('#ndNetModeSet').addEventListener('click', (e) => {
   const m = +$('#ndNetMode').value;
-  nodeArm(e.currentTarget, 'Restart as ' + window.deskCaps.NET_MODES[m] + '?', () => nodeDo('netmode/set', 'Wi-Fi mode set: the node restarts', { m }));
+  nodeAsk('Restart the node as ' + window.deskCaps.NET_MODES[m] + '? It drops off the network for a moment.', 'Restart', () => nodeDo('netmode/set', 'Wi-Fi mode set: the node restarts', { m }));
 });
 $('#ndScan').addEventListener('click', () => { ND.scanPending = true; $('#ndScanNote').textContent = 'scanning…'; pullScan(); });
 $('#ndNets').addEventListener('click', (e) => {
@@ -6451,7 +6432,7 @@ $('#ndJoin').addEventListener('click', async () => {
   const r = await nodeDo('wifi/set', 'Joining ' + ssid + ': the address shows here when it is joined', { ssid, pass }, true);
   if (!r.error) $('#ndPass').value = '';
 });
-$('#ndForget').addEventListener('click', (e) => nodeArm(e.currentTarget, 'Forget the saved network?', () => nodeDo('wifi/forget', 'Saved Wi-Fi network forgotten')));
+$('#ndForget').addEventListener('click', (e) => nodeAsk('Forget the saved Wi-Fi network? The node will need it set again.', 'Forget', () => nodeDo('wifi/forget', 'Saved Wi-Fi network forgotten')));
 $('#ndMode').addEventListener('change', (e) => nodeDo('mode/set', 'Source: ' + window.deskCaps.SOURCE_MODES[+e.target.value], { m: +e.target.value }));
 $('#ndFallback').addEventListener('change', (e) => nodeDo('mode/fallback', 'Fallback to web ' + (e.target.checked ? 'on' : 'off'), { en: e.target.checked ? 1 : 0 }));
 $('#ndArtSet').addEventListener('click', () => {
@@ -6463,7 +6444,7 @@ $('#ndArtSet').addEventListener('click', () => {
 $('#ndPeerSet').addEventListener('click', (e) => {
   const ip = $('#ndPeerTarget').value;
   if (!ip) { nodeDo('artout/peer', 'Art-Net out: every node (broadcast)', { ip: '' }); return; }
-  nodeArm(e.currentTarget, 'Send only to ' + ip + '?', () => nodeDo('artout/peer', 'Art-Net out: only ' + ip, { ip }));
+  nodeAsk('Send Art-Net only to ' + ip + '? Every other node stops receiving it.', 'Send only there', () => nodeDo('artout/peer', 'Art-Net out: only ' + ip, { ip }));
 });
 $('#ndBurn').addEventListener('click', () => {
   const f = ND.st ? window.deskCaps.nodeFacts(ND.st) : null;
@@ -6486,8 +6467,8 @@ $('#ndNameSet').addEventListener('click', () => {
   if (apPass) args.ap_pass = apPass;
   nodeDo('node/set', 'Saved: ' + name, args, true).then((r) => { if (!r.error) $('#ndApPass').value = ''; });
 });
-$('#ndReboot').addEventListener('click', (e) => nodeArm(e.currentTarget, 'Restart now?', () => nodeDo('reboot', 'Restarting: this page reconnects when the node is back')));
-$('#ndFactory').addEventListener('click', (e) => nodeArm(e.currentTarget, 'Erase everything? Press again', () => nodeDo('factory-reset', 'Factory reset: every setting erased, the node restarts')));
+$('#ndReboot').addEventListener('click', () => nodeAsk('Restart the node now? This page reconnects when it is back.', 'Restart', () => nodeDo('reboot', 'Restarting: this page reconnects when the node is back')));
+$('#ndFactory').addEventListener('click', () => nodeAsk('Erase every setting on this node and restart it? This cannot be undone.', 'Erase everything', () => nodeDo('factory-reset', 'Factory reset: every setting erased, the node restarts')));
 
 setInterval(() => { pullInput(); pullNode(); }, 1000);
 

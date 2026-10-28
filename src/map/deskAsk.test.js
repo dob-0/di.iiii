@@ -99,8 +99,25 @@ describe('the desk has one confirm path', () => {
         expect(code.match(/(^|[^.\w])confirm\(/g)).toBeNull()
         expect(code).not.toMatch(/armThen|Sure\?/)
     })
+    it('the node panel has no second, two-press path: nodeArm, paintArmed and the armed state are gone', () => {
+        expect(code).not.toMatch(/nodeArm|paintArmed|ND\.armed|confirmStep|stillArmed/)
+    })
+    it('every node step that restarts, erases or narrows goes through nodeAsk, which calls deskAsk', () => {
+        expect(code).toMatch(/async function nodeAsk\([^)]*\) \{\s*if \(await window\.deskAsk\.ask\(/)
+        for (const id of ['ndNetModeSet', 'ndForget', 'ndPeerSet', 'ndReboot', 'ndFactory']) {
+            const at = code.indexOf(`$('#${id}')`)
+            expect(at, id).toBeGreaterThan(0)
+            expect(code.slice(at, at + 400), id).toMatch(/nodeAsk\(/)
+        }
+        expect((code.match(/nodeAsk\(/g) || []).length).toBe(6)    // its definition + the five buttons
+    })
+    it('unpatching one fixture asks too (the desk server has no undo)', () => {
+        const at = code.indexOf('async function unpatchSelection')
+        expect(code.slice(at, at + 600)).toMatch(/if \(!\(await window\.deskAsk\.ask\(/)
+        expect(code.slice(at, at + 600)).not.toMatch(/ids\.length > 1 &&/)
+    })
     it('every destructive step asks through deskAsk, and the page loads ask.js before app.js', () => {
-        expect((code.match(/deskAsk\.ask\(/g) || []).length).toBe(7)  // unpatch, release others, set all, clear MIDI map, whiteout, delete set, and askThen's own
+        expect((code.match(/deskAsk\.ask\(/g) || []).length).toBe(8)  // unpatch, release others, set all, clear MIDI map, whiteout, delete set, askThen's own, nodeAsk's own
         expect((code.match(/askThen\(/g) || []).length).toBe(7)       // its definition + scene overwrite/delete (detail and popover), layer, look
         const html = ui('index.html')
         expect(html.indexOf('src="ask.js"')).toBeGreaterThan(0)
