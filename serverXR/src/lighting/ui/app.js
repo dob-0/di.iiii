@@ -2171,10 +2171,10 @@ function buildSceneDetail() {
   $('#sdGo').addEventListener('click', () => post('api/scenes/recall', { id: sc.id }).then(pullState));
   // Both of these destroy a saved look with one click and no undo, so both ask first, through
   // deskAsk: a bar, not a native confirm() (which froze the poll, the stage repaint and the panic key).
-  $('#sdRestage').addEventListener('click', (e) => askThen('Overwrite this scene with the current look?', 'Overwrite', () => {
+  $('#sdRestage').addEventListener('click', (e) => askThen(`Overwrite the scene "${sc.name}" with the current look?`, 'Overwrite', () => {
     post('api/scenes/update', { id: sc.id, restage: true }).then(pullState);
   }));
-  $('#sdDel').addEventListener('click', (e) => askThen('Delete this scene? This cannot be undone.', 'Delete', () => {
+  $('#sdDel').addEventListener('click', (e) => askThen(`Delete the scene "${sc.name}"? This cannot be undone.`, 'Delete', () => {
     activeScene = null;
     post('api/scenes/remove', { id: sc.id }).then(pullState);
   }));
@@ -2759,7 +2759,7 @@ $('#miRestage').addEventListener('click', () => {
   // Read the scene NOW: the press on the ask bar is outside the popover and closes it.
   const sc = popScene();
   if (!sc) { closeBindPop(); return; }
-  askThen('Replace this scene with the current look?', 'Replace', () => {
+  askThen(`Replace the scene "${sc.name}" with the current look?`, 'Replace', () => {
   const who = sc.name;
   post('api/scenes/update', { id: sc.id, restage: true }).then((r) => {
     if (r && r.error) say(`overwrite did not reach the desk — ${r.error}`, true);
@@ -2773,7 +2773,7 @@ $('#miDelete').addEventListener('click', () => {
   // Read the scene NOW: the press on the ask bar is outside the popover and closes it.
   const sc = popScene();
   if (!sc) { closeBindPop(); return; }
-  askThen('Delete this scene? This cannot be undone.', 'Delete', () => {
+  askThen(`Delete the scene "${sc.name}"? This cannot be undone.`, 'Delete', () => {
   const who = sc.name, id = sc.id;
   post('api/scenes/remove', { id }).then((r) => {
     if (r && r.error) { say(`delete did not reach the desk — ${r.error}`, true); pullState(); return; }
