@@ -1,0 +1,14 @@
+{
+  "name": "di-name-broker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Gives each di install its network name <label>.<zone>; a Cloudflare Worker.",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "test": "cd ../.. && npx vitest run services/name-broker"
+  },
+  "devDependencies": {
+    "wrangler": "4.154.0"
+  }
+}
