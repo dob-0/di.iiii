@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import RawViewport, { renderNodeBody } from './RawViewport.jsx'
+import { loadLampType } from '../../project/nodes/light.lamp/lampType.js'
 
 vi.mock('@react-three/fiber', () => ({
     Canvas: ({ children }) => <div data-testid="mock-canvas">{children}</div>,
@@ -483,7 +484,11 @@ describe('the Lamp (light.lamp)', () => {
         expect(props.fitted).toBe(false)
     })
 
-    it("a typed lamp draws its type's beam, dimmed by Dimmer", () => {
+    it("a typed lamp draws its type's beam, dimmed by Dimmer (once the type's file is in)", async () => {
+        const untyped = drawn({ type: 'up-b380f', dimmer: 0.5 }) // the file is not in yet: drawn as untyped
+        expect(untyped.fitted).toBe(false)
+        await loadLampType('up-b380f')
+        cleanup()
         const props = drawn({ type: 'up-b380f', dimmer: 0.5 })
         expect(props.intensity).toBe(3)
         expect(props.angle).toBeCloseTo(0.9 * Math.PI / 180, 10)

@@ -2,14 +2,14 @@ import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { cwd } from 'node:process'
 import jsQR from 'jsqr'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { NODE_RUNTIMES } from './index.js'
 import { changeTimes, worstFlashesPerSecond } from './flashRule.js'
 import { encodeQr, rasterQr } from './view.qrcode/qrCode.js'
 import { createEdge, createNode, getNodeType, isNodeTypeImplemented } from '../nodeRegistry.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeOutput } from '../graph/nodeGraphRuntime.js'
 import { lampDmx } from '../../shared/lampDmx.js'
-import { lampModeOf, lampTypeOf } from './light.lamp/lampType.js'
+import { lampModeOf, lampTypeOf, loadLampType } from './light.lamp/lampType.js'
 
 // Vitest roots at src/ but node resolves from the repo — try both, the same
 // dance nodeRegistry.test.js does for its own source scan.
@@ -1351,6 +1351,8 @@ describe('number → vector, converted at the link', () => {
 })
 
 describe('light.lamp — a stage lamp: patch and DMX', () => {
+    beforeAll(() => Promise.all(['up-pl5403', 'up-b380f', 'up-250bsw'].map(loadLampType)))
+
     it('bare, it has no type: it sends nothing and says so', () => {
         const doc = { nodes: [node('l', 'light.lamp')], edges: [] }
         expect(evalPort(doc, 'l', 'dmx')).toBeNull()

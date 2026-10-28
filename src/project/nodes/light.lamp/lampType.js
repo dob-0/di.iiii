@@ -7,11 +7,44 @@
 //
 // Pure on purpose — no three, no React — so the picture can be tested without a WebGL context.
 
-// The per-type files, not the whole-library file (dev's guard, projectTypes.test.js "who may import the whole
-// library": the Studio's tool surfaces only). Eager, because the Lamp's runtime reads its type synchronously.
-const TYPE_FILES = import.meta.glob(['../../../rigbuild/types/library/*.json', '!../../../rigbuild/types/library/index.json', '!../../../rigbuild/types/library/all.json'], { eager: true, import: 'default' })
-const TYPE_LIBRARY = { types: Object.values(TYPE_FILES) }
+// The per-type files, loaded on demand: one chunk per type, so a Raw room carries only the types its lamps name
+// (owner 2026-10-13, #1047) and not the whole fixture library. Not the whole-library file either (dev's guard,
+// projectTypes.test.js "who may import the whole library": the Studio's tool surfaces only).
+const LOADERS = import.meta.glob(['../../../rigbuild/types/library/*.json', '!../../../rigbuild/types/library/index.json', '!../../../rigbuild/types/library/all.json'], { import: 'default' })
+const loaderOf = (id) => LOADERS[`../../../rigbuild/types/library/${id}.json`]
 import { modeOf, typeById } from '../../../rigbuild/fixtureTypes.js'
+
+const loaded = new Map() // id -> type, once its file is in
+const loading = new Map() // id -> promise, one request per type
+const listeners = new Set()
+
+const idOf = (id) => (typeof id === 'string' ? id.trim() : '')
+
+/** Is `id` a type the library has a file for (loaded or not)? */
+export const lampTypeKnown = (id) => Boolean(loaderOf(idOf(id)))
+
+/** Load a type's file once; resolves to the type, or null for an id the library has no file for. */
+export const loadLampType = (id) => {
+    const want = idOf(id)
+    if (loaded.has(want)) return Promise.resolve(loaded.get(want))
+    const load = loaderOf(want)
+    if (!load) return Promise.resolve(null)
+    if (!loading.has(want)) {
+        loading.set(want, load().then((type) => {
+            loaded.set(want, type)
+            listeners.forEach((fn) => fn(want))
+            return type
+        }).catch((error) => {
+            loading.delete(want) // a failed load may be tried again
+            console.error('[lampType] a fixture type did not load', want, error)
+            return null
+        }))
+    }
+    return loading.get(want)
+}
+
+/** Call `fn(id)` whenever a type's file arrives; returns the unsubscribe. */
+export const onLampTypeLoaded = (fn) => { listeners.add(fn); return () => listeners.delete(fn) }
 
 // A Lamp with no type: a moving head's range, 540° pan and 270° tilt (what the library's moving heads publish:
 // up-b380f and up-250bsw, pan_tilt_deg), a 25° beam that Zoom opens from 10° to 50°, and a 0.3 m body.
@@ -26,11 +59,15 @@ const finite = (value, fallback) => (Number.isFinite(Number(value)) && value !==
 const unit = (value, fallback) => Math.max(0, Math.min(1, finite(value, fallback)))
 const DEG = Math.PI / 180
 
-export const lampTypes = () => TYPE_LIBRARY.types
+/** The types loaded so far (not the whole library: that is what lazy means). */
+export const lampTypes = () => [...loaded.values()]
 
+/** The type if its file is in; null for none, unknown, or not yet loaded (it starts loading: see onLampTypeLoaded). */
 export const lampTypeOf = (id) => {
-    const want = typeof id === 'string' ? id.trim() : ''
-    return want ? typeById(TYPE_LIBRARY, want) : null
+    const want = idOf(id)
+    if (!want) return null
+    if (!loaded.has(want)) { loadLampType(want); return null }
+    return typeById([loaded.get(want)], want)
 }
 
 // The mode asked for, else the type's default, else its first.

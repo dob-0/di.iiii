@@ -12,7 +12,7 @@ import ModelObject from '../../objectComponents/ModelObject.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
 import AudioObject from '../../objectComponents/AudioObject.jsx'
 import SpotLightObject from '../../objectComponents/SpotLightObject.jsx'
-import { lampModeOf, lampPicture, lampTypeOf } from '../../project/nodes/light.lamp/lampType.js'
+import { lampModeOf, lampPicture, lampTypeOf, loadLampType } from '../../project/nodes/light.lamp/lampType.js'
 import { beamStopUserData } from '../utils/beamStops.js'
 import { detectModelFormatFromMeta } from '../../utils/modelFormats.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
@@ -345,6 +345,46 @@ function GeoFootprint() {
     )
 }
 
+// A stage lamp's body. Its type's file loads on demand (lampType.js), so the body re-renders when it arrives;
+// until then it draws as an untyped lamp, as before a type is named.
+function LampBody({ values }) {
+    const [, setLoaded] = useState(0)
+    useEffect(() => {
+        const want = typeof values.type === 'string' ? values.type.trim() : ''
+        if (!want) return undefined
+        let live = true
+        loadLampType(want).then(() => { if (live) setLoaded((n) => n + 1) })
+        return () => { live = false }
+    }, [values.type])
+    const type = lampTypeOf(values.type)
+    const look = lampPicture(type, lampModeOf(type, values.mode), values)
+    const [w, d, h] = look.size
+    return (
+        <group rotation={[0, look.pan, 0]}>
+            <group rotation={[look.tilt, 0, 0]}>
+                <mesh position={[0, h / 2 - 0.02, 0]}>
+                    <boxGeometry args={[w, h, d]} />
+                    <meshStandardMaterial color="#2b2b30" roughness={0.6} metalness={0.3} />
+                </mesh>
+                <mesh position={[0, -0.015, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                    <circleGeometry args={[Math.min(w, d) * 0.35, 24]} />
+                    <meshBasicMaterial color={look.color} side={2} />
+                </mesh>
+                <group position={[0, -0.03, 0]}>
+                    <SpotLightObject
+                        color={look.color}
+                        intensity={look.intensity}
+                        angle={look.angle}
+                        penumbra={0.2}
+                        beam={{ visible: true }}
+                        fitted={look.fitted}
+                    />
+                </group>
+            </group>
+        </group>
+    )
+}
+
 export function renderNodeBody(node, values, assetMap = null) {
     switch (node.typeId) {
         case 'geom.model': {
@@ -592,33 +632,7 @@ export function renderNodeBody(node, values, assetMap = null) {
             // Pan about Y and Tilt about X, and Studio's own spot with a beam
             // in the air (SpotLightObject) — whose reach probe stops the beam
             // at the first surface it meets. No second beam is drawn here.
-            const type = lampTypeOf(values.type)
-            const look = lampPicture(type, lampModeOf(type, values.mode), values)
-            const [w, d, h] = look.size
-            return (
-                <group rotation={[0, look.pan, 0]}>
-                    <group rotation={[look.tilt, 0, 0]}>
-                        <mesh position={[0, h / 2 - 0.02, 0]}>
-                            <boxGeometry args={[w, h, d]} />
-                            <meshStandardMaterial color="#2b2b30" roughness={0.6} metalness={0.3} />
-                        </mesh>
-                        <mesh position={[0, -0.015, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                            <circleGeometry args={[Math.min(w, d) * 0.35, 24]} />
-                            <meshBasicMaterial color={look.color} side={2} />
-                        </mesh>
-                        <group position={[0, -0.03, 0]}>
-                            <SpotLightObject
-                                color={look.color}
-                                intensity={look.intensity}
-                                angle={look.angle}
-                                penumbra={0.2}
-                                beam={{ visible: true }}
-                                fitted={look.fitted}
-                            />
-                        </group>
-                    </group>
-                </group>
-            )
+            return <LampBody values={values} />
         }
         case 'world.camera': {
             // The eye you can pick up: a small housing with a lens cone aimed
