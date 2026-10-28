@@ -78,6 +78,12 @@ cp "$src/serverXR/package.json" "$src/serverXR/package-lock.json" "$rel.tmp/app/
 cp -R "$src/serverXR/src" "$src/serverXR/public" "$rel.tmp/app/"
 cp "$src/scripts/space-bundle.mjs" "$src/scripts/project-move.mjs" "$rel.tmp/app/scripts/"
 cp -R "$src/shared" "$rel.tmp/shared"
+# as serverXR/Dockerfile lines 41-51: the one context's public bundle and the wiki's articles, at the same
+# relative places (app/src is serverXR/src, so ../../docs/ai/public and ../../src/wiki resolve from the release root).
+# Without them an install built this way answered 404 for /llms.txt and /ai/context (dev, 2026-10-28, ledger N1409).
+mkdir -p "$rel.tmp/docs/ai" "$rel.tmp/src/wiki"
+cp -R "$src/docs/ai/public" "$rel.tmp/docs/ai/public"
+cp "$src/src/wiki/wikiContent.js" "$rel.tmp/src/wiki/wikiContent.js"
 printf '{"deployEnv":"%s","sourceRef":"%s","gitCommit":"%s","releaseId":"%s","generatedAt":"%s"}\n' \
   standby "$sha" "$sha" "$sha" "$(date -u +%FT%TZ)" > "$rel.tmp/app/release.json"
 
