@@ -459,11 +459,12 @@ export default function StudioShell({
             if (e.key === 'Escape') {
                 if (quickInsert) setQuickInsert(null)
                 setShowHelp(false)
-                if (!quickInsert && !transformOp && selectedEntityIds.length === 0) {
+                // One thing per press: an Esc that closed Quick Insert or the help closes no window as well.
+                if (!quickInsert && !showHelp && !transformOp && selectedEntityIds.length === 0) {
                     // The window the focus is in; with the focus on the page or the scene, the window opened last (the top one).
                     let panel = e.target?.closest?.('.sfp-shell')
                     if (!panel) {
-                        const doc = e.target?.ownerDocument || document
+                        const doc = e.target?.ownerDocument || window.document
                         const keys = [...openRef.current].reverse()
                         for (const k of keys) {
                             const candidate = doc.querySelector(`.sfp-shell[data-window-key="${k}"]`)
@@ -569,7 +570,7 @@ export default function StudioShell({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode, entities])
+    }, [quickInsert, showHelp, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode, entities])
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return

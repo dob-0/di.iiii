@@ -6,7 +6,7 @@ import { ALL_TOOLS_KEY, saveAllTools } from '../utils/jamMode.js'
 const WORKSPACE_KEY = 'dii.studio.workspace.v1'
 
 vi.mock('./StudioViewportLayout.jsx', () => ({
-    default: ({ shared }) => <output data-testid="gizmo-axis" data-edit-mode={shared.editMode}>{shared.gizmoAxis || 'all'}</output>
+    default: ({ shared }) => <output data-testid="gizmo-axis" data-edit-mode={shared.editMode} data-help={shared.showHelp ? 'open' : 'closed'}>{shared.gizmoAxis || 'all'}</output>
 }))
 vi.mock('./StudioFloatingPanel.jsx', () => ({ default: ({ title, onClose, windowKey, children }) => <div className="sfp-shell" data-window-key={windowKey} data-panel={title} data-closable={onClose ? 'yes' : 'no'}>{onClose && <button className="sfp-close" onClick={onClose}>x</button>}{children}</div> }))
 vi.mock('./StudioControlCluster.jsx', () => ({
@@ -482,5 +482,19 @@ describe('StudioShell keyboard: Tab, letter keys, Esc', () => {
         expect(shells().sort()).toEqual(['scene', 'world'])
         fireEvent.keyDown(document.body, { key: 'Escape' })
         expect(shells()).toEqual(['scene'])
+    })
+
+    it('Esc with the help open closes only the help; the windows stay (one thing per press)', () => {
+        window.localStorage.setItem(WORKSPACE_KEY, JSON.stringify({ open: ['scene', 'world', 'projects'] }))
+        renderShell()
+        const shells = () => [...document.querySelectorAll('.sfp-shell[data-window-key]')].map((el) => el.dataset.windowKey)
+        const help = () => screen.getByTestId('gizmo-axis').dataset.help
+        fireEvent.keyDown(document.body, { key: '?' })
+        expect(help()).toBe('open')
+        fireEvent.keyDown(document.body, { key: 'Escape' })
+        expect(help()).toBe('closed')
+        expect(shells().sort()).toEqual(['projects', 'scene', 'world'])
+        fireEvent.keyDown(document.body, { key: 'Escape' })
+        expect(shells().sort()).toEqual(['scene', 'world'])
     })
 })
