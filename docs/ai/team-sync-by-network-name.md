@@ -11,7 +11,7 @@ an **install** is one machine's di, a **space** is yours inside it, a **place** 
 and I have diiii.localhost, my version … diiii.<my ip> … Ponyo installs the same … and if needed she can send
 the same with ip and there will be synced."* His two decisions:
 1. **Any machine can be the hub.** People follow each other's di by a network name; no dev server in the room.
-2. **Private until SHARE, then instant.** The name and certificate are prepared while private; SHARE only opens the door.
+2. **Private until the wifi door opens, then instant.** The name and certificate are prepared while private; opening the door only opens the door.
 
 Unchanged: your own address is `http://diiii.localhost/` on every machine (VERIFIED, PR #893: `di status` leads
 with it; the certificate's name is one line `phones and headsets: …`, `scripts/di/ui.mjs` `phonesLine`).
@@ -32,7 +32,7 @@ with it; the certificate's name is one line `phones and headsets: …`, `scripts
 - The door on :80 serves one exact name and answers 421 to any other Host — the DNS-rebinding guard
   (VERIFIED, `serverXR/src/localName.js`). The rig beacon is UDP broadcast, HMAC-signed with a rig secret
   (VERIFIED, `serverXR/src/rig/discovery.js`). `avahi-publish` gives `di.local` (VERIFIED, `name.mjs`).
-- There is no `di share` command (VERIFIED, `cli.mjs` command table).
+- There is no `di wifi` command (VERIFIED, `cli.mjs` command table).
 
 ## 3. Research (read 2026-10-14)
 
@@ -66,11 +66,11 @@ with it; the certificate's name is one line `phones and headsets: …`, `scripts
 
 **A. Per-install record through a broker (recommended first, PROPOSAL).** The broker writes one A record per
 install in the Cloudflare zone, TTL 60. While private it points at `127.0.0.1` (a record that exists avoids a
-cached "no such name" delaying SHARE); on SHARE it moves to the LAN address. Uses only Cloudflare's DNS; no new
-server. Cost: one API write per SHARE and per address change.
+cached "no such name" delaying the door); when the door opens it moves to the LAN address. Uses only Cloudflare's DNS; no new
+server. Cost: one API write per door opening and per address change.
 
 **B. Stateless address-in-name (later, Q3, PROPOSAL).** Delegate `<zone>` (NS) to an sslip.io-style server
-on the VPS; `192-168-15-53.ponyo-k7q2.<zone>` answers itself, nothing is ever written, SHARE needs no DNS write
+on the VPS; `192-168-15-53.ponyo-k7q2.<zone>` answers itself, nothing is ever written, opening the door needs no DNS write
 at all. Cost: running authoritative DNS (port 53, two servers for redundancy). The QR would use this form.
 
 **C. No DNS at all, between installs on one wifi (PROPOSAL, §8).** The beacon says "ponyo-k7q2 is at
@@ -93,28 +93,28 @@ scope to a zone, not a subdomain — a reason for Q1). Flow, Tailscale-style:
 Files: the install's name certificate lives in `~/.di/name/` — **not** `~/.di/tls/`, so aylmo's
 `local.thedi.studio` certificate is never touched (VERIFIED: `~/.di/tls/` is what `di up` serves today, `paths.mjs`).
 
-## 7. SHARE — one command, one button, instant (PROPOSAL)
+## 7. THE WIFI DOOR — one command, one button, instant (BUILT 2026-10-28, PR 3: `serverXR/src/wifiDoor.js`, `routes/wifiDoorRoutes.js`, `scripts/di/wifiCmd.mjs`, `src/landing/WifiPanel.jsx`; not yet run on a real phone or a real certificate)
 
 **Prepared ahead, while private** (at `di login` or the first `di up` after it): claim the label, get the
 certificate, record at 127.0.0.1. Nothing listens on the wifi. `di status` says the name is ready.
-**SHARE** (`di share`, or the **Share** button on the local home top bar; the existing Phones & headsets door
-`/#join` becomes the Share panel):
-1. the server opens a **share door**: a listener on the LAN address, port 443 (else the install's port), added at
+**WIFI** (`di wifi`, or the **Wifi** button on the local home top bar; the existing Phones & headsets door
+`/#join` becomes the Wifi panel):
+1. the server opens a **wifi door**: a listener on the LAN address, port 443 (else the install's port), added at
    runtime like the :80 door — no restart (today `--lan` needs one);
 2. the door serves only the install's own names (421 otherwise, the `localName.js` rule) and **always** as
    `--guests`: a visitor is a guest with a sandbox and the open space, never the owner's estate;
 3. the broker moves the record to the LAN address (or nothing, under §5 B); the beacon starts announcing;
 4. the panel shows the QR of `https://ponyo-k7q2.<zone>/` and the line for di people:
    `di follow <space> --from ponyo-k7q2` (+ `--key`, from `di invite`, which stays per space).
-**Unshare** (`di share --stop`, same button): door closed, record back to 127.0.0.1, beacon silent.
-After a restart the install is private again, like `--lan` today; SHARE is pressed again (the name and certificate are kept).
+**Close door** (`di wifi --stop`, same button): door closed, record back to 127.0.0.1, beacon silent.
+After a restart the install is private again, like `--lan` today; the Wifi button is pressed again (the name and certificate are kept).
 The name certificate's CN is the plain name, so `guest-address` reads one address from it (VERIFIED rule: CN first).
 
 ## 8. `di follow --from <name>`, peer to peer (PROPOSAL)
 
 `di follow show --from ponyo-k7q2 --key dii_sync_…` resolves the address in this order, and keeps the name for
 Host, SNI and the certificate check every time (the address pin, VERIFIED):
-1. **the beacon** on this wifi: a new unsigned `share` announcement `{label, port}`; an announcement is only a
+1. **the beacon** on this wifi: a new unsigned `di-name` announcement `{label, port}`; an announcement is only a
    hint — trust comes from the certificate, which a liar cannot present;
 2. **DNS** of the network name (§5 A/B);
 3. **the last address that worked** (stored with the follow).
@@ -127,22 +127,22 @@ install is both. Across the internet: out of scope — the dev tier, or Tailscal
 
 ```
 http://diiii.localhost/  — di.iiii running                         (unchanged first line, #893)
-private · name ready: ponyo-k7q2 (certificate until 2027-01-12) · di share to open it
+private · name ready: ponyo-k7q2 (certificate until 2027-01-12) · di wifi to open it
 ```
-Shared:
+Open:
 ```
 http://diiii.localhost/  — di.iiii running
-shared on this wifi (192.168.15.53) · phones and headsets: https://ponyo-k7q2.l.thedi.studio/
+open on this wifi (192.168.15.53) · phones and headsets: https://ponyo-k7q2.l.thedi.studio/
 following: show ← dob-a3f9 (this wifi) · 2 follow you
 ```
 One line when something is wrong, naming the fix: `name not ready: broker unreachable — retry at next di up`,
-`the router hides ponyo-k7q2 from phones — see di share --router`.
+`the router hides ponyo-k7q2 from phones — see di wifi --router`.
 
 ## 10. Address changes and renewals (PROPOSAL)
 
-- **DHCP:** while shared the server checks its addresses every 10 s; on change the door rebinds, the broker
+- **DHCP:** while open the server checks its addresses every 10 s; on change the door rebinds, the broker
   moves the record (TTL 60), the beacon says the new address. Followers find it by beacon within seconds.
-- **Several interfaces** (wifi + cable + Tailscale): the default-route interface; `di share --on <address>` picks.
+- **Several interfaces** (wifi + cable + Tailscale): the default-route interface; `di wifi --on <address>` picks.
 - **Renewal:** LE certificates last 90 days; renew at 30 days left, at `di up` and daily while running. A failed
   renewal never touches `http://diiii.localhost/`; `di status` says the date. LE has announced shorter lifetimes
   (**unverified** schedule) — the daily check covers that.
@@ -158,7 +158,7 @@ OpenWrt default and FRITZ!Box). Installs are unaffected (they use the beacon, §
 uci add_list dhcp.@dnsmasq[0].rebind_domain='l.thedi.studio'; uci commit dhcp; /etc/init.d/dnsmasq restart
 ```
 (Forum posts also show the `/l.thedi.studio/` form; **unverified on dob-0** which one its dnsmasq takes — test both.)
-`di share --router` prints this line and the FRITZ!Box path. Offline places: the router answers itself
+`di wifi --router` prints this line and the FRITZ!Box path. Offline places: the router answers itself
 (`address=/ponyo-k7q2.l.thedi.studio/192.168.15.53`, `one-local-address.md` §5 b).
 
 ## 12. Security
@@ -166,14 +166,14 @@ uci add_list dhcp.@dnsmasq[0].rebind_domain='l.thedi.studio'; uci commit dhcp; /
 - Private key per install, made locally, never shared (atlas decision: a shared key is dangerous once a name
   points at a reachable address). The Cloudflare token lives only in the Worker.
 - Names only point at private or loopback addresses; a label belongs to one install key.
-- The share door: own names only (421), guests always, owner rights only on loopback / `diiii.localhost`.
-- Following needs a per-space sync key (VERIFIED: editor, one space, revocable). SHARE hands out no keys.
+- The wifi door: own names only (421), guests always, owner rights only on loopback / `diiii.localhost`.
+- Following needs a per-space sync key (VERIFIED: editor, one space, revocable). the wifi door hands out no keys.
 - Certificate Transparency publishes every label (VERIFIED for Tailscale, same for any public CA): `<who>`
   must be a handle, never a full name. The wildcard hides the addresses.
 
 ## 13. Costs
 
-Cloudflare DNS and Workers free tier: 0 € (one SHARE ≈ 3 Worker requests). Let's Encrypt: 0 €. KV free tier: 0 €.
+Cloudflare DNS and Workers free tier: 0 € (one door opening ≈ 3 Worker requests). Let's Encrypt: 0 €. KV free tier: 0 €.
 A separate domain (Q1): one yearly registration (**unverified** price, typically ~10–20 €). §5 B adds a DNS
 server on the existing VPS: 0 € but an always-on service to watch. Build: five PRs below.
 
@@ -183,9 +183,9 @@ server on the existing VPS: 0 € but an always-on service to watch. Build: five
 | --- | --- | --- |
 | 1 | **Name broker** (Worker + tests against a fake Cloudflare API; claim, TXT, address, limits, revoke). | A deploy line to run with his token; `curl` health. No change on installs. |
 | 2 | **`di name`**: claim after `di login`, ACME DNS-01 through the broker, `~/.di/name/`, renewal. | `di status`: `private · name ready: dob-a3f9 (certificate until …)`. |
-| 3 | **`di share` + Share button**: runtime share door, guests forced, record move, QR on the panel, wiki entry; verified on a real phone. | Press Share → phone scans → padlock, camera, WebXR. |
-| 4 | **Follow by name**: `--from <label>`, share beacon, last-address memory; two machines with the internet cut. | `di follow show --from ponyo-k7q2` works on the same wifi, offline. |
-| 5 | **Router help and IP changes**: `di share --router`, address watcher, `di status` lines; (optional) §5 B DNS. | A DHCP change mid-session heals itself; phones blocked by the router get the one line. |
+| 3 | **`di wifi` + Wifi button**: runtime wifi door, guests forced, record move, QR on the panel, wiki entry; verified on a real phone. | Press Wifi → phone scans → padlock, camera, WebXR. |
+| 4 | **Follow by name**: `--from <label>`, beacon, last-address memory; two machines with the internet cut. | `di follow show --from ponyo-k7q2` works on the same wifi, offline. |
+| 5 | **Router help and IP changes**: `di wifi --router`, address watcher, `di status` lines; (optional) §5 B DNS. | A DHCP change mid-session heals itself; phones blocked by the router get the one line. |
 
 ## 15. Questions only the owner can answer
 
@@ -194,4 +194,4 @@ server on the existing VPS: 0 € but an always-on service to watch. Build: five
 2. **Label:** `<who>-<4 chars>` from the `di login` handle, or fully random? **Recommend the handle form** —
    people say "follow ponyo", and CT logs see only a handle.
 3. **Stateless DNS (§5 B):** run our own nameserver for the address-in-name form, or stay on broker records?
-   **Recommend broker records now**, nameserver only if SHARE delays or Cloudflare writes become a problem.
+   **Recommend broker records now**, nameserver only if opening the door is delayed or Cloudflare writes become a problem.
