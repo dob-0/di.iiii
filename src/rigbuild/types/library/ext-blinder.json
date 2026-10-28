@@ -1,0 +1,215 @@
+{
+  "id": "ext-blinder",
+  "code": "EXT-BLINDER",
+  "identified": "EQUIVALENT",
+  "identifiedNote": "NOT FOUND — not on the rental house's list (a line from another supplier); a planning type modelled on an EQUIVALENT",
+  "maker": null,
+  "model": null,
+  "modelledOn": "Chauvet Professional STRIKE 4 (alternatives on the versions' equipment lines: Elation DTW Blinder 700 IP, Chauvet STRIKE Array 2)",
+  "product": "equivalent: Chauvet Professional STRIKE 4 (alternatives on the versions' equipment lines: Elation DTW Blinder 700 IP, Chauvet STRIKE Array 2)",
+  "category": "blinder",
+  "modes": [
+    {
+      "name": "1ch",
+      "footprint": 1,
+      "channels": null,
+      "channelsSource": null,
+      "src": "CHAUVET-STRIKE4",
+      "basis": "EQUIVALENT"
+    },
+    {
+      "name": "3ch",
+      "footprint": 3,
+      "channels": null,
+      "channelsSource": null,
+      "src": "CHAUVET-STRIKE4",
+      "basis": "EQUIVALENT"
+    },
+    {
+      "name": "4ch",
+      "footprint": 4,
+      "channels": null,
+      "channelsSource": null,
+      "src": "CHAUVET-STRIKE4",
+      "basis": "EQUIVALENT"
+    },
+    {
+      "name": "9ch",
+      "footprint": 9,
+      "channels": null,
+      "channelsSource": null,
+      "src": "CHAUVET-STRIKE4",
+      "basis": "EQUIVALENT"
+    },
+    {
+      "name": "3ch-assumed",
+      "footprint": 3,
+      "channels": [
+        {
+          "role": "dimmer",
+          "label": "Dimmer H"
+        },
+        {
+          "role": "dimmerFine",
+          "label": "Dimmer L",
+          "default": 0
+        },
+        {
+          "role": "strobe",
+          "label": "Strobe",
+          "default": 0,
+          "cap": {
+            "shutter": [
+              {
+                "from": 0,
+                "to": 10,
+                "open": true
+              },
+              {
+                "from": 11,
+                "to": 132,
+                "strobe": [
+                  1,
+                  20
+                ]
+              },
+              {
+                "from": 133,
+                "to": 255,
+                "strobe": [
+                  8,
+                  8
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "channelsSource": {
+        "basis": "ASSUMED",
+        "grade": "STILL ASSUMED",
+        "gradeWhy": "no blinder is chosen yet (another supplier), and no Yerevan rental lists one (checked 2026-09-29): a planning type",
+        "fixture": "Chauvet Professional STRIKE 4",
+        "url": "https://chauvetprofessional.com/wp-content/uploads/2015/07/Strike_4_DMX_EN_Rev1_WO.pdf",
+        "title": "STRIKE 4 DMX chart",
+        "pages": "1",
+        "accessed": "2026-09-29",
+        "fill": [
+          "strobe 11–132 \"0–20 Hz (all pods)\" drawn 1–20 Hz; 133–255 random macros drawn at 8 Hz"
+        ]
+      },
+      "assumed": "ASSUMED from Chauvet STRIKE 4 DMX chart p.1 — verify on the rental unit",
+      "src": null,
+      "basis": "ASSUMED"
+    },
+    {
+      "name": "1ch-assumed",
+      "footprint": 1,
+      "channels": [
+        {
+          "role": "dimmer",
+          "label": "Dimmer H"
+        }
+      ],
+      "channelsSource": {
+        "basis": "ASSUMED",
+        "grade": "STILL ASSUMED",
+        "gradeWhy": "no blinder is chosen yet (another supplier), and no Yerevan rental lists one (checked 2026-09-29): a planning type",
+        "fixture": "Chauvet Professional STRIKE 4",
+        "url": "https://chauvetprofessional.com/wp-content/uploads/2015/07/Strike_4_DMX_EN_Rev1_WO.pdf",
+        "title": "STRIKE 4 DMX chart",
+        "pages": "1",
+        "accessed": "2026-09-29",
+        "fill": [
+          "strobe 11–132 \"0–20 Hz (all pods)\" drawn 1–20 Hz; 133–255 random macros drawn at 8 Hz"
+        ]
+      },
+      "assumed": "ASSUMED from Chauvet STRIKE 4 DMX chart p.1 — verify on the rental unit",
+      "src": null,
+      "basis": "ASSUMED"
+    }
+  ],
+  "defaultMode": "1ch",
+  "modesOwed": false,
+  "assumedMode": "3ch-assumed",
+  "power_w": {
+    "value": 286,
+    "src": "CHAUVET-STRIKE4",
+    "basis": "EQUIVALENT",
+    "note": "at 230 V"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 8.7,
+    "src": "CHAUVET-STRIKE4",
+    "basis": "EQUIVALENT"
+  },
+  "size_mm": {
+    "value": [
+      362,
+      163,
+      362
+    ],
+    "src": "CHAUVET-STRIKE4",
+    "basis": "EQUIVALENT",
+    "order": "W x D x H"
+  },
+  "pan_tilt_deg": null,
+  "ip": {
+    "value": "IP20",
+    "src": "CHAUVET-STRIKE4",
+    "basis": "EQUIVALENT"
+  },
+  "optics": {
+    "beam_deg": 49,
+    "zoom_deg": null,
+    "lux": 999,
+    "at_m": 5,
+    "photometrySrc": "CHAUVET-STRIKE4",
+    "photometryBasis": "EQUIVALENT"
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": null,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/blinder.glb",
+    "sidecar": "scripts/place/fixtures/glb/blinder.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": 0,
+    "tiltY": 0.175,
+    "lensY": 0.249,
+    "sizeAtHome_mm": {
+      "width_x": 390,
+      "depth_z": 320,
+      "height_y": 259
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "CHAUVET-STRIKE4": {
+      "url": "https://www.chauvetprofessional.com/product/strike-4/",
+      "what": "Chauvet Professional STRIKE 4, maker's product page (fetched 2026-09-28): 362 x 163 x 362 mm, 8.7 kg, beam 49 deg / field 79 deg, 999 lux @ 5 m, 286 W @ 230 V, 1/3/4/9 DMX channels, 4 x 100 W warm-white LEDs 3,096 K, IP20"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "blinder",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "equivalent",
+    "date": "2026-09-29",
+    "sources": [
+      "CHAUVET-STRIKE4"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 0,
+      "datasheet": 0,
+      "equivalent": 9,
+      "assumed": 4,
+      "unknown": 0
+    }
+  }
+}

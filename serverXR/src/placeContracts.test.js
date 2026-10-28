@@ -18,27 +18,17 @@
 // behaviour: what it copies, what it spawns, what it writes down, and how it
 // reads a build's state back off the disk.
 import { mkdtemp, rm, writeFile, mkdir, readFile } from 'node:fs/promises'
-import { spawn } from 'node:child_process'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const SERVER_ENTRY = path.join(HERE, 'index.js')
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
-const getFreePort = () => new Promise((resolve, reject) => {
-  const probe = net.createServer()
-  probe.on('error', reject)
-  probe.listen(0, '127.0.0.1', () => {
-    const { port } = probe.address()
-    probe.close((error) => (error ? reject(error) : resolve(port)))
-  })
-})
 
 // Stands in for scripts/place/place.mjs: prints one of the step lines the real
 // one prints, then leaves. Enough for the route to have something to read a step
@@ -54,11 +44,9 @@ const startServer = async ({ local }) => {
   const dataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-place-data-'))
   const stub = path.join(cwd, 'stub-place.mjs')
   await writeFile(stub, STUB_PLACE)
-  const port = await getFreePort()
 
   const env = {
     ...process.env,
-    PORT: String(port),
     APP_BASE_PATH: '/serverXR',
     DATA_ROOT: dataRoot,
     API_TOKEN: 'test-token',
@@ -82,28 +70,15 @@ const startServer = async ({ local }) => {
   delete env.SPACES_DIR
   delete env.UPLOADS_DIR
 
-  const child = spawn(process.execPath, [SERVER_ENTRY], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] })
-  let logs = ''
-  child.stdout.on('data', (chunk) => { logs += chunk.toString() })
-  child.stderr.on('data', (chunk) => { logs += chunk.toString() })
+  const { child, port, logs: readLogs } = await spawnServerUntilReady({ entry: SERVER_ENTRY, cwd, env })
 
   const baseUrl = `http://127.0.0.1:${port}/serverXR`
-  const deadline = Date.now() + 25000
-  for (;;) {
-    if (child.exitCode !== null) throw new Error(`the server exited while booting (code ${child.exitCode})\n${logs}`)
-    try {
-      const res = await fetch(`${baseUrl}/api/health`)
-      if (res.ok) break
-    } catch { /* not up yet */ }
-    if (Date.now() > deadline) throw new Error(`the server never became healthy\n${logs}`)
-    await wait(200)
-  }
 
   return {
     baseUrl,
     dataRoot,
     stub,
-    getLogs: () => logs,
+    getLogs: readLogs,
     stop: async () => {
       if (child.exitCode === null) {
         child.kill('SIGTERM')

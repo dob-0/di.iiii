@@ -34,8 +34,21 @@ export class AppErrorBoundary extends React.Component {
     }
 }
 
+// Inline on purpose: this page must still read when the stylesheets failed to
+// load. The fallbacks are the house tokens' own values (base.css), so the page
+// looks the same with or without CSS.
+export const VIEW_FAILED_INK = {
+    text: 'var(--ui-text-primary, #fff)',
+    ground: 'var(--ui-bg, #000)',
+    line: 'var(--ui-border, rgba(255, 255, 255, 0.12))',
+    muted: 'var(--ui-text-muted, rgba(255, 255, 255, 0.5))',
+    sans: "var(--di-sans, Inter, system-ui, sans-serif)",
+    mono: "var(--di-mono, 'JetBrains Mono', monospace)"
+}
+
 export function ViewFailed({ error }) {
     const message = String(error?.message || error || '').slice(0, 300)
+    const ink = VIEW_FAILED_INK
     return (
         <div
             role="alert"
@@ -43,24 +56,23 @@ export function ViewFailed({ error }) {
             style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12,
                 maxWidth: 560, margin: '15vh auto 0', padding: 24,
-                color: 'var(--ui-text-primary, #eee)', background: 'var(--ui-bg, #111)',
-                border: '1px solid var(--ui-border, #444)', borderRadius: 0,
-                font: '14px/1.5 system-ui, sans-serif'
+                color: ink.text, background: ink.ground,
+                border: `1px solid ${ink.line}`, borderRadius: 0,
+                fontFamily: ink.sans, fontSize: 14, lineHeight: 1.5
             }}
         >
             <strong>This view stopped working.</strong>
-            <span style={{ color: 'var(--ui-text-muted, #aaa)' }}>
-                Something in it failed while drawing. Your work is saved as before; nothing was changed
-                by this. Reload this view to try again, or go to the spaces list or the di home page.
+            <span style={{ color: ink.muted }}>
+                Failed while drawing. Work saved, nothing changed.
             </span>
             {message && (
-                <code style={{ color: 'var(--ui-text-muted, #aaa)', fontSize: 12, wordBreak: 'break-word' }}>{message}</code>
+                <code style={{ color: ink.muted, fontFamily: ink.mono, fontSize: 12, wordBreak: 'break-word' }}>{message}</code>
             )}
             <button
                 type="button"
                 onClick={() => window.location.reload()}
                 style={{
-                    padding: '6px 14px', borderRadius: 2, cursor: 'pointer',
+                    padding: '6px 14px', borderRadius: 0, cursor: 'pointer',
                     color: 'inherit', background: 'transparent', border: '1px solid currentColor', font: 'inherit'
                 }}
             >
@@ -68,7 +80,7 @@ export function ViewFailed({ error }) {
             </button>
             <nav aria-label="Leave this view" style={{ display: 'flex', gap: 16 }}>
                 <a href="/spaces" style={{ color: 'inherit' }}>Spaces</a>
-                <a href="/" style={{ color: 'inherit' }}>di home</a>
+                <a href="/" style={{ color: 'inherit' }}>di.iiii</a>
             </nav>
         </div>
     )

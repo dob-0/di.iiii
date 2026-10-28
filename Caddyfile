@@ -35,7 +35,7 @@
 	reverse_proxy host.docker.internal:{$DEV_PORT:8081}
 }
 
-# map.di-studio.xyz — a memorable door onto the map lane, not a second app.
+# map.diiii.xyz — a memorable door onto the map lane, not a second app.
 # It reverse-proxies to the SAME prod client as {$SITE_DOMAIN} above, so
 # every path, asset and API call resolves exactly as it does there — the
 # map lane already sits behind ProtectedSurface (per-space sign-in), so this

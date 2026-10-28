@@ -65,3 +65,32 @@ export const atHeight = (from, dir, y) => (dir[1] > 1e-6 ? from.map((v, i) => v 
 
 /** Is the point (x, z) inside a roof lantern's opening (audit A-03)? */
 export const inLantern = (p, lanterns) => lanterns.some((l) => p[0] >= l.x_m[0] && p[0] <= l.x_m[1] && p[2] >= l.z_m[0] && p[2] <= l.z_m[1])
+
+/** Two roof-lantern beams landing closer than this converge on one spot (audit A-03). Project rule, UNVALIDATED: no published standard sets it. */
+export const LANTERN_BEAM_SPREAD_M = 1
+
+/** Which of the hall's measurements the three checks need are missing (empty = the hall can be checked). */
+export const hallMissing = (g = {}, need) => need.filter((k) => g[k] === undefined || g[k] === null)
+
+/** Every placed thing outside the walls, as readable lines (audit A-10). */
+export const outsideHallLines = (placed, g) => outsideHall(placed, g).map((p) => `${p.id} at ${p.pos.map((v) => v.toFixed(2)).join(', ')}`)
+
+/**
+ * The laser lamps (`{ id, from: [x,y,z], dir: [x,y,z] }`) against the roof (audit A-03): each beam must rise to the
+ * deck, land on solid deck (not in a lantern opening) and land >= LANTERN_BEAM_SPREAD_M from every other beam.
+ * Computed from the lamp's own position and aim; no stored landing point.
+ */
+export const lanternFailures = (lamps, g) => {
+    const hits = lamps.map((l) => ({ id: l.id, at: atHeight(l.from, l.dir, g.deck_m) }))
+    const fails = []
+    for (const h of hits) {
+        if (!h.at) fails.push(`${h.id}: never rises to the deck (${g.deck_m} m)`)
+        else if (inLantern(h.at, g.lanterns)) fails.push(`${h.id}: lands in a roof lantern at ${h.at[0].toFixed(2)}, ${h.at[2].toFixed(2)}`)
+    }
+    const landed = hits.filter((h) => h.at)
+    for (let i = 0; i < landed.length; i += 1) for (let j = i + 1; j < landed.length; j += 1) {
+        const d = Math.hypot(landed[i].at[0] - landed[j].at[0], landed[i].at[2] - landed[j].at[2])
+        if (d <= LANTERN_BEAM_SPREAD_M) fails.push(`${landed[i].id} / ${landed[j].id}: land ${d.toFixed(2)} m apart (need > ${LANTERN_BEAM_SPREAD_M})`)
+    }
+    return fails
+}

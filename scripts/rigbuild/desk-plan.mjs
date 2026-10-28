@@ -5,20 +5,20 @@
  * the space's chosen version patches onto its desk"); audit docs/ai/audits/moxir-2026-10-05 B1, B2.
  *
  *   # 1. DRY RUN (the default): reads the live show and the project, writes nothing live
- *   node scripts/rigbuild/desk-plan.mjs --space moxir --project moxir-hall-known-full \
- *        --out ~/Downloads/moxir-desk-plan-2026-10-05 [--show <show.json>] [--document <doc.json>] \
- *        [--gate scripts/place/rigs/moxir-2026-10-17-known-full.patch.json]
+ *   node scripts/rigbuild/desk-plan.mjs --space <space> --project <project> \
+ *        --out ~/Downloads/desk-plan-<stamp> [--show <show.json>] [--document <doc.json>] \
+ *        [--gate <patch.json>]
  *   # 2. APPLY (the owner). The desk is stopped FIRST and the plan made from the stopped show:
  *   #    a running desk saves its show at every cue, so a plan made while it runs is stale at once.
  *   #    With di down the local API is down too: read the document from dev (the hub), which
  *   #    every install follows (--api https://dev.diiii.xyz/serverXR).
  *   di down
- *   node scripts/rigbuild/desk-plan.mjs --space moxir --project moxir-hall-known-full --api https://dev.diiii.xyz/serverXR \
- *        --out ~/Downloads/moxir-desk-plan-2026-10-05 --gate scripts/place/rigs/moxir-2026-10-17-known-full.patch.json
- *   node scripts/rigbuild/desk-plan.mjs --space moxir --apply ~/Downloads/moxir-desk-plan-2026-10-05
+ *   node scripts/rigbuild/desk-plan.mjs --space <space> --project <project> --api https://dev.diiii.xyz/serverXR \
+ *        --out ~/Downloads/desk-plan-<stamp> --gate <patch.json>
+ *   node scripts/rigbuild/desk-plan.mjs --space <space> --apply ~/Downloads/desk-plan-<stamp>
  *   di up
  *   # 3. UNDO, from the backup the apply wrote (also with the desk stopped)
- *   node scripts/rigbuild/desk-plan.mjs --space moxir --undo ~/di-backups/moxir-desk-plan-<stamp>
+ *   node scripts/rigbuild/desk-plan.mjs --space <space> --undo ~/di-backups/desk-plan-<stamp>
  *
  * The plan is made by the desk's OWN code (serverXR/src/lighting/desk.js, offline: it binds no
  * port and transmits nothing) on a throwaway copy of the show, through the same routes the

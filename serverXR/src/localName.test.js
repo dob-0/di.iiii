@@ -15,9 +15,6 @@ const { hostIs, localNameConfig, startLocalName, stopLocalName, urlFor } = local
 const cleanups = []
 afterEach(() => { for (const c of cleanups.splice(0)) c() })
 
-const freePort = () => new Promise((resolve) => {
-    const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => resolve(p)) })
-})
 const get = (port, host, path = '/serverXR/api/health') => new Promise((resolve, reject) => {
     const req = http.request({ host: '127.0.0.1', port, path, headers: { host } }, (res) => {
         let body = ''
@@ -73,9 +70,10 @@ describe('hostIs: the exact name, any port, trailing dot — nothing else (DNS r
 describe('startLocalName: one app behind two doors', () => {
     it('hands requests and upgrades for the name to the main server; 421 for any other Host', async () => {
         const { s, seen } = mainServer()
-        const port = await freePort()
-        const state = await startLocalName({ mainServer: s, config: { name: 'diiii.localhost', port }, hosts: ['127.0.0.1'] })
+        // Port 0: the door binds a port the OS gives it, read back from the bound server (no pick-then-bind race).
+        const state = await startLocalName({ mainServer: s, config: { name: 'diiii.localhost', port: 0 }, hosts: ['127.0.0.1'] })
         cleanups.push(() => stopLocalName(state))
+        const port = state.servers[0].address().port
         expect(state.served).toEqual(['127.0.0.1'])
         expect(state.aside).toEqual([])
         const a = await get(port, 'diiii.localhost')

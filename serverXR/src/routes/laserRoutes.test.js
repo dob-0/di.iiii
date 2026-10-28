@@ -22,10 +22,10 @@ afterEach(async () => {
   for (const [k, v] of Object.entries(envBefore)) { if (v == null) delete process.env[k]; else process.env[k] = v }
 })
 
-const boot = async () => {
+const boot = async (extra = {}) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dii-laser-'))
   const app = express()
-  const lane = registerLaserRoutes(app, { dataDir: dir, log: null })
+  const lane = registerLaserRoutes(app, { dataDir: dir, log: null, ...extra })
   const { server, base } = await listen(app)
   cleanups.push(() => new Promise((r) => { lane.close(); server.close(r); fs.rmSync(dir, { recursive: true, force: true }) }))
   return { base, lane }
@@ -81,5 +81,56 @@ describe('the lasers at /laser', () => {
     delete process.env.DI_LOCAL
     const { base } = await boot()
     expect((await fetch(`${base}/laser/api/state`)).status).toBe(404)
+  })
+
+  it('plays a project\'s laser lines on the cubes by show time, says so in /state, and stops', async () => {
+    delete process.env.NODE_ENV
+    const line = (id) => ({ id, type: 'spotLight', components: { beam: { laser: { mW: [1], nm: [525], frames: { period: 10, list: [[[0.1, 0.5, 1, 1, 1]], [[0.2, 0.5, 1, 1, 1]]] } } } } })
+    const docs = { show: { entities: [line('rig-laser-1a'), line('rig-laser-1b'), line('rig-laser-2a')] }, empty: { entities: [] } }
+    const { base } = await boot({ loadDocument: async (id) => docs[id] || null })
+    expect((await post(`${base}/laser/api/show`, {})).status).toBe(400)
+    expect((await post(`${base}/laser/api/show`, { project: 'nope' })).status).toBe(404)
+    expect((await post(`${base}/laser/api/show`, { project: 'empty' })).status).toBe(400)
+    const started = await post(`${base}/laser/api/show`, { project: 'show' })
+    expect(started.status).toBe(200)
+    expect(await started.json()).toMatchObject({ ok: true, project: 'show', show: { playing: true, cubes: [{ cube: 'cube-1', group: 'rig-laser-1', lines: 2 }, { cube: 'cube-2', group: 'rig-laser-2', lines: 1 }] } })
+    const state = await (await fetch(`${base}/laser/api/state`)).json()
+    expect(state.show).toMatchObject({ playing: true, project: 'show', out: 'show:show', groups: ['rig-laser-1', 'rig-laser-2'] })
+    expect(state.cubes[0].lastFrameAt).toBeGreaterThan(0)
+    // The frame it keeps is the room's: both lines of cube 1 joined with blank moves, the zone applied.
+    const frames = await (await fetch(`${base}/laser/api/frames`)).json()
+    const kept = frames.byCube?.['cube-1'] || frames.cubes?.find?.((c) => c.id === 'cube-1')
+    expect((JSON.stringify(kept).match(/,0\.5,1,1,1\]/g) || []).length).toBe(2) // the two lines' lit points
+    expect((JSON.stringify(kept).match(/,0\.5,0,0,0\]/g) || []).length).toBe(4) // each with its blank move and blank end
+    // A Nodes editor Out on the same cube is refused: the show holds it.
+    expect(await (await post(`${base}/laser/api/frame`, { cube: 'cube-1', points: [[0, 0.5, 1, 1, 1]], out: 'out-9' })).json()).toMatchObject({ ok: false })
+    expect(await (await post(`${base}/laser/api/show/stop`, {})).json()).toMatchObject({ ok: true, stopped: true, show: { playing: false } })
+    expect((await (await fetch(`${base}/laser/api/state`)).json()).show).toEqual({ playing: false })
+  })
+
+  it('approves the show\'s still beams per cube only with the sign-off phrase, writes them and reloads disarmed', async () => {
+    delete process.env.NODE_ENV
+    const aim = (yawDeg) => [-Math.PI / 2, 0, (yawDeg * Math.PI) / 180]
+    const line = (id, yawDeg, list) => ({ id, type: 'spotLight', components: { transform: { rotation: aim(yawDeg) }, beam: { laser: { mW: [1], nm: [525], frames: { period: 10, list } } } } })
+    const doc = { entities: [line('rig-laser-1a', -2, [[[0, 0.5, 1, 1, 1]]]), line('rig-laser-1b', 2, [[[0, 0.5, 1, 1, 1]]]), line('rig-laser-2a', 0, [[[0, 0.5, 1, 0, 0]], [[0.5, 0.5, 1, 0, 0]]])] }
+    const { base } = await boot({ loadDocument: async (id) => (id === 'show' ? doc : null) })
+    const refused = await post(`${base}/laser/api/show/still`, { project: 'show' })
+    expect(refused.status).toBe(403)
+    expect(await refused.json()).toMatchObject({ ok: false, needsPhrase: true, wouldApprove: { 'cube-1': 2, 'cube-2': 2 } })
+    expect((await post(`${base}/laser/api/show/still`, { project: 'nope', confirm: ARM_PHRASE })).status).toBe(404)
+    const ok = await post(`${base}/laser/api/show/still`, { project: 'show', confirm: ARM_PHRASE })
+    expect(ok.status).toBe(200)
+    const body = await ok.json()
+    expect(body).toMatchObject({ ok: true, approved: { 'cube-1': 2, 'cube-2': 2 }, total: { 'cube-1': 2, 'cube-2': 2, 'cube-3': 0 }, disarmed: true })
+    expect(JSON.parse(fs.readFileSync(body.file, 'utf8')).cubes.find((c) => c.id === 'cube-1').stillBeams).toHaveLength(2)
+    // Approved again (the same show): nothing doubles. The engine knows them.
+    expect(await (await post(`${base}/laser/api/show/still`, { project: 'show', confirm: ARM_PHRASE })).json()).toMatchObject({ total: { 'cube-1': 2, 'cube-2': 2 } })
+    expect((await (await fetch(`${base}/laser/api/state`)).json()).cubes[0]).toMatchObject({ id: 'cube-1', stillBeams: 2 })
+  })
+
+  it('answers 501 for the show when this server cannot read projects', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    expect((await post(`${base}/laser/api/show`, { project: 'x' })).status).toBe(501)
   })
 })

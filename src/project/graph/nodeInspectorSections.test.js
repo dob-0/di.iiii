@@ -19,6 +19,12 @@ describe('deriveNodeInspectorSections', () => {
         expect(sections[0].fields[0]).toMatchObject({ path: ['body'], type: 'textarea' })
     })
 
+    it('gives a laser-typed Frame no hand-typed field (a frame is only wired; its object must not print as [object Object])', () => {
+        const node = createNode('device.laser.out')
+        const frame = deriveNodeInspectorSections(node).flatMap((s) => s.fields).find((f) => f.label === 'Frame')
+        expect(frame).toMatchObject({ type: 'connection', portType: 'laser' })
+    })
+
     it('keeps regular node ports for standard node types', () => {
         const node = createNode('geom.cube')
         const sections = deriveNodeInspectorSections(node)
@@ -85,11 +91,10 @@ describe('deriveNodeInspectorSections', () => {
         expect(field).toMatchObject({ label: 'Target URL', type: 'text' })
     })
 
-    it('exposes stream.recorder\'s file pattern as an editable field', () => {
+    it('gives Recorder no file-pattern field: the file is named after its source and date', () => {
         const node = createNode('stream.recorder')
         const sections = deriveNodeInspectorSections(node)
-        const field = sections[0].fields.find((f) => f.path[0] === 'filePattern')
-        expect(field).toMatchObject({ label: 'File Pattern', type: 'text' })
+        expect(sections[0].fields.find((f) => f.path[0] === 'filePattern')).toBeUndefined()
     })
 
     // Universal code panel (product decision 2026-07-19): every node type,
@@ -135,6 +140,14 @@ describe('deriveNodeInspectorSections', () => {
         expect(src).toBeDefined()
         expect(src.type).toBe('asset')
         expect(src.assetKind).toBe(assetKind)
+    })
+
+    // An .ild and an .svg share no media kind, so Laser File offers every asset and reads the bytes.
+    it('gives laser.file an unfiltered asset picker', () => {
+        const src = deriveNodeInspectorSections(createNode('laser.file'))
+            .find((section) => section.id === 'values')?.fields.find((field) => field.path[0] === 'src')
+        expect(src).toMatchObject({ type: 'asset', portType: 'string' })
+        expect(src.assetKind).toBeUndefined()
     })
 
         // A doorway's port type decides what its socket on the container carries.

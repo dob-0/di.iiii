@@ -1,6 +1,9 @@
 // @vitest-environment node
 
+import { mkdtempSync, rmSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import os from 'node:os'
+import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 // require, not import: these stores are CommonJS, and an ESM import of ./db.js
@@ -92,5 +95,77 @@ describe('the archive that was five titles', () => {
         const untouched = db.prepare("SELECT title, state FROM projects WHERE id = 'live-one'").get()
         expect(untouched.title).toBe('ops board')
         expect(untouched.state).toBe('live')
+    })
+})
+
+// P1 (2026-10-13). The pass above ran once, in September. A project that is
+// followed or synced in from an older tier can still arrive wearing the prefix
+// long after, so the pass runs on every start, says how many it moved, and
+// finds nothing the second time.
+describe('the archive prefix, moved on every start', () => {
+    const insert = (id, title, updatedAt = 7) => getDb().prepare("INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, 'main', ?, 0, 'project', 1, ?, 1)").run(id, title, updatedAt)
+    const row = (id) => getDb().prepare('SELECT title, state, updated_at FROM projects WHERE id = ?').get(id)
+    const pass = () => require('./db.js').runArchiveBackfill(getDb())
+
+    it('moves a prefix that arrives after the one-time pass is on record, and counts it', () => {
+        pass()
+        insert('arrived-late', '[archived] Old board')
+        expect(pass()).toBe(1)
+        expect(row('arrived-late')).toMatchObject({ title: 'Old board', state: 'archived' })
+    })
+
+    it('is idempotent: the second pass finds nothing and changes nothing', () => {
+        insert('a', '[archived] A')
+        insert('b', '[archived] B')
+        expect(pass()).toBe(2)
+        const after = [row('a'), row('b')]
+        expect(pass()).toBe(0)
+        expect([row('a'), row('b')]).toEqual(after)
+    })
+
+    it('does not move the time a project was last changed', () => {
+        insert('old', '[archived] Old', 7)
+        pass()
+        expect(row('old').updated_at).toBe(7)
+    })
+
+    it('reads the prefix the way the readers do: leading space, any case', () => {
+        insert('spaced', '  [Archived]   Spaced out')
+        expect(pass()).toBe(1)
+        expect(row('spaced')).toMatchObject({ title: 'Spaced out', state: 'archived' })
+    })
+
+    it('a title that is only the prefix keeps a name, so the next pass does not find it again', () => {
+        insert('bare', '[archived]')
+        expect(pass()).toBe(1)
+        expect(row('bare')).toMatchObject({ title: 'bare', state: 'archived' })
+        expect(pass()).toBe(0)
+    })
+
+    it('leaves a project alone whose name only mentions the word', () => {
+        insert('mention', 'Notes on the [archived] prefix')
+        expect(pass()).toBe(0)
+        expect(row('mention')).toMatchObject({ title: 'Notes on the [archived] prefix', state: 'live' })
+    })
+
+    it('opening the database again runs the pass — no hand needed', () => {
+        const dir = mkdtempSync(path.join(os.tmpdir(), 'di-archive-prefix-'))
+        try {
+            const file = path.join(dir, 'di.db')
+            closeDb()
+            initDb(file)
+            expect(require('./db.js').getStartupReport()).toEqual({ archivedTitlesMoved: 0 })
+            getDb().prepare('INSERT OR IGNORE INTO spaces (id, label, permanent, allow_edits, scene_version, created_at, updated_at, last_touched_at) VALUES (?, ?, 1, 1, 0, ?, ?, ?)').run('main', 'main', 1, 1, 1)
+            insert('followed-in', '[archived] Followed in')
+            expect(row('followed-in').state).toBe('live')
+            closeDb()
+            initDb(file)
+            expect(row('followed-in')).toMatchObject({ title: 'Followed in', state: 'archived' })
+            // The server reads this to say, in its log, how many this install moved.
+            expect(require('./db.js').getStartupReport()).toEqual({ archivedTitlesMoved: 1 })
+        } finally {
+            closeDb()
+            rmSync(dir, { recursive: true, force: true })
+        }
     })
 })

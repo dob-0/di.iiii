@@ -1,5 +1,5 @@
 import { Box, Button, Link, Stack, ThemeProvider, Typography } from '@mui/material'
-import { diFontTheme } from '../styles/muiTheme.js'
+import { diTheme } from '../styles/muiTheme.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { buildWikiPath } from '../utils/spaceRouting.js'
 
@@ -48,7 +48,7 @@ export default function ReservedAddressCard({ word }) {
     const entry = ADDRESSES[word]
     if (!entry) return null
     return (
-        <ThemeProvider theme={diFontTheme}>
+        <ThemeProvider theme={diTheme}>
             <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
                 <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
                     <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>

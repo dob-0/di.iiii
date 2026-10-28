@@ -1,0 +1,70 @@
+{
+ "equipment-order-laptop-dark": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "equipment-order-laptop-light": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "equipment-order-phone-dark": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "equipment-order-phone-light": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "perform-laptop-dark": {
+  "changed_pct": 0.013,
+  "bbox": [
+   1980,
+   1134,
+   2006,
+   1160
+  ]
+ },
+ "perform-laptop-light": {
+  "changed_pct": 0.017,
+  "bbox": [
+   1980,
+   1134,
+   2354,
+   1241
+  ]
+ },
+ "perform-phone-dark": {
+  "changed_pct": 0.05,
+  "bbox": [
+   324,
+   1119,
+   363,
+   1158
+  ]
+ },
+ "perform-phone-light": {
+  "changed_pct": 0.05,
+  "bbox": [
+   324,
+   1119,
+   363,
+   1158
+  ]
+ },
+ "studio-inspector-laptop-dark": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "studio-inspector-laptop-light": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "studio-inspector-phone-dark": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "studio-inspector-phone-light": {
+  "changed_pct": 0.0,
+  "bbox": null
+ }
+}

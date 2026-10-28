@@ -1,0 +1,7 @@
+{
+  "what": "MOXIR: the U1.329 wash (rig-par-cut-07) stands on the floor beside the left column row's column at z 6 (x -12), between that column and the organiser's speaker L, pointing up. The first floor spot (-11.55, 3.31) was hidden behind that column from the owner's view.",
+  "source": "owner at the venue 2026-10-17 ~06:5x: 'i can't see in 3d the ground one', 'now put the 329 on the ground' and his marked 3D screenshot (circle at the column's base, left of the speaker box, text 'wash a329 its now lights green'). The column position is from the hall model: column_row_x_m -12, column_grid_z_m 6.0.",
+  "moves": [
+    { "id": "rig-par-cut-07", "position": [-11.2, 0.322, 5.8], "rotation": [3.1416, 0, 0] }
+  ]
+}

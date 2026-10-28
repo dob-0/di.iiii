@@ -8,7 +8,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { spawnServerUntilReady } from './spawnServer.mjs'
+import { MAX_ATTEMPTS, spawnServerUntilReady } from './spawnServer.mjs'
 
 let dir
 let pidFile
@@ -64,7 +64,8 @@ describe('spawnServerUntilReady when the server never says it is listening', () 
         await expect(spawnStub({ STUB_SAYS: 'Error: listen EADDRINUSE: address already in use :::4000' }))
             .rejects.toThrow(/did not become ready in time/)
         const pids = pidsSeen()
-        expect(pids).toHaveLength(3) // the three attempts the loop allows
+        expect(MAX_ATTEMPTS).toBeGreaterThan(1) // else this test would not exercise a retry
+        expect(pids).toHaveLength(MAX_ATTEMPTS) // one server per attempt the loop allows, no more
         expect(await gone(pids)).toBe(true)
     }, 15000)
 

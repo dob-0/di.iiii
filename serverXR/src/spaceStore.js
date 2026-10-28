@@ -115,6 +115,11 @@ function createSpaceStore({
   // this machine follows. A follow says "keep this here in step with the hub";
   // a quiet hub month is not the owner letting the space go.
   keptSpaceIds = () => [],
+  // Spaces the site itself links to (the landing's /support, FUNDING.yml).
+  // Idle or not, a link someone follows must not land on nothing.
+  linkedSpaceIds = () => [],
+  // Where the sweep's one-line reports go (tests pass their own).
+  log = logger,
   blankScene
 } = {}) {
   const safeSlug = (value = '') => String(value)
@@ -187,6 +192,9 @@ function createSpaceStore({
     trustedUserIds: parseTrusted(row.trusted_user_ids),
     // Owner opt-in: anonymous append-only inscriptions (see inscriptionRoutes).
     openInscriptions: Boolean(row.open_inscriptions),
+    // One line for visitors: the card on /spaces and the share card's
+    // description (shared/spaceBlurb.cjs). null = the space has not said yet.
+    blurb: row.blurb || null,
     sceneVersion: row.scene_version || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -242,7 +250,17 @@ function createSpaceStore({
       selectExists:  db.prepare('SELECT 1 FROM spaces WHERE id = ? AND deleted_at IS NULL'),
       selectBySlug:  db.prepare('SELECT * FROM spaces WHERE slug = ? AND deleted_at IS NULL'),
       selectAll:     db.prepare('SELECT * FROM spaces WHERE deleted_at IS NULL ORDER BY updated_at DESC'),
-      selectStale:   db.prepare("SELECT id FROM spaces WHERE deleted_at IS NULL AND permanent = 0 AND kind != 'global' AND last_touched_at < ?"),
+      // Every space the idle sweep can reach, with what it holds and what
+      // points at it — the facts sweepKeepReason reads. A project "has
+      // content" once it was saved at least once (document_version > 0).
+      selectSweepable: db.prepare(`SELECT s.*,
+          (SELECT COUNT(*) FROM projects p WHERE p.space_id = s.id AND p.deleted_at IS NULL AND p.document_version > 0) AS content_projects,
+          EXISTS (SELECT 1 FROM space_domains d WHERE d.space_id = s.id) AS has_domain,
+          EXISTS (SELECT 1 FROM space_links l WHERE l.space_id = s.id) AS has_repo_link
+        FROM spaces s WHERE s.deleted_at IS NULL AND s.permanent = 0 AND s.kind != 'global' AND s.last_touched_at < ?`),
+      insertSweepLog: db.prepare('INSERT INTO sweep_log (at, space_id, action, reason, owner) VALUES (?, ?, ?, ?, ?)'),
+      lastSweepLogFor: db.prepare('SELECT at FROM sweep_log WHERE space_id = ? AND action = ? AND reason = ? ORDER BY at DESC LIMIT 1'),
+      selectSweepLog: db.prepare('SELECT * FROM sweep_log ORDER BY seq DESC LIMIT ?'),
       selectStaleSandbox: db.prepare("SELECT id FROM spaces WHERE deleted_at IS NULL AND permanent = 0 AND kind = 'sandbox' AND last_touched_at < ?"),
       countByOwner:  db.prepare('SELECT COUNT(*) as cnt FROM spaces WHERE owner_user_id = ? AND deleted_at IS NULL'),
       countSandboxes: db.prepare("SELECT COUNT(*) as cnt FROM spaces WHERE kind = 'sandbox'"),
@@ -335,9 +353,10 @@ function createSpaceStore({
       const nextInscribe  = 'openInscriptions' in updates ? (updates.openInscriptions ? 1 : 0)                                                       : row.open_inscriptions
       const nextArchived  = 'archived'         in updates ? (updates.archived ? (row.archived_at || now) : null)                                       : (row.archived_at ?? null)
       const nextTrusted   = 'trustedUserIds'   in updates ? serializeTrusted(updates.trustedUserIds)                                                       : (row.trusted_user_ids ?? null)
-      db.prepare('UPDATE spaces SET archived_at=? WHERE id=?').run(nextArchived, spaceId)
+      const nextBlurb     = 'blurb'            in updates ? (updates.blurb ?? null)                                                                  : (row.blurb ?? null)
+      db.prepare('UPDATE spaces SET archived_at=?, blurb=? WHERE id=?').run(nextArchived, nextBlurb, spaceId)
       update.run(nextSlug, nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, nextInscribe, nextTrusted, spaceId)
-      return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe, trusted_user_ids: nextTrusted, archived_at: nextArchived })
+      return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe, trusted_user_ids: nextTrusted, archived_at: nextArchived, blurb: nextBlurb })
     })()
   }
 
@@ -402,13 +421,20 @@ function createSpaceStore({
   }
 
   const trashSpace = async (spaceId) => {
-    const db = getDb()
     const meta = rowToMeta(s().selectById.get(spaceId))
     if (!meta) return null
     const reason = protectedReason(meta)
     if (reason) {
       throw Object.assign(new Error(`"${spaceId}" is a ${reason} space and cannot be deleted.`), { status: 409, code: 'space_protected', reason })
     }
+    return moveToTrash(spaceId)
+  }
+
+  // The trash itself, with no protection check: trashSpace (a person's delete)
+  // checks first; the idle sweep has its own rules (sweepKeepReason) and may
+  // trash a guest sandbox, which no person can delete by hand.
+  const moveToTrash = (spaceId) => {
+    const db = getDb()
     // The stamp is what ties a project to THIS trashing, so it must differ from
     // any stamp already on the space's projects (one trashed on its own in the
     // same millisecond would otherwise come back with the space).
@@ -478,20 +504,109 @@ function createSpaceStore({
   }
 
   const purgeSpaceTrash = async ({ now = Date.now(), ttlMs = SPACE_TRASH_TTL_MS } = {}) => {
-    const due = s().selectPurgeableSpaces.all(now - ttlMs).map((r) => r.id)
-    for (const id of due) await deleteSpace(id)
-    return due
+    const rows = s().selectPurgeableSpaces.all(now - ttlMs)
+    for (const { id } of rows) {
+      const owner = sweepOwner(s().selectAnyById.get(id))
+      await deleteSpace(id)
+      sweepReport({ at: now, spaceId: id, action: 'purged', reason: 'trash hold over', owner })
+    }
+    return rows.map((r) => r.id)
   }
 
-  const pruneSpaces = async () => {
-    const stale = []
-    if (defaultTtlMs) stale.push(...s().selectStale.all(Date.now() - defaultTtlMs))
-    if (sandboxTtlMs) stale.push(...s().selectStaleSandbox.all(Date.now() - sandboxTtlMs))
-    const kept = new Set(keptSpaceIds())
-    const ids = [...new Set(stale.map(row => row.id))].filter(id => !kept.has(id))
-    await Promise.all(ids.map(id => deleteSpace(id)))
-    return ids
+  // ── The idle sweep ───────────────────────────────────────────────────────
+  // Its purpose is clearing abandoned guest spaces. Until 2026-10-21 it
+  // hard-deleted every non-permanent space idle past SPACE_TTL_MS, and on
+  // 2026-10-20 that took the published donation page the landing links to.
+  // Now: a space someone can reach or that holds work is skipped and
+  // reported; everything else goes to the space trash (same restore as a
+  // manual delete) and only purgeSpaceTrash removes bytes, 30 days later.
+  const SWEEP_DAY_MS = 24 * 60 * 60 * 1000
+  const sweepOwner = (row) => row?.owner_user_id || (row?.kind === 'sandbox' ? 'guest' : 'none')
+
+  // Why the sweep keeps this space however idle it is, or null.
+  const sweepKeepReason = (row, linked) => {
+    if (row.id === (normalizeSpaceId(defaultSpaceId) || defaultSpaceId)) return 'front room'
+    if (row.published_project_id) return 'published'
+    if (row.is_public) return 'publicly listed'
+    if (linked.has(row.id)) return 'linked from the site'
+    if (row.has_domain) return 'linked: own domain'
+    if (row.has_repo_link) return 'linked: repository'
+    if (row.slug) return 'linked: named address'
+    if (row.content_projects > 0) return `holds ${row.content_projects} project(s) with content`
+    return null
   }
+
+  // When the sweep reaches a row: the sandbox TTL for a sandbox (the shorter
+  // of the two when both are set), the default TTL for any other space.
+  const sweepTtlFor = (row) => {
+    const ttls = [defaultTtlMs]
+    if (row.kind === 'sandbox') ttls.push(sandboxTtlMs)
+    const set = ttls.filter((ms) => ms > 0)
+    return set.length ? Math.min(...set) : 0
+  }
+
+  // Every space the sweep reaches before now + horizonMs, and what it will do
+  // to each: one function feeds both the sweep and the admin's "due" list, so
+  // the list cannot say something the sweep then does differently.
+  const sweepPlan = ({ now = Date.now(), horizonMs = 0, sandboxesOnly = false } = {}) => {
+    const shortest = [defaultTtlMs, sandboxTtlMs].filter((ms) => ms > 0)
+    if (!shortest.length) return []
+    const kept = new Set(keptSpaceIds())
+    const linked = new Set(linkedSpaceIds())
+    const horizon = now + Math.max(0, horizonMs)
+    return s().selectSweepable.all(horizon - Math.min(...shortest))
+      .filter((row) => !kept.has(row.id) && (!sandboxesOnly || row.kind === 'sandbox'))
+      .map((row) => {
+        const ttl = sweepTtlFor(row)
+        if (!ttl) return null
+        const dueAt = row.last_touched_at + ttl
+        if (!(dueAt < horizon)) return null
+        const keep = sweepKeepReason(row, linked)
+        return {
+          spaceId: row.id,
+          label: row.label || row.id,
+          kind: normalizeSpaceKind(row.kind),
+          owner: sweepOwner(row),
+          lastTouchedAt: row.last_touched_at,
+          dueAt,
+          action: keep ? 'skip' : 'trash',
+          reason: keep || `idle ${Math.floor((now - row.last_touched_at) / SWEEP_DAY_MS)} days`
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.dueAt - b.dueAt || a.spaceId.localeCompare(b.spaceId))
+  }
+
+  // One line per act, in the server log and in sweep_log (the admin's list).
+  const sweepReport = ({ at, spaceId, action, reason, owner }) => {
+    s().insertSweepLog.run(at, spaceId, action, reason, owner)
+    log.info(`[sweep] ${action} space=${spaceId} reason="${reason}" owner=${owner}`)
+  }
+
+  // A kept space is reported again only once a day: the sweep runs every half
+  // hour and would otherwise write the same line 48 times.
+  const SKIP_REPORT_EVERY_MS = SWEEP_DAY_MS
+
+  const pruneSpaces = async ({ now = Date.now(), sandboxesOnly = false } = {}) => {
+    const trashed = []
+    for (const entry of sweepPlan({ now, sandboxesOnly })) {
+      if (entry.action === 'skip') {
+        const last = s().lastSweepLogFor.get(entry.spaceId, 'skipped', entry.reason)?.at
+        if (last && now - last < SKIP_REPORT_EVERY_MS) continue
+        sweepReport({ at: now, spaceId: entry.spaceId, action: 'skipped', reason: entry.reason, owner: entry.owner })
+        continue
+      }
+      moveToTrash(entry.spaceId)
+      sweepReport({ at: now, spaceId: entry.spaceId, action: 'trashed', reason: entry.reason, owner: entry.owner })
+      trashed.push(entry.spaceId)
+    }
+    return trashed
+  }
+
+  const listSweepLog = ({ limit = 200 } = {}) =>
+    s().selectSweepLog.all(Math.max(1, Math.min(1000, Number(limit) || 200))).map((row) => ({
+      at: row.at, spaceId: row.space_id, action: row.action, reason: row.reason, owner: row.owner
+    }))
 
   // Re-home a space under a new id — row, children (ops, projects), and the
   // whole directory (scene, assets, project dirs). Powers guest→account
@@ -535,11 +650,11 @@ function createSpaceStore({
     return { total, stale }
   }
 
+  // The admin's "purge stale sandboxes" button: the same sweep, sandboxes only,
+  // so it trashes and reports exactly as the timer does.
   const pruneStaleSandboxes = async () => {
     if (!sandboxTtlMs) return []
-    const ids = s().selectStaleSandbox.all(Date.now() - sandboxTtlMs).map(row => row.id)
-    await Promise.all(ids.map(id => deleteSpace(id)))
-    return ids
+    return pruneSpaces({ sandboxesOnly: true })
   }
 
   // Archive + revive: long-idle account sandboxes fold down to a scene
@@ -1233,6 +1348,8 @@ function createSpaceStore({
     normalizeSpaceSlug,
     pruneSpaces,
     pruneStaleSandboxes,
+    sweepPlan,
+    listSweepLog,
     isValidSnapshotId,
     listSpaceSnapshots,
     pruneSpaceSnapshots,

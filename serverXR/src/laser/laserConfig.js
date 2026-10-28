@@ -123,4 +123,45 @@ const saveCubes = (dir, cubes) => {
     return { ok: true, config, file, dropped: config.dropped }
 }
 
-module.exports = { saveCubes, mergeConfig, validatePicked, readRaw, writeConfig, MAX_CUBES }
+/**
+ * ONE cube from a Laser Out's address (2026-10-14), added to laser.json or moved, keyed by serial;
+ * every other cube in the file is kept as it is. A cube the file holds with this serial keeps its
+ * id, name and stillBeams and takes the new address. Otherwise a hand-written cube without a serial
+ * at this address lends its id and name once, and its stillBeams are dropped (named in `dropped`:
+ * the box answering there may be another cube, the rule `mergeConfig` follows). Otherwise a new
+ * cube takes the lowest free cube-N. Any other entry holding this address loses it (ip null).
+ * @returns {{ ok: true, cube: object, file: string, dropped: object[] } | { ok: false, error: string }}
+ */
+const upsertCube = (dir, { serial: rawSerial, ip, name } = {}) => {
+    const checked = validatePicked([{ serial: rawSerial, ip, name }])
+    if (!checked.ok) return { ok: false, error: checked.error.replace(/^cube 1: /, '') }
+    const [p] = checked.picked
+    const existing = readRaw(dir)
+    const cubes = Array.isArray(existing.cubes) ? existing.cubes.filter((c) => c && typeof c === 'object').map((c) => ({ ...c })) : []
+    const dropped = []
+    let hit = cubes.find((c) => String(c.serial || '').toLowerCase() === p.serial)
+    if (!hit) {
+        hit = cubes.find((c) => !c.serial && c.ip === p.ip) || null
+        if (hit && Array.isArray(hit.stillBeams) && hit.stillBeams.length) {
+            dropped.push({ id: hit.id, serial: p.serial, ip: p.ip, stillBeams: hit.stillBeams.length })
+            delete hit.stillBeams
+        }
+    }
+    if (!hit) {
+        if (cubes.length >= MAX_CUBES) return { ok: false, error: `at most ${MAX_CUBES} cubes` }
+        const used = new Set(cubes.map((c) => String(c.id)))
+        let n = 1
+        while (used.has(`cube-${n}`)) n += 1
+        hit = { id: `cube-${n}` }
+        cubes.push(hit)
+    }
+    hit.id = String(hit.id || 'cube-1')
+    hit.name = p.name || cleanName(hit.name) || hit.id
+    hit.ip = p.ip
+    hit.serial = p.serial
+    for (const c of cubes) if (c !== hit && c.ip === p.ip) c.ip = null
+    const file = writeConfig(dir, { ...existing, cubes })
+    return { ok: true, cube: hit, file, dropped }
+}
+
+module.exports = { upsertCube, saveCubes, mergeConfig, validatePicked, readRaw, writeConfig, MAX_CUBES }

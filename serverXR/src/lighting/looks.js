@@ -23,6 +23,8 @@
 // scene recall assigned straight onto the fixtures and nothing could sit above it.
 
 const { roleKind } = require('./roles');
+const { sanitizeHeads } = require('./headMotion');
+const { sanitizeMotion } = require('./lookMotion');
 
 // What a look is allowed to set. A mask keeps a colour palette from moving the heads,
 // and lets a layer own the beam while another owns intensity.
@@ -107,6 +109,8 @@ function sanitizeLook(look) {
   const steps = (Array.isArray(look.steps) ? look.steps : []).slice(0, MAX_STEPS)
     .map(sanitizeStep).filter(Boolean);
   if (!steps.length) return null;
+  const heads = sanitizeHeads(look.heads);
+  const motion = sanitizeMotion(look.motion);
   return {
     id: look.id.slice(0, 40),
     name: String(look.name || 'Look').slice(0, 60),
@@ -126,6 +130,10 @@ function sanitizeLook(look) {
     phase: Math.max(-3600, Math.min(3600, num(look.phase, 0))),
     // A look can run against the clock (null) or at its own tempo.
     bpm: look.bpm == null ? null : Math.max(1, Math.min(600, num(look.bpm, 120))),
+    // The heads this look moves (headMotion.js): pan/tilt offsets played from the layer's firedAt. Absent = they hold still.
+    ...(heads ? { heads } : {}),
+    // The levels this look moves (lookMotion.js): fx.js's curve on its units, played from the layer's firedAt. Absent = still.
+    ...(motion ? { motion } : {}),
   };
 }
 

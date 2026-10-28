@@ -19,6 +19,7 @@ import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode, r
 import { createFrameMemory, createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
 import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
+import { CIRCLE_SEGMENTS } from '../../objectComponents/primitiveSegments.js'
 import { createTapTracker } from '../utils/useDoubleTap.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
@@ -280,7 +281,7 @@ function GeometryPieces({ descriptor, pruned = false }) {
             return (
                 <mesh {...place}>
                     <circleGeometry args={[
-                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5)))), 48
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5)))), CIRCLE_SEGMENTS
                     ]} />
                     <meshStandardMaterial color={asColor(descriptorLeaf.color, '#5fa8ff')} side={2} />
                 </mesh>
@@ -1237,6 +1238,29 @@ function SceneContent({
     )
 }
 
+// DEV ONLY, for a shot script (scripts/measure/light-env-shots.cjs): the room page's own camera, moved the way a hand would.
+// window.__diRoom exists only with bloom and SmartView only with Inside, and the document's fixedCamera never moved this view.
+function DevViewHandle() {
+    const camera = useThree((state) => state.camera)
+    const controls = useThree((state) => state.controls)
+    useEffect(() => {
+        if (!import.meta.env.DEV || typeof window === 'undefined') return undefined
+        window.__diView = {
+            camera,
+            setView: ({ position, target, fov }) => {
+                if (Number.isFinite(fov)) { camera.fov = fov; camera.updateProjectionMatrix() }
+                camera.position.set(...position)
+                if (controls?.target) { controls.target.set(...target); controls.update?.() } else camera.lookAt(...target)
+                camera.updateMatrixWorld(true)
+                return { position: camera.position.toArray(), fov: camera.fov }
+            }
+        }
+        return () => { window.__diView = null }
+    }, [camera, controls])
+    return null
+}
+
+
 // RE-AIM AFTER MOUNT.
 //
 // The Canvas `camera` prop is read once, when the renderer is created, and
@@ -1470,6 +1494,7 @@ export default function RawViewport({
             >
                 {interactive && !hasAuthoredCamera && <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />}
                 {viewRequest ? <ViewRequestApplier request={viewRequest} /> : null}
+                {import.meta.env.DEV ? <DevViewHandle /> : null}
                 <SceneContent
                     ambience={ambience}
                     showSelectionPills={showSelectionPills}

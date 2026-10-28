@@ -1,0 +1,1111 @@
+{
+  "contract_version": 1,
+  "about": "What the desk UI (ui/*.js) needs from whatever serves it. One entry per distinct method+path. Classes: a = must really exist on a node; b = a node may answer statically or refuse ({error:\"not on this node\"}); c = not applicable on a node, 404 with a JSON body. reply = the keys and JSON types the UI reads on success from the full desk. Types: string number boolean array object, or a|b. probe (class a, POST) = the body tests/test-http.js --class a sends; \"$name\" tokens are filled from earlier captures (dotted path into that reply). Entries run in file order.",
+  "state_keys": {
+    "about": "Keys of GET api/state the UI dereferences without a guard (required) and keys it reads behind a guard such as `S.x && ...` or `|| default` (optional). Measured by reading ui/app.js renderAll and the paint functions it calls.",
+    "required": {
+      "status": "object",
+      "output": "object",
+      "fx": "object",
+      "chase": "object",
+      "fixtures": "array",
+      "scenes": "array",
+      "groups": "array",
+      "lfos": "array",
+      "layers": "array",
+      "master": "number",
+      "blackout": "boolean",
+      "raw": "object",
+      "profiles": "object"
+    },
+    "nested_required": {
+      "status": {
+        "universes": "array",
+        "nodes": "array",
+        "interfaces": "array",
+        "broadcast": "array",
+        "packetsSent": "number",
+        "lastError": "string|null",
+        "serial": "object|null"
+      },
+      "output": {
+        "driver": "string",
+        "serialPort": "string",
+        "mode": "string",
+        "targets": "array",
+        "enabled": "boolean"
+      },
+      "fx": {
+        "mode": "string",
+        "bpm": "number",
+        "depth": "number",
+        "enabled": "boolean"
+      },
+      "chase": {
+        "enabled": "boolean",
+        "sceneIds": "array",
+        "holdMs": "number",
+        "fadeMs": "number"
+      }
+    },
+    "optional": {
+      "top": [
+        "activeScene",
+        "rawOwners",
+        "looks",
+        "sets",
+        "audioCfg",
+        "audio",
+        "caps",
+        "show",
+        "roleKinds",
+        "fxModes",
+        "fxSpatial",
+        "now",
+        "dmx",
+        "midi",
+        "cues",
+        "customProfiles",
+        "strips",
+        "fanStyles",
+        "lfoWaves",
+        "audioModes",
+        "blackoutBlind"
+      ],
+      "status": [
+        "identifying",
+        "extra",
+        "listen",
+        "lanAllowed",
+        "serialPorts",
+        "input"
+      ],
+      "output": [
+        "refreshHz",
+        "input"
+      ],
+      "fx": [
+        "spatial",
+        "exclude"
+      ]
+    }
+  },
+  "caps": {
+    "about": "Keys of the `caps` object in GET api/state. caps may be absent: that is the full desk. A cap is off only on an explicit false; an absent key is on. Read by ui/caps.js cap().",
+    "keys": {
+      "midi": "MIDI controls (also needs a secure page)",
+      "audio": "microphone / audio controls (also needs a secure page)",
+      "stream": "api/dmx/stream (server-sent DMX frames) is offered. On: the UI takes DMX from the stream and polls api/dmx only as a fallback (silent 2 s, error: poll resumes, stream retried with back-off 1-30 s). false: api/dmx is polled at 10 Hz. Absent: on, because the full desk (desk.js) always has the route.",
+      "node": "This page is served by a hardware node. OPT-IN, unlike every other cap: on only on an explicit true (absent or anything else = off, so a machine never shows it). On: Setup gains the 'This node' fold, which calls node_routes below and nothing under api/."
+    }
+  },
+  "entries": [
+    {
+      "method": "GET",
+      "path": "api/state",
+      "class": "a",
+      "reply": {
+        "status": "object"
+      },
+      "note": "full key list under state_keys",
+      "check": "state"
+    },
+    {
+      "method": "GET",
+      "path": "api/dmx",
+      "class": "a",
+      "reply": {
+        "dmx": "object"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/dmx/stream",
+      "class": "a",
+      "transport": "sse",
+      "reply": {
+        "s": "number",
+        "t": "number",
+        "k": "number",
+        "d": "array"
+      },
+      "note": "transport: sse. Content-Type text/event-stream; a `retry:` line, then one event named `frame` per change, data = JSON {s,t,k,d,m?}: s sequence from 1, t desk clock ms, k 1 on a key frame (whole universes, sent first on subscribe) else 0, d = [[universe (0 = U1), start (0-based), [values]], ...] runs of changed slots, m = {master,blackout,looks,cues} only when changed (ignored by the UI). A frame with nothing changed is not sent, so a quiet desk is silent. Optional ?u=0,1 limits universes. Used only when caps.stream is on; api/dmx stays the fallback."
+    },
+    {
+      "method": "GET",
+      "path": "api/input",
+      "class": "a",
+      "reply": {
+        "config": "object",
+        "interfaces": "array",
+        "listening": "array",
+        "summary": "object"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/input",
+      "class": "a",
+      "reply": {
+        "config": "object",
+        "interfaces": "array",
+        "listening": "array",
+        "summary": "object"
+      },
+      "probe": {
+        "body": {}
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/input/release",
+      "class": "a",
+      "reply": {
+        "ok": "boolean"
+      },
+      "probe": {
+        "body": {}
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/master",
+      "class": "a",
+      "reply": {
+        "ok": "boolean"
+      },
+      "probe": {
+        "body": {}
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/raw",
+      "class": "a",
+      "reply": {
+        "ok": "boolean",
+        "raw": "object"
+      },
+      "probe": {
+        "body": {
+          "channels": []
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/fx",
+      "class": "a",
+      "reply": {
+        "ok": "boolean",
+        "fx": "object"
+      },
+      "probe": {
+        "body": {}
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/chase",
+      "class": "a",
+      "reply": {
+        "ok": "boolean",
+        "chase": "object"
+      },
+      "probe": {
+        "body": {}
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/output",
+      "class": "a",
+      "reply": {
+        "ok": "boolean",
+        "output": "object"
+      },
+      "probe": {
+        "body": {}
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/fixtures/add",
+      "class": "a",
+      "reply": {
+        "ok": "boolean",
+        "added": "array"
+      },
+      "probe": {
+        "body": {
+          "profile": "rgb",
+          "count": 1
+        },
+        "capture": {
+          "fixtureId": "added.0.id",
+          "fixtureUniverse": "added.0.universe",
+          "fixtureAddress": "added.0.address",
+          "fixtureX": "added.0.x",
+          "fixtureY": "added.0.y"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/fixture",
+      "class": "a",
+      "reply": {
+        "ok": "boolean",
+        "fixture": "object"
+      },
+      "probe": {
+        "body": {
+          "id": "$fixtureId",
+          "values": {}
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/fixtures/all",
+      "class": "a",
+      "reply": {
+        "ok": "boolean"
+      },
+      "probe": {
+        "body": {
+          "values": {}
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/fixtures/move",
+      "class": "a",
+      "reply": {
+        "ok": "boolean"
+      },
+      "probe": {
+        "body": {
+          "moves": [
+            {
+              "id": "$fixtureId",
+              "x": "$fixtureX",
+              "y": "$fixtureY"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/fixtures/readdress",
+      "class": "a",
+      "reply": {
+        "ok": "boolean",
+        "moved": "array"
+      },
+      "probe": {
+        "body": {
+          "moves": [
+            {
+              "id": "$fixtureId",
+              "universe": "$fixtureUniverse",
+              "address": "$fixtureAddress"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/fixtures/identify",
+      "class": "a",
+      "reply": {
+        "ok": "boolean"
+      },
+      "probe": {
+        "body": {
+          "ids": [
+            "$fixtureId"
+          ],
+          "seconds": 1
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/groups/add",
+      "class": "a",
+      "reply": {
+        "ok": "boolean",
+        "group": "object"
+      },
+      "probe": {
+        "body": {
+          "name": "contract",
+          "ids": [
+            "$fixtureId"
+          ]
+        },
+        "capture": {
+          "groupId": "group.id"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/scenes/save",
+      "class": "a",
+      "reply": {
+        "ok": "boolean",
+        "scene": "object"
+      },
+      "probe": {
+        "body": {
+          "name": "contract"
+        },
+        "capture": {
+          "sceneId": "scene.id"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/scenes/update",
+      "class": "a",
+      "reply": {
+        "ok": "boolean",
+        "scene": "object"
+      },
+      "probe": {
+        "body": {
+          "id": "$sceneId",
+          "name": "contract"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/scenes/recall",
+      "class": "a",
+      "reply": {
+        "ok": "boolean"
+      },
+      "probe": {
+        "body": {
+          "id": "$sceneId"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/scenes/remove",
+      "class": "a",
+      "reply": {
+        "ok": "boolean"
+      },
+      "probe": {
+        "body": {
+          "id": "$sceneId"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/groups/remove",
+      "class": "a",
+      "reply": {
+        "ok": "boolean"
+      },
+      "probe": {
+        "body": {
+          "id": "$groupId"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/fixtures/remove",
+      "class": "a",
+      "reply": {
+        "ok": "boolean",
+        "removed": "number"
+      },
+      "probe": {
+        "body": {
+          "ids": [
+            "$fixtureId"
+          ]
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/cues",
+      "class": "b",
+      "reply": {
+        "cues": "object"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "cues": "object"
+        },
+        "text": "an empty cue list"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/cues/go",
+      "class": "b",
+      "reply": {
+        "cues": "object"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string",
+          "cues": "object"
+        },
+        "text": "{error:'not on this node', cues: empty list}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/cues/back",
+      "class": "b",
+      "reply": {
+        "cues": "object"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string",
+          "cues": "object"
+        },
+        "text": "{error:'not on this node', cues: empty list}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/cues/stop",
+      "class": "b",
+      "reply": {
+        "cues": "object"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string",
+          "cues": "object"
+        },
+        "text": "{error:'not on this node', cues: empty list}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/cues/loop",
+      "class": "b",
+      "reply": {
+        "cues": "object"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string",
+          "cues": "object"
+        },
+        "text": "{error:'not on this node', cues: empty list}"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/show",
+      "class": "b",
+      "reply": {
+        "file": "string",
+        "live": "boolean"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "file": "string",
+          "live": "boolean"
+        },
+        "text": "one show, always live"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/looks",
+      "class": "b",
+      "reply": {
+        "looks": "array"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "looks": "array"
+        },
+        "text": "an empty list"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/looks/add",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/looks/remove",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/looks/capture",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/looks/fire",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/layer",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/layers/add",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/layers/remove",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/lfos",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/sets",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/fan",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/fixtures/limits",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/profiles/add",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/profiles/remove",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/output/send",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/output/send/remove",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/nodes/add",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/nodes/remove",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/discover",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/serial/identify",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/audio",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/audiocfg",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/library",
+      "class": "c",
+      "reply": {
+        "manufacturers": "array"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/library/manufacturer",
+      "class": "c",
+      "reply": {
+        "fixtures": "array"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/library/fixture",
+      "class": "c",
+      "reply": {
+        "value": "object"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/library/import",
+      "class": "c",
+      "reply": {
+        "name": "string"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/midi",
+      "class": "c",
+      "reply": {
+        "midi": "object"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/midi",
+      "class": "c",
+      "reply": {
+        "ok": "boolean"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/show/open",
+      "class": "c",
+      "reply": {
+        "ok": "boolean"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/show/copy-machine",
+      "class": "c",
+      "reply": {
+        "ok": "boolean"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    }
+  ],
+  "node_routes": {
+    "about": "The hardware node's own routes that the 'This node' fold (caps.node) calls. Not api/* and not part of the desk's API: the node answers them as its own README documents. kind console = POST with header X-Vizzz-Console: 1 (else 403; GET is 405), numbers in the query string, form body where args says form. kind read = plain GET. A command answers 204; a refusal 400 {error,arg,min,max}. The UI calls them by relative path (status, not /status). lint:api-contract checks every nodeGet/nodePost literal in ui/*.js against this list and the other way round.",
+    "header": "X-Vizzz-Console: 1",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/status",
+        "kind": "read",
+        "what": "live facts: addresses, Wi-Fi state, source mode, live sources, Art-Net address, burn-safe numbers, heap, firmware"
+      },
+      {
+        "method": "GET",
+        "path": "/peers",
+        "kind": "read",
+        "what": "{peers:[{ip,name,mac,uni,age}],count}"
+      },
+      {
+        "method": "GET",
+        "path": "/node/manifest",
+        "kind": "read",
+        "what": "firmware tag when /status has no fw"
+      },
+      {
+        "method": "GET",
+        "path": "/wifi/scan",
+        "kind": "read",
+        "what": "{scanning,networks:[{ssid,rssi,enc}]} (same origin only); scanning:true is asked again on the next tick"
+      },
+      {
+        "method": "POST",
+        "path": "/netmode/set",
+        "kind": "console",
+        "args": "m=0|1|2 (access point + Wi-Fi / Wi-Fi only / access point only), then restart",
+        "what": "Wi-Fi mode"
+      },
+      {
+        "method": "POST",
+        "path": "/wifi/set",
+        "kind": "console",
+        "args": "form: ssid=1-32 B, pass=empty or 8-63",
+        "what": "join a network"
+      },
+      {
+        "method": "POST",
+        "path": "/wifi/forget",
+        "kind": "console",
+        "args": "-",
+        "what": "clear the saved network"
+      },
+      {
+        "method": "POST",
+        "path": "/mode/set",
+        "kind": "console",
+        "args": "m=0|1|2 (web / network / HTP)",
+        "what": "source mode"
+      },
+      {
+        "method": "POST",
+        "path": "/mode/fallback",
+        "kind": "console",
+        "args": "en=0|1",
+        "what": "fall back to web when the network is quiet"
+      },
+      {
+        "method": "POST",
+        "path": "/artnet/set",
+        "kind": "console",
+        "args": "net=0-127&subnet=0-15&uni=0-15",
+        "what": "Art-Net port-address"
+      },
+      {
+        "method": "POST",
+        "path": "/artout/peer",
+        "kind": "console",
+        "args": "ip=a.b.c.d or empty (broadcast)",
+        "what": "Art-Net OUT target"
+      },
+      {
+        "method": "POST",
+        "path": "/safety/set",
+        "kind": "console",
+        "args": "burn=0|1",
+        "what": "burn-safe"
+      },
+      {
+        "method": "POST",
+        "path": "/panic",
+        "kind": "console",
+        "args": "-",
+        "what": "master 0, blackout, FX and cues off, web only, in one call"
+      },
+      {
+        "method": "POST",
+        "path": "/announce",
+        "kind": "console",
+        "args": "-",
+        "what": "send a discovery beacon now"
+      },
+      {
+        "method": "POST",
+        "path": "/node/set",
+        "kind": "console",
+        "args": "form: name, ap_ssid, ap_pass=8-63 (optional)",
+        "what": "identity"
+      },
+      {
+        "method": "POST",
+        "path": "/reboot",
+        "kind": "console",
+        "args": "-",
+        "what": "restart"
+      },
+      {
+        "method": "POST",
+        "path": "/factory-reset",
+        "kind": "console",
+        "args": "-",
+        "what": "erase saved settings and restart"
+      }
+    ]
+  }
+}

@@ -9,7 +9,7 @@
     --card-scale: 1;
     --card-family: var(--di-cyan);
     --family-color: transparent;
-    --window-accent: rgba(255, 255, 255, 0.42);
+    --window-accent: rgba(255, 255, 255, 0.5); /* 4.5:1 on #0a0a0a (audit 2026-10-21 NR-07) */
     --raw-scaffold-top: 64px;
     --raw-bottom-chrome: 0px;
     --raw-sheet-inset: 0px;
@@ -285,7 +285,9 @@
 }
 
 .raw-node-palette-item-title span {
-    color: rgba(255, 255, 255, 0.36);
+    /* 0.5: 4.5:1 on the row (#111114) and the active row (#17282c); 0.36 was
+       3.33 (audit 2026-10-21 NR-07). */
+    color: rgba(255, 255, 255, 0.5);
     font-size: var(--di-text-2);
     font-family: var(--di-mono);
     white-space: nowrap;
@@ -357,7 +359,7 @@
 }
 
 .raw-node-palette-group-count {
-    color: rgba(255, 255, 255, 0.28);
+    color: rgba(255, 255, 255, 0.5); /* was 0.28, 2.41:1 (audit 2026-10-21 NR-07) */
     letter-spacing: 0;
 }
 
@@ -1713,7 +1715,7 @@
     font-size: var(--di-text-2);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: rgba(255, 255, 255, 0.36);
+    color: rgba(255, 255, 255, 0.5); /* was 0.36, 3.24:1 (audit 2026-10-21 NR-07) */
     font-family: var(--di-mono);
     margin: 0 0 var(--di-space-3);
 }
@@ -2567,7 +2569,7 @@
 }
 
 .raw-selection-scaffold:focus { outline: none }
-.raw-selection-scaffold:focus-visible { outline: 1px solid var(--di-cyan-border); outline-offset: -1px }
+.raw-selection-scaffold:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 2px }
 
 /* Drag handle on the column's left edge; arrows resize it from the keyboard. */
 .raw-column-resize {
@@ -2864,7 +2866,7 @@
     width: 8px;
     height: 8px;
     border-radius: 0;
-    border: 1.5px solid var(--di-black);
+    border: 1px solid var(--di-black);
     pointer-events: auto;
     touch-action: none;
 }
@@ -3633,8 +3635,110 @@
     overflow-wrap: anywhere;
 }
 
+/* Recorder and Still — a preview of what will be kept, the button that keeps
+   it, and one line that says what happened. */
+.raw-take-panel {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    background: var(--di-surface);
+    padding: var(--di-space-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    font-size: var(--di-text-3);
+    color: var(--di-text);
+}
+
+.raw-take-preview {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--di-radius);
+    background: var(--di-scrim);
+    overflow: hidden;
+}
+
+.raw-take-media {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.raw-take-empty {
+    margin: 0;
+    padding: var(--di-space-3);
+    text-align: center;
+    color: var(--di-text-muted);
+    font-family: var(--di-mono);
+}
+
+.raw-take-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+}
+
+.raw-take-button {
+    padding: var(--di-space-1) var(--di-space-3);
+    font: inherit;
+    color: var(--di-text);
+    background: var(--di-cyan-wash);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
+    cursor: pointer;
+}
+
+.raw-take-button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.raw-take-button:focus-visible {
+    outline: 2px solid var(--di-cyan);
+    outline-offset: 1px;
+}
+
+.raw-take-time {
+    margin-left: auto;
+    font-family: var(--di-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.raw-take-status {
+    margin: 0;
+    color: var(--di-text-muted);
+    overflow-wrap: anywhere;
+}
+
 /* Laser Out reuses the DMX panel's frame; these are only its own two things:
    the square the shape is drawn in, and the armed/disarmed badge. */
+.raw-laser-panel-budget {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-1) var(--di-space-2);
+    font-size: 11px;
+}
+
+.raw-laser-panel-budget label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-1);
+}
+
+.raw-laser-panel-budget input[type='range'] {
+    width: 120px;
+}
+
+.raw-laser-panel-budget-text {
+    flex-basis: 100%;
+    opacity: 0.75;
+}
+
 .raw-laser-panel-canvas {
     align-self: center;
     width: 100%;
@@ -4320,16 +4424,24 @@
    the way home — a link wearing the same ambient clothes. */
 .raw-surface-wordmark {
     position: fixed;
-    bottom: 18px;
+    /* 24px of target (WCAG 2.5.8): the bare text was 33x17, measured at
+       820x1180 (audit 2026-10-21 NR-04). The line box is pinned at the 17px
+       Chromium measured for it, so 14.5px + (24 - 17) / 2 puts the letters
+       exactly where they sat at bottom 18px; at 14px they moved 0.5px down. */
+    bottom: 14.5px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    line-height: 17px;
     /* Bottom-left, beside the zoom cluster. At bottom-centre it was drawn over
        the cards (Bar, Studio, owner 2026-10-05); under them it vanished behind
        the opaque canvas. The corner is the one place no fit puts a card. */
     left: 300px;
     font-family: var(--di-sans);
-    font-weight: 800;
+    font-weight: 700;
     font-size: var(--di-text-4);
     letter-spacing: -0.02em;
-    color: rgba(255, 255, 255, 0.28);
+    color: var(--di-text-muted);
     user-select: none;
     /* Chrome sits BEHIND the cards (the owner's screenshot, hayfilm MOCT: the
        mark drew over a card). 0 = above the canvas ground, below .raw-graph-stage
@@ -4339,16 +4451,16 @@
 }
 
 .raw-surface-wordmark:hover {
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--di-text);
 }
 
 .raw-surface-wordmark:focus-visible {
     outline: 1px solid var(--di-cyan);
     outline-offset: 4px;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--di-text);
 }
 
-.raw-surface-wordmark span {
+.raw-surface-wordmark .dot {
     color: var(--di-cyan);
     opacity: 0.75;
 }

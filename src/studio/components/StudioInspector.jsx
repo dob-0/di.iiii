@@ -84,7 +84,23 @@ const setNestedValue = (value, path, nextValue) => {
 const readNestedValue = (value, path = []) =>
     path.reduce((cur, key) => cur?.[key], value)
 
-function InspNumber({ field, value, onChange, compact = false, axisColor }) {
+// A rotation is stored in radians and read in degrees (Blender's Transform panel; owner 2026-10-13,
+// arranging lamps by hand: 1.5708 is not a number a person types). The field steps by 1°, Shift 0.1°,
+// Ctrl 10°; what is written back is radians, exactly the typed degrees over 180/π.
+const DEG_PER_RAD = 180 / Math.PI
+export const inDegrees = ({ field, value, onChange }) => ({
+    field: { ...field, step: 1 },
+    value: Number.isFinite(Number(value)) ? Number(value) * DEG_PER_RAD : value,
+    onChange: (next) => onChange?.(Number(next) / DEG_PER_RAD)
+})
+
+function InspNumber(props) {
+    return props.field?.degrees
+        ? <InspNumberField {...props} {...inDegrees(props)} />
+        : <InspNumberField {...props} />
+}
+
+function InspNumberField({ field, value, onChange, compact = false, axisColor }) {
     const baseStep = field.step ?? 0.1
     const fieldMin = field.min ?? -Infinity
     const fieldMax = field.max ?? Infinity
@@ -118,8 +134,15 @@ function InspNumber({ field, value, onChange, compact = false, axisColor }) {
     }
     const stopRepeat = () => { clearInterval(intervalRef.current) }
 
-    // Keyboard arrows with modifier step
+    // Keyboard arrows with modifier step. Enter and Escape hand the focus back to the
+    // page: the value is already written on change, and while a field holds the focus
+    // every editor shortcut — Escape to deselect first of all — steps aside (N581).
     const handleKeyDown = (e) => {
+        if (e.key === 'Enter' || e.key === 'Escape') {
+            e.preventDefault()
+            e.currentTarget.blur()
+            return
+        }
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
         e.preventDefault()
         applyDelta(e.key === 'ArrowUp' ? 1 : -1, resolveStep(e))
@@ -432,7 +455,7 @@ function InspSection({ section, sectionValue, assetOptions, spaceOptions, surfac
                 <div className="insp-section-body">
                     {groupVectorFields(section.fields).map((group) => group.vector ? (
                         <div className="insp-vec3-group" key={`${section.id}-${group.base}`}>
-                            <label className="insp-label">{group.base}</label>
+                            <label className="insp-label">{group.fields[0].degrees ? `${group.base} °` : group.base}</label>
                             <div className="insp-vec3-row">
                                 {group.fields.map((field, axisIndex) => (
                                     <InspNumber

@@ -7,6 +7,7 @@ import {
     updateServerSpace,
     deleteServerSpace,
     getServerConfig,
+    getSweepReport,
     patchServerConfig,
     listCommonsAssets,
     removeCommonsAsset
@@ -26,6 +27,7 @@ import {
     navigateToStudioPath
 } from '../../studio/utils/studioRouting.js'
 import { buildAppSpacePath, buildPublicProjectPath, buildVanityProjectPath } from '../../utils/spaceRouting.js'
+import LoadingScreen from '../LoadingScreen.jsx'
 
 const ROLES = [
     { key: 'viewer', hint: 'Read-only access' },
@@ -249,21 +251,26 @@ export default function AdminManageSection({ onStats }) {
 
                     {spaces.map((space) => {
                         const isOpen = expanded.has(space.id)
+                        const isSelected = selection.type === 'space' && selection.spaceId === space.id
                         const bucket = projectsBySpace[space.id]
                         return (
                             <div key={space.id} className="preferences-tree-group">
+                                {/* One control per row. The caret used to be a second
+                                    button inside this one, and the only way to close a
+                                    space — out of reach of a keyboard. Now the row opens
+                                    a space and selects it; on the selected space it
+                                    closes it again. */}
                                 <button
                                     type="button"
-                                    className={`preferences-tree-row is-child${selection.type === 'space' && selection.spaceId === space.id ? ' is-selected' : ''}`}
-                                    onClick={() => { setSelection({ type: 'space', spaceId: space.id }); if (!isOpen) toggleExpand(space.id) }}
+                                    className={`preferences-tree-row is-child${isSelected ? ' is-selected' : ''}`}
+                                    aria-expanded={isOpen}
+                                    onClick={() => {
+                                        if (isSelected && isOpen) { toggleExpand(space.id); return }
+                                        setSelection({ type: 'space', spaceId: space.id })
+                                        if (!isOpen) toggleExpand(space.id)
+                                    }}
                                 >
-                                    <span
-                                        className="preferences-tree-caret"
-                                        role="button"
-                                        tabIndex={-1}
-                                        aria-hidden="true"
-                                        onClick={(e) => { e.stopPropagation(); toggleExpand(space.id) }}
-                                    >
+                                    <span className="preferences-tree-caret" aria-hidden="true">
                                         {isOpen ? '▾' : '▸'}
                                     </span>
                                     <span className="preferences-tree-name">{space.label || space.id}</span>
@@ -272,7 +279,7 @@ export default function AdminManageSection({ onStats }) {
                                 </button>
                                 {isOpen && (
                                     <>
-                                        {bucket?.loading && <div className="preferences-tree-note">Loading projects…</div>}
+                                        {bucket?.loading && <div className="preferences-tree-note"><LoadingScreen variant="inline" label="Loading projects" text="loading projects" /></div>}
                                         {bucket?.error && <div className="preferences-tree-note">{bucket.error}</div>}
                                         {bucket && !bucket.loading && bucket.items.length === 0 && (
                                             <div className="preferences-tree-note">No projects yet.</div>
@@ -377,7 +384,7 @@ export function TrafficSection() {
         .reduce((best, row) => (!best || row.count > best.count ? row : best), null)
     return (
         <ModuleSection title="Traffic" subtitle={`Last ${stats?.windowDays || 30} days · counted here, first-party, one per page load`}>
-            {loading && <div className="preferences-empty">Loading the counts…</div>}
+            {loading && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading the counts" text="loading the counts" /></div>}
             {error && <div className="preferences-empty">{error}</div>}
             {stats && (
                 <>
@@ -405,6 +412,56 @@ export function TrafficSection() {
     )
 }
 
+const formatDay = (ms) => new Date(ms).toISOString().slice(0, 10)
+
+// The idle sweep runs every half hour. A space it will reach shows here two
+// weeks ahead, with what it will do: "trash" (restorable for 30 days from the
+// Trash) or "keep" and the reason. Below, the last things it did.
+export function SweepSection() {
+    const [state, setState] = useState({ loading: true, error: '', report: null })
+    useEffect(() => {
+        let alive = true
+        getSweepReport()
+            .then((report) => { if (alive) setState({ loading: false, error: '', report }) })
+            .catch((err) => { if (alive) setState({ loading: false, error: err.message || 'Could not load the sweep.', report: null }) })
+        return () => { alive = false }
+    }, [])
+    const { loading, error, report } = state
+    const days = Math.round((report?.horizonMs || 0) / (24 * 60 * 60 * 1000)) || 14
+    return (
+        <ModuleSection title="Due for the sweep" subtitle={`Idle spaces the sweep reaches in the next ${days} days`}>
+            {loading && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading the sweep" text="loading the sweep" /></div>}
+            {error && <div className="preferences-empty">{error}</div>}
+            {report && (
+                <>
+                    {report.due.length === 0 && <div className="preferences-empty">Nothing comes due in the next {days} days.</div>}
+                    {report.due.map((entry) => (
+                        <InfoPair
+                            key={entry.spaceId}
+                            label={`${entry.spaceId} · ${entry.owner}`}
+                            value={`${formatDay(entry.dueAt)} · ${entry.action === 'skip' ? `keep (${entry.reason})` : `trash (${entry.reason})`}`}
+                            mono
+                        />
+                    ))}
+                    {report.log.length > 0 && (
+                        <>
+                            <div className="preferences-info-label">What the sweep did</div>
+                            {report.log.slice(0, 20).map((row) => (
+                                <InfoPair
+                                    key={`${row.at}-${row.spaceId}-${row.action}`}
+                                    label={`${formatDay(row.at)} ${row.action} ${row.spaceId}`}
+                                    value={`${row.reason} · ${row.owner}`}
+                                    mono
+                                />
+                            ))}
+                        </>
+                    )}
+                </>
+            )}
+        </ModuleSection>
+    )
+}
+
 function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, onCreateSpace, onPatchUser, spaceLimit }) {
     return (
         <>
@@ -423,6 +480,8 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
 
             <TrafficSection />
 
+            <SweepSection />
+
             <ModuleSection
                 title="New space"
                 subtitle={Number.isFinite(spaceLimit) ? `Free accounts can create up to ${spaceLimit} spaces each` : 'A space holds projects, assets, and its own access'}
@@ -434,6 +493,7 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
                     <input
                         className="preferences-input"
                         placeholder="Space name"
+                        aria-label="New space name"
                         value={draftSpace}
                         onChange={(e) => setDraftSpace(e.target.value)}
                     />
@@ -445,7 +505,7 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
             <CommonsModerationSection />
 
             <ModuleSection title="People" subtitle="Account roles and overall reach">
-                {users === null && <div className="preferences-empty">Loading accounts…</div>}
+                {users === null && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading accounts" text="loading accounts" /></div>}
                 {Array.isArray(users) && users.length === 0 && (
                     <div className="preferences-empty">No accounts to manage (admin sign-in required).</div>
                 )}
@@ -524,6 +584,7 @@ function SpaceDetail({
                             ref={(el) => el?.focus()}
                             value={editing.value}
                             placeholder={editing.type === 'space-slug' ? 'Leave empty to clear (falls back to id)' : ''}
+                            aria-label={editing.type === 'space-slug' ? 'Public link' : 'Space name'}
                             onChange={(e) => setEditing({ ...editing, value: e.target.value })}
                             onKeyDown={(e) => e.key === 'Escape' && setEditing(null)}
                         />
@@ -585,6 +646,7 @@ function SpaceDetail({
                     <input
                         className="preferences-input"
                         placeholder="New project title"
+                        aria-label="New project title"
                         value={draftProject}
                         onChange={(e) => setDraftProject(e.target.value)}
                     />
@@ -604,7 +666,7 @@ function SpaceDetail({
                     value={ownerLabel}
                     mono={!ownerUser}
                 />
-                {users === null && <div className="preferences-empty">Loading accounts…</div>}
+                {users === null && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading accounts" text="loading accounts" /></div>}
                 {Array.isArray(users) && users.length === 0 && (
                     <div className="preferences-empty">No accounts to manage (admin sign-in required).</div>
                 )}
@@ -698,6 +760,7 @@ function CommonsModerationSection() {
                 <input
                     className="preferences-input"
                     placeholder="Search shared assets"
+                    aria-label="Search shared assets"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                 />
@@ -772,6 +835,7 @@ function ProjectDetail({ space, project, isPublished, editing, startEdit, submit
                             ref={(el) => el?.focus()}
                             value={editing.value}
                             placeholder={editing.type === 'project-slug' ? 'Leave empty to clear (falls back to id)' : ''}
+                            aria-label={editing.type === 'project-slug' ? 'Public link' : 'Project title'}
                             onChange={(e) => setEditing({ ...editing, value: e.target.value })}
                             onKeyDown={(e) => e.key === 'Escape' && setEditing(null)}
                         />

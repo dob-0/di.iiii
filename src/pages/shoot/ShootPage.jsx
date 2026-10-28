@@ -311,8 +311,8 @@ function ChecklistTab({ plan, send, openDialog }) {
 function PlanTab({ plan, send }) {
     return (
         <div className="shoot-two">
-            <TextPanel eyebrow="ORDER OF THE DAY" title={plan.scheduleTitle || 'The day'} field="schedule" value={plan.schedule || ''} send={send} />
-            <TextPanel eyebrow="KEEP EVERYTHING HERE" title="Production notes" field="notes" value={plan.notes || ''} send={send}
+            <TextPanel eyebrow="Order of the day" title={plan.scheduleTitle || 'The day'} field="schedule" value={plan.schedule || ''} send={send} />
+            <TextPanel eyebrow="Keep everything here" title="Production notes" field="notes" value={plan.notes || ''} send={send}
                 placeholder="Contacts, reminders, anything the crew must remember…" />
         </div>
     )

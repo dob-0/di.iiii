@@ -29,7 +29,7 @@ export default function ReplyQuote({ name, text, onOpen = null, onClear = null, 
                 pl: 1,
                 py: dense ? 0.25 : 0.5,
                 borderLeft: '2px solid var(--ui-accent)',
-                borderRadius: '2px',
+                borderRadius: 0,
                 background: 'color-mix(in srgb, var(--ui-accent) 7%, transparent)',
                 cursor: clickable ? 'pointer' : 'default'
             }}

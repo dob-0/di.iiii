@@ -99,11 +99,11 @@ describe('space-sync engine', () => {
 
     it('maps a tier name to its url so nobody pastes one from memory', () => {
         const tiers = {
-            prod: { url: 'https://di-studio.xyz/serverXR' },
+            prod: { url: 'https://diiii.xyz/serverXR' },
             dev: { url: 'https://dev.diiii.xyz/serverXR' },
         }
         expect(tierOf('https://dev.diiii.xyz/serverXR', tiers)).toBe('dev')
-        expect(tierOf('https://di-studio.xyz/serverXR', tiers)).toBe('prod')
+        expect(tierOf('https://diiii.xyz/serverXR', tiers)).toBe('prod')
         // an unknown host must NOT silently answer "prod"
         expect(tierOf('http://localhost:4000/serverXR', tiers)).toBe('localhost:4000')
         expect(parseArgs(['--all']).all).toBe(true)

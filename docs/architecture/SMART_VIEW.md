@@ -101,7 +101,9 @@ The owner on MOXIR v2.6, 2026-10-12: the circle of the occlusion fade "read as a
    (hall.py v13: roof = deck, skylight; walls = block, brick, glass, steel; machines = machine, press, rust; outside =
    entities `rig-out-*`), and the merged `shell` mesh's roof and wall parts are taken by the cutaway planes held in
    place (`planWithLayers`). All on by default; `?layers=walls,machines` (the layers shown, `none` for none) carries the
-   state in a link. Sources: The Sims "walls down", Capture / Depence layer visibility.
+   state in a link. Cut (the camera's cutaway itself) is the fifth item: the Studio starts with it on (the walls-down work reading);
+   the room page (public link) starts with it OFF — the building stands whole — unless `?layers=` names the layers, and the
+   Display menu's Cut item switches it and writes the link back (owner 2026-10-15). Sources: The Sims "walls down", Capture / Depence layer visibility.
 
 ## What is "the building"
 
@@ -155,3 +157,14 @@ offload), uncapped (`--disable-gpu-vsync --disable-frame-rate-limit`), 1440×900
 - Room bounds are axis-aligned: a building turned off the world axes gets a loose box and a
   looser cut. MOXIR is axis-aligned by construction (`hall.py`).
 - The graph lane's published renderer (`PublicGraphSurface`) and walk mode do not have it.
+
+## Auto fly (2026-10-15)
+
+`src/project/viewport/autoFly.js` (pure) builds a closed flight from the room's frame (`computeRoomFrame`) and the points of
+interest the scene has (DJ riser, rig box, entrance; the frame alone is enough): a centripetal Catmull-Rom spline, speed from a
+profile (1.6–6 m/s, curvature- and acceleration-limited), bank = atan(lateral acceleration / g) capped at 25°, look-ahead on the
+path. Every sample stays 0.8 m inside the walls and the roof cut and ≥ 1.2 m above the floor (`checkFlight` reports it).
+`SmartView` follows it (`fly`, `onFlyEnd` props) with camera-controls disabled; `useAutoFlyStop` ends it on any pointer, wheel,
+key or touch input. Buttons: the room page's "Auto fly" beside Walk / Fly (PublicProjectViewer), the Studio view bar's "Auto fly";
+`?fly=1` starts it on open. Limits: the path is checked against the room's frame, not against each piece of furniture; the spline
+is C1 (smoothness of speed and bank is by filtering, not by construction).

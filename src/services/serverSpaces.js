@@ -46,6 +46,21 @@ export const resolveVanityProjectLink = async (spaceSegment, projectSegment) => 
     }
 }
 
+// The bare /{space} address. The server answers { movedTo } when the space's
+// front door left it in a recorded move and no front door was set since, and
+// only when this caller could open where it leads (serverXR/src/index.js
+// GET /api/resolve/:spaceSegment). null on a 404 — there is nothing to
+// forward and the space opens as it always did.
+export const resolveSpaceRoot = async (spaceSegment) => {
+    try {
+        const data = await apiFetch(`/api/resolve/${encodeURIComponent(spaceSegment)}`)
+        return { movedTo: data.movedTo || null }
+    } catch (error) {
+        if (error?.status === 404) return null
+        throw error
+    }
+}
+
 export const createServerSpace = async ({ label, slug, isPermanent = false } = {}) => {
     const data = await apiFetch('/api/spaces', {
         method: 'POST',
@@ -302,6 +317,13 @@ export const listGithubRepos = async ({ refresh = false } = {}) =>
 export const getServerConfig = async () => {
     const data = await apiFetch('/api/config')
     return data.config || {}
+}
+
+// The idle-space sweep, as an admin reads it: what comes due in the next 14
+// days (and whether it will be trashed or kept, and why), and what it did.
+export const getSweepReport = async () => {
+    const data = await apiFetch('/api/admin/sweep')
+    return { due: data.due || [], log: data.log || [], horizonMs: data.horizonMs || 0 }
 }
 
 export const patchServerConfig = async (updates = {}) => {

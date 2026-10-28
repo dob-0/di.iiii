@@ -87,7 +87,7 @@ term expires. Do not delete it as part of adopting this path.
    curl -sS -o /dev/null -w '%{http_code}\n' \
      --http1.1 -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
      -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: AAAAAAAAAAAAAAAAAAAAAA==' \
-     'https://di-studio.xyz/serverXR/mesh?room=bridge&node=keeper-probe'   # -> 401
+     'https://diiii.xyz/serverXR/mesh?room=bridge&node=keeper-probe'   # -> 401
    ```
    An ordinary visitor id on the same URL must still return `101`. Never probe
    this over HTTP/2 — that reports false 404s for websocket paths.

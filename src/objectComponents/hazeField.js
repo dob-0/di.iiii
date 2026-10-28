@@ -68,7 +68,7 @@ const num = (n, fallback) => (Number.isFinite(Number(n)) ? Number(n) : fallback)
 export const MAX_HAZE_SOURCES = 12
 
 // THE PHYSICS OF EACH KIND OF MACHINE. Keyed by the fixture type's category
-// (src/rigbuild/types/moxir.json: 'hazer', 'smoke-machine'). The fluid's output comes
+// (src/rigbuild/types/library/: 'hazer', 'smoke-machine'). The fluid's output comes
 // from the type's own spec (fluid_ml_per_min); the rest no maker states:
 //   dropletD_um — ASSUMED. Oil haze: a mean of ~1 µm (an oil "cracker" or atomising
 //                 hazer makes sub-micron to ~1 µm droplets — why haze hangs for an hour
@@ -279,6 +279,9 @@ export const NOISE_TILE_M = 8
  */
 export const hazeScatteringAt = (field, p, time = 0) => {
     if (!field) return 0
+    // no air outside the building's box (the shader's uHazeBox*, beamReach.js): field.box { min, max } when known
+    const box = field.box
+    if (box && [0, 1, 2].some((k) => p[k] < box.min[k] || p[k] > box.max[k])) return 0
     const q = [
         (p[0] - field.drift[0] * time) / NOISE_TILE_M,
         (p[1] - field.drift[1] * time) / NOISE_TILE_M,

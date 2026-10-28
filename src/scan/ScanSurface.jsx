@@ -49,6 +49,8 @@ import {
 import { getProjectDocument } from '../project/services/projectsApi.js'
 import { requestPlaceBuild, readPlaceBuild } from './placeBuildApi.js'
 import './scanSurface.css'
+import ArScan from './ar/ArScan.jsx'
+import { arSupport, requestArSession } from './ar/xrSource.js'
 
 const SAMPLE_EVERY_MS = 400
 // How many readings the coach looks back over: about twelve seconds, which is
@@ -72,7 +74,7 @@ const CAMERA_WANTED = {
 
 const isPortrait = () => typeof window !== 'undefined' && window.innerHeight > window.innerWidth
 
-export default function ScanSurface({ spaceId }) {
+function CameraScan({ spaceId, arReady = 'no', arProblem = '', onStartAr = null }) {
     const videoRef = useRef(null)
     const sampleCanvasRef = useRef(null)
     const stillCanvasRef = useRef(null)
@@ -592,6 +594,19 @@ export default function ScanSurface({ spaceId }) {
                         Let the page read the compass
                     </button>
                 )}
+                {arReady === 'yes' && onStartAr && (
+                    <button
+                        className="scan-btn scan-ar-start"
+                        type="button"
+                        disabled={recording}
+                        onClick={() => {
+                            // AR and this camera cannot hold the lens at once: let go first.
+                            streamRef.current?.getTracks().forEach((track) => track.stop())
+                            onStartAr({ sourcesProject, spaceLabel: spaceLabel || spaceId })
+                        }}
+                    >Scan in AR — shows what is seen, where to stand, real size</button>
+                )}
+                {arProblem && <p className="scan-small scan-small-warn">{arProblem}</p>}
                 {compass === 'refused' && <p className="scan-small">No compass, so no ring of directions. Everything else works.</p>}
                 {compass === 'none' && <p className="scan-small">This phone reports no orientation, so there is no ring of directions.</p>}
                 {coaching && <p className="scan-coach">{coaching}</p>}
@@ -709,5 +724,72 @@ export default function ScanSurface({ spaceId }) {
                 </footer>
             </div>
         </div>
+    )
+}
+
+
+/**
+ * The scan: the camera walk (any phone), or — on a phone whose browser has WebXR
+ * immersive-ar (Chrome on Android, ARCore) — the AR scan, which paints what has
+ * been seen, maps the place from above, puts the next spot on the floor, warns
+ * before a bad shot and saves every shot with its pose (src/scan/ar/).
+ * `?ar=play` plays a recorded walk on any screen, for looking and testing;
+ * `&session=<url>` plays one saved by a phone.
+ */
+export default function ScanSurface({ spaceId }) {
+    const overlayRef = useRef(null)
+    const params = useMemo(() => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : ''), [])
+    const [ar, setAr] = useState(() => (params.get('ar') === 'play' && !params.get('session')
+        ? { mode: 'play', speed: Number(params.get('speed')) || 1 }
+        : null))
+    const [arReady, setArReady] = useState('no')
+    const [arProblem, setArProblem] = useState('')
+    const [cameraKey, setCameraKey] = useState(0)
+
+    useEffect(() => {
+        let cancelled = false
+        void arSupport().then((answer) => { if (!cancelled) setArReady(answer) })
+        const url = params.get('ar') === 'play' ? params.get('session') : null
+        if (url) {
+            fetch(url).then((r) => r.json())
+                .then((recorded) => { if (!cancelled) setAr({ mode: 'play', recorded, speed: Number(params.get('speed')) || 1 }) })
+                .catch(() => { if (!cancelled) setArProblem('That recorded walk could not be read.') })
+        }
+        return () => { cancelled = true }
+    }, [params])
+
+    const startAr = useCallback((context) => {
+        setArProblem('')
+        requestArSession(overlayRef.current)
+            .then((xrSession) => setAr({ mode: 'xr', xrSession, ...context }))
+            .catch((error) => {
+                setArProblem(`The AR scan did not start (${error?.name || 'unknown'}). The camera walk still works.`)
+                setCameraKey((k) => k + 1)
+            })
+    }, [])
+
+    const leaveAr = useCallback(() => {
+        setAr(null)
+        setCameraKey((k) => k + 1)
+    }, [])
+
+    return (
+        <>
+            {!ar && <CameraScan key={cameraKey} spaceId={spaceId} arReady={arReady} arProblem={arProblem} onStartAr={startAr} />}
+            <div ref={overlayRef} className="scan-ar-root">
+                {ar && (
+                    <ArScan
+                        mode={ar.mode}
+                        xrSession={ar.xrSession || null}
+                        recorded={ar.recorded || null}
+                        speed={ar.speed || 1}
+                        spaceId={spaceId}
+                        spaceLabel={ar.spaceLabel || spaceId}
+                        sourcesProject={ar.sourcesProject || ''}
+                        onLeave={leaveAr}
+                    />
+                )}
+            </div>
+        </>
     )
 }

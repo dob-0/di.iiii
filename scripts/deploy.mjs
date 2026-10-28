@@ -318,7 +318,7 @@ const printStatus = async () => {
     console.log(`Worktree: ${worktree ? 'dirty' : 'clean'}`)
     console.log('Deploy lanes:')
     console.log('  dev -> https://dev.diiii.xyz (the dev tier)')
-    console.log('  production -> https://di-studio.xyz')
+    console.log('  production -> https://diiii.xyz')
     console.log(`Remote dev-tier host: ${remoteDefaults.sshTarget}:${remoteDefaults.devRepo}`)
     console.log(`Remote production host: ${remoteDefaults.sshTarget}:${remoteDefaults.productionRepo}`)
 }
@@ -493,7 +493,7 @@ const handlers = {
         await runMaybe(nodeCommand, ['scripts/smoke-check.mjs', '--base-url', 'https://dev.diiii.xyz'])
     },
     'smoke:production': async () => {
-        await runMaybe(nodeCommand, ['scripts/smoke-check.mjs', '--base-url', 'https://di-studio.xyz'])
+        await runMaybe(nodeCommand, ['scripts/smoke-check.mjs', '--base-url', 'https://diiii.xyz'])
     },
     'build:dev': async () => {
         await runMaybe(nodeCommand, ['scripts/stage-cpanel-nodeapp-release.mjs'], {
