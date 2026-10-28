@@ -62,7 +62,7 @@ const send = async (d, url, init) => {
     try {
         res = await d.fetchImpl(url, { ...init, signal: AbortSignal.timeout(BROKER_TIMEOUT_MS), headers: { 'user-agent': DI_USER_AGENT, ...init.headers } })
     } catch (error) {
-        throw new Error(`broker unreachable (${url}): ${error?.message || error}`)
+        throw new Error(`broker unreachable (${url}): ${error?.message || error}`, { cause: error })
     }
     let body = null
     try { body = res.status === 204 ? null : await res.json() } catch { /* an error page, not JSON */ }
