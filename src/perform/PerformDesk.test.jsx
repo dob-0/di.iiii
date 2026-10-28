@@ -109,13 +109,13 @@ describe('the Perform desk', () => {
         const { layout } = renderDesk()
         fireEvent.click(screen.getByRole('button', { name: /VJ/ }))
         fireEvent.click(screen.getByRole('menuitem', { name: 'Save as mine…' }))
-        fireEvent.change(screen.getByLabelText('Name for your preset'), { target: { value: 'friday at MOCT' } })
+        fireEvent.change(screen.getByLabelText('Name for your preset'), { target: { value: 'friday, small room' } })
         fireEvent.click(screen.getByRole('button', { name: 'Save' }))
         expect(layout.setPresets).toHaveBeenCalledTimes(1)
         const saved = layout.setPresets.mock.calls[0][0][0]
-        expect(saved).toMatchObject({ name: 'friday at MOCT', source: 'mine', base: 'vj' })
+        expect(saved).toMatchObject({ name: 'friday, small room', source: 'mine', base: 'vj' })
         expect(saved.windows.map((item) => item.kind)).toEqual(['deck', 'out', 'clock', 'master'])
-        expect(screen.getByText(/Saved as “friday at MOCT” on this device/)).toBeTruthy()
+        expect(screen.getByText(/Saved as “friday, small room” on this device/)).toBeTruthy()
     })
 
     it('save to the show is one op on the document', () => {
@@ -165,5 +165,53 @@ describe('Desk | Perform', () => {
     it('draws nothing outside a project', () => {
         const { container } = render(<DeskPerformSwitch current="desk" space="lab" project={null} />)
         expect(container.innerHTML).toBe('')
+    })
+})
+
+// Audit 2026-10-21 (docs/ai/audits/2026-10-21-rig-show-pages.md, row F1): a menu that only its own button
+// could close. Escape and a press outside close it (Nielsen 3, user control; WAI-ARIA APG menu button).
+describe('the strip menus close the way menus close', () => {
+    it('Escape closes the preset menu and puts focus back on its button', () => {
+        renderDesk()
+        const button = screen.getByRole('button', { name: /VJ/ })
+        fireEvent.click(button)
+        expect(screen.getByRole('menu', { name: 'Presets' })).toBeTruthy()
+        fireEvent.keyDown(screen.getByRole('menu', { name: 'Presets' }), { key: 'Escape' })
+        expect(screen.queryByRole('menu', { name: 'Presets' })).toBe(null)
+        expect(document.activeElement).toBe(button)
+    })
+
+    it('a press outside closes the window menu; a press inside does not', () => {
+        renderDesk()
+        fireEvent.click(screen.getByRole('button', { name: '+ window' }))
+        const menu = screen.getByRole('menu', { name: 'Add a window' })
+        fireEvent.pointerDown(menu)
+        expect(screen.getByRole('menu', { name: 'Add a window' })).toBeTruthy()
+        fireEvent.pointerDown(document.body)
+        expect(screen.queryByRole('menu', { name: 'Add a window' })).toBe(null)
+    })
+})
+
+// Audit 2026-10-21, row F2: axe-core "aria-prohibited-attr" (serious) — an aria-label on a plain div is not
+// read by every screen reader. The four beat dots are one picture with a name.
+describe('the clock window', () => {
+    it('names the beat as an image, not as a bare div', () => {
+        renderDesk()
+        const beats = document.querySelector('.perform-beats')
+        expect(beats.getAttribute('role')).toBe('img')
+        expect(beats.getAttribute('aria-label')).toMatch(/^Beat \d of 4$/)
+    })
+})
+
+// Audit 2026-10-21, row F3: the owner's rule — no production name in code or defaults. The save box's
+// example name named a real production.
+describe('the save box', () => {
+    it('suggests a name that belongs to no production', () => {
+        renderDesk()
+        fireEvent.click(screen.getByRole('button', { name: /VJ/ }))
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Save as mine…' }))
+        const placeholder = screen.getByLabelText('Name for your preset').getAttribute('placeholder')
+        expect(placeholder).toBeTruthy()
+        expect(placeholder).not.toMatch(/MOCT|MOXIR|Dilijan|Hayfilm/i)
     })
 })

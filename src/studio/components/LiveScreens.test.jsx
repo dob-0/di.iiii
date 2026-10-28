@@ -5,7 +5,7 @@ import { act, render } from '@testing-library/react'
 // which read the rest of apiClient at import time.
 vi.mock('../../services/apiClient.js', async (importOriginal) => ({
     ...(await importOriginal()),
-    apiBaseUrl: 'https://di-studio.xyz/serverXR'
+    apiBaseUrl: 'https://diiii.xyz/serverXR'
 }))
 
 import LiveScreens, { drawPlate } from './LiveScreens.jsx'

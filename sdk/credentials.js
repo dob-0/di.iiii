@@ -18,7 +18,15 @@ import { join } from 'node:path'
 export const TIERS = {
     local: { base: 'http://localhost:4000/serverXR', env: 'DI_TOKEN_LOCAL', site: 'http://localhost:4000' },
     dev: { base: 'https://dev.diiii.xyz/serverXR', env: 'DI_TOKEN_DEV', site: 'https://dev.diiii.xyz' },
-    prod: { base: 'https://di-studio.xyz/serverXR', env: 'DI_TOKEN_PROD', site: 'https://di-studio.xyz' }
+    prod: { base: 'https://diiii.xyz/serverXR', env: 'DI_TOKEN_PROD', site: 'https://diiii.xyz' }
+}
+
+// Old addresses that still reach a tier. di-studio.xyz was prod's address until
+// 2026-10-21 and forwards to diiii.xyz; a script or link file that still names
+// it must find the prod login, not file a second one under the old origin.
+export const SITE_ALIASES = {
+    'https://di-studio.xyz': 'prod',
+    'https://www.di-studio.xyz': 'prod'
 }
 
 export const credentialsPath = (home = homedir()) => join(home, '.config', 'di', 'credentials.json')
@@ -64,7 +72,7 @@ export const resolveToken = ({ tier, base = null, token = null, env = process.en
     if (own) return own
     const origin = base ? originOf(base) : null
     if (!origin) return null
-    return filed(Object.keys(TIERS).find((name) => TIERS[name].site === origin) || origin)
+    return filed(Object.keys(TIERS).find((name) => TIERS[name].site === origin) || SITE_ALIASES[origin] || origin)
 }
 
 export const resolveBase = ({ tier = null, base = null } = {}) => {

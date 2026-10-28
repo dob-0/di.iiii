@@ -6,7 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ScenePicker from './ScenePicker.jsx'
 import { scenesOf } from '../utils/scenesOf.js'
-import { newSceneOps, duplicateSceneOps, deleteSceneOps, moveSceneOps, changeSceneOps, headsWarning, flashLine, clampBpm } from '../utils/sceneEdit.js'
+import { newSceneOps, duplicateSceneOps, deleteSceneOps, moveSceneOps, changeSceneOps, headsWarning, flashLine, clampBpm, cueOps } from '../utils/sceneEdit.js'
 import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import { v1Entities, v1Looks, v1RigParts, cuesOf } from '../../../scripts/rigbuild/epic-build.mjs'
 
@@ -93,6 +93,27 @@ describe('the scene editor: a change emits the ops with the rebuilt look', () =>
         fireEvent.click(screen.getByLabelText(`Edit ${scenesOf(doc)[3].name}`))
         fireEvent.click(screen.getByTestId('scene-play'))
         expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({ id: doc.mappingState.cues[3].id }))
+    })
+})
+
+// A visible label names its field (WCAG 2.5.3, label in name). The labels wrapped a
+// Field that carried its own aria-label, which won: "fade s" was read as "Cue fade",
+// "pan°" as "pan" — and jsx-a11y could not see the control (12 warnings, 2026-10-21).
+describe('the scene editor: every visible label is its field\'s name', () => {
+    it('each labelled field is found by its role and the words on screen, and still writes', () => {
+        const doc = baseDoc()
+        const look = doc.entities[0].components.rigLooks.looks.find((l) => l.id === scenesOf(doc)[3].lookId)
+        look.motion = { mode: 'pulse', bpm: 60, depth: 255, spatial: 'patch', kinds: [], still: 0 }
+        look.heads = { pattern: 'nod', period_s: 8, pan_deg: 30, tilt_deg: 20, spatial: 'all', kinds: [] }
+        const onApplyOps = vi.fn()
+        render(<ScenePicker document={doc} current={undefined} onPick={() => {}} onApplyOps={onApplyOps} />)
+        fireEvent.click(screen.getByLabelText(`Edit ${scenesOf(doc)[3].name}`))
+        for (const name of ['Title', 'Intent', 'kinds']) expect(screen.getByRole('textbox', { name })).toBeTruthy()
+        for (const name of ['Act', 'bpm', 'depth', 'still', 'period s', 'pan°', 'tilt°', 'fade s', 'hold s']) {
+            expect(screen.getByRole('spinbutton', { name })).toBeTruthy()
+        }
+        fireEvent.change(screen.getByRole('spinbutton', { name: 'fade s' }), { target: { value: '2.5' } })
+        expect(onApplyOps).toHaveBeenLastCalledWith(cueOps(doc.mappingState.cues[3].id, { fade: 2.5 }))
     })
 })
 

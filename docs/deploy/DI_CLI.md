@@ -9,7 +9,7 @@ macOS / Linux   curl -fsSL https://diiii.xyz/get | sh
 Windows         irm https://diiii.xyz/get.ps1 | iex
 ```
 
-`https://di-studio.xyz/get` and `/get.ps1` serve the same bytes and always
+`https://diiii.xyz/get` and `/get.ps1` serve the same bytes and always
 will — that line is printed on handouts — and must never become a redirect: a
 plain `curl … | sh` does not follow one. If neither host is reachable, the same
 script is at

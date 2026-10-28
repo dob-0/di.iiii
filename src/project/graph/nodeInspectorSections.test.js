@@ -91,11 +91,10 @@ describe('deriveNodeInspectorSections', () => {
         expect(field).toMatchObject({ label: 'Target URL', type: 'text' })
     })
 
-    it('exposes stream.recorder\'s file pattern as an editable field', () => {
+    it('gives Recorder no file-pattern field: the file is named after its source and date', () => {
         const node = createNode('stream.recorder')
         const sections = deriveNodeInspectorSections(node)
-        const field = sections[0].fields.find((f) => f.path[0] === 'filePattern')
-        expect(field).toMatchObject({ label: 'File Pattern', type: 'text' })
+        expect(sections[0].fields.find((f) => f.path[0] === 'filePattern')).toBeUndefined()
     })
 
     // Universal code panel (product decision 2026-07-19): every node type,
@@ -141,6 +140,14 @@ describe('deriveNodeInspectorSections', () => {
         expect(src).toBeDefined()
         expect(src.type).toBe('asset')
         expect(src.assetKind).toBe(assetKind)
+    })
+
+    // An .ild and an .svg share no media kind, so Laser File offers every asset and reads the bytes.
+    it('gives laser.file an unfiltered asset picker', () => {
+        const src = deriveNodeInspectorSections(createNode('laser.file'))
+            .find((section) => section.id === 'values')?.fields.find((field) => field.path[0] === 'src')
+        expect(src).toMatchObject({ type: 'asset', portType: 'string' })
+        expect(src.assetKind).toBeUndefined()
     })
 
         // A doorway's port type decides what its socket on the container carries.

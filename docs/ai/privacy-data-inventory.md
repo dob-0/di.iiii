@@ -151,8 +151,9 @@ published by them, for exactly this purpose, and expires with the 90-day window.
 workspace documents. Enumerated in the audit; surfaced to users at
 `src/components/PreferencesPage.jsx:550`.
 
-**Retention that exists.** Spaces 30 d, guest sandboxes 7 d, account sandboxes
-180 d then archived (`config.js:274-281`). Op history capped at 500/doc. Program
+**Retention that exists.** Spaces 30 d idle, then 30 d in the trash (published, listed, site-linked, slugged or
+domain-bound spaces are skipped), guest sandboxes 7 d + 30 d trash, account sandboxes
+180 d then archived (`config.js:274-281`). Op history capped at 500/doc. `sweep_log` (db.js) holds one row per sweep act with space id, action, reason and owner id; no deletion. Program
 guest-book rows 90 d (`appVisitorStore.js`).
 
 **Backups.** Nightly `VACUUM INTO` snapshot + tar of uploads/spaces/snapshots to

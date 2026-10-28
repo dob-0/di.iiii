@@ -36,7 +36,8 @@ const previewUntil = Date.now() + Number(args.preview || 0) * 1000
 const GRAPHICS = String(args.graphics || '1,5,8,10,48,2,27').split(',').map(Number)
 // The never-use values and the dot ranges live in the device's chart (one home); this player only reads them.
 const chart = JSON.parse(readFileSync(new URL('../place/fixtures/charts/up-la40wf.json', import.meta.url), 'utf8')).graphics
-const NEVER = new Set(chart.neverUseValues)
+// the test pattern (181) is never played either: the owner's word, kept beside the never-use list in the chart
+const NEVER = new Set([...chart.neverUseValues, chart.testPattern.value])
 const dot = (g) => chart.safety.dotValueRanges.some(([a, b]) => g >= a && g <= b)
 if (GRAPHICS.some((g) => NEVER.has(g) || dot(g))) throw new Error('a forbidden graphic is in the list')
 if (!cues.size && !args.preview) { console.log('usage: --cues 2,8,… (1-based) [--preview 30]'); process.exit(2) }

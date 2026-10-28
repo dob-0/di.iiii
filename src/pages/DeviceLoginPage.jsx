@@ -653,7 +653,7 @@ export default function DeviceLoginPage() {
 
             <header className="legal-header">
                 <p className="legal-eyebrow">terminal sign-in</p>
-                <h1 className="legal-title">Sign a terminal in</h1>
+                <h1 className="legal-title">sign a terminal in</h1>
                 <p className="legal-lede">
                     A terminal shows a short code. Type it here to sign that terminal in as you.
                 </p>

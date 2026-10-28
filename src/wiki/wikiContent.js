@@ -17,6 +17,19 @@ export const WIKI_CATEGORIES = [
 
 export const WIKI_ARTICLES = [
     {
+        id: 'studio-frame',
+        category: 'Editing',
+        title: 'The Editor\'s frame and your scene',
+        summary: 'The panels, buttons and bars around the viewport wear di.iiii\'s own colours and square corners. What your project draws inside the viewport keeps its own colours.',
+        body: [
+            'The Editor\'s frame is di.iiii\'s: one cyan, a near-black ground, and rectangles for every button, tab, badge, switch and slider. A project\'s scene is yours: its background, its objects and their colours look exactly as you set them, with or without the frame around them.',
+            'A slider\'s thumb is a small upright bar with a dark rim, so it stays visible over the filled cyan line. The whole 24 px row of a slider takes a click or a touch, not only the thin line. A switch is a square in a rectangle: grey when off, cyan when on. Controls have sharp corners; the only round mark is the connection light.',
+            'On the Spaces page, the view you are on (Grid, List, Map) is lit, a row you reach with the keyboard is lit too, and a public space is drawn light grey, because cyan means live. A space\'s address is printed in grey; green is kept for what is live.'
+        ],
+        tags: ['studio', 'editor', 'frame', 'colours', 'slider', 'switch', 'look'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'auto-fly',
         category: 'Editing',
         title: 'Auto fly: a drone flight through the room',
@@ -153,9 +166,10 @@ export const WIKI_ARTICLES = [
             'A door can show where it leads. Give a door a picture (the same media slot an image uses) and the picture fills the door\u2019s opening \u2014 the round door or the standing frame \u2014 a little veiled until you point at it, then clear. A door with no picture keeps its own colour, as before. A door can also invite: in its own colour a ripple spreads out from it and arrows slide in from both sides, so it reads as a place to go from across the room; with reduced motion they stand still.',
             'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately, and nothing falls. Going through a door is a short plain fade. The destination is never different, only the journey.',
             'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.',
-            'Everything on the page can be reached with the tab key, and whatever you are on is ringed in cyan. While the door is opening, what falls past you is a picture of the page you were reading, drawn as flat pieces in the room itself \u2014 not a second set of its controls, so nothing in the flight can be tabbed to or read twice by a screen reader.'
+            'Everything on the page can be reached with the tab key, and whatever you are on is ringed in cyan. While the door is opening, what falls past you is a picture of the page you were reading, drawn as flat pieces in the room itself \u2014 not a second set of its controls, so nothing in the flight can be tabbed to or read twice by a screen reader.',
+            'The address is diiii.xyz. A link or a printed code that names the old studio address still reaches the same place; new links name diiii.xyz.'
         ],
-        tags: ['landing', 'basics', 'navigation', 'room', 'walk'],
+        tags: ['landing', 'basics', 'navigation', 'room', 'walk', 'address'],
         updated: '2026-10-25'
     },
     {
@@ -212,10 +226,11 @@ export const WIKI_ARTICLES = [
             'The Trash button appears on the Spaces page once something is in it. Each row shows how many projects went with the space and how many days are left. Restore brings the space back with exactly the projects that went with it; a project you had deleted on its own earlier stays in that project trash. Delete forever… asks twice and is the only way the files go before the 30 days are up.',
             'A space marked permanent is not deleted: the box says so, and an admin can unmark it there first. The front room, the shared global space and a sandbox are never deleted. While a space is in the Trash its name is held, so a new space cannot take it by accident.',
             'A project can move to another space you own: on a project card in Studio, "move to…" lists them. Its link keeps working. A project that is its space\u2019s front door asks first, because moving it leaves that space with no front door. Once moved, the old space\u2019s own address sends visitors on to the project in its new space, until that space is given a new front door. Someone who could not open the project where it went is not sent there: they see the old space as it is.',
-            'Not yet carried: a space that is followed from another copy (di follow) does nothing special when it is trashed — the copy that follows simply stops finding it. A delete does not travel to the copies that follow.'
+            'Not yet carried: a space that is followed from another copy (di follow) does nothing special when it is trashed — the copy that follows simply stops finding it. A delete does not travel to the copies that follow.',
+            'Spaces nobody touches. A space that is not permanent and has not been edited for 30 days (a guest sandbox: 7 days) is cleared by the server\u2019s half-hour sweep — and cleared means moved to the Trash, the same as a delete: it can be restored for 30 days. A space that is published, listed publicly, linked from the site, reachable by its own address or domain, or holds a project with saved work is never cleared: it is kept, and the sweep says so. A guest who comes back to a cleared sandbox inside the 30 days gets it back. Admins see every space due in the next 14 days, and what the sweep will do to each, under Manage → Due for the sweep.'
         ],
-        tags: ['delete', 'trash', 'restore', 'space', 'permanent', 'move', 'undo'],
-        updated: '2026-10-20'
+        tags: ['delete', 'trash', 'restore', 'space', 'permanent', 'move', 'undo', 'sweep', 'idle'],
+        updated: '2026-10-21'
     },
     {
         id: 'your-space-your-word',
@@ -1243,7 +1258,7 @@ export const WIKI_ARTICLES = [
         title: 'Apps, scripts and AIs',
         summary: 'Programs are welcome to read public di.iiii. Name yourself in the User-Agent and you get more room — /for-apps has the rules.',
         body: [
-            'Anything a visitor without an account can open — public spaces, published pages, /spaces, this wiki, and the API reads behind them — is open to programs too: apps, scripts, search engines and AI crawlers, for answering and for training alike. robots.txt welcomes them all, and /llms.txt describes di.iiii for language models.',
+            'Anything a visitor without an account can open — public spaces, published pages, /spaces, this wiki, and the API reads behind them — is open to programs too: apps, scripts, search engines and AI crawlers, for answering and for training alike. robots.txt welcomes them all, and /llms.txt describes di.iiii for language models; /llms-full.txt is the same file with every article of this wiki after it, so one fetch reads them all.',
             'Say who you are with a User-Agent carrying your program’s name, version and a contact in parentheses, the way MusicBrainz asks: “SpaceMirror/1.4 ( ops@example.org )” or “my-bot/0.2 (+https://example.org/bot)”.',
             { list: [
                 'Identified apps and crawlers: 300 API reads a minute from one address.',
@@ -1252,10 +1267,10 @@ export const WIKI_ARTICLES = [
                 'Off-limits: /admin, /preferences, private spaces, anything behind sign-in, and sending forms automatically.'
             ] },
             'A name is only what a program claims, so the per-address limits hold whatever the header says. di.iiii keeps a count per day per program name and the contact it published — no addresses, no pages read — for 90 days. Admins see that guest book in Ops Graph → Visitors, and can turn a program away by name; it then gets a 403 pointing back to /for-apps. Nothing is counted on a local install.',
-            'For a higher allowance or a block you think is a mistake: info@thedi.studio.'
+            'For a higher allowance or a block you think is a mistake: info@thedi.studio. A security problem goes to the same address; /.well-known/security.txt says so in the form security tools read.'
         ],
-        tags: ['api', 'apps', 'ai', 'crawlers', 'bots', 'user-agent', 'rate limit', 'llms.txt', 'robots.txt', 'developers'],
-        updated: '2026-09-13'
+        tags: ['api', 'apps', 'ai', 'crawlers', 'bots', 'user-agent', 'rate limit', 'llms.txt', 'llms-full.txt', 'robots.txt', 'security.txt', 'developers'],
+        updated: '2026-10-21'
     },
     {
         id: 'github-sync',
@@ -1535,7 +1550,8 @@ export const WIKI_ARTICLES = [
             { list: [
                 'Press ⌖ to pin a window to the screen — it holds still at its current on-screen position and size while the canvas pans and zooms underneath it, the old behaviour. Press it again to release it back onto the canvas, where it keeps exactly where it was standing.',
                 'Drag the title bar to move a window; drag any edge or corner to resize it, not only the bottom-right grip. Arrow keys on the title bar move it, arrow keys on the corner grip resize it — hold Shift for a one-pixel nudge.',
-                'Scrolling inside a window\'s body belongs to that window: a Text note scrolls, a List scrolls, a Scene orbits. Scrolling on the canvas zooms the desk, and Ctrl/⌘ + scroll zooms the desk from anywhere, including over a window.',
+                'Scrolling inside a window\'s body belongs to that window: a Text note scrolls, a List scrolls, a Scene orbits. Scrolling on the canvas zooms the desk; on a touchpad a sideways two-finger swipe pans it instead of zooming. Ctrl/⌘ + scroll (and a touchpad pinch) zooms the desk from anywhere, including over a window.',
+                'A card moves with the arrow keys too: the card you have tabbed to, or else the selected one, 10 steps a press and 50 with Shift, for when a drag is not the way: a keyboard, a switch, a hand that cannot hold a drag.',
                 'On a phone every window stays pinned — the clamp that fits a wide default frame into a narrow screen is the whole layout there, and a window that travelled freely on the canvas would walk straight off it.',
                 'A window that would open exactly on top of another one steps down and to the right, so four Lists opened one after another show four title bars, not one.',
                 'A node\'s window opens below its card, never over it, also when the canvas moves a little as the first node lands. Positions you have saved stay as they are.',
@@ -1543,7 +1559,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['raw', 'nodes', 'windows', 'pin', 'resize', 'zoom', 'canvas', 'editor', 'escape'],
-        updated: '2026-10-20'
+        updated: '2026-10-21'
     },
     {
         id: 'raw-on-a-phone',
@@ -1554,7 +1570,7 @@ export const WIKI_ARTICLES = [
             'The graph editor was previously mouse-only in a way no amount of zooming could work around: starting a wire on an output port captured the pointer, so the release never reached the input port under your finger and no connection could be made. Dragging between ports now works the same way on a phone as on a desktop.',
             { list: [
                 'Drag from an output port to an input port to wire them. You do not have to land exactly on the dot — the drop snaps to the nearest port that accepts that type, within a finger’s width, so a small miss still connects.',
-                'Pinch with two fingers to zoom and pan the canvas at the same time. The zoom buttons in the bottom-left corner do the same thing in steps.',
+                'Pinch with two fingers to zoom and pan the canvas at the same time. The zoom buttons in the bottom-left corner do the same thing in steps. A pinch never selects a card, even one your first finger lands on: a card is selected when one finger lets go of it. So a card you drag with a finger is not highlighted while it moves; it is selected, and its settings rise, when you let go. A mouse still selects on the press.',
                 'Opening a graph fits it to the screen instead of dropping you at 100% somewhere inside it, so you can see the whole patch before choosing where to work.',
                 'The ⤢ button fits every card, at whatever zoom that takes — on a phone a wide graph can land small, and pinching in from there is one gesture. Fits nobody asked for (opening, resizing) stop at a readable size and say "showing N of M".',
                 'Resizing the window (or turning the phone) keeps the cards: a view you have not moved fits again; a view you panned or zoomed keeps the same point in the middle, and if no card is left on screen it fits.',
@@ -1565,7 +1581,7 @@ export const WIKI_ARTICLES = [
             'The overflow menu (⋯) has an All Nodes Example: one graph containing every node type the palette can create, with a clock driving a chain of maths into a pulsing sphere, a colour crossfade on a cube, and a breathing light. It is the quickest way to see what the node system can currently do — and it is deliberately honest about what it cannot: geometry, texture and signal outputs are declared on several node types but are not computed yet, so those ports are left unwired rather than connected to look complete.'
         ],
         tags: ['raw', 'nodes', 'mobile', 'touch', 'phone', 'example', 'editor', 'fit', 'resize'],
-        updated: '2026-10-02'
+        updated: '2026-10-21'
     },
     {
         id: 'br-id-ge',
@@ -1824,6 +1840,71 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-13'
     },
     {
+        id: 'osc-dmx-in-nodes',
+        category: 'Editing',
+        title: 'OSC In, OSC Out and DMX In: talk to the other show machines',
+        summary: 'Hear and send OSC to TouchDesigner, Resolume, QLab, VCV Cardinal or a console, and read a lighting console\'s faders, through the di.iiii on your own machine.',
+        body: [
+            'A web page cannot open a network socket, so these three nodes ask the di.iiii running on your own computer (`di up`, or npm run dev) to do it for them. On a hosted tab there is no such di, and each node says “No local bridge” (or that there is no desk) instead of sitting blank.',
+            'OSC IN. Set the Port it listens on (8000 by default; any number from 1024 to 65535) and, if you like, an Address Filter: an OSC address pattern such as /fader/* or /layer?/clip[1-3] or /{go,stop}. Empty hears every address. Address and Value are the latest matching message — Value is its first argument: a number, a word, or true/false. Signal is a rising count of matching messages, so a Counter or an OSC Out Trigger sees each one. Messages already waiting when the node opens are shown, not counted, so opening a project does not fire its cues. Bundles are opened. The node reads twenty times a second.',
+            'OSC OUT. Set Target Host and Target Port in the card. A message goes out at Address whenever Value changes — at most fifty a second, the newest value winning — and nothing is sent while Value stays the same. Trigger sends the message again: on its rising edge, and whenever it changes while held (MIDI In\'s and OSC In\'s rising counts). A Trigger with nothing on Value sends the bare address, which is a whole command to QLab (/go). A list on Value is one argument per item. Numbers go as 32-bit floats; choose Whole number for receivers that want integers.',
+            'Where OSC Out may send: an address on this computer (127.0.0.1) or on a private network (192.168…, 10…, 172.16–31…, 169.254…). Public addresses and broadcast addresses are refused, and Status says why.',
+            'Another machine on the network: OSC In hears only this computer until di is started with di up --lan; then it hears the network. OSC Out reaches the network either way.',
+            'DMX IN. Your console sends Art-Net or sACN to this di.iiii\'s lighting desk; switch that on under Setup → Input on the desk and add the universe there. Then give DMX In a Universe (1 is the desk\'s U1: Art-Net 0:0:0, sACN universe 1) and a Channel (1–512), and Value is that channel from 0 to 1 — the same range DMX Out takes back. If the signal stops, Value holds the last level it read and Status says so; nothing drops to zero because a cable was pulled.',
+            'Measured on the loopback (scripts/osc/osc-loopback-rehearsal.mjs, three runs of 1000 messages each way, one every millisecond): every message heard, in order, and every message sent arrived byte for byte; readable about 1.3 ms after it was sent. A burst of thousands of messages with no gap can still overflow the computer\'s receive buffer and lose some. Not yet tried against a real TouchDesigner, Resolume, QLab or console.'
+        ],
+        tags: ['nodes', 'osc', 'open sound control', 'udp', 'dmx', 'artnet', 'sacn', 'console', 'touchdesigner', 'resolume', 'qlab', 'cardinal', 'device', 'performance', 'network'],
+        updated: '2026-10-21'
+    },
+    {
+        id: 'flash-guard-node',
+        category: 'Editing',
+        title: 'Flash Guard: no more than three flashes a second',
+        summary: 'Put a Flash Guard between any number and a light or a picture, and it never lets more than three flashes a second through.',
+        body: [
+            'Fast light can cause seizures in people with photosensitive epilepsy. The web\'s accessibility rule (WCAG 2.2, success criterion 2.3.1, “Three Flashes or Below Threshold”) says nothing may flash more than three times in any one second. A flash is a pair of opposite changes — up then down, or down then up — of 10 % of full or more.',
+            'Wire the number that drives a light — into a DMX Out Value or Master, a Laser\'s Level, a picture\'s brightness — through a Flash Guard. While the number changes slowly, or by less than 10 %, it passes untouched. When it would flash a fourth time inside a second, the Guard holds the light where it is, a little short of the change, until an older flash has left that second; then it lets the next change through. A 10-a-second strobe comes out as three flashes a second.',
+            'Rate is how many times a second the incoming number flashes. Limited is true while the Guard is holding the light back, and for a second after: wire it into a Text panel or a lamp of its own, and the operator sees when the Guard acted.',
+            'Full says what “full” means on the wire: 1 for the usual 0 to 1, 255 if the wire carries bytes. Limit can be made stricter — 2, or 1 — but never looser: anything above 3, and an empty, zero or wrong Limit, counts as 3. There is no switch that turns the Guard off.',
+            'The Guard counts the same way the venue checks do (scripts/measure/flashrate.cjs and scripts/place/scenes_flash.cjs measure a lighting file with the same code). What it does not know: WCAG excuses changes where the darker side is very bright, and the Guard counts those too, so it is stricter there. It does not see colour, so WCAG\'s separate rule for saturated red flashes is not checked. It guards one number: two lamps flashing out of step, or a whole picture, each need their own Guard.'
+        ],
+        tags: ['raw', 'nodes', 'flash', 'strobe', 'safety', 'wcag', 'accessibility', 'light', 'dmx', 'performance'],
+        updated: '2026-10-21'
+    },
+    {
+        id: 'mesh-in-out-nodes',
+        category: 'Editing',
+        title: 'Mesh In and Mesh Out — screens and phones in sync',
+        summary: 'Mesh Out publishes a value to every other screen and phone in the same group; Mesh In hears it, with who sent it and when.',
+        body: [
+            'Mesh Out and Mesh In speak to the mesh: a live hub on the di.iiii server where every screen and phone in one group hears what the others publish. Nothing to install — any browser that opens the project can join.',
+            'Group names who meets. Leave it empty and the node uses this project’s own group, so every screen and phone that opens the same project meets there. Type a name to meet across projects. Channel names what is being said, so one group can carry several values at once; Mesh In listens to one channel.',
+            'Mesh Out publishes its Value on its Channel whenever Value changes — at most once per Interval (200 ms by default, which is five times a second; anything under 50 ms is raised to 50). If several values arrive inside one interval, the latest is the one that goes out. While the link is down nothing is sent and nothing is kept for later; when the link comes back, the current value goes out once.',
+            'Mesh In gives the latest Value, who sent it (From) and when the server passed it on (Time, in milliseconds), and Signal counts one more for every event, so a Counter or a Trigger can react to each one. Min and Max, when Min is below Max, only let numbers in that range through; Allowed is a comma list of the only values let through; Max Length refuses longer text. A refused value is dropped and the Status says why.',
+            'Both nodes say Up (1) while the link is up and 0 while it is down, and Status says how many others are in the group. A dropped link is tried again after 1 second, then 2, 4, 8, and every 10 seconds after that.',
+            'Each Mesh In and Mesh Out holds its own link, so a Mesh In hears a Mesh Out on the same page too, which makes one tab enough to try it. The server passes an event to everyone in the group except the link that published it. Up to 64 links can share one group.'
+        ],
+        tags: ['raw', 'nodes', 'mesh', 'phone', 'screens', 'sync', 'remote', 'wall', 'device', 'network'],
+        updated: '2026-10-21'
+    },
+    {
+        id: 'recorder-and-still-nodes',
+        category: 'Editing',
+        title: 'Recorder and Still — keep what the show looked like',
+        summary: 'Recorder records a picture, and a sound if you wire one, to a WebM file between Start and Stop; Still saves one PNG of a picture. Both land in the project’s files.',
+        body: [
+            'Add a Recorder in the node editor and wire a picture into its Picture socket: a Scene’s Picture, a Picture Out, or a camera’s Frame. Press Start to record and Stop to finish, or wire signals into Start and Stop — a Button, a Trigger or a Timer — so the show records itself. Holding a signal high starts once; it has to fall and rise again to act again.',
+            'The file is a WebM video. Recorder asks the browser for VP9 first, then VP8, then any WebM it can write, at 6 Mbps and 30 frames a second. When it stops, the file lands in the project’s files, named after what fed its picture and the moment recording began, for example recording-scene-2026-10-21T14-03-07.webm. On a project that is not saved to a server, the file stays in this browser.',
+            'Wire a sound into Sound to record it with the picture. Sound takes a live sound stream; without one the recording is picture only, and Recorder says so while it records.',
+            'Recorder answers four things the graph can read: Recording (true while it records), Seconds, Status (what it is doing, in words) and File (the name of the last file it kept).',
+            'Add a Still and wire a picture into Picture. Press Take, or send a signal into Take, and Still saves one PNG at the picture’s own size, named the same way: still-scene-2026-10-21T14-03-07.png. Its Status and File outputs say what it kept.',
+            'Both need their window open: a Scene gives its Picture only while its own window draws it, and a closed Recorder window stops and keeps what it recorded. If no picture is arriving, neither makes an empty file; each says that nothing is arriving.',
+            'For people who cut films of a project in a test browser: the editor and the output page answer window.__seek(seconds), which holds the clock at that moment and resolves once the frame is drawn (window.__ready is true then); window.__play() lets the clock run again.'
+        ],
+        tags: ['raw', 'nodes', 'record', 'recording', 'video', 'still', 'png', 'webm', 'documentation', 'show'],
+        updated: '2026-10-21'
+    },
+    {
         id: 'laser-out-node',
         category: 'Editing',
         title: 'Laser and Laser Out — draw for the LaserCubes',
@@ -1875,6 +1956,76 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'nodes', 'laser', 'lasercube', 'trace', 'outline', 'wireframe', 'points', 'merge', 'budget', 'geometry', 'touchdesigner'],
         updated: '2026-10-14'
+    },
+    {
+        id: 'beat-and-oscillator',
+        category: 'Editing',
+        title: 'Beat and Oscillator — move things on the beat',
+        summary: 'Beat is a clock: a tempo and a beat 0. One master clock runs for the whole project; Oscillators follow it, or an extra clock you wire in. The Light desk can lend a Beat its tempo and tap.',
+        body: [
+            'One master clock always runs in a project: 120 BPM until you add a Beat. The first Beat whose Clock is set to Master is the master; every other Beat is an extra clock. Each Beat gives Ramp (0 to 1 over its Period, in beats), Pulse (on for the first tenth of each period), Count, Beat (1 to 4 in the bar), Bar, Ramp bar and BPM, and its Clock output for Oscillators.',
+            'An Oscillator still runs in Hz, as before, until you give it Beats: then one cycle lasts that many beats (¼ to 64) of the master clock, or of the Beat you wire into its Clock. Wave picks the shape of the Out output — Sine, Triangle, Ramp, Square, Pulse, Random glide, Sample & hold; Amplitude and Offset scale and move it; Bias leans it (on a square it is how long it stays up); Reset starts the cycle again now. The old Sine, Square, Triangle and Saw outputs are unchanged, so a project made before this moves exactly as it did.',
+            'Tap and Reset on a Beat: wire a Button or a Keyboard key in. Two taps set the tempo and put beat 0 on the last tap; every window keeps the same beat. Clock and Tempo from are settings in the Beat’s inspector, not inputs: nothing wired in can change them. Set Tempo from to Light desk and the Beat takes the /light desk’s tempo and phase instead, and a tap goes to the desk; when no desk answers, the Beat keeps its own tempo and its Status says so.',
+            'The waves are the light desk’s own: a Sample & hold on an Oscillator and a random LFO on the desk draw the same values at the same moment. Still to be seen on the real cubes: a Laser Trace pulsing on the beat, and a tap on the desk moving the laser’s tempo.'
+        ],
+        tags: ['raw', 'nodes', 'beat', 'clock', 'master clock', 'bpm', 'tempo', 'tap', 'oscillator', 'lfo', 'wave', 'laser', 'light', 'touchdesigner'],
+        updated: '2026-10-21'
+    },
+    {
+        id: 'laser-file-text-nodes',
+        category: 'Editing',
+        title: 'Laser File and Laser Text — draw a file or a word with the LaserCubes',
+        summary: 'Laser File draws an ILDA show file or an SVG drawing; Laser Text writes a word in a single-stroke font. Both wire into Laser Out like Laser Trace.',
+        body: [
+            'Laser File takes a file from the project: an ILDA file (.ild — formats 0, 1, 4 and 5, the ones laser shows are traded in) or an SVG drawing. It reads the file itself to tell which it is. An ILDA file draws as its author made it, in its own colours and order; Frame picks which frame, and Speed above 0 plays the frames that many a second. An SVG is fitted into most of the field, every path in its stroke colour (green where it has none); its curves and arcs become short straight lines no farther than Tolerance from the true curve. Only <path> shapes are read: rectangles, circles, text and transforms in the file are counted on Status, not drawn.',
+            'Laser Text writes Text in the Hershey Roman Simplex font, one stroke per line of each letter, the way engraving machines and plotters write. Size is a capital letter\'s height; Height is where the text sits up the field (0.5 keeps it above the half the cube blanks). Letters outside plain ASCII draw as ?, and text too big for the field is made smaller to fit — Status says so.',
+            'Both send at most 2000 points, the most a frame carries; a bigger file is thinned evenly and Status says how many points were cut. A file that is not an ILDA or SVG, or is cut short, is refused and Status names why. Size and Height can carry a drawing past the edge of the field: what goes past is left dark, never pressed flat against the edge, and Status counts the points that were. Neither node has been seen on the real cubes yet.',
+            'The Hershey fonts were originally created by Dr. A. V. Hershey while working at the U. S. National Bureau of Standards. The format of the font data was originally created by James Hurt, Cognition, Inc.'
+        ],
+        tags: ['raw', 'nodes', 'laser', 'lasercube', 'ilda', 'svg', 'file', 'text', 'hershey', 'font', 'import'],
+        updated: '2026-10-21'
+    },
+    {
+        id: 'visitor-and-tilt-nodes',
+        category: 'Editing',
+        title: 'Visitor and Tilt — what the phone or screen is, as wires',
+        summary: 'Visitor tells the graph whether the screen is a phone, asks for reduced motion, stands in portrait, how wide and tall it is, its language and whether it is embedded; it also keeps a Name, Hue and Id in this browser. Tilt turns how the phone is tipped into X and Y from -1 to 1.',
+        body: [
+            'Visitor has no window. Its outputs are Phone (a touch screen whose short side is under 600 pixels, so a tablet is not a phone), Reduced motion (the person asked their device for less movement), Portrait (taller than wide), Width and Height in pixels, Language (the first part of the browser language, such as en or hy) and Embedded (the page is in a frame, or its address has embed=1 or preview=1). They change as the screen turns or resizes. Wire Phone into a Route to draw fewer things on a phone, or Reduced motion into a Mix to slow an Oscillator down.',
+            'Name, Hue and Id belong to the person, not the project: they are kept in this browser, so two people see their own. Id and Hue (0 to 1, the Hue of a Colour Split) are made on the first visit. Wire a text into New name and it is kept; an empty New name keeps the old one. Where the browser refuses to keep anything, they last until the page is closed.',
+            'Tilt gives X (the right edge dipping is plus) and Y (the top edge dipping is plus), from -1 to 1. Level is however the phone was held at the first reading, and Range is how many degrees reach 1 (30 unless changed). Live says a reading has arrived. On an iPhone the browser asks first, and only after a tap: Tilt asks at the first tap anywhere on the page, and stays at 0 and not Live if the answer is no. On a computer it stays at 0.',
+            'Both work where the Nodes editor runs, on the desk and in Perform. The published page and /out do not run them yet: there they answer their plain values (not a phone, 0 wide, level).'
+        ],
+        tags: ['raw', 'nodes', 'visitor', 'phone', 'mobile', 'reduced motion', 'portrait', 'language', 'embed', 'tilt', 'orientation', 'gyro'],
+        updated: '2026-10-21'
+    },
+    {
+        id: 'cue-node',
+        category: 'Editing',
+        title: 'Cue — the cue list on a wire',
+        summary: 'The Cue node reads the project\'s cue list: which cue is on, its name and look, how far into its fade and hold it is. Go, Back and Jump move it.',
+        body: [
+            'A project\'s cue list is the one the Projection desk, the Perform window\'s Cues and the cards page edit: each cue has a name, a fade, a hold and, if it lights the rig, a look. The Cue node puts that list on wires. Index is the cue that is on, counted from 0 (-1 before the first cue). Name and Look are its name and its look. Progress runs from 0 to 1 over the cue\'s hold, or over its fade when the fade is longer. Fading is on while the fade runs. Fired changes each time a cue fires.',
+            'The timing is the desk\'s: a cue fades in from the moment it fires, its hold counts from the same moment, and when the hold is served the next cue fires. A hold of 0 waits for Go. Loop takes the list from its last cue back to the first; unwired, it follows the cue list\'s own loop switch.',
+            'When the project has a show started on the show clock, the node reads the cue every room is on. Wire a Button\'s Presses, a Keyboard or Time\'s Beat into Go to move to the next cue, the same into Back for the one before, and a number into Jump to fire that cue. A cue you move to this way is fired as the Perform window fires it: its surfaces change and its look is called up on the Light desk when one is running here.',
+            'Presses are counted in the window you press them in. A window opened later starts from the cue list as it finds it. Two editors open on one project both fire the cue a press moves to.'
+        ],
+        tags: ['raw', 'nodes', 'cue', 'cue list', 'show', 'go', 'fade', 'hold', 'look', 'perform'],
+        updated: '2026-10-21'
+    },
+    {
+        id: 'qr-code-node',
+        category: 'Editing',
+        title: 'QR Code — a live code phones can scan',
+        summary: 'QR Code draws an address as a code people scan with a phone. Left empty, it shows this tier\u2019s own address, so it never goes stale.',
+        body: [
+            'Add a QR Code and wire its Picture into a Plane\u2019s Texture, an Image panel or Picture Out. Phones in the room scan it and open the address it holds.',
+            'Text is the address. Left empty, it is this tier\u2019s own address, read again every time the graph runs: move the project to another tier and the code changes with it, instead of pointing at a host that is gone. Type an address into Text, or wire in a String, to send phones to one page.',
+            'Correction says how much of the code can be covered or worn and still read: L about 7 %, M 15 % (the default), Q 25 %, H 30 %. A higher level makes a denser code for the same address, so keep M for a screen and use H for a print that people will lean on.',
+            'The code is redrawn only when the address or the level changes. An address longer than a QR code can hold (about 2,900 characters at L, 1,270 at H) draws nothing rather than a broken picture.'
+        ],
+        tags: ['raw', 'nodes', 'qr', 'qrcode', 'scan', 'phone', 'address', 'link', 'picture', 'texture'],
+        updated: '2026-10-21'
     },
     {
         id: 'build-zones',
@@ -2003,12 +2154,13 @@ export const WIKI_ARTICLES = [
             'On the left is a rail: select, truss, tower, deck, fixture, fx and measure. Drag on the plan with truss to draw a run — it is laid in 3, 2 and 1 m pieces end to end. Click with tower near the end of a truss and the tower stands under it, built to the truss\'s height. Click with fixture near a truss and the lamp hangs at the nearest clamp point. Everything snaps: truss end to truss end, tower top, deck edge, a 0.5 m grid. Type exact numbers in the inspector when you want them — length, height, x, z, turn.',
             'A new lamp is patched on this machine\'s desk as soon as you place it, like in Studio: the number and the address appear beside it. Opening the plot never patches anything — a room that arrived unpatched (a bundle from another machine) stays as it is until you press patch the room on the desk, in the title block. Select several and press patch this group to lay them out again as one block. Two lamps on the same channels are drawn in a dashed box with a !, and the inspector says what the desk said.',
             'The room beside the plan is the same room as in Studio, showing what is selected. On a phone the plan fills the screen; plan and room are one tap apart, and the tools and the inspector are in a sheet you pull up.',
+            'Moving around the plan: the mouse wheel zooms to the pointer; on a touchpad two fingers move the plan and a pinch zooms; on a phone one finger moves it and two pinch. The + − fit buttons at the plan\'s bottom left, and the keys + - 0, zoom without a wheel or a second finger.',
             'Print sheet 1 gives the plot on A3 or A4 at a true scale with a scale bar — the whole rig, or just what is on the screen for a close-up of the stage. Sheets 2 and 3, the patch and the power, are the patch sheet. Print at 100%, not "fit to page".',
             'The hall comes from the model it was built from, never drawn by hand. The plot makes no load or rigging calculation: a truss end with no tower under it is marked free, and the real hang needs a rigger\'s sign-off.',
             'A run may slope: a line hung from a crane on picks of different height (MOXIR\'s "cut", 12 m at 15°) is one run, and its clamp points follow it — a lamp on it sits at its real height, the looks reach it, and the plan draws its footprint (its length × the cosine of the slope). Its heights, picks and loads come from the rig file, which states them with their sources; the plot still makes no calculation of its own.'
         ],
         tags: ['plot', 'lighting plot', 'plan', 'cad', 'truss', 'tower', 'deck', 'stage', 'rig', 'fixture', 'lamp', 'dmx', 'patch', 'address', 'print', 'a3', 'scale', 'room', 'build', 'light engineer', 'crew', 'rp-2'],
-        updated: '2026-10-01'
+        updated: '2026-10-21'
     },
     {
         id: 'rig-cards',

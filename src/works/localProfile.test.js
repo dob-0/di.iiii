@@ -117,7 +117,7 @@ describe('vite installs the profile the flags asked for', () => {
         const config = await configFor({ DI_PROFILE: 'local' })
         expect(pluginNames(config)).not.toContain('di-local-profile')
         // The public include-list still applies: a local install is the
-        // program plus the works, never di-studio.xyz's hosting furniture.
+        // program plus the works, never diiii.xyz's hosting furniture.
         expect(pluginNames(config)).toContain('di-local-public-dir')
         expect(config.publicDir).toBe(false)
     })

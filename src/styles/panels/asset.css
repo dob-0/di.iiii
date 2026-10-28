@@ -173,7 +173,7 @@
 .asset-tag {
     font-size: var(--di-text-2);
     padding: var(--di-space-1) var(--di-space-2);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     border: 1px solid rgba(255,255,255,0.2);
     color: rgba(255,255,255,0.72);
     white-space: nowrap;

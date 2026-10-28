@@ -77,6 +77,10 @@ export const PASS_THROUGH_PORTS = [
         why: 'merges the laser paths that arrive; with nothing wired it carries nothing, like the shape Merge'
     },
     {
+        port: 'laser.file.frame',
+        why: 'draws the file it is given; with no file chosen it carries nothing — an empty file is not a blank frame'
+    },
+    {
         port: 'logic.route.out',
         why: 'in its Gate operation — the one it is born in — it passes through what arrives while open; bare or closed it carries nothing, because a closed gate is an unplugged wire, not a zero'
     }
@@ -178,7 +182,9 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('counter', 'signal.counter', { label: 'Counter', col: 0, row: 11 })
     add('hold', 'signal.hold', { label: 'Hold', col: 0, row: 12 })
     add('delay', 'signal.delay', { label: 'Delay', col: 0, row: 13 })
+    add('flashGuard', 'signal.flash', { label: 'Flash Guard', col: 0, row: 18 })
     add('timer', 'signal.timer', { label: 'Timer', col: 0, row: 14 })
+    add('cue', 'signal.cue', { label: 'Cue', col: 0, row: 18 })
     add('trigger', 'signal.trigger', { label: 'Trigger', col: 0, row: 15 })
     add('speed', 'signal.speed', { label: 'Speed', col: 0, row: 16 })
     add('toggle', 'logic.toggle', { label: 'Toggle', col: 0, row: 17 })
@@ -202,12 +208,21 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('circle', 'geom.circle', { label: 'Circle', col: 3, row: 14, values: { position: [-5.5, 0.5, -2] } })
     add('go', 'view.button', { label: 'Go', col: 4, row: 0 })
     add('keys', 'device.keyboard', { label: 'Keyboard', col: 4, row: 1 })
+    add('visitor', 'device.visitor', { label: 'Visitor', col: 4, row: 20 })
+    add('tilt', 'device.tilt', { label: 'Tilt', col: 4, row: 21 })
     add('midiOut', 'device.midi.out', { label: 'MIDI Out', col: 4, row: 2 })
+    add('meshOut', 'device.mesh.out', { label: 'Mesh Out', col: 4, row: 20 })
+    add('meshIn', 'device.mesh.in', { label: 'Mesh In', col: 4, row: 21 })
     add('dmxOut', 'device.dmx.out', { label: 'DMX Out', col: 4, row: 15 })
     add('laser', 'laser.shape', { label: 'Laser', col: 4, row: 16 })
     add('laserOut', 'device.laser.out', { label: 'Laser Out', col: 4, row: 17 })
     add('laserTrace', 'laser.trace', { label: 'Laser Trace', col: 4, row: 18 })
     add('laserMerge', 'laser.merge', { label: 'Laser Merge', col: 4, row: 19 })
+    add('beat', 'signal.beat', { label: 'Beat', col: 0, row: 20 })
+    add('laserFile', 'laser.file', { label: 'Laser File', col: 4, row: 20 })
+    add('laserText', 'laser.text', { label: 'Laser Text', col: 4, row: 21 })
+    add('recorder', 'stream.recorder', { label: 'Recorder', col: 4, row: 22 })
+    add('still', 'stream.still', { label: 'Still', col: 4, row: 23 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 
@@ -274,9 +289,10 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
 
     add('text', 'view.text', { label: 'Text panel', col: 4, row: 3, values: { content: 'Every node type, one graph.' } })
     // Same-origin on purpose: the example must also open on a local install
-    // with no network, where an iframe of di-studio.xyz is a dead panel.
+    // with no network, where an iframe of diiii.xyz is a dead panel.
     add('browser', 'view.browser', { label: 'Browser panel', col: 4, row: 4, values: { url: '/wiki' } })
     add('image', 'view.image', { label: 'Image panel', col: 4, row: 5 })
+    add('qrcode', 'view.qrcode', { label: 'QR Code', col: 4, row: 11 })
     add('publish', 'view.publish', { label: 'Public page panel', col: 4, row: 6, values: { title: 'The example project' } })
     add('list', 'view.list', { label: 'List panel', col: 4, row: 7, values: {
         groups: ['Core', 'Would be good'],
@@ -353,6 +369,11 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // than channel 1 would otherwise look broken in the one graph that exists
     // to show what works.
     add('midiIn', 'device.midi.in', { label: 'MIDI In', col: 7, row: 3, values: { channel: 0 } })
+    // The show-network trio beside MIDI In: OSC both ways through this
+    // machine's di.iiii, and one channel of the lighting desk's input.
+    add('oscIn', 'device.osc.in', { label: 'OSC In', col: 7, row: 4 })
+    add('oscOut', 'device.osc.out', { label: 'OSC Out', col: 7, row: 5 })
+    add('dmxIn', 'device.dmx.in', { label: 'DMX In', col: 7, row: 6 })
 
     const id = (key) => made.get(key)?.id || ''
     const wire = (fromKey, fromPort, toKey, toPort) => {
@@ -489,6 +510,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('compare', 'greater', 'midiOut', 'trigger'),
         wire('numB', 'out', 'midiOut', 'note'),
         wire('sin', 'out', 'midiOut', 'value'),
+        wire('sin', 'out', 'meshOut', 'value'),
 
         // A wire OUT of a container — new on 2026-08-19, and the thing that
         // used to be impossible: every container declared zero outputs, so

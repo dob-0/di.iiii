@@ -44,9 +44,13 @@ const applyOp = (scene, op) => {
  * GET ops reads the ops, THEN the version (spaceRoutes.js), and a hook can run
  * between the two; GET scene can run a hook before it answers. Writes check
  * baseVersion (409 + pendingOps) and drop opIds already held.
+ *
+ * `retain` keeps only the newest N ops, and the opId dedupe looks only at
+ * those — serverXR's retained window (500 per stream). `stamp` is the clock an
+ * op's timestamp is read from.
  */
-const fakeInstall = async () => {
-    const state = { ops: [], version: 0, scene: { objects: [] } }
+const fakeInstall = async ({ retain = Infinity, stamp = () => Date.now() } = {}) => {
+    let state = { ops: [], version: 0, scene: { objects: [] } }
     const hooks = { betweenOpsAndVersion: null, beforeScene: null }
     const listeners = new Set()
 
@@ -56,11 +60,12 @@ const fakeInstall = async () => {
         }
         const known = new Set(state.ops.map(op => op.opId))
         const fresh = incoming.filter(op => !known.has(op.opId))
-        const landed = fresh.map(op => ({ ...op, version: ++state.version, timestamp: Date.now() }))
+        const landed = fresh.map(op => ({ ...op, version: ++state.version, timestamp: stamp() }))
         for (const op of landed) {
             state.ops.push(op)
             state.scene = applyOp(state.scene, op)
         }
+        if (state.ops.length > retain) state.ops = state.ops.slice(-retain)
         if (landed.length) for (const notify of listeners) notify()
         return { status: 200, body: { newVersion: state.version, ops: landed } }
     }
@@ -105,8 +110,12 @@ const fakeInstall = async () => {
     const base = `http://127.0.0.1:${server.address().port}`
     return {
         base,
-        state,
+        get state() { return state },
         hooks,
+        // A whole copy of this install's log and document, and putting one back:
+        // a backup taken now, and the install restored from it later.
+        backup: () => structuredClone(state),
+        restore: (copy) => { state = structuredClone(copy) },
         edit: (op) => write([op], state.version),
         hasOp: (opId) => state.ops.some(op => op.opId === opId),
         close: () => new Promise(resolve => { server.closeAllConnections?.(); server.close(resolve) })
@@ -122,19 +131,30 @@ afterEach(async () => {
     cleanup = []
 })
 
-const pair = async ({ onSave = null } = {}) => {
-    const host = await fakeInstall()
-    const mine = await fakeInstall()
+const pair = async ({ onSave = null, host: hostOptions = {}, mine: mineOptions = {} } = {}) => {
+    const host = await fakeInstall(hostOptions)
+    const mine = await fakeInstall(mineOptions)
     let ticks = 0
-    const follower = startFollowing({
+    const follow = ({ saved = null } = {}) => startFollowing({
         local: side({ base: mine.base, spaceId: SPACE }),
         remote: side({ base: host.base, spaceId: SPACE }),
         log: quiet,
         onState: () => { ticks += 1 },
-        onSave
+        onSave,
+        saved
     })
-    cleanup.push(() => host.close(), () => mine.close(), () => follower.stop())
-    return { host, mine, follower, ticks: () => ticks }
+    const follower = follow()
+    const running = [follower]
+    cleanup.push(() => host.close(), () => mine.close(), () => running.forEach(one => one.stop()))
+    // The install restarting: this follow stops and a new one starts from
+    // `saved` (what follow-state held), or from nothing when it was lost.
+    const restart = (previous, { saved = null } = {}) => {
+        previous.stop()
+        const next = follow({ saved })
+        running.push(next)
+        return next
+    }
+    return { host, mine, follower, restart, ticks: () => ticks }
 }
 
 describe('C2 — an edit landing between the op read and the version read is carried (audit F9)', () => {
@@ -208,5 +228,89 @@ describe('C3 — where the follow got to is not kept only in memory when a save 
         // nothing. The follow must try again on its own.
         await settle('a second save after the failed one', () => saves.length >= 2)
         expect(saves[1].cursors).toEqual(saves[0].cursors)
+    })
+})
+
+const cursorsOf = (snapshot) => Object.values(snapshot?.cursors || {})
+
+describe('F13 — a host restored from an older backup, whose log then passes the old cursor (audit F13)', () => {
+    // Real, and not fixed here (no protocol change in this PR). A cursor is a
+    // bare version number: the follower notices a rebuilt log only when its
+    // cursor is PAST the log's end (follower.js, `behind`). A host put back to
+    // version 1 that makes three edits before the follower looks again is at
+    // version 4 — past the saved cursor 3 — so the follower reads from 3 and the
+    // restored host's edits at versions 2 and 3 are never read. Fix sketch in
+    // the audit (a log epoch beside each cursor).
+    // Asserts the loss exactly, not `it.fails`: `it.fails` passes on ANY error
+    // (a settle that times out, a broken fake), so it could stay green for a
+    // reason that is not F13. When the fix lands the missing list becomes []
+    // and this goes red: then assert [] and rename it.
+    it('loses the restored host\'s edits under the old cursor (F13 open; red the day it is fixed)', async () => {
+        const saves = []
+        const { host, mine, follower, restart, ticks } = await pair({ onSave: (snapshot) => { saves.push(snapshot) } })
+        await settle('the follow running', () => ticks() >= 2)
+
+        host.edit(addObject('lamp', 'op-lamp'))
+        follower.wake()
+        await settle('the first edit here', () => mine.hasOp('op-lamp'))
+        const backup = host.backup()
+
+        host.edit(addObject('chair', 'op-chair'))
+        host.edit(addObject('table', 'op-table'))
+        follower.wake()
+        await settle('a save that holds the host at version 3', () => cursorsOf(saves.at(-1)).some(cursor => cursor.remoteVersion === 3))
+        follower.stop()
+
+        // While this install is off, the host is put back to version 1 and three
+        // edits are made on it: versions 2, 3 and 4 of a log this follow never saw.
+        host.restore(backup)
+        host.edit(addObject('after-1', 'op-after-1'))
+        host.edit(addObject('after-2', 'op-after-2'))
+        host.edit(addObject('after-3', 'op-after-3'))
+        expect(host.state.version).toBe(4)
+
+        restart(follower, { saved: saves.at(-1) })
+        await settle('the restored host\'s newest edit here', () => mine.hasOp('op-after-3'))
+        expect(['op-after-1', 'op-after-2'].filter(opId => !mine.hasOp(opId))).toEqual(['op-after-1', 'op-after-2'])
+    })
+})
+
+describe('F14 — after the follow state is lost, no older edit lands again over a newer one (audit F14)', () => {
+    // Settled by 0934fe96 (2026-10-04, audit F4): a follow with nothing saved
+    // starts each stream from now and compares the documents once; it no longer
+    // re-sends either side's retained window. This install keeps only 3 ops, so
+    // the host's two renames are out of its dedupe window while the host still
+    // holds both. Every op is stamped a minute back: the state was lost and the
+    // install restarted later, never in the same millisecond as an edit.
+    it('drops the state, restarts, and lands no op on either side but the next real edit', async () => {
+        const stamp = () => Date.now() - 60_000
+        const { host, mine, follower, restart, ticks } = await pair({ host: { stamp }, mine: { stamp, retain: 3 } })
+        await settle('the follow running', () => ticks() >= 2)
+
+        host.edit(addObject('lamp', 'op-lamp'))
+        host.edit({ opId: 'op-rename-v1', type: 'updateObject', payload: { id: 'lamp', patch: { name: 'v1' } } })
+        follower.wake()
+        await settle('the first rename here', () => mine.hasOp('op-rename-v1'))
+        host.edit({ opId: 'op-rename-v2', type: 'updateObject', payload: { id: 'lamp', patch: { name: 'v2' } } })
+        follower.wake()
+        await settle('the second rename here', () => mine.hasOp('op-rename-v2'))
+        for (const id of ['c1', 'c2', 'c3']) mine.edit(addObject(id, `op-${id}`))
+        follower.wake()
+        await settle('this install\'s edits on the host', () => host.hasOp('op-c3'))
+        expect(mine.hasOp('op-rename-v1') || mine.hasOp('op-rename-v2')).toBe(false)
+
+        // follow-state removed: the next follow starts from nothing.
+        const versions = { host: host.state.version, mine: mine.state.version }
+        const before = ticks()
+        const next = restart(follower)
+        await settle('the new follow past its first pass', () => ticks() >= before + 2)
+        host.edit(addObject('marker', 'op-marker'))
+        next.wake()
+        await settle('a new edit carried by the new follow', () => mine.hasOp('op-marker'))
+
+        const nameOf = (install) => install.state.scene.objects.find(object => object.id === 'lamp')?.name
+        expect({ mine: nameOf(mine), host: nameOf(host) }).toEqual({ mine: 'v2', host: 'v2' })
+        expect({ host: host.state.version, mine: mine.state.version }).toEqual({ host: versions.host + 1, mine: versions.mine + 1 })
+        expect(JSON.stringify(mine.state.scene)).toBe(JSON.stringify(host.state.scene))
     })
 })

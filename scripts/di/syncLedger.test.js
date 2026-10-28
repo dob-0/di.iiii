@@ -35,7 +35,7 @@ describe('ledger files', () => {
 
     it('two remotes for the same space never share a file', () => {
         const a = ledgerPath(home, 'https://dev.diiii.xyz/serverXR', 'open')
-        const b = ledgerPath(home, 'https://di-studio.xyz/serverXR', 'open')
+        const b = ledgerPath(home, 'https://diiii.xyz/serverXR', 'open')
         expect(a).not.toBe(b)
     })
 
@@ -64,7 +64,7 @@ describe('ledger files', () => {
 
 describe('remoteSlug', () => {
     it('is filesystem-safe and scheme-blind', () => {
-        expect(remoteSlug('https://di-studio.xyz/serverXR')).toBe('di-studio.xyz_serverxr')
+        expect(remoteSlug('https://diiii.xyz/serverXR')).toBe('diiii.xyz_serverxr')
         expect(remoteSlug('http://localhost:4000/serverXR')).toBe('localhost_4000_serverxr')
         expect(remoteSlug('')).toBe('remote')
     })
