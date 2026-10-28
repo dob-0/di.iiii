@@ -367,6 +367,12 @@ describe('StudioShell — a code project does not open Create by itself', () => 
         expect(panels()).toContain('Objects')
     })
 
+    it('a project holding a page still opens Create when the address asks for it (?open=create)', () => {
+        window.history.replaceState(null, '', '/?open=create')
+        renderShell({ document: codeDoc, layers: PAGE })
+        expect(panels()).toContain('Create')
+    })
+
     it('a scene project keeps Create open, as before', () => {
         renderShell({ document: sceneDoc, layers: PAGE })
         expect(panels()).toEqual(['Create', 'Objects'])

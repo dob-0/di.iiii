@@ -348,7 +348,9 @@ export default function StudioShell({
     const viewportMode = useViewportMode(document)
     const codeFirst = viewportMode === 'code' && (layers ? layers.loaded : true)
     const [createAsked, setCreateAsked] = useState(false)
-    const createHeldBack = codeFirst && !createAsked
+    // `?open=create` (the "Add pages or pictures" door) asked for Create by name: it is never held back then.
+    const createAskedFor = typeof window !== 'undefined' && panelFromAddress(window.location.search) === 'create'
+    const createHeldBack = codeFirst && !createAsked && !createAskedFor
     const shownOpen = useMemo(() => {
         if (!createHeldBack || !open.has('create')) return open
         const next = new Set(open)
