@@ -191,6 +191,15 @@ describe('StudioShell — a new project opens bare', () => {
 
     afterEach(() => {
         window.localStorage.removeItem(ALL_TOOLS_KEY)
+        window.history.replaceState(null, '', '/')
+        // the shell saves the windows it had open; a later test must not inherit them
+        window.localStorage.clear()
+    })
+
+    it('draws the Code window on an empty project when the address asks for it (?open=files)', () => {
+        window.history.replaceState(null, '', '/?open=files')
+        renderShell({ ...inProject, layers: NEW })
+        expect(panels()).toContain('Code')
     })
 
     it('shows the bar, the room and Create alone — no cluster, no other window, no Drive or Commons, no empty Files list', () => {

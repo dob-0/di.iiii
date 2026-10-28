@@ -96,7 +96,7 @@ export default function SpaceSurfaceApp({ routeState }) {
     const routeProjectId = routeState?.projectId || null
     // A space with no front door is not a scene: it opens what it holds (its only project, its list of projects, or
     // a plain empty-space view). Only asked when nothing else decides, and only once the space itself has answered.
-    const needsContents = shouldResolvePublishedSurface && surfaceState.status === 'ready' && Boolean(surfaceState.space)
+    const needsContents = shouldResolvePublishedSurface && Boolean(surfaceState.space)
         && !publishedProjectId && !routeProjectId
     const [contents, setContents] = useState({ spaceId: null, projects: null })
     useEffect(() => {

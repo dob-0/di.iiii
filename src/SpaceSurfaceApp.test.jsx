@@ -129,6 +129,18 @@ describe('SpaceSurfaceApp', () => {
             expect(await screen.findByText('space-contents-page:cinema-house')).toBeInTheDocument()
         })
 
+        it('does not swap in the editor when a later poll of the space fails', async () => {
+            vi.useFakeTimers()
+            getServerSpace.mockResolvedValueOnce(noDoor).mockRejectedValue(new Error('network down'))
+            listSpaceContents.mockResolvedValue([])
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'cinema-house' }} />)
+            await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+            expect(screen.getByText(/empty-space-view/)).toBeInTheDocument()
+            await act(async () => { await vi.advanceTimersByTimeAsync(2100) })
+            expect(screen.queryByText('legacy-app')).toBeNull()
+            expect(screen.getByText(/empty-space-view/)).toBeInTheDocument()
+        })
+
         it('shows the plain empty-space view when it holds no project', async () => {
             getServerSpace.mockResolvedValue(noDoor)
             listSpaceContents.mockResolvedValue([])

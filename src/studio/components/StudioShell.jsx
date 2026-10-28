@@ -7,7 +7,7 @@ import StudioControlCluster from './StudioControlCluster.jsx'
 import StudioCueStrip from './StudioCueStrip.jsx'
 import StudioProjectsPanel from './StudioProjectsPanel.jsx'
 import StudioQuickInsert from './StudioQuickInsert.jsx'
-import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
+import { useStudioPanelState, panelFromAddress } from '../hooks/useStudioPanelState.js'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import StudioCoachMarks from './StudioCoachMarks.jsx'
 import RigMirrorHint from './RigMirrorHint.jsx'
@@ -337,6 +337,9 @@ export default function StudioShell({
     const allTools = useAllTools()
     const handleToggleAllTools = useCallback(() => saveAllTools(!allTools), [allTools])
     const bare = !isJam && !allTools && Boolean(layers?.loaded) && !layers.held
+    // `?open=files` (the plain project view's "Write code"): the Code window is drawn even while the project is bare,
+    // since that is the project the choice is offered on.
+    const codeAskedFor = typeof window !== 'undefined' && panelFromAddress(window.location.search) === 'files'
     // Studio's own jump buttons to Nodes and Projection (the control cluster, the phone
     // header) follow the bar: offered once the project has reached that tool's layer,
     // never before (2026-09-27 — the phone offered Projection before the first wire).
@@ -780,7 +783,7 @@ export default function StudioShell({
                             {panelBodies.scene}
                         </StudioFloatingPanel>
                     )}
-                    {!jamMinimal && !bare && isOpen('files') && (
+                    {!jamMinimal && (!bare || codeAskedFor) && isOpen('files') && (
                         <StudioFloatingPanel key={`files-${layoutKey}`} title="Code" onClose={() => toggle('files')} initialWidth={480} minWidth={320} maxWidth={800} {...panelChrome('files')}>
                             {panelBodies.files}
                         </StudioFloatingPanel>
