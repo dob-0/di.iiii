@@ -211,11 +211,13 @@ describe('a brought-in file that fails to load retries itself', () => {
 
     it('clears its timer on unmount', () => {
         const { container, unmount } = render(<MapSourceView surface={surfaceOf({ kind: 'video', ref: '/api/projects/p1/assets/a1' })} />)
+        // a delta, not an absolute: jsdom 30.1 and the test runner may hold timers of their own
+        const before = vi.getTimerCount()
         act(() => { fireEvent.error(container.querySelector('video')) })
-        expect(vi.getTimerCount()).toBe(1)
+        expect(vi.getTimerCount()).toBe(before + 1)
 
         unmount()
-        expect(vi.getTimerCount()).toBe(0)
+        expect(vi.getTimerCount()).toBe(before)
     })
 
     it('renders no placeholder and no new text while a video is failing', () => {
