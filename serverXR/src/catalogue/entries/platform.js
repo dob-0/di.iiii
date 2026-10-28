@@ -11,7 +11,7 @@ module.exports = [
   },
   {
     route: "GET /llms-full.txt",
-    summary: "always a 404 in plain text naming /llms.txt: di.iiii keeps one file for language models",
+    summary: "llms.txt and the whole wiki in one plain-text file, from the build; nginx answers it on the hosted tiers, an install serves it itself; a plain-text 404 naming /llms.txt when the build has none",
     reach: "read",
     role: "guest",
     agent: false

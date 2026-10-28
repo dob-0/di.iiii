@@ -49,7 +49,7 @@ const readBundleFile = async (dir, name) => {
   }
 }
 
-function registerAiPublicRoutes(target, { bundleDir = DEFAULT_BUNDLE_DIR, appPages = false, logger = console } = {}) {
+function registerAiPublicRoutes(target, { bundleDir = DEFAULT_BUNDLE_DIR, appPages = false, fullFile = null, logger = console } = {}) {
   target.get('/llms.txt', async (req, res, next) => {
     try {
       const text = await readBundleFile(bundleDir, 'llms.txt')
@@ -66,9 +66,18 @@ function registerAiPublicRoutes(target, { bundleDir = DEFAULT_BUNDLE_DIR, appPag
     } catch (error) { next(error) }
   })
 
-  // llmstxt.org names no "full" file, and di.iiii keeps one. A 404 that says
-  // where to go, not the app shell.
-  target.get('/llms-full.txt', (req, res) => notFound(res, 'Not found. di.iiii keeps one file for language models: /llms.txt'))
+  // llmstxt.org names no "full" file, and di.iiii keeps one: the build writes it
+  // into dist/ (scripts/llmsFull.mjs). nginx answers it first on the hosted
+  // tiers; an install without nginx passes the built file as `fullFile` and
+  // serverXR serves it. No built file: a 404 that says where to go, not the shell.
+  target.get('/llms-full.txt', async (req, res, next) => {
+    try {
+      const text = fullFile ? await readBundleFile(path.dirname(fullFile), path.basename(fullFile)) : null
+      if (text === null) return notFound(res, 'Not found. di.iiii keeps one file for language models: /llms.txt')
+      res.set(HEADERS)
+      res.type('text/plain; charset=utf-8').send(text)
+    } catch (error) { next(error) }
+  })
 
   target.use('/ai', async (req, res, next) => {
     try {

@@ -119,6 +119,24 @@ describe('serving it', () => {
     expect(await res.text()).toMatch(/llms\.txt/)
   })
 
+  it('serves the built /llms-full.txt itself when the install has the file', async () => {
+    const dir = await fixtureDir({ 'llms-full.txt': '# di.iiii full\n\nthe wiki\n' })
+    const base = await start({ fullFile: path.join(dir, 'llms-full.txt') })
+    const res = await fetch(`${base}/llms-full.txt`)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('text/plain; charset=utf-8')
+    expect(res.headers.get('cache-control')).toBe('public, max-age=300')
+    expect(await res.text()).toBe('# di.iiii full\n\nthe wiki\n')
+  })
+
+  it('answers the 404 text when fullFile points at a file that is not built', async () => {
+    const dir = await fixtureDir({})
+    const base = await start({ fullFile: path.join(dir, 'llms-full.txt') })
+    const res = await fetch(`${base}/llms-full.txt`)
+    expect(res.status).toBe(404)
+    expect(await res.text()).toMatch(/llms\.txt/)
+  })
+
   it('serves an /ai/*.md file as markdown, pointing back at llms.txt', async () => {
     const base = await start()
     const res = await fetch(`${base}/ai/about.md`)

@@ -3420,7 +3420,7 @@ if (CLIENT_DIR) {
   app.get('/', servePage)
   // Before the built app's files and its fallback: under /ai/ the shell must
   // never answer for a file the bundle does not have (aiPublic.js).
-  registerAiPublicRoutes(app, { logger, appPages: true })
+  registerAiPublicRoutes(app, { logger, appPages: true, fullFile: path.join(CLIENT_DIR, 'llms-full.txt') })
   app.use(express.static(CLIENT_DIR, { setHeaders: allowNullOrigin }))
 
   // Digital asset links — how Android decides that the installed studio-chat
