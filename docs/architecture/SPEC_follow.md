@@ -343,3 +343,19 @@ Owner-approved sketches A + C (`/home/dob/Downloads/di-sync-ui/sketches.html`, 2
 - Host side: no per-follower "stop sharing" button (use `di invite --revoke`), and no list of past joins.
 - The sketch's "Edits made here wait and cross … Nothing is lost" is true while the host's op log still holds the
   gap; a follower offline past the retained window is resynced by the converge pass, and no warning says so yet.
+
+## Resolving a name (2026-10-28)
+
+`di follow <space> --from <label> --key <key>`: a bare label (no scheme, no dot) is a network name; the zone
+(`l.thedi.studio` unless `DI_NAME_ZONE` or this install's `name/name.json` says another) is added. The install is
+found by, in order: (1) the **beacon** — a UDP broadcast `{ v:1, kind:'di-name', label, port }` on port 41767,
+unsigned, listened to for 2 s; (2) **DNS** of `<label>.<zone>` (a loopback answer is the broker's "not shared" marker
+and is skipped); (3) the **last address** stored with the follow (`name.lastAddress`, `lastPort`). Each address is
+probed before it is believed: a request to it under the name (Host, SNI, certificate check — the address pin), so a
+stale record or a forged beacon fails and the next route is tried. The follow record keeps `name: { label, zone,
+route, lastAddress, lastPort }` and no `address`; the running follower (`follow/index.js`) starts from `lastAddress`
+and, when a read gets no answer, re-resolves in the same order (`createReresolver`, at most one search per 5 s),
+moves `base`/`address` in place and records the route (`noteRoute`, which never restarts the follow). The join-by-words
+flow takes a label through the same function. Code: `serverXR/src/follow/{beacon,nameResolver}.js`; the CLI twin
+`scripts/di/nameResolve.mjs` is held to it by `scripts/di/followByName.test.js`. Limit: the beacon reaches one
+broadcast domain; across routers only DNS or `--at` do.

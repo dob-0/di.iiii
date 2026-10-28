@@ -86,7 +86,7 @@ const writeFollows = async (dataDir, follows) => {
     return follows
 }
 
-export const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null, direction = null, start = null }) => {
+export const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null, name = null, direction = null, start = null }) => {
     const follows = followsForWrite(dataDir)
     follows[spaceId] = {
         remote: String(remote || '').replace(/\/$/, ''),
@@ -98,6 +98,9 @@ export const addFollow = async (dataDir, spaceId, { remote, token, label = null,
         // no pin must serialise byte-identically to one from before this
         // existed (scripts/di/follows.test.js holds that line).
         ...(address ? { address } : {}),
+        // A network name (docs/ai/team-sync-by-network-name.md §8): { label, zone, route,
+        // lastAddress, lastPort }. Absent entirely when the follow was typed as a URL.
+        ...(name ? { name } : {}),
         // `--take-host` / `--take-mine`: spent by the server on the first
         // comparison of each stream, then cleared. `start: 'replay'` is the
         // explicit `--replay`; absent means start from now. Both absent when
