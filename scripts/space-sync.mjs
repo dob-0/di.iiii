@@ -127,7 +127,7 @@ const normalizeTiers = (tiers) => {
 
 // Fields the repo is master for. Kept in one list so the reconcile, the audit
 // and the docs cannot disagree about what "declared" means.
-const SPACE_FIELDS = ['label', 'slug', 'isPublic']
+const SPACE_FIELDS = ['label', 'slug', 'isPublic', 'blurb']
 const TIER_FIELDS = ['openInscriptions']
 
 const loadEnvFile = async (filePath) => {
@@ -168,7 +168,7 @@ const api = async (url, options = {}, retries = 4) => {
     try {
       res = await fetch(url, options)
     } catch (err) {
-      if (attempt >= retries) throw new Error(`${url} — network: ${err.message}`)
+      if (attempt >= retries) throw new Error(`${url} — network: ${err.message}`, { cause: err })
       await sleep(1000 * 2 ** attempt)
       continue
     }
@@ -406,14 +406,14 @@ async function syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, ti
   // tells you nothing. Left alone, a dev-tier copy would look like a rehearsal
   // while writing every crossing to the live field.
   const liveHost = new URL(live).host
-  const PROD_HOST = 'di-studio.xyz'
-  if (liveHost !== PROD_HOST) {
+  const PROD_HOSTS = ['diiii.xyz', 'di-studio.xyz']
+  if (!PROD_HOSTS.includes(liveHost)) {
     const before = entryHtml
     // Production answers to both names. The lookbehind means a subdomain
     // ("dev.diiii.xyz") is never
     // re-prefixed into itself.
     entryHtml = entryHtml.replace(/(?<![\w.-])(di-studio|diiii)\.xyz/g, liveHost)
-    if (before !== entryHtml) console.log(`  ⇄ retargeted ${PROD_HOST} → ${liveHost}`)
+    if (before !== entryHtml) console.log(`  ⇄ retargeted ${PROD_HOSTS[0]} → ${liveHost}`)
   }
 
   // 4. upload referenced assets, rewrite their URLs in the entry HTML.
@@ -710,7 +710,7 @@ async function main() {
   if (!target) {
     console.error('Error: no target. Pass --to <url> or --tier <name>, or set LIVE_API_URL.')
     console.error('  dev:     https://dev.diiii.xyz/serverXR')
-    console.error('  prod:    https://di-studio.xyz/serverXR')
+    console.error('  prod:    https://diiii.xyz/serverXR')
     process.exitCode = 1; return
   }
   const live = target.replace(/\/+$/, '')

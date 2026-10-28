@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { getProjectDocument, listSpaceContents } from '../project/services/projectsApi.js'
+import { getProjectDocument, listProductionVersions, listSpaceContents } from '../project/services/projectsApi.js'
 import { versionsFromDocument } from '../shared/productionVersions.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
-import { rigVariantOf, shortTitle, versionLinks, versionListProjectOf } from './rigVariant.js'
+import useRememberedOpen from '../utils/rememberedOpen.js'
+import { CHIP, PANEL } from './chromeStyle.js'
+import { rigVariantOf, versionLinks, versionListProjectOf } from './rigVariant.js'
 
 // THE VERSION SWITCH in the space view (RIG_BUILD.md §15). Owner, 2026-09-28: three
 // versions of MOXIR's rig — minimal, middle, full — to choose between by looking.
@@ -19,8 +21,8 @@ const rowStyle = {
     gap: '2px',
     padding: '2px',
     borderRadius: '2px',
-    border: '1px solid rgba(255,255,255,0.14)',
-    background: 'rgba(10, 16, 24, 0.82)',
+    border: '1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3))',
+    background: 'var(--di-scrim, rgba(4, 6, 14, 0.74))',
     backdropFilter: 'blur(12px)',
     maxWidth: 'calc(100vw - 2rem)',
     overflow: 'hidden'
@@ -53,17 +55,17 @@ const linkStyle = (current, extra = {}) => ({
     minHeight: '44px',
     padding: '0 0.95rem',
     borderRadius: '2px',
-    fontSize: '0.9rem',
+    fontSize: 'var(--di-text-4, 0.9rem)',
     whiteSpace: 'nowrap',
     textDecoration: 'none',
-    color: current ? '#05070a' : '#f5f7fa',
-    background: current ? '#f5f7fa' : 'transparent',
+    color: current ? 'var(--di-black, #000)' : 'var(--di-text, #fff)',
+    background: current ? 'var(--di-cyan, #4df9ff)' : 'transparent',
     flex: '0 0 auto',
     ...extra
 })
 
 // A button in the row (Old versions / Versions): same rectangle, same 44 px, plain border.
-const buttonStyle = { ...linkStyle(false), font: 'inherit', fontSize: '0.9rem', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.28)' }
+const buttonStyle = { ...linkStyle(false), font: 'inherit', fontSize: 'var(--di-text-4, 0.9rem)', cursor: 'pointer', border: '1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3))' }
 
 // What the space really holds: the same visitor-safe list the space's contents page reads
 // (GET /api/spaces/:id/contents) — rows with each version's own mark. null until it answers — and null for good if
@@ -82,21 +84,29 @@ function useSpaceProjects(spaceId, enabled) {
     return ids
 }
 
-// The production's version list (docs/architecture/decisions/2026-10-04-production-versions.md): the
-// project `<set>-versions`, born private, so only the space's members can read it — for anyone else (and
-// on an install that has no list) this is null and the row is what it was. undefined while it loads.
-function useVersionList(listProjectId) {
+// The production's version list (docs/architecture/decisions/2026-10-04-production-versions.md). Read in
+// this order: the server's public parts of it (GET /api/spaces/:id/productions/:production/versions — the
+// only one a visitor can read, the list project is private), then the private list project itself (a member
+// on an older server), then null and the row is what it was. undefined while it loads.
+function useVersionList(spaceId, variant) {
+    const production = variant?.set || null
+    const listProjectId = versionListProjectOf(variant)
     const [list, setList] = useState(undefined)
     useEffect(() => {
-        if (!listProjectId) { setList(null); return undefined }
+        if (!listProjectId || !spaceId) { setList(null); return undefined }
         let live = true
         setList(undefined)
+        const fromPrivate = () => getProjectDocument(listProjectId)
+            .then((answer) => (answer?.document ? versionsFromDocument(answer.document) : null))
         Promise.resolve()
-            .then(() => getProjectDocument(listProjectId))
-            .then((answer) => { if (live) setList(answer?.document ? versionsFromDocument(answer.document) : null) })
-            .catch(() => { if (live) setList(null) })
+            .then(() => listProductionVersions(spaceId, production))
+            .then((versions) => (Array.isArray(versions) && versions.length ? { production: { id: production }, entries: versions, problems: [] } : null))
+            .catch(() => null)
+            .then((answered) => answered || fromPrivate())
+            .catch(() => null)
+            .then((answer) => { if (live) setList(answer) })
         return () => { live = false }
-    }, [listProjectId])
+    }, [spaceId, production, listProjectId])
     return list
 }
 
@@ -115,7 +125,7 @@ export const splitVersions = (links) => {
 function VersionLink({ l, curRef }) {
     return (
         <a ref={l.current ? curRef : undefined} href={l.href} aria-current={l.current ? 'page' : undefined} title={`${l.summary || l.title}${l.show ? ' — for the show' : ''}`} style={linkStyle(l.current)}>
-            {shortTitle(l.title, l.id)}
+            {l.name}
             {l.show ? <span data-show="true" style={{ marginLeft: '0.4rem', opacity: 0.72, fontSize: '0.8rem' }}>· for the show</span> : null}
         </a>
     )
@@ -130,12 +140,15 @@ const bareStyle = { display: 'flex', gap: '2px', position: 'relative', minWidth:
 export default function RigVersionSwitch({ spaceId, projectId, entities, top = '1rem', mode = 'row', maxWidth = null, bare = false }) {
     const variant = useMemo(() => rigVariantOf(entities), [entities])
     const existing = useSpaceProjects(spaceId, Boolean(variant))
-    const list = useVersionList(versionListProjectOf(variant))
+    const list = useVersionList(spaceId, variant)
     // while the list is loading only the current version shows (no row that reshuffles when it lands)
     const links = useMemo(() => versionLinks(variant, projectId, (id) => buildPublicProjectPath(spaceId, id), list === undefined ? null : existing, list || null), [variant, projectId, spaceId, existing, list])
     const [foldOpen, setFoldOpen] = useState(false)
     const [conceptsOpen, setConceptsOpen] = useState(false)
-    const [menuOpen, setMenuOpen] = useState(false)
+    const [bareOpen, toggleBare] = useRememberedOpen('versions')
+    const [walkOpen, setWalkOpen] = useState(false)
+    const menuOpen = bare ? bareOpen : walkOpen
+    const toggleMenu = bare ? toggleBare : () => setWalkOpen((v) => !v)
     const [cue, setCue] = useState({ left: false, right: false })
     const scrollerRef = useRef(null)
     const curRef = useRef(null)
@@ -189,10 +202,24 @@ export default function RigVersionSwitch({ spaceId, projectId, entities, top = '
     if (walk) {
         return (
             <nav aria-label="rig versions" style={{ ...rowStyle, top, position: 'fixed', zIndex: 30, flexDirection: 'column', maxHeight: `calc(100vh - ${top} - 1rem)` }}>
-                <button type="button" aria-expanded={menuOpen} aria-controls="rig-walk-versions" onClick={() => setMenuOpen((v) => !v)} style={{ ...buttonStyle, maxWidth: '100%', minWidth: 0 }}>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{`Versions · ${current ? shortTitle(current.title, current.id) : ''}`}</span>
+                <button type="button" aria-expanded={menuOpen} aria-controls="rig-walk-versions" onClick={toggleMenu} style={{ ...buttonStyle, maxWidth: '100%', minWidth: 0 }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{`Versions · ${current ? current.name : ''}`}</span>
                 </button>
                 {menuOpen ? <div id="rig-walk-versions" style={columnStyle}>{items}</div> : null}
+            </nav>
+        )
+    }
+    // In the scene bar the switch is ONE small chip - the version you are in - and the row of siblings opens under it
+    // (the scene is the page, owner 2026-10-13); remembered for this viewer only.
+    if (bare) {
+        return (
+            <nav aria-label="rig versions" data-bare="true" style={{ position: 'relative', minWidth: 0, flex: '0 1 auto' }}>
+                <button type="button" data-testid="rig-versions-chip" aria-expanded={menuOpen} aria-controls="rig-bar-versions" onClick={toggleMenu}
+                    title="The versions of this production" style={{ ...CHIP, maxWidth: 'min(16rem, calc(100vw - 2rem))' }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{`Versions · ${current ? current.name : ''}`}</span>
+                    <span aria-hidden="true" style={{ opacity: 0.7 }}>{menuOpen ? '▾' : '▸'}</span>
+                </button>
+                {menuOpen ? <div id="rig-bar-versions" style={{ ...PANEL, minWidth: 'min(16rem, calc(100vw - 2rem))', display: 'flex', flexDirection: 'column' }}>{items}</div> : null}
             </nav>
         )
     }

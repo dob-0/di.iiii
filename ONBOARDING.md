@@ -7,7 +7,7 @@ inline.
 
 > **Wrong door?** If you were invited to *collaborate on a space* — build scenes,
 > upload work, edit projects — you need none of this. That path is a browser tab
-> and nothing else: [di-studio.xyz/wiki#joining-a-space](https://di-studio.xyz/wiki#joining-a-space).
+> and nothing else: [diiii.xyz/wiki#joining-a-space](https://diiii.xyz/wiki#joining-a-space).
 > This page is for running and changing the platform itself.
 
 > TL;DR for the impatient: install prerequisites → fork & clone → `npm install`
@@ -117,7 +117,7 @@ This starts **serverXR** (`http://localhost:4000`) and the **Vite client**
 - `http://localhost:5173/spaces` — your spaces
 - `http://localhost:5173/main` — public view
 - `http://localhost:5173/main/studio` — main editor
-- `http://localhost:5173/main/raw/projects` — the node editor (Raw; `beta` was
+- `http://localhost:5173/main/raw/projects` — Nodes, the node editor (`beta` was
   deleted in Aug 2026 and its route is gone)
 - `http://localhost:5173/admin` — ops
 - `http://localhost:4000/serverXR/api/health` — server health check

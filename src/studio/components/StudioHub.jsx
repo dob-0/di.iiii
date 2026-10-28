@@ -26,6 +26,7 @@ import { buildStudioHubPath, buildStudioProjectPath, buildSpacesPath, navigateTo
 import { getCodeSpace } from '../utils/codeSpaces.js'
 import { describeProjectLayers } from '../../project/layers.js'
 import '../styles/studio-hub.css'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 const formatRelativeDate = (iso) => {
     const d = new Date(iso || Date.now())
@@ -519,7 +520,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                 <div className="sh-top-row">
                     <div>
                         <p className="sh-space-context">Space: {spaceLabel}</p>
-                        <h1 className="sh-title">Projects</h1>
+                        <h1 className="sh-title">projects</h1>
                     </div>
                     {creatingTitle === null ? (
                         <div className="sh-top-actions">
@@ -616,7 +617,8 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                 </div>
 
                 {/* Status */}
-                {status && (
+                {status === 'loading...' && <LoadingScreen variant="inline" label="Loading" text="loading" />}
+                {status && status !== 'loading...' && (
                     <p className={`sh-status${status.includes('error') || status.includes('failed') ? ' sh-status-error' : ''}`}>
                         {status}
                     </p>

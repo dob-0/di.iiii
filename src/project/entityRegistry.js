@@ -11,16 +11,19 @@ const VECTOR_FIELD = (label, component, path, options = {}) => ({
     type: 'number',
     step: options.step ?? 0.1,
     min: options.min,
-    max: options.max
+    max: options.max,
+    // Stored in radians, shown in degrees by the Studio Inspector (Blender's Object Properties ›
+    // Transform shows rotation in degrees). Other inspectors ignore it and keep radians.
+    ...(options.degrees ? { degrees: true } : {})
 })
 
 const TRANSFORM_FIELDS = [
     VECTOR_FIELD('Position X', 'transform', ['position', 0]),
     VECTOR_FIELD('Position Y', 'transform', ['position', 1]),
     VECTOR_FIELD('Position Z', 'transform', ['position', 2]),
-    VECTOR_FIELD('Rotation X', 'transform', ['rotation', 0], { step: 0.05 }),
-    VECTOR_FIELD('Rotation Y', 'transform', ['rotation', 1], { step: 0.05 }),
-    VECTOR_FIELD('Rotation Z', 'transform', ['rotation', 2], { step: 0.05 }),
+    VECTOR_FIELD('Rotation X', 'transform', ['rotation', 0], { step: 0.05, degrees: true }),
+    VECTOR_FIELD('Rotation Y', 'transform', ['rotation', 1], { step: 0.05, degrees: true }),
+    VECTOR_FIELD('Rotation Z', 'transform', ['rotation', 2], { step: 0.05, degrees: true }),
     VECTOR_FIELD('Scale X', 'transform', ['scale', 0], { step: 0.05, min: 0.01 }),
     VECTOR_FIELD('Scale Y', 'transform', ['scale', 1], { step: 0.05, min: 0.01 }),
     VECTOR_FIELD('Scale Z', 'transform', ['scale', 2], { step: 0.05, min: 0.01 })
@@ -442,6 +445,8 @@ const DEFINITIONS = {
                     ] },
                     { label: 'Space', component: 'reference', path: ['spaceId'], type: 'space' },
                     { label: 'Project', component: 'reference', path: ['projectId'], type: 'project' },
+                    // a part of that page: the id of a section (e.g. works -> /dilijan#works); N1248
+                    { label: 'Part of the page', component: 'reference', path: ['anchor'], type: 'text' },
                     { label: 'Label', component: 'reference', path: ['label'], type: 'text' }
                 ]
             }

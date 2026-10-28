@@ -3,11 +3,13 @@
 //   NAV_URL=http://navfix.diiii.localhost/moxir/studio/projects/<id> di-test-browser run scripts/nav/measure-pan-after-zoom.cjs
 // The camera is read WITHOUT any app hook: the script walks the React fiber tree for the ref that holds
 // camera-controls (the one with getPosition), so it also works on a production build (the installed di).
-// Optional: NAV_SHOT=/path/file.png (page screenshot after the drag), NAV_NOTCHES=12, NAV_DRAG=240.
+// Optional: NAV_SHOT=/path/file.png (page screenshot after the drag), NAV_NOTCHES=12, NAV_DRAG=240,
+// NAV_WHEEL=out (wheel BACK, deltaY +100: the owner's 2026-10-14 "when I zoom back it is impossible to move").
 const { chromium } = require('playwright')
 const URL = process.env.NAV_URL
 const NOTCHES = Number(process.env.NAV_NOTCHES || 12)
 const DRAG = Number(process.env.NAV_DRAG || 240)
+const WHEEL_OUT = process.env.NAV_WHEEL === 'out'
 const AXIS = process.env.NAV_AXIS === 'y' ? 'y' : 'x'   // drag right (x) or drag DOWN (y)
 const BUTTON = process.env.NAV_BUTTON || 'right'      // right (Sketchfab pan) or middle (Blender orbit; with NAV_SHIFT=1 = pan)
 const SHIFT = process.env.NAV_SHIFT === '1'
@@ -81,7 +83,7 @@ const dist = (a, b) => Math.hypot(a[1] - b[1], a[2] - b[2], a[3] - b[3])
     const perNotch = []
     for (let i = 0; i < NOTCHES; i++) {
         const a = await last()
-        await page.mouse.wheel(0, -100)
+        await page.mouse.wheel(0, WHEEL_OUT ? 100 : -100)
         await sleep(150)
         perNotch.push(dist(a, await last()))
     }

@@ -5,7 +5,7 @@ import { useHoldFrames } from '../utils/renderDemand.jsx'
 import { Html, TransformControls } from '@react-three/drei'
 import GraphRoomNodes from '../../raw/components/GraphRoomNodes.jsx'
 import { registerEntityObject } from '../utils/entityObjectRegistry.js'
-import { GIZMO_SNAP, useSnapModifier } from '../utils/gizmoSnap.js'
+import { gizmoSnapSteps, useSnapModifier } from '../utils/gizmoSnap.js'
 
 // What Nodes made, in Studio's room (owner's decision 2026-10-02, "edit inside
 // the Geo"). The bodies are Nodes' own (GraphRoomNodes → NodeVisual); this adds
@@ -103,9 +103,9 @@ function SelectedNodeChrome({ object, label, gizmoActive, gizmoMode, gizmoAxis, 
                     showX={!gizmoAxis || gizmoAxis === 'x'}
                     showY={!gizmoAxis || gizmoAxis === 'y'}
                     showZ={!gizmoAxis || gizmoAxis === 'z'}
-                    translationSnap={snapping ? GIZMO_SNAP.translation : null}
-                    rotationSnap={snapping ? GIZMO_SNAP.rotation : null}
-                    scaleSnap={snapping ? GIZMO_SNAP.scale : null}
+                    translationSnap={gizmoSnapSteps(snapping).translation}
+                    rotationSnap={gizmoSnapSteps(snapping).rotation}
+                    scaleSnap={gizmoSnapSteps(snapping).scale}
                 />
             ) : null}
         </>

@@ -61,3 +61,20 @@ describe('the people picker', () => {
         await waitFor(() => expect(screen.getByText(/Nobody yet/)).toBeInTheDocument())
     })
 })
+
+// Design audit D21: avatars and the + button were circles. Owner,
+// 2026-10-21: 0 px for every control; status dots stay round.
+describe('the chat home corners', () => {
+    it('draws a person avatar and the + button square', async () => {
+        vi.stubGlobal('fetch', vi.fn((url) => (String(url).includes('/api/dm/people')
+            ? answer(200, { people: [{ userId: 'u1', label: 'Ana' }] })
+            : answer(200, { rooms: [] }))))
+
+        render(<ChatHomeSurface />)
+        await openThePicker()
+        const initials = await screen.findByText('AN')
+
+        expect(getComputedStyle(initials).borderRadius).toBe('0px')
+        expect(getComputedStyle(screen.getByLabelText('Start a private conversation')).borderRadius).toBe('0px')
+    })
+})

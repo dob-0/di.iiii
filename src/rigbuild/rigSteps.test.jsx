@@ -15,7 +15,7 @@ import { getCardsLocationState } from './cardsRouting.js'
 import { getPatchSheetLocationState } from './patchRouting.js'
 import { BUILD_KEYS } from './buildKeys.js'
 import { RIG_KIT_LINES } from '../kit/kitCatalogue.js'
-import library from './types/moxir.json'
+import { TYPE_LIBRARY as library } from './types/index.js'
 
 // The rig, step by step (RIG_BUILD.md §14). Owner 2026-09-28: "look to UI/UX fix tha
 // gaps that we can easy go from one place to other" and "make buttons in space that we

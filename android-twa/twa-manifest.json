@@ -1,6 +1,6 @@
 {
   "packageId": "xyz.distudio.chat",
-  "host": "di-studio.xyz",
+  "host": "diiii.xyz",
   "name": "iiii",
   "launcherName": "iiii",
   "display": "standalone",
@@ -33,7 +33,7 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://di-studio.xyz/chat",
+  "fullScopeUrl": "https://diiii.xyz/chat",
   "minSdkVersion": 23,
   "orientation": "portrait",
   "fingerprints": [],

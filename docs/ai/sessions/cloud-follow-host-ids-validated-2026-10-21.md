@@ -1,0 +1,6 @@
+## 2026-10-21 — follow carries only project ids this server would make (audit F18)
+
+- The ids the other side lists (`streams.js` `projectIdsFrom`, and the rows `followProjects.js` plans from) are now kept only when `normalizeProjectId(id) === id` — the store's own rule, no new regex. Before, a host listing `..` made the follower send `GET /api/ops`, `GET /api/document` and a create with slug `..` (seen through a recording proxy in `followIntegration.test.js`).
+- One list carries at most `MAX_FOLLOWED_PROJECTS` = 5000 ids. Every dropped id is counted per pass in `state.projects.refusedIds` (`bad id`, `over cap`; distinct ids) and the pass logs one line. Nothing throws.
+- Tests: 6 new cases red on dev, green after; all 18 serverXR follow test files pass (224 tests). The existing `followProjects.test.js` used one-letter ids (`a`, `b`), which the rule now refuses; they became `p-a`, `p-b` with the same titles.
+- Not done: `di follows` (scripts/di/follow.mjs, open PR #1054) does not print `refusedIds` yet. The cap is per list, so the union of both sides can reach 10 000 streams. Ids already saved in an old follow's `projectBase` are not re-checked (no host row can act on them now). No real two-machine run.

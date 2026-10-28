@@ -38,6 +38,36 @@ describe('install lines', () => {
         expect(message).toMatch(/Node\.js 22\.15 or newer/)
     })
 
+    // install.ps1 said the opposite until 2026-10-21: "Pick whichever sounds
+    // easier", Docker Desktop first. Running the line again after installing
+    // Docker hits the same wall, so both installers now say the one way out.
+    it('install.ps1 offers no docker anywhere and says what install.sh says', () => {
+        const ps1 = read('install.ps1')
+        expect(ps1).not.toMatch(/docker/i)
+        const start = ps1.indexOf('di.iiii could not start on this machine.')
+        const message = ps1.slice(start, ps1.indexOf('Nothing was installed.', start))
+        expect(start).toBeGreaterThan(-1)
+        expect(message).toMatch(/Install Node\.js 22\.15 or newer from https:\/\/nodejs\.org/)
+        expect(message).toMatch(/then run this line again\./)
+    })
+
+    it('install.ps1 says at its top why it is ASCII', () => {
+        const head = read('install.ps1').split('\n').slice(0, 30).join('\n')
+        expect(head).toMatch(/PowerShell 5\.1/)
+        expect(head).toMatch(/byte-order mark/)
+        expect(head).toMatch(/charset/)
+    })
+
+    it('di doctor, with no runtime, says the one way out, not docker', async () => {
+        process.env.NO_COLOR = '1'
+        const { ui } = await import('./ui.mjs')
+        const text = ui.noRuntime()
+        expect(text).not.toMatch(/docker/i)
+        expect(text).not.toMatch(/pick whichever/i)
+        expect(text).toMatch(/Node\.js 22\.15 or newer from https:\/\/nodejs\.org/)
+        expect(text).toMatch(/nothing was installed\./i)
+    })
+
     it('detect names no flag the CLI does not read', () => {
         expect(read('scripts/di/detect.mjs')).not.toMatch(/\(--docker\)/)
     })

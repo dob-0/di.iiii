@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { atmosphereOf } from '../../objectComponents/beamAir.js'
-import { getHazeField, hazeFogBase, setAtmosphere, subscribeHazeField } from '../../objectComponents/atmosphereStore.js'
+import { getHazeField, hazeFogBase, setAtmosphere, setSchematic, subscribeHazeField } from '../../objectComponents/atmosphereStore.js'
 import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
 import { installBeerLambertFog } from '../../objectComponents/beerLambertFog.js'
 
@@ -15,6 +15,7 @@ import { surfacesOf } from './surfaces.js'
 import SurfaceOverrides from './SurfaceOverrides.jsx'
 import BeamMirrors from './BeamMirrors.jsx'
 import NightOutside from './NightOutside.jsx'
+import SchematicSurfaces from './SchematicSurfaces.jsx'
 import useMeasureRequest from './measure/useMeasureRequest.js'
 
 // The room in high dynamic range with bloom (HdrBloom.jsx): loaded only by a room that asks.
@@ -112,6 +113,11 @@ export default function RenderSettingsEffect({ renderSettings }) {
         return subscribeHazeField(gl, apply)
     }, [gl, scene])
     useEffect(() => () => setAtmosphere(gl, null), [gl])
+    // render Tech (src/shared/renderPlan.js): the beams flat, the textured surfaces grey
+    const schematicLook = renderSettings?.look === 'schematic'
+    useEffect(() => { setSchematic(gl, schematicLook) }, [gl, schematicLook])
+    useEffect(() => () => setSchematic(gl, false), [gl])
+    const flat = schematicLook ? <SchematicSurfaces /> : null
     // Mounted only while the room asks for bloom: once it is mounted it draws every
     // frame itself (a priority frame callback stops R3F's own render).
     const governed = Boolean(atmosphereOf({ atmosphere: renderSettings?.atmosphere })) && renderSettings?.quality?.adaptive !== false
@@ -137,9 +143,10 @@ export default function RenderSettingsEffect({ renderSettings }) {
     const measure = measureRequest ? (
         <MeasurementMode renderSettings={renderSettings} request={measureRequest} toneMapping={toneMappingOf(renderSettings?.toneMapping)} />
     ) : null
-    if (!heavyRoom) return measure ? <Suspense fallback={null}>{measure}</Suspense> : null
+    if (!heavyRoom) return measure || flat ? <>{flat}{measure ? <Suspense fallback={null}>{measure}</Suspense> : null}</> : null
     return (
         <Suspense fallback={null}>
+            {flat}
             {measure}
             {bloomOf(renderSettings) ? <HdrBloom renderSettings={renderSettings} /> : null}
             {governed ? <QualityGovernor renderSettings={renderSettings} /> : null}

@@ -133,7 +133,8 @@ const withAuth = (token) => ({
 const createServerProject = async (server, spaceId, {
     title = 'Live Project',
     slug = 'live-project',
-    source = 'studio-v3'
+    source = 'studio-v3',
+    visibility
 } = {}) => {
     const response = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
         method: 'POST',
@@ -141,7 +142,7 @@ const createServerProject = async (server, spaceId, {
             'Content-Type': 'application/json',
             ...withAuth(server.apiToken)
         },
-        body: JSON.stringify({ title, slug, source })
+        body: JSON.stringify({ title, slug, source, ...(visibility ? { visibility } : {}) })
     })
     expect(response.status).toBe(201)
     const payload = await response.json()
@@ -265,6 +266,35 @@ describe('server write contracts', () => {
         expect(asStranger).toBeTruthy()
         expect(asStranger.projectCount).toBeUndefined()
         expect(asStranger.publishedCount).toBeUndefined()
+    })
+
+    // Marketing audit 2026-10-21, G23: a space's one line for visitors is set
+    // by its owner, listed with the space, and is what its share card says.
+    it('a space\'s blurb is saved, listed, cleared, refused when too long, and is its card\'s description', async () => {
+        const server = await startServer({ nodeEnv: 'production' })
+        const admin = { 'Content-Type': 'application/json', ...withAuth(server.apiToken) }
+        expect((await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST', headers: admin, body: JSON.stringify({ label: 'Told', slug: 'told', isPublic: true })
+        })).status).toBe(201)
+        const patch = (body) => fetch(`${server.baseUrl}/api/spaces/told`, { method: 'PATCH', headers: admin, body: JSON.stringify(body) })
+        const listed = async () => (await (await fetch(`${server.baseUrl}/api/spaces`)).json()).spaces.find((s) => s.id === 'told')
+
+        const saved = await patch({ blurb: '  Films made\n by   children.  ', isPublic: true })
+        expect(saved.status).toBe(200)
+        expect((await listed()).blurb).toBe('Films made by children.')
+
+        const card = await (await fetch(`${server.baseUrl}/og/told`)).text()
+        expect(card).toContain('<meta property="og:description" content="Films made by children.">')
+
+        expect((await patch({ blurb: 'x'.repeat(161) })).status).toBe(400)
+        expect((await patch({ blurb: 42 })).status).toBe(400)
+        expect((await listed()).blurb).toBe('Films made by children.')
+        // Another field written later must not wipe it.
+        expect((await patch({ label: 'Told again' })).status).toBe(200)
+        expect((await listed()).blurb).toBe('Films made by children.')
+
+        expect((await patch({ blurb: '' })).status).toBe(200)
+        expect((await listed()).blurb).toBeNull()
     })
 
     it('requires auth by default in production when REQUIRE_AUTH is unset', async () => {
@@ -1152,6 +1182,21 @@ describe('server write contracts', () => {
         expect(guestProbe.status).toBe(404)
         const accountProbe = await fetch(`${server.baseUrl}/api/spaces/${sessionState.sandboxSpaceId}`, { headers: withAuth(server.apiToken) })
         expect(accountProbe.status).toBe(200)
+
+        // The purge trashed the guest sandbox, it did not destroy it, and it
+        // said so where an admin reads it. An editor may not read that list.
+        const sweep = await fetch(`${server.baseUrl}/api/admin/sweep`, { headers: withAuth(server.apiToken) })
+        expect(sweep.status).toBe(200)
+        const sweepBody = await sweep.json()
+        expect(sweepBody.log).toContainEqual(expect.objectContaining({ spaceId: guestState.sandboxSpaceId, action: 'trashed', owner: 'guest' }))
+        expect(Array.isArray(sweepBody.due)).toBe(true)
+        const editorSweep = await fetch(`${server.baseUrl}/api/admin/sweep`, { headers: { Cookie: accountCookie } })
+        expect(editorSweep.status).toBe(403)
+
+        // The guest comes back inside the hold: their room is restored, not
+        // refused as a name that sits in the trash.
+        const guestBack = await fetch(`${server.baseUrl}/api/spaces/${guestState.sandboxSpaceId}/scene`, { headers: { Cookie: guestCookie } })
+        expect(guestBack.status).toBe(200)
     })
 
     it('archives a long-idle account sandbox to a snapshot and revives it when the owner returns', async () => {
@@ -2533,7 +2578,7 @@ describe('open-call application contracts', () => {
     })
 
     it('answers submission preflights permissively for sandboxed (Origin: null) iframes', async () => {
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://diiii.xyz' } })
 
         const preflight = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications`, {
             method: 'OPTIONS',
@@ -2565,7 +2610,7 @@ describe('open-call application contracts', () => {
         await writeFile(path.join(clientDir, 'index.html'), '<!doctype html><title>x</title>')
         await writeFile(path.join(clientDir, 'fonts', 'inter-regular.woff'), 'not-really-a-font')
         await writeFile(path.join(clientDir, 'plain.txt'), 'no header for this one')
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://diiii.xyz' } })
         const origin = new URL(server.baseUrl).origin
 
         const font = await fetch(`${origin}/fonts/inter-regular.woff`, { headers: { Origin: 'null' } })
@@ -2588,7 +2633,7 @@ describe('open-call application contracts', () => {
         await mkdir(path.join(clientDir, 'wcc', 'process'), { recursive: true })
         await writeFile(path.join(clientDir, 'index.html'), '<!doctype html><title>x</title>')
         await writeFile(path.join(clientDir, 'wcc', 'process', 'process-01.jpeg'), 'not-really-a-jpeg')
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://diiii.xyz' } })
         const origin = new URL(server.baseUrl).origin
 
         const photo = await fetch(`${origin}/wcc/process/process-01.jpeg`, { headers: { Origin: 'null' } })
@@ -2597,7 +2642,7 @@ describe('open-call application contracts', () => {
     })
 
     it('serves project asset reads with permissive CORS for sandboxed iframes', async () => {
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://diiii.xyz' } })
 
         const preflight = await fetch(`${server.baseUrl}/api/projects/some-project/assets/some-asset`, {
             method: 'OPTIONS',
@@ -3795,6 +3840,71 @@ describe('a space\'s contents', () => {
         expect(authored.status).toBe(200)
         const authoredIds = (await authored.json()).projects.map((p) => p.id).sort()
         expect(authoredIds).toEqual([archived.id, draft.id, legacy.id, live.id].sort())
+    })
+
+    // 2026-10-05: the production's version list is a PRIVATE project, so a visitor's read of it was a 404
+    // and the version row fell back to stale siblings (no "for the show", "Old versions (8)"). The server
+    // now answers the public parts of the list, and only those.
+    describe('GET /api/spaces/:spaceId/productions/:production/versions', () => {
+        const entity = (id, components) => ({ id, type: 'group', name: id, components: { transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, ...components } })
+        const putDoc = async (server, projectId, entities) => {
+            const current = await (await fetch(`${server.baseUrl}/api/projects/${projectId}/document`, { headers: withAuth(server.apiToken) })).json()
+            const put = await fetch(`${server.baseUrl}/api/projects/${projectId}/document`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+                body: JSON.stringify({ ...current.document, entities })
+            })
+            expect(put.status).toBe(200)
+        }
+        const version = (id, projectId, status) => entity(`version-${id}`, {
+            productionVersion: {
+                id, projectId, title: `Title ${id}`, status,
+                madeBy: { machine: 'secret-machine', install: 'secret-install', tool: 't', commit: 'c' },
+                fingerprint: `sha256:${'a'.repeat(64)}`, note: 'SECRET NOTE', rig: { file: 'secret/rig.json', blob: null }
+            }
+        })
+
+        it('answers a visitor and a member only {id, projectId, title, status}, and leaves out a version whose project is private', async () => {
+            const server = await startServer({ nodeEnv: 'production', extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false' } })
+            await makeSpace(server, 'prod-space', 'Prod Space')
+            await publish(server, 'prod-space')
+            const list = await createServerProject(server, 'prod-space', { title: 'Show versions', slug: 'show-2026-versions', visibility: 'private' })
+            const open = await createServerProject(server, 'prod-space', { title: 'Open hall', slug: 'open-hall' })
+            const other = await createServerProject(server, 'prod-space', { title: 'Other hall', slug: 'other-hall' })
+            const hidden = await createServerProject(server, 'prod-space', { title: 'Hidden hall', slug: 'hidden-hall', visibility: 'private' })
+            await putDoc(server, list.id, [
+                entity('production', { productionMeta: { id: 'show-2026', title: 'Show', space: 'prod-space', codeList: '' } }),
+                version('open', open.id, 'for-the-show'),
+                version('other', other.id, 'concept'),
+                version('hidden', hidden.id, 'candidate')
+            ])
+            const url = `${server.baseUrl}/api/spaces/prod-space/productions/show-2026/versions`
+
+            // the list project itself is still private to a visitor
+            expect((await fetch(`${server.baseUrl}/api/projects/${list.id}/document`)).status).toBe(404)
+
+            const visitor = await fetch(url)
+            expect(visitor.status).toBe(200)
+            const body = await visitor.json()
+            expect(body.versions).toEqual([
+                { id: 'open', projectId: open.id, title: 'Title open', status: 'for-the-show' },
+                { id: 'other', projectId: other.id, title: 'Title other', status: 'concept' }
+            ])
+            const raw = JSON.stringify(body)
+            for (const leak of ['secret-machine', 'secret-install', 'SECRET NOTE', 'sha256:', 'secret/rig.json', 'hidden-hall', 'Hidden hall']) expect(raw).not.toContain(leak)
+
+            const member = await fetch(url, { headers: withAuth(server.apiToken) })
+            expect(member.status).toBe(200)
+            const memberBody = await member.json()
+            expect(memberBody.versions.map((v) => v.id)).toEqual(['open', 'hidden', 'other'])
+            for (const v of memberBody.versions) expect(Object.keys(v).sort()).toEqual(['id', 'projectId', 'status', 'title'])
+
+            // no such list, a malformed production id, a private space
+            expect((await fetch(`${server.baseUrl}/api/spaces/prod-space/productions/nothing/versions`)).status).toBe(404)
+            expect((await fetch(`${server.baseUrl}/api/spaces/prod-space/productions/Bad_Id/versions`)).status).toBe(400)
+            await makeSpace(server, 'prod-shut', 'Prod Shut')
+            expect((await fetch(`${server.baseUrl}/api/spaces/prod-shut/productions/show-2026/versions`)).status).toBe(401)
+        })
     })
 
     // 2026-09-30: the rig version switch was built from a sibling list frozen into each

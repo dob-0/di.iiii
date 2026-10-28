@@ -15,50 +15,38 @@
 //   dropped shadows, bloom, the floor's surface model (reflections), antialias; DPR 1
 // The document is never written: the room draws a copy.
 //
-// WHO GETS WHICH: `?quality=full|lite` in the address wins, then the viewer's own choice
-// (the Full/Lite button, remembered for this tab), else Lite (owner 2026-10-08: Lite is the
-// default; full HQ only when asked).
+// WHO GETS WHICH: `?quality=high|low` in the address wins (`full|lite`, the old words, still open), then the viewer's own choice
+// (the High/Low button, remembered for this tab), else: a desktop with a real GPU (a fine
+// pointer, a hardware WebGL renderer) starts in High; a phone or tablet (coarse pointer) and
+// a software renderer (SwiftShader, llvmpipe) start in Low. Owner 2026-10-15, looking at the
+// dev room in Low ("why this much ugly" → "so fix"); before that, 2026-10-08, Low was the
+// default everywhere ("full HQ only when needed") — that rule stays for every device that
+// cannot carry High. The setting is called Quality, its values Low and High (owner 2026-10-15; the keys 'lite'/'full' of before are read as aliases).
 
-export const OUTPUT_POOL_SLOTS = 4
+// The Low rule itself (what the output keeps and drops) lives in src/shared/renderPlan.js since 2026-10-15, so the render
+// plan (Studio / Tech / Show × Low / High) and this file share one copy.
+export { OUTPUT_POOL_SLOTS, outputRenderSettings, outputDocument } from '../../shared/renderPlan.js'
 export const OUTPUT_STORAGE_KEY = 'di.view.quality'
 
-const QUALITY_RE = /(?:^|[?&])quality=(full|lite)(?:&|$)/i
+const QUALITY_RE = /(?:^|[?&])quality=(high|low|full|lite)(?:&|$)/i
+
+/** One quality word, old or new, as 'low' | 'high' (null for anything else). 'lite' and 'full' are the retired words. */
+export const normalizeQuality = (value) => {
+    const v = String(value ?? '').toLowerCase()
+    if (v === 'low' || v === 'lite') return 'low'
+    if (v === 'high' || v === 'full') return 'high'
+    return null
+}
 
 /** Is the room drawn as the output (true) or at full work quality (false)? */
-export const outputModeWanted = ({ search = '', stored = null, coarse = false, workMachine = false } = {}) => {
-    const asked = QUALITY_RE.exec(String(search || ''))?.[1]?.toLowerCase()
-    const pick = asked || (stored === 'full' || stored === 'lite' ? stored : null)
-    if (pick) return pick === 'lite'
-    // LITE BY DEFAULT, EVERYWHERE (owner, 2026-10-08: "make the Lite version the default; full HQ only when needed"): the
-    // work machine with a mouse starts in Lite too, and Full is the button (remembered for this tab only, useOutputMode.js).
-    // `coarse` and `workMachine` are kept in the signature for the callers and the record of the old rule.
-    void coarse
+export const outputModeWanted = ({ search = '', stored = null, coarse = false, workMachine = false, softwareGl = false } = {}) => {
+    const pick = normalizeQuality(QUALITY_RE.exec(String(search || ''))?.[1]) || normalizeQuality(stored)
+    if (pick) return pick === 'low'
+    // High on a desktop with a real GPU, Low on a phone (coarse pointer) or a software renderer (owner 2026-10-15).
+    // `workMachine` is kept in the signature for the callers and the record of the 2026-10-04 rule (local = full).
     void workMachine
-    return true
+    return Boolean(coarse || softwareGl)
 }
 
-/** The room's render settings as the output draws them. */
-export const outputRenderSettings = (renderSettings = {}) => {
-    const rs = renderSettings && typeof renderSettings === 'object' ? renderSettings : {}
-    const { bloom: _bloom, surfaces: _surfaces, ...rest } = rs
-    return {
-        ...rest,
-        shadows: false,
-        shadowCasting: { ...(rs.shadowCasting || {}), enabled: false },
-        antialias: false,
-        dprMin: 1,
-        dprMax: 1
-    }
-}
-
-/** A copy of the document drawn as the output: its render settings, and the light pool on. */
-export const outputDocument = (document) => {
-    if (!document) return document
-    const pool = document.mappingState?.lightPool || {}
-    const slots = Math.min(OUTPUT_POOL_SLOTS, Number.isFinite(Number(pool.slots)) ? Number(pool.slots) : OUTPUT_POOL_SLOTS)
-    return {
-        ...document,
-        renderSettings: outputRenderSettings(document.renderSettings),
-        mappingState: { ...(document.mappingState || {}), lightPool: { ...pool, enabled: true, slots } }
-    }
-}
+/** Is this WebGL renderer string a software one (no GPU: SwiftShader, llvmpipe, Mesa's software rasterizer)? */
+export const isSoftwareRenderer = (renderer = '') => /swiftshader|llvmpipe|softpipe|software|mesa offscreen|basic render/i.test(String(renderer || ''))

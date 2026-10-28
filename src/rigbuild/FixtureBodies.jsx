@@ -176,7 +176,7 @@ function PartInstances({ mesh, poses, onPick }) {
     }, [poses, mesh, geometry])
     if (!count) return null
     // A new count needs a new InstancedMesh (its buffers are sized at creation).
-    return <instancedMesh key={count} ref={ref} args={[geometry, mesh.material, count]} frustumCulled={false} userData={{ noShadow: true, rigBody: true }} onClick={instancePick(poses, onPick)} />
+    return <instancedMesh key={count} ref={ref} args={[geometry, mesh.material, count]} frustumCulled={false} userData={{ noShadow: true, rigBody: true, lampIds: poses.map((p) => p.id) }} onClick={instancePick(poses, onPick)} />
 }
 
 export default function FixtureBodies({ lamps, library, onPick }) {

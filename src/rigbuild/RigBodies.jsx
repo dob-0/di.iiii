@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import FixtureBodies from './FixtureBodies.jsx'
 import RigFlashes from './RigFlashes.jsx'
 import DmxProbe from './DmxProbe.jsx'
-import { TYPE_LIBRARY } from './types/index.js'
+import { useProjectLibrary } from './types/projectTypes.js'
 import { libraryWithShow } from './rental.js'
 import { rigBodyLamps } from './rigBodyLamps.js'
 import { bounceOf, bounceSpecOf, hazeGlowFactor } from './rigBounce.js'
@@ -26,7 +26,10 @@ import { measurementOf } from '../project/viewport/measure/measureState.js'
 // Lazy-loaded by the rooms and mounted only when the document has a typed lamp, so a
 // space with no rig pays nothing — not even the fixture models' download.
 
-export default function RigBodies({ entities, library = TYPE_LIBRARY, onPick }) {
+// `library` absent: the project's own types alone (types/projectTypes.js), not the whole fixture library.
+export default function RigBodies({ entities, library: givenLibrary = null, onPick }) {
+    const projectLibrary = useProjectLibrary(givenLibrary ? null : entities || null)
+    const library = givenLibrary || projectLibrary
     const shownLibrary = useMemo(() => libraryWithShow(library, entities), [library, entities])
     const lamps = useMemo(() => rigBodyLamps(entities, shownLibrary), [entities, shownLibrary])
     // The rig's own light coming back off the hall (rigBounce.js): only in a room whose

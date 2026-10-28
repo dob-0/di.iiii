@@ -89,6 +89,9 @@ const LOD_HYSTERESIS = 0.02
 
 export const LOD_TIERS = ['block', 'header', 'summary', 'full']
 
+// Arrow key → the direction a selected card moves (audit 2026-10-21 NR-05).
+const CARD_NUDGE = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
+
 /**
  * Which detail tier a card renders at. Pure, exported for tests.
  * `previous` applies hysteresis so a gesture sitting on a boundary is stable.
@@ -383,6 +386,12 @@ export default function RawGraphSurface({
     const pendingWireRef = useRef(null)
     const pointersRef = useRef(new Map())
     const pinchRef = useRef(null)
+    // A touch on a card selects on release, not on the press: the press may be
+    // the first finger of a pinch, and a selection raises the settings sheet
+    // over half a phone (audit 2026-10-21 NR-08). Cleared when a pinch begins.
+    const touchSelectRef = useRef(null)
+    const onSelectNodeRef = useRef(onSelectNode)
+    useEffect(() => { onSelectNodeRef.current = onSelectNode })
     const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
     const hasFitRef = useRef(false)
     const lastFitViewportRef = useRef(null)
@@ -470,18 +479,35 @@ export default function RawGraphSurface({
 
     // Publish the viewport whenever it moves — through applyViewport OR the
     // pan drag, which writes the ref directly; both end in these three state
-    // values, so keying on them catches every path. Resize republishes the
-    // origin, which is the only part that can change without a pan.
+    // values, so keying on them catches every path. The ORIGIN is the surface's
+    // own top-left on screen and can change with no pan at all: the empty-canvas
+    // hint leaves and the top bar settles when the first node lands. A stale
+    // origin put every world window ~57 px off its card — a new Laser Out's
+    // window opened over its own node (2026-10-20) — so a resize, the surface
+    // itself changing size, and one frame after a pan re-measure it; an
+    // unchanged measurement is not republished.
     useEffect(() => {
         if (!onViewportChange) return undefined
+        let last = null
         const publish = () => {
             const rect = containerRef.current?.getBoundingClientRect?.() || { left: 0, top: 0 }
             const vp = viewportRef.current
-            onViewportChange({ panX: vp.panX, panY: vp.panY, zoom: vp.zoom, originLeft: rect.left, originTop: rect.top })
+            const next = { panX: vp.panX, panY: vp.panY, zoom: vp.zoom, originLeft: rect.left, originTop: rect.top }
+            if (last && Object.keys(next).every((key) => last[key] === next[key])) return
+            last = next
+            onViewportChange(next)
         }
         publish()
         window.addEventListener('resize', publish)
-        return () => window.removeEventListener('resize', publish)
+        const element = containerRef.current
+        const observer = element && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(publish) : null
+        if (observer) observer.observe(element)
+        const frame = typeof requestAnimationFrame === 'function' ? requestAnimationFrame(publish) : null
+        return () => {
+            window.removeEventListener('resize', publish)
+            if (observer) observer.disconnect()
+            if (frame !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(frame)
+        }
     }, [onViewportChange, panX, panY, zoom])
 
     const updateZoom = (nextZoom) => {
@@ -870,9 +896,21 @@ export default function RawGraphSurface({
             // fires dozens of small events per swipe and a flat step made it
             // fly; a mouse notch (deltaY 100) lands near the old step.
             const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1
+            const vp = viewportRef.current
+            // A touchpad's two-finger swipe carries deltaX: it pans, so a
+            // sideways swipe moves the desk sideways (audit 2026-10-21 NR-01).
+            // A pinch's deltaX is not a pan, it zooms only. One axis per
+            // event, the larger one: a vertical swipe that drifts a little
+            // sideways zooms and nothing else, so the desk never creeps
+            // sideways while it zooms (review of NR-01).
+            const pinch = event.ctrlKey || event.metaKey
+            if (!pinch && Math.abs(event.deltaX || 0) > Math.abs(event.deltaY || 0)) {
+                applyViewport(vp.panX - event.deltaX * unit, vp.panY, vp.zoom)
+                return
+            }
+            if (!event.deltaY) return
             const magnitude = clamp(Math.abs(event.deltaY) * unit, 1, 120)
             const factor = Math.exp((event.deltaY < 0 ? 1 : -1) * magnitude * 0.0016)
-            const vp = viewportRef.current
             const rect = container.getBoundingClientRect()
             const mx = event.clientX - rect.left
             const my = event.clientY - rect.top
@@ -922,6 +960,7 @@ export default function RawGraphSurface({
             setIsPanning(false)
             setIsPanMoving(false)
             setDraggingNodeId(null)
+            touchSelectRef.current = null
             pendingWireRef.current = null
             setPendingWire(null)
         }
@@ -1379,6 +1418,8 @@ export default function RawGraphSurface({
             if (final && start && (final.x !== start.graphX || final.y !== start.graphY)) {
                 onMoveNode?.(draggingNodeId, final.x, final.y)
             }
+            if (touchSelectRef.current === draggingNodeId) onSelectNodeRef.current?.(draggingNodeId)
+            touchSelectRef.current = null
             setDragPos(null)
             setDraggingNodeId(null)
         }
@@ -1659,6 +1700,20 @@ export default function RawGraphSurface({
             if (matchesKeyId(event, 'leave') && onLeaveScope) return act(() => onLeaveScope())
             if (matchesKeyId(event, 'rename') && selected && onRenameNode) return act(() => onRenameNode(selected))
             if (matchesKeyId(event, 'keys') && onShowKeys) return act(() => onShowKeys())
+            // The way to place a card without a drag (WCAG 2.1.1, 2.5.7;
+            // audit 2026-10-21 NR-05): 10 graph px a press, Shift ×5. The
+            // card that has focus moves, else the selected one — selecting
+            // sends focus to the settings column, and Escape hands it back
+            // to the card with the selection cleared.
+            const arrow = CARD_NUDGE[event.key]
+            const focusedId = event.target?.closest?.('[data-card-id]')?.getAttribute('data-card-id')
+            const moving = focusedId && nodeById.has(focusedId) ? focusedId : selected
+            // An open context menu owns the arrows; ← and → reached the card behind it.
+            if (arrow && moving && onMoveNode && !contextMenu && !event.metaKey && !event.ctrlKey && !event.altKey) {
+                const node = nodeById.get(moving)
+                const by = event.shiftKey ? 50 : 10
+                return act(() => onMoveNode(moving, (Number(node.graphX) || 0) + arrow[0] * by, (Number(node.graphY) || 0) + arrow[1] * by))
+            }
         }
         if (event.key !== 'Enter' || event.target !== event.currentTarget || !onDoubleClick) return
         const rect = event.currentTarget.getBoundingClientRect()
@@ -1683,12 +1738,21 @@ export default function RawGraphSurface({
     }
 
     return (
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the canvas: a named group that holds the cards and takes the canvas keys
         <div
             className="raw-graph-surface"
             ref={containerRef}
-            role="button"
+            // A group, not a button: a button's children are presentational,
+            // so every card inside it vanished for a screen reader (audit
+            // 2026-10-21 NR-02). Focusable for the canvas keys; Enter on it
+            // still creates a node.
+            role="group"
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the canvas keys (H, F, 1, arrows) act only while it has focus (WCAG 2.1.4)
             tabIndex={0}
-            aria-label="Create a graph node"
+            aria-label="Node canvas"
+            // Only where Enter does something: Studio's read-only preview
+            // passes no onDoubleClick, and a key that does nothing is not announced.
+            aria-keyshortcuts={onDoubleClick ? 'Enter' : undefined}
             style={{
                 top: `${topInset}px`,
                 // Published so on-canvas controls can sit clear of whatever is
@@ -1954,7 +2018,8 @@ export default function RawGraphSurface({
                                         y: point.y - node.graphY
                                     }
                                     dragPanRef.current = { x: event.clientX, y: event.clientY, live: false, last: 0 }
-                                    onSelectNode?.(node.id)
+                                    if (event.pointerType === 'touch') touchSelectRef.current = node.id
+                                    else onSelectNode?.(node.id)
                                     setIsPanning(false)
                                     setDraggingNodeId(node.id)
                                     event.currentTarget.setPointerCapture(event.pointerId)
@@ -2158,6 +2223,12 @@ export default function RawGraphSurface({
                                                 className={`raw-graph-port-dot raw-graph-port-dot--in${pendingWire ? (arePortsCompatible(pendingWire.fromPortType, port.type) ? ' is-compatible' : ' is-incompatible') : ''}`}
                                                 data-node-id={node.id}
                                                 data-port-id={port.id}
+                                                // A pointer handle inside the card, which is itself
+                                                // the button: a focusable child of a button is a
+                                                // nested control, and the row's label already names
+                                                // the port. Hidden from the reader; wiring by
+                                                // keyboard does not exist yet (audit 2026-10-21).
+                                                aria-hidden="true"
                                                 onPointerDown={(event) => armLongPress(event, node, port, 'in')}
                                                 onContextMenu={(event) => {
                                                     if (!onPromotePort) return
@@ -2191,6 +2262,7 @@ export default function RawGraphSurface({
                                                 className="raw-graph-port-dot raw-graph-port-dot--out"
                                                 data-node-id={node.id}
                                                 data-port-id={port.id}
+                                                aria-hidden="true"
                                                 onPointerDown={(event) => {
                                                     armLongPress(event, node, port, 'out')
                                                     handleOutputPointerDown(event, node, port)

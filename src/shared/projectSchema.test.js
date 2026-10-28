@@ -920,3 +920,29 @@ describe('fields this build does not know ride through (audit 2026-10-09 F3)', (
         expect(normalizeProjectDocument({ version: 99 }).version).toBe(PROJECT_DOCUMENT_VERSION)
     })
 })
+
+import { createRequire as createRequireForPan } from 'node:module'
+describe('a measured pan correction survives a save on both sides (MOXIR 2026-10-17)', () => {
+    it('the server copy (shared/projectSchema.cjs) and the client copy keep panOffsetDeg and panInvert', async () => {
+        const server = createRequireForPan(import.meta.url)('../../shared/projectSchema.cjs')
+        const client = await import('./projectSchema.js')
+        const doc = { entities: [{ id: 'h', type: 'spotLight', components: { fixture: { type: 'up-b380f', hung: true, panOffsetDeg: -270, panInvert: true } } }] }
+        for (const normalize of [server.normalizeProjectDocument, client.normalizeProjectDocument]) {
+            const f = normalize(doc).entities[0].components.fixture
+            expect(f.panOffsetDeg).toBe(-270)
+            expect(f.panInvert).toBe(true)
+        }
+    })
+})
+
+describe('a door that invites', () => {
+    it('keeps invite: true, and nothing for any other value', () => {
+        const doc = normalizeProjectDocument({ entities: [
+            { id: 'a', type: 'portal', components: { reference: { spaceId: 's', invite: true } } },
+            { id: 'b', type: 'portal', components: { reference: { spaceId: 's', invite: 'yes' } } }
+        ] })
+        expect(doc.entities.find((e) => e.id === 'a').components.reference.invite).toBe(true)
+        expect('invite' in doc.entities.find((e) => e.id === 'b').components.reference).toBe(false)
+    })
+})
+

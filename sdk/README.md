@@ -1,10 +1,10 @@
-# The di.iiii SDK
+# SDK
 
 Everything di.iiii can be told to do, written once, and handed out three ways:
 
 | face | who uses it | how |
 |---|---|---|
-| a library | a project, a script, you | `import { connect } from 'di.iiii/sdk'` |
+| a library | a project, a script, you | `import { connect } from './sdk/index.js'` |
 | an MCP server | Claude, or any agent that speaks MCP | `di mcp`, or `node sdk/mcp.mjs` |
 | the `di` command | you, typing | *not yet on this core — see Honest limits* |
 
@@ -102,9 +102,10 @@ Each of these cost real damage before it was a line of code.
 - **A space made by a token belongs to nobody.** `canAccessSpace` ignores
   `ownerUserId`, so without an invite or a scope entry even the person who asked
   for it gets "Access restricted". `space.ensure` says so as it happens.
-- **Spaces delete themselves.** `pruneSpaces` removes any non-permanent space
-  untouched for 30 days — and a *read* is not a touch. Everything is born
-  `permanent: true`.
+- **Idle spaces go to the trash.** `pruneSpaces` moves any non-permanent space
+  untouched for 30 days to the space trash (restorable 30 days; purged after)
+  unless it is published, listed, linked or holds a saved project — and a
+  *read* is not a touch. Everything is still born `permanent: true`.
 
 ## The agent face
 
@@ -122,6 +123,19 @@ or, from an install, `di mcp`. Spec: `docs/architecture/SPEC_agent_door.md`.
 | `di_describe` | one name in full: inputs, reach, any trap, a call to fill in |
 | `di_call` | run one name |
 | `di_run` | up to 20 calls in order in one go; `"${step.body.id}"` feeds one into the next; stops at the first failure and says what ran |
+
+**Four read-only rig tools**, for a production's rig in a checkout (`sdk/rig.js`;
+they read the committed rig files under `scripts/place/rigs/`, so an install
+without `scripts/` answers that it needs a checkout):
+
+| tool | does |
+|---|---|
+| `di_rig_versions` | every version, variant and candidate: id, title, truss kind, fixture counts by code, lamps, effects, looks (~7 KB instead of the 203 KB versions file) |
+| `di_rig_check` | the existing checks, pass/fail with numbers: generated files fresh (`versions.mjs --check`), bridle angles, every look built clean, lasers ≥ 3 m and rising, the ground-mover policy; `hall` checks against another committed hall |
+| `di_rig_truss` | one version's truss: ends, picks with kg and bridle angles, tie-offs, load, sign-off, the bridle check; `detail: true` for the whole block |
+| `di_production_archive_plan` | `archive-versions.mjs`'s plan (keep these, archive + hide the rest) from one GET of the space's projects; changes nothing — applying stays the owner's command |
+
+None writes a file, git, a server or the desk (`sdk/rig.test.js` proves it).
 
 Names are the moves above (`space.list`, ranked first, because they carry the
 traps) and every route the server's own catalogue opens to agents

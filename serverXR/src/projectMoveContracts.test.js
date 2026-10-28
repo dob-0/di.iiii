@@ -6,13 +6,12 @@
 // that the work and its asset are really reachable in the new space, and that
 // the old bare link answers with where the project went.
 
-import { spawn } from 'node:child_process'
 import { mkdtemp, rm } from 'node:fs/promises'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 vi.setConfig({ testTimeout: 25_000, hookTimeout: 40_000 })
 
@@ -25,26 +24,13 @@ const VIEWER = 'mv-viewer-token' // viewer, scoped to alpha only
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const getFreePort = () => new Promise((resolve, reject) => {
-    const server = net.createServer()
-    server.on('error', reject)
-    server.listen(0, '127.0.0.1', () => {
-        const { port } = server.address()
-        server.close((error) => (error ? reject(error) : resolve(port)))
-    })
-})
-
 let server = null
 
 const startServer = async () => {
     const cwd = await mkdtemp(path.join(os.tmpdir(), 'dii-mv-cwd-'))
     const dataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-mv-data-'))
-    const port = await getFreePort()
-    const child = spawn(process.execPath, [SERVER_ENTRY], {
-        cwd,
-        env: {
+    const { child, port, logs: readLogs } = await spawnServerUntilReady({ entry: SERVER_ENTRY, cwd, env: {
             ...process.env,
-            PORT: String(port),
             NODE_ENV: 'production',
             APP_BASE_PATH: '/serverXR',
             DATA_ROOT: dataRoot,
@@ -58,23 +44,12 @@ const startServer = async () => {
             AUTH_SESSION_SECRET: 'mv-session-secret',
             AUTH_SESSION_COOKIE_SECURE: 'false',
             AUTH_HUB_URL: 'off'
-        },
-        stdio: ['ignore', 'pipe', 'pipe']
-    })
-    let logs = ''
-    child.stdout.on('data', (chunk) => { logs += chunk })
-    child.stderr.on('data', (chunk) => { logs += chunk })
+        } })
     const baseUrl = `http://127.0.0.1:${port}/serverXR`
-    const deadline = Date.now() + 15000
-    while (Date.now() < deadline) {
-        if (child.exitCode !== null) throw new Error(`server exited early\n${logs}`)
-        try { if ((await fetch(`${baseUrl}/api/health`)).ok) break } catch { /* booting */ }
-        await wait(200)
-    }
     return {
         baseUrl,
         dataRoot,
-        logs: () => logs,
+        logs: readLogs,
         stop: async () => {
             if (child.exitCode === null) {
                 child.kill('SIGTERM')
@@ -176,5 +151,72 @@ describe('POST /api/projects/:id/move', () => {
         const space = await (await ok(await get('/api/spaces/alpha', ADMIN))).json()
         expect(space.space?.publishedProjectId ?? space.publishedProjectId ?? null).toBeNull()
         expect(await idsIn('gallery')).toContain('door')
+    })
+})
+
+// The old space's own bare address, /alpha, after its front door left for
+// gallery in the test above. GET /api/resolve/:space answers the same
+// { movedTo } pointer the old project link gets, and the client follows it
+// with the same replace (RootApp.jsx SpaceRootRoute).
+describe('GET /api/resolve/:space — the old space root forwards to its front door', () => {
+    const resolveRoot = (space, token) => get(`/api/resolve/${space}`, token)
+    let galleryId = null
+
+    it('forwards the old space root to the project\'s new address', async () => {
+        galleryId = (await (await ok(await get('/api/projects/door', ADMIN))).json()).project.spaceId
+        const body = await (await ok(await resolveRoot('alpha', ADMIN))).json()
+        expect(body).toEqual({ movedTo: { spaceId: galleryId, projectId: 'door' } })
+    })
+
+    it('a space no front door ever left is unchanged: 404, nothing to forward', async () => {
+        await ok(await send('POST', '/api/spaces', ADMIN, { label: 'quiet', slug: 'quiet' }), 201)
+        expect((await resolveRoot('quiet', ADMIN)).status).toBe(404)
+        // bravo only ever RECEIVED a project, and lost none.
+        expect((await resolveRoot('bravo', ADMIN)).status).toBe(404)
+    })
+
+    it('never names a destination the caller could not open', async () => {
+        // VIEWER may read alpha but not gallery, which is not public.
+        expect((await resolveRoot('alpha', VIEWER)).status).toBe(404)
+        await ok(await send('PATCH', '/api/spaces/gallery', ADMIN, { isPublic: true }))
+        expect((await (await ok(await resolveRoot('alpha', VIEWER))).json()).movedTo.projectId).toBe('door')
+        // gallery public, the project private inside it: still nothing.
+        await ok(await send('PATCH', '/api/projects/door', ADMIN, { visibility: 'private' }))
+        expect((await resolveRoot('alpha', VIEWER)).status).toBe(404)
+        expect((await resolveRoot('alpha', ADMIN)).status).toBe(200)
+        await ok(await send('PATCH', '/api/projects/door', ADMIN, { visibility: 'public' }))
+        // A draft is not shown to a visitor either.
+        await ok(await send('PATCH', '/api/projects/door/shelf', ADMIN, { state: 'draft' }))
+        expect((await resolveRoot('alpha', VIEWER)).status).toBe(404)
+        await ok(await send('PATCH', '/api/projects/door/shelf', ADMIN, { state: 'live' }))
+        expect((await resolveRoot('alpha', VIEWER)).status).toBe(200)
+        // Anonymous, alpha private: the gate answers before any pointer.
+        expect((await resolveRoot('alpha', null)).status).toBeGreaterThanOrEqual(401)
+    })
+
+    it('stops forwarding as soon as the space gets a new front door — and stays stopped', async () => {
+        await ok(await send('PATCH', '/api/spaces/alpha', ADMIN, { publishedProjectId: 'clasher' }))
+        expect((await resolveRoot('alpha', ADMIN)).status).toBe(404)
+        // Taking the new front door down again does not bring the old forward back:
+        // the space's last front door is clasher now, and it never left.
+        await ok(await send('PATCH', '/api/spaces/alpha', ADMIN, { publishedProjectId: null }))
+        const space = await (await ok(await get('/api/spaces/alpha', ADMIN))).json()
+        expect(space.space?.publishedProjectId ?? space.publishedProjectId ?? null).toBeNull()
+        expect((await resolveRoot('alpha', ADMIN)).status).toBe(404)
+    })
+
+    it('a new space made under a purged space\'s name never had a move: nothing to forward', async () => {
+        // A space id is its name, and a purge frees the name (spaceTrashContracts).
+        // delta's front door leaves for gallery, delta is trashed and purged, and
+        // a NEW delta is made: the old move must not send the new space's address on.
+        await ok(await send('POST', '/api/spaces', ADMIN, { label: 'delta', slug: 'delta' }), 201)
+        await ok(await send('POST', '/api/spaces/delta/projects', ADMIN, { title: 'Delta door', slug: 'delta-door' }), 201)
+        await ok(await send('PATCH', '/api/spaces/delta', ADMIN, { publishedProjectId: 'delta-door' }))
+        await ok(await send('POST', '/api/projects/delta-door/move', ADMIN, { toSpace: 'gallery', unpublish: true }))
+        expect((await resolveRoot('delta', ADMIN)).status).toBe(200)
+        await ok(await send('DELETE', '/api/spaces/delta', ADMIN))
+        await ok(await send('DELETE', '/api/spaces/delta/purge', ADMIN))
+        await ok(await send('POST', '/api/spaces', ADMIN, { label: 'delta', slug: 'delta' }), 201)
+        expect((await resolveRoot('delta', ADMIN)).status).toBe(404)
     })
 })

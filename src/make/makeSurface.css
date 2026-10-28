@@ -281,7 +281,7 @@ body.is-make .account-btn-wrapper {
     transform: translateX(-50%);
     margin: 0;
     padding: var(--di-space-2) var(--di-space-4);
-    border-radius: 999px;
+    border-radius: var(--di-radius);
     background: rgba(251, 248, 243, 0.94);
     color: var(--make-ink);
     font-size: var(--di-text-3);
@@ -495,7 +495,7 @@ body.is-make .account-btn-wrapper {
     margin: 0;
     padding: 0;
     border: 0;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     background: transparent;
     cursor: pointer;
 }
@@ -503,7 +503,7 @@ body.is-make .account-btn-wrapper {
 .make-swatch-disc {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     background: var(--swatch);
     /* Every hue in the row gets the same hairline, so white and sand are discs
        on paper rather than holes in it. */
@@ -664,7 +664,7 @@ body.is-make .account-btn-wrapper {
 
 .make-surface .raw-selection-pill {
     padding: var(--di-space-2) var(--di-space-3);
-    border-radius: 999px;
+    border-radius: var(--di-radius);
     background: var(--make-ink);
     color: var(--make-paper);
     font-family: var(--make-sans);

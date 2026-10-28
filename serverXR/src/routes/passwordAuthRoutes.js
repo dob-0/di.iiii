@@ -99,7 +99,7 @@ const registerPasswordAuthRoutes = (router, {
     return mail.sendMail({
       to: user.email,
       subject,
-      text: `${line}\n\n${url}\n\nIf you did not ask for this, nothing has happened and you can ignore this message.`
+      text: `${line}\n\n${url}\n\nNot you? Ignore this. Nothing has changed.`
     })
   }
 

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 // Plain data, no imports of its own — see the note at the top of that file.
 import { resolveBuildProfile } from './src/works/buildProfile.js'
 import { isMeasuredFile } from './scripts/node-anatomy-lib.mjs'
+import { llmsFullPlugin } from './scripts/llmsFull.mjs'
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const XR_EMULATE_STUB = path.resolve(ROOT_DIR, 'src/xr/emulateStub.js')
@@ -84,7 +85,7 @@ const emitInstallScriptsPlugin = () => ({
     name: 'emit-install-scripts',
     apply: 'build',
     generateBundle() {
-        // The install scripts are how a stranger reaches di-studio.xyz. Inside
+        // The install scripts are how a stranger reaches diiii.xyz. Inside
         // an install they would offer to install what is already installed.
         if (LOCAL_PROFILE) return
         for (const [source, fileName] of [['install.sh', 'get.sh'], ['install.ps1', 'get.ps1']]) {
@@ -92,6 +93,20 @@ const emitInstallScriptsPlugin = () => ({
             if (!fs.existsSync(full)) continue
             this.emitFile({ type: 'asset', fileName, source: fs.readFileSync(full, 'utf8') })
         }
+    }
+})
+
+// dist/sitemap.xml — written by the build from the wiki, the network roster
+// and the public spaces list (scripts/sitemap.mjs), so it lists every article
+// and every room without anyone keeping it. A local install names no public
+// address, so its build writes none.
+const emitSitemapPlugin = () => ({
+    name: 'emit-sitemap',
+    apply: 'build',
+    async generateBundle() {
+        if (LOCAL_PROFILE) return
+        const { buildSitemap } = await import('./scripts/sitemap.mjs')
+        this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: await buildSitemap(ROOT_DIR) })
     }
 })
 
@@ -123,7 +138,7 @@ const emitBuildProfilePlugin = () => ({
 //
 // `DI_PROFILE=local` builds di.iiii for an artist's own machine: the program
 // and the studio's own pieces, without the hosting furniture that only means
-// anything on di-studio.xyz. `DI_LOCAL_SLIM=1` alongside it builds the program
+// anything on diiii.xyz. `DI_LOCAL_SLIM=1` alongside it builds the program
 // ALONE — which is what `local` used to mean, and no longer does.
 //
 // Why it changed. The strip was measured and correct and it broke the one
@@ -486,9 +501,11 @@ export default {
     root: 'src/',
     // An include-list, not a delete-list: under the local profile the public
     // directory is copied by localPublicDirPlugin, which names what a copy of
-    // the program needs (fonts, draco, basis, suite, unicode-fonts, vendor)
+    // the program needs (PROGRAM_PUBLIC_DIRS in src/works/buildProfile.js)
     // plus each work's own media, and therefore cannot silently start shipping
-    // whatever gets dropped into public/ next.
+    // whatever gets dropped into public/ next. The same list cannot silently
+    // drop it either: src/works/localProfile.test.js fails on an entry of
+    // public/ that is neither in the list nor named there as left out.
     publicDir: LOCAL_PROFILE ? false : '../public/',
     envDir: '../',
     // Keep the dep-optimizer cache in the WORKTREE, not in node_modules.
@@ -523,7 +540,7 @@ export default {
     plugins:
     [
         // DI_PROFILE=local — di.iiii for an artist's own machine: the program
-        // and the works, without di-studio.xyz's hosting furniture.
+        // and the works, without diiii.xyz's hosting furniture.
         ...(LOCAL_PROFILE ? [localPublicDirPlugin()] : []),
         // …and DI_LOCAL_SLIM=1 on top of it — the program alone. This is the
         // plugin that cuts the works out, so on a plain local build it is not
@@ -543,8 +560,15 @@ export default {
         // Publish install.sh / install.ps1 as /get.sh and /get.ps1
         emitInstallScriptsPlugin(),
 
+        // dist/sitemap.xml — every article, room and public page (G25/G27/G28)
+        emitSitemapPlugin(),
+
         // dist/build-profile.json — which of the three shapes this dist is
         emitBuildProfilePlugin(),
+
+        // dist/llms-full.txt — llms.txt plus the whole wiki. Hosted only, like
+        // llms.txt itself: it names diiii.xyz, which a laptop install is not.
+        ...(LOCAL_PROFILE ? [] : [llmsFullPlugin({ rootDir: ROOT_DIR })]),
 
         // Save from the algovrithm director panel (dev only)
         algoVrithmSavePlugin(),
@@ -639,6 +663,13 @@ export default {
             // (serverXR/src/routes/laserRoutes.js). Without this a dev page's Laser Out and the
             // room's laser view got index.html back and read "no laser server here".
             '^/laser(/|$)': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true
+            },
+            // OSC — the same shape: serverXR answers /osc itself on a local install
+            // (serverXR/src/routes/oscRoutes.js), the OSC In and OSC Out nodes' UDP.
+            '^/osc(/|$)': {
                 target: DEV_PROXY_API_TARGET,
                 changeOrigin: true,
                 xfwd: true

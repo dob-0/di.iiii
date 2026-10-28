@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { Buffer } from 'node:buffer'
 import JSZip from 'jszip'
-import library from './types/moxir.json'
+import { TYPE_LIBRARY as library } from './types/index.js'
 import { typeById } from './fixtureTypes.js'
 import { gdtfArchive, gdtfDescription, gdtfFileName, gdtfMatrix, gdtfName, stableUuid } from './gdtf.js'
 import { absoluteAddress, mvrMatrix, mvrScene, toMvr } from './mvr.js'
@@ -42,7 +42,7 @@ describe('GDTF, authored', () => {
         expect(Buffer.from(a).equals(Buffer.from(b))).toBe(true)
         const zip = await JSZip.loadAsync(a)
         expect(Object.keys(zip.files).sort()).toEqual(['description.xml', 'models/gltf/body.glb'])
-        expect(gdtfFileName(type)).toBe('UPlight@UP-B380F@di.gdtf')
+        expect(gdtfFileName(type)).toBe('U-Plus@UP-B380F@di.gdtf')
     })
 
     it('keeps names and matrices inside the schema\'s alphabets', () => {

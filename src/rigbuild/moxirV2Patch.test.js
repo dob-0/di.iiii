@@ -18,7 +18,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import library from './types/moxir.json'
+import { TYPE_LIBRARY as library } from './types/index.js'
 import { artnetOf, expectedRoom, planPatch } from './patchPlan.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -280,13 +280,18 @@ describe('against the v2 rigs the plan is applied to (every v2 rig in the tree: 
 
     it.skipIf(!rigFiles.length)('lays 71 lamps on the document each rig builds, leaves the 6 cubes off DMX and flips the smoke on', async () => {
         for (const file of rigFiles) {
-            const r = planPatch({ entities: await documentOf(file), library, plan })
+            const entities = await documentOf(file)
+            const r = planPatch({ entities, library, plan })
             expect(r.errors, file).toEqual([])
             expect(r.assignments, file).toHaveLength(71)
             expect(r.offDmx, file).toHaveLength(6)
             expect(r.offDmx.every((id) => /^rig-laser-\d[a-z]$/.test(id)), file).toBe(true)
-            // the smoke is dmx:false in the rig's document; the plan puts it on U1.501 and says so
-            expect(r.warnings.join('\n'), file).toMatch(/rig-smoke-planes .*off DMX in the document.*U1\.501/)
+            // the smoke takes the rig's dmx block since #981 (epic-build dmxOf); a rig with none leaves it dmx:false,
+            // and then the plan puts it on U1.501 and says so
+            const smoke = entities.flatMap((e) => [e, ...(e.children || [])]).find((e) => e.id === 'rig-smoke-planes')
+            const smokeOff = smoke?.components?.fixture?.dmx === false
+            const smokeWarned = /rig-smoke-planes .*off DMX in the document.*U1\.501/.test(r.warnings.join('\n'))
+            expect(smokeWarned, file).toBe(smokeOff)
             expect(r.assignments.find((a) => a.entityId === 'rig-smoke-planes'), file).toMatchObject({ universe: 1, address: 501 })
             expect(Object.fromEntries(r.universes.map((u) => [u.universe, u.used])), file).toEqual({ 1: 353, 2: 400 })
         }

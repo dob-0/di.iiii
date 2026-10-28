@@ -3,18 +3,39 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { buildLibrary, serialise } from '../../scripts/rigbuild/types.mjs'
-import { footprintOf, modeOf, powerOf, typeById, typeFlags, typeIdOf, typesFromManifest } from './fixtureTypes.js'
+import { LIBRARY_DIR, buildLibrary, libraryFiles } from '../../scripts/rigbuild/types.mjs'
+import { loadLibrary } from '../../scripts/rigbuild/library.mjs'
+import { PROVENANCE_BASES, footprintOf, modeOf, powerOf, typeById, typeFlags, typeIdOf, typesFromManifest, valueBasesOf } from './fixtureTypes.js'
 import { isAssumedMode } from './assumedProfiles.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
-const committed = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/rigbuild/types/moxir.json'), 'utf8'))
+const committed = loadLibrary()
 
-describe('the MOXIR type library', () => {
-    it('is exactly what the generator makes from the manifest (never edited by hand)', () => {
-        const text = fs.readFileSync(path.join(ROOT, 'src/rigbuild/types/moxir.json'), 'utf8')
-        expect(serialise(buildLibrary())).toBe(text)
+describe('the fixture library (src/rigbuild/types/library/: the starter set)', () => {
+    it('is exactly what the generator makes from the manifest (never edited by hand): one file per type and the index', () => {
+        const files = libraryFiles(buildLibrary())
+        for (const [file, text] of Object.entries(files)) expect(fs.readFileSync(path.join(ROOT, file), 'utf8'), file).toBe(text)
+        const onDisk = fs.readdirSync(path.join(ROOT, LIBRARY_DIR)).filter((f) => f.endsWith('.json')).map((f) => `${LIBRARY_DIR}/${f}`).sort()
+        expect(onDisk).toEqual(Object.keys(files).filter((f) => f.startsWith(`${LIBRARY_DIR}/`)).sort())
     })
+
+    it('carries every type\'s provenance: how it is identified, the date its sources were read, which, and how each value was got', () => {
+        expect(committed.types).toHaveLength(13)
+        for (const t of committed.types) {
+            expect(['exact', 'equivalent'], t.id).toContain(t.provenance.identified)
+            expect(t.provenance.date, t.id).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+            expect(t.provenance.sources.length, t.id).toBeGreaterThan(0)
+            for (const key of t.provenance.sources) expect(t.sources[key], `${t.id} ${key}`).toBeTruthy()
+            expect(Object.keys(t.provenance.values)).toEqual(PROVENANCE_BASES)
+            expect(Object.values(t.provenance.values).reduce((a, b) => a + b, 0), t.id).toBeGreaterThan(0)
+        }
+        // honest about today: nothing measured by us; tested on the rental units = the channel maps run at Sevan
+        expect(committed.types.filter((t) => t.provenance.values.measured > 0)).toEqual([])
+        expect(committed.types.filter((t) => t.provenance.values.tested > 0).map((t) => t.id).sort()).toEqual(['up-b380f', 'up-la40wf', 'up-pl5403'])
+        expect(valueBasesOf({ a: { basis: 'TESTED' }, b: [{ photometryBasis: 'EQUIVALENT' }], c: { basis: 'ASSUMED — x' }, d: { basis: 'COMPONENT' }, e: { basis: 'MEASURED 2026-11-01' }, sources: { s: { basis: 'EXACT' } } }))
+            .toEqual({ measured: 1, tested: 1, datasheet: 1, equivalent: 1, assumed: 1, unknown: 0 })
+    })
+
 
     it('holds the nine rental codes (UP-COB200 since the cut and the halo, 2026-09-29), the three other-supplier planning types, and the owner’s LaserCube', () => {
         expect(committed.types.map((t) => t.code).filter((c) => c.startsWith('UP-')).sort()).toEqual(
@@ -59,7 +80,7 @@ describe('the MOXIR type library', () => {
         // A tested unit's list says so, with no url to invent; a mode nobody charted stays null.
         const beam = modeOf(typeById(committed, 'UP-B380F'))
         expect(beam.channels).toHaveLength(16)
-        expect(beam.channelsSource).toMatchObject({ basis: 'TESTED', url: null })
+        expect(beam.channelsSource).toMatchObject({ basis: 'APPROVED' })
         expect(new Set(beam.channels.map((c) => c.role)).size).toBe(16)
         expect(modeOf(typeById(committed, 'UP-250BSW')).channels).toBe(null)
     })
@@ -96,5 +117,17 @@ describe('typesFromManifest', () => {
     it('refuses a kind with no code, and ids are the lowercased code', () => {
         expect(() => typesFromManifest({ kinds: { x: { code: '' } } })).toThrow(/no usable code/)
         expect(typeIdOf(' UP-B380F ')).toBe('up-b380f')
+    })
+})
+
+import { TESTED_CHANNEL_LISTS as LISTS_FOR_REST } from './fixtureTypes.js'
+describe('a DMX laser rests dark (MOXIR 2026-10-17)', () => {
+    it('declares 0 as the resting value of its output channel in every mode', () => {
+        const modes = LISTS_FOR_REST['UP-LA40WF'].modes
+        for (const [name, channels] of Object.entries(modes)) {
+            const out = channels.find((c) => c.role === 'dimmer')
+            expect(out, `mode ${name} has an output channel`).toBeTruthy()
+            expect(out.default, `mode ${name}: a cleared desk must leave the laser dark`).toBe(0)
+        }
     })
 })

@@ -827,13 +827,13 @@ const normalizeProductionMeta = (value) => {
 // numbers per group of lamps (a group is `${position}/${type}`), and a colour per
 // group. Written by scripts/rigbuild/looks.mjs from the rig file; the cards put them on
 // the desk and the cue list, the room poses by them. Bounded, numbers and short words.
-const RIG_LOOKS_CAP = 50
+const RIG_LOOKS_CAP = 120
 const RIG_GROUPS_CAP = 100
 const lookKey = (value) => (typeof value === 'string' && /^[\w:.-]{1,40}\/[\w.-]{1,40}$/.test(value.trim()) ? value.trim() : '')
 const lookHex = (value) => (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.trim()) ? value.trim().toLowerCase() : '')
 // A look may MOVE (docs/architecture/RIG_BUILD.md §11.4, 2026-10-09): `motion` names an effect of the desk's FX engine
 // (serverXR/src/lighting/fx.js FX_MODES - the same words), its tempo, depth, the way it fans across the rig and the
-// lamp kinds it moves. Level and colour only: nothing here can say pan or tilt. src/rigbuild/lookMotion.js plays it.
+// lamp kinds it moves. Level and colour only: nothing here can say pan or tilt (`heads`, below, does). src/rigbuild/lookMotion.js plays it.
 const MOTION_MODES = ['strobe', 'chase', 'pulse', 'sine', 'sparkle', 'comet', 'bars', 'glitch', 'radar', 'pump', 'breathe', 'pingpong', 'blocks']
 const MOTION_SPATIAL = ['patch', 'x', 'x-', 'y', 'y-', 'radial', 'radial-']
 const normalizeLookMotion = (value) => {
@@ -851,6 +851,64 @@ const normalizeLookMotion = (value) => {
     // A lamp at or under this level in the look holds still: the readable floor of the look does not flicker.
     still: Math.max(0, Math.min(1, still == null ? 0 : still))
   }
+}
+
+// A look may MOVE ITS HEADS (2026-10-15): `heads` is the pan/tilt motion of the moving heads the look names, played in the room
+// (src/rigbuild/headMotion.js) and by the desk in DMX (serverXR/src/lighting/headMotion.js, the one definition). A pattern, a
+// period, how far it swings and how it fans across the heads; the fixture types that move ([] = every head of the look). The
+// words are the server file's HEAD_PATTERNS / HEAD_SPATIAL; a test pins the three copies.
+const HEAD_PATTERNS = ['sweep', 'nod', 'circle', 'figure8', 'fan', 'wave', 'cross']
+const HEAD_SPATIAL = ['all', 'alternate', 'left-right', 'ripple']
+const normalizeLookHeads = (value) => {
+  if (!value || typeof value !== 'object' || !HEAD_PATTERNS.includes(value.pattern)) return null
+  const period = planNum(value.period_s)
+  const pan = planNum(value.pan_deg)
+  const tilt = planNum(value.tilt_deg)
+  const kinds = (Array.isArray(value.kinds) ? value.kinds : []).filter((k) => typeof k === 'string' && /^[\w.-]{1,40}$/.test(k)).slice(0, 8)
+  return {
+    pattern: value.pattern,
+    period_s: Math.max(0.5, Math.min(600, period == null ? 8 : period)),
+    pan_deg: Math.max(0, Math.min(270, pan == null ? 30 : pan)),
+    tilt_deg: Math.max(0, Math.min(135, tilt == null ? 20 : tilt)),
+    spatial: HEAD_SPATIAL.includes(value.spatial) ? value.spatial : 'all',
+    kinds
+  }
+}
+
+// A look keeps its SOURCE next to what was built from it (2026-10-15, the Studio's scene editor, src/shared/buildLook.js): `parts`
+// {part: [hex|null, level 0..1]} (a part left out is off), `laser_colour`, `desk_caps` {part: {fader, note}} and `act`.
+const PART_KEY = /^[\w .:/()+,'#-]{1,60}$/
+const normalizeLookParts = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const out = {}
+  for (const [k, pair] of Object.entries(value).slice(0, RIG_GROUPS_CAP)) {
+    if (!PART_KEY.test(k) || !Array.isArray(pair)) continue
+    const level = planNum(pair[1])
+    out[k] = [lookHex(pair[0]) || null, level == null ? 1 : Math.min(1, Math.max(0, level))]
+  }
+  return out
+}
+const normalizeDeskCaps = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const out = {}
+  for (const [k, cap] of Object.entries(value).slice(0, RIG_GROUPS_CAP)) {
+    const fader = planNum(cap?.fader)
+    if (!PART_KEY.test(k) || fader == null) continue
+    out[k] = { fader: Math.min(1, Math.max(0, fader)), note: planText(cap.note, 240) }
+  }
+  return Object.keys(out).length ? out : null
+}
+// Which units belong to which part of a project: `rigParts` on the show entity { parts: {part: [unitId…]} }.
+const RIG_PART_UNITS_CAP = 400
+const normalizeRigParts = (value) => {
+  const source = value?.parts
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return null
+  const parts = {}
+  for (const [k, ids] of Object.entries(source).slice(0, RIG_GROUPS_CAP)) {
+    if (!PART_KEY.test(k) || !Array.isArray(ids)) continue
+    parts[k] = ids.filter((id) => typeof id === 'string' && /^[\w.:-]{1,80}$/.test(id)).slice(0, RIG_PART_UNITS_CAP)
+  }
+  return Object.keys(parts).length ? { parts } : null
 }
 
 const normalizeRigLooks = (value) => {
@@ -887,7 +945,12 @@ const normalizeRigLooks = (value) => {
       if (key && n != null) levels[key] = Math.min(1, Math.max(0, n))
     }
     const motion = normalizeLookMotion(look.motion)
-    return { id, title: planText(look.title, 60) || id, intent: planText(look.intent, 480), aims, colours, ...(Object.keys(levels).length ? { levels } : {}), ...(motion ? { motion } : {}) }
+    const parts = normalizeLookParts(look.parts)
+    const deskCaps = normalizeDeskCaps(look.desk_caps)
+    const laserColour = lookHex(look.laser_colour)
+    const act = planNum(look.act)
+    const heads = normalizeLookHeads(look.heads)
+    return { id, title: planText(look.title, 60) || id, intent: planText(look.intent, 480), ...(act != null ? { act: Math.max(0, Math.min(99, Math.round(act))) } : {}), aims, colours, ...(Object.keys(levels).length ? { levels } : {}), ...(parts ? { parts } : {}), ...(laserColour ? { laser_colour: laserColour } : {}), ...(deskCaps ? { desk_caps: deskCaps } : {}), ...(motion ? { motion } : {}), ...(heads ? { heads } : {}) }
   }).slice(0, RIG_LOOKS_CAP)
   if (!looks.length) return null
   return { source: planText(value.source, 480), writtenAt: planText(value.writtenAt, 32), defaultLook: planText(value.defaultLook, 36), looks }
@@ -925,6 +988,14 @@ const normalizeFixture = (fixture) => {
   const position = fixtureText(fixture.position, 64)
   if (position) out.position = position
   if (fixture.hung === true) out.hung = true
+  // A head hung turned or with its pan reversed, measured on the rig (src/rigbuild/dmxPose.js fixturePanOf, 2026-10-17).
+  // The SERVER keeps them too: without this twin of src/shared/projectSchema.js every save dropped them (MOXIR 2026-10-17).
+  const panOffsetDeg = Number(fixture.panOffsetDeg)
+  if (Number.isFinite(panOffsetDeg) && panOffsetDeg !== 0) out.panOffsetDeg = Math.max(-360, Math.min(360, Math.round(panOffsetDeg * 100) / 100))
+  if (fixture.panInvert === true) out.panInvert = true
+  if (fixture.aimSwap === true) out.aimSwap = true
+  if (fixture.aimInvertX === true) out.aimInvertX = true
+  if (fixture.aimInvertY === true) out.aimInvertY = true
   // Kept off DMX by the owner (run by hand: hazers, smoke): never patched (rigbuild/autoPatch.js).
   if (fixture.dmx === false) out.dmx = false
   return out
@@ -1021,6 +1092,9 @@ const normalizeEntity = (entity = {}) => {
       projectId: ensureString(refSource.projectId, refDefault.projectId || ''),
       mode: ['embed', 'portal'].includes(refMode) ? refMode : 'portal',
       label: ensureString(refSource.label, refDefault.label || ''),
+      // A part of the destination page (a section id): /dilijan#works. Optional; a door without one
+      // is unchanged. Only a plain id survives (N1248).
+      ...(/^[A-Za-z][\w:.-]{0,63}$/.test(String(refSource.anchor || '').replace(/^#/, '')) ? { anchor: String(refSource.anchor).replace(/^#/, '') } : {}),
       // Label styling. Defaults reproduce the original look exactly (white
       // type on a dark plate, renderer's built-in font), so a portal
       // authored before these existed is untouched.
@@ -1029,7 +1103,9 @@ const normalizeEntity = (entity = {}) => {
       labelFont: LABEL_FONT_NAMES.includes(refSource.labelFont) ? refSource.labelFont : 'default',
       // Door shape. 'gateway' reproduces the ring exactly, so an
       // unknown or absent value leaves an existing portal untouched.
-      style: PORTAL_STYLES.includes(refSource.style) ? refSource.style : 'gateway'
+      style: PORTAL_STYLES.includes(refSource.style) ? refSource.style : 'gateway',
+      // a door that invites (portalInvite.js); only `true` is kept
+      ...(refSource.invite === true ? { invite: true } : {})
     }
   }
   if (sourceComponents.runtime || defaultComponents.runtime) {
@@ -1115,6 +1191,12 @@ const normalizeEntity = (entity = {}) => {
     const looks = normalizeRigLooks(sourceComponents.rigLooks)
     if (looks) nextComponents.rigLooks = looks
     else delete nextComponents.rigLooks
+  }
+  // Which units belong to which part — mirror of src/shared/projectSchema.js normalizeRigParts.
+  if (sourceComponents.rigParts) {
+    const rigParts = normalizeRigParts(sourceComponents.rigParts)
+    if (rigParts) nextComponents.rigParts = rigParts
+    else delete nextComponents.rigParts
   }
   // Which rig version this project is — mirror of src/shared/projectSchema.js (RIG_BUILD.md §15).
   if (sourceComponents.rigVariant) {
@@ -1263,8 +1345,11 @@ const normalizeBeamOptics = (optics) => {
 
 // `components.beam.laser` (2026-10-09, src/objectComponents/laserLine.js): a laser's diodes (mW at each
 // wavelength, nm), its beam diameter and divergence, the scene's exposure scale, the cube's field half-angle,
-// a frame it holds ([x, y, r, g, b] points, the Nodes editor's laser frame) and where the numbers come from.
+// a frame it holds ([x, y, r, g, b] points, the Nodes editor's laser frame), its frames in time and where the numbers come from.
 const LASER_NM = new Set([455, 525, 638])
+const laserFramePoints = (points) => (Array.isArray(points) ? points : []).slice(0, 2000)
+  .filter((p) => Array.isArray(p) && p.length >= 5 && p.slice(0, 5).every((v) => Number.isFinite(Number(v))))
+  .map((p) => [0, 1, 2, 3, 4].map((k) => (k < 2 ? Math.min(1, Math.max(-1, Number(p[k]))) : Math.min(1, Math.max(0, Number(p[k]))))))
 const normalizeBeamLaser = (laser) => {
   if (!laser || typeof laser !== 'object' || !Array.isArray(laser.mW) || !Array.isArray(laser.nm)) return null
   if (laser.mW.length !== laser.nm.length || laser.mW.length < 1 || laser.mW.length > 3) return null
@@ -1278,9 +1363,22 @@ const normalizeBeamLaser = (laser) => {
   positive('sceneScale', 1)
   positive('fieldHalfDeg', 60)
   if (Array.isArray(laser.frame)) {
-    const frame = laser.frame.slice(0, 2000).filter((p) => Array.isArray(p) && p.length >= 5 && p.slice(0, 5).every((v) => Number.isFinite(Number(v))))
-      .map((p) => [0, 1, 2, 3, 4].map((k) => (k < 2 ? Math.min(1, Math.max(-1, Number(p[k]))) : Math.min(1, Math.max(0, Number(p[k]))))))
+    const frame = laserFramePoints(laser.frame)
     if (frame.length) out.frame = frame
+  }
+  // `frames` (2026-10-13, N562): { period (s), list of frames } played by show time (laserLine.js framesOf, the same caps)
+  if (laser.frames && typeof laser.frames === 'object' && Array.isArray(laser.frames.list) && ensureNumber(laser.frames.period, 0) > 0) {
+    const list = []
+    let total = 0
+    for (const f of laser.frames.list.slice(0, 256)) {
+      const pts = laserFramePoints(f)
+      if (!pts.length) continue
+      if (total + pts.length > 20000) break
+      total += pts.length
+      list.push(pts)
+    }
+    // `tween: true` (2026-10-17): the frames are keyframes; the room and the cubes' player blend between them.
+    if (list.length) out.frames = { period: Math.min(3600, Math.max(0.05, ensureNumber(laser.frames.period, 0))), list, ...(laser.frames.tween === true ? { tween: true } : {}) }
   }
   if (typeof laser.source === 'string') out.source = laser.source.slice(0, 500)
   return out
@@ -2785,6 +2883,8 @@ module.exports = {
   normalizePresentationState,
   normalizePublishState,
   normalizeProjectDocument,
+  normalizeRigLooks,
+  normalizeRigParts,
   normalizeProjectNode,
   normalizeProjectEdge,
   normalizeProjectMeta,

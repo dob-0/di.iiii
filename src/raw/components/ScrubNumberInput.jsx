@@ -113,6 +113,8 @@ export default function ScrubNumberInput({ value, fallback = 0, min, max, step, 
         if (!el || disabled) return undefined
         const wheelHandler = (event) => {
             if (document.activeElement !== el) return
+            // A sideways touchpad swipe (deltaY 0) is not a step; it scrolls on.
+            if (!event.deltaY) return
             event.preventDefault()
             const base = draft !== null && Number.isFinite(Number(draft)) ? Number(draft) : canonical
             const direction = event.deltaY < 0 ? 1 : -1

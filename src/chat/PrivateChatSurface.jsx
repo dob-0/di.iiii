@@ -3,7 +3,7 @@ import { Box, IconButton, InputBase, Snackbar, Stack, ThemeProvider, Tooltip, Ty
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import LockIcon from '@mui/icons-material/Lock'
-import { diFontTheme } from '../styles/muiTheme.js'
+import { diTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useP2PChat from './useP2PChat.js'
 import { appNavigate } from '../utils/appNavigate.js'
@@ -81,7 +81,7 @@ export default function PrivateChatSurface({ withUserId, withName = null }) {
     const live = state === 'open'
 
     return (
-        <ThemeProvider theme={diFontTheme}>
+        <ThemeProvider theme={diTheme}>
             <Box sx={{
                 position: 'fixed',
                 inset: 0,

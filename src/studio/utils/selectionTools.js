@@ -14,6 +14,13 @@ export const isHiddenEntity = (entity) => entity?.components?.runtime?.visible =
 /** Entities a click or a box may pick: shown and not locked. */
 export const isPickableEntity = (entity) => Boolean(entity) && !isLockedEntity(entity) && !isHiddenEntity(entity)
 
+/** What G/R/S may move out of a selection: shown and not locked. A hidden object stays selected after
+ *  the Objects window hides it (walked 2026-10-13: G then moved it unseen); a locked one never moves. */
+export const movableEntities = (entities = [], ids = null) => {
+    const wanted = ids ? new Set(ids) : null
+    return (entities || []).filter((entity) => isPickableEntity(entity) && (!wanted || wanted.has(entity.id)))
+}
+
 // The rig build's outside and shell boxes (scripts/rigbuild: rig-out-ground, rig-out-road-*,
 // rig-shell-*) are the building's surroundings, not rig.
 const HALL_ID = /^rig-(out|shell)-/
@@ -32,6 +39,30 @@ export const lockOps = (entities = [], ids = [], locked = true) => {
             type: 'updateComponent',
             payload: { entityId: entity.id, component: 'runtime', patch: { locked: Boolean(locked) } }
         }))
+}
+
+/** True when a selection has anything a transform may move. An id the list does not know
+ *  counts as movable: the editor, which holds the document, is the gate; this is the shell's. */
+export const selectionCanMove = (entities = [], ids = []) => {
+    const locked = new Set((entities || []).filter(isLockedEntity).map((entity) => entity.id))
+    return (ids || []).some((id) => !locked.has(id))
+}
+
+/** The selection once `ids` are locked: a locked object leaves the selection, whichever control locked it. */
+export const selectionWithout = (selectedIds = [], ids = []) => {
+    const out = new Set(ids || [])
+    return (selectedIds || []).filter((id) => !out.has(id))
+}
+
+/**
+ * True for a pointer miss that deselects: a primary-button click or a tap. R3F reports the
+ * `contextmenu` event as a miss too, and on Linux the browser fires it on the right button's
+ * PRESS — so every right-drag pan dropped the selection and closed the Inspector (N581 sweep).
+ */
+export const isDeselectingMiss = (event) => {
+    if (!event) return true
+    if (event.type === 'contextmenu') return false
+    return (event.button ?? 0) === 0
 }
 
 /** The rectangle between two screen points, whichever way it was dragged. */

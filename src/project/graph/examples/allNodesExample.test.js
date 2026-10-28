@@ -184,6 +184,32 @@ describe('all-nodes example graph', () => {
                 })
                 return { node: array, context }
             },
+            // A cube's shape fed in is what brings Laser Trace alive.
+            'laser.trace.frame': () => {
+                const trace = createNode('laser.trace', { id: 'proof-trace' })
+                const cube = createNode('geom.cube', { id: 'proof-trace-cube' })
+                const context = createNodeGraphContext({
+                    nodes: [trace, cube],
+                    edges: [createEdge('proof-trace-cube', 'geometry', 'proof-trace', 'geometry')]
+                })
+                return { node: trace, context }
+            },
+            // A Laser's frame fed in is what brings Laser Merge alive.
+            'laser.merge.frame': () => {
+                const merge = createNode('laser.merge', { id: 'proof-lmerge' })
+                const shape = createNode('laser.shape', { id: 'proof-lmerge-shape' })
+                const context = createNodeGraphContext({
+                    nodes: [merge, shape],
+                    edges: [createEdge('proof-lmerge-shape', 'frame', 'proof-lmerge', 'a')]
+                })
+                return { node: merge, context }
+            },
+            // A file chosen and its bytes on the live side channel (LaserFileFeed's job in the editor).
+            'laser.file.frame': () => {
+                const file = createNode('laser.file', { id: 'proof-lfile', values: { src: 'asset-proof' } })
+                const liveOutputs = new Map([['proof-lfile:bytes', new TextEncoder().encode('<svg><path d="M0 0 L10 10"/></svg>')]])
+                return { node: file, context: createNodeGraphContext({ nodes: [file], edges: [] }, { liveOutputs }) }
+            },
             // Feeding the value is enough — Open defaults true, so the wired
             // gate speaks; the bare-dead half is proven by the main sweep.
             'logic.route.out': () => {

@@ -13,11 +13,11 @@ describe('getApiBaseUrlForRuntime', () => {
 
     it('preserves external origins outside local dev proxying', () => {
         expect(getApiBaseUrlForRuntime({
-            configuredBase: 'https://di-studio.xyz/serverXR',
+            configuredBase: 'https://diiii.xyz/serverXR',
             isDev: true,
             locationOrigin: 'http://localhost:5173',
             locationHostname: 'localhost'
-        })).toBe('https://di-studio.xyz/serverXR')
+        })).toBe('https://diiii.xyz/serverXR')
     })
 })
 

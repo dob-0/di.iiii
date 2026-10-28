@@ -25,6 +25,7 @@ describe('resolveDeployMode', () => {
         // Exact first label only — these are somebody's website.
         ['developers.example.com', MODE_HOSTED],
         ['dev-notes.example.com', MODE_HOSTED],
+        ['diiii.xyz', MODE_HOSTED],
         ['di-studio.xyz', MODE_HOSTED],
         // Only the FIRST label counts, or any domain with the word in it
         // would wear the rehearsal colour.

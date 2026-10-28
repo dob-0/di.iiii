@@ -13,6 +13,7 @@ import { WORKS } from '../../works/works.js'
 vi.setConfig({ testTimeout: 20000 })
 
 
+const issueJoinCode = vi.fn()
 const listServerSpaces = vi.fn()
 const getServerConfig = vi.fn()
 const updateServerSpace = vi.fn()
@@ -28,6 +29,12 @@ const purgeServerSpace = vi.fn()
 let authState
 // Admin-only summary the hub's collapsed sandbox row renders from.
 let sandboxSummary = null
+
+vi.mock('../../sync/syncApi.js', async (importOriginal) => ({
+    ...(await importOriginal()),
+    issueJoinCode: (...args) => issueJoinCode(...args),
+    revokeJoinCode: vi.fn()
+}))
 
 vi.mock('../../hooks/useAuthSession.js', () => ({
     default: () => authState,
@@ -182,7 +189,7 @@ describe('SpaceHub', () => {
     it('names /spaces itself in the tab, not the platform', async () => {
         listServerSpaces.mockResolvedValue([])
         render(<SpaceHub />)
-        await screen.findByText('Spaces')
+        await screen.findByRole('heading', { name: 'spaces' })
         expect(document.title).toBe('Spaces — di.iiii')
     })
 
@@ -197,6 +204,23 @@ describe('SpaceHub', () => {
         const link = await screen.findByText('Light')
         expect(link.getAttribute('href')).toBe('/light/')
         expect(screen.getByText('On this machine')).toBeTruthy()
+    })
+
+    // P1 (2026-10-13): a work compiled into di.iiii's code has no project row,
+    // and its space card said "No projects yet" beside a finished work.
+    it('a space that holds a work compiled into di.iiii does not say "No projects yet"', async () => {
+        const compiledId = WORKS.find((work) => work.codeSpace).id
+        listServerSpaces.mockResolvedValue([
+            { id: compiledId, label: compiledId, isOwner: true, projectCount: 0, publishedCount: 0 },
+            { id: 'plain-space', label: 'Plain space', isOwner: true, projectCount: 0, publishedCount: 0 }
+        ])
+
+        render(<SpaceHub />)
+
+        const compiled = await findCard(compiledId)
+        expect(within(compiled).getByText("a work in di.iiii's code")).toBeTruthy()
+        expect(within(compiled).queryByText('No projects yet')).toBeNull()
+        expect(within(await findCard('plain-space')).getByText('No projects yet')).toBeTruthy()
     })
 
     it('says nothing about lights on a tier with no desk', async () => {
@@ -251,6 +275,24 @@ describe('SpaceHub', () => {
         // Someone else's public space: no management at all, only the live-link Copy.
         expect(cardActionsFor('theirs')).toEqual(['Copy'])
         expect(screen.getByText('View live')).toBeTruthy()
+    })
+
+    // 2026-10-20: "Invite a machine" in the Manage row must open its panel with the four words
+    // (a test on the agent screen saw nothing open).
+    it('Invite a machine opens the panel and shows the four words', async () => {
+        listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+        issueJoinCode.mockReset().mockResolvedValue({ id: 'jc1', code: 'amber-river-stone-lamp', expiresAt: Date.now() + 600000, now: Date.now(), addresses: ['http://192.168.1.5:5173'] })
+        const scroll = vi.fn()
+        Element.prototype.scrollIntoView = scroll
+        render(<SpaceHub />)
+        await findCard('mine')
+        openManageFor('mine')
+        fireEvent.click(within(cardOf('mine')).getByRole('button', { name: 'Invite a machine' }))
+        // the panel opens below the fold; it must be scrolled to
+        await waitFor(() => expect(scroll).toHaveBeenCalled())
+        expect(scroll.mock.contexts.some(el => el.classList.contains('ssh-project-linker'))).toBe(true)
+        await waitFor(() => expect(issueJoinCode).toHaveBeenCalledWith('mine'))
+        await waitFor(() => expect(cardOf('mine').textContent).toContain('amber-river-stone-lamp'))
     })
 
     // 2026-09-28: the server could revoke an invite link; nothing in the app asked it
@@ -347,6 +389,51 @@ describe('SpaceHub', () => {
         // A public space outside the session scope goes straight to the live view.
         fireEvent.click(screen.getByText('Beyond Form'))
         expect(mockEnter).toHaveBeenCalledWith('/beyond-form')
+    })
+
+    // Audit 2026-10-21, G23: 10 of 11 public cards said nothing about what the
+    // space holds. A space that wrote its line shows it; one that did not
+    // shows nothing in its place (no placeholder pretending to be a line).
+    it('a card shows the space\'s one line for visitors, only when it has one', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'told', label: 'Told', isPublic: true, blurb: 'Nineteen films made by children in one town.' },
+            { id: 'silent', label: 'Silent', isPublic: true }
+        ])
+
+        render(<SpaceHub />)
+
+        await findCard('told')
+        expect(cardOf('told').querySelector('.ssh-space-blurb')?.textContent)
+            .toBe('Nineteen films made by children in one town.')
+        expect(cardOf('silent').querySelector('.ssh-space-blurb')).toBeNull()
+    })
+
+    it('the owner sets the line from Manage, and an empty answer clears it', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'mine', label: 'Mine', isOwner: true, isPublic: true, blurb: 'Old line.' }
+        ])
+        updateServerSpace.mockResolvedValue({})
+        const prompt = vi.spyOn(window, 'prompt')
+
+        render(<SpaceHub />)
+
+        await findCard('mine')
+        openManageFor('mine')
+        prompt.mockReturnValueOnce('  A new\nline.  ')
+        fireEvent.click(screen.getByRole('button', { name: 'One line for visitors' }))
+        await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('mine', { blurb: 'A new line.' }))
+        expect(prompt.mock.calls[0][1]).toBe('Old line.')
+
+        prompt.mockReturnValueOnce('')
+        fireEvent.click(screen.getByRole('button', { name: 'One line for visitors' }))
+        await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('mine', { blurb: '' }))
+
+        // Cancel writes nothing.
+        updateServerSpace.mockClear()
+        prompt.mockReturnValueOnce(null)
+        fireEvent.click(screen.getByRole('button', { name: 'One line for visitors' }))
+        expect(updateServerSpace).not.toHaveBeenCalled()
+        prompt.mockRestore()
     })
 
     it('shows the live public link with a copy action on public spaces', async () => {

@@ -1,0 +1,5 @@
+[
+  { "name": "road-left", "eye": [-80, 16, 15], "at": [-5, 5, 0] },
+  { "name": "entrance", "eye": [10, 7, 100], "at": [0, 5, 30] },
+  { "name": "corner-road-entrance", "eye": [-70, 20, 90], "at": [-5, 5, 10] }
+]
