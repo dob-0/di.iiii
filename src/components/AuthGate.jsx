@@ -16,6 +16,7 @@ import PasswordSignIn from './PasswordSignIn.jsx'
 import AccountButton from './AccountButton.jsx'
 import { OUT_OF_SCOPE_EXPLAIN, OUT_OF_SCOPE_REDIRECT } from './authGateScope.js'
 import LoadingScreen from './LoadingScreen.jsx'
+import NotFoundExits, { BrandHomeLink } from './NotFoundExits.jsx'
 
 const readInviteTokenFromUrl = () => {
     if (typeof window === 'undefined') return null
@@ -224,9 +225,8 @@ const ClosedDoorCard = ({
     return (
     <Box sx={cardFrameSx}>
         <Stack spacing={2} sx={{ ...cardSx, width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
-            <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
-                di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
-            </Typography>
+            {/* The mark is a link to the front page (audit F071, 2026-10-28). */}
+            <BrandHomeLink />
             {uniform ? (
                 <Typography data-testid="closed-door-uniform" variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
                     Nothing is open at &ldquo;{missingAddressFromUrl(requiredSpaceId)}&rdquo; — it may not exist,
@@ -239,8 +239,8 @@ const ClosedDoorCard = ({
                 </Typography>
             ) : (
                 <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
-                    Nothing lives at &ldquo;{missingAddressFromUrl(requiredSpaceId)}&rdquo; — there is no
-                    space with that address. Check the spelling, or step through one of your own doors.
+                    We could not find &ldquo;{missingAddressFromUrl(requiredSpaceId)}&rdquo;. There is no
+                    space with that address. Check the spelling.
                 </Typography>
             )}
             {inviteStatus === 'failed' && (
@@ -259,6 +259,10 @@ const ClosedDoorCard = ({
                     {' '}&mdash; how an invite works, and what to ask for.
                 </Typography>
             )}
+            {/* A wrong address always has a way out: the front page, the
+                spaces, the help (audit F071, 2026-10-28). Not on the card for
+                a real space this session is merely not scoped to. */}
+            {(uniform || !exists) && <NotFoundExits />}
             {/* The doors this session can actually use — named, never
                 the raw ids. */}
             {authSession.openSpaceId && (

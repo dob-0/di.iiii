@@ -244,7 +244,7 @@ describe('AuthGate on a local install (requireAuth off)', () => {
 
         expect(await screen.findByText('editor')).toBeInTheDocument()
         expect(screen.queryByText(/Access restricted/)).not.toBeInTheDocument()
-        expect(screen.queryByText(/Nothing lives at/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/We could not find/)).not.toBeInTheDocument()
         expect(screen.queryByText(/Sign in/)).not.toBeInTheDocument()
     })
 
@@ -259,7 +259,7 @@ describe('AuthGate on a local install (requireAuth off)', () => {
         mockUseAuthSession.mockReturnValue(localSession())
         render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
 
-        expect(await screen.findByText(/Nothing lives at/)).toBeInTheDocument()
+        expect(await screen.findByText(/We could not find/)).toBeInTheDocument()
         expect(screen.queryByText('editor')).not.toBeInTheDocument()
         expect(screen.queryByText(/Access restricted/)).not.toBeInTheDocument()
         // Nothing to sign in to on a local install: no provider buttons, no
@@ -270,6 +270,26 @@ describe('AuthGate on a local install (requireAuth off)', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Open Space' }))
         expect(mockAppNavigate).toHaveBeenCalledWith('/open')
+    })
+
+    // Audit F071 (2026-10-28): the card's one button was "Open Space" (the
+    // shared space of that name, not the way home), it spoke of "doors", and
+    // the di.iiii mark was plain text.
+    it('names the address it could not find and gives the three ways out', async () => {
+        mockUseAuthSession.mockReturnValue(localSession())
+        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
+
+        expect(await screen.findByText(/We could not find “ghost”\. There is no space with that address\. Check the spelling\./)).toBeInTheDocument()
+        expect(screen.queryByText(/your own doors/)).not.toBeInTheDocument()
+        // getByText + closest, not getByRole: role queries over the MUI card
+        // are slow enough in jsdom to time the test out.
+        const link = (name) => screen.getByText(name).closest('a')
+        expect(screen.getByTestId('not-found-brand')).toHaveAttribute('href', '/')
+        expect(link('Go to the front page')).toHaveAttribute('href', '/')
+        expect(link('See spaces')).toHaveAttribute('href', '/spaces')
+        expect(link('Get help')).toHaveAttribute('href', '/wiki')
+        fireEvent.click(link('See spaces'))
+        expect(mockAppNavigate).toHaveBeenCalledWith('/spaces')
     })
 
     // A bare /make or /light no longer reaches this card at all: those words
@@ -526,7 +546,9 @@ describe('gate cards stay reachable in a short window', () => {
     })
 
     const expectScrollableFrame = () => {
-        const logo = screen.getAllByText((_, el) => el?.tagName === 'H6' && el.textContent.trim() === 'di.iiii')[0]
+        // The mark is an H6 on the sign-in card and a link to the front page on
+        // the not-found cards (audit F071); either way its parent is the card.
+        const logo = screen.getAllByText((_, el) => (el?.tagName === 'H6' || el?.dataset?.testid === 'not-found-brand') && el.textContent.trim() === 'di.iiii')[0]
         const card = logo.parentElement
         const frame = card.parentElement
         const frameStyle = window.getComputedStyle(frame)

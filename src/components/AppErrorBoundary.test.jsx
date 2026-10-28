@@ -73,3 +73,23 @@ describe('the crash page in the house type (brand-plain-pages)', () => {
         err.mockRestore()
     })
 })
+
+// Audit F142 (2026-10-28): the page said "Work saved, nothing changed" on every
+// failure, whatever the state of the save, and printed the raw error in code
+// type as the second thing a visitor read.
+describe('the crash page says only what is known', () => {
+    it('makes no claim about the save, and folds the raw error under Details for helpers', () => {
+        const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+        render(<AppErrorBoundary><Bomb /></AppErrorBoundary>)
+        const box = screen.getByTestId('view-failed')
+        expect(box).not.toHaveTextContent(/Work saved/i)
+        expect(box).not.toHaveTextContent(/nothing changed/i)
+        expect(box).toHaveTextContent('Something went wrong while drawing this page.')
+        const details = screen.getByTestId('view-failed-details')
+        expect(details.tagName).toBe('DETAILS')
+        expect(details.open).toBe(false)
+        expect(details.querySelector('summary')).toHaveTextContent('Details for helpers')
+        expect(details).toHaveTextContent('panel exploded')
+        err.mockRestore()
+    })
+})
