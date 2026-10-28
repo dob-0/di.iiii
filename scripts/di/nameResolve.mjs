@@ -23,7 +23,7 @@ const beacon = (() => {
 export const { BEACON_PORT, isLabel, encode, decode, announce } = beacon
 export const listenBeacon = beacon.listen
 
-export const DEFAULT_ZONE = 'l.thedi.studio'
+export const DEFAULT_ZONE = 'l.di-studio.xyz'
 export const ROUTES = ['beacon', 'dns', 'last']
 
 /** A bare label: no scheme, no dot, no slash, no port — the only form that means "a network name". */

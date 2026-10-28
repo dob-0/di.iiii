@@ -51,13 +51,13 @@ with it; the certificate's name is one line `phones and headsets: …`, `scripts
 
 - **Label:** `<who>-<4 chars>`, e.g. `ponyo-k7q2`, `dob-a3f9`. `<who>` comes from the `di login` account; the
   4 chars are random and make it unguessable-enough and unique per machine (one person, two laptops, two names).
-- **Network name:** `ponyo-k7q2.<zone>`; `<zone>` is `l.thedi.studio` or a separate domain (Q1).
+- **Network name:** `ponyo-k7q2.<zone>`; `<zone>` is `l.di-studio.xyz` or a separate domain (Q1).
 - **Certificate:** one per install, names `ponyo-k7q2.<zone>` **and** `*.ponyo-k7q2.<zone>`. The wildcard also
   covers the address-in-name form `192-168-15-53.ponyo-k7q2.<zone>` (atlas decision) if §5 B is ever turned on.
 - **BUILT (PR 2, branch `feat/di-name-2026-10-28`, tested against a fake broker and a fake ACME client only):** `di name` / `--status` /
   `--renew` / `--forget` in `scripts/di/networkName.mjs` + `nameStore.mjs`; files in `~/.di/name/`; `di status` prints the name line;
   `di up` and `di autoupdate run` renew at < 30 days, at most once a day (the CLI exits after `di up`, so the timer's tick is the daily
-  check). Zone `l.thedi.studio`; ACME through `acme-client` 5.4.0 pinned in `serverXR/package.json` (what a packed install runs `npm ci` for).
+  check). Zone `l.di-studio.xyz`; ACME through `acme-client` 5.4.0 pinned in `serverXR/package.json` (what a packed install runs `npm ci` for).
   Not yet run against the real broker or Let's Encrypt. `scripts/di/name.mjs` is the older mDNS (`di.local`) file, unrelated.
 - What a person types: the label only — `di follow show --from ponyo-k7q2`. The CLI adds the zone.
 - The address stays `http://diiii.localhost/` for yourself; the network name is for **other** machines.
@@ -132,7 +132,7 @@ private · name ready: ponyo-k7q2 (certificate until 2027-01-12) · di wifi to o
 Open:
 ```
 http://diiii.localhost/  — di.iiii running
-open on this wifi (192.168.15.53) · phones and headsets: https://ponyo-k7q2.l.thedi.studio/
+open on this wifi (192.168.15.53) · phones and headsets: https://ponyo-k7q2.l.di-studio.xyz/
 following: show ← dob-a3f9 (this wifi) · 2 follow you
 ```
 One line when something is wrong, naming the fix: `name not ready: broker unreachable — retry at next di up`,
@@ -147,19 +147,19 @@ One line when something is wrong, naming the fix: `name not ready: broker unreac
   renewal never touches `http://diiii.localhost/`; `di status` says the date. LE has announced shorter lifetimes
   (**unverified** schedule) — the daily check covers that.
 - **LE limit:** 50 per registered domain per week (VERIFIED) is shared by every install **and** the owner's
-  other `thedi.studio` certificates. 90-day renewals mean about 400 installs before it binds — fine for a team,
-  and Q1's separate domain gives the installs their own bucket.
+  other `di-studio.xyz` certificates. 90-day renewals mean about 400 installs before it binds — fine for a team;
+  the zone is `l.di-studio.xyz` for now (§15 Q1).
 
 ## 11. The router limit, and its one-line fix
 
 Phones ask the router; a router with rebind protection drops `ponyo-k7q2.<zone> → 192.168.x.x` (VERIFIED for
 OpenWrt default and FRITZ!Box). Installs are unaffected (they use the beacon, §8). On OpenWrt, once:
 ```
-uci add_list dhcp.@dnsmasq[0].rebind_domain='l.thedi.studio'; uci commit dhcp; /etc/init.d/dnsmasq restart
+uci add_list dhcp.@dnsmasq[0].rebind_domain='l.di-studio.xyz'; uci commit dhcp; /etc/init.d/dnsmasq restart
 ```
-(Forum posts also show the `/l.thedi.studio/` form; **unverified on dob-0** which one its dnsmasq takes — test both.)
+(Forum posts also show the `/l.di-studio.xyz/` form; **unverified on dob-0** which one its dnsmasq takes — test both.)
 `di wifi --router` prints this line and the FRITZ!Box path. Offline places: the router answers itself
-(`address=/ponyo-k7q2.l.thedi.studio/192.168.15.53`, `one-local-address.md` §5 b).
+(`address=/ponyo-k7q2.l.di-studio.xyz/192.168.15.53`, `one-local-address.md` §5 b).
 
 ## 12. Security
 
@@ -189,8 +189,10 @@ server on the existing VPS: 0 € but an always-on service to watch. Build: five
 
 ## 15. Questions only the owner can answer
 
-1. **Zone:** `l.thedi.studio`, or a separate domain for install names (as Plex uses plex.direct)?
-   **Recommend a separate domain:** a broker breach never touches `thedi.studio`, and the certificate limit is its own.
+1. **Zone (decided 2026-10-29, ledger N1418.10/.11):** `l.di-studio.xyz`, broker `https://name.di-studio.xyz`; a separate domain, so a broker breach never touches `thedi.studio` and the certificate limit is its own.
+   - **Why not `l.thedi.studio`:** thedi.studio is not a Cloudflare zone (its nameservers are GoDaddy's, `ns67/68.domaincontrol.com`), so the broker cannot write records there.
+   - **Owed move:** when the owner moves thedi.studio to Cloudflare (GoDaddy → Domains → thedi.studio → Nameservers → "Change" → enter the two nameservers Cloudflare shows for the zone; Cloudflare then imports the records), the zone can become `l.thedi.studio`. It is a config value (`ZONE` in `wrangler.toml`, `DI_NAME_ZONE` on an install), so the move is one value, not code; installs already named keep their name until they re-claim.
+   - **Reviewer's note (Opus R20):** di-studio.xyz also carries live sign-in hosts. Mitigation: the broker writes only `<label>.<zone>` and `_acme-challenge.<label>.<zone>` records (its name guard rejects any other name), and its `CF_API_TOKEN` is scoped to Zone → DNS → Edit on di-studio.xyz only.
 2. **Label:** `<who>-<4 chars>` from the `di login` handle, or fully random? **Recommend the handle form** —
    people say "follow ponyo", and CT logs see only a handle.
 3. **Stateless DNS (§5 B):** run our own nameserver for the address-in-name form, or stay on broker records?

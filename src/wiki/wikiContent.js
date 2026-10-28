@@ -323,7 +323,7 @@ export const WIKI_ARTICLES = [
         title: 'Your install\'s network name',
         summary: 'After di login, one command gives this install a name other machines can use, and a certificate of its own for it that renews itself.',
         body: [
-            'CLAIM IT. Sign in once with di login, then type di name. The install asks the name broker for a label made of your handle and four letters, like ponyo-k7q2, and keeps its name under l.thedi.studio. An account holds up to three names.',
+            'CLAIM IT. Sign in once with di login, then type di name. The install asks the name broker for a label made of your handle and four letters, like ponyo-k7q2, and keeps its name under l.di-studio.xyz. An account holds up to three names.',
             'ITS OWN CERTIFICATE. The same command then asks Let\'s Encrypt for a certificate for the name and everything under it. The key is made on this machine and never leaves it; the broker only writes the one proof record Let\'s Encrypt asks for. Everything lives in the .di/name folder in your home folder, and nothing there touches the certificate di up serves today.',
             'IT LOOKS AFTER ITSELF. A certificate lasts 90 days. di up checks it when it starts, and the daily update check does too; below 30 days left it renews. A failed renewal leaves the old certificate and writes one line to .di/logs/name.log. Your own address, http://diiii.localhost/, is never touched.',
             'SEE IT. di status ends with one line: the name and the date the certificate runs until, or "none — run di name". di name --status says the same without asking anyone; di name --renew renews now if it is due; di name --forget removes the local files (the broker keeps the label until it is revoked).',

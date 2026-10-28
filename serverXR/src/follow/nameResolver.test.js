@@ -25,25 +25,25 @@ describe('what counts as a network name', () => {
         for (const ok of ['ponyo-k7q2', 'dob-a3f9', 'a1']) expect(isLabelInput(ok), ok).toBe(true)
         for (const bad of ['https://x', 'local.thedi.studio', '192.168.1.5', 'host:4000', '', 'Ponyo K', '-x', 'x-']) expect(isLabelInput(bad), bad).toBe(false)
     })
-    it('the zone is a config value: env, then the own name file, then l.thedi.studio', () => {
-        expect(DEFAULT_ZONE).toBe('l.thedi.studio')
-        expect(zoneFrom({ env: {} })).toBe('l.thedi.studio')
+    it('the zone is a config value: env, then the own name file, then l.di-studio.xyz', () => {
+        expect(DEFAULT_ZONE).toBe('l.di-studio.xyz')
+        expect(zoneFrom({ env: {} })).toBe('l.di-studio.xyz')
         expect(zoneFrom({ env: {}, own: { zone: 'Team.Example' } })).toBe('team.example')
         expect(zoneFrom({ env: { DI_NAME_ZONE: 'x.test' }, own: { zone: 'team.example' } })).toBe('x.test')
     })
     it('the name and the base keep the label, and the port only when it is not 443', () => {
-        expect(nameOf('ponyo-k7q2')).toBe('ponyo-k7q2.l.thedi.studio')
-        expect(baseOf('ponyo-k7q2', 'l.thedi.studio')).toBe('https://ponyo-k7q2.l.thedi.studio')
-        expect(baseOf('ponyo-k7q2', 'l.thedi.studio', 8443)).toBe('https://ponyo-k7q2.l.thedi.studio:8443')
+        expect(nameOf('ponyo-k7q2')).toBe('ponyo-k7q2.l.di-studio.xyz')
+        expect(baseOf('ponyo-k7q2', 'l.di-studio.xyz')).toBe('https://ponyo-k7q2.l.di-studio.xyz')
+        expect(baseOf('ponyo-k7q2', 'l.di-studio.xyz', 8443)).toBe('https://ponyo-k7q2.l.di-studio.xyz:8443')
     })
 })
 
 describe('resolveName — beacon, then DNS, then the last address', () => {
-    const base = { label: 'ponyo-k7q2', zone: 'l.thedi.studio' }
+    const base = { label: 'ponyo-k7q2', zone: 'l.di-studio.xyz' }
 
     it('the beacon wins when it is heard, with its port', async () => {
         const found = await resolveName({ ...base, listen: heard('192.168.1.20', 8443), lookup: dnsAt('10.0.0.9'), last: { address: '10.1.1.1' } })
-        expect(found).toMatchObject({ ok: true, route: 'beacon', address: '192.168.1.20', port: 8443, base: 'https://ponyo-k7q2.l.thedi.studio:8443' })
+        expect(found).toMatchObject({ ok: true, route: 'beacon', address: '192.168.1.20', port: 8443, base: 'https://ponyo-k7q2.l.di-studio.xyz:8443' })
     })
     it('DNS next, when nothing was heard', async () => {
         const found = await resolveName({ ...base, listen: never, lookup: dnsAt('10.0.0.9'), last: { address: '10.1.1.1' } })
@@ -66,7 +66,7 @@ describe('resolveName — beacon, then DNS, then the last address', () => {
         const found = await resolveName({ ...base, listen: heard('192.168.1.99'), lookup: dnsAt('10.0.0.9'), last: { address: '10.1.1.1' }, probe })
         expect(found).toMatchObject({ ok: true, route: 'last', address: '10.1.1.1' })
         expect(probe.mock.calls.map(([c]) => c.route)).toEqual(['beacon', 'dns', 'last'])
-        expect(probe.mock.calls.every(([c]) => c.name === 'ponyo-k7q2.l.thedi.studio')).toBe(true)
+        expect(probe.mock.calls.every(([c]) => c.name === 'ponyo-k7q2.l.di-studio.xyz')).toBe(true)
     })
     it('every probe failing is a refusal naming the routes that had an address', async () => {
         const found = await resolveName({ ...base, listen: heard('192.168.1.99'), lookup: dnsAt('10.0.0.9'), last: { address: '10.1.1.1' }, probe: async () => false })
@@ -160,22 +160,22 @@ describe('the pin keeps the name: Host, SNI and the certificate check', () => {
 })
 
 describe('createReresolver — the running follower asks again when the install moved', () => {
-    const remote = () => ({ base: 'https://ponyo-k7q2.l.thedi.studio/serverXR', address: '192.168.1.20' })
-    const name = { label: 'ponyo-k7q2', zone: 'l.thedi.studio' }
+    const remote = () => ({ base: 'https://ponyo-k7q2.l.di-studio.xyz/serverXR', address: '192.168.1.20' })
+    const name = { label: 'ponyo-k7q2', zone: 'l.di-studio.xyz' }
 
     it('moves address and base in place, keeps /serverXR, remembers the route, and says it moved', async () => {
         const side = remote()
         const onRoute = vi.fn()
-        const resolve = vi.fn(async () => ({ ok: true, address: '192.168.1.77', port: 8443, route: 'beacon', base: 'https://ponyo-k7q2.l.thedi.studio:8443' }))
+        const resolve = vi.fn(async () => ({ ok: true, address: '192.168.1.77', port: 8443, route: 'beacon', base: 'https://ponyo-k7q2.l.di-studio.xyz:8443' }))
         const again = createReresolver({ name, remote: side, resolve, probe: async () => true, onRoute })
         expect(await again()).toBe(true)
-        expect(side).toEqual({ base: 'https://ponyo-k7q2.l.thedi.studio:8443/serverXR', address: '192.168.1.77' })
+        expect(side).toEqual({ base: 'https://ponyo-k7q2.l.di-studio.xyz:8443/serverXR', address: '192.168.1.77' })
         expect(onRoute).toHaveBeenCalledWith({ route: 'beacon', address: '192.168.1.77', port: 8443 })
         expect(resolve.mock.calls[0][0].last).toEqual({ address: '192.168.1.20', port: 443 })
     })
     it('the same place is "did not move", so nothing is asked twice for nothing', async () => {
         const side = remote()
-        const again = createReresolver({ name, remote: side, resolve: async () => ({ ok: true, address: '192.168.1.20', port: 443, route: 'last', base: 'https://ponyo-k7q2.l.thedi.studio' }) })
+        const again = createReresolver({ name, remote: side, resolve: async () => ({ ok: true, address: '192.168.1.20', port: 443, route: 'last', base: 'https://ponyo-k7q2.l.di-studio.xyz' }) })
         expect(await again()).toBe(false)
     })
     it('a failed search leaves the remote alone and is not repeated inside the gap', async () => {
@@ -192,7 +192,7 @@ describe('createReresolver — the running follower asks again when the install 
         expect(side.address).toBe('192.168.1.20')
     })
     it('a store that cannot remember does not break the follow', async () => {
-        const again = createReresolver({ name, remote: remote(), resolve: async () => ({ ok: true, address: '10.0.0.5', port: 443, route: 'dns', base: 'https://ponyo-k7q2.l.thedi.studio' }), onRoute: async () => { throw new Error('disk') } })
+        const again = createReresolver({ name, remote: remote(), resolve: async () => ({ ok: true, address: '10.0.0.5', port: 443, route: 'dns', base: 'https://ponyo-k7q2.l.di-studio.xyz' }), onRoute: async () => { throw new Error('disk') } })
         expect(await again()).toBe(true)
     })
 })

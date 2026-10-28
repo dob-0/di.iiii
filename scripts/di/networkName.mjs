@@ -25,7 +25,7 @@ import { forgetName, nameFiles, readCertInfo, readName, ensureAcmeAccountKey, en
 import { readState, writeState } from './state.mjs'
 import { DI_USER_AGENT } from './userAgent.mjs'
 
-export const DEFAULT_BROKER = 'https://name.thedi.studio'
+export const DEFAULT_BROKER = 'https://name.di-studio.xyz'
 export const LE_PRODUCTION = 'https://acme-v02.api.letsencrypt.org/directory'
 export const LE_STAGING = 'https://acme-staging-v02.api.letsencrypt.org/directory'
 export const RENEW_BELOW_DAYS = 30

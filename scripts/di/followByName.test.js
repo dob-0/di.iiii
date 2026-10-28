@@ -76,7 +76,7 @@ describe('parsing: a label, a URL and --at are three different things', () => {
     })
     it('only a bare label is a network name; a URL, an address and a dotted host are not', () => {
         for (const label of ['ponyo-k7q2', 'dob-a3f9']) expect(twin.isLabelInput(label)).toBe(true)
-        for (const url of ['https://ponyo-k7q2.l.thedi.studio', 'http://127.0.0.1:4000', 'local.thedi.studio', '100.87.4.12']) expect(twin.isLabelInput(url)).toBe(false)
+        for (const url of ['https://ponyo-k7q2.l.di-studio.xyz', 'http://127.0.0.1:4000', 'local.thedi.studio', '100.87.4.12']) expect(twin.isLabelInput(url)).toBe(false)
     })
     it('--from <label> --at <ip> keeps both on the line', () => {
         expect(parseArgs(['follow', 'show', '--from', 'ponyo-k7q2', '--at', '192.168.1.20']).flags).toEqual({ from: 'ponyo-k7q2', at: '192.168.1.20' })
@@ -94,10 +94,10 @@ describe('findByName', () => {
         fs.writeFileSync(path.join(h, 'name', 'name.json'), JSON.stringify({ label: 'me-0000', zone: 'team.example', name: 'me-0000.team.example' }))
         await findByName({ home: h, label: 'a-b1', env: {}, resolve })
         await findByName({ home: h, label: 'a-b1', env: { DI_NAME_ZONE: 'env.example' }, resolve })
-        expect(seen).toEqual(['l.thedi.studio', 'team.example', 'env.example'])
+        expect(seen).toEqual(['l.di-studio.xyz', 'team.example', 'env.example'])
     })
     it('hands the stored last address to the resolver — only for the same label', async () => {
-        const stored = { name: { label: 'a-b1', zone: 'l.thedi.studio', lastAddress: '10.9.9.9', lastPort: 8443 } }
+        const stored = { name: { label: 'a-b1', zone: 'l.di-studio.xyz', lastAddress: '10.9.9.9', lastPort: 8443 } }
         const lasts = []
         const resolve = async (call) => { lasts.push(call.last); return { ok: false, tried: [] } }
         await findByName({ home: home(), label: 'a-b1', stored, resolve })
@@ -112,13 +112,13 @@ describe('findByName', () => {
 
 describe('the words', () => {
     it('name-not-found says what was looked at and what to do on their machine', () => {
-        const words = ui.nameNotFound('a-b1', 'l.thedi.studio', ['beacon'])
+        const words = ui.nameNotFound('a-b1', 'l.di-studio.xyz', ['beacon'])
         expect(words).toContain('could not find a-b1')
         expect(words).toContain('tried: beacon')
         expect(words).toContain('di share')
     })
     it('di follows shows the name and which route found it, the way it shows the host', () => {
-        const follows = { show: { remote: 'https://a-b1.l.thedi.studio/serverXR', name: { label: 'a-b1', zone: 'l.thedi.studio', route: 'beacon', lastAddress: '192.168.1.20' } }, jam: { remote: 'https://x.example/serverXR' } }
+        const follows = { show: { remote: 'https://a-b1.l.di-studio.xyz/serverXR', name: { label: 'a-b1', zone: 'l.di-studio.xyz', route: 'beacon', lastAddress: '192.168.1.20' } }, jam: { remote: 'https://x.example/serverXR' } }
         const text = ui.followList(follows, [])
         expect(text).toContain('a-b1')
         expect(text).toContain('the beacon on this wifi')
@@ -126,17 +126,17 @@ describe('the words', () => {
         expect(text).toContain('https://x.example')
     })
     it('following says which route found it', () => {
-        const text = ui.following('show', 'https://a-b1.l.thedi.studio/serverXR', false, '10.0.0.2', { label: 'a-b1', zone: 'l.thedi.studio', route: 'dns', lastAddress: '10.0.0.2' })
+        const text = ui.following('show', 'https://a-b1.l.di-studio.xyz/serverXR', false, '10.0.0.2', { label: 'a-b1', zone: 'l.di-studio.xyz', route: 'dns', lastAddress: '10.0.0.2' })
         expect(text).toContain('by DNS')
-        expect(text).toContain('a-b1.l.thedi.studio')
+        expect(text).toContain('a-b1.l.di-studio.xyz')
     })
 })
 
 describe('the follow record keeps the name, in the CLI writer and the server reader', () => {
-    const name = { label: 'a-b1', zone: 'l.thedi.studio', route: 'beacon', lastAddress: '10.0.0.2', lastPort: 443 }
+    const name = { label: 'a-b1', zone: 'l.di-studio.xyz', route: 'beacon', lastAddress: '10.0.0.2', lastPort: 443 }
     it('written by the CLI, read by the server, with no pin when it is a name', async () => {
         const dir = tmp()
-        await addFollow(dir, 'show', { remote: 'https://a-b1.l.thedi.studio/serverXR', token: 't', name })
+        await addFollow(dir, 'show', { remote: 'https://a-b1.l.di-studio.xyz/serverXR', token: 't', name })
         expect(store.readFollows(dir).show.name).toEqual(name)
         expect(store.readFollows(dir).show.address).toBeUndefined()
     })
@@ -147,11 +147,11 @@ describe('the follow record keeps the name, in the CLI writer and the server rea
     })
     it('the server remembers the route that worked, without touching remote, key or pin', async () => {
         const dir = tmp()
-        await addFollow(dir, 'show', { remote: 'https://a-b1.l.thedi.studio/serverXR', token: 't', name })
+        await addFollow(dir, 'show', { remote: 'https://a-b1.l.di-studio.xyz/serverXR', token: 't', name })
         expect(await store.noteRoute(dir, 'show', { route: 'dns', address: '10.0.0.7', port: 8443 })).toBe(true)
         const entry = store.readFollows(dir).show
         expect(entry.name).toMatchObject({ route: 'dns', lastAddress: '10.0.0.7', lastPort: 8443 })
-        expect(entry).toMatchObject({ remote: 'https://a-b1.l.thedi.studio/serverXR', token: 't' })
+        expect(entry).toMatchObject({ remote: 'https://a-b1.l.di-studio.xyz/serverXR', token: 't' })
         expect(await store.noteRoute(dir, 'show', { route: 'dns', address: '10.0.0.7', port: 8443 })).toBe(false)
     })
     it('a follow with no name is left alone by noteRoute', async () => {
@@ -230,10 +230,10 @@ describe('join by words accepts a label where it accepts an address', () => {
                 return { ok: true, address: '192.168.1.20', port: 443, route: 'beacon', base: server.baseOf(label, zone) }
             }
         })
-        expect(result).toMatchObject({ ok: true, spaceId: 'show', base: 'https://ponyo-k7q2.l.thedi.studio/serverXR' })
+        expect(result).toMatchObject({ ok: true, spaceId: 'show', base: 'https://ponyo-k7q2.l.di-studio.xyz/serverXR' })
         expect(calls.length).toBeGreaterThanOrEqual(4)
-        expect(calls.every((call) => call.address === '192.168.1.20' && call.host === 'ponyo-k7q2.l.thedi.studio')).toBe(true)
-        expect(written[0][2]).toMatchObject({ remote: 'https://ponyo-k7q2.l.thedi.studio/serverXR', name: { label: 'ponyo-k7q2', route: 'beacon' } })
+        expect(calls.every((call) => call.address === '192.168.1.20' && call.host === 'ponyo-k7q2.l.di-studio.xyz')).toBe(true)
+        expect(written[0][2]).toMatchObject({ remote: 'https://ponyo-k7q2.l.di-studio.xyz/serverXR', name: { label: 'ponyo-k7q2', route: 'beacon' } })
     })
     it('a label nothing finds is "unreachable", never a crash', async () => {
         const result = await joinSpace({

@@ -347,7 +347,7 @@ Owner-approved sketches A + C (`/home/dob/Downloads/di-sync-ui/sketches.html`, 2
 ## Resolving a name (2026-10-28)
 
 `di follow <space> --from <label> --key <key>`: a bare label (no scheme, no dot) is a network name; the zone
-(`l.thedi.studio` unless `DI_NAME_ZONE` or this install's `name/name.json` says another) is added. The install is
+(`l.di-studio.xyz` unless `DI_NAME_ZONE` or this install's `name/name.json` says another) is added. The install is
 found by, in order: (1) the **beacon** — a UDP broadcast `{ v:1, kind:'di-name', label, port }` on port 41767,
 unsigned, listened to for 2 s; (2) **DNS** of `<label>.<zone>` (a loopback answer is the broker's "not shared" marker
 and is skipped); (3) the **last address** stored with the follow (`name.lastAddress`, `lastPort`). Each address is
