@@ -156,7 +156,7 @@ export default function StudioHelpDialog({ open, onClose, initialMode = 'basics'
                             <div className="sh-help-shortcut-title">Keyboard choices</div>
                             <label className="sh-help-shortcut-row sh-help-keychoice">
                                 <input type="checkbox" checked={keyPrefs.letters} onChange={(e) => writeKeyPrefs({ letters: e.target.checked })} />
-                                <span>Letter keys act (G R S X Y Z T H E A L F B ?). Turn off to stop a stray key from changing things; Ctrl, Cmd and Alt keys stay.</span>
+                                <span>Single-letter keys work (G R S X Y Z T H E A L F B ?). Turn off to stop a stray key from changing things. Ctrl, Cmd and Alt keys and the number keys 1-9 (cues) stay.</span>
                             </label>
                             <label className="sh-help-shortcut-row sh-help-keychoice">
                                 <input type="checkbox" checked={keyPrefs.blenderTab} onChange={(e) => writeKeyPrefs({ blenderTab: e.target.checked })} />

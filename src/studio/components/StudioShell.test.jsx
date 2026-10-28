@@ -6,9 +6,14 @@ import { ALL_TOOLS_KEY, saveAllTools } from '../utils/jamMode.js'
 vi.mock('./StudioViewportLayout.jsx', () => ({
     default: ({ shared }) => <output data-testid="gizmo-axis" data-edit-mode={shared.editMode}>{shared.gizmoAxis || 'all'}</output>
 }))
-vi.mock('./StudioFloatingPanel.jsx', () => ({ default: ({ title, onClose, children }) => <div className="sfp-shell" data-panel={title} data-closable={onClose ? 'yes' : 'no'}>{onClose && <button className="sfp-close" onClick={onClose}>x</button>}{children}</div> }))
+vi.mock('./StudioFloatingPanel.jsx', () => ({ default: ({ title, onClose, windowKey, children }) => <div className="sfp-shell" data-window-key={windowKey} data-panel={title} data-closable={onClose ? 'yes' : 'no'}>{onClose && <button className="sfp-close" onClick={onClose}>x</button>}{children}</div> }))
 vi.mock('./StudioControlCluster.jsx', () => ({
-    default: ({ gizmoMode, previewUrl }) => <output data-testid="gizmo-mode" data-preview-url={previewUrl || ''}>{gizmoMode}</output>
+    default: ({ gizmoMode, previewUrl }) => (
+        <div className="scc-wrap">
+            <button type="button" data-window-key="scene">Objects</button>
+            <output data-testid="gizmo-mode" data-preview-url={previewUrl || ''}>{gizmoMode}</output>
+        </div>
+    )
 }))
 vi.mock('./StudioQuickInsert.jsx', () => ({ default: () => null }))
 vi.mock('./StudioInspector.jsx', () => ({ default: () => null }))
@@ -458,7 +463,10 @@ describe('StudioShell keyboard: Tab, letter keys, Esc', () => {
         const close2 = document.querySelector('.sfp-shell[data-panel="Objects"] .sfp-close')
         const onClick2 = vi.fn()
         close2.addEventListener('click', onClick2)
+        close2.focus()
         fireEvent.keyDown(close2, { key: 'Escape' })
         expect(onClick2).toHaveBeenCalledTimes(1)
+        // WCAG 2.4.3: the focus goes to the button that opens that window again, not to <body>
+        expect(document.activeElement).toBe(document.querySelector('.scc-wrap [data-window-key="scene"]'))
     })
 })

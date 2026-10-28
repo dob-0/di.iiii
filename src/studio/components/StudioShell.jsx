@@ -270,6 +270,7 @@ export default function StudioShell({
         onPositionChange: recordPanelPosition(id),
         onSizeChange: recordPanelSize(id),
         onCollapsedChange: recordPanelCollapsed(id),
+        windowKey: id,
         snapEdges
     }), [positions, panelSizes, collapsedPanels, snapEdges, recordPanelPosition, recordPanelSize, recordPanelCollapsed])
 
@@ -461,7 +462,16 @@ export default function StudioShell({
                 if (!quickInsert && !transformOp && selectedEntityIds.length === 0) {
                     const panel = e.target?.closest?.('.sfp-shell')
                     const closeButton = panel?.querySelector?.('.sfp-close')
-                    if (closeButton) { closeButton.click(); e.preventDefault() }
+                    if (closeButton) {
+                        // Keep the place in the Tab order (WCAG 2.4.3): the close button is about to go, so the focus moves to the
+                        // button that opens this window again, else to the first control of the window bar.
+                        const key = panel.dataset?.windowKey
+                        const wrap = panel.ownerDocument.querySelector('.scc-wrap')
+                        const back = (key && wrap?.querySelector(`[data-window-key="${key}"]`)) || wrap?.querySelector('button')
+                        closeButton.click()
+                        back?.focus()
+                        e.preventDefault()
+                    }
                 }
                 return
             }

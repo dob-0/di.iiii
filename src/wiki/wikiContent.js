@@ -196,7 +196,7 @@ export const WIKI_ARTICLES = [
         body: [
             'Tab walks the focus through the Studio\u2019s buttons and windows, Shift+Tab goes back, so the Studio can be used without a mouse. Switching between Navigate and Edit is the E key or the Navigate / Edit button.',
             'Esc closes the window the focus is in. With something selected, the first Esc lets go of the selection, the next one closes the window. Esc also closes Quick Insert and the help.',
-            'Single-letter keys (G R S X Y Z T H E A L F B and ?) act on a bare key press. If a stray key changes things, open the help with the ? button, go to Shortcuts and turn off \u201cLetter keys act\u201d. Ctrl, Cmd and Alt shortcuts, Delete and Esc keep working. Walk and Fly keep their own keys.',
+            'Single-letter keys (G R S X Y Z T H E A L F B and ?) act on a bare key press. If a stray key changes things, open the help with the ? button, go to Shortcuts and turn off \u201cSingle-letter keys work\u201d. Ctrl, Cmd and Alt shortcuts, Delete, Esc and the number keys 1-9 (cues) keep working. Walk and Fly keep their own keys.',
             'If your hands know Blender, turn on \u201cBlender keys\u201d in the same place: Tab then switches Navigate and Edit again, and does not move the focus. Both choices are kept in this browser on this device only.'
         ],
         tags: ['studio', 'keyboard', 'tab', 'focus', 'escape', 'shortcuts', 'accessibility', 'blender'],

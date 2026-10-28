@@ -5,3 +5,4 @@
 - Esc closes Quick Insert, then the help, then the window the focus is in; with a selection the first Esc deselects (the editor's own rule).
 - Walking and flying are unchanged (`useWalkNavigation.js` not edited; Move 1 untouched). Wiki entry `studio-keyboard`, help Shortcuts text and `known-fixes.md` updated.
 - Still owed: a keyboard walk with a visible focus ring at 1440 and the phone view of the switch (real-browser proof); a visible focus-ring style for the floating panels if the walk shows none; the shell's ? key is off with letters off, so the help is reached by its button.
+- Review round 2026-10-28: Esc now returns the focus to the closed window's button (WCAG 2.4.3); the checkbox reads "Single-letter keys work"; the help and wiki say the number keys 1-9 (cues) stay on with letter keys off (owed to the owner: should cue keys have an off switch too? WCAG 2.1.4 counts digits).
