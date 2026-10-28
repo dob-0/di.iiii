@@ -83,6 +83,7 @@ import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateN
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode } from '../../project/graph/useGraphClock.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
+import { useLampTypeVersion } from '../../project/nodes/light.lamp/useLampTypeVersion.js'
 import { installClockSeek } from '../../project/graph/clockSeek.js'
 import { isNodeInScope, useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
@@ -1766,6 +1767,7 @@ export default function RawEditor({
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
     // must not survive a tick or the clock would freeze at its first sample.
     const clockNow = useDocumentClock(document)
+    const lampTypes = useLampTypeVersion()
     // A test browser cuts any project frame-exact: __seek(t), __ready, __play
     // (clockSeek.js). Nothing is held until a script asks.
     useEffect(() => installClockSeek(typeof window === 'undefined' ? null : window), [])
@@ -2003,7 +2005,7 @@ export default function RawEditor({
     useEffect(() => { frameMemory.clear() }, [frameMemory, projectId])
     const graphContext = useMemo(
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
-        [document, clockNow, liveOutputs, frameMemory]
+        [document, clockNow, lampTypes, liveOutputs, frameMemory]
     )
     // A Cue node a person presses fires its cues the way the Perform window does.
     // Not from a preview card (a picture on someone else's page acts on nothing).
@@ -2039,14 +2041,14 @@ export default function RawEditor({
             document,
             childCount: childCounts.get(anatomyNode.id) || 0
         })
-    }, [anatomyOpen, anatomyNode, authoredNodes, document, liveOutputs, anatomyMemory, childCounts, anatomyNow])
+    }, [anatomyOpen, anatomyNode, authoredNodes, document, liveOutputs, anatomyMemory, childCounts, anatomyNow, lampTypes])
 
     // The same reading, live, for the selected node's Ports in the column and
     // for the node you are inside (its rails). Own memory, as above.
     const [columnMemory] = useState(() => createFrameMemory())
     const readingContext = useMemo(
         () => createNodeGraphContext(document, { now: anatomyNow, liveOutputs, frameMemory: columnMemory }),
-        [document, anatomyNow, liveOutputs, columnMemory]
+        [document, anatomyNow, lampTypes, liveOutputs, columnMemory]
     )
     const columnReading = useMemo(() => (scopedSelectedNode
         ? readNode(scopedSelectedNode, { allNodes: authoredNodes, context: readingContext, document, childCount: childCounts.get(scopedSelectedNode.id) || 0 })

@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { createFrameMemory, createNodeGraphContext } from '../../project/graph/nodeGraphRuntime.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
+import { useLampTypeVersion } from '../../project/nodes/light.lamp/useLampTypeVersion.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import {
     NodeVisual,
@@ -43,11 +44,12 @@ export default function GraphRoomNodes({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const assetMap = useMemo(() => buildAssetMap(document), [document.assets, document.projectMeta?.id])
     const clockNow = useDocumentClock(document)
+    const lampTypes = useLampTypeVersion()
     const [frameMemory] = useState(() => createFrameMemory())
     useEffect(() => { frameMemory.clear() }, [frameMemory, document.projectMeta?.id])
     const graphContext = useMemo(
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
-        [document, clockNow, liveOutputs, frameMemory]
+        [document, clockNow, lampTypes, liveOutputs, frameMemory]
     )
     const childMap = useMemo(() => buildSpatialChildMap(document.nodes, graphContext), [document.nodes, graphContext])
     // The scope's active Camera is the eye in Nodes, never a body in the room.

@@ -3,7 +3,7 @@
 // the same lamp (src/shared/lampDmx.test.js). `dmx` carries { universe, address, values }, or null when the lamp
 // has no type or cannot be sent; `patch` says which, in words.
 import { lampFrame } from '../../../shared/lampDmx.js'
-import { lampModeOf, lampTypeOf } from './lampType.js'
+import { lampModeOf, lampTypeKnown, lampTypeOf } from './lampType.js'
 
 export const lampOf = (input) => {
     const typeId = String(input('type') ?? '').trim()
@@ -18,6 +18,7 @@ export const lampOf = (input) => {
         zoom: input('zoom'),
     }
     if (!typeId) return { type: null, mode: null, frame: null, patch: 'no type: drawn only, sends nothing' }
+    if (!type && lampTypeKnown(typeId)) return { type: null, mode: null, frame: null, patch: `loading type "${typeId}"` }
     if (!type) return { type: null, mode: null, frame: null, patch: `no type "${typeId}" in the fixture library` }
     if (!mode) return { type, mode: null, frame: null, patch: `${type.code} has no mode` }
     const frame = lampFrame({ mode, universe: input('universe') ?? 1, address: input('address') ?? 1, inputs: told })
