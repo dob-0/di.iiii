@@ -1,0 +1,6 @@
+## 2026-10-28 — One di.iiii question box and an Undo notice (UX fix S01)
+
+- Added the shared primitive in `src/components/ui/`: `AskDialog` (role=alertdialog, named buttons, Esc says no, Tab stays inside, a danger question starts on the safe button, optional one-line field), `UndoNotice` (role=status, Undo for 10 s, hover or focus holds the clock), `useAsk` / `useUndoNotice` (promise-style `ask()`, `notify(message, onUndo)`), `ui.css` (house tokens, square corners, Inter, 44 px buttons).
+- Added `nativeDialogs.budget.test.js`: counts `alert(` / `confirm(` / `prompt(` calls with the plan's one rule and lets the count only go down. Measured 112 on origin/dev db7d9c667 (the plan judge got 109 with its own run; the guard uses its own measure). S47 and S48 take it to 0; each slice that removes calls lowers `BASELINE`.
+- No user of the primitive yet, so no screen picture and no wiki line: the first users (S02, S04) bring both. Nothing here is a bug fix, so no known-fixes entry.
+- Not done: no app uses it yet; the AskDialog is not mounted anywhere (each user renders `{askDialog}` from `useAsk()`).
