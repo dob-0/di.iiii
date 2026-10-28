@@ -4,7 +4,9 @@
 //   HEAD_LIGHT_URL=<project url> HEAD_LIGHT_WALL_URL=<project url spawned at a wall> HEAD_LIGHT_OUT_DIR=<dir> \
 //     di-test-browser run scripts/head-light/shots.cjs
 //
-// It drives the page like a visitor: arrives walking, presses F (desktop) or taps the Light button (phone), and says
+// HEAD_LIGHT_ONLY=04,05 takes only those pictures (the number is the file's prefix; default: all six).
+//
+// It drives the page like a visitor: arrives walking, presses L (desktop) or taps the Head light button (phone), and says
 // what aria-pressed read after each toggle. Every context it opens is closed and its page left on about:blank.
 const fs = require('node:fs')
 const path = require('node:path')
@@ -15,6 +17,8 @@ const URL_WALL = process.env.HEAD_LIGHT_WALL_URL || URL_MAIN
 const OUT = process.env.HEAD_LIGHT_OUT_DIR
 if (!URL_MAIN || !OUT) { console.error('HEAD_LIGHT_URL and HEAD_LIGHT_OUT_DIR are required'); process.exit(2) }
 fs.mkdirSync(OUT, { recursive: true })
+const ONLY = (process.env.HEAD_LIGHT_ONLY || '').split(',').map((n) => n.trim()).filter(Boolean)
+const wants = (n) => ONLY.length === 0 || ONLY.includes(n)
 
 const pressed = (page) => page.getAttribute('.live-scene-light-btn', 'aria-pressed').catch(() => 'no button')
 
@@ -77,7 +81,7 @@ const probe = (page, withMeshes = false) => page.evaluate((listMeshes) => {
 
 const toggle = async (page, phone) => {
     if (phone) await page.tap('.live-scene-light-btn')
-    else { await page.bringToFront(); await page.keyboard.press('f') }
+    else { await page.bringToFront(); await page.keyboard.press('l') }
     await page.waitForTimeout(3000)
     return pressed(page)
 }
@@ -102,29 +106,29 @@ const lighter = async (browser, spec, steps) => {
 ;(async () => {
     const browser = await chromium.connectOverCDP(process.env.DI_TEST_CDP)
     try {
-        await lighter(browser, { url: URL_MAIN, quality: 'high' }, async (page) => {
-            console.log('high: before F, aria-pressed =', await pressed(page))
+        if (wants('01') || wants('02')) await lighter(browser, { url: URL_MAIN, quality: 'high' }, async (page) => {
+            console.log('high: before L, aria-pressed =', await pressed(page))
             await shot(page, '01-high-off.png')
-            console.log('high: after F, aria-pressed =', await toggle(page, false))
+            console.log('high: after L, aria-pressed =', await toggle(page, false))
             console.log('probe high', JSON.stringify(await probe(page, true), null, 1))
             await shot(page, '02-high-on.png')
         })
-        await lighter(browser, { url: URL_MAIN, quality: 'low' }, async (page) => {
-            console.log('low: after F, aria-pressed =', await toggle(page, false))
+        if (wants('03')) await lighter(browser, { url: URL_MAIN, quality: 'low' }, async (page) => {
+            console.log('low: after L, aria-pressed =', await toggle(page, false))
             console.log('probe low', JSON.stringify(await probe(page)))
             await shot(page, '03-low-on.png')
         })
-        await lighter(browser, { url: URL_WALL, quality: 'high' }, async (page) => {
-            console.log('wall: after F, aria-pressed =', await toggle(page, false))
+        if (wants('04')) await lighter(browser, { url: URL_WALL, quality: 'high' }, async (page) => {
+            console.log('wall: after L, aria-pressed =', await toggle(page, false))
             await shot(page, '04-wall-high-on.png')
         })
-        await lighter(browser, { url: URL_MAIN, quality: 'low', phone: true }, async (page) => {
+        if (wants('05')) await lighter(browser, { url: URL_MAIN, quality: 'low', phone: true }, async (page) => {
             console.log('phone: before tap, aria-pressed =', await pressed(page))
             console.log('phone: after tap, aria-pressed =', await toggle(page, true))
             await shot(page, '05-phone-low-on.png')
         })
-        await lighter(browser, { url: URL_MAIN, quality: 'high', scheme: 'light' }, async (page) => {
-            console.log('light scheme: after F, aria-pressed =', await toggle(page, false))
+        if (wants('06')) await lighter(browser, { url: URL_MAIN, quality: 'high', scheme: 'light' }, async (page) => {
+            console.log('light scheme: after L, aria-pressed =', await toggle(page, false))
             await shot(page, '06-high-on-light-scheme.png')
         })
     } finally {

@@ -6,10 +6,11 @@
 //
 //     worldState.headLight = { enabled: true }      // absent / null = no head light
 //
-// With the field present the visitor gets a toggle: the F key on a PC, a square
-// button on a phone. The light starts OFF either way, and `on` is the visitor's
-// own state, never saved into the document. (F is also Fly's key; in a project
-// with a head light, Fly moves to G and keeps its button. Elsewhere nothing moves.)
+// With the field present the visitor gets a toggle: the L key on a PC, a square
+// "Head light" button on a phone. The light starts OFF either way, and `on` is the
+// visitor's own state, never saved into the document. Fly keeps F in every project
+// (owner, 2026-10-28: di.iiii keeps its own keys, there is no common standard for a
+// fly toggle or a flashlight key); the keys and the words of the hint line: walkKeys.js.
 //
 // Physics first (owner, 2026-10-13). The light sits exactly at the visitor's eye
 // and points where the eye points, so every surface the visitor can see, the
@@ -25,10 +26,7 @@
 // range) and cost a ray against every mesh several times a second, to change
 // nothing the visitor can see. Numbers in the session note.
 
-export const HEAD_LIGHT_KEY = 'f'
-// Projects that turn the head light on give F to it; Fly keeps its on-screen
-// button and moves to this key.
-export const FLY_KEY_WITH_HEAD_LIGHT = 'g'
+export const HEAD_LIGHT_KEY = 'l'
 
 // Full cone ~35 degrees (three.js `angle` is the half-angle), range ~10 m, inverse-square decay.
 export const HEAD_LIGHT = Object.freeze({
@@ -49,7 +47,7 @@ export const resolveHeadLight = (worldState) => {
     return { available: Boolean(field && typeof field === 'object' && field.enabled === true) }
 }
 
-/** The F key (not while typing, not with a modifier, not on key repeat). */
+/** The L key (not while typing, not with a modifier, not on key repeat). */
 export const isHeadLightKey = (event, isTyping = false) => {
     if (!event || isTyping || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return false
     return typeof event.key === 'string' && event.key.toLowerCase() === HEAD_LIGHT_KEY

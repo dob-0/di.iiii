@@ -11,13 +11,24 @@ afterEach(() => { document.body.innerHTML = '' })
 const mount = (available = true) => renderHook(({ available: a }) => useHeadLight(a), { initialProps: { available } })
 
 describe('useHeadLight: the visitor\'s own switch', () => {
-    it('is off at first, F turns it on and off', () => {
+    it('is off at first, L turns it on and off', () => {
         const { result } = mount(true)
         expect(result.current.on).toBe(false)
-        press('f')
+        press('l')
         expect(result.current.on).toBe(true)
+        press('L')
+        expect(result.current.on).toBe(false)
+    })
+
+    it('F does not touch it: F is Fly\'s key, in every project', () => {
+        const { result } = mount(true)
+        press('f')
         press('F')
         expect(result.current.on).toBe(false)
+        press('l')
+        expect(result.current.on).toBe(true)
+        press('f')
+        expect(result.current.on).toBe(true)
     })
 
     it('the on-screen button does the same through toggle', () => {
@@ -30,25 +41,25 @@ describe('useHeadLight: the visitor\'s own switch', () => {
 
     it('does nothing when the project did not turn it on: no key, no button', () => {
         const { result } = mount(false)
-        press('f')
+        press('l')
         act(() => result.current.toggle())
         expect(result.current.on).toBe(false)
     })
 
-    it('ignores F while typing in a field, with a modifier, and on key repeat', () => {
+    it('ignores L while typing in a field, with a modifier, and on key repeat', () => {
         const { result } = mount(true)
         const input = document.createElement('input')
         document.body.appendChild(input)
-        press('f', {}, input)
-        press('f', { ctrlKey: true })
-        press('f', { metaKey: true })
-        press('f', { repeat: true })
+        press('l', {}, input)
+        press('l', { ctrlKey: true })
+        press('l', { metaKey: true })
+        press('l', { repeat: true })
         expect(result.current.on).toBe(false)
     })
 
     it('starts dark again after the visitor leaves walk mode', () => {
         const { result, rerender } = mount(true)
-        press('f')
+        press('l')
         expect(result.current.on).toBe(true)
         rerender({ available: false })
         expect(result.current.on).toBe(false)

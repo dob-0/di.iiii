@@ -12,7 +12,8 @@ import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGua
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
 import { confineToAreas } from './walkableAreas.js'
 import HeadLight from './HeadLight.jsx'
-import { resolveHeadLight, headLightCastsShadow, FLY_KEY_WITH_HEAD_LIGHT } from './headLight.js'
+import { resolveHeadLight, headLightCastsShadow } from './headLight.js'
+import { isFlyKey, walkKeyHintText } from './walkKeys.js'
 import { useHeadLight } from './useHeadLight.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
@@ -1264,14 +1265,14 @@ function MoveHintVisual({ isMobile }) {
     )
 }
 
-function VerticalTouchControls({ vertTouchRef }) {
+function VerticalTouchControls({ vertTouchRef, aboveHeadLight = false }) {
     const setVert = (value) => (e) => {
         e.preventDefault()
         vertTouchRef.current = value
     }
     const clearVert = () => { vertTouchRef.current = 0 }
     return (
-        <div className="live-scene-vert-controls">
+        <div className={`live-scene-vert-controls${aboveHeadLight ? ' live-scene-vert-controls--above-head-light' : ''}`}>
             <button
                 type="button"
                 className="live-scene-vert-btn"
@@ -1787,17 +1788,16 @@ export default function LiveProjectScene({
     const headLightAvailable = walking && headLight.available
     const headLightControl = useHeadLight(headLightAvailable)
 
-    // F flies, except in a project with a head light: F is the light there and Fly keeps its button and G.
-    const flyKey = headLight.available ? FLY_KEY_WITH_HEAD_LIGHT : 'f'
+    // F flies, in every project; the head light has its own key, L (walkKeys.js).
     useEffect(() => {
         if (!walking || !showModeControls) return undefined
         const onKey = (e) => {
             if (isTypingTarget(e.target)) return
-            if (e.key.toLowerCase() === flyKey) setFlyMode((f) => !f)
+            if (isFlyKey(e)) setFlyMode((f) => !f)
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [walking, showModeControls, flyKey])
+    }, [walking, showModeControls])
 
     // Esc is always a way out. With walkLook 'drag' nothing holds the pointer, so the first
     // Esc lands here. With 'lock' the browser keeps the first Esc for itself (it releases the
@@ -2128,7 +2128,7 @@ export default function LiveProjectScene({
                             <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />
                         )}
                         {walking && isMobile && flyMode && showModeControls && (
-                            <VerticalTouchControls vertTouchRef={vertTouchRef} />
+                            <VerticalTouchControls vertTouchRef={vertTouchRef} aboveHeadLight={headLightAvailable} />
                         )}
                         {headLightAvailable && (
                             <button
@@ -2137,7 +2137,7 @@ export default function LiveProjectScene({
                                 aria-pressed={headLightControl.on}
                                 onClick={headLightControl.toggle}
                             >
-                                Light
+                                Head light
                             </button>
                         )}
                         {walking && showModeControls && (
@@ -2265,7 +2265,7 @@ export default function LiveProjectScene({
 
                     {walking && !isMobile && locking && !isLocked && (
                         <p className="live-scene-hint live-scene-hint--lock">
-                            Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; F · fly
+                            Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; {walkKeyHintText({ headLight: headLight.available })}
                         </p>
                     )}
                     {walking && !isMobile && (!locking || isLocked) && walkHint ? (
@@ -2273,7 +2273,7 @@ export default function LiveProjectScene({
                     ) : null}
                     {walking && !isMobile && (!locking || isLocked) && !walkHint && (
                         <p className="live-scene-hint">
-                            WASD · move &nbsp;·&nbsp; {locking ? 'Mouse · look' : 'Drag · look \u00A0·\u00A0 Scroll · forward / back'} &nbsp;·&nbsp; {headLight.available ? <>F · light &nbsp;·&nbsp; G · {flyMode ? 'walk' : 'fly'}</> : <>F · {flyMode ? 'walk' : 'fly'}</>}
+                            WASD · move &nbsp;·&nbsp; {locking ? 'Mouse · look' : 'Drag · look \u00A0·\u00A0 Scroll · forward / back'} &nbsp;·&nbsp; {walkKeyHintText({ headLight: headLight.available, flying: flyMode })}
                             {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
                             {locking ? <>&nbsp;·&nbsp; ESC · release</> : exitLabel ? <>&nbsp;·&nbsp; Esc · exit</> : null}
                         </p>

@@ -1,12 +1,13 @@
 // Seed the head light test project: a dark corridor with the head light turned on.
 //
-//   node scripts/head-light/seed.mjs --api <origin of a scratch stack> [--space headlight] [--slug dark-school] [--spawn-z 3]
+//   node scripts/head-light/seed.mjs --api <origin of a scratch stack> [--space headlight] [--slug dark-school] [--spawn-z 3] [--no-head-light]
 //
 // Run against a SCRATCH stack (`di-dev up <tree> --api scratch`), never against a real database: it
 // creates a space and a project, and replaces every entity in the project. Safe to run again.
 // The scene: a corridor 6 m wide with an end wall 9.5 m from the spawn, a door and a locker on the left, two desks on the right,
 // a ball, a pillar; no lamp at all, almost no ambient light, so the head light is the only light.
-// worldState.headLight = { enabled: true } is what makes the Light button and the F key exist (src/components/headLight.js).
+// worldState.headLight = { enabled: true } is what makes the Head light button and the L key exist (src/components/headLight.js).
+// --no-head-light seeds the same room without the field: the control project for "Fly is on F and L does nothing where there is no head light".
 import crypto from 'node:crypto'
 
 const arg = (name, fallback) => {
@@ -20,6 +21,7 @@ if (!API) {
 }
 const SPACE = arg('space', 'headlight')
 const SLUG = arg('slug', 'dark-school')
+const NO_HEAD_LIGHT = process.argv.includes('--no-head-light')
 
 const call = async (method, path, body, okStatuses = []) => {
     const res = await fetch(API + path, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
@@ -67,7 +69,7 @@ const world = {
     // yaw Math.PI looks down the corridor toward the end wall (yaw 0 looks the other way).
     spawn: { x: 0, z: Number(arg('spawn-z', '3')), yaw: Math.PI, pitch: 0, altY: 1.6 },
     walkableAreas: [{ minX: -2.8, maxX: 2.8, minZ: -8.2, maxZ: 8 }],
-    headLight: { enabled: true }
+    ...(NO_HEAD_LIGHT ? {} : { headLight: { enabled: true } })
 }
 
 await call('POST', '/api/spaces', { label: 'Head light', slug: SPACE }, [409])

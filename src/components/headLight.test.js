@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-    FLY_KEY_WITH_HEAD_LIGHT, HEAD_LIGHT, HEAD_LIGHT_KEY,
+    HEAD_LIGHT, HEAD_LIGHT_KEY,
     headLightCastsShadow, isHeadLightKey, resolveHeadLight, toggleHeadLight
 } from './headLight.js'
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
@@ -42,17 +42,17 @@ describe('head light: the toggle', () => {
         expect(toggleHeadLight(true, false)).toBe(false)
     })
 
-    it('answers the F key, either case, and nothing else', () => {
-        expect(HEAD_LIGHT_KEY).toBe('f')
-        expect(FLY_KEY_WITH_HEAD_LIGHT).toBe('g')
-        expect(isHeadLightKey({ key: 'f' })).toBe(true)
-        expect(isHeadLightKey({ key: 'F' })).toBe(true)
+    it('answers the L key, either case, and nothing else (F is Fly\'s, in every project)', () => {
+        expect(HEAD_LIGHT_KEY).toBe('l')
+        expect(isHeadLightKey({ key: 'l' })).toBe(true)
+        expect(isHeadLightKey({ key: 'L' })).toBe(true)
+        expect(isHeadLightKey({ key: 'f' })).toBe(false)
         expect(isHeadLightKey({ key: 'g' })).toBe(false)
-        expect(isHeadLightKey({ key: 'f', repeat: true })).toBe(false)
-        expect(isHeadLightKey({ key: 'f', ctrlKey: true })).toBe(false)
-        expect(isHeadLightKey({ key: 'f', metaKey: true })).toBe(false)
-        expect(isHeadLightKey({ key: 'f', altKey: true })).toBe(false)
-        expect(isHeadLightKey({ key: 'f' }, true)).toBe(false)
+        expect(isHeadLightKey({ key: 'l', repeat: true })).toBe(false)
+        expect(isHeadLightKey({ key: 'l', ctrlKey: true })).toBe(false)
+        expect(isHeadLightKey({ key: 'l', metaKey: true })).toBe(false)
+        expect(isHeadLightKey({ key: 'l', altKey: true })).toBe(false)
+        expect(isHeadLightKey({ key: 'l' }, true)).toBe(false)
         expect(isHeadLightKey(null)).toBe(false)
     })
 })

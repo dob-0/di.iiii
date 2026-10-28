@@ -3,7 +3,7 @@ import { isTypingTarget } from './walkKeyboard.js'
 import { isHeadLightKey, toggleHeadLight } from './headLight.js'
 
 /**
- * The visitor's own head light state: always off at first, never saved. The F key
+ * The visitor's own head light state: always off at first, never saved. The L key
  * (while the project makes the light available and nobody is typing) and the
  * on-screen button both go through `toggle`. Leaving walk mode switches it off,
  * so the next walk starts dark again.
