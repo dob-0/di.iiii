@@ -69,7 +69,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-3);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
 }
 
 .wiki-title {
@@ -131,7 +131,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
 }
 
 .wiki-sidebar-link {
@@ -159,7 +159,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
 }
 
 .wiki-article-title {
@@ -212,6 +212,14 @@
 }
 
 .wiki-footer-brand { font-weight: 700; color: var(--di-text); }
+
+/* The top bar at a phone: the links row is right-aligned, so when Admin makes
+   it wider than the room left of the wordmark it overflowed to the LEFT and
+   "Spaces" sat under "di.iiii" (audit 2026-10-28, wiki phone 390). `safe` keeps
+   the row from ever starting left of its own box; what does not fit scrolls
+   with the bar, and the wordmark stays on top of anything. */
+.wiki-root .sbar-links { justify-content: safe flex-end; }
+.wiki-root .sbar-home { position: relative; z-index: 1; background: var(--di-bg); }
 
 @media (max-width: 800px) {
     .wiki-layout { grid-template-columns: 1fr; }

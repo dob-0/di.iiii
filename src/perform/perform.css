@@ -92,7 +92,7 @@
     color: var(--di-dim);
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
 }
 
 .perform-menu-row {
@@ -266,7 +266,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
 }
 
 /* The picture of a Picture Out, as big as the window lets it be. */
