@@ -11,6 +11,11 @@ import { CodeEditorArea } from './CodeEditorArea.jsx'
 // numbers, no colours, no find and no indenting. These fail on that box.
 afterEach(() => { window.localStorage.clear(); vi.useRealTimers() })
 
+// jsdom has no layout for a Range. CodeMirror measures text on an animation frame; when that frame
+// runs inside a test (fake timers, or a slow full-suite run) it called these and threw (land batch review).
+if (!Range.prototype.getClientRects) Range.prototype.getClientRects = () => []
+if (!Range.prototype.getBoundingClientRect) Range.prototype.getBoundingClientRect = () => new DOMRect()
+
 const loaded = async (props = {}) => {
     const ref = createRef()
     const onCommit = vi.fn()
