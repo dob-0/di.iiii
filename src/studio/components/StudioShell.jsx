@@ -408,6 +408,16 @@ export default function StudioShell({
     const openRef = useRef(open)
     useEffect(() => { openRef.current = open }, [open])
 
+    // While the phone's bottom bar is drawn, tell the floating notices and
+    // questions how much of the screen it takes (--di-bottom-offset, ui.css).
+    const bottomBarDrawn = !uiHidden && Boolean(isMobile)
+    useEffect(() => {
+        if (!bottomBarDrawn) return undefined
+        const root = window.document.documentElement
+        root.classList.add('has-studio-bottom-bar')
+        return () => root.classList.remove('has-studio-bottom-bar')
+    }, [bottomBarDrawn])
+
     const resetLayout = useCallback(() => {
         setPositions(DEFAULT_POSITIONS())
         setPanelSizes({})

@@ -110,10 +110,18 @@
     outline-offset: 2px;
 }
 
+/* One offset for every floating notice and question: the height of whatever
+   fixed bar sits at the bottom of the screen plus the home-bar safe area.
+   A shell that draws such a bar sets --di-bottom-offset where it draws it
+   (Studio on a phone: .has-studio-bottom-bar in studio-mobile.css). */
+:root {
+    --di-bottom-offset: env(safe-area-inset-bottom);
+}
+
 .di-undo-notice {
     position: fixed;
     left: 50%;
-    bottom: var(--di-space-5);
+    bottom: calc(var(--di-space-5) + var(--di-bottom-offset));
     transform: translateX(-50%);
     z-index: 10001;
     display: flex;
@@ -136,7 +144,7 @@
         padding:
             max(var(--di-space-4), env(safe-area-inset-top))
             max(var(--di-space-4), env(safe-area-inset-right))
-            max(var(--di-space-4), env(safe-area-inset-bottom))
+            max(var(--di-space-4), var(--di-bottom-offset))
             max(var(--di-space-4), env(safe-area-inset-left));
     }
 

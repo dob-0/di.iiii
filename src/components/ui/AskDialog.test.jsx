@@ -24,7 +24,7 @@ describe('AskDialog', () => {
         const narrow = css.slice(css.indexOf('@media (max-width: 600px)'))
         expect(narrow).toMatch(/\.di-ask-actions\s*\{[^}]*flex-direction:\s*column/)
         expect(narrow).toMatch(/\.di-ask-button\s*\{[^}]*width:\s*100%/)
-        expect(narrow).toMatch(/safe-area-inset-bottom/)
+        expect(narrow).toMatch(/safe-area-inset-bottom|--di-bottom-offset/)
     })
 
     it('is an alertdialog with a title and a named confirm button', () => {
