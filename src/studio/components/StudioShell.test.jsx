@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import StudioShell from './StudioShell.jsx'
 import { ALL_TOOLS_KEY, saveAllTools } from '../utils/jamMode.js'
+import { clearViewportChoices } from '../utils/viewportMode.js'
 
 const WORKSPACE_KEY = 'dii.studio.workspace.v1'
 
@@ -11,14 +12,16 @@ vi.mock('./StudioViewportLayout.jsx', () => ({
         <>
             <output data-testid="gizmo-axis" data-edit-mode={shared.editMode} data-help={shared.showHelp ? 'open' : 'closed'}>{shared.gizmoAxis || 'all'}</output>
             <output data-testid="edit-mode">{shared.editMode}</output>
+            <output data-testid="viewport-page-only">{shared.pageOnly ? 'yes' : 'no'}</output>
         </>
     )
 }))
 vi.mock('./StudioFloatingPanel.jsx', () => ({ default: ({ title, onClose, windowKey, children }) => <div className="sfp-shell" data-window-key={windowKey} data-panel={title} data-closable={onClose ? 'yes' : 'no'}>{onClose && <button className="sfp-close" onClick={onClose}>x</button>}{children}</div> }))
 vi.mock('./StudioControlCluster.jsx', () => ({
-    default: ({ gizmoMode, previewUrl }) => (
-        <div className="scc-wrap">
+    default: ({ gizmoMode, previewUrl, pageOnly, onAddScene }) => (
+        <div className="scc-wrap" data-page-only={pageOnly ? 'yes' : 'no'}>
             <button type="button" data-window-key="scene">Objects</button>
+            {pageOnly && onAddScene && <button type="button" onClick={onAddScene}>Add a scene</button>}
             <output data-testid="gizmo-mode" data-preview-url={previewUrl || ''}>{gizmoMode}</output>
         </div>
     )
@@ -408,7 +411,8 @@ describe('StudioShell — a code project does not open Create by itself', () => 
     it('a project holding a page opens without the Create window', () => {
         renderShell({ document: codeDoc, layers: PAGE })
         expect(panels()).not.toContain('Create')
-        expect(panels()).toContain('Objects')
+        // S16 (2026-10-29): nor the Objects window; a page project shows page tools only (next describe).
+        expect(panels()).not.toContain('Objects')
     })
 
     it('a project holding a page still opens Create when the address asks for it (?open=create)', () => {
@@ -624,5 +628,69 @@ describe('StudioShell keyboard: Tab, letter keys, Esc', () => {
         await act(() => new Promise((r) => setTimeout(r, 0)))
         expect(screen.queryByLabelText('Project title')).toBeNull()
         expect(saved).toEqual([])
+    })
+})
+
+// S16 (audit F017, F139, F001; 2026-10-29): a page project drew the 3D tools around its page — Create, Objects,
+// Navigate / Edit / Select / Walk / Fly, the split buttons, the axis ball and 'Perspective'. It now shows page tools
+// only; "Add a scene" brings every 3D tool back, and "All tools" keeps the full screen (nothing is lost).
+describe('StudioShell — a page project shows page tools only', () => {
+    const OPEN = { space: true, things: true, connections: false, wall: false, lamps: false, handover: false }
+    const PAGE = { loaded: true, empty: false, held: true, open: OPEN }
+    const pageDoc = (id) => ({ projectMeta: { id, title: 'Page' }, assets: [], presentationState: { mode: 'scene', entryView: 'code', codeFiles: [{ name: 'index.html', content: '<p>hi</p>' }] } })
+    const sceneDoc = { projectMeta: { id: 's16-scene', title: 'Room' }, assets: [], entities: [{ id: 'e1', type: 'box' }], presentationState: { mode: 'scene' } }
+    const panels = () => [...document.querySelectorAll('[data-panel]')].map((el) => el.dataset.panel)
+    const threeD = () => ({
+        panels: panels().filter((name) => ['Create', 'Objects', 'Scene'].includes(name)),
+        switch: screen.queryByRole('radiogroup', { name: 'View or Edit' }) ? 1 : 0,
+        viewport: screen.getByTestId('viewport-page-only').textContent,
+        cluster: document.querySelector('.scc-wrap')?.dataset.pageOnly,
+    })
+
+    afterEach(() => {
+        saveAllTools(false)
+        clearViewportChoices()
+        window.history.replaceState(null, '', '/')
+        window.localStorage.clear()
+    })
+
+    it('a page project draws no 3D window, no View | Edit, and tells the viewport and the cluster', () => {
+        renderShell({ document: pageDoc('s16-a'), layers: PAGE })
+        expect(threeD()).toEqual({ panels: [], switch: 0, viewport: 'yes', cluster: 'yes' })
+    })
+
+    it('a scene project is unchanged', () => {
+        renderShell({ document: sceneDoc, layers: PAGE })
+        expect(threeD()).toEqual({ panels: ['Create', 'Objects'], switch: 1, viewport: 'no', cluster: 'no' })
+    })
+
+    it('a page that also holds a scene keeps its 3D tools', () => {
+        renderShell({ document: { ...pageDoc('s16-b'), entities: [{ id: 'e1', type: 'box' }] }, layers: PAGE })
+        expect(threeD().viewport).toBe('no')
+        expect(threeD().switch).toBe(1)
+    })
+
+    it('"Add a scene" brings every 3D tool back, with Create open', () => {
+        renderShell({ document: pageDoc('s16-c'), layers: PAGE })
+        fireEvent.click(screen.getByRole('button', { name: 'Add a scene' }))
+        expect(threeD()).toEqual({ panels: ['Create', 'Objects'], switch: 1, viewport: 'no', cluster: 'no' })
+    })
+
+    it('on a phone: Share and Code in the bar, no View | Edit, and "Add a scene" opens Create', () => {
+        renderShell({ document: pageDoc('s16-e'), layers: PAGE, isMobile: true })
+        const bar = () => [...screen.getByRole('navigation', { name: 'Studio windows' }).querySelectorAll('button')].map((b) => b.textContent)
+        expect(bar()).toEqual(['Share', 'Code', 'Add a scene'])
+        expect(screen.queryByRole('radiogroup', { name: 'View or Edit' })).toBeNull()
+        fireEvent.click(screen.getByRole('button', { name: 'Add a scene' }))
+        expect(bar()).toEqual(['Create', 'Objects', 'Scene', 'Share', 'Code'])
+        expect(document.querySelector('.smb-sheet-head')?.textContent).toContain('Create')
+    })
+
+    it('"All tools" keeps the full screen on a page project', () => {
+        saveAllTools(true)
+        renderShell({ document: pageDoc('s16-d'), layers: PAGE })
+        expect(threeD().viewport).toBe('no')
+        expect(threeD().cluster).toBe('no')
+        expect(threeD().switch).toBe(1)
     })
 })
