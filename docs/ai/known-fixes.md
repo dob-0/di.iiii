@@ -3,6 +3,20 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Empty rig pages told people to run developer scripts (rig pages, UX audit F038, 2026-10-29)
+
+Symptom: a fresh project's plot said "No venue plan … (scripts/rigbuild/load-plot.mjs)", the cards "written … by scripts/rigbuild/looks.mjs"
+and "rental.mjs", the scenes deck "looks.mjs … show-cues.mjs" — and no button (audit `capture/sheets/plot.png`, `cards.png`, `scenes.png`).
+Cause: the empty states were written for the developer who loaded MOXIR by script; the steps had no in-app way in.
+Fix: `src/rigbuild/NextStep.jsx` + `nextStep.js`: each empty state is one plain line and the buttons that do it — rental list → "pick the
+equipment" (the equipment page writes it), positions → "build on the plot" / "build it in the room", plot hall → "load the hall plan"
+(a hall.json, `venuePlanFromHall`, same as `load-plot.mjs --plan-only`), looks → "make a first look" (every group `point`, open white) and
+"load looks from a rig file" (`rigLooksFrom`, moved to `src/rigbuild/rigLooksFrom.js`; `scripts/rigbuild/looks.mjs` imports and re-exports
+it, so script and button run one code), scenes → "put looks on the cue list" (the cards). Writes go through the page's own op path (undo,
+read-only = links only, the server's write check). The scripts stay runnable from a terminal.
+Regression test: `src/rigbuild/nextStep.test.jsx` ("the empty rig pages name no developer script", "the script and the button run one code";
+5 of its 16 fail on origin/dev's page files).
+
 ## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
 
 Symptom: after adding a box from Create, the child and the senior pulled it; the view turned and the box left the screen, Position

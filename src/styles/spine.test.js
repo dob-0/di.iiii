@@ -29,6 +29,8 @@ const SPINE_FILES = [
     'components/surfaceBar.css',
     // The rig's steps row: a second row of the bar, written in the spine from its first line.
     'rigbuild/rigSteps.css',
+    // An empty rig page's next step (NextStep.jsx, F038): in the spine from its first line.
+    'rigbuild/nextStep.css',
     'wiki/wiki.css',
     'studio/styles/studio-hub.css',
     'landing/landing.css',

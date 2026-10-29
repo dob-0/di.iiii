@@ -33,7 +33,7 @@ export default function ScenesSurface({ spaceId, projectId, readOnly = false }) 
                 {readOnly ? <ViewOnlyLine /> : null}
             </div>
             {state.hasLoaded
-                ? <ScenesDeck doc={state.document} applyOps={applyOps} projectId={projectId} readOnly={readOnly} syncError={readOnly ? null : syncState?.pendingSyncError} syncVersion={state.version} />
+                ? <ScenesDeck doc={state.document} applyOps={applyOps} spaceId={spaceId} projectId={projectId} readOnly={readOnly} syncError={readOnly ? null : syncState?.pendingSyncError} syncVersion={state.version} />
                 : <p className="rigscenes-body">Reading the show…</p>}
         </div>
     )

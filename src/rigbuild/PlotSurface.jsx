@@ -14,6 +14,9 @@ import { snap, wrapYaw } from './snap.js'
 import { buildPatchSheetPath } from './patchRouting.js'
 import { plotModel, titleTotals } from './plotModel.js'
 import { planExtent } from './venuePlan.js'
+import NextStep from './NextStep.jsx'
+import { rigStepPath } from './rigTools.js'
+import { NEXT_STEP_WORDS, hallPlanOps } from './nextStep.js'
 import {
     SHEETS, chooseScale, fitView, formatMetres, hitTest, inMarquee, layRun, nextUnit, rigExtent,
     sheetLayout, snapToGrid, zoomView
@@ -750,7 +753,20 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
                 ) : null}
             </svg>
             {!state.hasLoaded ? <p className="rigplot-loading">Reading the rig…</p> : null}
-            {state.hasLoaded && !model.venue ? <p className="rigplot-banner">No venue plan in this project: the hall is not drawn. It comes from the hall the model was built from (scripts/rigbuild/load-plot.mjs).</p> : null}
+            {/* No hall plan: load it here (F038); scripts/rigbuild/load-plot.mjs --plan-only does the same from a terminal */}
+            {state.hasLoaded && !model.venue ? (
+                <div className="rigplot-banner">
+                    <NextStep
+                        line={NEXT_STEP_WORDS.hall}
+                        readOnly={readOnly}
+                        applyOps={(ops) => edit(ops)}
+                        actions={[
+                            { label: NEXT_STEP_WORDS.hallFile, file: (hall, name) => hallPlanOps(entities, hall, name), done: 'the hall plan is loaded' },
+                            { label: NEXT_STEP_WORDS.build, href: rigStepPath('build', spaceId, projectId) }
+                        ]}
+                    />
+                </div>
+            ) : null}
             <div className="rigplot-zoom" role="group" aria-label="Zoom">
                 <button type="button" aria-label="Zoom in" title="Zoom in (+)" onClick={() => zoomBy(ZOOM_STEP)}>+</button>
                 <button type="button" aria-label="Zoom out" title="Zoom out (-)" onClick={() => zoomBy(1 / ZOOM_STEP)}>−</button>
