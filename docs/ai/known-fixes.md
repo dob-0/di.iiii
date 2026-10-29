@@ -3,6 +3,21 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Flat pages started 3D, cards booted a whole app each, "no forward" logged a red error (UX audit F136, F137, F138, F155; 2026-10-29)
+
+Symptom: `/spaces` loaded 336 requests / 2 MB (a hidden copy of the app per card); the wiki and front page started a WebGL canvas as
+decoration; every space open logged `404 /api/resolve/<space>` in red; `verify:surfaces` failed on an artist page's Cloudflare beacon.
+Cause: cards without a cover booted `?preview=1` frames to take a still; `WikiPage` mounted `GridFloorBackground` always; the server
+answered "nothing to forward" with a 404; the checker counted every console error, whoever logged it.
+Fix: a card with no picture draws a calm still (`SpaceHub.jsx` `ssh-card-still`) and the 3D opens by pressing it (`SpaceCardLive`);
+wiki flat unless `?scene=1`; front page's idle room off under reduced-motion (`utils/decorative3d.js`, the door still brings the room);
+`GET /api/resolve/:space` answers 200 `{ movedTo: null }` for nothing to forward (404 only for a space that does not exist; old clients
+read both); `scripts/verifySurfacesFilters.mjs` drops console lines from another origin.
+Kept as modes (nothing is lost): `?previews=live` or `localStorage['dii:space-card-previews']='live'` = the earlier boot-a-frame cards
+(`studio/utils/spaceCardMode.js`); `?scene=1` = the 3D backdrop on wiki and front page.
+Regression tests (fail on the old code, run): `SpaceHub.test.jsx` ("calm still"), `WikiPage.test.jsx` ("backdrop"),
+`serverXR/src/projectMoveContracts.test.js` (nothing-to-forward is 200), `scripts/verifySurfacesFilters.test.js`, `utils/decorative3d.test.js`.
+
 ## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
 
 Symptom: after adding a box from Create, the child and the senior pulled it; the view turned and the box left the screen, Position

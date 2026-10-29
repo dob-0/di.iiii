@@ -2484,18 +2484,19 @@ router.get('/api/resolve/:spaceSegment', async (req, res, next) => {
   try {
     const spaceSegment = req.params.spaceSegment
     const space = (await findSpaceBySlug(spaceSegment)) || (await loadSpaceMeta(normalizeSpaceId(spaceSegment) || spaceSegment))
-    if (!space || space.publishedProjectId) return res.status(404).json({ error: 'Not found.' })
+    if (!space) return res.status(404).json({ error: 'Not found.' })
+    if (space.publishedProjectId) return res.json({ movedTo: null })
     const moved = findSpaceRootMove(space.id)
-    if (!moved) return res.status(404).json({ error: 'Not found.' })
+    if (!moved) return res.json({ movedTo: null })
     const target = await findProjectById(SPACES_DIR, moved.projectId)
     const targetSpace = target ? await loadSpaceMeta(target.spaceId) : null
-    if (!target || !targetSpace) return res.status(404).json({ error: 'Not found.' })
+    if (!target || !targetSpace) return res.json({ movedTo: null })
     const options = { requireAuth: config.requireAuth }
     const member = isSpaceMember(req.authState, target.spaceId, options)
     const canOpenSpace = !config.requireAuth || Boolean(targetSpace.isPublic) || member
     const canOpenProject = canSeeProject(req.authState, target.meta, options)
       && (member || target.meta.state === 'live')
-    if (!canOpenSpace || !canOpenProject) return res.status(404).json({ error: 'Not found.' })
+    if (!canOpenSpace || !canOpenProject) return res.json({ movedTo: null })
     // Where it is NOW, not where the move put it: a project that moved on
     // again is still reached by its id in its current space.
     res.json({ movedTo: { spaceId: target.spaceId, projectId: target.projectId } })
