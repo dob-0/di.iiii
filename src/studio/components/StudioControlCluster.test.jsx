@@ -223,3 +223,26 @@ describe('the save line, review round 2 of S03', () => {
         expect(dot.getAttribute('title')).toBe('connected')
     })
 })
+
+// S16 (2026-10-29): a page project's cluster has no Tools row and no 3D windows; "Add a scene" stands in their place.
+describe('a page project (pageOnly)', () => {
+    it('draws no Navigate / Edit / Select / Walk / Fly and no Create, Objects or Scene window button', () => {
+        const onAddScene = vi.fn()
+        render(<StudioControlCluster {...base} onWalk={() => {}} xrState={{ canEnterVr: true }} onToggleRigMirror={() => {}} pageOnly onAddScene={onAddScene} />)
+        for (const name of ['Navigate', 'Edit', 'Select', 'Walk', 'Fly', 'Create', 'Objects', 'Scene', 'VR', 'Lights']) {
+            expect(screen.queryByRole('button', { name })).toBeNull()
+        }
+        expect(screen.getByRole('button', { name: 'Code' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument()
+        fireEvent.click(screen.getByRole('button', { name: 'Add a scene' }))
+        expect(onAddScene).toHaveBeenCalledTimes(1)
+    })
+
+    it('a scene project keeps its Tools row and every window, and has no "Add a scene"', () => {
+        render(<StudioControlCluster {...base} onWalk={() => {}} />)
+        for (const name of ['Navigate', 'Edit', 'Select', 'Walk', 'Fly', 'Create', 'Objects', 'Scene', 'Code']) {
+            expect(screen.getByRole('button', { name })).toBeInTheDocument()
+        }
+        expect(screen.queryByRole('button', { name: 'Add a scene' })).toBeNull()
+    })
+})
