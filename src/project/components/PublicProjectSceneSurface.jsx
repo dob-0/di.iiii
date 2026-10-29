@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import useXrAr from '../../hooks/useXrAr.js'
 import { computeFramingCamera, fitCameraToAspect, getPointsBoundingSphere, getViewportAspect } from '../../utils/cameraFraming.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
@@ -7,6 +7,7 @@ import { doorsOf, fitArrivalToDoors } from '../../components/arrivalFraming.js'
 import { isPlatformOwnSpace } from '../../components/MadeWithBadge.jsx'
 import lazyWithReload from '../../utils/lazyWithReload.js'
 import { useGraphMakesRoom } from './graphRoom.js'
+import { walkNeedsGraph } from '../graph/walkNeedsGraph.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
 
 // Everything in this module -- the XR store, the camera framing math, the two
@@ -218,7 +219,7 @@ export default function PublicProjectSceneSurface({
             {navMode === 'walk' ? (
                 <>
                 {/* the project's graph runs beside the walk: same runtime as RawViewport, one owner (useWalkGraph) */}
-                {document.nodes?.length ? <WalkGraphLayer document={document} /> : null}
+                {walkNeedsGraph(document) ? <Suspense fallback={null}><WalkGraphLayer document={document} topClear={topClear} /></Suspense> : null}
                 <LiveProjectScene
                     // a new renderer on a quality switch: antialias is fixed when the context is made
                     key={outputMode ? 'lite' : 'full'}

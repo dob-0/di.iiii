@@ -2,6 +2,7 @@ import { act, cleanup, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import WalkGraphLayer from '../components/WalkGraphLayer.jsx'
 import { claimWalkGraph, releaseWalkGraph } from './useWalkGraph.js'
+import { walkNeedsGraph } from './walkNeedsGraph.js'
 import { createEdge, createNode } from '../nodeRegistry.js'
 
 // A Timer started at once, its Elapsed wired into a Text: the walk shows it counting.
@@ -46,5 +47,24 @@ describe('the node graph runs while walking', () => {
         const mine = Symbol('x')
         expect(claimWalkGraph(mine)).toBe(false)
         releaseWalkGraph(mine)
+    })
+
+    it('the second runner takes the graph when the first leaves', () => {
+        const a = render(<WalkGraphLayer document={timerDoc()} />)
+        const b = render(<WalkGraphLayer document={timerDoc()} />)
+        expect(b.container.querySelector('[data-walk-graph-texts]')).toBeNull()
+        a.unmount()
+        act(() => { vi.advanceTimersByTime(300) })
+        expect(b.container.querySelector('[data-walk-graph-texts]')).not.toBeNull()
+    })
+
+    it('a Text with no wire is a note: nothing shown, nothing mounted', () => {
+        const doc = { ...timerDoc(), edges: [] }
+        expect(walkNeedsGraph(doc)).toBe(false)
+        expect(walkNeedsGraph(timerDoc())).toBe(true)
+        expect(walkNeedsGraph({ nodes: [], edges: [] })).toBe(false)
+        const { container } = render(<WalkGraphLayer document={doc} />)
+        act(() => { vi.advanceTimersByTime(300) })
+        expect(container.querySelector('[data-walk-graph-texts]')).toBeNull()
     })
 })

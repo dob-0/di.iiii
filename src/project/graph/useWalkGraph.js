@@ -7,15 +7,19 @@ import { useDocumentClock } from './useDocumentClock.js'
 // memory so a Timer keeps its start) — no second evaluator. RawViewport is not
 // mounted in a walk (PublicProjectSceneSurface shows one OR the other), and this
 // claim keeps it that way if two surfaces ever mount together: the first runner
-// owns the graph, any later one stays quiet until the first leaves.
+// owns the graph; a later one waits and takes it when the first leaves, so a
+// second surface keeps the graph running.
 let owner = null
+const waiting = new Set()
 export const claimWalkGraph = (token) => {
     if (owner && owner !== token) return false
     owner = token
     return true
 }
 export const releaseWalkGraph = (token) => {
-    if (owner === token) owner = null
+    if (owner !== token) return
+    owner = null
+    for (const retry of [...waiting]) { if (retry()) break }
 }
 
 // Returns the graph context of this frame (read it with evaluateNodeInput /
@@ -26,9 +30,15 @@ export function useWalkGraph(document) {
     const [token] = useState(() => Symbol('walk-graph'))
     const [claimed, setClaimed] = useState(false)
     useEffect(() => {
-        if (!claimWalkGraph(token)) return undefined
-        setClaimed(true)
+        const take = () => {
+            if (!claimWalkGraph(token)) return false
+            waiting.delete(take)
+            setClaimed(true)
+            return true
+        }
+        if (!take()) waiting.add(take)
         return () => {
+            waiting.delete(take)
             releaseWalkGraph(token)
             setClaimed(false)
         }
