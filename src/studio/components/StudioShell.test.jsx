@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import StudioShell from './StudioShell.jsx'
@@ -497,7 +498,7 @@ describe('StudioShell keyboard: Tab, letter keys, Esc', () => {
         fireEvent.keyDown(document.body, { key: 'Escape' })
         expect(shells().sort()).toEqual(['scene', 'world'])
     })
-    it('Esc closes the help also with the focus on a checkbox inside it; in a text field it first leaves the field', () => {
+    it('Esc closes the help also with the focus on a checkbox inside it; in a text field it first leaves the field', async () => {
         renderShell()
         const help = () => screen.getByTestId('gizmo-axis').dataset.help
         fireEvent.keyDown(document.body, { key: '?' })
@@ -516,10 +517,39 @@ describe('StudioShell keyboard: Tab, letter keys, Esc', () => {
         text.focus()
         fireEvent.keyDown(text, { key: 'h' })
         fireEvent.keyDown(text, { key: 'Escape' })
+        await act(() => new Promise((r) => setTimeout(r, 0)))
         expect(help()).toBe('open')
         expect(document.activeElement).not.toBe(text)
         fireEvent.keyDown(document.body, { key: 'Escape' })
         expect(help()).toBe('closed')
         box.remove(); text.remove()
+    })
+    it('Esc in a rename field cancels the rename: leaving the field does not save it', async () => {
+        // The Projects panel and the object list rename fields: Esc cancels, blur saves. React runs the field's
+        // own Esc first; the shell must not blur the field while it is still on the page, or the cancel becomes a save.
+        const saved = []
+        const RenameField = () => {
+            const [editing, setEditing] = useState(true)
+            const [draft, setDraft] = useState('old')
+            if (!editing) return null
+            return (
+                <input
+                    aria-label="Project title"
+                    value={draft}
+                    ref={(el) => el?.focus()}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onBlur={() => { saved.push(draft); setEditing(false) }}
+                    onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false) }}
+                />
+            )
+        }
+        renderShell()
+        render(<RenameField />)
+        const field = screen.getByLabelText('Project title')
+        fireEvent.change(field, { target: { value: 'typo' } })
+        fireEvent.keyDown(field, { key: 'Escape' })
+        await act(() => new Promise((r) => setTimeout(r, 0)))
+        expect(screen.queryByLabelText('Project title')).toBeNull()
+        expect(saved).toEqual([])
     })
 })

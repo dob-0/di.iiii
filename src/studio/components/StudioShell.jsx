@@ -456,8 +456,12 @@ export default function StudioShell({
                 || (e.target.tagName === 'INPUT' && !NON_TEXT.includes(e.target.type))
             const inInput = inText || e.target.tagName === 'INPUT'
             // WAI-ARIA dialog pattern: Esc in a text field first leaves the field (the focus goes to the page), the next Esc closes.
+            // After the field's own Esc has run: a rename field that Esc cancels is gone by then, so blur cannot save it.
             if (inText && e.key === 'Escape') {
-                e.target.blur?.()
+                const field = e.target
+                setTimeout(() => {
+                    if (field.isConnected && field.ownerDocument.activeElement === field) field.blur?.()
+                }, 0)
                 return
             }
             if (inInput && e.key !== 'Escape') return
