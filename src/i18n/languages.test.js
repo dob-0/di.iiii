@@ -37,9 +37,8 @@ describe.each([
         expect(lib.isPreviewHost(input)).toBe(expected)
     })
     it('withLang then splitLang gives the path back', () => {
-        for (const [, p] of cases.splitLang.filter(([, r]) => r.lang === 'hy' || r.lang === 'ru')) {
-            const { lang, path: rest } = lib.splitLang(`/${'hy'}${p.path === '/' ? '' : p.path}`)
-            expect(lib.splitLang(lib.withLang(lang, rest))).toEqual({ lang, path: rest })
+        for (const [, split] of cases.splitLang) {
+            expect(lib.splitLang(lib.withLang(split.lang, split.path))).toEqual(split)
         }
     })
 })
