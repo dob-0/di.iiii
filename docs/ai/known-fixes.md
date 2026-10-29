@@ -3,6 +3,24 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
+
+Symptom: after adding a box from Create, the child and the senior pulled it; the view turned and the box left the screen, Position
+stayed 0 / 0.75 / 0 and the tool was still Navigate (audit `capture/flows/T5/desktop-08.png` → `desktop-10.png`).
+Cause: the Studio opened in Navigate (`StudioShell.jsx` `useState('navigate')`), where every left pull orbits the camera, and adding a
+thing did not change the tool; nothing on screen said which mode a pull was in. Fix (owner 2026-10-28, "View | Edit"): one
+**View | Edit** switch (`ViewEditSwitch.jsx`, desk top centre and the phone's top row; E toggles it); in **Edit** a pull that starts on
+the ONE selected, unlocked thing slides it along the floor at its height, one undo step (`pullToMove.js`, `PULL_TOOLS = ['edit']`,
+`pullPressAllowed`; `useCameraNavigation` takes `mode`); a pull anywhere else, Alt+pull and the middle button still move the camera
+(Move 1, untouched); in **View** nothing moves by a pull; adding from Create switches to Edit (`StudioShell.jsx`).
+Regression tests: `src/studio/navigation/pullToMove.test.js` ("View: a pull on the selected box turns the view…", "only in Edit…"),
+`src/studio/components/StudioShell.test.jsx` ("View | Edit (owner 2026-10-28)").
+Kept as a mode (owner 2026-10-29, "what we have never lose"): the 2026-10-12 Edit mouse ("edit like Blender", commit `ed2c5290e`) is
+**Scene → Move → Mouse in Edit: Pull to move | Like Blender** (`navigation/editMouse.js` `presetForTool` / `pullOnFor`, stored per
+browser as `di.studio.navigation.editMouse`, default `pull`). Like Blender = origin/dev's Edit map, no pull; View is always Move 1.
+Tests: `src/studio/navigation/editMouse.test.js` (the map compared button by button with a snapshot read from origin/dev's
+`mappings.js`), `MoveSettings.test.jsx` ("Mouse in Edit"), `StudioHelpDialog.test.jsx` (both mouse tables).
+
 ## Recurring bug class: silent hardcoded fallback
 
 A per-entity value (spaceId, auth scope, asset id) gets read from a source that can be

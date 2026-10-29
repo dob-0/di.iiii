@@ -17,6 +17,7 @@ import { CC_ACTION } from '../navigation/mappings.js'
 import { isTypingTarget } from '../utils/editKeys.js'
 import { letterKeyIsOff } from '../utils/studioKeyPrefs.js'
 import { boxModeFor, isPickableEntity, mergeSelection, normalizeRect, pickInRect } from '../utils/selectionTools.js'
+import { pullInProgress } from '../navigation/pullToMove.js'
 
 const DRAG_START_PX = 4
 
@@ -98,6 +99,8 @@ export default function BoxSelect({ active = false, entities = [], selectedEntit
             const { active: on } = live.current
             if (event.button !== 0 || event.altKey) return
             if (!on && !armed) return
+            // Edit (View | Edit): the press already started a pull on the selected thing (pullToMove.js), so it draws no box.
+            if (pullInProgress()) return
             start = { x: event.clientX, y: event.clientY, mode: boxModeFor(event) }
             dragging = false
             setButtons({ left: CC_ACTION.NONE })
