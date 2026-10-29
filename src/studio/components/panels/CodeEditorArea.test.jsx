@@ -1,6 +1,9 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { createRef } from 'react'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { EditorView } from '@codemirror/view'
 import { CodeEditorArea } from './CodeEditorArea.jsx'
 
@@ -85,5 +88,19 @@ describe('CodeEditorArea (CodeMirror)', () => {
         rerender(<CodeEditorArea ref={ref} value={'abc\ndefg'} fileName="a.js" onCommit={() => {}} />)
         expect(ref.current.value).toBe('abc\ndefg')
         expect(ref.current.selectionStart).toBe(6)
+    })
+
+    // Picture step (S18): a 680 KB file made the box as tall as the file, the find bar sat ~125,000 px
+    // down and "Use a plain text box" was out of reach; the line numbers let sideways text show through.
+    describe('box in a window (css)', () => {
+        const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../styles/studio-code.css'), 'utf8')
+        const rule = (sel) => (css.match(new RegExp(`${sel.replace(/[.]/g, '\\.')}\\s*\\{([^}]*)\\}`)) || [])[1] || ''
+        it('the editor has a height limit and scrolls inside', () => {
+            expect(rule('.di-code-editor')).toMatch(/max-height:\s*\d+vh/)
+            expect(rule('.di-code-editor .cm-editor .cm-scroller')).toMatch(/overflow:\s*auto/)
+        })
+        it('the gutter is opaque', () => {
+            expect(rule('.di-code-editor .cm-editor .cm-gutters')).toMatch(/background:\s*var\(--di-bg\)/)
+        })
     })
 })
