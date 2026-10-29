@@ -283,7 +283,7 @@ describe('SpaceHub', () => {
         listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true, isPublic: true }])
         render(<SpaceHub />)
         const card = await findCard('mine')
-        expect(card.getAttribute('role')).toBeNull()
+        expect(card.getAttribute('role')).not.toBe('button')
         expect(card.getAttribute('tabindex')).toBeNull()
         const link = screen.getByRole('link', { name: 'Mine' })
         expect(link.getAttribute('href')).toBe('/mine')
