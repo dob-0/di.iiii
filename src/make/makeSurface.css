@@ -41,6 +41,8 @@ body.is-make .account-btn-wrapper {
     --make-card: #FFFFFF;
     --make-ink: #26241F;
     --make-ink-soft: #7C7568;
+    /* the second-language line and the 'later' button: 5.5:1 on the paper (soft was 4.3:1; UX audit F103) */
+    --make-ink-readable: #6B6458;
     --make-line: rgba(38, 36, 31, 0.10);
     --make-shadow: 0 -16px 44px rgba(38, 30, 18, 0.16);
     /* Two rows: the picture on its own, then the other three words. */
@@ -713,7 +715,7 @@ body.is-make .account-btn-wrapper {
     font-size: var(--di-text-4);
     font-weight: 500;
     letter-spacing: 0.04em;
-    color: var(--make-ink-soft);
+    color: var(--make-ink-readable);
 }
 
 .make-name-input {
@@ -774,7 +776,7 @@ body.is-make .account-btn-wrapper {
     border: 0;
     border-radius: 20px;
     background: transparent;
-    color: var(--make-ink-soft);
+    color: var(--make-ink-readable);
     font-family: inherit;
     cursor: pointer;
 }
