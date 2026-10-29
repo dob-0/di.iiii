@@ -5,6 +5,7 @@ import StudioViewportLayout from './StudioViewportLayout.jsx'
 import StudioFloatingPanel from './StudioFloatingPanel.jsx'
 import { letterKeyIsOff, readKeyPrefs, tabFlipsMode } from '../utils/studioKeyPrefs.js'
 import StudioControlCluster from './StudioControlCluster.jsx'
+import StudioSaveLine from './StudioSaveLine.jsx'
 import StudioCueStrip from './StudioCueStrip.jsx'
 import StudioProjectsPanel from './StudioProjectsPanel.jsx'
 import StudioQuickInsert from './StudioQuickInsert.jsx'
@@ -180,6 +181,10 @@ export default function StudioShell({
     onTransformCancel,
     editHistory = null,
     onHistoryJump,
+    // Undo and Redo, the same calls as Ctrl+Z (useOpHistory's undo and redo, which replay inverse ops
+    // through applyLocalOps). Null draws no buttons. The ends come from editHistory's cursor.
+    onUndo = null,
+    onRedo = null,
     // mappingState.cues, and the one way to fire one. The same cues the
     // projection tool lists; firing from here reaches the wall and the
     // lighting desk by exactly the same path.
@@ -908,6 +913,10 @@ export default function StudioShell({
                         onOpenProjection={offerProjection ? onOpenProjection : undefined}
                         xrState={xrState}
                         syncState={syncState}
+                        onUndo={onUndo}
+                        onRedo={onRedo}
+                        canUndo={Boolean(editHistory && editHistory.cursor > 0)}
+                        canRedo={Boolean(editHistory && editHistory.cursor < editHistory.steps.length)}
                         presence={presence}
                         snapEdges={snapEdges}
                         onToggleSnap={() => setSnapEdges((v) => !v)}
@@ -985,6 +994,21 @@ export default function StudioShell({
                             >
                                 {viewportEditMode === 'edit' ? 'Editing' : 'Edit'}
                             </button>
+                        )}
+                        {/* Undo and Redo, and the save line: the phone has no Ctrl key. Their own row
+                            (full width, never more than one 44 px button high), so the bar grows by at most
+                            one row in every save state and the long "Not saved: ..." wraps beside the buttons
+                            instead of pushing a third row (UX audit S03 review). */}
+                        {!bare && ((onUndo && onRedo) || syncState) && (
+                            <div className="smb-status-row">
+                                {onUndo && onRedo && (
+                                    <span className="smb-undo-redo">
+                                        <button type="button" className="smb-top-btn" onClick={onUndo} disabled={!(editHistory && editHistory.cursor > 0)} aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
+                                        <button type="button" className="smb-top-btn" onClick={onRedo} disabled={!(editHistory && editHistory.cursor < editHistory.steps.length)} aria-label="Redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+                                    </span>
+                                )}
+                                {syncState && <StudioSaveLine syncState={syncState} className="smb-save-line" />}
+                            </div>
                         )}
                     </div>
                     {mobileSheet && (
