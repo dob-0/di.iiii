@@ -109,7 +109,8 @@ const ALLOWED = {
     'src/works/works.js': [1, 'links already printed with the old name still work'],
     'vite.config.js': [1, 'quotes the message the slim install printed'],
     'src/raw/director/DirectorPanel.jsx': [1, 'how the timeline used to fail on the hosted site'],
-    'src/timeline/timingOverlay.js': [1, 'how the timeline used to fail on the hosted site']
+    'src/timeline/timingOverlay.js': [1, 'how the timeline used to fail on the hosted site'],
+    'docs/ai/team-sync-by-network-name.md': [1, 'the 2026-10-29 decision that dropped the old zone']
 }
 
 const counts = () => {
