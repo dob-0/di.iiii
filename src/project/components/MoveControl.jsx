@@ -6,6 +6,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 import { TURN_MODES } from '../../studio/navigation/freeMove.js'
+import { FLY_KEYS, FLY_KEYS_LABEL, flyKeysFor } from '../../studio/navigation/flyKeys.js'
 import { MOVES, moveFor } from '../../studio/navigation/moves.js'
 import { MOVE_HINT, MOVE_LABEL, SPEED_LABEL, TURN_LABELS, autoLabel, metresText, useMoveSettings, useSpeedField } from '../../studio/navigation/useMoveSettings.js'
 
@@ -49,7 +50,7 @@ export default function MoveControl({ buttonStyle = overlayButtonStyle, wrapStyl
     const wrap = useRef(null)
     const trigger = useRef(null)
     const speedId = useId()
-    const { speed, turn, move, setSpeed, setTurn, setMove, isAuto, auto } = useMoveSettings()
+    const { speed, turn, move, flyKeys, setSpeed, setTurn, setMove, setFlyKeys, isAuto, auto } = useMoveSettings()
     const current = moveFor(move, moves)
     const speedField = useSpeedField({ speed, setSpeed })
 
@@ -120,6 +121,14 @@ export default function MoveControl({ buttonStyle = overlayButtonStyle, wrapStyl
                         {TURN_MODES.map((mode) => (
                             <button key={mode} type="button" aria-pressed={turn === mode} style={{ ...choice, ...(turn === mode ? lit : null) }} onClick={() => setTurn(mode)}>
                                 {TURN_LABELS[mode]}
+                            </button>
+                        ))}
+                    </div>
+                    <span style={caption}>{FLY_KEYS_LABEL}</span>
+                    <div style={row} role="group" aria-label={FLY_KEYS_LABEL}>
+                        {FLY_KEYS.map((f) => (
+                            <button key={f.id} type="button" aria-pressed={flyKeysFor(flyKeys).id === f.id} style={{ ...choice, ...(flyKeysFor(flyKeys).id === f.id ? lit : null) }} onClick={() => setFlyKeys(f.id)}>
+                                {f.label}
                             </button>
                         ))}
                     </div>

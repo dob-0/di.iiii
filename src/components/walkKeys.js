@@ -6,13 +6,15 @@
 //   L · head light  the head light (headLight.js), only in a project that turns the light on.
 //
 // Owner, 2026-10-28 (ledger N1445): "if every one has their own lets keep our how that is" -- where there is no common
-// standard, di.iiii keeps its own keys. Q, E and the other walk keys are not touched here.
+// standard, di.iiii keeps its own keys. While flying, E is up and Q is down (Unity, Unreal, Roblox Studio and Blender agree;
+// owner N1445.1, 2026-10-29); the table is docs/ai/keys.md.
 import { HEAD_LIGHT_KEY } from './headLight.js'
+import { physicalKey } from './physicalKey.js'
 
 export const FLY_KEY = 'f'
 
-/** Fly's key: F, either case. The same in every project. (Typing into a field is ruled out by the caller: walkKeyboard.js.) */
-export const isFlyKey = (event) => Boolean(event) && typeof event.key === 'string' && event.key.toLowerCase() === FLY_KEY
+/** Fly's key: the F key, either case, on any keyboard layout (physicalKey.js). The same in every project. (Typing into a field is ruled out by the caller: walkKeyboard.js.) */
+export const isFlyKey = (event) => physicalKey(event) === FLY_KEY
 
 // Between two keys on a hint line: the line has always been written with non-breaking spaces round the dot.
 export const HINT_SEPARATOR = ' \u00A0·\u00A0 '
@@ -24,6 +26,13 @@ export const HINT_SEPARATOR = ' \u00A0·\u00A0 '
  * @param {{ headLight?: boolean, flying?: boolean }} state
  * @returns {string}
  */
+// Fly's up / down keys. Space and C were always up and down; E up and Q down is the common standard, so it now leads.
+export const ALTITUDE_KEYS = Object.freeze({ up: [' ', 'e'], down: ['q', 'c'] })
+// Archive (nothing we have is lost): the pair before 2026-10-29, Q up and E down. A caller can still pass it as `altitudeKeys`.
+export const LEGACY_ALTITUDE_KEYS = Object.freeze({ up: [' ', 'q'], down: ['e', 'c'] })
+// The words for the altitude keys on the hint line while flying.
+export const ALTITUDE_HINT_TEXT = 'Space/E · up' + HINT_SEPARATOR + 'C/Q · down'
+
 export const walkKeyHintText = ({ headLight = false, flying = false } = {}) => [
     ...(headLight ? [`${HEAD_LIGHT_KEY.toUpperCase()} · head light`] : []),
     `${FLY_KEY.toUpperCase()} · ${flying ? 'walk' : 'fly'}`
