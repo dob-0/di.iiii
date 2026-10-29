@@ -3,6 +3,24 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## A page project drew the 3D tools around its page (Studio, UX audit F017 / F001 / F139, slice S16 PR a, 2026-10-29)
+
+Symptom: a project that is a web page (the cinema-house copy) opened Studio on its page (#1161) but still drew the 3D tools over it:
+the Objects window, View | Edit, Navigate / Edit / Select / Walk / Fly, Create / Objects / Scene window buttons, the H V N W split
+buttons, the axis ball and "Perspective" (13 such buttons at 1440 px, 8 at 390 px; `ux-fix/wave3/S16/shots/counts-before.json`).
+Cause: `StudioShell.jsx` chose the toolset by "empty or not" only (`bare = … !layers.held`), and a page makes a project never empty
+(`project/layers.js`), so a page got the full scene toolset. Fix: `pageOnly` in `StudioShell.jsx` = the viewport opens on the page
+(`useViewportMode` = code, loaded), the project holds no scene (`holdsScene`), not the jam, not "⚒ All tools", and "Add a scene" not
+pressed for this project. Then the Objects and Scene windows, View | Edit (desk and phone), the cluster's Tools row, Create / Objects /
+Scene buttons, XR and Lights (`StudioControlCluster.jsx` `pageOnly`), and the pane's split buttons, axis ball and view name
+(`StudioViewportLayout.jsx` `shared.pageOnly`) are not drawn; the phone bar is Share, Code, Add a scene. Nothing is lost: **Add a scene**
+(cluster "Scene" row; phone bar) sets the viewport choice to scene and opens Create, every 3D tool back for the page's life; **⚒ All
+tools** keeps the old full screen on every project. Canvas: 0 on a page project before and after (#1161 already mounted no
+`StudioViewport` in code view); F139 is closed by #1161, measured here. A page that also holds a scene keeps its 3D tools.
+Regression tests (5 fail on origin/dev 8f20185c1): `StudioShell.test.jsx` "a page project shows page tools only" (+ the #1161 test's
+Objects line now expects no Objects), `StudioControlCluster.test.jsx` "a page project (pageOnly)", `StudioViewportLayout.test.jsx`
+"on a page project".
+
 ## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
 
 Symptom: after adding a box from Create, the child and the senior pulled it; the view turned and the box left the screen, Position
@@ -1593,3 +1611,5 @@ CI fix (2026-10-29): `spine.test.js` refused `.sh-project-title { padding-right:
 Symptom: `https://dev.diiii.xyz/serverXR/page/terms` answered 503 `shell unavailable` (17 B); an unknown address answered 200 with the static shell (a soft 404, nginx `@shell`); `/sitemap-built.xml` answered 404 and the server logged `[sitemap] built sitemap unreadable: fetch failed`.
 Cause (read on the Mac, read-only): the dev tier's generated `server.env` held `SHELL_URL=http://client:8080/index.html` and `SITEMAP_BUILT_URL=http://client:8080/sitemap-built.xml`, the defaults of `docker-compose.yml:87-88`, a Docker name with no host there (`curl http://client:8080/` exit 6, could not resolve). `scripts/standby/server-env.mjs` replaced DATA_ROOT, HOST and NODE_ENV but not these. And `nginx-conf.sh` rewrote `listen`, `root` and `server:4000` but not `alias /usr/share/nginx/html/sitemap.xml` (`nginx.conf:328`): the nginx error log read `open() "/usr/share/nginx/html/sitemap.xml" failed`. `loadShell().catch(() => null)` logs nothing, so the 503 was silent. Ruled out: CLIENT_DIR (not set), an old build (health `gitCommit` = the release, and the 503 text is the page route's own), the tier's nginx (`127.0.0.1:8081/index.html` 200, 10,176 B).
 Fix: `server-env.mjs --nginx <host:port>` points every `http://client:8080` value at the tier's own nginx and refuses (exit 1, naming the keys) to write a value still naming `client:8080`; di-atlas `tools/standby/release.sh` genenv passes `--nginx 127.0.0.1:$NGINX_PORT` (an older server-env ignores the flag, so di-atlas lands first). `nginx-conf.sh` rewrites `alias /usr/share/nginx/html/` to the release's `dist/` and stops on any non-comment line still naming `/usr/share/nginx/html`; its three shape checks stay. Guard: `scripts/standby/server-env.test.js` (3 new) and `scripts/standby/nginx-conf.test.js` (3); 5 of 6 new cases red on the old scripts. Rule: a standby host replaces EVERY Docker-only fact of the compose and nginx files (service names, image paths), and the script refuses what it does not replace.
+
+| **Twenty spaces could not each have a project called "my scene": the second one got `409 that name is taken on this di.iiii — try another` in small grey words, the form already closed, and an empty name ("Untitled") clashed the same way** (2026-10-29, ux-fix S21, F061) | The create route turned the typed name into the project's id, and ids are global on one di.iiii; both create forms sent `slug: name`, so a person's name was always treated as an exact id. The forms closed before the answer came | A name typed by a person (`title`, no `slug`) is unique only inside its space: a same-space clash is a 409 `code: name-taken-in-space` naming it; a clash with another space gets a free id (`my-scene-2`) and the name as short name, so `/{space}/my-scene` still opens; an empty name becomes "Untitled", "Untitled 2"… Callers that name the id (`slug`, `carried`) keep the old door. StudioHub and the Studio projects panel send only the name and keep the form open with a red `role="alert"` message. No id is renamed. Decision: `docs/ai/decisions/2026-10-29-project-names-per-space.md`. Guards: `serverXR/src/routes/projectRoutes.namesPerSpace.test.js`, `projectContracts.test.js` "names per space", `StudioHub.test.jsx` / `StudioProjectsPanel.test.jsx` "…taken in this space" (all fail on origin/dev) |

@@ -582,6 +582,47 @@ machine, and a type of project in di.iiii: a project you play, because it has ru
 | **start point** | Where a visitor appears when play starts. | not "spawn" in copy |
 | **walker** | An object that walks the scene by itself: patrol, follow, search. | not "NPC", "AI" |
 
+## Proposed 2026-10-29 — the six core words in Armenian and Russian (unverified)
+
+Languages design, slice S13c (`docs/ai/decisions/2026-10-29-languages-in-the-address.md`, "Words first"). Before any
+message file exists, the six words every other sentence leans on get one Armenian and one Russian form here. Every row is a
+machine draft: state **unverified**, source `machine:<model>@<date>`. The owner checks them on one page
+(`node scripts/i18n/review.mjs page`); his answer per row is written back by the agent with
+`node scripts/i18n/review.mjs check <word> <lang> --by <name> [--says <his word>]`, which sets the state to **checked**
+and the source to `human:<name>@<date>`. He never edits this file. Russian is checked by a native speaker he names.
+
+The words keep their English meaning from the dictionary above; only the form a person reads changes. Nouns are given in
+the singular; a heading that lists them takes the plural (Տարածքներ, пространства).
+
+<!-- i18n-core-words:start -->
+| Word | Language | Says | State | Source | Why this word |
+| --- | --- | --- | --- | --- | --- |
+| space | hy | Տարածք | unverified | machine:claude-opus-5-5@2026-10-29 | The plain word for an area that is someone's; the sketch already says Տարածքներ for Spaces. |
+| space | ru | пространство | unverified | machine:claude-opus-5-5@2026-10-29 | The word Russian software uses for a shared place of work ("рабочее пространство"); not "комната", which is a room. |
+| project | hy | Նախագիծ | unverified | machine:claude-opus-5-5@2026-10-29 | The standard word for a thing one plans and makes; the camp says սենյակ (room), which the dictionary bans for a project. |
+| project | ru | проект | unverified | machine:claude-opus-5-5@2026-10-29 | The same word and the same meaning as in English; no other word competes. |
+| scene | hy | Տեսարան | unverified | machine:claude-opus-5-5@2026-10-29 | A scene one sees and stands in; not Բեմ, which is the stage itself and would clash with a real place's stage. |
+| scene | ru | сцена | unverified | machine:claude-opus-5-5@2026-10-29 | The word 3D tools use in Russian (Blender: «Сцена»); a theatre ear also hears the stage, the owner may prefer it or not. |
+| object | hy | Օբյեկտ | unverified | machine:claude-opus-5-5@2026-10-29 | As the sketch writes it (Օբյեկտներ); not Առարկա, which also means a school subject. |
+| object | ru | объект | unverified | machine:claude-opus-5-5@2026-10-29 | The word 3D tools use in Russian (Blender: «Объект»); "предмет" also means a school subject. |
+| place | hy | Վայր | unverified | machine:claude-opus-5-5@2026-10-29 | A real location in the world; not Տարածք (that is a space) and not Սրահ, which is only a hall. |
+| place | ru | площадка | unverified | machine:claude-opus-5-5@2026-10-29 | What Russian theatre and events call a venue; "место" is heard as a seat or a spot. |
+| production | hy | Բեմադրություն | unverified | machine:claude-opus-5-5@2026-10-29 | A staged work with its place and run; not Արտադրություն, which is a factory's output. Narrower for a light show: owner's call. |
+| production | ru | постановка | unverified | machine:claude-opus-5-5@2026-10-29 | The theatre word for a staged work and its run; not "производство" (a factory) or "продакшн" (a film company's slang). |
+<!-- i18n-core-words:end -->
+
+**Where earlier guesses differ** (read 2026-10-29, nothing in them was changed):
+
+- The sketch (`docs/design/lang-switch/concept-b.html:112,121`) says Տարածքներ (Spaces) and Օբյեկտներ (Objects): the same
+  words as above, in the plural. Its third word, Հատկություններ (Properties), is a panel name, not a core word; it waits for
+  the message files (S13g).
+- The camp's table (`src/make/makeVocabulary.js`) has no word for space, project, scene, object, place or production. It
+  calls a child's project a room ("put your photo in the room", դիր քո նկարը սենյակում) and a shape by its own name
+  (ԽՈՐԱՆԱՐԴ, ԳՆԴԱԿ…). That is `/make`'s own mode, outside the switch (the decision, "What it replaces"): it stays as it is.
+  The difference to review is the room: on `/make` a project is սենյակ, everywhere else Նախագիծ.
+- The camp writes its buttons in capitals (ԱՎԵԼԱՑՆԵԼ); this table gives the words in sentence case, the way the frame
+  sets them. Neither changes the other.
+
 ## The rule for anything new
 
 Before adding a word to the product, check it here. If it is not in the dictionary and not
