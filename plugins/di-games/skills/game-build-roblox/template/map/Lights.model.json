@@ -1,0 +1,125 @@
+{
+  "ClassName": "Folder",
+  "Children": [
+    {
+      "Name": "Light_Start",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          2,
+          0.4,
+          2
+        ],
+        "CFrame": {
+          "CFrame": {
+            "position": [
+              20.0,
+              13.5,
+              15.0
+            ],
+            "orientation": [
+              [
+                1,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                0,
+                1
+              ]
+            ]
+          }
+        },
+        "Color": [
+          1,
+          0.95,
+          0.8
+        ],
+        "Material": "Neon",
+        "CanCollide": false
+      },
+      "Children": [
+        {
+          "Name": "Lamp",
+          "ClassName": "PointLight",
+          "Properties": {
+            "Color": [
+              1,
+              0.95,
+              0.8
+            ],
+            "Range": 26,
+            "Brightness": 1
+          }
+        }
+      ]
+    },
+    {
+      "Name": "Light_Hall",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          2,
+          0.4,
+          2
+        ],
+        "CFrame": {
+          "CFrame": {
+            "position": [
+              70.0,
+              13.5,
+              15.0
+            ],
+            "orientation": [
+              [
+                1,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                0,
+                1
+              ]
+            ]
+          }
+        },
+        "Color": [
+          1,
+          0.95,
+          0.8
+        ],
+        "Material": "Neon",
+        "CanCollide": false
+      },
+      "Children": [
+        {
+          "Name": "Lamp",
+          "ClassName": "PointLight",
+          "Properties": {
+            "Color": [
+              1,
+              0.95,
+              0.8
+            ],
+            "Range": 26,
+            "Brightness": 1
+          }
+        }
+      ]
+    }
+  ]
+}
