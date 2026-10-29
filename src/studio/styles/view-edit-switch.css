@@ -18,7 +18,7 @@
     font-family: var(--di-sans);
     font-size: var(--di-text-4);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     min-height: var(--di-touch-target);
     min-width: calc(var(--di-touch-target) * 2);
     padding: 0 var(--di-space-4);
