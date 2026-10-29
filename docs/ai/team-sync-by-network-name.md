@@ -147,7 +147,7 @@ One line when something is wrong, naming the fix: `name not ready: broker unreac
   renewal never touches `http://diiii.localhost/`; `di status` says the date. LE has announced shorter lifetimes
   (**unverified** schedule) — the daily check covers that.
 - **LE limit:** 50 per registered domain per week (VERIFIED) is shared by every install **and** the owner's
-  other `di-studio.xyz` certificates. 90-day renewals mean about 400 installs before it binds — fine for a team;
+  other `diiii.xyz` certificates. 90-day renewals mean about 400 installs before it binds — fine for a team;
   the zone is `l.diiii.xyz` for now (§15 Q1).
 
 ## 11. The router limit, and its one-line fix
@@ -194,7 +194,7 @@ server on the existing VPS: 0 € but an always-on service to watch. Build: five
 1. **Zone (decided 2026-10-29, ledger N1418.10/.11):** `l.diiii.xyz`, broker `https://name.diiii.xyz`; a separate domain, so a broker breach never touches `thedi.studio` and the certificate limit is its own.
    - **Why not `l.thedi.studio`:** thedi.studio is not a Cloudflare zone (its nameservers are GoDaddy's, `ns67/68.domaincontrol.com`), so the broker cannot write records there.
    - **Owed move:** when the owner moves thedi.studio to Cloudflare (GoDaddy → Domains → thedi.studio → Nameservers → "Change" → enter the two nameservers Cloudflare shows for the zone; Cloudflare then imports the records), the zone can become `l.thedi.studio`. It is a config value (`ZONE` in `wrangler.toml`, `DI_NAME_ZONE` on an install), so the move is one value, not code; installs already named keep their name until they re-claim.
-   - **Reviewer's note (Opus R20):** di-studio.xyz also carries live sign-in hosts. Mitigation: the broker writes only `<label>.<zone>` and `_acme-challenge.<label>.<zone>` records (its name guard rejects any other name), and its `CF_API_TOKEN` is scoped to Zone → DNS → Edit on di-studio.xyz only.
+   - **Reviewer's note (Opus R20):** diiii.xyz also carries live hosts (dev, prod, name). Mitigation: the broker writes only `<label>.<zone>` and `_acme-challenge.<label>.<zone>` records (its name guard rejects any other name), and its `CF_API_TOKEN` is scoped to Zone → DNS → Edit on diiii.xyz only.
 2. **Label:** `<who>-<4 chars>` from the `di login` handle, or fully random? **Recommend the handle form** —
    people say "follow ponyo", and CT logs see only a handle.
 3. **Stateless DNS (§5 B):** run our own nameserver for the address-in-name form, or stay on broker records?

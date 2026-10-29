@@ -70,8 +70,8 @@ cd services/name-broker
 npm install                                   # pinned wrangler, dev only
 npx wrangler login                            # once per machine
 npx wrangler kv namespace create LABELS       # put the printed id into wrangler.toml
-# CF_ZONE_ID in wrangler.toml: dashboard → di-studio.xyz → Overview → Zone ID
-npx wrangler secret put CF_API_TOKEN          # a token with Zone → DNS → Edit on di-studio.xyz only
+# CF_ZONE_ID in wrangler.toml: dashboard → diiii.xyz → Overview → Zone ID
+npx wrangler secret put CF_API_TOKEN          # a token with Zone → DNS → Edit on diiii.xyz only
 npx wrangler secret put ADMIN_TOKEN           # a long random string, e.g. openssl rand -hex 32
 npx wrangler deploy
 curl -s https://di-name-broker.<account>.workers.dev/v1/health   # { ok: true, zone, version }
