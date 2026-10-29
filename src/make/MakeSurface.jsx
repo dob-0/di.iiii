@@ -3,6 +3,7 @@ import MakeRoom from './MakeRoom.jsx'
 import { useProjectStore } from '../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
 import { useProjectPresence } from '../project/hooks/useProjectPresence.js'
+import { PlayButton, PlayHost, usePlay } from '../project/components/PlayButton.jsx'
 import { isPreviewRequest } from '../utils/previewMode.js'
 import { createEntityOfType } from '../project/entityRegistry.js'
 import { currentAuthor } from '../project/authorship.js'
@@ -90,6 +91,7 @@ export default function MakeSurface({ projectId, spaceId }) {
         origin: projectDocument?.worldState?.savedView?.target || [0, 0, 0]
     }), [projectDocument?.worldState?.savedView])
 
+    const play = usePlay()
     const [sheet, setSheet] = useState(null)
     const [readSpaceCount, setReadSpaceCount] = useState(0)
     const [status, setStatus] = useState('')
@@ -285,6 +287,13 @@ export default function MakeSurface({ projectId, spaceId }) {
                 onClearSelection={clearSelection}
             />
 
+            {projectDocument?.projectMeta?.id && !sheet ? (
+                <PlayButton onPlay={play.start} className="make-play" title="play · խաղալ">
+                    <span className="make-word-hy">{WORDS.play.hy}</span>
+                    <span className="make-word-en">{WORDS.play.en}</span>
+                </PlayButton>
+            ) : null}
+
             {roomName && (
                 <p className="make-room-name">
                     <span className="make-room-name-hy">{roomName.hy}</span>
@@ -382,6 +391,7 @@ export default function MakeSurface({ projectId, spaceId }) {
             />
 
             {!nameAsked && <MakeNamePrompt onDone={handleName} />}
+            <PlayHost playing={play.playing} document={projectDocument} onStop={play.stop} />
         </main>
     )
 }
