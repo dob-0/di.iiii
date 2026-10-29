@@ -16,7 +16,7 @@ export const NEXT_STEP_WORDS = Object.freeze({
     rental: 'No rental list in this project yet. The equipment page makes one: pick what you take.',
     positions: 'Nothing to hang lamps from yet: no truss, towers, decks or hall plan. Build them first.',
     hall: 'The hall is not drawn yet: this project has no plan of the room.',
-    scenes: 'No scenes in this project yet. A scene is a look on the cue list.',
+    scenes: 'No scenes in this project yet. The cards page makes looks and puts them on the cue list.',
     firstLook: 'make a first look',
     rigFile: 'load looks from a rig file',
     hallFile: 'load the hall plan',

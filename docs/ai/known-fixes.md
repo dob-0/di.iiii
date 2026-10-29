@@ -15,7 +15,7 @@ equipment" (the equipment page writes it), positions → "build on the plot" / "
 it, so script and button run one code), scenes → "put looks on the cue list" (the cards). Writes go through the page's own op path (undo,
 read-only = links only, the server's write check). The scripts stay runnable from a terminal.
 Regression test: `src/rigbuild/nextStep.test.jsx` ("the empty rig pages name no developer script", "the script and the button run one code";
-5 of its 16 fail on origin/dev's page files).
+4 of its 16 fail on origin/dev's page files).
 
 ## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
 
