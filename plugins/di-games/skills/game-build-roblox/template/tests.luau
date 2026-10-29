@@ -5,5 +5,6 @@ local h = require("./tests/harness")
 
 require("./tests/config.test")(h)
 require("./tests/round.test")(h)
+require("./tests/map.test")(h)
 
 h.summary()

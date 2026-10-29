@@ -20,11 +20,16 @@ LAMP_COLOR = [1, 0.95, 0.8]
 REQUIRED = ["wall_height", "thickness", "door_width", "door_height", "areas", "walls", "doors", "spawn"]
 
 
+def cf(pos):
+    """Rojo ignores "Position" in .model.json; it applies only CFrame (explicit form, tested 2026-10-28)."""
+    return {"CFrame": {"position": [round(float(v), 3) for v in pos],
+                       "orientation": [[1, 0, 0], [0, 1, 0], [0, 0, 1]]}}
+
 def part(name, pos, size, color, **extra):
     props = {
         "Anchored": True,
         "Size": [round(v, 3) for v in size],
-        "Position": [round(v, 3) for v in pos],
+        "CFrame": cf(pos),
         "Color": color,
         "Material": "Concrete",
     }
@@ -161,7 +166,7 @@ def build(plan):
             "Neutral": True,
             "Duration": 0,
             "Size": [6, 1, 6],
-            "Position": plan["spawn"],
+            "CFrame": cf(plan["spawn"]),
             "Transparency": 0.5,
         },
     }

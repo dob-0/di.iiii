@@ -59,7 +59,7 @@ function RoundService.start(remote: RemoteEvent, onEvent: (event: Round.Event) -
 	return {
 		round = round,
 		addItem = function(itemId)
-			local _, event = Round.addItem(round, itemId)
+			local _, event: Round.Event? = Round.addItem(round, itemId)
 			handle(event)
 		end,
 		tryFinish = function()

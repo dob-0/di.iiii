@@ -91,3 +91,11 @@ plugin. Studio officially runs on Windows 10+ and macOS 10.14+ (create.roblox.co
 is not listed. Vinegar (Studio through Wine, v1.9.4 of 2026-06-24) exists but had open crash and login
 issues dated 2026-10 (UNCHECKED: from the research job's notes, which are not in this repo; the Vinegar issue tracker was not re-read), so on Linux treat Studio as unproven and use a Windows or
 macOS machine for the walk and the playtests.
+
+## Lessons
+
+Each was measured on a real game and is now built into the template, so a new game starts right.
+
+- **Rojo ignores `Position` in a `.model.json`; only an explicit `CFrame` places a part** (2026-10-28; haunted-school `57fd4c9`, night-forest `bf50922`). `gen_greybox.py` writes `CFrame`; `tests/map.test.luau` fails on any `Position`, any part without a `CFrame`, any part at the origin. Tests read a part's place from `Properties.CFrame.CFrame.position`.
+- **Logic tests read the same JSON as the build, so they cannot see a wrong build** (2026-10-28; haunted-school `8b7aa01`). `scripts/check_place.luau` reads the BUILT `.rbxl` with Lune and fails on parts at the origin, parts outside the plan, a missing or misplaced spawn, scripts missing from the place. `check.sh` runs it right after the Rojo build. Add the game's own rules at its section 5.
+- **`luau-lsp analyze` with Roblox's definitions finds real bugs** (2026-10-28; haunted-school `brain:update` on a method-less table). `check.sh` runs it on `src` with the pinned definitions (`scripts/setup-types.sh` fetches them once; the sha256 is checked). First run on the template itself found a loose `event` type in `RoundService.luau`, now annotated.
