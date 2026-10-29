@@ -137,7 +137,7 @@ try {
         await hold((i) => generateShape({ shape: LASER_SHAPES[i % 8], size: 0.3 + 0.2 * Math.sin(i), height: 0.5, points: 500 }), 2000)
         const got = cube.points.slice(from)
         const secs = (now() - t0) / 1000
-        result.stream.push({ pointsPerSecond: Math.round(got.length / secs), litPerSecond: Math.round(got.filter(lit).length / secs), ...steps(got), overflow: cube.overflow, underruns: cube.ring.snapshot().underruns - ring0.underruns, missing: cube.ring.snapshot().missing - ring0.missing })
+        result.stream.push({ secs, pointsPerSecond: Math.round(got.length / secs), litPerSecond: Math.round(got.filter(lit).length / secs), ...steps(got), overflow: cube.overflow, underruns: cube.ring.snapshot().underruns - ring0.underruns, missing: cube.ring.snapshot().missing - ring0.missing })
         // Signal loss: no frame, no keep-alive.
         const tLoss = now()
         await wait(400)
@@ -194,13 +194,13 @@ console.log(`temperature 70 °C: max green ${result.temperature.maxGreen}/4095 =
 const out = arg('--json', null)
 if (out) fs.writeFileSync(out, JSON.stringify(result, null, 2))
 // Thresholds (ledger N1501.6, N1501.15): a run that misses one exits non-zero.
-const MIN_PPS = Number(arg('--min-pps', 28000))
-const MAX_MISSING_SHARE = Number(arg('--max-missing-share', 0.02)) // of the points a run sent
+const MIN_PPS = Number(arg('--min-pps', 29500))
+const MAX_MISSING_SHARE = Number(arg('--max-missing-share', 0.005)) // of the points a run sent
 const misses = []
 s.forEach((r, i) => {
     if (r.pointsPerSecond < MIN_PPS) misses.push(`run ${i + 1}: ${r.pointsPerSecond} points/s < ${MIN_PPS}`)
     if (r.overflow > 0) misses.push(`run ${i + 1}: buffer overflow ${r.overflow}`)
-    if (r.missing > MAX_MISSING_SHARE * r.pointsPerSecond * 2) misses.push(`run ${i + 1}: ${r.missing} points missing (underruns ${r.underruns})`)
+    if (r.missing > MAX_MISSING_SHARE * r.pointsPerSecond * r.secs) misses.push(`run ${i + 1}: ${r.missing} points missing (underruns ${r.underruns})`)
 })
 console.log(misses.length ? `FAIL\n${misses.join('\n')}` : `PASS: every run >= ${MIN_PPS} points/s, no overflow, missing <= ${MAX_MISSING_SHARE * 100} %`)
 process.exit(misses.length ? 1 : 0)

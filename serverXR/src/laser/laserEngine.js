@@ -85,6 +85,12 @@ const TICK_MS = 20
 const BUFFER_MARGIN = 200
 // The longest stretch of missed time a tick makes up (a stall past it is dropped, not banked).
 const CATCH_UP_MAX_MS = 100
+// The most the engine keeps queued AHEAD in a cube's ring buffer, in ms of playing time. Whatever is
+// queued still plays after a blackout or a dark frame (they stop the feed, not the cube's buffer),
+// so this is also the most dark delay the cushion adds. Today's engine queues about 20 ms.
+// 40 ms covers the studio Mac's late ticks (p99 28-30 ms) and adds up to 20 ms of dark delay against
+// today; 20 ms keeps today's delay and gives up most of the catch-up gain. Owner's choice: 40 or 20.
+const LEAD_MS = 40
 const INFO_POLL_MS = 1000
 const SHUTDOWN_WAIT_MS = 250
 // A Laser Out holds its cube while it says so (frame, keep-alive, its 3-second check): 10 s of silence
@@ -516,6 +522,8 @@ const createLaserEngine = ({
             let free = c.bufferFree + (rate * (t - (c.bufferAt ?? t))) / 1000 - c.sentSince
             if (c.info?.rxBufferSize) free = Math.min(free, c.info.rxBufferSize)
             room = Math.min(room, Math.max(0, Math.floor(free - BUFFER_MARGIN)))
+            const size = c.info?.rxBufferSize
+            if (size) room = Math.min(room, Math.max(0, Math.floor(free - (size - (rate * LEAD_MS) / 1000))))
         }
         c.streamCarry = Math.min(due - Math.floor(due), 1)
         // The next pass of the frame, as optimised; a new frame is reached by a blank bridge.

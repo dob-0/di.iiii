@@ -90,6 +90,15 @@ const armedWith = (config = CUBES) => {
     return rig
 }
 
+// A cube with a small ring buffer, so the free count (not the LEAD_MS cushion) is what limits a send.
+const armedSmallBuffer = () => {
+    const rig = engineWith(ONE)
+    rig.answer('10.0.0.51', { size: 1000 })
+    expect(rig.engine.arm({ armed: true, confirm: ARM_PHRASE }).ok).toBe(true)
+    rig.hear('10.0.0.51', [0x8a, 0, 0xe8, 0x03]) // the clear is confirmed: 1000 free
+    return rig
+}
+
 describe('the LaserCube protocol', () => {
     it('writes a sample-data message: header, then 10 bytes a point, little-endian, centre 0x800', () => {
         const buf = proto.encodeSampleData([[0, 0, 1, 0, 0.5], [-1, 1, 0, 0, 0]], 7, 3)
@@ -276,7 +285,7 @@ describe('the laser engine', () => {
         expect(run({ dac: 30000, max: 35000 }, { ...ONE, dacRate: 25000 })).toBe(600) // laser.json's dacRate is only a request: the cube plays 30 kpps
     })
     it('sends no more than a cube says it has room for', () => {
-        const { engine, socket, hear } = armedWith(ONE)
+        const { engine, socket, hear } = armedSmallBuffer()
         engine.setFrame('all', [[0, 0.5, 1, 1, 1], [0.3, 0.5, 1, 1, 1]])
         hear('10.0.0.51', [0x8a, 0, 250, 0])
         socket.sent.length = 0
@@ -284,7 +293,7 @@ describe('the laser engine', () => {
         expect(pointsIn(dataTo(socket))).toBe(50) // 250 free − the 200-sample margin
     })
     it('counts what the cube has played since its last answer, at its DAC rate', () => {
-        const { engine, socket, hear, at } = armedWith(ONE)
+        const { engine, socket, hear, at } = armedSmallBuffer()
         engine.setFrame('all', circle)
         hear('10.0.0.51', [0x8a, 0, 250, 0])
         at(10) // 10 ms at 30 kpps: 300 more played
@@ -535,6 +544,43 @@ describe('the engine sends every point on time (catch-up pacing)', () => {
     it('a long stall is not banked: the catch-up is capped and the buffer free count still caps the send', () => {
         const r = run({ gaps: [20, 20, 2000, 20] })
         expect(r.overflow).toBe(0)
+    })
+    // The lit points still queued in the cube after a stall, when the show goes dark (blackout or a dark frame).
+    const litQueuedAfterStall = (goDark) => {
+        const { engine, socket, clock, hear } = armedWith(ONE)
+        engine.setFrame('all', circle)
+        socket.sent.length = 0
+        const queue = [] // one flag per queued point: lit or not
+        let seen = 0
+        let owed = 0
+        const tick = (gap, refresh = true) => {
+            clock.t += gap
+            owed += (RATE * gap) / 1000
+            const played = Math.min(queue.length, Math.floor(owed))
+            owed -= Math.floor(owed)
+            queue.splice(0, played)
+            if (refresh) engine.setFrame('all', circle)
+            engine.tick()
+            for (const s of dataTo(socket).slice(seen)) {
+                for (let o = 4; o < s.buf.length; o += 10) queue.push(Boolean(s.buf.readUInt16LE(o + 4) || s.buf.readUInt16LE(o + 6) || s.buf.readUInt16LE(o + 8)))
+            }
+            seen = dataTo(socket).length
+            const free = Math.max(0, SIZE - queue.length)
+            hear('10.0.0.51', [0x8a, 0, free & 0xff, free >> 8])
+        }
+        for (let i = 0; i < 10; i += 1) tick(20)
+        tick(100) // one stall
+        for (let i = 0; i < 50; i += 1) tick(20) // then a second of steady ticks
+        goDark(engine)
+        tick(20, false) // the tick after: the engine feeds nothing lit; what is queued plays on
+        return queue.filter(Boolean).length
+    }
+    it('after a 100 ms stall, a blackout finds at most LEAD_MS of lit points queued', () => {
+        expect(litQueuedAfterStall((engine) => engine.blackout())).toBeLessThanOrEqual((RATE * 40) / 1000)
+    })
+    it('after a 100 ms stall, a dark frame finds at most LEAD_MS of lit points queued', () => {
+        const dark = Array.from({ length: 60 }, () => [0.2, 0.5, 0, 0, 0])
+        expect(litQueuedAfterStall((engine) => engine.setFrame('all', dark))).toBeLessThanOrEqual((RATE * 40) / 1000)
     })
     it('every guard still applies to every point sent: a point outside the zone goes out blank', () => {
         const { engine, socket, clock } = armedWith({ zone: { xMin: -0.2, xMax: 0.2, yMin: 0, yMax: 1 }, cubes: ONE.cubes })
