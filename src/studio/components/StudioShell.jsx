@@ -46,6 +46,7 @@ import {
 import LoadingScreen from '../../components/LoadingScreen.jsx'
 import ViewEditSwitch from './ViewEditSwitch.jsx'
 import { PlayButton, PlayHost, usePlay } from '../../project/components/PlayButton.jsx'
+import { isPlaying } from '../../project/play/playingFlag.js'
 
 // Raycast a viewport double-click into the scene's ground plane (y=0) so a
 // quick-inserted entity lands where the cursor pointed, not at a fixed default.
@@ -503,6 +504,7 @@ export default function StudioShell({
 
     useEffect(() => {
         const handler = (e) => {
+            if (isPlaying()) return
             // A text field keeps every key (typing never fires a shortcut). A checkbox, radio, range or button is not typing: Esc still works there.
             const NON_TEXT = ['checkbox', 'radio', 'range', 'button', 'submit', 'reset', 'color', 'file']
             const inText = e.target.isContentEditable

@@ -67,6 +67,7 @@ import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { KICK_AFTER_INPUT_MS, RenderDemandProvider, useHoldFrames, useFrameloopMode, useStableDemand } from '../utils/renderDemand.jsx'
 import { handlePickClick, pickUserData } from '../utils/pickPriority.js'
+import { isPlaying } from '../../project/play/playingFlag.js'
 
 // The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
 const RigBodies = lazy(() => import('../../rigbuild/RigBodies.jsx'))
@@ -1323,21 +1324,22 @@ export default function StudioViewport({
     useEffect(() => {
         if (lowPower) return undefined
         const kick = () => demand.kick()
+        const keyKick = () => { if (!isPlaying()) demand.kick() }
         const visible = () => { if (!window.document.hidden) kick() }
         // The pointer arriving over the view: frames start before the first drag, so the GPU clock is up when it begins
         // (measured 2026-10-12: after ~4 s idle the clock sat at 225 MHz and the first frames of a drag took 52–144 ms;
         // 300 ms of frames bring it back to 1680 MHz — docs/ai/research/render-smoothness-audit-2026-10-12.md).
         const over = (e) => { if (e.target?.tagName === 'CANVAS') kick() }
         window.addEventListener('resize', kick)
-        window.addEventListener('keydown', kick, true)
-        window.addEventListener('keyup', kick, true)
+        window.addEventListener('keydown', keyKick, true)
+        window.addEventListener('keyup', keyKick, true)
         window.addEventListener('pointerover', over, true)
         window.document.addEventListener('visibilitychange', visible)
         return () => {
             window.removeEventListener('resize', kick)
             window.removeEventListener('pointerover', over, true)
-            window.removeEventListener('keydown', kick, true)
-            window.removeEventListener('keyup', kick, true)
+            window.removeEventListener('keydown', keyKick, true)
+            window.removeEventListener('keyup', keyKick, true)
             window.document.removeEventListener('visibilitychange', visible)
         }
     }, [demand, lowPower])

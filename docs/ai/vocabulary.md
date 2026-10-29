@@ -609,6 +609,9 @@ the singular; a heading that lists them takes the plural (Տարածքներ, п
 | place | ru | площадка | unverified | machine:claude-opus-5-5@2026-10-29 | What Russian theatre and events call a venue; "место" is heard as a seat or a spot. |
 | production | hy | Բեմադրություն | unverified | machine:claude-opus-5-5@2026-10-29 | A staged work with its place and run; not Արտադրություն, which is a factory's output. Narrower for a light show: owner's call. |
 | production | ru | постановка | unverified | machine:claude-opus-5-5@2026-10-29 | The theatre word for a staged work and its run; not "производство" (a factory) or "продакшн" (a film company's slang). |
+| play | hy | ԽԱՂԱԼ | unverified | machine:claude-sonnet-5-5@2026-10-29 | The standard infinitive, same form as ԽՈՍԵԼ and ԱՎԵԼԱՑՆԵԼ beside it in Make; for the Play button (Studio, Make). |
+| playing | hy | ԽԱՂՈՒՄ ԵՍ | unverified | machine:claude-sonnet-5-5@2026-10-29 | The bar's state while a project is walked: "you are playing", second person like Make's other words; the form of address is for a speaker to confirm. |
+| stop | hy | ԿԱՆԳՆԵՑՆԵԼ | unverified | machine:claude-sonnet-5-5@2026-10-29 | The standard infinitive of "to stop" (causative); ԿԱՆԳ is the short sign form a speaker may prefer on a small button. |
 <!-- i18n-core-words:end -->
 
 **Where earlier guesses differ** (read 2026-10-29, nothing in them was changed):

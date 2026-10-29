@@ -49,8 +49,8 @@ describe('Fly stays on F in every project; the head light never moves it', () =>
 describe('every hint line takes its key words from walkKeyHintText', () => {
     it('LiveProjectScene: the pointer-lock hint and the walk hint, with the head light when the project has one', () => {
         expect(SCENE.match(/walkKeyHintText\(/g)).toHaveLength(2)
-        expect(SCENE).toMatch(/walkKeyHintText\(\{ headLight: headLight\.available \}\)/)
-        expect(SCENE).toMatch(/walkKeyHintText\(\{ headLight: headLight\.available, flying: flyMode \}\)/)
+        expect(SCENE).toMatch(/lockHintKeys = walkKeyHintText\(\{ headLight: headLight\.available, fly: showModeControls \}\)/)
+        expect(SCENE).toMatch(/walkHintKeys = walkKeyHintText\(\{ headLight: headLight\.available, flying: flyMode, fly: showModeControls \}\)/)
     })
 
     it('the rig builder hint does the same from the project document', () => {

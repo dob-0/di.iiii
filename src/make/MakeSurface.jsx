@@ -391,7 +391,7 @@ export default function MakeSurface({ projectId, spaceId }) {
             />
 
             {!nameAsked && <MakeNamePrompt onDone={handleName} />}
-            <PlayHost playing={play.playing} document={projectDocument} onStop={play.stop} />
+            <PlayHost playing={play.playing} document={projectDocument} onStop={play.stop} words={{ playing: WORDS.playing, stop: WORDS.stop }} />
         </main>
     )
 }
