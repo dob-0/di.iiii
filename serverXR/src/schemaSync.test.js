@@ -1118,3 +1118,15 @@ describe('fields this build does not know ride through the CJS twin (audit 2026-
     expect(normalizeProjectDocument(JSON.parse(JSON.stringify(once)))).toEqual(once)
   })
 })
+
+// worldState.solidWalls (src/components/solidWalls.js): the server's mirror must normalize the switch the way the
+// client does, or a document saved by one side would be read differently by the other.
+describe('solidWalls mirror', () => {
+  it('is off by default and on only for an explicit enabled: true, keeping nothing else', () => {
+    expect(normalizeProjectDocument({}).worldState.solidWalls).toBe(null)
+    expect(normalizeProjectDocument({ worldState: { solidWalls: { enabled: true, radius: 9 } } }).worldState.solidWalls).toEqual({ enabled: true })
+    for (const off of [{ enabled: false }, {}, { enabled: 'yes' }, true, 'on', null]) {
+      expect(normalizeProjectDocument({ worldState: { solidWalls: off } }).worldState.solidWalls).toBe(null)
+    }
+  })
+})

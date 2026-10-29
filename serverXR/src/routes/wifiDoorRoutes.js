@@ -54,7 +54,7 @@ const registerWifiDoorRoutes = (router, { door, isOwner = isOwnerRequest }) => {
     return res.status(code).json({ error: result.reason, message, ...(result.detail ? { detail: result.detail } : {}) })
   })
   router.delete('/api/wifi-door', guard, async (req, res) => {
-    await door.close()
+    await door.close({ home: true })
     res.json(door.status())
   })
 }
