@@ -3166,6 +3166,10 @@ registerProjectRoutes(router, {
   ensureProject,
   ensureSpaceWritable,
   findProjectBySlug,
+  findAnyProjectById: async (id) => {
+    const found = await findProjectByIdAny(SPACES_DIR, id)
+    return found ? { spaceId: found.spaceId, trashed: Boolean(found.meta?.deletedAt) } : null
+  },
   getProjectLiveBucket,
   getProjectPaths,
   isReservedProjectSlug,

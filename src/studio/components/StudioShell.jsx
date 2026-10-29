@@ -23,6 +23,7 @@ import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspa
 import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
 import { setViewportChoice, useViewportMode } from '../utils/viewportMode.js'
+import { holdsScene } from '../../shared/openingView.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import { useRigMirrorSwitch } from '../hooks/useRigMirrorSwitch.js'
 import { useSendRigPositions } from '../hooks/useSendRigPositions.js'
@@ -387,6 +388,21 @@ export default function StudioShell({
         }
         handleTogglePanel(id)
     }, [createHeldBack, open, handleTogglePanel])
+    // A PAGE PROJECT SHOWS PAGE TOOLS ONLY (S16, 2026-10-29): a project that opens on its page and holds no scene
+    // (no objects, no nodes) does not draw the 3D tools around the page: no Objects or Scene window, no View | Edit,
+    // no Navigate / Edit / Select / Walk / Fly, no split buttons, axis ball or view name. Nothing is lost:
+    // "Add a scene" (the control cluster) brings every 3D tool back with Create open and the viewport on the scene,
+    // for the rest of this page; "⚒ All tools" keeps the full screen on every project. Nothing is saved.
+    const projectId = document?.projectMeta?.id
+    const [sceneAskedFor, setSceneAskedFor] = useState(null)
+    const pageOnly = codeFirst && !isJam && !allTools && sceneAskedFor !== projectId && !holdsScene(document)
+    const handleAddScene = useCallback(() => {
+        setSceneAskedFor(projectId)
+        setCreateAsked(true)
+        setViewportChoice(projectId, 'scene')
+        if (!open.has('create')) handleTogglePanel('create')
+        if (isMobile) setMobileSheet('create')
+    }, [projectId, open, handleTogglePanel, isMobile])
     const isShown = (id) => shownOpen.has(id)
     // Studio's own jump buttons to Nodes and Projection (the control cluster, the phone
     // header) follow the bar: offered once the project has reached that tool's layer,
@@ -401,7 +417,10 @@ export default function StudioShell({
         ? [...MOBILE_PANELS.filter(([id]) => id === 'create'), ['jamedit', 'Edit']]
         : bare
             ? MOBILE_PANELS.filter(([id]) => id === 'create' || (id === 'files' && codeAskedFor))
-            : MOBILE_PANELS
+            // A page project's phone: Share and Code, and "Add a scene" in the bar (S16); Create stays when the address asked for it.
+            : pageOnly
+                ? MOBILE_PANELS.filter(([id]) => !['create', 'scene', 'world'].includes(id) || (id === 'create' && createAskedFor))
+                : MOBILE_PANELS
 
     // The one bar, carrying this project across to Nodes, Projection and Light.
     // Not in a window (?embed=1), a headset, Hide UI, or the jam's simple mode —
@@ -689,6 +708,8 @@ export default function StudioShell({
     )
 
     const viewportShared = {
+        // A page project draws no split buttons, axis ball or view name over its page (S16).
+        pageOnly,
         // a Try in the Light environment section draws the viewport with another version's light; nothing is written
         document: lightEnv?.previewDocument || document,
         selectedEntityId,
@@ -874,7 +895,7 @@ export default function StudioShell({
             {!uiHidden && !isMobile && (
                 <>
                     {/* Nothing to move in an empty room. */}
-                    {!bare && (
+                    {!bare && !pageOnly && (
                         <ViewEditSwitch className="ves--desk" mode={viewportEditMode} onChange={setViewOrEdit} />
                     )}
                     {(isShown('create') || (bare && !createHeldBack)) && (
@@ -889,7 +910,7 @@ export default function StudioShell({
                             {panelBodies.jamedit}
                         </StudioFloatingPanel>
                     )}
-                    {!jamMinimal && !bare && isOpen('scene') && (
+                    {!jamMinimal && !bare && !pageOnly && isOpen('scene') && (
                         <StudioFloatingPanel key={`scene-${layoutKey}`} title="Objects" onClose={() => toggle('scene')} initialWidth={300} {...panelChrome('scene')}>
                             {panelBodies.scene}
                         </StudioFloatingPanel>
@@ -904,7 +925,7 @@ export default function StudioShell({
                             {panelBodies.publish}
                         </StudioFloatingPanel>
                     )}
-                    {!jamMinimal && !bare && isOpen('world') && (
+                    {!jamMinimal && !bare && !pageOnly && isOpen('world') && (
                         <StudioFloatingPanel key={`world-${layoutKey}`} title="Scene" onClose={() => toggle('world')} initialWidth={280} {...panelChrome('world')}>
                             {panelBodies.world}
                         </StudioFloatingPanel>
@@ -935,6 +956,8 @@ export default function StudioShell({
                         onSetGizmoSpace={setViewportGizmoSpace}
                         openPanels={shownOpen}
                         onTogglePanel={handleTogglePanelFor}
+                        pageOnly={pageOnly}
+                        onAddScene={handleAddScene}
                         onFullscreen={handleFullscreen}
                         onHideUI={() => setUiHidden(true)}
                         onBackToHub={onBackToHub}
@@ -1015,7 +1038,7 @@ export default function StudioShell({
                             </button>
                         )}
                         {/* Nothing to edit in an empty room. The same View | Edit switch as on the desk. */}
-                        {!bare && (
+                        {!bare && !pageOnly && (
                             <ViewEditSwitch className="ves--phone" mode={viewportEditMode} onChange={setViewOrEdit} />
                         )}
                         {/* Undo and Redo, and the save line: the phone has no Ctrl key. Their own row
@@ -1067,6 +1090,9 @@ export default function StudioShell({
                                 {label}
                             </button>
                         ))}
+                        {pageOnly && (
+                            <button type="button" className="smb-nav-btn" onClick={handleAddScene}>Add a scene</button>
+                        )}
                     </nav>
                 </>
             )}
