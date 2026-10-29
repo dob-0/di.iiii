@@ -30,3 +30,5 @@ Method source: CodeMirror 6 reference (codemirror.net/docs/ref) — tab-focus mo
 
 ## Round 2 (picture step)
 The editor now fills the free height of its own Code window (desktop) and Code sheet (phone) through a flex chain with min-height 0; the 70vh cap is gone. Nothing removed: the plain text box, find, opaque gutter stay.
+
+Review of round 2: the Code window body and the phone Code sheet body keep their own scroll (no `overflow: hidden`), so the buttons and the library list under the editor are never clipped.
