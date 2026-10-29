@@ -98,7 +98,7 @@ export default function BoxSelect({ active = false, entities = [], selectedEntit
             const { active: on } = live.current
             if (event.button !== 0 || event.altKey) return
             if (!on && !armed) return
-            // Move 2: the press already started a pull on the selected thing (pullToMove.js), so it draws no box.
+            // Edit (View | Edit): the press already started a pull on the selected thing (pullToMove.js), so it draws no box.
             if (pullInProgress()) return
             start = { x: event.clientX, y: event.clientY, mode: boxModeFor(event) }
             dragging = false

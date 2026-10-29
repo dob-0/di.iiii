@@ -309,7 +309,7 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, selected
         // World axes by default (Blender's Global orientation); 'local' follows the object's own axes (owner 10-13: 'no way
         // to move an object in the world frame').
         tc.setSpace(gizmoSpace)
-        // Move 2's pull leaves a press on a handle to the gizmo (pullToMove.js gizmoHasPointer).
+        // Edit's pull (View | Edit) leaves a press on a handle to the gizmo (pullToMove.js gizmoHasPointer).
         const unregister = registerPullGizmo(tc)
         return () => { unregister(); tc.detach() }
     }, [gizmoActive, gizmoSpace])

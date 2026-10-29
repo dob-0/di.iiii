@@ -11,7 +11,7 @@ export const registerEntityObject = (entityId, object3D) => {
     return () => { if (objects.get(entityId) === object3D) objects.delete(entityId) }
 }
 
-// The live group of an entity, or null (Move 2's pull moves it while the pull lasts: navigation/pullToMove.js).
+// The live group of an entity, or null (Edit's pull, View | Edit, moves it while the pull lasts: navigation/pullToMove.js).
 export const getEntityObject = (entityId) => objects.get(entityId) ?? null
 
 export const getEntityWorldBox = (entity) => {
