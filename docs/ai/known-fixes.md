@@ -3,6 +3,19 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Objects said "No objects yet" beside six things on screen (Studio, UX audit F026, 2026-10-29)
+
+Symptom: a scene showed a sphere, boxes, a torus and a lamp, but the Objects window read "Objects (0) No objects yet." and a click on
+the sphere changed nothing (audit `capture/shots/studio-scene/desktop.png`).
+Cause: the list counted `document.entities` only; the things were standing nodes (made in Nodes, a template or a page layer), which
+the scene draws and the list never read (`StudioEditor.jsx` `entities={insideGeo ? geoRows : entities}`).
+Fix: `listRoomNodes` / `roomNodeRow` (`project/graph/geoScope.js`) list the parentless spatial nodes; the editor passes them as
+`nodeRows` and `StructurePanel` adds them to the count and the list; a Geo row opens that Geo (`onOpenNodeRow` = `openGeo`).
+Each row made in Nodes (not a Geo) shows a visible "Edit in Nodes" button that opens Nodes (`onEditNodeRowInNodes` = the Nodes jump); the top room's marked Camera is not listed, as Studio does not draw it.
+Not done: selecting a non-Geo standing node inside Studio (the top room stays `editable:false`; the button is the way to edit it).
+Regression tests: `StructurePanel.test.jsx` ("lists what the scene shows"), `geoScope.test.js` ("what stands in the top room", incl. the marked Camera, and the Edit in Nodes button).
+Replaced nothing: entity rows, rename, hide, lock, drag-to-group and the empty line for a truly empty project are unchanged.
+
 ## A page project drew the 3D tools around its page (Studio, UX audit F017 / F001 / F139, slice S16 PR a, 2026-10-29)
 
 Symptom: a project that is a web page (the cinema-house copy) opened Studio on its page (#1161) but still drew the 3D tools over it:
