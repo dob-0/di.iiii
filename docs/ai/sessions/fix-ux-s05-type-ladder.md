@@ -17,3 +17,6 @@
 - `.device-code` (`src/pages/deviceLogin.css`) is a code to copy, not a label: it keeps its 0.16em spacing; the 0.02em label tracking had reached it through the token. No case change needed (the letters are capitals already).
 - Provenance: Q1 A is the UX plan's default the owner took with "ok fix everything", not a separate answer; the comments in `base.css`, `brandTokens.test.js` and the known-fixes line now say so.
 - Checked: the 8 new tests fail on the origin/dev stylesheets (8 failed, 25 passed) and pass on this branch.
+
+## Round 3 (2026-10-29)
+Two phone-390 faults seen in the round-1 picture: the wiki bar links under the wordmark (`wiki.css`, `safe flex-end`), and the build page status box under ITEMS (`build.css`, `max-width: calc(100vw - 188px)`). Guards in `wikiStyles.test.js` and `buildPhoneTotals.test.js`. Wiki article not changed: layout only, no new words or steps.

@@ -168,7 +168,7 @@
 .rigbuild.is-phone .rigbuild-hotbar { max-width: 100%; }
 .rigbuild.is-phone .rigbuild-slot { width: 76px; min-height: 56px; }
 .rigbuild.is-phone .rigbuild-slot__label { font-size: 11px; }
-.rigbuild.is-phone .rigbuild-totals { top: 58px; right: 8px; font-size: 10px; padding: 5px 7px; max-width: 58vw; }
+.rigbuild.is-phone .rigbuild-totals { top: 58px; right: 8px; font-size: 10px; padding: 5px 7px; max-width: calc(100vw - 188px); /* right of the items button (96px + its width, 171px at 390), never under it */ }
 .rigbuild.is-phone .rigbuild-totals .rigbuild-dim { display: none; }
 .rigbuild.is-phone .rigbuild-mode { top: 58px; left: 8px; }
 /* a tag is small type with a thumb-sized target around it */
