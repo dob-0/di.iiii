@@ -3,6 +3,10 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Two main regions on /spaces and a hub (Studio, UX S19 repair, 2026-10-29)
+
+StudioApp wrapped the hub, spaces and director views in `<main>`, but SpaceHub and StudioHub already render their own: axe `landmark-no-duplicate-main` 1 and `landmark-main-is-top-level` 1. Rule: every view owns its main, the wrapper adds none; the director now renders its own `<main>` (also on the redirect fallback). Guards: a render count of `main` in `SpaceHub.test.jsx`, `StudioHub.test.jsx`, `StudioCodeSpaceDirector.test.jsx` and a source check in `pageTitles.test.js`; the director and source ones watched fail on the old code.
+
 ## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
 
 Symptom: after adding a box from Create, the child and the senior pulled it; the view turned and the box left the screen, Position
