@@ -12,6 +12,8 @@
  * "visible to a guest", and the line says so.
  * Design: docs/ai/decisions/2026-10-29-languages-in-the-address.md (S13b).
  */
+import { isMainModule } from '../lib/isMainModule.mjs'
+
 const DEFAULT_HOSTS = ['https://diiii.xyz', 'https://dev.diiii.xyz', 'http://diiii.localhost']
 const MIN_LENGTH = 3
 
@@ -47,7 +49,7 @@ export const countHost = async (host) => {
     return out
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
     const hosts = process.argv.slice(2).length ? process.argv.slice(2) : DEFAULT_HOSTS
     for (const host of hosts) {
         const r = await countHost(host.replace(/\/+$/, ''))
