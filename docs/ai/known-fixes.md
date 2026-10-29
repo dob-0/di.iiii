@@ -1578,3 +1578,4 @@ Cause: only ~15 call sites used `useDocumentTitle`; the Studio, chat home, tools
 Fix: `src/hooks/pageTitles.js` is the one route -> title table ("<page> — <where> — di.iiii"); `StudioApp`, `StudioEditor` (project name, a visually hidden h1 and a `<main>` with `display: contents`), `ChatHomeSurface` (h1 + main), `KitPage`, `PreferencesPage` (section name) call it.
 Guard: `src/hooks/pageTitles.test.js` (18; 7 failed on the old code). Owed: titles move into the S13 message layer when it lands; Make page and axe page-has-heading-one are not measured here.
 Kept (nothing lost): the index.html default stays as the title of the landing and any route without an entry.
+Review fix (2026-10-29): the Studio hub, spaces and director views had an h1 but still no main; `StudioApp` now wraps them in `<main className="studio-page-main">` (display: contents), and the project view's hidden h1 sits inside its main. Guard: `pageTitles.test.js` (20; 9 fail on origin/dev's sources).
