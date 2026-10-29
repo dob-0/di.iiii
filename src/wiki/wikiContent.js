@@ -44,6 +44,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-25'
     },
     {
+        id: 'head-light',
+        category: 'Editing',
+        title: 'Head light: a flashlight that follows your view',
+        summary: 'A project can give people who walk in it a flashlight. It points where they look, starts off, and is switched with L on a computer or a square Head light button on a phone.',
+        body: [
+            'The head light is a warm white cone about 35 degrees wide that reaches about 10 m and fades with distance. It sits at the visitor\'s eye and points where the eye points, so it is the visitor\'s own light and nobody else sees it. It is off when they start walking.',
+            'On a computer press L to switch it on and off. On a phone tap the square Head light button by the Fly button. Fly is where it always was: the F key and its button.',
+            'A project turns it on in its document: worldState.headLight = { enabled: true } (a setWorldState op). Without it there is no light and no button, and L does nothing; F flies in every project.',
+            'In High quality the light casts a shadow. On a phone (Low quality) there are no shadows, so the beam also reaches things behind a wall; the visitor cannot see them, because the light sits at their eye. It has not been tried in a headset, and a headset has no key or button to switch it on.'
+        ],
+        tags: ['head light', 'flashlight', 'torch', 'walk', 'dark', 'light', 'phone', 'keyboard', 'quality'],
+        updated: '2026-10-28'
+    },
+    {
         id: 'view-page-controls',
         category: 'Editing',
         title: 'What visitors see on the view page',
@@ -1217,11 +1231,12 @@ export const WIKI_ARTICLES = [
                 'Mouse wheel — zoom (always; it never rotates the view)',
                 'WASD — walk when you are inside a scene; click (or drag) to look with the mouse; scroll — step forward/back toward what you face',
                 'F — fly mode (Space / Q up, C / E down); on phones, up/down buttons appear while flying',
+                'L — head light, in a project that turns it on: a flashlight that follows where you look, off until you press L (in other projects L does nothing)',
                 'VR & AR controllers — left stick walks, right stick turns and flies (push the stick up/down); works in passthrough AR too; a hint appears in-headset the first time you enter'
             ] }
         ],
         tags: ['shortcuts', 'controls', 'vr'],
-        updated: '2026-10-13'
+        updated: '2026-10-28'
     },
     {
         id: 'api-and-agents',
