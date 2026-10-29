@@ -1861,7 +1861,7 @@ export const WIKI_ARTICLES = [
             'One address shape only: /{space}/make/{project}. There is no list page and no default — a child follows a link a mentor wrote down, because an address that guessed which project you meant could open the wrong child\'s room. A bare /make is not the toybox: no project is named in it, so there is nothing for it to open, and the page says so and points here. It sits behind the same gate as the node editor, so an invite that opens the space opens its toybox too.'
         ],
         tags: ['make', 'toybox', 'phone', 'camp', 'children', 'raw', 'project'],
-        updated: '2026-09-10'
+        updated: '2026-10-29'
     },
     {
         id: 'math-and-route-nodes',
