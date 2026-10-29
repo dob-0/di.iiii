@@ -200,6 +200,47 @@ describe('the desk on the engine', () => {
         desk.close()
         engine.shutdown()
     })
+    describe('a Blackout taken by an engine the desk has not seen yet (review 1224 F1)', () => {
+        const mk = (dir, t) => createLaserEngine({ dataDir: dir, log: null, now: () => t.now, setInterval: () => 0, clearInterval: () => {} })
+        const lit = (engine) => engine.frames().byCube['cube-1']?.some(isLit) ?? false
+        it('A: a Blackout before the desk\'s first Go is not drawn over', () => {
+            const dir = tmp(), t = { now: 5000 }
+            const engine = mk(dir, t)
+            const { desk } = deskWith(engine, { dir, t })
+            engine.blackout()
+            desk.go('star')
+            expect(desk.state().blackout).toBe(true)
+            expect(lit(engine)).toBe(false)
+            desk.close(); engine.shutdown()
+        })
+        it('B: release, a new engine (Use these), its Blackout, then Go stays dark', () => {
+            const dir = tmp(), t = { now: 5000 }
+            let engine = mk(dir, t)
+            const desk = createLaserDesk({ dataDir: dir, getEngine: () => engine, now: () => t.now, setInterval: () => 1, clearInterval: () => {}, log: null })
+            desk.go('star')
+            desk.release()
+            const old = engine
+            engine = mk(dir, t)
+            engine.blackout()
+            desk.go('ring')
+            expect(desk.state().blackout).toBe(true)
+            expect(lit(engine)).toBe(false)
+            desk.close(); engine.shutdown(); old.shutdown()
+        })
+        it('C: live desk, a reload, the new engine\'s Blackout, then Go stays dark', () => {
+            const dir = tmp(), t = { now: 5000 }
+            let engine = mk(dir, t)
+            const desk = createLaserDesk({ dataDir: dir, getEngine: () => engine, now: () => t.now, setInterval: () => 1, clearInterval: () => {}, log: null })
+            desk.go('star')
+            const old = engine
+            engine = mk(dir, t)
+            engine.blackout()
+            desk.go('ring')
+            expect(desk.state().blackout).toBe(true)
+            expect(lit(engine)).toBe(false)
+            desk.close(); engine.shutdown(); old.shutdown()
+        })
+    })
     it('a live edit with nothing live is refused (409) and puts nothing on the cubes (review 1218 S2)', () => {
         const engine = fakeEngine()
         const { desk } = deskWith(engine)

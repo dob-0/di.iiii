@@ -2032,7 +2032,7 @@ export const WIKI_ARTICLES = [
             'The desk is one more sender to the laser server, next to Laser Out and the show player, and every rule of the server applies to it: the cubes start disarmed at every start, the keep-in zone blanks what would point below the cube, the galvo and still-beam guards and the signal-loss stop work as for any frame, and one sender drives a cube at a time — a cube a Laser Out holds refuses the desk, and Setup and Stage say so. A start finds the desk released: the bank, the clock and the setup are kept, nothing is on the cubes until a look is pressed.'
         ],
         tags: ['laser', 'lasercube', 'desk', 'looks', 'bpm', 'show', 'live', 'safety', 'blackout', 'performance'],
-        updated: '2026-10-29'
+        updated: '2026-10-30'
     },
     {
         id: 'lamp-node',

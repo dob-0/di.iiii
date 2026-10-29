@@ -300,8 +300,9 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         const engine = getEngine()
         const count = engine.frames().blackouts ?? 0
         // A config reload (Use these) builds a new engine with no frames: everything is sent again, not kept alive.
-        if (engine !== lastEngine) { for (const s of sent.values()) s.key = null; lastEngine = engine; seenBlackouts = count }
-        else if (count > seenBlackouts) {
+        if (engine !== lastEngine) { for (const s of sent.values()) s.key = null; lastEngine = engine; seenBlackouts = 0 }
+        // A new engine counts from 0, so a Blackout it already took is new to the desk (review 1224 F1).
+        if (count > seenBlackouts) {
             seenBlackouts = count
             if (!blackout) {
                 blackout = true

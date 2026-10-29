@@ -620,7 +620,7 @@
                 el('td', {}, output),
                 el('td', {}, check('on')),
                 el('td', {}, check('flipX')),
-                el('td', {}, slider('size', 0, 2, 0.05)),
+                el('td', {}, slider('size', 0.3, 2, 0.05)),
                 el('td', {}, slider('x', -1, 1, 0.01)),
                 el('td', {}, slider('y', -1, 1, 0.01)),
                 el('td', {}, now)
