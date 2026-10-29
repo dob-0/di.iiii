@@ -134,6 +134,139 @@ describe('the TouchDesigner scenes (2026-10-17)', () => {
     })
 })
 
+describe('the minimal figures and the sparkles (2026-10-29)', () => {
+    const blanks = (points) => points.filter((p) => p[2] + p[3] + p[4] === 0).length
+    const has = (points, x, y) => points.some((p) => Math.abs(p[0] - x) < 1e-9 && Math.abs(p[1] - y) < 1e-9)
+    // The ✦ marks of a frame: the strokes between blank moves, each as its centre (the mean of its four tips).
+    const marks = (points) => {
+        const out = [[]]
+        for (const p of points) { if (p[2] + p[3] + p[4] === 0) out.push([]); else out[out.length - 1].push(p) }
+        return out.filter((m) => m.length).map((m) => [0, 1].map((k) => +((Math.max(...m.map((p) => p[k])) + Math.min(...m.map((p) => p[k]))) / 2).toFixed(9)))
+    }
+
+    it('the figures are one or a few strokes: arc, chevron and glint one; cross two; bars and rings `copies`; corners four', () => {
+        const at = (shape, copies = 0) => blanks(generateShape({ shape, size: 1, points: 200, copies }))
+        expect([at('arc'), at('chevron'), at('glint'), at('cross'), at('corners')]).toEqual([0, 0, 0, 1, 3])
+        expect([at('bars'), at('bars', 5), at('rings'), at('rings', 4)]).toEqual([1, 4, 1, 3])
+    })
+
+    it('corners, chevron and the glint\'s tips are points of their own, never cut', () => {
+        const corners = generateShape({ shape: 'corners', size: 1, points: 200 })
+        for (const [x, y] of [[-1, 1], [1, 1], [1, -1], [-1, -1]]) expect(has(corners, x, y), `${x},${y}`).toBe(true)
+        expect(has(generateShape({ shape: 'chevron', size: 1, points: 101 }), 0, -0.5)).toBe(true)
+        const glint = generateShape({ shape: 'glint', size: 1, points: 120 })
+        for (const [x, y] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) expect(has(glint, x, y), `${x},${y}`).toBe(true)
+    })
+
+    it('sparkle: on every half beat one mark, in turn, jumps; within a half beat nothing moves', () => {
+        const at = (beat) => marks(generateShape({ shape: 'sparkle', size: 1, points: 300, beat }))
+        expect(at(0)).toHaveLength(5)
+        expect(at(0.1)).toEqual(at(0.4))
+        for (let half = 0; half < 12; half += 1) {
+            const before = at(half / 2)
+            const after = at(half / 2 + 0.5)
+            expect(after.filter((m, i) => m.join() !== before[i].join()), `half beat ${half + 1}`).toHaveLength(1)
+        }
+        expect(marks(generateShape({ shape: 'sparkle', points: 300, copies: 8 }))).toHaveLength(8)
+    })
+
+    it('twinkle: the marks keep their places and half of them are lit, a new half each half beat', () => {
+        const at = (beat) => marks(generateShape({ shape: 'twinkle', size: 1, points: 300, beat })).map((m) => m.join())
+        const seen = new Set()
+        for (let beat = 0; beat < 20; beat += 0.5) {
+            expect(at(beat)).toHaveLength(5)
+            at(beat).forEach((m) => seen.add(m))
+        }
+        expect(seen.size).toBe(9)
+        expect(at(0)).toEqual(at(0.3))
+        expect(Array.from({ length: 8 }, (_, i) => at(i / 2).join('|')).some((m, i, all) => m !== all[0])).toBe(true)
+    })
+
+    // A ✦ of radius r lies inside its circle of radius r: two marks whose circles do not meet never cross.
+    it('no two marks ever touch: sparkle with 1 to 12 marks at 200 half beats, twinkle with 1 to 10', () => {
+        const circles = (points) => {
+            const out = [[]]
+            for (const p of points) { if (p[2] + p[3] + p[4] === 0) out.push([]); else out[out.length - 1].push(p) }
+            return out.filter((m) => m.length).map((m) => {
+                const x = (Math.max(...m.map((p) => p[0])) + Math.min(...m.map((p) => p[0]))) / 2
+                const y = (Math.max(...m.map((p) => p[1])) + Math.min(...m.map((p) => p[1]))) / 2
+                return { x, y, r: Math.max(...m.map((p) => Math.hypot(p[0] - x, p[1] - y))) }
+            })
+        }
+        for (const [shape, most] of [['sparkle', 12], ['twinkle', 10], ['spots', 16]]) {
+            for (let copies = 1; copies <= most; copies += 1) {
+                for (let half = 0; half < 200; half += 1) {
+                    const m = circles(generateShape({ shape, size: 1, points: 300, copies, beat: half / 2 }))
+                    for (let i = 0; i < m.length; i += 1) {
+                        expect(Math.hypot(m[i].x, m[i].y) + m[i].r, `${shape} ×${copies} half beat ${half}: inside`).toBeLessThanOrEqual(1 + 1e-9)
+                        for (let j = i + 1; j < m.length; j += 1) {
+                            expect(Math.hypot(m[i].x - m[j].x, m[i].y - m[j].y), `${shape} ×${copies} half beat ${half}: marks ${i}, ${j}`).toBeGreaterThan(m[i].r + m[j].r)
+                        }
+                    }
+                }
+            }
+        }
+    })
+
+    const strokes = (points) => {
+        const out = [[]]
+        for (const p of points) { if (p[2] + p[3] + p[4] === 0) out.push([]); else out[out.length - 1].push(p) }
+        return out.filter((s) => s.length)
+    }
+
+    it('lines: five upright lines that swing in their lanes, never crossing, a swing every two beats', () => {
+        const at = (beat) => strokes(generateShape({ shape: 'lines', size: 1, points: 300, beat }))
+        for (let beat = 0; beat < 4; beat += 0.125) {
+            const lines = at(beat)
+            expect(lines).toHaveLength(5)
+            for (const line of lines) expect(new Set(line.map((p) => p[0].toFixed(9))).size).toBe(1)
+            const xs = lines.map((line) => line[0][0])
+            xs.slice(1).forEach((x, i) => expect(x - xs[i], `beat ${beat}`).toBeGreaterThan(0.15))
+        }
+        expect(at(0.5)).not.toEqual(at(0))
+        const later = generateShape({ shape: 'lines', points: 300, beat: 2.75 })
+        generateShape({ shape: 'lines', points: 300, beat: 0.75 }).forEach((p, i) => p.forEach((v, k) => expect(later[i][k]).toBeCloseTo(v, 9)))
+        expect(strokes(generateShape({ shape: 'lines', points: 300, copies: 8 }))).toHaveLength(8)
+    })
+
+    it('spots: ten rings that glide to new places in the first half of each beat and rest in the second', () => {
+        const at = (beat) => marks(generateShape({ shape: 'spots', size: 1, points: 300, beat }))
+        expect(at(0)).toHaveLength(10)
+        // At rest a spot keeps more than half a spot (0.12) from the next.
+        const rest = at(5.75)
+        rest.forEach((m, i) => rest.slice(i + 1).forEach((o) => expect(Math.hypot(m[0] - o[0], m[1] - o[1])).toBeGreaterThan(0.24 + 0.11)))
+        expect(at(3.6)).toEqual(at(3.95))
+        expect(at(3.25)).not.toEqual(at(3))
+        expect(at(3.25)).not.toEqual(at(3.5))
+        // No jump at the beat: where a glide ends is where the next starts.
+        at(3.999).forEach((m, i) => { expect(m[0]).toBeCloseTo(at(4)[i][0], 9); expect(m[1]).toBeCloseTo(at(4)[i][1], 9) })
+        expect(at(4.5)).not.toEqual(at(4))
+    })
+
+    it('wobble: three lines held at their ends, the wave running along them, never reaching the next line', () => {
+        const at = (beat) => strokes(generateShape({ shape: 'wobble', size: 1, points: 300, beat }))
+        for (let beat = 0; beat < 4; beat += 0.25) {
+            const lines = at(beat).map((line, i) => (i % 2 ? [...line].reverse() : line))
+            expect(lines).toHaveLength(3)
+            lines.forEach((line, i) => {
+                expect(line[0][1]).toBeCloseTo(0.5 - 0.5 * i, 9)
+                expect(line[line.length - 1][1]).toBeCloseTo(0.5 - 0.5 * i, 9)
+            })
+            for (let j = 0; j < lines[0].length; j += 1) {
+                expect(lines[0][j][1]).toBeGreaterThan(lines[1][j][1])
+                expect(lines[1][j][1]).toBeGreaterThan(lines[2][j][1])
+            }
+        }
+        expect(at(0.5)).not.toEqual(at(0))
+    })
+
+    it('without a beat the sparkles run on time at 120 BPM', () => {
+        for (const shape of ['sparkle', 'twinkle', 'spots', 'lines', 'wobble']) {
+            expect(generateShape({ shape, time: 3.3 })).toEqual(generateShape({ shape, beat: 6.6 }))
+        }
+    })
+})
+
 describe('height', () => {
     it('lifts a shape up the field; at 0.5 a size-0.5 circle sits wholly in the upper half (the keep-in zone)', async () => {
         const { generateShape } = await import('./laserShapes.js')

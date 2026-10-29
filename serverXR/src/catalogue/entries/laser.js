@@ -107,5 +107,127 @@ module.exports = [
     role: "guest",
     agent: false,
     note: `${SAME_MACHINE} The phrase is never echoed. Dots already approved are not doubled (0.005 grid).`
+  },
+  // The laser desk (laser/laserDesk.js, 2026-10-29): the light desk's twin for the cubes, one more sender (Out "desk").
+  // Its frames meet every rule of the engine; nothing here arms a cube or loosens a guard.
+  {
+    route: "GET /laser",
+    summary: "the laser desk's page (laser/ui/): a bank of looks, the live look's editor, the stage (what each cube holds) and the cubes' setup; /laser redirects to /laser/",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: LOCAL
+  },
+  {
+    route: "GET /laser/desk/api/state",
+    summary: "the laser desk: the bank of looks, the live look, master, BPM and beat, blackout, and each cube's desk setup (on, mirror, size, offset, order) and whether another Out holds it",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: `${LOCAL} The desk is built on its first request and starts released: nothing on the cubes until a look is pressed.`
+  },
+  {
+    route: "GET /laser/desk/api/view",
+    summary: "what the laser engine keeps for each cube now, after its keep-in zone, rounded — the desk's stage view",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: LOCAL
+  },
+  {
+    route: "GET /laser/desk/api/thumbs",
+    summary: "a small picture of every look in the desk's bank, for its tiles",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: LOCAL
+  },
+  {
+    route: "POST /laser/desk/api/go",
+    summary: "put a look of the bank on the cubes: { look } — the desk draws it every 50 ms as the Out \"desk\" (a cube another Out holds refuses it)",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE} Frames only: nothing lights until the laser safety officer has armed.`
+  },
+  {
+    route: "POST /laser/desk/api/live",
+    summary: "edit the live look on the cubes: any of { name, shape, colour, rainbow, level, size, height, x, rotation, spin, copies, points, cycle, pulse, pulseBeats, sweep, sweepBeats, mirror, phase, cubes }, each clamped",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/store",
+    summary: "keep the live look: { id } writes it into that tile, no id adds a new tile ({ name? }); the bank is in <data>/laser/desk.json",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/looks/rename",
+    summary: "rename a tile of the laser desk's bank: { id, name }",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/looks/delete",
+    summary: "remove a tile from the laser desk's bank: { id } (the live look stays on the cubes)",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/looks/order",
+    summary: "the laser desk's bank in a new order: { ids }",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/master",
+    summary: "the laser desk's master level: { level } 0…1, multiplying every look's level",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/bpm",
+    summary: "the laser desk's clock: { bpm } 20…300 (the beat keeps its place), or { tap: true } (the tempo from the taps, the beat on the tap)",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/cube",
+    summary: "one cube's place on the laser desk: { id, on?, flipX?, size? 0…2, x? y? −1…1, order? } — off lets the desk's hold on it run out",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/release",
+    summary: "the laser desk lets go: every cube it drew on gets one blank frame and the desk stops sending, so a Laser Out or the show can take them",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} A stop: the same gate as /laser/api/blackout (STOPS_FROM_REMOTE).`
+  },
+  {
+    route: "POST /laser/desk/api/blackout",
+    summary: "the laser desk's blackout: { on } — every cube it drives held dark, the look kept",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} A stop: the same gate as /laser/api/blackout (STOPS_FROM_REMOTE).`
   }
 ]
