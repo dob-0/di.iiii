@@ -1779,3 +1779,14 @@
 .scene-picker .spa-item.active .scene-picker__intent {
     color: rgba(var(--di-cyan-rgb), 0.8);
 }
+
+/* Scene -> Move, "Mouse in Edit" (MoveSettings.jsx): two equal buttons, 44 px on touch. */
+.move-edit-mouse .scc-btn {
+    flex: 1;
+}
+
+@media (pointer: coarse) {
+    .move-edit-mouse .scc-btn {
+        min-height: 44px;
+    }
+}

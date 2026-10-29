@@ -15,6 +15,11 @@ the ONE selected, unlocked thing slides it along the floor at its height, one un
 (Move 1, untouched); in **View** nothing moves by a pull; adding from Create switches to Edit (`StudioShell.jsx`).
 Regression tests: `src/studio/navigation/pullToMove.test.js` ("View: a pull on the selected box turns the view…", "only in Edit…"),
 `src/studio/components/StudioShell.test.jsx` ("View | Edit (owner 2026-10-28)").
+Kept as a mode (owner 2026-10-29, "what we have never lose"): the 2026-10-12 Edit mouse ("edit like Blender", commit `ed2c5290e`) is
+**Scene → Move → Mouse in Edit: Pull to move | Like Blender** (`navigation/editMouse.js` `presetForTool` / `pullOnFor`, stored per
+browser as `di.studio.navigation.editMouse`, default `pull`). Like Blender = origin/dev's Edit map, no pull; View is always Move 1.
+Tests: `src/studio/navigation/editMouse.test.js` (the map compared button by button with a snapshot read from origin/dev's
+`mappings.js`), `MoveSettings.test.jsx` ("Mouse in Edit"), `StudioHelpDialog.test.jsx` (both mouse tables).
 
 ## Recurring bug class: silent hardcoded fallback
 

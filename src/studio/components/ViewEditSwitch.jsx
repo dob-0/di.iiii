@@ -4,14 +4,19 @@
 //         else, Alt+pull and the middle button still move the view as in Move 1; the arrows stay for exact moves.
 // It is the same state as the Tools window's Navigate / Edit and the E key (StudioShell viewportEditMode), not a second model.
 import '../styles/view-edit-switch.css'
+import { useNavigationPreference } from '../navigation/preference.js'
+import { normalizeEditMouse } from '../navigation/editMouse.js'
 
 export const VIEW_EDIT_MODES = Object.freeze([
     Object.freeze({ id: 'navigate', label: 'View', title: 'View: every pull turns the view, nothing moves by accident' }),
     Object.freeze({ id: 'edit', label: 'Edit', title: 'Edit: pull the selected thing to move it; pull anywhere else to turn the view' }),
 ])
+// Edit's tip when the Edit mouse is Like Blender (editMouse.js).
+export const EDIT_BLENDER_TITLE = 'Edit, like Blender: the left button picks; the middle button turns the view'
 
 export default function ViewEditSwitch({ mode = 'navigate', onChange, className = '' }) {
     const current = mode === 'edit' ? 'edit' : 'navigate'
+    const blender = normalizeEditMouse(useNavigationPreference().editMouse) === 'blender'
     // A radio group's keys (WAI-ARIA APG "Radio Group"): one Tab stop, the arrows pick the other side and move the focus to it.
     const onKeyDown = (event) => {
         if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return
@@ -33,7 +38,7 @@ export default function ViewEditSwitch({ mode = 'navigate', onChange, className 
                     tabIndex={current === m.id ? 0 : -1}
                     aria-checked={current === m.id}
                     className={`ves-btn${current === m.id ? ' is-on' : ''}`}
-                    title={m.title}
+                    title={m.id === 'edit' && blender ? EDIT_BLENDER_TITLE : m.title}
                     onClick={() => { if (current !== m.id) onChange?.(m.id) }}
                 >
                     {m.label}

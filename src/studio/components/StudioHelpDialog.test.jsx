@@ -55,4 +55,13 @@ describe('StudioHelpDialog', () => {
         expect(screen.getByText('Unlock all (our own keys, Blender has no lock key)')).toBeInTheDocument()
         for (const key of ['Click a beam', 'Click a locked object', 'L', 'Alt+L', 'Alt+A']) expect(row(key).length).toBeGreaterThan(0)
     })
+
+    // Nothing is lost (owner 2026-10-29): the Like Blender table stays beside the default one (editMouse.js).
+    it('shows the mouse of View and Pull to move, and of Edit with Like Blender', () => {
+        render(<StudioHelpDialog open onClose={vi.fn()} />)
+        fireEvent.click(screen.getByRole('tab', { name: 'Shortcuts' }))
+        expect(screen.getByText('Mouse · View, and Edit with Pull to move (like Sketchfab)')).toBeTruthy()
+        expect(screen.getByText('Mouse · Edit with Like Blender (Scene, Move, Mouse in Edit)')).toBeTruthy()
+        expect(screen.getByText('Shift+Middle drag')).toBeTruthy()
+    })
 })

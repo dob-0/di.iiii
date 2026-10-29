@@ -17,7 +17,7 @@ export const MOVE_HINT = 'Wheel: forward and back. Shift faster, Alt slower. Hol
 // The Help panel's words for the default move.
 export const MOVE_HELP_NOTE = 'Move 1 (default): the same speed in every direction, the speed set from the size of the place.'
 // The words of the View | Edit switch (ViewEditSwitch.jsx), shown above Move 1's.
-export const VIEW_EDIT_HELP_NOTE = 'View | Edit, at the top of the Studio (E switches). View: every pull turns the view, nothing moves by accident. Edit: pull the selected thing to slide it along the floor; pull anywhere else, hold Alt or use the middle button to move the view; the arrows still give exact moves. Adding something from Create switches to Edit. Locked things and the walls and floor of a place never move.'
+export const VIEW_EDIT_HELP_NOTE = 'View | Edit, at the top of the Studio (E switches). View: every pull turns the view, nothing moves by accident. Edit, with Pull to move (the default): pull the selected thing to slide it along the floor; pull anywhere else, hold Alt or use the middle button to move the view; the arrows still give exact moves. Edit, with Like Blender (Scene, Move, Mouse in Edit): the mouse works exactly like Blender, as in the second table. Adding something from Create switches to Edit. Locked things and the walls and floor of a place never move.'
 
 // What typed text means as a speed: metres in range, or null when it is not a usable number (the setting then stays as it is). Pure.
 export function parseSpeedText(text) {
@@ -63,9 +63,9 @@ export function useStandardMoveReading() {
 
 // The preference plus the automatic reading: { speed, turn, move, setSpeed, setTurn, setMove, isAuto, auto }.
 export function useMoveSettings() {
-    const { speed, turn, move, setSpeed, setTurn, setMove } = useNavigationPreference()
+    const { speed, turn, move, editMouse, setSpeed, setTurn, setMove, setEditMouse } = useNavigationPreference()
     const { auto } = useStandardMoveReading()
-    return { speed, turn, move, setSpeed, setTurn, setMove, isAuto: speed === 'auto', auto }
+    return { speed, turn, move, editMouse, setSpeed, setTurn, setMove, setEditMouse, isAuto: speed === 'auto', auto }
 }
 
 // The speed field: empty is Auto, a number is that many metres. Typing writes at once (the house number fields do the same);

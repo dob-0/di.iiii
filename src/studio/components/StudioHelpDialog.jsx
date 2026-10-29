@@ -152,9 +152,10 @@ export default function StudioHelpDialog({ open, onClose, initialMode = 'basics'
                     <div className="sh-help-shortcuts">
                         <p className="sh-help-shortcut-note">{VIEW_EDIT_HELP_NOTE}</p>
                         <p className="sh-help-shortcut-note">{MOVE_HELP_NOTE}</p>
-                        {['studio'].map((id) => (
+                        {/* View, and Edit with Pull to move, use 'studio'; Edit with Like Blender uses 'blender' (editMouse.js). */}
+                        {['studio', 'blender'].map((id) => (
                             <div key={id} className="sh-help-shortcut-group">
-                                <div className="sh-help-shortcut-title">Mouse · View and Edit (like Sketchfab)</div>
+                                <div className="sh-help-shortcut-title">Mouse · {id === 'studio' ? 'View, and Edit with Pull to move (like Sketchfab)' : 'Edit with Like Blender (Scene, Move, Mouse in Edit)'}</div>
                                 {viewportMouseRows(id).map(([key, desc]) => (
                                     <div key={key} className="sh-help-shortcut-row">
                                         <code>{key}</code>

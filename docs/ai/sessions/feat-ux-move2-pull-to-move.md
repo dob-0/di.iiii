@@ -45,12 +45,14 @@ mode and view mode"; the lead read it back and he said "yes"; after trying View 
 
 ## Decisions and readings (say if wrong)
 
-- **Changed on purpose (owner's words over the 2026-10-12 note):** the Edit tool's mouse was "exactly like Blender" (left button only
-  selects, middle orbits). Now the camera is Move 1 in Edit too, because "a pull on empty space still turns the view". The `blender`
-  preset stays in `mappings.js`.
+- **Changed on purpose, then kept as a mode (S55V2, owner 2026-10-29 "i think we can have this as mode … what we have never lose"):**
+  the Edit tool's mouse was "exactly like Blender" (left button only selects, middle orbits; 2026-10-12, `ed2c5290e`). The default in
+  Edit is now Pull to move (camera = Move 1, plus the pull), and **Scene → Move → Mouse in Edit → Like Blender** brings back the
+  2026-10-12 map exactly (`navigation/editMouse.js`; `editMouse.test.js` compares it with origin/dev's map).
 - **Words:** `vocabulary.md` already uses **view** for a named camera a project keeps; the switch uses the owner's own word "View", and
   the new row writes both meanings down.
-- No "Move 2" ships: `MOVES`, `DEFAULT_MOVE_ID`, `preference.js` and `move1.golden.test.js` equal `origin/dev`. A browser that stored
+- No "Move 2" ships: `MOVES`, `DEFAULT_MOVE_ID` and `move1.golden.test.js` equal `origin/dev` (`preference.js` only gains the Edit
+  mouse key). A browser that stored
   `move-2` during the try-out reads Move 1 (`normalizeMoveId`).
 - "Rig of a place" = fixtures, rig pieces, beams and steel; a light added from Create is the person's own and pulls.
 - With two or more selected a pull is the camera's; moving a whole selection by a pull is not built.
@@ -71,3 +73,20 @@ show they fail on the old code).
 
 - The switch now has the keys of a radio group (WAI-ARIA APG "Radio Group"): one Tab stop, the arrows flip it (`ViewEditSwitch.jsx`;
   test "the switch is one Tab stop…" in `StudioShell.test.jsx`, fails on the commit before).
+
+## What this branch replaced, and where each one is kept (S55V2, 2026-10-29, rule "nothing we have is ever lost")
+
+Read from `git diff origin/dev...HEAD` (every `-` line of the branch):
+
+| Was on origin/dev | Now | Kept as |
+|---|---|---|
+| Edit's mouse = `blender` map (2026-10-12 "edit like Blender", `ed2c5290e`; StudioViewport `getNavigationPreset(editMode === 'edit' ? 'blender' : 'studio')`) | Edit default = `studio` map + pull | **Mode**: Scene → Move → Mouse in Edit → Like Blender (`editMouse.js`, key `di.studio.navigation.editMouse`); `editMouse.test.js` = origin/dev map |
+| Blender's per-pixel turn speed in Edit (`viewportHeight / 900`) | unused with Pull to move | **Mode**: comes back with Like Blender (the same `preset.id === 'blender'` line, untouched) |
+| Help → Shortcuts: two mouse tables, "Navigate (like Sketchfab)" and "Edit (like Blender)" | one table | **Back**: both tables, titled "View, and Edit with Pull to move" and "Edit with Like Blender" |
+| Help note "The tool picks the mouse: Navigate moves like Sketchfab, Edit exactly like Blender." | `VIEW_EDIT_HELP_NOTE` | **Mode**: the note now names both Edit mice; the old sentence is true again with Like Blender |
+| Phone top row: one toggle button "Edit" / "Editing" | View \| Edit switch (same state, same place) | **Tool**: the switch does the same toggle; the Tools window's Navigate / Edit and the E key are unchanged |
+| `StudioShell` passed `onCreateEntity` / `onCreateFromAsset` straight through | wrapped: adding switches to Edit | added behaviour, nothing removed (with Like Blender the left button then only picks, as on 10-12) |
+| `// eslint-disable-next-line react-hooks/exhaustive-deps` above `bindings` useMemo | removed | not a behaviour (the deps are complete) |
+
+Not touched by the choice: View (Move 1, `move1.golden.test.js` unchanged), the Shift+? "Mouse navigation" preset (`NAVIGATION_STORAGE_KEY`,
+read nowhere in StudioOrbit on origin/dev either), Walk/Fly.

@@ -53,7 +53,8 @@ import { controlBindingsFor, getNavigationPreset, mouseButtonsFor } from '../nav
 import { MOVE_1_CAMERA } from '../navigation/freeMove.js'
 import { useNavigationPreference } from '../navigation/preference.js'
 import { useCameraNavigation } from '../navigation/useCameraNavigation.js'
-import { pullPressAllowed, isPulling, registerPullGizmo, usePullToMove } from '../navigation/pullToMove.js'
+import { isPulling, registerPullGizmo, usePullToMove } from '../navigation/pullToMove.js'
+import { presetForTool, pullOnFor } from '../navigation/editMouse.js'
 import { useWalkNavigation } from '../navigation/useWalkNavigation.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
@@ -566,10 +567,11 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     // Mouse navigation preset (Shift+? > Shortcuts). 'studio' is the default and
     // the bindings Studio always had; see src/studio/navigation/mappings.js.
     const navigation = useNavigationPreference()
-    // The camera is Move 1 in View AND in Edit (owner 2026-10-28, View | Edit: "a pull on empty space still turns the view"); Edit only
-    // adds the pull on the selected thing (usePullToMove below). This retires 2026-10-12's "edit like blender" left-button map in
-    // the Studio; the 'blender' preset stays in mappings.js for the Help page's table.
-    const preset = getNavigationPreset('studio')
+    // The Edit mouse (editMouse.js, Scene -> Move): with Pull to move (default) the camera is Move 1 in View AND in Edit (owner
+    // 2026-10-28, View | Edit: "a pull on empty space still turns the view") and Edit adds the pull on the selected thing; with
+    // Like Blender, Edit is exactly 2026-10-12's "edit like blender" map ('blender'), no pull. View is always 'studio'.
+    const preset = getNavigationPreset(presetForTool(editMode, navigation.editMouse))
+    const pullOn = pullOnFor(editMode, navigation.editMouse)
     // Blender turns 0.4° per pixel (its Orbit Sensitivity default, the owner's value); camera-controls turns 360° per
     // viewport height, so the speed is scaled by the height to keep Blender's per-pixel feel in Edit.
     const viewportHeight = useThree((state) => state.size.height)
@@ -586,7 +588,7 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         entities,
         selectedEntityIds,
         onCommit: onPullCommit,
-        enabled: enabled && !isXrPresenting && !walking && pullPressAllowed(editMode),
+        enabled: enabled && !isXrPresenting && !walking && pullOn,
     })
     useCameraNavigation({
         controlsRef,
@@ -599,7 +601,7 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         turn: navigation.turn,
         active: enabled && !isXrPresenting,
         mode: editMode,
-        pull,
+        pull: pullOn ? pull : null,
     })
 
     // The lens the camera eases toward. Shared with the smart view when there is one
