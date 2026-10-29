@@ -327,7 +327,7 @@ describe('the laser engine', () => {
         expect(engine.frames().all).toEqual([[0, 0.5, 1, 1, 1]])
     })
     it('starts a new frame where the playing one ends, so a figure is never torn (both as the guards draw them)', () => {
-        const { engine, socket } = armedWith(ONE)
+        const { engine, socket, at } = armedWith(ONE)
         const long = Array.from({ length: 1000 }, (_, i) => [Math.cos(i / 100), 0.5, 1, 0, 0])
         const plan = guards.pathPlan(guards.DEFAULT_GUARDS, 30000)
         const longOut = guards.optimisePath(long, plan).points
@@ -338,6 +338,7 @@ describe('the laser engine', () => {
         const bridgeIn = guards.bridgePath([0, 0], longOut[0], plan).length
         engine.setFrame('all', circle)
         socket.sent.length = 0
+        at(20) // the next 20 ms tick: pacing sends what the elapsed time makes due
         engine.tick() // the long frame goes on to its end, then a bridge, then the circle
         const msgs = dataTo(socket)
         expect(pointsIn(msgs)).toBe(600)
@@ -482,5 +483,71 @@ describe('the still-beam guard', () => {
         for (let i = 0; i < 12; i += 1) { clock.t += 20; engine.alive('cube-3'); engine.tick() }
         expect(engine.state().cubes[2].stop).toMatchObject({ reason: 'still-beam' })
         expect(engine.frames().stopped).toEqual({ 'cube-3': 'still-beam' })
+    })
+})
+
+// A cube's ring buffer played at its DAC rate, to count what the engine's pacing does to it (ledger N1501.18).
+describe('the engine sends every point on time (catch-up pacing)', () => {
+    const RATE = 30000
+    const SIZE = 6000
+    const run = ({ gaps, frame = circle }) => {
+        const { engine, socket, clock, hear } = armedWith(ONE)
+        engine.setFrame('all', frame)
+        socket.sent.length = 0
+        let buffered = 0
+        let sent = 0
+        let underruns = 0
+        let overflow = 0
+        let elapsed = 0
+        let seen = 0
+        for (const gap of gaps) {
+            clock.t += gap
+            elapsed += gap
+            const played = (RATE * gap) / 1000
+            if (buffered < played && sent > 0) underruns += 1
+            buffered = Math.max(0, buffered - played)
+            engine.setFrame('all', frame) // the sender keeps the frame fresh (signal-loss guard)
+            engine.tick()
+            const total = pointsIn(dataTo(socket))
+            buffered += total - seen
+            sent += total - seen
+            seen = total
+            if (buffered > SIZE) overflow += 1
+            hear('10.0.0.51', [0x8a, 0, Math.max(0, Math.floor(SIZE - buffered)) & 0xff, Math.max(0, Math.floor(SIZE - buffered)) >> 8])
+        }
+        return { sent, elapsed, underruns, overflow, socket }
+    }
+    it('ticks 5 ms late still deliver the due points over 1 s within 1 %', () => {
+        const gaps = Array.from({ length: 40 }, () => 25) // a 20 ms timer firing 5 ms late, every time
+        const r = run({ gaps })
+        const due = (RATE * r.elapsed) / 1000
+        expect(Math.abs(r.sent - due) / due).toBeLessThan(0.01)
+        expect(r.overflow).toBe(0)
+    })
+    it('a 20 ms blocked loop is caught up without overflowing the buffer; only the blocked tick can starve the cube', () => {
+        const gaps = [20, 20, 20, 20, 40, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20]
+        const r = run({ gaps })
+        expect(r.overflow).toBe(0)
+        expect(r.underruns).toBeLessThanOrEqual(1) // the blocked tick itself; no cushion is built yet (owed: real-cube decision)
+        const due = (RATE * r.elapsed) / 1000
+        expect(Math.abs(r.sent - due) / due).toBeLessThan(0.02)
+    })
+    it('a long stall is not banked: the catch-up is capped and the buffer free count still caps the send', () => {
+        const r = run({ gaps: [20, 20, 2000, 20] })
+        expect(r.overflow).toBe(0)
+    })
+    it('every guard still applies to every point sent: a point outside the zone goes out blank', () => {
+        const { engine, socket, clock } = armedWith({ zone: { xMin: -0.2, xMax: 0.2, yMin: 0, yMax: 1 }, cubes: ONE.cubes })
+        engine.setFrame('all', circle)
+        socket.sent.length = 0
+        for (let i = 0; i < 10; i += 1) { clock.t += 25; engine.setFrame('all', circle); engine.tick() }
+        expect(pointsIn(dataTo(socket))).toBeGreaterThan(1000)
+        for (const s of dataTo(socket)) {
+            for (let o = 4; o < s.buf.length; o += 10) {
+                const lit = s.buf.readUInt16LE(o + 4) || s.buf.readUInt16LE(o + 6) || s.buf.readUInt16LE(o + 8)
+                const x = (s.buf.readUInt16LE(o) - 0x800) / 0x800
+                if (lit) expect(Math.abs(x)).toBeLessThanOrEqual(0.2 + 1 / 0x800)
+            }
+        }
     })
 })

@@ -18,6 +18,11 @@ import os from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+import { createRingBuffer } from './fake-cube-buffer.mjs'
+
+// The engine only talks to loopback cubes when this flag is set (laserFind.js); it is set for THIS process
+// only, never on an installed di (this is why the script used to crash without it).
+process.env.DI_LASER_TEST_LOOPBACK = '1'
 
 const require = createRequire(import.meta.url)
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -35,11 +40,15 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
 // THE FAKE CUBE
 const fakeCube = async () => {
-    const cube = { out: false, interlock: true, temp: 31, bufferAnswers: false, buffered: 0, playedAt: now(), points: [], outputs: [], clears: [], overflow: 0 }
+    const cube = { out: false, interlock: true, temp: 31, bufferAnswers: false, points: [], outputs: [], clears: [] }
+    const ring = createRingBuffer({ rate: RATE, size: SIZE, now })
+    ring.outputOn = () => cube.out
+    cube.ring = ring
+    Object.defineProperty(cube, 'overflow', { get: () => ring.overflow })
     const cmd = dgram.createSocket('udp4')
     const data = dgram.createSocket('udp4')
-    const play = () => { const t = now(); cube.buffered = Math.max(0, cube.buffered - ((t - cube.playedAt) * RATE) / 1000); cube.playedAt = t }
-    const free = () => { play(); return Math.max(0, Math.floor(SIZE - cube.buffered)) }
+    const play = () => ring.play()
+    const free = () => ring.free()
     const info = () => {
         const b = Buffer.alloc(64)
         b[0] = 0x77; b[3] = 1; b[4] = 7; b[5] = (cube.out ? 1 : 0) | (cube.interlock ? 2 : 0)
@@ -53,7 +62,7 @@ const fakeCube = async () => {
         if (m[0] === 0x77) cmd.send(info(), r.port, r.address)
         if (m[0] === 0x78) cube.bufferAnswers = m[1] === 1
         if (m[0] === 0x80) { cube.out = m[1] === 1; cube.outputs.push({ t, on: cube.out }) }
-        if (m[0] === 0x8d) { play(); cube.clears.push({ t, dropped: Math.round(cube.buffered) }); cube.buffered = 0 }
+        if (m[0] === 0x8d) { play(); cube.clears.push({ t, dropped: ring.clear() }) }
         if (m[0] === 0x8a) { const f = free(); cmd.send(Buffer.from([0x8a, 0, f & 0xff, f >> 8]), r.port, r.address) }
     })
     data.on('message', (m, r) => {
@@ -65,8 +74,7 @@ const fakeCube = async () => {
             const o = 4 + i * 10
             cube.points.push({ t, x: m.readUInt16LE(o), y: m.readUInt16LE(o + 2), r: m.readUInt16LE(o + 4), g: m.readUInt16LE(o + 6), b: m.readUInt16LE(o + 8) })
         }
-        cube.buffered += n
-        if (cube.buffered > SIZE) { cube.overflow += cube.buffered - SIZE; cube.buffered = SIZE }
+        ring.feed(n)
         if (cube.bufferAnswers) { const f = free(); data.send(Buffer.from([0xa9, f & 0xff, f >> 8]), r.port, r.address) }
     })
     await new Promise((res) => cmd.bind(proto.PORT.CMD, CUBE_IP, res))
@@ -125,10 +133,11 @@ try {
         // Streaming: the eight shapes, a new one every 40 ms (frame switches, bridges), for 2 s.
         const t0 = now()
         const from = cube.points.length
+        const ring0 = cube.ring.snapshot()
         await hold((i) => generateShape({ shape: LASER_SHAPES[i % 8], size: 0.3 + 0.2 * Math.sin(i), height: 0.5, points: 500 }), 2000)
         const got = cube.points.slice(from)
         const secs = (now() - t0) / 1000
-        result.stream.push({ pointsPerSecond: Math.round(got.length / secs), litPerSecond: Math.round(got.filter(lit).length / secs), ...steps(got), overflow: cube.overflow })
+        result.stream.push({ pointsPerSecond: Math.round(got.length / secs), litPerSecond: Math.round(got.filter(lit).length / secs), ...steps(got), overflow: cube.overflow, underruns: cube.ring.snapshot().underruns - ring0.underruns, missing: cube.ring.snapshot().missing - ring0.missing })
         // Signal loss: no frame, no keep-alive.
         const tLoss = now()
         await wait(400)
@@ -173,7 +182,7 @@ try {
 }
 const s = result.stream
 console.log(`runs ${RUNS} · fake cube ${CUBE_IP} at ${RATE} pps`)
-console.log(`stream  points/s ${range(s.map((r) => r.pointsPerSecond))} (lit ${range(s.map((r) => r.litPerSecond))}) · max lit step ${Math.max(...s.map((r) => r.maxLit)).toFixed(4)} · max blank step ${Math.max(...s.map((r) => r.maxBlank)).toFixed(4)} (field units) · buffer overflow ${cube.overflow}`)
+console.log(`stream  points/s ${range(s.map((r) => r.pointsPerSecond))} (lit ${range(s.map((r) => r.litPerSecond))}) · max lit step ${Math.max(...s.map((r) => r.maxLit)).toFixed(4)} · max blank step ${Math.max(...s.map((r) => r.maxBlank)).toFixed(4)} (field units) · buffer overflow ${cube.overflow} · underruns ${range(s.map((r) => r.underruns))} (points missing ${range(s.map((r) => r.missing))})`)
 for (const k of ['noFrame', 'still', 'disarm']) {
     const r = result[k]
     console.log(`${k.padEnd(8)} off ${range(r.map((x) => x.offMs))} ms · park ${range(r.map((x) => x.parkMs))} ms · park kept after the clear ${r.filter((x) => x.parkKept).length}/${r.length}, before the off ${r.filter((x) => x.parkBeforeOff).length}/${r.length} · lit after off ${r.reduce((n, x) => n + (x.litAfterOff || 0), 0)}`)
@@ -184,3 +193,14 @@ console.log(`after disarm: the cube's output ${result.flagsAfterDisarm.cubeOut ?
 console.log(`temperature 70 °C: max green ${result.temperature.maxGreen}/4095 = ${result.temperature.scale} (want 0.667); state ${JSON.stringify(result.temperature.state)}`)
 const out = arg('--json', null)
 if (out) fs.writeFileSync(out, JSON.stringify(result, null, 2))
+// Thresholds (ledger N1501.6, N1501.15): a run that misses one exits non-zero.
+const MIN_PPS = Number(arg('--min-pps', 28000))
+const MAX_MISSING_SHARE = Number(arg('--max-missing-share', 0.02)) // of the points a run sent
+const misses = []
+s.forEach((r, i) => {
+    if (r.pointsPerSecond < MIN_PPS) misses.push(`run ${i + 1}: ${r.pointsPerSecond} points/s < ${MIN_PPS}`)
+    if (r.overflow > 0) misses.push(`run ${i + 1}: buffer overflow ${r.overflow}`)
+    if (r.missing > MAX_MISSING_SHARE * r.pointsPerSecond * 2) misses.push(`run ${i + 1}: ${r.missing} points missing (underruns ${r.underruns})`)
+})
+console.log(misses.length ? `FAIL\n${misses.join('\n')}` : `PASS: every run >= ${MIN_PPS} points/s, no overflow, missing <= ${MAX_MISSING_SHARE * 100} %`)
+process.exit(misses.length ? 1 : 0)

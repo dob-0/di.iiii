@@ -17,6 +17,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+import { createRingBuffer } from './fake-cube-buffer.mjs'
 
 process.env.DI_LASER_TEST_LOOPBACK = '1'
 const require = createRequire(import.meta.url)
@@ -30,6 +31,9 @@ const jsonOut = (() => { const i = process.argv.indexOf('--json'); return i > 0 
 
 const fakeCube = async (ip, serial) => {
     const cube = { ip, serial, out: false, outputs: [], points: 0, pointsWhileOff: 0 }
+    const ring = createRingBuffer({ rate: 30000, size: 6000 })
+    ring.outputOn = () => cube.out
+    cube.ring = ring
     const cmd = dgram.createSocket('udp4')
     const data = dgram.createSocket('udp4')
     const info = () => {
@@ -43,14 +47,17 @@ const fakeCube = async (ip, serial) => {
     cmd.on('message', (m, r) => {
         if (m[0] === 0x77) cmd.send(info(), r.port, r.address)
         if (m[0] === 0x80) { cube.out = m[1] === 1; cube.outputs.push(cube.out) }
-        if (m[0] === 0x8a) cmd.send(Buffer.from([0x8a, 0, 0x70, 0x17]), r.port, r.address)
+        if (m[0] === 0x8d) ring.clear()
+        if (m[0] === 0x8a) { const f = ring.free(); cmd.send(Buffer.from([0x8a, 0, f & 0xff, f >> 8]), r.port, r.address) }
     })
     data.on('message', (m, r) => {
         if (m[0] !== 0xa9) return
         const n = Math.floor((m.length - 4) / 10)
         cube.points += n
         if (!cube.out) cube.pointsWhileOff += n
-        data.send(Buffer.from([0x8a, 0, 0x70, 0x17]), r.port, r.address)
+        ring.feed(n)
+        const f = ring.free()
+        data.send(Buffer.from([0x8a, 0, f & 0xff, f >> 8]), r.port, r.address)
     })
     await new Promise((r) => cmd.bind(45457, ip, r))
     await new Promise((r) => data.bind(45458, ip, r))
@@ -114,6 +121,7 @@ try {
     check('Disarm all darkens both', all.body.ok && !A.out && !B.out, `outputs A ${A.outputs.at(-1)}, B ${B.outputs.at(-1)}`)
     const again = await call('/arm', { armed: true, cube: b, out: 'out-right' })
     check('after Disarm all the next ON asks the phrase again', again.status === 403 && again.body.needsPhrase, again.body.error)
+    check('no buffer overflow and few underruns on either cube while armed', A.ring.overflow === 0 && B.ring.overflow === 0 && A.ring.underruns <= 15 && B.ring.underruns <= 15, `A ${JSON.stringify(A.ring.snapshot())}, B ${JSON.stringify(B.ring.snapshot())}`)
     check('no cube got a lit stream while its output was off', A.pointsWhileOff < 400 && B.pointsWhileOff < 400, `A ${A.pointsWhileOff}, B ${B.pointsWhileOff} (park points only)`)
 } finally {
     keep = false

@@ -57,3 +57,7 @@ reading of byte 4) does not mean "light on" — do not trust it as a light indic
   same hour: the re-arm after a lost link is a human step. During a show: nobody touches "Wired connection" in the
   network menu; if the lasers stop, a person re-arms (handover-laser.md §2, or the Raw page's Arm).
 - Open (N954): 06:49:19 all six `link-lost` at one instant with no cable, menu or DHCP event — not explained.
+
+## Empty buffer (asked 2026-10-30, ledger N1501.18)
+
+What a LaserCube Ultra does when its buffer runs empty (blank, or the last point held lit): **unknown, needs a real cube.** Not in this file, the 10-14 jam notes, or the protocol code. The engine counts nothing on a real cube; only the fake cube counts underruns (`scripts/laser/fake-cube-buffer.mjs`). Test with the output ARMED ONLY by the owner, at a safe aim, stopping the stream mid-figure and watching the beam.

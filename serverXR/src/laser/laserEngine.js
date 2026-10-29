@@ -83,6 +83,8 @@ const DEFAULT_ZONE = Object.freeze({ xMin: -1, xMax: 1, yMin: 0, yMax: 1 })
 const DEFAULT_CUBES = Object.freeze(Array.from({ length: 6 }, (_, i) => ({ id: `cube-${i + 1}`, name: `Cube ${i + 1}`, ip: null })))
 const TICK_MS = 20
 const BUFFER_MARGIN = 200
+// The longest stretch of missed time a tick makes up (a stall past it is dropped, not banked).
+const CATCH_UP_MAX_MS = 100
 const INFO_POLL_MS = 1000
 const SHUTDOWN_WAIT_MS = 250
 // A Laser Out holds its cube while it says so (frame, keep-alive, its 3-second check): 10 s of silence
@@ -313,7 +315,7 @@ const createLaserEngine = ({
         ...c,
         lastFrameAt: null,
         info: null, infoAt: null, heardAt: null,
-        bufferFree: null, bufferAt: null, sentSince: 0,
+        bufferFree: null, bufferAt: null, sentSince: 0, streamAt: null, streamCarry: 0,
         playing: null, index: 0, message: 0, frameNum: 0, lastPoint: [0, 0],
         armed: false, stop: null, stillSince: null,
         prep: null, playingPrep: null, guardsKey: JSON.stringify(c.guards), clearAt: null, clearConfirmed: false,
@@ -442,6 +444,8 @@ const createLaserEngine = ({
         if (c.info?.rxBufferSize) { c.bufferFree = c.info.rxBufferSize; c.bufferAt = t; c.sentSince = 0 }
         c.clearAt = t
         c.clearConfirmed = false
+        c.streamAt = null
+        c.streamCarry = 0
         c.playing = null
         c.index = 0
         c.playingPrep = null
@@ -500,13 +504,21 @@ const createLaserEngine = ({
         if (holdingForClear(c, t)) return
         const prep = prepare(c, frame)
         if (c.playing && c.playingPrep && c.playingPrep !== prep && !frame?.lit) { c.playing = null; c.index = 0 }
+        // Catch-up pacing (ledger N1501.18): the points due are the cube's rate × the time since the
+        // last stream (the fraction carried), so a late tick sends the points it missed and the mean
+        // rate is the DAC rate, not 600 / mean tick. A stall longer than CATCH_UP_MAX_MS is not
+        // banked (the buffer would be past full), and the cube's free count still caps the send.
         const perTick = Math.ceil((rate * TICK_MS) / 1000)
-        let room = perTick
+        const dt = c.streamAt === null ? TICK_MS : Math.min(Math.max(0, t - c.streamAt), CATCH_UP_MAX_MS)
+        c.streamAt = t
+        const due = c.streamCarry + (rate * dt) / 1000
+        let room = Math.floor(due)
         if (c.bufferFree !== null) {
             let free = c.bufferFree + (rate * (t - (c.bufferAt ?? t))) / 1000 - c.sentSince
             if (c.info?.rxBufferSize) free = Math.min(free, c.info.rxBufferSize)
-            room = Math.min(perTick, Math.max(0, Math.floor(free - BUFFER_MARGIN)))
+            room = Math.min(room, Math.max(0, Math.floor(free - BUFFER_MARGIN)))
         }
+        c.streamCarry = Math.min(due - Math.floor(due), 1)
         // The next pass of the frame, as optimised; a new frame is reached by a blank bridge.
         const next = () => {
             if (!prep?.points?.length) { c.playingPrep = null; return [[c.lastPoint[0], c.lastPoint[1], 0, 0, 0]] }
