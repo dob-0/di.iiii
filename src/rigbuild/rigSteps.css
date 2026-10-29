@@ -11,7 +11,8 @@
 .rigsteps { gap: var(--di-space-4); }
 
 .rigsteps-title {
-    color: var(--di-faint);
+    /* the row that says where you are: --di-dim (5.3:1), not the faint grey kept for rules (UX audit F096) */
+    color: var(--di-dim);
     text-transform: var(--di-label-case);
     letter-spacing: var(--di-label-tracking);
     flex-shrink: 0;
@@ -37,7 +38,7 @@
 .rigsteps-step { flex-shrink: 0; white-space: nowrap; display: inline-flex; align-items: baseline; gap: var(--di-space-2); }
 
 /* The step's number, and what the document says about it: quieter than the name. */
-.rigsteps-n { color: var(--di-faint); }
+.rigsteps-n { color: var(--di-dim); }
 .rigsteps-step.is-here .rigsteps-n { color: inherit; }
 .rigsteps-said {
     color: var(--di-dim);
@@ -138,3 +139,17 @@
 /* The paper pages (plot, cards, equipment) are fixed to the window: they start below
    the two rows instead of behind them. */
 .rigplot.has-rigbar { top: var(--rigbar-h); }
+
+/* Target floor (UX audit F040, WCAG 2.5.8): every button, field and step link on a rig page
+   is at least 24 px each way. The step links and the top bar's links were 13 px tall. Only
+   raises; a control that is already bigger (the 44 px phone targets) keeps its size. */
+.rigbar .sbar-link, .rigbar .sbar-extra a, .rigbar .sbar-extra button,
+:is(.rigbuild, .rigplot, .rigcards, .rigequip, .rigscenes, .vis-page, .show-page) :is(button, select, input:not([type='checkbox'], [type='radio'], [type='range'], [type='hidden'])),
+:is(.rigbuild, .rigplot, .rigcards, .rigequip, .rigscenes, .vis-page, .show-page) a[class] {
+    min-height: 24px;
+}
+.rigbar .sbar-link, .rigbar .sbar-extra a, .rigbar .sbar-extra button,
+:is(.rigbuild, .rigplot, .rigcards, .rigequip, .rigscenes, .vis-page, .show-page) :is(button, a[class]) {
+    min-width: 24px;
+}
+.rigbar .sbar-link { display: inline-flex; align-items: center; }
