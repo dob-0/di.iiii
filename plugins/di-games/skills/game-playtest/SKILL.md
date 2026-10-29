@@ -36,6 +36,36 @@ description: "Stage 4 of the di-games routine. Use when a playable v1 passes its
 8. Retest the fixes in the next session. The stop line is the design's section 8 line about players asking
    for another round, in as many sessions as the plan names before the first session.
 
+## Scripted scenarios in the place (the method that worked, 2026-10-29)
+
+Behaviour that needs the engine (a monster's chase, a door, a player freed from a room) is tested by **scenarios IN the place**,
+not by driving Studio's window. Measured on night-forest and haunted-school (Studio through Vinegar on an agent screen):
+
+1. **The runner is a server Script in a test-only place.** `tests/place/ScenarioRunner.server.luau` in the game starts by itself on Play,
+   sets each case up (puts the player, starts the situation, `Humanoid:MoveTo`), waits, measures, and prints ONE line per case,
+   `TEST <case> PASS|FAIL <numbers>`, then `TEST DONE <passed>/<total>`. `scripts/build-test.sh` builds the test place
+   (`build/<Project>-test-scenario.rbxl`) from a copy of `src`; the shipped place never holds it
+   (`scripts/check_no_test_code.luau`, run by `check.sh`, fails if it does).
+2. **The driver only starts Play and reads the log.** `${CLAUDE_SKILL_DIR}/scripts/scenario.sh <test.rbxl> <outdir> <tag>`
+   starts Studio on the agent screen, sends F5 to the window found by its own PID tree, reads the TEST lines from Studio's log and
+   stops Studio by PID. It has no game name in it. A run with no `TEST DONE` is LOST, never a pass.
+3. **Claim an agent screen by id** (brief template item 22): `export DI_AGENT_SCREEN_ID=<n>`, the driver refuses a screen with a
+   visible window, and types only into a window found by its own PID. Another job's Chromium on a shared screen took the focus and
+   typed Lua landed in its search box; 4 runs were lost.
+4. **The owner's live view** of the same screen: `DI_AGENT_SCREEN_ID=<n> di-agent-screen live`. It shoots the claimed screen only.
+5. **Heat and sterile end:** `di-cool` first (the driver does), one Studio at a time, never detached (`&`, `nohup`, `setsid`); the
+   driver's trap stops Studio, and the job ends with no Studio, Vinegar or Wine process and an empty screen.
+
+What failed, and why it is not the method (so nobody tries it again):
+
+- **Coordinate clicks and the command bar.** Maximising Studio moved the command bar, a coordinate-driven tester typed into nothing and
+  the run was lost; typed text also went to the wrong window on a shared screen. Maximise first, and do not click by coordinates.
+- **A client-side bot** (a LocalScript that walks the player) never saw the server's Watcher, so the hiding rule read as "never tested"
+  and as "always escapes" in a model. The server runner needs no client.
+- **A pure-logic model of the chase** (Lune, random trunks) said "hider escapes 10 of 10" where Studio said 1 of 10: a model that is not
+  calibrated against the place is a claim, not a result. Label it so.
+- **Sample size:** 10 to 20 trials per row; plus or minus 2 trials is noise. Write the targets before the run.
+
 ## Counts to write down each session
 
 - rounds started, won, and lost on time
