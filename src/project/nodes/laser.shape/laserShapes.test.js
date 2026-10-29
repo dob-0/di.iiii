@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { FRAME_MAX_POINTS, normaliseFramePoints } from '../../../shared/laserFrame.js'
 import { LASER_SHAPES, generateShape, parseLaserColour } from './laserShapes.js'
+import * as twin from '../../../shared/laserShapes.js'
+
+// The shapes live in shared/laserShapes.cjs since the laser desk draws them on the server (2026-10-29); this file is
+// the node's old import path and must hand out the twin's own functions.
+describe('the node\'s import path', () => {
+    it('gives the same functions as the generated twin', () => {
+        expect(generateShape).toBe(twin.generateShape)
+        expect(LASER_SHAPES).toBe(twin.LASER_SHAPES)
+    })
+})
 
 describe('parseLaserColour', () => {
     it('reads hex, short hex, and falls back to green', () => {

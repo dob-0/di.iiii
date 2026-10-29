@@ -79,6 +79,12 @@ The owner's ask: "lets create laser soft like how is lighting one" — inside di
   22 of 23 tiles change in 0.4 s (Grid has no movement), lib loaded, 0 console errors. The first spots sat 0.3 apart and
   read as a clump: spread to 0.36, 10 by default.
 
+- CI on #1218 (first push): shard 3 and node-22-compat failed one test, `src/raw/rawTestScope.test.js` — the new
+  `src/shared/laserShapes.test.js` imported the node (`../project/…`), so it reached the node graph from outside
+  `test:raw`. The node's import-path check moved to `src/project/nodes/laser.shape/laserShapes.test.js`. It passed
+  unseen locally because on Windows that guard always fails (backslash paths list a dozen files), which hid the new one.
+  Rule: on Windows, read rawTestScope's list, don't trust its red/green.
+
 ## Not tested
 
 - Nothing on a real cube; nothing armed (sim included). The desk on the wall is owed, with the officer.

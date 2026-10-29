@@ -4,7 +4,6 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import * as browser from './laserShapes.js'
-import * as node from '../project/nodes/laser.shape/laserShapes.js'
 
 const require = createRequire(import.meta.url)
 const dir = path.dirname(fileURLToPath(import.meta.url))
@@ -18,10 +17,8 @@ describe('the laser shapes (shared/laserShapes.cjs, its browser twin and the nod
         const onDisk = fs.readFileSync(path.join(dir, 'laserShapes.js'), 'utf8').replace(/\r\n/g, '\n')
         expect(onDisk).toBe(buildTwin(fs.readFileSync(path.join(dir, '../../shared/laserShapes.cjs'), 'utf8'), 'laserShapes'))
     })
-    it('the node still imports the same functions from its old path', () => {
-        expect(node.generateShape).toBe(browser.generateShape)
-        expect(node.LASER_SHAPES).toBe(browser.LASER_SHAPES)
-    })
+    // The node's old import path is checked in src/project/nodes/laser.shape/laserShapes.test.js: a test here that
+    // imports the node graph would sit outside `npm run test:raw` (src/raw/rawTestScope.test.js).
     it.each(server.LASER_SHAPES)('server and browser draw %s the same', (shape) => {
         const knobs = { shape, size: 0.7, height: 0.3, rotation: 0.1, spin: 0.25, time: 3.2, colour: '#ff2040', level: 0.8, points: 300, copies: 0, rainbow: shape === 'galaxy', cycle: 0 }
         expect(browser.generateShape(knobs)).toEqual(server.generateShape(knobs))
