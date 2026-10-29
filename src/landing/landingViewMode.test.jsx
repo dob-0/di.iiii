@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // The room, reduced to the props the page hands it. What broke view mode was
 // never visible in the DOM: the page passed `interactive={entered && !viewMode}`,
@@ -42,6 +42,11 @@ const stepInside = async () => {
 
 describe('the front door\'s view mode', () => {
     beforeEach(() => { bgProps.current = null })
+    // These tests are about the room itself, so they open the front page in the
+    // mode where the room is already behind it (?scene=1, decorative3d.js); the
+    // default front page is flat since UX S15 (F138).
+    beforeEach(() => { window.history.replaceState(null, '', '/?scene=1') })
+    afterEach(() => { window.history.replaceState(null, '', '/') })
 
     it('hands the room an orbit, not a switched-off scene', async () => {
         await stepInside()
@@ -74,5 +79,18 @@ describe('the front door\'s view mode', () => {
         expect(screen.getByText(/Scroll to zoom/)).toBeTruthy()
         expect(screen.getByText(/Click a door/)).toBeTruthy()
         expect(screen.queryByText(/Walk \(WASD\)/)).toBeNull()
+    })
+})
+
+describe('the flat front page (UX S15, F138)', () => {
+    beforeEach(() => { bgProps.current = null })
+
+    it('starts no room while idle, and the door still brings it', async () => {
+        render(<LandingPage />)
+        await new Promise(resolve => setTimeout(resolve, 30))
+        expect(bgProps.current).toBeNull()
+        fireEvent.click(screen.getAllByRole('link', { name: /Step inside/ })[0])
+        await waitFor(() => expect(screen.getByRole('button', { name: /View mode/ })).toBeTruthy())
+        await waitFor(() => expect(bgProps.current?.interactive).toBe(true))
     })
 })

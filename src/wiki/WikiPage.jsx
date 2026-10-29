@@ -8,6 +8,7 @@ import SurfaceBar from '../components/SurfaceBar.jsx'
 import { isEmbedRequest } from '../utils/previewMode.js'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 import { buildWikiArticlePath, buildWikiPath } from '../utils/spaceRouting.js'
+import { wikiBackdropOn } from '../utils/decorative3d.js'
 
 // Lazy, not static — same fix as LandingPage.jsx: a plain import ships the
 // three.js vendor chunk (1.47 MB) to every wiki reader, phones included,
@@ -120,9 +121,13 @@ export default function WikiPage({ articleId = null }) {
 
     return (
         <div className="wiki-root" data-page="wiki" ref={rootRef}>
-            <Suspense fallback={null}>
-                <GridFloorBackground aria-hidden="true" interactive={false} />
-            </Suspense>
+            {/* Flat by default: a help page does not start the graphics card.
+                `?scene=1` brings the old 3D backdrop back (decorative3d.js). */}
+            {wikiBackdropOn() ? (
+                <Suspense fallback={null}>
+                    <GridFloorBackground aria-hidden="true" interactive={false} />
+                </Suspense>
+            ) : null}
 
             {/* The wiki described Raw, Tools and the lighting desk in named
                 sections and linked to none of them; its own way home was a
