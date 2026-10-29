@@ -47,6 +47,16 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## Rig pages and perform used 10-11.5 px type, a faint step-bar title and a 20 px tick box; the toybox had two low-contrast greys (UX audit F040, F094, F096, F100, F103, 2026-10-29)
+
+Symptom: build, cards, equipment and plot set text at 10-11.5 px; the step bar's "RIG" title and step numbers were `--di-faint` (axe serious); equipment tick boxes 20 px; toybox English name line and "later" 4.3:1 on cream.
+Cause: the rig CSS predates the 12 px floor (S05); the steps row used the rules-only grey; `--make-ink-soft` is 4.3:1 on `--make-paper`.
+Fix: every `font-size` under 12 px in `src/rigbuild/*.css` is 12px; `.rigsteps-title`/`.rigsteps-n` use `--di-dim`; tick box 24 px; new `--make-ink-readable` (#6B6458, 5.5:1) on `.make-name-en` and `.make-name-skip` only (the toybox keeps its palette). F100 (phone totals over Items) was already fixed by the `top:112px` second row; the test now pins it. perform.css was already on the ladder tokens.
+Review pass: the first guard read only `font-size: Npx`, so nine `font:` shorthands (9-11.5 px in build, cards, equipment, plot) and four rem sizes in show.css (0.62-0.72 rem) stayed small; all are 12 px now, the cards slot grows (`min-width: 40px`, 3 px side padding) instead of clipping, and the build page's exact-value button has `min-height: 24px`.
+Fix round 2: a 24 px target floor (WCAG 2.5.8) for buttons, fields and links on every rig page root (`.rigbuild`, `.rigplot`, `.rigcards`, `.rigscenes`, `.vis-page`, `.show-page`) and the rig bar's links (rigSteps.css), the perform windows (`.perform-pane`) and the small map buttons; the map's labels follow `--di-label-case`. Reviewer 2: the first floor named `.vis` and `.show`, classes no page carries (the roots are `.vis-page` and `.show-page`), so the visualise page got no floor; the test now names the real roots.
+Fix round 3: at 12 px the phone status box (full width, top 112px) lay on the Undo/Redo row (top 110px, 44px tall; seen at 390 with the rig bar); it now starts at 160px (rig bar: `var(--rigbar-h) + 160px`), below Items and Undo. Guard: `buildPhoneTotals.test.js` "starts below the Undo/Redo row" (fails on the round-2 CSS).
+Guard: `src/rigbuild/readableType.test.js` (8): it reads `font-size` and the `font` shorthand in px and rem (print pt excluded); 5 fail on the old CSS, the phone-geometry one passes on both (it pins an existing fix). Paper views (.rigplot, .rigsheet) and the light desk untouched.
+
 ## Light desk controls had no accessible name; the fixture library could not be scrolled by keyboard (UX audit F129, 2026-10-29)
 
 Symptoms (axe, 4 critical): `#dimMaxH` `#dimMinH` (button-name), `#bpm` and the zoom slider (label), `#gridUniverse` (select-name), `#libTree` (scrollable-region-focusable).

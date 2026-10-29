@@ -346,6 +346,13 @@
     accent-color: var(--di-ink);
 }
 
+/* Target floor (UX audit F094, WCAG 2.5.8): nothing in a perform window is under 24 px.
+   The window's own square, dash and cross are 44 px in raw.css (.raw-window-actions button). */
+.perform-pane :is(button, select, input:not([type='checkbox'], [type='radio'], [type='range'], [type='hidden'])) {
+    min-height: 24px;
+    min-width: 24px;
+}
+
 @media (pointer: coarse), (max-width: 600px) {
     .perform-strip-button,
     .perform-action {
