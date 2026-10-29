@@ -10,7 +10,7 @@ import { useXrAr } from '../hooks/useXrAr.js'
 import MadeWithBadge from './MadeWithBadge.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
-import { confineToAreas } from './walkableAreas.js'
+import { createSolidWallsKeeper, walkStep, SOLID_WALLS_MAX_TRIANGLES, SOLID_WALLS_MAX_TRIANGLES_PHONE } from './solidWalls.js'
 import HeadLight from './HeadLight.jsx'
 import { resolveHeadLight, headLightCastsShadow } from './headLight.js'
 import { isFlyKey, walkKeyHintText } from './walkKeys.js'
@@ -488,14 +488,30 @@ export const detectTouchDevice = () => {
     return (navigator.maxTouchPoints || 0) > 0 && !window.matchMedia('(any-pointer: fine)').matches
 }
 
-function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true, walkLook = 'lock' }) {
-    const { camera, gl } = useThree()
+function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, solidWalls = null, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true, walkLook = 'lock' }) {
+    const { camera, gl, scene } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
     // write camera.position/lookAt then, or it yanks the camera back to the
     // flat-screen player pose every frame -- fighting head-tracking and
     // defeating XROrigin movement entirely.
     const isPresenting = useXR((state) => state.session != null)
+    // Solid walls (opt-in, worldState.solidWalls): the walker is a capsule swept against the scene's own meshes
+    // (solidWalls.js). Without the switch there is no keeper and the movement below is exactly what it always was.
+    const wallsOn = solidWalls?.enabled === true
+    const wallsKeeper = useMemo(() => {
+        if (!wallsOn) return null
+        return createSolidWallsKeeper({
+            root: scene,
+            maxTriangles: COARSE_POINTER ? SOLID_WALLS_MAX_TRIANGLES_PHONE : SOLID_WALLS_MAX_TRIANGLES,
+            // the one obvious place that says what the walls are doing, and why not when they are not
+            onStatus: (text, stats) => { gl.domElement.dataset.solidWalls = text; gl.domElement.__solidWallsStats = stats }
+        })
+    }, [wallsOn, scene, gl])
+    useEffect(() => () => {
+        wallsKeeper?.dispose()
+        if (wallsKeeper) { delete gl.domElement.dataset.solidWalls; delete gl.domElement.__solidWallsStats }
+    }, [wallsKeeper, gl])
     const keysRef = useRef(new Set())
     const speedRef = useRef(0)
     const strafeSpeedRef = useRef(0)
@@ -908,6 +924,8 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         const joy = joystickRef?.current || { x: 0, y: 0 }
         const fly = flyRef.current
         if (player.pitch === undefined) player.pitch = 0
+        // the walls follow the scene (cheap: one clock read most frames); not while flying
+        const walls = wallsKeeper && !fly ? wallsKeeper.tick() : null
         if (player.altY === undefined) player.altY = EYE_HEIGHT
 
         // Only arrow keys (and mouse/touch drag, and the mobile joystick's x
@@ -957,8 +975,8 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             const rightZ = Math.sin(player.yaw) * strafeSpeedRef.current
             const nextX = player.x + (forwardX + rightX) * delta
             const nextZ = player.z + (forwardZ + rightZ) * delta
-            const moved = confineToAreas(
-                walkableAreas,
+            const moved = walkStep(
+                walkableAreas, walls,
                 player.x, player.z,
                 THREE.MathUtils.clamp(nextX, bounds.minX, bounds.maxX),
                 THREE.MathUtils.clamp(nextZ, bounds.minZ, bounds.maxZ)
@@ -972,8 +990,8 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         if (wheelDollyRef.current !== 0) {
             const dolly = wheelDollyRef.current
             wheelDollyRef.current = 0
-            const dollied = confineToAreas(
-                walkableAreas,
+            const dollied = walkStep(
+                walkableAreas, walls,
                 player.x, player.z,
                 THREE.MathUtils.clamp(player.x + Math.sin(player.yaw) * dolly, bounds.minX, bounds.maxX),
                 THREE.MathUtils.clamp(player.z + Math.cos(player.yaw) * dolly, bounds.minZ, bounds.maxZ)
@@ -2086,6 +2104,7 @@ export default function LiveProjectScene({
                         entities={entities}
                         bounds={bounds}
                         walkableAreas={worldState.walkableAreas}
+                        solidWalls={worldState.solidWalls}
                         joystickRef={joystickRef}
                         joyVisRef={joyVisRef}
                         joyThumbRef={joyThumbRef}
