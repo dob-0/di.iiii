@@ -409,6 +409,21 @@ describe('shelves and the trash', () => {
         expect(await screen.findByText(/wait here for 30 days/i)).toBeTruthy()
         expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
     })
+
+    // UX S10 (F031): a project card is not a button holding buttons; its name opens it.
+    it('a project card is no button itself, and its name is the button that opens it', async () => {
+        listProjects.mockResolvedValue([{ id: 'a', title: 'Kept', updatedAt: Date.now(), source: 'project' }])
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 30 * 24 * 60 * 60 * 1000 })
+
+        render(<StudioHub spaceId="main" />)
+
+        const open = await screen.findByRole('button', { name: 'Kept' })
+        const card = open.closest('.sh-project-card')
+        expect(card.getAttribute('role')).not.toBe('button')
+        expect(card.getAttribute('tabindex')).toBeNull()
+        expect(card.querySelector('.sh-project-open')).toBe(open)
+    })
 })
 
 // ── One project list per space (2026-09-23) ─────────────────────────────────

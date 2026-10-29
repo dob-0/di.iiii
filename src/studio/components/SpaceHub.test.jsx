@@ -399,7 +399,7 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        // Guest is scoped into main (open jam) — the card still opens the editor.
+        // Guest is scoped into main (open jam) — the card opens the space; Edit opens the editor (UX S10).
         fireEvent.click(await screen.findByText('Main Space'))
         expect(mockEnter).toHaveBeenCalledWith('/main')
         expect(mockEnter).not.toHaveBeenCalledWith('/main/studio')
@@ -820,8 +820,8 @@ describe('SpaceHub', () => {
         expect(shelfLabels[1]).toMatch(/^Your sandbox/)
         expect(shelfLabels[2]).toMatch(/^Your spaces/)
 
-        // The open space is public but everyone can enter it — the card opens
-        // the editor, never the read-only live view.
+        // The open space is public and everyone can enter it — the card opens
+        // the space (UX S10); its Edit button opens the editor.
         fireEvent.click(cardOf('open'))
         expect(mockEnter).toHaveBeenCalledWith('/open')
         expect(mockEnter).toHaveBeenCalledTimes(1)

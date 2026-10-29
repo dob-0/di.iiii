@@ -383,10 +383,8 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
             <div
                 key={project.id}
                 className="sh-project-card"
+                role="presentation"
                 onClick={() => !isRenaming && openProject(project.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={e => e.key === 'Enter' && !isRenaming && openProject(project.id)}
             >
                 {isRenaming ? (
                     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
@@ -414,7 +412,14 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                         onDoubleClick={e => startRename(project, e)}
                         title="Double-click to rename"
                     >
-                        {project.title}
+                        {/* The card's one control that opens it (keyboard and screen
+                            reader); a click anywhere else on the card is a mouse bonus.
+                            The card is no longer a button holding buttons (UX S10, F031). */}
+                        <button
+                            type="button"
+                            className="sh-project-open"
+                            onClick={e => { e.stopPropagation(); openProject(project.id) }}
+                        >{project.title}</button>
                     </p>
                 )}
                 {/* What the project holds, in one line — "3 things · 2 wires ·
