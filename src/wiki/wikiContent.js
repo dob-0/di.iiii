@@ -228,10 +228,11 @@ export const WIKI_ARTICLES = [
             'A space marked permanent is not deleted: the box says so, and an admin can unmark it there first. The front room, the shared global space and a sandbox are never deleted. While a space is in the Trash its name is held, so a new space cannot take it by accident.',
             'A project can move to another space you own: on a project card in Studio, "move to…" lists them. Its link keeps working. A project that is its space\u2019s front door asks first, because moving it leaves that space with no front door. Once moved, the old space\u2019s own address sends visitors on to the project in its new space, until that space is given a new front door. Someone who could not open the project where it went is not sent there: they see the old space as it is.',
             'Not yet carried: a space that is followed from another copy (di follow) does nothing special when it is trashed — the copy that follows simply stops finding it. A delete does not travel to the copies that follow.',
-            'Spaces nobody touches. A space that is not permanent and has not been edited for 30 days (a guest sandbox: 7 days) is cleared by the server\u2019s half-hour sweep — and cleared means moved to the Trash, the same as a delete: it can be restored for 30 days. A space that is published, listed publicly, linked from the site, reachable by its own address or domain, or holds a project with saved work is never cleared: it is kept, and the sweep says so. A guest who comes back to a cleared sandbox inside the 30 days gets it back. Admins see every space due in the next 14 days, and what the sweep will do to each, under Manage → Due for the sweep.'
+            'Spaces nobody touches. A space that is not permanent and has not been edited for 30 days (a guest sandbox: 7 days) is cleared by the server\u2019s half-hour sweep — and cleared means moved to the Trash, the same as a delete: it can be restored for 30 days. A space that is published, listed publicly, linked from the site, reachable by its own address or domain, or holds a project with saved work is never cleared: it is kept, and the sweep says so. A guest who comes back to a cleared sandbox inside the 30 days gets it back. Admins see every space due in the next 14 days, and what the sweep will do to each, under Manage → Due for the sweep.',
+            'ONE DELETE, TWO DOORS (2026-10-28). Delete in Manage on the Spaces page and Delete in the admin Directory open the same box with the same words. After Move to Trash a notice says the space is in the Trash and for how many days, with Undo for 10 seconds, which brings it back. In Manage, Delete sits last on its own line, apart from Archive (Archive keeps the space whole and only takes it out of the list).',
         ],
         tags: ['delete', 'trash', 'restore', 'space', 'permanent', 'move', 'undo', 'sweep', 'idle'],
-        updated: '2026-10-21'
+        updated: '2026-10-28'
     },
     {
         id: 'your-space-your-word',
@@ -243,9 +244,10 @@ export const WIKI_ARTICLES = [
             'TRUSTED PEOPLE. An owner can name accounts that change the space directly, the way the owner does — a co-author, a group running a workshop room. Add them in Manage; they can reach the space at once. Anyone else who sends work for your space is making a proposal: you see a plain summary of what would change and say yes or no.',
             'EVERY CHANGE HAS AN AUTHOR, AND CAN BE PUT BACK. When someone who is not the owner finishes a run of edits, the owner is told what changed — "+3 images, 1 object removed, title changed" — with an Undo that restores the space to just before. Trust means no gate in the way, not no record.',
             'ONE SPACE, NOT ALL. Being the owner or trusted in one space grants nothing anywhere else. It is not a role; it is a relationship to one place.',
+            'WHO CAN SEE IT (2026-10-28). In Manage on a space card, the switch “Anyone with the link can see it” says On or Off, and the line under it says what that means: Off, only you and the people you invite open the space; On, anyone with the link does, without signing in. Turning it On asks first and names the space; turning it Off happens at once. A private project stays members-only inside a public space. The rest of Manage is grouped: Name, Who can see it, Invite people, History and backup, then More (own domain, linked project, card picture, GitHub), Put away (Archive), and Delete last.',
         ],
         tags: ['owner', 'steward', 'trusted', 'permissions', 'approval', 'proposal', 'undo', 'manage', 'space'],
-        updated: '2026-09-21'
+        updated: '2026-10-28'
     },
     {
         id: 'private-projects',
@@ -323,7 +325,7 @@ export const WIKI_ARTICLES = [
         title: 'Your install\'s network name',
         summary: 'After di login, one command gives this install a name other machines can use, and a certificate of its own for it that renews itself.',
         body: [
-            'CLAIM IT. Sign in once with di login, then type di name. The install asks the name broker for a label made of your handle and four letters, like ponyo-k7q2, and keeps its name under l.thedi.studio. An account holds up to three names.',
+            'CLAIM IT. Sign in once with di login, then type di name. The install asks the name broker for a label made of your handle and four letters, like ponyo-k7q2, and keeps its name under l.diiii.xyz. An account holds up to three names.',
             'ITS OWN CERTIFICATE. The same command then asks Let\'s Encrypt for a certificate for the name and everything under it. The key is made on this machine and never leaves it; the broker only writes the one proof record Let\'s Encrypt asks for. Everything lives in the .di/name folder in your home folder, and nothing there touches the certificate di up serves today.',
             'IT LOOKS AFTER ITSELF. A certificate lasts 90 days. di up checks it when it starts, and the daily update check does too; below 30 days left it renews. A failed renewal leaves the old certificate and writes one line to .di/logs/name.log. Your own address, http://diiii.localhost/, is never touched.',
             'SEE IT. di status ends with one line: the name and the date the certificate runs until, or "none — run di name". di name --status says the same without asking anyone; di name --renew renews now if it is due; di name --forget removes the local files (the broker keeps the label until it is revoked).',

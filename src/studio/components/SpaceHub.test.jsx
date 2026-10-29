@@ -1167,6 +1167,81 @@ describe('SpaceHub', () => {
         expect(screen.getByRole('button', { name: /^Only you/ })).toBeTruthy()
     })
 
+    // 2026-10-28 (UX S04, F015/F014): "Public"/"Private" was a one-click button
+    // that named the state, not the action, and published at once. It is a
+    // labelled switch with a line on who sees the space, and going public asks.
+    describe('who can see the space', () => {
+        const switchFor = (spaceId) => openManageFor(spaceId).querySelector('[role="switch"]')
+
+        it('one click on the switch does not make the space public until the question is answered yes', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'drafts', label: 'Drafts', isOwner: true, isPublic: false }])
+            updateServerSpace.mockResolvedValue({})
+            render(<SpaceHub />)
+            await findCard('drafts')
+
+            const toggle = switchFor('drafts')
+            expect(toggle).toBeTruthy()
+            expect(toggle.getAttribute('aria-checked')).toBe('false')
+            expect(toggle.textContent).toContain('Anyone with the link can see it')
+            expect(cardOf('drafts').textContent).toContain('Off: only you and the people you invite can open this space.')
+
+            fireEvent.click(toggle)
+            const question = await screen.findByRole('alertdialog')
+            expect(question.textContent).toContain('Make “Drafts” public?')
+            expect(updateServerSpace).not.toHaveBeenCalled()
+
+            fireEvent.click(screen.getByRole('button', { name: 'Keep it private' }))
+            await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+            expect(updateServerSpace).not.toHaveBeenCalled()
+
+            fireEvent.click(switchFor('drafts'))
+            fireEvent.click(await screen.findByRole('button', { name: 'Make it public' }))
+            await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('drafts', { isPublic: true }))
+        })
+
+        it('going private needs no question, and the line says who sees it now', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'show', label: 'Show', isOwner: true, isPublic: true }])
+            updateServerSpace.mockResolvedValue({})
+            render(<SpaceHub />)
+            await findCard('show')
+            const toggle = switchFor('show')
+            expect(toggle.getAttribute('aria-checked')).toBe('true')
+            expect(cardOf('show').textContent).toContain('On: anyone with the link can open this space, without signing in.')
+            fireEvent.click(toggle)
+            await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('show', { isPublic: false }))
+            expect(screen.queryByRole('alertdialog')).toBeNull()
+        })
+
+        it('a failure is said in the page notice, not in a browser alert', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'show', label: 'Show', isOwner: true, isPublic: true }])
+            updateServerSpace.mockRejectedValue(new Error('The server said no'))
+            const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+            try {
+                render(<SpaceHub />)
+                await findCard('show')
+                fireEvent.click(switchFor('show'))
+                const notice = await screen.findByText(/Could not change who can see “Show”: The server said no/)
+                expect(notice.getAttribute('role')).toBe('status')
+                expect(alertSpy).not.toHaveBeenCalled()
+            } finally {
+                alertSpy.mockRestore()
+            }
+        })
+
+        it('Manage is grouped, and Delete sits in its own group, apart from Archive', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            render(<SpaceHub />)
+            await findCard('mine')
+            const card = openManageFor('mine')
+            const groups = [...card.querySelectorAll('.ssh-manage [role="group"]')].map((g) => g.getAttribute('aria-label'))
+            expect(groups).toEqual(['Name', 'Who can see it', 'Invite people', 'History and backup', 'Put away', 'Delete'])
+            const buttonIn = (label) => [...card.querySelectorAll('.ssh-card-btn')].find((b) => b.textContent === label)
+            expect(buttonIn('Delete').closest('[role="group"]')).not.toBe(buttonIn('Archive').closest('[role="group"]'))
+            // the developer things are folded under More
+            expect(buttonIn('GitHub sync').closest('details')).toBeTruthy()
+        })
+    })
+
     // 2026-10-05: Delete was a window.confirm that said "cannot be undone" and
     // removed the directory. It is a dialog that names what goes now, and the
     // space waits in the Trash.
@@ -1198,6 +1273,21 @@ describe('SpaceHub', () => {
             await waitFor(() => expect(deleteServerSpace).toHaveBeenCalledWith('mine'))
             await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
             confirmSpy.mockRestore()
+        })
+
+        it('after a delete, the notice offers Undo, which brings the space back from the Trash', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            getSpaceFootprint.mockResolvedValue({ projects: 0, bytes: 0, protected: null })
+            deleteServerSpace.mockResolvedValue({ ok: true, trashed: true, projects: 0 })
+            restoreServerSpace.mockResolvedValue({ ok: true })
+            render(<SpaceHub />)
+            await findCard('mine')
+            clickDelete('mine')
+            await screen.findByText(/It is empty: no projects/)
+            fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }))
+            expect(await screen.findByText('“Mine” is in the Trash for 30 days.')).toBeTruthy()
+            fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+            await waitFor(() => expect(restoreServerSpace).toHaveBeenCalledWith('mine'))
         })
 
         it('Cancel deletes nothing', async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
     getSpaceFootprint,
     updateServerSpace,
@@ -7,6 +7,8 @@ import {
     purgeServerSpace
 } from '../../services/serverSpaces.js'
 import { spaceName } from '../utils/spaceNames.js'
+import { useUndoNotice } from '../../components/ui/useAsk.js'
+import '../styles/studio-space-hub.css'
 
 // Delete a space, and the Trash it goes to. Same promise a project's delete
 // makes (StudioHub): nothing is removed, everything waits 30 days, and the
@@ -42,8 +44,37 @@ export function SpaceDeleteDialog({ space, isAdmin = false, onClose, onDone }) {
         return () => { cancelled = true }
     }, [space.id])
 
+    // Keyboard: focus starts on Cancel (the safe button), Tab stays inside the
+    // box, and closing it gives focus back to what opened it (WAI-ARIA APG,
+    // modal dialog pattern; the same as AskDialog).
+    const dialogRef = useRef(null)
+    const cancelRef = useRef(null)
     useEffect(() => {
-        const onKey = (event) => { if (event.key === 'Escape' && !busy) onClose?.() }
+        const before = document.activeElement
+        cancelRef.current?.focus()
+        return () => { if (before && before.isConnected) before.focus?.() }
+    }, [])
+
+    useEffect(() => {
+        const onKey = (event) => {
+            if (event.key === 'Escape' && !busy) { onClose?.(); return }
+            if (event.key !== 'Tab') return
+            const nodes = [...(dialogRef.current?.querySelectorAll('button:not([disabled])') || [])]
+            if (!nodes.length) return
+            const first = nodes[0]
+            const last = nodes[nodes.length - 1]
+            const active = document.activeElement
+            if (!dialogRef.current?.contains(active)) {
+                event.preventDefault()
+                first.focus()
+            } else if (event.shiftKey && active === first) {
+                event.preventDefault()
+                last.focus()
+            } else if (!event.shiftKey && active === last) {
+                event.preventDefault()
+                first.focus()
+            }
+        }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
     }, [busy, onClose])
@@ -84,6 +115,7 @@ export function SpaceDeleteDialog({ space, isAdmin = false, onClose, onDone }) {
     return (
         <div className="ssh-dialog-scrim" role="presentation" onClick={(event) => { if (event.target === event.currentTarget && !busy) onClose?.() }}>
             <div
+                ref={dialogRef}
                 className="ssh-dialog"
                 role="dialog"
                 aria-modal="true"
@@ -115,7 +147,7 @@ export function SpaceDeleteDialog({ space, isAdmin = false, onClose, onDone }) {
                 )}
                 {error && <p className="ssh-dialog-body ssh-dialog-error" role="alert">{error}</p>}
                 <div className="ssh-dialog-actions">
-                    <button type="button" className="ssh-card-btn" onClick={onClose} disabled={busy}>Cancel</button>
+                    <button ref={cancelRef} type="button" className="ssh-card-btn" onClick={onClose} disabled={busy}>Cancel</button>
                     {reason === 'permanent' && isAdmin && (
                         <button type="button" className="ssh-card-btn" onClick={unmarkPermanent} disabled={busy}>Unmark permanent</button>
                     )}
@@ -131,6 +163,46 @@ export function SpaceDeleteDialog({ space, isAdmin = false, onClose, onDone }) {
             </div>
         </div>
     )
+}
+
+// One delete for a space, wherever it starts (the Spaces page, the admin
+// directory): the same box that names what goes and the 30 days in the Trash,
+// then a notice with Undo, which brings the space back from the Trash.
+// onChanged() reloads the caller's lists; onMessage(text) shows a line in the
+// caller's own notice (a pending approval, a restore that failed).
+export function useSpaceDelete({ isAdmin = false, onChanged, onMessage } = {}) {
+    const [deleting, setDeleting] = useState(null)
+    const { notify, undoNotice } = useUndoNotice()
+    const startDelete = useCallback((space) => setDeleting(space), [])
+
+    const done = async (receipt) => {
+        const space = deleting
+        setDeleting(null)
+        await onChanged?.()
+        if (receipt?.status === 'pending_approval') {
+            onMessage?.('Waiting for approval before it moves to the Trash.')
+            return
+        }
+        const days = receipt?.restorableUntil ? daysLeft(receipt.restorableUntil) : 30
+        notify(`“${spaceName(space)}” is in the Trash for ${days} days.`, async () => {
+            try {
+                await restoreServerSpace(space.id)
+                await onChanged?.()
+            } catch (e) {
+                onMessage?.(`Could not bring “${spaceName(space)}” back: ${e.message || 'try the Trash'}.`)
+            }
+        })
+    }
+
+    const deleteUi = (
+        <>
+            {deleting && (
+                <SpaceDeleteDialog space={deleting} isAdmin={isAdmin} onClose={() => setDeleting(null)} onDone={done} />
+            )}
+            {undoNotice}
+        </>
+    )
+    return { startDelete, deleteUi }
 }
 
 export function SpaceTrashPanel({ trash, onChanged, onClose }) {

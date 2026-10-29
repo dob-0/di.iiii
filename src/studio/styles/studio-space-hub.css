@@ -653,6 +653,144 @@
     background: color-mix(in srgb, var(--di-danger) 6%, transparent);
 }
 
+/* ─── MANAGE: grouped by what you want to do ───────────────
+   Name · Who can see it · Invite people · History and backup ·
+   More (developer things, folded) · Put away · Delete, last and apart.
+   Labels in normal letters at 12 px or more (owner Q1, 2026-10-28). */
+.ssh-manage {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 12px;
+}
+
+.ssh-manage-group { min-width: 0; }
+
+.ssh-manage-heading {
+    margin: 0 0 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--di-text);
+}
+
+.ssh-manage-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.ssh-manage .ssh-card-btn {
+    font-size: 0.75rem;
+    letter-spacing: 0;
+    min-height: 32px;
+    padding: 4px 10px;
+}
+
+.ssh-manage-hint {
+    margin: 6px 0 0;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--di-text-muted);
+}
+
+.ssh-manage-row .ssh-manage-hint { margin: 0; }
+
+.ssh-manage-more > summary {
+    cursor: pointer;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+}
+
+.ssh-manage-more[open] > summary { margin-bottom: 6px; }
+
+/* Delete stands apart: its own line, a rule above, never beside Archive. */
+.ssh-manage-danger {
+    margin-top: 6px;
+    padding-top: 12px;
+    border-top: 1px solid color-mix(in srgb, var(--di-danger) 30%, transparent);
+}
+
+.ssh-manage-danger .ssh-card-btn--danger {
+    color: var(--di-danger);
+    border-color: color-mix(in srgb, var(--di-danger) 45%, transparent);
+}
+
+/* Who can see it: a labelled switch (role=switch), its state in words. */
+.ssh-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 36px;
+    padding: 6px 10px;
+    font: inherit;
+    font-size: 0.8rem;
+    text-align: left;
+    color: var(--di-text);
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--di-ink) 20%, transparent);
+    border-radius: var(--di-radius);
+    cursor: pointer;
+}
+
+.ssh-switch:hover { border-color: color-mix(in srgb, var(--di-ink) 40%, transparent); }
+
+.ssh-switch:focus-visible {
+    outline: 2px solid var(--di-cyan);
+    outline-offset: 2px;
+}
+
+.ssh-switch-track {
+    flex: none;
+    position: relative;
+    width: 34px;
+    height: 18px;
+    border: 1px solid color-mix(in srgb, var(--di-ink) 40%, transparent);
+    border-radius: var(--di-radius);
+    background: color-mix(in srgb, var(--di-ink) 8%, transparent);
+}
+
+.ssh-switch-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--di-radius);
+    background: var(--di-text-muted);
+    transition: transform 0.12s;
+}
+
+.ssh-switch.is-on .ssh-switch-track {
+    background: color-mix(in srgb, var(--di-success) 30%, transparent);
+    border-color: var(--di-success);
+}
+
+.ssh-switch.is-on .ssh-switch-knob {
+    transform: translateX(16px);
+    background: var(--di-success);
+}
+
+.ssh-switch-label { flex: 1; min-width: 0; }
+
+.ssh-switch-state {
+    flex: none;
+    font-weight: 600;
+}
+
+@media (pointer: coarse) {
+    .ssh-manage .ssh-card-btn,
+    .ssh-switch,
+    .ssh-manage-more > summary {
+        min-height: var(--di-touch-target);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ssh-switch-knob { transition: none; }
+}
+
 /* ─── PROJECT LINKER ────────────────────────────────────── */
 .ssh-project-linker {
     margin-top: 10px;

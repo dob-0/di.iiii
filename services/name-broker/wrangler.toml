@@ -3,14 +3,18 @@
 name = "di-name-broker"
 main = "src/worker.js"
 compatibility_date = "2026-10-01"
+# Served on its own name in the diiii.xyz zone (a custom domain: Cloudflare makes the DNS record). No workers.dev subdomain.
+workers_dev = false
+routes = [ { pattern = "name.diiii.xyz", custom_domain = true } ]
 
 [vars]
-ZONE = "l.thedi.studio"
+ZONE = "l.diiii.xyz"
 # The zone's id: Cloudflare dashboard → thedi.studio → Overview → Zone ID. Not a secret.
-CF_ZONE_ID = "SET-BEFORE-DEPLOY"
+CF_ZONE_ID = "402a1ccaafcbe3989e051ada1eaee730"
 DI_API_BASE = "https://dev.diiii.xyz/serverXR"
 
 [[kv_namespaces]]
 binding = "LABELS"
 # `npx wrangler kv namespace create LABELS` prints this id once.
-id = "SET-BEFORE-DEPLOY"
+id = "989b4960ded74f7cadc9c16a571d02f1"
+
