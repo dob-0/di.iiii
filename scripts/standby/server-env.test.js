@@ -97,6 +97,12 @@ describe('server-env.mjs', () => {
         expect(r.env).toEqual({})
     })
 
+    it('refuses only the host client itself, not a name that ends in client', () => {
+        const r = run([BASE], fakeEnv([BASE], DOCKER_DEFAULTS), ['--nginx', '127.0.0.1:8080', '--set', 'SHELL_URL=http://myclient:8080/x.html'])
+        expect(r.status).toBe(0)
+        expect(r.env.SHELL_URL).toBe('http://myclient:8080/x.html')
+    })
+
     it('a --set value still wins over the --nginx rewrite; a bad --nginx is refused', () => {
         const ok = run([BASE], fakeEnv([BASE], DOCKER_DEFAULTS), ['--nginx', '127.0.0.1:8080', '--set', 'SHELL_URL=http://127.0.0.1:9/x.html'])
         expect(ok.status).toBe(0)

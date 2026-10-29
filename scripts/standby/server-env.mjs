@@ -96,7 +96,8 @@ for (const kv of sets) {
   env[m[1]] = m[2]
 }
 delete env.DI_LOCAL
-const docker = Object.keys(env).filter((k) => env[k].includes('client:8080'))
+// the host must be exactly `client` (a URL's //client:8080), so a name like myclient:8080 passes
+const docker = Object.keys(env).filter((k) => /\/\/client:8080(?![0-9])/.test(env[k]))
 if (docker.length) {
   console.error(`${docker.join(', ')} name the Docker client container (client:8080), which a standby host cannot reach; pass --nginx <the tier's nginx host:port>`)
   process.exit(1)
