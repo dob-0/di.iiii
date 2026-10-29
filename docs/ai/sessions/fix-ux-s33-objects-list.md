@@ -5,3 +5,4 @@
 - Not done: selecting a non-Geo node in Studio outside a Geo; browser pictures (see the result file).
 - Review (S33 judge): node rows are listed only where Studio draws them (not in a jam project, where graphRoom is null).
 - Fix round 2: each non-Geo row has a visible "Edit in Nodes" button (opens Nodes for the project; Nodes has no per-node link); the marked top-room Camera is no longer listed (matches GraphRoomNodes.jsx:56-64). Top room stays not selectable in Studio (named, not done).
+- Review 2 (S33 judge): a row made in Nodes no longer shows the hand cursor or hover (`spa-item--static`), and its button is named per thing ("Edit Sphere in Nodes") for a screen reader.
