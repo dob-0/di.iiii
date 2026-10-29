@@ -171,11 +171,11 @@ function NodeRow({ row, onOpen, onEditInNodes }) {
             <span className="spa-type">{row.type} · open</span>
         </div>
     ) : (
-        <div className="spa-item" title="Made in Nodes — edit it there">
+        <div className="spa-item spa-item--static" title="Made in Nodes — edit it there">
             <span className="spa-name">{label}</span>
             <span className="spa-type">{row.type}</span>
             {onEditInNodes && (
-                <button type="button" className="spa-node-edit" onClick={onEditInNodes} title="Made in Nodes — open Nodes to edit it">
+                <button type="button" className="spa-node-edit" onClick={onEditInNodes} title="Made in Nodes — open Nodes to edit it" aria-label={`Edit ${label} in Nodes`}>
                     Edit in Nodes
                 </button>
             )}

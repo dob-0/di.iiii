@@ -662,6 +662,15 @@
     flex-shrink: 0;
 }
 
+/* A row shown, not clicked (made in Nodes): no hand, no hover, so it does not
+   promise a click; its Edit in Nodes button is the way in. */
+.spa-item--static,
+.spa-item--static:hover {
+    cursor: default;
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.07);
+}
+
 .spa-node-edit {
     appearance: none;
     background: transparent;

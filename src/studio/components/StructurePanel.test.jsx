@@ -156,7 +156,8 @@ describe('StructurePanel lists what the scene shows (UX audit F026)', () => {
     it('a row made in Nodes shows a visible Edit in Nodes button that opens Nodes', () => {
         const onEdit = vi.fn()
         render(<StructurePanel entities={[]} nodeRows={nodeRows} onOpenNodeRow={() => {}} onEditNodeRowInNodes={onEdit} selectedEntityIds={[]} onSelectEntity={() => {}} onToggleSelectEntity={() => {}} />)
-        const buttons = screen.getAllByRole('button', { name: 'Edit in Nodes' })
+        const buttons = screen.getAllByRole('button', { name: 'Edit Sphere in Nodes' })
+        expect(buttons[0]).toHaveTextContent('Edit in Nodes')
         expect(buttons).toHaveLength(1)
         fireEvent.click(buttons[0])
         expect(onEdit).toHaveBeenCalledTimes(1)
