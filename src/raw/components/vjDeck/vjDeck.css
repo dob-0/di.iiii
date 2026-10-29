@@ -49,7 +49,7 @@
     color: var(--di-dim);
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
 }
 
 .vj-deck-dim {

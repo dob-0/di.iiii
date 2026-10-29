@@ -4,6 +4,7 @@ import {
     STUDIO_SHORTCUT_SECTIONS,
     viewportMouseRows
 } from '../utils/studioGuide.js'
+import { useKeyPrefs, writeKeyPrefs } from '../utils/studioKeyPrefs.js'
 import { MOVE_HELP_NOTE } from '../navigation/useMoveSettings.js'
 import '../styles/studio-help.css'
 
@@ -56,6 +57,7 @@ function GuideDiagram({ sectionId }) {
 export default function StudioHelpDialog({ open, onClose, initialMode = 'basics' }) {
     const [mode, setMode] = useState(initialMode)
     const [sectionId, setSectionId] = useState('move')
+    const keyPrefs = useKeyPrefs()
 
     useEffect(() => {
         if (!open) return
@@ -150,6 +152,17 @@ export default function StudioHelpDialog({ open, onClose, initialMode = 'basics'
                     </>
                 ) : (
                     <div className="sh-help-shortcuts">
+                        <div className="sh-help-shortcut-group" role="group" aria-label="Keyboard choices">
+                            <div className="sh-help-shortcut-title">Keyboard choices</div>
+                            <label className="sh-help-shortcut-row sh-help-keychoice">
+                                <input type="checkbox" checked={keyPrefs.letters} onChange={(e) => writeKeyPrefs({ letters: e.target.checked })} />
+                                <span>Single-letter keys work (G R S X Y Z T H E A L F B ?). Turn off to stop a stray key from changing things. Ctrl, Cmd and Alt keys and the number keys 1-9 (cues) stay.</span>
+                            </label>
+                            <label className="sh-help-shortcut-row sh-help-keychoice">
+                                <input type="checkbox" checked={keyPrefs.blenderTab} onChange={(e) => writeKeyPrefs({ blenderTab: e.target.checked })} />
+                                <span>Blender keys: Tab switches Navigate and Edit. Off, Tab moves the focus from button to button.</span>
+                            </label>
+                        </div>
                         <p className="sh-help-shortcut-note">The tool picks the mouse: Navigate moves like Sketchfab, Edit exactly like Blender.</p>
                         <p className="sh-help-shortcut-note">{MOVE_HELP_NOTE}</p>
                         {['studio', 'blender'].map((id) => (
@@ -178,7 +191,7 @@ export default function StudioHelpDialog({ open, onClose, initialMode = 'basics'
                 )}
 
                 <footer className="sh-help-footer">
-                    <span>Shift+? opens this anytime · Esc closes</span>
+                    <span>Shift+? opens this anytime (unless letter keys are off: use the ? button) · Esc closes</span>
                 </footer>
             </section>
         </div>

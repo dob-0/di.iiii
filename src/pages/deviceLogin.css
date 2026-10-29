@@ -94,8 +94,10 @@
     font-family: var(--di-mono);
     /* 16 px or more, or a phone zooms the page the moment the field is focused. */
     font-size: var(--di-text-6);
-    letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    /* A code to copy letter by letter, not a label: it keeps its wide spacing
+       (the label tracking went to 0.02em for Q1 A). The letters are already
+       capitals (formatUserCode). */
+    letter-spacing: 0.16em;
     -webkit-user-select: text;
     user-select: text;
 }

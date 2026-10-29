@@ -139,8 +139,18 @@
     background: rgba(var(--di-cyan-rgb), 0.15);
 }
 
+/* The bottom bar's height plus the safe area, set on <html> by StudioShell
+   while the bar is drawn. Read by the Undo notice and the question box
+   (components/ui/ui.css) so nothing floats under the bar. :root.<class> so it
+   outranks ui.css's :root default whichever stylesheet the build loads last. */
+:root.has-studio-bottom-bar {
+    --di-bottom-offset: calc(48px + env(safe-area-inset-bottom));
+}
+
 .smb-nav {
     position: fixed;
+    box-sizing: border-box;
+    min-height: calc(48px + env(safe-area-inset-bottom));
     bottom: 0;
     left: 0;
     right: 0;

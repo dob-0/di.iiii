@@ -12,7 +12,7 @@
 
 .rigsteps-title {
     color: var(--di-faint);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     letter-spacing: var(--di-label-tracking);
     flex-shrink: 0;
 }

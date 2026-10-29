@@ -44,6 +44,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-25'
     },
     {
+        id: 'head-light',
+        category: 'Editing',
+        title: 'Head light: a flashlight that follows your view',
+        summary: 'A project can give people who walk in it a flashlight. It points where they look, starts off, and is switched with L on a computer or a square Head light button on a phone.',
+        body: [
+            'The head light is a warm white cone about 35 degrees wide that reaches about 10 m and fades with distance. It sits at the visitor\'s eye and points where the eye points, so it is the visitor\'s own light and nobody else sees it. It is off when they start walking.',
+            'On a computer press L to switch it on and off. On a phone tap the square Head light button by the Fly button. Fly is where it always was: the F key and its button.',
+            'A project turns it on in its document: worldState.headLight = { enabled: true } (a setWorldState op). Without it there is no light and no button, and L does nothing; F flies in every project.',
+            'In High quality the light casts a shadow. On a phone (Low quality) there are no shadows, so the beam also reaches things behind a wall; the visitor cannot see them, because the light sits at their eye. It has not been tried in a headset, and a headset has no key or button to switch it on.'
+        ],
+        tags: ['head light', 'flashlight', 'torch', 'walk', 'dark', 'light', 'phone', 'keyboard', 'quality'],
+        updated: '2026-10-28'
+    },
+    {
         id: 'view-page-controls',
         category: 'Editing',
         title: 'What visitors see on the view page',
@@ -187,6 +201,20 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['studio', 'navigation', 'mouse', 'blender', 'orbit', 'pan', 'zoom', 'keyboard', 'preferences', 'walk', 'fly'],
         updated: '2026-10-13'
+    },
+    {
+        id: 'studio-keyboard',
+        category: 'Editing',
+        title: 'The Studio keyboard: Tab, letter keys, Esc',
+        summary: 'Tab moves from button to button, Esc closes the window you are in, and the single-letter keys can be turned off.',
+        body: [
+            'Tab walks the focus through the Studio\u2019s buttons and windows, Shift+Tab goes back, so the Studio can be used without a mouse. Switching between Navigate and Edit is the E key or the Navigate / Edit button.',
+            'Esc closes the window the focus is in; with the focus on the scene or the page it closes the window you opened last, one per press. With something selected, the first Esc lets go of the selection, the next one closes the window. Esc also closes Quick Insert and the help, also when the focus is on a tick box inside it. In a text field the first Esc leaves the field; the next one closes.',
+            'Single-letter keys (G R S X Y Z T H E A L F B and ?) act on a bare key press. If a stray key changes things, open the help with the ? button, go to Shortcuts and turn off \u201cSingle-letter keys work\u201d. Ctrl, Cmd and Alt shortcuts, Delete, Esc and the number keys 1-9 (cues) keep working. Walk and Fly keep their own keys.',
+            'If your hands know Blender, turn on \u201cBlender keys\u201d in the same place: Tab then switches Navigate and Edit again, and does not move the focus. Both choices are kept in this browser on this device only.'
+        ],
+        tags: ['studio', 'keyboard', 'tab', 'focus', 'escape', 'shortcuts', 'accessibility', 'blender'],
+        updated: '2026-10-29'
     },
     {
         id: 'shelves-and-the-trash',
@@ -415,10 +443,11 @@ export const WIKI_ARTICLES = [
             'Standing inside a project — in Studio, on its node canvas, or on its Projection page — Studio, Nodes and Projection open THAT project. The bar reads di.iiii · space · project in all three, so you can go from the room to its nodes to its wall and back without passing through a list.',
             'Outside a project, Light is always listed. On a di.iiii running on your own machine it opens the lighting desk, and from inside a project the link carries the space and the project with it. Anywhere else it opens a page that says where the desk lives, with the way to run di.iiii on your own machine — the desk talks to fixtures on the local network, and a server on the internet is not in that room. The lighting desk itself keeps its own denser, squarer look — it is read at arm\'s length in a dark booth — and carries a di.iiii link home.',
             'The bar hides itself in a presentation: an embedded window, a preview thumbnail, a headset, Studio with its UI hidden (H), the node canvas with its toolbar hidden or opened full-screen onto its room, and the projector pages at /out are showing the work, not the tool.',
-            'Add ?embed=1 to any address and that is what you get: /tools, the wiki, a space’s contents list, the node canvas, Studio, the Projection page and a published room all drop the bar, because the page you have put them inside already carries the way out. The flag hides that navigation and nothing else — you are signed in exactly as you would be in a tab, edits save the same, and nothing is held back from a window that a tab would be given.'
+            'Add ?embed=1 to any address and that is what you get: /tools, the wiki, a space’s contents list, the node canvas, Studio, the Projection page and a published room all drop the bar, because the page you have put them inside already carries the way out. The flag hides that navigation and nothing else — you are signed in exactly as you would be in a tab, edits save the same, and nothing is held back from a window that a tab would be given.',
+            'The writing is made to be read. The house text sizes start at 12 px; parts of Studio and the tools still set their own smaller sizes and are moving onto them. Labels are written in normal letters, not in spaced capitals; capitals stay only for the di.iiii name and for big signs. A link inside a sentence is underlined, so it never depends on its colour alone, and the house grey text is bright enough to read on the black ground (4.5 to 1). On a touch screen the bar and its links are 44 px.',
         ],
-        tags: ['navigation', 'bar', 'surfaces', 'ui', 'light', 'studio', 'raw', 'nodes', 'projection', 'project', 'embed', 'iframe'],
-        updated: '2026-10-26'
+        tags: ['navigation', 'bar', 'surfaces', 'ui', 'light', 'studio', 'raw', 'nodes', 'projection', 'project', 'embed', 'iframe', 'text size', 'contrast', 'links'],
+        updated: '2026-10-28'
     },
     {
         id: 'layers-one-at-a-time',
@@ -981,12 +1010,14 @@ export const WIKI_ARTICLES = [
                 'Files are stored by content: re-importing a file the project already has (same bytes, any name) skips the upload and finishes instantly, and identical files across a space’s projects are stored only once.',
                 '+ Add places a file into the scene as an object. Deleting a file warns you when objects still use it — in this project or in other projects of the space.',
                 'Code: the Code window edits HTML/CSS/JS files stored inside the project. A project that holds a page and no scene opens with the viewport on the page, and the Create window (3D shapes and lights) stays closed until you open it. The toggle at its top, Scene or Code view, switches the viewport either way, and the “Project file” picker inserts any file’s URL straight into your code.',
-                'Instead of local files, the Code window can embed an external site (Embed external URL).',
+                'Code tabs: the small x on a tab (or Delete on the focused tab) only closes the tab; the file stays in your project, and “Closed tabs” under the row opens it again. To remove a file, choose “Delete file”: it asks first, and Undo brings the file back for 10 seconds. Adding files or a zip to a project that has files asks once: Cancel, Replace all or Add them. The file that visitors see first is marked “opens first” (index.html, else the first .html file); renaming it asks before it stops being the start page.',
+                'Add files brings in single files and .zip archives together, Add folder a whole folder. If the project already has files, it asks whether to add the new ones to yours or replace yours; either can be undone for 10 seconds. A zip that cannot be read says why, and files the Code window cannot hold are listed as left out.',
+                'Instead of local files, the Code window can embed an external site: “Use a web address” in a new project, or Embed external URL at the bottom.',
                 'Share controls what visitors see: the public entry view (the scene or the code) and the live route are set in the Share window.'
             ] }
         ],
         tags: ['studio', 'files', 'assets', 'code', 'content'],
-        updated: '2026-10-28'
+        updated: '2026-10-29'
     },
     {
         id: 'studio-inside-a-geo',
@@ -1216,11 +1247,12 @@ export const WIKI_ARTICLES = [
                 'Mouse wheel — zoom (always; it never rotates the view)',
                 'WASD — walk when you are inside a scene; click (or drag) to look with the mouse; scroll — step forward/back toward what you face',
                 'F — fly mode (Space / Q up, C / E down); on phones, up/down buttons appear while flying',
+                'L — head light, in a project that turns it on: a flashlight that follows where you look, off until you press L (in other projects L does nothing)',
                 'VR & AR controllers — left stick walks, right stick turns and flies (push the stick up/down); works in passthrough AR too; a hint appears in-headset the first time you enter'
             ] }
         ],
         tags: ['shortcuts', 'controls', 'vr'],
-        updated: '2026-10-13'
+        updated: '2026-10-28'
     },
     {
         id: 'api-and-agents',

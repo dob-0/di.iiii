@@ -490,3 +490,12 @@
     color: rgba(255, 255, 255, 0.3);
     font-size: var(--di-text-2);
 }
+
+/* Keyboard choices (Shortcuts tab): a plain checkbox and a sentence, left-aligned, easy to hit. */
+.sh-help-keychoice {
+    justify-content: flex-start;
+    align-items: flex-start;
+    cursor: pointer;
+}
+.sh-help-keychoice input { margin-top: var(--di-space-1); width: 18px; height: 18px; flex: none; }
+.sh-help-keychoice span { text-align: left; }

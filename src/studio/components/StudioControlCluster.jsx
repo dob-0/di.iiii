@@ -194,6 +194,7 @@ export default function StudioControlCluster({
                                 {panelButtons.map(({ key, label }) => (
                                     <button
                                         key={key}
+                                        data-window-key={key}
                                         className={`scc-btn ${openPanels.has(key) ? 'active' : ''}`}
                                         onClick={() => onTogglePanel(key)}
                                     >

@@ -56,7 +56,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius);
     cursor: pointer;
@@ -251,6 +251,35 @@
     border-color: var(--di-cyan);
 }
 
+/* Head light toggle: same square control as Fly, left of it (no round corners). On a phone it stacks on Fly (media query below). */
+.live-scene-light-btn {
+    position: absolute;
+    bottom: 40px;
+    right: 130px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: var(--di-space-2) var(--di-space-4);
+    border: 1px solid var(--di-cyan-line);
+    border-radius: 0;
+    background: rgba(0, 0, 0, 0.4);
+    color: rgba(255, 255, 255, 0.6);
+    font-family: var(--di-sans);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    z-index: 11;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.live-scene-light-btn.active {
+    color: var(--di-cyan);
+    border-color: var(--di-cyan);
+}
+
 /* Fly mode altitude buttons (mobile only -- Space/Q/C/E have no touch
    equivalent). Stacked above the Fly toggle so neither overlaps. */
 .live-scene-vert-controls {
@@ -287,9 +316,14 @@
 
 @media (max-width: 720px) {
     .live-scene-title { display: none; }
-    .live-scene-hint { font-size: var(--di-text-2); bottom: 140px; }
+    /* The hint has a line of its own, under every control. At 390 px the touch hint ran under the joystick (76 px of it)
+       and under the Fly button (28 px), and the Head light button covered 71 px more; the Head light button now stacks on
+       Fly at the right edge. Measured, every size: scripts/head-light/phone-layout.cjs (PR #1170, round 2). */
+    .live-scene-hint { font-size: var(--di-text-2); bottom: 96px; }
     .live-scene-fly-btn { bottom: 140px; }
+    .live-scene-light-btn { bottom: 180px; right: 40px; }
     .live-scene-vert-controls { bottom: 200px; }
+    .live-scene-vert-controls--above-head-light { bottom: 236px; }
 }
 
 /* ── First-visit movement hint (animated, fades) ───────────────────────────── */
