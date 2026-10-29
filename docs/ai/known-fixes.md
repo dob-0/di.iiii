@@ -11,8 +11,9 @@ Cause: the list counted `document.entities` only; the things were standing nodes
 the scene draws and the list never read (`StudioEditor.jsx` `entities={insideGeo ? geoRows : entities}`).
 Fix: `listRoomNodes` / `roomNodeRow` (`project/graph/geoScope.js`) list the parentless spatial nodes; the editor passes them as
 `nodeRows` and `StructurePanel` adds them to the count and the list; a Geo row opens that Geo (`onOpenNodeRow` = `openGeo`).
-Not done: selecting a non-Geo standing node in Studio outside a Geo (listed read-only, edited in Nodes).
-Regression tests: `StructurePanel.test.jsx` ("lists what the scene shows"), `geoScope.test.js` ("what stands in the top room").
+Each row made in Nodes (not a Geo) shows a visible "Edit in Nodes" button that opens Nodes (`onEditNodeRowInNodes` = the Nodes jump); the top room's marked Camera is not listed, as Studio does not draw it.
+Not done: selecting a non-Geo standing node inside Studio (the top room stays `editable:false`; the button is the way to edit it).
+Regression tests: `StructurePanel.test.jsx` ("lists what the scene shows"), `geoScope.test.js` ("what stands in the top room", incl. the marked Camera, and the Edit in Nodes button).
 Replaced nothing: entity rows, rename, hide, lock, drag-to-group and the empty line for a truly empty project are unchanged.
 
 ## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)

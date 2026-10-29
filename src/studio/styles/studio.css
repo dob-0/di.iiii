@@ -654,6 +654,23 @@
     flex-shrink: 0;
 }
 
+.spa-node-edit {
+    appearance: none;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--di-radius);
+    color: inherit;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-family: inherit;
+    font-size: var(--di-text-2);
+    padding: var(--di-space-1) var(--di-space-2);
+}
+
+.spa-node-edit:hover {
+    background: rgba(255, 255, 255, 0.09);
+}
+
 .spa-item--space {
     display: flex;
     align-items: center;

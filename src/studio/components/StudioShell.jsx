@@ -752,6 +752,7 @@ export default function StudioShell({
                                 entities={entities}
                                 nodeRows={nodeRows}
                                 onOpenNodeRow={onOpenNodeRow}
+                                onEditNodeRowInNodes={offerNodes ? onOpenNodeEditor : undefined}
                                 selectedEntityId={selectedEntityId}
                                 selectedEntityIds={selectedEntityIds}
                                 onSelectEntity={handleSelectEntity}

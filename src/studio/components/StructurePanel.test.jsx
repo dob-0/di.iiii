@@ -152,4 +152,13 @@ describe('StructurePanel lists what the scene shows (UX audit F026)', () => {
         fireEvent.click(screen.getByRole('button', { name: /Room/ }))
         expect(onOpenNodeRow).toHaveBeenCalledWith('n-geo')
     })
+
+    it('a row made in Nodes shows a visible Edit in Nodes button that opens Nodes', () => {
+        const onEdit = vi.fn()
+        render(<StructurePanel entities={[]} nodeRows={nodeRows} onEditNodeRowInNodes={onEdit} selectedEntityIds={[]} onSelectEntity={() => {}} onToggleSelectEntity={() => {}} />)
+        const buttons = screen.getAllByRole('button', { name: 'Edit in Nodes' })
+        expect(buttons).toHaveLength(1)
+        fireEvent.click(buttons[0])
+        expect(onEdit).toHaveBeenCalledTimes(1)
+    })
 })

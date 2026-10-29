@@ -75,9 +75,13 @@ export const listGeoChildren = (document, geoId) => {
 // What stands in the TOP room as nodes (made in Nodes, a template or a page
 // layer): spatial nodes with no parent. Studio's Objects list names them so
 // its count matches what the scene shows. Read-only rows; a Geo row opens it.
-export const listRoomNodes = (document) => (
-    (document?.nodes || []).filter((node) => !node.parentId && isSpatial(node))
-)
+// The top room's marked Camera is the eye, never a body in the room: Studio
+// does not draw it (RawViewport.pickAuthoredCameraNode), so it is not listed.
+export const listRoomNodes = (document) => {
+    const markedId = document?.workspaceState?.activeNodeIdByTypeScope?.['world.camera::']
+    return (document?.nodes || []).filter((node) => !node.parentId && isSpatial(node)
+        && !(node.id === markedId && node.typeId === 'world.camera'))
+}
 
 // A Geo's path for the switcher's label: "Room / Table / Shelf", outermost
 // first. Bounded, because parentId is patchable to anything and can loop.

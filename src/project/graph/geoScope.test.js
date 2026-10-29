@@ -96,6 +96,15 @@ describe('what stands in the top room as nodes (UX audit F026)', () => {
         expect(rows.find((row) => row.id === 'geo-a')?.isGeo).toBe(true)
         expect(rows.map((row) => row.id)).not.toContain('cube-a')
     })
+
+    it('leaves out the top room\'s marked Camera, which Studio does not draw', () => {
+        const document = fixture()
+        const camera = createNode('world.camera', { id: 'cam-1' })
+        document.nodes.push(camera)
+        expect(listRoomNodes(document).map((node) => node.id)).toContain('cam-1')
+        document.workspaceState = { ...(document.workspaceState || {}), activeNodeIdByTypeScope: { 'world.camera::': 'cam-1' } }
+        expect(listRoomNodes(document).map((node) => node.id)).not.toContain('cam-1')
+    })
 })
 
 describe('adding into a Geo', () => {

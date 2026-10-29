@@ -150,7 +150,7 @@ function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, 
 // A thing the scene shows that is a node, not a document entity (made in Nodes,
 // a template or a page layer). Listed so the count and the list match the scene.
 // A Geo opens (Studio goes inside it); the others are shown, not editable here.
-function NodeRow({ row, onOpen }) {
+function NodeRow({ row, onOpen, onEditInNodes }) {
     const open = row.isGeo && onOpen ? () => onOpen(row.id) : null
     const label = row.name || row.id
     return open ? (
@@ -174,11 +174,16 @@ function NodeRow({ row, onOpen }) {
         <div className="spa-item" title="Made in Nodes — edit it there">
             <span className="spa-name">{label}</span>
             <span className="spa-type">{row.type}</span>
+            {onEditInNodes && (
+                <button type="button" className="spa-node-edit" onClick={onEditInNodes} title="Made in Nodes — open Nodes to edit it">
+                    Edit in Nodes
+                </button>
+            )}
         </div>
     )
 }
 
-export function StructurePanel({ entities = [], nodeRows = [], onOpenNodeRow, selectedEntityId, selectedEntityIds = [], onSelectEntity, onToggleSelectEntity, onGroupSelected, onUngroup, onRenameEntity, onToggleEntityVisible, onToggleEntityLocked, onReparentEntity }) {
+export function StructurePanel({ entities = [], nodeRows = [], onOpenNodeRow, onEditNodeRowInNodes, selectedEntityId, selectedEntityIds = [], onSelectEntity, onToggleSelectEntity, onGroupSelected, onUngroup, onRenameEntity, onToggleEntityVisible, onToggleEntityLocked, onReparentEntity }) {
     const selectedIds = new Set(selectedEntityIds)
     const childMap = useMemo(() => {
         const map = new Map()
@@ -239,7 +244,7 @@ export function StructurePanel({ entities = [], nodeRows = [], onOpenNodeRow, se
                             onReparentEntity={onReparentEntity}
                         />
                     ))}
-                    {nodeRows.map((row) => <NodeRow key={row.id} row={row} onOpen={onOpenNodeRow} />)}
+                    {nodeRows.map((row) => <NodeRow key={row.id} row={row} onOpen={onOpenNodeRow} onEditInNodes={onEditNodeRowInNodes} />)}
                 </div>
             )}
         </div>
