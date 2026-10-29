@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import useXrAr from '../../hooks/useXrAr.js'
 import { computeFramingCamera, fitCameraToAspect, getPointsBoundingSphere, getViewportAspect } from '../../utils/cameraFraming.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
@@ -7,6 +7,7 @@ import { doorsOf, fitArrivalToDoors } from '../../components/arrivalFraming.js'
 import { isPlatformOwnSpace } from '../../components/MadeWithBadge.jsx'
 import lazyWithReload from '../../utils/lazyWithReload.js'
 import { useGraphMakesRoom } from './graphRoom.js'
+import { walkNeedsGraph } from '../graph/walkNeedsGraph.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
 
 // Everything in this module -- the XR store, the camera framing math, the two
@@ -17,6 +18,8 @@ import { isEmbedRequest } from '../../utils/previewMode.js'
 // critical path even though both renderers are lazy; see the guard in
 // publicViewerCodeModeGraph.test.js.
 const LiveProjectScene = lazyWithReload(() => import('../../components/LiveProjectScene.jsx'), 'live-project-scene')
+// the graph beside the walk: lazy for the same reason as its siblings (it brings the node runtime)
+const WalkGraphLayer = lazyWithReload(() => import('./WalkGraphLayer.jsx'), 'walk-graph-layer')
 const StudioViewport = lazyWithReload(() => import('../../studio/components/StudioViewport.jsx'), 'studio-viewport')
 // Work made in the node lane. Until now the published page rendered
 // `entities` and nothing else, so a project authored as a graph published as
@@ -214,6 +217,9 @@ export default function PublicProjectSceneSurface({
     return (
         <>
             {navMode === 'walk' ? (
+                <>
+                {/* the project's graph runs beside the walk: same runtime as RawViewport, one owner (useWalkGraph) */}
+                {walkNeedsGraph(document) ? <Suspense fallback={null}><WalkGraphLayer document={document} topClear={topClear} /></Suspense> : null}
                 <LiveProjectScene
                     // a new renderer on a quality switch: antialias is fixed when the context is made
                     key={outputMode ? 'lite' : 'full'}
@@ -233,6 +239,7 @@ export default function PublicProjectSceneSurface({
                     walkLook={walkLook}
                     topClear={topClear}
                 />
+                </>
             ) : hasGraph === null ? null : hasGraph ? (
                 <PublicGraphSurface
                     document={document}
