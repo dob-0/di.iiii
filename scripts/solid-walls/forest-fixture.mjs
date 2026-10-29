@@ -108,8 +108,9 @@ async function main() {
     // a project that is already there is filled again, so the command can be re-run
     let id = null
     try { await call(api, 'GET', `/api/projects/${slug}`); id = slug } catch { /* not there yet */ }
+    let made = null
     if (!id) {
-        const made = await call(api, 'POST', `/api/spaces/${space}/projects`, { title: slug, slug })
+        made = await call(api, 'POST', `/api/spaces/${space}/projects`, { title: slug, slug })
         id = made?.id || made?.projectId || made?.project?.id || made?.meta?.projectId
     }
     if (!id) throw new Error(`no project id in ${JSON.stringify(made).slice(0, 300)}`)
