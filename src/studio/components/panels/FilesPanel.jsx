@@ -270,7 +270,7 @@ export function FilesPanel({
     }
 
     return (
-        <Stack spacing={0} sx={{ p: 0, height: '100%' }}>
+        <Stack spacing={0} sx={{ p: 0, flex: '1 1 auto', minHeight: 0 }}>
             {/* ── viewport preview toggle: the switch lives with the code ── */}
             <Stack direction="row" spacing={0.5} sx={{ px: 1, py: 0.75, borderBottom: 1, borderColor: 'divider', alignItems: 'center' }}>
                 <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>Viewport shows</Typography>

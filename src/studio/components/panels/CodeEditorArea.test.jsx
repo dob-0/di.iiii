@@ -96,7 +96,11 @@ describe('CodeEditorArea (CodeMirror)', () => {
         const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../styles/studio-code.css'), 'utf8')
         const rule = (sel) => (css.match(new RegExp(`${sel.replace(/[.]/g, '\\.')}\\s*\\{([^}]*)\\}`)) || [])[1] || ''
         it('the editor has a height limit and scrolls inside', () => {
-            expect(rule('.di-code-editor')).toMatch(/max-height:\s*\d+vh/)
+            // Round 2: a viewport cap (70vh) ignored the window's own height; the chain gives min-height:0 instead.
+            expect(rule('.di-code-editor')).not.toMatch(/max-height/)
+            expect(rule('.di-code-editor .cm-editor')).toMatch(/min-height:\s*0/)
+            const studio = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../styles/studio.css'), 'utf8')
+            expect(studio).toMatch(/\.sfp-shell\[data-window-key="files"\] \.sfp-content\s*\{[^}]*flex-direction:\s*column/)
             expect(rule('.di-code-editor .cm-editor .cm-scroller')).toMatch(/overflow:\s*auto/)
         })
         it('the gutter is opaque', () => {

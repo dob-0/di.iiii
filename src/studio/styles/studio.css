@@ -220,6 +220,13 @@
     max-height: 70vh;
 }
 
+/* The Code window: its body is a column, so the editor takes the height left inside the window. */
+.sfp-shell[data-window-key="files"] .sfp-content {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
 .sfp-resizer {
     position: absolute;
     bottom: 2px;
