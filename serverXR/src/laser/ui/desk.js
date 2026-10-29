@@ -38,6 +38,7 @@
     // the bank (each look keeps its own changes); when it is the one on the laser, the laser shows it at once. Save writes
     // the bank to disk.
     let selected = null // the id of the look open in Edit
+    let firstState = true // the first answer from the desk: Edit opens the look on the laser, once
     const editing = () => desk?.looks.find((l) => l.id === selected) || null
 
     // ---- talking to the server
@@ -334,7 +335,7 @@
             num.select()
         })
         parent.append(row)
-        return { set: (v) => { if (!held(spec.key) && document.activeElement !== range) { range.value = String(v); show() } } }
+        return { set: (v, force = false) => { if (force || (!held(spec.key) && document.activeElement !== range)) { range.value = String(v); show() } } }
     }
 
     const fields = {}
@@ -418,13 +419,15 @@
         }
     }
     const renderSaveState = () => {
+        $('undoBtn').disabled = !desk?.canUndo
+        $('redoBtn').disabled = !desk?.canRedo
         const b = $('saveBtn')
         const unsaved = Boolean(desk?.unsaved)
         b.classList.toggle('is-unsaved', unsaved)
         b.textContent = unsaved ? 'Save' : 'Saved'
         b.title = unsaved ? 'Save (Ctrl+S): every changed look becomes a new scene, the saved looks stay as they were' : 'Everything is saved'
     }
-    const renderEditor = () => {
+    const renderEditor = (force = false) => {
         const live = editing()
         const box = $('page-control').querySelector('.editor')
         box.classList.toggle('is-empty', !live)
@@ -442,7 +445,7 @@
         $('cycleField').hidden = !$('cycleMode').checked
         if (!held('rainbow')) $('rainbow').checked = live.rainbow
         if (!held('mirror')) $('mirror').checked = live.mirror
-        for (const [k, f] of Object.entries(fields)) f.set(live[k])
+        for (const [k, f] of Object.entries(fields)) f.set(live[k], force)
         if (!held('shape')) renderShapes()
         if (!held('colour')) renderSwatches()
         if (!held('cubes')) renderLookCubes()
@@ -480,26 +483,8 @@
         await refreshDesk()
         renderEditor()
     })
-    // Two clicks to delete: no browser dialog, and a slip of the hand does not lose a tile.
-    let deleteArmedAt = 0
-    $('deleteBtn').addEventListener('click', async () => {
-        const b = $('deleteBtn')
-        if (Date.now() - deleteArmedAt > 3000) {
-            deleteArmedAt = Date.now()
-            b.textContent = 'Delete? Click again'
-            setTimeout(() => { b.textContent = 'Delete tile' }, 3000)
-            return
-        }
-        deleteArmedAt = 0
-        b.textContent = 'Delete tile'
-        const id = selected
-        if (!id) return
-        await flush()
-        await post('desk/api/looks/delete', { id })
-        selected = null
-        await refreshDesk()
-        renderEditor()
-    })
+    // One click, as the Delete key: Ctrl+Z brings it back.
+    $('deleteBtn').addEventListener('click', () => deleteSelected())
     // The edits gathered so far, to the server (at most every SEND_MS while a slider moves).
     const flush = async () => {
         clearTimeout(sendTimer)
@@ -667,19 +652,118 @@
         renderSetup()
     })
 
-    // ---- keys: 1–9 a look to the laser, B blackout, T tap (never while typing); Ctrl+S Save (anywhere)
+    // ---- keys (2026-10-30, the owner: "add delete ctl z ctrl v ctrl c and other shortkeys"), as Resolume and most
+    // editors have them; the list is behind ? (index.html #keysHelp). Undo and redo are the desk's own (server), so they
+    // reach every page and a look on the laser follows them.
+    const undo = async () => { await flush(); await post('desk/api/undo'); touched.clear(); await refreshDesk(); renderEditor(true) }
+    const redo = async () => { await flush(); await post('desk/api/redo'); touched.clear(); await refreshDesk(); renderEditor(true) }
+    $('undoBtn').addEventListener('click', undo)
+    $('redoBtn').addEventListener('click', redo)
+    const showKeys = (on) => { $('keysHelp').hidden = !on; if (on) $('keysClose').focus() }
+    $('keysBtn').addEventListener('click', () => showKeys(true))
+    $('keysClose').addEventListener('click', () => showKeys(false))
+    $('keysHelp').addEventListener('click', (e) => { if (e.target === $('keysHelp')) showKeys(false) })
+
+    // Copy and paste carry a look as text, so a look copied here pastes into another tab or another machine's desk.
+    const CLIP = 'di-laser-look'
+    let clipboard = null // the last look copied on this page (when the system clipboard cannot be read)
+    const lookOfText = (text) => {
+        try {
+            const v = JSON.parse(text)
+            return v && v.kind === CLIP && v.look && typeof v.look === 'object' ? v.look : null
+        } catch { return null }
+    }
+    const pasteLook = async (look) => {
+        if (!look) return
+        await flush()
+        const out = await post('desk/api/looks/paste', { look, after: selected })
+        if (out.ok) selected = out.id
+        await refreshDesk()
+        renderEditor()
+    }
+    const deleteSelected = async () => {
+        if (!selected) return
+        await flush()
+        const at = desk.looks.findIndex((l) => l.id === selected)
+        await post('desk/api/looks/delete', { id: selected })
+        await refreshDesk()
+        // Edit moves to the look that took its place, as a list does.
+        selected = desk.looks[Math.min(at, desk.looks.length - 1)]?.id ?? null
+        renderTiles()
+        renderEditor()
+    }
+    const duplicateSelected = () => $('copyBtn').click()
+    // Arrows walk the bank as it is laid out: left/right one look, up/down one row.
+    const moveSelection = (key) => {
+        const tiles = [...$('tiles').children]
+        if (!tiles.length) return
+        const at = tiles.findIndex((t) => t.dataset.id === selected)
+        const cols = Math.max(1, tiles.filter((t) => t.offsetTop === tiles[0].offsetTop).length)
+        const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -cols, ArrowDown: cols }[key]
+        const next = at < 0 ? 0 : Math.min(tiles.length - 1, Math.max(0, at + step))
+        selectLook(tiles[next].dataset.id)
+        // The keyboard's focus goes with the selection, so Enter and the next arrow start from the look in Edit.
+        tiles[next].querySelector('.name')?.focus({ preventScroll: true })
+        tiles[next].scrollIntoView({ block: 'nearest' })
+    }
+    // Typing: a text field keeps its own keys (its own undo, copy, arrows). A slider or a checkbox keeps only arrows.
+    const typing = (el) => Boolean(el.closest('textarea, select, input:not([type=range]):not([type=checkbox]):not([type=color])'))
+    const inField = (el) => Boolean(el.closest('input, textarea, select'))
+    document.addEventListener('copy', (e) => {
+        if (!desk || typing(e.target) || String(window.getSelection())) return
+        const look = editing()
+        if (!look) return
+        clipboard = JSON.parse(JSON.stringify(look))
+        e.clipboardData.setData('text/plain', JSON.stringify({ kind: CLIP, look: clipboard }))
+        e.preventDefault()
+        notice(`Copied ${look.name}. Ctrl+V pastes it as a new look.`)
+    })
+    document.addEventListener('paste', (e) => {
+        if (!desk || typing(e.target)) return
+        const look = lookOfText(e.clipboardData?.getData('text/plain') || '') || clipboard
+        if (!look) return
+        e.preventDefault()
+        pasteLook(look)
+    })
     document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S') && desk) {
-            e.preventDefault()
-            saveAll()
+        if (!desk) return
+        const mod = e.ctrlKey || e.metaKey
+        const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
+        if (!$('keysHelp').hidden) { if (key === 'Escape' || key === '?') { e.preventDefault(); showKeys(false) } return }
+        if (mod && key === 's') { e.preventDefault(); saveAll(); return }
+        // Esc leaves a text field (a second Esc closes Edit); every other key there is the field's own.
+        if (typing(e.target)) { if (key === 'Escape') e.target.blur(); return }
+        if (key === 'F2' && !mod) {
+            if (selected) { e.preventDefault(); $('lookName').focus(); $('lookName').select() }
             return
         }
-        if (e.target.closest('input, textarea, select') || e.ctrlKey || e.metaKey || e.altKey || !desk) return
-        if (/^[1-9]$/.test(e.key)) {
-            const look = desk.looks[Number(e.key) - 1]
+        if (mod && !e.altKey) {
+            if (key === 'z' && !e.shiftKey) { e.preventDefault(); undo() }
+            else if (key === 'y' || (key === 'z' && e.shiftKey)) { e.preventDefault(); redo() }
+            else if (key === 'd') { e.preventDefault(); duplicateSelected() }
+            return // Ctrl+C and Ctrl+V arrive as copy and paste (above)
+        }
+        if (e.altKey) return
+        if (key === '?') { e.preventDefault(); showKeys(true); return }
+        if (key === 'Escape') {
+            if (selected) { selected = null; renderTiles(); renderEditor() }
+            return
+        }
+        if (inField(e.target)) return // a slider's arrows move the slider
+        if (/^[1-9]$/.test(key)) {
+            const look = desk.looks[Number(key) - 1]
             if (look) sendLook(look.id)
-        } else if (e.key === 'b' || e.key === 'B') $('blackoutBtn').click()
-        else if (e.key === 't' || e.key === 'T') $('tapBtn').click()
+        } else if (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown') {
+            e.preventDefault()
+            moveSelection(key)
+        } else if (key === 'Enter') {
+            // A tile's own buttons send the look in Edit; any other focused button (Save, Blackout…) clicks itself.
+            if (e.target.closest('button') && !e.target.closest('.tile')) return
+            if (selected) { e.preventDefault(); sendLook(selected) }
+        } else if (key === 'Delete' || key === 'Backspace') {
+            if (selected) { e.preventDefault(); deleteSelected() }
+        } else if (key === 'b') $('blackoutBtn').click()
+        else if (key === 't') $('tapBtn').click()
     })
 
     // ---- polling
@@ -689,7 +773,8 @@
             if (desk.loadMessage) notice(desk.loadMessage)
             syncTileClock()
             // A page opened while a look plays opens that look in Edit; a look deleted elsewhere closes.
-            if (selected === null && desk.liveId) selected = desk.liveId
+            if (firstState && selected === null && desk.liveId) selected = desk.liveId
+            firstState = false
             if (selected && !desk.looks.some((l) => l.id === selected)) selected = null
             // Edits still on their way: the server's answer must not jump the sliders back.
             const mine = desk.looks.find((l) => l.id === pending.id)

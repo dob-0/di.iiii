@@ -31,6 +31,9 @@ const TICK_MS = 50 // as the show player: well inside the engine's signal-loss s
 const OUT = 'desk' // the desk's Laser Out name in the engine (one sender per cube)
 const FILE = 'desk.json'
 const SAVE_DELAY_MS = 400
+// Undo keeps this many steps of the bank; edits to one look closer than UNDO_JOIN_MS apart are one step (a slider drag).
+const UNDO_DEPTH = 100
+const UNDO_JOIN_MS = 1500
 const MAX_LOOKS = 128
 const BLANK = [0, 0, 0, 0, 0]
 // What one frame may be at the cube's rate when the engine has no plan yet (LaserOutPanelWindow.jsx cubeCap: 67 ms of
@@ -362,6 +365,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     const editLook = (id, fields = {}) => {
         const i = show.looks.findIndex((l) => l.id === idOf(id))
         if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
+        remember('edit', show.looks[i].id)
         show.looks[i] = normaliseLook({ ...fields, id: show.looks[i].id }, show.looks[i])
         dirty = true
         if (live && liveId === show.looks[i].id) {
@@ -379,7 +383,69 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         if (show.looks.length >= MAX_LOOKS) return { ok: false, status: 400, error: `the bank is full (${MAX_LOOKS} looks)` }
         const name = `${show.looks[i].name} 2`.slice(0, 40)
         const look = normaliseLook({ ...show.looks[i], id: newId(name), name })
+        remember('copy')
         show.looks.splice(i + 1, 0, look)
+        dirty = true
+        return { ok: true, id: look.id }
+    }
+
+    // ---- undo (2026-10-30, the owner: "add delete ctl z ctrl v ctrl c and other shortkeys"): the bank before each change
+    // (an edit, a copy, a paste, a delete, a rename, the order, Store, a Save's new scenes), at most UNDO_DEPTH steps.
+    // Edits to one look in a row are one step (a slider dragged) until another change comes or UNDO_JOIN_MS passes without
+    // an edit. Sending a look to the laser is not a change of the bank and is not undone; a look on the laser follows an
+    // undo, as it follows an edit. A Save already on disk stays there: after an undo, Save lights again.
+    const past = []
+    const future = []
+    let lastStep = null // { kind, id, at }: what the newest step was, to join a slider's edits
+    const snapshot = () => ({ looks: clone(show.looks), liveId })
+    const remember = (kind, id = null) => {
+        const t = now()
+        if (kind === 'edit' && lastStep?.kind === 'edit' && lastStep.id === id && t - lastStep.at < UNDO_JOIN_MS) {
+            lastStep.at = t
+            return
+        }
+        past.push(snapshot())
+        if (past.length > UNDO_DEPTH) past.shift()
+        future.length = 0
+        lastStep = { kind, id, at: t }
+    }
+    // The bank as it was; the look on the laser shows its picture there (or the cubes play on when it is gone).
+    const restore = (snap) => {
+        show.looks = clone(snap.looks)
+        const has = (id) => id !== null && show.looks.some((l) => l.id === id)
+        if (!has(liveId)) liveId = has(snap.liveId) ? snap.liveId : null
+        dirty = JSON.stringify(show.looks) !== JSON.stringify(savedLooks)
+        lastStep = null
+        const look = show.looks.find((l) => l.id === liveId)
+        if (live && look) {
+            live = { ...look, cubes: Array.isArray(look.cubes) ? [...look.cubes] : 'all' }
+            tick()
+        }
+    }
+    const undo = () => {
+        if (!past.length) return { ok: true, undone: false }
+        future.push(snapshot())
+        restore(past.pop())
+        return { ok: true, undone: true }
+    }
+    const redo = () => {
+        if (!future.length) return { ok: true, redone: false }
+        past.push(snapshot())
+        restore(future.pop())
+        return { ok: true, redone: true }
+    }
+
+    /** A copied look (Ctrl+V; from this desk or another) as a new tile after `after`, else at the end. */
+    const pasteLook = (raw, after) => {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, status: 400, error: 'look: the look to paste' }
+        if (show.looks.length >= MAX_LOOKS) return { ok: false, status: 400, error: `the bank is full (${MAX_LOOKS} looks)` }
+        const base = normaliseLook({ ...raw, id: undefined })
+        const names = new Set(show.looks.map((l) => l.name))
+        const name = names.has(base.name) ? nextName(base.name, names) : base.name
+        const look = normaliseLook({ ...base, id: newId(name), name })
+        remember('paste')
+        const i = show.looks.findIndex((l) => l.id === idOf(after))
+        show.looks.splice(i < 0 ? show.looks.length : i + 1, 0, look)
         dirty = true
         return { ok: true, id: look.id }
     }
@@ -421,6 +487,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             created.push({ from: look.id, id })
         }
         if (kept.length + made.length > MAX_LOOKS) return { ok: false, status: 400, error: `the bank is full (${MAX_LOOKS} looks): delete some, then Save` }
+        if (made.length) remember('save')
         show.looks = [...kept, ...made]
         const moved = created.find((c) => c.from === liveId)
         if (moved) liveId = moved.id
@@ -470,6 +537,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     const rename = (id, name) => {
         const look = show.looks.find((l) => l.id === idOf(id))
         if (!look) return { ok: false, status: 404, error: `no look "${id}"` }
+        remember('rename')
         look.name = String(name ?? '').trim().slice(0, 40) || look.name
         dirty = true
         return { ok: true }
@@ -478,6 +546,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     const remove = (id) => {
         const i = show.looks.findIndex((l) => l.id === idOf(id))
         if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
+        remember('delete')
         show.looks.splice(i, 1)
         if (liveId === idOf(id)) liveId = null
         dirty = true
@@ -487,6 +556,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     const reorder = (ids = []) => {
         if (!Array.isArray(ids)) return { ok: false, status: 400, error: 'ids: the looks in their new order' }
         const rank = new Map(ids.map((id, i) => [idOf(id), i]))
+        remember('order')
         show.looks.sort((a, b) => (rank.get(a.id) ?? 1e6) - (rank.get(b.id) ?? 1e6))
         dirty = true
         return { ok: true }
@@ -576,6 +646,8 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             unsaved: dirty,
             changed: changedIds(),
             added: addedIds(),
+            canUndo: past.length > 0,
+            canRedo: future.length > 0,
             cubes: orderedCubes(engine.cubes).map((c) => {
                 const s = sent.get(c.id)
                 return { id: c.id, ...cubeCfg(c.id), driving: Boolean(live && s && !s.held), held: s?.held ?? null, points: s?.points ?? 0 }
@@ -590,7 +662,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         else if (saveTimer) { clearTimeout(saveTimer); saveNow() }
     }
 
-    return { state, go, editLook, copyLook, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBpm, tap, setCube, thumbs, view, tick, close }
+    return { state, go, editLook, copyLook, pasteLook, undo, redo, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBpm, tap, setCube, thumbs, view, tick, close }
 }
 
 module.exports = { createLaserDesk, normaliseLook, normaliseCube, lookPointsAt, capOf, hashPoints, beatsAt, SEED_LOOKS, LOOK_DEFAULTS, CUBE_DEFAULTS, TICK_MS, OUT }

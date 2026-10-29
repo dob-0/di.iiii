@@ -159,6 +159,14 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .preview canvas { width: 100%; aspect-ratio: 3 / 2; display: block; background: var(--stagebg); border: 1px solid var(--line); }
 .previewnote { display: block; padding-top: 6px; font-size: 12px; }
 .previewnote.is-live { color: var(--accent); }
+button.icon { min-width: 30px; padding: 6px 8px; font-size: 15px; line-height: 1; }
+/* The keys list: over the page, Esc or Close shuts it. */
+.keyshelp { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, .62); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.keysbox { background: var(--pane); border: 1px solid var(--line); width: min(520px, 100%); max-height: 100%; overflow: auto; }
+.keys { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; padding: 10px 12px 14px; font-size: 13px; }
+.keys dt { font: 500 12px var(--mono); color: var(--accent); white-space: nowrap; }
+.keys dd { margin: 0; color: var(--text); }
+@media (max-width: 520px) { .keys { grid-template-columns: 1fr; gap: 2px; } .keys dd { margin-bottom: 8px; } .keys dt { white-space: normal; } }
 /* Save lights while the bank has changes desk.json does not have yet. */
 button.save.is-unsaved { background: var(--accent); border-color: var(--accent); color: #031416; font-weight: 600; }
 .editor:not(.is-empty) .empty { display: none; }

@@ -29,7 +29,10 @@
     <label class="master" title="Master level for every cube">
       <span>Master</span><input id="master" type="range" min="0" max="1" step="0.01"><b id="masterVal"></b>
     </label>
+    <button id="undoBtn" class="icon" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button>
+    <button id="redoBtn" class="icon" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>↷</button>
     <button id="saveBtn" class="save" title="Write every look's changes to disk (Ctrl+S)">Saved</button>
+    <button id="keysBtn" class="icon" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
     <button id="blackoutBtn" class="topbo" title="Every cube dark, the desk keeps its look (B)">Blackout</button>
     <button id="releaseBtn" title="The desk lets go of the cubes: dark, and free for a Laser Out or the show">Release</button>
     <button id="disarmBtn" class="danger" title="Every cube's output off. One click, always">Disarm all</button>
@@ -88,8 +91,8 @@
         <div class="chips" id="lookCubes"></div>
       </div>
       <div class="actions">
-        <button id="copyBtn" title="A copy of this look as a new tile, to change without losing this one">Copy</button>
-        <button id="deleteBtn" class="quiet" title="Remove the tile this look came from">Delete tile</button>
+        <button id="copyBtn" title="A copy of this look as a new tile after it (Ctrl+D)">Copy</button>
+        <button id="deleteBtn" class="quiet" title="Delete this look (Delete key); Ctrl+Z brings it back">Delete</button>
       </div>
     </div>
     <p class="empty muted" id="editorEmpty">Click a look’s NAME to open it here: change it and watch the preview. Click its PICTURE to send it to the laser (keys 1–9 too). Every look keeps its own changes; Save keeps each changed look as a new scene, and the saved one stays as it was.</p>
@@ -146,6 +149,25 @@
       <button type="button" id="phraseCancel" class="quiet">Cancel</button>
     </div>
   </form>
+</div>
+
+<!-- The keys, as Resolume and most editors have them (2026-10-30, the owner: "add delete ctl z ctrl v ctrl c and other shortkeys"). -->
+<div class="keyshelp" id="keysHelp" hidden>
+  <div class="keysbox" role="dialog" aria-modal="true" aria-labelledby="keysTitle">
+    <div class="panehead"><h2 id="keysTitle">Keys</h2><button id="keysClose" class="quiet">Close</button></div>
+    <dl class="keys">
+      <dt>Click a picture · 1–9 · Enter</dt><dd>Send the look to the laser (Enter: the look open in Edit)</dd>
+      <dt>Click a name · ← → ↑ ↓</dt><dd>Open a look in Edit</dd>
+      <dt>Ctrl+C · Ctrl+V</dt><dd>Copy the look in Edit · paste it as a new look after the one in Edit (also into another tab)</dd>
+      <dt>Ctrl+D</dt><dd>Duplicate the look in Edit</dd>
+      <dt>Delete</dt><dd>Delete the look in Edit</dd>
+      <dt>Ctrl+Z · Ctrl+Y</dt><dd>Undo · redo (Ctrl+Shift+Z redoes too)</dd>
+      <dt>Ctrl+S</dt><dd>Save: every changed look becomes a new scene</dd>
+      <dt>F2</dt><dd>Rename the look in Edit</dd>
+      <dt>Esc</dt><dd>Close Edit (or this list)</dd>
+      <dt>B · T · ?</dt><dd>Blackout · tap the beat · this list</dd>
+    </dl>
+  </div>
 </div>
 
 <script src="lib/laser.js"></script>

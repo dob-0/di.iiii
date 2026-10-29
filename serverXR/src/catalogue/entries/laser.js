@@ -199,6 +199,30 @@ module.exports = [
     note: `${SAME_MACHINE} ${OWN_PAGE}`
   },
   {
+    route: "POST /laser/desk/api/looks/paste",
+    summary: "a copied look as a new tile: { look, after? } — after that look of the bank, else at the end; a taken name gets the next number → { id }",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/undo",
+    summary: "undo the last change to the laser desk's bank (an edit, a copy, a paste, a delete, a rename, the order, a Save's new scenes); the look on the cubes follows",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/redo",
+    summary: "redo what the laser desk's undo took back",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
     route: "POST /laser/desk/api/save",
     summary: "Save: each look whose picture changed since the last Save becomes a new scene at the end of the bank and the look goes back as it was saved (a new name alone renames in place); then the bank, clock and setup go into <data>/laser/desk.json → { created: [{ from, id }] }",
     reach: "private",

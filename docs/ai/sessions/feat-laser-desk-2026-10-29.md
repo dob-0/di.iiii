@@ -66,6 +66,16 @@ The owner's ask: "lets create laser soft like how is lighting one" — inside di
   already. The desk keeps `savedLooks` (what desk.json holds): writes for BPM, master and setup write that, never an
   unsaved edit. A look on the cubes that became a new scene is that scene now (`liveId` moves); the page's Edit follows
   it too (`created` in the answer). State has `changed` and `added`; their tiles show a dot after the name.
+- **Keys** (2026-10-30, the owner: "add delete ctl z ctrl v ctrl c and other shortkeys and do immitation and debug them"):
+  1–9 / Enter send (Enter: the look in Edit, also from a focused tile), arrows walk the bank by its layout (focus follows),
+  Ctrl+C / Ctrl+V as copy/paste events carrying `{ kind: 'di-laser-look', look }` text (pastes into another tab; no
+  clipboard permission needed), Ctrl+D duplicate, Delete (and the Edit button, one click now), Ctrl+Z / Ctrl+Y /
+  Ctrl+Shift+Z, Ctrl+S, F2 (also from a slider), Esc (out of the name, then closes Edit), B, T, ? (the list). A text field
+  keeps its own keys. **Undo is the desk's** (`POST /laser/desk/api/undo|redo`, `looks/paste`): the bank before each change,
+  100 steps, edits to one look within 1.5 s joined (a slider drag = one step); the look on the cubes follows an undo;
+  `canUndo`/`canRedo` in state light ↶ ↷. Simulated in headless Chrome (scratch `keys-sim.cjs`, 30 checks): the first
+  runs found Enter re-clicking the focused name button, F2 dead while a slider had focus, Esc dead in the name field,
+  undo not moving a focused slider back, and Edit reopening after Esc (the poll re-selected the live look); all fixed.
 - Wiki `laser-desk`; eslint gives `serverXR/src/laser/ui` browser globals like the light desk's ui.
 
 ## Tested
