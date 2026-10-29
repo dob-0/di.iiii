@@ -5,12 +5,14 @@
 import { MOVE_HINT, MOVE_LABEL, SPEED_LABEL, TURN_LABELS, autoLabel, metresText, useMoveSettings, useSpeedField } from '../navigation/useMoveSettings.js'
 import { TURN_MODES } from '../navigation/freeMove.js'
 import { MOVES, moveFor } from '../navigation/moves.js'
+import { EDIT_MOUSES, EDIT_MOUSE_LABEL, normalizeEditMouse } from '../navigation/editMouse.js'
 
 // `moves` is the list of named moves (moves.js); a test passes a second one. With one move: a heading line, no picker.
 export default function MoveSettings({ moves = MOVES }) {
-    const { speed, turn, move, setSpeed, setTurn, setMove, isAuto, auto } = useMoveSettings()
+    const { speed, turn, move, editMouse, setSpeed, setTurn, setMove, setEditMouse, isAuto, auto } = useMoveSettings()
     const field = useSpeedField({ speed, setSpeed })
     const current = moveFor(move, moves)
+    const mouse = EDIT_MOUSES.find((m) => m.id === normalizeEditMouse(editMouse))
     return (
         <>
             <div className="insp-field" data-testid="move-row">
@@ -29,6 +31,19 @@ export default function MoveSettings({ moves = MOVES }) {
                         <div className="insp-label">{current.about}</div>
                     </>
                 )}
+            </div>
+            {/* The mouse in Edit (navigation/editMouse.js): Pull to move (default) or Like Blender (2026-10-12's map, kept as a
+                mode). View is always Move 1. */}
+            <div className="insp-field move-edit-mouse" data-testid="edit-mouse-row">
+                <span className="insp-label">{EDIT_MOUSE_LABEL}</span>
+                <div className="scc-buttons" role="group" aria-label={EDIT_MOUSE_LABEL}>
+                    {EDIT_MOUSES.map((m) => (
+                        <button key={m.id} type="button" className={`scc-btn${mouse.id === m.id ? ' active' : ''}`} aria-pressed={mouse.id === m.id} onClick={() => setEditMouse(m.id)}>
+                            {m.label}
+                        </button>
+                    ))}
+                </div>
+                <div className="insp-label">{mouse.about}</div>
             </div>
             <div className="insp-field">
                 <label className="insp-label" htmlFor="studio-move-speed">{SPEED_LABEL}</label>

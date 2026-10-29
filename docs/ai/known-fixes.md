@@ -3,6 +3,24 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
+
+Symptom: after adding a box from Create, the child and the senior pulled it; the view turned and the box left the screen, Position
+stayed 0 / 0.75 / 0 and the tool was still Navigate (audit `capture/flows/T5/desktop-08.png` → `desktop-10.png`).
+Cause: the Studio opened in Navigate (`StudioShell.jsx` `useState('navigate')`), where every left pull orbits the camera, and adding a
+thing did not change the tool; nothing on screen said which mode a pull was in. Fix (owner 2026-10-28, "View | Edit"): one
+**View | Edit** switch (`ViewEditSwitch.jsx`, desk top centre and the phone's top row; E toggles it); in **Edit** a pull that starts on
+the ONE selected, unlocked thing slides it along the floor at its height, one undo step (`pullToMove.js`, `PULL_TOOLS = ['edit']`,
+`pullPressAllowed`; `useCameraNavigation` takes `mode`); a pull anywhere else, Alt+pull and the middle button still move the camera
+(Move 1, untouched); in **View** nothing moves by a pull; adding from Create switches to Edit (`StudioShell.jsx`).
+Regression tests: `src/studio/navigation/pullToMove.test.js` ("View: a pull on the selected box turns the view…", "only in Edit…"),
+`src/studio/components/StudioShell.test.jsx` ("View | Edit (owner 2026-10-28)").
+Kept as a mode (owner 2026-10-29, "what we have never lose"): the 2026-10-12 Edit mouse ("edit like Blender", commit `ed2c5290e`) is
+**Scene → Move → Mouse in Edit: Pull to move | Like Blender** (`navigation/editMouse.js` `presetForTool` / `pullOnFor`, stored per
+browser as `di.studio.navigation.editMouse`, default `pull`). Like Blender = origin/dev's Edit map, no pull; View is always Move 1.
+Tests: `src/studio/navigation/editMouse.test.js` (the map compared button by button with a snapshot read from origin/dev's
+`mappings.js`), `MoveSettings.test.jsx` ("Mouse in Edit"), `StudioHelpDialog.test.jsx` (both mouse tables).
+
 ## Recurring bug class: silent hardcoded fallback
 
 A per-entity value (spaceId, auth scope, asset id) gets read from a source that can be
@@ -30,6 +48,12 @@ Review pass: the first guard read only `font-size: Npx`, so nine `font:` shortha
 Fix round 2: a 24 px target floor (WCAG 2.5.8) for buttons, fields and links on every rig page root (`.rigbuild`, `.rigplot`, `.rigcards`, `.rigscenes`, `.vis-page`, `.show-page`) and the rig bar's links (rigSteps.css), the perform windows (`.perform-pane`) and the small map buttons; the map's labels follow `--di-label-case`. Reviewer 2: the first floor named `.vis` and `.show`, classes no page carries (the roots are `.vis-page` and `.show-page`), so the visualise page got no floor; the test now names the real roots.
 Fix round 3: at 12 px the phone status box (full width, top 112px) lay on the Undo/Redo row (top 110px, 44px tall; seen at 390 with the rig bar); it now starts at 160px (rig bar: `var(--rigbar-h) + 160px`), below Items and Undo. Guard: `buildPhoneTotals.test.js` "starts below the Undo/Redo row" (fails on the round-2 CSS).
 Guard: `src/rigbuild/readableType.test.js` (8): it reads `font-size` and the `font` shorthand in px and rem (print pt excluded); 5 fail on the old CSS, the phone-geometry one passes on both (it pins an existing fix). Paper views (.rigplot, .rigsheet) and the light desk untouched.
+
+## Light desk controls had no accessible name; the fixture library could not be scrolled by keyboard (UX audit F129, 2026-10-29)
+
+Symptoms (axe, 4 critical): `#dimMaxH` `#dimMinH` (button-name), `#bpm` and the zoom slider (label), `#gridUniverse` (select-name), `#libTree` (scrollable-region-focusable).
+Fix: aria-labels in serverXR/src/lighting/ui/index.html (also on the zoom buttons and fit button); `#libTree` got `tabindex="0"`, `role="region"`, an aria-label. Nothing restyled, no behaviour removed.
+Guard: serverXR/src/lighting/deskNames.test.js (fails on the old html: "dimMaxH ... to match aria-label", "libTree ... tabindex").
 
 ## A wrong address opened something else, and empty or failed pages said nothing useful (UX audit F010, F070, F071, F142, F154, 2026-10-28)
 
@@ -1547,3 +1571,12 @@ Symptom (UX audit 2026-10-28, `capture/sheets/admin.png`): the page that holds w
 Cause: copy written for the operator; `managementButtons` (`usePreferencesData.js`) had no switch kind; Refresh had no data path.
 Fix: plain names and two named groups (`SECTIONS`/`GROUP_LABELS` in `PreferencesPage.jsx`); on/off settings carry `kind: 'switch'` and render `role="switch"` with `aria-checked`, an On/Off word and a line on what they touch; Refresh bumps a key on `<main>` so the open section mounts and fetches again. Wiki articles admin-manage, admin-estate, agents-board follow.
 Guard: `src/components/PreferencesPageWords.test.jsx` (4); all 4 failed on the old code. Review fix (2026-10-29): the Machines section still headed itself "Estate" / "Estate map" (the words test mocks it); now "Machines" / "Machines map". Guard: `EstateSection.test.jsx` "renders the map in a frame" (fails on origin/dev).
+
+## Space card opened the Studio, was a button holding buttons (UX S10, 2026-10-29)
+
+Symptom: on /spaces a card click landed in /<space>/studio, not the space; axe `nested-interactive` on 8 cards (role=button div holding links and buttons); Delete in a project card was a bare ✕ shown only on hover; the Studio trash was hidden until something was deleted; the Light link opened a new tab silently.
+Fix: `SpaceHub.jsx` — the card is a plain div (mouse click still opens the space), its title is the one link to `/<space>`, **Edit** is its own button to `/<space>/studio`, Manage unchanged; a sandbox still opens its Studio. `StudioHub.jsx` — Delete is a word, always visible; the trash always shows ("Trash — 0"). Light says "(opens in a new tab)". Tests: `SpaceHub.test.jsx` "a card is a link to the space…", `StudioHub.test.jsx` "shows the trash with 0 items…" (both fail on the old code).
+Kept (nothing lost): the old card→Studio route is the Edit button.
+Review fix (2026-10-29): the Studio project card (`.sh-project-card`, F031) was still `role="button"` holding Rename, Delete and two selects; now a plain div (mouse click still opens) whose title is the one button that opens the project. Rename moved clear of the wider Delete word, the title keeps room for both. Guard: `StudioHub.test.jsx` "a project card is no button itself…" (fails on origin/dev).
+Picture fix (2026-10-29): /spaces footer read "Light(opens in a new tab)" — `.ssh-tools-link` is `inline-flex`, so the hint span's leading space collapsed. Fix: `.ssh-tools-newtab { margin-left: 0.25em }` (`studio-space-hub.css`). Guard: `SpaceHub.test.jsx` "the \"(opens in a new tab)\" hint keeps a visible gap…" (fails without the margin).
+CI fix (2026-10-29): `spine.test.js` refused `.sh-project-title { padding-right: calc(140px - var(--di-space-5)) }`, a guessed reserve for Rename (at a fixed `right: 78px`) and Delete; with a longer word (a translation) Rename still covered the name on a phone. Fix: the name and `.sh-project-tools` (Rename, Delete) share one wrapping flex row, `.sh-project-head`; no absolute positions; the name is never narrower than `min(4em, 100%)`, else the buttons go under it; `overflow-wrap: anywhere` breaks a name with no spaces. Guard: StudioHub.test.jsx "a project card keeps Rename and Delete in the name's row".

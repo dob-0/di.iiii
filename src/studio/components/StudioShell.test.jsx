@@ -7,7 +7,12 @@ import { ALL_TOOLS_KEY, saveAllTools } from '../utils/jamMode.js'
 const WORKSPACE_KEY = 'dii.studio.workspace.v1'
 
 vi.mock('./StudioViewportLayout.jsx', () => ({
-    default: ({ shared }) => <output data-testid="gizmo-axis" data-edit-mode={shared.editMode} data-help={shared.showHelp ? 'open' : 'closed'}>{shared.gizmoAxis || 'all'}</output>
+    default: ({ shared }) => (
+        <>
+            <output data-testid="gizmo-axis" data-edit-mode={shared.editMode} data-help={shared.showHelp ? 'open' : 'closed'}>{shared.gizmoAxis || 'all'}</output>
+            <output data-testid="edit-mode">{shared.editMode}</output>
+        </>
+    )
 }))
 vi.mock('./StudioFloatingPanel.jsx', () => ({ default: ({ title, onClose, windowKey, children }) => <div className="sfp-shell" data-window-key={windowKey} data-panel={title} data-closable={onClose ? 'yes' : 'no'}>{onClose && <button className="sfp-close" onClick={onClose}>x</button>}{children}</div> }))
 vi.mock('./StudioControlCluster.jsx', () => ({
@@ -28,7 +33,7 @@ vi.mock('./StudioShellPanels.jsx', () => ({
     FilesPanel: () => null,
     HistoryPanel: () => null,
     JamEditPanel: () => null,
-    LibraryPanel: () => null,
+    LibraryPanel: ({ onCreateEntity }) => <button type="button" onClick={() => onCreateEntity?.('box')}>box</button>,
     PresentPanel: () => null,
     ProjectPanel: () => null,
     PublishPanel: () => null,
@@ -320,7 +325,7 @@ describe('StudioShell — a new project opens bare', () => {
         const { rerender } = renderShell({ ...inProject, layers: NEW, isMobile: true })
         const nav = () => [...screen.getByRole('navigation', { name: 'Studio windows' }).querySelectorAll('button')].map((b) => b.textContent)
         expect(nav()).toEqual(['Create'])
-        expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
+        expect(screen.queryByRole('radio', { name: 'Edit' })).toBeNull()
         expect(screen.queryByLabelText('Back to projects')).toBeNull()
         expect(screen.queryByLabelText('Open this project in the node editor')).toBeNull()
         rerender(
@@ -330,7 +335,7 @@ describe('StudioShell — a new project opens bare', () => {
             />
         )
         expect(nav()).toEqual(['Create', 'Objects', 'Scene', 'Share', 'Code'])
-        expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+        expect(screen.getByRole('radio', { name: 'Edit' })).toBeInTheDocument()
     })
 
     // 2026-09-27: the phone header offered Projection from the first thing on, while
@@ -434,6 +439,43 @@ describe('StudioShell — a code project does not open Create by itself', () => 
     })
 })
 
+describe('View | Edit (owner 2026-10-28)', () => {
+    afterEach(() => { window.history.replaceState(null, '', '/') })
+    const holding = { document: { projectMeta: {}, assets: [], entities: [{ id: 'cube-1' }] }, entities: [{ id: 'cube-1' }] }
+
+    it('one View | Edit switch at the top; View is the start, Edit is the Edit tool, View the Navigate tool', () => {
+        renderShell(holding)
+        const group = screen.getByRole('radiogroup', { name: 'View or Edit' })
+        expect(group).toBeInTheDocument()
+        expect(screen.getByRole('radio', { name: 'View' })).toHaveAttribute('aria-checked', 'true')
+        expect(screen.getByTestId('edit-mode')).toHaveTextContent('navigate')
+        fireEvent.click(screen.getByRole('radio', { name: 'Edit' }))
+        expect(screen.getByTestId('edit-mode')).toHaveTextContent('edit')
+        expect(screen.getByRole('radio', { name: 'Edit' })).toHaveAttribute('aria-checked', 'true')
+        fireEvent.keyDown(window, { key: 'e' }) // the E key is the same switch
+        expect(screen.getByTestId('edit-mode')).toHaveTextContent('navigate')
+        expect(screen.getByRole('radio', { name: 'View' })).toHaveAttribute('aria-checked', 'true')
+    })
+
+    it('the switch is one Tab stop and the arrow keys flip it (a radio group)', () => {
+        renderShell(holding)
+        const view = screen.getByRole('radio', { name: 'View' })
+        expect(view).toHaveAttribute('tabindex', '0')
+        expect(screen.getByRole('radio', { name: 'Edit' })).toHaveAttribute('tabindex', '-1')
+        fireEvent.keyDown(view, { key: 'ArrowRight' })
+        expect(screen.getByTestId('edit-mode')).toHaveTextContent('edit')
+        expect(screen.getByRole('radio', { name: 'Edit' })).toHaveFocus()
+    })
+
+    it('adding from Create puts the Studio in Edit, so the first pull moves the new thing', () => {
+        const onCreateEntity = vi.fn()
+        renderShell({ ...holding, onCreateEntity })
+        expect(screen.getByTestId('edit-mode')).toHaveTextContent('navigate')
+        fireEvent.click(screen.getByRole('button', { name: 'box' }))
+        expect(onCreateEntity).toHaveBeenCalledWith('box')
+        expect(screen.getByTestId('edit-mode')).toHaveTextContent('edit')
+    })
+})
 
 // S58: the Studio keyboard (WCAG 2.1.1 / 2.1.4, ux audit F002 + F127, 2026-10-28)
 describe('StudioShell keyboard: Tab, letter keys, Esc', () => {

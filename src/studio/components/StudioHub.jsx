@@ -383,40 +383,63 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
             <div
                 key={project.id}
                 className="sh-project-card"
+                role="presentation"
                 onClick={() => !isRenaming && openProject(project.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={e => e.key === 'Enter' && !isRenaming && openProject(project.id)}
             >
-                {isRenaming ? (
-                    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-                    <form
-                        className="sh-rename-form"
-                        onSubmit={e => submitRename(project.id, e)}
-                        onClick={e => e.stopPropagation()}
-                        onKeyDown={e => e.stopPropagation()}
-                    >
-                        <input
-                            className="sh-rename-input"
-                            ref={el => el?.focus()}
-                            value={renameValue}
-                            onChange={e => setRenameValue(e.target.value)}
-                            onKeyDown={e => {
-                                if (e.key === 'Escape') { setRenamingId(null); setRenameValue('') }
-                            }}
-                        />
-                        <button className="sh-rename-save" type="submit">Save</button>
-                        <button className="sh-rename-cancel" type="button" onClick={() => { setRenamingId(null); setRenameValue('') }}>✕</button>
-                    </form>
-                ) : (
-                    <p
-                        className="sh-project-title"
-                        onDoubleClick={e => startRename(project, e)}
-                        title="Double-click to rename"
-                    >
-                        {project.title}
-                    </p>
-                )}
+                {/* The name and its Rename and Delete share one row, so a long name
+                    wraps beside the two words whatever their length (UX S10). */}
+                <div className="sh-project-head">
+                    {isRenaming ? (
+                        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+                        <form
+                            className="sh-rename-form"
+                            onSubmit={e => submitRename(project.id, e)}
+                            onClick={e => e.stopPropagation()}
+                            onKeyDown={e => e.stopPropagation()}
+                        >
+                            <input
+                                className="sh-rename-input"
+                                ref={el => el?.focus()}
+                                value={renameValue}
+                                onChange={e => setRenameValue(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Escape') { setRenamingId(null); setRenameValue('') }
+                                }}
+                            />
+                            <button className="sh-rename-save" type="submit">Save</button>
+                            <button className="sh-rename-cancel" type="button" onClick={() => { setRenamingId(null); setRenameValue('') }}>✕</button>
+                        </form>
+                    ) : (
+                        <p
+                            className="sh-project-title"
+                            onDoubleClick={e => startRename(project, e)}
+                            title="Double-click to rename"
+                        >
+                            {/* The card's one control that opens it (keyboard and screen
+                                reader); a click anywhere else on the card is a mouse bonus.
+                                The card is no longer a button holding buttons (UX S10, F031). */}
+                            <button
+                                type="button"
+                                className="sh-project-open"
+                                onClick={e => { e.stopPropagation(); openProject(project.id) }}
+                            >{project.title}</button>
+                        </p>
+                    )}
+                    {!isRenaming && (
+                        <div className="sh-project-tools">
+                            <button
+                                className="sh-btn-rename"
+                                onClick={e => startRename(project, e)}
+                                title="Rename project"
+                            >Rename</button>
+                            <button
+                                className="sh-btn-delete"
+                                onClick={e => { e.stopPropagation(); handleDelete(project) }}
+                                title="Delete — held in the trash for 30 days"
+                            >Delete</button>
+                        </div>
+                    )}
+                </div>
                 {/* What the project holds, in one line — "3 things · 2 wires ·
                     1 surface · 1 lamp", or "empty" — worked out by the server
                     from the document (src/project/layers.js), never stored. A
@@ -442,17 +465,6 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                 </div>
                 {!isRenaming && (
                     <>
-                        <button
-                            className="sh-btn-rename"
-                            onClick={e => startRename(project, e)}
-                            title="Rename project"
-                        >Rename</button>
-                        <button
-                            className="sh-btn-delete"
-                            onClick={e => { e.stopPropagation(); handleDelete(project) }}
-                            aria-label="Delete"
-                            title="Delete — held in the trash for 30 days"
-                        >✕</button>
                         {/* Where it sits and what it is. Two selects rather than
                             a menu: both are one-tap on a phone, and both say
                             their current answer without being opened. */}
@@ -723,12 +735,16 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                 {/* The trash. Delete used to remove the row and the files in the
                     same breath; it holds for thirty days now, and this is where
                     you see that it did. */}
-                {trash?.projects?.length > 0 && (
+                {/* Always there, so the way back is findable before a first delete (UX F078). */}
+                {trash && (
                     <section className="sh-trash">
                         <button className="sh-link" type="button" onClick={() => setShowTrash(v => !v)}>
-                            {showTrash ? 'Hide the trash' : `Trash — ${trash.projects.length}`}
+                            {showTrash ? 'Hide the trash' : `Trash — ${trash.projects?.length || 0}`}
                         </button>
-                        {showTrash && (
+                        {showTrash && !(trash.projects?.length > 0) && (
+                            <p className="sh-shelf-empty">Nothing in the trash. Deleted things wait here for 30 days.</p>
+                        )}
+                        {showTrash && trash.projects?.length > 0 && (
                             <ul className="sh-trash-list">
                                 {trash.projects.map(project => (
                                     <li key={project.id} className="sh-trash-row">
