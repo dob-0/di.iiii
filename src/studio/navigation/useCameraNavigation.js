@@ -6,7 +6,7 @@
 // - a slide drag moves both sideways or up and down by the same metres per pixel in every direction;
 // - a zoom drag moves both forward or back, 100 px a step;
 // - a turn drag turns around a point a fixed distance ahead (setting: where you stand); the buttons stay the tool's own
-//   (mappings.js: the Studio uses 'studio', like Sketchfab, in View and Edit since 2026-10-28; 'blender' stays as a preset);
+//   (mappings.js: View is 'studio', like Sketchfab; Edit is 'studio' with Pull to move or 'blender' with Like Blender, editMouse.js);
 // - a double-click on a surface turns the view to it and makes it the turning point until the next move (an explicit choice);
 // - Blender's Orbit Around Selection, when the viewer turns it on, turns around the selection (an explicit choice).
 // camera-controls keeps its own turning and easing; this hook places the turning point at each drag's start (capture-phase

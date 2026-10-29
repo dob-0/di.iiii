@@ -90,3 +90,11 @@ Read from `git diff origin/dev...HEAD` (every `-` line of the branch):
 
 Not touched by the choice: View (Move 1, `move1.golden.test.js` unchanged), the Shift+? "Mouse navigation" preset (`NAVIGATION_STORAGE_KEY`,
 read nowhere in StudioOrbit on origin/dev either), Walk/Fly.
+
+## Review (S55V2, 2026-10-29)
+
+Independent review of `45d8ec7f5` (Mouse in Edit). Like Blender gives Edit origin/dev's `blender` map and no pull (`presetForTool`,
+`pullOnFor`; both the pull hook and the press branch are off). The new tests fail on `88b5e6624` (3 files, editMouse.js missing,
+2 UI tests red) and pass here with the related suite (12 files, 193 tests). Reviewer fix: the stale header comment in
+`useCameraNavigation.js` (said the Studio uses 'studio' in Edit always). The default stays Pull to move: the owner names it in the
+merge window; Like Blender is one click away in Scene → Move.
