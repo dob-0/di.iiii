@@ -1659,6 +1659,10 @@ const cmdAutoupdate = async (args) => {
         })
         say(`${outcome} ${detail}`)
         if (outcome === 'failed') process.exitCode = 1
+        try {
+            const timer = await autoupdate.refreshTimer({ home })
+            if (timer.changed) say(timer.ok ? `timer rewritten — now every ${autoupdate.EVERY_MINUTES} minutes` : `timer rewrite failed: ${timer.why}`)
+        } catch { /* a timer that cannot be refreshed keeps its old interval; the tick itself is logged */ }
         await noticeNameRenewal(home)
         return
     }

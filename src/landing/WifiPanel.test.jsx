@@ -6,8 +6,8 @@ vi.mock('../services/apiClient.js', () => ({ apiFetch: vi.fn(() => Promise.resol
 
 import WifiPanel from './WifiPanel.jsx'
 
-const PRIVATE = { open: false, name: 'dob-a3f9.l.thedi.studio', address: null, port: null, since: null }
-const OPENED = { open: true, name: 'dob-a3f9.l.thedi.studio', address: '192.168.1.20', port: 443, since: 'now' }
+const PRIVATE = { open: false, name: 'dob-a3f9.l.diiii.xyz', address: null, port: null, since: null }
+const OPENED = { open: true, name: 'dob-a3f9.l.diiii.xyz', address: '192.168.1.20', port: 443, since: 'now' }
 const qr = () => document.querySelector('svg.qr-code')
 
 describe('WifiPanel', () => {
@@ -23,13 +23,13 @@ describe('WifiPanel', () => {
         fireEvent.click(await screen.findByRole('button', { name: 'Open door' }))
         expect(await screen.findByRole('button', { name: 'Close door' })).toBeInTheDocument()
         expect(open).toHaveBeenCalled()
-        expect(qr().getAttribute('data-qr-value')).toBe('https://dob-a3f9.l.thedi.studio/')
+        expect(qr().getAttribute('data-qr-value')).toBe('https://dob-a3f9.l.diiii.xyz/')
         expect(screen.getByText('di follow <space> --from dob-a3f9')).toBeInTheDocument()
     })
     it('open with another port: the code holds the port', async () => {
         render(<WifiPanel load={() => Promise.resolve({ ...OPENED, port: 4001 })} />)
         await screen.findByRole('button', { name: 'Close door' })
-        expect(qr().getAttribute('data-qr-value')).toBe('https://dob-a3f9.l.thedi.studio:4001/')
+        expect(qr().getAttribute('data-qr-value')).toBe('https://dob-a3f9.l.diiii.xyz:4001/')
     })
     it('Close door closes it: back to private, no code', async () => {
         const close = vi.fn(() => Promise.resolve(PRIVATE))

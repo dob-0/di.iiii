@@ -207,31 +207,34 @@ async function main() {
       await page.waitForFunction(() => document.querySelector('#ndSummary').textContent.startsWith('node-1'), null, { timeout: 4000 });
       assert.strictEqual((await statusNow()).name, 'node-1');
     });
-    await check('factory reset needs two presses of the same button: one press sends nothing', async () => {
+    await check('factory reset asks through the desk bar: one press sends nothing, Cancel sends nothing, the bar button sends it once', async () => {
       const n = () => posts.filter((x) => x.path === '/factory-reset').length;
       await page.click('#ndFactory');
+      await page.waitForSelector('#deskAsk');
       await page.waitForTimeout(500);
-      assert.strictEqual(n(), 0, 'one press sent factory-reset');
-      assert.ok(await page.$eval('#ndFactory', (b) => b.classList.contains('armed')), 'the first press arms it');
-      assert.strictEqual(await page.textContent('#ndFactory'), 'Erase everything? Press again');
-      await page.click('#ndReboot');   // another press disarms factory reset (and arms restart)
-      await page.waitForTimeout(200);
-      assert.ok(!(await page.$eval('#ndFactory', (b) => b.classList.contains('armed'))), 'another press must disarm');
-      await page.click('#ndFactory');
+      assert.strictEqual(n(), 0, 'opening the bar sent factory-reset');
+      assert.ok(/cannot be undone/.test(await page.textContent('#deskAskText')), await page.textContent('#deskAskText'));
+      assert.strictEqual(await page.evaluate(() => document.activeElement.className), 'deskask-no', 'Cancel has the focus');
+      await page.click('#deskAsk .deskask-no');
       await page.waitForTimeout(300);
-      assert.strictEqual(n(), 0, 'pressing after a disarm only arms again');
+      assert.strictEqual(await page.$('#deskAsk'), null, 'Cancel closes the bar');
+      assert.strictEqual(n(), 0, 'Cancel sent factory-reset');
       await page.click('#ndFactory');
+      await page.waitForSelector('#deskAsk');
       await page.waitForTimeout(500);
-      assert.strictEqual(n(), 1, 'the second press sends it once');
+      await page.click('#deskAsk .deskask-yes');
+      await page.waitForTimeout(500);
+      assert.strictEqual(n(), 1, 'the bar button sends it once');
       assert.strictEqual(posts.filter((x) => x.path === '/factory-reset')[0].header, '1');
-      assert.strictEqual(posts.filter((x) => x.path === '/reboot').length, 0, 'restart was armed, never fired');
+      assert.strictEqual(posts.filter((x) => x.path === '/reboot').length, 0, 'restart was never fired');
     });
-    await check('an armed button disarms itself after 4 s', async () => {
+    await check('restart asks too, and Esc says no', async () => {
       await page.click('#ndReboot');
-      assert.ok(await page.$eval('#ndReboot', (b) => b.classList.contains('armed')));
-      await page.waitForTimeout(5200);
-      assert.ok(!(await page.$eval('#ndReboot', (b) => b.classList.contains('armed'))), 'still armed after 5 s');
-      assert.strictEqual(await page.textContent('#ndReboot'), 'Restart');
+      await page.waitForSelector('#deskAsk');
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      assert.strictEqual(await page.$('#deskAsk'), null, 'Esc closes the bar');
+      assert.strictEqual(posts.filter((x) => x.path === '/reboot').length, 0, 'Esc sent restart');
     });
     await check('Discover sends announce and reads the table again', async () => {
       await page.click('#ndDiscover');

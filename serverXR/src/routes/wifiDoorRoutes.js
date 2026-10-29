@@ -7,14 +7,28 @@
  * can point its own name at 127.0.0.1, so the Host must be a loopback or
  * `.localhost` name and an Origin, when sent, the same.
  */
+const crypto = require('node:crypto')
 const { isOwnerAtTheMachine } = require('../localOwner')
 
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\]|([a-z0-9-]+\.)*localhost)$/
 
 const bare = (value) => String(value || '').trim().toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '')
 
-const isOwnerRequest = (req, ownerCheck = isOwnerAtTheMachine) => {
+// The CLI reaches the install by its certificate name (local.thedi.studio), which is not a
+// local name, so it proves itself with the install's own token (ADMIN_API_TOKEN in di.env)
+// instead. Still only from this machine, never through the wifi door or a proxy; a page in
+// a guest's browser cannot know the token, so DNS rebinding gains nothing.
+const carriesInstallToken = (req, token = process.env.ADMIN_API_TOKEN) => {
+  const match = /^Bearer\s+(.+)$/i.exec(String(req.headers?.authorization || ''))
+  if (!token || !match) return false
+  const a = crypto.createHash('sha256').update(match[1].trim()).digest()
+  const b = crypto.createHash('sha256').update(token).digest()
+  return crypto.timingSafeEqual(a, b)
+}
+
+const isOwnerRequest = (req, ownerCheck = isOwnerAtTheMachine, token = process.env.ADMIN_API_TOKEN) => {
   if (req.diWifiDoor || !ownerCheck(req)) return false
+  if (carriesInstallToken(req, token)) return true
   if (!LOCAL_HOST.test(bare(req.headers?.host))) return false
   const origin = req.headers?.origin
   if (origin) {
@@ -45,4 +59,4 @@ const registerWifiDoorRoutes = (router, { door, isOwner = isOwnerRequest }) => {
   })
 }
 
-module.exports = { registerWifiDoorRoutes, isOwnerRequest }
+module.exports = { registerWifiDoorRoutes, isOwnerRequest, carriesInstallToken }

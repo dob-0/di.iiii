@@ -8,7 +8,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {
-    HEAT_LIMIT_C, enable, disable, logFile, parsePackageTemp, readPackageTemp, runAutoUpdate, statusLines, statusOf, unitTexts
+    HEAT_LIMIT_C, enable, disable, logFile, parsePackageTemp, readPackageTemp, refreshTimer, runAutoUpdate, statusLines, statusOf, unitTexts
 } from './autoupdate.mjs'
 import { readState, writeState } from './state.mjs'
 
@@ -26,8 +26,9 @@ const logLines = (home) => fs.readFileSync(logFile(home), 'utf8').trim().split('
 
 describe('the timer unit text', () => {
     const { service, timer } = unitTexts({ home: '/home/x/.di', shim: '/home/x/.di/bin/di' })
-    it('runs every 15 minutes and catches up after a reboot or sleep', () => {
-        expect(timer).toContain('OnCalendar=*:0/15')
+    it('runs every 5 minutes, spread by a random delay, and catches up after a reboot or sleep', () => {
+        expect(timer).toContain('OnCalendar=*:0/5')
+        expect(timer).toContain('RandomizedDelaySec=60')
         expect(timer).toContain('Persistent=true')
         expect(timer).toContain('WantedBy=timers.target')
     })
@@ -41,6 +42,35 @@ describe('the timer unit text', () => {
         const { service: s } = unitTexts({ home: '/home/x/.di', shim: '/home/x/.di/bin/di', nodeDir: '/home/x/.local/opt/node-v22/bin' })
         expect(s).toContain('Environment=PATH=/home/x/.local/opt/node-v22/bin:/usr/local/bin:/usr/bin:/bin')
         expect(service).toMatch(/^Environment=PATH=[^:\n]+:\/usr\/local\/bin/m)
+    })
+})
+
+describe('refreshTimer', () => {
+    const setup = async (text) => {
+        const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'di-units-'))
+        homes.push(dir)
+        const home = await makeHome()
+        if (text !== null) await fsp.writeFile(path.join(dir, 'di-autoupdate.timer'), text)
+        const calls = []
+        return { dir, home, calls, run: (args) => { calls.push(args.join(' ')); return { ok: true, output: '' } } }
+    }
+    it('rewrites an old 15-minute timer and restarts it', async () => {
+        const t = await setup('[Timer]\nOnCalendar=*:0/15\n')
+        const result = await refreshTimer({ home: t.home, run: t.run, dir: t.dir })
+        expect(result).toEqual({ changed: true, ok: true })
+        expect(fs.readFileSync(path.join(t.dir, 'di-autoupdate.timer'), 'utf8')).toContain('OnCalendar=*:0/5')
+        expect(t.calls).toEqual(['daemon-reload', 'restart di-autoupdate.timer'])
+    })
+    it('leaves a current timer alone, and an install with automatic updates off', async () => {
+        const home = await makeHome()
+        const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'di-units-'))
+        homes.push(dir)
+        const t = await setup(null)
+        expect(await refreshTimer({ home: t.home, run: t.run, dir: t.dir })).toEqual({ changed: false })
+        await enable({ home, run: t.run, dir })
+        t.calls.length = 0
+        expect(await refreshTimer({ home, run: t.run, dir })).toEqual({ changed: false })
+        expect(t.calls).toEqual([])
     })
 })
 
