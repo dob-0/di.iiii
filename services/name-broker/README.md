@@ -1,7 +1,7 @@
 # di name broker
 
 A Cloudflare Worker that gives each di install its own network name, `<label>.<zone>`
-(zone `l.di-studio.xyz`, label `<who>-<4 chars>`, e.g. `dob-a3f9.l.di-studio.xyz`), and moves
+(zone `l.diiii.xyz`, label `<who>-<4 chars>`, e.g. `dob-a3f9.l.diiii.xyz`), and moves
 that name's records when the install asks, signed with its install key. The install
 makes its TLS key and runs its own ACME client; the broker only writes the DNS-01
 challenge record. The Cloudflare token lives only in this Worker's secret.
@@ -77,14 +77,14 @@ npx wrangler deploy
 curl -s https://di-name-broker.<account>.workers.dev/v1/health   # { ok: true, zone, version }
 ```
 
-The broker's address is `https://name.di-studio.xyz` (owner, 2026-10-28, N1418); add it as a custom route in `wrangler.toml` (`routes = [{ pattern = "name.di-studio.xyz", custom_domain = true }]`) at deploy. The zone itself is the `ZONE` var in `wrangler.toml`.
+The broker's address is `https://name.diiii.xyz` (owner, 2026-10-28, N1418); add it as a custom route in `wrangler.toml` (`routes = [{ pattern = "name.diiii.xyz", custom_domain = true }]`) at deploy. The zone itself is the `ZONE` var in `wrangler.toml`.
 
 Revoke a label: `curl -X DELETE -H "X-Di-Admin: $ADMIN_TOKEN" https://…/v1/labels/<label>`.
 
 ## Rollback
 
 `npx wrangler delete` removes the Worker; the DNS records it wrote stay until deleted
-in the dashboard (each is `<label>.l.di-studio.xyz` or `_acme-challenge.<label>.l.di-studio.xyz`).
+in the dashboard (each is `<label>.l.diiii.xyz` or `_acme-challenge.<label>.l.diiii.xyz`).
 Installs keep `http://diiii.localhost/` either way.
 
 ## Tests

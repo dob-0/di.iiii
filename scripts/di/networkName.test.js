@@ -37,7 +37,7 @@ beforeEach(() => {
 afterEach(() => { for (const dir of tmp.splice(0)) fs.rmSync(dir, { recursive: true, force: true }) })
 
 /** A broker that answers the contract and checks every signed call against the key it was claimed with. */
-const fakeBroker = ({ claimStatus = 201, labelOf = 'ponyo-k7q2', zone = 'l.di-studio.xyz', failTxt = false } = {}) => {
+const fakeBroker = ({ claimStatus = 201, labelOf = 'ponyo-k7q2', zone = 'l.diiii.xyz', failTxt = false } = {}) => {
     const calls = []
     let pubkey = null
     const fetchImpl = async (url, init = {}) => {
@@ -106,9 +106,9 @@ describe('the install key and the claim', () => {
         const { code, out, broker } = await run(['name', '--staging'])
         expect(code).toBe(0)
         const f = nameFiles(home)
-        expect(readName(home)).toMatchObject({ label: 'ponyo-k7q2', zone: 'l.di-studio.xyz', name: 'ponyo-k7q2.l.di-studio.xyz', brokerUrl: 'https://name.di-studio.xyz' })
+        expect(readName(home)).toMatchObject({ label: 'ponyo-k7q2', zone: 'l.diiii.xyz', name: 'ponyo-k7q2.l.diiii.xyz', brokerUrl: 'https://name.diiii.xyz' })
         expect(fs.existsSync(f.installPub)).toBe(true)
-        expect(out.says[0]).toBe('claimed ponyo-k7q2.l.di-studio.xyz')
+        expect(out.says[0]).toBe('claimed ponyo-k7q2.l.diiii.xyz')
         expect(broker.calls[0].path).toBe('/v1/claim')
         if (posix) expect(mode(f.installKey)).toBe(0o600)
     })
@@ -192,7 +192,7 @@ describe('the certificate order', () => {
 
     it('orders the name and its wildcard, from production by default and staging on --staging', async () => {
         const prod = await run(['name'])
-        expect(prod.acme.log.csr).toEqual({ commonName: 'ponyo-k7q2.l.di-studio.xyz', altNames: ['ponyo-k7q2.l.di-studio.xyz', '*.ponyo-k7q2.l.di-studio.xyz'] })
+        expect(prod.acme.log.csr).toEqual({ commonName: 'ponyo-k7q2.l.diiii.xyz', altNames: ['ponyo-k7q2.l.diiii.xyz', '*.ponyo-k7q2.l.diiii.xyz'] })
         expect(prod.acme.log.directoryUrls[0]).toBe('https://acme-v02.api.letsencrypt.org/directory')
         fs.rmSync(nameFiles(home).dir, { recursive: true })
         const stg = await run(['name', '--staging'])
@@ -211,7 +211,7 @@ describe('the certificate order', () => {
         const f = nameFiles(home)
         expect(fs.readFileSync(f.key, 'utf8')).toContain('PRIVATE KEY')
         expect(fs.readFileSync(f.cert, 'utf8')).toContain('BEGIN CERTIFICATE')
-        expect(readCertInfo(home)).toEqual({ notAfter: new Date(NOW + 90 * DAY).toISOString(), issuedAt: new Date(NOW).toISOString(), names: ['ponyo-k7q2.l.di-studio.xyz', '*.ponyo-k7q2.l.di-studio.xyz'] })
+        expect(readCertInfo(home)).toEqual({ notAfter: new Date(NOW + 90 * DAY).toISOString(), issuedAt: new Date(NOW).toISOString(), names: ['ponyo-k7q2.l.diiii.xyz', '*.ponyo-k7q2.l.diiii.xyz'] })
         if (posix) for (const file of [f.key, f.acmeAccountKey, f.installKey]) expect(mode(file)).toBe(0o600)
     })
 
@@ -304,7 +304,7 @@ describe('renewal', () => {
         expect(readState(home).lastNameCheck).toBe(new Date(later).toISOString())
         const log = fs.readFileSync(path.join(paths(home).logs, 'name.log'), 'utf8').trim().split('\n')
         expect(log).toHaveLength(1)
-        expect(log[0]).toContain('renewed ponyo-k7q2.l.di-studio.xyz')
+        expect(log[0]).toContain('renewed ponyo-k7q2.l.diiii.xyz')
 
         const muchLater = later + 70 * DAY
         const bad = deps({ d: { now: () => muchLater }, acme: fakeAcme({ failAuto: true }) })
@@ -326,10 +326,10 @@ describe('status line and --forget', () => {
         expect(statusLine(home)).toBe('name: none — run di name')
         const x = deps({ acme: fakeAcme({ failAuto: true }) })
         await cmdName(parseArgs(['name']), x.d)
-        expect(statusLine(home)).toBe('name: ponyo-k7q2.l.di-studio.xyz · no certificate yet — run di name')
+        expect(statusLine(home)).toBe('name: ponyo-k7q2.l.diiii.xyz · no certificate yet — run di name')
         fs.rmSync(nameFiles(home).dir, { recursive: true })
         await run(['name'])
-        expect(statusLine(home)).toBe('name: ponyo-k7q2.l.di-studio.xyz · certificate until 2027-01-26')
+        expect(statusLine(home)).toBe('name: ponyo-k7q2.l.diiii.xyz · certificate until 2027-01-26')
     })
 
     it('di name --status prints that line from local files with no broker call', async () => {
