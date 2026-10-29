@@ -1,0 +1,19 @@
+{
+  "name": "di-games",
+  "displayName": "di.iiii Games",
+  "version": "0.1.0",
+  "description": "Concept to game, the same way every time: one skill and one gate per stage, four agents, and the tool config. Roblox first.",
+  "author": {
+    "name": "di.iiii"
+  },
+  "repository": "https://github.com/dob-0/di.iiii",
+  "keywords": [
+    "games",
+    "roblox",
+    "game-design",
+    "greybox",
+    "playtest",
+    "provenance"
+  ],
+  "license": "AGPL-3.0-only"
+}
