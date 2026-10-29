@@ -128,8 +128,8 @@ export const WIKI_ARTICLES = [
             'The address of a project always begins with its space. The editor addresses put the tool first for historical reasons, which is why the shortcut below exists — it is the one that reads the way the product is actually arranged:',
             { list: [
                 '/<space>/projects — everything in a space, listed, each thing saying whether it is a scene or a page. Open to whoever the space is open to: on a public space no sign-in is needed. This is the one to use — the list belongs to the space, not to whichever tool you are holding.',
-                '/spaces — all of your spaces',
-                '/<space>/studio — the same projects in Studio, where you make them: New project, drafts, shelves and the trash are here, and a card opens its project in Studio',
+                '/spaces — all of your spaces. A card opens the space itself (its name is the link); Edit on the card opens the Studio, Manage keeps the settings',
+                '/<space>/studio — the same projects in Studio, where you make them: New project, drafts, shelves and the trash are here, and a card opens its project in Studio; the trash is always there, also when empty — deleted things wait 30 days',
                 '/<space>/raw/projects — the same projects, for the node editor: a card opens its project on the node canvas',
                 '/<space>/studio/projects/<id> — the editor for one project',
                 '/<space>/<project>/studio — the same project, open for editing. Add /raw instead for the node editor. This works on any project link: take the address you are looking at and add the word. It is a shortcut, not a second address — the bar heals to the editor’s own link once it opens.',
@@ -139,7 +139,7 @@ export const WIKI_ARTICLES = [
             'A wrong address says so. A project name that is not in the space opens a card that says “There is no project called … in the space …”, naming the space, with a button to what is in the space; it never opens some other project under the wrong address. An address with no space behind it says “We could not find …”, and every such card has the same three ways out: Go to the front page, See spaces, Get help. A space with nothing in it says “Nothing here yet.”; a visitor also reads “The owner has not shown anything.”, and the owner reads the way to make the first project instead. If a page stops working while it draws, it says so, and the technical detail for whoever helps you sits under Details for helpers.'
         ],
         tags: ['spaces', 'projects', 'basics', 'contents'],
-        updated: '2026-10-28'
+        updated: '2026-10-29'
     },
     {
         id: 'everything-in-a-space',
@@ -198,10 +198,12 @@ export const WIKI_ARTICLES = [
             'If your hands know Blender, open the help with Shift+?, go to Shortcuts, and pick Blender under Mouse navigation. Then the middle mouse button orbits, Shift with the middle button pans, Ctrl with the middle button zooms, and the wheel zooms toward the pointer. The left button no longer moves the view, so it is free for picking things. Without a middle button, hold Alt with the left button: Alt orbits, Shift+Alt pans, Ctrl+Alt zooms. Touch stays the same.',
             'In the Blender setting the view turns, slides and zooms around the surface under the pointer instead of a fixed point in the middle. Tick Orbit around selection to turn around what you selected instead.',
             'The choice is kept in this browser on this device only. The table under it always shows the mouse keys of the setting you chose. Some desktops take Alt+drag for moving windows; if Alt+drag moves the window instead of the view, use the middle button or change that desktop setting.',
-            'To move through the room like a visitor, press Walk or Fly under Tools. Walk keeps you at eye height above the floor: the mouse looks and W A S D move on the level. Fly is free: W goes where you look and Q / E go down and up (Shift+` starts Fly too, as in Blender). Tab switches between the two while you move. In the Studio the walk builds, Minecraft style: the hotbar shows at the bottom while you walk or fly, 1 to 0 pick a slot, E opens the inventory (Space lifts while flying), a left click places the object where the crosshair aims, a right click removes what you aim at, R turns it, and Ctrl+Z undoes each one. H hides every panel but the crosshair; H again brings them back. Esc stops where you are. The public view page stays walk and fly only. The pressed button shows which one is on.'
+            'To move through the room like a visitor, press Walk or Fly under Tools. Walk keeps you at eye height above the floor: the mouse looks and W A S D move on the level. Fly is free: W goes where you look and Q / E go down and up (Shift+` starts Fly too, as in Blender). Tab switches between the two while you move. In the Studio the walk builds, Minecraft style: the hotbar shows at the bottom while you walk or fly, 1 to 0 pick a slot, E opens the inventory (Space lifts while flying), a left click places the object where the crosshair aims, a right click removes what you aim at, R turns it, and Ctrl+Z undoes each one. H hides every panel but the crosshair; H again brings them back. Esc stops where you are. The public view page stays walk and fly only. The pressed button shows which one is on.',
+            'VIEW | EDIT. At the top of the Studio (on a phone too) one switch says what a pull does. View: every pull turns the view, so nothing can move by accident. Edit: a pull (the left button, or one finger) that starts on the thing you have selected slides it along the floor at its height, and letting go is one step you can undo; a pull anywhere else still turns the view, and Alt with the drag, or the middle button, always moves the view, even over the selected thing. The arrows on the thing stay for exact moves. Adding something from Create switches to Edit, and the new thing comes selected, so your first pull moves it. E switches between View and Edit. Locked things and the walls, floor and rig of a place never move by a pull.',
+            'MOUSE IN EDIT. If your hands know Blender, open the Scene window, find Move, and under Mouse in Edit pick Like Blender instead of Pull to move. Then, in Edit only, the left button picks things and never moves them, the middle button turns the view, Shift with the middle button slides it, Ctrl with the middle button and the wheel go forward and back, and without a middle button Alt with the left button does the same. View stays the same with both choices. The choice is kept in this browser, and Pull to move is one click away.',
         ],
-        tags: ['studio', 'navigation', 'mouse', 'blender', 'orbit', 'pan', 'zoom', 'keyboard', 'preferences', 'walk', 'fly'],
-        updated: '2026-10-13'
+        tags: ['studio', 'navigation', 'mouse', 'blender', 'orbit', 'pan', 'zoom', 'keyboard', 'preferences', 'walk', 'fly', 'view', 'edit', 'pull to move'],
+        updated: '2026-10-29'
     },
     {
         id: 'studio-keyboard',
@@ -567,6 +569,7 @@ export const WIKI_ARTICLES = [
                 'Fader — plain channel faders, for when a fixture is doing something no profile explains and you need to poke a channel by hand.',
                 'MIDI — map a controller. Mappings live with the desk, not in one browser, so the same knobs work from any screen you open it on.'
             ] },
+            'A screen reader or the keyboard can use the desk: the dimmer limits, the tempo box, the universe list, the zoom buttons and slider, and the fixture library all have names, and Tab reaches the library to scroll it with the arrow keys.',
             'Opened from a project — Projection\'s Light button, for one — the lighting desk knows which project sent you. Its top left reads ← and the project\'s name, and one press takes you back to that project in Studio; beside it, Studio, Nodes and Projection open the same project in each tool. It keeps that for as long as the tab is open, whichever of its five pages you are on. Opened on its own, at /light, it has only the one door home, to your spaces.',
             'One rule that matters more than any other: output is OFF until you switch it on, under OUTPUT. Until then the desk runs, the stage view moves, scenes recall — and nothing leaves the machine. A dev server on a shared wifi can never blast a frame at somebody else\'s rig by accident, and a rig only ever lights when a person decided it should.',
             'The rig is yours. Nothing in the desk is patched to any particular room — you name the fixtures, you set the addresses, you save the looks.',
@@ -1769,7 +1772,7 @@ export const WIKI_ARTICLES = [
             'An install that has a name (di name) can be opened to the wifi for guests. On the local home, press Wifi (or run di wifi): a door opens on this machine\u2019s wifi address, with the install\u2019s own certificate, and the panel shows a QR code. A phone, a headset or a laptop scans it and gets the padlock, so the camera, the microphone and WebXR work.',
             'A visitor is always a guest: their own sandbox and the open space, never your spaces. You, at this machine, stay the owner. The door answers the install\u2019s own name only; any other name gets a refusal.',
             'Another di can follow a space from you: di follow <space> --from <name> (the name is the first part of the address, shown on the panel). Following needs the space\u2019s own key from di invite; the wifi door hands out no keys.',
-            'Close it with Close door (or di wifi --stop). After a restart the install is private again; the name and certificate stay, so the wifi door is one press away. If the wifi address changes (a new router lease), the door follows it within ten seconds.',
+            'Close it with Close door (or di wifi --stop). After a restart the install is private again and points its name home by itself within a minute, so an old link stops answering instead of leading nowhere; the name and certificate stay, so the wifi door is one press away. If the wifi address changes (a new router lease), the door follows it within ten seconds.',
             { list: [
                 'di wifi \u2014 open the door, print the name, the link and the follow line',
                 'di wifi --status \u2014 is it open, and where',

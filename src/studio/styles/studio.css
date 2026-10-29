@@ -1824,3 +1824,14 @@
         min-height: var(--di-touch-target);
     }
 }
+
+/* Scene -> Move, "Mouse in Edit" (MoveSettings.jsx): two equal buttons, 44 px on touch. */
+.move-edit-mouse .scc-btn {
+    flex: 1;
+}
+
+@media (pointer: coarse) {
+    .move-edit-mouse .scc-btn {
+        min-height: 44px;
+    }
+}
