@@ -970,6 +970,7 @@ export const WIKI_ARTICLES = [
         title: 'Studio editor basics',
         summary: 'Add objects, arrange them, and tune the scene.',
         body: [
+            'Every page and every Studio view has its own name in the browser tab — the project, then Studio, then the space, then di.iiii — so several open tabs are told apart, and a screen reader announces the right page.',
             'Open the Studio, pick or create a project, and start building. A new project opens bare — the bar, the room, Create and a hint — and the rest arrives with the first thing you place (see “A project grows one layer at a time”).',
             { list: [
                 'Five windows, one per job: Create (shapes, lights, and one Files library — imports, Google Drive, Commons), Objects (the object tree, and editing whatever is selected), Scene (settings for the whole 3D scene), Share (publish, export, activity), Code (HTML/CSS/JS files + the 3D↔code viewport toggle).',
@@ -999,7 +1000,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['studio', 'editor', 'basics'],
-        updated: '2026-10-28'
+        updated: '2026-10-29'
     },
     {
         id: 'studio-content-model',

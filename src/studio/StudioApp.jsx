@@ -1,4 +1,6 @@
 import { useMemo } from 'react'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
+import { pageTitle } from '../hooks/pageTitles.js'
 import StudioThemeProvider from './StudioThemeProvider.jsx'
 import SpaceHub from './components/SpaceHub.jsx'
 import StudioHub from './components/StudioHub.jsx'
@@ -16,6 +18,15 @@ import './styles/studio.css'
 
 export default function StudioApp({ initialRoute }) {
     const route = initialRoute
+
+    // The project's own name is set by StudioEditor once it is loaded; every
+    // other Studio view is titled here from its route (F125).
+    const spaceId = route.spaceId || DEFAULT_STUDIO_SPACE_ID
+    let title = null
+    if (route.page === STUDIO_PAGE_DIRECTOR) title = pageTitle('studio-director', { space: spaceId })
+    else if (route.page === STUDIO_PAGE_SPACES) title = pageTitle('studio-spaces')
+    else if (route.page !== STUDIO_PAGE_PROJECT || !route.projectId) title = pageTitle('studio-hub', { space: spaceId })
+    useDocumentTitle(title)
 
     const content = useMemo(() => {
         if (route.page === STUDIO_PAGE_PROJECT && route.projectId) {

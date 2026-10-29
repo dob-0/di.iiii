@@ -16,6 +16,8 @@ import {
 import { kitStackGroups } from './kitStack.js'
 import KitPreview from './KitPreview.jsx'
 import kitWeights from './kitWeights.json'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
+import { pageTitle } from '../hooks/pageTitles.js'
 
 /**
  * `/tools` — the Kit.
@@ -170,6 +172,7 @@ const kb = (value) => `${Math.round(Number(value) || 0)} KB`
 
 export default function KitPage({ isLocalInstall = false }) {
     const isEmbed = isEmbedRequest()
+    useDocumentTitle(pageTitle('tools'))
     const { sandboxSpaceId } = useAuthSession()
     const [liveId, setLiveId] = useState(null)
     const [coarse] = useState(isCoarsePointer)
