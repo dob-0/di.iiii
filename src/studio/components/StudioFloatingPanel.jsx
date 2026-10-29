@@ -56,7 +56,7 @@ export default function StudioFloatingPanel({
                     {collapsed ? '▸' : '▾'}
                 </button>
                 {onClose && (
-                    <button className="sfp-close" onClick={onClose} title="Close (bring it back from Tools > Windows)">×</button>
+                    <button className="sfp-close" onClick={onClose} aria-label="Close" title="Close (bring it back from the Windows row of the control panel)">×</button>
                 )}
             </div>
             {!collapsed && (
