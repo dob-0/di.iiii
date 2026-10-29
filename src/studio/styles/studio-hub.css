@@ -227,7 +227,9 @@
     transition: color 0.1s, border-color 0.1s, opacity 0.15s;
     border-radius: 0;
     font-family: inherit;
-    opacity: 0;
+    /* Always visible: a word you can find on touch and by keyboard (UX F031). */
+    opacity: 0.85;
+    min-height: 24px;
     line-height: 1;
 }
 
@@ -295,7 +297,9 @@
     transition: color 0.1s, border-color 0.1s, opacity 0.15s;
     border-radius: 0;
     font-family: inherit;
-    opacity: 0;
+    /* Always visible: a word you can find on touch and by keyboard (UX F031). */
+    opacity: 0.85;
+    min-height: 24px;
     line-height: 1;
 }
 

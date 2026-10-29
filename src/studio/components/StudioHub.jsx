@@ -450,9 +450,8 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                         <button
                             className="sh-btn-delete"
                             onClick={e => { e.stopPropagation(); handleDelete(project) }}
-                            aria-label="Delete"
                             title="Delete — held in the trash for 30 days"
-                        >✕</button>
+                        >Delete</button>
                         {/* Where it sits and what it is. Two selects rather than
                             a menu: both are one-tap on a phone, and both say
                             their current answer without being opened. */}
@@ -723,12 +722,16 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                 {/* The trash. Delete used to remove the row and the files in the
                     same breath; it holds for thirty days now, and this is where
                     you see that it did. */}
-                {trash?.projects?.length > 0 && (
+                {/* Always there, so the way back is findable before a first delete (UX F078). */}
+                {trash && (
                     <section className="sh-trash">
                         <button className="sh-link" type="button" onClick={() => setShowTrash(v => !v)}>
-                            {showTrash ? 'Hide the trash' : `Trash — ${trash.projects.length}`}
+                            {showTrash ? 'Hide the trash' : `Trash — ${trash.projects?.length || 0}`}
                         </button>
-                        {showTrash && (
+                        {showTrash && !(trash.projects?.length > 0) && (
+                            <p className="sh-shelf-empty">Nothing in the trash. Deleted things wait here for 30 days.</p>
+                        )}
+                        {showTrash && trash.projects?.length > 0 && (
                             <ul className="sh-trash-list">
                                 {trash.projects.map(project => (
                                     <li key={project.id} className="sh-trash-row">

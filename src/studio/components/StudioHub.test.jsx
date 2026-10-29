@@ -396,6 +396,19 @@ describe('shelves and the trash', () => {
         fireEvent.click(screen.getByText('Bring it back'))
         await waitFor(() => expect(restoreProject).toHaveBeenCalledWith('gone'))
     })
+
+    // UX S10 (F078, F031): the way back exists before a first delete, and Delete is a word.
+    it('shows the trash with 0 items, and the delete button says Delete', async () => {
+        listProjects.mockResolvedValue([{ id: 'a', title: 'Kept', updatedAt: Date.now(), source: 'project' }])
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 30 * 24 * 60 * 60 * 1000 })
+
+        render(<StudioHub spaceId="main" />)
+
+        fireEvent.click(await screen.findByText('Trash — 0'))
+        expect(await screen.findByText(/wait here for 30 days/i)).toBeTruthy()
+        expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
+    })
 })
 
 // ── One project list per space (2026-09-23) ─────────────────────────────────

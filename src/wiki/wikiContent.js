@@ -127,8 +127,8 @@ export const WIKI_ARTICLES = [
             'The address of a project always begins with its space. The editor addresses put the tool first for historical reasons, which is why the shortcut below exists — it is the one that reads the way the product is actually arranged:',
             { list: [
                 '/<space>/projects — everything in a space, listed, each thing saying whether it is a scene or a page. Open to whoever the space is open to: on a public space no sign-in is needed. This is the one to use — the list belongs to the space, not to whichever tool you are holding.',
-                '/spaces — all of your spaces',
-                '/<space>/studio — the same projects in Studio, where you make them: New project, drafts, shelves and the trash are here, and a card opens its project in Studio',
+                '/spaces — all of your spaces. A card opens the space itself (its name is the link); Edit on the card opens the Studio, Manage keeps the settings',
+                '/<space>/studio — the same projects in Studio, where you make them: New project, drafts, shelves and the trash are here, and a card opens its project in Studio; the trash is always there, also when empty — deleted things wait 30 days',
                 '/<space>/raw/projects — the same projects, for the node editor: a card opens its project on the node canvas',
                 '/<space>/studio/projects/<id> — the editor for one project',
                 '/<space>/<project>/studio — the same project, open for editing. Add /raw instead for the node editor. This works on any project link: take the address you are looking at and add the word. It is a shortcut, not a second address — the bar heals to the editor’s own link once it opens.',
@@ -138,7 +138,7 @@ export const WIKI_ARTICLES = [
             'A wrong address says so. A project name that is not in the space opens a card that says “There is no project called … in the space …”, naming the space, with a button to what is in the space; it never opens some other project under the wrong address. An address with no space behind it says “We could not find …”, and every such card has the same three ways out: Go to the front page, See spaces, Get help. A space with nothing in it says “Nothing here yet.”; a visitor also reads “The owner has not shown anything.”, and the owner reads the way to make the first project instead. If a page stops working while it draws, it says so, and the technical detail for whoever helps you sits under Details for helpers.'
         ],
         tags: ['spaces', 'projects', 'basics', 'contents'],
-        updated: '2026-10-28'
+        updated: '2026-10-29'
     },
     {
         id: 'everything-in-a-space',

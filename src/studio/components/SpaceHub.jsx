@@ -514,14 +514,21 @@ export default function SpaceHub() {
     // Both routes out of a card go through the entry transition: the page
     // pushes toward the card, and it holds until the destination has painted
     // instead of cutting to black.
-    const openCard = (space, element = null) => {
-        const href = !canEnter(space) && space.isPublic
-            ? buildSpaceFacePath(space)
-            : buildStudioHubPath(space.id)
+    // A card OPENS THE SPACE (the address it prints). The Studio is the card's
+    // "Edit" button, kept as its own named route (UX S10, F012). A sandbox has
+    // no front page, only its Studio, so it still opens there.
+    const goFromCard = (href, element) => {
         enterFromElement(null, href, {
             element: element?.querySelector?.('.ssh-card-preview') || element
         })
     }
+    const openCard = (space, element = null) => {
+        goFromCard(
+            space.kind === 'sandbox' ? buildStudioHubPath(space.id) : buildSpaceFacePath(space),
+            element
+        )
+    }
+    const editCard = (space, element = null) => goFromCard(buildStudioHubPath(space.id), element)
 
     // One creation, two doors. `born` decides where the new space OPENS, and
     // nothing else differs: a space made to be scanned is an ordinary space, and
@@ -1652,10 +1659,8 @@ export default function SpaceHub() {
                                     key={space.id}
                                     data-space-id={space.id}
                                     className="ssh-space-card"
+                                    role="presentation"
                                     onClick={(event) => openCard(space, event.currentTarget)}
-                                    role="button"
-                                    tabIndex={0}
-                                    onKeyDown={e => e.key === 'Enter' && openCard(space, e.currentTarget)}
                                 >
                                     {/* One name per space (utils/spaceNames.js). The header
                                         used to open with the id in mono — "drum-rhythms"
@@ -1741,7 +1746,20 @@ export default function SpaceHub() {
                                             </div>
                                         )
                                     })()}
-                                    <p className="ssh-space-label">{spaceName(space)}</p>
+                                    <p className="ssh-space-label">
+                                        {/* The card's one link (keyboard and screen reader).
+                                            A click anywhere else on the card is a mouse bonus. */}
+                                        <a
+                                            className="ssh-space-open"
+                                            href={space.kind === 'sandbox' ? buildStudioHubPath(space.id) : buildSpaceFacePath(space)}
+                                            onClick={e => {
+                                                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                                openCard(space, e.currentTarget.closest('.ssh-space-card'))
+                                            }}
+                                        >{spaceName(space)}</a>
+                                    </p>
                                     {/* What the space is, in its owner's words. 10 of 11
                                         public cards said nothing about what was inside
                                         (audit 2026-10-21, G23). */}
@@ -1830,8 +1848,18 @@ export default function SpaceHub() {
                                         </div>
                                     )}
 
-                                    {canManage(space) && (
+                                    {(canManage(space) || (canEnter(space) && space.kind !== 'sandbox')) && (
                                         <div className="ssh-card-manage" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                                            {canEnter(space) && space.kind !== 'sandbox' && (
+                                                <button
+                                                    className="ssh-card-btn"
+                                                    title="Open the Studio for this space to change what is in it"
+                                                    onClick={e => editCard(space, e.currentTarget.closest('.ssh-space-card'))}
+                                                >
+                                                    Edit
+                                                </button>
+                                            )}
+                                            {canManage(space) && (
                                             <button
                                                 className={`ssh-card-btn${manageId === space.id ? ' ssh-card-btn--active' : ''}`}
                                                 aria-expanded={manageId === space.id}
@@ -1839,6 +1867,7 @@ export default function SpaceHub() {
                                             >
                                                 {manageId === space.id ? 'Done' : 'Manage'}
                                             </button>
+                                            )}
                                         </div>
                                     )}
                                 {renderManage(space)}
@@ -1873,6 +1902,7 @@ export default function SpaceHub() {
                         <span className="ssh-tools-label">On this machine</span>
                         <a className="ssh-tools-link" href={lightingDeskPath()} target="_blank" rel="noreferrer">
                             Light
+                            <span className="ssh-tools-newtab"> (opens in a new tab)</span>
                         </a>
                         <span className="ssh-tools-hint">— the lighting desk, for the rig in the room</span>
                     </p>

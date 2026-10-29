@@ -1537,3 +1537,9 @@ Symptom (UX audit 2026-10-28, `capture/sheets/admin.png`): the page that holds w
 Cause: copy written for the operator; `managementButtons` (`usePreferencesData.js`) had no switch kind; Refresh had no data path.
 Fix: plain names and two named groups (`SECTIONS`/`GROUP_LABELS` in `PreferencesPage.jsx`); on/off settings carry `kind: 'switch'` and render `role="switch"` with `aria-checked`, an On/Off word and a line on what they touch; Refresh bumps a key on `<main>` so the open section mounts and fetches again. Wiki articles admin-manage, admin-estate, agents-board follow.
 Guard: `src/components/PreferencesPageWords.test.jsx` (4); all 4 failed on the old code. Review fix (2026-10-29): the Machines section still headed itself "Estate" / "Estate map" (the words test mocks it); now "Machines" / "Machines map". Guard: `EstateSection.test.jsx` "renders the map in a frame" (fails on origin/dev).
+
+## Space card opened the Studio, was a button holding buttons (UX S10, 2026-10-29)
+
+Symptom: on /spaces a card click landed in /<space>/studio, not the space; axe `nested-interactive` on 8 cards (role=button div holding links and buttons); Delete in a project card was a bare ✕ shown only on hover; the Studio trash was hidden until something was deleted; the Light link opened a new tab silently.
+Fix: `SpaceHub.jsx` — the card is a plain div (mouse click still opens the space), its title is the one link to `/<space>`, **Edit** is its own button to `/<space>/studio`, Manage unchanged; a sandbox still opens its Studio. `StudioHub.jsx` — Delete is a word, always visible; the trash always shows ("Trash — 0"). Light says "(opens in a new tab)". Tests: `SpaceHub.test.jsx` "a card is a link to the space…", `StudioHub.test.jsx` "shows the trash with 0 items…" (both fail on the old code).
+Kept (nothing lost): the old card→Studio route is the Edit button.
