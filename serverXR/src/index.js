@@ -3788,6 +3788,8 @@ initStorage()
           log: (line) => logger.info(line)
         })
         process.once('exit', () => { wifiDoorSlot.door.close().catch(() => {}) })
+        // The door starts closed; the broker may still hold the wifi address from before the restart.
+        wifiDoorSlot.door.startHome()
       }
       // `di follow` / `di unfollow` write follows.json while this runs. Polled
       // stat, not fs.watch: the file is replaced by a write and inotify loses
