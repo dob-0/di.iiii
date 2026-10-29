@@ -145,7 +145,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
     const store = useProjectStore()
     const { state, dispatch } = store
     const { applyLocalOps: syncOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: crew ? 'crew-client' : 'build-client', opIdPrefix: crew ? 'crew-op' : 'build-op' })
-    const { applyLocalOps, undo, redo, edits } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
+    const { applyLocalOps, undo, redo, canUndo, canRedo, edits } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const projectDocument = state.document
     const entities = useMemo(() => projectDocument?.entities || [], [projectDocument?.entities])
     // The library with the show's own types (RIG_BUILD.md §13), one object per list.
@@ -527,6 +527,12 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                         orderHref={`${buildEquipmentPath(spaceId, projectId)}?view=order`}
                         header={<h2 className="rigcards-h">inventory · E</h2>}
                     />
+                </div>
+            ) : null}
+            {!crew ? (
+                <div className="rigbuild-undo" role="group" aria-label="Undo and redo">
+                    <button type="button" onClick={undo} disabled={!canUndo()} title="Undo the last change (Ctrl/Cmd+Z)">Undo</button>
+                    <button type="button" onClick={redo} disabled={!canRedo()} title="Redo (Ctrl/Cmd+Shift+Z)">Redo</button>
                 </div>
             ) : null}
             {!crew ? (
