@@ -3,11 +3,13 @@
  *
  * All the doing is in the running server (serverXR/src/wifiDoor.js, routes
  * /api/wifi-door); this file calls the three routes and says what came back. The
- * server answers the owner only, and the CLI is the owner by being on loopback.
+ * server answers the owner only, and the CLI is the owner by being on this machine and carrying the install's own token.
  * Plan: docs/ai/team-sync-by-network-name.md §7.
  */
 import fs from 'node:fs'
 import path from 'node:path'
+
+import { readEnv } from './state.mjs'
 
 const readLabel = (home) => {
     try {
@@ -54,7 +56,8 @@ export const runWifi = async ({ flags = {}, home, base, fetchImpl = fetch }) => 
     const method = stop ? 'DELETE' : (flags.status ? 'GET' : 'POST')
     let response
     try {
-        response = await fetchImpl(url, { method })
+        const token = readEnv(home).ADMIN_API_TOKEN
+        response = await fetchImpl(url, { method, ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}) })
     } catch {
         return { code: 1, lines: ['This install is not running. Start it with di up.'] }
     }
