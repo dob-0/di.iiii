@@ -3,6 +3,18 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Objects said "No objects yet" beside six things on screen (Studio, UX audit F026, 2026-10-29)
+
+Symptom: a scene showed a sphere, boxes, a torus and a lamp, but the Objects window read "Objects (0) No objects yet." and a click on
+the sphere changed nothing (audit `capture/shots/studio-scene/desktop.png`).
+Cause: the list counted `document.entities` only; the things were standing nodes (made in Nodes, a template or a page layer), which
+the scene draws and the list never read (`StudioEditor.jsx` `entities={insideGeo ? geoRows : entities}`).
+Fix: `listRoomNodes` / `roomNodeRow` (`project/graph/geoScope.js`) list the parentless spatial nodes; the editor passes them as
+`nodeRows` and `StructurePanel` adds them to the count and the list; a Geo row opens that Geo (`onOpenNodeRow` = `openGeo`).
+Not done: selecting a non-Geo standing node in Studio outside a Geo (listed read-only, edited in Nodes).
+Regression tests: `StructurePanel.test.jsx` ("lists what the scene shows"), `geoScope.test.js` ("what stands in the top room").
+Replaced nothing: entity rows, rename, hide, lock, drag-to-group and the empty line for a truly empty project are unchanged.
+
 ## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
 
 Symptom: after adding a box from Create, the child and the senior pulled it; the view turned and the box left the screen, Position

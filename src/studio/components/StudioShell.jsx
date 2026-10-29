@@ -113,6 +113,8 @@ export default function StudioShell({
     selectedEntityId,
     selectedEntityIds = [],
     entities,
+    nodeRows,
+    onOpenNodeRow,
     inspectorSections,
     inspectorValues,
     assetOptions,
@@ -748,6 +750,8 @@ export default function StudioShell({
             <>
                             <StructurePanel
                                 entities={entities}
+                                nodeRows={nodeRows}
+                                onOpenNodeRow={onOpenNodeRow}
                                 selectedEntityId={selectedEntityId}
                                 selectedEntityIds={selectedEntityIds}
                                 onSelectEntity={handleSelectEntity}

@@ -72,6 +72,13 @@ export const listGeoChildren = (document, geoId) => {
     return (document?.nodes || []).filter((node) => (node.parentId || null) === geoId && isSpatial(node))
 }
 
+// What stands in the TOP room as nodes (made in Nodes, a template or a page
+// layer): spatial nodes with no parent. Studio's Objects list names them so
+// its count matches what the scene shows. Read-only rows; a Geo row opens it.
+export const listRoomNodes = (document) => (
+    (document?.nodes || []).filter((node) => !node.parentId && isSpatial(node))
+)
+
 // A Geo's path for the switcher's label: "Room / Table / Shelf", outermost
 // first. Bounded, because parentId is patchable to anything and can loop.
 export const geoPathLabel = (document, geoId) => {
@@ -97,6 +104,10 @@ export const geoChildRow = (node) => ({
     parentId: null,
     components: {}
 })
+
+// The same row for a node standing in the top room: `nodeId`/`isGeo` tell the
+// list it is a node (no hide/lock buttons, no rename) and whether a click opens it.
+export const roomNodeRow = (node) => ({ ...geoChildRow(node), fromNodes: true, isGeo: isGeoNode(node) })
 
 // A card place for the new node on the Geo's own canvas in Nodes: one step
 // to the right of the right-most card already in that scope, level with it,

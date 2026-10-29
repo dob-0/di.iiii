@@ -126,3 +126,30 @@ describe('formatNumberDisplay (P10)', () => {
         expect(formatNumberDisplay('')).toBe('')
     })
 })
+
+describe('StructurePanel lists what the scene shows (UX audit F026)', () => {
+    const nodeRows = [
+        { id: 'n-sphere', name: 'Sphere', type: 'sphere', fromNodes: true, isGeo: false },
+        { id: 'n-geo', name: 'Room', type: 'geo', fromNodes: true, isGeo: true }
+    ]
+
+    it('counts and lists standing nodes when the document has no entities', () => {
+        render(<StructurePanel entities={[]} nodeRows={nodeRows} selectedEntityIds={[]} onSelectEntity={() => {}} onToggleSelectEntity={() => {}} />)
+
+        expect(screen.getByText('Objects (2)')).toBeInTheDocument()
+        expect(screen.queryByText('No objects yet.')).toBeNull()
+        expect(screen.getByText('Sphere')).toBeInTheDocument()
+    })
+
+    it('adds node rows to the entities count', () => {
+        render(<StructurePanel entities={entities} nodeRows={nodeRows} selectedEntityIds={[]} onSelectEntity={() => {}} onToggleSelectEntity={() => {}} />)
+        expect(screen.getByText('Objects (5)')).toBeInTheDocument()
+    })
+
+    it('a Geo row opens that Geo on click', () => {
+        const onOpenNodeRow = vi.fn()
+        render(<StructurePanel entities={[]} nodeRows={nodeRows} onOpenNodeRow={onOpenNodeRow} selectedEntityIds={[]} onSelectEntity={() => {}} onToggleSelectEntity={() => {}} />)
+        fireEvent.click(screen.getByRole('button', { name: /Room/ }))
+        expect(onOpenNodeRow).toHaveBeenCalledWith('n-geo')
+    })
+})
