@@ -22,6 +22,8 @@ Method source: CodeMirror 6 reference (codemirror.net/docs/ref) — tab-focus mo
 - A change from outside (asset insert, sync) replaces only the part that differs, so the cursor stays where it was.
 - "Use a plain text box" is at least 24 px tall (WCAG 2.5.8).
 
+- Picture step fix: the editor has a height limit (70vh) and scrolls inside, so the find bar and "Use a plain text box" stay reachable with a 680 KB file; the line-number gutter is opaque.
+
 ## Not done / owed
 - The 680 KB cinema-house file in a browser, desktop and phone, before/after pictures: not taken by this builder (see S18-work.json notes).
 - "Whole page sent at each pause" is S31.

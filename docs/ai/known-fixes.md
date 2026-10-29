@@ -10,6 +10,7 @@ When you solve something that took >5 min to find, add a row here and update `CU
 - Kept (nothing lost): the textarea is the load fallback, the fallback if the editor fails to load, and a remembered choice ("Use a plain text box", `di.codeEditor.plain`).
 - Trap: without the manualChunks entry CodeMirror lands in the shared `vendor` chunk (+495 KB for every route). Keep it named.
 - Tests: `panels/CodeEditorArea.test.jsx` (5 fail on the old box).
+- Picture step (2026-10-29): with the 680 KB file the box grew as tall as the file (no height limit, `.cm-editor` max-height 100% of a content-sized parent), so the page scrolled instead of the editor: the find bar sat ~125,000 px down and "Use a plain text box" was out of reach; the gutter was transparent, so text scrolled sideways showed through the line numbers. Fix (`studio-code.css`): `.di-code-editor` `max-height: 70vh`, `min-height: 0` on `.cm-editor` and `.cm-scroller`; gutter `background: var(--di-bg)`. Tests: "box in a window (css)" (2 fail on the CSS before it). Limit: 70vh is the viewport, not the window.
 
 ## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
 
