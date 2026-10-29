@@ -21,6 +21,13 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## Rig pages and perform used 10-11.5 px type, a faint step-bar title and a 20 px tick box; the toybox had two low-contrast greys (UX audit F040, F094, F096, F100, F103, 2026-10-29)
+
+Symptom: build, cards, equipment and plot set text at 10-11.5 px; the step bar's "RIG" title and step numbers were `--di-faint` (axe serious); equipment tick boxes 20 px; toybox English name line and "later" 4.3:1 on cream.
+Cause: the rig CSS predates the 12 px floor (S05); the steps row used the rules-only grey; `--make-ink-soft` is 4.3:1 on `--make-paper`.
+Fix: every `font-size` under 12 px in `src/rigbuild/*.css` is 12px; `.rigsteps-title`/`.rigsteps-n` use `--di-dim`; tick box 24 px; new `--make-ink-readable` (#6B6458, 5.5:1) on `.make-name-en` and `.make-name-skip` only (the toybox keeps its palette). F100 (phone totals over Items) was already fixed by the `top:112px` second row; the test now pins it. perform.css was already on the ladder tokens.
+Guard: `src/rigbuild/readableType.test.js` (5): 4 fail on the old CSS, the phone-geometry one passes on both (it pins an existing fix). Paper views (.rigplot, .rigsheet) and the light desk untouched.
+
 ## A wrong address opened something else, and empty or failed pages said nothing useful (UX audit F010, F070, F071, F142, F154, 2026-10-28)
 
 Symptoms (audit `~/work/agent-reports-2026-10-28/ux-audit`, captured at 4ef52d1b7): `/cinema-house/nope-xyz` showed Cinema House's own front page under the wrong address (title "Cinema House — di.iiii", resolve 404 in the network log); an empty space showed a visitor its name in bold and nothing else, while its `/projects` list said "Nothing is on show in this space yet." (two voices); the unknown-space card said "step through one of your own doors" and its one button was "Open Space" (the shared space, not the way home), the di.iiii mark plain text; the crash page printed "Work saved, nothing changed" on every failure and the raw error in code type; `/<space>/studio/director` on a space with no director was a page that only said "no director here", and bare `/scan` answered "Not found".

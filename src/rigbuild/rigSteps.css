@@ -11,7 +11,8 @@
 .rigsteps { gap: var(--di-space-4); }
 
 .rigsteps-title {
-    color: var(--di-faint);
+    /* the row that says where you are: --di-dim (5.3:1), not the faint grey kept for rules (UX audit F096) */
+    color: var(--di-dim);
     text-transform: var(--di-label-case);
     letter-spacing: var(--di-label-tracking);
     flex-shrink: 0;
@@ -37,7 +38,7 @@
 .rigsteps-step { flex-shrink: 0; white-space: nowrap; display: inline-flex; align-items: baseline; gap: var(--di-space-2); }
 
 /* The step's number, and what the document says about it: quieter than the name. */
-.rigsteps-n { color: var(--di-faint); }
+.rigsteps-n { color: var(--di-dim); }
 .rigsteps-step.is-here .rigsteps-n { color: inherit; }
 .rigsteps-said {
     color: var(--di-dim);

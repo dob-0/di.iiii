@@ -15,7 +15,7 @@
 .rigcards-btn.is-primary { background: var(--ink); color: var(--paper); }
 .rigcards-main { min-height: 0; overflow: auto; padding: 16px; display: grid; gap: 16px; align-content: start; }
 .rigcards-h { margin: 0 0 8px; font: 700 12px var(--di-mono, monospace); letter-spacing: 0.1em; text-transform: uppercase; }
-.rigcards-foot { margin: 10px 0 0; font-size: 11.5px; color: var(--ink); }
+.rigcards-foot { margin: 10px 0 0; font-size: 12px; color: var(--ink); }
 
 /* a card */
 .rigcards-cardlist { display: grid; gap: 6px; }
@@ -28,11 +28,11 @@
 .rigcards-card__head { display: flex; align-items: center; gap: 8px; }
 .rigcards-card__code { font-weight: 700; font-size: 13px; flex: 1 1 auto; min-width: 0; }
 .rigcards-card__count { font-size: 13px; }
-.rigcards-card__meta { font-size: 11.5px; color: var(--soft); }
+.rigcards-card__meta { font-size: 12px; color: var(--soft); }
 .rigcards-card__bar { display: block; height: 5px; border: 1px solid var(--ink); }
 .rigcards-card__bar span { display: block; height: 100%; background: var(--ink); }
 .rigcards-card.is-owed .rigcards-card__bar { border-style: dashed; }
-.rigcards-card__words { font-size: 11px; color: var(--soft); }
+.rigcards-card__words { font-size: 12px; color: var(--soft); }
 .rigcards-card.is-over .rigcards-card__words { color: var(--ink); font-weight: 700; }
 
 /* the desk: cards | positions (| patch), the status and the cue list under them */
@@ -54,9 +54,9 @@
 .rigcards-pos__name { font-weight: 700; font-size: 13px; }
 .rigcards-pos__count { font-size: 12px; color: var(--soft); }
 .rigcards-pos__acts { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
-.rigcards-pos__note { margin: 2px 0 6px; font-size: 11.5px; color: var(--soft); }
+.rigcards-pos__note { margin: 2px 0 6px; font-size: 12px; color: var(--soft); }
 .rigcards-slots { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; margin: 3px 0; }
-.rigcards-slots__side { width: 14px; font-size: 11px; color: var(--soft); }
+.rigcards-slots__side { width: 14px; font-size: 12px; color: var(--soft); }
 .rigcards-slot {
     width: 40px; height: 30px; padding: 0; box-sizing: border-box; font: 9px/1 var(--di-mono, monospace); letter-spacing: -0.02em;
     color: var(--ink); background: var(--paper); border: 1px dashed var(--faint); border-radius: 1px; cursor: pointer; overflow: hidden;
@@ -73,7 +73,7 @@
 .rigcards--phone { grid-template-rows: auto minmax(0, 1fr) auto; }
 .rigcards--phone .rigcards-main { padding: 12px; }
 .rigcards--phone .rigcards-top { flex-wrap: wrap; }
-.rigcards--phone .rigcards-slot { width: 44px; height: 40px; font-size: 10px; }
+.rigcards--phone .rigcards-slot { width: 44px; height: 40px; font-size: 12px; }
 .rigcards-sheet.is-open { max-height: 78vh; }
 .rigcards--phone .rigcards-dealbar .rigplot-seg button { min-height: 40px; }
 @media (orientation: landscape) and (max-height: 500px) {
@@ -94,7 +94,7 @@
 .rigcards-patch { display: grid; gap: 10px; align-content: start; }
 .rigcards-universe { display: grid; gap: 3px; }
 .rigcards-universe__title { font-size: 12.5px; font-weight: 700; }
-.rigcards-universe__makeup { font-size: 11px; color: var(--soft); }
+.rigcards-universe__makeup { font-size: 12px; color: var(--soft); }
 .rigcards-bar { display: block; width: 100%; height: 20px; }
 .rigcards-bar--owed { box-sizing: border-box; border: 1px dashed var(--ink); background: var(--paper); }
 .rigcards-conflict { display: grid; gap: 4px; font-size: 12px; padding: 8px 10px; border: 1.5px solid var(--ink); background: var(--paper); }
@@ -115,15 +115,15 @@
 .rigcards-cue { flex: 1 1 0; min-width: 170px; display: grid; gap: 4px; border: 1px solid var(--ink); padding: 6px; box-sizing: border-box; background: var(--paper); }
 .rigcards-cue.is-wait { border-style: dashed; }
 .rigcards-cue__fire { display: grid; gap: 2px; text-align: left; font: inherit; color: inherit; background: transparent; border: 0; padding: 2px; cursor: pointer; min-height: 44px; }
-.rigcards-cue__n { font-size: 11px; font-weight: 700; }
+.rigcards-cue__n { font-size: 12px; font-weight: 700; }
 .rigcards-cue__name { font-size: 13px; font-weight: 600; }
-.rigcards-cue__time { font-size: 10.5px; color: var(--soft); }
+.rigcards-cue__time { font-size: 12px; color: var(--soft); }
 .rigcards-cue.is-live { background: var(--ink); color: var(--paper); }
 .rigcards-cue.is-live .rigcards-cue__time, .rigcards-cue.is-live .rigplot-field { color: #cfcdc7; }
 .rigcards-cue__acts { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
-.rigcards-cue__acts .rigplot-field { margin: 0; font-size: 11px; }
+.rigcards-cue__acts .rigplot-field { margin: 0; font-size: 12px; }
 .rigcards-cue__acts .rigplot-field input { width: 44px; min-height: 28px; padding: 3px 5px; }
-.rigcards-cue__acts .rigcards-btn { min-height: 28px; padding: 3px 7px; font-size: 11px; }
+.rigcards-cue__acts .rigcards-btn { min-height: 28px; padding: 3px 7px; font-size: 12px; }
 .rigcards--phone .rigcards-cues { margin-top: 8px; }
 .rigcards--phone .rigcards-timeline { flex-direction: column; overflow: visible; }
 .rigcards--phone .rigcards-cue { min-width: 0; }

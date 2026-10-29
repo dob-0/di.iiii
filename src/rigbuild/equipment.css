@@ -42,8 +42,8 @@
 .rigequip-tile.is-selected { outline: 2px solid var(--ink); outline-offset: 1px; }
 .rigequip-tile.is-owed { border-style: dashed; }
 .rigequip-tile__name { font-weight: 700; font-size: 12.5px; line-height: 1.2; min-width: 0; overflow-wrap: anywhere; }
-.rigequip-tile__code { font-size: 11px; color: var(--soft); overflow-wrap: anywhere; }
-.rigequip-tile__words { font-size: 11px; color: var(--soft); }
+.rigequip-tile__code { font-size: 12px; color: var(--soft); overflow-wrap: anywhere; }
+.rigequip-tile__words { font-size: 12px; color: var(--soft); }
 .rigequip-tile.is-taken .rigequip-tile__words { color: var(--ink); }
 .rigequip-tile.is-warn .rigequip-tile__words { color: var(--ink); font-weight: 700; }
 .rigequip-tile:not(.is-taken) .rigequip-pic img { opacity: 0.55; }
@@ -56,7 +56,7 @@
 .rigequip-pic--card { border-bottom: 1px solid var(--rule); }
 .rigequip-pic--card img { max-height: 280px; }
 .rigequip-pic--card.is-none { max-height: 120px; aspect-ratio: auto; min-height: 80px; }
-.rigequip-pic figcaption { font-size: 11px; color: var(--soft); padding: 4px 16px 6px; }
+.rigequip-pic figcaption { font-size: 12px; color: var(--soft); padding: 4px 16px 6px; }
 
 /* the card */
 .rigequip-card { background: var(--paper); }
@@ -65,7 +65,7 @@
 .rigequip-card__code { margin: 2px 0 0; font-size: 12px; color: var(--soft); }
 .rigequip-take { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--rule); background: var(--desk); }
 .rigequip-take__state { font-size: 12px; }
-.rigequip-take__words { flex: 1 1 100%; font-size: 11.5px; color: var(--soft); }
+.rigequip-take__words { flex: 1 1 100%; font-size: 12px; color: var(--soft); }
 .rigequip-take__from { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 6px 10px; }
 .rigequip-take__from .rigplot-field { margin: 0; }
 .rigequip-take__from .rigplot-field--text { flex: 1 1 180px; }
@@ -73,17 +73,17 @@
 .rigequip-card__part { padding: 10px 16px; border-bottom: 1px solid var(--rule); }
 .rigequip-card__part h3 { margin: 0 0 4px; font: 700 11.5px var(--di-mono, monospace); letter-spacing: 0.08em; text-transform: uppercase; }
 .rigequip-card__part p { margin: 0 0 6px; }
-.rigequip-refs { font-size: 10.5px; color: var(--soft); overflow-wrap: anywhere; }
+.rigequip-refs { font-size: 12px; color: var(--soft); overflow-wrap: anywhere; }
 .rigequip-refs a { color: var(--soft); }
 .rigequip-needs, .rigequip-alts { margin: 0; padding: 0 0 0 16px; display: grid; gap: 4px; }
-.rigequip-kind { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--rule); padding: 0 3px; }
+.rigequip-kind { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--rule); padding: 0 3px; }
 .rigequip-alts a { color: var(--ink); }
 .rigequip-specs { margin: 0; display: grid; gap: 3px; }
 .rigequip-specs div { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px; }
-.rigequip-specs dt { font-size: 11.5px; color: var(--soft); }
+.rigequip-specs dt { font-size: 12px; color: var(--soft); }
 .rigequip-specs dd { margin: 0; overflow-wrap: anywhere; }
 .rigequip-specs .is-owed dd { font-weight: 700; }
-.rigequip-sources ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 11px; }
+.rigequip-sources ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 12px; }
 .rigequip-sources a { color: var(--ink); overflow-wrap: anywhere; }
 .rigequip-sources li:target { outline: 1.5px solid var(--ink); }
 
@@ -97,14 +97,14 @@
 .rigequip-preview { margin: 6px 0 0; border: 1.5px solid var(--ink); background: #0b0b0e; }
 .rigequip-preview > div:first-child { height: 200px; }
 .rigequip-preview.is-empty { height: auto; min-height: 60px; display: grid; place-items: center; color: var(--paper); font-size: 12px; padding: 12px; }
-.rigequip-preview__foot { display: flex; justify-content: space-between; align-items: center; padding: 2px 8px; font-size: 11px; background: var(--paper); border-top: 1px solid var(--ink); }
+.rigequip-preview__foot { display: flex; justify-content: space-between; align-items: center; padding: 2px 8px; font-size: 12px; background: var(--paper); border-top: 1px solid var(--ink); }
 
 /* the hotbar inside the inventory */
 .rigequip-hotbar { list-style: none; margin: 0; padding: 8px 16px max(8px, env(safe-area-inset-bottom)); display: flex; gap: 4px; overflow-x: auto; border-top: 1.5px solid var(--ink); background: var(--paper); }
-.rigequip-hotbar__slot { flex: 0 0 auto; min-width: 84px; min-height: 52px; display: grid; align-content: center; gap: 1px; padding: 4px 8px; border: 1.5px solid var(--ink); border-radius: 2px; font-size: 11.5px; position: relative; }
+.rigequip-hotbar__slot { flex: 0 0 auto; min-width: 84px; min-height: 52px; display: grid; align-content: center; gap: 1px; padding: 4px 8px; border: 1.5px solid var(--ink); border-radius: 2px; font-size: 12px; position: relative; }
 .rigequip-hotbar__slot.is-empty { border-style: dashed; color: var(--faint); }
 .rigequip-hotbar__slot.is-target { background: var(--desk); }
-.rigequip-hotbar__key { position: absolute; right: 4px; top: 2px; font-size: 10px; color: var(--soft); }
+.rigequip-hotbar__key { position: absolute; right: 4px; top: 2px; font-size: 12px; color: var(--soft); }
 .rigequip-ghost { position: fixed; z-index: 90; pointer-events: none; padding: 4px 8px; border: 1.5px solid var(--ink); background: var(--paper); font-size: 12px; }
 
 /* dialogs */
@@ -114,12 +114,12 @@
 .rigequip-modal__said { margin: 0 0 12px; }
 .rigequip-modal__acts { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .rigequip-modal__acts .rigcards-btn { min-height: 44px; }
-.rigequip-modal__foot { margin: 8px 0 0; font-size: 11px; color: var(--soft); }
+.rigequip-modal__foot { margin: 8px 0 0; font-size: 12px; color: var(--soft); }
 .rigequip-modal__count { margin: 0 0 6px; font-size: 12px; }
 .rigequip-pick { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow-y: auto; border: 1px solid var(--rule); }
 .rigequip-pick li + li { border-top: 1px solid var(--rule); }
 .rigequip-pick label { display: flex; gap: 10px; align-items: center; min-height: 44px; padding: 0 8px; font-size: 12px; cursor: pointer; }
-.rigequip-pick input { width: 20px; height: 20px; }
+.rigequip-pick input { width: 24px; height: 24px; }
 .rigequip-fields { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
 .rigequip-fields .rigplot-field { margin: 0; }
 .rigequip-fields--stack { flex-direction: column; align-items: stretch; }
@@ -130,8 +130,8 @@
 .rigequip-ofl__list { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow-y: auto; border: 1px solid var(--rule); }
 .rigequip-ofl__list button { display: flex; justify-content: space-between; gap: 8px; width: 100%; min-height: 40px; text-align: left; padding: 4px 8px; border: 0; border-bottom: 1px solid var(--rule); background: var(--paper); color: var(--ink); font: inherit; cursor: pointer; }
 .rigequip-ofl__list button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
-.rigequip-ofl__list .rigplot-mono { font-size: 11px; color: inherit; opacity: 0.7; }
-.rigequip-ofl__modes { margin: 4px 0; padding: 0 0 0 16px; font-size: 11.5px; }
+.rigequip-ofl__list .rigplot-mono { font-size: 12px; color: inherit; opacity: 0.7; }
+.rigequip-ofl__modes { margin: 4px 0; padding: 0 0 0 16px; font-size: 12px; }
 
 /* the phone: the grid full screen, the card a bottom sheet */
 .rigequip-inv.is-phone .rigequip-inv__head { padding: max(8px, env(safe-area-inset-top)) 12px 8px; }
@@ -162,7 +162,7 @@
 .rigequip-totals { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; margin: 0 0 12px; }
 .rigequip-totals div { background: var(--paper); border: 1px solid var(--ink); padding: 6px 10px; }
 .rigequip-totals b { display: block; font: 700 16px var(--di-mono, monospace); }
-.rigequip-totals span { font-size: 11px; color: var(--soft); }
+.rigequip-totals span { font-size: 12px; color: var(--soft); }
 .rigequip-table { width: 100%; border-collapse: collapse; background: var(--paper); font-size: 12px; }
 .rigequip-table th, .rigequip-table td { border-bottom: 1px solid var(--rule); padding: 5px 6px; text-align: left; vertical-align: top; }
 .rigequip-table th { font: 700 11px var(--di-mono, monospace); letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1.5px solid var(--ink); position: sticky; top: 0; background: var(--paper); }
@@ -172,7 +172,7 @@
 .rigequip-owed { margin: 12px 0 0; padding: 8px 12px; border: 1.5px dashed var(--ink); background: var(--paper); }
 .rigequip-owed h3 { margin: 0 0 4px; font: 700 11.5px var(--di-mono, monospace); letter-spacing: 0.08em; text-transform: uppercase; }
 .rigequip-owed ul { margin: 0; padding: 0 0 0 16px; font-size: 12px; }
-.rigequip-foot { margin: 12px 0 0; font-size: 11px; color: var(--soft); }
+.rigequip-foot { margin: 12px 0 0; font-size: 12px; color: var(--soft); }
 .rigequip-lines { list-style: none; margin: 0; padding: 0; display: none; }
 
 @media (max-width: 760px) {
@@ -180,7 +180,7 @@
     .rigequip-lines { display: grid; gap: 6px; }
     .rigequip-line { background: var(--paper); border: 1px solid var(--ink); padding: 8px 10px; display: grid; gap: 4px; }
     .rigequip-line__head { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
-    .rigequip-line__meta { font-size: 11px; color: var(--soft); }
+    .rigequip-line__meta { font-size: 12px; color: var(--soft); }
 }
 
 @media print {
@@ -223,10 +223,10 @@
 .rigequip-page__main { min-height: 0; overflow-y: auto; }
 .rigequip-page__main > .rigequip-inv { height: 100%; }
 .rigequip-page__status { border-top: 1px solid var(--rule); padding: 6px 16px; }
-.rigequip-src { font-size: 11px; color: var(--soft); max-width: 340px; overflow-wrap: anywhere; }
+.rigequip-src { font-size: 12px; color: var(--soft); max-width: 340px; overflow-wrap: anywhere; }
 .rigequip-table .rigequip-stepper__btn { min-width: 32px; min-height: 30px; font-size: 16px; }
 .rigequip-table .rigequip-stepper__n { width: 40px; font-size: 13px; }
-.rigequip-card__product { margin: 0; padding: 6px 16px; font-size: 11.5px; color: var(--soft); border-bottom: 1px solid var(--rule); }
+.rigequip-card__product { margin: 0; padding: 6px 16px; font-size: 12px; color: var(--soft); border-bottom: 1px solid var(--rule); }
 .rigequip-take__from select { min-width: 150px; }
 .rigequip-modal .rigcards-btn.is-primary:disabled, .rigequip-card .rigcards-btn.is-primary:disabled { background: var(--paper); color: var(--faint); border-color: var(--rule); }
 .rigequip-order__terms input[type='date'] { min-width: 150px; }
@@ -259,19 +259,19 @@
 .rigequip-gallery__dot.is-on { border: 2px solid var(--ink); }
 .rigequip-gallery__dot img { width: 100%; height: 100%; object-fit: contain; aspect-ratio: auto; }
 .rigequip-verified { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0; padding: 8px 16px; border-bottom: 1px solid var(--rule); font-size: 12px; }
-.rigequip-verified__badge { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 1px 6px; border: 1.5px solid var(--ink); }
+.rigequip-verified__badge { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 1px 6px; border: 1.5px solid var(--ink); }
 .rigequip-verified.is-confirmed .rigequip-verified__badge { background: var(--ink); color: var(--paper); }
 .rigequip-verified.is-equivalent .rigequip-verified__badge { border-style: dashed; }
 .rigequip-verified.is-unknown .rigequip-verified__badge { border-style: dashed; border-color: var(--faint); color: var(--soft); }
-.rigequip-verified__ev { font-size: 11px; color: var(--soft); }
+.rigequip-verified__ev { font-size: 12px; color: var(--soft); }
 .rigequip-verified__ev a { color: var(--ink); }
-.rigequip-verified__note { flex: 1 1 100%; color: var(--soft); font-size: 11.5px; }
+.rigequip-verified__note { flex: 1 1 100%; color: var(--soft); font-size: 12px; }
 .rigequip-docs ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .rigequip-docs a { color: var(--ink); }
 .rigequip-docs li > a { display: inline-block; min-height: 24px; }
-.rigequip-docs__rights { display: block; font-size: 10.5px; color: var(--soft); overflow-wrap: anywhere; }
+.rigequip-docs__rights { display: block; font-size: 12px; color: var(--soft); overflow-wrap: anywhere; }
 .rigequip-docs__rights a { color: var(--soft); }
-.rigequip-photolinks { margin: 0; padding: 6px 16px 8px; border-bottom: 1px solid var(--rule); font-size: 11.5px; }
+.rigequip-photolinks { margin: 0; padding: 6px 16px 8px; border-bottom: 1px solid var(--rule); font-size: 12px; }
 .rigequip-photolinks a { color: var(--ink); overflow-wrap: anywhere; display: inline-block; min-height: 24px; }
 
 /* a finger on the equipment page: the view tabs and the row buttons a full 44 px target */
