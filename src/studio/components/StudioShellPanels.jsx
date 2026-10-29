@@ -458,7 +458,7 @@ export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateF
     return (
         <>
             <div className="scc-section">
-                <label className="scc-btn spa-btn-wide" style={{ cursor: 'pointer' }}>
+                <label className="scc-btn spa-btn-wide" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     ↑ Import files
                     <input type="file" multiple accept={ASSET_ACCEPT} onChange={onAssetFilesSelected} style={{ display: 'none' }} />
                 </label>

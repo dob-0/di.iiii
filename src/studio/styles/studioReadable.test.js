@@ -45,4 +45,12 @@ describe('Studio stylesheets: readable and easy to hit', () => {
             expect(block(css, sel)).toMatch(/color:\s*var\(--di-text-muted\)/)
         }
     })
+
+    it('the Import files button centres its label, so a 44 px touch box has no empty space below', () => {
+        const jsx = fs.readFileSync(path.join(HERE, '../components/StudioShellPanels.jsx'), 'utf8')
+        const tag = jsx.match(/<label className="scc-btn spa-btn-wide"[^>]*>/)?.[0] || ''
+        expect(tag).toMatch(/display:\s*'flex'/)
+        expect(tag).toMatch(/alignItems:\s*'center'/)
+        expect(tag).toMatch(/justifyContent:\s*'center'/)
+    })
 })
