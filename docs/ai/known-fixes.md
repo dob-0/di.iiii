@@ -1490,4 +1490,5 @@ Guard: `src/wiki/wikiStyles.test.js` (bar links) and `src/rigbuild/buildPhoneTot
 Symptom: picture of round 3: ITEMS box left 96 to right 173, status box left 164 (9 px overlap); the `calc(100vw - 188px)` cap assumed a 75 px button and ignored the box's padding.
 Cause: both boxes shared one row, so any width sum above the screen overlaps.
 Fix: `src/rigbuild/build.css`: on a phone the status box is a second row (`top: 112px`, `calc(var(--rigbar-h) + 112px)` with the rig bar), `max-width: calc(100vw - 16px)`. Own design kept; nothing removed (same box, same words, new row).
-Guard: `src/rigbuild/buildPhoneTotals.test.js` (2 tests, both fail on the round-3 CSS: 2 failed there, 2 passed here).
+Landscape phone (`orientation: landscape` and `max-height: 500px`) keeps the box on the first row (`top: 58px`, rig bar `+ 58px`): there 40vw from the right already clears the button, and a second row would reach the thumbs at `bottom: 96px` (review fix).
+Guard: `src/rigbuild/buildPhoneTotals.test.js` (3 tests; all 3 fail on the round-3 CSS and on origin/dev, pass here).

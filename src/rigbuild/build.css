@@ -168,8 +168,7 @@
 .rigbuild.is-phone .rigbuild-hotbar { max-width: 100%; }
 .rigbuild.is-phone .rigbuild-slot { width: 76px; min-height: 56px; }
 .rigbuild.is-phone .rigbuild-slot__label { font-size: 11px; }
-.rigbuild.is-phone .rigbuild-totals { top: 58px; right: 8px; font-size: 10px; padding: 5px 7px; max-width: calc(100vw - 16px); /* second row: under the items button (48px tall at top 58px), never beside it, so it cannot overlap at 320-430 */ }
-.rigbuild.is-phone .rigbuild-totals { top: 112px; }
+.rigbuild.is-phone .rigbuild-totals { top: 112px; right: 8px; font-size: 10px; padding: 5px 7px; max-width: calc(100vw - 16px); /* second row: under the items button (44px tall at top 58px), never beside it, so it cannot overlap at 320-430 */ }
 .rigbuild.is-phone .rigbuild-totals .rigbuild-dim { display: none; }
 .rigbuild.is-phone .rigbuild-mode { top: 58px; left: 8px; }
 /* a tag is small type with a thumb-sized target around it */
@@ -180,7 +179,9 @@
     .rigbuild.is-phone .rigbuild-thumbs { bottom: 96px; grid-template-columns: repeat(4, 52px) 72px; }
     .rigbuild.is-phone .rigbuild-thumb--place { grid-column: auto; width: 72px; height: 52px; }
     .rigbuild.is-phone .rigbuild-hand { right: 8px; }
-    .rigbuild.is-phone .rigbuild-totals { max-width: 40vw; }
+    /* lying down there is room beside the items button; a second row would reach the thumbs (bottom 96px) */
+    .rigbuild.is-phone .rigbuild-totals { max-width: 40vw; top: 58px; }
+    .rigbuild.has-rigbar.is-phone .rigbuild-totals { top: calc(var(--rigbar-h) + 58px); }
     .rigbuild.is-phone .rigbuild-sheet.rigplot { inset: 8px 8px 8px auto; width: 320px; max-height: none; }
 }
 

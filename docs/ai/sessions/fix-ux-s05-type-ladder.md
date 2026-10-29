@@ -23,3 +23,4 @@ Two phone-390 faults seen in the round-1 picture: the wiki bar links under the w
 
 ## Round 4 (2026-10-29)
 Build phone status box moved to a second row under ITEMS (build.css); test rewritten. Layout only, no wiki article change.
+Review (round 4): the second row is for a standing phone only; lying down the box stays on the first row (the thumbs sit at bottom 96 px there). Duplicate `top` rule merged; test 3 added (3 failed on cc0113919 and on origin/dev, 3 passed here).
