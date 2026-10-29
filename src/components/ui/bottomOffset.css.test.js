@@ -17,7 +17,12 @@ const rule = (source, selector) => {
 describe('the bottom offset shared by notices and questions', () => {
     it('defaults to the safe area and is raised by the Studio bottom bar', () => {
         expect(rule(ui, ':root')).toMatch(/--di-bottom-offset:\s*env\(safe-area-inset-bottom\)/)
-        expect(rule(mobile, '.has-studio-bottom-bar')).toMatch(/--di-bottom-offset:\s*calc\(48px \+ env\(safe-area-inset-bottom\)\)/)
+        expect(rule(mobile, ':root.has-studio-bottom-bar')).toMatch(/--di-bottom-offset:\s*calc\(48px \+ env\(safe-area-inset-bottom\)\)/)
+    })
+
+    it('outranks the :root default whatever order the stylesheets load in', () => {
+        // :root and a lone class tie (0,1,0); a lazily loaded ui.css would win.
+        expect(mobile).toMatch(/:root\.has-studio-bottom-bar\s*\{/)
     })
 
     it('the bar is at least as tall as the offset it announces', () => {
