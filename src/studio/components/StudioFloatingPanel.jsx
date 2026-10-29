@@ -14,6 +14,7 @@ export default function StudioFloatingPanel({
     minHeight = 80,
     maxHeight = 900,
     snapEdges = false,
+    windowKey,
     onPositionChange,
     onSizeChange,
     onCollapsedChange,
@@ -42,6 +43,7 @@ export default function StudioFloatingPanel({
             ref={panelRef}
             style={{ ...dragStyle, width }}
             className="sfp-shell"
+            data-window-key={windowKey}
             {...panelPointerProps}
         >
             <div className="sfp-header" {...dragProps}>
