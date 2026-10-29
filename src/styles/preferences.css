@@ -250,8 +250,9 @@
     color: var(--ui-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-size: var(--di-text-2);
-    opacity: 0.7;
+    /* 12 px and full muted colour: at 10 px and 0.7 opacity the two group
+       names failed contrast (axe, UX audit 2026-10-28 F109). */
+    font-size: var(--di-text-3);
 }
 
 .preferences-nav-entry:first-child .preferences-nav-group-label {
@@ -1268,6 +1269,52 @@
     to { transform: translateX(260%); }
 }
 
+/* ─── Switches: an on/off setting says its state in words (F108) ─── */
+
+.preferences-switch {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+}
+
+.preferences-switch-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-3);
+    min-height: 44px;
+    padding: var(--di-space-2) var(--di-space-3);
+    border: 1px solid var(--pref-border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-text);
+    font: inherit;
+    font-size: var(--di-text-4);
+    text-align: left;
+    cursor: pointer;
+}
+
+.preferences-switch-control:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.preferences-switch-state {
+    min-width: 3.5em;
+    padding: var(--di-space-1) var(--di-space-2);
+    border: 1px solid currentColor;
+    color: var(--ui-text-muted);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    text-align: center;
+}
+
+.preferences-switch-control.is-on .preferences-switch-state { color: var(--di-cyan); }
+
+.preferences-switch-control.is-warning .preferences-switch-state { color: var(--di-warning); }
+
+.preferences-switch-detail {
+    color: var(--ui-text-muted);
+    font-size: var(--di-text-3);
+}
+
 /* ─── Responsive ───────────────────────────────────────────── */
 
 @media (max-width: 1480px) {
@@ -1297,13 +1344,23 @@
 @media (max-width: 880px) {
     .preferences-shell { grid-template-columns: 1fr; }
 
+    /* Two even columns of plain rows instead of chips wrapping in ragged
+       rows (F109); a group name takes a full row of its own. */
     .preferences-nav {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: var(--di-space-2);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--di-space-1) var(--di-space-2);
     }
 
-    .preferences-nav-item { width: auto; }
+    .preferences-nav-entry { display: contents; }
+
+    .preferences-nav-group-label { grid-column: 1 / -1; }
+
+    .preferences-nav-item { min-height: 44px; }
+}
+
+@media (pointer: coarse) {
+    .preferences-nav-item { min-height: 44px; }
 }
 
 @media (max-width: 760px) {
