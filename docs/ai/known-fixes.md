@@ -72,6 +72,17 @@ Regression tests (5 fail on origin/dev 8f20185c1): `StudioShell.test.jsx` "a pag
 Objects line now expects no Objects), `StudioControlCluster.test.jsx` "a page project (pageOnly)", `StudioViewportLayout.test.jsx`
 "on a page project".
 
+## The code box was a bare text box: no name, no line numbers, colours, find or indent (Studio, UX audit F018, 2026-10-29)
+- Symptom: Code window = a `<textarea>` with no accessible name (axe `label`), no line numbers or colours, Tab left the box, 12 px system `monospace`.
+- Fix: `panels/CodeEditorArea.jsx` lazy-loads CodeMirror 6 (`CodeMirrorBox.jsx`, own `codemirror-vendor` chunk in vite.config.js); name "Code of <file>"; Tab indents, Esc then Tab leaves (WCAG 2.1.1); `--di-mono`.
+- Same commit path: both the editor and the plain box use `codeBuffer.js` (400 ms idle, blur, unmount -> onCommit). The ref handle looks like a textarea, so "insert at the cursor" is unchanged.
+- Kept (nothing lost): the textarea is the load fallback, the fallback if the editor fails to load, and a remembered choice ("Use a plain text box", `di.codeEditor.plain`).
+- Trap: without the manualChunks entry CodeMirror lands in the shared `vendor` chunk (+495 KB for every route). Keep it named.
+- Tests: `panels/CodeEditorArea.test.jsx` (5 fail on the old box).
+- Picture step (2026-10-29): with the 680 KB file the box grew as tall as the file (no height limit, `.cm-editor` max-height 100% of a content-sized parent), so the page scrolled instead of the editor: the find bar sat ~125,000 px down and "Use a plain text box" was out of reach; the gutter was transparent, so text scrolled sideways showed through the line numbers. Fix (`studio-code.css`): `.di-code-editor` `max-height: 70vh`, `min-height: 0` on `.cm-editor` and `.cm-scroller`; gutter `background: var(--di-bg)`. Tests: "box in a window (css)" (2 fail on the CSS before it). Limit: 70vh is the viewport, not the window.
+- Picture step, round 2 (2026-10-29): the first cap (`max-height: 70vh`) was relative to the browser, not to the Code window: the box ended below the window edge (desktop box bottom y=869, window y=765) and on a phone below the screen, so the find bar and "Use a plain text box" were hidden. Fix: no vh cap; the body of the Code window (`.sfp-shell[data-window-key="files"] .sfp-content`) and of the phone Code sheet (`.smb-sheet[data-sheet="files"] .smb-sheet-body`) are columns, `FilesPanel`'s root is `flex: 1 1 auto; min-height: 0`, so the editor takes the height left and scrolls inside itself. Regression test: `CodeEditorArea.test.jsx` "box in a window (css)".
+- Review of round 2 (2026-10-29): the column must keep its scroll. `overflow: hidden` on those two bodies clipped what sits under the editor (Rename, Delete file, the library list, the templates when there is no file) in a short window or on a phone. The editor still fills the height; the body scrolls only when the 220 px floor plus the rest does not fit. Same test.
+
 ## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
 
 Symptom: after adding a box from Create, the child and the senior pulled it; the view turned and the box left the screen, Position
