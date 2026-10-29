@@ -497,5 +497,5 @@
     align-items: flex-start;
     cursor: pointer;
 }
-.sh-help-keychoice input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+.sh-help-keychoice input { margin-top: var(--di-space-1); width: 18px; height: 18px; flex: none; }
 .sh-help-keychoice span { text-align: left; }
