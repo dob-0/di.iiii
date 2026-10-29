@@ -123,7 +123,7 @@ export const WIKI_ARTICLES = [
         title: 'Spaces & projects',
         summary: 'How di.iiii is organized: a space is a place that is yours, and a project is one thing you make inside it.',
         body: [
-            'On the Spaces page a card without a picture shows a calm still with the space’s name. Press the picture and the scene opens right there, in one step. The wiki and the help pages are flat, and the front page stops its moving scene if your system asks for less motion. To see the moving scene anyway, add ?scene=1 to the address; to have the cards draw a live picture each, add ?previews=live to /spaces.',
+            'On the Spaces page a card without a picture shows a calm still with the space’s name and its one line. Press the picture and the scene opens right there, in one step. The wiki, the help pages and the front page are flat; on the front page the door “Step inside” brings the scene. To see the moving scene anyway, add ?scene=1 to the address; to have the cards draw a live picture each, add ?previews=live to /spaces.',
             'A space is a place that is yours: an address, a guest list, and everything in it — projects, uploaded files, collaborators, and the rules about who gets in.',
             'A project is one thing you make inside a space. A space can hold many projects, and one of them can be marked as the space’s published (live) project.',
             'The address of a project always begins with its space. The editor addresses put the tool first for historical reasons, which is why the shortcut below exists — it is the one that reads the way the product is actually arranged:',

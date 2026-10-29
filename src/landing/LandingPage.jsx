@@ -403,7 +403,7 @@ function LandingPageInner() {
     // `entered` is exempt from the small-screen gate: "Step inside" *is* the
     // walkable scene, so a phone visitor who taps it has asked for three.js
     // and gets it then — on demand, rather than on every passive page view.
-    // Idle decoration honours reduced-motion; pressing the door still brings the room.
+    // Idle decoration is flat (no canvas); ?scene=1 or pressing the door brings the room.
     const showBackground = entered || flightArmed || (heroInView && !isSmallScreen && landingBackdropOn())
 
     return (

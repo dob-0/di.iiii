@@ -10,7 +10,7 @@ decoration; every space open logged `404 /api/resolve/<space>` in red; `verify:s
 Cause: cards without a cover booted `?preview=1` frames to take a still; `WikiPage` mounted `GridFloorBackground` always; the server
 answered "nothing to forward" with a 404; the checker counted every console error, whoever logged it.
 Fix: a card with no picture draws a calm still (`SpaceHub.jsx` `ssh-card-still`) and the 3D opens by pressing it (`SpaceCardLive`);
-wiki flat unless `?scene=1`; front page's idle room off under reduced-motion (`utils/decorative3d.js`, the door still brings the room);
+the still also prints the space's own one-line blurb; wiki AND front page flat unless `?scene=1` (`utils/decorative3d.js`; on the front page the door "Step inside" still brings the room);
 `GET /api/resolve/:space` answers 200 `{ movedTo: null }` for nothing to forward (404 only for a space that does not exist; old clients
 read both); `scripts/verifySurfacesFilters.mjs` drops console lines from another origin.
 Kept as modes (nothing is lost): `?previews=live` or `localStorage['dii:space-card-previews']='live'` = the earlier boot-a-frame cards

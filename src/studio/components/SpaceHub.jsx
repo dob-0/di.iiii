@@ -152,7 +152,7 @@ const PREVIEW_VIEWPORT_HEIGHT = 576
 // loop). The iframe only mounts while the card is near the viewport so
 // off-screen spaces cost nothing, and unmounts again when scrolled away to
 // free its WebGL context. Boots are queued through requestPreviewBoot above.
-function SpaceCardPreview({ doorPath, label }) {
+function SpaceCardPreview({ doorPath, label, blurb }) {
     const hostRef = useRef(null)
     const frameRef = useRef(null)
     const [visible, setVisible] = useState(false)
@@ -277,6 +277,7 @@ function SpaceCardPreview({ doorPath, label }) {
             {!stub && stillOnly ? (
                 <div className="ssh-card-still" data-card-still="">
                     <span className="ssh-card-still-name">{label}</span>
+                    {blurb ? <span className="ssh-card-still-blurb">{blurb}</span> : null}
                     <span className="ssh-card-still-hint">press to look inside</span>
                 </div>
             ) : null}
@@ -1752,7 +1753,7 @@ export default function SpaceHub() {
                                                 ) : isEmptySandbox ? (
                                                     <p className="ssh-card-preview-empty-line">nothing in it yet — open it and put something in</p>
                                                 ) : (
-                                                    <SpaceCardPreview doorPath={buildSpaceFacePath(space)} label={space.label || space.id} />
+                                                    <SpaceCardPreview doorPath={buildSpaceFacePath(space)} label={space.label || space.id} blurb={space.blurb} />
                                                 )}
                                             </div>
                                         )

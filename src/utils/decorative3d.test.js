@@ -15,10 +15,10 @@ describe('decorative 3D (F138)', () => {
         expect(sceneForced(win({ search: '?scene=0' }))).toBe(false)
     })
 
-    it('front page keeps its room, unless the reader asked for reduced motion', () => {
-        expect(landingBackdropOn(win())).toBe(true)
+    it('front page is flat until ?scene=1 (the door brings the room), reduced motion or not', () => {
+        expect(landingBackdropOn(win())).toBe(false)
         expect(landingBackdropOn(win({ reduced: true }))).toBe(false)
-        expect(landingBackdropOn(win({ reduced: true, search: '?scene=1' }))).toBe(true)
+        expect(landingBackdropOn(win({ search: '?scene=1' }))).toBe(true)
         expect(prefersReducedMotion(win({ reduced: true }))).toBe(true)
     })
 })

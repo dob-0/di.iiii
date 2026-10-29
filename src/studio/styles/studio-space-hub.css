@@ -510,6 +510,13 @@
     color: var(--di-text);
 }
 
+.ssh-card-still-blurb {
+    font-size: 0.85rem;
+    color: var(--di-text);
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
 .ssh-card-still-hint {
     font-size: 0.8rem;
     color: var(--di-text-muted);

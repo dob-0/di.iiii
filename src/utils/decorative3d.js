@@ -4,8 +4,8 @@
 // for them in battery and attention (UX audit F138; WCAG 2.2.2 pause/stop/hide).
 //
 // Nothing is removed: `?scene=1` on either page brings the 3D back, so the old
-// look is one address away. Without it the wiki stays flat, and the front page
-// stays flat for a reader who asked for reduced motion.
+// look is one address away. Without it the wiki and the front page stay flat;
+// on the front page pressing the door ("Step inside") still brings the room.
 const searchOf = (win) => (win && win.location ? win.location.search : '')
 
 export const sceneForced = (win = typeof window !== 'undefined' ? window : null) =>
@@ -17,6 +17,6 @@ export const prefersReducedMotion = (win = typeof window !== 'undefined' ? windo
 // The wiki is for reading: flat unless asked.
 export const wikiBackdropOn = (win) => sceneForced(win)
 
-// The front page keeps its 3D door (the signature) unless the reader asked for
-// less motion.
-export const landingBackdropOn = (win) => sceneForced(win) || !prefersReducedMotion(win)
+// The front page is flat until asked: ?scene=1, or the door. Reduced motion
+// never overrides the door, only the idle decoration (and it is off anyway).
+export const landingBackdropOn = (win) => sceneForced(win)

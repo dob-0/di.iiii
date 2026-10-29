@@ -1475,7 +1475,7 @@ describe('SpaceHub', () => {
             stubVisible()
             try {
                 listServerSpaces.mockResolvedValue([
-                    { id: 'showroom', label: 'Showroom', isOwner: true, isPublic: true, publishedProjectId: 'p1' },
+                    { id: 'showroom', label: 'Showroom', isOwner: true, isPublic: true, publishedProjectId: 'p1', blurb: 'A hall for light.' },
                 ])
                 render(<SpaceHub />)
                 const card = await findCard('showroom')
@@ -1484,6 +1484,7 @@ describe('SpaceHub', () => {
                 await new Promise(resolve => setTimeout(resolve, 50))
                 expect(card.querySelector('.ssh-card-preview iframe')).toBeNull()
                 expect(card.querySelector('[data-card-still]').textContent).toContain('Showroom')
+                expect(card.querySelector('[data-card-still]').textContent).toContain('A hall for light.')
                 fireEvent.click(card.querySelector('.ssh-card-preview'))
                 await waitFor(() => expect(card.querySelector('.ssh-card-live-frame iframe')).not.toBeNull())
             } finally {
