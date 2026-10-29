@@ -122,7 +122,8 @@ main { padding: 8px 24px 32px; }
 .cell b { font-size: 24px; font-weight: 600; overflow-wrap: anywhere; }
 .cell small { color: var(--dim); }
 .cell code { color: var(--dim); font: 12px/1.4 "JetBrains Mono", ui-monospace, monospace; overflow-wrap: anywhere; }
-.cell .lang { display: none; color: var(--dim); font: 12px/1.4 "JetBrains Mono", ui-monospace, monospace; }
+/* On a wide screen the heads row names the columns; the label stays in the reading order for a screen reader. */
+.cell .lang { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; color: var(--dim); font: 12px/1.4 "JetBrains Mono", ui-monospace, monospace; }
 .state { font: 13px/1.6 "JetBrains Mono", ui-monospace, monospace; white-space: nowrap; color: var(--open); }
 .state.checked { color: var(--ok); }
 footer { padding: 0 24px 24px; color: var(--dim); font: 12px/1.5 "JetBrains Mono", ui-monospace, monospace; }
@@ -130,7 +131,7 @@ footer { padding: 0 24px 24px; color: var(--dim); font: 12px/1.5 "JetBrains Mono
   header, main, footer { padding-left: 16px; padding-right: 16px; }
   .heads { display: none; }
   .row { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .cell .lang { display: block; }
+  .cell .lang { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
 }
 </style>
 </head>
@@ -150,6 +151,10 @@ ${body}
 // His answer for one row: state checked, source human:<name>@<date>, and his word if he gave one.
 export function applyAnswer(md, { word, lang, by, date, says }) {
     if (!by) throw new Error('review: check needs --by <name>')
+    // A | or a line break in his word or name would split the table row and move every cell after it.
+    for (const [name, value] of [['--by', by], ['--says', says]]) {
+        if (/[|\n\r]/.test(value || '')) throw new Error(`review: ${name} may not hold | or a line break`)
+    }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) throw new Error('review: check needs a date YYYY-MM-DD')
     const { from, to } = block(md)
     let found = 0

@@ -61,5 +61,6 @@ describe('the six core words in Armenian and Russian', () => {
         expect(ok[0].ru).toMatchObject({ says: rows[0].ru.says, state: 'checked' })
         expect(() => applyAnswer(vocabulary, { word: 'space', lang: 'ru', date: '2026-10-30' })).toThrow(/--by/)
         expect(() => applyAnswer(vocabulary, { word: 'room', lang: 'ru', by: 'Gev', date: '2026-10-30' })).toThrow(/0 rows/)
+        expect(() => applyAnswer(vocabulary, { word: 'place', lang: 'hy', by: 'Gev', date: '2026-10-30', says: 'Վայր | Սրահ' })).toThrow(/--says/)
     })
 })
