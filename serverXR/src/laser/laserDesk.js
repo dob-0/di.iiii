@@ -313,6 +313,21 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         return { ok: true, live: liveId }
     }
 
+    /**
+     * A look the page made, on the cubes: the editor's Preview, sent (2026-10-29, the owner: "change some shapes see
+     * results then play and send signal to laser"). `from` is the bank's look it was loaded from (its tile stays lit).
+     */
+    const send = (raw, from) => {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, status: 400, error: 'look: the fields of a look' }
+        live = normaliseLook({ ...raw, id: undefined })
+        delete live.id
+        liveId = show.looks.some((l) => l.id === idOf(from)) ? idOf(from) : null
+        for (const s of sent.values()) s.key = null
+        tick()
+        startTicking()
+        return { ok: true, live: liveId }
+    }
+
     /** Edit the live look (on the cubes at once). Starts from the defaults if nothing is live. */
     const editLive = (fields = {}) => {
         const base = live || { ...LOOK_DEFAULTS }
@@ -330,22 +345,29 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         return id
     }
 
-    /** Store the live look: into `id` (its tile), or as a new tile when `id` is absent. */
-    const store = ({ id, name } = {}) => {
-        if (!live) return { ok: false, status: 400, error: 'nothing is live to store — press a look first' }
+    /**
+     * Store a look: into `id` (its tile), or as a new tile when `id` is absent. The look is `look` when the page sends
+     * one (its Preview, stored without going to the cubes), else the live look.
+     */
+    const store = ({ id, name, look: raw } = {}) => {
+        const preview = raw && typeof raw === 'object' && !Array.isArray(raw)
+        const from = preview ? normaliseLook({ ...raw, id: undefined }) : live
+        if (!from) return { ok: false, status: 400, error: 'nothing is live to store — press a look first' }
+        let stored
         if (id) {
             const i = show.looks.findIndex((l) => l.id === idOf(id))
             if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
-            show.looks[i] = normaliseLook({ ...live, id: show.looks[i].id, name: name ?? show.looks[i].name })
-            liveId = show.looks[i].id
+            show.looks[i] = normaliseLook({ ...from, id: show.looks[i].id, name: name ?? show.looks[i].name })
+            stored = show.looks[i].id
         } else {
             if (show.looks.length >= MAX_LOOKS) return { ok: false, status: 400, error: `the bank is full (${MAX_LOOKS} looks)` }
-            const look = normaliseLook({ ...live, id: newId(name || live.name), name: name || live.name })
+            const look = normaliseLook({ ...from, id: newId(name || from.name), name: name || from.name })
             show.looks.push(look)
-            liveId = look.id
+            stored = look.id
         }
+        if (!preview) liveId = stored
         save()
-        return { ok: true, id: liveId }
+        return { ok: true, id: stored }
     }
 
     const rename = (id, name) => {
@@ -466,7 +488,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         if (saveTimer) { clearTimeout(saveTimer); saveNow() }
     }
 
-    return { state, go, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBpm, tap, setCube, thumbs, view, tick, close }
+    return { state, go, send, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBpm, tap, setCube, thumbs, view, tick, close }
 }
 
 module.exports = { createLaserDesk, normaliseLook, normaliseCube, lookPointsAt, capOf, hashPoints, beatsAt, SEED_LOOKS, LOOK_DEFAULTS, CUBE_DEFAULTS, TICK_MS, OUT }

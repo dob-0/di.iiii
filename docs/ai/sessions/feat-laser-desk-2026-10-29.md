@@ -50,6 +50,13 @@ The owner's ask: "lets create laser soft like how is lighting one" — inside di
 - **New seed looks reach a saved bank**: desk.json keeps `seeded` (the seed ids it has been offered); a bank without it
   counts the first fourteen as offered. A seed added later joins the end once; one the owner deleted is not re-offered.
   Found because the scratch desk had saved desk.json and never showed the new looks.
+- **Preview, then Send** (the owner: "i want for example change some shapes see results then plaay and send signal to
+  laser"): the editor (now "Edit") changes a Preview that only the page holds, drawn above its controls with
+  lib/laser.js on the first cube's field; ▶ Send to laser (`POST /laser/desk/api/send { look, from }`) puts it on the
+  cubes; Store / Save as new send the Preview as `{ look }` and leave the cubes alone. A click on a tile loads it into
+  the Preview (dashed outline); a double-click or keys 1–9 send it at once. The **Live** switch (per browser,
+  localStorage) is the desk as it was: clicks and changes reach the cubes at once. The bank header says "(changed, not
+  stored)" when what plays differs from its tile.
 - Wiki `laser-desk`; eslint gives `serverXR/src/laser/ui` browser globals like the light desk's ui.
 
 ## Tested

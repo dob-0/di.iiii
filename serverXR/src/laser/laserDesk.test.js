@@ -224,6 +224,33 @@ describe('the clock', () => {
     })
 })
 
+describe('the page\'s Preview (2026-10-29: change it, see it, then send it)', () => {
+    it('send puts a look the page made on the cubes, its tile lit; nothing reaches them before', () => {
+        const engine = fakeEngine(['cube-1'])
+        const { desk } = deskWith(engine)
+        expect(engine.calls).toEqual([])
+        const preview = { ...SEED_LOOKS.find((l) => l.id === 'star'), colour: '#3050ff', spin: 0.5, evil: 1 }
+        expect(desk.send(preview, 'star')).toMatchObject({ ok: true, live: 'star' })
+        expect(desk.state().live).toMatchObject({ shape: 'star', colour: '#3050ff', spin: 0.5 })
+        expect(desk.state().live).not.toHaveProperty('evil')
+        expect(desk.state().liveId).toBe('star')
+        expect(engine.calls.filter((c) => c.kind === 'frame' && c.points.some(isLit))).toHaveLength(1)
+        expect(desk.send({ shape: 'spots' }, 'nope')).toMatchObject({ ok: true, live: null })
+        expect(desk.send('star')).toMatchObject({ ok: false, status: 400 })
+    })
+    it('store keeps the Preview in a tile or a new one, and leaves the cubes as they were', () => {
+        const { desk } = deskWith(fakeEngine())
+        desk.go('ring')
+        const before = desk.state().live
+        expect(desk.store({ id: 'star', look: { ...SEED_LOOKS.find((l) => l.id === 'star'), colour: '#ffb020' } })).toMatchObject({ ok: true, id: 'star' })
+        expect(desk.state().looks.find((l) => l.id === 'star').colour).toBe('#ffb020')
+        expect(desk.store({ name: 'Amber spots', look: { shape: 'spots', colour: '#ffb020' } })).toMatchObject({ ok: true, id: 'amber-spots' })
+        expect(desk.state()).toMatchObject({ live: before, liveId: 'ring' })
+        // Nothing live and no look: nothing to store.
+        expect(deskWith(fakeEngine()).desk.store({})).toMatchObject({ ok: false, status: 400 })
+    })
+})
+
 describe('the bank on disk', () => {
     it('Store keeps the live look as a tile, and a restart finds the bank — released', () => {
         const dir = tmp()

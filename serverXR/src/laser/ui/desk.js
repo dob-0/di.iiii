@@ -32,6 +32,20 @@
     let page = 'control'
     const touched = new Map() // field → when the person last moved it
 
+    // The look the editor changes (2026-10-29, the owner: "change some shapes see results then plaay and send signal to
+    // laser"). PREVIEW, the default: a copy only this page holds, drawn on the Preview; ▶ Send puts it on the laser and
+    // Store keeps it in its tile without sending. LIVE (the switch): the look on the laser itself, every change sent at
+    // once, as the desk first was. The switch is this browser's own.
+    let draft = null // the Preview's look
+    let draftFrom = null // the bank's look it was loaded from
+    let liveEdit = false
+    try { liveEdit = localStorage.getItem('laserDesk.liveEdit') === '1' } catch { /* no storage here: Preview */ }
+    const editing = () => (liveEdit ? desk?.live : draft)
+    const copyLook = (look) => { const c = JSON.parse(JSON.stringify(look)); delete c.id; return c }
+    // Two looks draw the same when every field but the name matches (desk.defaults lists the fields).
+    const sameLook = (a, b) => Boolean(a && b) && Object.keys(desk?.defaults || {}).filter((k) => k !== 'name')
+        .every((k) => JSON.stringify(a[k]) === JSON.stringify(b[k]))
+
     // ---- talking to the server
     const notice = (text) => {
         const n = $('notice')
@@ -186,8 +200,11 @@
                 const canvas = el('canvas')
                 tileCanvases.set(look.id, canvas)
                 const tile = el('button', {
-                    class: 'tile', draggable: 'true', 'data-id': look.id, title: `${look.name}${i < 9 ? ` (key ${i + 1})` : ''}`,
-                    onclick: () => post('desk/api/go', { look: look.id }).then(refreshDesk),
+                    class: 'tile', draggable: 'true', 'data-id': look.id,
+                    title: `${look.name}: click to edit it, double-click to send it to the laser${i < 9 ? ` (key ${i + 1} sends it)` : ''}`,
+                    // Preview: a click loads the look to edit; Live: a click puts it on the laser. A double-click always does.
+                    onclick: () => (liveEdit ? post('desk/api/go', { look: look.id }).then(refreshDesk) : loadDraft(look.id)),
+                    ondblclick: () => post('desk/api/go', { look: look.id }).then(refreshDesk),
                     ondragstart: (e) => { dragId = look.id; tile.classList.add('is-drag'); e.dataTransfer.effectAllowed = 'move' },
                     ondragend: () => { dragId = null; tile.classList.remove('is-drag') },
                     ondragover: (e) => { if (dragId && dragId !== look.id) { e.preventDefault(); tile.classList.add('is-over') } },
@@ -204,12 +221,16 @@
                 return tile
             }))
         }
-        for (const tile of box.children) tile.classList.toggle('is-live', tile.dataset.id === desk.liveId)
+        for (const tile of box.children) {
+            tile.classList.toggle('is-live', tile.dataset.id === desk.liveId)
+            tile.classList.toggle('is-editing', !liveEdit && Boolean(draft) && tile.dataset.id === draftFrom)
+        }
         const live = desk.live
         const where = desk.cubes.length <= 1 ? 'laser' : 'cubes'
+        const stored = desk.looks.find((l) => l.id === desk.liveId)
         $('liveName').textContent = live
-            ? `On the ${where}: ${live.name}${desk.liveId ? '' : ' (edited, not stored)'}${desk.blackout ? ' · blackout' : ''}`
-            : `Nothing on the ${where}. Press a look.`
+            ? `On the ${where}: ${live.name}${stored && sameLook(stored, live) ? '' : ' (changed, not stored)'}${desk.blackout ? ' · blackout' : ''}`
+            : `Nothing on the ${where}. ${liveEdit ? 'Press a look.' : 'Click a look to edit it; double-click to send it.'}`
     }
     // The tiles PLAY their looks (2026-10-29, the owner: "cant see animations"), drawn here with the desk's own code
     // (lib/laser.js: shared/laserLook.cjs) on the desk's clock, as often as the desk draws the cubes. A page whose
@@ -233,6 +254,12 @@
             if (!canvas) continue
             const points = window.DiLaser.lookPointsAt({ ...look, points: Math.min(look.points, 240) }, { t, clock: tileClock })
             drawFrame(canvas, points, { box: window.DiLaser.lookBox(look) })
+        }
+        // The Preview: the look being edited on the first cube's field, its keep-in zone shaded, as the Stage draws.
+        const look = editing()
+        const preview = $('preview')
+        if (look && preview.offsetParent) {
+            drawFrame(preview, window.DiLaser.lookPointsAt(look, { t, clock: tileClock, index: 0, cube: desk.cubes[0] }), { zone: engine?.zone })
         }
     }
 
@@ -267,6 +294,12 @@
     let sendTimer = null
     const edit = (fields) => {
         for (const k of Object.keys(fields)) touched.set(k, Date.now())
+        if (!liveEdit) {
+            // The Preview: nothing leaves this page until Send.
+            if (draft) Object.assign(draft, fields)
+            renderSendState()
+            return
+        }
         Object.assign(pending, fields)
         if (desk?.live) Object.assign(desk.live, fields)
         if (!sendTimer) {
@@ -319,9 +352,9 @@
     $('cycleMode').addEventListener('change', (e) => {
         touched.set('shape', Date.now())
         $('cycleField').hidden = !e.target.checked
-        if (!desk?.live) return
-        const first = desk.live.shape.split(',')[0]
-        edit(e.target.checked ? { cycle: desk.live.cycle || 4 } : { shape: first, cycle: 0 })
+        if (!editing()) return
+        const first = editing().shape.split(',')[0]
+        edit(e.target.checked ? { cycle: editing().cycle || 4 } : { shape: first, cycle: 0 })
         renderEditor()
     })
     $('rainbow').addEventListener('change', (e) => edit({ rainbow: e.target.checked }))
@@ -337,7 +370,7 @@
             box.append(...desk.shapes.map((s) => el('button', {
                 class: 'chip', 'data-shape': s, text: s[0].toUpperCase() + s.slice(1),
                 onclick: () => {
-                    const picked = desk.live ? desk.live.shape.split(',') : []
+                    const picked = editing() ? editing().shape.split(',') : []
                     let next = [s]
                     if ($('cycleMode').checked) {
                         next = picked.includes(s) ? picked.filter((x) => x !== s) : [...picked, s]
@@ -348,7 +381,7 @@
                 }
             })))
         }
-        const picked = desk.live ? desk.live.shape.split(',') : []
+        const picked = editing() ? editing().shape.split(',') : []
         for (const chip of box.children) chip.classList.toggle('is-on', picked.includes(chip.dataset.shape))
     }
     const renderSwatches = () => {
@@ -361,7 +394,7 @@
                 onclick: () => { edit({ colour: c, rainbow: false }); $('rainbow').checked = false; renderSwatches() }
             })), picker)
         }
-        const live = desk.live
+        const live = editing()
         for (const b of box.querySelectorAll('.swatch')) b.classList.toggle('is-on', Boolean(live && !live.rainbow && live.colour === b.dataset.colour))
         const picker = $('colourPicker')
         if (live && document.activeElement !== picker) picker.value = live.colour
@@ -372,7 +405,7 @@
         if (box.dataset.ids !== ids.join(',')) {
             box.dataset.ids = ids.join(',')
             const pick = (id) => {
-                const cur = desk.live?.cubes
+                const cur = editing()?.cubes
                 const all = cur === 'all'
                 const picked = all ? [] : (cur || [])
                 let next = id === null ? 'all' : all ? [id] : picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]
@@ -385,15 +418,31 @@
                 ...ids.map((id) => el('button', { class: 'chip', 'data-cube': id, text: nameOf(id), onclick: () => pick(id) }))
             )
         }
-        const cur = desk.live?.cubes
+        const cur = editing()?.cubes
         for (const chip of box.children) {
             const id = chip.dataset.cube
             chip.classList.toggle('is-on', id === '' ? cur === 'all' : Array.isArray(cur) && cur.includes(id))
         }
     }
+    // The tile Store and Delete act on: the one the Preview came from, or (Live) the one on the laser.
+    const storeTarget = () => (liveEdit ? desk?.liveId : draftFrom)
+    const renderSendState = () => {
+        const sent = sameLook(draft, desk?.live)
+        const b = $('sendBtn')
+        b.disabled = !draft
+        b.classList.toggle('is-sent', sent)
+        b.textContent = sent ? 'On the laser' : '▶ Send to laser'
+        $('previewNote').textContent = liveEdit
+            ? 'Live: every change is on the laser at once'
+            : sent ? 'Preview = what the laser draws' : 'Preview: only on this screen until you send it'
+    }
     const renderEditor = () => {
-        const live = desk.live
-        $('page-control').querySelector('.editor').classList.toggle('is-empty', !live)
+        const live = editing()
+        const box = $('page-control').querySelector('.editor')
+        box.classList.toggle('is-empty', !live)
+        box.classList.toggle('is-live', liveEdit)
+        $('liveEdit').checked = liveEdit
+        renderSendState()
         if (!live) return
         if (!held('name') && document.activeElement !== $('lookName')) $('lookName').value = live.name
         if (!held('shape')) $('cycleMode').checked = live.shape.includes(',') || live.cycle > 0
@@ -404,20 +453,56 @@
         if (!held('shape')) renderShapes()
         if (!held('colour')) renderSwatches()
         if (!held('cubes')) renderLookCubes()
-        $('storeBtn').disabled = !desk.liveId
-        $('deleteBtn').disabled = !desk.liveId
+        $('storeBtn').disabled = !storeTarget()
+        $('deleteBtn').disabled = !storeTarget()
     }
 
+    // A tile's look into the Preview (nothing reaches the laser).
+    const loadDraft = (id) => {
+        const look = desk?.looks.find((l) => l.id === id)
+        if (!look) return
+        draft = copyLook(look)
+        draftFrom = id
+        touched.clear()
+        renderTiles()
+        renderEditor()
+    }
+    $('sendBtn').addEventListener('click', async () => {
+        if (!draft) return
+        await post('desk/api/send', { look: draft, from: draftFrom })
+        await refreshDesk()
+    })
+    $('liveEdit').addEventListener('change', async (e) => {
+        liveEdit = e.target.checked
+        try { localStorage.setItem('laserDesk.liveEdit', liveEdit ? '1' : '0') } catch { /* the switch is not kept */ }
+        // Back to Preview: it starts from what the laser draws.
+        if (!liveEdit && desk?.live) { draft = copyLook(desk.live); draftFrom = desk.liveId }
+        touched.clear()
+        renderTiles()
+        renderEditor()
+    })
+
     $('storeBtn').addEventListener('click', async () => {
-        if (!desk?.liveId) return
-        await flush()
-        await post('desk/api/store', { id: desk.liveId, name: $('lookName').value })
+        const id = storeTarget()
+        if (!id) return
+        if (liveEdit) {
+            await flush()
+            await post('desk/api/store', { id, name: $('lookName').value })
+        } else {
+            await post('desk/api/store', { id, name: $('lookName').value, look: draft })
+        }
         await refreshDesk()
         refreshThumbs()
     })
     $('saveNewBtn').addEventListener('click', async () => {
-        await flush()
-        await post('desk/api/store', { name: $('lookName').value || 'Look' })
+        const name = $('lookName').value || 'Look'
+        if (liveEdit) {
+            await flush()
+            await post('desk/api/store', { name })
+        } else if (draft) {
+            const out = await post('desk/api/store', { name, look: draft })
+            if (out.ok) draftFrom = out.id
+        }
         await refreshDesk()
         refreshThumbs()
     })
@@ -433,7 +518,10 @@
         }
         deleteArmedAt = 0
         b.textContent = 'Delete tile'
-        await post('desk/api/looks/delete', { id: desk.liveId })
+        const id = storeTarget()
+        if (!id) return
+        await post('desk/api/looks/delete', { id })
+        if (draftFrom === id) draftFrom = null
         await refreshDesk()
         refreshThumbs()
     })
@@ -607,8 +695,12 @@
     document.addEventListener('keydown', (e) => {
         if (e.target.closest('input, textarea, select') || e.ctrlKey || e.metaKey || e.altKey || !desk) return
         if (/^[1-9]$/.test(e.key)) {
+            // Straight to the laser, show speed; the Preview follows it.
             const look = desk.looks[Number(e.key) - 1]
-            if (look) post('desk/api/go', { look: look.id }).then(refreshDesk)
+            if (look) {
+                post('desk/api/go', { look: look.id }).then(refreshDesk)
+                if (!liveEdit) loadDraft(look.id)
+            }
         } else if (e.key === 'b' || e.key === 'B') $('blackoutBtn').click()
         else if (e.key === 't' || e.key === 'T') $('tapBtn').click()
     })
@@ -619,6 +711,8 @@
             desk = await get('desk/api/state')
             if (desk.loadMessage) notice(desk.loadMessage)
             syncTileClock()
+            // A page opened while a look plays starts its Preview from what the laser draws.
+            if (!liveEdit && !draft && desk.live) { draft = copyLook(desk.live); draftFrom = desk.liveId }
         } catch (error) {
             notice(`The laser desk did not answer (${error.message}).`)
             return

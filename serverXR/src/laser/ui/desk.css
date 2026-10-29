@@ -146,7 +146,17 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .field input.num { width: 46px; background: var(--field); border: 1px solid var(--accent); font: 500 11px var(--mono); padding: 2px 3px; text-align: right; }
 .actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; }
 .empty { padding: 12px 10px; margin: 0; }
-.editor.is-empty .editbody { display: none; }
+.editor.is-empty .editbody, .editor.is-empty .preview { display: none; }
+/* The Preview: the look being edited, drawn here on the desk's beat; Send puts it on the laser. */
+.preview { padding: 8px 10px 0; }
+.preview canvas { width: 100%; aspect-ratio: 3 / 2; display: block; background: var(--stagebg); border: 1px solid var(--line); }
+.sendrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 8px; }
+.sendrow .muted { font-size: 12px; }
+button.send { background: var(--accent); border-color: var(--accent); color: #031416; font-weight: 600; padding: 6px 14px; white-space: nowrap; flex: none; }
+button.send:hover { border-color: #fff; }
+button.send.is-sent { background: none; color: var(--accent); font-weight: 500; }
+.editor.is-live .sendrow button { display: none; }
+.tile.is-editing { outline: 1px dashed var(--muted); outline-offset: -3px; }
 .editor:not(.is-empty) .empty { display: none; }
 
 /* ---- setup */

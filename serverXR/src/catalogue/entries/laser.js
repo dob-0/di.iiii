@@ -159,6 +159,14 @@ module.exports = [
     note: `${SAME_MACHINE} ${OWN_PAGE} Frames only: nothing lights until the laser safety officer has armed.`
   },
   {
+    route: "POST /laser/desk/api/send",
+    summary: "put a look the page made on the cubes: { look, from? } — the editor's Preview, sent; `from` is the bank's look it was loaded from",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE} Frames only: nothing lights until the laser safety officer has armed.`
+  },
+  {
     route: "POST /laser/desk/api/live",
     summary: "edit the live look on the cubes: any of { name, shape, colour, rainbow, level, size, height, x, rotation, spin, copies, points, cycle, pulse, pulseBeats, sweep, sweepBeats, mirror, phase, cubes }, each clamped",
     reach: "private",
@@ -168,7 +176,7 @@ module.exports = [
   },
   {
     route: "POST /laser/desk/api/store",
-    summary: "keep the live look: { id } writes it into that tile, no id adds a new tile ({ name? }); the bank is in <data>/laser/desk.json",
+    summary: "keep a look: { id } writes it into that tile, no id adds a new tile ({ name? }); { look } stores the page's Preview instead of the live look; the bank is in <data>/laser/desk.json",
     reach: "private",
     role: "guest",
     agent: false,

@@ -55,10 +55,18 @@
     <div class="cubes" id="stage"></div>
   </section>
 
-  <aside class="editor pane" aria-label="Live look">
+  <aside class="editor pane" aria-label="Edit a look">
     <div class="panehead">
-      <h2>Live look</h2>
+      <h2>Edit</h2>
       <input id="lookName" class="namefield" maxlength="40" placeholder="Name" aria-label="Look name">
+      <label class="check" title="Live: every change goes to the laser at once. Off: you change a preview, and Send puts it on the laser"><input type="checkbox" id="liveEdit"> Live</label>
+    </div>
+    <div class="preview">
+      <canvas id="preview" aria-label="Preview of the look being edited"></canvas>
+      <div class="sendrow">
+        <span class="muted" id="previewNote">Preview: only on this screen until you send it</span>
+        <button id="sendBtn" class="send" title="Put this look on the laser">▶ Send to laser</button>
+      </div>
     </div>
     <div class="editbody" id="editor">
       <div class="group">
@@ -83,12 +91,12 @@
         <div class="chips" id="lookCubes"></div>
       </div>
       <div class="actions">
-        <button id="storeBtn" title="Write the live look into its tile">Store</button>
-        <button id="saveNewBtn" title="Keep the live look as a new tile">Save as new</button>
+        <button id="storeBtn" title="Write this look into its tile">Store</button>
+        <button id="saveNewBtn" title="Keep this look as a new tile">Save as new</button>
         <button id="deleteBtn" class="quiet" title="Remove the tile this look came from">Delete tile</button>
       </div>
     </div>
-    <p class="empty muted" id="editorEmpty">Press a look to edit it live. Changes reach the cubes at once; Store keeps them.</p>
+    <p class="empty muted" id="editorEmpty">Click a look to edit it here. Change it and watch the preview; ▶ Send puts it on the laser, Store keeps it in its tile. Double-click a look (or press 1–9) to send it straight away; tick Live to send every change at once.</p>
   </aside>
 </main>
 
