@@ -445,7 +445,7 @@ export const WIKI_ARTICLES = [
             'The Spaces page (/studio) has a Grid / List / Map toggle next to the page title whenever you have at least one space. Grid is the card shelves; List is one dense row per space — name, what opens in it, its state, and Open/Live — which stays readable when you have twenty of them; Map draws every space as a point you can orbit around and zoom into.',
             'Under the title, once you have more than three spaces: Arrange orders them by Recent (what has something to show, then last touched), by Name, or by State. The chips beside it show only the spaces in one state, and each carries its count: Open to anyone (public, with something published), Only you (private — a visitor meets a login wall), and Needs a door (public, but nothing is published in it, so a visitor walks into an empty room).',
             'In Map view each space is one star: its SIZE is how much is in it, its colour is who can open it (the legend names all five), and the glow breathes on a space that is live. The view opens framed on the whole estate — it works out how far back to stand from the spaces you actually have and the shape of your window, so nothing is cropped on a phone or on a wide screen.',
-            'Click a space in Map view to open a side panel for it — rename, copy the live link, make public/private, delete, and manage its projects — the same actions as the grid, just reached from the map. Clicking the satellite projects around a selected space lets you rename them or set one live. Which space is "Main" (marked with a badge here and on the grid) is set in Ops Graph → Manage only.',
+            'Click a space in Map view to open a side panel for it — rename, copy the live link, make public/private, delete, and manage its projects — the same actions as the grid, just reached from the map. Clicking the satellite projects around a selected space lets you rename them or set one live. Which space is "Main" (marked with a badge here and on the grid) is set in the admin console → Spaces and users only.',
             'Your view, your arrangement and your filter are each remembered on this device for next time.',
             'A space goes by one name everywhere: its card, its row in the list, its star on the map, the heading on the page that lists what it holds, and the browser tab. The name is the space’s own — the one you set with Rename. What the space opens on is called by its own title only once you are inside it. So a visitor’s card says the name once and nothing more about the project behind the door. Your own cards add an “Opens on:” line only when the project that opens has a different title from the space, which is the one fact worth checking at a glance; the List view’s “what opens” column follows the same rule, and says “the space itself” otherwise.'
         ],
@@ -474,13 +474,13 @@ export const WIKI_ARTICLES = [
             'For a live jam — an event, a workshop, a projected wall — share the short link diiii.xyz/open_jam (or turn it into a QR code). It opens the shared Open Jam directly, and a one-line welcome shows first-timers how to add their visual. Anyone who scans can drop in an image, video or 3D model on the spot, no account needed.',
             'There are two ways in, and they are the same jam. diiii.xyz/open_jam/scene puts you inside the scene — you stand in it, walk around, and add things where you are looking; it is the one to put on a flyer or a QR code for a phone. So does the bare diiii.xyz/open, which used to open a different, read-only picture of the same room — the two addresses now always land in the identical live scene. See "Standing in the jam" for what it does.',
             'The Open Jam opens in a simple mode: one Create window with file upload and a few basic shapes — the full editor’s other windows and import options stay out of the way. Tapping an object opens a small Edit window (change your text, pick a colour, or remove it). Anyone who wants the complete toolset can press “⚒ All tools” in the toolbar (and “◱ Simple” switches back); the choice is remembered on that device.',
-            'For admins: Ops Graph → Manage can repoint the communal space (the guest entry), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.',
-            'Ops Graph → Manage also shows the site’s own traffic for the last 30 days under Traffic: page views, sign-ups, the busiest day, the most viewed pages and the sites visitors came from. These are counted here, one per page load, with no cookie and no third party — the same counting the privacy page describes.',
+            'For admins: the admin console → Spaces and users can repoint the communal space (the guest entry), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.',
+            'The admin console → Spaces and users also shows the site’s own traffic for the last 30 days under Traffic: page views, sign-ups, the busiest day, the most viewed pages and the sites visitors came from. These are counted here, one per page load, with no cookie and no third party — the same counting the privacy page describes.',
             'Every address now says what it is before any script runs. A search engine, a link preview or a reader that skips JavaScript gets that page’s own title, one-line description, card picture and canonical address (on diiii.xyz) — not the front door’s on every page — and an address nothing answers to is a real “not found” (404) instead of the front page in disguise. The Open Space has one canonical address, diiii.xyz/open; /open_jam and /open_jam/scene still work, and the front page’s Open Space button now hands out /open. diiii.xyz/sitemap.xml is written from the public spaces and their public projects each time it is asked for, so nothing private is ever in it and a new page appears in it the moment it is public.',
             'A room carries its own text for anything that reads instead of looking. A space drawn on a canvas used to be an empty page to a screen reader, a search engine, or a browser whose 3D failed; every published room now also carries its name, its lines and its doors as ordinary links, out of sight but reachable — tab through a room and each door becomes a visible link you can follow without a mouse.',
             'The front door is the landing page, and the scene is behind it: on a wide screen the page is ordinary HTML over the scene, and a phone loads the scene only when you press “Step inside”. Pressing it turns the page’s pieces into objects in that scene while the camera flies in, instead of a new page loading. The scene holds the name, the one line and a door to each featured work, all things you can walk past. ?room=1 opens the scene bare, without the page. That scene is the live project of di.iiii’s own front space, which has its own address, /di-iiii; an old /main link still resolves and heals to /?room=1, so the bare name “main” never stays in the address bar. The addresses inside that space — /main/studio, /main/raw, a project deep-link — keep their names. On a local install, / is your own home, the landing page is at /?tour=1, and /main is not rewritten.',
             'The landing page names three routes, in order of weight: “Step inside” walks into the scene behind the page, “The Spaces” opens the Spaces page, and “Open Space” opens the shared Open Jam. The quiet “Already have spaces? Open your Spaces →” line further down is the return path for people who already have work of their own.',
-            'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page.'
+            'The “Set as main” switch under the admin console → Spaces and users → a space no longer puts its own button on the landing page.'
         ],
         tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr', 'telegram', 'sign in'],
         updated: '2026-10-28'
@@ -875,7 +875,7 @@ export const WIKI_ARTICLES = [
             'A published-but-private space shows a login wall to visitors instead of the project. The editor’s Share window and the space card both tell you when that’s the case and offer a one-click “Make space public” right there — no hunting for the toggle.',
             'Opening an editor URL (like /<space>/studio) with an account that isn’t scoped to that space no longer dead-ends: if the space is public you are taken to its live view; only private spaces show the access-restricted screen.',
             'Every public space carries a small “Made with di.iiii” mark in the bottom-left corner, so visitors who like what they see have a way in. At rest it is just the ◈ — the page is yours, and nothing of di.iiii’s should sit on top of your work; point at it (or reach it with the keyboard) and it opens into the full “Made with di.iiii — build yours” link. It never appears on hub-card preview thumbnails, and it stays out of di.iiii’s own front space — there it would only be a link back to the room you are already standing in.',
-            'Spaces and individual projects can each get a clean public link (a slug) that’s independent of their internal id — e.g. /wcc/artistplace instead of a longer id-based path. Set it from Ops Graph → Manage (“Edit public link” next to Rename); old id-based links keep working forever, they’re never replaced.',
+            'Spaces and individual projects can each get a clean public link (a slug) that’s independent of their internal id — e.g. /wcc/artistplace instead of a longer id-based path. Set it from the admin console → Spaces and users (“Edit public link” next to Rename); old id-based links keep working forever, they’re never replaced.',
             'Published code pages can use the visitor’s camera, microphone and motion sensors — but only if the project opts in by setting deviceAccess: true in its presentation state (repo-synced pages set it in their di-space manifest). Opted-in pages run without the usual origin isolation, so reserve it for pages you author yourself; everything else stays fully sandboxed. The visitor still gets the normal browser permission prompt either way.',
             'Opting into deviceAccess also gives the page real, persistent localStorage and sessionStorage — what it saves survives reloads and is shared with the space’s other opted-in pages on the same device, which is how one page can leave something for a sibling to find. Fully sandboxed pages keep an in-memory stand-in instead: calls succeed, but nothing outlives the visit.',
             'Published code pages can read the URL’s query string — /<space>/<slug>?just=bkyi — through window.diiPageQuery (already parsed for you as window.diiPageParams). A published page is rendered inside a frame with no URL of its own, so location.search there is always empty; read new URLSearchParams(window.diiPageQuery || location.search) and the same code keeps working when you open the file locally. This is what lets one published page hand over to another with state — “open the field, on the core I just made”.',
@@ -925,7 +925,7 @@ export const WIKI_ARTICLES = [
         body: [
             'The owner of a space is whoever created it. Ownership is what makes a space self-service: the owner publishes, mints invites, renames, changes the public link, and can delete it — none of which needs an admin.',
             'A space can also have no owner. That happens when it was provisioned over the API rather than created in the browser — every space linked to a GitHub repo starts this way. Such a space works normally, but every management action in it falls to a di.iiii admin, which quietly makes one person the bottleneck.',
-            'Admins assign the owner in Ops Graph → Manage → pick the space → Owner & access. The panel names the current owner, or says plainly that there is none. "Make owner" hands the space over and grants that account access in the same move; clicking it again on the current owner releases the space back to di.iiii.',
+            'Admins assign the owner in the admin console → Spaces and users → pick the space → Owner & access. The panel names the current owner, or says plainly that there is none. "Make owner" hands the space over and grants that account access in the same move; clicking it again on the current owner releases the space back to di.iiii.',
             'Only admins can change ownership — an owner cannot give their own space away. Granting access is a separate, smaller thing: it lets someone into the space without making them its owner (that is also what an invite link does).'
         ],
         tags: ['owner', 'ownership', 'access', 'admin', 'handover', 'collaboration', 'spaces'],
@@ -1148,11 +1148,11 @@ export const WIKI_ARTICLES = [
     {
         id: 'admin-manage',
         category: 'Spaces & access',
-        title: 'Ops Graph — the admin console',
-        summary: 'Ops Graph, at /admin, is admins-only; your own spaces are managed from /studio.',
+        title: 'The admin console',
+        summary: 'The admin console, at /admin, is admins-only; your own spaces are managed from /studio.',
         body: [
-            'Ops Graph is di.iiii’s console. It lives at /admin and is visible to admin accounts only — everyone else is pointed back to their Spaces page. Owners never need it: your own spaces are fully self-service on /studio.',
-            'Admins manage everything from Ops Graph → Manage: a directory tree of spaces, each expanding to its projects. The console keeps four admin sections (Manage, Open Call, Agents, Visitors — the programs that called the API, with a block toggle) and four diagnostics sections (Overview, Inspect, System, Estate); the header shows counts for the work at hand instead of 3D telemetry while you administer.',
+            'The admin console is di.iiii’s console for admins. It lives at /admin and is visible to admin accounts only — everyone else is pointed back to their Spaces page. Owners never need it: your own spaces are fully self-service on /studio.',
+            'Admins manage everything from the admin console → Spaces and users: a directory tree of spaces, each expanding to its projects. Its list has two groups. Spaces and people: Spaces and users, Open call, Agent sessions, Apps that visit (the programs that called the API, with a block switch). Operator tools (staff): Overview, This scene, Log and settings, Machines. On/off settings are switches that say On or Off and what they touch; flip one back to undo. Refresh loads the lists again without reloading the page, and Back to the space leaves the console; the header shows counts for the work at hand instead of 3D telemetry while you administer.',
             { list: [
                 'Create / rename / delete spaces and projects inline.',
                 'Edit a space or project’s public link (slug) separately from its rename — the id underneath never changes, so old links stay valid.',
@@ -1161,15 +1161,15 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['admin', 'manage', 'access', 'slug', 'ops graph'],
-        updated: '2026-09-13'
+        updated: '2026-10-29'
     },
     {
         id: 'admin-estate',
         category: 'Spaces & access',
-        title: 'Estate — the machines behind di.iiii',
-        summary: 'A read-only map of every machine, address and store the studio runs, shown inside Ops Graph.',
+        title: 'Machines — the computers behind di.iiii',
+        summary: 'A read-only map of every machine, address and store the studio runs, shown in the admin console under Machines.',
         body: [
-            'Ops Graph → Estate renders the studio\u2019s infrastructure map: the tailnet topology, every machine and what it is for, what runs where, the public names, and the totals \u2014 threads, memory, storage, GPUs, backups.',
+            'Admin console → Machines shows the studio\u2019s infrastructure map: the tailnet topology, every machine and what it is for, what runs where, the public names, and the totals \u2014 threads, memory, storage, GPUs, backups.',
             'It is written and kept in a private repository, not in this one. This repository is public, so the map is never committed here and never served from the static site; the server reads it from a path given at deploy time and hands it only to admin accounts.',
             { list: [
                 'A host that was never given the file says so plainly \u2014 that is the normal state, not a fault.',
@@ -1178,24 +1178,24 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['admin', 'estate', 'infrastructure', 'diagnostics'],
-        updated: '2026-08-19'
+        updated: '2026-10-29'
     },
     {
         id: 'agents-board',
         category: 'Spaces & access',
-        title: 'Ops Graph → Agents',
+        title: 'Agent sessions — who is working on this machine',
         summary: 'An operator-only map of the Claude Code sessions and agents working on this machine.',
         body: [
-            'The Agents section of Ops Graph shows the AI sessions working alongside you: a live map of every running Claude Code session, which checkout and branch each one holds, and a directory of recent chats with their topics.',
+            'Agent sessions, in the admin console, shows the AI sessions working alongside you: a live map of every running Claude Code session, which checkout and branch each one holds, and a directory of recent chats with their topics.',
             'Selecting a session opens its detail: the subagent tree it spawned, its background-job state, and the tail of its conversation.',
             { list: [
                 'The map links each live session to the checkout it is editing — two sessions on one tree is visible at a glance.',
                 'Live status (busy / shell / idle) updates every few seconds.',
-                'This section reads local machine data, so it only exists when serverXR runs on your own machine in dev mode. Deployed environments serve nothing here.'
+                'This section reads local machine data, so it only exists when serverXR runs on your own machine in dev mode. Deployed environments serve nothing here. On an install that signs people in, the server shows it to admins only.'
             ] }
         ],
         tags: ['admin', 'agents', 'ai', 'sessions', 'operator'],
-        updated: '2026-08-19'
+        updated: '2026-10-29'
     },
     {
         id: 'keyboard-shortcuts',
@@ -1302,7 +1302,7 @@ export const WIKI_ARTICLES = [
                 'People in a browser, and anyone signed in with an account or a token, are not counted against either.',
                 'Off-limits: /admin, /preferences, private spaces, anything behind sign-in, and sending forms automatically.'
             ] },
-            'A name is only what a program claims, so the per-address limits hold whatever the header says. di.iiii keeps a count per day per program name and the contact it published — no addresses, no pages read — for 90 days. Admins see that guest book in Ops Graph → Visitors, and can turn a program away by name; it then gets a 403 pointing back to /for-apps. Nothing is counted on a local install.',
+            'A name is only what a program claims, so the per-address limits hold whatever the header says. di.iiii keeps a count per day per program name and the contact it published — no addresses, no pages read — for 90 days. Admins see that guest book in the admin console → Apps that visit, and can turn a program away by name; it then gets a 403 pointing back to /for-apps. Nothing is counted on a local install.',
             'For a higher allowance or a block you think is a mistake: info@thedi.studio. A security problem goes to the same address; /.well-known/security.txt says so in the form security tools read.'
         ],
         tags: ['api', 'apps', 'ai', 'crawlers', 'bots', 'user-agent', 'rate limit', 'llms.txt', 'llms-full.txt', 'robots.txt', 'security.txt', 'developers', 'markdown', 'assistant'],
@@ -1314,7 +1314,7 @@ export const WIKI_ARTICLES = [
         title: 'GitHub sync',
         summary: 'Connect a space to a GitHub repo — pushes auto-update the live space.',
         body: [
-            'A space can be linked to a GitHub repo so every push updates the live space automatically, through the di.iiii GitHub App. No command line needed — space owners connect from the Spaces page (/studio → GitHub sync on your space card); admins have the same panel in Ops Graph → Manage.',
+            'A space can be linked to a GitHub repo so every push updates the live space automatically, through the di.iiii GitHub App. No command line needed — space owners connect from the Spaces page (/studio → GitHub sync on your space card); admins have the same panel in the admin console → Spaces and users.',
             { list: [
                 'Open GitHub sync on your space card, click the connect button — GitHub asks which repos to allow (one time).',
                 'Back in di.iiii the repo list fills in by itself — pick your repository from the dropdown and it connects immediately.',
@@ -1374,7 +1374,7 @@ export const WIKI_ARTICLES = [
                 'Share: next to any file in the Files list, click Share — it becomes a public asset anyone can discover. Click Public to take it back down. Sharing needs a signed-in account; guests can browse and import from the commons but not publish to it.',
                 'Reuse: click Commons, search what others have shared, select, and Import — the assets are copied into your space instantly (they are content-addressed, so nothing re-uploads). Then hit + Add on the file to place it in your scene.',
                 'Shared assets keep their sharer label, and the bytes stay in the origin space — the commons is an index, not a second copy.',
-                'Moderation: admins see the full commons in Ops Graph → Manage (Asset commons section) and can remove any entry; the origin space keeps its file.'
+                'Moderation: admins see the full commons in the admin console → Spaces and users (Asset commons section) and can remove any entry; the origin space keeps its file.'
             ] }
         ],
         tags: ['assets', 'commons', 'share', 'public', 'studio'],
@@ -1404,11 +1404,11 @@ export const WIKI_ARTICLES = [
         id: 'open-call-applications',
         category: 'Spaces & access',
         title: 'Open-call applications',
-        summary: 'A space’s published page can carry an application form; submissions are stored in di.iiii and reviewed in Ops Graph → Open Call.',
+        summary: 'A space’s published page can carry an application form; submissions are stored in di.iiii and reviewed in the admin console → Open call.',
         body: [
             'A space’s published page (like the Beyond Form open call) can host its own application form. Submissions are stored in di.iiii and — where the call uses one — mirrored to the organizers\u2019 Google Form in the background.',
             { list: [
-                'Review: admins open Ops Graph \u2192 Open Call to see applications with status chips (new / shortlist / accepted / declined), per-applicant notes, and status counts.',
+                'Review: admins open the admin console \u2192 Open call to see applications with status chips (new / shortlist / accepted / declined), per-applicant notes, and status counts.',
                 'Filter by status, expand a row for the full answers, and export everything as CSV for sharing with partners.',
                 'Delete removes an application permanently (confirmation required) — use it to clear test submissions and junk entries.',
                 'The public submit endpoint is unauthenticated and rate-limited; reviewing, updating, and deleting require an admin session.'

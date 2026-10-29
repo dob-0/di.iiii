@@ -1470,3 +1470,10 @@ Symptom (UX audit 2026-10-28, `PreferencesPage.jsx:35-47`, `AgentsSection.jsx:33
 Cause: `serverXR/src/routes/agentBoardRoutes.js` `requireLocalOperator` tested `isLocalOperatorRequest` only. On an install that signs people in, a member's browser on that machine (or anyone not signed in) got the board.
 Fix: once the caller is local, the role is checked on the server: below admin → 403 `admins only`. Off the machine it stays 404. An install without sign-in (one person, own machine) still reads it. The estate map (`estateRoutes.js`, `requireAdminAlways`) and the recent events (`statusRoutes.js`, admin or empty) were already gated by role and are unchanged.
 Guard: `serverXR/src/routes/agentBoardRoutes.test.js` (6 cases); 3 failed on the old code (member 403, visitor 403, session detail 403).
+
+## The admin console said "Ops Graph", its switches showed state as a label, and Refresh reloaded the page (2026-10-29, UX audit F045/F108/F109/F110/F150)
+
+Symptom (UX audit 2026-10-28, `capture/sheets/admin.png`): the page that holds who-can-see-what was titled "Ops Graph" with "Socket", "Estate", "Inspect" and Unicode glyphs as icons; "Editing Locked" was a button whose label was the state; "Back to Editor" named a place that is not where it goes; Refresh called `window.location.reload()` and lost the open section.
+Cause: copy written for the operator; `managementButtons` (`usePreferencesData.js`) had no switch kind; Refresh had no data path.
+Fix: plain names and two named groups (`SECTIONS`/`GROUP_LABELS` in `PreferencesPage.jsx`); on/off settings carry `kind: 'switch'` and render `role="switch"` with `aria-checked`, an On/Off word and a line on what they touch; Refresh bumps a key on `<main>` so the open section mounts and fetches again. Wiki articles admin-manage, admin-estate, agents-board follow.
+Guard: `src/components/PreferencesPageWords.test.jsx` (4); all 4 failed on the old code.
