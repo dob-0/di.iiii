@@ -497,4 +497,29 @@ describe('StudioShell keyboard: Tab, letter keys, Esc', () => {
         fireEvent.keyDown(document.body, { key: 'Escape' })
         expect(shells().sort()).toEqual(['scene', 'world'])
     })
+    it('Esc closes the help also with the focus on a checkbox inside it; in a text field it first leaves the field', () => {
+        renderShell()
+        const help = () => screen.getByTestId('gizmo-axis').dataset.help
+        fireEvent.keyDown(document.body, { key: '?' })
+        expect(help()).toBe('open')
+        const box = document.createElement('input')
+        box.type = 'checkbox'
+        document.body.appendChild(box)
+        box.focus()
+        fireEvent.keyDown(box, { key: 'Escape' })
+        expect(help()).toBe('closed')
+        // text field: Esc leaves the field and closes nothing; letters stay typing
+        fireEvent.keyDown(document.body, { key: '?' })
+        const text = document.createElement('input')
+        text.type = 'text'
+        document.body.appendChild(text)
+        text.focus()
+        fireEvent.keyDown(text, { key: 'h' })
+        fireEvent.keyDown(text, { key: 'Escape' })
+        expect(help()).toBe('open')
+        expect(document.activeElement).not.toBe(text)
+        fireEvent.keyDown(document.body, { key: 'Escape' })
+        expect(help()).toBe('closed')
+        box.remove(); text.remove()
+    })
 })

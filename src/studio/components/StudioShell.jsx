@@ -449,10 +449,18 @@ export default function StudioShell({
 
     useEffect(() => {
         const handler = (e) => {
-            const inInput = e.target.tagName === 'INPUT'
+            // A text field keeps every key (typing never fires a shortcut). A checkbox, radio, range or button is not typing: Esc still works there.
+            const NON_TEXT = ['checkbox', 'radio', 'range', 'button', 'submit', 'reset', 'color', 'file']
+            const inText = e.target.isContentEditable
                 || e.target.tagName === 'TEXTAREA'
-                || e.target.isContentEditable
-            if (inInput) return
+                || (e.target.tagName === 'INPUT' && !NON_TEXT.includes(e.target.type))
+            const inInput = inText || e.target.tagName === 'INPUT'
+            // WAI-ARIA dialog pattern: Esc in a text field first leaves the field (the focus goes to the page), the next Esc closes.
+            if (inText && e.key === 'Escape') {
+                e.target.blur?.()
+                return
+            }
+            if (inInput && e.key !== 'Escape') return
 
             // Esc closes what is on top: Quick Insert, then Help, then the window the focus is in, else the window opened last (WCAG 2.1.2 / Nielsen H3).
             // Not while a transform runs (its own Esc cancels it) or something is selected (the editor's Esc deselects first), and never by a letter, so it works with letter keys off.
