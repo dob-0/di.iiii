@@ -3,6 +3,7 @@ import { Plane, Raycaster, Vector2, Vector3 } from 'three'
 import StudioInspector from './StudioInspector.jsx'
 import StudioViewportLayout from './StudioViewportLayout.jsx'
 import StudioFloatingPanel from './StudioFloatingPanel.jsx'
+import { letterKeyIsOff, readKeyPrefs, tabFlipsMode } from '../utils/studioKeyPrefs.js'
 import StudioControlCluster from './StudioControlCluster.jsx'
 import StudioSaveLine from './StudioSaveLine.jsx'
 import StudioCueStrip from './StudioCueStrip.jsx'
@@ -274,6 +275,7 @@ export default function StudioShell({
         onPositionChange: recordPanelPosition(id),
         onSizeChange: recordPanelSize(id),
         onCollapsedChange: recordPanelCollapsed(id),
+        windowKey: id,
         snapEdges
     }), [positions, panelSizes, collapsedPanels, snapEdges, recordPanelPosition, recordPanelSize, recordPanelCollapsed])
 
@@ -452,25 +454,74 @@ export default function StudioShell({
 
     useEffect(() => {
         const handler = (e) => {
-            const inInput = e.target.tagName === 'INPUT'
+            // A text field keeps every key (typing never fires a shortcut). A checkbox, radio, range or button is not typing: Esc still works there.
+            const NON_TEXT = ['checkbox', 'radio', 'range', 'button', 'submit', 'reset', 'color', 'file']
+            const inText = e.target.isContentEditable
                 || e.target.tagName === 'TEXTAREA'
-                || e.target.isContentEditable
-            if (inInput) return
+                || (e.target.tagName === 'INPUT' && !NON_TEXT.includes(e.target.type))
+            const inInput = inText || e.target.tagName === 'INPUT'
+            // WAI-ARIA dialog pattern: Esc in a text field first leaves the field (the focus goes to the page), the next Esc closes.
+            // After the field's own Esc has run: a rename field that Esc cancels is gone by then, so blur cannot save it.
+            if (inText && e.key === 'Escape') {
+                const field = e.target
+                setTimeout(() => {
+                    if (field.isConnected && field.ownerDocument.activeElement === field) field.blur?.()
+                }, 0)
+                return
+            }
+            if (inInput && e.key !== 'Escape') return
+
+            // Esc closes what is on top: Quick Insert, then Help, then the window the focus is in, else the window opened last (WCAG 2.1.2 / Nielsen H3).
+            // Not while a transform runs (its own Esc cancels it) or something is selected (the editor's Esc deselects first), and never by a letter, so it works with letter keys off.
+            if (e.key === 'Escape') {
+                if (quickInsert) setQuickInsert(null)
+                setShowHelp(false)
+                // One thing per press: an Esc that closed Quick Insert or the help closes no window as well.
+                if (!quickInsert && !showHelp && !transformOp && selectedEntityIds.length === 0) {
+                    // The window the focus is in; with the focus on the page or the scene, the window opened last (the top one).
+                    let panel = e.target?.closest?.('.sfp-shell')
+                    if (!panel) {
+                        const doc = e.target?.ownerDocument || window.document
+                        const keys = [...openRef.current].reverse()
+                        for (const k of keys) {
+                            const candidate = doc.querySelector(`.sfp-shell[data-window-key="${k}"]`)
+                            if (candidate?.querySelector('.sfp-close')) { panel = candidate; break }
+                        }
+                    }
+                    const closeButton = panel?.querySelector?.('.sfp-close')
+                    if (closeButton) {
+                        // Keep the place in the Tab order (WCAG 2.4.3): the close button is about to go, so the focus moves to the
+                        // button that opens this window again, else to the first control of the window bar.
+                        const key = panel.dataset?.windowKey
+                        const wrap = panel.ownerDocument.querySelector('.scc-wrap')
+                        const back = (key && wrap?.querySelector(`[data-window-key="${key}"]`)) || wrap?.querySelector('button')
+                        closeButton.click()
+                        back?.focus()
+                        e.preventDefault()
+                    }
+                }
+                return
+            }
+
+            const prefs = readKeyPrefs()
+            // Tab is the browser's: it walks the focus. It flips Navigate/Edit only for the "Blender keys" opt-in.
+            if (tabFlipsMode(e, prefs)) {
+                e.preventDefault()
+                setViewportEditMode((m) => (m === 'navigate' ? 'edit' : 'navigate'))
+                setViewportSelectTool(false)
+                return
+            }
+            // Letter keys switched off (Help > Shortcuts): H, E, ?, G, R, S, X, Y, Z, T, Shift+A, Shift+R do nothing.
+            if (letterKeyIsOff(e, prefs)) return
 
             if (e.key === 'h' || e.key === 'H') {
                 e.preventDefault()
                 setUiHidden((v) => !v)
             }
-            if (e.key === 'e' || e.key === 'E' || e.key === 'Tab') {
+            if (e.key === 'e' || e.key === 'E') {
                 e.preventDefault()
                 setViewportEditMode((m) => (m === 'navigate' ? 'edit' : 'navigate'))
                 setViewportSelectTool(false)
-            }
-            if (e.key === 'Escape' && quickInsert) {
-                setQuickInsert(null)
-            }
-            if (e.key === 'Escape') {
-                setShowHelp(false)
             }
             if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault()
@@ -536,7 +587,7 @@ export default function StudioShell({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode, entities])
+    }, [quickInsert, showHelp, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode, entities])
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return
