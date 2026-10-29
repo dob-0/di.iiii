@@ -21,8 +21,8 @@
 
 .cluster-label {
     font-size: var(--di-text-1);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    letter-spacing: var(--di-label-tracking);
+    text-transform: var(--di-label-case);
     color: rgba(255,255,255,0.75);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7), 0 -1px 2px rgba(0,0,0,0.25);
 }
@@ -44,7 +44,7 @@
     display: inline-flex;
     margin-left: var(--di-space-2);
     font-size: var(--di-text-1);
-    letter-spacing: 0.08em;
+    letter-spacing: var(--di-label-tracking);
     color: rgba(255,255,255,0.65);
 }
 

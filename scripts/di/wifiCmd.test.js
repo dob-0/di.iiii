@@ -64,3 +64,26 @@ describe('di wifi', () => {
         expect(init.method).toBe('GET'); expect(init.headers.Authorization).toBe('Bearer tok123')
     })
 })
+
+describe('di wifi, the name against the door', () => {
+    it('--status closed, name still points at the wifi: says so and how to fix it', async () => {
+        named()
+        const r = await runWifi({ flags: { status: true }, home, base: 'b', fetchImpl: answer(200, { open: false }), resolve: async () => '192.168.15.53' })
+        expect(r.lines[1]).toBe('The name still points at 192.168.15.53; the install points it home on start — run di wifi --stop to do it now.')
+    })
+    it('--status closed, name at home: one line only', async () => {
+        named()
+        const r = await runWifi({ flags: { status: true }, home, base: 'b', fetchImpl: answer(200, { open: false }), resolve: async () => '127.0.0.1' })
+        expect(r.lines.length).toBe(1)
+    })
+    it('--status closed, name does not resolve: one line only', async () => {
+        named()
+        const r = await runWifi({ flags: { status: true }, home, base: 'b', fetchImpl: answer(200, { open: false }), resolve: async () => null })
+        expect(r.lines.length).toBe(1)
+    })
+    it('--stop on a closed door sends DELETE and says private again', async () => {
+        named(); const log = []
+        const r = await runWifi({ flags: { stop: true }, home, base: 'b', fetchImpl: answer(200, { open: false }, log) })
+        expect(log[0][0]).toBe('DELETE'); expect(r.code).toBe(0); expect(r.lines[0]).toMatch(/Private again/)
+    })
+})

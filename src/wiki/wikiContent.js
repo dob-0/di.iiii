@@ -443,10 +443,11 @@ export const WIKI_ARTICLES = [
             'Standing inside a project — in Studio, on its node canvas, or on its Projection page — Studio, Nodes and Projection open THAT project. The bar reads di.iiii · space · project in all three, so you can go from the room to its nodes to its wall and back without passing through a list.',
             'Outside a project, Light is always listed. On a di.iiii running on your own machine it opens the lighting desk, and from inside a project the link carries the space and the project with it. Anywhere else it opens a page that says where the desk lives, with the way to run di.iiii on your own machine — the desk talks to fixtures on the local network, and a server on the internet is not in that room. The lighting desk itself keeps its own denser, squarer look — it is read at arm\'s length in a dark booth — and carries a di.iiii link home.',
             'The bar hides itself in a presentation: an embedded window, a preview thumbnail, a headset, Studio with its UI hidden (H), the node canvas with its toolbar hidden or opened full-screen onto its room, and the projector pages at /out are showing the work, not the tool.',
-            'Add ?embed=1 to any address and that is what you get: /tools, the wiki, a space’s contents list, the node canvas, Studio, the Projection page and a published room all drop the bar, because the page you have put them inside already carries the way out. The flag hides that navigation and nothing else — you are signed in exactly as you would be in a tab, edits save the same, and nothing is held back from a window that a tab would be given.'
+            'Add ?embed=1 to any address and that is what you get: /tools, the wiki, a space’s contents list, the node canvas, Studio, the Projection page and a published room all drop the bar, because the page you have put them inside already carries the way out. The flag hides that navigation and nothing else — you are signed in exactly as you would be in a tab, edits save the same, and nothing is held back from a window that a tab would be given.',
+            'The writing is made to be read. The house text sizes start at 12 px; parts of Studio and the tools still set their own smaller sizes and are moving onto them. Labels are written in normal letters, not in spaced capitals; capitals stay only for the di.iiii name and for big signs. A link inside a sentence is underlined, so it never depends on its colour alone, and the house grey text is bright enough to read on the black ground (4.5 to 1). On a touch screen the bar and its links are 44 px.',
         ],
-        tags: ['navigation', 'bar', 'surfaces', 'ui', 'light', 'studio', 'raw', 'nodes', 'projection', 'project', 'embed', 'iframe'],
-        updated: '2026-10-26'
+        tags: ['navigation', 'bar', 'surfaces', 'ui', 'light', 'studio', 'raw', 'nodes', 'projection', 'project', 'embed', 'iframe', 'text size', 'contrast', 'links'],
+        updated: '2026-10-28'
     },
     {
         id: 'layers-one-at-a-time',
@@ -1767,7 +1768,7 @@ export const WIKI_ARTICLES = [
             'An install that has a name (di name) can be opened to the wifi for guests. On the local home, press Wifi (or run di wifi): a door opens on this machine\u2019s wifi address, with the install\u2019s own certificate, and the panel shows a QR code. A phone, a headset or a laptop scans it and gets the padlock, so the camera, the microphone and WebXR work.',
             'A visitor is always a guest: their own sandbox and the open space, never your spaces. You, at this machine, stay the owner. The door answers the install\u2019s own name only; any other name gets a refusal.',
             'Another di can follow a space from you: di follow <space> --from <name> (the name is the first part of the address, shown on the panel). Following needs the space\u2019s own key from di invite; the wifi door hands out no keys.',
-            'Close it with Close door (or di wifi --stop). After a restart the install is private again; the name and certificate stay, so the wifi door is one press away. If the wifi address changes (a new router lease), the door follows it within ten seconds.',
+            'Close it with Close door (or di wifi --stop). After a restart the install is private again and points its name home by itself within a minute, so an old link stops answering instead of leading nowhere; the name and certificate stay, so the wifi door is one press away. If the wifi address changes (a new router lease), the door follows it within ten seconds.',
             { list: [
                 'di wifi \u2014 open the door, print the name, the link and the follow line',
                 'di wifi --status \u2014 is it open, and where',

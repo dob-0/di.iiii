@@ -108,6 +108,8 @@ certificate, record at 127.0.0.1. Nothing listens on the wifi. `di status` says 
    `di follow <space> --from ponyo-k7q2` (+ `--key`, from `di invite`, which stays per space).
 **Close door** (`di wifi --stop`, same button): door closed, record back to 127.0.0.1, beacon silent.
 After a restart the install is private again, like `--lan` today; the Wifi button is pressed again (the name and certificate are kept).
+A restart closes the door but the broker keeps the last address it was given (measured 2026-10-29: 06:11 restart, the name still answered the wifi address). So a start points the record home: one signed PUT `127.0.0.1` about 5 s after start (one retry after 60 s), logged as `name record pointed home`.
+`di wifi --stop` on an already closed door does the same now; `di wifi --status` says when the name still points at a wifi address while the door is closed.
 The name certificate's CN is the plain name, so `guest-address` reads one address from it (VERIFIED rule: CN first).
 
 ## 8. `di follow --from <name>`, peer to peer (BUILT 2026-10-28, branch feat/follow-by-name-2026-10-28; two-machine offline proof still owed)
