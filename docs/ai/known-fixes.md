@@ -1485,3 +1485,9 @@ Symptom: wiki at 390 px: "Spaces" printed over "di.iiii" (picture: wave1/S05/bef
 Cause: the links row (`.sbar-links`) is `justify-content: flex-end`, so a row wider than its box overflows to the left, under the wordmark. The phone status box was `max-width: 58vw`, 226 px from the right edge, so its left edge (164 px) lay inside the button (96 px to about 171 px).
 Fix: `src/wiki/wiki.css` `.wiki-root .sbar-links { justify-content: safe flex-end }` and the wordmark above its row; `src/rigbuild/build.css` phone `.rigbuild-totals { max-width: calc(100vw - 188px) }`. Each in its own surface's CSS.
 Guard: `src/wiki/wikiStyles.test.js` (bar links) and `src/rigbuild/buildPhoneTotals.test.js` (box clears the button); both fail on the old CSS.
+
+## 2026-10-29 — phone 390: the build status box still overlapped the ITEMS button (UX audit, S05 round 4)
+Symptom: picture of round 3: ITEMS box left 96 to right 173, status box left 164 (9 px overlap); the `calc(100vw - 188px)` cap assumed a 75 px button and ignored the box's padding.
+Cause: both boxes shared one row, so any width sum above the screen overlaps.
+Fix: `src/rigbuild/build.css`: on a phone the status box is a second row (`top: 112px`, `calc(var(--rigbar-h) + 112px)` with the rig bar), `max-width: calc(100vw - 16px)`. Own design kept; nothing removed (same box, same words, new row).
+Guard: `src/rigbuild/buildPhoneTotals.test.js` (2 tests, both fail on the round-3 CSS: 2 failed there, 2 passed here).

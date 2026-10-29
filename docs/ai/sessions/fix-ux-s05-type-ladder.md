@@ -20,3 +20,6 @@
 
 ## Round 3 (2026-10-29)
 Two phone-390 faults seen in the round-1 picture: the wiki bar links under the wordmark (`wiki.css`, `safe flex-end`), and the build page status box under ITEMS (`build.css`, `max-width: calc(100vw - 188px)`). Guards in `wikiStyles.test.js` and `buildPhoneTotals.test.js`. Wiki article not changed: layout only, no new words or steps.
+
+## Round 4 (2026-10-29)
+Build phone status box moved to a second row under ITEMS (build.css); test rewritten. Layout only, no wiki article change.
