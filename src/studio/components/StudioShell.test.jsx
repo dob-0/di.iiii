@@ -178,6 +178,16 @@ describe('StudioShell mobile chrome', () => {
         expect(screen.queryByLabelText('Close panel')).not.toBeInTheDocument()
     })
 
+    it('tells floating notices how tall the bottom bar is, only while it is drawn', () => {
+        const root = document.documentElement
+        const { unmount } = renderShell({ isMobile: true })
+        expect(root.classList.contains('has-studio-bottom-bar')).toBe(true)
+        unmount()
+        expect(root.classList.contains('has-studio-bottom-bar')).toBe(false)
+        renderShell({ isMobile: false })
+        expect(root.classList.contains('has-studio-bottom-bar')).toBe(false)
+    })
+
     it('keeps the desktop chrome unchanged off phones', () => {
         renderShell({})
         expect(screen.queryByRole('navigation', { name: 'Studio windows' })).not.toBeInTheDocument()

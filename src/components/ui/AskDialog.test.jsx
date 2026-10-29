@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { existsSync, readFileSync } from 'node:fs'
 import AskDialog from './AskDialog.jsx'
 import UndoNotice from './UndoNotice.jsx'
 import { useAsk, useUndoNotice } from './useAsk.js'
@@ -10,6 +11,22 @@ const open = (props = {}) => render(
 )
 
 describe('AskDialog', () => {
+    it('is drawn on document.body, outside the component that asked, so a tall panel cannot push it off the screen', () => {
+        const { container } = open()
+        const box = screen.getByRole('alertdialog')
+        expect(container.contains(box)).toBe(false)
+        expect(box.closest('.di-ask-backdrop').parentElement).toBe(document.body)
+    })
+
+    it('on a narrow screen the buttons stack full width and the box keeps clear of the safe area', () => {
+        const file = ['src/components/ui/ui.css', 'components/ui/ui.css'].find((f) => existsSync(f))
+        const css = readFileSync(file, 'utf8')
+        const narrow = css.slice(css.indexOf('@media (max-width: 600px)'))
+        expect(narrow).toMatch(/\.di-ask-actions\s*\{[^}]*flex-direction:\s*column/)
+        expect(narrow).toMatch(/\.di-ask-button\s*\{[^}]*width:\s*100%/)
+        expect(narrow).toMatch(/safe-area-inset-bottom|--di-bottom-offset/)
+    })
+
     it('is an alertdialog with a title and a named confirm button', () => {
         open()
         const box = screen.getByRole('alertdialog', { name: 'Delete “Cube”?' })
@@ -21,6 +38,17 @@ describe('AskDialog', () => {
     it('Esc cancels and does not confirm', () => {
         const props = { onConfirm: vi.fn(), onCancel: vi.fn() }
         open(props)
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(props.onCancel).toHaveBeenCalledTimes(1)
+        expect(props.onConfirm).not.toHaveBeenCalled()
+    })
+
+    it('a third choice sits between Cancel and the confirm, and Esc still means Cancel', () => {
+        const props = { onConfirm: vi.fn(), onCancel: vi.fn(), onAlt: vi.fn(), altLabel: 'Replace all' }
+        open(props)
+        expect(screen.getAllByRole('button').map((b) => b.textContent).filter(Boolean)).toEqual(['Cancel', 'Replace all', 'Delete'])
+        fireEvent.click(screen.getByRole('button', { name: 'Replace all' }))
+        expect(props.onAlt).toHaveBeenCalledTimes(1)
         fireEvent.keyDown(window, { key: 'Escape' })
         expect(props.onCancel).toHaveBeenCalledTimes(1)
         expect(props.onConfirm).not.toHaveBeenCalled()
