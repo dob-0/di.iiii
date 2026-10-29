@@ -54,7 +54,7 @@ describe('rig pages and perform are readable', () => {
         const totals = Number(b.match(/\.rigbuild\.is-phone \.rigbuild-totals \{ top: (\d+)px/)[1])
         const itemsTop = 58
         expect(totals).toBeGreaterThanOrEqual(itemsTop + 44)
-        expect(b).toMatch(/\.rigbuild\.has-rigbar\.is-phone \.rigbuild-totals \{ top: calc\(var\(--rigbar-h\) \+ 112px\)/)
+        expect(b).toMatch(/\.rigbuild\.has-rigbar\.is-phone \.rigbuild-totals \{ top: calc\(var\(--rigbar-h\) \+ 160px\)/)
     })
 
     it('the toybox second-language line and the later button pass 4.5:1 on the paper', () => {

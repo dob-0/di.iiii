@@ -16,3 +16,5 @@ Tests: `npx vitest run src/rigbuild src/perform src/make src/styles` 168 files /
 ## Review 2
 - The target floor named `.vis` and `.show`, which no page carries (roots are `.vis-page`, `.show-page`): the visualise page had no floor. Fixed in rigSteps.css; the test names the real roots with a strict boundary and fails on the previous commit (1 failed).
 - known-fixes entry updated for fix round 2 (floor, map label case, 8 tests).
+
+Round 3 (S11): on the Build page at 390 px the 12 px status box spans the full width and sat on the Undo/Redo row (top 110px, 44px tall). The box now starts at 160px (rig bar: +160px), below both the Items button and the Undo row; tests: `buildPhoneTotals.test.js` (starts below Undo/Redo), `readableType.test.js`.
