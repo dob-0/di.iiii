@@ -187,20 +187,24 @@
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(var(--di-cyan-rgb), 0.55);
+    color: rgba(var(--di-cyan-rgb), 0.85);
 }
 
 .sfp-close {
     appearance: none;
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--di-text-muted);
     cursor: pointer;
     font-size: var(--di-text-5);
     padding: 0 var(--di-space-1);
     line-height: 1;
     border-radius: var(--di-radius);
     transition: color 0.1s, background 0.1s;
+    /* UX audit F021/F087: a target of its own (24 px floor, WCAG 2.5.8), and a gap from the fold button. */
+    min-width: 28px;
+    min-height: 28px;
+    margin-left: var(--di-space-3);
 }
 
 .sfp-close:hover {
@@ -346,6 +350,8 @@
     padding: var(--di-space-1) var(--di-space-1);
     border-radius: var(--di-radius);
     line-height: 1;
+    min-width: 28px;
+    min-height: 28px;
 }
 
 .scc-collapse-btn:hover {
@@ -367,7 +373,7 @@
     font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.22);
+    color: var(--di-text-muted);
     margin-bottom: var(--di-space-1);
 }
 
@@ -398,6 +404,7 @@
     white-space: nowrap;
     transition: background 0.1s, border-color 0.1s, color 0.1s;
     line-height: 1.4;
+    min-height: 28px;
 }
 
 .scc-btn:hover {
@@ -512,7 +519,7 @@
     font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.28);
+    color: var(--di-text-muted);
     margin-bottom: var(--di-space-2);
 }
 
@@ -570,7 +577,7 @@
 
 .sfp-empty {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.28);
+    color: var(--di-text-muted);
     padding: var(--di-space-2) 0 var(--di-space-1);
     margin: 0;
 }
@@ -589,6 +596,7 @@
 .spa-btn-wide {
     width: 100%;
     display: flex;
+    align-items: center;
     justify-content: center;
     text-align: center;
     box-sizing: border-box;
@@ -649,7 +657,7 @@
 
 .spa-type {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--di-text-muted);
     white-space: nowrap;
     flex-shrink: 0;
 }
@@ -800,7 +808,7 @@
 
 .spa-activity-time {
     font-size: var(--di-text-1);
-    color: rgba(255, 255, 255, 0.22);
+    color: var(--di-text-muted);
 }
 
 .spa-activity-msg {
@@ -938,7 +946,7 @@
 .insp-subtitle {
     display: block;
     font-size: var(--di-text-1);
-    color: rgba(255, 255, 255, 0.32);
+    color: var(--di-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.12em;
 }
@@ -970,7 +978,7 @@
 
 .insp-arrow {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.28);
+    color: var(--di-text-muted);
 }
 
 .insp-section-body {
@@ -988,7 +996,7 @@
 
 .insp-label {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.38);
+    color: var(--di-text-muted);
     letter-spacing: 0.04em;
     cursor: default;
 }
@@ -1421,7 +1429,7 @@
     font-size: var(--di-text-2);
     font-weight: 500;
     letter-spacing: 0.04em;
-    color: rgba(255,255,255,0.35);
+    color: var(--di-text-muted);
     pointer-events: none;
     user-select: none;
 }
@@ -1708,7 +1716,7 @@
     display: inline-block;
     min-width: 8px;
     margin-right: var(--di-space-1);
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--di-text-muted);
     font-variant-numeric: tabular-nums;
 }
 
@@ -1807,6 +1815,16 @@
 
 .scene-picker .spa-item.active .scene-picker__intent {
     color: rgba(var(--di-cyan-rgb), 0.8);
+}
+
+/* UX audit F021 (2026-10-29): on a finger the window controls are 44 px (--di-touch-target). */
+@media (pointer: coarse) {
+    .sfp-close,
+    .scc-collapse-btn,
+    .scc-btn {
+        min-width: var(--di-touch-target);
+        min-height: var(--di-touch-target);
+    }
 }
 
 /* Scene -> Move, "Mouse in Edit" (MoveSettings.jsx): two equal buttons, 44 px on touch. */
