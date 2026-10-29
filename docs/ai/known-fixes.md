@@ -26,7 +26,8 @@ contract assertions.
 Symptom: build, cards, equipment and plot set text at 10-11.5 px; the step bar's "RIG" title and step numbers were `--di-faint` (axe serious); equipment tick boxes 20 px; toybox English name line and "later" 4.3:1 on cream.
 Cause: the rig CSS predates the 12 px floor (S05); the steps row used the rules-only grey; `--make-ink-soft` is 4.3:1 on `--make-paper`.
 Fix: every `font-size` under 12 px in `src/rigbuild/*.css` is 12px; `.rigsteps-title`/`.rigsteps-n` use `--di-dim`; tick box 24 px; new `--make-ink-readable` (#6B6458, 5.5:1) on `.make-name-en` and `.make-name-skip` only (the toybox keeps its palette). F100 (phone totals over Items) was already fixed by the `top:112px` second row; the test now pins it. perform.css was already on the ladder tokens.
-Guard: `src/rigbuild/readableType.test.js` (5): 4 fail on the old CSS, the phone-geometry one passes on both (it pins an existing fix). Paper views (.rigplot, .rigsheet) and the light desk untouched.
+Review pass: the first guard read only `font-size: Npx`, so nine `font:` shorthands (9-11.5 px in build, cards, equipment, plot) and four rem sizes in show.css (0.62-0.72 rem) stayed small; all are 12 px now, the cards slot grows (`min-width: 40px`, 3 px side padding) instead of clipping, and the build page's exact-value button has `min-height: 24px`.
+Guard: `src/rigbuild/readableType.test.js` (6): it reads `font-size` and the `font` shorthand in px and rem (print pt excluded); 5 fail on the old CSS, the phone-geometry one passes on both (it pins an existing fix). Paper views (.rigplot, .rigsheet) and the light desk untouched.
 
 ## A wrong address opened something else, and empty or failed pages said nothing useful (UX audit F010, F070, F071, F142, F154, 2026-10-28)
 

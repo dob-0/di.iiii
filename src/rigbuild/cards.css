@@ -58,7 +58,7 @@
 .rigcards-slots { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; margin: 3px 0; }
 .rigcards-slots__side { width: 14px; font-size: 12px; color: var(--soft); }
 .rigcards-slot {
-    width: 40px; height: 30px; padding: 0; box-sizing: border-box; font: 9px/1 var(--di-mono, monospace); letter-spacing: -0.02em;
+    min-width: 40px; height: 30px; padding: 0 3px; box-sizing: border-box; font: 12px/1 var(--di-mono, monospace); letter-spacing: -0.02em;
     color: var(--ink); background: var(--paper); border: 1px dashed var(--faint); border-radius: 1px; cursor: pointer; overflow: hidden;
 }
 .rigcards-slot.is-filled { border: 1px solid var(--ink); background: var(--desk); font-weight: 700; }

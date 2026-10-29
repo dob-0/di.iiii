@@ -50,7 +50,7 @@
 .rigplot-room { position: relative; width: 100%; height: 100%; }
 .rigplot-room .studio-viewport-shell { position: absolute; inset: 0; }
 .rigplot-room--empty { box-sizing: border-box; display: grid; place-items: center; color: #9a9a9a; font: 12px var(--di-mono, monospace); padding: 16px; text-align: center; }
-.rigplot-room__label { position: absolute; left: 8px; top: 6px; font: 11px var(--di-mono, monospace); color: #b8b8b8; letter-spacing: 0.04em; pointer-events: none; text-transform: uppercase; }
+.rigplot-room__label { position: absolute; left: 8px; top: 6px; font: 12px var(--di-mono, monospace); color: #b8b8b8; letter-spacing: 0.04em; pointer-events: none; text-transform: uppercase; }
 
 .rigplot-block { background: var(--paper); border: 1.5px solid var(--ink); padding: 10px 12px; }
 .rigplot-block h2 { margin: 0 0 6px; font: 700 12px var(--di-mono, monospace); letter-spacing: 0.1em; text-transform: uppercase; }

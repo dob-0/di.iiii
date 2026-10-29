@@ -71,7 +71,7 @@
 .rigequip-take__from .rigplot-field--text { flex: 1 1 180px; }
 .rigequip-flag { color: var(--ink); font-weight: 700; }
 .rigequip-card__part { padding: 10px 16px; border-bottom: 1px solid var(--rule); }
-.rigequip-card__part h3 { margin: 0 0 4px; font: 700 11.5px var(--di-mono, monospace); letter-spacing: 0.08em; text-transform: uppercase; }
+.rigequip-card__part h3 { margin: 0 0 4px; font: 700 12px var(--di-mono, monospace); letter-spacing: 0.08em; text-transform: uppercase; }
 .rigequip-card__part p { margin: 0 0 6px; }
 .rigequip-refs { font-size: 12px; color: var(--soft); overflow-wrap: anywhere; }
 .rigequip-refs a { color: var(--soft); }
@@ -165,12 +165,12 @@
 .rigequip-totals span { font-size: 12px; color: var(--soft); }
 .rigequip-table { width: 100%; border-collapse: collapse; background: var(--paper); font-size: 12px; }
 .rigequip-table th, .rigequip-table td { border-bottom: 1px solid var(--rule); padding: 5px 6px; text-align: left; vertical-align: top; }
-.rigequip-table th { font: 700 11px var(--di-mono, monospace); letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1.5px solid var(--ink); position: sticky; top: 0; background: var(--paper); }
+.rigequip-table th { font: 700 12px var(--di-mono, monospace); letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1.5px solid var(--ink); position: sticky; top: 0; background: var(--paper); }
 .rigequip-table td.n, .rigequip-table th.n { text-align: right; font-family: var(--di-mono, monospace); white-space: nowrap; }
-.rigequip-table tr.is-group td { font: 700 11px var(--di-mono, monospace); letter-spacing: 0.06em; text-transform: uppercase; background: var(--desk); }
+.rigequip-table tr.is-group td { font: 700 12px var(--di-mono, monospace); letter-spacing: 0.06em; text-transform: uppercase; background: var(--desk); }
 .rigequip-table tfoot td { font-weight: 700; border-top: 1.5px solid var(--ink); }
 .rigequip-owed { margin: 12px 0 0; padding: 8px 12px; border: 1.5px dashed var(--ink); background: var(--paper); }
-.rigequip-owed h3 { margin: 0 0 4px; font: 700 11.5px var(--di-mono, monospace); letter-spacing: 0.08em; text-transform: uppercase; }
+.rigequip-owed h3 { margin: 0 0 4px; font: 700 12px var(--di-mono, monospace); letter-spacing: 0.08em; text-transform: uppercase; }
 .rigequip-owed ul { margin: 0; padding: 0 0 0 16px; font-size: 12px; }
 .rigequip-foot { margin: 12px 0 0; font-size: 12px; color: var(--soft); }
 .rigequip-lines { list-style: none; margin: 0; padding: 0; display: none; }

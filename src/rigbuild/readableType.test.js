@@ -25,8 +25,10 @@ describe('rig pages and perform are readable', () => {
         const small = []
         for (const f of files) {
             css(f).split('\n').forEach((line, i) => {
-                for (const m of line.matchAll(/font-size:\s*([\d.]+)px/g)) {
-                    if (Number(m[1]) < 12) small.push(`${f.split('/src/')[1]}:${i + 1} ${m[1]}px`)
+                // font-size and the font shorthand, in px or rem (16 px root); print pt sizes are paper, not screen
+                for (const m of line.matchAll(/font(?:-size)?:[^;]*?(?<![\w.-])([\d.]+)(px|rem)\b/g)) {
+                    const px = m[2] === 'rem' ? Number(m[1]) * 16 : Number(m[1])
+                    if (px < 12) small.push(`${f.split('/src/')[1]}:${i + 1} ${m[1]}${m[2]}`)
                 }
             })
         }
@@ -35,6 +37,10 @@ describe('rig pages and perform are readable', () => {
 
     it('checkboxes in the equipment list are at least 24px', () => {
         expect(css('equipment.css')).toMatch(/\.rigequip-pick input \{ width: 24px; height: 24px; \}/)
+    })
+
+    it('the build page\'s exact-value button is at least 24px tall', () => {
+        expect(css('build.css')).toMatch(/\.rigbuild-exact \{[^}]*min-height: 24px/)
     })
 
     it('the step bar title and numbers do not use the faint grey', () => {
