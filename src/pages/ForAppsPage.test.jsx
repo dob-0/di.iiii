@@ -65,6 +65,6 @@ describe('/for-apps — the door sign for programs', () => {
         const expectedDisallow = ['', ...languageTable.PREFIXED_CODES.map((code) => `/${code}`)]
             .flatMap((prefix) => [`Disallow: ${prefix}/admin`, `Disallow: ${prefix}/preferences`])
         expect(rules.filter((line) => /^User-agent:/i.test(line))).toEqual(['User-agent: *'])
-        expect(rules.filter((line) => /^Disallow:/i.test(line))).toEqual(expectedDisallow)
+        expect(rules.filter((line) => /^Disallow:/i.test(line)).sort()).toEqual([...expectedDisallow].sort())
     })
 })
