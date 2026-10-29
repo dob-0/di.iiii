@@ -44,13 +44,11 @@ export default function StudioApp({ initialRoute }) {
         return <StudioHub spaceId={DEFAULT_STUDIO_SPACE_ID} />
     }, [route.page, route.projectId, route.spaceId])
 
-    // The project view brings its own h1 and main (StudioEditor); the hub,
-    // spaces and director views already have an h1 and get their main here
-    // (F125). display: contents, so the layout is untouched.
-    const ownsMain = route.page === STUDIO_PAGE_PROJECT && route.projectId
+    // Every view renders its own h1 and its own main (F125): exactly one main
+    // per page, so none is added here.
     return (
         <StudioThemeProvider>
-            {ownsMain ? content : <main className="studio-page-main">{content}</main>}
+            {content}
         </StudioThemeProvider>
     )
 }

@@ -193,6 +193,15 @@ describe('SpaceHub', () => {
         expect(document.title).toBe('Spaces — di.iiii')
     })
 
+    // StudioApp used to wrap this view in a second main (axe
+    // landmark-no-duplicate-main): the view owns the page's only main.
+    it('renders exactly one main region', async () => {
+        listServerSpaces.mockResolvedValue([])
+        const { container } = render(<SpaceHub />)
+        await screen.findByRole('heading', { name: 'spaces' })
+        expect(container.querySelectorAll('main')).toHaveLength(1)
+    })
+
     it('leads to the lighting desk only when a desk on this machine answers', async () => {
         listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
         probeLightingDesk.mockResolvedValue(true)

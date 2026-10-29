@@ -146,6 +146,12 @@ describe('StudioHub', () => {
         })
     })
 
+    it('renders exactly one main region', async () => {
+        const { container } = render(<StudioHub spaceId="gallery" />)
+        await screen.findByRole('main')
+        expect(container.querySelectorAll('main')).toHaveLength(1)
+    })
+
     // The doors audit (2026-08-21): this button promised "The node editor" and
     // landed on /{space}/raw — the localStorage scratch canvas — instead of the
     // space's node project list one segment deeper. The label is a list promise.
