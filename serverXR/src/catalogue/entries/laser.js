@@ -143,6 +143,14 @@ module.exports = [
     note: LOCAL
   },
   {
+    route: "GET /laser/lib/laser.js",
+    summary: "the desk's drawing code for its page (shared/laserFrame, laserShapes, laserLook as one script): the bank's tiles play every look as the cubes would",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: LOCAL
+  },
+  {
     route: "POST /laser/desk/api/go",
     summary: "put a look of the bank on the cubes: { look } — the desk draws it every 50 ms as the Out \"desk\" (a cube another Out holds refuses it)",
     reach: "private",
