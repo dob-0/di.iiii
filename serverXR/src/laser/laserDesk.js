@@ -177,7 +177,18 @@ const SEED_LOOKS = [
     // The same evening: "add animations of 5 vertcal lines, and to many spots, wobbling lines as well".
     { id: 'lines', name: 'Lines', shape: 'lines', colour: '#ff2030', size: 0.5 },
     { id: 'spots', name: 'Spots', shape: 'spots', colour: '#ffb020', size: 0.5 },
-    { id: 'wobble', name: 'Wobble', shape: 'wobble', colour: '#20d8ff', size: 0.5 }
+    { id: 'wobble', name: 'Wobble', shape: 'wobble', colour: '#20d8ff', size: 0.5 },
+    // 2026-10-30: "more scenes like complex ones but minimalistic lines circle dots". Scenes plays five of them in turn,
+    // four bars each.
+    { id: 'planets', name: 'Planets', shape: 'planets', colour: '#20d8ff', size: 0.5, points: 400 },
+    { id: 'pendulum', name: 'Pendulum', shape: 'pendulum', colour: '#ffffff', size: 0.5, points: 400 },
+    { id: 'bounce', name: 'Bounce', shape: 'bounce', colour: '#ff2030', size: 0.5, points: 400 },
+    { id: 'radar', name: 'Radar', shape: 'radar', colour: '#ffb020', size: 0.5, points: 400 },
+    { id: 'constellation', name: 'Constellation', shape: 'constellation', colour: '#ff30c0', size: 0.5, points: 400 },
+    { id: 'clock', name: 'Clock', shape: 'clock', colour: '#ffffff', size: 0.5, points: 400 },
+    { id: 'horizon', name: 'Horizon', shape: 'horizon', colour: '#ffb020', size: 0.5, points: 400 },
+    { id: 'morse', name: 'Morse', shape: 'morse', colour: '#20d8ff', size: 0.5, points: 400 },
+    { id: 'scenes', name: 'Scenes', shape: 'planets,pendulum,radar,constellation,horizon', cycle: 16, colour: '#ff30c0', size: 0.5, points: 400 }
 ].map((look) => normaliseLook(look))
 // The seed looks a bank saved before `seeded` was kept (2026-10-29 evening) had been offered: the first fourteen.
 const FIRST_SEEDS = ['ring', 'star', 'fan', 'wave', 'triangle', 'square', 'spiral', 'scan', 'galaxy', 'sunflower', 'noisy', 'grid', 'td-cycle', 'pairs']

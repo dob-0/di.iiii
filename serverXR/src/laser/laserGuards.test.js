@@ -280,12 +280,38 @@ describe('the Laser node\'s shapes, as the guards draw them, still pass the stil
     // 2026-10-29: the minimal figures (arc … chevron, glint) and the sparkles. At 0.5 the bars put 7.3 % in one window
     // (a level line's end dwell and the hop to the next), more than the twelve's 6.4 % and far from the 50 % stop.
     it('the shapes added on 2026-10-29 keep the headroom: figures 7.3 % / 16.3 % / 32.0 %, sparkles 4.1 % and 7.7 % at their smallest', () => {
-        const figures = LASER_SHAPES.slice(12).filter((s) => !MARK_SHAPES.includes(s))
+        const marks = ['sparkle', 'twinkle', 'spots']
+        const figures = LASER_SHAPES.slice(12, 24).filter((s) => !marks.includes(s))
         expect(worstOf(figures, 0.5)).toBeCloseTo(0.073, 2)
         expect(worstOf(figures, 0.1)).toBeCloseTo(0.163, 2)
         expect(worstOf(figures, 0.05)).toBeCloseTo(0.32, 2)
-        expect(worstOf(MARK_SHAPES, 0.5)).toBeCloseTo(0.041, 2)
-        expect(worstOf(MARK_SHAPES, MARK_MIN_SIZE)).toBeCloseTo(0.077, 2)
+        expect(worstOf(marks, 0.5)).toBeCloseTo(0.041, 2)
+        expect(worstOf(marks, MARK_MIN_SIZE)).toBeCloseTo(0.077, 2)
+    })
+    // 2026-10-30: the scenes of lines, circles and dots (planets … morse). A dot is a small ring that shrinks into the
+    // window with the picture; the lines and circles around it keep the frame a stroke, morse's dashes only from
+    // MARK_MIN_SIZE (it is a mark shape). They move on the beat, so they are held at every quarter beat as well, as sent.
+    const SCENES = LASER_SHAPES.slice(24)
+    it('the scenes keep the headroom: 6.1 % / 20.1 % / 33.5 %, morse 6.9 % and 15.1 % at its smallest', () => {
+        expect(SCENES).toEqual(['planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse'])
+        const figures = SCENES.filter((s) => !MARK_SHAPES.includes(s))
+        expect(worstOf(figures, 0.5)).toBeCloseTo(0.061, 2)
+        expect(worstOf(figures, 0.1)).toBeCloseTo(0.201, 2)
+        expect(worstOf(figures, 0.05)).toBeCloseTo(0.335, 2)
+        expect(worstOf(['morse'], 0.5)).toBeCloseTo(0.069, 2)
+        expect(worstOf(['morse'], MARK_MIN_SIZE)).toBeCloseTo(0.151, 2)
+    })
+    it('the scenes as sent are never still at any quarter beat over 16, and never put 40 % in one window', () => {
+        const plan = at(30000)
+        for (const shape of SCENES) {
+            for (const size of MARK_SHAPES.includes(shape) ? [0.5, MARK_MIN_SIZE] : [0.5, 0.1, 0.05]) {
+                for (let beat = 0; beat < 16; beat += 0.25) {
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape, size, height: 0.5, points: 300, beat }), { budget: null }).points, normaliseZone()).points, plan).points
+                    expect(stillBeams(frame), `${shape} ${size} beat ${beat}`).toEqual([])
+                    expect(dwellSpots(frame, { minShare: 0 })[0].share, `${shape} ${size} beat ${beat}`).toBeLessThan(0.4)
+                }
+            }
+        }
     })
     // As the desk and Laser Out send them: flattened, a blank point before every mark, so the frame's last mark never
     // joins its first into one stroke when the frame loops.
@@ -453,7 +479,7 @@ describe('round 2: the review\'s findings (reproduced first with the reviewer\'s
         const parsed = proto.parseFullInfo(infoAnswer(info))
         expect(parsed).toMatchObject({ dacRate: 35000, maxDacRate: 35000, rxBufferSize: 6000, rxBufferFree: 6000 })
         expect(g.frameBudget(parsed.dacRate, parsed.rxBufferSize)).toBe(2333)
-        expect(LASER_SHAPES.length).toBe(24)
+        expect(LASER_SHAPES.length).toBe(32)
         for (const shape of LASER_SHAPES) {
             const rig = armed(ONE, info)
             rig.engine.setFrame('all', generateShape({ shape, size: 0.5, height: 0.5, points: 1992 }))

@@ -2346,10 +2346,11 @@ export const NODE_TYPES = {
         category: 'geometry',
         runtime: 'any',
         singleton: false,
-        keywords: ['laser', 'shape', 'circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid', 'arc', 'cross', 'bars', 'rings', 'corners', 'chevron', 'glint', 'sparkle', 'twinkle', 'lines', 'spots', 'wobble', 'animation', 'rainbow', 'scenes', 'beam', 'draw', 'frame', 'lasercube'],
+        keywords: ['laser', 'shape', 'circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid', 'arc', 'cross', 'bars', 'rings', 'corners', 'chevron', 'glint', 'sparkle', 'twinkle', 'lines', 'spots', 'wobble', 'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse', 'animation', 'rainbow', 'scenes', 'beam', 'draw', 'frame', 'lasercube'],
         inputs: [
             // One of: circle, line, square, triangle, star, wave, fan, spiral, galaxy, sunflower, noisy, grid, arc, cross,
-            // bars, rings, corners, chevron, glint, sparkle, twinkle, lines, spots, wobble — or a comma list of them that plays in turn every
+            // bars, rings, corners, chevron, glint, sparkle, twinkle, lines, spots, wobble, and the scenes planets, pendulum, bounce,
+            // radar, constellation, clock, horizon, morse — or a comma list of them that plays in turn every
             // `cycle` seconds (shared/laserShapes.cjs).
             { id: 'shape',    type: 'string', label: 'Shape',    default: 'circle' },
             { id: 'size',     type: 'number', label: 'Size',     default: 0.5 },
@@ -2364,7 +2365,8 @@ export const NODE_TYPES = {
             // Brightness 0..1 — Sound's volume wired here makes the shape breathe.
             { id: 'level',    type: 'number', label: 'Level',    default: 1 },
             { id: 'points',   type: 'number', label: 'Points',   default: 120 },
-            // Galaxy's spirals, noisy's rings, the bars, rings, sparkle stars, lines or spots; 0 is the shape's own number.
+            // Galaxy's spirals, noisy's rings, the bars, rings, sparkle stars, lines, spots, or a scene's pendulums, dots or
+            // places; 0 is the shape's own number.
             { id: 'copies',   type: 'number', label: 'Copies',   default: 0 },
             // The hue runs along the path and drifts with time (TouchDesigner's COLORS ramp).
             { id: 'rainbow',  type: 'boolean', label: 'Rainbow', default: false },

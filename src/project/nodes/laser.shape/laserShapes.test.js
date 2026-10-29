@@ -277,6 +277,122 @@ describe('the minimal figures and the sparkles (2026-10-29)', () => {
     })
 })
 
+describe('the scenes: lines, circles and dots (2026-10-30)', () => {
+    const SCENES = ['planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse']
+    const isLit = (p) => p[2] + p[3] + p[4] > 0
+    const strokes = (points) => {
+        const out = [[]]
+        for (const p of points) { if (!isLit(p)) out.push([]); else out[out.length - 1].push(p) }
+        return out.filter((s) => s.length)
+    }
+    // The dots drawn as strokes of their own (bounce, radar, the stars, morse): closed rings 0.24 across at size 1.
+    const dots = (points) => strokes(points)
+        .filter((s) => Math.hypot(s[0][0] - s[s.length - 1][0], s[0][1] - s[s.length - 1][1]) < 1e-9)
+        .map((s) => {
+            const x = (Math.max(...s.map((p) => p[0])) + Math.min(...s.map((p) => p[0]))) / 2
+            const y = (Math.max(...s.map((p) => p[1])) + Math.min(...s.map((p) => p[1]))) / 2
+            return { x, y, r: Math.max(...s.map((p) => Math.hypot(p[0] - x, p[1] - y))) }
+        })
+        .filter((d) => d.r < 0.13)
+    const same = (a, b, digits = 9) => {
+        expect(a).toHaveLength(b.length)
+        a.forEach((p, i) => p.forEach((v, k) => expect(v).toBeCloseTo(b[i][k], digits)))
+    }
+
+    it('every scene at every count and every eighth of a beat is a lit frame inside the field and the point cap', () => {
+        for (const shape of SCENES) {
+            for (let copies = 0; copies <= 8; copies += 1) {
+                for (let beat = 0; beat < 32; beat += 0.125) {
+                    const points = generateShape({ shape, size: 1, points: 300, copies, beat })
+                    expect(normaliseFramePoints(points).dropped, `${shape} ×${copies} beat ${beat}`).toBe(0)
+                    expect(points.some(isLit), `${shape} ×${copies} beat ${beat}`).toBe(true)
+                }
+            }
+            expect(generateShape({ shape, size: 1, points: FRAME_MAX_POINTS, copies: 8, beat: 2 }).length).toBeLessThanOrEqual(FRAME_MAX_POINTS)
+        }
+    })
+
+    it('no two dots ever touch: bounce, radar, the stars and morse at every count, every eighth of a beat over 64 beats', () => {
+        for (const shape of ['bounce', 'radar', 'horizon', 'morse']) {
+            for (let copies = 0; copies <= 8; copies += 1) {
+                for (let beat = 0; beat < 64; beat += 0.125) {
+                    const d = dots(generateShape({ shape, size: 1, points: 600, copies, beat }))
+                    for (let i = 0; i < d.length; i += 1) {
+                        for (let j = i + 1; j < d.length; j += 1) {
+                            expect(Math.hypot(d[i].x - d[j].x, d[i].y - d[j].y), `${shape} ×${copies} beat ${beat}`).toBeGreaterThan(d[i].r + d[j].r)
+                        }
+                    }
+                }
+            }
+        }
+    })
+
+    it('planets, pendulum, bounce and constellation glide: nothing jumps at the beat', () => {
+        for (const shape of ['planets', 'pendulum', 'bounce', 'constellation']) {
+            for (const beat of [1, 2, 3, 7, 12]) {
+                same(generateShape({ shape, points: 300, beat: beat - 1e-7 }), generateShape({ shape, points: 300, beat }), 4)
+            }
+        }
+    })
+
+    it('planets and pendulum come round every 16 beats; the constellation moves one dot a beat', () => {
+        for (const shape of ['planets', 'pendulum']) same(generateShape({ shape, points: 300, beat: 3.3 }), generateShape({ shape, points: 300, beat: 19.3 }))
+        // Resting in the second half of a beat, and the dots that are not this beat's never move.
+        same(generateShape({ shape: 'constellation', points: 300, beat: 5.6 }), generateShape({ shape: 'constellation', points: 300, beat: 5.95 }))
+        expect(generateShape({ shape: 'constellation', points: 300, beat: 5.25 })).not.toEqual(generateShape({ shape: 'constellation', points: 300, beat: 5 }))
+    })
+
+    it('clock: the hands jump on the beat and hold between; the short hand moves once a bar', () => {
+        const at = (beat) => generateShape({ shape: 'clock', points: 300, beat })
+        same(at(5.1), at(5.9))
+        expect(at(6)).not.toEqual(at(5.9))
+        // The ring starts at the long hand, so where the ring stroke starts says where the long hand points.
+        const ringStart = (beat) => strokes(at(beat))[1][0]
+        expect(ringStart(0)[0]).toBeCloseTo(0, 9)
+        expect(ringStart(3)[0]).toBeCloseTo(0.5, 9) // a quarter turn, clockwise
+        expect(strokes(at(4))[0][0]).not.toEqual(strokes(at(3))[0][0]) // the short hand's tip
+        expect(strokes(at(3))[0][0]).toEqual(strokes(at(0))[0][0])
+    })
+
+    it('radar: each dot is lit from when the hand passes it until half a turn later', () => {
+        for (let beat = 0; beat < 32; beat += 0.125) {
+            const hand = Math.PI / 2 - (2 * Math.PI * beat) / 4
+            const d = dots(generateShape({ shape: 'radar', size: 1, points: 600, beat }))
+            expect(d.length).toBeLessThanOrEqual(4)
+            // A dot's centre read off its drawn points is a few thousandths out, so a dot just lit may read a hair ahead.
+            for (const { x, y } of d) {
+                const behind = (((Math.atan2(y, x) - hand) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
+                expect(behind < Math.PI + 0.05 || behind > 2 * Math.PI - 0.05, `beat ${beat}: ${behind}`).toBe(true)
+            }
+        }
+        expect(dots(generateShape({ shape: 'radar', size: 1, points: 600, beat: 7 })).length).toBeGreaterThan(0)
+    })
+
+    it('horizon: nothing lit under the line; the stars are out only while the sun is more than half down', () => {
+        for (let beat = 0; beat < 32; beat += 0.25) {
+            const points = generateShape({ shape: 'horizon', size: 1, points: 300, beat })
+            for (const p of points.filter(isLit)) expect(p[1], `beat ${beat}`).toBeGreaterThanOrEqual(-0.3 - 1e-9)
+            const sun = -0.15 - 0.65 * Math.cos((2 * Math.PI * beat) / 16)
+            expect(dots(points), `beat ${beat}`).toHaveLength(sun < -0.3 ? 3 : 0)
+        }
+    })
+
+    it('morse: a row of four marks on the beat; it glides one place left, the first mark gone, and lands where the next beat starts', () => {
+        const at = (beat) => strokes(generateShape({ shape: 'morse', size: 1, points: 300, beat }))
+        expect(at(4)).toHaveLength(4)
+        expect(at(4.25)).toHaveLength(3)
+        expect(at(4.75)).toHaveLength(3)
+        const resting = at(4.999)
+        const next = at(5)
+        expect(next).toHaveLength(4)
+        resting.forEach((mark, i) => expect(mark[0][0]).toBeCloseTo(next[i][0][0], 9))
+    })
+
+    it('without a beat the scenes run on time at 120 BPM', () => {
+        for (const shape of SCENES) expect(generateShape({ shape, time: 3.3 })).toEqual(generateShape({ shape, beat: 6.6 }))
+    })
+})
+
 describe('height', () => {
     it('lifts a shape up the field; at 0.5 a size-0.5 circle sits wholly in the upper half (the keep-in zone)', async () => {
         const { generateShape } = await import('./laserShapes.js')

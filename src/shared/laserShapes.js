@@ -19,11 +19,14 @@ const LASER_SHAPES = [
     'arc', 'cross', 'bars', 'rings', 'corners', 'chevron', 'glint', 'sparkle', 'twinkle',
     // Moving on their own, on the beat (the owner: "add animations of 5 vertcal lines, and to many spots, wobbling lines").
     'lines', 'spots', 'wobble',
+    // Scenes of a few lines, circles and dots that move on the beat (2026-10-30, the owner: "more scenes like complex ones
+    // but minimalistic lines circle dots").
+    'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse',
 ]
 // The shapes made of small marks. Below MARK_MIN_SIZE their smallest mark is inside the engine's still-beam window
 // (0.6°, about 0.032 of the field: laserEngine.js), and when every lit mark is, the frame is dots only: the engine blanks
 // the cube until the picture grows again (laser.test.js). Every other shape stays a stroke down to size 0.05.
-const MARK_SHAPES = ['sparkle', 'twinkle', 'spots']
+const MARK_SHAPES = ['sparkle', 'twinkle', 'spots', 'morse']
 const MARK_MIN_SIZE = 0.15
 // A shape name may be a comma list ('galaxy,sunflower,noisy,grid'): with `cycle` seconds each shape plays in turn,
 // the way TD's switch1 steps through its four scenes on a slow oscillator.
@@ -129,6 +132,8 @@ const markQuarter = (n, marks) => clamp(Math.floor(n / (4 * marks)), 3, 12)
 // A spot is a small ring, not a dot: a dot is a still beam (the engine's guard). 0.12 is the smallest that is still a
 // stroke at MARK_MIN_SIZE (0.24 × 0.15 = 0.036 of the field, over the 0.032 window, at any turn).
 const SPOT_R = 0.12
+// Morse's dash: still a stroke at MARK_MIN_SIZE turned 45°, where its box is smallest (0.34 × 0.15 / √2 = 0.036 of the field).
+const DASH = 0.34
 // The places spots rest on: a honeycomb 0.36 apart inside the circle (19 places), so resting spots keep half a spot
 // between them. At 0.3 apart they all but touched and the spots read as a clump.
 const SPOT_PLACES = (() => {
@@ -143,6 +148,33 @@ const SPOT_PLACES = (() => {
     }
     return out
 })()
+
+// The scenes' parts. A path's length, and paths as strokes with the n points shared out by length, so every part is
+// equally bright (each at least `least`, and never more than n in all once n covers that).
+const lengthOf = (path) => path.slice(1).reduce((sum, p, i) => sum + Math.hypot(p[0] - path[i][0], p[1] - path[i][1]), 0)
+const byLength = (paths, n, least = 8) => {
+    const lengths = paths.map(lengthOf)
+    const total = lengths.reduce((sum, l) => sum + l, 0) || 1
+    const spare = Math.max(0, n - least * paths.length)
+    return paths.map((p, i) => along(p, least + Math.floor((spare * lengths[i]) / total)))
+}
+// A circle round (x, y) of radius r from angle `from`, `turns` times round (negative: clockwise), as a path.
+const arcPath = (x, y, r, from, turns = 1) => {
+    const steps = Math.max(8, Math.ceil(48 * Math.abs(turns)))
+    return Array.from({ length: steps + 1 }, (_, i) => {
+        const a = from + (i / steps) * TAU * turns
+        return [x + Math.cos(a) * r, y + Math.sin(a) * r]
+    })
+}
+// A line from `from` that ends at the edge of the dot at `dot` and runs on once round it: a string and its dot in one stroke.
+const toDot = (from, dot) => [from, ...arcPath(dot[0], dot[1], SPOT_R, Math.atan2(from[1] - dot[1], from[0] - dot[0]))]
+// A dot as a stroke of its own, starting on the side that faces `from` (the end of the stroke before it).
+const dotFrom = (dot, from) => arcPath(dot[0], dot[1], SPOT_R, Math.atan2(from[1] - dot[1], from[0] - dot[0]))
+// The first half of each beat eased from 0 to 1, as the spots glide, then 1 while the beat rests.
+const glideOf = (beat) => {
+    const f = clamp((beat - Math.floor(beat)) * 2, 0, 1)
+    return f * f * (3 - 2 * f)
+}
 
 // Each builder returns strokes: arrays of [x, y] drawn lit, in a unit circle.
 // A stroke after the first is reached by a blank move.
@@ -406,6 +438,149 @@ const STROKES = {
             })
             return i % 2 === 0 ? line : line.reverse()
         })
+    },
+    // The scenes: a few lines, circles and dots each, moving on the beat. A dot is a small ring (SPOT_R), as the spots are,
+    // and it only moves: it never squashes, smears or fades.
+    // `copies` circles inside each other (3), a dot riding each: the outer one round in 16 beats, each ring in twice as fast
+    // and the other way. A ring stops at its dot's edge and runs on once round the dot: one stroke a ring. The rings are
+    // 0.29 apart, so two dots (0.24 across) never touch.
+    planets: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 3, 1, 3))
+        return byLength(Array.from({ length: count }, (_, i) => {
+            const r = ((1 - SPOT_R) * (count - i)) / count
+            const a = Math.PI / 2 + ((i % 2 ? -1 : 1) * TAU * beat * 2 ** i) / 16
+            // The ring meets its dot 2·asin(ρ / 2r) either side of the dot's centre.
+            const gap = 2 * Math.asin(SPOT_R / (2 * r))
+            const ring = arcPath(0, 0, r, a + gap, 1 - (2 * gap) / TAU)
+            return [...ring, ...dotFrom([Math.cos(a) * r, Math.sin(a) * r], ring[ring.length - 1]).slice(1)]
+        }), n)
+    },
+    // `copies` pendulums (5) hung from one point under a short bar, each a line down to a dot. The longest is 1.75, each
+    // next one shorter by 0.3 (0.26 at six), so two dots never touch. They swing 26° each way, the i-th 8 + i times in 16
+    // beats: they set off as one line, fan out into waves and fall back into one line every 16 beats.
+    pendulum: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 5, 1, 6))
+        const pivot = [0, 0.95]
+        const step = count > 1 ? Math.min(0.3, 1.3 / (count - 1)) : 0
+        const paths = [[[-0.3, pivot[1]], [0.3, pivot[1]]]]
+        for (let i = 0; i < count; i += 1) {
+            const length = 1.75 - i * step
+            const swing = 0.45 * Math.cos((TAU * (8 + i) * beat) / 16)
+            paths.push(toDot(pivot, [pivot[0] + Math.sin(swing) * length, pivot[1] - Math.cos(swing) * length]))
+        }
+        return byLength(paths, n)
+    },
+    // A floor and `copies` dots (3) bouncing on it, each in its own lane: one bounce a beat, up 1.5 and down again as a
+    // thrown ball goes, each dot a share of a beat behind the one before.
+    bounce: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 3, 1, 6))
+        const floor = -0.85
+        const lane = 2 / count
+        const paths = [[[-1, floor], [1, floor]]]
+        for (let i = 0; i < count; i += 1) {
+            const f = beat - i / count - Math.floor(beat - i / count)
+            const last = paths[paths.length - 1]
+            paths.push(dotFrom([-1 + lane * (i + 0.5), floor + SPOT_R + 6 * f * (1 - f)], last[last.length - 1]))
+        }
+        return byLength(paths, n)
+    },
+    // A circle and a hand that sweeps round it once a bar (4 beats), clockwise from the top, with `copies` dots (4, at
+    // most 4), one in each slice of the sweep. A dot lights as the hand passes it and goes out half a turn later; on the
+    // next turn it comes back somewhere new in its slice. Dots sit 0.45 or more from the centre and in the middle 60 % of
+    // their slice, so two that are out together never touch. The hand and the circle are one stroke.
+    radar: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 4, 1, 4))
+        const turns = beat / 4
+        const hand = Math.PI / 2 - TAU * turns
+        const paths = [[[0, 0], ...arcPath(0, 0, 1, hand, -1)]]
+        for (const k of [Math.floor(turns) - 1, Math.floor(turns)]) {
+            for (let i = 0; i < count; i += 1) {
+                const at = k + (i + 0.2 + 0.6 * hash01(i, k, 11)) / count
+                if (turns < at || turns >= at + 0.5) continue
+                const a = Math.PI / 2 - TAU * at
+                const d = 0.45 + 0.4 * hash01(i, k, 12)
+                const last = paths[paths.length - 1]
+                paths.push(dotFrom([Math.cos(a) * d, Math.sin(a) * d], last[last.length - 1]))
+            }
+        }
+        return byLength(paths, n)
+    },
+    // `copies` dots (5, 3 to 6), one in each slice of the circle, joined into a ring of lines. On every beat one of them,
+    // in turn, glides to a new place in its slice in the first half of the beat, and its lines go with it. Dots sit 0.5 or
+    // more from the centre in the middle half of their slice, so two never touch. One stroke: each line runs into a dot's
+    // edge, once round the dot and on round it (the short way) to where the next line leaves.
+    constellation: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 5, 3, 6))
+        const k = Math.floor(beat)
+        const ease = glideOf(beat)
+        const place = (i, born) => {
+            const a = Math.PI / 2 + (TAU * (i + 0.25 + 0.5 * hash01(i, born, 21))) / count
+            const d = 0.5 + 0.35 * hash01(i, born, 22)
+            return [Math.cos(a) * d, Math.sin(a) * d]
+        }
+        const dots = Array.from({ length: count }, (_, i) => {
+            const born = k - ((((k - i) % count) + count) % count)
+            const to = place(i, born)
+            if (born !== k) return to
+            const from = place(i, born - count)
+            return [from[0] + (to[0] - from[0]) * ease, from[1] + (to[1] - from[1]) * ease]
+        })
+        const towards = (i, j) => Math.atan2(dots[j][1] - dots[i][1], dots[j][0] - dots[i][0])
+        const path = []
+        for (let i = 0; i < count; i += 1) {
+            const enter = towards(i, (i + count - 1) % count)
+            const on = (((towards(i, (i + 1) % count) - enter) % TAU) + TAU) % TAU
+            path.push(...arcPath(dots[i][0], dots[i][1], SPOT_R, enter, on <= Math.PI ? 1 + on / TAU : -(2 - on / TAU)))
+        }
+        path.push(path[0])
+        return [along(path, n)]
+    },
+    // A clock face: a circle, a long hand with a dot at its end that ticks a twelfth of a turn on every beat, and a short
+    // hand that ticks a twelfth on every bar (4 beats). The hands jump on the beat; they never sweep.
+    clock: (n, { beat = 0 } = {}) => {
+        const long = Math.PI / 2 - (TAU * Math.floor(beat)) / 12
+        const short = Math.PI / 2 - (TAU * Math.floor(beat / 4)) / 12
+        const hands = [[Math.cos(short) * 0.45, Math.sin(short) * 0.45], ...toDot([0, 0], [Math.cos(long) * 0.72, Math.sin(long) * 0.72])]
+        return byLength([hands, arcPath(0, 0, 1, long)], n)
+    },
+    // A horizon and a sun (a circle, 0.4) that rises over it and sets again every 16 beats, starting down; what is under
+    // the line is not drawn. While the sun is more than half down, `copies` stars (3, at most 4) are out: dots in their own
+    // lanes of the sky, each night somewhere new.
+    horizon: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 3, 1, 4))
+        const line = -0.3
+        const r = 0.4
+        const y = -0.15 - 0.65 * Math.cos((TAU * beat) / 16)
+        const paths = [[[-1, line], [1, line]]]
+        // The sun from where it meets the line on the right, over the top, to where it meets it on the left.
+        const s = (line - y) / r
+        if (s <= -1) paths.push(arcPath(0, y, r, -Math.PI / 2))
+        else if (s < 1) paths.push(arcPath(0, y, r, Math.asin(s), (Math.PI - 2 * Math.asin(s)) / TAU))
+        if (y < line) {
+            const night = Math.round(beat / 16)
+            const lane = 1.6 / count
+            for (let i = 0; i < count; i += 1) {
+                const last = paths[paths.length - 1]
+                const star = [-0.8 + lane * (i + 0.35 + 0.3 * hash01(i, night, 31)), 0.3 + 0.55 * hash01(i, night, 32)]
+                paths.push(dotFrom(star, last[last.length - 1]))
+            }
+        }
+        return byLength(paths, n)
+    },
+    // A row of `copies` places (4, 2 to 5) holding dots and dashes, read like Morse. On every beat the row glides one place
+    // to the left in the first half of the beat: the first mark goes as the glide starts, and a new one comes in at the
+    // end when the next beat starts. Which marks are dashes comes from the hash, the same on every machine.
+    morse: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 4, 2, 5))
+        const gap = 2 / count
+        const k = Math.floor(beat)
+        const ease = glideOf(beat)
+        const paths = []
+        for (let j = ease > 0 ? 1 : 0; j < count; j += 1) {
+            const x = -1 + gap * (j + 0.5 - ease)
+            paths.push(hash01(k + j, 0, 41) < 0.5 ? arcPath(x, 0, SPOT_R, Math.PI) : [[x - DASH / 2, 0], [x + DASH / 2, 0]])
+        }
+        return byLength(paths, n)
     },
 }
 
