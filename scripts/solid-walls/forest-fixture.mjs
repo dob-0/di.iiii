@@ -9,6 +9,8 @@
 //
 // On aylmo the API is the scratch serverXR of `di-dev up <tree> --api scratch` (`di-dev ls` shows its port).
 // Method: the project is made through the same two routes the app uses: POST a project into a space, PUT its document.
+import { isMainModule } from '../lib/isMainModule.mjs'
+
 
 const arg = (name, fallback = null) => {
     const i = process.argv.indexOf(`--${name}`)
@@ -121,6 +123,6 @@ async function main() {
     console.log(JSON.stringify({ space, slug, id, entities: got?.entities?.length ?? null, solidWalls: got?.worldState?.solidWalls ?? null }))
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => { console.error(error.message); process.exit(1) })
 }
