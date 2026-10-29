@@ -142,9 +142,9 @@ plugins/di-games/
   skills/game-greybox/           stage 2
   skills/game-build-roblox/      stage 3, with scripts/new-game.sh and template/ (the game repo)
   skills/game-build-dii/         stage 3 for di.iiii: a stub
-  skills/game-playtest/          stage 4, with the test-plan and session-notes templates
+  skills/game-playtest/          stage 4, with the templates and scripts/scenario.sh (the scenario driver)
   skills/game-look/              stage 5, with scripts/check_assets.py
-  skills/game-release/           stage 6
+  skills/game-release/           stage 6, with release-template.md
 .claude-plugin/marketplace.json  (repo root) lists the plugin
 ```
 
