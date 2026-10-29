@@ -243,7 +243,7 @@ export default function SpaceContentsPage({ spaceId }) {
                 {canEdit && state.status !== 'error' && (
                     <p className="sc-aside">
                         <a className="sc-aside-link" href={buildStudioHubPath(spaceId)}>Open this space in Studio</a>
-                        {' '}— drafts, archived work, shelves and the trash are there.
+                        {' '}— drafts and older work are there too.
                     </p>
                 )}
 

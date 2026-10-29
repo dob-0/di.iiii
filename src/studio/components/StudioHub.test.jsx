@@ -1,4 +1,7 @@
 import React from 'react'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import StudioHub from './StudioHub.jsx'
@@ -395,6 +398,54 @@ describe('shelves and the trash', () => {
 
         fireEvent.click(screen.getByText('Bring it back'))
         await waitFor(() => expect(restoreProject).toHaveBeenCalledWith('gone'))
+    })
+
+    // UX S10 (F078, F031): the way back exists before a first delete, and Delete is a word.
+    it('shows the trash with 0 items, and the delete button says Delete', async () => {
+        listProjects.mockResolvedValue([{ id: 'a', title: 'Kept', updatedAt: Date.now(), source: 'project' }])
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 30 * 24 * 60 * 60 * 1000 })
+
+        render(<StudioHub spaceId="main" />)
+
+        fireEvent.click(await screen.findByText('Trash — 0'))
+        expect(await screen.findByText(/wait here for 30 days/i)).toBeTruthy()
+        expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
+    })
+
+    // UX S10 (F031): a project card is not a button holding buttons; its name opens it.
+    it('a project card is no button itself, and its name is the button that opens it', async () => {
+        listProjects.mockResolvedValue([{ id: 'a', title: 'Kept', updatedAt: Date.now(), source: 'project' }])
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 30 * 24 * 60 * 60 * 1000 })
+
+        render(<StudioHub spaceId="main" />)
+
+        const open = await screen.findByRole('button', { name: 'Kept' })
+        const card = open.closest('.sh-project-card')
+        expect(card.getAttribute('role')).not.toBe('button')
+        expect(card.getAttribute('tabindex')).toBeNull()
+        expect(card.querySelector('.sh-project-open')).toBe(open)
+    })
+
+    // UX S10 (CI fix): the name and its Rename and Delete share one row, so a long name, or a longer
+    // word in another language, wraps beside the two buttons instead of running under them — no reserve in px.
+    it('a project card keeps Rename and Delete in the name\'s row, not over it', async () => {
+        listProjects.mockResolvedValue([{ id: 'a', title: 'Kept', updatedAt: Date.now(), source: 'project' }])
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 30 * 24 * 60 * 60 * 1000 })
+
+        render(<StudioHub spaceId="main" />)
+
+        const head = (await screen.findByRole('button', { name: 'Kept' })).closest('.sh-project-head')
+        expect(head).toBeTruthy()
+        expect([...head.querySelectorAll('.sh-project-tools button')].map(b => b.textContent)).toEqual(['Rename', 'Delete'])
+
+        const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../styles/studio-hub.css'), 'utf8')
+        const rule = sel => css.match(new RegExp(`\\n${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`))?.[1] ?? ''
+        for (const sel of ['.sh-btn-rename', '.sh-btn-delete']) expect(rule(sel)).not.toMatch(/position\s*:\s*absolute/)
+        expect(rule('.sh-project-title')).not.toMatch(/padding-right/)
+        expect(rule('.sh-project-title')).toMatch(/overflow-wrap\s*:\s*anywhere/)
     })
 })
 
