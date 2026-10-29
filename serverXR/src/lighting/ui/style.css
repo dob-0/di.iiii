@@ -1064,8 +1064,6 @@ body.space .stage { cursor: grab; }
 }
 .popitem:hover, .popitem:focus-visible { background: var(--pane2); outline: none; }
 .popitem.danger { color: var(--danger); }
-/* an armed destructive row: the second press fires, anything else disarms it */
-.popitem.arm { background: #e0524a22; color: var(--danger); font-weight: 600; }
 .popedit { display: flex; gap: 6px; padding: 8px 12px; align-items: center; }
 .popedit input[type=text] { flex: 1; min-width: 0; }
 .popnum { display: flex; align-items: center; gap: 4px; flex: 1; color: var(--muted); font-size: 11px; }
@@ -1452,7 +1450,7 @@ button.ndrow { cursor: pointer; }
 button.ndrow:hover { outline: 1px solid var(--muted); }
 .ndlamps { font-size: 11px; color: var(--muted); }
 .ndlamps span { display: inline-flex; align-items: center; gap: 4px; }
-.nodegroup .sq.armed { background: var(--danger); border-color: var(--danger); color: #041012; font-weight: 600; }
+
 .nodegroup .sq.on { border-color: var(--accent); color: var(--accent); }
 @media (max-width: 700px) { .nodedetails .nodegrid { grid-template-columns: 1fr; max-height: none; } }
 
@@ -1473,3 +1471,10 @@ button.ndrow:hover { outline: 1px solid var(--muted); }
 .pxtile { display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px solid #00000055; min-width: 240px; flex: 1 1 240px; }
 .pxtile .px-dots { display: flex; height: 18px; gap: 1px; }
 .pxtile .px-label { font-size: 11px; color: var(--muted); }
+
+/* The one ask before something is lost (ui/ask.js): a bar at the foot, never a dialog that blocks the page. */
+.deskask { position: fixed; left: 12px; right: 12px; bottom: 16px; margin: 0 auto; max-width: 640px; z-index: 90; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 14px; background: var(--pane2); border: 1px solid var(--danger); border-radius: 0; box-shadow: 0 6px 24px #0008; }
+.deskask-text { flex: 1 1 240px; font-size: 14px; line-height: 1.35; white-space: pre-line; }
+.deskask button { min-height: 44px; min-width: 88px; padding: 0 16px; font: inherit; font-weight: 600; border-radius: 0; cursor: pointer; }
+.deskask-no { background: none; border: 1px solid var(--muted); color: var(--text); }
+.deskask-yes { background: var(--danger); border: 1px solid var(--danger); color: #041012; }   /* dark-on-fill, like .blackout.on */
