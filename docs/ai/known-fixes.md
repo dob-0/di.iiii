@@ -16,6 +16,21 @@ Not done: selecting a non-Geo standing node inside Studio (the top room stays `e
 Regression tests: `StructurePanel.test.jsx` ("lists what the scene shows"), `geoScope.test.js` ("what stands in the top room", incl. the marked Camera, and the Edit in Nodes button).
 Replaced nothing: entity rows, rename, hide, lock, drag-to-group and the empty line for a truly empty project are unchanged.
 
+## Flat pages started 3D, cards booted a whole app each, "no forward" logged a red error (UX audit F136, F137, F138, F155; 2026-10-29)
+
+Symptom: `/spaces` loaded 336 requests / 2 MB (a hidden copy of the app per card); the wiki and front page started a WebGL canvas as
+decoration; every space open logged `404 /api/resolve/<space>` in red; `verify:surfaces` failed on an artist page's Cloudflare beacon.
+Cause: cards without a cover booted `?preview=1` frames to take a still; `WikiPage` mounted `GridFloorBackground` always; the server
+answered "nothing to forward" with a 404; the checker counted every console error, whoever logged it.
+Fix: a card with no picture draws a calm still (`SpaceHub.jsx` `ssh-card-still`) and the 3D opens by pressing it (`SpaceCardLive`);
+the still also prints the space's own one-line blurb; wiki AND front page flat unless `?scene=1` (`utils/decorative3d.js`; on the front page the door "Step inside" still brings the room);
+`GET /api/resolve/:space` answers 200 `{ movedTo: null }` for nothing to forward (404 only for a space that does not exist; old clients
+read both); `scripts/verifySurfacesFilters.mjs` drops console lines from another origin.
+Kept as modes (nothing is lost): `?previews=live` or `localStorage['dii:space-card-previews']='live'` = the earlier boot-a-frame cards
+(`studio/utils/spaceCardMode.js`); `?scene=1` = the 3D backdrop on wiki and front page.
+Regression tests (fail on the old code, run): `SpaceHub.test.jsx` ("calm still"), `WikiPage.test.jsx` ("backdrop"),
+`serverXR/src/projectMoveContracts.test.js` (nothing-to-forward is 200), `scripts/verifySurfacesFilters.test.js`, `utils/decorative3d.test.js`.
+
 ## A page project drew the 3D tools around its page (Studio, UX audit F017 / F001 / F139, slice S16 PR a, 2026-10-29)
 
 Symptom: a project that is a web page (the cinema-house copy) opened Studio on its page (#1161) but still drew the 3D tools over it:

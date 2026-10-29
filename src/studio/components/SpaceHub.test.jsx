@@ -2,6 +2,7 @@ import React from 'react'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SpaceHub, { resetSpaceCardPosters } from './SpaceHub.jsx'
+import { SPACE_CARD_PREVIEWS_KEY } from '../utils/spaceCardMode.js'
 import { WORKS } from '../../works/works.js'
 
 // Several tests here render the thirteen-card hub, which mounts thirteen preview
@@ -174,6 +175,9 @@ describe('SpaceHub', () => {
         sandboxSummary = null
         projectTitlesById = {}
         localStorage.clear()
+        // The tests below are about the 'live' card mode (a hidden app per card
+        // takes the picture). The calm-still default has its own tests at the end.
+        localStorage.setItem(SPACE_CARD_PREVIEWS_KEY, 'live')
         authState = {
             authenticated: true,
             type: 'session',
@@ -1455,6 +1459,52 @@ describe('SpaceHub', () => {
             render(<SpaceHub />)
             await waitFor(() => expect(rowOf('theirs')).toBeTruthy())
             expect(manageBtn('theirs')).toBeUndefined()
+        })
+    })
+
+    describe('calm still (the default for a card with no picture)', () => {
+        const stubVisible = () => vi.stubGlobal('IntersectionObserver', class {
+            constructor(callback) { this.callback = callback }
+            observe(target) { this.callback([{ isIntersecting: true, target }]) }
+            unobserve() {}
+            disconnect() {}
+        })
+
+        it('draws a still with the name and starts no hidden app; pressing it opens the 3D in one step', async () => {
+            localStorage.removeItem(SPACE_CARD_PREVIEWS_KEY)
+            stubVisible()
+            try {
+                listServerSpaces.mockResolvedValue([
+                    { id: 'showroom', label: 'Showroom', isOwner: true, isPublic: true, publishedProjectId: 'p1', blurb: 'A hall for light.' },
+                ])
+                render(<SpaceHub />)
+                const card = await findCard('showroom')
+                await waitFor(() => expect(card.querySelector('[data-card-still]')).not.toBeNull())
+                // give the boot effect every chance to start a frame
+                await new Promise(resolve => setTimeout(resolve, 50))
+                expect(card.querySelector('.ssh-card-preview iframe')).toBeNull()
+                expect(card.querySelector('[data-card-still]').textContent).toContain('Showroom')
+                expect(card.querySelector('[data-card-still]').textContent).toContain('A hall for light.')
+                fireEvent.click(card.querySelector('.ssh-card-preview'))
+                await waitFor(() => expect(card.querySelector('.ssh-card-live-frame iframe')).not.toBeNull())
+            } finally {
+                vi.unstubAllGlobals()
+            }
+        })
+
+        it('keeps the earlier behaviour as a mode: previews=live boots the card frame again', async () => {
+            stubVisible()
+            try {
+                listServerSpaces.mockResolvedValue([
+                    { id: 'showroom', label: 'Showroom', isOwner: true, isPublic: true, publishedProjectId: 'p1' },
+                ])
+                render(<SpaceHub />)
+                const card = await findCard('showroom')
+                await waitFor(() => expect(card.querySelector('.ssh-card-preview iframe')).not.toBeNull())
+                expect(card.querySelector('[data-card-still]')).toBeNull()
+            } finally {
+                vi.unstubAllGlobals()
+            }
         })
     })
 })
