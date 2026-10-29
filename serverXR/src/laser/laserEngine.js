@@ -508,7 +508,6 @@ const createLaserEngine = ({
         // last stream (the fraction carried), so a late tick sends the points it missed and the mean
         // rate is the DAC rate, not 600 / mean tick. A stall longer than CATCH_UP_MAX_MS is not
         // banked (the buffer would be past full), and the cube's free count still caps the send.
-        const perTick = Math.ceil((rate * TICK_MS) / 1000)
         const dt = c.streamAt === null ? TICK_MS : Math.min(Math.max(0, t - c.streamAt), CATCH_UP_MAX_MS)
         c.streamAt = t
         const due = c.streamCarry + (rate * dt) / 1000
