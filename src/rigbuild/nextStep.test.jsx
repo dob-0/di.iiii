@@ -174,3 +174,32 @@ describe('NextStep: who may write', () => {
         await waitFor(() => expect(applyOps).toHaveBeenCalledWith([{ type: 'noop', name: 'good.json' }]))
     })
 })
+
+// The next step's button is drawn in its page's own colours: nextStep.css reads custom properties (not the
+// platform's --di-* tokens) that each page that mounts it must set. The scenes deck set none, and its
+// button showed as bare text (2026-10-29 picture step). Each page's stylesheets, read as text.
+describe('the next step is a button on every rig page that shows it', () => {
+    const PAGES = {
+        'src/rigbuild/CardsSurface.jsx': ['src/rigbuild/plot.css', 'src/rigbuild/cards.css'],
+        'src/rigbuild/PlotSurface.jsx': ['src/rigbuild/plot.css'],
+        'src/rigbuild/ScenesDeck.jsx': ['src/rigbuild/scenes.css'],
+    }
+    const css = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '')
+    const reads = [...new Set([...css('src/rigbuild/nextStep.css').matchAll(/var\(\s*(--[\w-]+)\s*[,)]/g)].map((m) => m[1]))]
+        .filter((name) => !name.startsWith('--di-'))
+    it('knows every page that mounts it', () => {
+        const mounts = fs.readdirSync(path.join(ROOT, 'src/rigbuild'))
+            .filter((f) => /\.jsx$/.test(f) && !/\.test\.jsx$/.test(f) && f !== 'NextStep.jsx')
+            .filter((f) => /import NextStep from/.test(read(`src/rigbuild/${f}`)))
+            .map((f) => `src/rigbuild/${f}`)
+        expect(mounts.sort()).toEqual(Object.keys(PAGES).sort())
+    })
+    for (const [page, sheets] of Object.entries(PAGES)) {
+        it(`every page that mounts the next step sets the colours its CSS reads: ${page}`, () => {
+            const text = sheets.map(css).join('\n')
+            expect(reads.length).toBeGreaterThan(0)
+            const missing = reads.filter((name) => !new RegExp(`${name}\\s*:`).test(text))
+            expect(missing).toEqual([])
+        })
+    }
+})

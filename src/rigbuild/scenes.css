@@ -28,6 +28,11 @@
 .rigscenes-note { font-size: 12px; color: var(--sc-dim); border-left: 2px solid var(--sc-line); padding-left: 8px; margin-top: 8px; }
 .rigscenes-msg { min-height: 20px; margin: 6px 0; }
 
+/* The empty deck's next step (NextStep.jsx, nextStep.css) reads --ink, --paper and --soft; here they are the
+   deck's own colours, so its button is a button on this dark ground (without them it was bare text, 2026-10-29). */
+.rigscenes .rignext { --ink: var(--sc-tx); --paper: var(--sc-bg); --soft: var(--sc-dim); }
+.rigscenes .rignext-btn { min-height: 44px; }
+
 /* Every control: a rectangle, 44 px or more. */
 .rigscenes button,
 .rigscenes input[type='range'],

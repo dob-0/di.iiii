@@ -16,6 +16,11 @@ it, so script and button run one code), scenes → "put looks on the cue list" (
 read-only = links only, the server's write check). The scripts stay runnable from a terminal.
 Regression test: `src/rigbuild/nextStep.test.jsx` ("the empty rig pages name no developer script", "the script and the button run one code";
 4 of its 16 fail on origin/dev's page files).
+Picture fix (2026-10-29): on the empty scenes deck (desktop and phone) "put looks on the cue list" was bare text, no border, no fill.
+Cause: `nextStep.css` draws `.rignext-btn` with `var(--ink)`/`var(--paper)`; the plot and cards pages set them (`.rigplot`, plot.css),
+the scenes deck (`scenes.css`) has only its `--sc-*` colours. Fix: `scenes.css` `.rigscenes .rignext` maps `--ink/--paper/--soft` to the
+deck's own `--sc-tx/--sc-bg/--sc-dim` (and the deck's 44 px control height). Guard: `nextStep.test.jsx` "every page that mounts the next
+step sets the colours its CSS reads" (fails on the scenes.css before this fix).
 
 ## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
 
