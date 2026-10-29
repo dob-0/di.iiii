@@ -19,3 +19,11 @@ export const physicalKey = (event) => {
     if (/^Arrow(Up|Down|Left|Right)$/.test(code)) return code.toLowerCase()
     return typeof event.key === 'string' ? event.key.toLowerCase() : ''
 }
+
+/**
+ * The letter of a shortcut (Ctrl / Cmd + Z): what the layout types, as the browser's own shortcuts do. On a German layout the key that
+ * types 'z' sits at code KeyY and still undoes. A layout with no Latin letter (Armenian, Russian) falls back to the key's place.
+ * @param {{ code?: string, key?: string } | null | undefined} event
+ * @returns {string}
+ */
+export const shortcutLetter = (event) => (event && typeof event.key === 'string' && /^[a-z]$/i.test(event.key) ? event.key.toLowerCase() : physicalKey(event))
