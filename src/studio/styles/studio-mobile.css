@@ -221,6 +221,13 @@
     padding: 0 var(--di-space-1);
 }
 
+/* The Code sheet: its body is a column, so the editor takes the height left inside the sheet. */
+.smb-sheet[data-sheet="files"] .smb-sheet-body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
 .smb-sheet-body {
     overflow-y: auto;
     overscroll-behavior: contain;

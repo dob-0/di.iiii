@@ -100,6 +100,8 @@ describe('CodeEditorArea (CodeMirror)', () => {
             expect(rule('.di-code-editor')).not.toMatch(/max-height/)
             expect(rule('.di-code-editor .cm-editor')).toMatch(/min-height:\s*0/)
             const studio = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../styles/studio.css'), 'utf8')
+            const mobile = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../styles/studio-mobile.css'), 'utf8')
+            expect(mobile).toMatch(/\.smb-sheet\[data-sheet="files"\] \.smb-sheet-body\s*\{[^}]*flex-direction:\s*column/)
             expect(studio).toMatch(/\.sfp-shell\[data-window-key="files"\] \.sfp-content\s*\{[^}]*flex-direction:\s*column/)
             expect(rule('.di-code-editor .cm-editor .cm-scroller')).toMatch(/overflow:\s*auto/)
         })

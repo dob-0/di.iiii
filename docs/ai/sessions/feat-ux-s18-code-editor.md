@@ -27,3 +27,6 @@ Method source: CodeMirror 6 reference (codemirror.net/docs/ref) — tab-focus mo
 ## Not done / owed
 - The 680 KB cinema-house file in a browser, desktop and phone, before/after pictures: not taken by this builder (see S18-work.json notes).
 - "Whole page sent at each pause" is S31.
+
+## Round 2 (picture step)
+The editor now fills the free height of its own Code window (desktop) and Code sheet (phone) through a flex chain with min-height 0; the 70vh cap is gone. Nothing removed: the plain text box, find, opaque gutter stay.

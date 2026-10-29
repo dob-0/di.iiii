@@ -1035,7 +1035,7 @@ export default function StudioShell({
                         )}
                     </div>
                     {mobileSheet && (
-                        <div className="smb-sheet">
+                        <div className="smb-sheet" data-sheet={mobileSheet}>
                             <div className="smb-sheet-head">
                                 <span>{mobilePanels.find(([id]) => id === mobileSheet)?.[1]}</span>
                                 <button type="button" onClick={() => setMobileSheet(null)} aria-label="Close panel">×</button>
