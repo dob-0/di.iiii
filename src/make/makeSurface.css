@@ -896,3 +896,16 @@ body.is-make .account-btn-wrapper {
     .make-room-name-hy { font-size: var(--di-text-5); }
     .make-room-name-en { font-size: var(--di-text-2); }
 }
+
+/* Play (project/components/PlayButton.jsx): top right, over the room, a 44 px thumb target; the four words below stay as they were. */
+.make-surface .make-play {
+    position: absolute;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    right: 8px;
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 64px;
+}

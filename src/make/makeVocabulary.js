@@ -17,6 +17,8 @@ export const WORDS = {
     colour: say('ԳՈՒՅՆ', 'colour'),
     photo: say('ՆԿԱՐ', 'photo'),
     talk: say('ԽՈՍԵԼ', 'talk'),
+    // play / stop: UNCHECKED by an Armenian speaker (machine draft, 2026-10-29) — correct here, one place
+    play: say('ԽԱՂԱԼ', 'play'),
     nameQuestion: say('ի՞նչ է քո անունը', 'what is your name?'),
     nameDone: say('պատրաստ է', 'done'),
     nameSkip: say('հետո', 'later'),
