@@ -242,8 +242,9 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     )
     const geoRows = useMemo(() => geoChildren.map(geoChildRow), [geoChildren])
     const roomNodeRows = useMemo(
-        () => (insideGeo || !document ? [] : listRoomNodes(document).map(roomNodeRow)),
-        [insideGeo, document]
+        // Only where Studio draws them (graphRoom: never in a jam project).
+        () => (insideGeo || !geoAllowed || !document ? [] : listRoomNodes(document).map(roomNodeRow)),
+        [insideGeo, geoAllowed, document]
     )
     const geoSelectedNode = insideGeo ? (geoChildren.find((node) => node.id === geoSelectedId) || null) : null
     const geoSelectedRow = geoSelectedNode ? geoChildRow(geoSelectedNode) : null
