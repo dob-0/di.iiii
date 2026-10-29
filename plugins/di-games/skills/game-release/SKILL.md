@@ -24,6 +24,18 @@ checked.
    The account needs 2FA. (Sources 1.)
 2. **Publish privately.** Studio, File > Publish; icon, thumbnail, name, genre, description. A new
    experience starts private: only you, users with Edit access, and group members with rights. (2.)
+2a. **Studio's "Publish to Roblox As" dialog, as measured 2026-10-29** (Studio through Vinegar, two private releases).
+   Fields: Name, Description, Creator, Devices, Team Create (default ON), Data Sharing (default ON; it lets Roblox train its
+   generative AI on the experience). **Every one of them is the owner's decision, never the agent's**: name, text, creator
+   (a person or a group), devices, Team Create, Data Sharing. Read the defaults out to him; change nothing unasked.
+2b. **Private confirmation, three checks:** Studio's own state text "Only available to you and your collaborators"; the list in
+   Studio's Publish window shows the experience as Private; and the link `https://www.roblox.com/games/<placeId>` answers
+   HTTP 404 to a signed-out caller (`curl -s -o /dev/null -w '%{http_code}' <link>`). The ids come from Studio's log
+   (`placeid`, `universeid`); `apis.roblox.com/universes/v1/places/<placeId>/universe` confirms place to universe. A Manage Audience
+   window may follow the first publish: Done closes it.
+2c. **Play it yourself (Linux):** Sober opens a place with `roblox://experiences/start?placeId=<placeId>` (signed in as the owner's
+   account); join, take a picture of the first screen. A link a person cannot open is not "published".
+2d. **Record it** in `docs/release.md` (format: `${CLAUDE_SKILL_DIR}/release-template.md`, the one both games use).
 3. **Publish from a script (owed).** Open Cloud Place Publishing: `POST
    https://apis.roblox.com/universes/v1/{universeId}/places/{placeId}/versions?versionType=Published`,
    header `x-api-key`, body `.rbxl` (`application/octet-stream`) or `.rbxlx` (`application/xml`); the key

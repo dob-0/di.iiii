@@ -40,6 +40,9 @@ const run = (composes, env, extra = []) => {
     return { status: r.status, stderr: r.stderr, env: out }
 }
 
+// left unset in .env, so the compose defaults (http://client:8080/...) apply, as on the Mac
+const DOCKER_DEFAULTS = ['SHELL_URL', 'SITEMAP_BUILT_URL']
+
 describe('server-env.mjs', () => {
     it('prod: the base file alone, host facts replaced, hosted mode only', () => {
         const { status, env } = run([BASE], fakeEnv([BASE]), ['--set', 'MAX_UPLOAD_MB=95'])
@@ -73,6 +76,38 @@ describe('server-env.mjs', () => {
         expect(r.status).toBe(1)
         expect(r.stderr).toContain('DEV_AUTH_SESSION_SECRET is required')
         expect(r.env).toEqual({})
+    })
+
+    // 2026-10-29: the dev tier on the Mac had SHELL_URL=http://client:8080/index.html, a Docker
+    // name with no host there, so /serverXR/page/* answered 503 'shell unavailable' on every address
+    it('points every client:8080 value at the tier\'s own nginx (--nginx), for both tiers', () => {
+        for (const files of [[BASE], [BASE, DEV]]) {
+            const r = spawnSync(process.execPath, [SCRIPT, ...files.flatMap((c) => ['--compose', c]), '--env', fakeEnv(files, DOCKER_DEFAULTS), '--data-root', '/srv/data', '--nginx', '127.0.0.1:8081'], { encoding: 'utf8' })
+            expect(r.status).toBe(0)
+            expect(r.stdout).not.toContain('client:8080')
+            expect(r.stdout).toContain('SHELL_URL=http://127.0.0.1:8081/index.html\n')
+            expect(r.stdout).toContain('SITEMAP_BUILT_URL=http://127.0.0.1:8081/sitemap-built.xml\n')
+        }
+    })
+
+    it('refuses to write a client:8080 value when no --nginx is given, naming the keys', () => {
+        const r = run([BASE], fakeEnv([BASE], DOCKER_DEFAULTS))
+        expect(r.status).toBe(1)
+        expect(r.stderr).toContain('SHELL_URL, SITEMAP_BUILT_URL')
+        expect(r.env).toEqual({})
+    })
+
+    it('refuses only the host client itself, not a name that ends in client', () => {
+        const r = run([BASE], fakeEnv([BASE], DOCKER_DEFAULTS), ['--nginx', '127.0.0.1:8080', '--set', 'SHELL_URL=http://myclient:8080/x.html'])
+        expect(r.status).toBe(0)
+        expect(r.env.SHELL_URL).toBe('http://myclient:8080/x.html')
+    })
+
+    it('a --set value still wins over the --nginx rewrite; a bad --nginx is refused', () => {
+        const ok = run([BASE], fakeEnv([BASE], DOCKER_DEFAULTS), ['--nginx', '127.0.0.1:8080', '--set', 'SHELL_URL=http://127.0.0.1:9/x.html'])
+        expect(ok.status).toBe(0)
+        expect(ok.env.SHELL_URL).toBe('http://127.0.0.1:9/x.html')
+        expect(run([BASE], fakeEnv([BASE]), ['--nginx', 'http://x']).status).toBe(2)
     })
 
     it('refuses to let --set turn hosted mode local', () => {

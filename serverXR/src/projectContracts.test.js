@@ -1665,3 +1665,81 @@ describe('a plane that is a screen (components.surface)', () => {
         expect(screen.components.surface).toEqual({ surfaceId: 'srf-wall' })
     })
 })
+
+// ── A project name is unique only inside its own space ──
+// Added 2026-10-29 (ux-fix S21, finding F061; decision
+// docs/ai/decisions/2026-10-29-project-names-per-space.md). At a camp twenty
+// children, in twenty spaces, all type "my scene". Project ids stay global (every
+// /api/projects/:id link and every follow keys on them), so a person who types only
+// a name gets a free id when another space already holds it, and the name as the
+// project's short name, so /{space}/my-scene still opens it. A caller that names the
+// id (`slug`, `carried`) keeps the old answer: that id or a 409.
+describe('POST /api/spaces/:spaceId/projects — names per space', () => {
+    const json = { 'Content-Type': 'application/json' }
+    const post = (server, spaceId, body) => fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+        method: 'POST', headers: json, body: JSON.stringify(body)
+    })
+    const makeSpace = async (server, slug) => {
+        const made = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST', headers: json, body: JSON.stringify({ label: slug, slug })
+        })
+        expect(made.status).toBe(201)
+    }
+
+    it('lets two spaces each make "my scene" and an empty name, with no 409, and keeps the first id', async () => {
+        const server = await startServer()
+        await makeSpace(server, 'camp-ani')
+        await makeSpace(server, 'camp-aram')
+
+        const first = await post(server, 'camp-ani', { title: 'my scene', source: 'studio-v3' })
+        expect(first.status).toBe(201)
+        const firstProject = (await first.json()).project
+        expect(firstProject.id).toBe('my-scene')
+
+        const second = await post(server, 'camp-aram', { title: 'my scene', source: 'studio-v3' })
+        expect(second.status).toBe(201)
+        const secondProject = (await second.json()).project
+        expect(secondProject.id).toBe('my-scene-2')
+        expect(secondProject.title).toBe('my scene')
+        expect(secondProject.slug).toBe('my-scene')
+
+        // The first one's id and address are untouched; each space's address opens its own.
+        const byId = await (await fetch(`${server.baseUrl}/api/projects/my-scene`)).json()
+        expect(byId.project?.spaceId ?? byId.spaceId ?? byId.project?.space_id).toBe('camp-ani')
+        const ani = await (await fetch(`${server.baseUrl}/api/resolve/camp-ani/my-scene`)).json()
+        const aram = await (await fetch(`${server.baseUrl}/api/resolve/camp-aram/my-scene`)).json()
+        expect(JSON.stringify(ani)).toContain('"my-scene"')
+        expect(JSON.stringify(aram)).toContain('"my-scene-2"')
+
+        // An empty name is a real name in each space, never a clash.
+        for (const spaceId of ['camp-ani', 'camp-aram']) {
+            const untitled = await post(server, spaceId, { title: '', source: 'studio-v3' })
+            expect(untitled.status, spaceId).toBe(201)
+            expect((await untitled.json()).project.title).toBe('Untitled')
+            const again = await post(server, spaceId, { title: '', source: 'studio-v3' })
+            expect(again.status, spaceId).toBe(201)
+            expect((await again.json()).project.title).toBe('Untitled 2')
+        }
+    })
+
+    it('refuses the same name twice in one space, in plain words that name it', async () => {
+        const server = await startServer()
+        await makeSpace(server, 'camp-ani')
+        expect((await post(server, 'camp-ani', { title: 'My Scene' })).status).toBe(201)
+        const twice = await post(server, 'camp-ani', { title: 'my scene' })
+        expect(twice.status).toBe(409)
+        const body = await twice.json()
+        expect(body.code).toBe('name-taken-in-space')
+        expect(body.error).toBe('This space already has a project called "My Scene". Pick another name.')
+    })
+
+    it('keeps the exact-id door as it was: a slug taken in another space is still a 409', async () => {
+        const server = await startServer()
+        await makeSpace(server, 'camp-ani')
+        await makeSpace(server, 'camp-aram')
+        expect((await post(server, 'camp-ani', { title: 'Copy', slug: 'copy-of-it' })).status).toBe(201)
+        const copied = await post(server, 'camp-aram', { title: 'Copy', slug: 'copy-of-it' })
+        expect(copied.status).toBe(409)
+        expect((await copied.json()).error).toBe('that name is taken on this di.iiii — try another')
+    })
+})

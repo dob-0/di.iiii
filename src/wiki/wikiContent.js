@@ -228,11 +228,12 @@ export const WIKI_ARTICLES = [
             'A SHELF (a collection) groups work inside a space without the group becoming a place of its own. Before this the only container was the space itself, so an open call\'s entries, a week of a camp or a roster had to become either a whole new space or a flat pile of siblings — one space ended up holding 74 projects. Make one from "+ Shelf" on a space\'s project page, then file a project onto it with the shelf menu at the bottom of its card.',
             'A space with no shelves looks exactly as it always did: one grid, no headings. The moment there is one shelf, the page groups by shelf and whatever is not on one gets a heading of its own — filing something never hides anything else.',
             'Deleting a shelf never deletes the work on it. Its projects come loose in the space and the page tells you how many.',
+            'A PROJECT NAME only has to be new inside its own space: twenty spaces can each have a project called \u201cmy scene\u201d. If this space already has one with that name, the form stays open and says so in red; change the name and press Create again. Press Create with no name and the project is called \u201cUntitled\u201d (then \u201cUntitled 2\u201d). Old links to every project keep working.',
             'Every project is DRAFT, LIVE or ARCHIVED. Live is the ordinary answer and the only one that is not stated on the card. Archived projects are hidden until you ask for them by name. (The five projects whose titles began with "[archived]" were converted to the real state, and the word was taken out of their names.)',
             'DELETE NO LONGER MEANS GONE. A deleted project goes to the trash on its space\'s project page for 30 days — the row and every byte stay where they are — and "Bring it back" returns it whole, its document included. Only after 30 days does anything actually remove it.'
         ],
         tags: ['collections', 'shelves', 'archive', 'draft', 'trash', 'delete', 'undo', 'projects'],
-        updated: '2026-09-10'
+        updated: '2026-10-29'
     },
     {
         id: 'shoot-sheet',
@@ -979,6 +980,7 @@ export const WIKI_ARTICLES = [
                 'Drag to position; edit the selected object in the Objects window — the defaults for the whole scene live in the Scene window.',
                 'Light environment (Scene window): every version of the space is a row with its haze, ambient, exposure, bloom and surfaces. Try draws the view with that version’s light and writes nothing (Back returns); Take writes it to this project as one step, and Undo takes it back. Lamps are never carried.',
                 'In the Objects tree: double-click any object to rename it, and use the per-row circle (show/hide) and square (lock/unlock) toggles — hidden objects disappear from the scene; a locked one leaves the selection and cannot be picked or moved until it is unlocked.',
+                'The Objects list counts everything the scene shows. Things made in Nodes, in a template or in a page layer stand in the list too, marked with their kind; a Geo among them opens in Studio when you click it, the others have an Edit in Nodes button beside them.',
                 'Duplicate (Shift+D copies and starts moving the copy at once — Esc leaves it in place; Ctrl+D copies in place) and copy/paste (Ctrl+C / Ctrl+V) carry whole hierarchies — duplicating a group brings all of its children along, and copy works on multi-selections.',
                 'Drag an Objects-tree row onto a group to nest it (its position in the scene is kept), onto another object to make them siblings, or onto empty list space to move it back to the root.',
                 'Drop files straight onto the viewport — from your computer or from the Create window’s Files list — and they land in the scene at the point under your cursor.',
@@ -1000,7 +1002,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['studio', 'editor', 'basics'],
-        updated: '2026-10-28'
+        updated: '2026-10-29'
     },
     {
         id: 'studio-content-model',
@@ -1013,7 +1015,7 @@ export const WIKI_ARTICLES = [
                 'Files: the Create window lists every file in one place — uploads, Google Drive imports, and Commons pulls. Each row shows where it lives (project / space), a “placed ×N” badge when objects use it, and “public” when it is shared to the commons.',
                 'Files are stored by content: re-importing a file the project already has (same bytes, any name) skips the upload and finishes instantly, and identical files across a space’s projects are stored only once.',
                 '+ Add places a file into the scene as an object. Deleting a file warns you when objects still use it — in this project or in other projects of the space.',
-                'Code: the Code window edits HTML/CSS/JS files stored inside the project. A project that holds a page and no scene opens with the viewport on the page, and the Create window (3D shapes and lights) stays closed until you open it. The toggle at its top, Scene or Code view, switches the viewport either way, and the “Project file” picker inserts any file’s URL straight into your code.',
+                'Code: the Code window edits HTML/CSS/JS files stored inside the project. A project that holds a page and no scene opens with the viewport on the page and shows page tools only: Share, Code and Projects, with no 3D windows, no View | Edit, no Navigate, Walk or Fly and no axis ball over the page. One button, Add a scene (in the tools panel on a desk, in the bottom bar on a phone), brings every 3D tool back with Create open; ⚒ All tools keeps the full screen on every project. The toggle at its top, Scene or Code view, switches the viewport either way, and the “Project file” picker inserts any file’s URL straight into your code.',
                 'Code tabs: the small x on a tab (or Delete on the focused tab) only closes the tab; the file stays in your project, and “Closed tabs” under the row opens it again. To remove a file, choose “Delete file”: it asks first, and Undo brings the file back for 10 seconds. Adding files or a zip to a project that has files asks once: Cancel, Replace all or Add them. The file that visitors see first is marked “opens first” (index.html, else the first .html file); renaming it asks before it stops being the start page.',
                 'Add files brings in single files and .zip archives together, Add folder a whole folder. If the project already has files, it asks whether to add the new ones to yours or replace yours; either can be undone for 10 seconds. A zip that cannot be read says why, and files the Code window cannot hold are listed as left out.',
                 'Instead of local files, the Code window can embed an external site: “Use a web address” in a new project, or Embed external URL at the bottom.',

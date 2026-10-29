@@ -61,6 +61,8 @@ function registerProjectRoutes(router, {
   ensureProject,
   ensureSpaceWritable,
   findProjectBySlug,
+  // Optional: (id) => { spaceId, trashed } | null, trash included (projectStore.js).
+  findAnyProjectById,
   getProjectLiveBucket,
   getProjectPaths,
   // Fails CLOSED. This used to default to `() => false`, so a router mounted without the
@@ -335,6 +337,60 @@ function registerProjectRoutes(router, {
     }
   })
 
+  // Who holds an id, trash included: a trashed project still owns its id
+  // (upsertProjectMeta brings it back on a write). Without the store's door,
+  // fall back to live projects only.
+  const idHolder = async (id) => {
+    if (typeof findAnyProjectById === 'function') return findAnyProjectById(id)
+    const live = await resolveProjectContext(id)
+    return live ? { spaceId: live.spaceId, trashed: false } : null
+  }
+  const sameName = (project, base, title) =>
+    project.id === base || project.slug === base ||
+    (base && normalizeProjectId(project.title || '') === base) ||
+    (title && String(project.title || '').trim().toLowerCase() === title.toLowerCase())
+
+  // A person's name for a new project in one space → its title, id and short name.
+  const pickNamedProject = async (spaceId, typedTitle) => {
+    const inSpace = typeof listProjectsInSpace === 'function' ? (await listProjectsInSpace(spacesDir, spaceId)) || [] : []
+    let title = typedTitle
+    if (!title) {
+      // An empty name gets a real one, never a clash: the first free "Untitled N" here.
+      for (let n = 1; n < 1000; n += 1) {
+        const candidate = n === 1 ? 'Untitled' : `Untitled ${n}`
+        if (!inSpace.some((p) => sameName(p, normalizeProjectId(candidate), candidate))) { title = candidate; break }
+      }
+      title = title || `Untitled ${Date.now()}`
+    }
+    const base = normalizeProjectId(title) || 'project'
+    const clash = inSpace.find((p) => sameName(p, normalizeProjectId(title), title))
+    if (clash) return { clash }
+    if (isReservedProjectSlug(base)) return { reserved: base }
+    const freeHere = async (id) => {
+      const holder = await idHolder(id)
+      // A trashed project of THIS space under the very id the name makes comes
+      // back, as it always has (upsertProjectMeta) — never one of another space.
+      if (holder && !(id === base && holder.trashed && holder.spaceId === spaceId)) return false
+      const bySlug = await findProjectBySlug(spaceId, id)
+      return !bySlug || bySlug.id === id
+    }
+    const stem = base.slice(0, 56).replace(/-+$/, '')
+    let id = null
+    if (base !== 'project' && await freeHere(base)) id = base
+    for (let n = 2; !id && n < 1000; n += 1) {
+      const candidate = `${stem}-${n}`
+      if (await freeHere(candidate)) id = candidate
+    }
+    if (!id) id = normalizeProjectId(`${stem}-${Date.now()}`)
+    let slug
+    if (id !== base && base !== 'project') {
+      const bySlug = await findProjectBySlug(spaceId, base)
+      const holder = await idHolder(base)
+      if (!bySlug && !(holder && holder.spaceId === spaceId)) slug = base
+    }
+    return { title, id, slug }
+  }
+
   router.post('/api/spaces/:spaceId/projects', async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -353,8 +409,38 @@ function registerProjectRoutes(router, {
       if (visibility !== undefined && visibility !== 'public' && visibility !== 'private') {
         return res.status(400).json({ error: 'visibility must be "public" or "private".' })
       }
-      const slugSource = req.body?.slug || title || `project-${Date.now()}`
-      const projectId = normalizeProjectId(slugSource)
+      const carried = req.body?.carried === true
+      // Two ways in (2026-10-29, ux-fix S21, docs/ai/decisions/2026-10-29-project-names-per-space.md):
+      // - EXACT: the caller names the id (`slug`, or `carried`) — a follow, a copy
+      //   script, an import. The id is used as given or refused with a 409, exactly
+      //   as before; those callers match projects across installs by id.
+      // - NAMED: a person typed only a name (`title`, maybe empty). A name has to be
+      //   unique only inside this space. Ids stay global, so when another space
+      //   already holds the id the name would make, the project gets a free id
+      //   (`my-scene-2`) and the name as its short name (`slug`), so it still opens
+      //   at /{space}/my-scene. An empty name becomes "Untitled", "Untitled 2", …
+      const named = !carried && (req.body?.slug === undefined || req.body?.slug === null || req.body?.slug === '')
+      let projectTitle = title
+      let projectSlug
+      let projectId
+      if (named) {
+        const picked = await pickNamedProject(spaceId, title)
+        if (picked.clash) {
+          return res.status(409).json({
+            error: `This space already has a project called "${picked.clash.title || picked.clash.id}". Pick another name.`,
+            code: 'name-taken-in-space'
+          })
+        }
+        if (picked.reserved) {
+          return res.status(400).json({ error: `"${picked.reserved}" is a reserved address and can't be a project name — try another.` })
+        }
+        projectTitle = picked.title
+        projectSlug = picked.slug
+        projectId = picked.id
+      } else {
+        const slugSource = req.body?.slug || title || `project-${Date.now()}`
+        projectId = normalizeProjectId(slugSource)
+      }
       if (!projectId) {
         return res.status(400).json({ error: 'Invalid project id.' })
       }
@@ -378,8 +464,7 @@ function registerProjectRoutes(router, {
       // only at /{space}/p/{id}). The copy scripts (project-pull, space-sync,
       // space-sync-github, local-mirror, tier-sync) use this route too and do not say so
       // yet: for a reserved id they get the 400.
-      const carried = req.body?.carried === true
-      if (!carried && isReservedProjectSlug(projectId)) {
+      if (!named && !carried && isReservedProjectSlug(projectId)) {
         return res.status(400).json({ error: `"${projectId}" is a reserved address and can't be a project name — try another.` })
       }
       const existing = await resolveProjectContext(projectId)
@@ -391,10 +476,17 @@ function registerProjectRoutes(router, {
         // exists." named nothing and gave nobody anything to act on — a
         // newcomer who picks an ordinary name twice, weeks apart, in two
         // different spaces, hit this with no way to tell what happened.
+        if (existing.spaceId === spaceId) {
+          return res.status(409).json({
+            error: `This space already has a project called "${existing.meta?.title || projectId}". Pick another name.`,
+            code: 'name-taken-in-space'
+          })
+        }
         return res.status(409).json({ error: 'that name is taken on this di.iiii — try another' })
       }
       const meta = await ensureProject(spacesDir, spaceId, projectId, {
-        title: title || 'Untitled Project',
+        title: projectTitle || 'Untitled Project',
+        ...(projectSlug ? { slug: projectSlug } : {}),
         ...(source ? { source } : {}),
         ...(visibility ? { visibility } : {})
       })
