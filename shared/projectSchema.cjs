@@ -110,6 +110,10 @@ const defaultWorldState = {
   // plus a 22m margin). An array of {minX,maxX,minZ,maxZ} rectangles declares
   // the walkable floor plan, and the walker cannot leave their union.
   walkableAreas: null,
+  // null = no head light. { enabled: true } gives the walking visitor a
+  // flashlight that follows the view (F key, phone button); it starts off.
+  // See src/components/headLight.js.
+  headLight: null,
   // null = free space, the historical behaviour. An object turns the room's
   // build zones ON: everything hangable that arrives is put in a numbered slot
   // by the server, so the room stays arranged no matter who edits it or how.
@@ -1280,6 +1284,8 @@ const normalizeWorldState = (world = {}) => {
       altY: ensureNumber(source.spawn.altY, 1.6)
     } : null,
     walkableAreas: normalizeWalkableAreas(source.walkableAreas),
+    headLight: source.headLight && typeof source.headLight === 'object' && source.headLight.enabled === true
+      ? { enabled: true } : null,
     placement: normalizePlacement(source.placement),
     // Walk-mode atmosphere: null keeps the built-in close fog (8..50m); an
     // authored object opens the distance for VAST scenes — the walker's camera

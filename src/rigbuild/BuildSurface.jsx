@@ -1,6 +1,8 @@
 import { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import LiveProjectScene from '../components/LiveProjectScene.jsx'
 import { isTypingTarget } from '../components/walkKeyboard.js'
+import { resolveHeadLight } from '../components/headLight.js'
+import { walkKeyHintText } from '../components/walkKeys.js'
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../project/hooks/useOpHistory.js'
 import { useProjectStore } from '../project/state/projectStore.js'
@@ -426,7 +428,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
     }, [crew, projectTitle])
     const hint = building && !crew
         ? <>WASD · move &nbsp;·&nbsp; mouse · aim &nbsp;·&nbsp; click · place &nbsp;·&nbsp; right-click · remove &nbsp;·&nbsp; 1–0 / wheel · pieces &nbsp;·&nbsp; R · turn &nbsp;·&nbsp; Q/Z · up/down &nbsp;·&nbsp; E · inventory &nbsp;·&nbsp; B · walk &nbsp;·&nbsp; ESC · release</>
-        : <>WASD · move &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; click / I · the patch of a lamp &nbsp;·&nbsp; E · inventory &nbsp;·&nbsp; {crew ? '' : <>B · build &nbsp;·&nbsp; </>}F · fly &nbsp;·&nbsp; ESC · release</>
+        : <>WASD · move &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; click / I · the patch of a lamp &nbsp;·&nbsp; E · inventory &nbsp;·&nbsp; {crew ? '' : <>B · build &nbsp;·&nbsp; </>}{walkKeyHintText({ headLight: resolveHeadLight(shownDocument?.worldState).available })} &nbsp;·&nbsp; ESC · release</>
 
     return (
         <main className={`rigbuild has-rigbar${phone ? ' is-phone' : ''}${building ? ' is-building' : ''}${crew ? ' is-crew' : ''}`} ref={wrapRef} data-space-id={spaceId || ''}>
