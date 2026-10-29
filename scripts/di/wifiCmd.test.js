@@ -57,4 +57,10 @@ describe('di wifi', () => {
         const r = await runWifi({ flags: {}, home, base: 'b', fetchImpl: async () => { throw new Error('ECONNREFUSED') } })
         expect(r.code).toBe(1); expect(r.lines[0]).toMatch(/di up/)
     })
+    it('sends the install token as a bearer on the call', async () => {
+        named(); fs.writeFileSync(path.join(home, 'di.env'), 'ADMIN_API_TOKEN=tok123\n')
+        let init
+        await runWifi({ flags: { status: true }, home, base: 'http://x/serverXR', fetchImpl: async (u, i) => { init = i; return { ok: true, status: 200, json: async () => ({ open: false }) } } })
+        expect(init.method).toBe('GET'); expect(init.headers.Authorization).toBe('Bearer tok123')
+    })
 })
