@@ -11,6 +11,10 @@ import MadeWithBadge from './MadeWithBadge.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
 import { createSolidWallsKeeper, walkStep, SOLID_WALLS_MAX_TRIANGLES, SOLID_WALLS_MAX_TRIANGLES_PHONE } from './solidWalls.js'
+import HeadLight from './HeadLight.jsx'
+import { resolveHeadLight, headLightCastsShadow } from './headLight.js'
+import { isFlyKey, walkKeyHintText } from './walkKeys.js'
+import { useHeadLight } from './useHeadLight.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
     buildProjectEventsUrl,
@@ -1279,14 +1283,14 @@ function MoveHintVisual({ isMobile }) {
     )
 }
 
-function VerticalTouchControls({ vertTouchRef }) {
+function VerticalTouchControls({ vertTouchRef, aboveHeadLight = false }) {
     const setVert = (value) => (e) => {
         e.preventDefault()
         vertTouchRef.current = value
     }
     const clearVert = () => { vertTouchRef.current = 0 }
     return (
-        <div className="live-scene-vert-controls">
+        <div className={`live-scene-vert-controls${aboveHeadLight ? ' live-scene-vert-controls--above-head-light' : ''}`}>
             <button
                 type="button"
                 className="live-scene-vert-btn"
@@ -1795,11 +1799,19 @@ export default function LiveProjectScene({
         Object.assign(root.style, { position: 'fixed', inset: '0', width: '100%', height: '100%' })
     }, [xr.domOverlayRoot])
 
+    // Head light: the project's document says whether it exists (worldState.headLight,
+    // headLight.js); the visitor's own state says whether it is on (always off at
+    // first, never saved).
+    const headLight = resolveHeadLight(doc?.worldState)
+    const headLightAvailable = walking && headLight.available
+    const headLightControl = useHeadLight(headLightAvailable)
+
+    // F flies, in every project; the head light has its own key, L (walkKeys.js).
     useEffect(() => {
         if (!walking || !showModeControls) return undefined
         const onKey = (e) => {
             if (isTypingTarget(e.target)) return
-            if (e.key.toLowerCase() === 'f') setFlyMode((f) => !f)
+            if (isFlyKey(e)) setFlyMode((f) => !f)
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
@@ -1966,6 +1978,9 @@ export default function LiveProjectScene({
     // Shadows from the room: off unless this space asked for them. Walk mode
     // and the arrival frame read the same switch (shadowCasting.js).
     const shadowCasting = resolveShadowCasting(renderSettings)
+    // The head light casts its own shadow whenever the renderer allows shadows (High
+    // quality); the solid meshes then join the shadow pass, without the room's lamps.
+    const headLightShadow = headLightAvailable && headLightCastsShadow(renderSettings)
     const ambient = worldState.ambientLight || { color: '#ffffff', intensity: 0.85 }
     const directional = worldState.directionalLight || { color: '#fff7ea', intensity: 1.15, position: [8, 12, 4] }
     const backgroundColor = worldState.backgroundColor || '#0a1118'
@@ -2011,7 +2026,7 @@ export default function LiveProjectScene({
             >
                 <XR store={xr.xrStore}>
                 <RenderSettingsEffect renderSettings={renderSettings} />
-                <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
+                <ShadowCasting enabled={shadowCasting.enabled || headLightShadow} mapSize={shadowCasting.mapSize} lamps={shadowCasting.enabled} />
                 {/* The landing holds its page through a front-page button; this
                     is how the copy of the page gets this room's frame. */}
                 <FrameSource />
@@ -2110,6 +2125,8 @@ export default function LiveProjectScene({
                     <IdleOrbit center={center} />
                 )}
                 {walking && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />}
+                {/* After the Walker: frame callbacks run in mount order, and the light must read the camera the Walker just moved. */}
+                {headLightAvailable ? <HeadLight on={headLightControl.on} shadow={headLightShadow} /> : null}
                 {walking && worldState.ringTour?.enabled ? (
                     <RingTour playerRef={playerRef} config={worldState.ringTour} />
                 ) : null}
@@ -2130,7 +2147,17 @@ export default function LiveProjectScene({
                             <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />
                         )}
                         {walking && isMobile && flyMode && showModeControls && (
-                            <VerticalTouchControls vertTouchRef={vertTouchRef} />
+                            <VerticalTouchControls vertTouchRef={vertTouchRef} aboveHeadLight={headLightAvailable} />
+                        )}
+                        {headLightAvailable && (
+                            <button
+                                type="button"
+                                className={`live-scene-light-btn${headLightControl.on ? ' active' : ''}`}
+                                aria-pressed={headLightControl.on}
+                                onClick={headLightControl.toggle}
+                            >
+                                Head light
+                            </button>
                         )}
                         {walking && showModeControls && (
                             <button
@@ -2257,7 +2284,7 @@ export default function LiveProjectScene({
 
                     {walking && !isMobile && locking && !isLocked && (
                         <p className="live-scene-hint live-scene-hint--lock">
-                            Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; F · fly
+                            Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; {walkKeyHintText({ headLight: headLight.available })}
                         </p>
                     )}
                     {walking && !isMobile && (!locking || isLocked) && walkHint ? (
@@ -2265,7 +2292,7 @@ export default function LiveProjectScene({
                     ) : null}
                     {walking && !isMobile && (!locking || isLocked) && !walkHint && (
                         <p className="live-scene-hint">
-                            WASD · move &nbsp;·&nbsp; {locking ? 'Mouse · look' : 'Drag · look \u00A0·\u00A0 Scroll · forward / back'} &nbsp;·&nbsp; F · {flyMode ? 'walk' : 'fly'}
+                            WASD · move &nbsp;·&nbsp; {locking ? 'Mouse · look' : 'Drag · look \u00A0·\u00A0 Scroll · forward / back'} &nbsp;·&nbsp; {walkKeyHintText({ headLight: headLight.available, flying: flyMode })}
                             {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
                             {locking ? <>&nbsp;·&nbsp; ESC · release</> : exitLabel ? <>&nbsp;·&nbsp; Esc · exit</> : null}
                         </p>

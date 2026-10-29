@@ -291,6 +291,18 @@ describe('applyProjectOps', () => {
     expect(typeof doc.worldState.ambientLight).toBe('object')
   })
 
+  it('worldState.headLight: { enabled: true } or null, set and cleared by a setWorldState patch (same inputs as src/components/headLight.test.js)', () => {
+    expect(normalizeProjectDocument({ worldState: { headLight: { enabled: true, junk: 1 } } }).worldState.headLight).toEqual({ enabled: true })
+    expect(normalizeProjectDocument({ worldState: {} }).worldState.headLight).toBeNull()
+    expect(normalizeProjectDocument({ worldState: { headLight: { enabled: false } } }).worldState.headLight).toBeNull()
+    expect(normalizeProjectDocument({ worldState: { headLight: { enabled: 'yes' } } }).worldState.headLight).toBeNull()
+    expect(normalizeProjectDocument({}).worldState.headLight).toBeNull()
+    const on = applyProjectOps({}, [{ type: 'setWorldState', payload: { patch: { headLight: { enabled: true } } } }])
+    expect(on.worldState.headLight).toEqual({ enabled: true })
+    const off = applyProjectOps(on, [{ type: 'setWorldState', payload: { patch: { headLight: null } } }])
+    expect(off.worldState.headLight).toBeNull()
+  })
+
   it('setWorkspaceState patches liveWorldNodeIdByScope without an explicit new op type, and does not wipe other scopes\' entries', () => {
     const afterFirst = applyProjectOps({}, [{
       type: 'setWorkspaceState',

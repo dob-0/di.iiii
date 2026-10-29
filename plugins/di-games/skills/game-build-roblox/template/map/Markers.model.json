@@ -1,0 +1,190 @@
+{
+  "ClassName": "Folder",
+  "Children": [
+    {
+      "Name": "PlayerSpawn",
+      "ClassName": "SpawnLocation",
+      "Properties": {
+        "Anchored": true,
+        "Neutral": true,
+        "Duration": 0,
+        "Size": [
+          6,
+          1,
+          6
+        ],
+        "CFrame": {
+          "CFrame": {
+            "position": [
+              20.0,
+              0.5,
+              15.0
+            ],
+            "orientation": [
+              [
+                1,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                0,
+                1
+              ]
+            ]
+          }
+        },
+        "Transparency": 0.5
+      }
+    },
+    {
+      "Name": "Item_01",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          1,
+          1,
+          1
+        ],
+        "CFrame": {
+          "CFrame": {
+            "position": [
+              70.0,
+              1.0,
+              8.0
+            ],
+            "orientation": [
+              [
+                1,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                0,
+                1
+              ]
+            ]
+          }
+        },
+        "Color": [
+          1,
+          1,
+          1
+        ],
+        "Material": "Concrete",
+        "Transparency": 1,
+        "CanCollide": false,
+        "CanQuery": false,
+        "CanTouch": false
+      }
+    },
+    {
+      "Name": "Item_02",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          1,
+          1,
+          1
+        ],
+        "CFrame": {
+          "CFrame": {
+            "position": [
+              70.0,
+              1.0,
+              22.0
+            ],
+            "orientation": [
+              [
+                1,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                0,
+                1
+              ]
+            ]
+          }
+        },
+        "Color": [
+          1,
+          1,
+          1
+        ],
+        "Material": "Concrete",
+        "Transparency": 1,
+        "CanCollide": false,
+        "CanQuery": false,
+        "CanTouch": false
+      }
+    },
+    {
+      "Name": "Item_03",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          1,
+          1,
+          1
+        ],
+        "CFrame": {
+          "CFrame": {
+            "position": [
+              90.0,
+              1.0,
+              15.0
+            ],
+            "orientation": [
+              [
+                1,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                0,
+                1
+              ]
+            ]
+          }
+        },
+        "Color": [
+          1,
+          1,
+          1
+        ],
+        "Material": "Concrete",
+        "Transparency": 1,
+        "CanCollide": false,
+        "CanQuery": false,
+        "CanTouch": false
+      }
+    }
+  ]
+}

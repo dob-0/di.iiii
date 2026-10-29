@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { usePanelDrag } from '../../hooks/usePanelDrag.js'
+import StudioSaveLine from './StudioSaveLine.jsx'
 
 // Five scene windows, one per job: add things, edit the scene, configure the
 // world, ship it, write code — plus Projects, the space-level window for
@@ -42,6 +43,11 @@ export default function StudioControlCluster({
     onOpenProjection,
     xrState,
     syncState,
+    // Undo and Redo: the same calls as Ctrl+Z. Null onUndo draws no buttons; canUndo / canRedo say the ends.
+    onUndo = null,
+    onRedo = null,
+    canUndo = false,
+    canRedo = false,
     presence,
     snapEdges = false,
     onToggleSnap,
@@ -101,18 +107,25 @@ export default function StudioControlCluster({
                     </span>
                     {syncState && (
                         <span
-                            className={`scc-sync-dot scc-sync-dot--${syncState.pendingSyncError ? 'error' : (syncState.sceneStreamState || 'idle')}`}
-                            // "retrying" was a lie on the path that matters most: a 401
-                            // clearTimeout()s the retry and breaks, so nothing is retrying
-                            // and the queued edits sit in memory until a reload drops them.
-                            // The message the sync layer already wrote says what to do.
-                            title={syncState.pendingSyncError || syncState.sceneStreamState}
+                            className={`scc-sync-dot scc-sync-dot--${syncState.sceneStreamState || 'idle'}`}
+                            // The dot is the live scene connection only. Whether work is stored is the
+                            // save line below, in words (F089); the red dot and its raw-error tooltip
+                            // said the same thing a second time.
+                            title={syncState.sceneStreamState}
                         />
+                    )}
+                    {onUndo && (
+                        <button type="button" className="scc-btn scc-undo-btn" onClick={onUndo} disabled={!canUndo} aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
+                    )}
+                    {onRedo && (
+                        <button type="button" className="scc-btn scc-undo-btn" onClick={onRedo} disabled={!canRedo} aria-label="Redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
                     )}
                     <button className="scc-collapse-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand' : 'Collapse'}>
                         {collapsed ? '▸' : '▾'}
                     </button>
                 </div>
+
+                {syncState && <StudioSaveLine syncState={syncState} className="scc-save-line" />}
 
                 {!collapsed && (
                     <>

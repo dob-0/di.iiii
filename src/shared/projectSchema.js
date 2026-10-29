@@ -120,6 +120,10 @@ export const defaultWorldState = {
     // null = off: the walk is the floor rectangles only, as it always was. { enabled: true } makes walk mode stop at the
     // scene's own walls, tree trunks and other solid models (src/components/solidWalls.js). The switch is all there is.
     solidWalls: null,
+    // null = no head light. { enabled: true } gives the walking visitor a
+    // flashlight that follows the view (F key, phone button); it starts off.
+    // See src/components/headLight.js.
+    headLight: null,
     // null = free space, the historical behaviour. An object turns the room's
     // build zones ON: everything hangable that arrives is put in a numbered slot
     // by the server, so the room stays arranged no matter who edits it or how.
@@ -1313,6 +1317,8 @@ const normalizeWorldState = (world = {}) => {
         } : null,
         walkableAreas: normalizeWalkableAreas(source.walkableAreas),
         solidWalls: normalizeSolidWalls(source.solidWalls),
+        headLight: source.headLight && typeof source.headLight === 'object' && source.headLight.enabled === true
+            ? { enabled: true } : null,
         placement: normalizePlacement(source.placement),
         // Walk-mode atmosphere: null keeps the built-in close fog (8..50m); an
         // authored object opens the distance for VAST scenes — the walker's

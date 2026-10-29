@@ -1355,12 +1355,12 @@ async function patchProfile(profile, { universe, address, x, y, count = 1 }) {
   pullState();
 }
 
-// Unpatch whatever is selected. Removing several at once is worth a confirmation —
-// with everything selected by default, a stray Delete would otherwise take the whole rig.
+// Unpatch whatever is selected. One or many asks first: the desk server has no undo, so a stray Delete
+// (everything is selected by default) would be lost for good.
 async function unpatchSelection() {
   const ids = [...sel];
   if (!ids.length) { $('#patchHint').textContent = 'nothing selected'; return; }
-  if (ids.length > 1 && !confirm(`Unpatch ${ids.length} fixtures? This cannot be undone.`)) return;
+  if (!(await window.deskAsk.ask(`Unpatch ${ids.length === 1 ? 'this fixture' : ids.length + ' fixtures'}? This cannot be undone.`, 'Unpatch'))) return;
   // one request, not one per fixture — a burst of them races the server's debounced save
   const r = await post('api/fixtures/remove', { ids });
   const removed = r.removed != null ? r.removed : ids.length;
@@ -1726,7 +1726,7 @@ async function offerReleaseOthers(replies, universes) {
   for (const r of replies) for (const [who, n] of Object.entries((r && r.kept) || {})) kept[who] = (kept[who] || 0) + n;
   if (!Object.keys(kept).length) return;
   const where = `universe${universes.length === 1 ? '' : 's'} ${universes.map((u) => u + 1).join(', ')}`;
-  if (!confirm(`Still held on ${where}: ${holdersText(kept)}.\n\nThose are not yours. Release them too?`)) {
+  if (!(await window.deskAsk.ask(`Still held on ${where}: ${holdersText(kept)}.\n\nThose are not yours. Release them too?`, 'Release them'))) {
     say(`released yours; still held on ${where}: ${holdersText(kept)}`);
     return;
   }
@@ -1768,10 +1768,10 @@ async function setAllFaders(value) {
   if (risky.length) {
     const names = risky.slice(0, 4).map((f) => `${f.index}.${f.profile}`).join(', ');
     const more = risky.length > 4 ? ', …' : '';
-    const okGo = confirm(
+    const okGo = await window.deskAsk.ask(
       `Set every channel in universe ${fUni + 1} to ${value}?\n\n`
       + `This also drives pan, tilt and control channels on ${risky.length} fixture`
-      + `${risky.length === 1 ? '' : 's'} (${names}${more}). Moving heads will swing hard to one extreme.`);
+      + `${risky.length === 1 ? '' : 's'} (${names}${more}). Moving heads will swing hard to one extreme.`, 'Set all');
     if (!okGo) return;
   }
   const channels = [];
@@ -2169,16 +2169,12 @@ function buildSceneDetail() {
         : ''}</span>
     </div>`;
   $('#sdGo').addEventListener('click', () => post('api/scenes/recall', { id: sc.id }).then(pullState));
-  // Both of these destroy a saved look with one click and no undo, and they sit in the
-  // same row, at the same size, as the button that fires it. Unpatching more than one
-  // fixture already asks first; losing a scene at a show should cost at least as much.
-  // The same two-step arm the right-click popover uses — press once to arm, again to
-  // fire, and it stands down by itself. A native confirm() froze the poll, the stage
-  // repaint and the panic key until someone found the dialog.
-  $('#sdRestage').addEventListener('click', (e) => armThen(e.currentTarget, 'Sure? Overwrite', () => {
+  // Both of these destroy a saved look with one click and no undo, so both ask first, through
+  // deskAsk: a bar, not a native confirm() (which froze the poll, the stage repaint and the panic key).
+  $('#sdRestage').addEventListener('click', (e) => askThen(`Overwrite the scene "${sc.name}" with the current look?`, 'Overwrite', () => {
     post('api/scenes/update', { id: sc.id, restage: true }).then(pullState);
   }));
-  $('#sdDel').addEventListener('click', (e) => armThen(e.currentTarget, 'Sure? Delete', () => {
+  $('#sdDel').addEventListener('click', (e) => askThen(`Delete the scene "${sc.name}"? This cannot be undone.`, 'Delete', () => {
     activeScene = null;
     post('api/scenes/remove', { id: sc.id }).then(pullState);
   }));
@@ -2455,41 +2451,15 @@ let popAt = { x: 8, y: 8 };              // where it opened — to re-clamp when
 let popOpenedAt = 0;                     // armed by the LONG-PRESS openers only: the lift
                                          // must not click a menu row; a desktop right-click
                                          // has no synthetic click, so it stays 0 there
-let armTimer = null;                     // two-step confirm timeout
 let suppressBankClick = false;           // the lift after a long-press must not recall
 
 function popScene() { return (S && S.scenes.find((s) => s.id === bindSceneId)) || null; }
 
-// The destructive rows ask twice: the first press arms ("Sure?…"), the second fires.
-// Anything else — a mode switch, closing, three seconds of nothing — disarms.
-// Buttons that armed themselves, and the words they had before. The two popover rows
-// below are reset by name because opening the menu re-labels them whether or not they
-// were armed; everything else — the scene detail pane, the look library — is restored
-// from here. Without this, arming a button outside the popover left it reading "Sure?"
-// for ever, because nothing knew what it used to say.
-const armedBtns = new Map();
-function disarmConfirms() {
-  clearTimeout(armTimer); armTimer = null;
-  const rs = $('#miRestage'), del = $('#miDelete');
-  rs.classList.remove('arm'); rs.textContent = 'Overwrite with current look';
-  del.classList.remove('arm'); del.textContent = 'Delete scene';
-  for (const [btn, label] of armedBtns) { btn.classList.remove('arm'); btn.textContent = label; }
-  armedBtns.clear();
-}
-let armedAt = 0;                         // when "Sure?…" was armed
-function armThen(btn, warn, fn) {
-  if (btn.classList.contains('arm')) {
-    // The press that armed it can double-fire (a double-tap, a bouncing touch): the
-    // confirming press only counts once the warning has had a beat on screen — the
-    // same 350ms guard the long-press popover uses.
-    if (Date.now() - armedAt < 350) return;
-    disarmConfirms(); fn(); return;
-  }
-  disarmConfirms();
-  armedBtns.set(btn, btn.textContent);
-  btn.classList.add('arm'); btn.textContent = warn;
-  armedAt = Date.now();
-  armTimer = setTimeout(disarmConfirms, 3000);
+// Every destructive step asks the same way: deskAsk (ui/ask.js), a bar that never blocks the page.
+// The old "Sure?" two-step button and the native confirm() box are gone; this is the one helper
+// the buttons that destroy a scene, a layer or a look go through.
+async function askThen(message, okLabel, fn) {
+  if (await window.deskAsk.ask(message, okLabel)) fn();
 }
 
 function setPopMode(mode) {
@@ -2499,7 +2469,6 @@ function setPopMode(mode) {
   $('#popEdit').hidden = mode !== 'rename' && mode !== 'fade';
   $('#popText').hidden = mode !== 'rename';
   $('#popNumWrap').hidden = mode !== 'fade';
-  disarmConfirms();
 }
 
 function placeBindPop(x, y) {
@@ -2530,7 +2499,6 @@ function openBindPop(name, x, y, id) {
 }
 function closeBindPop() {
   bindTarget = null; bindSceneId = null;
-  disarmConfirms();
   $('#bindPop').hidden = true;
 }
 
@@ -2787,9 +2755,11 @@ $('#popOk').addEventListener('click', commitPopEdit);
 $('#popText').addEventListener('keydown', (e) => { if (e.key === 'Enter') commitPopEdit(); });
 $('#popNum').addEventListener('keydown', (e) => { if (e.key === 'Enter') commitPopEdit(); });
 
-$('#miRestage').addEventListener('click', () => armThen($('#miRestage'), 'Sure? This replaces the scene', () => {
+$('#miRestage').addEventListener('click', () => {
+  // Read the scene NOW: the press on the ask bar is outside the popover and closes it.
   const sc = popScene();
   if (!sc) { closeBindPop(); return; }
+  askThen(`Replace the scene "${sc.name}" with the current look?`, 'Replace', () => {
   const who = sc.name;
   post('api/scenes/update', { id: sc.id, restage: true }).then((r) => {
     if (r && r.error) say(`overwrite did not reach the desk — ${r.error}`, true);
@@ -2797,10 +2767,13 @@ $('#miRestage').addEventListener('click', () => armThen($('#miRestage'), 'Sure? 
     pullState();
   });
   closeBindPop();
-}));
-$('#miDelete').addEventListener('click', () => armThen($('#miDelete'), 'Sure? Delete this scene', () => {
+  });
+});
+$('#miDelete').addEventListener('click', () => {
+  // Read the scene NOW: the press on the ask bar is outside the popover and closes it.
   const sc = popScene();
   if (!sc) { closeBindPop(); return; }
+  askThen(`Delete the scene "${sc.name}"? This cannot be undone.`, 'Delete', () => {
   const who = sc.name, id = sc.id;
   post('api/scenes/remove', { id }).then((r) => {
     if (r && r.error) { say(`delete did not reach the desk — ${r.error}`, true); pullState(); return; }
@@ -2813,7 +2786,8 @@ $('#miDelete').addEventListener('click', () => armThen($('#miDelete'), 'Sure? De
     pullState();
   });
   closeBindPop();
-}));
+  });
+});
 
 // Bindings point at names; the id is looked up at the moment the key lands.
 function recallByName(name) {
@@ -3735,7 +3709,7 @@ function buildLayers() {
         e.target.value = l.priority;
         queueLayer(id, { priority: l.priority }); buildLayers();
       });
-      row.querySelector('.lay-del').addEventListener('click', (e) => armThen(e.currentTarget, 'Sure? Remove', async () => {
+      row.querySelector('.lay-del').addEventListener('click', (e) => askThen('Remove this layer?', 'Remove', async () => {
         const r = await post('api/layers/remove', { id });
         if (r && r.error) return say(r.error, true);
         if (selLayer === id) selLayer = null;
@@ -3817,7 +3791,7 @@ function buildLooks() {
     const ren = row.querySelector('.lk-ren');
     if (ren) ren.addEventListener('click', () => { renameLook = id; buildLooks(); });
     const del = row.querySelector('.lk-del');
-    if (del) del.addEventListener('click', (e) => armThen(e.currentTarget, 'Sure?', async () => {
+    if (del) del.addEventListener('click', (e) => askThen('Delete this look?', 'Delete', async () => {
       const r = await post('api/looks/remove', { id });
       if (r && r.error) return say(r.error, true);
       S.looks = looksOf().filter((l) => l.id !== id);
@@ -4923,8 +4897,8 @@ $('#miWizard').addEventListener('click', () => {
     : 'wizard stopped');
 });
 $('#miByNum').addEventListener('click', midiMapByNumber);
-$('#miClearMap').addEventListener('click', () => {
-  if (!confirm('Clear the whole MIDI map? Every surface on this desk loses it.')) return;
+$('#miClearMap').addEventListener('click', async () => {
+  if (!(await window.deskAsk.ask('Clear the whole MIDI map? Every surface on this desk loses it.', 'Clear map'))) return;
   midiMap = {};
   for (const k of Object.keys(midiPickup)) delete midiPickup[k];
   for (const k of Object.keys(midiLastVal)) delete midiLastVal[k];
@@ -5357,8 +5331,8 @@ $('#fAllZero').addEventListener('click', () => setAllFaders(0));
 // Every channel in the universe to full is a whiteout with no undo, and on a universe of
 // plain washes the existing confirm does not fire at all — it only asks when the universe
 // holds position or control channels. Ask every time.
-$('#fAllFull').addEventListener('click', () => {
-  if (!confirm('Hold every channel in this universe at full? That is a whiteout, and there is no undo.')) return;
+$('#fAllFull').addEventListener('click', async () => {
+  if (!(await window.deskAsk.ask('Hold every channel in this universe at full? That is a whiteout, and there is no undo.', 'Whiteout'))) return;
   setAllFaders(255);
 });
 
@@ -6052,10 +6026,10 @@ $('#sbRen').addEventListener('click', () => {
   st.name = name.trim().slice(0, 40);
   saveSets(getSets());
 });
-$('#sbDel').addEventListener('click', () => {
+$('#sbDel').addEventListener('click', async () => {
   const st = currentSet();
   if (!st) { say('pick a set to delete'); return; }
-  if (!confirm(`Delete the set "${st.name}"? The scenes themselves are untouched.`)) return;
+  if (!(await window.deskAsk.ask(`Delete the set "${st.name}"? The scenes themselves are untouched.`, 'Delete set'))) return;
   const sets = getSets().filter((s) => s.id !== st.id);
   liveSet.setId = null; liveSet.pos = -1; saveLiveSetPos();
   saveSets(sets);
@@ -6335,7 +6309,7 @@ $('#inDetails').addEventListener('toggle', () => { if ($('#inDetails').open) pul
 // form body for wifi/set and node/set. Facts come from GET status on the same one-second
 // tick as the Input panel (Setup only, tab visible); there is no timer of its own.
 // api-contract.json `node_routes` lists every path here; lint:api-contract holds it.
-const ND = { st: null, manifest: null, peers: null, nets: null, scanPending: false, armed: null, tick: 0, manifestAsked: false };
+const ND = { st: null, manifest: null, peers: null, nets: null, scanPending: false, tick: 0, manifestAsked: false };
 async function nodeGet(path) {
   const r = await fetch(path, { cache: 'no-store' });
   if (!r.ok) throw new Error(path + ' answered ' + r.status);
@@ -6365,30 +6339,12 @@ async function nodeDo(path, what, args, form) {
   pullNode(true);
   return r;
 }
-// Two presses for anything that restarts the node, erases it, or narrows where light goes.
-function nodeArm(btn, armedText, fire) {
-  const step = window.deskCaps.confirmStep(ND.armed, btn.id, Date.now());
-  ND.armed = step.armed;
-  paintArmed();
-  if (step.fire) { fire(); return; }
-  btn.dataset.armedText = armedText;
-  paintArmed();
-}
-function paintArmed() {
-  const live = window.deskCaps.stillArmed(ND.armed, Date.now()) ? ND.armed.key : null;
-  if (!live) ND.armed = null;
-  $$('#ndDetails .sq[data-label]').forEach((b) => {
-    const on = b.id === live;
-    b.classList.toggle('armed', on);
-    b.textContent = on ? b.dataset.armedText : b.dataset.label;
-  });
+// Anything that restarts the node, erases it, or narrows where light goes asks through the desk's one
+// helper (deskAsk, ui/ask.js), the same bar as every other destructive step.
+async function nodeAsk(message, okLabel, fire) {
+  if (await window.deskAsk.ask(message, okLabel)) fire();
 }
 $$('#ndDetails .sq').forEach((b) => { b.dataset.label = b.textContent; });
-// Any other press inside the fold disarms (capture phase: it runs before the button's own handler).
-$('#ndDetails').addEventListener('click', (e) => {
-  const b = e.target.closest('button');
-  if (ND.armed && (!b || b.id !== ND.armed.key)) { ND.armed = null; paintArmed(); }
-}, true);
 
 async function pullNode(force) {
   if (!cap('node') || document.hidden || page !== 'setup') return;
@@ -6420,7 +6376,6 @@ function paintNode() {
   const f = ND.st ? D.nodeFacts(ND.st, ND.manifest) : null;
   $('#ndSummary').textContent = f ? D.nodeSummary(f) : 'not reached: no answer from status';
   $('#ndLamp').className = 'inlamp' + (!f ? ' error' : f.live.artnet || f.live.sacn || f.live.usb ? ' live' : '');
-  paintArmed();
   if (!f) return;
   $('#ndAddr').innerHTML = [
     `access point <b>${esc(f.apIp || 'off')}</b>${f.apName ? ' · ' + esc(f.apName) : ''}${f.apClients !== null ? ' · ' + f.apClients + ' connected' : ''}`,
@@ -6448,7 +6403,7 @@ function paintNode() {
   }
   const burn = $('#ndBurn');
   burn.dataset.label = f.burnSafe ? 'Burn-safe is ON' : 'Burn-safe is OFF';
-  if (!burn.classList.contains('armed')) burn.textContent = burn.dataset.label;
+  burn.textContent = burn.dataset.label;
   burn.classList.toggle('on', !!f.burnSafe);
   $('#ndBurnNums').textContent = `ceiling ${nd(f.ceiling)} of 255 · slew ${nd(f.slew)} per frame`;
   $('#ndPeerCount').textContent = ND.peers ? peers.length + (peers.length === 1 ? ' peer' : ' peers') : (f.peerCount !== null ? f.peerCount + ' peers' : '');
@@ -6461,7 +6416,7 @@ function paintNode() {
 $('#ndDetails').addEventListener('toggle', () => { if ($('#ndDetails').open) pullNode(true); });
 $('#ndNetModeSet').addEventListener('click', (e) => {
   const m = +$('#ndNetMode').value;
-  nodeArm(e.currentTarget, 'Restart as ' + window.deskCaps.NET_MODES[m] + '?', () => nodeDo('netmode/set', 'Wi-Fi mode set: the node restarts', { m }));
+  nodeAsk('Restart the node as ' + window.deskCaps.NET_MODES[m] + '? It drops off the network for a moment.', 'Restart', () => nodeDo('netmode/set', 'Wi-Fi mode set: the node restarts', { m }));
 });
 $('#ndScan').addEventListener('click', () => { ND.scanPending = true; $('#ndScanNote').textContent = 'scanning…'; pullScan(); });
 $('#ndNets').addEventListener('click', (e) => {
@@ -6477,7 +6432,7 @@ $('#ndJoin').addEventListener('click', async () => {
   const r = await nodeDo('wifi/set', 'Joining ' + ssid + ': the address shows here when it is joined', { ssid, pass }, true);
   if (!r.error) $('#ndPass').value = '';
 });
-$('#ndForget').addEventListener('click', (e) => nodeArm(e.currentTarget, 'Forget the saved network?', () => nodeDo('wifi/forget', 'Saved Wi-Fi network forgotten')));
+$('#ndForget').addEventListener('click', (e) => nodeAsk('Forget the saved Wi-Fi network? The node will need it set again.', 'Forget', () => nodeDo('wifi/forget', 'Saved Wi-Fi network forgotten')));
 $('#ndMode').addEventListener('change', (e) => nodeDo('mode/set', 'Source: ' + window.deskCaps.SOURCE_MODES[+e.target.value], { m: +e.target.value }));
 $('#ndFallback').addEventListener('change', (e) => nodeDo('mode/fallback', 'Fallback to web ' + (e.target.checked ? 'on' : 'off'), { en: e.target.checked ? 1 : 0 }));
 $('#ndArtSet').addEventListener('click', () => {
@@ -6489,7 +6444,7 @@ $('#ndArtSet').addEventListener('click', () => {
 $('#ndPeerSet').addEventListener('click', (e) => {
   const ip = $('#ndPeerTarget').value;
   if (!ip) { nodeDo('artout/peer', 'Art-Net out: every node (broadcast)', { ip: '' }); return; }
-  nodeArm(e.currentTarget, 'Send only to ' + ip + '?', () => nodeDo('artout/peer', 'Art-Net out: only ' + ip, { ip }));
+  nodeAsk('Send Art-Net only to ' + ip + '? Every other node stops receiving it.', 'Send only there', () => nodeDo('artout/peer', 'Art-Net out: only ' + ip, { ip }));
 });
 $('#ndBurn').addEventListener('click', () => {
   const f = ND.st ? window.deskCaps.nodeFacts(ND.st) : null;
@@ -6512,8 +6467,8 @@ $('#ndNameSet').addEventListener('click', () => {
   if (apPass) args.ap_pass = apPass;
   nodeDo('node/set', 'Saved: ' + name, args, true).then((r) => { if (!r.error) $('#ndApPass').value = ''; });
 });
-$('#ndReboot').addEventListener('click', (e) => nodeArm(e.currentTarget, 'Restart now?', () => nodeDo('reboot', 'Restarting: this page reconnects when the node is back')));
-$('#ndFactory').addEventListener('click', (e) => nodeArm(e.currentTarget, 'Erase everything? Press again', () => nodeDo('factory-reset', 'Factory reset: every setting erased, the node restarts')));
+$('#ndReboot').addEventListener('click', () => nodeAsk('Restart the node now? This page reconnects when it is back.', 'Restart', () => nodeDo('reboot', 'Restarting: this page reconnects when the node is back')));
+$('#ndFactory').addEventListener('click', () => nodeAsk('Erase every setting on this node and restart it? This cannot be undone.', 'Erase everything', () => nodeDo('factory-reset', 'Factory reset: every setting erased, the node restarts')));
 
 setInterval(() => { pullInput(); pullNode(); }, 1000);
 
