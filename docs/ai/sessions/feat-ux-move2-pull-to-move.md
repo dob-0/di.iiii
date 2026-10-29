@@ -66,3 +66,8 @@ show they fail on the old code).
 - Not pushed, no PR. `npm run build`, `start-check`, full `npm run test` not run (heat rule; scoped runs).
 - Touch: a second finger during a pull is not a pinch (the first finger belongs to the pull). Snapping does not apply to a pull.
 - Open PRs #1174 (Undo/Redo buttons) and #1176 were not on `origin/dev` at the rebase; whichever lands second rebases.
+
+## Review (S55V, 2026-10-29)
+
+- The switch now has the keys of a radio group (WAI-ARIA APG "Radio Group"): one Tab stop, the arrows flip it (`ViewEditSwitch.jsx`;
+  test "the switch is one Tab stop…" in `StudioShell.test.jsx`, fails on the commit before).

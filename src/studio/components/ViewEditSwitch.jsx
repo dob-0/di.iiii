@@ -12,6 +12,15 @@ export const VIEW_EDIT_MODES = Object.freeze([
 
 export default function ViewEditSwitch({ mode = 'navigate', onChange, className = '' }) {
     const current = mode === 'edit' ? 'edit' : 'navigate'
+    // A radio group's keys (WAI-ARIA APG "Radio Group"): one Tab stop, the arrows pick the other side and move the focus to it.
+    const onKeyDown = (event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return
+        event.preventDefault()
+        event.stopPropagation()
+        const next = current === 'edit' ? 'navigate' : 'edit'
+        onChange?.(next)
+        event.currentTarget.parentElement?.querySelector(`[data-mode="${next}"]`)?.focus()
+    }
     return (
         <div className={`ves${className ? ` ${className}` : ''}`} role="radiogroup" aria-label="View or Edit">
             {VIEW_EDIT_MODES.map((m) => (
@@ -19,6 +28,9 @@ export default function ViewEditSwitch({ mode = 'navigate', onChange, className 
                     key={m.id}
                     type="button"
                     role="radio"
+                    data-mode={m.id}
+                    onKeyDown={onKeyDown}
+                    tabIndex={current === m.id ? 0 : -1}
                     aria-checked={current === m.id}
                     className={`ves-btn${current === m.id ? ' is-on' : ''}`}
                     title={m.title}

@@ -418,6 +418,16 @@ describe('View | Edit (owner 2026-10-28)', () => {
         expect(screen.getByRole('radio', { name: 'View' })).toHaveAttribute('aria-checked', 'true')
     })
 
+    it('the switch is one Tab stop and the arrow keys flip it (a radio group)', () => {
+        renderShell(holding)
+        const view = screen.getByRole('radio', { name: 'View' })
+        expect(view).toHaveAttribute('tabindex', '0')
+        expect(screen.getByRole('radio', { name: 'Edit' })).toHaveAttribute('tabindex', '-1')
+        fireEvent.keyDown(view, { key: 'ArrowRight' })
+        expect(screen.getByTestId('edit-mode')).toHaveTextContent('edit')
+        expect(screen.getByRole('radio', { name: 'Edit' })).toHaveFocus()
+    })
+
     it('adding from Create puts the Studio in Edit, so the first pull moves the new thing', () => {
         const onCreateEntity = vi.fn()
         renderShell({ ...holding, onCreateEntity })
