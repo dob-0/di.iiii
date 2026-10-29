@@ -103,6 +103,9 @@ describe('CodeEditorArea (CodeMirror)', () => {
             const mobile = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../styles/studio-mobile.css'), 'utf8')
             expect(mobile).toMatch(/\.smb-sheet\[data-sheet="files"\] \.smb-sheet-body\s*\{[^}]*flex-direction:\s*column/)
             expect(studio).toMatch(/\.sfp-shell\[data-window-key="files"\] \.sfp-content\s*\{[^}]*flex-direction:\s*column/)
+            // Review: the column keeps its scroll, so the buttons and library list under the editor are never clipped.
+            expect(mobile).not.toMatch(/\.smb-sheet\[data-sheet="files"\] \.smb-sheet-body\s*\{[^}]*overflow:\s*hidden/)
+            expect(studio).not.toMatch(/\.sfp-shell\[data-window-key="files"\] \.sfp-content\s*\{[^}]*overflow:\s*hidden/)
             expect(rule('.di-code-editor .cm-editor .cm-scroller')).toMatch(/overflow:\s*auto/)
         })
         it('the gutter is opaque', () => {
