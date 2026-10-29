@@ -20,7 +20,7 @@
 //   - shadows allowed (High quality, or any project that leaves `shadows` on):
 //     the light casts a shadow, so it also stops at walls for any other view;
 //   - Low quality (phones: no shadow maps): no shadow. It shines on surfaces behind
-//     a wall that nobody can see. Measured, limits: docs/ai/sessions/feat-head-light.md.
+//     a wall that nobody can see. Measured, limits: PR #1170.
 // A "stop the reach at the first wall" clamp was built first and thrown away: it
 // dimmed the wall being looked at (three.js windows the light to zero at its
 // range) and cost a ray against every mesh several times a second, to change
