@@ -83,6 +83,28 @@ const colourOf = (v) => {
     return '#' + rgb.map((c) => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
 }
 const idOf = (v) => String(v ?? '').trim().replace(/[^a-z0-9_-]/gi, '').slice(0, 40)
+const clone = (v) => JSON.parse(JSON.stringify(v))
+/** Two looks draw the same picture: every field but the name (both normalised, so the fields come in one order). */
+const samePicture = (a, b) => {
+    const { name: _a, ...pa } = a
+    const { name: _b, ...pb } = b
+    return JSON.stringify(pa) === JSON.stringify(pb)
+}
+/** An id from a name that is not in `taken`: "star", "star-2"… */
+const freeId = (name, taken) => {
+    const stem = idOf(String(name || 'look').toLowerCase().replace(/\s+/g, '-')) || 'look'
+    let id = stem
+    for (let n = 2; taken.has(id); n += 1) id = `${stem}-${n}`
+    return id
+}
+/** The next free numbered name: "Star" → "Star 2", "Star 2" → "Star 3" when "Star 2" is taken. */
+const nextName = (name, taken) => {
+    const base = String(name).replace(/\s+\d+$/, '').trim() || 'Look'
+    for (let n = 2; ; n += 1) {
+        const candidate = `${base} ${n}`.slice(0, 40)
+        if (!taken.has(candidate)) return candidate
+    }
+}
 
 /** Any object as a look: unknown fields dropped, every known one clamped. `base` fills what `raw` leaves out. */
 const normaliseLook = (raw = {}, base = LOOK_DEFAULTS) => {
@@ -223,14 +245,17 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             log?.warn?.(`[laser desk] ${loadMessage}`)
         }
     }
+    // The bank as last saved: what desk.json holds. Edits change show.looks; only Save (saveBank) and Store move them
+    // here. A write for the clock, the master or the setup writes this bank, never an edit Save has not seen.
+    let savedLooks = clone(show.looks)
+    const commit = () => { savedLooks = clone(show.looks); dirty = false }
     const saveNow = () => {
         saveTimer = null
         try {
             fs.mkdirSync(dataDir, { recursive: true })
             const tmp = file + '.tmp'
-            fs.writeFileSync(tmp, JSON.stringify({ v: 1, bpm: show.bpm, master: show.master, looks: show.looks, cubes: show.cubes, seeded: show.seeded }, null, 1))
+            fs.writeFileSync(tmp, JSON.stringify({ v: 1, bpm: show.bpm, master: show.master, looks: savedLooks, cubes: show.cubes, seeded: show.seeded }, null, 1))
             fs.renameSync(tmp, file)
-            dirty = false
             return true
         } catch (error) {
             log?.warn?.(`[laser desk] desk.json could not be written: ${error.message}`)
@@ -348,10 +373,48 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         return { ok: true, id: look.id }
     }
 
-    /** Save: the bank, the clock and the setup into desk.json, now. */
+    /** The saved looks whose picture changed since the last Save (Save makes each a new scene), and the looks new since. */
+    const changedIds = () => {
+        const before = new Map(savedLooks.map((l) => [l.id, l]))
+        return show.looks.filter((l) => before.has(l.id) && !samePicture(before.get(l.id), l)).map((l) => l.id)
+    }
+    const addedIds = () => {
+        const before = new Set(savedLooks.map((l) => l.id))
+        return show.looks.filter((l) => !before.has(l.id)).map((l) => l.id)
+    }
+
+    /**
+     * Save (2026-10-30, the owner: "it will be saved like new scene"): a look whose picture changed since the last
+     * Save becomes a NEW scene at the end of the bank ("Star 2", or the name it was given), and the look goes back to how
+     * it was saved, so nothing saved is ever overwritten. A new name alone renames it in place; a copy made since the
+     * last Save is kept as it is. The cubes play on: a look on them that became a new scene is that new scene now.
+     * Then the bank, the clock and the setup go into desk.json.
+     */
     const saveBank = () => {
         if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
-        return saveNow() ? { ok: true } : { ok: false, status: 500, error: 'desk.json could not be written (see the server log)' }
+        const before = new Map(savedLooks.map((l) => [l.id, l]))
+        const names = new Set(show.looks.map((l) => l.name))
+        const ids = new Set(show.looks.map((l) => l.id))
+        const kept = []
+        const made = []
+        const created = []
+        for (const look of show.looks) {
+            const was = before.get(look.id)
+            if (!was || samePicture(was, look)) { kept.push(look); continue }
+            const name = look.name !== was.name ? look.name : nextName(was.name, names)
+            names.add(name)
+            const id = freeId(name, ids)
+            ids.add(id)
+            kept.push(clone(was))
+            made.push(normaliseLook({ ...look, id, name }))
+            created.push({ from: look.id, id })
+        }
+        if (kept.length + made.length > MAX_LOOKS) return { ok: false, status: 400, error: `the bank is full (${MAX_LOOKS} looks): delete some, then Save` }
+        show.looks = [...kept, ...made]
+        const moved = created.find((c) => c.from === liveId)
+        if (moved) liveId = moved.id
+        commit()
+        return saveNow() ? { ok: true, created } : { ok: false, status: 500, error: 'desk.json could not be written (see the server log)', created }
     }
 
     /** Edit the live look (on the cubes at once). Starts from the defaults if nothing is live. */
@@ -364,12 +427,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         return { ok: true }
     }
 
-    const newId = (name) => {
-        const stem = idOf(String(name || 'look').toLowerCase().replace(/\s+/g, '-')) || 'look'
-        let id = stem
-        for (let n = 2; show.looks.some((l) => l.id === id); n += 1) id = `${stem}-${n}`
-        return id
-    }
+    const newId = (name) => freeId(name, new Set(show.looks.map((l) => l.id)))
 
     /**
      * Store a look: into `id` (its tile), or as a new tile when `id` is absent. The look is `look` when the page sends
@@ -392,6 +450,8 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             stored = look.id
         }
         if (!preview) liveId = stored
+        // Store writes the bank as it is (the look into its own tile), not as Save does.
+        commit()
         save()
         return { ok: true, id: stored }
     }
@@ -503,6 +563,8 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             defaults: LOOK_DEFAULTS,
             loadMessage,
             unsaved: dirty,
+            changed: changedIds(),
+            added: addedIds(),
             cubes: orderedCubes(engine.cubes).map((c) => {
                 const s = sent.get(c.id)
                 return { id: c.id, ...cubeCfg(c.id), driving: Boolean(live && s && !s.held), held: s?.held ?? null, points: s?.points ?? 0 }
@@ -510,9 +572,11 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         }
     }
 
+    // A clean stop keeps the work as Save would.
     const close = () => {
         release()
-        if (saveTimer || dirty) { clearTimeout(saveTimer); saveNow() }
+        if (dirty) saveBank()
+        else if (saveTimer) { clearTimeout(saveTimer); saveNow() }
     }
 
     return { state, go, editLook, copyLook, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBpm, tap, setCube, thumbs, view, tick, close }

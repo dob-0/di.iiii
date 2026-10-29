@@ -200,7 +200,7 @@ module.exports = [
   },
   {
     route: "POST /laser/desk/api/save",
-    summary: "Save: write the laser desk's bank, clock and setup into <data>/laser/desk.json now",
+    summary: "Save: each look whose picture changed since the last Save becomes a new scene at the end of the bank and the look goes back as it was saved (a new name alone renames in place); then the bank, clock and setup go into <data>/laser/desk.json → { created: [{ from, id }] }",
     reach: "private",
     role: "guest",
     agent: false,

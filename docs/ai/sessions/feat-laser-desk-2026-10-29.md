@@ -60,6 +60,12 @@ The owner's ask: "lets create laser soft like how is lighting one" — inside di
   set `unsaved` and wait for **Save** (top bar, Ctrl+S, `POST /laser/desk/api/save`); any other write (BPM, master,
   setup) and a clean stop write them too. Copy (`looks/copy`) puts a copy after the look. `send` is gone; `store` keeps
   its `{ look }` option.
+- **Save makes a new scene** (2026-10-30, the owner: "it will be saved like new scene"; picked over "two buttons" and
+  "same tile"): a look whose picture changed since the last Save becomes a NEW tile at the end ("Star 2", "Star 3", or
+  the name it was given), and the look goes back to how it was saved; a new name alone renames in place; copies are new
+  already. The desk keeps `savedLooks` (what desk.json holds): writes for BPM, master and setup write that, never an
+  unsaved edit. A look on the cubes that became a new scene is that scene now (`liveId` moves); the page's Edit follows
+  it too (`created` in the answer). State has `changed` and `added`; their tiles show a dot after the name.
 - Wiki `laser-desk`; eslint gives `serverXR/src/laser/ui` browser globals like the light desk's ui.
 
 ## Tested

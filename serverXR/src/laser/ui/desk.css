@@ -111,6 +111,8 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .tile.is-live { border-color: var(--accent); }
 .tile.is-live .name { color: var(--accent); }
 .tile.is-selected .name { background: var(--pane2); box-shadow: inset 0 -2px 0 var(--muted); }
+/* Changed or new since the last Save: Save makes a changed one a new scene. */
+.tile.is-changed .name::after { content: ' \2022'; color: var(--accent); }
 .tile.is-drag { opacity: .4; }
 .tile.is-over { border-color: #fff; }
 

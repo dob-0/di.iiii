@@ -220,6 +220,7 @@
         for (const tile of box.children) {
             tile.classList.toggle('is-live', tile.dataset.id === desk.liveId)
             tile.classList.toggle('is-selected', tile.dataset.id === selected)
+            tile.classList.toggle('is-changed', [...(desk.changed || []), ...(desk.added || [])].includes(tile.dataset.id))
             const look = desk.looks.find((l) => l.id === tile.dataset.id)
             const name = tile.querySelector('.name')
             if (look && name && name.textContent !== look.name) name.textContent = look.name
@@ -421,7 +422,7 @@
         const unsaved = Boolean(desk?.unsaved)
         b.classList.toggle('is-unsaved', unsaved)
         b.textContent = unsaved ? 'Save' : 'Saved'
-        b.title = unsaved ? 'Write every look’s changes to disk (Ctrl+S)' : 'Every look’s changes are on disk'
+        b.title = unsaved ? 'Save (Ctrl+S): every changed look becomes a new scene, the saved looks stay as they were' : 'Everything is saved'
     }
     const renderEditor = () => {
         const live = editing()
@@ -430,9 +431,11 @@
         const onLaser = Boolean(live && desk.live && desk.liveId === live.id)
         const note = $('previewNote')
         note.classList.toggle('is-live', onLaser)
-        note.textContent = onLaser
+        const changed = Boolean(live && (desk.changed || []).includes(live.id))
+        note.textContent = (onLaser
             ? 'On the laser: your changes show there at once'
-            : 'Preview only. Click the look’s picture to send it to the laser'
+            : 'Preview only. Click the look’s picture to send it to the laser')
+            + (changed ? `. Save keeps your changes as a new scene; the saved ${live.name} stays as it was` : '')
         if (!live) return
         if (!held('name') && document.activeElement !== $('lookName')) $('lookName').value = live.name
         if (!held('shape')) $('cycleMode').checked = live.shape.includes(',') || live.cycle > 0
@@ -459,10 +462,14 @@
         await post('desk/api/go', { look: id })
         await refreshDesk()
     }
+    // Save: each changed look becomes a new scene and the look goes back as it was saved; Edit follows the new scene.
     const saveAll = async () => {
         await flush()
-        await post('desk/api/save')
+        const out = await post('desk/api/save')
+        const moved = (out.created || []).find((c) => c.from === selected)
+        if (moved) selected = moved.id
         await refreshDesk()
+        renderEditor()
     }
     $('saveBtn').addEventListener('click', saveAll)
     $('copyBtn').addEventListener('click', async () => {
