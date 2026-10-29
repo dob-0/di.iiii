@@ -168,7 +168,7 @@
 .rigbuild.is-phone .rigbuild-hotbar { max-width: 100%; }
 .rigbuild.is-phone .rigbuild-slot { width: 76px; min-height: 56px; }
 .rigbuild.is-phone .rigbuild-slot__label { font-size: 12px; }
-.rigbuild.is-phone .rigbuild-totals { top: 112px; right: 8px; font-size: 12px; padding: 5px 7px; max-width: calc(100vw - 16px); /* second row: under the items button (44px tall at top 58px), never beside it, so it cannot overlap at 320-430 */ }
+.rigbuild.is-phone .rigbuild-totals { top: 160px; right: 8px; font-size: 12px; padding: 5px 7px; max-width: calc(100vw - 16px); /* second row: under the items button (44px tall at top 58px) AND under the undo row (110px + 44px), never beside them, so it cannot overlap at 320-430 */ }
 .rigbuild.is-phone .rigbuild-totals .rigbuild-dim { display: none; }
 .rigbuild.is-phone .rigbuild-mode { top: 58px; left: 8px; }
 /* a tag is small type with a thumb-sized target around it */
@@ -202,7 +202,7 @@
 .rigbuild.has-rigbar .rigbuild-mode:not(.rigbuild-mode--items) { top: calc(var(--rigbar-h) + 64px); }
 .rigbuild.has-rigbar .rigbuild-sheet.rigplot { top: calc(var(--rigbar-h) + 64px); }
 .rigbuild.has-rigbar.is-phone .rigbuild-mode { top: calc(var(--rigbar-h) + 58px); }
-.rigbuild.has-rigbar.is-phone .rigbuild-totals { top: calc(var(--rigbar-h) + 112px); }
+.rigbuild.has-rigbar.is-phone .rigbuild-totals { top: calc(var(--rigbar-h) + 160px); }
 .rigbuild.has-rigbar.is-phone .rigbuild-mode--items { top: calc(var(--rigbar-h) + 58px); bottom: auto; }
 .rigbuild.has-rigbar.is-phone .rigbuild-sheet.rigplot { top: auto; }
 
