@@ -24,10 +24,11 @@ export const WIKI_ARTICLES = [
         body: [
             'The Editor\'s frame is di.iiii\'s: one cyan, a near-black ground, and rectangles for every button, tab, badge, switch and slider. A project\'s scene is yours: its background, its objects and their colours look exactly as you set them, with or without the frame around them.',
             'A slider\'s thumb is a small upright bar with a dark rim, so it stays visible over the filled cyan line. The whole 24 px row of a slider takes a click or a touch, not only the thin line. A switch is a square in a rectangle: grey when off, cyan when on. Controls have sharp corners; the only round mark is the connection light.',
-            'On the Spaces page, the view you are on (Grid, List, Map) is lit, a row you reach with the keyboard is lit too, and a public space is drawn light grey, because cyan means live. A space\'s address is printed in grey; green is kept for what is live.'
+            'On the Spaces page, the view you are on (Grid, List, Map) is lit, a row you reach with the keyboard is lit too, and a public space is drawn light grey, because cyan means live. A space\'s address is printed in grey; green is kept for what is live.',
+            'The Editor\'s smallest text is 12 px. Window buttons (fold and close) are at least 28 px, 44 px on a touch screen, with a gap between them; a closed window comes back from Tools > Windows.',
         ],
         tags: ['studio', 'editor', 'frame', 'colours', 'slider', 'switch', 'look'],
-        updated: '2026-10-21'
+        updated: '2026-10-29'
     },
     {
         id: 'auto-fly',
