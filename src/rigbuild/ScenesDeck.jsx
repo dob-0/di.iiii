@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { applyProjectOps } from '../shared/projectSchema.js'
+import NextStep from './NextStep.jsx'
+import { NEXT_STEP_WORDS } from './nextStep.js'
+import { rigStepPath } from './rigTools.js'
 import { SceneDeckError } from './sceneDeck/errors.js'
 import { LOOP_RANGE_S, applyControl, guardSceneChange, intensityOf, isBlinderKey, readScenes } from './sceneDeck/model.js'
 import { createHistory, historyReducer } from './sceneDeck/history.js'
@@ -300,7 +303,7 @@ function SyncStrip({ ledger, compared, readOnly, onFile, onExport, onChoose, fil
  * storage   localStorage-like, for the sync ledger (tests pass their own)
  * download  (fileName, text) => void, for EXPORT (tests pass their own)
  */
-export default function ScenesDeck({ doc, applyOps, projectId, readOnly = false, syncError = null, syncVersion, storage, download = downloadJson, now = () => new Date(), reducedMotion: forcedReduced }) {
+export default function ScenesDeck({ doc, applyOps, spaceId = null, projectId, readOnly = false, syncError = null, syncVersion, storage, download = downloadJson, now = () => new Date(), reducedMotion: forcedReduced }) {
     const read = useMemo(() => readScenes(doc), [doc])
     const { scenes, loopSeconds } = read
     const [tab, setTab] = useState('A')
@@ -561,7 +564,9 @@ export default function ScenesDeck({ doc, applyOps, projectId, readOnly = false,
     if (!scenes.length) {
         return (
             <div className="rigscenes rigscenes-body">
-                <p>No scenes in this project yet. Looks are written by scripts/rigbuild/looks.mjs and the cue list by show-cues.mjs; the cards page adds cues too.</p>
+                {/* The next step as a button (F038): the cards page makes looks and puts them on the cue list.
+                    scripts/rigbuild/looks.mjs and show-cues.mjs still write them from a terminal. */}
+                <NextStep line={NEXT_STEP_WORDS.scenes} actions={[spaceId ? { label: NEXT_STEP_WORDS.cards, href: rigStepPath('cards', spaceId, projectId) } : null]} />
             </div>
         )
     }

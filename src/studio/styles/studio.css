@@ -220,6 +220,14 @@
     max-height: 70vh;
 }
 
+/* The Code window: its body is a column, so the editor takes the height left inside the window.
+   It keeps its own scroll (overflow-y: auto from .sfp-content): when the window is too short for the
+   editor's 220 px floor plus the buttons and the library list, those stay reachable by scrolling. */
+.sfp-shell[data-window-key="files"] .sfp-content {
+    display: flex;
+    flex-direction: column;
+}
+
 .sfp-resizer {
     position: absolute;
     bottom: 2px;
@@ -1862,4 +1870,19 @@
     .move-edit-mouse .scc-btn {
         min-height: 44px;
     }
+}
+
+/* The Studio's heading and landmark for screen readers and the tab (F125, S19).
+   The main region adds no box of its own: the shell lays out as before. */
+.studio-page-main {
+    display: contents;
+}
+
+.studio-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }

@@ -16,6 +16,44 @@ Not done: selecting a non-Geo standing node inside Studio (the top room stays `e
 Regression tests: `StructurePanel.test.jsx` ("lists what the scene shows"), `geoScope.test.js` ("what stands in the top room", incl. the marked Camera, and the Edit in Nodes button).
 Replaced nothing: entity rows, rename, hide, lock, drag-to-group and the empty line for a truly empty project are unchanged.
 
+## Flat pages started 3D, cards booted a whole app each, "no forward" logged a red error (UX audit F136, F137, F138, F155; 2026-10-29)
+
+Symptom: `/spaces` loaded 336 requests / 2 MB (a hidden copy of the app per card); the wiki and front page started a WebGL canvas as
+decoration; every space open logged `404 /api/resolve/<space>` in red; `verify:surfaces` failed on an artist page's Cloudflare beacon.
+Cause: cards without a cover booted `?preview=1` frames to take a still; `WikiPage` mounted `GridFloorBackground` always; the server
+answered "nothing to forward" with a 404; the checker counted every console error, whoever logged it.
+Fix: a card with no picture draws a calm still (`SpaceHub.jsx` `ssh-card-still`) and the 3D opens by pressing it (`SpaceCardLive`);
+the still also prints the space's own one-line blurb; wiki AND front page flat unless `?scene=1` (`utils/decorative3d.js`; on the front page the door "Step inside" still brings the room);
+`GET /api/resolve/:space` answers 200 `{ movedTo: null }` for nothing to forward (404 only for a space that does not exist; old clients
+read both); `scripts/verifySurfacesFilters.mjs` drops console lines from another origin.
+Kept as modes (nothing is lost): `?previews=live` or `localStorage['dii:space-card-previews']='live'` = the earlier boot-a-frame cards
+(`studio/utils/spaceCardMode.js`); `?scene=1` = the 3D backdrop on wiki and front page.
+Regression tests (fail on the old code, run): `SpaceHub.test.jsx` ("calm still"), `WikiPage.test.jsx` ("backdrop"),
+`serverXR/src/projectMoveContracts.test.js` (nothing-to-forward is 200), `scripts/verifySurfacesFilters.test.js`, `utils/decorative3d.test.js`.
+
+## Two main regions on /spaces and a hub (Studio, UX S19 repair, 2026-10-29)
+
+StudioApp wrapped the hub, spaces and director views in `<main>`, but SpaceHub and StudioHub already render their own: axe `landmark-no-duplicate-main` 1 and `landmark-main-is-top-level` 1. Rule: every view owns its main, the wrapper adds none; the director now renders its own `<main>` (also on the redirect fallback). Guards: a render count of `main` in `SpaceHub.test.jsx`, `StudioHub.test.jsx`, `StudioCodeSpaceDirector.test.jsx` and a source check in `pageTitles.test.js`; the director and source ones watched fail on the old code.
+
+## Empty rig pages told people to run developer scripts (rig pages, UX audit F038, 2026-10-29)
+
+Symptom: a fresh project's plot said "No venue plan … (scripts/rigbuild/load-plot.mjs)", the cards "written … by scripts/rigbuild/looks.mjs"
+and "rental.mjs", the scenes deck "looks.mjs … show-cues.mjs" — and no button (audit `capture/sheets/plot.png`, `cards.png`, `scenes.png`).
+Cause: the empty states were written for the developer who loaded MOXIR by script; the steps had no in-app way in.
+Fix: `src/rigbuild/NextStep.jsx` + `nextStep.js`: each empty state is one plain line and the buttons that do it — rental list → "pick the
+equipment" (the equipment page writes it), positions → "build on the plot" / "build it in the room", plot hall → "load the hall plan"
+(a hall.json, `venuePlanFromHall`, same as `load-plot.mjs --plan-only`), looks → "make a first look" (every group `point`, open white) and
+"load looks from a rig file" (`rigLooksFrom`, moved to `src/rigbuild/rigLooksFrom.js`; `scripts/rigbuild/looks.mjs` imports and re-exports
+it, so script and button run one code), scenes → "put looks on the cue list" (the cards). Writes go through the page's own op path (undo,
+read-only = links only, the server's write check). The scripts stay runnable from a terminal.
+Regression test: `src/rigbuild/nextStep.test.jsx` ("the empty rig pages name no developer script", "the script and the button run one code";
+4 of its 16 fail on origin/dev's page files).
+Picture fix (2026-10-29): on the empty scenes deck (desktop and phone) "put looks on the cue list" was bare text, no border, no fill.
+Cause: `nextStep.css` draws `.rignext-btn` with `var(--ink)`/`var(--paper)`; the plot and cards pages set them (`.rigplot`, plot.css),
+the scenes deck (`scenes.css`) has only its `--sc-*` colours. Fix: `scenes.css` `.rigscenes .rignext` maps `--ink/--paper/--soft` to the
+deck's own `--sc-tx/--sc-bg/--sc-dim` (and the deck's 44 px control height, three classes deep so rigSteps.css's 24 px floor `:is(…) a[class]` does not win). Guard: `nextStep.test.jsx` "every page that mounts the next
+step sets the colours its CSS reads" (fails on the scenes.css before this fix).
+
 ## A page project drew the 3D tools around its page (Studio, UX audit F017 / F001 / F139, slice S16 PR a, 2026-10-29)
 
 Symptom: a project that is a web page (the cinema-house copy) opened Studio on its page (#1161) but still drew the 3D tools over it:
@@ -34,6 +72,17 @@ Regression tests (5 fail on origin/dev 8f20185c1): `StudioShell.test.jsx` "a pag
 Objects line now expects no Objects), `StudioControlCluster.test.jsx` "a page project (pageOnly)", `StudioViewportLayout.test.jsx`
 "on a page project".
 
+## The code box was a bare text box: no name, no line numbers, colours, find or indent (Studio, UX audit F018, 2026-10-29)
+- Symptom: Code window = a `<textarea>` with no accessible name (axe `label`), no line numbers or colours, Tab left the box, 12 px system `monospace`.
+- Fix: `panels/CodeEditorArea.jsx` lazy-loads CodeMirror 6 (`CodeMirrorBox.jsx`, own `codemirror-vendor` chunk in vite.config.js); name "Code of <file>"; Tab indents, Esc then Tab leaves (WCAG 2.1.1); `--di-mono`.
+- Same commit path: both the editor and the plain box use `codeBuffer.js` (400 ms idle, blur, unmount -> onCommit). The ref handle looks like a textarea, so "insert at the cursor" is unchanged.
+- Kept (nothing lost): the textarea is the load fallback, the fallback if the editor fails to load, and a remembered choice ("Use a plain text box", `di.codeEditor.plain`).
+- Trap: without the manualChunks entry CodeMirror lands in the shared `vendor` chunk (+495 KB for every route). Keep it named.
+- Tests: `panels/CodeEditorArea.test.jsx` (5 fail on the old box).
+- Picture step (2026-10-29): with the 680 KB file the box grew as tall as the file (no height limit, `.cm-editor` max-height 100% of a content-sized parent), so the page scrolled instead of the editor: the find bar sat ~125,000 px down and "Use a plain text box" was out of reach; the gutter was transparent, so text scrolled sideways showed through the line numbers. Fix (`studio-code.css`): `.di-code-editor` `max-height: 70vh`, `min-height: 0` on `.cm-editor` and `.cm-scroller`; gutter `background: var(--di-bg)`. Tests: "box in a window (css)" (2 fail on the CSS before it). Limit: 70vh is the viewport, not the window.
+- Picture step, round 2 (2026-10-29): the first cap (`max-height: 70vh`) was relative to the browser, not to the Code window: the box ended below the window edge (desktop box bottom y=869, window y=765) and on a phone below the screen, so the find bar and "Use a plain text box" were hidden. Fix: no vh cap; the body of the Code window (`.sfp-shell[data-window-key="files"] .sfp-content`) and of the phone Code sheet (`.smb-sheet[data-sheet="files"] .smb-sheet-body`) are columns, `FilesPanel`'s root is `flex: 1 1 auto; min-height: 0`, so the editor takes the height left and scrolls inside itself. Regression test: `CodeEditorArea.test.jsx` "box in a window (css)".
+- Review of round 2 (2026-10-29): the column must keep its scroll. `overflow: hidden` on those two bodies clipped what sits under the editor (Rename, Delete file, the library list, the templates when there is no file) in a short window or on a phone. The editor still fills the height; the body scrolls only when the 220 px floor plus the rest does not fit. Same test.
+
 ## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
 
 Symptom: after adding a box from Create, the child and the senior pulled it; the view turned and the box left the screen, Position
@@ -51,6 +100,14 @@ Kept as a mode (owner 2026-10-29, "what we have never lose"): the 2026-10-12 Edi
 browser as `di.studio.navigation.editMouse`, default `pull`). Like Blender = origin/dev's Edit map, no pull; View is always Move 1.
 Tests: `src/studio/navigation/editMouse.test.js` (the map compared button by button with a snapshot read from origin/dev's
 `mappings.js`), `MoveSettings.test.jsx` ("Mouse in Edit"), `StudioHelpDialog.test.jsx` (both mouse tables).
+
+## A base path ate half a word: base `/hy` turned `/hyper/studio` into `per/studio` (S13b, 2026-10-29)
+
+Symptom: none yet on screen (found in the languages design before `/hy` became a base). Cause: `createBasePathHelpers` (`laneBasePath.js`) and
+`stripAppBasePath` (`spaceRouting.js`) used `startsWith(base)` on the string, not on a whole segment. Fix: strip only when the path is the
+base or starts with `base + '/'`. Regression test: `src/i18n/languages.test.js` ("a base path owns whole segments only"; fails on origin/dev's
+`laneBasePath.js`). `stripAppBasePath` reads `BASE_URL` once at load (root in tests), so its whole-segment branch is not reachable from a
+test; the lane helper carries the proof. The codes `en`, `hy`, `ru` are now reserved words from the language table.
 
 ## Recurring bug class: silent hardcoded fallback
 
@@ -1618,6 +1675,16 @@ Kept (nothing lost): the old card→Studio route is the Edit button.
 Review fix (2026-10-29): the Studio project card (`.sh-project-card`, F031) was still `role="button"` holding Rename, Delete and two selects; now a plain div (mouse click still opens) whose title is the one button that opens the project. Rename moved clear of the wider Delete word, the title keeps room for both. Guard: `StudioHub.test.jsx` "a project card is no button itself…" (fails on origin/dev).
 Picture fix (2026-10-29): /spaces footer read "Light(opens in a new tab)" — `.ssh-tools-link` is `inline-flex`, so the hint span's leading space collapsed. Fix: `.ssh-tools-newtab { margin-left: 0.25em }` (`studio-space-hub.css`). Guard: `SpaceHub.test.jsx` "the \"(opens in a new tab)\" hint keeps a visible gap…" (fails without the margin).
 CI fix (2026-10-29): `spine.test.js` refused `.sh-project-title { padding-right: calc(140px - var(--di-space-5)) }`, a guessed reserve for Rename (at a fixed `right: 78px`) and Delete; with a longer word (a translation) Rename still covered the name on a phone. Fix: the name and `.sh-project-tools` (Rename, Delete) share one wrapping flex row, `.sh-project-head`; no absolute positions; the name is never narrower than `min(4em, 100%)`, else the buttons go under it; `overflow-wrap: anywhere` breaks a name with no spaces. Guard: StudioHub.test.jsx "a project card keeps Rename and Delete in the name's row".
+
+## Every page had the same tab title; the Studio had no h1 or main (UX S19, F125, 2026-10-29)
+
+Symptom: 35 of 74 captured pages (every Studio view, Admin, chat, tools, make) read the index.html default "di.iiii — public spaces on the open web"; the Studio had no h1 and no main landmark (WCAG 2.4.2).
+Cause: only ~15 call sites used `useDocumentTitle`; the Studio, chat home, tools and Admin never did.
+Fix: `src/hooks/pageTitles.js` is the one route -> title table ("<page> — <where> — di.iiii"); `StudioApp`, `StudioEditor` (project name, a visually hidden h1 and a `<main>` with `display: contents`), `ChatHomeSurface` (h1 + main), `KitPage`, `PreferencesPage` (section name) call it.
+Guard: `src/hooks/pageTitles.test.js` (18; 7 failed on the old code). Owed: titles move into the S13 message layer when it lands; Make page and axe page-has-heading-one are not measured here.
+Kept (nothing lost): the index.html default stays as the title of the landing and any route without an entry.
+Review fix (2026-10-29): the Studio hub, spaces and director views had an h1 but still no main; `StudioApp` now wraps them in `<main className="studio-page-main">` (display: contents), and the project view's hidden h1 sits inside its main. Guard: `pageTitles.test.js` (20; 9 fail on origin/dev's sources).
+Superseded (2026-10-29, S19 repair): the StudioApp wrapper made two mains; see "Two main regions on /spaces and a hub" at the top. Each view now owns its one main.
 
 ## The page route answered 503 on the Mac tiers; /sitemap-built.xml was 404 (2026-10-29, languages S13a)
 

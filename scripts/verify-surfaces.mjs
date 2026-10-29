@@ -31,6 +31,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { buildAllNodesExample } from '../src/project/graph/examples/allNodesExample.js'
 import { normalizeProjectDocument } from '../src/shared/projectSchema.js'
+import { isForeignConsoleLine } from './verifySurfacesFilters.mjs'
 
 const arg = (name, fallback = null) => {
   const i = process.argv.indexOf(`--${name}`)
@@ -160,7 +161,12 @@ const main = async () => {
       const pageErrors = [], consoleErrors = [], httpErrors = [], htmlAssets = []
 
       page.on('pageerror', e => pageErrors.push(String(e.message).slice(0, 160)))
-      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 160)) })
+      // Lines from another site (an artist page's own beacon) are not ours to fail on.
+      page.on('console', m => {
+        if (m.type() !== 'error') return
+        if (isForeignConsoleLine({ text: m.text(), locationUrl: m.location()?.url }, BASE)) return
+        consoleErrors.push(m.text().slice(0, 160))
+      })
       page.on('response', async r => {
         const url = r.url()
         if (r.status() >= 400) httpErrors.push(`${r.status()} ${url.slice(0, 90)}`)

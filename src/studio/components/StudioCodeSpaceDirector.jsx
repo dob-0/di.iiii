@@ -45,14 +45,14 @@ export default function StudioCodeSpaceDirector({ spaceId }) {
 
     if (!hasSurface) {
         return (
-            <div className="studio-shell-root scsd-root">
+            <main className="studio-shell-root scsd-root">
                 <div className="scsd-loading"><LoadingScreen variant="inline" label="Opening Projects" text="opening projects" /></div>
-            </div>
+            </main>
         )
     }
 
     return (
-        <div className="studio-shell-root scsd-root">
+        <main className="studio-shell-root scsd-root">
             <header className="scsd-head">
                 <div>
                     <p className="sh-space-context">Space: {codeSpace.label}</p>
@@ -79,6 +79,6 @@ export default function StudioCodeSpaceDirector({ spaceId }) {
                     <Surface embedded director />
                 </Suspense>
             </div>
-        </div>
+        </main>
     )
 }

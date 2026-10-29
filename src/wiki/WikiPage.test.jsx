@@ -1,7 +1,9 @@
 import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import WikiPage from './WikiPage.jsx'
+
+vi.mock('../components/GridFloorBackground.jsx', () => ({ default: () => <canvas data-testid="mock-backdrop" /> }))
 import { getAppLocationState } from '../utils/spaceRouting.js'
 import { WIKI_ARTICLES, WIKI_HIGHLIGHTS, WIKI_CATEGORIES } from './wikiContent.js'
 
@@ -104,5 +106,30 @@ describe('WikiPage', () => {
             expect(document.title).toBe('Wiki — di.iiii')
             expect(window.location.pathname).toBe('/wiki')
         })
+    })
+})
+
+describe('WikiPage backdrop (F138)', () => {
+    // jsdom has no scrollIntoView; the page calls it for a deep link left in the
+    // address by an earlier test. Without this the run ends with unhandled errors.
+    const realScroll = Element.prototype.scrollIntoView
+    beforeEach(() => {
+        window.history.replaceState(null, '', '/wiki')
+        Element.prototype.scrollIntoView = vi.fn()
+    })
+    afterEach(() => { Element.prototype.scrollIntoView = realScroll })
+
+    it('starts no canvas by default; ?scene=1 brings the 3D backdrop back', async () => {
+        const { container, unmount } = render(<WikiPage />)
+        await new Promise(resolve => setTimeout(resolve, 30))
+        expect(container.querySelectorAll('canvas').length).toBe(0)
+        unmount()
+        window.history.replaceState(null, '', '/wiki?scene=1')
+        try {
+            const forced = render(<WikiPage />)
+            expect(await forced.findByTestId('mock-backdrop')).toBeTruthy()
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
     })
 })

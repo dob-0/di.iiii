@@ -1,0 +1,44 @@
+/* The code window's editor (CodeMirror 6). House mono, square corners, the studio's dark surface.
+   Rules inside the editor name .cm-editor too: the library's own theme has the same weight and may load later. */
+.di-code-editor {
+    flex: 1;
+    min-height: 220px;
+    /* Fills what is left inside its own Code window (a flex chain with min-height:0 all the way down):
+       a long file scrolls inside the editor (its .cm-scroller), so the find bar and the
+       "plain text box" button stay in the window. */
+    display: flex;
+    border: 1px solid var(--di-line);
+    border-radius: 0;
+    overflow: hidden;
+}
+.di-code-editor:focus-within {
+    border-color: var(--di-cyan);
+}
+.di-code-editor .cm-editor {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    background: transparent;
+    color: inherit;
+    font-family: var(--di-mono);
+    font-size: 0.8rem;
+}
+.di-code-editor .cm-editor.cm-focused {
+    outline: none;
+}
+.di-code-editor .cm-editor .cm-scroller {
+    font-family: inherit;
+    line-height: 1.5;
+    overflow: auto;
+    min-height: 0;
+}
+.di-code-editor .cm-editor .cm-gutters {
+    /* Opaque: text scrolled sideways must not show through the line numbers. */
+    background: var(--di-bg);
+    color: rgba(255, 255, 255, 0.55);
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+.di-code-editor .cm-editor .cm-activeLine,
+.di-code-editor .cm-editor .cm-activeLineGutter {
+    background: rgba(255, 255, 255, 0.06);
+}
