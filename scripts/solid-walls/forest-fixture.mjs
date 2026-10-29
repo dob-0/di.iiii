@@ -46,7 +46,7 @@ const blocked = (x, z) => (Math.abs(x) < 2.5 && z > 0 && z < 12)
     || (x > 0 && x < 18 && z > -5 && z < 7)
     || (Math.abs(x + 8) < 1.8 && z > -20 && z < 12)
 
-export function buildForestDocument({ solidWalls = true, trees = 60 } = {}) {
+export function buildForestDocument({ solidWalls = true, trees = 60, headLight = false } = {}) {
     counter = 0
     const rand = lcg(2026)
     const entities = []
@@ -81,7 +81,8 @@ export function buildForestDocument({ solidWalls = true, trees = 60 } = {}) {
             directionalLight: { color: '#cfdcff', intensity: 2.6, position: [-14, 22, 9] },
             // the visitor starts at the edge of the clearing, facing the head-on trunk (forward is -z at yaw = PI)
             spawn: { x: 0, z: 9, yaw: Math.PI, pitch: 0, altY: 1.6 },
-            solidWalls: solidWalls ? { enabled: true } : null
+            solidWalls: solidWalls ? { enabled: true } : null,
+            headLight: headLight ? { enabled: true } : null
         }
     }
 }
@@ -116,7 +117,7 @@ async function main() {
         id = made?.id || made?.projectId || made?.project?.id || made?.meta?.projectId
     }
     if (!id) throw new Error(`no project id in ${JSON.stringify(made).slice(0, 300)}`)
-    const doc = buildForestDocument({ solidWalls: !off, trees })
+    const doc = buildForestDocument({ solidWalls: !off, trees, headLight: Boolean(arg('head-light', false)) })
     await call(api, 'PUT', `/api/projects/${id}/document`, doc)
     const back = await call(api, 'GET', `/api/projects/${id}`)
     const got = back?.document || back
