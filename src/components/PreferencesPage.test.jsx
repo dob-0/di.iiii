@@ -198,7 +198,7 @@ describe('PreferencesPage', () => {
         const gotoSection = (label) => fireEvent.click(within(nav).getByRole('button', { name: new RegExp(label) }))
 
         // System section — frontend build + backend release metadata.
-        gotoSection('System')
+        gotoSection('Log and settings')
         expect(await screen.findByText('Build / Release')).toBeInTheDocument()
         // The build's own version, not a literal. It was '0.2.0', which is what
         // package.json happened to say for three releases — so this assertion
@@ -216,7 +216,7 @@ describe('PreferencesPage', () => {
         // Inspect section (topology + objects + session merged, 2026-08-08) —
         // clicking a node in the architecture map updates the inline Node
         // Inspector ("Node Inspector — <label>" after selection).
-        gotoSection('Inspect')
+        gotoSection('This scene')
         const architectureSection = screen.getByText('System Architecture').closest('section')
         expect(architectureSection).toBeTruthy()
 

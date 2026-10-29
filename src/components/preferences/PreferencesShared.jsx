@@ -128,7 +128,7 @@ export function SectionNav({ sections = [], activeKey, onSelect }) {
                 return (
                     <div key={section.key} className="preferences-nav-entry">
                         {showGroupLabel ? (
-                            <div className="preferences-nav-group-label">{section.group}</div>
+                            <div className="preferences-nav-group-label">{section.groupLabel || section.group}</div>
                         ) : null}
                         <button
                             type="button"
@@ -136,7 +136,7 @@ export function SectionNav({ sections = [], activeKey, onSelect }) {
                             onClick={() => onSelect?.(section.key)}
                             aria-current={activeKey === section.key ? 'page' : undefined}
                         >
-                            <span className="preferences-nav-glyph" aria-hidden="true">{section.glyph}</span>
+                            {section.glyph ? <span className="preferences-nav-glyph" aria-hidden="true">{section.glyph}</span> : null}
                             <span className="preferences-nav-label">{section.label}</span>
                             {section.badge != null && section.badge !== '' ? (
                                 <span className="preferences-nav-badge">{section.badge}</span>
