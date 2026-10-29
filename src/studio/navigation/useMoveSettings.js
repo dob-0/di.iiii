@@ -16,6 +16,8 @@ export const SPEED_LABEL = 'Speed (metres a step)'
 export const MOVE_HINT = 'Wheel: forward and back. Shift faster, Alt slower. Hold the right button and press W\u00a0A\u00a0S\u00a0D\u00a0Q\u00a0E to fly.'
 // The Help panel's words for the default move.
 export const MOVE_HELP_NOTE = 'Move 1 (default): the same speed in every direction, the speed set from the size of the place.'
+// The words of the View | Edit switch (ViewEditSwitch.jsx), shown above Move 1's.
+export const VIEW_EDIT_HELP_NOTE = 'View | Edit, at the top of the Studio (E switches). View: every pull turns the view, nothing moves by accident. Edit: pull the selected thing to slide it along the floor; pull anywhere else, hold Alt or use the middle button to move the view; the arrows still give exact moves. Adding something from Create switches to Edit. Locked things and the walls and floor of a place never move.'
 
 // What typed text means as a speed: metres in range, or null when it is not a usable number (the setting then stays as it is). Pure.
 export function parseSpeedText(text) {

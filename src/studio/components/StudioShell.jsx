@@ -41,6 +41,7 @@ import {
     TimelinePanel,
 } from './StudioShellPanels.jsx'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
+import ViewEditSwitch from './ViewEditSwitch.jsx'
 
 // Raycast a viewport double-click into the scene's ground plane (y=0) so a
 // quick-inserted entity lands where the cursor pointed, not at a fixed default.
@@ -125,8 +126,8 @@ export default function StudioShell({
     controlsRef,
     paneControlsRef,
     xrState,
-    onCreateEntity,
-    onCreateFromAsset,
+    onCreateEntity: createEntity,
+    onCreateFromAsset: createFromAsset,
     onAssetFilesSelected,
     onDriveImportUrl,
     onDriveImportSelection,
@@ -221,6 +222,20 @@ export default function StudioShell({
         }
         setViewportEditMode(mode)
     }, [])
+    // Adding a thing (Create, the quick insert, a drop) puts the Studio in Edit, so the first pull on the new, selected thing
+    // moves it (owner 2026-10-28, View | Edit; UX audit F030: the first pull turned the view and the new box left the screen).
+    const onCreateEntity = useCallback((...args) => {
+        const made = createEntity?.(...args)
+        setViewportEditMode('edit')
+        return made
+    }, [createEntity])
+    const onCreateFromAsset = useCallback((...args) => {
+        const made = createFromAsset?.(...args)
+        setViewportEditMode('edit')
+        return made
+    }, [createFromAsset])
+    // The View | Edit switch (ViewEditSwitch.jsx): View is the Navigate tool, Edit the Edit tool; one state, not two.
+    const setViewOrEdit = useCallback((mode) => setEditModeFromTools(mode === 'edit' ? 'edit' : 'navigate'), [setEditModeFromTools])
     const [viewportGizmoMode, setViewportGizmoMode] = useState('translate')
     const [viewportGizmoSpace, setViewportGizmoSpace] = useState('world')
     const [viewportGizmoAxis, setViewportGizmoAxis] = useState(null)
@@ -792,6 +807,10 @@ export default function StudioShell({
 
             {!uiHidden && !isMobile && (
                 <>
+                    {/* Nothing to move in an empty room. */}
+                    {!bare && (
+                        <ViewEditSwitch className="ves--desk" mode={viewportEditMode} onChange={setViewOrEdit} />
+                    )}
                     {(isShown('create') || (bare && !createHeldBack)) && (
                         // Bare, Create is the one window: always drawn, and not
                         // closable, or the first screen would have nothing on it.
@@ -925,15 +944,9 @@ export default function StudioShell({
                                 Projection
                             </button>
                         )}
-                        {/* Nothing to edit in an empty room. */}
+                        {/* Nothing to edit in an empty room. The same View | Edit switch as on the desk. */}
                         {!bare && (
-                            <button
-                                type="button"
-                                className={`smb-top-btn${viewportEditMode === 'edit' ? ' is-active' : ''}`}
-                                onClick={() => setViewportEditMode((m) => (m === 'navigate' ? 'edit' : 'navigate'))}
-                            >
-                                {viewportEditMode === 'edit' ? 'Editing' : 'Edit'}
-                            </button>
+                            <ViewEditSwitch className="ves--phone" mode={viewportEditMode} onChange={setViewOrEdit} />
                         )}
                     </div>
                     {mobileSheet && (

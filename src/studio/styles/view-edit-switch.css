@@ -1,0 +1,53 @@
+/* VIEW | EDIT (components/ViewEditSwitch.jsx): one big two-way switch, square, house tokens.
+   A 44 px touch target on every screen (--di-touch-target), plain words in Inter, the label tracking of the bar. */
+.ves {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--di-cyan-border);
+    background: var(--di-scrim);
+    border-radius: 0;
+    pointer-events: auto;
+}
+
+.ves-btn {
+    appearance: none;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-dim);
+    font-family: var(--di-sans);
+    font-size: var(--di-text-4);
+    letter-spacing: var(--di-label-tracking);
+    text-transform: uppercase;
+    min-height: var(--di-touch-target);
+    min-width: calc(var(--di-touch-target) * 2);
+    padding: 0 var(--di-space-4);
+    cursor: pointer;
+}
+
+.ves-btn + .ves-btn { border-left: 1px solid var(--di-cyan-border); }
+
+.ves-btn:hover { color: var(--di-ink); }
+
+.ves-btn.is-on {
+    color: var(--di-cyan);
+    background: rgba(var(--di-cyan-rgb), 0.15);
+    cursor: default;
+}
+
+.ves-btn:focus-visible {
+    outline: 2px solid var(--di-cyan);
+    outline-offset: -2px;
+}
+
+/* On the desk: at the top of the Studio, in the middle, under the bar. */
+.ves--desk {
+    position: absolute;
+    top: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+}
+
+/* On a phone: in the top row, beside the back arrow. */
+.ves--phone .ves-btn { min-width: var(--di-touch-target); padding: 0 var(--di-space-2); }

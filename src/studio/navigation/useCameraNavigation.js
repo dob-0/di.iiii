@@ -6,7 +6,7 @@
 // - a slide drag moves both sideways or up and down by the same metres per pixel in every direction;
 // - a zoom drag moves both forward or back, 100 px a step;
 // - a turn drag turns around a point a fixed distance ahead (setting: where you stand); the buttons stay the tool's own
-//   (mappings.js: Edit like Blender, Navigate like Sketchfab);
+//   (mappings.js: the Studio uses 'studio', like Sketchfab, in View and Edit since 2026-10-28; 'blender' stays as a preset);
 // - a double-click on a surface turns the view to it and makes it the turning point until the next move (an explicit choice);
 // - Blender's Orbit Around Selection, when the viewer turns it on, turns around the selection (an explicit choice).
 // camera-controls keeps its own turning and easing; this hook places the turning point at each drag's start (capture-phase
@@ -17,6 +17,7 @@ import { Vector3 } from 'three'
 import { useProgress } from '@react-three/drei'
 import { modelsLoading } from '../../objectComponents/modelLoads.js'
 import { clientToNdc, contentLargestSide, pickPivot, selectionCenter } from './autoDepth.js'
+import { pullPressAllowed } from './pullToMove.js'
 import { wheelNotches } from '../../project/viewport/navMath.js'
 import { IN_PLACE_DISTANCE, autoSpeed, flyVelocity, resolveSpeed, slideMetresPerPixel, speedModifier, turnDistance, wheelStep, zoomDragStep } from './freeMove.js'
 
@@ -159,12 +160,18 @@ export function useCameraNavigation({
     turn: turnSetting = 'point',
     // Re-run when the controls mount/unmount (Studio hides them in XR / when disabled).
     active = true,
+    // The Studio's View | Edit (StudioShell viewportEditMode: 'navigate' = View, 'edit' = Edit) and its pull (pullToMove.js
+    // usePullToMove). Only in Edit is a press handed to the pull first. Read at gesture time.
+    mode = 'navigate',
+    pull = null,
 }) {
     // Read at gesture time, so a new selection or setting does not re-register listeners.
     const selectionRef = useRef(selectedEntityIds)
     useEffect(() => { selectionRef.current = selectedEntityIds }, [selectedEntityIds])
     const settingsRef = useRef({ speed: speedSetting, turn: turnSetting })
     useEffect(() => { settingsRef.current = { speed: speedSetting, turn: turnSetting } }, [speedSetting, turnSetting])
+    const moveRef = useRef({ mode, pull })
+    useEffect(() => { moveRef.current = { mode, pull } }, [mode, pull])
     useEffect(() => {
         const preset = getNavigationPreset(presetId)
         const cc = controlsRef.current
@@ -397,6 +404,19 @@ export function useCameraNavigation({
 
         const onPointerDown = (event) => {
             if (!element.contains(event.target)) { trace({ why: 'pointer outside controls element', target: event.target?.tagName, cls: String(event.target?.className || '').slice(0, 60) }); return }
+            // EDIT MODE (View | Edit, owner 2026-10-28): a pull that starts on the selected thing moves it (pullToMove.js), and the
+            // camera holds still until it ends; every other press goes on to Move 1's path below, which this branch never changes.
+            // In View this branch is never taken: every pull is Move 1's.
+            if (pullPressAllowed(moveRef.current.mode) && moveRef.current.pull) {
+                const touch = event.pointerType === 'touch'
+                const held = touch ? cc.touches.one : cc.mouseButtons.left
+                const release = () => { if (touch) cc.touches.one = held; else if (cc.mouseButtons.left === CC_ACTION.NONE) cc.mouseButtons.left = held }
+                if (moveRef.current.pull.begin(event, { onEnd: release })) {
+                    if (touch) cc.touches.one = CC_ACTION.NONE; else cc.mouseButtons.left = CC_ACTION.NONE
+                    trace({ action: 'pull', mode: 'edit' })
+                    return
+                }
+            }
             // pointerType is what the browser reports, not a guess: touch keeps camera-controls' touch gestures.
             if (event.pointerType === 'touch') { onTouchDown(event); return }
             const name = BUTTON_NAME[event.button]

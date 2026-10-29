@@ -4,7 +4,12 @@ import StudioShell from './StudioShell.jsx'
 import { ALL_TOOLS_KEY, saveAllTools } from '../utils/jamMode.js'
 
 vi.mock('./StudioViewportLayout.jsx', () => ({
-    default: ({ shared }) => <output data-testid="gizmo-axis">{shared.gizmoAxis || 'all'}</output>
+    default: ({ shared }) => (
+        <>
+            <output data-testid="gizmo-axis">{shared.gizmoAxis || 'all'}</output>
+            <output data-testid="edit-mode">{shared.editMode}</output>
+        </>
+    )
 }))
 vi.mock('./StudioFloatingPanel.jsx', () => ({ default: ({ title, onClose, children }) => <div data-panel={title} data-closable={onClose ? 'yes' : 'no'}>{children}</div> }))
 vi.mock('./StudioControlCluster.jsx', () => ({
@@ -20,7 +25,7 @@ vi.mock('./StudioShellPanels.jsx', () => ({
     FilesPanel: () => null,
     HistoryPanel: () => null,
     JamEditPanel: () => null,
-    LibraryPanel: () => null,
+    LibraryPanel: ({ onCreateEntity }) => <button type="button" onClick={() => onCreateEntity?.('box')}>box</button>,
     PresentPanel: () => null,
     ProjectPanel: () => null,
     PublishPanel: () => null,
@@ -281,7 +286,7 @@ describe('StudioShell — a new project opens bare', () => {
         const { rerender } = renderShell({ ...inProject, layers: NEW, isMobile: true })
         const nav = () => [...screen.getByRole('navigation', { name: 'Studio windows' }).querySelectorAll('button')].map((b) => b.textContent)
         expect(nav()).toEqual(['Create'])
-        expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
+        expect(screen.queryByRole('radio', { name: 'Edit' })).toBeNull()
         expect(screen.queryByLabelText('Back to projects')).toBeNull()
         expect(screen.queryByLabelText('Open this project in the node editor')).toBeNull()
         rerender(
@@ -291,7 +296,7 @@ describe('StudioShell — a new project opens bare', () => {
             />
         )
         expect(nav()).toEqual(['Create', 'Objects', 'Scene', 'Share', 'Code'])
-        expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+        expect(screen.getByRole('radio', { name: 'Edit' })).toBeInTheDocument()
     })
 
     // 2026-09-27: the phone header offered Projection from the first thing on, while
@@ -392,5 +397,33 @@ describe('StudioShell — a code project does not open Create by itself', () => 
     it('the same bare project opened for a scene (no ?open=files) still shows Create alone', () => {
         renderShell({ document: { projectMeta: { id: 'fresh2', title: 'first' }, assets: [] }, layers: { loaded: true, empty: true, held: false, open: OPEN } })
         expect(panels()).toEqual(['Create'])
+    })
+})
+
+describe('View | Edit (owner 2026-10-28)', () => {
+    afterEach(() => { window.history.replaceState(null, '', '/') })
+    const holding = { document: { projectMeta: {}, assets: [], entities: [{ id: 'cube-1' }] }, entities: [{ id: 'cube-1' }] }
+
+    it('one View | Edit switch at the top; View is the start, Edit is the Edit tool, View the Navigate tool', () => {
+        renderShell(holding)
+        const group = screen.getByRole('radiogroup', { name: 'View or Edit' })
+        expect(group).toBeInTheDocument()
+        expect(screen.getByRole('radio', { name: 'View' })).toHaveAttribute('aria-checked', 'true')
+        expect(screen.getByTestId('edit-mode')).toHaveTextContent('navigate')
+        fireEvent.click(screen.getByRole('radio', { name: 'Edit' }))
+        expect(screen.getByTestId('edit-mode')).toHaveTextContent('edit')
+        expect(screen.getByRole('radio', { name: 'Edit' })).toHaveAttribute('aria-checked', 'true')
+        fireEvent.keyDown(window, { key: 'e' }) // the E key is the same switch
+        expect(screen.getByTestId('edit-mode')).toHaveTextContent('navigate')
+        expect(screen.getByRole('radio', { name: 'View' })).toHaveAttribute('aria-checked', 'true')
+    })
+
+    it('adding from Create puts the Studio in Edit, so the first pull moves the new thing', () => {
+        const onCreateEntity = vi.fn()
+        renderShell({ ...holding, onCreateEntity })
+        expect(screen.getByTestId('edit-mode')).toHaveTextContent('navigate')
+        fireEvent.click(screen.getByRole('button', { name: 'box' }))
+        expect(onCreateEntity).toHaveBeenCalledWith('box')
+        expect(screen.getByTestId('edit-mode')).toHaveTextContent('edit')
     })
 })
