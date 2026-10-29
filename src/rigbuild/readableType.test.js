@@ -65,4 +65,24 @@ describe('rig pages and perform are readable', () => {
         expect(m).toMatch(/\.make-name-en \{[^}]*color: var\(--make-ink-readable\)/)
         expect(m).toMatch(/\.make-name-skip \{[^}]*color: var\(--make-ink-readable\)/)
     })
+
+    it('every control on the rig pages, perform and the map has a 24px target floor (F040, F094)', () => {
+        const steps = css('rigSteps.css')
+        // the floor rule names every rig root, the top bar's links and sets both sides
+        for (const root of ['rigbuild', 'rigplot', 'rigcards', 'rigequip', 'rigscenes', 'vis', 'show']) {
+            expect(steps).toMatch(new RegExp(`:is\\([^)]*\\.${root}\\b[^)]*\\) :is\\(button`))
+        }
+        expect(steps).toMatch(/\.rigbar \.sbar-link[^{]*\{\s*min-height: 24px;\s*\}/)
+        expect(steps).toMatch(/\{\s*min-width: 24px;\s*\}/)
+        expect(css('../perform/perform.css')).toMatch(/\.perform-pane :is\(button[^{]*\{\s*min-height: 24px;\s*min-width: 24px;/)
+        expect(css('../map/mapSurface.css')).toMatch(/\.map-mini, \.map-toggle, \.map-action, \.map-output-controls button \{ min-height: 24px; min-width: 24px; \}/)
+        // the window's square, dash and cross are already 44px in the shared window CSS
+        expect(css('../raw/styles/raw.css')).toMatch(/\.raw-window-actions button \{[^}]*min-height: 44px;[^}]*min-width: 44px/)
+    })
+
+    it('the map labels follow the label-case token, not a hard-coded uppercase', () => {
+        const m = css('../map/mapSurface.css')
+        expect(m).toMatch(/\.map-bar-lane \{[^}]*text-transform: var\(--di-label-case\)/)
+        expect(m).toMatch(/\.map-panel-head h2 \{[^}]*text-transform: var\(--di-label-case\)/)
+    })
 })

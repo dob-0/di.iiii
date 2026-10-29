@@ -139,3 +139,17 @@
 /* The paper pages (plot, cards, equipment) are fixed to the window: they start below
    the two rows instead of behind them. */
 .rigplot.has-rigbar { top: var(--rigbar-h); }
+
+/* Target floor (UX audit F040, WCAG 2.5.8): every button, field and step link on a rig page
+   is at least 24 px each way. The step links and the top bar's links were 13 px tall. Only
+   raises; a control that is already bigger (the 44 px phone targets) keeps its size. */
+.rigbar .sbar-link, .rigbar .sbar-extra a, .rigbar .sbar-extra button,
+:is(.rigbuild, .rigplot, .rigcards, .rigequip, .rigscenes, .vis, .show) :is(button, select, input:not([type='checkbox'], [type='radio'], [type='range'], [type='hidden'])),
+:is(.rigbuild, .rigplot, .rigcards, .rigequip, .rigscenes, .vis, .show) a[class] {
+    min-height: 24px;
+}
+.rigbar .sbar-link, .rigbar .sbar-extra a, .rigbar .sbar-extra button,
+:is(.rigbuild, .rigplot, .rigcards, .rigequip, .rigscenes, .vis, .show) :is(button, a[class]) {
+    min-width: 24px;
+}
+.rigbar .sbar-link { display: inline-flex; align-items: center; }
