@@ -35,6 +35,25 @@ Regression tests (fail on the old code, run): `SpaceHub.test.jsx` ("calm still")
 
 StudioApp wrapped the hub, spaces and director views in `<main>`, but SpaceHub and StudioHub already render their own: axe `landmark-no-duplicate-main` 1 and `landmark-main-is-top-level` 1. Rule: every view owns its main, the wrapper adds none; the director now renders its own `<main>` (also on the redirect fallback). Guards: a render count of `main` in `SpaceHub.test.jsx`, `StudioHub.test.jsx`, `StudioCodeSpaceDirector.test.jsx` and a source check in `pageTitles.test.js`; the director and source ones watched fail on the old code.
 
+## Empty rig pages told people to run developer scripts (rig pages, UX audit F038, 2026-10-29)
+
+Symptom: a fresh project's plot said "No venue plan … (scripts/rigbuild/load-plot.mjs)", the cards "written … by scripts/rigbuild/looks.mjs"
+and "rental.mjs", the scenes deck "looks.mjs … show-cues.mjs" — and no button (audit `capture/sheets/plot.png`, `cards.png`, `scenes.png`).
+Cause: the empty states were written for the developer who loaded MOXIR by script; the steps had no in-app way in.
+Fix: `src/rigbuild/NextStep.jsx` + `nextStep.js`: each empty state is one plain line and the buttons that do it — rental list → "pick the
+equipment" (the equipment page writes it), positions → "build on the plot" / "build it in the room", plot hall → "load the hall plan"
+(a hall.json, `venuePlanFromHall`, same as `load-plot.mjs --plan-only`), looks → "make a first look" (every group `point`, open white) and
+"load looks from a rig file" (`rigLooksFrom`, moved to `src/rigbuild/rigLooksFrom.js`; `scripts/rigbuild/looks.mjs` imports and re-exports
+it, so script and button run one code), scenes → "put looks on the cue list" (the cards). Writes go through the page's own op path (undo,
+read-only = links only, the server's write check). The scripts stay runnable from a terminal.
+Regression test: `src/rigbuild/nextStep.test.jsx` ("the empty rig pages name no developer script", "the script and the button run one code";
+4 of its 16 fail on origin/dev's page files).
+Picture fix (2026-10-29): on the empty scenes deck (desktop and phone) "put looks on the cue list" was bare text, no border, no fill.
+Cause: `nextStep.css` draws `.rignext-btn` with `var(--ink)`/`var(--paper)`; the plot and cards pages set them (`.rigplot`, plot.css),
+the scenes deck (`scenes.css`) has only its `--sc-*` colours. Fix: `scenes.css` `.rigscenes .rignext` maps `--ink/--paper/--soft` to the
+deck's own `--sc-tx/--sc-bg/--sc-dim` (and the deck's 44 px control height, three classes deep so rigSteps.css's 24 px floor `:is(…) a[class]` does not win). Guard: `nextStep.test.jsx` "every page that mounts the next
+step sets the colours its CSS reads" (fails on the scenes.css before this fix).
+
 ## A page project drew the 3D tools around its page (Studio, UX audit F017 / F001 / F139, slice S16 PR a, 2026-10-29)
 
 Symptom: a project that is a web page (the cinema-house copy) opened Studio on its page (#1161) but still drew the 3D tools over it:
