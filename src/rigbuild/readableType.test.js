@@ -69,8 +69,8 @@ describe('rig pages and perform are readable', () => {
     it('every control on the rig pages, perform and the map has a 24px target floor (F040, F094)', () => {
         const steps = css('rigSteps.css')
         // the floor rule names every rig root, the top bar's links and sets both sides
-        for (const root of ['rigbuild', 'rigplot', 'rigcards', 'rigequip', 'rigscenes', 'vis', 'show']) {
-            expect(steps).toMatch(new RegExp(`:is\\([^)]*\\.${root}\\b[^)]*\\) :is\\(button`))
+        for (const root of ['rigbuild', 'rigplot', 'rigcards', 'rigequip', 'rigscenes', 'vis-page', 'show-page']) {
+            expect(steps).toMatch(new RegExp(`:is\\([^)]*\\.${root}(?![\\w-])[^)]*\\) :is\\(button`))
         }
         expect(steps).toMatch(/\.rigbar \.sbar-link[^{]*\{\s*min-height: 24px;\s*\}/)
         expect(steps).toMatch(/\{\s*min-width: 24px;\s*\}/)

@@ -144,12 +144,12 @@
    is at least 24 px each way. The step links and the top bar's links were 13 px tall. Only
    raises; a control that is already bigger (the 44 px phone targets) keeps its size. */
 .rigbar .sbar-link, .rigbar .sbar-extra a, .rigbar .sbar-extra button,
-:is(.rigbuild, .rigplot, .rigcards, .rigequip, .rigscenes, .vis, .show) :is(button, select, input:not([type='checkbox'], [type='radio'], [type='range'], [type='hidden'])),
-:is(.rigbuild, .rigplot, .rigcards, .rigequip, .rigscenes, .vis, .show) a[class] {
+:is(.rigbuild, .rigplot, .rigcards, .rigequip, .rigscenes, .vis-page, .show-page) :is(button, select, input:not([type='checkbox'], [type='radio'], [type='range'], [type='hidden'])),
+:is(.rigbuild, .rigplot, .rigcards, .rigequip, .rigscenes, .vis-page, .show-page) a[class] {
     min-height: 24px;
 }
 .rigbar .sbar-link, .rigbar .sbar-extra a, .rigbar .sbar-extra button,
-:is(.rigbuild, .rigplot, .rigcards, .rigequip, .rigscenes, .vis, .show) :is(button, a[class]) {
+:is(.rigbuild, .rigplot, .rigcards, .rigequip, .rigscenes, .vis-page, .show-page) :is(button, a[class]) {
     min-width: 24px;
 }
 .rigbar .sbar-link { display: inline-flex; align-items: center; }

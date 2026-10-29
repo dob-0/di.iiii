@@ -12,3 +12,7 @@ Tests: `npx vitest run src/rigbuild src/perform src/make src/styles` 168 files /
 - Map labels use `--di-label-case` (was hard-coded uppercase).
 - Replaces nothing: it only raises sizes (mode/tool/archive: not needed, no behaviour removed).
 - Not seen in a browser this round: F100 phone totals, F096 float-bar contrast, cards slot at 390 px still need the ship pictures.
+
+## Review 2
+- The target floor named `.vis` and `.show`, which no page carries (roots are `.vis-page`, `.show-page`): the visualise page had no floor. Fixed in rigSteps.css; the test names the real roots with a strict boundary and fails on the previous commit (1 failed).
+- known-fixes entry updated for fix round 2 (floor, map label case, 8 tests).
