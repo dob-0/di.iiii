@@ -1121,7 +1121,7 @@
 .ssh-live-url { font-size: var(--di-text-3); display: inline-block; min-height: 24px; line-height: 24px; }
 .ssh-card-btn { font-size: var(--di-text-4); letter-spacing: 0; min-height: 28px; padding: 3px 10px; }
 .ssh-card-manage { display: flex; flex-wrap: wrap; gap: 6px; }
-.ssh-tools-newtab { color: var(--di-text-muted); font-weight: 400; }
+.ssh-tools-newtab { color: var(--di-text-muted); font-weight: 400; margin-left: 0.25em; }
 @media (pointer: coarse) {
     .ssh-card-btn, .ssh-space-inside a, .ssh-live-url, .ssh-space-open { min-height: 44px; display: inline-flex; align-items: center; }
 }

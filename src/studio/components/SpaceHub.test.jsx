@@ -1055,6 +1055,19 @@ describe('SpaceHub', () => {
         expect(rootBlock).not.toMatch(/min-height:\s*100vh/)
     })
 
+    it('the "(opens in a new tab)" hint keeps a visible gap inside the inline-flex tools link', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const cssPath = ['src/studio/styles/studio-space-hub.css', 'studio/styles/studio-space-hub.css']
+            .map(p => path.join(cwd(), p))
+            .find(p => fs.existsSync(p))
+        const css = fs.readFileSync(cssPath, 'utf8')
+        // A flex container drops the leading space of its child, so the gap must be a margin.
+        expect(css.match(/\.ssh-tools-link\s*\{[^}]*\}/)?.[0]).toMatch(/display:\s*inline-flex/)
+        expect(css.match(/\.ssh-tools-newtab\s*\{[^}]*\}/)?.[0]).toMatch(/margin-left:\s*0?\.25em/)
+    })
+
     it('puts Open Space and the sandbox side by side from ~1024px up, stacked below it', async () => {
         const fs = await import('node:fs')
         const path = await import('node:path')
