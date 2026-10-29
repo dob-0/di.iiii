@@ -14,6 +14,10 @@ import { createSolidWallsKeeper, walkStep, SOLID_WALLS_MAX_TRIANGLES, SOLID_WALL
 import HeadLight from './HeadLight.jsx'
 import { resolveHeadLight, headLightCastsShadow } from './headLight.js'
 import { isFlyKey, walkKeyHintText } from './walkKeys.js'
+import { altitudeKeysFor, altitudeHintTextFor } from '../studio/navigation/flyKeys.js'
+import { useNavigationPreference } from '../studio/navigation/preference.js'
+import { layoutLabel, moveKeysText, useLayoutMap } from './layoutLabels.js'
+import { physicalKey } from './physicalKey.js'
 import { useHeadLight } from './useHeadLight.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
@@ -107,7 +111,6 @@ const STEEL_TAG = Object.freeze({ svSteel: true })
 
 // Fly mode's altitude keys. A caller that needs Q and E for something else (the
 // rig builder's hand raises and lowers with them) passes its own set.
-const DEFAULT_ALTITUDE_KEYS = Object.freeze({ up: [' ', 'q'], down: ['e', 'c'] })
 
 const isGateEntity = (entity) => /gate|threshold|entrance/i.test(entity?.name || '')
 
@@ -488,7 +491,7 @@ export const detectTouchDevice = () => {
     return (navigator.maxTouchPoints || 0) > 0 && !window.matchMedia('(any-pointer: fine)').matches
 }
 
-function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, solidWalls = null, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true, walkLook = 'lock' }) {
+function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, solidWalls = null, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys, wheelDolly = true, walkLook = 'lock' }) {
     const { camera, gl, scene } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
@@ -539,12 +542,14 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         const moveKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'q', 'e', 'c']
         const onKeyDown = (e) => {
             if (isTypingTarget(e.target)) return
-            const key = e.key.toLowerCase()
+            // A key held with Alt / Option, Ctrl or Cmd is a shortcut, not a step (Mac Option+W must not walk). Key-up stays open so none sticks.
+            if (e.altKey || e.ctrlKey || e.metaKey) return
+            const key = physicalKey(e)
             if (!moveKeys.includes(key)) return
             if (key === ' ') e.preventDefault()
             keys.add(key)
         }
-        const onKeyUp = (e) => keys.delete(e.key.toLowerCase())
+        const onKeyUp = (e) => keys.delete(physicalKey(e))
         window.addEventListener('keydown', onKeyDown)
         window.addEventListener('keyup', onKeyUp)
         return () => {
@@ -968,7 +973,7 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             // Forward/strafe always move on the horizontal plane, even while
             // flying -- like a drone, not a jet. Looking down to film the
             // ground below shouldn't also make you descend; altitude is only
-            // ever changed explicitly, via Space/Q (up) and C/E (down).
+            // ever changed explicitly, via Space/E (up) and C/Q (down).
             const forwardX = Math.sin(player.yaw) * speedRef.current
             const forwardZ = Math.cos(player.yaw) * speedRef.current
             const rightX = -Math.cos(player.yaw) * strafeSpeedRef.current
@@ -1253,7 +1258,7 @@ function MobileJoystick({ outerRef, thumbRef }) {
     )
 }
 
-// Fly mode's altitude keys (Space/Q, C/E) have no touch equivalent --
+// Fly mode's altitude keys (Space/E, C/Q) have no touch equivalent --
 // press-and-hold buttons fill that gap. Pointer events (not click) so
 // altitude changes continuously while held, like the keyboard.
 // Animated first-visit movement cue: a ghost joystick demo on mobile (the real
@@ -1668,8 +1673,8 @@ export default function LiveProjectScene({
     // (src/rigbuild/BuildSurface.jsx). Each defaults to what walk mode did before.
     //
     // `altitudeKeys`: fly mode's up/down keys ({ up: [...], down: [...] }, lower
-    // case `KeyboardEvent.key`); the builder keeps Space/C and gives Q/E to the hand.
-    altitudeKeys = DEFAULT_ALTITUDE_KEYS,
+    // case key token: physicalKey.js); the builder keeps Space/C and gives Q/E to the hand.
+    altitudeKeys = null,
     // `wheelDolly`: the scroll wheel dollies the walker. The builder's wheel scrolls
     // its hotbar instead, so a wheel turn must not also walk the builder forward.
     wheelDolly = true,
@@ -1705,10 +1710,12 @@ export default function LiveProjectScene({
         }
     }, [])
     const [flyMode, setFlyMode] = useState(false)
+    const { flyKeys: flyKeysChoice } = useNavigationPreference()
+    const layoutMap = useLayoutMap()
     const joystickRef = useRef({ x: 0, y: 0 })
     const joyVisRef = useRef(null)
     const joyThumbRef = useRef(null)
-    // Fly mode's altitude keys (Space/Q up, C/E down) have no touch
+    // Fly mode's altitude keys (Space/E up, C/Q down) have no touch
     // equivalent -- without this, mobile fly has no way to ascend/descend at all.
     const vertTouchRef = useRef(0)
     const arTouchElRef = useRef(null)
@@ -2114,7 +2121,7 @@ export default function LiveProjectScene({
                         flyMode={flyMode}
                         isArActive={isArActive}
                         arTouchElRef={arTouchElRef}
-                        altitudeKeys={altitudeKeys}
+                        altitudeKeys={altitudeKeys ?? altitudeKeysFor(flyKeysChoice)}
                         wheelDolly={wheelDolly}
                     />
                 ) : viewing ? (
@@ -2292,8 +2299,8 @@ export default function LiveProjectScene({
                     ) : null}
                     {walking && !isMobile && (!locking || isLocked) && !walkHint && (
                         <p className="live-scene-hint">
-                            WASD · move &nbsp;·&nbsp; {locking ? 'Mouse · look' : 'Drag · look \u00A0·\u00A0 Scroll · forward / back'} &nbsp;·&nbsp; {walkKeyHintText({ headLight: headLight.available, flying: flyMode })}
-                            {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
+                            {moveKeysText(layoutMap)} · move &nbsp;·&nbsp; {locking ? 'Mouse · look' : 'Drag · look \u00A0·\u00A0 Scroll · forward / back'} &nbsp;·&nbsp; {walkKeyHintText({ headLight: headLight.available, flying: flyMode })}
+                            {flyMode ? <>&nbsp;·&nbsp; {altitudeHintTextFor(flyKeysChoice, (code, fallback) => layoutLabel(layoutMap, code, fallback))}</> : null}
                             {locking ? <>&nbsp;·&nbsp; ESC · release</> : exitLabel ? <>&nbsp;·&nbsp; Esc · exit</> : null}
                         </p>
                     )}

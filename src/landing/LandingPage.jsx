@@ -550,7 +550,7 @@ function LandingPageInner() {
                                     : 'Drag to orbit · Scroll to zoom · Click a door')
                                 : (isMobile
                                     ? 'Joystick to move · Drag to look · Fly button to switch modes'
-                                    : 'Walk (WASD) · Drag to look · F to fly (Space/Q up · C/E down) · V to view')}
+                                    : 'Walk (WASD) · Drag to look · F to fly (Space/E up · C/Q down) · V to view')}
                         </p>
                     </>
                 )}

@@ -26,6 +26,8 @@
 // range) and cost a ray against every mesh several times a second, to change
 // nothing the visitor can see. Numbers in the session note.
 
+import { physicalKey } from './physicalKey.js'
+
 export const HEAD_LIGHT_KEY = 'l'
 
 // Full cone ~35 degrees (three.js `angle` is the half-angle), range ~10 m, inverse-square decay.
@@ -50,7 +52,7 @@ export const resolveHeadLight = (worldState) => {
 /** The L key (not while typing, not with a modifier, not on key repeat). */
 export const isHeadLightKey = (event, isTyping = false) => {
     if (!event || isTyping || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return false
-    return typeof event.key === 'string' && event.key.toLowerCase() === HEAD_LIGHT_KEY
+    return physicalKey(event) === HEAD_LIGHT_KEY
 }
 
 /** Toggle reducer: off unless the project makes it available. */
