@@ -24,7 +24,7 @@
 }
 
 .map-bar-title { display: flex; align-items: baseline; gap: var(--di-space-2); }
-.map-bar-lane { color: var(--ui-accent); font-family: var(--di-mono); text-transform: uppercase; letter-spacing: 0.12em; font-size: var(--di-text-2); }
+.map-bar-lane { color: var(--ui-accent); font-family: var(--di-mono); text-transform: var(--di-label-case); letter-spacing: 0.12em; font-size: var(--di-text-2); }
 .map-bar-project { color: var(--ui-text-primary); font-weight: 500; }
 .map-bar-controls { display: flex; align-items: center; gap: var(--di-space-2); }
 
@@ -47,7 +47,7 @@
 .map-panel-right { border-left: 1px solid var(--ui-divider); }
 
 .map-panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-2); }
-.map-panel-head h2 { margin: 0; font-size: var(--di-text-2); text-transform: uppercase; letter-spacing: 0.1em; color: var(--ui-text-muted); font-weight: 500; }
+.map-panel-head h2 { margin: 0; font-size: var(--di-text-2); text-transform: var(--di-label-case); letter-spacing: 0.1em; color: var(--ui-text-muted); font-weight: 500; }
 .map-panel-actions { display: flex; gap: var(--di-space-2); margin-top: var(--di-space-2); }
 
 .map-surface-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--di-space-1); }
@@ -365,6 +365,8 @@ a.map-action { display: inline-flex; align-items: center; text-decoration: none;
     padding: var(--di-space-1) var(--di-space-3);
     cursor: pointer;
 }
+/* Target floor (UX audit F094, WCAG 2.5.8): the small map buttons and the corner buttons. */
+.map-mini, .map-toggle, .map-action, .map-output-controls button { min-height: 24px; min-width: 24px; }
 .map-output-controls button:hover { border-color: var(--ui-accent); color: var(--ui-accent); }
 
 /* Carrying a mapping between machines. Deliberately a text box and not a file
