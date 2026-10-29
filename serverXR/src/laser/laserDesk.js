@@ -139,6 +139,10 @@ const normaliseLook = (raw = {}, base = LOOK_DEFAULTS) => {
     }
 }
 
+// Below this a cube's picture shrinks into still beams and the engine's still-beam guard stops it mid-show
+// (measured: 8 of 32 seed looks stop at 0.1, none at 0.3; review 1218 S3).
+const CUBE_SIZE_MIN = 0.3
+
 /** A cube's place on the desk (CUBE_DEFAULTS, shared/laserLook.cjs), every field in range. */
 const normaliseCube = (raw = {}, base = CUBE_DEFAULTS) => {
     const r = raw && typeof raw === 'object' ? raw : {}
@@ -146,7 +150,7 @@ const normaliseCube = (raw = {}, base = CUBE_DEFAULTS) => {
     return {
         on: bool(pick('on'), true),
         flipX: bool(pick('flipX')),
-        size: clamp(num(pick('size'), 1), 0, 2),
+        size: clamp(num(pick('size'), 1), CUBE_SIZE_MIN, 2),
         x: clamp(num(pick('x'), 0), -1, 1),
         y: clamp(num(pick('y'), 0), -1, 1),
         order: Math.round(clamp(num(pick('order'), 0), -999, 999))
@@ -287,21 +291,28 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         .map(({ c }) => c)
 
     let lastEngine = null
-    const tick = () => {
-        if (!live) return
+    let seenBlackouts = 0
+    // The engine's Blackout (POST /laser/api/blackout, from any page) clears every frame. The desk must not draw
+    // them straight back: the engine counts its blackouts, and when the count rises the desk goes to its own
+    // blackout — lit on the page, kept until a person lifts it. Counted, not inferred from the frames, so it holds
+    // whatever the desk sent last, and a Go after a blackout met while released is dark too (review 1218 S1).
+    const watchEngine = () => {
         const engine = getEngine()
+        const count = engine.frames().blackouts ?? 0
         // A config reload (Use these) builds a new engine with no frames: everything is sent again, not kept alive.
-        if (engine !== lastEngine) { for (const s of sent.values()) s.key = null; lastEngine = engine }
-        // The engine's Blackout (POST /laser/api/blackout, from any page) clears every frame. The desk must not draw
-        // them straight back: a cube it sent to that now holds nothing means someone stopped the lasers, so the desk
-        // goes to its own blackout — lit on the page, kept until a person presses Blackout again.
-        else if (!blackout) {
-            const held = engine.frames().byCube
-            if ([...sent].some(([id, s]) => s.key !== null && !held[id])) {
+        if (engine !== lastEngine) { for (const s of sent.values()) s.key = null; lastEngine = engine; seenBlackouts = count }
+        else if (count > seenBlackouts) {
+            seenBlackouts = count
+            if (!blackout) {
                 blackout = true
-                log?.warn?.('[laser desk] the laser engine was blacked out: the desk holds its blackout until it is pressed again')
+                log?.warn?.('[laser desk] the laser engine was blacked out: the desk holds its blackout until it is lifted')
             }
         }
+        return engine
+    }
+    const tick = () => {
+        if (!live) return
+        const engine = watchEngine()
         const cubes = orderedCubes(engine.state().cubes).filter((c) => cubeCfg(c.id).on)
         const t = now()
         cubes.forEach((cube, index) => {
@@ -351,6 +362,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         live = { ...look, cubes: Array.isArray(look.cubes) ? [...look.cubes] : 'all' }
         liveId = look.id
         for (const s of sent.values()) s.key = null
+        watchEngine()
         tick()
         startTicking()
         return { ok: true, live: liveId }
@@ -495,9 +507,10 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         return saveNow() ? { ok: true, created } : { ok: false, status: 500, error: 'desk.json could not be written (see the server log)', created }
     }
 
-    /** Edit the live look (on the cubes at once). Starts from the defaults if nothing is live. */
+    /** Edit the live look (on the cubes at once). Refused when nothing is live: the defaults never reach a cube. */
     const editLive = (fields = {}) => {
-        const base = live || { ...LOOK_DEFAULTS }
+        if (!live) return { ok: false, status: 409, error: 'nothing is live — press a look first' }
+        const base = live
         live = normaliseLook({ ...fields, id: undefined }, base)
         delete live.id
         tick()
@@ -563,7 +576,13 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     }
 
     const setMaster = (level) => { show.master = clamp(num(level, show.master), 0, 1); save(); return { ok: true, master: show.master } }
-    const setBlackout = (on) => { blackout = bool(on, !blackout); tick(); return { ok: true, blackout } }
+    // `on` must be a boolean: a missing or unreadable one is refused, never a toggle that could light the cubes (review 1218 M1).
+    const setBlackout = (on) => {
+        if (typeof on !== 'boolean') return { ok: false, status: 400, error: 'on: true or false' }
+        blackout = on
+        tick()
+        return { ok: true, blackout }
+    }
 
     // A new tempo keeps the beat where it is (no jump in the picture); a tap lands the beat on the tap.
     const setBpm = (bpm) => {

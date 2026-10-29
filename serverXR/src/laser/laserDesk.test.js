@@ -160,6 +160,66 @@ describe('the desk on the engine', () => {
         expect(engine.calls.every((c) => c.kind === 'frame' && !c.points.some(isLit))).toBe(true)
         expect(desk.state()).toMatchObject({ blackout: true, liveId: 'ring' })
     })
+    it('Blackout needs a true or false: nothing, or anything else, is refused and never toggles (review 1218 M1)', () => {
+        const engine = fakeEngine()
+        const { desk } = deskWith(engine)
+        desk.go('ring')
+        desk.setBlackout(true)
+        for (const bad of [undefined, null, 'false', 0, 1, 'on']) {
+            expect(desk.setBlackout(bad)).toMatchObject({ ok: false, status: 400 })
+            expect(desk.state().blackout).toBe(true)
+        }
+        desk.setBlackout(true) // pressing "dark" twice stays dark
+        expect(desk.state().blackout).toBe(true)
+        expect(desk.setBlackout(false)).toMatchObject({ ok: true, blackout: false })
+    })
+    it('an engine Blackout met within the desk\'s next 50 ms is still latched when a look is pressed (review 1218 S1)', () => {
+        const dir = tmp()
+        const t = { now: 5000 }
+        const engine = createLaserEngine({ dataDir: dir, log: null, now: () => t.now, setInterval: () => 0, clearInterval: () => {} })
+        const { desk } = deskWith(engine, { dir, t })
+        desk.go('star')
+        engine.blackout()
+        desk.go('ring') // pressed before any tick saw the blackout: every key was reset by go()
+        expect(desk.state().blackout).toBe(true)
+        expect(engine.frames().byCube['cube-1'].some(isLit)).toBe(false)
+        desk.close()
+        engine.shutdown()
+    })
+    it('an engine Blackout while the desk is released is not drawn over by the next Go (review 1218 S1)', () => {
+        const dir = tmp()
+        const t = { now: 5000 }
+        const engine = createLaserEngine({ dataDir: dir, log: null, now: () => t.now, setInterval: () => 0, clearInterval: () => {} })
+        const { desk } = deskWith(engine, { dir, t })
+        desk.go('star')
+        desk.release()
+        engine.blackout()
+        desk.go('ring')
+        expect(desk.state().blackout).toBe(true)
+        expect(engine.frames().byCube['cube-1']?.some(isLit) ?? false).toBe(false)
+        desk.close()
+        engine.shutdown()
+    })
+    it('a live edit with nothing live is refused (409) and puts nothing on the cubes (review 1218 S2)', () => {
+        const engine = fakeEngine()
+        const { desk } = deskWith(engine)
+        expect(desk.editLive({ size: 0.3 })).toMatchObject({ ok: false, status: 409 })
+        expect(engine.calls).toEqual([])
+        expect(desk.state().live).toBe(null)
+        desk.go('ring')
+        desk.release()
+        engine.calls.length = 0
+        expect(desk.editLive({ size: 0.3 })).toMatchObject({ ok: false, status: 409 })
+        expect(engine.calls.some((c) => c.points?.some(isLit))).toBe(false)
+    })
+    it('a cube cannot be set smaller than 0.3, where no seed look is stopped as a still beam (review 1218 S3)', () => {
+        const engine = fakeEngine()
+        const { desk } = deskWith(engine)
+        desk.setCube('cube-1', { size: 0.1 })
+        expect(desk.state().cubes.find((c) => c.id === 'cube-1').size).toBe(0.3)
+        desk.setCube('cube-1', { size: 0 })
+        expect(desk.state().cubes.find((c) => c.id === 'cube-1').size).toBe(0.3)
+    })
     it('a look on some cubes holds the rest dark; a cube off the desk is let go', () => {
         const engine = fakeEngine()
         const { desk } = deskWith(engine)

@@ -67,6 +67,24 @@ describe('the lasers at /laser', () => {
     expect((await (await fetch(`${base}/laser/api/frames`)).json()).all).toBe(null)
   })
 
+  it('the desk Blackout takes a true or false only, and lifting it is same-machine only (review 1218 M1)', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    const url = `${base}/laser/desk/api/blackout`
+    expect((await post(url, {})).status).toBe(400)
+    expect((await post(url, { on: 'false' })).status).toBe(400)
+    expect(await (await post(url, { on: true })).json()).toMatchObject({ ok: true, blackout: true })
+    // a second dark press stays dark; an empty post does not lift it
+    expect(await (await post(url, { on: true })).json()).toMatchObject({ blackout: true })
+    await post(url, {})
+    expect((await (await fetch(`${base}/laser/desk/api/state`)).json()).blackout).toBe(true)
+    // a peer that is not this machine (it came through a proxy): refused to lift
+    const viaProxy = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.9' }, body: JSON.stringify({ on: false }) })
+    expect(viaProxy.status).toBe(403)
+    expect((await (await fetch(`${base}/laser/desk/api/state`)).json()).blackout).toBe(true)
+    expect(await (await post(url, { on: false })).json()).toMatchObject({ ok: true, blackout: false })
+  })
+
   it('refuses to arm without the sign-off phrase (403), and arms with it', async () => {
     delete process.env.NODE_ENV
     const { base } = await boot()

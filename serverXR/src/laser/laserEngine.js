@@ -322,6 +322,7 @@ const createLaserEngine = ({
     })
     const live = new Map(config.cubes.map((c) => [c.id, liveEntry(c)]))
     const frames = { all: null, byCube: new Map() }
+    let blackouts = 0 // how many times Blackout was pressed: the desk latches when this rises (review 1218 S1)
     let armed = false
     // Signed off for this run: the phrase was typed since the engine started or the last disarm-all.
     // Never written anywhere, never survives a restart (rule 1).
@@ -699,6 +700,7 @@ const createLaserEngine = ({
     }
 
     const blackout = () => {
+        blackouts += 1
         frames.all = null
         frames.byCube.clear()
         for (const c of live.values()) { c.playing = null; c.index = 0 }
@@ -859,6 +861,7 @@ const createLaserEngine = ({
     /** What the room's laser view and the editor read: the kept frames, armed or not, and which cubes are stopped. */
     const framesView = () => ({
         armed,
+        blackouts,
         sim: sim(),
         all: frames.all ? frames.all.points : null,
         byCube: Object.fromEntries([...frames.byCube.entries()].map(([id, f]) => [id, f.points])),

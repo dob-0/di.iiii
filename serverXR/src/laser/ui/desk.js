@@ -762,7 +762,10 @@
             if (selected) { e.preventDefault(); sendLook(selected) }
         } else if (key === 'Delete' || key === 'Backspace') {
             if (selected) { e.preventDefault(); deleteSelected() }
-        } else if (key === 'b') $('blackoutBtn').click()
+        } else if (key === 'b') {
+            // B only ever goes dark; Shift+B (or the button) lifts it, so a second press never lights the cubes (review 1218 M1).
+            if (e.shiftKey) { if (desk.blackout) $('blackoutBtn').click() } else post('desk/api/blackout', { on: true }).then(refreshDesk)
+        }
         else if (key === 't') $('tapBtn').click()
     })
 

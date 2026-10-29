@@ -291,7 +291,13 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   router.post('/desk/api/bpm', requireSameMachine, (req, res) => answer(res, req.body?.tap ? getDesk().tap() : getDesk().setBpm(req.body?.bpm)))
   router.post('/desk/api/cube', requireSameMachine, (req, res) => answer(res, getDesk().setCube(req.body?.id, req.body || {})))
   router.post('/desk/api/release', stopGate, (req, res) => answer(res, getDesk().release()))
-  router.post('/desk/api/blackout', stopGate, (req, res) => answer(res, getDesk().setBlackout(req.body?.on)))
+  // Putting the cubes dark is a stop (stopGate); lifting the blackout lights them, so it is as strict as Arm. `on` is a
+  // boolean or the route answers 400 — never a toggle (review 1218 M1).
+  router.post('/desk/api/blackout', (req, res, next) => {
+    const on = req.body?.on
+    if (typeof on !== 'boolean') return res.status(400).json({ ok: false, error: 'on: true or false' })
+    return (on ? stopGate : requireSameMachine)(req, res, next)
+  }, (req, res) => answer(res, getDesk().setBlackout(req.body?.on)))
   // The page: /laser → /laser/ (its addresses are relative), then the files of laser/ui/.
   router.get('/', (req, res, next) => {
     const [bare, query] = req.originalUrl.split('?')

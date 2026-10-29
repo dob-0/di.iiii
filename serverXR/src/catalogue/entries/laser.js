@@ -280,10 +280,10 @@ module.exports = [
   },
   {
     route: "POST /laser/desk/api/blackout",
-    summary: "the laser desk's blackout: { on } — every cube it drives held dark, the look kept",
+    summary: "the laser desk's blackout: { on: true | false } (a boolean, else 400) — every cube it drives held dark, the look kept; false lifts it",
     reach: "private",
     role: "guest",
     agent: false,
-    note: `${SAME_MACHINE} A stop: the same gate as /laser/api/blackout (STOPS_FROM_REMOTE).`
+    note: `${SAME_MACHINE} on:true is a stop: the same gate as /laser/api/blackout (STOPS_FROM_REMOTE). on:false lights the cubes again, so it is same-machine only.`
   }
 ]
