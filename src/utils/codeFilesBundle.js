@@ -57,12 +57,78 @@ const inlineLocalJs = (html, files) => {
     return result
 }
 
+// The file visitors see first: index.html, else the first .html file.
+export const startPageFile = (files) => {
+    if (!Array.isArray(files)) return null
+    return files.find((f) => f.name === 'index.html') || files.find((f) => f.name.endsWith('.html')) || null
+}
+
 export const bundleCodeFiles = (files) => {
     if (!Array.isArray(files) || files.length === 0) return ''
-    const indexFile = files.find((f) => f.name === 'index.html') || files.find((f) => f.name.endsWith('.html'))
+    const indexFile = startPageFile(files)
     if (!indexFile) return ''
     let html = indexFile.content
     html = inlineLocalCss(html, files)
     html = inlineLocalJs(html, files)
     return html
+}
+
+// ── Import helpers (pure, so the panel only asks and shows) ──────────────
+
+// Read a .zip into { files, skipped, error }. `skipped` lists the entries that
+// are not text kinds the Code window can hold; `error` says why the zip failed.
+export const readZipFiles = async (JSZip, blob) => {
+    let zip
+    try {
+        zip = await JSZip.loadAsync(blob)
+    } catch (err) {
+        return { files: [], skipped: [], error: `This zip could not be read (${err?.message || 'it may be damaged'}).` }
+    }
+    const entries = []
+    const skipped = []
+    zip.forEach((relativePath, entry) => {
+        if (entry.dir) return
+        if (isSupportedFile(relativePath)) entries.push({ relativePath, entry })
+        else skipped.push(relativePath)
+    })
+    try {
+        const files = await Promise.all(
+            entries.map(async ({ relativePath, entry }) => ({
+                name: normalizeFileName(relativePath),
+                content: await entry.async('text')
+            }))
+        )
+        return { files, skipped, error: '' }
+    } catch (err) {
+        return { files: [], skipped, error: `A file inside this zip could not be read (${err?.message || 'it may be damaged'}).` }
+    }
+}
+
+// mode 'replace' = only the incoming files; 'add' = existing files kept, an
+// incoming file with the same name takes that file's place.
+export const mergeImported = (existing, incoming, mode) => {
+    if (mode === 'replace') return incoming
+    const incomingByName = new Map(incoming.map((f) => [f.name, f]))
+    const kept = existing.map((f) => incomingByName.get(f.name) || f)
+    const have = new Set(existing.map((f) => f.name))
+    return [...kept, ...incoming.filter((f) => !have.has(f.name))]
+}
+
+// Undo an import without losing what was typed since: files the import did not
+// touch keep their current text; touched files go back to what they were.
+export const undoImported = (before, current, incomingNames) => {
+    const touched = new Set(incomingNames)
+    const currentByName = new Map(current.map((f) => [f.name, f]))
+    const beforeNames = new Set(before.map((f) => f.name))
+    const restored = before.map((f) => (!touched.has(f.name) && currentByName.get(f.name)) || f)
+    const extra = current.filter((f) => !beforeNames.has(f.name) && !touched.has(f.name))
+    return [...restored, ...extra]
+}
+
+// Put a deleted file back where it was, unless the name is taken again.
+export const restoreDeleted = (current, file, index) => {
+    if (current.some((f) => f.name === file.name)) return current
+    const next = current.slice()
+    next.splice(Math.min(index, next.length), 0, file)
+    return next
 }
