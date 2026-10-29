@@ -2,8 +2,11 @@
 // and the scrollable fixture library can be reached by keyboard.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const html = readFileSync(new URL('./ui/index.html', import.meta.url), 'utf8');
+// A path, not new URL(): the root run (jsdom) refuses that with 'The URL must be of scheme file'.
+const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'ui/index.html'), 'utf8');
 const tag = (re) => [...html.matchAll(new RegExp(re.source, 'g'))].map((m) => m[0]);
 
 describe('light desk accessible names', () => {
