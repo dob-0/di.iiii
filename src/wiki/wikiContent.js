@@ -1000,7 +1000,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['studio', 'editor', 'basics'],
-        updated: '2026-10-28'
+        updated: '2026-10-29'
     },
     {
         id: 'studio-content-model',
