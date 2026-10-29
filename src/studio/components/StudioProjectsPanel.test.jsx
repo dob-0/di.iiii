@@ -85,6 +85,10 @@ describe('StudioProjectsPanel', () => {
         expect(alert.className).toContain('spp-status-error')
         expect(screen.getByRole('textbox', { name: 'New project title' }).value).toBe('sketch')
         expect(navigateToStudioPath).not.toHaveBeenCalled()
+
+        // Escape closes the form and the red alert goes with it.
+        await userEvent.keyboard('{Escape}')
+        await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
     })
 
     it('renames a project in place', async () => {

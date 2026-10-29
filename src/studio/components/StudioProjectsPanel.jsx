@@ -56,6 +56,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
         // Only the name goes: unique inside this space, the id picked by the server
         // (docs/ai/decisions/2026-10-29-project-names-per-space.md). The form stays
         // open until the project exists, so a clash is read beside what was typed.
+        setCreateFailed(false)
         setBusy(true)
         setStatus('creating...')
         try {
@@ -183,7 +184,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
                         placeholder="project title"
                         value={createValue}
                         onChange={(e) => { setCreateValue(e.target.value); setCreateFailed(false) }}
-                        onKeyDown={(e) => { if (e.key === 'Escape') { setCreating(false); setCreateValue('') } }}
+                        onKeyDown={(e) => { if (e.key === 'Escape') { setCreating(false); setCreateValue(''); setCreateFailed(false) } }}
                         aria-label="New project title"
                     />
                     <button type="submit" className="spp-icon" title="Create" aria-label="Create">✓</button>
