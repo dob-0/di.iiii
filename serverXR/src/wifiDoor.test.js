@@ -277,3 +277,81 @@ describe('the wifi address', () => {
         expect(await defaultRouteAddress({ probe: () => null, interfaces })).toBe('10.0.0.7')
     })
 })
+
+describe('the record goes home on start', () => {
+    const puts = (calls) => calls.map((c) => JSON.parse(c.body).address)
+    it('startHome with a name and a closed door: one signed PUT of 127.0.0.1, one log line', async () => {
+        const calls = fakeBroker(); const lines = []
+        const { d } = door({ log: (l) => lines.push(l) })
+        d.startHome({ afterMs: 0, retryMs: 3600000 })
+        await vi.waitFor(() => expect(calls.length).toBe(1))
+        expect(puts(calls)).toEqual(['127.0.0.1'])
+        expect(calls[0].headers['X-Di-Sig']).toBeTruthy()
+        await vi.waitFor(() => expect(lines).toEqual(['[wifi] name record pointed home']))
+    })
+    it('without a name: no call', async () => {
+        const calls = fakeBroker()
+        fs.rmSync(path.join(dir, 'name.json'))
+        const { d } = door()
+        expect(await d.pointHome()).toMatchObject({ ok: false, skipped: 'no-name' })
+        expect(calls.length).toBe(0)
+    })
+    it('broker down: one log line, no throw', async () => {
+        vi.stubGlobal('fetch', async () => { throw new Error('ECONNREFUSED') })
+        const lines = []
+        const { d } = door({ log: (l) => lines.push(l) })
+        const result = await d.pointHome()
+        expect(result.ok).toBe(false)
+        expect(lines.length).toBe(1); expect(lines[0]).toMatch(/did not take/)
+    })
+    it('a broker that refuses is not a throw either', async () => {
+        vi.stubGlobal('fetch', async () => ({ status: 429 }))
+        const { d } = door()
+        await expect(d.pointHome()).resolves.toMatchObject({ ok: false })
+    })
+    it('retries once after the retry delay, then stops', async () => {
+        const calls = []
+        vi.stubGlobal('fetch', async (url, init) => { calls.push(init); return { status: 503 } })
+        const { d } = door()
+        d.startHome({ afterMs: 0, retryMs: 20 })
+        await vi.waitFor(() => expect(calls.length).toBe(2))
+        await new Promise((r) => setTimeout(r, 80))
+        expect(calls.length).toBe(2)
+    })
+    it('does not retry when the first call worked', async () => {
+        const calls = fakeBroker()
+        const { d } = door()
+        d.startHome({ afterMs: 0, retryMs: 20 })
+        await vi.waitFor(() => expect(calls.length).toBe(1))
+        await new Promise((r) => setTimeout(r, 80))
+        expect(calls.length).toBe(1)
+    })
+    it('an open door is left alone', async () => {
+        const calls = fakeBroker()
+        const { d } = door()
+        await d.open(); calls.length = 0
+        expect(await d.pointHome()).toMatchObject({ skipped: 'open' })
+        expect(calls.length).toBe(0)
+    })
+    it('the start timer is unref\'d, so tests and di down are not held', () => {
+        fakeBroker()
+        const { d } = door()
+        const timer = d.startHome({ afterMs: 3600000 })
+        expect(timer.hasRef()).toBe(false)
+        clearTimeout(timer)
+    })
+    it('close of an open door still PUTs 127.0.0.1', async () => {
+        const calls = fakeBroker()
+        const { d } = door()
+        await d.open(); await d.close()
+        expect(puts(calls).at(-1)).toBe('127.0.0.1')
+    })
+    it('close({ home }) on a door that is already closed points home; plain close does not', async () => {
+        const calls = fakeBroker()
+        const { d } = door()
+        await d.close()
+        expect(calls.length).toBe(0)
+        const r = await d.close({ home: true })
+        expect(r.ok).toBe(true); expect(puts(calls)).toEqual(['127.0.0.1'])
+    })
+})
