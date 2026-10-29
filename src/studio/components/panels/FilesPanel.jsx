@@ -382,6 +382,7 @@ export function FilesPanel({
             {activeFile && (
                 <Box sx={{ px: 1, pt: 1, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                     <CodeEditorArea
+                        fileName={activeFile.name}
                         key={activeFile.name}
                         ref={editorInputRef}
                         value={activeFile.content}

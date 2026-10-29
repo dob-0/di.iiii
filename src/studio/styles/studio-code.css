@@ -1,0 +1,38 @@
+/* The code window's editor (CodeMirror 6). House mono, square corners, the studio's dark surface. */
+.di-code-editor {
+    flex: 1;
+    min-height: 220px;
+    display: flex;
+    border: 1px solid var(--di-line);
+    border-radius: 0;
+    overflow: hidden;
+}
+.di-code-editor:focus-within {
+    border-color: var(--di-cyan);
+}
+.di-code-editor .cm-editor {
+    flex: 1;
+    min-width: 0;
+    max-height: 100%;
+    background: transparent;
+    color: inherit;
+    font-family: var(--di-mono);
+    font-size: 0.8rem;
+}
+.di-code-editor .cm-editor.cm-focused {
+    outline: none;
+}
+.di-code-editor .cm-scroller {
+    font-family: inherit;
+    line-height: 1.5;
+    overflow: auto;
+}
+.di-code-editor .cm-gutters {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.55);
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+.di-code-editor .cm-activeLine,
+.di-code-editor .cm-activeLineGutter {
+    background: rgba(255, 255, 255, 0.06);
+}

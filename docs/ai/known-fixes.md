@@ -3,6 +3,14 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## The code box was a bare text box: no name, no line numbers, colours, find or indent (Studio, UX audit F018, 2026-10-29)
+- Symptom: Code window = a `<textarea>` with no accessible name (axe `label`), no line numbers or colours, Tab left the box, 12 px system `monospace`.
+- Fix: `panels/CodeEditorArea.jsx` lazy-loads CodeMirror 6 (`CodeMirrorBox.jsx`, own `codemirror-vendor` chunk in vite.config.js); name "Code of <file>"; Tab indents, Esc then Tab leaves (WCAG 2.1.1); `--di-mono`.
+- Same commit path: both the editor and the plain box use `codeBuffer.js` (400 ms idle, blur, unmount -> onCommit). The ref handle looks like a textarea, so "insert at the cursor" is unchanged.
+- Kept (nothing lost): the textarea is the load fallback, the fallback if the editor fails to load, and a remembered choice ("Use a plain text box", `di.codeEditor.plain`).
+- Trap: without the manualChunks entry CodeMirror lands in the shared `vendor` chunk (+495 KB for every route). Keep it named.
+- Tests: `panels/CodeEditorArea.test.jsx` (5 fail on the old box).
+
 ## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
 
 Symptom: after adding a box from Create, the child and the senior pulled it; the view turned and the box left the screen, Position
