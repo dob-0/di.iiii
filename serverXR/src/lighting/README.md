@@ -2,7 +2,7 @@
 
 `npm run desk:bundle [-- --out <dir>] [--gz node|python]` writes, to `build/desk-bundle/` by default (gitignored):
 
-- `ui/*` — every file of `serverXR/src/lighting/ui/`, byte for byte (today 7: `index.html app.js style.css qr.js from.js show.js caps.js`; a new UI file is picked up and listed in the manifest).
+- `ui/*` — every file of `serverXR/src/lighting/ui/`, byte for byte (today 9: `index.html app.js style.css qr.js from.js show.js caps.js dmxfeed.js ask.js`; a new UI file is picked up and listed in the manifest).
 - `manifest.json` — `{ di_commit, contract_version, gz_producer, files: [{ path, bytes, sha256, gz_bytes, gz_sha256 }] }`. No build time: the same commit gives the same bytes. `di_commit` gets `-dirty` when the UI, `engine.js` or the contract differ from `HEAD`.
 - `profiles-node.json` — `{ source: { file, di_commit }, profiles: [{ name, cat, label, channels }] }`: the 13 built-ins a node carries (`dimmer ds drgb drgbs drgbw drgbwa rgb rgba rgbw rgbaw dwwcw ptdrgb ppttdrgbw`), read from `PROFILES` in `engine.js`, never copied.
 

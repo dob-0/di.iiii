@@ -76,9 +76,11 @@
     --di-ink: var(--di-text);
     --di-dim: var(--di-text-muted);
     /* A third level below --di-dim: an id, a count, a hint — present, never
-       competing. 2.9:1 on black, so it is for supporting text only, never for
-       anything a person has to read to act. */
-    --di-faint: rgba(255, 255, 255, 0.34);
+       competing. 4.58:1 on black (WCAG 2.2 SC 1.4.3, 4.5:1); it was .34 = 2.9:1
+       until the 2026-10-28 UX audit (F140: faint small grey is the first thing
+       an older reader loses). The test src/styles/contrast.test.js holds every
+       text grey token at 4.5:1. */
+    --di-faint: rgba(255, 255, 255, 0.46);
     --di-line: rgba(77, 249, 255, 0.12);
     --di-bg: var(--di-black);
 
@@ -194,6 +196,10 @@
        Applied under (pointer: coarse), so it follows the finger, not the screen
        width — a tablet had 13px-tall links on the bar (measured 2026-09-27). */
     --di-touch-target: 44px;
+    /* The floor under that: no target on a screen is smaller than 24 x 24 CSS px
+       (WCAG 2.2 SC 2.5.8 Target Size (Minimum), level AA). 44 is the aim for a
+       finger; 24 is the line nothing may go under, mouse or not. */
+    --di-target-min: 24px;
 
     /* Type: two families (above) and one scale, same measurement. 679 literal
        font-sizes across the same stylesheets against 7 uses of the old
@@ -202,14 +208,22 @@
        7 rungs, same 2026-09-10 measurement, same rule: nothing snaps here by
        more than 1px. Large fluid headings (clamp() display type) are their
        own thing and are not on this ladder — see the session doc. */
-    --di-text-1: 0.5rem;      /* 8px */
-    --di-text-2: 0.625rem;    /* 10px */
+    --di-text-1: 0.75rem;     /* 12px — the floor; was 8px (2026-10-28, UX audit F140) */
+    --di-text-2: 0.75rem;     /* 12px — was 10px; rungs 1-3 now sit together at the floor */
     --di-text-3: 0.76rem;     /* 12.16px */
     --di-text-4: 0.9rem;      /* 14.4px */
     --di-text-5: 1.0625rem;   /* 17px */
     --di-text-6: 1.25rem;     /* 20px */
     --di-text-7: 1.4375rem;   /* 23px */
-    --di-label-tracking: 0.16em;
+    /* Small text is 12px at the least: WCAG 2.2 SC 1.4.4 asks that text can be
+       read and resized, and NN/g's research on older adults names tiny type as
+       the first barrier. The two lowest rungs keep their names so the 300 call
+       sites do not change, and read 12px. Q1 A, the UX plan's default the owner took with "ok fix
+       everything" (2026-10-28; B is the one line below set to uppercase):
+       labels are written in normal letters; capitals stay for the brand line and
+       big signs only (those set their own text-transform and tracking). */
+    --di-label-tracking: 0.02em;
+    --di-label-case: none;
 
     /* ── aliases for legacy panel/studio CSS ── */
     /* --ui-bg was used by AuthGate, ReservedAddressCard and the chat
@@ -220,7 +234,9 @@
     --ui-surface-raised: var(--di-surface-2);
     --ui-surface-muted: var(--di-surface-2);
     --ui-surface-highlight: var(--di-cyan-wash);
-    --ui-border: var(--di-cyan-border);
+    /* the edge of a control: 3:1 on the ground (WCAG 2.2 SC 1.4.11). .42 = 3.3:1;
+       the old .3 was 2.14:1. --ui-divider below stays the quiet hairline. */
+    --ui-border: rgba(77, 249, 255, 0.42);
     --ui-border-strong: var(--di-cyan);
     --ui-divider: var(--di-cyan-border);
     --ui-shadow: none;
@@ -366,6 +382,14 @@ img,
 a
 {
     -webkit-user-drag: none;
+}
+
+/* A link inside running text is told apart by more than its colour: underlined
+   (WCAG 2.2 SC 1.4.1 Use of Colour). Only a bare link — one with a class is a
+   component (a button, a nav item, a card) and styles itself. */
+p a:not([class]) {
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
 }
 
 

@@ -8,6 +8,7 @@ import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { isTypingTarget, lockFromKey, undoRedoFromKey } from '../utils/editKeys.js'
+import { letterKeyIsOff } from '../utils/studioKeyPrefs.js'
 import { unitMembersOf } from '../utils/laserTest.js'
 import { clearFromKey, clearTransformOps } from '../utils/clearTransform.js'
 import { hallEntityIds, lockOps, movableEntities, selectionWithout } from '../utils/selectionTools.js'
@@ -849,6 +850,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
 
             const meta = event.ctrlKey || event.metaKey
             const key = event.key
+            // Letter keys switched off (Help > Shortcuts, WCAG 2.1.4): A, F, ".", Shift+D, Shift+G do nothing; Ctrl/Cmd/Alt ones stay.
+            if (letterKeyIsOff(event)) return
 
             // Blender view keys by event.code (numpad, Home, and the no-numpad
             // Shift+1/3/7, Shift+Arrows) -- see resolveViewKey. Skipped while focus is
@@ -1406,7 +1409,13 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         activity: state.activity,
         sceneStreamState: state.sceneStreamState,
         sceneStreamError: state.sceneStreamError,
-        pendingSyncError: state.pendingSyncError
+        pendingSyncError: state.pendingSyncError,
+        // Edits not yet acknowledged, and whether the sign-in ran out: the save line reads both.
+        pendingOpCount: state.pendingOpCount,
+        authExpired: state.authExpired,
+        // The save line says nothing until the project has loaded, and says so if it could not.
+        hasLoaded: state.hasLoaded,
+        loadError: state.loadError
     }
 
     return (
@@ -1430,6 +1439,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             loadError={state.loadError}
             editHistory={history()}
             onHistoryJump={jumpTo}
+            onUndo={undo}
+            onRedo={redo}
             displayName={displayName}
             onDisplayNameChange={setDisplayName}
             selectedEntity={insideGeo ? geoSelectedRow : selectedEntity}

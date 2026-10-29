@@ -37,6 +37,7 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **Light** | The lighting desk: patch, looks, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The capital is the tool; a light in a scene and a stage fixture have their own words, **light** and **lamp** below (settled 2026-10-13). |
 | **lamp** | A stage fixture: the real device on the rig (a moving head, a par, a strip). In a scene it is a light that carries a fixture: a typed one from the rig builder, or a join to a fixture of the lighting desk. A project's card counts these: "74 lamps". Owner, 2026-10-13: *"lamp" = a stage fixture.* Added 2026-10-13. |
 | **light** | A 3D scene light: the sun, a point, a spot, an ambient light, joined to nothing on the rig. Written with a small l; the lighting desk is **Light** with a capital. A project's card counts these: "2 lights". Owner, 2026-10-13: *"light" = a 3D scene light (sun, point…).* Added 2026-10-13. |
+| **head light** | A flashlight that follows a visitor's view while they walk in a scene. A project turns it on; the visitor switches it on and off with L (on a phone, the Head light button) and it starts off, never saved. Two words; the button says Head light. Not **Light** (the lighting desk), not a **light** (a 3D scene light that belongs to the scene, lit for everyone) and not a **lamp** (a stage fixture): only the visitor who walks sees it. Added 2026-10-28. |
 | **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
 | **mesh** | serverXR's live hub at `/serverXR/mesh`, where every screen and phone in one **group** hears what the others publish on a **channel**. Spoken in Nodes through Mesh In and Mesh Out. The hub's own protocol calls a group a `room`; copy says **group**, because Room is banned copy. Added 2026-10-21. |
 | **post** | A short message the share door sends out about a space or a project: words, one link, pictures or a video. A draft until it is approved; then sent to the channels it names. Never a project and never a page. Added 2026-10-21. |
@@ -551,13 +552,35 @@ in future people can use that."*
 | Word | Means | Not |
 |---|---|---|
 | **app** | Any program a person installs and runs on a machine: a game, Blender, TouchDesigner, a browser. The overall word — Steam names every item an app (its *appid*), the Linux desktop names every launcher entry an application (freedesktop Desktop Entry, `Type=Application`, games under `Categories=Game`). | not a di.iiii **tool** (Studio · Nodes · Projection · Light are tools *inside* di.iiii) |
-| **game** | An app made to be played. A *type* of app, never a separate thing. | not "software", not "title" in copy |
+| **game** | An app made to be played. A *type* of app, never a separate thing. In di.iiii the same word names a **project you play**: a project that has rules (see "Amended 2026-10-29"). | not "software", not "title" in copy |
 | **creative app** | An app made to create with: Blender, TouchDesigner, a DAW, an editor. | not "creative tool" — **tool** is taken by di.iiii's own tools |
 | **software** | Not used in product copy. It means any code at all (drivers, libraries, firmware), wider than what a person runs. | — |
 | **settings set** | The values di.g_apptune writes into an app's own settings for one goal (Recommended, Performance, Quality, Yours). | not "profile" (a person has a profile), not "preset" (a game's own word for its menu presets) |
 
 Where it lives in code: di.g_apptune `apps/<source>-<id>.toml` with `type = "game" | "creative" | "app"`
 (described in the di.g_apptune repo, dob-0/di.g_apptune, file APP_FILE.md).
+
+## Amended 2026-10-29 — a game is a project you play
+
+Studio games design (`di-studio-games-design.md`, section 7), slice A. Owner's words (ledger N1469): *"1 playlab 2. we need pro
+level 3 and 4 your pick"*. Pick 3 was the word for a project you play: **game**, or "a project with rules" with "game" kept for
+apps only. The owner left it to the lead; the lead picked **game**. Decision record:
+`docs/ai/decisions/2026-10-29-game-is-a-project-you-play.md`.
+
+**game** stays one meaning, the one of 2026-10-21: a *type* of something, never a separate thing. It is a type of app on a
+machine, and a type of project in di.iiii: a project you play, because it has rules. A game is made in a space like any project
+(the space `playlab` holds the first ones).
+
+| Word | Means | Not |
+|---|---|---|
+| **Play** (the button) | Run this project as a visitor would, from the Studio or Make. **Stop** returns to editing. Nothing done while playing is saved. | not "Preview", not "Test" in copy |
+| **Play panel** | Where a project turns on head light, solid walls, sounds, things you can use, rules, walker and friends. | not "game settings" |
+| **play-test** | Playing your own project to try it, then stopping. | — |
+| **thing you can use** | An object a visitor can take or open while walking. | not "item", "pickup" |
+| **take / open / locked / Use** | The actions on a thing you can use: take it, open it, it is locked until its key is used; **Use** is the button (key E while walking). | — |
+| **rules** · **round** · **counter** (on screen) | The rules are what makes a project a game; a round is one play from start to win or end; a counter is a number shown on screen. | not the `signal.counter` node in copy |
+| **start point** | Where a visitor appears when play starts. | not "spawn" in copy |
+| **walker** | An object that walks the scene by itself: patrol, follow, search. | not "NPC", "AI" |
 
 ## The rule for anything new
 
