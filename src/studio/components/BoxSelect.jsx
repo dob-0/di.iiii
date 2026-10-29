@@ -18,6 +18,7 @@ import { isTypingTarget } from '../utils/editKeys.js'
 import { letterKeyIsOff } from '../utils/studioKeyPrefs.js'
 import { boxModeFor, isPickableEntity, mergeSelection, normalizeRect, pickInRect } from '../utils/selectionTools.js'
 import { pullInProgress } from '../navigation/pullToMove.js'
+import { isPlaying } from '../../project/play/playingFlag.js'
 
 const DRAG_START_PX = 4
 
@@ -159,6 +160,7 @@ export default function BoxSelect({ active = false, entities = [], selectedEntit
         }
 
         const onKeyDown = (event) => {
+            if (isPlaying()) return
             if (isTypingTarget(event.target)) return
             if (event.key === 'Escape' && (start || armed)) {
                 armed = false

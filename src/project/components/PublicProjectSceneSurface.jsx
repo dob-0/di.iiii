@@ -126,6 +126,8 @@ export default function PublicProjectSceneSurface({
     navMode,
     walkLook = 'lock',
     onNavModeChange,
+    // false: no Fly toggle, no F key, no VR/AR buttons in the walk (Play: a game is walked; LiveProjectScene showModeControls).
+    walkModeControls = true,
     topClear = null,
     isPreview,
     initialCameraView = null,
@@ -242,6 +244,7 @@ export default function PublicProjectSceneSurface({
                     // the view page walks with one look (drag), never a pointer lock
                     walkLook={walkLook}
                     topClear={topClear}
+                    showModeControls={walkModeControls}
                 />
                 </>
             ) : hasGraph === null ? null : hasGraph ? (

@@ -21,7 +21,7 @@ export function PlayButton({ onPlay, className = '', children = 'Play ▸', titl
 }
 
 /** Mounts the walk over the editor while playing. `document` is the editor's live document; PlayLayer copies it. */
-export function PlayHost({ playing, document, onStop }) {
+export function PlayHost({ playing, document, onStop, words = null }) {
     if (!playing) return null
-    return <Suspense fallback={null}><PlayLayer document={document} onStop={onStop} /></Suspense>
+    return <Suspense fallback={null}><PlayLayer document={document} onStop={onStop} words={words} /></Suspense>
 }

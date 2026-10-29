@@ -33,7 +33,7 @@ export const LEGACY_ALTITUDE_KEYS = Object.freeze({ up: [' ', 'q'], down: ['e', 
 // The words for the altitude keys on the hint line while flying.
 export const ALTITUDE_HINT_TEXT = 'Space/E · up' + HINT_SEPARATOR + 'C/Q · down'
 
-export const walkKeyHintText = ({ headLight = false, flying = false } = {}) => [
+export const walkKeyHintText = ({ headLight = false, flying = false, fly = true } = {}) => [
     ...(headLight ? [`${HEAD_LIGHT_KEY.toUpperCase()} · head light`] : []),
-    `${FLY_KEY.toUpperCase()} · ${flying ? 'walk' : 'fly'}`
+    ...(fly ? [`${FLY_KEY.toUpperCase()} · ${flying ? 'walk' : 'fly'}`] : [])
 ].join(HINT_SEPARATOR)

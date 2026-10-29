@@ -64,6 +64,7 @@ import {
     nodeValuesPatch,
     roomNodeRow
 } from '../../project/graph/geoScope.js'
+import { isPlaying } from '../../project/play/playingFlag.js'
 
 // Inside a Geo, Create offers what exists as a node — the Create window's own
 // entries, filtered (src/project/graph/geoScope.js GEO_ADD_TYPES).
@@ -359,6 +360,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         // whole-document replace would revert their concurrent edits too
         // (see docs/ai/known-fixes.md).
         const handler = (event) => {
+            if (isPlaying()) return
             if (isTypingTarget(event.target)) return
             // By the key's place as well as its letter: Shift makes it 'Z', and the
             // Armenian layout makes it '\u0566' — both used to fall through (utils/editKeys.js).
@@ -848,6 +850,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
 
     useEffect(() => {
         const handler = (event) => {
+            if (isPlaying()) return
             const tag = event.target?.tagName?.toLowerCase?.()
             if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
 

@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Vector3 } from 'three'
 import { FLY_DEFAULTS, flyStart, flyStep } from '../../project/viewport/flyMotion.js'
 import { EYE_HEIGHT } from '../../components/walkModeConfig.js'
+import { isPlaying } from '../../project/play/playingFlag.js'
 
 export const WALK_KEYS = Object.freeze({ KeyW: 'forward', KeyS: 'back', KeyA: 'left', KeyD: 'right', KeyE: 'up', KeyQ: 'down' })
 export const WALK_PREFS = Object.freeze({
@@ -219,6 +220,7 @@ export function useWalkNavigation({ controlsRef, active = true, onWalkingChange,
             cbs.current.onCameraChange?.({ position: cc.camera.position.toArray(), target: cc.getTarget(new Vector3()).toArray() })
         }
         const onKeyDown = (e) => {
+            if (isPlaying()) return
             if (typing(e.target)) return
             if (isWalkToggle(e)) { e.preventDefault(); if (walk) end(); else begin('fly'); return }
             if (!walk) return

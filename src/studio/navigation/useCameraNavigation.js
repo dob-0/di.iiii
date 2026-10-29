@@ -20,6 +20,7 @@ import { clientToNdc, contentLargestSide, pickPivot, selectionCenter } from './a
 import { pullPressAllowed } from './pullToMove.js'
 import { wheelNotches } from '../../project/viewport/navMath.js'
 import { IN_PLACE_DISTANCE, autoSpeed, flyVelocity, resolveSpeed, slideMetresPerPixel, speedModifier, turnDistance, wheelStep, zoomDragStep } from './freeMove.js'
+import { isPlaying } from '../../project/play/playingFlag.js'
 
 const BUTTON_NAME = { 0: 'left', 1: 'middle', 2: 'right' }
 
@@ -354,6 +355,7 @@ export function useCameraNavigation({
             if (flyFrame) { cancelAnimationFrame(flyFrame); flyFrame = 0 }
         }
         const onFlyKey = (event) => {
+            if (isPlaying()) return
             const down = event.type === 'keydown'
             readMods(event)
             if (!rightHeld || !FLY_KEYS.has(event.code)) return

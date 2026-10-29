@@ -10,14 +10,24 @@ import { applyAnswer, parseCoreWords, renderReviewPage } from './review.mjs'
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const vocabulary = readFileSync(resolve(repoDir, 'docs/ai/vocabulary.md'), 'utf8')
 const CORE = ['space', 'project', 'scene', 'object', 'place', 'production']
+// Make's Play words (slice B): Armenian first, drafted by a machine, on the same page; no Russian row yet.
+const MAKE_PLAY = ['play', 'playing', 'stop']
 const ARMENIAN = /^[Ա-֏]+$/
 const CYRILLIC = /^[Ѐ-ӿ]+$/
 
 describe('the six core words in Armenian and Russian', () => {
     const rows = parseCoreWords(vocabulary)
 
-    it('lists all six words, once each, in the dictionary order', () => {
-        expect(rows.map((row) => row.id)).toEqual(CORE)
+    it('lists all six words, once each, in the dictionary order, then Make\'s Play words', () => {
+        expect(rows.map((row) => row.id)).toEqual([...CORE, ...MAKE_PLAY])
+    })
+
+    it.each(MAKE_PLAY)('Make\'s %s has an unverified Armenian row from a machine, on the page', (word) => {
+        const row = rows.find((r) => r.id === word)
+        expect(row.hy.says).toMatch(/^[Ա-֏ ]+$/)
+        expect(row.hy.state).toBe('unverified')
+        expect(row.hy.source).toMatch(/^machine:[\w.-]+@\d{4}-\d{2}-\d{2}$/)
+        expect(renderReviewPage(rows, { date: '2026-10-29' })).toContain(`<b>${row.hy.says}</b>`)
     })
 
     it.each(CORE)('%s has an Armenian and a Russian row with a state and a source', (word) => {
@@ -36,7 +46,7 @@ describe('the six core words in Armenian and Russian', () => {
 
     it('puts every word and its state on the one review page', () => {
         const html = renderReviewPage(rows, { date: '2026-10-29' })
-        for (const row of rows) {
+        for (const row of rows.filter((r) => CORE.includes(r.id))) {
             const section = html.slice(html.indexOf(`data-id="${row.id}"`), html.indexOf('</section>', html.indexOf(`data-id="${row.id}"`)))
             expect(section).toContain(`<b>${row.hy.says}</b>`)
             expect(section).toContain(`<b>${row.ru.says}</b>`)

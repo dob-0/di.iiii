@@ -1812,6 +1812,9 @@ export default function LiveProjectScene({
     const headLight = resolveHeadLight(doc?.worldState)
     const headLightAvailable = walking && headLight.available
     const headLightControl = useHeadLight(headLightAvailable)
+    // The key words of the hint lines; empty when the project has no head light and Fly is hidden (Play), so no bare separator is drawn.
+    const lockHintKeys = walkKeyHintText({ headLight: headLight.available, fly: showModeControls })
+    const walkHintKeys = walkKeyHintText({ headLight: headLight.available, flying: flyMode, fly: showModeControls })
 
     // F flies, in every project; the head light has its own key, L (walkKeys.js).
     useEffect(() => {
@@ -2291,7 +2294,7 @@ export default function LiveProjectScene({
 
                     {walking && !isMobile && locking && !isLocked && (
                         <p className="live-scene-hint live-scene-hint--lock">
-                            Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; {walkKeyHintText({ headLight: headLight.available })}
+                            Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look{lockHintKeys ? <> &nbsp;·&nbsp; {lockHintKeys}</> : null}
                         </p>
                     )}
                     {walking && !isMobile && (!locking || isLocked) && walkHint ? (
@@ -2299,7 +2302,7 @@ export default function LiveProjectScene({
                     ) : null}
                     {walking && !isMobile && (!locking || isLocked) && !walkHint && (
                         <p className="live-scene-hint">
-                            {moveKeysText(layoutMap)} · move &nbsp;·&nbsp; {locking ? 'Mouse · look' : 'Drag · look \u00A0·\u00A0 Scroll · forward / back'} &nbsp;·&nbsp; {walkKeyHintText({ headLight: headLight.available, flying: flyMode })}
+                            {moveKeysText(layoutMap)} · move &nbsp;·&nbsp; {locking ? 'Mouse · look' : 'Drag · look \u00A0·\u00A0 Scroll · forward / back'}{walkHintKeys ? <> &nbsp;·&nbsp; {walkHintKeys}</> : null}
                             {flyMode ? <>&nbsp;·&nbsp; {altitudeHintTextFor(flyKeysChoice, (code, fallback) => layoutLabel(layoutMap, code, fallback))}</> : null}
                             {locking ? <>&nbsp;·&nbsp; ESC · release</> : exitLabel ? <>&nbsp;·&nbsp; Esc · exit</> : null}
                         </p>
