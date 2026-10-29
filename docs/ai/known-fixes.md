@@ -101,6 +101,14 @@ browser as `di.studio.navigation.editMouse`, default `pull`). Like Blender = ori
 Tests: `src/studio/navigation/editMouse.test.js` (the map compared button by button with a snapshot read from origin/dev's
 `mappings.js`), `MoveSettings.test.jsx` ("Mouse in Edit"), `StudioHelpDialog.test.jsx` (both mouse tables).
 
+## A base path ate half a word: base `/hy` turned `/hyper/studio` into `per/studio` (S13b, 2026-10-29)
+
+Symptom: none yet on screen (found in the languages design before `/hy` became a base). Cause: `createBasePathHelpers` (`laneBasePath.js`) and
+`stripAppBasePath` (`spaceRouting.js`) used `startsWith(base)` on the string, not on a whole segment. Fix: strip only when the path is the
+base or starts with `base + '/'`. Regression test: `src/i18n/languages.test.js` ("a base path owns whole segments only"; fails on origin/dev's
+`laneBasePath.js`). `stripAppBasePath` reads `BASE_URL` once at load (root in tests), so its whole-segment branch is not reachable from a
+test; the lane helper carries the proof. The codes `en`, `hy`, `ru` are now reserved words from the language table.
+
 ## Recurring bug class: silent hardcoded fallback
 
 A per-entity value (spaceId, auth scope, asset id) gets read from a source that can be
