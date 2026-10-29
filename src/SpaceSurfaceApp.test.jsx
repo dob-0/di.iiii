@@ -1,8 +1,25 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 
 const getServerSpace = vi.fn()
+const listSpaceContents = vi.fn()
+
+vi.mock('./project/services/projectsApi.js', () => ({
+    listSpaceContents: (...args) => listSpaceContents(...args)
+}))
+
+vi.mock('./components/EmptySpaceView.jsx', () => ({
+    default: function MockEmptySpaceView({ spaceId }) {
+        return <div>empty-space-view:{spaceId}</div>
+    }
+}))
+
+vi.mock('./pages/SpaceContentsPage.jsx', () => ({
+    default: function MockSpaceContentsPage({ spaceId }) {
+        return <div>space-contents-page:{spaceId}</div>
+    }
+}))
 
 vi.mock('./App.jsx', () => ({
     default: function MockApp() {
@@ -17,8 +34,9 @@ vi.mock('./raw/BlankNodeWorkspaceApp.jsx', () => ({
 }))
 
 vi.mock('./project/components/PublicProjectViewer.jsx', () => ({
-    default: function MockPublicProjectViewer({ spaceId, projectId, showProjectSwitcher, showProjectInTitle }) {
-        return <div>public-project-viewer:{spaceId}:{projectId}{showProjectSwitcher ? ':switcher' : ''}{showProjectInTitle ? ':title-carries-project' : ''}</div>
+    default: function MockPublicProjectViewer({ spaceId, projectId, spaceLabel, spaceAddress, showProjectSwitcher, showProjectInTitle }) {
+        // the name and the address are what the viewer's bar and tab are built from
+        return <div data-space-label={spaceLabel} data-space-address={spaceAddress}>public-project-viewer:{spaceId}:{projectId}{showProjectSwitcher ? ':switcher' : ''}{showProjectInTitle ? ':title-carries-project' : ''}</div>
     }
 }))
 
@@ -28,8 +46,14 @@ vi.mock('./services/serverSpaces.js', () => ({
 }))
 
 describe('SpaceSurfaceApp', () => {
+    beforeEach(() => {
+        listSpaceContents.mockResolvedValue([])
+    })
+
     afterEach(() => {
         getServerSpace.mockReset()
+        listSpaceContents.mockReset()
+        listSpaceContents.mockResolvedValue([])
         vi.useRealTimers()
     })
 
@@ -87,17 +111,50 @@ describe('SpaceSurfaceApp', () => {
         expect(getServerSpace).not.toHaveBeenCalled()
     })
 
-    it('falls back to the legacy editor when no published project is configured', async () => {
-        getServerSpace.mockResolvedValue({
-            id: 'main',
-            label: 'Main Space',
-            publishedProjectId: null
+    describe('a space with no front door opens what it holds, never the 3D editor', () => {
+        const noDoor = { id: 'cinema-house', label: 'Cinema House', publishedProjectId: null }
+
+        it('opens its only project', async () => {
+            getServerSpace.mockResolvedValue(noDoor)
+            listSpaceContents.mockResolvedValue([{ id: 'only' }])
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'cinema-house' }} />)
+            expect(await screen.findByText(/public-project-viewer:cinema-house:only/)).toBeInTheDocument()
+            expect(screen.queryByText('legacy-app')).toBeNull()
         })
 
-        render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'main' }} />)
+        it('lists its projects when it holds several', async () => {
+            getServerSpace.mockResolvedValue(noDoor)
+            listSpaceContents.mockResolvedValue([{ id: 'a' }, { id: 'b' }])
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'cinema-house' }} />)
+            expect(await screen.findByText('space-contents-page:cinema-house')).toBeInTheDocument()
+        })
 
-        await waitFor(() => {
-            expect(screen.getByText('legacy-app')).toBeInTheDocument()
+        it('does not swap in the editor when a later poll of the space fails', async () => {
+            vi.useFakeTimers()
+            getServerSpace.mockResolvedValueOnce(noDoor).mockRejectedValue(new Error('network down'))
+            listSpaceContents.mockResolvedValue([])
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'cinema-house' }} />)
+            await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+            expect(screen.getByText(/empty-space-view/)).toBeInTheDocument()
+            await act(async () => { await vi.advanceTimersByTimeAsync(2100) })
+            expect(screen.queryByText('legacy-app')).toBeNull()
+            expect(screen.getByText(/empty-space-view/)).toBeInTheDocument()
+        })
+
+        it('shows the empty-space view, not the editor, when the contents cannot be read', async () => {
+            getServerSpace.mockResolvedValue(noDoor)
+            listSpaceContents.mockRejectedValue(new Error('boom'))
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'cinema-house' }} />)
+            expect(await screen.findByText(/empty-space-view/)).toBeInTheDocument()
+            expect(screen.queryByText('legacy-app')).toBeNull()
+        })
+
+        it('shows the plain empty-space view when it holds no project', async () => {
+            getServerSpace.mockResolvedValue(noDoor)
+            listSpaceContents.mockResolvedValue([])
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'cinema-house' }} />)
+            expect(await screen.findByText('empty-space-view:cinema-house')).toBeInTheDocument()
+            expect(screen.queryByText('legacy-app')).toBeNull()
         })
     })
 
@@ -119,8 +176,10 @@ describe('SpaceSurfaceApp', () => {
 
         await act(async () => {
             await Promise.resolve()
+            await Promise.resolve()
+            await Promise.resolve()
         })
-        expect(screen.getByText('legacy-app')).toBeInTheDocument()
+        expect(screen.getByText(/empty-space-view/)).toBeInTheDocument()
 
         await act(async () => {
             await vi.advanceTimersByTimeAsync(2100)
@@ -177,7 +236,7 @@ describe('SpaceSurfaceApp', () => {
 
             render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'dilijan' }} />)
 
-            await screen.findByText('legacy-app')
+            await screen.findByText(/empty-space-view/)
             await waitFor(() => expect(document.title).toBe('Dilijan Camp — di.iiii'))
         })
 
@@ -187,8 +246,72 @@ describe('SpaceSurfaceApp', () => {
 
             render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'main' }} />)
 
-            await screen.findByText('legacy-app')
+            await screen.findByText(/empty-space-view/)
             expect(document.title).toBe('di.iiii — public spaces on the open web')
+        })
+
+        // One name per space: the same space, typed as its address. The tab read "di.iiii — di.iiii" because the skip
+        // compared the typed word with 'main' instead of asking the space which space it is.
+        it('leaves the tab title alone for the platform\'s own space, reached by its address too', async () => {
+            document.title = 'di.iiii — public spaces on the open web'
+            getServerSpace.mockResolvedValue({ id: 'main', slug: 'di-iiii', label: 'Home', publishedProjectId: null })
+
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'di-iiii' }} />)
+
+            await screen.findByText(/empty-space-view/)
+            expect(document.title).toBe('di.iiii — public spaces on the open web')
+        })
+
+        it('names a space that has no name by its address, not by the id it was typed as', async () => {
+            document.title = 'di.iiii — public spaces on the open web'
+            getServerSpace.mockResolvedValue({ id: 'queerlab', slug: 'queer-lab', label: '', publishedProjectId: null })
+
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'queerlab' }} />)
+
+            await screen.findByText(/empty-space-view/)
+            await waitFor(() => expect(document.title).toBe('queer-lab — di.iiii'))
+        })
+    })
+
+    // One name per space (owner, 2026-09-14): the viewer draws the bar and the tab from what it is handed here, so the
+    // same space must hand it the same name and the same address whichever address was typed.
+    describe('what the viewer is told about the space', () => {
+        const main = { id: 'main', slug: 'di-iiii', label: 'di.iiii', publishedProjectId: 'main-dii-project' }
+
+        it('is the space\'s name and its address, by its id, by its address, and on a project link of either', async () => {
+            getServerSpace.mockResolvedValue(main)
+            for (const routeState of [
+                { page: 'editor', spaceId: 'main' },
+                { page: 'editor', spaceId: 'di-iiii' },
+                { page: 'editor', spaceId: 'main', projectId: 'landing' },
+                { page: 'editor', spaceId: 'di-iiii', projectId: 'landing' }
+            ]) {
+                const { unmount } = render(<SpaceSurfaceApp routeState={routeState} />)
+                const viewer = await screen.findByText(/^public-project-viewer:/)
+                expect(viewer, JSON.stringify(routeState)).toHaveAttribute('data-space-label', 'di.iiii')
+                expect(viewer, JSON.stringify(routeState)).toHaveAttribute('data-space-address', 'di-iiii')
+                unmount()
+            }
+        })
+
+        it('is the address as the name, for a space that has no name — never the id it was typed as', async () => {
+            getServerSpace.mockResolvedValue({ id: 'queerlab', slug: 'queer-lab', label: '', publishedProjectId: 'p' })
+
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'queerlab' }} />)
+
+            const viewer = await screen.findByText(/^public-project-viewer:/)
+            expect(viewer).toHaveAttribute('data-space-label', 'queer-lab')
+            expect(viewer).toHaveAttribute('data-space-address', 'queer-lab')
+        })
+
+        it('is the id, as name and address, when the space could not be read', async () => {
+            getServerSpace.mockRejectedValue(new Error('network down'))
+
+            render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'queerlab', projectId: 'p' }} />)
+
+            const viewer = await screen.findByText(/^public-project-viewer:/)
+            expect(viewer).toHaveAttribute('data-space-label', 'queerlab')
+            expect(viewer).toHaveAttribute('data-space-address', 'queerlab')
         })
     })
 })

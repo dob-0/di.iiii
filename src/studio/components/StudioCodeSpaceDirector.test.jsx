@@ -61,10 +61,14 @@ describe('StudioCodeSpaceDirector', () => {
         expect(navigate).toHaveBeenCalledWith('/algovrithm')
     })
 
-    it('says so rather than rendering blank for a space with no surface', () => {
+    // Audit F154 (2026-10-28): a routed page that only said "no director here"
+    // is gone. A space with no director surface sends the visitor on to its
+    // Projects, replacing the dead address in the history.
+    it('sends a space with no surface on to its Projects, with replace', () => {
+        navigate.mockClear()
         render(<StudioCodeSpaceDirector spaceId="main" />)
-        expect(screen.getByRole('heading', { name: 'No director here' })).toBeTruthy()
+        expect(screen.queryByRole('heading', { name: 'no director here' })).toBeNull()
         expect(screen.queryByTestId('experience')).toBeNull()
-        expect(screen.getByText(/keeps its work as projects/i)).toBeTruthy()
+        expect(navigate).toHaveBeenCalledWith('/main/studio', { replace: true })
     })
 })

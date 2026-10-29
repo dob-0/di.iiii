@@ -20,12 +20,24 @@ const actorFromAuthState = (state = null) => {
   if (!subject) {
     return { actor: 'anonymous', type: 'anonymous', label: 'Someone not signed in', role: null }
   }
+  const fallback = state.type === 'guest' || subject.startsWith('guest:') ? 'Guest' : subject
+  const label = cleanLabel(state.label) || fallback
+  // di.bo acting for a person (an act token, actTokenGate.js): the change is
+  // still theirs — same actor, so it groups with their own edits — but the
+  // history says how it arrived. `di.bo` is the kind of identity that made
+  // the request; the label is what a person reads.
+  if (state.actor === 'di.bo') {
+    return { actor: subject.slice(0, 200), type: 'di.bo', label: cleanLabel(`${label} via di.bo`), role: state.role || null }
+  }
+  // A terminal signed in as the person (cliTokenGate.js): theirs, and says so.
+  if (state.actor === 'di.cli') {
+    return { actor: subject.slice(0, 200), type: 'di.cli', label: cleanLabel(`${label} via di CLI`), role: state.role || null }
+  }
   const type = state.type ? String(state.type) : 'unknown'
-  const fallback = type === 'guest' || subject.startsWith('guest:') ? 'Guest' : subject
   return {
     actor: subject.slice(0, 200),
     type,
-    label: cleanLabel(state.label) || fallback,
+    label,
     role: state.role || null
   }
 }

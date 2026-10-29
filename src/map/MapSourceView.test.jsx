@@ -5,7 +5,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 // read the rest of apiClient at import time.
 vi.mock('../services/apiClient.js', async (importOriginal) => ({
     ...(await importOriginal()),
-    apiBaseUrl: 'https://di-studio.xyz/serverXR'
+    apiBaseUrl: 'https://diiii.xyz/serverXR'
 }))
 
 import MapSourceView, { resolveMapSourceRef } from './MapSourceView.jsx'
@@ -91,12 +91,12 @@ describe('what a surface draws', () => {
 
     it('mounts a brought-in file onto an image element', () => {
         const { container } = render(<MapSourceView surface={surfaceOf({ kind: 'image', ref: '/api/projects/p1/assets/a1' })} />)
-        expect(container.querySelector('img').src).toBe('https://di-studio.xyz/serverXR/api/projects/p1/assets/a1')
+        expect(container.querySelector('img').src).toBe('https://diiii.xyz/serverXR/api/projects/p1/assets/a1')
     })
 
     it('mounts a brought-in file onto a video element', () => {
         const { container } = render(<MapSourceView surface={surfaceOf({ kind: 'video', ref: '/api/projects/p1/assets/a1' })} />)
-        expect(container.querySelector('video').src).toBe('https://di-studio.xyz/serverXR/api/projects/p1/assets/a1')
+        expect(container.querySelector('video').src).toBe('https://diiii.xyz/serverXR/api/projects/p1/assets/a1')
     })
 
     it('leaves a typed web address untouched', () => {
@@ -108,7 +108,7 @@ describe('what a surface draws', () => {
 describe('resolveMapSourceRef', () => {
     it('mounts a project-relative asset path onto the deployed API base', () => {
         expect(resolveMapSourceRef('/api/projects/p1/assets/a1'))
-            .toBe('https://di-studio.xyz/serverXR/api/projects/p1/assets/a1')
+            .toBe('https://diiii.xyz/serverXR/api/projects/p1/assets/a1')
     })
 
     it('leaves an absolute address untouched', () => {
@@ -145,7 +145,7 @@ describe('a brought-in file that fails to load retries itself', () => {
         act(() => { vi.advanceTimersByTime(1) })
         expect(container.querySelector('video')).not.toBe(first)
         // Same content address — a remount, not a different file.
-        expect(container.querySelector('video').src).toBe('https://di-studio.xyz/serverXR/api/projects/p1/assets/a1')
+        expect(container.querySelector('video').src).toBe('https://diiii.xyz/serverXR/api/projects/p1/assets/a1')
     })
 
     it('waits 4 seconds after a second failure', () => {
@@ -199,7 +199,7 @@ describe('a brought-in file that fails to load retries itself', () => {
 
         rerender(<MapSourceView surface={surfaceOf({ kind: 'video', ref: '/api/projects/p1/assets/a2' })} />)
         const swapped = container.querySelector('video')
-        expect(swapped.src).toBe('https://di-studio.xyz/serverXR/api/projects/p1/assets/a2')
+        expect(swapped.src).toBe('https://diiii.xyz/serverXR/api/projects/p1/assets/a2')
 
         act(() => { fireEvent.error(swapped) })
         act(() => { vi.advanceTimersByTime(1999) })
@@ -211,11 +211,13 @@ describe('a brought-in file that fails to load retries itself', () => {
 
     it('clears its timer on unmount', () => {
         const { container, unmount } = render(<MapSourceView surface={surfaceOf({ kind: 'video', ref: '/api/projects/p1/assets/a1' })} />)
+        // a delta, not an absolute: jsdom 30.1 and the test runner may hold timers of their own
+        const before = vi.getTimerCount()
         act(() => { fireEvent.error(container.querySelector('video')) })
-        expect(vi.getTimerCount()).toBe(1)
+        expect(vi.getTimerCount()).toBe(before + 1)
 
         unmount()
-        expect(vi.getTimerCount()).toBe(0)
+        expect(vi.getTimerCount()).toBe(before)
     })
 
     it('renders no placeholder and no new text while a video is failing', () => {
@@ -236,7 +238,7 @@ describe('a brought-in file that fails to load retries itself', () => {
 
         act(() => { vi.advanceTimersByTime(1) })
         expect(container.querySelector('img')).not.toBe(first)
-        expect(container.querySelector('img').src).toBe('https://di-studio.xyz/serverXR/api/projects/p1/assets/a1')
+        expect(container.querySelector('img').src).toBe('https://diiii.xyz/serverXR/api/projects/p1/assets/a1')
     })
 
     it('stops retrying an image once it loads', () => {

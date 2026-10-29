@@ -152,8 +152,8 @@ git checkout main && git merge dev --no-edit && git push origin main && git chec
 7. Verify production:
 
 ```bash
-curl -s https://di-studio.xyz/serverXR/api/health
-npm run smoke -- --base-url https://di-studio.xyz
+curl -s https://diiii.xyz/serverXR/api/health
+npm run smoke -- --base-url https://diiii.xyz
 ```
 
 ## Automatic Behavior

@@ -53,6 +53,7 @@
 .rigscenes :focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
 .rigscenes-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.rigscenes-row > button { text-transform: uppercase; } /* the deck's buttons read in capitals; the words are written in sentence case */
 .rigscenes-tabs { display: flex; margin: 8px 0; }
 .rigscenes-tabs button { flex: 1; margin-left: -1px; }
 

@@ -4,9 +4,8 @@ import {
     STUDIO_SHORTCUT_SECTIONS,
     viewportMouseRows
 } from '../utils/studioGuide.js'
-import { getNavigationPreset } from '../navigation/mappings.js'
-import { useNavigationPreference } from '../navigation/preference.js'
-import NavigationPreferenceControl from './NavigationPreferenceControl.jsx'
+import { useKeyPrefs, writeKeyPrefs } from '../utils/studioKeyPrefs.js'
+import { MOVE_HELP_NOTE, VIEW_EDIT_HELP_NOTE } from '../navigation/useMoveSettings.js'
 import '../styles/studio-help.css'
 
 // Pure-CSS diagrams, one per guide section — same approach as Raw's
@@ -58,7 +57,7 @@ function GuideDiagram({ sectionId }) {
 export default function StudioHelpDialog({ open, onClose, initialMode = 'basics' }) {
     const [mode, setMode] = useState(initialMode)
     const [sectionId, setSectionId] = useState('move')
-    const navigation = useNavigationPreference()
+    const keyPrefs = useKeyPrefs()
 
     useEffect(() => {
         if (!open) return
@@ -153,21 +152,31 @@ export default function StudioHelpDialog({ open, onClose, initialMode = 'basics'
                     </>
                 ) : (
                     <div className="sh-help-shortcuts">
-                        <NavigationPreferenceControl
-                            preset={navigation.preset}
-                            orbitSelection={navigation.orbitSelection}
-                            onPresetChange={navigation.setPreset}
-                            onOrbitSelectionChange={navigation.setOrbitSelection}
-                        />
-                        <div className="sh-help-shortcut-group">
-                            <div className="sh-help-shortcut-title">Mouse · {getNavigationPreset(navigation.preset).label}</div>
-                            {viewportMouseRows(navigation.preset).map(([key, desc]) => (
-                                <div key={key} className="sh-help-shortcut-row">
-                                    <code>{key}</code>
-                                    <span>{desc}</span>
-                                </div>
-                            ))}
+                        <div className="sh-help-shortcut-group" role="group" aria-label="Keyboard choices">
+                            <div className="sh-help-shortcut-title">Keyboard choices</div>
+                            <label className="sh-help-shortcut-row sh-help-keychoice">
+                                <input type="checkbox" checked={keyPrefs.letters} onChange={(e) => writeKeyPrefs({ letters: e.target.checked })} />
+                                <span>Single-letter keys work (G R S X Y Z T H E A L F B ?). Turn off to stop a stray key from changing things. Ctrl, Cmd and Alt keys and the number keys 1-9 (cues) stay.</span>
+                            </label>
+                            <label className="sh-help-shortcut-row sh-help-keychoice">
+                                <input type="checkbox" checked={keyPrefs.blenderTab} onChange={(e) => writeKeyPrefs({ blenderTab: e.target.checked })} />
+                                <span>Blender keys: Tab switches Navigate and Edit. Off, Tab moves the focus from button to button.</span>
+                            </label>
                         </div>
+                        <p className="sh-help-shortcut-note">{VIEW_EDIT_HELP_NOTE}</p>
+                        <p className="sh-help-shortcut-note">{MOVE_HELP_NOTE}</p>
+                        {/* View, and Edit with Pull to move, use 'studio'; Edit with Like Blender uses 'blender' (editMouse.js). */}
+                        {['studio', 'blender'].map((id) => (
+                            <div key={id} className="sh-help-shortcut-group">
+                                <div className="sh-help-shortcut-title">Mouse · {id === 'studio' ? 'View, and Edit with Pull to move (like Sketchfab)' : 'Edit with Like Blender (Scene, Move, Mouse in Edit)'}</div>
+                                {viewportMouseRows(id).map(([key, desc]) => (
+                                    <div key={key} className="sh-help-shortcut-row">
+                                        <code>{key}</code>
+                                        <span>{desc}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
                         {STUDIO_SHORTCUT_SECTIONS.map((group) => (
                             <div key={group.title} className="sh-help-shortcut-group">
                                 <div className="sh-help-shortcut-title">{group.title}</div>
@@ -183,7 +192,7 @@ export default function StudioHelpDialog({ open, onClose, initialMode = 'basics'
                 )}
 
                 <footer className="sh-help-footer">
-                    <span>Shift+? opens this anytime · Esc closes</span>
+                    <span>Shift+? opens this anytime (unless letter keys are off: use the ? button) · Esc closes</span>
                 </footer>
             </section>
         </div>

@@ -19,6 +19,14 @@
 }
 
 :root {
+    /* Native controls (checkbox, range, date, select, scrollbars) draw for a
+       dark ground and take the house accent, not the browser's blue on white:
+       /perform's "Follow Light" was a UA-blue box on black. Two places must
+       NOT inherit this — an embedded page (html.dii-embed, below) and the
+       paper views (.rigplot, .rigsheet, below). */
+    color-scheme: dark;
+    accent-color: var(--di-cyan);
+
     /* ── canonical design tokens ── */
     --di-cyan: #4df9ff;
     --di-cyan-dim: rgba(77, 249, 255, 0.1);
@@ -68,20 +76,27 @@
     --di-ink: var(--di-text);
     --di-dim: var(--di-text-muted);
     /* A third level below --di-dim: an id, a count, a hint — present, never
-       competing. 2.9:1 on black, so it is for supporting text only, never for
-       anything a person has to read to act. */
-    --di-faint: rgba(255, 255, 255, 0.34);
+       competing. 4.58:1 on black (WCAG 2.2 SC 1.4.3, 4.5:1); it was .34 = 2.9:1
+       until the 2026-10-28 UX audit (F140: faint small grey is the first thing
+       an older reader loses). The test src/styles/contrast.test.js holds every
+       text grey token at 4.5:1. */
+    --di-faint: rgba(255, 255, 255, 0.46);
     --di-line: rgba(77, 249, 255, 0.12);
     --di-bg: var(--di-black);
 
-    /* Corners: two values, not the nine that were live. Near-square for the
-       room itself, a full pill for a thing you press. Nothing in between. */
-    --di-radius: 2px;
+    /* Corners: square. The owner, 2026-09-30: "in design we not use the round
+       things" (brand spec v2, row M17). The pill stays only until its last
+       user is gone (docs/ai/golden_rules.md, "Controls are rectangles"). */
+    --di-radius: 0;
     --di-radius-pill: 999px;
 
     /* The surface ladder. Four steps from the ground up, so a panel inside a
        panel inside a modal stays legible without anyone inventing a fifth grey.
-       Each surface used to carry its own copy of this ladder in hex. */
+       Each surface used to carry its own copy of this ladder in hex.
+       The ground ladder, bottom to top: --di-black #000 (the ground, --di-bg)
+       → --di-surface #0a0a0a → --di-surface-2 #111114 → --di-surface-3 #17171b
+       → --di-surface-4 #1c1c21. The --ui-* aliases below read these steps;
+       a new grey is a new step here, never a literal in a surface. */
     --di-surface-2: #111114;
     --di-surface-3: #17171b;
     --di-surface-4: #1c1c21;
@@ -108,6 +123,13 @@
        see. Written out by hand as rgba(77, 249, 255, …) in five stylesheets. */
     --di-cyan-wash: rgba(77, 249, 255, 0.06);
     --di-cyan-line: rgba(77, 249, 255, 0.35);
+    /* The accent on white or paper, where the cyan itself measures 1.3:1.
+       on-light: a mark — the wordmark's dot, a UI mark — 3.5:1 on #fff, 3.3:1
+       on #f7f7f5 (≥ 3:1, non-text). ink-on-light: accent TEXT, 5.4:1 / 5.1:1
+       (≥ 4.5:1). Brand spec v2, row M13; src/styles/brandTokens.test.js
+       measures both. */
+    --di-accent-on-light: #0097a3;
+    --di-accent-ink-on-light: #00757f;
 
     /* The brand colours as channel triples, so a surface can pick its own alpha
        without writing the colour's numbers out by hand. Seventeen different
@@ -116,12 +138,15 @@
        is the sanctioned form; `rgba(77, 249, 255, .2)` is not, and the spine
        test fails on it. */
     --di-cyan-rgb: 77, 249, 255;
+    /* --di-surface and --di-surface-2 as channels, for a scrim over the scene. */
+    --di-surface-rgb: 10, 10, 10;
+    --di-surface-2-rgb: 17, 17, 20;
     --di-danger-rgb: 242, 95, 92;
     --di-success-rgb: 77, 249, 192;
     --di-warning-rgb: 255, 179, 71;
     /* The spring green the Desk uses to mark "this machine is me" and Raw
        uses for a picture operator's primary action. */
-    --di-live-rgb: 80, 250, 123;
+    --di-live-rgb: 80, 250, 123; /* quotation of Dracula's green (SYSTEM rule 8) */
 
     /* A scrim: the dark veil laid over a live room or a 3D background so text
        on top of it stays readable whatever moves underneath. Two weights, and
@@ -171,6 +196,10 @@
        Applied under (pointer: coarse), so it follows the finger, not the screen
        width — a tablet had 13px-tall links on the bar (measured 2026-09-27). */
     --di-touch-target: 44px;
+    /* The floor under that: no target on a screen is smaller than 24 x 24 CSS px
+       (WCAG 2.2 SC 2.5.8 Target Size (Minimum), level AA). 44 is the aim for a
+       finger; 24 is the line nothing may go under, mouse or not. */
+    --di-target-min: 24px;
 
     /* Type: two families (above) and one scale, same measurement. 679 literal
        font-sizes across the same stylesheets against 7 uses of the old
@@ -179,14 +208,22 @@
        7 rungs, same 2026-09-10 measurement, same rule: nothing snaps here by
        more than 1px. Large fluid headings (clamp() display type) are their
        own thing and are not on this ladder — see the session doc. */
-    --di-text-1: 0.5rem;      /* 8px */
-    --di-text-2: 0.625rem;    /* 10px */
+    --di-text-1: 0.75rem;     /* 12px — the floor; was 8px (2026-10-28, UX audit F140) */
+    --di-text-2: 0.75rem;     /* 12px — was 10px; rungs 1-3 now sit together at the floor */
     --di-text-3: 0.76rem;     /* 12.16px */
     --di-text-4: 0.9rem;      /* 14.4px */
     --di-text-5: 1.0625rem;   /* 17px */
     --di-text-6: 1.25rem;     /* 20px */
     --di-text-7: 1.4375rem;   /* 23px */
-    --di-label-tracking: 0.16em;
+    /* Small text is 12px at the least: WCAG 2.2 SC 1.4.4 asks that text can be
+       read and resized, and NN/g's research on older adults names tiny type as
+       the first barrier. The two lowest rungs keep their names so the 300 call
+       sites do not change, and read 12px. Q1 A, the UX plan's default the owner took with "ok fix
+       everything" (2026-10-28; B is the one line below set to uppercase):
+       labels are written in normal letters; capitals stay for the brand line and
+       big signs only (those set their own text-transform and tracking). */
+    --di-label-tracking: 0.02em;
+    --di-label-case: none;
 
     /* ── aliases for legacy panel/studio CSS ── */
     /* --ui-bg was used by AuthGate, ReservedAddressCard and the chat
@@ -194,10 +231,12 @@
        transparent and borrowed whatever was behind them. */
     --ui-bg: var(--di-black);
     --ui-surface: var(--di-surface);
-    --ui-surface-raised: #111;
-    --ui-surface-muted: #111;
-    --ui-surface-highlight: rgba(77, 249, 255, 0.06);
-    --ui-border: var(--di-cyan-border);
+    --ui-surface-raised: var(--di-surface-2);
+    --ui-surface-muted: var(--di-surface-2);
+    --ui-surface-highlight: var(--di-cyan-wash);
+    /* the edge of a control: 3:1 on the ground (WCAG 2.2 SC 1.4.11). .42 = 3.3:1;
+       the old .3 was 2.14:1. --ui-divider below stays the quiet hairline. */
+    --ui-border: rgba(77, 249, 255, 0.42);
     --ui-border-strong: var(--di-cyan);
     --ui-divider: var(--di-cyan-border);
     --ui-shadow: none;
@@ -213,6 +252,9 @@
     --panel-gap: 4px;
     --panel-radius: 0;
     --panel-control-height: 24px;
+    /* quotation of Blender's axis colours (SYSTEM rule 8): x red, y green,
+       z blue, as a 3D person already reads them. Kept as quoted, not
+       re-derived from the house palette. */
     --axis-x: #ff6b6b;
     --axis-y: #4ae3a5;
     --axis-z: #4db2ff;
@@ -234,7 +276,7 @@
 
 *::-webkit-scrollbar-thumb {
     background: rgba(77, 249, 255, 0.3);
-    border-radius: 5px;
+    border-radius: var(--di-radius);
     border: 2px solid transparent;
     background-clip: content-box;
 }
@@ -292,6 +334,25 @@ textarea
     font-family: inherit;
 }
 
+/* The wordmark — di.iiii — set the same way wherever it appears, so a footer
+   can carry it on a page that has no header. `.name` holds the word as typed
+   (never upper-cased by a surrounding rule), `.dot` is the wordmark's dot,
+   `.di-name` the set word itself. Every `.dot` in src/ and spaces/ was the
+   wordmark's dot when this was written (brand spec v2, row M37). */
+.name {
+    text-transform: none;
+}
+
+.dot {
+    color: var(--di-cyan);
+}
+
+.di-name {
+    font-family: var(--di-sans);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
 /* Keyboard focus. A ring that is visible on every ground the platform has, on
    the elements a keyboard actually lands on — and only for keyboard, so a mouse
    press does not leave a ring behind. Without this the browser default ring was
@@ -323,6 +384,14 @@ a
     -webkit-user-drag: none;
 }
 
+/* A link inside running text is told apart by more than its colour: underlined
+   (WCAG 2.2 SC 1.4.1 Use of Colour). Only a bare link — one with a class is a
+   component (a button, a nav item, a card) and styles itself. */
+p a:not([class]) {
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+}
+
 
 
 /* ?embed=1 — the page is a window inside someone else's page, so the document
@@ -336,6 +405,24 @@ html.dii-embed,
 html.dii-embed body,
 html.dii-embed #root {
     background: transparent;
+}
+
+/* …and it must not be dark-scheme either. When the scheme of an iframe element
+   and of the document inside it differ, the browser paints an opaque Canvas
+   behind the frame (CSS Color Adjust 1, §2.4), so :root's `color-scheme: dark`
+   would put an embedded page — br_id_ge's rite, ?embed=1 — back in a box on an
+   ordinary host page. `normal` matches the host. The code-view iframes in
+   PublicProjectViewer.jsx carry the same guard from the other side. */
+html.dii-embed {
+    color-scheme: normal;
+}
+
+/* Paper views — the plot and the patch sheet are drawn as white sheets — keep
+   light pickers (date, select, checkbox) and the accent that reads on paper. */
+.rigplot,
+.rigsheet {
+    color-scheme: light;
+    accent-color: var(--di-accent-on-light);
 }
 
 /* The account button keeps clear of a docked right column (Nodes' settings

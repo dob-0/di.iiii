@@ -6,6 +6,15 @@ name: Deploy VPS Dev (GHCR + SSH)
 # inherits production's COMPOSE_PROFILES=https or secrets. See
 # docs/deploy/VPS_DOCKER_DEPLOY.md for the one-time host setup (second
 # checkout dir, its own .env, Caddyfile's dev-tier site block).
+#
+# The suite is not run twice on one tree. Every commit that reaches dev came
+# through a PR that CI already tested green, and a squash merge onto an
+# up-to-date base keeps the tree. Measured 2026-10-29 (last 5 runs 14-21 min):
+# "Run tests" alone took 10.7 and 8.9 min of the last two. `proof` asks the
+# GitHub API (scripts/ci/tested-tree.mjs) whether this commit's tree equals the
+# tree of a merged PR head whose required checks are green; if so `test` is
+# skipped and the later jobs run anyway. Fail-safe: any doubt (no PR, other
+# tree, red or missing check, API error, workflow_dispatch) means the tests run.
 
 on:
   push:
@@ -55,7 +64,8 @@ jobs:
   # than rebasing a stale fold onto it (a rebase could leave a newly merged
   # note unfolded); bounded to three tries.
   land:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     continue-on-error: true
     permissions:
       contents: write
@@ -108,6 +118,43 @@ jobs:
           echo "::error::could not push the fold commit after 3 attempts; run 'npm run land' on dev by hand."
           exit 1
 
+  # Did CI already test exactly this tree? See the header comment. Runs beside
+  # `land` (it reads, never writes); `test` waits for both.
+  proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    continue-on-error: true
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
+    outputs:
+      tested: ${{ steps.proof.outputs.tested }}
+    steps:
+      - name: Checkout
+        if: github.event_name == 'push'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: scripts/ci
+      - name: Is this tree already tested?
+        id: proof
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "push" ]; then
+            echo "tested=false" >> "$GITHUB_OUTPUT"
+            echo "tests run: manual dispatch is never trusted" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node scripts/ci/tested-tree.mjs "${{ github.repository }}" "${{ github.sha }}" 2> reason.txt || true
+          reason=$(cat reason.txt)
+          if grep -q '^tested=true$' "$GITHUB_OUTPUT"; then
+            echo "tests skipped: ${reason}" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "tested=false" >> "$GITHUB_OUTPUT"
+            echo "tests run: ${reason:-proof did not run}" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
   # Gate on the same test/lint/build/contract suite CI runs on every push —
   # previously this workflow and ci.yml were independent, so a failing test
   # suite did not block a dev-tier deploy either (audit 2026-07-17).
@@ -117,8 +164,13 @@ jobs:
   # (land_in_place -- see the comment on `land`), so they pass whether or not
   # `land` could push. Only on dev: a workflow_dispatch from another ref
   # checks out that ref, and session-land.mjs refuses anything but dev.
+  # Skipped only when `proof` says this exact tree was already tested green.
+  # `!cancelled()` because `land` is continue-on-error and `proof` must never
+  # be able to block a deploy by failing itself (its output is then empty =
+  # not 'true' = the tests run).
   test:
-    needs: land
+    needs: [land, proof]
+    if: ${{ !cancelled() && needs.proof.outputs.tested != 'true' }}
     uses: ./.github/workflows/ci.yml
     with:
       land_in_place: ${{ github.ref == 'refs/heads/dev' }}
@@ -134,8 +186,9 @@ jobs:
   # keeps the newest 20 dev-* prereleases and deletes the rest.
   publish-dev-channel:
     needs: test
-    if: github.ref == 'refs/heads/dev'
-    runs-on: ubuntu-latest
+    if: ${{ !cancelled() && needs.test.result != 'failure' && github.ref == 'refs/heads/dev' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     permissions:
       contents: write
     env:
@@ -147,9 +200,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -211,7 +264,9 @@ jobs:
 
   build-and-push:
     needs: test
-    runs-on: ubuntu-latest
+    if: ${{ !cancelled() && needs.test.result != 'failure' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     strategy:
       matrix:
         include:
@@ -262,7 +317,9 @@ jobs:
 
   deploy:
     needs: build-and-push
-    runs-on: ubuntu-latest
+    if: ${{ !cancelled() && needs.build-and-push.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     environment: dev
     env:
       # Where this tier runs: `vps` (the Docker Compose host over SSH, the default, so this

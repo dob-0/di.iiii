@@ -58,7 +58,8 @@ export function useSpacesController({
                 isOwner: typeof space.isOwner === 'boolean' ? space.isOwner : (existing.isOwner !== false),
                 publishedProjectId: typeof space.publishedProjectId === 'string' && space.publishedProjectId.trim()
                     ? space.publishedProjectId.trim()
-                    : (existing.publishedProjectId || null)
+                    : (existing.publishedProjectId || null),
+                domain: typeof space.domain === 'string' && space.domain ? space.domain : null
             })
         })
         return Array.from(map.values()).sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0))
@@ -173,7 +174,7 @@ export function useSpacesController({
                 } catch (error) {
                     const status = typeof error?.status === 'number' ? error.status : null
                     if (status === 403) {
-                        throw new Error("You're signed in but don't have permission to create spaces. Ask an admin to grant you access.")
+                        throw new Error("You're signed in but don't have permission to create spaces. Ask an admin to grant you access.", { cause: error })
                     } else if (status === 401) {
                         fellBackToLocal = true
                         fallbackMessage = 'Server auth required. Created a local space instead.'
@@ -216,7 +217,8 @@ export function useSpacesController({
     }, [])
 
     const handleCopySpaceLink = useCallback(async (spaceIdentifier) => {
-        const url = getSpaceShareUrl(spaceIdentifier)
+        const domain = spaces.find((space) => space.id === spaceIdentifier)?.domain || ''
+        const url = getSpaceShareUrl(spaceIdentifier, domain)
         try {
             await navigator.clipboard.writeText(url)
             return true

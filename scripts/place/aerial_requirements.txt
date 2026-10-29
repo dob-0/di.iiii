@@ -1,0 +1,12 @@
+# scripts/place/aerial_measure.py — tested 2026-10-07 in ~/tools/geo/.venv (Python 3.12.14), installed with:
+#   uv pip install --python ~/tools/geo/.venv/bin/python -r scripts/place/aerial_requirements.txt
+numpy==2.5.3
+scipy==1.18.1
+pillow==12.3.0
+opencv-python-headless==5.0.0.93
+pyproj==3.8.0
+shapely==2.2.0
+requests==2.34.2
+matplotlib==3.11.2
+overturemaps==1.0.2
+pyarrow==25.0.1

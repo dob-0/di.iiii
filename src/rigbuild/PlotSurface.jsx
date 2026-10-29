@@ -18,6 +18,7 @@ import {
     SHEETS, chooseScale, fitView, formatMetres, hitTest, inMarquee, layRun, nextUnit, rigExtent,
     sheetLayout, snapToGrid, zoomView
 } from './plotGeometry.js'
+import { createPlanWheel } from './planWheel.js'
 import {
     createOps, deleteOps, fixtureOps, heightOps, lampEntity, moveOps, pieceEntity, placeOps,
     renamePositionOps, ridersOfIds, rotateOps, runLengthOps
@@ -57,6 +58,7 @@ export const TOOLS = [
 export const VIEW_TOOLS = TOOLS.filter((t) => t.id === 'select' || t.id === 'measure')
 
 const r2 = (v) => Math.round(v * 100) / 100
+const ZOOM_STEP = 1.25
 const PHONE_QUERY = '(max-width: 760px), (max-height: 500px)'
 
 const useIsPhone = () => {
@@ -323,7 +325,7 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
     // Read only (a visitor on a public space): every write in this file goes through here,
     // so none of them reaches the document.
     const syncOps = readOnly ? NO_WRITE : sentOps
-    const { applyLocalOps, undo, redo, edits } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
+    const { applyLocalOps, undo, redo, canUndo, canRedo, edits } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const document_ = state.document
     const entities = useMemo(() => document_.entities || [], [document_.entities])
     // The library with the show's own types (RIG_BUILD.md §13), one object per list.
@@ -622,11 +624,16 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
         if (d.mode === 'place') place(placementPose(at))
     }
 
+    // A touchpad's two-finger scroll pans (both axes), a pinch or a mouse notch zooms to the pointer (planWheel.js).
+    const [planWheel] = useState(createPlanWheel)
     const onWheel = (event) => {
-        const at = toPlan(event)
-        const factor = Math.exp(-event.deltaY * (event.ctrlKey ? 0.01 : 0.0015))
-        setView(zoomView(v, factor, at))
+        const { zoom, pan } = planWheel(event, event.timeStamp)
+        if (pan) { setView([v[0] + pan[0] * u, v[1] + pan[1] * u, v[2], v[3]]); return }
+        setView(zoomView(v, zoom, toPlan(event)))
     }
+    // Zoom without a wheel or a second finger (WCAG 2.5.1, 2.1.1): the buttons on the plan and + / - / 0.
+    const zoomBy = useCallback((factor) => setView(zoomView(v, factor, [v[0] + v[2] / 2, v[1] + v[3] / 2])), [v])
+    const fit = useCallback(() => setView(fitView(extent, box)), [extent, box])
     useEffect(() => {
         const el = svgRef.current
         if (!el) return undefined
@@ -639,7 +646,14 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
     useEffect(() => {
         const onKey = (event) => {
             const tag = event.target?.tagName
-            if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+            if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || event.target?.isContentEditable) return
+            const zoomKey = { '+': ZOOM_STEP, '=': ZOOM_STEP, '-': 1 / ZOOM_STEP, _: 1 / ZOOM_STEP }[event.key]
+            if (!event.ctrlKey && !event.metaKey && !event.altKey && (zoomKey || event.key === '0')) {
+                event.preventDefault()
+                if (zoomKey) zoomBy(zoomKey)
+                else fit()
+                return
+            }
             if (readOnly) {
                 if (event.key === 'Escape') { setMeasure(null); setTool('select'); select([]) }
                 const t = VIEW_TOOLS.find((x) => x.key === event.key)
@@ -680,7 +694,7 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [selectedIds, selectedSet, entities, library, model, tool, edit, select, undo, redo, readOnly])
+    }, [selectedIds, selectedSet, entities, library, model, tool, edit, select, undo, redo, readOnly, zoomBy, fit])
 
     useEffect(() => { setGhost(null); setMeasure((m) => (tool === 'measure' ? m : null)) }, [tool])
     useEffect(() => {
@@ -737,6 +751,18 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
             </svg>
             {!state.hasLoaded ? <p className="rigplot-loading">Reading the rig…</p> : null}
             {state.hasLoaded && !model.venue ? <p className="rigplot-banner">No venue plan in this project: the hall is not drawn. It comes from the hall the model was built from (scripts/rigbuild/load-plot.mjs).</p> : null}
+            <div className="rigplot-zoom" role="group" aria-label="Zoom">
+                <button type="button" aria-label="Zoom in" title="Zoom in (+)" onClick={() => zoomBy(ZOOM_STEP)}>+</button>
+                <button type="button" aria-label="Zoom out" title="Zoom out (-)" onClick={() => zoomBy(1 / ZOOM_STEP)}>−</button>
+                <button type="button" aria-label="Fit the plan" title="Fit the plan (0)" onClick={fit}>fit</button>
+            </div>
+            {/* The same undo as Ctrl/Cmd+Z, for a finger on a tablet: a deleted truss must come back. */}
+            {readOnly ? null : (
+                <div className="rigplot-undo" role="group" aria-label="Undo and redo">
+                    <button type="button" onClick={undo} disabled={!canUndo()} title="Undo the last change (Ctrl/Cmd+Z)">Undo</button>
+                    <button type="button" onClick={redo} disabled={!canRedo()} title="Redo (Ctrl/Cmd+Shift+Z)">Redo</button>
+                </div>
+            )}
             <ScaleBar u={u} />
         </div>
     )

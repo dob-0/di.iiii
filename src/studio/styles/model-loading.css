@@ -1,0 +1,67 @@
+/* ModelLoading.jsx — the place is loading. Same box as the coach (studio-coach.css), at the top under the view bar. */
+.model-loading {
+    position: fixed;
+    left: 50%;
+    top: 96px;
+    transform: translateX(-50%);
+    z-index: 1200; /* above the Studio windows: it never takes a click (pointer-events: none) */
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-3);
+    padding: var(--di-space-2) var(--di-space-3);
+    background: var(--di-scrim-strong);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
+    color: var(--di-text);
+    font-size: var(--di-text-3);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.model-loading-dots { display: flex; gap: var(--di-space-1); }
+.model-loading-dots > span {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--di-radius);
+    background: rgba(var(--di-cyan-rgb), 0.25);
+    animation: model-loading-dot 1.2s steps(1, end) infinite;
+}
+.model-loading-dots > span:nth-child(2) { animation-delay: 0.4s; }
+.model-loading-dots > span:nth-child(3) { animation-delay: 0.8s; }
+@keyframes model-loading-dot {
+    0%, 33% { background: rgba(var(--di-cyan-rgb), 0.85); box-shadow: 0 0 6px rgba(var(--di-cyan-rgb), 0.5); }
+    34%, 100% { background: rgba(var(--di-cyan-rgb), 0.25); box-shadow: none; }
+}
+.model-loading-track {
+    position: relative;
+    width: 120px;
+    height: 2px;
+    overflow: hidden;
+    background: rgba(var(--di-cyan-rgb), 0.15);
+}
+.model-loading-fill { position: absolute; inset: 0 auto 0 0; background: rgba(var(--di-cyan-rgb), 0.6); transition: width 0.3s linear; }
+.model-loading-sweep {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 30%;
+    background: rgba(var(--di-cyan-rgb), 0.9);
+    animation: model-loading-sweep 1.1s linear infinite;
+}
+@keyframes model-loading-sweep { from { left: -30%; } to { left: 100%; } }
+/* A phone: the view buttons (Walk / Fly, Low, Move, Auto fly) stand in a column at the right edge, at the same height. The strip keeps to
+   the left of that column (the 144px is the column plus its gutters), loses its dots, and the track becomes its bottom edge. */
+@media (max-width: 480px) {
+    .model-loading {
+        left: var(--di-space-3);
+        transform: none;
+        max-width: calc(100vw - 144px);
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+    .model-loading-dots { display: none; }
+    .model-loading-track { position: absolute; left: 0; right: 0; bottom: 0; width: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .model-loading-dots > span, .model-loading-sweep { animation: none; }
+}

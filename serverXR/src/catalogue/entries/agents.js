@@ -2,6 +2,14 @@
 
 module.exports = [
   {
+    route: "GET /ai/context",
+    summary: "the one context as markdown, at the caller's level (public with no key); ?level= asks for a lower one, above the caller's is 403",
+    reach: "read",
+    role: "guest",
+    agent: true,
+    note: "the level is read from the caller's key, never from the request (aiContext.js); the MCP door's di_context tool reads this."
+  },
+  {
     route: "GET /api/agent-board",
     summary: "the operator's board of local Claude Code sessions (Ops Graph → Agents)",
     reach: "read",

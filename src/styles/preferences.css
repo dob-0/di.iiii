@@ -29,6 +29,7 @@
     border-radius: 0;
     background: var(--di-surface);
     color: var(--ui-text-primary);
+    /* Reset: the shared control's shadow does not reach this page; nothing here is over live content. */
     box-shadow: none;
     font-family: inherit;
 }
@@ -72,6 +73,7 @@
     border: 1px solid var(--pref-border-active);
     border-radius: 0;
     background: var(--di-surface);
+    /* Reset: the shared control's shadow does not reach this page; nothing here is over live content. */
     box-shadow: none;
 }
 
@@ -142,9 +144,12 @@
     border-radius: 0;
 }
 
-.preferences-metric-card.tone-success { box-shadow: inset 2px 0 0 var(--di-success); }
-.preferences-metric-card.tone-warning { box-shadow: inset 2px 0 0 var(--di-warning); }
-.preferences-metric-card.tone-accent { box-shadow: inset 2px 0 0 var(--di-cyan); }
+/* The tone is a 2px line on the leading edge, drawn inset so it takes no
+   layout: no offset, no blur, not a shadow. */
+.preferences-metric-card[class*='tone-'] { box-shadow: inset 2px 0 0 var(--pref-tone); }
+.preferences-metric-card.tone-success { --pref-tone: var(--di-success); }
+.preferences-metric-card.tone-warning { --pref-tone: var(--di-warning); }
+.preferences-metric-card.tone-accent { --pref-tone: var(--di-cyan); }
 
 .preferences-metric-value {
     font-size: clamp(1rem, 1.5vw, 1.25rem);
@@ -245,8 +250,9 @@
     color: var(--ui-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-size: var(--di-text-2);
-    opacity: 0.7;
+    /* 12 px and full muted colour: at 10 px and 0.7 opacity the two group
+       names failed contrast (axe, UX audit 2026-10-28 F109). */
+    font-size: var(--di-text-3);
 }
 
 .preferences-nav-entry:first-child .preferences-nav-group-label {
@@ -278,6 +284,7 @@
     color: var(--di-text);
     background: var(--di-cyan-dim);
     border-color: var(--pref-border-active);
+    /* A 2px selection line on the leading edge, inset so it takes no layout; not a shadow. */
     box-shadow: inset 2px 0 0 var(--di-cyan);
 }
 
@@ -323,6 +330,7 @@
     border: 1px solid var(--pref-border);
     border-radius: 0;
     background: var(--di-surface);
+    /* Reset: the shared control's shadow does not reach this page; nothing here is over live content. */
     box-shadow: none;
 }
 
@@ -407,7 +415,7 @@
 
 .preferences-architecture-line {
     stroke: rgba(255, 255, 255, 0.16);
-    stroke-width: 1.5;
+    stroke-width: 1;
     stroke-linecap: round;
     stroke-dasharray: 5 4;
 }
@@ -455,32 +463,31 @@
 
 .preferences-architecture-node.is-selected {
     border-color: var(--di-cyan);
+    /* A 1px selection line inside the border, inset so the row does not move; not a shadow. */
     box-shadow: inset 0 0 0 1px var(--di-cyan);
 }
 
+/* status dot, not a control: square like every light (owner rule, rectangles only). */
 .preferences-architecture-node-dot {
     grid-row: 1;
     grid-column: 1;
     width: 7px;
     height: 7px;
     margin-top: var(--di-space-1);
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     background: rgba(255, 255, 255, 0.25);
 }
 
 .preferences-architecture-node.tone-success .preferences-architecture-node-dot {
     background: var(--di-success);
-    box-shadow: 0 0 6px var(--di-success);
 }
 
 .preferences-architecture-node.tone-warning .preferences-architecture-node-dot {
     background: var(--di-warning);
-    box-shadow: 0 0 6px var(--di-warning);
 }
 
 .preferences-architecture-node.tone-accent .preferences-architecture-node-dot {
     background: var(--di-cyan);
-    box-shadow: 0 0 6px var(--di-cyan);
 }
 
 .preferences-architecture-node-kicker {
@@ -580,6 +587,7 @@
 .preferences-preview-dot.is-selected .preferences-preview-dot-core {
     width: 14px;
     height: 14px;
+    /* The selected place on the scene map: a 6px ring with no blur, drawn over the map. */
     box-shadow: 0 0 0 6px var(--di-cyan-dim);
 }
 
@@ -681,6 +689,7 @@
 
 .preferences-tree-row.is-selected {
     background: var(--di-cyan-dim);
+    /* A 2px selection line on the leading edge, inset so it takes no layout; not a shadow. */
     box-shadow: inset 2px 0 0 var(--di-cyan);
 }
 
@@ -756,9 +765,12 @@
     background: var(--di-surface);
 }
 
-.preferences-signal-node.tone-success { box-shadow: inset 2px 0 0 var(--di-success); }
-.preferences-signal-node.tone-warning { box-shadow: inset 2px 0 0 var(--di-warning); }
-.preferences-signal-node.tone-accent { box-shadow: inset 2px 0 0 var(--di-cyan); }
+/* The tone is a 2px line on the leading edge, drawn inset so it takes no
+   layout: no offset, no blur, not a shadow. */
+.preferences-signal-node[class*='tone-'] { box-shadow: inset 2px 0 0 var(--pref-tone); }
+.preferences-signal-node.tone-success { --pref-tone: var(--di-success); }
+.preferences-signal-node.tone-warning { --pref-tone: var(--di-warning); }
+.preferences-signal-node.tone-accent { --pref-tone: var(--di-cyan); }
 .preferences-signal-node.tone-muted { opacity: 0.7; }
 
 .preferences-signal-top {
@@ -858,6 +870,7 @@
 .preferences-object-row:hover { background: var(--di-cyan-dim); }
 
 .preferences-object-row.is-selected {
+    /* A 1px selection line inside the border, inset so the row does not move; not a shadow. */
     box-shadow: inset 0 0 0 1px var(--di-cyan);
     background: var(--di-cyan-dim);
 }
@@ -1003,6 +1016,7 @@
 .preferences-panel-tile:hover:not(:disabled) { background: var(--di-cyan-dim); }
 
 .preferences-panel-tile.is-active {
+    /* A 1px selection line inside the border, inset so the row does not move; not a shadow. */
     box-shadow: inset 0 0 0 1px var(--di-cyan);
     background: var(--di-cyan-dim);
 }
@@ -1037,6 +1051,7 @@
 }
 
 .preferences-space-row.is-active {
+    /* A 2px selection line on the leading edge, inset so it takes no layout; not a shadow. */
     box-shadow: inset 2px 0 0 var(--di-cyan);
     background: var(--di-cyan-dim);
 }
@@ -1254,6 +1269,52 @@
     to { transform: translateX(260%); }
 }
 
+/* ─── Switches: an on/off setting says its state in words (F108) ─── */
+
+.preferences-switch {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+}
+
+.preferences-switch-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-3);
+    min-height: 44px;
+    padding: var(--di-space-2) var(--di-space-3);
+    border: 1px solid var(--pref-border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-text);
+    font: inherit;
+    font-size: var(--di-text-4);
+    text-align: left;
+    cursor: pointer;
+}
+
+.preferences-switch-control:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.preferences-switch-state {
+    min-width: 3.5em;
+    padding: var(--di-space-1) var(--di-space-2);
+    border: 1px solid currentColor;
+    color: var(--ui-text-muted);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    text-align: center;
+}
+
+.preferences-switch-control.is-on .preferences-switch-state { color: var(--di-cyan); }
+
+.preferences-switch-control.is-warning .preferences-switch-state { color: var(--di-warning); }
+
+.preferences-switch-detail {
+    color: var(--ui-text-muted);
+    font-size: var(--di-text-3);
+}
+
 /* ─── Responsive ───────────────────────────────────────────── */
 
 @media (max-width: 1480px) {
@@ -1283,13 +1344,23 @@
 @media (max-width: 880px) {
     .preferences-shell { grid-template-columns: 1fr; }
 
+    /* Two even columns of plain rows instead of chips wrapping in ragged
+       rows (F109); a group name takes a full row of its own. */
     .preferences-nav {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: var(--di-space-2);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--di-space-1) var(--di-space-2);
     }
 
-    .preferences-nav-item { width: auto; }
+    .preferences-nav-entry { display: contents; }
+
+    .preferences-nav-group-label { grid-column: 1 / -1; }
+
+    .preferences-nav-item { min-height: 44px; }
+}
+
+@media (pointer: coarse) {
+    .preferences-nav-item { min-height: 44px; }
 }
 
 @media (max-width: 760px) {

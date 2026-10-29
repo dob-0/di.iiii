@@ -54,7 +54,7 @@ describe('StudioProjectsPanel', () => {
         expect(navigateToStudioPath).not.toHaveBeenCalled()
     })
 
-    it('creates a project and opens it', async () => {
+    it('creates a project and opens its project view, not the 3D editor', async () => {
         listProjects.mockResolvedValue([])
         getServerSpace.mockResolvedValue({ publishedProjectId: null })
         createProject.mockResolvedValue({ project: { id: 'fresh' } })
@@ -65,9 +65,30 @@ describe('StudioProjectsPanel', () => {
         await userEvent.type(screen.getByRole('textbox', { name: 'New project title' }), 'sketch{Enter}')
 
         await waitFor(() => {
-            expect(createProject).toHaveBeenCalledWith('br-id-ge', { title: 'sketch', slug: 'sketch', source: 'studio-v3' })
+            expect(createProject).toHaveBeenCalledWith('br-id-ge', { title: 'sketch', source: 'studio-v3' })
         })
-        expect(navigateToStudioPath).toHaveBeenCalledWith('/br-id-ge/studio/projects/fresh')
+        expect(navigateToStudioPath).toHaveBeenCalledWith('/br-id-ge/p/fresh')
+    })
+
+    it('keeps the form open with what was typed when the name is taken in this space', async () => {
+        listProjects.mockResolvedValue([])
+        getServerSpace.mockResolvedValue({})
+        createProject.mockRejectedValue(new Error('This space already has a project called "sketch". Pick another name.'))
+
+        render(<StudioProjectsPanel spaceId="br-id-ge" currentProjectId="other" />)
+
+        await userEvent.click(await screen.findByRole('button', { name: /New project/ }))
+        await userEvent.type(screen.getByRole('textbox', { name: 'New project title' }), 'sketch{Enter}')
+
+        const alert = await screen.findByRole('alert')
+        expect(alert.textContent).toBe('This space already has a project called "sketch". Pick another name.')
+        expect(alert.className).toContain('spp-status-error')
+        expect(screen.getByRole('textbox', { name: 'New project title' }).value).toBe('sketch')
+        expect(navigateToStudioPath).not.toHaveBeenCalled()
+
+        // Escape closes the form and the red alert goes with it.
+        await userEvent.keyboard('{Escape}')
+        await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
     })
 
     it('renames a project in place', async () => {

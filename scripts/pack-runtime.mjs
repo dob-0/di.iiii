@@ -10,12 +10,14 @@
  *                on the far side installs a small, prebuilt dependency set
  *   shared/      the schema contracts serverXR loads at runtime
  *   scripts/di/  the CLI itself, so `di update` replaces the CLI too
+ *   docs/ai/public/  the words for language models (24 KB): serverXR answers
+ *                /llms.txt and /ai/… from it, so a pack run without nginx (the dev tier)
  *   scripts/     space-bundle.mjs + install-bundle.mjs, which back up and restore
  *
  * What stays out: the root dependency tree (~1 GB with three.js, MUI, pdfjs and
  * playwright), every test, every doc, .git. An artist installs a product.
  *
- * The build runs under DI_PROFILE=local, which leaves out di-studio.xyz's
+ * The build runs under DI_PROFILE=local, which leaves out diiii.xyz's
  * hosting furniture — the install scripts, the OpenGraph images, the cPanel
  * php shims — and keeps the studio's own pieces, because an install that
  * cannot open the owner's own exhibition offline is not an offline install.
@@ -94,7 +96,7 @@ const main = async () => {
     // --no-build reuses whatever dist/ happens to be there, and all three
     // profiles produce the same filenames. `npm run dev` or a deploy build
     // leaves the hosted shape behind, so without this check `--no-build` would
-    // quietly pack di-studio.xyz's hosting furniture into an artist's install
+    // quietly pack diiii.xyz's hosting furniture into an artist's install
     // and report the local profile in release.json.
     //
     // Sniffing for dist/wcc used to answer this. It cannot any more: a local
@@ -133,6 +135,10 @@ const main = async () => {
     await copy(path.join(ROOT, 'serverXR', 'package.json'), path.join(stage, 'serverXR', 'package.json'))
     await copy(path.join(ROOT, 'serverXR', 'package-lock.json'), path.join(stage, 'serverXR', 'package-lock.json'))
     await copy(path.join(ROOT, 'scripts', 'di'), path.join(stage, 'cli'))
+    // serverXR/src/aiPublic.js reads <root>/docs/ai/public; without it /llms.txt
+    // and /ai/… were a 404 on the dev tier, which runs the pack natively. Only
+    // that folder, in every profile: the dev tier packs the local profile.
+    await copy(path.join(ROOT, 'docs', 'ai', 'public'), path.join(stage, 'docs', 'ai', 'public'))
     // The SDK travels with the install, or `di mcp` is a command that only
     // works in a checkout — which would make "an agent can drive your own
     // di.iiii" true for developers and false for everyone the installer is

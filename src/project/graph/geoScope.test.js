@@ -10,6 +10,8 @@ import {
     geoNodeInspectorSections,
     geoNodeInspectorValues,
     geoPathLabel,
+    listRoomNodes,
+    roomNodeRow,
     listGeoChoices,
     listGeoChildren,
     listGeoNodes,
@@ -83,6 +85,25 @@ describe('what stands in a Geo', () => {
     it('makes an Objects row in the shape the Objects list reads', () => {
         const row = geoChildRow(fixture().nodes.find((node) => node.id === 'cube-a'))
         expect(row).toMatchObject({ id: 'cube-a', name: 'Cube', type: 'cube', parentId: null })
+    })
+})
+
+describe('what stands in the top room as nodes (UX audit F026)', () => {
+    it('lists only parentless spatial nodes and marks a Geo row', () => {
+        const rows = listRoomNodes(fixture()).map(roomNodeRow)
+        expect(rows.length).toBeGreaterThan(0)
+        expect(rows.every((row) => row.fromNodes === true)).toBe(true)
+        expect(rows.find((row) => row.id === 'geo-a')?.isGeo).toBe(true)
+        expect(rows.map((row) => row.id)).not.toContain('cube-a')
+    })
+
+    it('leaves out the top room\'s marked Camera, which Studio does not draw', () => {
+        const document = fixture()
+        const camera = createNode('world.camera', { id: 'cam-1' })
+        document.nodes.push(camera)
+        expect(listRoomNodes(document).map((node) => node.id)).toContain('cam-1')
+        document.workspaceState = { ...(document.workspaceState || {}), activeNodeIdByTypeScope: { 'world.camera::': 'cam-1' } }
+        expect(listRoomNodes(document).map((node) => node.id)).not.toContain('cam-1')
     })
 })
 

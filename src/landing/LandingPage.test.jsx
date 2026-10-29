@@ -44,13 +44,13 @@ describe('LandingPage CTA routing', () => {
         expect(internalLinksTo('/raw')).toHaveLength(0)
     })
 
-    it('points every Studio link at the spaces hub, not one space\'s project list', () => {
+    it('points every "Open your Spaces" link at the spaces hub, not one space\'s project list', () => {
         // Regression: these used to go to /open/studio?browse=1, which is
         // StudioHub — the *open space's project list*, one level below the
         // top. The label promises the hub; deliver the hub.
         Object.assign(sessionState, { authenticated: false, type: null })
         render(<LandingPage />)
-        const spacesLinks = screen.getAllByRole('link', { name: /Open Studio/ })
+        const spacesLinks = screen.getAllByRole('link', { name: /Open your Spaces/ })
         expect(spacesLinks.length).toBeGreaterThan(0)
         for (const link of spacesLinks) {
             expect(link.getAttribute('href')).toBe('/spaces')
@@ -68,7 +68,7 @@ describe('LandingPage CTA routing', () => {
         ]) {
             Object.assign(sessionState, session)
             const { unmount } = render(<LandingPage />)
-            for (const link of screen.getAllByRole('link', { name: /Open Studio/ })) {
+            for (const link of screen.getAllByRole('link', { name: /Open your Spaces/ })) {
                 expect(link.getAttribute('href')).toBe('/spaces')
             }
             unmount()
@@ -139,7 +139,9 @@ describe('LandingPage three routes', () => {
         const jam = screen.getByRole('link', { name: 'Open Space' })
         expect(stepInside.getAttribute('href')).toBe('/spaces')
         expect(spaces.getAttribute('href')).toBe('/spaces')
-        expect(jam.getAttribute('href')).toMatch(/jam/i)
+        // The canonical address of the jam (audit G12): /open lands in the same
+        // room as /open_jam/scene, and is the one search engines are told to keep.
+        expect(jam.getAttribute('href')).toBe('/open')
         expect(spaces.className).toMatch(/landing-cta-spaces/)
     })
 
@@ -168,6 +170,19 @@ describe('LandingPage local-install copy', () => {
         expect(screen.getByText('Your machine, your spaces')).toBeInTheDocument()
         expect(screen.queryByText(/Sign in to keep it/)).not.toBeInTheDocument()
         expect(screen.queryByText('3 free spaces')).not.toBeInTheDocument()
+    })
+
+    // The line under the three buttons used to say "Studio is a room on the
+    // same desk": it named no button and used `desk`, a word the dictionary
+    // retired. It now says what the first button does, which is the same camera
+    // move into the scene as on a hosted install.
+    it('says under the buttons what Step inside does, in the dictionary\'s words', async () => {
+        serverConfigState.current = { local: true, requireAuth: false }
+        render(<LandingPage />)
+
+        expect(await screen.findByText('no account, no quota. Step inside walks into the scene.')).toBeInTheDocument()
+        expect(screen.queryByText(/desk/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/Studio is a room/)).not.toBeInTheDocument()
     })
 
     it('keeps hosted copy on the hosted product', async () => {

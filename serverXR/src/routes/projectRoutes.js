@@ -5,7 +5,10 @@ const { hashFileSha256, isSha256AssetId } = require('../assetHash')
 const { UNSCRUBBABLE_IMAGE_ERROR, scrubImageMetadata } = require('../assetScrub')
 const { getSpaceBlobPaths, hasBlob, storeBlobFromFile } = require('../blobStore')
 const { receiveBodyToTempFile } = require('../verbatimAsset')
+const { withProjectWriteLock, withProjectInProcessLock, commitProjectWrite: commitWrite } = require('../projectWrite')
 const { createKeyedLock } = require('../asyncLock')
+const { createTestBarrier } = require('../testBarrier')
+const logger = require('../logger')
 const { applyAssetSafetyHeaders } = require('../spaceStore')
 const { findIdlessCreateOp } = require('../opValidation')
 const { placeOps } = require('../../../shared/placement.cjs')
@@ -13,12 +16,44 @@ const { actorFromAuthState } = require('../opActor')
 const { countProjectLayers } = require('../../../shared/layers.cjs')
 const { canAccessSpace, formatAuthScopeLabel } = require('../authAccess')
 const { assetCacheControl, filterVisibleProjects } = require('../projectVisibility')
+const { normalizeProductionVersion, normalizeProductionMeta } = require('../../../shared/projectSchema.cjs')
+const { RESERVED_PROJECT_SLUGS } = require('../../../shared/reservedSegments.cjs')
 
-const withProjectLock = createKeyedLock()
+// A project's write: the version check, the document, the ops and the version
+// itself, guarded against this process AND every other server on the same data
+// folder (projectWrite.js), then committed in one database transaction that
+// re-checks the version (projectStore.commitProjectOps). A lost race is a 409,
+// never a 500 and never ops ahead of the version.
+const withProjectLock = (project, fn) => withProjectWriteLock({
+  spacesDir: project.spacesDir,
+  spaceId: project.spaceId,
+  projectId: project.projectId,
+  log: logger
+}, fn)
+// One sync key's limited actions run one at a time, so two requests at once
+// cannot both pass the same last unit of its budget (SPEC_space_sync_keys.md §13.5).
+const withKeyLock = createKeyedLock()
+// Test-only (inert unless NODE_ENV=test): lets a test hold two key moves until both have passed their gates.
+const testBarrier = createTestBarrier()
+
+/** The sync key a request came with, when that is all it is (not an owner, not an admin). */
+const projectMovedAnswer = () => ({ status: 409, body: { error: 'This project is no longer in the space this request was made for; nothing was changed.', code: 'project_moved' } })
+const syncKeyOf = (req) => (req.authState?.authenticated && req.authState.type === 'sync-key' ? req.authState.syncKey || null : null)
+
+// A change to a project's row (title, slug, visibility, trash, its space) is
+// not an op, so nothing else tells a follow about it: wake this install's
+// follower for the space, and release any di.iiii parked on its log, so the
+// change crosses in about a second instead of after a 20 s park
+// (SPEC_follow.md "A project trashed, restored, renamed or moved"). Never fatal.
+const tellFollows = (...spaceIds) => {
+  for (const spaceId of new Set(spaceIds.filter(Boolean))) {
+    try { require('../follow').nudgeFollow(spaceId) } catch { /* no follows here */ }
+    try { require('../follow/waiters').noteChange(spaceId) } catch { /* nobody waiting */ }
+  }
+}
 
 function registerProjectRoutes(router, {
   config = {},
-  appendProjectOps,
   applyProjectOps,
   broadcastProjectLiveEvent,
   buildProjectAssetMeta,
@@ -26,9 +61,15 @@ function registerProjectRoutes(router, {
   ensureProject,
   ensureSpaceWritable,
   findProjectBySlug,
+  // Optional: (id) => { spaceId, trashed } | null, trash included (projectStore.js).
+  findAnyProjectById,
   getProjectLiveBucket,
   getProjectPaths,
-  isReservedProjectSlug = () => false,
+  // Fails CLOSED. This used to default to `() => false`, so a router mounted without the
+  // predicate (a line missing in index.js, a test, another host) quietly stopped refusing
+  // reserved words, with no error anywhere. The default is the shared list itself
+  // (shared/reservedSegments.cjs): the words stay reserved however the router is built.
+  isReservedProjectSlug = (slug) => RESERVED_PROJECT_SLUGS.has(slug),
   isValidAssetId,
   listProjectsInSpace,
   maxOpHistory,
@@ -55,6 +96,12 @@ function registerProjectRoutes(router, {
   setProjectVisibility = null,
   loadSpaceMeta = null,
   isSpaceOwnerOrAdminState = null,
+  // A manage sync key's project actions (SPEC_space_sync_keys.md §13): the
+  // check, and the log + limits. Absent: no key gets past the owner's gate.
+  canManageProjectsState = null,
+  keyMoveWidensAccess = null,
+  visibilityStampOf = null,
+  syncKeyActions = null,
   // projectMove.js bound to the live database and spaces dir. Absent on a
   // router built without it: the route then answers 501.
   moveProject = null,
@@ -106,8 +153,9 @@ function registerProjectRoutes(router, {
 
   // ── what each project holds, for the card's one line ─────────────────────
   //
-  // "3 things · 2 wires · 1 surface · 1 lamp", or "empty" (the layers
-  // decision, 2026-09-23, unit 1). Read from the document by the same rule the
+  // "3 objects · 2 wires · 1 surface · 1 lamp · 4 files · 6.1 MB", or "empty"
+  // (the layers decision, 2026-09-23, unit 1; files, media, cues and the page
+  // since 2026-10-13). Read from the document by the same rule the
   // editor runs (shared/layers.cjs, the twin of src/project/layers.js), never
   // stored: the counts are a view of what the project holds, and a stored count
   // is a claim the data cannot keep — the same reason no "kind" is stored
@@ -251,6 +299,98 @@ function registerProjectRoutes(router, {
     }
   })
 
+  // ── a production's versions, the public parts ────────────────────────────
+  //
+  // The production's version list lives in a project of its own, `<production>-versions`, born
+  // PRIVATE (docs/architecture/decisions/2026-10-04-production-versions.md) — so a visitor's read of
+  // it answers 404 and the version row fell back to the old per-project siblings. This route reads
+  // that list on the server and answers only what a visitor may know: { id, projectId, title, status }
+  // per version, and only for versions whose project this caller may see. Never madeBy, fingerprints,
+  // notes or the rig file. Members get the same shape (the full list is theirs at the project route).
+  // The list project itself stays private; nothing here makes it readable.
+  const VERSION_STATUS_ORDER = ['for-the-show', 'candidate', 'kept-copy', 'concept', 'archived']
+  router.get('/api/spaces/:spaceId/productions/:production/versions', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      if (!(await spaceExists(spaceId))) return res.status(404).json({ error: 'Space not found.' })
+      const production = String(req.params.production || '')
+      if (!/^[a-z0-9][a-z0-9-]{0,47}$/.test(production)) return res.status(400).json({ error: 'Invalid production id.' })
+      const rows = await listProjectsInSpace(spacesDir, spaceId)
+      const listMeta = rows.find((m) => m.id === `${production}-versions`)
+      if (!listMeta) return res.status(404).json({ error: 'No version list for this production.' })
+      const document = await readProjectDocument(spacesDir, spaceId, listMeta.id)
+      const entities = Array.isArray(document?.entities) ? document.entities : []
+      const meta = normalizeProductionMeta(entities.find((e) => e?.id === 'production')?.components?.productionMeta)
+      if (!meta || meta.id !== production) return res.status(404).json({ error: 'No version list for this production.' })
+      const seeable = new Set(visibleTo(req, spaceId, rows).map((m) => m.id))
+      const versions = entities
+        .filter((e) => typeof e?.id === 'string' && e.id.startsWith('version-'))
+        .map((e) => [e.id, normalizeProductionVersion(e.components?.productionVersion)])
+        .filter(([entityId, v]) => v && entityId === `version-${v.id}` && seeable.has(v.projectId))
+        .map(([, v]) => ({ id: v.id, projectId: v.projectId, title: v.title, status: v.status }))
+        .sort((a, b) => (VERSION_STATUS_ORDER.indexOf(a.status) - VERSION_STATUS_ORDER.indexOf(b.status)) || (a.projectId < b.projectId ? -1 : a.projectId > b.projectId ? 1 : 0))
+        .slice(0, 200)
+      res.json({ spaceId, production, versions })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // Who holds an id, trash included: a trashed project still owns its id
+  // (upsertProjectMeta brings it back on a write). Without the store's door,
+  // fall back to live projects only.
+  const idHolder = async (id) => {
+    if (typeof findAnyProjectById === 'function') return findAnyProjectById(id)
+    const live = await resolveProjectContext(id)
+    return live ? { spaceId: live.spaceId, trashed: false } : null
+  }
+  const sameName = (project, base, title) =>
+    project.id === base || project.slug === base ||
+    (base && normalizeProjectId(project.title || '') === base) ||
+    (title && String(project.title || '').trim().toLowerCase() === title.toLowerCase())
+
+  // A person's name for a new project in one space → its title, id and short name.
+  const pickNamedProject = async (spaceId, typedTitle) => {
+    const inSpace = typeof listProjectsInSpace === 'function' ? (await listProjectsInSpace(spacesDir, spaceId)) || [] : []
+    let title = typedTitle
+    if (!title) {
+      // An empty name gets a real one, never a clash: the first free "Untitled N" here.
+      for (let n = 1; n < 1000; n += 1) {
+        const candidate = n === 1 ? 'Untitled' : `Untitled ${n}`
+        if (!inSpace.some((p) => sameName(p, normalizeProjectId(candidate), candidate))) { title = candidate; break }
+      }
+      title = title || `Untitled ${Date.now()}`
+    }
+    const base = normalizeProjectId(title) || 'project'
+    const clash = inSpace.find((p) => sameName(p, normalizeProjectId(title), title))
+    if (clash) return { clash }
+    if (isReservedProjectSlug(base)) return { reserved: base }
+    const freeHere = async (id) => {
+      const holder = await idHolder(id)
+      // A trashed project of THIS space under the very id the name makes comes
+      // back, as it always has (upsertProjectMeta) — never one of another space.
+      if (holder && !(id === base && holder.trashed && holder.spaceId === spaceId)) return false
+      const bySlug = await findProjectBySlug(spaceId, id)
+      return !bySlug || bySlug.id === id
+    }
+    const stem = base.slice(0, 56).replace(/-+$/, '')
+    let id = null
+    if (base !== 'project' && await freeHere(base)) id = base
+    for (let n = 2; !id && n < 1000; n += 1) {
+      const candidate = `${stem}-${n}`
+      if (await freeHere(candidate)) id = candidate
+    }
+    if (!id) id = normalizeProjectId(`${stem}-${Date.now()}`)
+    let slug
+    if (id !== base && base !== 'project') {
+      const bySlug = await findProjectBySlug(spaceId, base)
+      const holder = await idHolder(base)
+      if (!bySlug && !(holder && holder.spaceId === spaceId)) slug = base
+    }
+    return { title, id, slug }
+  }
+
   router.post('/api/spaces/:spaceId/projects', async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -269,10 +409,63 @@ function registerProjectRoutes(router, {
       if (visibility !== undefined && visibility !== 'public' && visibility !== 'private') {
         return res.status(400).json({ error: 'visibility must be "public" or "private".' })
       }
-      const slugSource = req.body?.slug || title || `project-${Date.now()}`
-      const projectId = normalizeProjectId(slugSource)
+      const carried = req.body?.carried === true
+      // Two ways in (2026-10-29, ux-fix S21, docs/ai/decisions/2026-10-29-project-names-per-space.md):
+      // - EXACT: the caller names the id (`slug`, or `carried`) — a follow, a copy
+      //   script, an import. The id is used as given or refused with a 409, exactly
+      //   as before; those callers match projects across installs by id.
+      // - NAMED: a person typed only a name (`title`, maybe empty). A name has to be
+      //   unique only inside this space. Ids stay global, so when another space
+      //   already holds the id the name would make, the project gets a free id
+      //   (`my-scene-2`) and the name as its short name (`slug`), so it still opens
+      //   at /{space}/my-scene. An empty name becomes "Untitled", "Untitled 2", …
+      const named = !carried && (req.body?.slug === undefined || req.body?.slug === null || req.body?.slug === '')
+      let projectTitle = title
+      let projectSlug
+      let projectId
+      if (named) {
+        const picked = await pickNamedProject(spaceId, title)
+        if (picked.clash) {
+          return res.status(409).json({
+            error: `This space already has a project called "${picked.clash.title || picked.clash.id}". Pick another name.`,
+            code: 'name-taken-in-space'
+          })
+        }
+        if (picked.reserved) {
+          return res.status(400).json({ error: `"${picked.reserved}" is a reserved address and can't be a project name — try another.` })
+        }
+        projectTitle = picked.title
+        projectSlug = picked.slug
+        projectId = picked.id
+      } else {
+        const slugSource = req.body?.slug || title || `project-${Date.now()}`
+        projectId = normalizeProjectId(slugSource)
+      }
       if (!projectId) {
         return res.status(400).json({ error: 'Invalid project id.' })
+      }
+      // The id is the address of a project that has no short name: /{space}/{id}.
+      // spaceRouting.js throws away a reserved word in that position, so a project
+      // born with one can be made but never opened at its own address (seen: `privacy`
+      // in `main`, which opens only at /p/privacy). PATCH has refused these words as a
+      // short name since the slug-hijack fix, and space creation as a space id; this
+      // was the third door. It is checked on the NORMALISED id, so "PRIVACY", " Privacy "
+      // and "Privacy!" are the word too, and BEFORE "taken", so the person is told about
+      // the word and not about somebody else's project.
+      //
+      // It lives here, in the route, and not in ensureProject: a snapshot restore, the
+      // open-jam bootstrap and a project already stored under such an id make theirs
+      // through ensureProject and must keep working. One caller does come through this
+      // route with an id it did not choose: a follow, making a project the other side
+      // already has (follower.js, makeMissing). It says so with `carried: true` and keeps
+      // its id; only the boolean `true` counts. This cannot be checked here: the route has
+      // no way to tell a project that exists elsewhere from a new one, so `carried` is the
+      // caller's own word and any editor can send it (a project made new with it would open
+      // only at /{space}/p/{id}). The copy scripts (project-pull, space-sync,
+      // space-sync-github, local-mirror, tier-sync) use this route too and do not say so
+      // yet: for a reserved id they get the 400.
+      if (!named && !carried && isReservedProjectSlug(projectId)) {
+        return res.status(400).json({ error: `"${projectId}" is a reserved address and can't be a project name — try another.` })
       }
       const existing = await resolveProjectContext(projectId)
       if (existing) {
@@ -283,10 +476,17 @@ function registerProjectRoutes(router, {
         // exists." named nothing and gave nobody anything to act on — a
         // newcomer who picks an ordinary name twice, weeks apart, in two
         // different spaces, hit this with no way to tell what happened.
+        if (existing.spaceId === spaceId) {
+          return res.status(409).json({
+            error: `This space already has a project called "${existing.meta?.title || projectId}". Pick another name.`,
+            code: 'name-taken-in-space'
+          })
+        }
         return res.status(409).json({ error: 'that name is taken on this di.iiii — try another' })
       }
       const meta = await ensureProject(spacesDir, spaceId, projectId, {
-        title: title || 'Untitled Project',
+        title: projectTitle || 'Untitled Project',
+        ...(projectSlug ? { slug: projectSlug } : {}),
         ...(source ? { source } : {}),
         ...(visibility ? { visibility } : {})
       })
@@ -340,7 +540,26 @@ function registerProjectRoutes(router, {
         const spaceMeta = typeof loadSpaceMeta === 'function' ? await loadSpaceMeta(project.spaceId) : null
         if (config.requireAuth && typeof isSpaceOwnerOrAdminState === 'function' &&
           !isSpaceOwnerOrAdminState(req.authState || {}, spaceMeta)) {
-          return res.status(403).json({ error: 'Only the space owner or an admin can change who sees a project.' })
+          // A manage sync key of this space may make a project private, never
+          // public: showing work to every visitor stays the owner's call (§13.2).
+          const key = syncKeyOf(req)
+          const manages = key && typeof canManageProjectsState === 'function' && canManageProjectsState(req.authState, spaceMeta)
+          if (!manages) {
+            return res.status(403).json({ error: 'Only the space owner or an admin can change who sees a project.' })
+          }
+          if (nextVisibility !== 'private') {
+            const why = "A sync key never makes a project public — the space's owner does."
+            syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'private', projectId: project.projectId, outcome: 'refused', reason: why })
+            return res.status(403).json({ error: why, code: 'sync_key_never_public' })
+          }
+          if (project.meta?.visibility !== 'private' && syncKeyActions) {
+            const budget = syncKeyActions.checkBudget({ keyId: key.keyId, action: 'private' })
+            if (!budget.ok) {
+              syncKeyActions.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'private', projectId: project.projectId, outcome: 'refused', reason: budget.reason })
+              return res.status(429).json({ error: budget.reason, code: 'sync_key_limit', action: 'private', limit: budget.limit, window: budget.window, retryAfterMs: budget.retryAfterMs })
+            }
+            req.syncKeyAction = { action: 'private' }
+          }
         }
         if (nextVisibility === 'private' && spaceMeta?.publishedProjectId === project.projectId) {
           return res.status(409).json({
@@ -370,29 +589,58 @@ function registerProjectRoutes(router, {
         }
         nextSlug = normalized
       }
+      // A manage key making a project private: the budget is checked again,
+      // the change made and the action recorded under the key's lock, as for
+      // a trash and a move — never relying on the calls in between being
+      // synchronous (review L1). Done before the title, so a refusal changes nothing.
+      let keyVisibilityMeta = null
+      if (req.syncKeyAction?.action === 'private') {
+        const key = syncKeyOf(req)
+        const answer = await withKeyLock(key.keyId, async () => {
+          const budget = syncKeyActions.checkBudget({ keyId: key.keyId, action: 'private' })
+          if (!budget.ok) {
+            syncKeyActions.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'private', projectId: project.projectId, outcome: 'refused', reason: budget.reason })
+            return { refused: { error: budget.reason, code: 'sync_key_limit', action: 'private', limit: budget.limit, window: budget.window, retryAfterMs: budget.retryAfterMs } }
+          }
+          const meta = await setProjectVisibility(project.projectId, nextVisibility)
+          // Stamped with the visibility change's own time: the undo re-opens it
+          // only while that stamp is still the project's (review M1).
+          const stamp = typeof visibilityStampOf === 'function' ? visibilityStampOf(project.projectId) : null
+          syncKeyActions.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'private', projectId: project.projectId, ...(stamp ? { now: stamp } : {}) })
+          return { meta }
+        })
+        if (answer.refused) return res.status(429).json(answer.refused)
+        keyVisibilityMeta = answer.meta
+      }
       let nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
         ...(req.body?.title !== undefined ? { title: req.body.title } : {}),
         ...(req.body?.slug !== undefined ? { slug: nextSlug } : {})
       })
       if (nextVisibility !== undefined) {
-        nextMeta = await setProjectVisibility(project.projectId, nextVisibility)
+        nextMeta = keyVisibilityMeta ? { ...nextMeta, visibility: keyVisibilityMeta.visibility } : await setProjectVisibility(project.projectId, nextVisibility)
         // Any open stream a visitor holds on this project is closed by the
         // broadcast itself (index.js drops listeners who may no longer see it).
         if (typeof broadcastProjectLiveEvent === 'function') {
           await broadcastProjectLiveEvent(project.projectId, 'project-visibility', { visibility: nextMeta.visibility })
         }
       }
-      const document = await readProjectDocument(spacesDir, project.spaceId, project.projectId)
-      document.projectMeta = {
-        ...document.projectMeta,
-        id: nextMeta.id,
-        spaceId: nextMeta.spaceId,
-        title: nextMeta.title,
-        createdAt: nextMeta.createdAt,
-        updatedAt: nextMeta.updatedAt,
-        source: nextMeta.source
-      }
-      await writeProjectDocument(spacesDir, project.spaceId, project.projectId, document)
+      // The title lives in the document too: a read-modify-write of the same
+      // file the op writes rewrite, so it takes the same lock — without it a
+      // rename racing an edit put the pre-edit document back.
+      await withProjectLock({ ...project, spacesDir }, async () => {
+        const document = await readProjectDocument(spacesDir, project.spaceId, project.projectId)
+        document.projectMeta = {
+          ...document.projectMeta,
+          id: nextMeta.id,
+          spaceId: nextMeta.spaceId,
+          title: nextMeta.title,
+          createdAt: nextMeta.createdAt,
+          updatedAt: nextMeta.updatedAt,
+          source: nextMeta.source
+        }
+        await writeProjectDocument(spacesDir, project.spaceId, project.projectId, document)
+      })
+      tellFollows(project.spaceId)
       res.json({ project: nextMeta })
     } catch (error) {
       next(error)
@@ -409,7 +657,39 @@ function registerProjectRoutes(router, {
       // Soft: the row is marked and the bytes are left alone until the trash
       // sweep passes TRASH_TTL_MS. The response says when it stops being
       // recoverable, so a client can offer the undo rather than inventing one.
+      const key = config.requireAuth ? syncKeyOf(req) : null
+      if (key) {
+        // Only a manage key reaches here (index.js raises the role otherwise).
+        // Its own limits and its log (§13.5, §13.6); never the front door.
+        const record = (outcome, reason = null) => syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'trash', projectId: project.projectId, outcome, reason })
+        const answer = await withKeyLock(key.keyId, async () => {
+          // Re-read inside the lock: the project may have moved since the gate
+          // resolved its space (review r3 L1).
+          const now = await resolveProjectContext(project.projectId)
+          if (!now || now.spaceId !== project.spaceId) {
+            record('refused', 'project_moved')
+            return projectMovedAnswer()
+          }
+          const spaceMeta = typeof loadSpaceMeta === 'function' ? await loadSpaceMeta(project.spaceId) : null
+          if (spaceMeta?.publishedProjectId === project.projectId) {
+            const why = "This project is the space's front door; a sync key does not move it to the trash. The space's owner can unpublish it first."
+            record('refused', why)
+            return { status: 409, body: { error: why, code: 'sync_key_front_door' } }
+          }
+          const budget = syncKeyActions ? syncKeyActions.checkBudget({ keyId: key.keyId, action: 'trash' }) : { ok: true }
+          if (!budget.ok) {
+            record('refused', budget.reason)
+            return { status: 429, body: { error: budget.reason, code: 'sync_key_limit', action: 'trash', limit: budget.limit, window: budget.window, retryAfterMs: budget.retryAfterMs } }
+          }
+          const receipt = await deleteProjectWithIndex(project.spaceId, project.projectId)
+          record('done')
+          return { status: 200, body: { ok: true, trashed: true, ...(receipt || {}) } }
+        })
+        if (answer.status === 200) tellFollows(project.spaceId)
+        return res.status(answer.status).json(answer.body)
+      }
       const receipt = await deleteProjectWithIndex(project.spaceId, project.projectId)
+      tellFollows(project.spaceId)
       res.json({ ok: true, trashed: true, ...(receipt || {}) })
     } catch (error) {
       next(error)
@@ -435,21 +715,100 @@ function registerProjectRoutes(router, {
       if (!toSpaceId) {
         return res.status(400).json({ error: 'toSpace must name the space to move the project into.' })
       }
+      let key = null
       if (config.requireAuth) {
         const state = req.authState || {}
         const [fromMeta, toMeta] = await Promise.all([loadSpaceMeta(project.spaceId), loadSpaceMeta(toSpaceId)])
-        if (!toMeta) return res.status(404).json({ error: `target space "${toSpaceId}" not found` })
-        if (!canAccessSpace(state, toSpaceId) ||
-          !isSpaceOwnerOrAdminState(state, fromMeta) || !isSpaceOwnerOrAdminState(state, toMeta)) {
-          return res.status(403).json({ error: 'Only an admin, or the owner of both spaces, can move a project between them.' })
+        // Only an admin, who can list every space anyway, hears that a target
+        // does not exist. Everyone else gets the refusal a space they may not
+        // use gets, word for word, so a move is not a test of which space ids
+        // exist (review r3 I2, 2026-10-20). A missing target is never theirs:
+        // no owner matches null, and no key's space is a missing id.
+        if (!toMeta && state.role === 'admin') return res.status(404).json({ error: `target space "${toSpaceId}" not found` })
+        const asOwner = canAccessSpace(state, toSpaceId) &&
+          isSpaceOwnerOrAdminState(state, fromMeta) && isSpaceOwnerOrAdminState(state, toMeta)
+        if (!asOwner) {
+          // Two manage sync keys (§13.2 item 4): the bearer of the space the
+          // project is in (the route's own scope gate already checked it
+          // reaches that space), and `alsoSyncKey` in the body for the space it
+          // goes to (index.js reads it, only on this route). Both spaces must
+          // have the SAME owner, both keys must be that owner's, and nobody
+          // new may gain access (review C1; owner, 2026-10-07). Anything else
+          // is a person's move: signed in.
+          key = syncKeyOf(req)
+          const also = state.alsoSyncKey
+          const record = (why) => key && syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'move', projectId: project.projectId, toSpaceId, outcome: 'refused', reason: why, alsoKeyId: also?.keyId || null })
+          const managesFrom = key && typeof canManageProjectsState === 'function' && canManageProjectsState(state, fromMeta)
+          const managesTo = Boolean(toMeta && also && also.scope === 'manage' && also.spaceId === toMeta.id)
+          if (!managesFrom || !managesTo) {
+            const why = key
+              ? 'A sync key moves a project only with a manage key of BOTH spaces: this one as the bearer, the other as alsoSyncKey in the body.'
+              : 'Only an admin, or the owner of both spaces, can move a project between them.'
+            record(why)
+            return res.status(403).json({ error: why, ...(key ? { code: 'sync_key_needs_both' } : {}) })
+          }
+          const owner = fromMeta?.ownerUserId || null
+          if (!owner || toMeta.ownerUserId !== owner || key.ownerUserId !== owner || also.ownerUserId !== owner) {
+            const why = 'A sync key moves a project only between two spaces of the same owner, with both keys his — do this signed in.'
+            record(why)
+            return res.status(403).json({ error: why, code: 'sync_key_not_same_owner' })
+          }
+          // Never more public, never the space's settings: a key does not
+          // unpublish a front door (that changes the space).
+          let why = null
+          if (req.body?.unpublish === true) why = "A sync key does not unpublish a space's front door — the space's owner does."
+          else {
+            const widens = typeof keyMoveWidensAccess === 'function' ? await keyMoveWidensAccess({ fromMeta, toMeta, project, alsoKeyId: also.keyId }) : 'this server cannot check who would gain access'
+            if (widens) why = `${widens}; a sync key does not move a project where somebody new could see it — do this signed in.`
+          }
+          if (why) {
+            record(why)
+            return res.status(403).json({ error: why, code: 'sync_key_never_public' })
+          }
         }
       }
-      const report = await withProjectLock(project.projectId, () => moveProject({
+      // In this process only, on purpose: the move renames the project's own
+      // directory, and the lock another server would respect is a file inside
+      // it (projectWrite.js, withProjectInProcessLock).
+      const doMove = () => withProjectInProcessLock(project.projectId, () => moveProject({
         projectId: project.projectId,
         toSpaceId,
         unpublish: req.body?.unpublish === true,
         dryRun: req.body?.dryRun === true
       }))
+      let report
+      if (key) {
+        const alsoKeyId = req.authState?.alsoSyncKey?.keyId || null
+        const record = (outcome, reason = null) => syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: project.spaceId, action: 'move', projectId: project.projectId, toSpaceId, outcome, reason, alsoKeyId })
+        // Both racing moves are past every gate here; a test barrier (X-Test-Barrier) holds each until its partner is too.
+        await testBarrier.arrive(req)
+        const refused = await withKeyLock(key.keyId, async () => {
+          // Re-read inside the lock (review r3 L1): the loser of two moves finds
+          // the project already elsewhere and changes nothing.
+          const now = await resolveProjectContext(project.projectId)
+          if (!now || now.spaceId !== project.spaceId) {
+            record('refused', 'project_moved')
+            return projectMovedAnswer()
+          }
+          const budget = syncKeyActions ? syncKeyActions.checkBudget({ keyId: key.keyId, action: 'move' }) : { ok: true }
+          if (!budget.ok) {
+            record('refused', budget.reason)
+            return { error: budget.reason, code: 'sync_key_limit', action: 'move', limit: budget.limit, window: budget.window, retryAfterMs: budget.retryAfterMs }
+          }
+          try {
+            report = await doMove()
+          } catch (error) {
+            if (error?.name === 'MoveRefused') record('refused', error.message)
+            throw error
+          }
+          if (!report?.dryRun) record('done')
+          return null
+        })
+        if (refused) return refused.status === 409 ? res.status(409).json(refused.body) : res.status(429).json(refused)
+      } else {
+        report = await doMove()
+      }
+      if (!report?.dryRun) tellFollows(project.spaceId, toSpaceId)
       res.json({
         ok: true,
         ...report,
@@ -522,6 +881,10 @@ function registerProjectRoutes(router, {
       }
       await ensureSpaceWritable(trashed.spaceId)
       const project = await restoreProject(projectId)
+      // Any key's restore is in the space's key log (§13.6); it is never limited.
+      const key = config.requireAuth ? syncKeyOf(req) : null
+      if (key) syncKeyActions?.recordAction({ keyId: key.keyId, keyLabel: key.label, spaceId: trashed.spaceId, action: 'restore', projectId })
+      tellFollows(trashed.spaceId)
       res.json({ project })
     } catch (error) {
       next(error)
@@ -671,7 +1034,7 @@ function registerProjectRoutes(router, {
       // makes this endpoint's replace atomic relative to every other writer
       // for the same project, even though it's still last-write-wins by
       // design (a full replace has no baseVersion to conflict-check against).
-      const result = await withProjectLock(project.projectId, async () => {
+      const result = await withProjectLock({ ...project, spacesDir }, async () => {
         // Re-fetch inside the lock: `project.meta` was read before we
         // acquired it and may already be stale.
         const fresh = await resolveProjectContext(project.projectId)
@@ -688,7 +1051,6 @@ function registerProjectRoutes(router, {
           createdAt: fresh.meta?.createdAt || Date.now(),
           updatedAt: Date.now()
         }
-        await writeProjectDocument(spacesDir, project.spaceId, project.projectId, document)
         const resetOp = {
           opId: crypto.randomUUID?.() || `project-op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
           clientId: 'server',
@@ -697,15 +1059,23 @@ function registerProjectRoutes(router, {
           version: nextVersion,
           timestamp: Date.now()
         }
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory, maxOpAgeMs, actor)
-        const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
-          title: document.projectMeta.title,
-          documentVersion: nextVersion
+        const committed = await commitWrite({ log: logger,
+          spacesDir, spaceId: project.spaceId, projectId: project.projectId,
+          baseVersion: currentVersion, ops: [resetOp], document,
+          title: document.projectMeta.title, maxHistory: maxOpHistory, maxAgeMs: maxOpAgeMs, actor
         })
-        return { nextVersion, nextMeta, document, resetOp }
+        if (committed.notFound) return null
+        // Only reachable when another server wrote between our read and our
+        // commit despite the lock (a lock taken over from a stalled holder):
+        // a whole replace is last-write-wins, but never a silent clobber.
+        if (committed.conflict) return { conflict: true, latestVersion: committed.latestVersion }
+        return { nextVersion, nextMeta: committed.meta, document, resetOp }
       })
       if (!result) {
         return res.status(404).json({ error: 'Project not found.' })
+      }
+      if (result.conflict) {
+        return res.status(409).json({ error: 'The project changed while this replace was being saved. Load it again and retry.', latestVersion: result.latestVersion })
       }
       const { nextVersion, nextMeta, document, resetOp } = result
       await broadcastProjectLiveEvent(project.projectId, 'project-op', {
@@ -803,7 +1173,7 @@ function registerProjectRoutes(router, {
       // it guards must be one atomic step, or two concurrent requests at the
       // same baseVersion both pass the check and both write, one silently
       // clobbering the other (the race this lock exists to close).
-      const result = await withProjectLock(project.projectId, async () => {
+      const result = await withProjectLock({ ...project, spacesDir }, async () => {
         const fresh = await resolveProjectContext(project.projectId)
         if (!fresh) return { notFound: true }
         const currentVersion = Number(fresh.meta?.documentVersion) || 0
@@ -860,13 +1230,23 @@ function registerProjectRoutes(router, {
           createdAt: fresh.meta?.createdAt || nextDocument.projectMeta.createdAt,
           updatedAt: Date.now()
         }
-        await writeProjectDocument(spacesDir, project.spaceId, project.projectId, nextDocument)
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory, maxOpAgeMs, actor)
-        const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
-          title: nextDocument.projectMeta.title,
-          documentVersion: nextVersion
+        const committed = await commitWrite({ log: logger,
+          spacesDir, spaceId: project.spaceId, projectId: project.projectId,
+          baseVersion: currentVersion, ops: versionedOps, document: nextDocument,
+          title: nextDocument.projectMeta.title, maxHistory: maxOpHistory, maxAgeMs: maxOpAgeMs, actor
         })
-        return { nextVersion, nextMeta, nextDocument, versionedOps }
+        if (committed.notFound) return { notFound: true }
+        if (committed.conflict) {
+          // Another server on this data folder got there first. The ordinary
+          // answer to "you were behind": the ops since baseVersion.
+          const pendingOps = await readProjectOpsSince(spacesDir, project.spaceId, project.projectId, baseVersion)
+          return {
+            conflict: true,
+            latestVersion: committed.latestVersion,
+            pendingOps: pendingOps.filter(entry => (entry.version || 0) > baseVersion)
+          }
+        }
+        return { nextVersion, nextMeta: committed.meta, nextDocument, versionedOps }
       })
 
       if (result.notFound) {

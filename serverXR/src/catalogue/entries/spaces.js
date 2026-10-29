@@ -39,15 +39,48 @@ module.exports = [
   },
   {
     route: "DELETE /api/spaces/:spaceId",
-    summary: "delete a space and everything inside it — scene, op-log, projects, assets",
+    summary: "move a space and its projects to the trash (soft delete; restorable for 30 days)",
     reach: "public",
     role: "admin",
     agent: true,
-    note: "owner-or-admin (an owning session counts as admin here); the shared \"global\" guest-entry space can only be deleted by a real admin even if you own it. When the approval gate is armed this answers 202 pending_approval, not deleted."
+    note: "owner-or-admin (an owning session counts as admin here); the shared \"global\" guest-entry space can only be deleted by a real admin even if you own it. A permanent, global, sandbox or front-room space is refused 409 space_protected. Nothing is removed: POST /api/spaces/:spaceId/restore brings the space back with the projects that went with it, and only DELETE /api/spaces/:spaceId/purge (or the 30-day sweep) removes bytes. When the approval gate is armed this answers 202 pending_approval, not trashed."
   },
   {
+    route: "GET /api/spaces/:spaceId/footprint",
+    summary: "what deleting this space would take — live project count and bytes on disk",
+    reach: "read",
+    role: "viewer",
+    agent: true,
+    note: "the router lets any reader of the space through; the handler then answers 403 to anyone who is not the owner or an admin. Read before the delete so a confirm can name the number of projects and the size."
+  },
+  {
+    route: "GET /api/trash/spaces",
+    summary: "spaces in the trash that the caller may restore (owner or admin), with the project count that went with each",
+    reach: "read",
+    role: "guest",
+    agent: true,
+    note: "no space param: filtered inside the handler to spaces the caller owns (admins see all). Each row carries restorableUntil."
+  },
+  {
+    route: "POST /api/spaces/:spaceId/restore",
+    summary: "bring a trashed space back, with the projects that were trashed together with it",
+    reach: "private",
+    role: "editor",
+    agent: true,
+    note: "owner-or-admin. A project trashed on its own before the space went stays in the project trash. 404 once the 30-day sweep has passed."
+  },
+  {
+    route: "DELETE /api/spaces/:spaceId/purge",
+    summary: "permanently remove a space that is already in the trash — irreversible",
+    reach: "public",
+    role: "admin",
+    agent: false,
+    note: "owner-or-admin, and only for a space already in the trash (a live one answers 404). The one explicit hard delete; may answer 202 pending_approval when the approval gate is armed."
+  },
+
+  {
     route: "GET /api/spaces/:spaceId",
-    summary: "read one space's metadata — label, visibility, owner, published project",
+    summary: "read one space's metadata — label, visibility, owner, published project, and `domain` (its live own domain for share links, or null)",
     reach: "read",
     role: "viewer",
     agent: true,
@@ -149,6 +182,14 @@ module.exports = [
     role: "viewer",
     agent: true,
     note: "drops draft/archived rows and legacy \"[archived]\"-titled ones that the author's own project list (GET .../projects) still includes."
+  },
+  {
+    route: "GET /api/spaces/:spaceId/productions/:production/versions",
+    summary: "a production's version list, public parts only: id, project id, title, status per version",
+    reach: "read",
+    role: "viewer",
+    agent: true,
+    note: "the list project (<production>-versions) stays private; this answers only {id, projectId, title, status}, and leaves out a version whose project the caller may not see. Never madeBy, fingerprints or notes."
   },
   {
     route: "GET /api/spaces/:spaceId/events",
@@ -329,11 +370,12 @@ module.exports = [
           title: { type: "string", description: "project title; also the default source for its id" },
           slug: { type: "string", description: "explicit project id/slug" },
           source: { type: "string", description: "optional starting-content marker" },
-          visibility: { type: "string", enum: ["public", "private"], description: "create it private (only the space's members see it); default public" }
+          visibility: { type: "string", enum: ["public", "private"], description: "create it private (only the space's members see it); default public" },
+          carried: { type: "boolean", description: "true only when this is the same project arriving from another install (a follow or a copy), so it keeps the id it already has even if that id is a reserved word. It is the caller's own word, not something the server checks: the server cannot tell a project that exists elsewhere from a new one, and any editor can send it. Never send it for a project you are making new: with a reserved word as its id that project opens only at /{space}/p/{id}, never at /{space}/{id}. Only the boolean true counts." }
         }
       }
     },
-    note: "project ids are unique across the whole server, not just this space — a collision names a project in a space you may not be able to see. A copy of private work should be created with visibility 'private', never made private after the fact."
+    note: "project ids are unique across the whole server, not just this space — a collision names a project in a space you may not be able to see. A reserved word (one of the app's own addresses, such as privacy or tools) is refused as the project id with 400 unless the body says carried: true (see that field: the caller's own word, not a check). It is checked on the cleaned-up id so \"Privacy!\" is the same word, and before the 409 so you are told about the word. A copy of private work should be created with visibility 'private', never made private after the fact."
   },
   {
     route: "PUT /api/spaces/:spaceId/projects/order",
@@ -490,11 +532,11 @@ module.exports = [
     reach: "read",
     role: "admin",
     agent: true,
-    note: "owner-or-admin, even on a public space: the records owed are setup detail for the owner. `connected: false` means the platform is not connected to Cloudflare and nothing switches a domain on by itself."
+    note: "owner-or-admin, even on a public space: the records owed are setup detail for the owner. `provider` is `cloudflare`, `caddy` or null; `connected: false` means no provider is configured and nothing switches a domain on by itself."
   },
   {
     route: "POST /api/spaces/:spaceId/domains",
-    summary: "give the space its own domain — registers it with Cloudflare; it goes live once its DNS points at di.iiii",
+    summary: "give the space its own domain — registers it with the provider (Cloudflare, or Caddy by DNS); it goes live once its DNS points at di.iiii",
     reach: "public",
     role: "admin",
     agent: false,
@@ -511,7 +553,7 @@ module.exports = [
   },
   {
     route: "POST /api/spaces/:spaceId/domains/:hostname/check",
-    summary: "ask Cloudflare now whether the domain's DNS and certificate are in place",
+    summary: "check now whether the domain's DNS (and, with Cloudflare, its certificate) is in place",
     reach: "private",
     role: "admin",
     agent: true,
@@ -519,7 +561,7 @@ module.exports = [
       body: {
         type: "object",
         properties: {
-          state: { type: "string", enum: ["active", "unmanaged"], description: "admin-only, and only when the platform is not connected to Cloudflare: mark the domain live by hand" }
+          state: { type: "string", enum: ["active", "unmanaged"], description: "admin-only, and only when no provider (Cloudflare or Caddy) is configured: mark the domain live by hand" }
         }
       }
     },
@@ -531,6 +573,6 @@ module.exports = [
     reach: "private",
     role: "admin",
     agent: false,
-    note: "owner-or-admin. Also removes the hostname at Cloudflare."
+    note: "owner-or-admin. With Cloudflare, also removes the hostname there."
   },
 ]

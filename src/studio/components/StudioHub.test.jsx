@@ -1,4 +1,7 @@
 import React from 'react'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import StudioHub from './StudioHub.jsx'
@@ -20,10 +23,12 @@ const createCollection = vi.fn()
 const setProjectShelf = vi.fn()
 const listTrash = vi.fn(async () => ({ projects: [], ttlMs: 0 }))
 const restoreProject = vi.fn()
+const moveProject = vi.fn()
 const updateProject = vi.fn()
 const updateProjectDocument = vi.fn()
 const uploadProjectAsset = vi.fn()
 const getServerSpace = vi.fn()
+const listServerSpaces = vi.fn(async () => [])
 const updateServerSpace = vi.fn()
 const navigateToStudioPath = vi.fn()
 const importLegacySceneFile = vi.fn()
@@ -41,6 +46,7 @@ vi.mock('../../project/services/projectsApi.js', () => ({
     setProjectShelf: (...args) => setProjectShelf(...args),
     listTrash: (...args) => listTrash(...args),
     restoreProject: (...args) => restoreProject(...args),
+    moveProject: (...args) => moveProject(...args),
     updateProject: (...args) => updateProject(...args),
     updateProjectDocument: (...args) => updateProjectDocument(...args),
     uploadProjectAsset: (...args) => uploadProjectAsset(...args),
@@ -55,7 +61,7 @@ vi.mock('../../services/serverSpaces.js', () => ({
     getServerSpace: (...args) => getServerSpace(...args),
     updateServerSpace: (...args) => updateServerSpace(...args),
     // GridFloorBackground (rendered by StudioHub) also calls this directly.
-    listServerSpaces: () => Promise.resolve([])
+    listServerSpaces: (...args) => listServerSpaces(...args)
 }))
 
 vi.mock('../../project/import/importLegacyScene.js', () => ({
@@ -245,6 +251,20 @@ describe('StudioHub', () => {
         })
     })
 
+    // P1 (2026-10-13): the card said "empty" over 133 files. The server now
+    // sends the file count and size; the card prints them.
+    it('says what a project holds — files included — and never "empty" over them', async () => {
+        listProjects.mockResolvedValue([
+            { id: 'docs', title: 'Documents', updatedAt: Date.now(), source: 'studio-v3', layers: { files: 133, fileBytes: 123102822 } },
+            { id: 'blank', title: 'Blank', updatedAt: Date.now(), source: 'studio-v3', layers: {} }
+        ])
+
+        render(<StudioHub spaceId="gallery" />)
+
+        expect(await screen.findByText('133 files · 117.4 MB')).toBeTruthy()
+        expect(screen.getAllByText('empty')).toHaveLength(1)
+    })
+
     it('is the page main landmark (F4)', async () => {
         listProjects.mockResolvedValue([])
         render(<StudioHub spaceId="gallery" />)
@@ -379,6 +399,54 @@ describe('shelves and the trash', () => {
         fireEvent.click(screen.getByText('Bring it back'))
         await waitFor(() => expect(restoreProject).toHaveBeenCalledWith('gone'))
     })
+
+    // UX S10 (F078, F031): the way back exists before a first delete, and Delete is a word.
+    it('shows the trash with 0 items, and the delete button says Delete', async () => {
+        listProjects.mockResolvedValue([{ id: 'a', title: 'Kept', updatedAt: Date.now(), source: 'project' }])
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 30 * 24 * 60 * 60 * 1000 })
+
+        render(<StudioHub spaceId="main" />)
+
+        fireEvent.click(await screen.findByText('Trash — 0'))
+        expect(await screen.findByText(/wait here for 30 days/i)).toBeTruthy()
+        expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
+    })
+
+    // UX S10 (F031): a project card is not a button holding buttons; its name opens it.
+    it('a project card is no button itself, and its name is the button that opens it', async () => {
+        listProjects.mockResolvedValue([{ id: 'a', title: 'Kept', updatedAt: Date.now(), source: 'project' }])
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 30 * 24 * 60 * 60 * 1000 })
+
+        render(<StudioHub spaceId="main" />)
+
+        const open = await screen.findByRole('button', { name: 'Kept' })
+        const card = open.closest('.sh-project-card')
+        expect(card.getAttribute('role')).not.toBe('button')
+        expect(card.getAttribute('tabindex')).toBeNull()
+        expect(card.querySelector('.sh-project-open')).toBe(open)
+    })
+
+    // UX S10 (CI fix): the name and its Rename and Delete share one row, so a long name, or a longer
+    // word in another language, wraps beside the two buttons instead of running under them — no reserve in px.
+    it('a project card keeps Rename and Delete in the name\'s row, not over it', async () => {
+        listProjects.mockResolvedValue([{ id: 'a', title: 'Kept', updatedAt: Date.now(), source: 'project' }])
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 30 * 24 * 60 * 60 * 1000 })
+
+        render(<StudioHub spaceId="main" />)
+
+        const head = (await screen.findByRole('button', { name: 'Kept' })).closest('.sh-project-head')
+        expect(head).toBeTruthy()
+        expect([...head.querySelectorAll('.sh-project-tools button')].map(b => b.textContent)).toEqual(['Rename', 'Delete'])
+
+        const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../styles/studio-hub.css'), 'utf8')
+        const rule = sel => css.match(new RegExp(`\\n${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`))?.[1] ?? ''
+        for (const sel of ['.sh-btn-rename', '.sh-btn-delete']) expect(rule(sel)).not.toMatch(/position\s*:\s*absolute/)
+        expect(rule('.sh-project-title')).not.toMatch(/padding-right/)
+        expect(rule('.sh-project-title')).toMatch(/overflow-wrap\s*:\s*anywhere/)
+    })
 })
 
 // ── One project list per space (2026-09-23) ─────────────────────────────────
@@ -454,7 +522,39 @@ describe('the Nodes copy of the list', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Create' }))
 
         await waitFor(() => expect(navigate).toHaveBeenCalledWith('/lab/raw/projects/first-thing', { replace: false }))
-        expect(createProject).toHaveBeenCalledWith('lab', { title: 'First thing', slug: 'First thing', source: 'raw-v2' })
+        expect(createProject).toHaveBeenCalledWith('lab', { title: 'First thing', source: 'raw-v2' })
+    })
+
+    it('keeps the new-project form open with a plain message when the name is taken in this space', async () => {
+        listProjects.mockResolvedValue([])
+        createProject.mockRejectedValue(new Error('This space already has a project called "my scene". Pick another name.'))
+
+        render(<StudioHub spaceId="lab" />)
+        fireEvent.click(await screen.findByRole('button', { name: '+ New project' }))
+        fireEvent.change(screen.getByPlaceholderText('Project name'), { target: { value: 'my scene' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+        const alert = await screen.findByRole('alert')
+        expect(alert.textContent).toBe('This space already has a project called "my scene". Pick another name.')
+        const input = screen.getByPlaceholderText('Project name')
+        expect(input.value).toBe('my scene')
+        expect(input.getAttribute('aria-invalid')).toBe('true')
+        expect(navigateToStudioPath).not.toHaveBeenCalled()
+
+        // Typing a new name clears the message.
+        fireEvent.change(input, { target: { value: 'my scene too' } })
+        expect(screen.queryByRole('alert')).toBeNull()
+    })
+
+    it('sends an empty name as empty, for the server to name it', async () => {
+        listProjects.mockResolvedValue([])
+        createProject.mockResolvedValue({ project: { id: 'untitled' } })
+
+        render(<StudioHub spaceId="lab" />)
+        fireEvent.click(await screen.findByRole('button', { name: '+ New project' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+        await waitFor(() => expect(createProject).toHaveBeenCalledWith('lab', { title: '', source: 'studio-v3' }))
     })
 
     it('crosses to the Studio copy of the same list, where Studio crosses back', async () => {
@@ -558,6 +658,61 @@ describe('private projects', () => {
 
         fireEvent.change(await screen.findByLabelText('Who sees it'), { target: { value: 'private' } })
         expect(await screen.findByText(/published front door/)).toBeTruthy()
+    })
+})
+
+// ── Move a project to another space (POST /api/projects/:id/move, #787) ─────
+describe('move a project', () => {
+    beforeEach(() => {
+        moveProject.mockReset()
+        moveProject.mockResolvedValue({ ok: true })
+        listServerSpaces.mockReset()
+        listServerSpaces.mockResolvedValue([
+            { id: 'moxir', label: 'MOXIR', isOwner: true },
+            { id: 'elsewhere', label: 'Elsewhere', isOwner: true },
+            { id: 'theirs', label: 'Theirs', isOwner: false },
+            { id: 'sandbox-x', label: 'Sandbox', isOwner: true, kind: 'sandbox' }
+        ])
+        getServerSpace.mockReset()
+        listCollections.mockResolvedValue([])
+    })
+
+    it('offers only the other spaces this account owns, and moves on confirm', async () => {
+        authState = { role: 'editor', openSpaceId: null }
+        getServerSpace.mockResolvedValue({ id: 'moxir', label: 'MOXIR', isOwner: true })
+        listProjects.mockResolvedValue([{ id: 'hall', title: 'Hall', visibility: 'public', updatedAt: Date.now(), source: 'project' }])
+
+        render(<StudioHub spaceId="moxir" />)
+
+        const control = await screen.findByLabelText('Move to another space')
+        await waitFor(() => expect([...control.options].map(o => o.textContent)).toEqual(['move to…', 'Elsewhere']))
+        fireEvent.change(control, { target: { value: 'elsewhere' } })
+        await waitFor(() => expect(moveProject).toHaveBeenCalledWith('hall', 'elsewhere'))
+        expect(await screen.findByText(/Moved "Hall" to "Elsewhere"/)).toBeTruthy()
+    })
+
+    it('asks again when the project is the space\'s front door, then moves it with unpublish', async () => {
+        authState = { role: 'editor', openSpaceId: null }
+        getServerSpace.mockResolvedValue({ id: 'moxir', label: 'MOXIR', isOwner: true })
+        listProjects.mockResolvedValue([{ id: 'hall', title: 'Hall', visibility: 'public', updatedAt: Date.now(), source: 'project' }])
+        const refused = Object.assign(new Error('front door'), { data: { code: 'is_published' } })
+        moveProject.mockRejectedValueOnce(refused)
+
+        render(<StudioHub spaceId="moxir" />)
+
+        const control = await screen.findByLabelText('Move to another space')
+        await waitFor(() => expect(control.options.length).toBe(2))
+        fireEvent.change(control, { target: { value: 'elsewhere' } })
+        await waitFor(() => expect(moveProject).toHaveBeenLastCalledWith('hall', 'elsewhere', { unpublish: true }))
+    })
+
+    it('gives no control to someone who does not steward the space', async () => {
+        authState = { role: 'editor', openSpaceId: null }
+        getServerSpace.mockResolvedValue({ id: 'moxir', label: 'MOXIR', isOwner: false })
+        listProjects.mockResolvedValue([{ id: 'hall', title: 'Hall', visibility: 'public', updatedAt: Date.now(), source: 'project' }])
+        render(<StudioHub spaceId="moxir" />)
+        await screen.findByText('Hall')
+        expect(screen.queryByLabelText('Move to another space')).toBeNull()
     })
 })
 

@@ -8,6 +8,7 @@ const LOOPBACK_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
 const isProductionEnv = () => (process.env.NODE_ENV || '').toLowerCase() === 'production'
 
 const isLoopbackRequest = (req) => {
+  if (req.diWifiDoor) return false
   const address = req.ip || req.socket?.remoteAddress || ''
   return LOOPBACK_ADDRESSES.has(address)
 }

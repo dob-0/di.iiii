@@ -88,15 +88,48 @@ export const followFileLines = (files) => {
 export const followSettingsLines = (settings) => (Array.isArray(settings?.notes) ? settings.notes : [])
     .map(note => style.dim(`settings: ${note}`))
 
+/**
+ * What a follow says about its projects' own lives (trash, restore, rename,
+ * move — serverXR/src/follow/followProjects.js): only what it did not carry,
+ * and why. A refusal to empty this copy is said in yellow.
+ */
+export const followProjectLines = (projects) => (Array.isArray(projects?.notes) ? projects.notes : [])
+    .map(note => (/not carried/.test(note) ? style.yellow(`projects: ${note}`) : style.dim(`projects: ${note}`)))
+
+// The one local address in what di prints (docs/ai/one-local-address.md §7, D1).
+// The certificate's name is not the address any more when the one address is this
+// di.iiii: it is the line for phones and headsets, which cannot use a .localhost name.
+const phonesLine = (url, indent = '') => `${indent}phones and headsets: ${style.cyan(url)}`
+// Only when the one address was asked and not answered as this di.iiii (judgeOneAddress says why).
+const oneAddressWhy = (why, indent = '') => style.dim(`${indent}http://diiii.localhost/ is not this di.iiii yet: ${why}`)
+const isLocalhostUrl = (url) => /^https?:\/\/(?:[^/:]+\.)?localhost(?::\d+)?\/?$/i.test(String(url))
+/**
+ * A follow's key, 14 days before it expires (owner, 2026-10-07: a manage key
+ * lives 90 days, an ordinary one a year). Said in yellow, with what to do.
+ */
+export const followKeyLines = (spaceId, entry, key, now = Date.now()) => {
+    if (!key?.expiresAt || !key.expiresSoon) return []
+    const days = Math.max(0, Math.ceil((key.expiresAt - now) / (24 * 60 * 60 * 1000)))
+    const from = String(entry?.remote || '').replace(/\/serverXR$/, '')
+    return [style.yellow(`key: ${key.scope || 'edit'} key ${days === 0 ? 'expires today' : `expires in ${days} ${days === 1 ? 'day' : 'days'}`} — ask the host's owner for a new one, then: ${CMD} follow ${spaceId} --from ${from} --key - --into ${spaceId}`)]
+}
+
+/** The route that found a named install, in words. */
+const routeWords = (route) => ({ beacon: 'the beacon on this wifi', dns: 'DNS', last: 'its last address', typed: '--at' }[route] || 'a stored route')
+
 export const ui = {
+    phonesLine,
+    oneAddressWhy,
+
     // What a start prints. It used to be three lines — the address, six space
     // ids and how to stop — and everything else di.iiii can do was a thing you
     // had to already know: the tools room, the lighting desk, the wiki, and
     // above all that phones in the room need `--lan`. A person who has just
     // typed `di up` is exactly the person who does not know those, so they are
     // printed once, here, plainly.
-    running: (url, spaces, { spaceCount = null, lan = false, prettyUrl = null, secure = false } = {}) => {
-        const base = prettyUrl || url
+    running: (url, spaces, { spaceCount = null, lan = false, prettyUrl = null, secure = false, one = false, phones = null, why = null } = {}) => {
+        // The one address ends in a slash (http://diiii.localhost/); a door path must not add a second.
+        const base = String(prettyUrl || url).replace(/\/+$/, '')
         // The note column is measured, not guessed: a certificate makes every
         // address longer and a fixed width silently ran the two together.
         const width = Math.max(...['/tools', '/spaces', '/light/', '/wiki'].map(path => `${base}${path}`.length)) + 3
@@ -106,11 +139,17 @@ export const ui = {
             : `${spaceCount} ${spaceCount === 1 ? 'space' : 'spaces'}${spaces?.length ? ` — ${spaces.slice(0, 4).join(', ')}…` : ''}`
         return [
             `di.iiii is running.  ${style.cyan(prettyUrl || url)}`,
-            prettyUrl && secure
-                ? style.dim('  a real certificate — so the camera, the microphone, MIDI and XR all work.')
-                : (prettyUrl ? style.dim(`  one address, here and on the phones. ${url} answers too.`) : null),
+            // The one address leads and the certificate's name is ONE line for phones and headsets;
+            // otherwise what was always said, and one dim line for why the one address is not here yet.
+            one
+                ? (phones ? phonesLine(phones, '  ') : style.dim('  the same link on every machine with di — each opens its own.'))
+                : (prettyUrl && secure
+                    ? style.dim('  a real certificate — so the camera, the microphone, MIDI and XR all work.')
+                    // a .localhost name answers on this machine only (RFC 6761); only the place's own name (di.local under --lan) reaches phones
+                    : (prettyUrl ? style.dim(`  ${isLocalhostUrl(prettyUrl) ? 'this machine only.' : 'one address, here and on the phones.'} ${url} answers too.`) : null)),
+            !one && why ? oneAddressWhy(why, '  ') : null,
             '',
-            door('tools', '/tools', 'every tool, in one room'),
+            door('tools', '/tools', 'every tool, on one page'),
             door('spaces', '/spaces', spacesNote),
             door('light', '/light/', 'the lighting desk — output off until you say so'),
             door('wiki', '/wiki', 'how all of it works'),
@@ -120,8 +159,10 @@ export const ui = {
         ].filter(value => value !== null).join('\n')
     },
 
-    alreadyRunning: (url, reach = null, wantedLan = false) => [
+    alreadyRunning: (url, reach = null, wantedLan = false, { one = false, phones = null, why = null } = {}) => [
         `already running — ${style.cyan(url)}${reach ? style.dim(`  ${reach.lan ? 'on this network too' : 'this machine only'}`) : ''}`,
+        one && phones ? phonesLine(phones, '  ') : null,
+        !one && why ? oneAddressWhy(why, '  ') : null,
         wantedLan && reach && !reach.lan
             ? style.dim(`to let the room in: ${CMD} down, then ${CMD} up --lan`)
             : null
@@ -148,8 +189,11 @@ export const ui = {
     // ── one space, two installs ───────────────────────────────────────────
     // The words a person reads off one laptop and types into another. The key
     // is shown once and belongs to that space alone.
-    invited: (spaceId, url, key) => [
+    invited: (spaceId, url, key, { manage = false } = {}) => [
         `${style.cyan(spaceId)} is open to one other di.iiii.`,
+        // A manage key is said out loud, every time it is made: it can move this
+        // space's projects to the trash (SPEC_space_sync_keys.md §13).
+        manage ? style.yellow('this is a MANAGE key: their trash, hiding and moves of projects in this space reach here too (never purge, never public; limited per hour). undo all it did: the key log and undo on the host.') : null,
         '',
         'on their machine:',
         `  ${style.cyan(`${CMD} follow ${spaceId} --from ${url} --key ${key}`)}`,
@@ -159,7 +203,23 @@ export const ui = {
         '',
         style.dim('that key opens this space and nothing else, and you can take it back:'),
         style.dim(`  ${CMD} invite ${spaceId} --revoke`)
+    ].filter(line => line !== null).join('\n'),
+
+    keyUndone: (spaceId, report) => [
+        `took back key ${report.key?.id || ''} for ${style.cyan(spaceId)}${report.revoked ? '' : ' (it was already taken back)'}.`,
+        `restored ${report.restored.length}, made public again ${report.madePublic.length}, moved back ${report.movedBack.length}.`,
+        ...report.notUndone.map(row => style.yellow(`not undone: ${row.action} ${row.projectId} — ${row.why}`))
     ].join('\n'),
+
+    /** The space's key log (GET …/sync-keys/actions), newest first. */
+    inviteActions: (spaceId, actions) => (actions.length
+        ? [`what the keys of ${style.cyan(spaceId)} did:`, ...actions.map(row => {
+            const when = new Date(row.at).toISOString().replace('T', ' ').slice(0, 16)
+            const what = `${row.action}${row.projectId ? ` ${row.projectId}` : ''}${row.toSpaceId ? ` → ${row.toSpaceId}` : ''}`
+            const line = `  ${when}  ${row.keyId}  ${String(row.keyLabel || '').slice(0, 28).padEnd(28)}  ${what}`
+            return row.outcome === 'done' ? line : style.yellow(`${line}  refused: ${row.reason || ''}`)
+        })].join('\n')
+        : `no key has trashed, hidden, moved or restored anything in ${spaceId}.`),
 
     inviteRefused: (spaceId, reason) => [
         `could not open ${spaceId} to anyone.`,
@@ -188,6 +248,12 @@ export const ui = {
     // changes two things here — the "how do I fix this" hint on an ordinary
     // unreachable, and a whole different sentence when the pinned address DID
     // answer but under the wrong certificate.
+    // A bare label that no route could find (beacon, DNS, last address).
+    nameNotFound: (label, zone, tried = []) => [
+        `could not find ${label} — nothing on this wifi announced it, ${label}.${zone} does not point at a shared install, and no earlier address worked${tried.length ? ` (tried: ${tried.join(', ')})` : ''}.`,
+        style.dim(`on their machine: ${CMD} share  # opens the wifi door and announces the name; then try again within a minute`)
+    ].join('\n'),
+
     followRefused: (reason, where, at = null) => {
         if (reason === 'cert-mismatch') return `something answers at ${at}, but not as ${where} — wrong machine.`
         const message = {
@@ -196,7 +262,9 @@ export const ui = {
             denied: 'that key was refused — ask for a fresh one: di invite <space> on their machine.',
             'local-space': 'this install could not make room for it — is di.iiii running here?',
             itself: 'that address is this di.iiii — a space cannot follow itself.',
+            'remote-differs': 'that space is already followed from another remote, with an edit key, and no --key was given — nothing was changed. pass the new remote\'s key: --key dii_sync_…',
             cleartext: `that address is plain http on a network that is not yours — the key and every edit would travel in the clear. use https, or say so out loud: --insecure`,
+            'manage-cleartext': 'that is a MANAGE key, and a manage key is sent only over https (or to this machine) — on any network, --insecure or not. use the https address, or ask for an ordinary key.',
             corrupt: `follows.json in this install's data folder cannot be read, so nothing was written — writing over it would drop every other follow and its key. it was left as it is, with a .corrupt copy beside it. look at it, fix or move it, then follow again.`
         }[reason] || `could not follow ${where}.`
         // Only on a plain, un-pinned "unreachable": the address pin is the fix
@@ -207,36 +275,54 @@ export const ui = {
             : message
     },
 
+    followKeptKey: () => 'kept the stored edit key — no --key was given, and the remote is the same.',
+    followRemoteDiffers: (spaceId, stored, base) =>
+        `${spaceId} is followed from ${stored}, with an edit key; ${base} is another remote, and no --key was given — nothing was changed.\n` +
+        `to follow it from ${base}, pass that remote's key: --key dii_sync_… (or --key - to read it from stdin).`,
+    followNotFollowed: (spaceId) =>
+        `${spaceId} is not followed here, so there is no remote to take — say where from: --from https://…`,
     followBothDirections: () => '--take-host and --take-mine answer opposite questions — say one of them.',
     followBothStarts: () => '--from-now and --replay are opposite starts — say one of them.',
 
     badAddress: (value) => `${value} is not an address — --at wants an IPv4 or IPv6 literal, like --at 100.87.4.12`,
 
-    following: (spaceId, remote, running, at = null) => [
+    following: (spaceId, remote, running, at = null, name = null) => [
         `following ${style.cyan(spaceId)} on ${remote.replace(/\/serverXR$/, '')}.`,
-        at ? style.dim(`the name stays — the socket goes to ${at}.`) : null,
-        style.dim('edits travel both ways — the room and every project in it. your copy stays on your disk.'),
+        name ? style.dim(`found ${name.label} by ${routeWords(name.route)}${name.lastAddress ? ` at ${name.lastAddress}` : ''}; the name ${name.label}.${name.zone} is checked on every request.`) : null,
+        !name && at ? style.dim(`the name stays — the socket goes to ${at}.`) : null,
+        style.dim('edits travel both ways — the space and every project in it. your copy stays on your disk.'),
         // Said plainly rather than discovered. Files named by a PROJECT are
         // carried (serverXR/src/follow/assets.js); files placed straight into
-        // the room's own scene are not — that manifest never travels. Better a
+        // the space's own scene are not — that manifest never travels. Better a
         // sentence now than a grey wall later.
-        style.dim('files in its projects travel too. files placed straight in the room itself are not carried yet — they stay where they were added.'),
+        style.dim('files in its projects travel too. files placed straight in the space itself are not carried yet — they stay where they were added.'),
         running ? null : style.dim(`start it to begin: ${CMD} up`)
     ].filter(Boolean).join('\n'),
 
-    followList: (follows, live) => {
+    // `carrier` is what the server says about who carries this data folder's
+    // follows (serverXR/src/follow/lease.js). When it is another server on the
+    // same folder — the installed di beside a dev stack — the list says so
+    // instead of calling every follow "not running".
+    followList: (follows, live, carrier = null) => {
         const ids = Object.keys(follows || {})
         if (!ids.length) return `this di.iiii follows nothing. ${style.dim(`${CMD} follow <space> --from <url> --key <key>`)}`
         const byId = new Map((live || []).map(entry => [entry.spaceId, entry]))
-        return ids.map((id) => {
+        const elsewhere = carrier && carrier.carriedHere === false
+        const by = elsewhere && carrier.carriedBy ? `pid ${carrier.carriedBy.pid}, port ${carrier.carriedBy.port}` : 'another server'
+        const head = elsewhere ? [style.yellow(`another di.iiii server on this data folder carries these follows (${by}). ask that one how they are doing; this one takes over if it stops.`)] : []
+        return [...head, ...ids.map((id) => {
             const entry = follows[id]
             const state = byId.get(id)
-            const where = String(entry.remote || '').replace(/\/serverXR$/, '')
+            const where = entry.name ? `${entry.name.label} ${style.dim(`(${routeWords(entry.name.route)}${entry.name.lastAddress ? ` · ${entry.name.lastAddress}` : ''})`)}` : String(entry.remote || '').replace(/\/serverXR$/, '')
+            if (!state && elsewhere) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim(`(carried by ${by})`)}`
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
-            const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
+            // The key's scope (SPEC_space_sync_keys.md §13): manage carries this
+            // install's trash, hiding and moves to the host; edit does not.
+            const scope = state.key?.scope ? ` · key: ${state.key.scope}` : ''
+            const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}${scope}`
             const line = `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
-            return [line, ...followSettingsLines(state.settings), ...followFileLines(state.files)].map((text, index) => (index === 0 ? text : `  ${' '.repeat(18)}${text}`)).join('\n')
-        }).join('\n')
+            return [line, ...followKeyLines(id, entry, state.key), ...followSettingsLines(state.settings), ...followProjectLines(state.projects), ...followFileLines(state.files)].map((text, index) => (index === 0 ? text : `  ${' '.repeat(18)}${text}`)).join('\n')
+        })].join('\n')
     },
 
     unfollowed: (spaceId) => `no longer following ${spaceId}. ${style.dim('your copy stays exactly as it is.')}`,
@@ -247,7 +333,7 @@ export const ui = {
     // Said in place of the "anyone can edit it" warning, because it is the
     // opposite fact and the room deserves to hear which one is true tonight.
     guestsOn: () => [
-        'visitors arrive as guests: their own room and the open space, and nothing of yours.',
+        'visitors arrive as guests: their own space and the open space, and nothing of yours.',
         style.dim(`you, on this machine, stay the owner — no sign-in. ${CMD} down when the room is done.`)
     ].join('\n'),
 
@@ -358,22 +444,17 @@ export const ui = {
     ].join('\n'),
 
     // The one screen an artist is asked to read when something is wrong. It
-    // names the two ways forward and does not rank them by what a developer
-    // would prefer.
+    // names the one way out, in the words install.sh and install.ps1 use:
+    // Docker is not one, because the di command itself runs on node.
     noRuntime: () => [
         'di.iiii could not start on this machine.',
         '',
-        '  docker    not found',
         '  node.js   not found, and nodejs.org could not be reached',
         '',
-        'you need one of these. pick whichever sounds easier:',
+        `Install Node.js 22.15 or newer from ${style.cyan('https://nodejs.org')} (the LTS button),`,
+        `then run:  ${CMD} up`,
         '',
-        `  docker desktop  ${style.cyan('https://docker.com/products/docker-desktop')}`,
-        `                  install it, open it once, then run:  ${CMD} up`,
-        `  node.js 22      ${style.cyan('https://nodejs.org')}`,
-        `                  the big green LTS button, then run:  ${CMD} up`,
-        '',
-        'nothing was installed. full report:  di doctor'
+        'Nothing was installed.'
     ].join('\n'),
 
     nodeTooOld: (found, needed) => [
@@ -476,6 +557,10 @@ export const ui = {
         '',
         '  --from URL      where the other di.iiii answers, e.g. https://local.thedi.studio',
         `  --key KEY       the per-space sync key, minted on their machine with: ${CMD} invite SPACE`,
+        `                  (${CMD} invite SPACE --manage: a key whose trash, hiding and moves of projects`,
+        '                  made here reach the host too — the host\'s owner gives it on purpose;',
+        `                  ${CMD} invite SPACE --actions on the host lists what keys did;`,
+        `                  ${CMD} invite SPACE --undo KEYID takes one back and undoes what it did)`,
         '  --at ADDRESS    the ADDRESS PIN — the name in --from stays, but the socket goes',
         '                  to this address instead of whatever it resolves to. For when',
         '                  --from names a machine this one can only reach somewhere else —',
@@ -491,12 +576,15 @@ export const ui = {
         '  --take-mine     the same, the other way: this copy becomes the host\'s. Restore point',
         '                  taken on the host first; used once, then cleared',
         '                  (with neither, a difference where this copy is ahead is REFUSED and',
-        `                  shown in ${CMD} follows)`,
+        `                  shown in ${CMD} follows). On a space already followed, either one`,
+        `                  alone is enough: ${CMD} follow SPACE --take-mine uses that follow's address and key`,
         '  --insecure      allow a key to travel over plain http to a public address (http to',
         '                  localhost, .local, LAN and Tailscale addresses needs no flag)',
         '',
         style.dim(`  ${CMD} follows          what this install is following`),
-        style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`)
+        style.dim(`  ${CMD} wifi             open this install to the wifi for guests (--stop closes, --status asks)`),
+        style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`),
+        style.dim(`  ${CMD} post draft|show|send|channels   share a post to Telegram, Bluesky, Mastodon`),
     ].join('\n'),
 
     // `di mcp --help` and `di help mcp`. Printed instead of starting the
@@ -509,6 +597,7 @@ export const ui = {
         '',
         `  claude mcp add di -- ${CMD} mcp`,
         `  ${CMD} mcp --port N       talk to a di.iiii running somewhere other than 4000`,
+        `  ${CMD} mcp --tier dev     talk to dev.diiii.xyz, as the person ${CMD} login signed in (--base URL: any other)`,
         '',
         'reading and private moves just run. public moves — making a space public, minting',
         'an invite link, deleting a space — are refused unless the agent was started with',
@@ -841,7 +930,85 @@ export const ui = {
     },
     unsupervisedWhileInstalled: (svc) => `answering, but not under ${svc.unit} — a server started some other way. ${CMD} down && ${CMD} up puts it under systemd.`,
 
-    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage(), service: () => ui.serviceUsage() })[name]?.() || null,
+    // ── di login ────────────────────────────────────────────────────────
+    // A person is asked for one thing: type a code in the browser they are
+    // already signed in with. Nothing here says how that works underneath, and
+    // nothing prints the login itself — only who it is, and where.
+    loginAsk: ({ host, address, code, minutes, opening }) => [
+        `sign in to ${host}`,
+        '',
+        `  1. open  ${style.cyan(address)}${opening ? style.dim('   (opening it for you)') : ''}`,
+        `  2. type  ${style.bold(code)}`,
+        '',
+        style.dim(`waiting for you to approve it there — the code runs out in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} · Ctrl-C to stop`)
+    ].join('\n'),
+    loginDone: (host, name) => [
+        `signed in as ${style.bold(name)} on ${host}.`,
+        style.dim('this terminal can read and edit your spaces and projects. it cannot publish or delete a space, or change who owns or edits one — those stay in the browser.')
+    ].join('\n'),
+    loginAlready: (host, name) => `already signed in to ${host} as ${style.bold(name)} — nothing changed. ${CMD} login --force signs in again.`,
+    loginEnded: (host) => `the login stored for ${host} has ended — signing in again.`,
+    loginDenied: () => `it was denied in the browser — nothing was saved. ${CMD} login to try again.`,
+    loginRanOut: () => `the code ran out — run ${CMD} login again.`,
+    loginStopped: () => `${process.stdout.isTTY ? '\n' : ''}stopped — nothing was saved.`,
+    loginNoAccounts: () => 'this di.iiii has no accounts to sign in to (it runs without sign-in).',
+    loginNotHere: (host) => `${host} does not answer a sign-in — is it a di.iiii, and an up-to-date one?`,
+    loginDown: (host, tries) => (tries > 1
+        ? `could not reach ${host} — gave up after ${tries} tries in a row. check the network, then run ${CMD} login again.`
+        : `could not reach ${host} — check the address and the network.`),
+    loginRedirected: (host, to) => `${host} answered with a redirect${to ? ` to ${to}` : ''} — nothing was sent on. use the address it points to: ${CMD} login --to ADDRESS`,
+    loginRateLimited: () => `too many tries just now — wait a minute, then run ${CMD} login again.`,
+    loginRefused: (host, status, code) => `${host} refused the sign-in (${status}${code ? `, ${code}` : ''}).`,
+    loginOdd: (host) => `${host} answered with something this ${CMD} does not understand — is it up to date? nothing was saved.`,
+    loginNotSaved: (host, why) => `signed in to ${host}, but could not keep the login on this machine (${why}) — run ${CMD} login again once that is fixed.`,
+    loginCleartext: (host) => `${host} is plain http on a network that is not yours — the login would travel in the clear. use https, or say so out loud: --insecure`,
+    loginTargetBoth: () => `--tier or --to, not both — ${CMD} login --tier dev|prod|local, or ${CMD} login --to https://example.org`,
+    loginBadTier: (tier) => `${tier ? `no such tier: ${String(tier).slice(0, 40)}` : '--tier wants a name'} — one of dev, prod, local. for any other di.iiii: ${CMD} login --to https://example.org`,
+    loginBadAddress: (text) => `${text ? `"${String(text).slice(0, 60)}" is not an address` : '--to wants an address'} — for example ${CMD} login --to https://example.org`,
+    loginAddressHasPath: (site) => `${String(site).slice(0, 60)} is an address with a path — a login is for the whole di.iiii, not one page. use just the address: ${CMD} login --to ${String(site).slice(0, 60)}`,
+    loginEnvWins: () => style.yellow(`DI_TOKEN is set in this environment and wins: the SDK, ${CMD} mcp and ${CMD} move use that token, not the login ${CMD} login keeps.`),
+    /** The command that signs in to this target again, flags included. */
+    loginAgain: ({ key, site }) => `${CMD} login${key === 'dev' ? '' : (['local', 'prod'].includes(key) ? ` --tier ${key}` : ` --to ${site}`)}`,
+    whoamiIs: ({ host, name, label, ends }) => [
+        `signed in as ${style.bold(name)} on ${host}`,
+        label ? style.dim(`  this terminal: ${label}`) : null,
+        ends ? style.dim(`  ends ${ends} if it is not used before then — every use moves that date forward`) : null
+    ].filter(Boolean).join('\n'),
+    whoamiNone: (host, again) => `not signed in to ${host} — ${again}`,
+    whoamiEnded: (host, again) => `this terminal's login to ${host} has ended (ended in the browser, or unused for too long) — ${again}`,
+    whoamiDown: (host) => `could not reach ${host} to check — the login is still stored here, and may be fine.`,
+    logoutDone: (host) => `signed out of ${host} — the login is ended there and removed here.`,
+    logoutAlready: (host) => `signed out of ${host} — the host had already ended it; removed here.`,
+    logoutNotTold: (host, list) => `removed here, but could not end it on ${host} — it stays valid there until it runs out or you end it in the browser: ${list}`,
+    logoutNone: (host) => `not signed in to ${host} — nothing to do.`,
+    logoutNotRemoved: (host, why) => `could not remove the login for ${host} from this machine (${why}) — it is still there.`,
+
+    // `di login --help`, `di logout --help`, `di whoami --help` and `di help login`.
+    loginUsage: () => [
+        style.bold(`${CMD} login`) + style.dim(' — sign in once on this machine, from the terminal'),
+        '',
+        'the terminal shows a short code; you type it in the browser you are already signed',
+        `in with. after that ${CMD}, ${CMD} mcp and the agents you start here act as you in your`,
+        'spaces — no more trip to the browser for every space.',
+        '',
+        `  ${CMD} login                sign in to dev.diiii.xyz`,
+        `  ${CMD} whoami               who this terminal is signed in as, and until when`,
+        `  ${CMD} logout               end it — on the host and on this machine`,
+        '',
+        '  --tier dev|prod|local   another di.iiii of ours (default dev)',
+        '  --to URL                any other di.iiii, e.g. https://example.org',
+        '  --label NAME            what the browser lists this terminal as (default: this machine)',
+        '  --no-open               do not open the browser for you',
+        '  --force                 sign in again even if this terminal already is',
+        '  --insecure              allow plain http to an address that is not yours',
+        '',
+        'a terminal login can read and edit your spaces and projects. it cannot publish or',
+        'delete a space, or change who owns or edits one — those stay in the browser.',
+        'it ends when you end it (here, or in the list at /device on that di.iiii), or after',
+        '90 days unused (a year at most). DI_TOKEN, when set, still wins — for CI.'
+    ].join('\n'),
+
+    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage(), service: () => ui.serviceUsage(), login: () => ui.loginUsage(), logout: () => ui.loginUsage(), whoami: () => ui.loginUsage() })[name]?.() || null,
 
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
@@ -864,6 +1031,10 @@ export const ui = {
         `  ${CMD} keeper get    a small model on this machine — works with no internet`,
         `  ${CMD} ndi get       video in and out over the network — OBS, Resolume, a projector`,
         '',
+        `  ${CMD} login         sign in from the terminal, once — then ${CMD} and Claude act as you`,
+        `  ${CMD} whoami        who this terminal is signed in as · ${CMD} logout ends it`,
+        `  ${CMD} name          this install's network name and its own certificate (after ${CMD} login) · --status --renew --forget`,
+        '',
         `  ${CMD} stage join SPACE --from URL   make this machine the one under the projector`,
         `  ${CMD} stage status  what it is showing, and why not · ${CMD} stage leave to undo it`,
         '',
@@ -876,7 +1047,7 @@ export const ui = {
         `  ${CMD} update --from FILE   update from an artifact on this machine (no network)`,
         `  ${CMD} update --channel dev|stable   one run on a channel (dev = the build dev.diiii.xyz serves)`,
         `  ${CMD} channel [dev|stable]   show or set which channel this install follows`,
-        `  ${CMD} autoupdate on|off|status   keep it on its channel by itself, every 15 minutes (Linux)`,
+        `  ${CMD} autoupdate on|off|status   keep it on its channel by itself, every 5 minutes (Linux)`,
         `  ${CMD} logs [-f]     what the server is saying`,
         `  ${CMD} doctor        what this machine can and cannot do`,
         `  ${CMD} where         the three paths that matter`,
@@ -886,7 +1057,7 @@ export const ui = {
         '',
         style.dim('  --port N     run somewhere other than 4000'),
         style.dim('  --lan        answer on this wifi too, for phones in the room — anyone on it can edit'),
-        style.dim('  --guests     with --lan: visitors get their own room, not yours'),
+        style.dim('  --guests     with --lan: visitors get their own space, not yours'),
         style.dim('  --verbose    show the docker/npm/node underneath'),
         ''
     ].join('\n')

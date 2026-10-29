@@ -1,5 +1,6 @@
 import { createContext, Suspense, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
+import Canvas from '../../components/GuardedCanvas.jsx'
 import { ContactShadows, Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
 import ConeObject from '../../objectComponents/ConeObject.jsx'
@@ -10,6 +11,9 @@ import SphereObject from '../../objectComponents/SphereObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
 import AudioObject from '../../objectComponents/AudioObject.jsx'
+import SpotLightObject from '../../objectComponents/SpotLightObject.jsx'
+import { lampModeOf, lampPicture, lampTypeOf, loadLampType } from '../../project/nodes/light.lamp/lampType.js'
+import { beamStopUserData } from '../utils/beamStops.js'
 import { detectModelFormatFromMeta } from '../../utils/modelFormats.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
@@ -18,8 +22,10 @@ import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode, r
 import { createFrameMemory, createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
 import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
+import { CIRCLE_SEGMENTS } from '../../objectComponents/primitiveSegments.js'
 import { createTapTracker } from '../utils/useDoubleTap.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
+import { useLampTypeVersion } from '../../project/nodes/light.lamp/useLampTypeVersion.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
@@ -279,7 +285,7 @@ function GeometryPieces({ descriptor, pruned = false }) {
             return (
                 <mesh {...place}>
                     <circleGeometry args={[
-                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5)))), 48
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5)))), CIRCLE_SEGMENTS
                     ]} />
                     <meshStandardMaterial color={asColor(descriptorLeaf.color, '#5fa8ff')} side={2} />
                 </mesh>
@@ -336,6 +342,46 @@ function GeoFootprint() {
                 fadeDistance={14}
                 infiniteGrid={false}
             />
+        </group>
+    )
+}
+
+// A stage lamp's body. Its type's file loads on demand (lampType.js), so the body re-renders when it arrives;
+// until then it draws as an untyped lamp, as before a type is named.
+function LampBody({ values }) {
+    const [, setLoaded] = useState(0)
+    useEffect(() => {
+        const want = typeof values.type === 'string' ? values.type.trim() : ''
+        if (!want) return undefined
+        let live = true
+        loadLampType(want).then(() => { if (live) setLoaded((n) => n + 1) })
+        return () => { live = false }
+    }, [values.type])
+    const type = lampTypeOf(values.type)
+    const look = lampPicture(type, lampModeOf(type, values.mode), values)
+    const [w, d, h] = look.size
+    return (
+        <group rotation={[0, look.pan, 0]}>
+            <group rotation={[look.tilt, 0, 0]}>
+                <mesh position={[0, h / 2 - 0.02, 0]}>
+                    <boxGeometry args={[w, h, d]} />
+                    <meshStandardMaterial color="#2b2b30" roughness={0.6} metalness={0.3} />
+                </mesh>
+                <mesh position={[0, -0.015, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                    <circleGeometry args={[Math.min(w, d) * 0.35, 24]} />
+                    <meshBasicMaterial color={look.color} side={2} />
+                </mesh>
+                <group position={[0, -0.03, 0]}>
+                    <SpotLightObject
+                        color={look.color}
+                        intensity={look.intensity}
+                        angle={look.angle}
+                        penumbra={0.2}
+                        beam={{ visible: true }}
+                        fitted={look.fitted}
+                    />
+                </group>
+            </group>
         </group>
     )
 }
@@ -582,6 +628,13 @@ export function renderNodeBody(node, values, assetMap = null) {
                     </mesh>
                 </group>
             )
+        case 'light.lamp': {
+            // A stage lamp: its body (the type's published size), turned by
+            // Pan about Y and Tilt about X, and Studio's own spot with a beam
+            // in the air (SpotLightObject) — whose reach probe stops the beam
+            // at the first surface it meets. No second beam is drawn here.
+            return <LampBody values={values} />
+        }
         case 'world.camera': {
             // The eye you can pick up: a small housing with a lens cone aimed
             // at its Look At. Only INACTIVE cameras are drawn — the active one
@@ -714,6 +767,8 @@ export function NodeVisual({
     return (
         <group
             ref={groupRef || undefined}
+            // a solid shape is where a Lamp's beam stops (utils/beamStops.js)
+            userData={beamStopUserData(node.typeId)}
             position={asVec3(values.position, [0, 0, 0])}
             rotation={asVec3(values.rotation, [0, 0, 0])}
             scale={nodeScaleFactor}
@@ -801,13 +856,14 @@ function SceneContent({
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
     // must not survive a tick or the clock would freeze at its first sample.
     const clockNow = useDocumentClock(document)
+    const lampTypes = useLampTypeVersion()
     // Between-pass node state (a Lag's last answer) — this window's own,
     // never React state, dropped whole when the document changes.
     const [frameMemory] = useState(() => createFrameMemory())
     useEffect(() => { frameMemory.clear() }, [frameMemory, document.projectMeta?.id])
     const graphContext = useMemo(
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
-        [document, clockNow, liveOutputs, frameMemory]
+        [document, clockNow, lampTypes, liveOutputs, frameMemory]
     )
     // scopeId undefined = unscoped, matches the old document-wide behavior; a real
     // scope (including root, `null`) only renders/uses siblings of that scope — see
@@ -1236,6 +1292,29 @@ function SceneContent({
     )
 }
 
+// DEV ONLY, for a shot script (scripts/measure/light-env-shots.cjs): the room page's own camera, moved the way a hand would.
+// window.__diRoom exists only with bloom and SmartView only with Inside, and the document's fixedCamera never moved this view.
+function DevViewHandle() {
+    const camera = useThree((state) => state.camera)
+    const controls = useThree((state) => state.controls)
+    useEffect(() => {
+        if (!import.meta.env.DEV || typeof window === 'undefined') return undefined
+        window.__diView = {
+            camera,
+            setView: ({ position, target, fov }) => {
+                if (Number.isFinite(fov)) { camera.fov = fov; camera.updateProjectionMatrix() }
+                camera.position.set(...position)
+                if (controls?.target) { controls.target.set(...target); controls.update?.() } else camera.lookAt(...target)
+                camera.updateMatrixWorld(true)
+                return { position: camera.position.toArray(), fov: camera.fov }
+            }
+        }
+        return () => { window.__diView = null }
+    }, [camera, controls])
+    return null
+}
+
+
 // RE-AIM AFTER MOUNT.
 //
 // The Canvas `camera` prop is read once, when the renderer is created, and
@@ -1469,6 +1548,7 @@ export default function RawViewport({
             >
                 {interactive && !hasAuthoredCamera && <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />}
                 {viewRequest ? <ViewRequestApplier request={viewRequest} /> : null}
+                {import.meta.env.DEV ? <DevViewHandle /> : null}
                 <SceneContent
                     ambience={ambience}
                     showSelectionPills={showSelectionPills}

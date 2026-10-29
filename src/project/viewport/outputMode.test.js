@@ -1,18 +1,40 @@
 import { describe, expect, it } from 'vitest'
-import { OUTPUT_POOL_SLOTS, outputDocument, outputModeWanted, outputRenderSettings } from './outputMode.js'
+import { OUTPUT_POOL_SLOTS, normalizeQuality, outputDocument, outputModeWanted, outputRenderSettings, isSoftwareRenderer } from './outputMode.js'
 
 describe('outputModeWanted', () => {
-    it('gives the work machine with a mouse the full room, everyone else the output', () => {
+    it('starts a desktop with a real GPU in High, a phone or a software renderer in Low (owner 2026-10-15)', () => {
         expect(outputModeWanted({ workMachine: true })).toBe(false)
+        expect(outputModeWanted({ workMachine: false })).toBe(false) // a hosted room on a desktop: High too
         expect(outputModeWanted({ workMachine: true, coarse: true })).toBe(true)
-        expect(outputModeWanted({ workMachine: false })).toBe(true)
+        expect(outputModeWanted({ workMachine: false, coarse: true })).toBe(true)
+        expect(outputModeWanted({ softwareGl: true })).toBe(true)
+        expect(isSoftwareRenderer('Google SwiftShader')).toBe(true)
+        expect(isSoftwareRenderer('llvmpipe (LLVM 17.0.6, 256 bits)')).toBe(true)
+        expect(isSoftwareRenderer('ANGLE (NVIDIA, Vulkan 1.3.277 (NVIDIA NVIDIA GeForce RTX 3080 Laptop GPU (0x0000249C)), NVIDIA)')).toBe(false)
+        expect(isSoftwareRenderer('')).toBe(false)
+    })
+    it('reads the new words and the retired ones the same way, both in the address and in the stored value', () => {
+        expect(normalizeQuality('low')).toBe('low')
+        expect(normalizeQuality('Lite')).toBe('low')
+        expect(normalizeQuality('HIGH')).toBe('high')
+        expect(normalizeQuality('full')).toBe('high')
+        expect(normalizeQuality('max')).toBeNull()
+        expect(normalizeQuality(null)).toBeNull()
+        expect(outputModeWanted({ search: '?quality=low' })).toBe(true)
+        expect(outputModeWanted({ search: '?quality=lite' })).toBe(true)
+        expect(outputModeWanted({ coarse: true, search: '?quality=high' })).toBe(false)
+        expect(outputModeWanted({ coarse: true, search: '?quality=full' })).toBe(false)
+        expect(outputModeWanted({ stored: 'low' })).toBe(true)
+        expect(outputModeWanted({ stored: 'lite' })).toBe(true)
+        expect(outputModeWanted({ coarse: true, stored: 'high' })).toBe(false)
+        expect(outputModeWanted({ coarse: true, stored: 'full' })).toBe(false)
     })
     it('lets the address win over the stored choice, and the stored choice over the default', () => {
         expect(outputModeWanted({ workMachine: true, stored: 'full', search: '?quality=lite' })).toBe(true)
         expect(outputModeWanted({ coarse: true, stored: 'lite', search: '?x=1&quality=FULL' })).toBe(false)
         expect(outputModeWanted({ coarse: true, stored: 'full' })).toBe(false)
         expect(outputModeWanted({ workMachine: true, stored: 'lite' })).toBe(true)
-        expect(outputModeWanted({ workMachine: true, stored: 'junk', search: '?quality=max' })).toBe(false)
+        expect(outputModeWanted({ workMachine: true, stored: 'junk', search: '?quality=max', coarse: true })).toBe(true) // junk and an unknown quality fall back to the default
     })
 })
 

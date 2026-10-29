@@ -3,6 +3,7 @@ import { cloneValue } from '../../shared/projectSchema.js'
 import { listProjects } from '../../project/services/projectsApi.js'
 import { getModelClips, subscribeModelClips } from '../../project/viewport/modelClipRegistry.js'
 import { panTiltFromRotation, rotationFromPanTilt } from '../../project/viewport/spotLightAim.js'
+import { formatNumberDisplay } from '../utils/formatNumberDisplay.js'
 import FixtureField from './FixtureField.jsx'
 
 // Clip names only exist once a viewport has loaded the model file, so this
@@ -83,13 +84,31 @@ const setNestedValue = (value, path, nextValue) => {
 const readNestedValue = (value, path = []) =>
     path.reduce((cur, key) => cur?.[key], value)
 
-function InspNumber({ field, value, onChange, compact = false, axisColor }) {
+// A rotation is stored in radians and read in degrees (Blender's Transform panel; owner 2026-10-13,
+// arranging lamps by hand: 1.5708 is not a number a person types). The field steps by 1°, Shift 0.1°,
+// Ctrl 10°; what is written back is radians, exactly the typed degrees over 180/π.
+const DEG_PER_RAD = 180 / Math.PI
+export const inDegrees = ({ field, value, onChange }) => ({
+    field: { ...field, step: 1 },
+    value: Number.isFinite(Number(value)) ? Number(value) * DEG_PER_RAD : value,
+    onChange: (next) => onChange?.(Number(next) / DEG_PER_RAD)
+})
+
+function InspNumber(props) {
+    return props.field?.degrees
+        ? <InspNumberField {...props} {...inDegrees(props)} />
+        : <InspNumberField {...props} />
+}
+
+function InspNumberField({ field, value, onChange, compact = false, axisColor }) {
     const baseStep = field.step ?? 0.1
     const fieldMin = field.min ?? -Infinity
     const fieldMax = field.max ?? Infinity
     const num = Number.isFinite(Number(value)) ? Number(value) : 0
     const intervalRef = useRef(null)
     const inputRef = useRef(null)
+    // Shown rounded while not being edited; while focused the field shows what is typed.
+    const [draft, setDraft] = useState(null)
 
     // Keep latest values accessible inside stable listeners
     const stateRef = useRef({ num, baseStep, fieldMin, fieldMax, onChange })
@@ -104,6 +123,7 @@ function InspNumber({ field, value, onChange, compact = false, axisColor }) {
 
     const applyDelta = useCallback((dir, s) => {
         const { num: n, fieldMin: lo, fieldMax: hi, onChange: cb } = stateRef.current
+        setDraft(null)
         cb(Math.min(hi, Math.max(lo, parseFloat((n + dir * s).toFixed(10)))))
     }, [])
 
@@ -114,8 +134,15 @@ function InspNumber({ field, value, onChange, compact = false, axisColor }) {
     }
     const stopRepeat = () => { clearInterval(intervalRef.current) }
 
-    // Keyboard arrows with modifier step
+    // Keyboard arrows with modifier step. Enter and Escape hand the focus back to the
+    // page: the value is already written on change, and while a field holds the focus
+    // every editor shortcut — Escape to deselect first of all — steps aside (N581).
     const handleKeyDown = (e) => {
+        if (e.key === 'Enter' || e.key === 'Escape') {
+            e.preventDefault()
+            e.currentTarget.blur()
+            return
+        }
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
         e.preventDefault()
         applyDelta(e.key === 'ArrowUp' ? 1 : -1, resolveStep(e))
@@ -144,11 +171,14 @@ function InspNumber({ field, value, onChange, compact = false, axisColor }) {
                     ref={inputRef}
                     type="number"
                     className="insp-input insp-num-input"
-                    value={num}
+                    value={draft ?? formatNumberDisplay(num)}
                     min={field.min}
                     max={field.max}
                     step={baseStep}
+                    onFocus={(e) => setDraft(e.target.value)}
+                    onBlur={() => setDraft(null)}
                     onChange={(e) => {
+                        setDraft(e.target.value)
                         const v = Number(e.target.value)
                         // Skip intermediate states like '' or a lone '-' (both
                         // parse to 0/NaN) instead of committing 0 — otherwise
@@ -425,7 +455,7 @@ function InspSection({ section, sectionValue, assetOptions, spaceOptions, surfac
                 <div className="insp-section-body">
                     {groupVectorFields(section.fields).map((group) => group.vector ? (
                         <div className="insp-vec3-group" key={`${section.id}-${group.base}`}>
-                            <label className="insp-label">{group.base}</label>
+                            <label className="insp-label">{group.fields[0].degrees ? `${group.base} °` : group.base}</label>
                             <div className="insp-vec3-row">
                                 {group.fields.map((field, axisIndex) => (
                                     <InspNumber
@@ -506,6 +536,8 @@ export default function StudioInspector({
     values = {},
     onSectionChange,
     footer = null,
+    // A control that acts on the whole selection (the Lock toggle), beside the title.
+    headerAction = null,
     emptyMessage = 'Select an object to edit it.',
     // The lighting-desk store the Fixture field reads; only tests pass one.
     lightingMirror = undefined,
@@ -523,6 +555,7 @@ export default function StudioInspector({
             <div className="insp-header">
                 <span className="insp-title">{title}</span>
                 {subtitle ? <span className="insp-subtitle">{subtitle}</span> : null}
+                {headerAction ? <span className="insp-header-action">{headerAction}</span> : null}
             </div>
 
             {sections.map((section) => {

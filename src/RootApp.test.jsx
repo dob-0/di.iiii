@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import RootApp from './RootApp.jsx'
+import { setHostSpace } from './utils/hostSpace.js'
 
 const mockUseAuthSession = vi.fn(() => ({
     requireAuth: false,
@@ -17,6 +18,8 @@ vi.mock('./hooks/useAuthSession.js', () => ({
 
 const mockSpacePublicOverrides = {}
 const mockVanityResolutions = {}
+// What GET /api/resolve/:space answers for a bare space address, by space.
+const mockSpaceRootResolutions = {}
 // Every id the app asked the server about. A reserved word can never BE a
 // space, so asking is itself the defect — the answer is 404 by construction.
 const mockSpaceLookups = vi.hoisted(() => [])
@@ -36,8 +39,13 @@ vi.mock('./services/serverSpaces.js', () => ({
             isPublic: spaceId === 'pub' || Boolean(mockSpacePublicOverrides[spaceId])
         })
     },
-    resolveVanityProjectLink: (spaceSegment, projectSegment) =>
-        Promise.resolve(mockVanityResolutions[`${spaceSegment}/${projectSegment}`] || null)
+    resolveVanityProjectLink: (spaceSegment, projectSegment) => {
+        // An Error entry stands for a failed question (a 401, the network);
+        // no entry is the server's 404, which the real service turns into null.
+        const answer = mockVanityResolutions[`${spaceSegment}/${projectSegment}`]
+        return answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer || null)
+    },
+    resolveSpaceRoot: (spaceSegment) => Promise.resolve(mockSpaceRootResolutions[spaceSegment] || null)
 }))
 
 vi.mock('./components/AuthGate.jsx', () => ({
@@ -291,6 +299,17 @@ describe('RootApp bare reserved addresses', () => {
         expect(mockSpaceLookups).not.toContain('make')
     })
 
+    // Audit F154 (2026-10-28): bare /scan answered "Not found" — a routed
+    // address that only said it was missing. It now says where scanning lives.
+    it('says where scanning lives at /scan instead of hunting for a space called scan', async () => {
+        window.history.pushState({}, '', '/scan')
+        render(<RootApp />)
+
+        expect(await screen.findByText(/Scanning happens inside a space\. Open the space first/)).toBeInTheDocument()
+        expect(screen.queryByText(/space-surface-app/)).toBeNull()
+        expect(mockSpaceLookups).not.toContain('scan')
+    })
+
     it('says where the lighting desk lives when /light is asked of a hosted tier', async () => {
         mockServerConfig.value = { local: false }
         window.history.pushState({}, '', '/light')
@@ -447,13 +466,98 @@ describe('RootApp vanity project links', () => {
         expect(await screen.findByText('space-surface-app:editor:wcc-space-real-id')).toBeInTheDocument()
     })
 
-    it('falls through to a plain space route when the second segment is not a real project slug', async () => {
+    // Audit F010 (2026-10-28): a mistyped project address used to open the
+    // space's own front page under the wrong address, so a visitor could not
+    // tell the project was missing. The server's 404 now gets its own card.
+    it('says there is no such project when the server answers 404, instead of opening the space', async () => {
         // No entry in mockVanityResolutions for 'somespace/randomtext' — the
         // hook resolves to null (mocked 404), same as production.
         window.history.pushState({}, '', '/somespace/randomtext')
         render(<RootApp />)
 
+        expect(await screen.findByTestId('missing-project-card')).toHaveTextContent(
+            'There is no project called “randomtext” in the space “somespace”.'
+        )
+        expect(screen.queryByText(/space-surface-app/)).toBeNull()
+        expect(screen.getByRole('link', { name: 'See what is in this space' })).toHaveAttribute('href', '/somespace/projects')
+        expect(screen.getByRole('link', { name: 'Go to the front page' })).toHaveAttribute('href', '/')
+        expect(window.location.pathname).toBe('/somespace/randomtext')
+    })
+
+    it('still opens the space when the question failed rather than answered 404', async () => {
+        mockVanityResolutions['somespace/randomtext'] = Object.assign(new Error('Unauthorized'), { status: 401 })
+        window.history.pushState({}, '', '/somespace/randomtext')
+        render(<RootApp />)
+
         expect(await screen.findByText('space-surface-app:editor:somespace')).toBeInTheDocument()
+        expect(screen.queryByTestId('missing-project-card')).toBeNull()
+    })
+
+    it('a moved project still forwards, and the bare space still opens', async () => {
+        mockVanityResolutions['oldspace/moved'] = { space: null, project: null, movedTo: { spaceId: 'newspace', projectId: 'p-1' } }
+        window.history.pushState({}, '', '/oldspace/moved')
+        const { unmount } = render(<RootApp />)
+        await waitFor(() => expect(window.location.pathname).toBe('/newspace/p/p-1'))
+        expect(screen.queryByTestId('missing-project-card')).toBeNull()
+        unmount()
+
+        window.history.pushState({}, '', '/somespace')
+        render(<RootApp />)
+        expect(await screen.findByText('space-surface-app:editor:somespace')).toBeInTheDocument()
+    })
+})
+
+// The old space's bare address after its front door moved to another space:
+// the server's { movedTo } is followed with the same replace() an old project
+// link gets (SlugProjectRoute). No answer: the space opens as before.
+describe('RootApp space root forward', () => {
+    afterEach(() => {
+        window.history.pushState({}, '', '/')
+        for (const key of Object.keys(mockSpaceRootResolutions)) delete mockSpaceRootResolutions[key]
+    })
+
+    it('sends /old-space on to its front door\'s new address, query and hash kept', async () => {
+        mockSpaceRootResolutions['old-space'] = { movedTo: { spaceId: 'new-space', projectId: 'old-door' } }
+        window.history.pushState({}, '', '/old-space?embed=1#top')
+        render(<RootApp />)
+
+        expect(await screen.findByText('space-surface-app:editor:new-space')).toBeInTheDocument()
+        expect(window.location.pathname).toBe('/new-space/p/old-door')
+        expect(window.location.search).toBe('?embed=1')
+        expect(window.location.hash).toBe('#top')
+    })
+
+    it('opens a space with nothing to forward exactly as before', async () => {
+        window.history.pushState({}, '', '/quiet-space')
+        render(<RootApp />)
+
+        expect(await screen.findByText('space-surface-app:editor:quiet-space')).toBeInTheDocument()
+        expect(window.location.pathname).toBe('/quiet-space')
+    })
+
+    it('asks only for the bare address: a project link inside the old space stays put', async () => {
+        mockSpaceRootResolutions['old-space'] = { movedTo: { spaceId: 'new-space', projectId: 'old-door' } }
+        window.history.pushState({}, '', '/old-space/p/kept')
+        render(<RootApp />)
+
+        expect(await screen.findByText('space-surface-app:editor:old-space')).toBeInTheDocument()
+        expect(window.location.pathname).toBe('/old-space/p/kept')
+    })
+
+    it('on the space\'s own domain the space opens as before: another space has no address there', async () => {
+        // `/` on the domain IS the space. /new-space/p/old-door stays domain-relative
+        // and reads back as a project slug of the host space (spaceRouting withHostSpace).
+        mockSpaceRootResolutions['old-space'] = { movedTo: { spaceId: 'new-space', projectId: 'old-door' } }
+        setHostSpace({ id: 'old-space', slug: 'old-space', platformOrigin: 'https://diiii.xyz' })
+        try {
+            window.history.pushState({}, '', '/')
+            render(<RootApp />)
+
+            expect(await screen.findByText('space-surface-app:editor:old-space')).toBeInTheDocument()
+            expect(window.location.pathname).toBe('/')
+        } finally {
+            setHostSpace(null)
+        }
     })
 })
 

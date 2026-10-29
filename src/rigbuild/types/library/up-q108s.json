@@ -1,0 +1,127 @@
+{
+  "id": "up-q108s",
+  "code": "UP-Q108S",
+  "identified": "EQUIVALENT",
+  "identifiedNote": "NOT FOUND — modelled on an EQUIVALENT",
+  "maker": null,
+  "model": null,
+  "modelledOn": "MagicFX CO2 Jet II",
+  "product": "equivalent: MagicFX CO2 Jet II",
+  "category": "co2-jet",
+  "modes": [
+    {
+      "name": "3ch-assumed",
+      "footprint": 3,
+      "channels": [
+        {
+          "role": "tilt",
+          "label": "Angle",
+          "default": 128
+        },
+        {
+          "role": "speed",
+          "label": "Speed"
+        },
+        {
+          "role": "aux1",
+          "label": "Output (valve ≥ 200)"
+        }
+      ],
+      "channelsSource": {
+        "basis": "ASSUMED",
+        "grade": "STILL ASSUMED",
+        "gradeWhy": "UP-Q108S is on neither maker site (2026-09-29); UPlight's DMX CO2 column machines are UP-QZ150Y/QZ250Y/QZ12L/QZ18L (no channel count printed)",
+        "fixture": "MagicFX PSYCO2JET (the collected MagicFX CO2jet II manual has no DMX table; same maker, same class)",
+        "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/magicfx/psyco2jet.json",
+        "title": "Open Fixture Library: MagicFX PSYCO2JET, \"Raw\"",
+        "pages": "mode \"Raw\"",
+        "licence": "MIT (Open Fixture Library)",
+        "accessed": "2026-09-29",
+        "fill": [
+          "CO₂ is not drawn in the room; a static CO2jet II ignores the angle channel"
+        ]
+      },
+      "assumed": "ASSUMED from MagicFX PSYCO2JET \"Raw\" (Open Fixture Library) — verify on the rental unit",
+      "src": null,
+      "basis": "ASSUMED"
+    }
+  ],
+  "defaultMode": null,
+  "modesOwed": true,
+  "assumedMode": "3ch-assumed",
+  "power_w": {
+    "value": 20,
+    "src": "MAGICFX",
+    "basis": "EQUIVALENT"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 4.2,
+    "src": "MAGICFX",
+    "basis": "EQUIVALENT"
+  },
+  "size_mm": {
+    "value": [
+      231,
+      200,
+      125
+    ],
+    "src": "MAGICFX",
+    "basis": "EQUIVALENT",
+    "note": "axis order not stated; modelled standing, 200 W x 125 D x 231 H"
+  },
+  "pan_tilt_deg": null,
+  "ip": null,
+  "optics": {
+    "beam_deg": null,
+    "zoom_deg": null,
+    "lux": null,
+    "at_m": null,
+    "photometrySrc": null,
+    "photometryBasis": null
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": null,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/co2.glb",
+    "sidecar": "scripts/place/fixtures/glb/co2.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": null,
+    "tiltY": null,
+    "lensY": 0.349,
+    "sizeAtHome_mm": {
+      "width_x": 290,
+      "depth_z": 165,
+      "height_y": 350
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "MAGICFX": {
+      "url": "https://www.sfxsupplies.co.uk/products/magicfx-co2-jet-ii",
+      "what": "MagicFX CO2 Jet II — equivalent for UP-Q108S"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "co2",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "equivalent",
+    "date": "2026-09-29",
+    "sources": [
+      "MAGICFX"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 0,
+      "datasheet": 0,
+      "equivalent": 3,
+      "assumed": 2,
+      "unknown": 0
+    }
+  }
+}

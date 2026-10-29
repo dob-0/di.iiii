@@ -1,0 +1,84 @@
+{
+ "what": "MOXIR v2.9: the U top row moved 1 m toward the dance floor, off the roof frame line (owner 2026-10-14 ~02:5x, screenshot Screenshot_20261014_025228.png: \"you put the beams with the line of the arc and will block so change the places make a bit right or left\")",
+ "source": "measured, not guessed: scripts/place/beam_clearance.mjs against the project hall GLB (asset e0cb5dde...): at z -11.97 every top-row beam (axis + 8 rim rays at 0.9 deg) stopped at 10.68 m on hall-frame (the space frame bottom chord line z -12); any row shift of 0.5-1.25 m either way reaches 13.2-13.33 m (deck/top layer). 1.0 m chosen for margin: the hall is estimated from photos, not taped. x, height and aim unchanged.",
+ "moves": [
+  {
+   "id": "rig-beam-planes-01",
+   "position": [
+    -15.714,
+    0.7,
+    -10.97
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-02",
+   "position": [
+    -9.429,
+    0.7,
+    -10.97
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-03",
+   "position": [
+    -3.143,
+    0.7,
+    -10.97
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-04",
+   "position": [
+    3.143,
+    0.7,
+    -10.97
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-05",
+   "position": [
+    9.429,
+    0.7,
+    -10.97
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-06",
+   "position": [
+    15.714,
+    0.7,
+    -10.97
+   ],
+   "rotation": [
+    3.141592653589793,
+    0,
+    0
+   ]
+  }
+ ]
+}

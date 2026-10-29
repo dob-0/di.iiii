@@ -91,7 +91,7 @@
     appearance: none;
     background: none;
     border: 1px solid rgba(var(--di-cyan-rgb), 0.2);
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
     color: rgba(255, 255, 255, 0.55);
     font-size: var(--di-text-2);
     letter-spacing: 0.08em;
@@ -175,7 +175,7 @@
     height: 64px;
     transform: translate(-50%, -50%);
     border: 1px dashed rgba(var(--di-cyan-rgb), 0.5);
-    border-radius: 50%;
+    border-radius: var(--di-radius);
 }
 
 .sh-help-cam {
@@ -184,7 +184,7 @@
     top: calc(52% - 4px);
     width: 8px;
     height: 8px;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     background: var(--di-cyan);
     box-shadow: 0 0 8px rgba(var(--di-cyan-rgb), 0.8);
     animation: sh-help-orbit-dot 6s linear infinite;
@@ -251,7 +251,7 @@
     height: 84px;
     transform: translate(-50%, -50%);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.5);
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     animation: sh-help-pulse 3s ease-in-out infinite;
 }
 
@@ -261,7 +261,7 @@
     bottom: 12px;
     padding: var(--di-space-1) var(--di-space-3);
     border: 1px solid var(--di-cyan);
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
     color: var(--di-cyan);
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
@@ -337,7 +337,7 @@
     display: grid;
     place-items: center;
     border: 1px solid var(--di-cyan);
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     color: var(--di-cyan);
     font-size: var(--di-text-2);
     font-weight: 700;
@@ -490,3 +490,12 @@
     color: rgba(255, 255, 255, 0.3);
     font-size: var(--di-text-2);
 }
+
+/* Keyboard choices (Shortcuts tab): a plain checkbox and a sentence, left-aligned, easy to hit. */
+.sh-help-keychoice {
+    justify-content: flex-start;
+    align-items: flex-start;
+    cursor: pointer;
+}
+.sh-help-keychoice input { margin-top: var(--di-space-1); width: 18px; height: 18px; flex: none; }
+.sh-help-keychoice span { text-align: left; }

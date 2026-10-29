@@ -1,0 +1,93 @@
+{
+  "ClassName": "Folder",
+  "Children": [
+    {
+      "Name": "Ceiling_Start",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          40,
+          1,
+          30
+        ],
+        "CFrame": {
+          "CFrame": {
+            "position": [
+              20.0,
+              14.5,
+              15.0
+            ],
+            "orientation": [
+              [
+                1,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                0,
+                1
+              ]
+            ]
+          }
+        },
+        "Color": [
+          0.22,
+          0.22,
+          0.22
+        ],
+        "Material": "Concrete"
+      }
+    },
+    {
+      "Name": "Ceiling_Hall",
+      "ClassName": "Part",
+      "Properties": {
+        "Anchored": true,
+        "Size": [
+          60,
+          1,
+          30
+        ],
+        "CFrame": {
+          "CFrame": {
+            "position": [
+              70.0,
+              14.5,
+              15.0
+            ],
+            "orientation": [
+              [
+                1,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                0,
+                1
+              ]
+            ]
+          }
+        },
+        "Color": [
+          0.22,
+          0.22,
+          0.22
+        ],
+        "Material": "Concrete"
+      }
+    }
+  ]
+}

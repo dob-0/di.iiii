@@ -4,13 +4,15 @@ import * as THREE from 'three'
 import FixtureBodies from './FixtureBodies.jsx'
 import RigFlashes from './RigFlashes.jsx'
 import DmxProbe from './DmxProbe.jsx'
-import { TYPE_LIBRARY } from './types/index.js'
+import { useProjectLibrary } from './types/projectTypes.js'
 import { libraryWithShow } from './rental.js'
 import { rigBodyLamps } from './rigBodyLamps.js'
 import { bounceOf, bounceSpecOf, hazeGlowFactor } from './rigBounce.js'
 import { typeById } from './fixtureTypes.js'
 import { hazeMachinesOf } from '../objectComponents/hazeField.js'
 import { getAtmosphere, getHazeField, setHazeMachines } from '../objectComponents/atmosphereStore.js'
+import { RIG_BOUNCE_NAME } from '../project/viewport/measure/measureLights.js'
+import { measurementOf } from '../project/viewport/measure/measureState.js'
 
 // THE LAMPS' BODIES IN ANY ROOM — the space view (LiveProjectScene), the Studio and the
 // rooms beside the plot and the cards (StudioViewport). RIG_BUILD.md §12.4.
@@ -24,7 +26,10 @@ import { getAtmosphere, getHazeField, setHazeMachines } from '../objectComponent
 // Lazy-loaded by the rooms and mounted only when the document has a typed lamp, so a
 // space with no rig pays nothing — not even the fixture models' download.
 
-export default function RigBodies({ entities, library = TYPE_LIBRARY }) {
+// `library` absent: the project's own types alone (types/projectTypes.js), not the whole fixture library.
+export default function RigBodies({ entities, library: givenLibrary = null, onPick }) {
+    const projectLibrary = useProjectLibrary(givenLibrary ? null : entities || null)
+    const library = givenLibrary || projectLibrary
     const shownLibrary = useMemo(() => libraryWithShow(library, entities), [library, entities])
     const lamps = useMemo(() => rigBodyLamps(entities, shownLibrary), [entities, shownLibrary])
     // The rig's own light coming back off the hall (rigBounce.js): only in a room whose
@@ -34,7 +39,7 @@ export default function RigBodies({ entities, library = TYPE_LIBRARY }) {
     return (
         <>
             <Suspense fallback={null}>
-                <FixtureBodies lamps={lamps} library={shownLibrary} />
+                <FixtureBodies lamps={lamps} library={shownLibrary} onPick={onPick} />
             </Suspense>
             {/* strobes and blinders: their face and their flash (looks.js flashEntities) */}
             <RigFlashes entities={entities} />
@@ -42,7 +47,8 @@ export default function RigBodies({ entities, library = TYPE_LIBRARY }) {
             <DmxProbe entities={entities} />
             {/* the hazers and fog machines, for the room's haze field (hazeField.js) */}
             <HazeMachines entities={entities} library={shownLibrary} />
-            {bounce ? <ambientLight color={bounce.color} intensity={bounce.intensity} /> : null}
+            {/* named so the measurement mode can tell it from the work light (measure/measureLights.js) */}
+            {bounce ? <ambientLight name={RIG_BOUNCE_NAME} color={bounce.color} intensity={bounce.intensity} /> : null}
             {bounce ? <HazeGlow bounce={bounce} spec={bounceSpecOf(entities)} /> : null}
         </>
     )
@@ -71,6 +77,12 @@ const glowColour = new THREE.Color()
 function HazeGlow({ bounce, spec }) {
     useFrame(({ scene, gl }) => {
         if (!scene.fog) return
+        // measuring direct light only (measurement mode without &bounce=1): no return light in the haze either
+        const measuring = measurementOf(gl)
+        if (measuring && !measuring.bounce) {
+            scene.fog.color.setRGB(0, 0, 0)
+            return
+        }
         // the haze's own scatter on top of the walls' return (rigBounce.js hazeGlowFactor),
         // with the haze the beams are drawn in: the field's fill, else the room's scattering
         const sigma = getHazeField(gl)?.fill ?? getAtmosphere(gl)?.scattering ?? 0

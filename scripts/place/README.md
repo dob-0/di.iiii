@@ -121,6 +121,34 @@ one. `--dry-run` lists each swap with both sizes. A file over the server's `MAX_
 and reported, never transcoded. Limit: the new rows sit above the
 existing top row, so on a 37-picture wall they hang about 8.6 m up; move them in Studio if that is too high.
 
+### Any file into one private project, with its provenance (`add-files.mjs`, 2026-10-04)
+
+A production owns files that are not pictures: the makers' manuals (PDF), an equipment order (CSV, PDF), a patch
+(MVR, GDTF), sketches (HTML), research (Markdown), scan meshes (GLB, OBJ). `add-files.mjs` puts them in ONE project
+as **project assets** (the project's Files panel is `document.assets`; a PDF turns into image pages only when
+someone presses "+ Add"; the other kinds are "stored and usable by URL"). It writes `upsertAsset` ops and no
+entity, no new type. What goes in is a manifest (`manifests/moxir-documents.json`): folders, each with a source and a
+licence note, and include/exclude rules. `--from-space-api` also pulls the SPACE files of another install (the
+maker PDFs) into `--stage`; `--media-json src/rigbuild/items/media.json` names each manual's maker page and date by sha256.
+
+```
+node scripts/place/add-files.mjs --manifest scripts/place/manifests/moxir-documents.json --name moxir --project moxir-documents \
+  --create-private --api https://dev.diiii.xyz/serverXR --token-file ~/work/di.iiii/serverXR/.env.local --token-key LIVE_API_TOKEN \
+  --from-space-api https://local.thedi.studio/serverXR --stage <dir> --media-json src/rigbuild/items/media.json --dedupe-space --dry-run
+```
+
+Drop `--dry-run` to write. Rules the tool keeps: the project is created with `visibility: 'private'` in the same
+request and nothing is uploaded until the server reads it back private (a public space's file list is public; a
+private project's document and files answer visitors 404); a name already in the project is skipped; a file with the
+same sha256 as an asset in the project or (with `--dedupe-space`) another project of the space, or the same name and
+size there, is a duplicate and not added; a file over `--max-bytes` (default 100 MB, Cloudflare's 413) is refused by
+name, size and reason without being tried, never split or transcoded; a server refusal (413, 415) is reported by name, size,
+status and reason and the run goes on (exit 2 unless `--allow-skips`); `PROVENANCE.md` (original path, sha256, size,
+date, source, licence note, status for every file, refused and duplicate ones too) is uploaded last and replaces an
+earlier one; the document is read back and every upload checked (non-image files must hash to their asset id).
+Tests: `add-files.test.js`. Limits: the server re-encodes images (privacy scrub), so a PNG or JPG is kept but its id
+is not its source sha256; a panorama 12032x3296 was refused 415 earlier. CPU above 85 C pauses the run.
+
 What ends up in the working folder:
 
 | file | what it is |
@@ -135,6 +163,45 @@ What ends up in the working folder:
 | `place-fitted.glb` | the room as it ships, standing upright on its own floor |
 | `import.json` | where it went and the addresses to walk |
 | `pulled/` | only with `--from-space`: the footage as it came down off the API |
+
+## 360 footage — an Insta360 (or any 360 camera) as scan input
+
+Footage from a 360 camera goes in the same drop folder, or the same space's footage room, as phone clips. Nothing to
+switch on: step 1 (`frames.mjs`) looks inside each file and cuts every sphere into ordinary pinhole views.
+
+```bash
+# export from Insta360 Studio first: Export, MP4 / JPG, "Panoramic" (not Reframe), highest resolution
+node scripts/place/place.mjs --from /mnt/data/footage/hayfilm-walk --name hayfilm --scale-edge 24   # phone + 360 mixed
+node scripts/place/place.mjs --from-space hayfilm --name hayfilm --scale-edge 24                    # a space's own footage
+node scripts/place/frames.mjs --from <folder> --work <work> --views 8 --pano-fov 90 --mask-sector 180:50   # step 1 alone
+```
+
+- **Found by content, never by name.** A picture or clip is a sphere when its Photo Sphere XMP (`GPano:ProjectionType`)
+  or ffprobe's spherical side data says equirectangular and it is 2:1, or when it is 2:1 and at least 1440 px wide with no
+  metadata (the basis is printed). A raw `.insv` / `.insp` (dual fisheye) is found by Insta360's 32-byte trailer
+  signature or by two square video streams, skipped, and the export steps above are printed. The Insta360 SDK is not
+  bundled: it is given on application, with an NDA and a business licence (insta360.com/sdk/apply); its redistribution
+  terms were not read (owed).
+- **Method.** Each sphere becomes pinhole views that share one centre, the practice of COLMAP's `panorama_sfm.py` and
+  AliceVision's Split360Images node. Default: 8 views round the horizon, 90 degrees each (45 degrees apart: 50 % overlap),
+  plus one straight up (trusses, lanterns); nothing looks down. View side = the sphere's own density
+  (width x fov / 360, 640 to 2400 px), so nothing is upscaled. The EXIF carries `FocalLengthIn35mmFilm` so the build starts
+  from the true focal. Output: `images/pano-NNNNN-vK.jpg`, beside the phone's `frame-NNNNN.jpg`.
+- **Photographer.** Everything pointing more than `--mask-below` (60) degrees under the horizon is painted black (no
+  features, so the matcher ignores it), and a view that is more than half black is not written. A person standing behind
+  a hand-held camera: `--mask-sector <yaw>:<half-width>` (for example `180:50`) blacks out that sector; the default is
+  none, because where the photographer stands depends on how the camera was held.
+- **Sampling.** Clips are sampled at `--pano-fps` (1), blur and sameness are scored on the sphere (own batch, not mixed
+  with phone frames), and at most `--max-pano-frames` (150) spheres are cut, evenly spread: 150 x 9 = 1350 views is already
+  heavy for one Meshroom run. These two numbers are starting points, not measured on a real hall.
+- **Rig.** `rig.json` in the work folder lists, per sphere, its views, so views of one centre can be found again.
+  Meshroom's Split360Images writes the same relation as `rig.sfm` and CameraInit has `rigId` / `subPoseId` fields. The
+  Meshroom batch in `colab-job.mjs` is fed a folder of pictures and does not read that relation, so today the views are
+  matched as independent cameras with one shared focal. A rig-aware build is owed and untested.
+- **Checked** on a synthetic box room (`pano_synth.py`, ray cast from numbers, no photograph): each view differs from a true
+  pinhole render of the same room by 1.7 to 2.9 grey levels of 255 (a straight line stays straight because the view is a
+  pinhole image), and by 2.2 to 2.5 from ffmpeg's `v360`. A view turned 5 degrees off fails the same test (above 8).
+  Tests: `npx vitest run scripts/place/pano`. Not tested: a real Insta360 file.
 
 ## Looking at the scanning page
 
@@ -674,3 +741,9 @@ package to be under 88 °C before each.
 The Meshroom invocation in `reconstruct.py` is written from the 2025.1.0
 documentation. The rest of the Colab step — sign-in, session, chunked upload,
 detached start, polling, download, stop — has been run against a real box.
+
+## Sheets for a show (`scenes_sheet.py`, `laser_sheet.py`, 2026-10-15)
+
+`python3 -I scripts/place/scenes_sheet.py SCENES.json out.html [--meta M.json] [--front F.html]` is the owner's picture per scene;
+`laser_sheet.py SCENES.json laser-plan.json out.html [--site S.json] [--meta M.json]` is the laser design sheet (plan from `laser_frames.py --plan-out`).
+Production text lives in the `--meta`/`--front`/`--site` files beside the scenes file (`rigs/moxir-*-2026-10-15*`); outside views for `look_shots.cjs`: `rigs/moxir-views-2026-10-15.json`.

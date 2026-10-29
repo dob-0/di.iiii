@@ -41,6 +41,8 @@ body.is-make .account-btn-wrapper {
     --make-card: #FFFFFF;
     --make-ink: #26241F;
     --make-ink-soft: #7C7568;
+    /* the second-language line and the 'later' button: 5.5:1 on the paper (soft was 4.3:1; UX audit F103) */
+    --make-ink-readable: #6B6458;
     --make-line: rgba(38, 36, 31, 0.10);
     --make-shadow: 0 -16px 44px rgba(38, 30, 18, 0.16);
     /* Two rows: the picture on its own, then the other three words. */
@@ -281,7 +283,7 @@ body.is-make .account-btn-wrapper {
     transform: translateX(-50%);
     margin: 0;
     padding: var(--di-space-2) var(--di-space-4);
-    border-radius: 999px;
+    border-radius: var(--di-radius);
     background: rgba(251, 248, 243, 0.94);
     color: var(--make-ink);
     font-size: var(--di-text-3);
@@ -495,7 +497,7 @@ body.is-make .account-btn-wrapper {
     margin: 0;
     padding: 0;
     border: 0;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     background: transparent;
     cursor: pointer;
 }
@@ -503,7 +505,7 @@ body.is-make .account-btn-wrapper {
 .make-swatch-disc {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     background: var(--swatch);
     /* Every hue in the row gets the same hairline, so white and sand are discs
        on paper rather than holes in it. */
@@ -664,7 +666,7 @@ body.is-make .account-btn-wrapper {
 
 .make-surface .raw-selection-pill {
     padding: var(--di-space-2) var(--di-space-3);
-    border-radius: 999px;
+    border-radius: var(--di-radius);
     background: var(--make-ink);
     color: var(--make-paper);
     font-family: var(--make-sans);
@@ -713,7 +715,7 @@ body.is-make .account-btn-wrapper {
     font-size: var(--di-text-4);
     font-weight: 500;
     letter-spacing: 0.04em;
-    color: var(--make-ink-soft);
+    color: var(--make-ink-readable);
 }
 
 .make-name-input {
@@ -774,7 +776,7 @@ body.is-make .account-btn-wrapper {
     border: 0;
     border-radius: 20px;
     background: transparent;
-    color: var(--make-ink-soft);
+    color: var(--make-ink-readable);
     font-family: inherit;
     cursor: pointer;
 }

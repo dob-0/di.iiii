@@ -34,6 +34,24 @@ export const APP_PAGE_TOOLS = 'tools'
 // app, a script or an AI should identify itself, and the limits it meets. The
 // server's 429 and 403 answers point here, so no space may take the word.
 export const APP_PAGE_FOR_APPS = 'for-apps'
+// The shoot sheet — /shoot/{key} (src/pages/shoot/ShootPage.jsx): a film crew's shared
+// plan for one shoot day, opened by its link. The key is the second segment and
+// the only credential (serverXR/src/routes/shootRoutes.js).
+export const APP_PAGE_SHOOT = 'shoot'
+// The browser half of `di login` — /device (src/pages/DeviceLoginPage.jsx): a
+// terminal shows a code, the person types it here and approves it. Reserved so no
+// space or project can take the word. Checked before reserving, 2026-10-07:
+// /serverXR/api/spaces/device and /serverXR/api/projects/device answer 404 on prod
+// (diiii.xyz) and on the dev tier (the local install was not running to ask).
+export const APP_PAGE_DEVICE = 'device'
+// How a person connects an assistant to di.iiii — /ai/setup (src/pages/AiSetupPage.jsx).
+// The rest of /ai/ is serverXR's (the markdown files and the context an assistant
+// reads, serverXR/src/aiPublic.js and aiContext.js), so only /ai/setup is a page here.
+// NOT checked against the tiers before reserving: the session that added it
+// could not reach them.
+export const APP_PAGE_AI = 'ai'
+export const AI_SETUP_SEGMENT = 'setup'
+export const APP_PAGE_AI_SETUP = 'ai-setup'
 export const RESERVED_APP_SEGMENTS = [
     ...APP_PAGE_PREFERENCES_ALIASES,
     APP_PAGE_WIKI,
@@ -43,6 +61,11 @@ export const RESERVED_APP_SEGMENTS = [
     // Checked before reserving: /serverXR/api/spaces/for-apps 404s on prod and
     // on staging (2026-09-13), so nothing holds the word.
     APP_PAGE_FOR_APPS,
+    // Checked before reserving (2026-10-07): /serverXR/api/spaces/shoot and
+    // /serverXR/api/resolve/shoot 404 on diiii.xyz and dev.diiii.xyz.
+    APP_PAGE_SHOOT,
+    APP_PAGE_DEVICE,
+    APP_PAGE_AI,
     'beta',
     'raw',
     'seed',
@@ -199,6 +222,28 @@ export const getPlatformRedirect = (locationLike = null) => {
     return null
 }
 
+// The address to hand to someone else. When the space has a LIVE own domain
+// (`domain`, from the space's metadata) it is that domain with the space
+// segment dropped — https://yokozo.xyz/taronx-instruments, not
+// https://diiii.xyz/taronx/taronx-instruments. Otherwise it is the platform
+// origin plus `path`, as before. `path` is the ordinary path from
+// buildAppSpacePath / buildPublicProjectPath / buildVanityProjectPath. Only for
+// public viewer links: editor and admin links stay on the platform's origin.
+export const buildShareUrl = ({ spaceId = '', spaceSlug = '', domain = '', path = '/' } = {}) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const host = String(domain || '').trim().toLowerCase()
+    // Already on that domain: the path is domain-relative (hostRelative), keep it.
+    if (!host || (typeof window !== 'undefined' && window.location.hostname.toLowerCase() === host)) {
+        return `${origin}${path}`
+    }
+    const prefix = getAppBasePrefix()
+    const rest = String(path).slice(String(path).startsWith(prefix) ? prefix.length : 0).replace(/^\/+/, '')
+    const [first, ...tail] = rest.split('/')
+    const names = [spaceId, spaceSlug].filter(Boolean).map((name) => String(name).toLowerCase())
+    const inDomain = names.includes(String(first || '').toLowerCase()) ? tail.join('/') : rest
+    return `https://${host}${prefix}/${inDomain}`.replace(/(?<!:)\/{2,}/g, '/')
+}
+
 export const buildAppSpacePath = (spaceId) => {
     const prefix = getAppBasePrefix()
     if (!spaceId) {
@@ -282,6 +327,9 @@ export const isPrivacyPageSegment = (value = '') => (value || '').trim().toLower
 export const isTermsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TERMS
 export const isToolsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TOOLS
 export const isForAppsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_FOR_APPS
+export const isShootPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_SHOOT
+export const isDevicePageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_DEVICE
+export const isAiPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_AI
 export const isSpaceContentsSegment = (value = '') => (value || '').trim().toLowerCase() === SPACE_CONTENTS_SEGMENT
 export const isScanSegment = (value = '') => (value || '').trim().toLowerCase() === SCAN_SEGMENT
 
@@ -304,9 +352,24 @@ export const buildToolsPath = () => {
     return `${prefix}/${APP_PAGE_TOOLS}`.replace(/\/{2,}/g, '/')
 }
 
+// The platform's front page, `/` under the base path. The way out of every
+// "nothing here" card (audit F071, 2026-10-28).
+export const buildFrontPagePath = () => {
+    const prefix = getAppBasePrefix()
+    return prefix ? `${prefix}/` : '/'
+}
+
 export const buildWikiPath = () => {
     const prefix = getAppBasePrefix()
     return `${prefix}/${APP_PAGE_WIKI}`.replace(/\/{2,}/g, '/')
+}
+
+// One wiki article at its own address, /wiki/{id} (G25, 2026-10-21): before,
+// every article was a #hash on one 250,000-character page, so a search engine
+// and a share card only ever saw the one page.
+export const buildWikiArticlePath = (articleId) => {
+    const id = String(articleId || '').trim()
+    return id ? `${buildWikiPath()}/${encodeURIComponent(id)}` : buildWikiPath()
 }
 
 export const getAppLocationState = (locationLike = null) => {
@@ -328,9 +391,13 @@ export const getAppLocationState = (locationLike = null) => {
             }
         }
         if (isWikiPageSegment(segment)) {
+            // A malformed escape (/wiki/%E0) is a miss, not a thrown render.
+            let articleId = relative.split('/')[1] || ''
+            try { articleId = decodeURIComponent(articleId) } catch { articleId = '' }
             return {
                 page: APP_PAGE_WIKI,
-                spaceId: null
+                spaceId: null,
+                ...(articleId ? { wikiArticleId: articleId } : {})
             }
         }
         // /privacy and /terms are plain top-level routes for now; the URL
@@ -357,6 +424,28 @@ export const getAppLocationState = (locationLike = null) => {
         if (isForAppsPageSegment(segment)) {
             return {
                 page: APP_PAGE_FOR_APPS,
+                spaceId: null
+            }
+        }
+        // `/shoot/{key}` — the key is case-sensitive, so it is read from the
+        // original path, never lowercased. A bare `/shoot` has no sheet to show
+        // and gets the page's own "this link is incomplete" answer.
+        if (isShootPageSegment(segment)) {
+            return {
+                page: APP_PAGE_SHOOT,
+                spaceId: null,
+                shootKey: relative.split('/')[1] || ''
+            }
+        }
+        if (isDevicePageSegment(segment)) {
+            return {
+                page: APP_PAGE_DEVICE,
+                spaceId: null
+            }
+        }
+        if (isAiPageSegment(segment) && (relative.split('/')[1] || '').toLowerCase() === AI_SETUP_SEGMENT && !relative.split('/')[2]) {
+            return {
+                page: APP_PAGE_AI_SETUP,
                 spaceId: null
             }
         }

@@ -66,7 +66,7 @@ describe('AuthGate out-of-scope handling', () => {
         await waitFor(() => {
             expect(mockAppNavigate).toHaveBeenCalledWith('/pub', { replace: true })
         })
-        expect(screen.queryByText(/Access restricted/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/Nothing is open at/)).not.toBeInTheDocument()
         expect(screen.queryByText('editor')).not.toBeInTheDocument()
     })
 
@@ -74,7 +74,7 @@ describe('AuthGate out-of-scope handling', () => {
         mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['main']))
         render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
 
-        expect(await screen.findByText(/Access restricted/)).toBeInTheDocument()
+        expect(await screen.findByText(/Nothing is open at/)).toBeInTheDocument()
         expect(mockAppNavigate).not.toHaveBeenCalled()
     })
 
@@ -103,7 +103,7 @@ describe('AuthGate restricted card doors', () => {
         mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open', 'sandbox-guestfa58']))
         render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
 
-        await screen.findByText(/Access restricted/)
+        await screen.findByText(/Nothing is open at/)
         expect(screen.queryByText(/sandbox-guestfa58/)).not.toBeInTheDocument()
         expect(screen.queryByText(/Allowed:/)).not.toBeInTheDocument()
     })
@@ -132,8 +132,7 @@ describe('AuthGate restricted card doors', () => {
         mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open', 'sandbox-guestfa58']))
         render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
 
-        expect(await screen.findByText(/Nothing lives at/)).toBeInTheDocument()
-        expect(screen.queryByText(/Access restricted/)).not.toBeInTheDocument()
+        expect(await screen.findByText(/Nothing is open at/)).toBeInTheDocument()
         // the same doors are still on the card
         expect(screen.getByRole('button', { name: 'Open Space' })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Your private sandbox' })).toBeInTheDocument()
@@ -148,16 +147,15 @@ describe('AuthGate restricted card doors', () => {
     it('titles the tab "Not found", but only for the card that means it', async () => {
         mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open', 'sandbox-guestfa58']))
         render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
-        await screen.findByText(/Nothing lives at/)
+        await screen.findByText(/Nothing is open at/)
         expect(document.title).toBe('Not found — di.iiii')
     })
 
-    it('leaves the tab title alone for a real space out of scope', async () => {
+    it('titles a private space exactly as a missing one (names must not leak)', async () => {
         mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['main']))
-        document.title = 'di.iiii — public spaces on the open web'
         render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
-        await screen.findByText(/Access restricted/)
-        expect(document.title).toBe('di.iiii — public spaces on the open web')
+        await screen.findByText(/Nothing is open at/)
+        expect(document.title).toBe('Not found — di.iiii')
     })
 })
 
@@ -180,39 +178,34 @@ describe('AuthGate not-found card', () => {
         mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
         render(<AuthGate requiredSpaceId="spaces">editor</AuthGate>)
 
-        expect(await screen.findByText(/Nothing lives at “nope”/)).toBeInTheDocument()
-        expect(screen.queryByText(/Nothing lives at “spaces”/)).not.toBeInTheDocument()
+        expect(await screen.findByText(/Nothing is open at “nope”/)).toBeInTheDocument()
+        expect(screen.queryByText(/Nothing is open at “spaces”/)).not.toBeInTheDocument()
     })
 
     it('leaves an ordinary mistyped space id named exactly as typed', async () => {
         mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
         render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
 
-        expect(await screen.findByText(/Nothing lives at “ghost”/)).toBeInTheDocument()
+        expect(await screen.findByText(/Nothing is open at “ghost”/)).toBeInTheDocument()
     })
 
-    it('shows no sign-in form on the not-found card, even with OAuth providers on', async () => {
+    it('P13: a private space and a missing one get the same words and the same sign-in door', async () => {
         providersState.current = { github: true, google: true }
-        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
-        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
-
-        await screen.findByText(/Nothing lives at/)
-        expect(screen.queryByRole('button', { name: /Continue with GitHub/ })).not.toBeInTheDocument()
-        expect(screen.queryByRole('button', { name: /Continue with Google/ })).not.toBeInTheDocument()
-        expect(screen.queryByPlaceholderText('Password')).not.toBeInTheDocument()
-        expect(screen.queryByText('Create one')).not.toBeInTheDocument()
-        // The doors onward are still on the card — a not-found address is
-        // not a dead end, only signing in to it is nonsense.
-        expect(screen.getByRole('button', { name: 'Open Space' })).toBeInTheDocument()
-    })
-
-    it('keeps the sign-in form when the space is real and merely out of reach', async () => {
-        providersState.current = { github: true, google: true }
-        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
-        render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
-
-        expect(await screen.findByText(/Access restricted/)).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: /Continue with GitHub/ })).toBeInTheDocument()
+        const answer = async (id) => {
+            mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
+            const view = render(<AuthGate requiredSpaceId={id}>editor</AuthGate>)
+            await screen.findByText(/Nothing is open at/)
+            const text = view.container.textContent.replaceAll(`“${id}”`, '“X”')
+            const signIn = Boolean(screen.queryByRole('button', { name: /Continue with GitHub/ }))
+            view.unmount()
+            return { text, signIn }
+        }
+        const privateSpace = await answer('secret')
+        const missing = await answer('ghost')
+        expect(privateSpace.text).toBe(missing.text)
+        expect(privateSpace.signIn).toBe(true)
+        expect(missing.signIn).toBe(true)
+        expect(privateSpace.text).not.toMatch(/restricted|scoped/i)
     })
 })
 
@@ -251,7 +244,7 @@ describe('AuthGate on a local install (requireAuth off)', () => {
 
         expect(await screen.findByText('editor')).toBeInTheDocument()
         expect(screen.queryByText(/Access restricted/)).not.toBeInTheDocument()
-        expect(screen.queryByText(/Nothing lives at/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/We could not find/)).not.toBeInTheDocument()
         expect(screen.queryByText(/Sign in/)).not.toBeInTheDocument()
     })
 
@@ -266,7 +259,7 @@ describe('AuthGate on a local install (requireAuth off)', () => {
         mockUseAuthSession.mockReturnValue(localSession())
         render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
 
-        expect(await screen.findByText(/Nothing lives at/)).toBeInTheDocument()
+        expect(await screen.findByText(/We could not find/)).toBeInTheDocument()
         expect(screen.queryByText('editor')).not.toBeInTheDocument()
         expect(screen.queryByText(/Access restricted/)).not.toBeInTheDocument()
         // Nothing to sign in to on a local install: no provider buttons, no
@@ -277,6 +270,26 @@ describe('AuthGate on a local install (requireAuth off)', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Open Space' }))
         expect(mockAppNavigate).toHaveBeenCalledWith('/open')
+    })
+
+    // Audit F071 (2026-10-28): the card's one button was "Open Space" (the
+    // shared space of that name, not the way home), it spoke of "doors", and
+    // the di.iiii mark was plain text.
+    it('names the address it could not find and gives the three ways out', async () => {
+        mockUseAuthSession.mockReturnValue(localSession())
+        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
+
+        expect(await screen.findByText(/We could not find “ghost”\. There is no space with that address\. Check the spelling\./)).toBeInTheDocument()
+        expect(screen.queryByText(/your own doors/)).not.toBeInTheDocument()
+        // getByText + closest, not getByRole: role queries over the MUI card
+        // are slow enough in jsdom to time the test out.
+        const link = (name) => screen.getByText(name).closest('a')
+        expect(screen.getByTestId('not-found-brand')).toHaveAttribute('href', '/')
+        expect(link('Go to the front page')).toHaveAttribute('href', '/')
+        expect(link('See spaces')).toHaveAttribute('href', '/spaces')
+        expect(link('Get help')).toHaveAttribute('href', '/wiki')
+        fireEvent.click(link('See spaces'))
+        expect(mockAppNavigate).toHaveBeenCalledWith('/spaces')
     })
 
     // A bare /make or /light no longer reaches this card at all: those words
@@ -342,6 +355,21 @@ describe('AuthGate sign-in card priority', () => {
         const field = await screen.findByLabelText('Access token')
         expect(field).toHaveAttribute('type', 'password')
         expect(field).toHaveFocus()
+    })
+
+    // Design audit D16: the card drew MUI's 8 px corner, the field and the
+    // button its 4 px one. Owner, 2026-10-21: 0 px for every control.
+    it('draws the card, the field and the button square', async () => {
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        const { container } = render(<AuthGate>editor</AuthGate>)
+        await screen.findByLabelText('Access token')
+        const round = [...container.querySelectorAll('*')]
+            .filter((el) => !['', '0px'].includes(getComputedStyle(el).borderRadius))
+            .map((el) => `${el.tagName.toLowerCase()}.${[...el.classList].find((c) => c.startsWith('Mui')) || ''} ${getComputedStyle(el).borderRadius}`)
+        expect(round).toEqual([])
+        for (const button of screen.getAllByRole('button', { name: 'Sign in' })) {
+            expect(getComputedStyle(button).borderRadius).toBe('0px')
+        }
     })
 })
 
@@ -465,7 +493,7 @@ describe('AuthGate for a brand-new account', () => {
         render(<AuthGate requiredSpaceId="sandbox-22b50e95382240d7">editor</AuthGate>)
 
         expect(screen.getByText('editor')).toBeInTheDocument()
-        expect(screen.queryByText(/Access restricted/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/Nothing is open at/)).not.toBeInTheDocument()
     })
 
     it('opens the Open Space editor', () => {
@@ -480,7 +508,7 @@ describe('AuthGate for a brand-new account', () => {
         mockUseAuthSession.mockReturnValue(freshAccount())
         render(<AuthGate requiredSpaceId="sandbox-someoneelse0000">editor</AuthGate>)
 
-        expect(await screen.findByText(/Access restricted/)).toBeInTheDocument()
+        expect(await screen.findByText(/Nothing is open at/)).toBeInTheDocument()
         expect(screen.queryByText('editor')).not.toBeInTheDocument()
     })
 
@@ -493,7 +521,7 @@ describe('AuthGate for a brand-new account', () => {
         await waitFor(() => {
             expect(mockAppNavigate).toHaveBeenCalledWith('/sandbox-22b50e95382240d7/studio?auth=ok#here', { replace: true })
         })
-        expect(screen.queryByText(/Nothing lives at/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/Nothing is open at/)).not.toBeInTheDocument()
     })
 
     it('says nothing lives at a gone guest sandbox this browser never held', async () => {
@@ -501,7 +529,7 @@ describe('AuthGate for a brand-new account', () => {
         mockUseAuthSession.mockReturnValue(freshAccount())
         render(<AuthGate requiredSpaceId="sandbox-guestgone">editor</AuthGate>)
 
-        expect(await screen.findByText(/Nothing lives at/)).toBeInTheDocument()
+        expect(await screen.findByText(/Nothing is open at/)).toBeInTheDocument()
         expect(mockAppNavigate).not.toHaveBeenCalled()
     })
 })
@@ -518,7 +546,9 @@ describe('gate cards stay reachable in a short window', () => {
     })
 
     const expectScrollableFrame = () => {
-        const logo = screen.getAllByText((_, el) => el?.tagName === 'H6' && el.textContent.trim() === 'di.iiii')[0]
+        // The mark is an H6 on the sign-in card and a link to the front page on
+        // the not-found cards (audit F071); either way its parent is the card.
+        const logo = screen.getAllByText((_, el) => (el?.tagName === 'H6' || el?.dataset?.testid === 'not-found-brand') && el.textContent.trim() === 'di.iiii')[0]
         const card = logo.parentElement
         const frame = card.parentElement
         const frameStyle = window.getComputedStyle(frame)
@@ -534,7 +564,7 @@ describe('gate cards stay reachable in a short window', () => {
     it('the access-restricted card', async () => {
         mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['main']))
         render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
-        await screen.findByText(/Access restricted/)
+        await screen.findByText(/Nothing is open at/)
         expectScrollableFrame()
     })
 

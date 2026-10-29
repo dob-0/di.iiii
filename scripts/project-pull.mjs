@@ -14,7 +14,7 @@
  *
  * Options:
  *   --space   <id>    Target local space (default: the project's own spaceId on live)
- *   --from    <url>   Live server API base (default: $LIVE_API_URL or https://di-studio.xyz/serverXR)
+ *   --from    <url>   Live server API base (default: $LIVE_API_URL or https://diiii.xyz/serverXR)
  *   --to      <url>   Local server API base (default: $LOCAL_API_URL or http://localhost:4000/serverXR)
  *   --token   <token> Bearer token for the live server (default: $LIVE_API_TOKEN).
  *                     Public projects need none.
@@ -48,7 +48,7 @@ import { ensureDestinationVisibility, visibilityCreateFields } from './project-v
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const { diffDocumentLoss, describeLoss, parseAcceptLoss, lossGate } = createRequire(import.meta.url)('../shared/documentLoss.cjs')
-const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
+const DEFAULT_LIVE_URL = 'https://diiii.xyz/serverXR'
 const DEFAULT_LOCAL_URL = 'http://localhost:4000/serverXR'
 
 const parseArgs = (argv) => {
@@ -284,7 +284,7 @@ const main = async () => {
     } catch (error) {
         if (error.status !== 409) throw error
         if (!force) {
-            throw new Error(`Project "${projectId}" already exists locally. Re-run with --force to overwrite its document.`)
+            throw new Error(`Project "${projectId}" already exists locally. Re-run with --force to overwrite its document.`, { cause: error })
         }
         console.log('  already exists — overwriting (--force)')
     }

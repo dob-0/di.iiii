@@ -128,17 +128,11 @@ Use `--ui-*` tokens in components, never hardcode the raw `rgba` unless the comp
 
 ## Spacing and Sizing
 
-### Radius scale
-| Context | Value |
-|---------|-------|
-| Viewport buttons, panels, inline inputs | `6px` |
-| Cluster outer, dialogs | `7px` |
-| Inspector fields, pane controls, scc buttons | `4px` |
-| Small inline (collapse, close, tag) | `3px` |
-| Color swatch | `2px` |
-| Circular (presence dot, toggle thumb) | `50%` |
+### Radius
 
-**Rule:** Do not add a new radius value. Map to the nearest entry in this table.
+**Rule:** one radius, `0` (`var(--di-radius)`). Every control, panel, dialog, field and swatch is square. A status dot (presence, a recording light) stays round (`50%`); it is a mark, not a control.
+
+**Why:** the owner, 2026-09-30: "in design we not use the round things"; confirmed 2026-10-21 as 0 px for every control, status dots round. The old scale here (6, 7, 4, 3, 2 px) is retired; a value still written in px is owed a change, not a precedent. See `docs/ai/golden_rules.md` → "Controls are rectangles".
 
 ### Button sizing
 | Context | Size |

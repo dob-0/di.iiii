@@ -880,6 +880,8 @@ input.pinned { border-color: var(--accent); }
 .title > * { flex: none; }
 .title > #showName { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .statusstrip.bad { color: var(--danger); }
+/* A control this desk cannot offer (caps, or no secure page for mic and MIDI) is not drawn at all. */
+.capoff { display: none !important; }
 /* The show note is a row of the top bar, last, full width: it stays in view with the bar. */
 .topbar > .shownote { flex: 1 1 100%; order: 10; border-top: 1px solid var(--line); border-bottom: 0; }
 
@@ -1062,8 +1064,6 @@ body.space .stage { cursor: grab; }
 }
 .popitem:hover, .popitem:focus-visible { background: var(--pane2); outline: none; }
 .popitem.danger { color: var(--danger); }
-/* an armed destructive row: the second press fires, anything else disarms it */
-.popitem.arm { background: #e0524a22; color: var(--danger); font-weight: 600; }
 .popedit { display: flex; gap: 6px; padding: 8px 12px; align-items: center; }
 .popedit input[type=text] { flex: 1; min-width: 0; }
 .popnum { display: flex; align-items: center; gap: 4px; flex: 1; color: var(--muted); font-size: 11px; }
@@ -1434,3 +1434,47 @@ body.space .stage { cursor: grab; }
 .cuestrip .pane-head { display: flex; align-items: baseline; gap: 8px; }
 .cuewhere { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .cuestrip[hidden] { display: none; }
+
+/* ---- This node (caps.node): the hardware node's own settings, a fold under Input ---- */
+.nodedetails .nodegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1px; background: var(--line); max-height: 70vh; }
+.nodegroup { background: var(--pane); padding: 8px 12px 10px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.nodegroup h3 { margin: 0; font-size: 11px; font-weight: 600; color: var(--text); text-transform: uppercase; letter-spacing: .06em; }
+.nodegroup input[type="text"], .nodegroup input[type="password"], .nodegroup input[type="number"], .nodegroup select { min-width: 0; max-width: 100%; }
+.ndfacts { font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.ndlist { display: grid; gap: 1px; font-size: 11px; }
+.ndlist:empty { display: none; }
+.ndrow { display: flex; gap: 8px; align-items: center; background: var(--field); padding: 4px 8px; border: 0; border-radius: 0; color: var(--text); font: inherit; text-align: left; min-width: 0; }
+.ndrow > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ndrow .grow { flex: 1; }
+button.ndrow { cursor: pointer; }
+button.ndrow:hover { outline: 1px solid var(--muted); }
+.ndlamps { font-size: 11px; color: var(--muted); }
+.ndlamps span { display: inline-flex; align-items: center; gap: 4px; }
+
+.nodegroup .sq.on { border-color: var(--accent); color: var(--accent); }
+@media (max-width: 700px) { .nodedetails .nodegrid { grid-template-columns: 1fr; max-height: none; } }
+
+/* Touch colours (colour.js): a strip on each look tile, and the live stage. Square corners: the house signature. */
+.tbtn.lookbtn { position: relative; }
+.tstrip { display: block; align-self: stretch; height: 6px; margin: 0 -10px -10px; background: var(--line); }
+.tstage { flex: none; }
+.tstage .bankhead { position: static; }
+.tstagebox { position: relative; margin-top: 10px; height: clamp(120px, 28vh, 240px); background: var(--pane2); border: 1px solid var(--line); border-radius: 0; }
+.tdot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; background: #1d1d20; border: 1px solid var(--line); border-radius: 0; }
+.tdot.lit { border-color: transparent; }
+
+/* Pixel strips: a line of dots on the stage (laid along the strip's own line), a tile on Touch. */
+.px-strip { position: absolute; transform-origin: 0 50%; pointer-events: none; }
+.px-strip .px-dots { display: flex; width: 100%; height: 8px; gap: 0; }
+.px-dots i { flex: 1 1 0; min-width: 1px; background: #1d1d20; }
+.px-strip .px-label { position: absolute; top: 100%; left: 0; margin-top: 3px; font-size: 9px; color: var(--muted); white-space: nowrap; }
+.pxtile { display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px solid #00000055; min-width: 240px; flex: 1 1 240px; }
+.pxtile .px-dots { display: flex; height: 18px; gap: 1px; }
+.pxtile .px-label { font-size: 11px; color: var(--muted); }
+
+/* The one ask before something is lost (ui/ask.js): a bar at the foot, never a dialog that blocks the page. */
+.deskask { position: fixed; left: 12px; right: 12px; bottom: 16px; margin: 0 auto; max-width: 640px; z-index: 90; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 14px; background: var(--pane2); border: 1px solid var(--danger); border-radius: 0; box-shadow: 0 6px 24px #0008; }
+.deskask-text { flex: 1 1 240px; font-size: 14px; line-height: 1.35; white-space: pre-line; }
+.deskask button { min-height: 44px; min-width: 88px; padding: 0 16px; font: inherit; font-weight: 600; border-radius: 0; cursor: pointer; }
+.deskask-no { background: none; border: 1px solid var(--muted); color: var(--text); }
+.deskask-yes { background: var(--danger); border: 1px solid var(--danger); color: #041012; }   /* dark-on-fill, like .blackout.on */

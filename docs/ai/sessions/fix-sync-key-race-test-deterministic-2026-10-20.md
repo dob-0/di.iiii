@@ -1,0 +1,8 @@
+## fix/sync-key-race-test-deterministic-2026-10-20: the two-moves test no longer depends on timing
+
+- Symptom: `serverXR/src/syncKeyMoveRace.test.js` (L1, two simultaneous moves by one sync key, loser must get 409) failed once in a full root vitest run under load; green alone.
+- Cause (measured, run-base-11 of 30 under 24 busy loops on origin/dev): `Promise.all` of two fetches does not make the requests overlap. When the second started after the first had finished, it was stopped earlier, at the route's scope gate, with 403 "Space access denied", never reaching the re-read inside the key lock that answers 409 `project_moved`. Statuses `[200, 403]` instead of `[200, 409]`.
+- Fix: `serverXR/src/testBarrier.js`, a rendezvous that is inert unless `NODE_ENV` is exactly `test`. Requests carrying `X-Test-Barrier: <name>:<n>` wait in the move route (after every gate, before `withKeyLock`) until n of them have arrived; a missing partner fails after 15 s with a message (500), it is never let through. The race test sends `race-<i>:2` on both moves, so both are past all gates before either takes the lock and the loser can only be stopped by the in-lock re-read.
+- Teeth kept: with the in-lock re-read disabled the test fails 3 of 3 runs at once with `[200, 200]` (before: it failed only when the scheduler happened to overlap them).
+- Not covered: the key-trash vs move test stays black-box (either order is legal, it only asserts both never apply). Other flakes seen in the full suite under load, not touched: `ndiContracts.test.js` (not-installed vs no-koffi, fetch failed), `followerLight.test.js` (silent host), `lighting.test.js` (cue loop).
+- Guards: `testBarrier.test.js` (holds until partner, inert outside test, no header, timeout, bad header).

@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEffect as mockUseEffect } from 'react'
 import SpaceContentsPage from '../pages/SpaceContentsPage.jsx'
+import SpaceSurfaceApp from '../SpaceSurfaceApp.jsx'
+import RigBar from '../rigbuild/RigSteps.jsx'
 import KitPage from '../kit/KitPage.jsx'
 import WikiPage from '../wiki/WikiPage.jsx'
 import BlankNodeWorkspaceApp from '../raw/BlankNodeWorkspaceApp.jsx'
@@ -11,6 +13,7 @@ import RawEditor from '../raw/components/RawEditor.jsx'
 import RawOutSurface from '../raw/components/RawOutSurface.jsx'
 import MapSurface from '../map/MapSurface.jsx'
 import MapOutput from '../map/MapOutput.jsx'
+import { listSpaceContents } from '../project/services/projectsApi.js'
 
 vi.mock('../project/services/projectsApi.js', () => ({
     DEFAULT_PROJECT_SPACE_ID: 'main',
@@ -21,15 +24,32 @@ vi.mock('../project/services/projectsApi.js', () => ({
         document: {
             projectMeta: { id: 'p', title: 'A room' },
             presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
-            entities: []
+            entities: [{ id: 'e1', type: 'cube' }]
         }
     })),
     listProjectOps: vi.fn(async () => ({ ops: [], latestVersion: 1 })),
     buildProjectEventsUrl: vi.fn((projectId) => `/api/projects/${projectId}/events`)
 }))
 
+// The spaces the one-name table below reads, as the server holds them: found by id or by address, like the real
+// GET /api/spaces/:segment. Any other word gets the one record every lane above has always been given.
+const { SPACES } = vi.hoisted(() => ({
+    SPACES: {
+        // the platform's own space: named in data like any other (spaces/main/di-space.space.json)
+        platform: { id: 'main', slug: 'di-iiii', label: 'Home', publishedProjectId: 'p' },
+        // a space with a name and an address of its own
+        named: { id: 'dilijan', slug: 'dilijan-camp', label: 'Dilijan As A Screen', publishedProjectId: 'p' },
+        // a space nobody named
+        unnamed: { id: 'queerlab', slug: 'queer-lab', label: '', publishedProjectId: 'p' }
+    }
+}))
+
 vi.mock('../services/serverSpaces.js', () => ({
-    getServerSpace: vi.fn(async () => ({ id: 'br_id_ge', label: 'br_id_ge', publishedProjectId: null })),
+    supportsServerSpaces: true,
+    getServerSpace: vi.fn(async (segment) => (
+        Object.values(SPACES).find((space) => space.id === segment || space.slug === segment)
+        || { id: 'br_id_ge', label: 'br_id_ge', publishedProjectId: null }
+    )),
     listServerSpaces: vi.fn(async () => []),
     getServerConfig: vi.fn(async () => ({}))
 }))
@@ -190,11 +210,13 @@ const LANES = [
     },
     {
         name: 'the Nodes project canvas',
-        body: () => document.querySelector('.raw-topbar.is-seeded'),
+        // The tools live in the bar's slot while the bar is up (audit row 5), in the
+        // old header where it is not.
+        body: () => document.querySelector('.raw-bar-tools, .raw-topbar.is-seeded'),
         render: () => renderNodes()
     },
     {
-        name: 'the Projection desk',
+        name: 'Projection',
         body: () => document.querySelector('header.map-bar'),
         render: () => render(<MapSurface spaceId="main" projectId="p" />)
     }
@@ -316,13 +338,17 @@ describe('a presentation draws no bar', () => {
         expect(bars()).toHaveLength(0)
     })
 
-    it('the Nodes topbar makes room for the bar only while the bar is there', async () => {
+    it('the Nodes tools are in the bar while it is there, and in the header only when it is not', async () => {
         renderNodes()
         await waitFor(() => expect(bars()).toHaveLength(1))
-        expect(document.querySelector('.raw-topbar').classList.contains('is-under-sbar')).toBe(true)
+        // One bar: the tools are its cells and there is no second header.
+        expect(document.querySelector('.raw-topbar')).toBeNull()
+        expect(document.querySelector('nav[aria-label="di.iiii"] .raw-bar-tools')).toBeTruthy()
         fireEvent.click(screen.getByRole('button', { name: /^Scene/ }))
         await waitFor(() => expect(bars()).toHaveLength(0))
-        expect(document.querySelector('.raw-topbar').classList.contains('is-under-sbar')).toBe(false)
+        // The bar is gone (the room is full screen), so the header carries the way back.
+        expect(document.querySelector('.raw-topbar')).toBeTruthy()
+        expect(document.querySelector('.raw-topbar .raw-bar-tools')).toBeNull()
     })
 
     it('/{space}/map/{project}/out draws no bar', async () => {
@@ -336,4 +362,75 @@ describe('a presentation draws no bar', () => {
         await waitFor(() => expect(screen.queryByTestId('lane-body')).toBeTruthy())
         expect(bars()).toHaveLength(0)
     })
+})
+
+// One name per space (owner, 2026-09-14; docs/ai/vocabulary.md). The bar says the space's NAME — the same word on every
+// surface of the space, whatever address was typed to reach it — and its space link goes to the space's ADDRESS. A space
+// nobody named shows its address. The platform's own space is named in data ("Home") and is no exception. Before this each surface fed the bar its own word, and one space read "di.iiii · main",
+// "di.iiii · di-iiii" and "di.iiii · di.iiii" depending on the page (measured 2026-10-26, 19 addresses).
+//
+// The lanes are the table the bar's callers join; a surface that grows a bar owes it a row here.
+describe('the bar says one name per space, on every surface', () => {
+    const TWO_THINGS = [
+        { id: 'p', slug: null, title: 'p', mode: 'scene', updatedAt: 0 },
+        { id: 'q', slug: null, title: 'q', mode: 'scene', updatedAt: 0 }
+    ]
+    const ONE_THING = [{ id: 'p', slug: null, title: 'p', mode: 'scene', updatedAt: 0 }]
+
+    // The list of one thing that IS the door hands the visitor on to the project instead of drawing its bar.
+    beforeEach(() => { listSpaceContents.mockResolvedValue(TWO_THINGS) })
+    afterEach(() => {
+        listSpaceContents.mockResolvedValue(ONE_THING)
+        window.history.replaceState(null, '', '/')
+        window.localStorage.removeItem('dii.raw.zen.p')
+    })
+
+    const NAME_LANES = [
+        { name: '/{space}/projects', render: ({ typed }) => render(<SpaceContentsPage spaceId={typed} />) },
+        { name: 'the published viewer, on the space', render: ({ typed }) => render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: typed }} />) },
+        { name: 'the published viewer, on a project', render: ({ typed }) => render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: typed, projectId: 'p' }} />) },
+        {
+            name: 'the Studio shell, as the editor feeds it',
+            // StudioEditor's side of this is pinned in studio/components/StudioEditorSpaceName.test.jsx
+            render: ({ typed, space }) => renderStudio({ liveProjectState: { spaceId: typed, spaceLabel: space.label || space.slug, spaceAddress: space.slug } })
+        },
+        {
+            name: 'the Nodes project canvas',
+            render: ({ typed }) => {
+                window.localStorage.setItem('dii.raw.zen.p', 'off')
+                return render(<RawEditor projectId="p" spaceId={typed} />)
+            }
+        },
+        { name: 'Projection', render: ({ typed }) => render(<MapSurface spaceId={typed} projectId="p" />) },
+        { name: 'the rig pages', render: ({ typed }) => render(<RigBar spaceId={typed} projectId="p" here="plot" isLocalInstall />) }
+    ]
+
+    const NAME_SPACES = [
+        { name: 'the platform\'s own space', space: SPACES.platform, typed: ['main', 'di-iiii'], says: 'di.iiii · Home', link: '/di-iiii' },
+        { name: 'a named space', space: SPACES.named, typed: ['dilijan', 'dilijan-camp'], says: 'di.iiii · Dilijan As A Screen', link: '/dilijan-camp' },
+        { name: 'a space nobody named', space: SPACES.unnamed, typed: ['queerlab', 'queer-lab'], says: 'di.iiii · queer-lab', link: '/queer-lab' }
+    ]
+
+    // The brand, then the space when the bar says one, with its link — the project part of the bar is left out, it is a
+    // different word with a different rule.
+    const barSpace = () => {
+        const bar = document.querySelector('nav[aria-label="di.iiii"]')
+        if (!bar) return null
+        const where = bar.querySelector('.sbar-where:not(.sbar-where--project)')
+        return {
+            says: where ? `${bar.querySelector('.sbar-home').textContent} · ${where.textContent}` : bar.querySelector('.sbar-home').textContent,
+            link: where ? where.getAttribute('href') : null
+        }
+    }
+
+    for (const lane of NAME_LANES) {
+        for (const { name, space, typed, says, link } of NAME_SPACES) {
+            for (const word of typed) {
+                it(`${lane.name}: ${name}, reached as /${word}, says "${says}"${link ? ` and links to ${link}` : ''}`, async () => {
+                    lane.render({ typed: word, space })
+                    await waitFor(() => expect(barSpace()).toEqual({ says, link }))
+                })
+            }
+        }
+    }
 })

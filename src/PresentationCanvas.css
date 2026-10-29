@@ -53,9 +53,8 @@
     max-width: 540px;
     margin: auto;
     padding: var(--di-space-6) var(--di-space-6);
-    border-radius: 24px;
+    border-radius: var(--di-radius);
     background: rgba(255,255,255,0.84);
-    box-shadow: 0 28px 70px rgba(52, 39, 16, 0.16);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     color: #23180a;
@@ -87,7 +86,7 @@
     .presentation-empty-state {
         margin: auto var(--di-space-4) var(--di-space-5);
         padding: var(--di-space-5) var(--di-space-5);
-        border-radius: 20px;
+        border-radius: var(--di-radius);
     }
 
     .presentation-frame-note {

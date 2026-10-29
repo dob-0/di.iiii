@@ -1,13 +1,18 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import axe from 'axe-core'
 
 vi.mock('../../services/serverSpaces.js', () => ({
     listServerSpaces: vi.fn(),
     createServerSpace: vi.fn(),
     updateServerSpace: vi.fn(),
     deleteServerSpace: vi.fn(),
+    getSpaceFootprint: vi.fn(),
+    restoreServerSpace: vi.fn(),
+    purgeServerSpace: vi.fn(),
     getServerConfig: vi.fn(),
+    getSweepReport: vi.fn(() => Promise.resolve({ due: [], log: [], horizonMs: 0 })),
     patchServerConfig: vi.fn(),
     getSpaceGithubLink: vi.fn(() => Promise.resolve(null)),
     connectSpaceGithub: vi.fn(() => Promise.resolve({ link: null, initialSync: null })),
@@ -36,16 +41,19 @@ vi.mock('../../utils/spaceRouting.js', () => ({
     buildPublicProjectPath: (s, p) => `/${s}/p/${p}`
 }))
 
-import AdminManageSection from './AdminManageSection.jsx'
+import AdminManageSection, { SweepSection } from './AdminManageSection.jsx'
 import {
+    getSweepReport,
     listServerSpaces,
     getServerConfig,
     updateServerSpace,
     getGithubAppInfo,
     listGithubRepos,
-    connectSpaceGithub
+    connectSpaceGithub,
+    deleteServerSpace,
+    getSpaceFootprint
 } from '../../services/serverSpaces.js'
-import { listProjects, updateProject } from '../../project/services/projectsApi.js'
+import { listProjects, updateProject, deleteProject } from '../../project/services/projectsApi.js'
 import { listUsers } from '../../services/usersApi.js'
 import { navigateToStudioPath } from '../../studio/utils/studioRouting.js'
 
@@ -176,5 +184,134 @@ describe('AdminManageSection', () => {
         fireEvent.click((await screen.findAllByText('Studio'))[0])
 
         expect(await screen.findByText('/demo/artistplace')).toBeTruthy()
+    })
+
+    // Audit 2026-10-21 A1 (axe `label`, critical, measured in Chromium on /admin):
+    // the rename and public-link fields had no name — no label, no placeholder for
+    // a rename — so a screen reader announced "edit text" and nothing else.
+    it('names every field it opens, for space and project alike (axe label rule)', async () => {
+        const run = async (container) => (await axe.run(container, { runOnly: ['label'] })).violations
+        const { container } = render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+        for (const edit of ['Rename', 'Edit public link']) {
+            fireEvent.click(await screen.findByRole('button', { name: edit }))
+            expect(await run(container)).toEqual([])
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+        }
+        expect(screen.getByRole('button', { name: 'Rename' })).toBeTruthy()
+        fireEvent.click((await screen.findAllByText('First Project'))[0])
+        for (const edit of ['Rename', 'Edit public link']) {
+            fireEvent.click(await screen.findByRole('button', { name: edit }))
+            expect(await run(container)).toEqual([])
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+        }
+    })
+
+    // Audit 2026-10-21 A2 (axe `nested-interactive`, serious ×4 in Chromium): the
+    // caret was a role=button inside the row's button, and it was the only way to
+    // close a space — a keyboard could open one and never close it again.
+    it('opens and closes a space from the row itself, with no button inside a button', async () => {
+        const { container } = render(<AdminManageSection />)
+        const row = (await screen.findByText('Demo')).closest('button')
+        expect(row.getAttribute('aria-expanded')).toBe('false')
+        fireEvent.click(row)
+        await waitFor(() => expect(row.getAttribute('aria-expanded')).toBe('true'))
+        fireEvent.click(row)
+        expect(row.getAttribute('aria-expanded')).toBe('false')
+        expect((await axe.run(container, { runOnly: ['nested-interactive'] })).violations).toEqual([])
+    })
+})
+
+describe('SweepSection', () => {
+    it('shows each space coming due, the day, and what the sweep will do to it', async () => {
+        const day = Date.UTC(2026, 10, 6)
+        getSweepReport.mockResolvedValueOnce({
+            horizonMs: 14 * 24 * 60 * 60 * 1000,
+            due: [
+                { spaceId: 'old-room', owner: 'none', dueAt: day, action: 'trash', reason: 'idle 31 days' },
+                { spaceId: 'gallery', owner: 'user-2', dueAt: day, action: 'skip', reason: 'published' }
+            ],
+            log: [{ at: day, spaceId: 'sandbox-x', action: 'trashed', reason: 'idle 8 days', owner: 'guest' }]
+        })
+        render(<SweepSection />)
+        expect(await screen.findByText('old-room · none')).toBeInTheDocument()
+        expect(screen.getByText('2026-11-06 · trash (idle 31 days)')).toBeInTheDocument()
+        expect(screen.getByText('2026-11-06 · keep (published)')).toBeInTheDocument()
+        expect(screen.getByText('2026-11-06 trashed sandbox-x')).toBeInTheDocument()
+        expect(screen.getByText('Idle spaces the sweep reaches in the next 14 days')).toBeInTheDocument()
+    })
+
+    it('says so when nothing comes due', async () => {
+        render(<SweepSection />)
+        expect(await screen.findByText('Nothing comes due in the next 14 days.')).toBeInTheDocument()
+    })
+})
+
+// 2026-10-28 (UX S04, F107): the admin Directory deleted a space through a
+// browser confirm with its own wording, while the Spaces page had a box that
+// names what goes. Both now open the same box (SpaceTrash.jsx useSpaceDelete).
+describe('AdminManageSection delete', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        listServerSpaces.mockResolvedValue([
+            { id: 'main', label: 'Main Space', isPublic: true, isPermanent: true },
+            { id: 'demo', label: 'Demo', isPublic: false, isPermanent: false }
+        ])
+        getServerConfig.mockResolvedValue({ defaultSpaceId: 'main', globalSpaceId: 'main' })
+        listUsers.mockResolvedValue([])
+        listProjects.mockResolvedValue([{ id: 'p1', title: 'First Project', spaceId: 'demo' }])
+    })
+
+    it('a space opens the same delete box as the Spaces page, with the 30 days in the Trash', async () => {
+        getSpaceFootprint.mockResolvedValue({ projects: 1, bytes: 1024, protected: null, holdMs: 30 * 24 * 3600 * 1000 })
+        deleteServerSpace.mockResolvedValue({ ok: true, trashed: true, projects: 1 })
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+        try {
+            render(<AdminManageSection />)
+            fireEvent.click(await screen.findByText('Demo'))
+            fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
+            const dialog = await screen.findByRole('dialog')
+            expect(dialog.textContent).toContain('Delete the space “Demo”?')
+            await waitFor(() => expect(dialog.textContent).toContain('Trash for 30 days'))
+            expect(confirmSpy).not.toHaveBeenCalled()
+            expect(deleteServerSpace).not.toHaveBeenCalled()
+            fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }))
+            await waitFor(() => expect(deleteServerSpace).toHaveBeenCalledWith('demo'))
+            expect(await screen.findByText('“Demo” is in the Trash for 30 days.')).toBeTruthy()
+        } finally {
+            confirmSpy.mockRestore()
+        }
+    })
+
+    it('the delete box takes the keyboard: focus starts on Cancel, Escape closes it and gives focus back', async () => {
+        getSpaceFootprint.mockResolvedValue({ projects: 1, bytes: 1024, protected: null, holdMs: 30 * 24 * 3600 * 1000 })
+        render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+        const opener = await screen.findByRole('button', { name: 'Delete' })
+        opener.focus()
+        fireEvent.click(opener)
+        await screen.findByRole('dialog')
+        expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
+        fireEvent.keyDown(window, { key: 'Escape' })
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+        expect(document.activeElement).toBe(opener)
+        expect(deleteServerSpace).not.toHaveBeenCalled()
+    })
+
+    it('a project asks in the di.iiii question box, not a browser confirm', async () => {
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+        try {
+            render(<AdminManageSection />)
+            fireEvent.click(await screen.findByText('Demo'))
+            fireEvent.click((await screen.findAllByText('First Project'))[0])
+            fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
+            const question = await screen.findByRole('alertdialog')
+            expect(question.textContent).toContain('trash for 30 days')
+            expect(confirmSpy).not.toHaveBeenCalled()
+            fireEvent.click(screen.getByRole('button', { name: 'Move to trash' }))
+            await waitFor(() => expect(deleteProject).toHaveBeenCalledWith('p1'))
+        } finally {
+            confirmSpy.mockRestore()
+        }
     })
 })

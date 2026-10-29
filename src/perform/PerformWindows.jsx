@@ -135,7 +135,7 @@ function ClockWindow() {
             <div className="perform-clock">
                 <span className="perform-clock-bpm" aria-label="Show tempo">{clock.timeline.bpm.toFixed(1)}</span>
                 <span className="perform-dim">BPM</span>
-                <div className="perform-beats" aria-label={`Beat ${beat + 1} of 4`}>
+                <div className="perform-beats" role="img" aria-label={`Beat ${beat + 1} of 4`}>
                     {[0, 1, 2, 3].map((n) => <span key={n} className={`perform-beat${n === beat ? ' is-on' : ''}`} />)}
                 </div>
                 <button type="button" className="perform-action" onClick={() => clock.tap()} disabled={!clock.canTap}>Tap</button>

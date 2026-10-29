@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, readBackShape, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite, applySkip } from './tier-sync.mjs'
+import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, readBackShape, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite, applySkip, readSignatures, listProjectMetas, listProjects, retryPolicy, PARTIAL_VIEW, readsPartially } from './tier-sync.mjs'
 
 describe('localBase', () => {
     // The documented convention is LOCAL_API_URL with no /serverXR suffix
@@ -214,7 +214,7 @@ describe('planAudit', () => {
     it('is quiet when the two tiers hold the same work', () => {
         const both = { main: { 'main-dii-project': sig(85) }, wcc: { arthur: sig(1) } }
         expect(planAudit({ source: both, destination: both }))
-            .toEqual({ missing: [], extra: [], differs: [], readdressed: [] })
+            .toEqual({ missing: [], extra: [], differs: [], readdressed: [], unreadable: [] })
     })
 })
 
@@ -570,5 +570,129 @@ describe('readBackShape', () => {
     it('falls back to the shape sent when the read-back fails', async () => {
         const shape = await readBackShape({ call: reply(false, 502, null), tier: {}, projectId: 'p', sent })
         expect(shape).toBe(documentSignature(sent).shape)
+    })
+})
+
+// A throttled tier answered 429 for 47 of 74 br-id-ge documents (measured
+// 2026-10-08 against dev.diiii.xyz) and readSignatures skipped every one of
+// them, so the audit reported 47 projects "only on local" that dev holds. A
+// read that fails must wait and retry, and one that never succeeds must be
+// reported as unreadable — never as missing.
+describe('reading a tier that throttles', () => {
+    const tier = { base: 'https://tier.test/serverXR', token: null }
+    const response = (status, body = {}, headers = {}) => new Response(status === 200 ? JSON.stringify(body) : 'x', {
+        status,
+        headers: { 'content-type': 'application/json', ...headers }
+    })
+    const doc = (title) => ({ document: { projectMeta: { title }, entities: [] }, version: 1 })
+    afterEach(() => {
+        vi.unstubAllGlobals()
+        retryPolicy.sleep = retryPolicy.defaultSleep
+    })
+
+    it('waits and retries a document the tier throttled, honouring Retry-After', async () => {
+        let documentCalls = 0
+        vi.stubGlobal('fetch', vi.fn(async (url) => {
+            if (url.endsWith('/api/spaces')) return response(200, { spaces: [{ id: 's' }] })
+            if (url.endsWith('/api/spaces/s/projects')) return response(200, { projects: [{ id: 'p', documentVersion: 1, updatedAt: 1 }] })
+            documentCalls += 1
+            return documentCalls < 3 ? response(429, {}, { 'retry-after': '2' }) : response(200, doc('p'))
+        }))
+        const waits = []
+        retryPolicy.sleep = async (ms) => { waits.push(ms) }
+        const inventory = await readSignatures(tier, 's')
+        expect(inventory.s.p.unreadable).toBeUndefined()
+        expect(inventory.s.p.shape).toBeTruthy()
+        expect(waits).toEqual([2000, 2000])
+    })
+
+    it('records a document it never managed to read as unreadable, not absent', async () => {
+        vi.stubGlobal('fetch', vi.fn(async (url) => {
+            if (url.endsWith('/api/spaces')) return response(200, { spaces: [{ id: 's' }] })
+            if (url.endsWith('/api/spaces/s/projects')) return response(200, { projects: [{ id: 'p', documentVersion: 1, updatedAt: 1 }] })
+            return response(429)
+        }))
+        retryPolicy.sleep = async () => {}
+        const inventory = await readSignatures(tier, 's')
+        expect(inventory.s.p).toEqual({ unreadable: 429 })
+    })
+
+    it('does not call an unreadable project missing, extra or different', () => {
+        const signature = documentSignature({ entities: [{ id: 'a' }] })
+        const plan = planAudit({
+            source: { s: { p: signature, q: signature } },
+            destination: { s: { p: { unreadable: 429 }, q: signature } }
+        })
+        expect(plan.missing).toEqual([])
+        expect(plan.differs).toEqual([])
+        expect(plan.unreadable).toEqual([{ spaceId: 's', projectId: 'p', side: 'destination', status: 429 }])
+    })
+
+    it('retries a throttled project list, and fails loudly rather than reading it as empty', async () => {
+        let calls = 0
+        vi.stubGlobal('fetch', vi.fn(async () => {
+            calls += 1
+            return calls === 1 ? response(429) : response(200, { projects: [{ id: 'p', documentVersion: 2, updatedAt: 3 }] })
+        }))
+        retryPolicy.sleep = async () => {}
+        expect(await listProjectMetas(tier, 's')).toEqual([{ id: 'p', documentVersion: 2, updatedAt: 3 }])
+
+        vi.stubGlobal('fetch', vi.fn(async () => response(503)))
+        await expect(listProjectMetas(tier, 's')).rejects.toThrow(/HTTP 503/)
+    })
+
+    it('still reads a space the tier has never heard of as empty', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => response(404)))
+        retryPolicy.sleep = async () => {}
+        expect(await listProjectMetas(tier, 'nowhere')).toEqual([])
+        expect(await listProjects(tier, 'nowhere')).toEqual([])
+    })
+})
+
+// 2026-10-09: an anonymous audit against dev.diiii.xyz called 96 projects "only
+// on local", all private work: dev shows an anonymous reader public spaces and
+// public projects only, and answers a private project's document 404, like one
+// that does not exist. A side read without its token cannot prove private work
+// absent, so the audit must say "could not be read", never "missing".
+describe('an anonymous read of a remote tier', () => {
+    const response = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+    const doc = { document: { projectMeta: { title: 't' }, entities: [] }, version: 1 }
+    afterEach(() => vi.unstubAllGlobals())
+
+    it('is a partial view without its token; a token or a loopback read is full', () => {
+        expect(readsPartially({ base: 'https://dev.diiii.xyz/serverXR', token: null })).toBe(true)
+        expect(readsPartially({ base: 'https://dev.diiii.xyz/serverXR', token: 't' })).toBe(false)
+        expect(readsPartially({ base: 'http://diiii.localhost/serverXR', token: null })).toBe(false)
+        expect(readsPartially({ base: 'http://localhost:4000/serverXR' })).toBe(false)
+    })
+
+    it('flags work in a private space, and private projects in a public one', async () => {
+        vi.stubGlobal('fetch', vi.fn(async (url) => {
+            if (url.endsWith('/api/spaces')) return response({ spaces: [{ id: 'open', isPublic: true }, { id: 'closed', isPublic: false }] })
+            if (url.endsWith('/api/spaces/open/projects')) return response({ projects: [{ id: 'shown', visibility: 'public' }, { id: 'hidden', visibility: 'private' }] })
+            if (url.endsWith('/api/spaces/closed/projects')) return response({ projects: [{ id: 'inside', visibility: 'public' }] })
+            return response(doc)
+        }))
+        const inventory = await readSignatures({ base: 'https://tier.test/serverXR', token: null })
+        expect(inventory[PARTIAL_VIEW]).toBe(true)
+        expect(Object.keys(inventory)).toEqual(['open', 'closed'])
+        expect(inventory.open.shown.isPrivate).toBeUndefined()
+        expect(inventory.open.hidden.isPrivate).toBe(true)
+        expect(inventory.closed.inside.isPrivate).toBe(true)
+    })
+
+    it('never calls private work missing from a side read without its token', () => {
+        const open = documentSignature({ entities: [{ id: 'a' }] })
+        const secret = { ...open, isPrivate: true }
+        const partial = (inventory) => Object.defineProperty(inventory, PARTIAL_VIEW, { value: true })
+        const plan = planAudit({ source: { s: { p: secret, q: open } }, destination: partial({ s: {} }) })
+        expect(plan.unreadable).toEqual([{ spaceId: 's', projectId: 'p', side: 'destination', status: 'private' }])
+        expect(plan.missing.map((m) => m.projectId)).toEqual(['q'])
+        // A space the partial side does not list at all is the same case.
+        expect(planAudit({ source: { hidden: { p: secret } }, destination: partial({}) }).unreadable).toHaveLength(1)
+        // Read with its token, the same absence IS missing work.
+        expect(planAudit({ source: { s: { p: secret } }, destination: { s: {} } }).missing).toHaveLength(1)
+        // And the other direction.
+        expect(planAudit({ source: partial({ s: {} }), destination: { s: { p: secret } } }).unreadable[0].side).toBe('source')
     })
 })

@@ -87,7 +87,7 @@ async function moveProjectBetweenSpaces({ db, spacesDir, projectId, toSpaceId, u
   if (!project) throw new MoveRefused(404, `project "${projectId}" not found`, 'project_not_found')
   const fromSpaceId = project.space_id
 
-  const targetSpace = db.prepare('SELECT * FROM spaces WHERE id = ?').get(toSpaceId)
+  const targetSpace = db.prepare('SELECT * FROM spaces WHERE id = ? AND deleted_at IS NULL').get(toSpaceId)
   if (!targetSpace) throw new MoveRefused(404, `target space "${toSpaceId}" not found`, 'target_not_found')
   if (fromSpaceId === toSpaceId) throw new MoveRefused(400, `project "${projectId}" is already in space "${toSpaceId}"`, 'same_space')
 
@@ -196,8 +196,10 @@ async function moveProjectBetweenSpaces({ db, spacesDir, projectId, toSpaceId, u
       db.prepare('UPDATE projects SET space_id = ?, slug = ?, collection_id = NULL, position = ?, updated_at = ? WHERE id = ?')
         .run(toSpaceId, slugDropped ? null : originalSlug, newPosition, now, projectId)
       if (isPublished) db.prepare('UPDATE spaces SET published_project_id = NULL, updated_at = ? WHERE id = ?').run(now, fromSpaceId)
-      db.prepare('INSERT INTO project_moves (project_id, from_space, to_space, old_slug, moved_at) VALUES (?, ?, ?, ?, ?)')
-        .run(projectId, fromSpaceId, toSpaceId, originalSlug, now)
+      // forwards_space_root: the front door left with it, so the old space's
+      // bare address points on (projectStore.findSpaceRootMove).
+      db.prepare('INSERT INTO project_moves (project_id, from_space, to_space, old_slug, moved_at, forwards_space_root) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(projectId, fromSpaceId, toSpaceId, originalSlug, now, isPublished ? 1 : 0)
     })()
     report.movedAt = now
   } catch (error) {

@@ -133,7 +133,8 @@ const withAuth = (token) => ({
 const createServerProject = async (server, spaceId, {
     title = 'Live Project',
     slug = 'live-project',
-    source = 'studio-v3'
+    source = 'studio-v3',
+    visibility
 } = {}) => {
     const response = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
         method: 'POST',
@@ -141,7 +142,7 @@ const createServerProject = async (server, spaceId, {
             'Content-Type': 'application/json',
             ...withAuth(server.apiToken)
         },
-        body: JSON.stringify({ title, slug, source })
+        body: JSON.stringify({ title, slug, source, ...(visibility ? { visibility } : {}) })
     })
     expect(response.status).toBe(201)
     const payload = await response.json()
@@ -265,6 +266,35 @@ describe('server write contracts', () => {
         expect(asStranger).toBeTruthy()
         expect(asStranger.projectCount).toBeUndefined()
         expect(asStranger.publishedCount).toBeUndefined()
+    })
+
+    // Marketing audit 2026-10-21, G23: a space's one line for visitors is set
+    // by its owner, listed with the space, and is what its share card says.
+    it('a space\'s blurb is saved, listed, cleared, refused when too long, and is its card\'s description', async () => {
+        const server = await startServer({ nodeEnv: 'production' })
+        const admin = { 'Content-Type': 'application/json', ...withAuth(server.apiToken) }
+        expect((await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST', headers: admin, body: JSON.stringify({ label: 'Told', slug: 'told', isPublic: true })
+        })).status).toBe(201)
+        const patch = (body) => fetch(`${server.baseUrl}/api/spaces/told`, { method: 'PATCH', headers: admin, body: JSON.stringify(body) })
+        const listed = async () => (await (await fetch(`${server.baseUrl}/api/spaces`)).json()).spaces.find((s) => s.id === 'told')
+
+        const saved = await patch({ blurb: '  Films made\n by   children.  ', isPublic: true })
+        expect(saved.status).toBe(200)
+        expect((await listed()).blurb).toBe('Films made by children.')
+
+        const card = await (await fetch(`${server.baseUrl}/og/told`)).text()
+        expect(card).toContain('<meta property="og:description" content="Films made by children.">')
+
+        expect((await patch({ blurb: 'x'.repeat(161) })).status).toBe(400)
+        expect((await patch({ blurb: 42 })).status).toBe(400)
+        expect((await listed()).blurb).toBe('Films made by children.')
+        // Another field written later must not wipe it.
+        expect((await patch({ label: 'Told again' })).status).toBe(200)
+        expect((await listed()).blurb).toBe('Films made by children.')
+
+        expect((await patch({ blurb: '' })).status).toBe(200)
+        expect((await listed()).blurb).toBeNull()
     })
 
     it('requires auth by default in production when REQUIRE_AUTH is unset', async () => {
@@ -1152,6 +1182,21 @@ describe('server write contracts', () => {
         expect(guestProbe.status).toBe(404)
         const accountProbe = await fetch(`${server.baseUrl}/api/spaces/${sessionState.sandboxSpaceId}`, { headers: withAuth(server.apiToken) })
         expect(accountProbe.status).toBe(200)
+
+        // The purge trashed the guest sandbox, it did not destroy it, and it
+        // said so where an admin reads it. An editor may not read that list.
+        const sweep = await fetch(`${server.baseUrl}/api/admin/sweep`, { headers: withAuth(server.apiToken) })
+        expect(sweep.status).toBe(200)
+        const sweepBody = await sweep.json()
+        expect(sweepBody.log).toContainEqual(expect.objectContaining({ spaceId: guestState.sandboxSpaceId, action: 'trashed', owner: 'guest' }))
+        expect(Array.isArray(sweepBody.due)).toBe(true)
+        const editorSweep = await fetch(`${server.baseUrl}/api/admin/sweep`, { headers: { Cookie: accountCookie } })
+        expect(editorSweep.status).toBe(403)
+
+        // The guest comes back inside the hold: their room is restored, not
+        // refused as a name that sits in the trash.
+        const guestBack = await fetch(`${server.baseUrl}/api/spaces/${guestState.sandboxSpaceId}/scene`, { headers: { Cookie: guestCookie } })
+        expect(guestBack.status).toBe(200)
     })
 
     it('archives a long-idle account sandbox to a snapshot and revives it when the owner returns', async () => {
@@ -1223,6 +1268,13 @@ describe('server write contracts', () => {
             body: JSON.stringify({ objects: [{ id: 'kept-cube' }], assets: [] })
         })
         expect(write.status).toBe(200)
+        // …and a project in it.
+        const made = await fetch(`${server.baseUrl}/api/spaces/${guestSandboxId}/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: guestCookie },
+            body: JSON.stringify({ title: 'Kept Project', slug: 'kept-project' })
+        })
+        expect(made.status).toBe(201)
 
         // …then signs in. Token session mint is the same upgrade moment as an
         // OAuth callback: the old guest cookie still rides on the request.
@@ -1244,6 +1296,10 @@ describe('server write contracts', () => {
         expect(meta.space).toMatchObject({ kind: 'sandbox', label: 'Sandbox', permanent: true })
         const gone = await fetch(`${server.baseUrl}/api/spaces/${guestSandboxId}`, { headers: withAuth(server.apiToken) })
         expect(gone.status).toBe(404)
+        // The moved project's document on disk names its new home: reading it
+        // never writes, so the promote rewrites it itself, under the write lock.
+        const keptDocument = JSON.parse(fs.readFileSync(path.join(server.dataRoot, 'spaces', session.sandboxSpaceId, 'projects', 'kept-project', 'document.json'), 'utf8'))
+        expect(keptDocument.projectMeta.spaceId).toBe(session.sandboxSpaceId)
 
         // A second guest signing in to the SAME identity never clobbers the
         // account sandbox that now has real work in it.
@@ -2522,7 +2578,7 @@ describe('open-call application contracts', () => {
     })
 
     it('answers submission preflights permissively for sandboxed (Origin: null) iframes', async () => {
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://diiii.xyz' } })
 
         const preflight = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications`, {
             method: 'OPTIONS',
@@ -2554,7 +2610,7 @@ describe('open-call application contracts', () => {
         await writeFile(path.join(clientDir, 'index.html'), '<!doctype html><title>x</title>')
         await writeFile(path.join(clientDir, 'fonts', 'inter-regular.woff'), 'not-really-a-font')
         await writeFile(path.join(clientDir, 'plain.txt'), 'no header for this one')
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://diiii.xyz' } })
         const origin = new URL(server.baseUrl).origin
 
         const font = await fetch(`${origin}/fonts/inter-regular.woff`, { headers: { Origin: 'null' } })
@@ -2577,7 +2633,7 @@ describe('open-call application contracts', () => {
         await mkdir(path.join(clientDir, 'wcc', 'process'), { recursive: true })
         await writeFile(path.join(clientDir, 'index.html'), '<!doctype html><title>x</title>')
         await writeFile(path.join(clientDir, 'wcc', 'process', 'process-01.jpeg'), 'not-really-a-jpeg')
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://diiii.xyz' } })
         const origin = new URL(server.baseUrl).origin
 
         const photo = await fetch(`${origin}/wcc/process/process-01.jpeg`, { headers: { Origin: 'null' } })
@@ -2586,7 +2642,7 @@ describe('open-call application contracts', () => {
     })
 
     it('serves project asset reads with permissive CORS for sandboxed iframes', async () => {
-        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://diiii.xyz' } })
 
         const preflight = await fetch(`${server.baseUrl}/api/projects/some-project/assets/some-asset`, {
             method: 'OPTIONS',
@@ -3169,7 +3225,7 @@ describe('saving and opening a space as a file', () => {
         const made = await fetch(`${server.baseUrl}/api/spaces`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
-            body: JSON.stringify({ label: 'carried file', permanent: true })
+            body: JSON.stringify({ label: 'carried file' })
         })
         expect(made.status).toBe(201)
         const saved = await fetch(`${server.baseUrl}/api/spaces/carried-file/bundle`, { headers: withAuth(server.apiToken) })
@@ -3179,6 +3235,10 @@ describe('saving and opening a space as a file', () => {
         // way the Spaces page sends it, with no `as`.
         const removed = await fetch(`${server.baseUrl}/api/spaces/carried-file`, { method: 'DELETE', headers: withAuth(server.apiToken) })
         expect(removed.status).toBe(200)
+        // Delete is the soft delete now (the space waits in the trash); the file
+        // opens under its own name only once the trash has let go of it.
+        const purged = await fetch(`${server.baseUrl}/api/spaces/carried-file/purge`, { method: 'DELETE', headers: withAuth(server.apiToken) })
+        expect(purged.status).toBe(200)
 
         const register = await fetch(`${server.baseUrl}/api/auth/password/register`, {
             method: 'POST',
@@ -3405,6 +3465,327 @@ describe('sign in with Telegram', () => {
     })
 })
 
+// di.bo acting AS a team member: POST /api/auth/telegram/act-token and what
+// the token it returns can and cannot do. Owner's decision 2026-10-07. Every
+// check runs against a real spawned server with auth ON, because the claim
+// being tested ("the person's own access, never more") is about requests.
+describe('di.bo acting as a person (act-token)', () => {
+    const SECRET = 'test-bot-secret'
+    const withTelegram = { TELEGRAM_LOGIN_SECRET: SECRET, OAUTH_CALLBACK_BASE_URL: 'https://example.test' }
+    const PERSON = 'tg-emilya'
+    const TG_ID = '207260649'
+
+    const readRows = (server, sql, ...params) => {
+        const db = new DatabaseSync(path.join(server.dataRoot, 'di.db'), { readOnly: true })
+        try { return db.prepare(sql).all(...params) } finally { db.close() }
+    }
+    const writeDb = (server, sql, ...params) => {
+        const db = new DatabaseSync(path.join(server.dataRoot, 'di.db'))
+        try { return db.prepare(sql).run(...params) } finally { db.close() }
+    }
+    // A person who signed in with Telegram once, reaching one space.
+    const setup = async (extraEnv = {}) => {
+        const server = await startServer({ requireAuth: true, extraEnv: { ...withTelegram, ...extraEnv } })
+        await createSpaceWithScene(server, { spaceId: 'tg-mine', scene: { objects: [{ id: 'floor' }], assets: [] } })
+        await createSpaceWithScene(server, { spaceId: 'tg-other', scene: { objects: [{ id: 'floor' }], assets: [] } })
+        const now = Date.now()
+        writeDb(server, `
+            INSERT INTO users (id, provider, provider_id, email, display_name, role, spaces, created_at, updated_at)
+            VALUES (?, 'telegram', ?, NULL, 'Emilya', 'editor', ?, ?, ?)
+        `, PERSON, TG_ID, JSON.stringify(['tg-mine']), now, now)
+        return server
+    }
+    const mint = (server, telegramId = TG_ID, headers = { 'x-telegram-login-secret': SECRET }) => fetch(`${server.baseUrl}/api/auth/telegram/act-token`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...headers },
+        body: JSON.stringify({ telegramId })
+    })
+    const as = (token, extra = {}) => ({ Authorization: `Bearer ${token}`, ...extra })
+    const json = { 'Content-Type': 'application/json' }
+
+    it('refuses anyone who cannot present the bot secret', async () => {
+        const server = await setup()
+        for (const headers of [{}, { 'x-telegram-login-secret': 'wrong' }, { 'x-telegram-login-secret': '' }]) {
+            const res = await mint(server, TG_ID, headers)
+            expect(res.status).toBe(401)
+            expect(await res.text()).not.toContain('dii_tgact_')
+        }
+        expect((await mint(server, '12a')).status).toBe(400)
+    })
+
+    it('answers 404 for a Telegram id with no account, and never creates one', async () => {
+        const server = await setup()
+        const before = readRows(server, 'SELECT COUNT(*) AS n FROM users')[0].n
+        const res = await mint(server, '555000111')
+        expect(res.status).toBe(404)
+        expect(await res.json()).toEqual({ bound: false })
+        expect(readRows(server, 'SELECT COUNT(*) AS n FROM users')[0].n).toBe(before)
+        expect(readRows(server, "SELECT COUNT(*) AS n FROM users WHERE provider = 'telegram' AND provider_id = '555000111'")[0].n).toBe(0)
+        expect(readRows(server, 'SELECT COUNT(*) AS n FROM telegram_act_tokens')[0].n).toBe(0)
+    })
+
+    it('acts as the bound person, inside their spaces only, and every write says di.bo', async () => {
+        const server = await setup()
+        const res = await mint(server)
+        expect(res.status).toBe(201)
+        const body = await res.json()
+        expect(body.token.startsWith('dii_tgact_')).toBe(true)
+        expect(body).toMatchObject({ userId: PERSON, role: 'editor' })
+        // 15 minutes, give or take the request.
+        expect(Math.abs(body.expiresAt - (Date.now() + 15 * 60 * 1000))).toBeLessThan(10_000)
+        // Only the hash is kept.
+        const secret = body.token.split('.').slice(1).join('.')
+        expect(JSON.stringify(readRows(server, 'SELECT * FROM telegram_act_tokens'))).not.toContain(secret)
+
+        // A read in their space works; the same read outside it does not.
+        const mine = await fetch(`${server.baseUrl}/api/spaces/tg-mine/projects`, { headers: as(body.token) })
+        expect(mine.status).toBe(200)
+        expect(mine.headers.get('set-cookie')).toBeFalsy()
+        const theirs = await fetch(`${server.baseUrl}/api/spaces/tg-other/projects`, { headers: as(body.token) })
+        expect(theirs.status).toBe(403)
+        const writeOutside = await fetch(`${server.baseUrl}/api/spaces/tg-other/projects`, {
+            method: 'POST', headers: as(body.token, json), body: JSON.stringify({ title: 'Not mine', slug: 'not-mine' })
+        })
+        expect(writeOutside.status).toBe(403)
+
+        // A write inside it is stamped as theirs, through di.bo.
+        const scene = await (await fetch(`${server.baseUrl}/api/spaces/tg-mine/scene`, { headers: as(body.token) })).json()
+        const ops = await fetch(`${server.baseUrl}/api/spaces/tg-mine/ops`, {
+            method: 'POST',
+            headers: as(body.token, json),
+            body: JSON.stringify({ baseVersion: scene.version, ops: [{ opId: 'via-dibo-1', type: 'addObject', payload: { object: { id: 'dibo-cube' } } }] })
+        })
+        expect(ops.status).toBe(200)
+        const rows = readRows(server, "SELECT actor, actor_type, actor_label FROM space_ops WHERE space_id = 'tg-mine' AND data LIKE '%via-dibo-1%'")
+        expect(rows).toEqual([{ actor: PERSON, actor_type: 'di.bo', actor_label: 'Emilya via di.bo' }])
+
+        // And the server's log has one line per write: who, through what, where,
+        // how it ended. Written on the response's finish, so it can land a beat
+        // after the client has the answer: wait for both lines, briefly.
+        const writeLines = () => server.logs().split('\n').filter((l) => l.includes('[act-token] write'))
+        for (let i = 0; i < 40 && writeLines().length < 2; i += 1) await wait(50)
+        const logged = writeLines().map((l) => JSON.parse(l.slice(l.indexOf('{'))))
+        expect(logged).toContainEqual(expect.objectContaining({ subject: PERSON, actor: 'di.bo', method: 'POST', path: '/api/spaces/tg-mine/ops', status: 200 }))
+        expect(logged).toContainEqual(expect.objectContaining({ subject: PERSON, method: 'POST', path: '/api/spaces/tg-other/projects', status: 403 }))
+    })
+
+    it('never turns into a browser session, even on a route that re-issues one', async () => {
+        const server = await setup()
+        const { token } = await (await mint(server)).json()
+        // Creating a space grants it to the creator and, for a browser, re-mints
+        // the cookie. For di.bo's errand the grant lands and the cookie does not.
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST', headers: as(token, json), body: JSON.stringify({ label: 'Made via di.bo', slug: 'tg-made' })
+        })
+        expect(created.status).toBe(201)
+        expect(created.headers.get('set-cookie')).toBeFalsy()
+        expect(JSON.parse(readRows(server, 'SELECT spaces FROM users WHERE id = ?', PERSON)[0].spaces)).toContain('tg-made')
+    })
+
+    it('refuses the routes a borrowed key must never reach, whatever the person\'s role', async () => {
+        // Even root's token, on an admin account, is refused here: the list is
+        // about the key, not the role or the tier.
+        const server = await setup({ ACT_TOKEN_ROOT_TELEGRAM_IDS: TG_ID })
+        writeDb(server, "UPDATE users SET role = 'admin' WHERE id = ?", PERSON)
+        const { token } = await (await mint(server)).json()
+        const refused = [
+            ['POST', '/api/auth/telegram/act-token', { telegramId: TG_ID }, { 'x-telegram-login-secret': SECRET }],
+            ['POST', '/api/auth/telegram/login-link', { telegramId: TG_ID }, { 'x-telegram-login-secret': SECRET }],
+            ['GET', '/api/auth/session'],
+            ['DELETE', '/api/auth/session'],
+            ['GET', '/api/users'],
+            ['PATCH', `/api/users/${PERSON}`, { role: 'admin' }],
+            ['POST', '/api/spaces/tg-mine/sync-keys', { label: 'x' }],
+            ['GET', '/api/spaces/tg-mine/sync-keys'],
+            ['POST', '/api/integrations/ai/connect', { apiKey: 'sk-x' }],
+            ['GET', '/api/dm/devices'],
+            ['POST', '/api/approvals/decision', {}],
+            ['POST', '/api/invites/redeem', { token: 'dii_invite_x.y' }],
+            ['PATCH', '/api/spaces/tg-mine', { ownerUserId: PERSON }],
+            ['PATCH', '/api/spaces/tg-mine', { trustedUserIds: [] }]
+        ]
+        for (const [method, route, payload, extra = {}] of refused) {
+            const res = await fetch(`${server.baseUrl}${route}`, {
+                method,
+                headers: as(token, { ...json, ...extra }),
+                ...(payload ? { body: JSON.stringify(payload) } : {})
+            })
+            expect(res.status, `${method} ${route}`).toBe(403)
+            expect((await res.json()).error, `${method} ${route}`).toBe('not_through_di_bo')
+        }
+        expect(readRows(server, 'SELECT COUNT(*) AS n FROM telegram_act_tokens')[0].n, 'no second token was minted').toBe(1)
+        expect(readRows(server, 'SELECT COUNT(*) AS n FROM space_sync_keys')[0].n).toBe(0)
+        // A plain rename is the person's own business and still goes through.
+        const renamed = await fetch(`${server.baseUrl}/api/spaces/tg-mine`, {
+            method: 'PATCH', headers: as(token, json), body: JSON.stringify({ label: 'Renamed via di.bo' })
+        })
+        expect(renamed.status).toBe(200)
+    })
+
+    it('answers 401 to a forged, expired or signed-out token — never a guest', async () => {
+        const server = await setup()
+        const forged = await fetch(`${server.baseUrl}/api/spaces/tg-mine/projects`, { headers: as('dii_tgact_deadbeefdeadbeef.forged') })
+        expect(forged.status).toBe(401)
+        expect((await forged.json()).error).toBe('act_token_invalid')
+
+        const expiring = await (await mint(server)).json()
+        writeDb(server, 'UPDATE telegram_act_tokens SET expires_at = ? WHERE user_id = ?', Date.now() - 1000, PERSON)
+        const expired = await fetch(`${server.baseUrl}/api/spaces/tg-mine/projects`, { headers: as(expiring.token) })
+        expect(expired.status).toBe(401)
+        expect(expired.headers.get('set-cookie'), 'a dead token must not be handed a guest session').toBeFalsy()
+
+        // Signing out everywhere (the person's own logout bumps token_version)
+        // ends di.bo's token the same moment it ends their cookies.
+        const live = await (await mint(server)).json()
+        expect((await fetch(`${server.baseUrl}/api/spaces/tg-mine/projects`, { headers: as(live.token) })).status).toBe(200)
+        const logout = await fetch(`${server.baseUrl}/api/auth/session`, { method: 'DELETE', headers: { Cookie: mintSessionCookie(PERSON) } })
+        expect(logout.status).toBe(204)
+        expect((await fetch(`${server.baseUrl}/api/spaces/tg-mine/projects`, { headers: as(live.token) })).status).toBe(401)
+    })
+
+    // The owner, 2026-10-07: "make me root, Emilya admin, and make the right
+    // privileges" (actTokenTier.js). Three admin ACCOUNTS, three tiers: the
+    // tier, not the account, decides how far di.bo reaches, and only downward.
+    it('reaches by tier — root, admin, member — and never past the account', async () => {
+        const server = await startServer({
+            requireAuth: true,
+            extraEnv: { ...withTelegram, ACT_TOKEN_ROOT_TELEGRAM_IDS: '111111', ACT_TOKEN_ADMIN_TELEGRAM_IDS: '222222, 444444' }
+        })
+        await createSpaceWithScene(server, { spaceId: 'tg-a', scene: { objects: [], assets: [] } })
+        await createSpaceWithScene(server, { spaceId: 'tg-b', scene: { objects: [], assets: [] } })
+        await createSpaceWithScene(server, { spaceId: 'tg-c', scene: { objects: [], assets: [] } })
+        // tg-c is the space root deletes below. The helper marks spaces permanent,
+        // and a permanent space is refused 409 by design (#789: an admin clears
+        // `permanent` first, on the record) — so clear it here, the documented way.
+        const unpinned = await fetch(`${server.baseUrl}/api/spaces/tg-c`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ permanent: false })
+        })
+        expect(unpinned.status).toBe(200)
+        const now = Date.now()
+        for (const [id, tg, role] of [['u-root', '111111', 'admin'], ['u-admin', '222222', 'admin'], ['u-member', '333333', 'admin'], ['u-listed-editor', '444444', 'editor']]) {
+            writeDb(server, `
+                INSERT INTO users (id, provider, provider_id, email, display_name, role, spaces, created_at, updated_at)
+                VALUES (?, 'telegram', ?, NULL, ?, ?, ?, ?, ?)
+            `, id, tg, id, role, JSON.stringify(role === 'editor' ? ['tg-a'] : []), now, now)
+        }
+        const tokenFor = async (tg) => (await mint(server, tg)).json()
+        const root = await tokenFor('111111')
+        const admin = await tokenFor('222222')
+        const member = await tokenFor('333333')
+        const editor = await tokenFor('444444')
+        expect([root.tier, admin.tier, member.tier, editor.tier]).toEqual(['root', 'admin', 'member', 'admin'])
+        expect(member.role).toBe('editor')
+        const status = async (token, method, url, body) => {
+            const res = await fetch(`${server.baseUrl}${url}`, {
+                method, headers: as(token, body ? json : {}), ...(body ? { body: JSON.stringify(body) } : {})
+            })
+            return { status: res.status, body: await res.json().catch(() => null) }
+        }
+
+        // A member's admin account acts as an editor of its own spaces: tg-b is not its.
+        expect((await status(member.token, 'GET', '/api/spaces/tg-b/projects')).status).toBe(403)
+        // An admin tier keeps the account's admin reach across spaces.
+        expect((await status(admin.token, 'GET', '/api/spaces/tg-b/projects')).status).toBe(200)
+        // Listed as admin, but the account is an editor: the tier never adds reach.
+        expect((await status(editor.token, 'GET', '/api/spaces/tg-b/projects')).status).toBe(403)
+        expect((await status(editor.token, 'GET', '/api/spaces/tg-a/projects')).status).toBe(200)
+
+        // The platform settings: refused below root, by rule, with the tier named.
+        for (const [method, url, body] of [
+            ['GET', '/api/estate/map'],
+            ['PATCH', '/api/config', { defaultSpaceId: 'tg-a' }],
+            ['DELETE', '/api/spaces/tg-c']
+        ]) {
+            for (const [who, token] of [['admin', admin.token], ['member', member.token]]) {
+                const r = await status(token, method, url, body)
+                expect(r.status, `${who} ${method} ${url}`).toBe(403)
+                expect(r.body).toMatchObject({ error: 'not_through_di_bo', tier: who })
+            }
+            const r = await status(root.token, method, url, body)
+            expect(r.body?.error, `root ${method} ${url}`).not.toBe('not_through_di_bo')
+        }
+        // Root really did it: the space is gone (to the trash or for good).
+        expect((await status(root.token, 'GET', '/api/spaces/tg-c/projects')).status).not.toBe(200)
+        // And root still meets the common refusals.
+        expect((await status(root.token, 'GET', '/api/users')).body).toMatchObject({ error: 'not_through_di_bo' })
+
+        // Every write line carries the tier.
+        const lines = () => server.logs().split('\n').filter((l) => l.includes('[act-token] write'))
+        for (let i = 0; i < 40 && !lines().some((l) => l.includes('"tier":"root"')); i += 1) await wait(50)
+        expect(lines().map((l) => JSON.parse(l.slice(l.indexOf('{'))))).toContainEqual(expect.objectContaining({ subject: 'u-root', tier: 'root', method: 'DELETE', path: '/api/spaces/tg-c' }))
+    })
+})
+
+// GET /ai/context at the caller's level (aiContext.js), against a real server
+// with auth ON and real act tokens of each tier: no key = public; root =
+// owner, admin = core, member = registered (no group column yet); a level
+// above the caller's is a 403, never a lower one handed back.
+describe('the one context, by level (GET /ai/context)', () => {
+    const SECRET = 'test-bot-secret'
+    const LEVELS = ['public', 'registered', 'partner', 'crew', 'core', 'owner']
+
+    it('serves each caller its own level and refuses every level above it', async () => {
+        const server = await startServer({
+            requireAuth: true,
+            extraEnv: {
+                TELEGRAM_LOGIN_SECRET: SECRET,
+                OAUTH_CALLBACK_BASE_URL: 'https://example.test',
+                ACT_TOKEN_ROOT_TELEGRAM_IDS: '911111',
+                ACT_TOKEN_ADMIN_TELEGRAM_IDS: '922222'
+            }
+        })
+        // The non-public bundles live in the data folder, never the repo.
+        for (const level of LEVELS.slice(1)) {
+            fs.mkdirSync(path.join(server.dataRoot, 'ai-context', level), { recursive: true })
+            fs.writeFileSync(path.join(server.dataRoot, 'ai-context', level, 'CONTEXT.md'), `# context — ${level}\n`)
+        }
+        const db = new DatabaseSync(path.join(server.dataRoot, 'di.db'))
+        const now = Date.now()
+        try {
+            for (const [id, tg] of [['ctx-root', '911111'], ['ctx-admin', '922222'], ['ctx-member', '933333']]) {
+                db.prepare(`
+                    INSERT INTO users (id, provider, provider_id, email, display_name, role, spaces, created_at, updated_at)
+                    VALUES (?, 'telegram', ?, NULL, ?, 'admin', '[]', ?, ?)
+                `).run(id, tg, id, now, now)
+            }
+        } finally { db.close() }
+        const tokenFor = async (telegramId) => (await (await fetch(`${server.baseUrl}/api/auth/telegram/act-token`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-telegram-login-secret': SECRET },
+            body: JSON.stringify({ telegramId })
+        })).json()).token
+        const callers = [
+            ['no key', null, 'public'],
+            ['act token, member', await tokenFor('933333'), 'registered'],
+            ['act token, admin', await tokenFor('922222'), 'core'],
+            ['act token, root', await tokenFor('911111'), 'owner'],
+            ['the API key', server.apiToken, 'core']
+        ]
+        for (const [who, token, yours] of callers) {
+            const headers = token ? { Authorization: `Bearer ${token}` } : {}
+            const own = await fetch(`${server.baseUrl}/ai/context`, { headers })
+            expect(own.status, `${who}: own level`).toBe(200)
+            expect(own.headers.get('x-di-context-level'), who).toBe(yours)
+            expect(own.headers.get('content-type'), who).toContain('text/markdown')
+            expect(own.headers.get('cache-control'), who).toContain('no-store')
+            const text = await own.text()
+            if (yours === 'public') expect(text).toMatch(/context, public level/)
+            else expect(text).toBe(`# context — ${yours}\n`)
+            for (const level of LEVELS) {
+                const res = await fetch(`${server.baseUrl}/ai/context?level=${level}`, { headers })
+                const allowed = LEVELS.indexOf(level) <= LEVELS.indexOf(yours)
+                expect(res.status, `${who} asking ${level}`).toBe(allowed ? 200 : 403)
+                if (!allowed) expect(await res.json()).toMatchObject({ error: 'level_refused', level, yours })
+            }
+        }
+        // A token that does not resolve is refused, not read as public.
+        const dead = await fetch(`${server.baseUrl}/ai/context`, { headers: { Authorization: 'Bearer dii_tgact_nope.nope' } })
+        expect(dead.status).toBe(401)
+    })
+})
+
 // The contents of a space, for whoever is allowed to look.
 //
 // Measured on the owner's own tier on 2026-09-10: 22 spaces, 201 projects, and
@@ -3527,6 +3908,71 @@ describe('a space\'s contents', () => {
         expect(authored.status).toBe(200)
         const authoredIds = (await authored.json()).projects.map((p) => p.id).sort()
         expect(authoredIds).toEqual([archived.id, draft.id, legacy.id, live.id].sort())
+    })
+
+    // 2026-10-05: the production's version list is a PRIVATE project, so a visitor's read of it was a 404
+    // and the version row fell back to stale siblings (no "for the show", "Old versions (8)"). The server
+    // now answers the public parts of the list, and only those.
+    describe('GET /api/spaces/:spaceId/productions/:production/versions', () => {
+        const entity = (id, components) => ({ id, type: 'group', name: id, components: { transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, ...components } })
+        const putDoc = async (server, projectId, entities) => {
+            const current = await (await fetch(`${server.baseUrl}/api/projects/${projectId}/document`, { headers: withAuth(server.apiToken) })).json()
+            const put = await fetch(`${server.baseUrl}/api/projects/${projectId}/document`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+                body: JSON.stringify({ ...current.document, entities })
+            })
+            expect(put.status).toBe(200)
+        }
+        const version = (id, projectId, status) => entity(`version-${id}`, {
+            productionVersion: {
+                id, projectId, title: `Title ${id}`, status,
+                madeBy: { machine: 'secret-machine', install: 'secret-install', tool: 't', commit: 'c' },
+                fingerprint: `sha256:${'a'.repeat(64)}`, note: 'SECRET NOTE', rig: { file: 'secret/rig.json', blob: null }
+            }
+        })
+
+        it('answers a visitor and a member only {id, projectId, title, status}, and leaves out a version whose project is private', async () => {
+            const server = await startServer({ nodeEnv: 'production', extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false' } })
+            await makeSpace(server, 'prod-space', 'Prod Space')
+            await publish(server, 'prod-space')
+            const list = await createServerProject(server, 'prod-space', { title: 'Show versions', slug: 'show-2026-versions', visibility: 'private' })
+            const open = await createServerProject(server, 'prod-space', { title: 'Open hall', slug: 'open-hall' })
+            const other = await createServerProject(server, 'prod-space', { title: 'Other hall', slug: 'other-hall' })
+            const hidden = await createServerProject(server, 'prod-space', { title: 'Hidden hall', slug: 'hidden-hall', visibility: 'private' })
+            await putDoc(server, list.id, [
+                entity('production', { productionMeta: { id: 'show-2026', title: 'Show', space: 'prod-space', codeList: '' } }),
+                version('open', open.id, 'for-the-show'),
+                version('other', other.id, 'concept'),
+                version('hidden', hidden.id, 'candidate')
+            ])
+            const url = `${server.baseUrl}/api/spaces/prod-space/productions/show-2026/versions`
+
+            // the list project itself is still private to a visitor
+            expect((await fetch(`${server.baseUrl}/api/projects/${list.id}/document`)).status).toBe(404)
+
+            const visitor = await fetch(url)
+            expect(visitor.status).toBe(200)
+            const body = await visitor.json()
+            expect(body.versions).toEqual([
+                { id: 'open', projectId: open.id, title: 'Title open', status: 'for-the-show' },
+                { id: 'other', projectId: other.id, title: 'Title other', status: 'concept' }
+            ])
+            const raw = JSON.stringify(body)
+            for (const leak of ['secret-machine', 'secret-install', 'SECRET NOTE', 'sha256:', 'secret/rig.json', 'hidden-hall', 'Hidden hall']) expect(raw).not.toContain(leak)
+
+            const member = await fetch(url, { headers: withAuth(server.apiToken) })
+            expect(member.status).toBe(200)
+            const memberBody = await member.json()
+            expect(memberBody.versions.map((v) => v.id)).toEqual(['open', 'hidden', 'other'])
+            for (const v of memberBody.versions) expect(Object.keys(v).sort()).toEqual(['id', 'projectId', 'status', 'title'])
+
+            // no such list, a malformed production id, a private space
+            expect((await fetch(`${server.baseUrl}/api/spaces/prod-space/productions/nothing/versions`)).status).toBe(404)
+            expect((await fetch(`${server.baseUrl}/api/spaces/prod-space/productions/Bad_Id/versions`)).status).toBe(400)
+            await makeSpace(server, 'prod-shut', 'Prod Shut')
+            expect((await fetch(`${server.baseUrl}/api/spaces/prod-shut/productions/show-2026/versions`)).status).toBe(401)
+        })
     })
 
     // 2026-09-30: the rig version switch was built from a sibling list frozen into each

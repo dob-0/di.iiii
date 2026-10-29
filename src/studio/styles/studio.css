@@ -94,17 +94,25 @@
     white-space: nowrap;
 }
 
+/* One name over the primary selection only (owner 2026-10-13: seven wrapped pills hid the scene).
+   One line, small, never under the pointer. */
 .studio-selection-pill {
     display: inline-flex;
     align-items: center;
-    min-height: 28px;
-    padding: 0 var(--di-space-3);
+    min-height: 22px;
+    max-width: 320px;
+    padding: 0 var(--di-space-2);
     border-radius: 0;
     background: var(--di-surface);
     border: 1px solid var(--di-cyan-border);
     color: var(--di-text);
     font-size: var(--di-text-3);
     font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    opacity: 0.9;
 }
 
 .studio-overlay-card {
@@ -179,20 +187,24 @@
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(var(--di-cyan-rgb), 0.55);
+    color: rgba(var(--di-cyan-rgb), 0.85);
 }
 
 .sfp-close {
     appearance: none;
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--di-text-muted);
     cursor: pointer;
     font-size: var(--di-text-5);
     padding: 0 var(--di-space-1);
     line-height: 1;
     border-radius: var(--di-radius);
     transition: color 0.1s, background 0.1s;
+    /* UX audit F021/F087: a target of its own (24 px floor, WCAG 2.5.8), and a gap from the fold button. */
+    min-width: 28px;
+    min-height: 28px;
+    margin-left: var(--di-space-3);
 }
 
 .sfp-close:hover {
@@ -318,6 +330,7 @@
 .scc-sync-dot {
     width: 6px;
     height: 6px;
+    /* status dot, not a control */
     border-radius: 50%;
     flex-shrink: 0;
     background: rgba(255, 255, 255, 0.25);
@@ -337,6 +350,8 @@
     padding: var(--di-space-1) var(--di-space-1);
     border-radius: var(--di-radius);
     line-height: 1;
+    min-width: 28px;
+    min-height: 28px;
 }
 
 .scc-collapse-btn:hover {
@@ -358,7 +373,7 @@
     font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.22);
+    color: var(--di-text-muted);
     margin-bottom: var(--di-space-1);
 }
 
@@ -389,6 +404,7 @@
     white-space: nowrap;
     transition: background 0.1s, border-color 0.1s, color 0.1s;
     line-height: 1.4;
+    min-height: 28px;
 }
 
 .scc-btn:hover {
@@ -401,6 +417,33 @@
     background: var(--di-line);
     border-color: var(--di-cyan-line);
     color: var(--di-cyan);
+}
+
+/* Undo and Redo sit in the cluster's header, so they are there even when it is collapsed. Words, 12 px. */
+.scc-undo-btn {
+    font-size: var(--di-text-3);
+    min-height: 28px;
+}
+
+.scc-undo-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* "Saved 14:32" / "Saving..." / "Not saved: ...": the state in words, never only a colour. */
+.di-save-line {
+    font-size: var(--di-text-3);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.scc-save-line {
+    padding: var(--di-space-1) var(--di-space-3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.di-save-line--error {
+    color: var(--di-danger);
+    font-weight: 600;
 }
 
 .scc-btn--icon {
@@ -441,7 +484,7 @@
     justify-content: center;
     width: 22px;
     height: 22px;
-    border-radius: 50%;
+    border-radius: 0;
     background: rgba(var(--di-cyan-rgb), 0.2);
     border: 1px solid var(--di-cyan-line);
     color: var(--di-cyan);
@@ -476,7 +519,7 @@
     font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.28);
+    color: var(--di-text-muted);
     margin-bottom: var(--di-space-2);
 }
 
@@ -534,9 +577,14 @@
 
 .sfp-empty {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.28);
+    color: var(--di-text-muted);
     padding: var(--di-space-2) 0 var(--di-space-1);
     margin: 0;
+}
+
+.sfp-link {
+    color: var(--di-cyan);
+    text-decoration: underline;
 }
 
 .spa-actions {
@@ -548,6 +596,7 @@
 .spa-btn-wide {
     width: 100%;
     display: flex;
+    align-items: center;
     justify-content: center;
     text-align: center;
     box-sizing: border-box;
@@ -608,9 +657,35 @@
 
 .spa-type {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--di-text-muted);
     white-space: nowrap;
     flex-shrink: 0;
+}
+
+/* A row shown, not clicked (made in Nodes): no hand, no hover, so it does not
+   promise a click; its Edit in Nodes button is the way in. */
+.spa-item--static,
+.spa-item--static:hover {
+    cursor: default;
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.07);
+}
+
+.spa-node-edit {
+    appearance: none;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--di-radius);
+    color: inherit;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-family: inherit;
+    font-size: var(--di-text-2);
+    padding: var(--di-space-1) var(--di-space-2);
+}
+
+.spa-node-edit:hover {
+    background: rgba(255, 255, 255, 0.09);
 }
 
 .spa-item--space {
@@ -759,7 +834,7 @@
 
 .spa-activity-time {
     font-size: var(--di-text-1);
-    color: rgba(255, 255, 255, 0.22);
+    color: var(--di-text-muted);
 }
 
 .spa-activity-msg {
@@ -782,27 +857,30 @@
     border-radius: var(--di-radius);
     min-width: 0;
     letter-spacing: 0;
-    box-shadow: none !important;
+    box-shadow: none;
 }
 
 .sfp-content .MuiButton-outlined {
-    border-color: rgba(255, 255, 255, 0.12) !important;
-    color: rgba(255, 255, 255, 0.75) !important;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.75);
 }
 
 .sfp-content .MuiButton-outlined:hover {
-    background: rgba(255, 255, 255, 0.06) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
+/* These rules outrank MUI by specificity; their !important was dropped on
+   2026-10-21 after measuring each one changed nothing on screen. The border
+   keeps it: without it the contained button loses its border (solid -> none). */
 .sfp-content .MuiButton-contained {
-    background: var(--di-line) !important;
+    background: var(--di-line);
     border: 1px solid var(--di-cyan-border) !important;
-    color: var(--di-cyan) !important;
+    color: var(--di-cyan);
 }
 
 .sfp-content .MuiButton-contained:hover {
-    background: rgba(var(--di-cyan-rgb), 0.2) !important;
+    background: rgba(var(--di-cyan-rgb), 0.2);
 }
 
 .sfp-content .MuiOutlinedInput-root {
@@ -818,8 +896,8 @@
 
 .sfp-content .MuiPaper-outlined,
 .sfp-content .MuiCard-root {
-    border-color: rgba(255, 255, 255, 0.08) !important;
-    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .sfp-content .MuiSelect-select,
@@ -864,10 +942,37 @@
     margin-bottom: var(--di-space-1);
 }
 
+.insp-header-action {
+    display: block;
+    margin-top: var(--di-space-2);
+}
+
+.insp-lock-btn.active {
+    /* Locked reads by fill, not shape (controls are rectangles, 0-2 px). */
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--di-black);
+}
+
+.insp-lock-row {
+    margin-top: var(--di-space-2);
+}
+
+/* Blender's Select Box: the dashed rectangle while a box is dragged (BoxSelect, StudioViewport). */
+.studio-box-select {
+    position: fixed;
+    border: 1px dashed rgba(255, 255, 255, 0.9);
+    outline: 1px dashed rgba(0, 0, 0, 0.6);
+    outline-offset: -2px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 0;
+    pointer-events: none;
+    z-index: 2000;
+}
+
 .insp-subtitle {
     display: block;
     font-size: var(--di-text-1);
-    color: rgba(255, 255, 255, 0.32);
+    color: var(--di-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.12em;
 }
@@ -899,7 +1004,7 @@
 
 .insp-arrow {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.28);
+    color: var(--di-text-muted);
 }
 
 .insp-section-body {
@@ -917,7 +1022,7 @@
 
 .insp-label {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.38);
+    color: var(--di-text-muted);
     letter-spacing: 0.04em;
     cursor: default;
 }
@@ -1088,9 +1193,10 @@
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
-    height: 4px;
-    border-radius: var(--di-radius);
-    margin: var(--di-space-2) 0 var(--di-space-1);
+    /* The input is the hit box: 24 px tall (WCAG 2.2 SC 2.5.8). The 4 px line is
+       its background, drawn in the middle; the thumb is a rectangle. */
+    height: 24px;
+    margin: 0;
     cursor: pointer;
     /* Set inline by InspSlider/SliderField; declared here so the gradient never
        has to read the token with a hardcoded fallback. */
@@ -1099,15 +1205,17 @@
         to right,
         var(--di-cyan) var(--insp-slider-fill),
         rgba(255, 255, 255, 0.1) var(--insp-slider-fill)
-    );
+    ) center / 100% 4px no-repeat;
 }
 
+/* The thumb's dark rim keeps it apart from the filled cyan line (SC 1.4.11).
+   Controls have 0 px corners (owner, 2026-10-21). */
 .insp-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
+    width: 8px;
+    height: 18px;
+    border-radius: 0;
     background: var(--di-cyan);
     border: 2px solid var(--di-scrim-strong);
     box-shadow: 0 0 0 1px rgba(var(--di-cyan-rgb), 0.4);
@@ -1115,9 +1223,9 @@
 }
 
 .insp-slider::-moz-range-thumb {
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
+    width: 8px;
+    height: 18px;
+    border-radius: 0;
     background: var(--di-cyan);
     border: 2px solid var(--di-scrim-strong);
     box-shadow: 0 0 0 1px rgba(var(--di-cyan-rgb), 0.4);
@@ -1126,13 +1234,13 @@
 
 .insp-slider::-moz-range-track {
     height: 4px;
-    border-radius: var(--di-radius);
+    border-radius: 0;
     background: rgba(255, 255, 255, 0.1);
 }
 
 .insp-slider::-moz-range-progress {
     height: 4px;
-    border-radius: var(--di-radius);
+    border-radius: 0;
     background: var(--di-cyan);
 }
 
@@ -1206,7 +1314,7 @@
     height: 16px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
     flex-shrink: 0;
     transition: background 0.15s, border-color 0.15s;
 }
@@ -1218,7 +1326,7 @@
     width: 10px;
     height: 10px;
     background: rgba(255, 255, 255, 0.45);
-    border-radius: 50%;
+    border-radius: 0;
     transition: transform 0.15s, background 0.15s;
 }
 
@@ -1347,7 +1455,7 @@
     font-size: var(--di-text-2);
     font-weight: 500;
     letter-spacing: 0.04em;
-    color: rgba(255,255,255,0.35);
+    color: var(--di-text-muted);
     pointer-events: none;
     user-select: none;
 }
@@ -1553,7 +1661,7 @@
     text-transform: uppercase;
     color: var(--di-cyan);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.4);
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
     padding: var(--di-space-1) var(--di-space-2);
 }
 .spp-actions {
@@ -1623,6 +1731,8 @@
     color: var(--di-text-muted);
     padding: var(--di-space-1) var(--di-space-2);
 }
+/* A name clash is read, not missed: the danger colour, not the muted grey. */
+.spp-status-error { color: var(--di-danger); }
 
 /* The cue strip's key badge. A cue that is not up is not news, so the number
    sits dimmer than the name it belongs to and never takes the eye off the
@@ -1632,6 +1742,124 @@
     display: inline-block;
     min-width: 8px;
     margin-right: var(--di-space-1);
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--di-text-muted);
     font-variant-numeric: tabular-nums;
+}
+
+/* Laser test (LaserTest.jsx): one label per laser unit, at the centre ray's hit. Same face as the transform HUD. */
+.laser-test-label {
+    padding: var(--di-space-1) var(--di-space-3);
+    border-radius: var(--di-radius);
+    background: var(--di-scrim);
+    border: 1px solid var(--di-cyan-border);
+    color: var(--di-text);
+    font-size: var(--di-text-3);
+    line-height: 1.4;
+    font-family: var(--di-mono);
+    white-space: nowrap;
+}
+
+/* SCENE EDITOR (2026-10-15, SceneEditor.jsx): under the scene's row. Rectangles, 2 px; fields at least 28 px tall. */
+.sfp-shell.scene-picker.scene-picker--editing { width: 500px; }
+.scene-editor input[type="range"] { width: 90px; }
+.scene-picker .sfp-content { overflow-y: auto; max-height: calc(58vh - 40px); }
+/* Scene bar (2026-10-16): New / Duplicate / Delete / up / down stay pinned at the top of the scrolling list, so Delete is in view while a far-down row is in Edit. Solid panel colour so rows do not show through. */
+.scene-picker .sfp-content > .scc-section:first-child { position: sticky; top: 0; z-index: 2; background: var(--di-surface); }
+.scene-picker--editable .spa-list { display: grid; grid-template-columns: 1fr auto; gap: var(--di-space-1); align-items: stretch; }
+.scene-picker--editable .scene-editor { grid-column: 1 / -1; }
+.scene-editor { display: flex; flex-direction: column; gap: var(--di-space-1); padding: var(--di-space-2); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: var(--di-radius); margin: var(--di-space-1) 0 var(--di-space-2); font-size: var(--di-text-2); }
+.scene-editor__row { display: flex; flex-wrap: wrap; gap: var(--di-space-2); align-items: center; }
+.scene-editor__title { font-weight: 600; letter-spacing: 0.04em; margin-top: var(--di-space-1); }
+.scene-editor__input { min-height: 28px; border-radius: var(--di-radius); border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(0, 0, 0, 0.35); color: inherit; padding: 0 var(--di-space-1); font: inherit; }
+.scene-editor__name { width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scene-editor__swatch { width: 18px; height: 18px; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 0; }
+.scene-editor__line { color: rgba(255, 255, 255, 0.65); line-height: 1.3; }
+.scene-editor__warn { color: var(--di-warning); border: 1px solid var(--di-warning); border-radius: var(--di-radius); padding: var(--di-space-1) var(--di-space-2); }
+.scene-editor__play { font-weight: 600; }
+
+/* ─── Scenes picker (ScenePicker.jsx) ─────────────────────────────────
+   A Studio window, not a card of its own: the shell, header, title and fold button of the Objects
+   window (sfp-*, scc-collapse-btn), the cluster's buttons (scc-btn) and the Objects list's rows
+   (spa-list / spa-item). Only the geometry is new. It is docked bottom-left of the viewport, ABOVE
+   the 44 px strip every page keeps free (--di-mode-mark-clearance, modeMark.css). In that strip live
+   the view label ("Perspective", .svl-view-label: bottom 12, left 14), the mode chip and, at the
+   bottom right, the tree chip (treeChip.css), so none of them is covered at any width.
+   Rectangles (--di-radius, 2 px); every target is at least 32 px. */
+.sfp-shell.scene-picker {
+    position: absolute;
+    top: auto;
+    left: var(--di-space-3);
+    bottom: calc(var(--di-mode-mark-clearance) + var(--di-space-1));
+    z-index: 10;
+    width: 300px;
+    max-width: calc(100% - 2 * var(--di-space-3));
+    max-height: 58vh;
+    pointer-events: auto;
+}
+
+/* Docked, not draggable: the header is not a handle. */
+.scene-picker .sfp-header {
+    cursor: default;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.scene-picker .scc-collapse-btn {
+    min-width: 32px;
+    min-height: 32px;
+    font-size: var(--di-text-3);
+}
+
+.scene-picker .scc-btn {
+    min-height: 32px;
+}
+
+/* The Objects list caps itself at 220 px; here the whole window scrolls, so the list does not. */
+.scene-picker .spa-list {
+    max-height: none;
+    overflow: visible;
+}
+
+.scene-picker .spa-item {
+    min-height: 32px;
+}
+
+.scene-picker__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+/* The one line that says what the scene is, from the floor. May wrap to a second line. */
+.scene-picker__intent {
+    font-size: var(--di-text-2);
+    line-height: 1.3;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.scene-picker .spa-item.active .scene-picker__intent {
+    color: rgba(var(--di-cyan-rgb), 0.8);
+}
+
+/* UX audit F021 (2026-10-29): on a finger the window controls are 44 px (--di-touch-target). */
+@media (pointer: coarse) {
+    .sfp-close,
+    .scc-collapse-btn,
+    .scc-btn {
+        min-width: var(--di-touch-target);
+        min-height: var(--di-touch-target);
+    }
+}
+
+/* Scene -> Move, "Mouse in Edit" (MoveSettings.jsx): two equal buttons, 44 px on touch. */
+.move-edit-mouse .scc-btn {
+    flex: 1;
+}
+
+@media (pointer: coarse) {
+    .move-edit-mouse .scc-btn {
+        min-height: 44px;
+    }
 }
