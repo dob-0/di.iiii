@@ -31,21 +31,30 @@ import AppVisitorsSection from './preferences/AppVisitorsSection.jsx'
 // Diagnostics deliberately collapsed to three (2026-08-08): the seven-section
 // nav made the console feel like seven separate tools instead of one surface.
 // Inspect = topology + objects + session; System = console + controls + env.
+//
+// Plain words (UX audit 2026-10-28, F045/F109): the keys stay, the names a
+// person reads say what each screen is for; no Unicode glyphs as icons (they
+// meant nothing and fell back to the device font). Group labels are the two
+// jobs: the people side and the staff-only operator side.
+const GROUP_LABELS = {
+    admin: 'Spaces and people',
+    diagnostics: 'Operator tools (staff)'
+}
 const SECTIONS = [
-    { key: 'manage', label: 'Manage', glyph: '▸', group: 'admin' },
-    { key: 'opencall', label: 'Open Call', glyph: '✉', group: 'admin' },
-    { key: 'agents', label: 'Agents', glyph: '◈', group: 'admin' },
+    { key: 'manage', label: 'Spaces and users', group: 'admin' },
+    { key: 'opencall', label: 'Open call', group: 'admin' },
+    { key: 'agents', label: 'Agent sessions', group: 'admin' },
     // The guest book: which apps, crawlers and scripts called, with a block
     // toggle — admin, because blocking changes who gets in.
-    { key: 'visitors', label: 'Visitors', glyph: '⌁', group: 'admin' },
-    { key: 'overview', label: 'Overview', glyph: '◆', group: 'diagnostics' },
-    { key: 'inspect', label: 'Inspect', glyph: '◇', group: 'diagnostics' },
-    { key: 'system', label: 'System', glyph: '▥', group: 'diagnostics' },
+    { key: 'visitors', label: 'Apps that visit', group: 'admin' },
+    { key: 'overview', label: 'Overview', group: 'diagnostics' },
+    { key: 'inspect', label: 'This scene', group: 'diagnostics' },
+    { key: 'system', label: 'Log and settings', group: 'diagnostics' },
     // Diagnostics, not admin: the estate map only observes. It is the machines
     // themselves rather than this app — read from the private atlas, admin-gated
     // at the server because it is infrastructure topology.
-    { key: 'estate', label: 'Estate', glyph: '⌗', group: 'diagnostics' }
-]
+    { key: 'estate', label: 'Machines', group: 'diagnostics' }
+].map((section) => ({ ...section, groupLabel: GROUP_LABELS[section.group] }))
 
 // Sections where the person is administering, not debugging the scene — the
 // topbar drops the scene-editor telemetry and shows counts that belong to the
@@ -57,6 +66,29 @@ const ADMIN_SECTION_KEYS = new Set(['manage', 'opencall', 'agents', 'visitors'])
 const QUICK_ACTION_KEYS = ['admin-mode', 'live-sync', 'edit-lock', 'publish']
 
 function ManagementButton({ button }) {
+    // An on/off setting is a switch that says its state in words, not a button
+    // whose label is the state ("Editing Locked" read as a status, F108).
+    if (button.kind === 'switch') {
+        const detailId = button.detail ? `preferences-switch-${button.key}` : undefined
+        return (
+            <div className="preferences-switch">
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={Boolean(button.checked)}
+                    aria-describedby={detailId}
+                    className={`preferences-switch-control${button.checked ? ' is-on' : ''}${button.variant === 'warning' && button.checked ? ' is-warning' : ''}`}
+                    onClick={button.onClick}
+                    disabled={button.disabled}
+                    title={button.title}
+                >
+                    <span className="preferences-switch-label">{button.label}</span>
+                    <span className="preferences-switch-state" aria-hidden="true">{button.checked ? 'On' : 'Off'}</span>
+                </button>
+                {button.detail ? <span id={detailId} className="preferences-switch-detail">{button.detail}</span> : null}
+            </div>
+        )
+    }
     return (
         <button
             type="button"
@@ -73,6 +105,10 @@ function ManagementButton({ button }) {
 export default function PreferencesPage({ onNavigateToEditor }) {
     const [activeSection, setActiveSection] = useState('manage')
     const [headerCollapsed, setHeaderCollapsed] = useState(false)
+    // Refresh loads the lists again by remounting the open section (each one
+    // fetches on mount); it no longer reloads the page, which threw away the
+    // open section and the selection (F150).
+    const [refreshKey, setRefreshKey] = useState(0)
     // Counts reported upward by the sections that own the data, so the slim
     // admin topbar can show real numbers without lifting whole fetches here.
     const [manageStats, setManageStats] = useState(null)
@@ -172,10 +208,10 @@ export default function PreferencesPage({ onNavigateToEditor }) {
         <div className="preferences-page">
             <header className={`preferences-topbar${headerCollapsed ? ' is-collapsed' : ''}`}>
                 <div className="preferences-topbar-main">
-                    <div className="preferences-eyebrow">Admin Management</div>
+                    <div className="preferences-eyebrow">Admin</div>
                     <div className="preferences-topbar-title-row">
-                        <h1>Ops Graph</h1>
-                        <span className="preferences-inline-chip">{sync?.spaceId || 'main'}</span>
+                        <h1>{isAdminSection ? 'Spaces and who can see them' : 'Operator tools'}</h1>
+                        <span className="preferences-inline-chip">Space: {sync?.spaceId || 'main'}</span>
                         <button
                             type="button"
                             className="preferences-collapse-toggle"
@@ -208,7 +244,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                     <MetricCard label="Users" value={manageStats?.users ?? '—'} />
                                 </>
                             )}
-                            <MetricCard label="Socket" value={sync?.isSocketConnected ? 'Live' : 'Down'} tone={sync?.isSocketConnected ? 'success' : 'warning'} />
+                            <MetricCard label="Live link" value={sync?.isSocketConnected ? 'Connected' : 'Offline'} tone={sync?.isSocketConnected ? 'success' : 'warning'} />
                         </>
                     ) : (
                         <>
@@ -216,14 +252,14 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                             <MetricCard label="Visible" value={visibleObjectCount} tone="success" />
                             <MetricCard label="Selected" value={selectedCount} tone={selectedCount ? 'accent' : 'default'} />
                             <MetricCard label="Hidden" value={hiddenObjectCount} tone={hiddenObjectCount ? 'warning' : 'default'} />
-                            <MetricCard label="Socket" value={sync?.isSocketConnected ? 'Live' : 'Down'} tone={sync?.isSocketConnected ? 'success' : 'warning'} />
-                            <MetricCard label="Roster" value={sync?.participantRoster?.length || 0} tone={sync?.participantRoster?.length ? 'accent' : 'default'} />
+                            <MetricCard label="Live link" value={sync?.isSocketConnected ? 'Connected' : 'Offline'} tone={sync?.isSocketConnected ? 'success' : 'warning'} />
+                            <MetricCard label="People here" value={sync?.participantRoster?.length || 0} tone={sync?.participantRoster?.length ? 'accent' : 'default'} />
                         </>
                     )}
                 </div>
 
                 <div className="preferences-topbar-actions">
-                    <button type="button" className="toggle-button" onClick={() => onNavigateToEditor?.(sync?.spaceId)}>Back to Editor</button>
+                    <button type="button" className="toggle-button" onClick={() => onNavigateToEditor?.(sync?.spaceId)}>Back to the space</button>
                     {!isAdminSection && (
                         <>
                             <button type="button" className="toggle-button" onClick={copySnapshot}>Copy Snapshot</button>
@@ -232,17 +268,17 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                             <button type="button" className="toggle-button warning-button" onClick={() => xr?.showXrDiagnostics?.()}>XR Debug</button>
                         </>
                     )}
-                    <button type="button" className="toggle-button" onClick={() => window.location.reload()}>Refresh</button>
+                    <button type="button" className="toggle-button" title="Load the lists again" onClick={() => setRefreshKey((n) => n + 1)}>Refresh</button>
                 </div>
             </header>
 
             <div className="preferences-shell">
                 <SectionNav sections={sections} activeKey={activeSection} onSelect={setActiveSection} />
 
-                <main className="preferences-content">
+                <main key={refreshKey} className="preferences-content">
                     {activeSection === 'overview' && (
                         <>
-                            <ModuleSection title="Quick Actions" subtitle="Most-used controls — full set under Controls">
+                            <ModuleSection title="Quick switches" subtitle="Each one says if it is on; flip it back to undo. All of them are under Log and settings">
                                 <div className="preferences-command-grid">
                                     {quickActions.map((button) => (
                                         <ManagementButton key={button.key} button={button} />
@@ -596,7 +632,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                 <InfoPair label="Scene Version" value={String(projectSnapshot.scene?.version ?? 'n/a')} />
                                 <InfoPair label="Display Name" value={sync?.effectiveDisplayName || 'n/a'} />
                                 <InfoPair label="Sync Mode" value={sync?.liveSyncFeatureEnabled && sync?.isLiveSyncEnabled ? 'Live collaborative editing' : 'Presence only + publish'} />
-                                <InfoPair label="Socket" value={sync?.isSocketConnected ? 'Connected' : 'Disconnected'} />
+                                <InfoPair label="Live link" value={sync?.isSocketConnected ? 'Connected' : 'Disconnected'} />
                                 <InfoPair label="Scene Stream" value={sync?.sceneStreamState || 'idle'} />
                                 <InfoPair label="Collaborators" value={String(sync?.collaborators?.length || 0)} />
                                 <InfoPair label="Local Save" value={sync?.localSaveStatus?.label || 'n/a'} />

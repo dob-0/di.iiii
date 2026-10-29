@@ -69,7 +69,7 @@ const writeFollows = async (dataDir, follows) => {
     return follows
 }
 
-const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null, direction = null, start = null }) => {
+const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null, name = null, direction = null, start = null }) => {
     const follows = followsForWrite(dataDir)
     follows[spaceId] = {
         remote: String(remote || '').replace(/\/$/, ''),
@@ -80,6 +80,8 @@ const addFollow = async (dataDir, spaceId, { remote, token, label = null, addres
         // entirely rather than null, so a record with no pin serialises
         // byte-identically to one written before this existed.
         ...(address ? { address } : {}),
+        // A network name, kept in step with scripts/di/follows.mjs.
+        ...(name ? { name } : {}),
         // `di follow --take-host | --take-mine`: the answer to a refusal, spent
         // on the first comparison of each stream and then cleared by the
         // server (clearDirection). `start: 'replay'` is the explicit opt-in to
@@ -89,6 +91,21 @@ const addFollow = async (dataDir, spaceId, { remote, token, label = null, addres
         ...(start === 'replay' ? { start } : {})
     }
     return writeFollows(dataDir, follows)
+}
+
+/**
+ * Remember which route found a named follow and where, so the next start has a
+ * last address. Never touches the remote, key or pin, so a running follower is
+ * not restarted by it. Nothing happens for a follow that has no name.
+ */
+const noteRoute = async (dataDir, spaceId, { route, address, port }) => {
+    const follows = followsForWrite(dataDir)
+    const name = follows[spaceId]?.name
+    if (!name) return false
+    if (name.route === route && name.lastAddress === address && name.lastPort === port) return false
+    follows[spaceId].name = { ...name, route, lastAddress: address, lastPort: port }
+    await writeFollows(dataDir, follows)
+    return true
 }
 
 /** Spend a direction: the first comparison happened, later edits sync the ordinary way. */
@@ -139,4 +156,4 @@ const writeFollowState = async (dataDir, spaceId, state) => {
     await writeFileAtomic(file, JSON.stringify({ format: STATE_FORMAT, version: 1, savedAt: new Date().toISOString(), state }))
 }
 
-module.exports = { readFollows, writeFollows, addFollow, clearDirection, removeFollow, readFollowState, writeFollowState, filePath, statePath, FORMAT }
+module.exports = { readFollows, writeFollows, addFollow, clearDirection, noteRoute, removeFollow, readFollowState, writeFollowState, filePath, statePath, FORMAT }

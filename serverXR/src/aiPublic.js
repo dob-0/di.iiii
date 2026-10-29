@@ -11,9 +11,9 @@
 //
 // Mounted twice by index.js: on the API router (nginx sends /llms.txt and
 // /ai/ to /serverXR/…), and at the root when serverXR is also the web server
-// (CLIENT_DIR, a local `di` install). A local pack does not carry the bundle
-// (its addresses are the hosted site's), so an install answers 404 for all of
-// it — the same answer it gave before for /llms.txt.
+// (CLIENT_DIR, a local `di` install). The pack carries the bundle
+// (scripts/pack-runtime.mjs copies docs/ai/public), because the dev tier runs
+// the pack without nginx; a build that lacks the folder answers 404 for all of it.
 
 const fs = require('node:fs/promises')
 const path = require('node:path')

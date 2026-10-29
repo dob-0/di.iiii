@@ -1221,7 +1221,7 @@ const cmdFollow = async (args) => {
     // `--take-mine` / `--take-host` alone may name a space already followed:
     // followSpace takes that follow's remote. Anything else needs --from.
     if (!spaceId || (!from && !takeHost && !takeMine)) {
-        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
+        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_… (or --from ponyo-k7q2, a network name)`)
         process.exitCode = 1
         return
     }
@@ -1244,13 +1244,14 @@ const cmdFollow = async (args) => {
         const pin = at || stored?.address || null
         if (result.reason === 'no-from') fail(ui.followNotFollowed(spaceId))
         else if (result.reason === 'remote-differs') fail(ui.followRemoteDiffers(spaceId, result.stored, result.base))
+        else if (result.reason === 'name-not-found') fail(ui.nameNotFound(result.label, result.zone, result.tried))
         else sayFollowRefusal(result.reason, { spaceId, url: where }, pin)
         process.exitCode = 1
         return
     }
     if (result.keptKey) say(ui.followKeptKey())
     // result.address is the pin used: typed with --at, or the stored follow's.
-    say(ui.following(spaceId, result.base, result.running, result.address))
+    say(ui.following(spaceId, result.base, result.running, result.address, result.name))
 }
 
 /** `di wifi` / `--stop` / `--status` — open or close this install's door on the wifi. */
@@ -1658,6 +1659,10 @@ const cmdAutoupdate = async (args) => {
         })
         say(`${outcome} ${detail}`)
         if (outcome === 'failed') process.exitCode = 1
+        try {
+            const timer = await autoupdate.refreshTimer({ home })
+            if (timer.changed) say(timer.ok ? `timer rewritten — now every ${autoupdate.EVERY_MINUTES} minutes` : `timer rewrite failed: ${timer.why}`)
+        } catch { /* a timer that cannot be refreshed keeps its old interval; the tick itself is logged */ }
         await noticeNameRenewal(home)
         return
     }
