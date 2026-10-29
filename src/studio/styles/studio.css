@@ -1863,3 +1863,18 @@
         min-height: 44px;
     }
 }
+
+/* The Studio's heading and landmark for screen readers and the tab (F125, S19).
+   The main region adds no box of its own: the shell lays out as before. */
+.studio-page-main {
+    display: contents;
+}
+
+.studio-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}

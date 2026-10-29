@@ -30,6 +30,15 @@ describe('StudioCodeSpaceDirector', () => {
         expect(screen.getByRole('heading', { name: 'Director' })).toBeTruthy()
     })
 
+    it('renders exactly one main region, on the piece and on the redirect fallback', async () => {
+        const piece = render(<StudioCodeSpaceDirector spaceId="algovrithm" />)
+        await screen.findByTestId('experience')
+        expect(piece.container.querySelectorAll('main')).toHaveLength(1)
+        piece.unmount()
+        const none = render(<StudioCodeSpaceDirector spaceId="no-such-space" />)
+        expect(none.container.querySelectorAll('main')).toHaveLength(1)
+    })
+
     // The two props ARE the integration. `embedded` swaps the root off
     // `position: fixed` — without it the piece covers the header naming the
     // space — and `director` forces the panel on, because a route called

@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
+import { pageTitle } from '../hooks/pageTitles.js'
 import { usePreferencesData } from '../hooks/usePreferencesData.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import { hasServerApi } from '../services/apiClient.js'
@@ -104,6 +106,7 @@ function ManagementButton({ button }) {
 
 export default function PreferencesPage({ onNavigateToEditor }) {
     const [activeSection, setActiveSection] = useState('manage')
+    useDocumentTitle(pageTitle('admin', { section: SECTIONS.find((s) => s.key === activeSection)?.label }))
     const [headerCollapsed, setHeaderCollapsed] = useState(false)
     // Refresh loads the lists again by remounting the open section (each one
     // fetches on mount); it no longer reloads the page, which threw away the

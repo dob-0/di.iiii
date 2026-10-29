@@ -4,6 +4,8 @@ import { useMediaQuery, useTheme } from '@mui/material'
 import { Vector3 } from 'three'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { currentAuthor } from '../../project/authorship.js'
+import useDocumentTitle from '../../hooks/useDocumentTitle.js'
+import { pageTitle } from '../../hooks/pageTitles.js'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
@@ -191,6 +193,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     // or a machine without a desk, is untouched.
     useRigAutoPatch({ projectId, entities: document.entities, applyOps: _applyLocalOps, edits })
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
+    useDocumentTitle(pageTitle('studio-project', { project: document.projectMeta?.title, space: resolvedSpaceId }))
     const { assets: spaceAssets, refresh: refreshSpaceAssets } = useSpaceAssets(resolvedSpaceId)
     // useDriveImport counts result.entries, the routes answer with .assets
     const asImportResult = (data) => ({ entries: data?.assets || [], failed: data?.failed || [] })
@@ -1425,8 +1428,13 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         loadError: state.loadError
     }
 
+    // F125: the tab names the project; the Studio had no h1 and no main
+    // landmark, so a screen reader met a page with neither (S19).
+    const studioHeading = document.projectMeta?.title || projectId
     return (
         <>
+            <main className="studio-page-main">
+            <h1 className="studio-sr-only">{studioHeading}</h1>
             <StudioShell
             document={document}
             walkBuild={(uiHidden) => (
@@ -1552,6 +1560,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onClearLiveProject={handleClearLiveProject}
             onMakeSpacePublic={handleMakeSpacePublic}
             />
+            </main>
             <AssetOptimizationDialog
                 prompt={assetOptimizationPrompt}
                 onOptimize={handleOptimizeAsset}

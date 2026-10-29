@@ -31,6 +31,10 @@ Kept as modes (nothing is lost): `?previews=live` or `localStorage['dii:space-ca
 Regression tests (fail on the old code, run): `SpaceHub.test.jsx` ("calm still"), `WikiPage.test.jsx` ("backdrop"),
 `serverXR/src/projectMoveContracts.test.js` (nothing-to-forward is 200), `scripts/verifySurfacesFilters.test.js`, `utils/decorative3d.test.js`.
 
+## Two main regions on /spaces and a hub (Studio, UX S19 repair, 2026-10-29)
+
+StudioApp wrapped the hub, spaces and director views in `<main>`, but SpaceHub and StudioHub already render their own: axe `landmark-no-duplicate-main` 1 and `landmark-main-is-top-level` 1. Rule: every view owns its main, the wrapper adds none; the director now renders its own `<main>` (also on the redirect fallback). Guards: a render count of `main` in `SpaceHub.test.jsx`, `StudioHub.test.jsx`, `StudioCodeSpaceDirector.test.jsx` and a source check in `pageTitles.test.js`; the director and source ones watched fail on the old code.
+
 ## A page project drew the 3D tools around its page (Studio, UX audit F017 / F001 / F139, slice S16 PR a, 2026-10-29)
 
 Symptom: a project that is a web page (the cinema-house copy) opened Studio on its page (#1161) but still drew the 3D tools over it:
@@ -1633,6 +1637,16 @@ Kept (nothing lost): the old card→Studio route is the Edit button.
 Review fix (2026-10-29): the Studio project card (`.sh-project-card`, F031) was still `role="button"` holding Rename, Delete and two selects; now a plain div (mouse click still opens) whose title is the one button that opens the project. Rename moved clear of the wider Delete word, the title keeps room for both. Guard: `StudioHub.test.jsx` "a project card is no button itself…" (fails on origin/dev).
 Picture fix (2026-10-29): /spaces footer read "Light(opens in a new tab)" — `.ssh-tools-link` is `inline-flex`, so the hint span's leading space collapsed. Fix: `.ssh-tools-newtab { margin-left: 0.25em }` (`studio-space-hub.css`). Guard: `SpaceHub.test.jsx` "the \"(opens in a new tab)\" hint keeps a visible gap…" (fails without the margin).
 CI fix (2026-10-29): `spine.test.js` refused `.sh-project-title { padding-right: calc(140px - var(--di-space-5)) }`, a guessed reserve for Rename (at a fixed `right: 78px`) and Delete; with a longer word (a translation) Rename still covered the name on a phone. Fix: the name and `.sh-project-tools` (Rename, Delete) share one wrapping flex row, `.sh-project-head`; no absolute positions; the name is never narrower than `min(4em, 100%)`, else the buttons go under it; `overflow-wrap: anywhere` breaks a name with no spaces. Guard: StudioHub.test.jsx "a project card keeps Rename and Delete in the name's row".
+
+## Every page had the same tab title; the Studio had no h1 or main (UX S19, F125, 2026-10-29)
+
+Symptom: 35 of 74 captured pages (every Studio view, Admin, chat, tools, make) read the index.html default "di.iiii — public spaces on the open web"; the Studio had no h1 and no main landmark (WCAG 2.4.2).
+Cause: only ~15 call sites used `useDocumentTitle`; the Studio, chat home, tools and Admin never did.
+Fix: `src/hooks/pageTitles.js` is the one route -> title table ("<page> — <where> — di.iiii"); `StudioApp`, `StudioEditor` (project name, a visually hidden h1 and a `<main>` with `display: contents`), `ChatHomeSurface` (h1 + main), `KitPage`, `PreferencesPage` (section name) call it.
+Guard: `src/hooks/pageTitles.test.js` (18; 7 failed on the old code). Owed: titles move into the S13 message layer when it lands; Make page and axe page-has-heading-one are not measured here.
+Kept (nothing lost): the index.html default stays as the title of the landing and any route without an entry.
+Review fix (2026-10-29): the Studio hub, spaces and director views had an h1 but still no main; `StudioApp` now wraps them in `<main className="studio-page-main">` (display: contents), and the project view's hidden h1 sits inside its main. Guard: `pageTitles.test.js` (20; 9 fail on origin/dev's sources).
+Superseded (2026-10-29, S19 repair): the StudioApp wrapper made two mains; see "Two main regions on /spaces and a hub" at the top. Each view now owns its one main.
 
 ## The page route answered 503 on the Mac tiers; /sitemap-built.xml was 404 (2026-10-29, languages S13a)
 
