@@ -1572,6 +1572,13 @@ Cause: copy written for the operator; `managementButtons` (`usePreferencesData.j
 Fix: plain names and two named groups (`SECTIONS`/`GROUP_LABELS` in `PreferencesPage.jsx`); on/off settings carry `kind: 'switch'` and render `role="switch"` with `aria-checked`, an On/Off word and a line on what they touch; Refresh bumps a key on `<main>` so the open section mounts and fetches again. Wiki articles admin-manage, admin-estate, agents-board follow.
 Guard: `src/components/PreferencesPageWords.test.jsx` (4); all 4 failed on the old code. Review fix (2026-10-29): the Machines section still headed itself "Estate" / "Estate map" (the words test mocks it); now "Machines" / "Machines map". Guard: `EstateSection.test.jsx` "renders the map in a frame" (fails on origin/dev).
 
+## 2026-10-29 — Studio text under 12 px, window controls under 24 px, 0.2-alpha greys (UX audit S09, F021 F023 F036 F087)
+
+- Symptom: Studio hub literals at 0.65-0.74 rem and 10 px; `.sfp-close` / `.scc-collapse-btn` about 11x16 and side by side; group labels, empty hints and arrows at white 0.22-0.38 (1.85:1).
+- Fix: `studio-space-hub.css` literals now `var(--di-text-1)` (12 px); `studio.css`: close, fold and `.scc-btn` have a 28 px minimum (44 px on `pointer: coarse`), close has a `--di-space-3` gap from the fold; eleven text greys use `var(--di-text-muted)`; `.sfp-title` cyan .55 to .85. Close now says how to bring the window back.
+- Guard: `src/studio/styles/studioReadable.test.js` (7 cases failed on the old CSS).
+- Fix round (2026-10-29): on a touch screen the 44 px minimum left the Import files label (a `<label>`, not a `<button>`) at the top of its box. `.spa-btn-wide` now also has `align-items: center`, so every wide button centres its label. Guard: the same file, "a wide button … centres its label" (fails on the old CSS).
+
 ## Space card opened the Studio, was a button holding buttons (UX S10, 2026-10-29)
 
 Symptom: on /spaces a card click landed in /<space>/studio, not the space; axe `nested-interactive` on 8 cards (role=button div holding links and buttons); Delete in a project card was a bare ✕ shown only on hover; the Studio trash was hidden until something was deleted; the Light link opened a new tab silently.
