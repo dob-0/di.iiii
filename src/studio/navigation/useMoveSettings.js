@@ -63,9 +63,9 @@ export function useStandardMoveReading() {
 
 // The preference plus the automatic reading: { speed, turn, move, setSpeed, setTurn, setMove, isAuto, auto }.
 export function useMoveSettings() {
-    const { speed, turn, move, editMouse, setSpeed, setTurn, setMove, setEditMouse } = useNavigationPreference()
+    const { speed, turn, move, editMouse, flyKeys, setSpeed, setTurn, setMove, setEditMouse, setFlyKeys } = useNavigationPreference()
     const { auto } = useStandardMoveReading()
-    return { speed, turn, move, editMouse, setSpeed, setTurn, setMove, setEditMouse, isAuto: speed === 'auto', auto }
+    return { speed, turn, move, editMouse, flyKeys, setSpeed, setTurn, setMove, setEditMouse, setFlyKeys, isAuto: speed === 'auto', auto }
 }
 
 // The speed field: empty is Auto, a number is that many metres. Typing writes at once (the house number fields do the same);
