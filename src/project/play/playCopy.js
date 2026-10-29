@@ -1,6 +1,7 @@
 // PLAY runs on a copy (design di-studio-games-design.md §4.3: "play runs on a copy of the play state, never the saved document").
-// Established practice: Unity's Play Mode reverts every change made in it (docs.unity3d.com/Manual/howto-playmode.html);
-// Roblox Studio's Play tests a separate copy of the place on a test server (create.roblox.com/docs/studio/testing-modes).
+// Established practice, pages fetched 2026-10-29: Unity "In Play mode, any changes you make are temporary and are reset when you
+// exit Play mode" (docs.unity3d.com/Manual/GameView.html); Roblox Studio's Stop "resets all objects and instances to how they were
+// before the playtest" (create.roblox.com/docs/studio/testing-modes). Both revert; here nothing needs reverting: the walk gets a copy.
 // Here the copy is taken once, when Play starts, and handed to the walk. The editor keeps its own document untouched,
 // so Stop has nothing to revert: the walk's copy is dropped.
 
