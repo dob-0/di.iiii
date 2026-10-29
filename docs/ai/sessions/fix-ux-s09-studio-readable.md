@@ -4,3 +4,4 @@
 - Files: `studio.css`, `studio-space-hub.css`, `StudioFloatingPanel.jsx` (close title), new `studioReadable.test.js`.
 - Tests: studio styles/components, styles, a11y lint, move1 golden pass; the new guard failed 7 cases on the old CSS.
 - Not done: before/after pictures and `verify:surfaces:mobile` (no browser run in this builder); the 63/71 and 96/99 capture counts are not re-measured; literal sizes in other `src/studio` JSX inline styles untouched.
+- Fix round: Import files label sat at the top of its 44 px touch box; `.spa-btn-wide` gets `align-items: center` (studio.css), guard in `studioReadable.test.js`.
