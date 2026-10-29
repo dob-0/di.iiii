@@ -37,4 +37,15 @@ describe('build page on a phone: the status box and the items button', () => {
         // 40vw from the right at 568 to 932 px wide starts right of the button (96 + 77)
         expect(568 - 8 - 0.4 * 568 - 14).toBeGreaterThan(96 + 77)
     })
+
+    // UX S11 fix round 3: at 12px the box spans the full width, so it lay on top of the Undo/Redo row (top 110px, 44px tall)
+    it('starts below the Undo/Redo row, with and without the rig bar', () => {
+        const undo = /\n\.rigbuild\.is-phone \.rigbuild-undo \{[^}]*top:\s*(\d+)px/.exec(css)
+        const undoBottom = Number(undo?.[1]) + 44
+        expect(undoBottom).toBeGreaterThan(44)
+        expect(rowTop).toBeGreaterThanOrEqual(undoBottom)
+        const bar = /\n\.rigbuild\.has-rigbar\.is-phone \.rigbuild-totals \{[^}]*calc\(var\(--rigbar-h\) \+ (\d+)px\)/.exec(css)
+        const barUndo = /\n\.rigbuild\.has-rigbar\.is-phone \.rigbuild-undo \{[^}]*calc\(var\(--rigbar-h\) \+ (\d+)px\)/.exec(css)
+        expect(Number(bar?.[1])).toBeGreaterThanOrEqual(Number(barUndo?.[1]) + 44)
+    })
 })
