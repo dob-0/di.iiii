@@ -147,6 +147,8 @@ describe('StudioHub', () => {
     })
 
     it('renders exactly one main region', async () => {
+        listProjects.mockResolvedValue([{ id: 'p1', title: 'P One', updatedAt: Date.now(), source: 'studio-v3' }])
+        getServerSpace.mockResolvedValue({ id: 'gallery', publishedProjectId: null })
         const { container } = render(<StudioHub spaceId="gallery" />)
         await screen.findByRole('main')
         expect(container.querySelectorAll('main')).toHaveLength(1)
