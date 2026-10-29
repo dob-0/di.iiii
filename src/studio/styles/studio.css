@@ -1697,6 +1697,8 @@
     color: var(--di-text-muted);
     padding: var(--di-space-1) var(--di-space-2);
 }
+/* A name clash is read, not missed: the danger colour, not the muted grey. */
+.spp-status-error { color: var(--di-danger); }
 
 /* The cue strip's key badge. A cue that is not up is not news, so the number
    sits dimmer than the name it belongs to and never takes the eye off the

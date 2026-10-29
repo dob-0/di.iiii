@@ -16,6 +16,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
     const [renameValue, setRenameValue] = useState('')
     const [creating, setCreating] = useState(false)
     const [createValue, setCreateValue] = useState('')
+    const [createFailed, setCreateFailed] = useState(false)
 
     const loadRequestRef = useRef(0)
     const loadProjects = useCallback(async () => {
@@ -51,17 +52,21 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
 
     const submitCreate = async (e) => {
         e?.preventDefault?.()
-        const name = createValue.trim() || 'Untitled'
-        setCreating(false)
-        setCreateValue('')
+        if (busy) return
+        // Only the name goes: unique inside this space, the id picked by the server
+        // (docs/ai/decisions/2026-10-29-project-names-per-space.md). The form stays
+        // open until the project exists, so a clash is read beside what was typed.
         setBusy(true)
         setStatus('creating...')
         try {
-            const res = await createProject(spaceId, { title: name, slug: name, source: 'studio-v3' })
+            const res = await createProject(spaceId, { title: createValue.trim(), source: 'studio-v3' })
+            setCreating(false)
+            setCreateValue('')
             // a new project is empty: it opens its project view, not the 3D editor
             navigateToStudioPath(newProjectDestination({ projectId: res.project.id, spaceId }))
         } catch (err) {
             setStatus(err.message || 'create failed')
+            setCreateFailed(true)
             setBusy(false)
         }
     }
@@ -177,7 +182,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
                         ref={(el) => el?.focus()}
                         placeholder="project title"
                         value={createValue}
-                        onChange={(e) => setCreateValue(e.target.value)}
+                        onChange={(e) => { setCreateValue(e.target.value); setCreateFailed(false) }}
                         onKeyDown={(e) => { if (e.key === 'Escape') { setCreating(false); setCreateValue('') } }}
                         aria-label="New project title"
                     />
@@ -188,7 +193,9 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
                     + New project
                 </button>
             )}
-            {status && <div className="spp-status">{status}</div>}
+            {status && (
+                <div className={`spp-status${createFailed ? ' spp-status-error' : ''}`} role={createFailed ? 'alert' : undefined}>{status}</div>
+            )}
         </div>
     )
 }
