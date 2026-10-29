@@ -1,0 +1,16 @@
+# The name broker — a Cloudflare Worker. README.md says how to deploy and roll back.
+# Secrets (never in this file): CF_API_TOKEN (DNS edit on the zone), ADMIN_TOKEN.
+name = "di-name-broker"
+main = "src/worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+ZONE = "l.thedi.studio"
+# The zone's id: Cloudflare dashboard → thedi.studio → Overview → Zone ID. Not a secret.
+CF_ZONE_ID = "SET-BEFORE-DEPLOY"
+DI_API_BASE = "https://dev.diiii.xyz/serverXR"
+
+[[kv_namespaces]]
+binding = "LABELS"
+# `npx wrangler kv namespace create LABELS` prints this id once.
+id = "SET-BEFORE-DEPLOY"

@@ -91,7 +91,7 @@ const request = async (url, { method = 'GET', token = null, body = null, timeout
  * One side of a followed space, addressed the same way whether it is across the
  * room or across the internet: a base URL, a space id, and a token.
  */
-const side = ({ base, spaceId, token = null, servername = null, address = null }) => ({
+const side = ({ base, spaceId, token = null, servername = null, address = null, reresolve = null }) => ({
     base: String(base || '').replace(/\/$/, ''),
     spaceId,
     token,
@@ -99,6 +99,9 @@ const side = ({ base, spaceId, token = null, servername = null, address = null }
     // The ADDRESS PIN, from a follow's `address` field (see followStore.js) —
     // the name in `base` stays, the socket goes here instead.
     address,
+    // Set for a followed network name: asks again where it is, updates `base` and
+    // `address` here, and says whether anything changed.
+    reresolve,
     url(path) { return `${this.base}${path}` },
     opsUrl(stream, since) {
         const url = this.url(stream.opsPath)
@@ -446,11 +449,16 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
             request(local.url(trashPath), { token: local.token, servername: local.servername, address: local.address })
         ])
-        let [[here, hereTrash], [there, thereTrash]] = await Promise.all([readHere(), Promise.all([
+        const readThere = () => Promise.all([
             request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address })
                 .then((answer) => { answer.tookMs = Date.now() - askedAt; return answer }),
             request(remote.url(trashPath), { token: remote.token, servername: remote.servername, address: remote.address })
-        ])])
+        ])
+        let [[here, hereTrash], [there, thereTrash]] = await Promise.all([readHere(), readThere()])
+        // A followed NAME (follow/nameResolver.js): silence means the install may
+        // have moved. Look for it again, beacon then DNS then last address, and
+        // ask once more at the new place before calling it down.
+        if (there.status === 0 && remote.reresolve && await remote.reresolve()) [there, thereTrash] = await readThere()
         // Any HTTP answer is the host being there; a 401/403 is a host that
         // answers and refuses, which the next reads say in words. Only silence
         // is "not answering".

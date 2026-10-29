@@ -228,10 +228,11 @@ export const WIKI_ARTICLES = [
             'A space marked permanent is not deleted: the box says so, and an admin can unmark it there first. The front room, the shared global space and a sandbox are never deleted. While a space is in the Trash its name is held, so a new space cannot take it by accident.',
             'A project can move to another space you own: on a project card in Studio, "move to…" lists them. Its link keeps working. A project that is its space\u2019s front door asks first, because moving it leaves that space with no front door. Once moved, the old space\u2019s own address sends visitors on to the project in its new space, until that space is given a new front door. Someone who could not open the project where it went is not sent there: they see the old space as it is.',
             'Not yet carried: a space that is followed from another copy (di follow) does nothing special when it is trashed — the copy that follows simply stops finding it. A delete does not travel to the copies that follow.',
-            'Spaces nobody touches. A space that is not permanent and has not been edited for 30 days (a guest sandbox: 7 days) is cleared by the server\u2019s half-hour sweep — and cleared means moved to the Trash, the same as a delete: it can be restored for 30 days. A space that is published, listed publicly, linked from the site, reachable by its own address or domain, or holds a project with saved work is never cleared: it is kept, and the sweep says so. A guest who comes back to a cleared sandbox inside the 30 days gets it back. Admins see every space due in the next 14 days, and what the sweep will do to each, under Manage → Due for the sweep.'
+            'Spaces nobody touches. A space that is not permanent and has not been edited for 30 days (a guest sandbox: 7 days) is cleared by the server\u2019s half-hour sweep — and cleared means moved to the Trash, the same as a delete: it can be restored for 30 days. A space that is published, listed publicly, linked from the site, reachable by its own address or domain, or holds a project with saved work is never cleared: it is kept, and the sweep says so. A guest who comes back to a cleared sandbox inside the 30 days gets it back. Admins see every space due in the next 14 days, and what the sweep will do to each, under Manage → Due for the sweep.',
+            'ONE DELETE, TWO DOORS (2026-10-28). Delete in Manage on the Spaces page and Delete in the admin Directory open the same box with the same words. After Move to Trash a notice says the space is in the Trash and for how many days, with Undo for 10 seconds, which brings it back. In Manage, Delete sits last on its own line, apart from Archive (Archive keeps the space whole and only takes it out of the list).',
         ],
         tags: ['delete', 'trash', 'restore', 'space', 'permanent', 'move', 'undo', 'sweep', 'idle'],
-        updated: '2026-10-21'
+        updated: '2026-10-28'
     },
     {
         id: 'your-space-your-word',
@@ -243,9 +244,10 @@ export const WIKI_ARTICLES = [
             'TRUSTED PEOPLE. An owner can name accounts that change the space directly, the way the owner does — a co-author, a group running a workshop room. Add them in Manage; they can reach the space at once. Anyone else who sends work for your space is making a proposal: you see a plain summary of what would change and say yes or no.',
             'EVERY CHANGE HAS AN AUTHOR, AND CAN BE PUT BACK. When someone who is not the owner finishes a run of edits, the owner is told what changed — "+3 images, 1 object removed, title changed" — with an Undo that restores the space to just before. Trust means no gate in the way, not no record.',
             'ONE SPACE, NOT ALL. Being the owner or trusted in one space grants nothing anywhere else. It is not a role; it is a relationship to one place.',
+            'WHO CAN SEE IT (2026-10-28). In Manage on a space card, the switch “Anyone with the link can see it” says On or Off, and the line under it says what that means: Off, only you and the people you invite open the space; On, anyone with the link does, without signing in. Turning it On asks first and names the space; turning it Off happens at once. A private project stays members-only inside a public space. The rest of Manage is grouped: Name, Who can see it, Invite people, History and backup, then More (own domain, linked project, card picture, GitHub), Put away (Archive), and Delete last.',
         ],
         tags: ['owner', 'steward', 'trusted', 'permissions', 'approval', 'proposal', 'undo', 'manage', 'space'],
-        updated: '2026-09-21'
+        updated: '2026-10-28'
     },
     {
         id: 'private-projects',
@@ -301,6 +303,21 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['sync', 'follow', 'invite', 'join', 'machines', 'light', 'code', 'four words', 'share', 'tailscale'],
         updated: '2026-10-01'
+    },
+    {
+        id: 'follow-by-name',
+        category: 'Spaces & access',
+        title: 'Follow by name',
+        summary: 'Follow a space from another install by its name, like ponyo-k7q2, with no address to type. It works on one wifi even with the internet cut.',
+        body: [
+            'THE NAME. Each install has a name — a label like ponyo-k7q2 (see di status). Type the label, nothing else: di follow show --from ponyo-k7q2 --key dii_sync_… The command finds the other install itself.',
+            'HOW IT FINDS IT. First it listens for two seconds for the other install announcing itself on this wifi (the other install has to be sharing: di share). If nothing is heard it asks the name\'s address in DNS, and last it tries the address that worked the time before. di follows shows which one found it: the beacon, DNS or its last address.',
+            'WHY IT IS SAFE. An announcement is only a hint. Every request goes to the address it found but still asks for the name ponyo-k7q2, and checks the certificate for that name; a machine that is not that install cannot show it, so it is refused.',
+            'WHEN THE OTHER INSTALL MOVES. If it gets a new address (a new wifi, a new router lease) the follow looks for it again by itself and goes on from where it was. Nothing to retype.',
+            'Joining with four words accepts the name in place of the address too. Following from far away, across the internet, still goes through the dev server, or an address you give with --at.'
+        ],
+        tags: ['follow', 'name', 'label', 'share', 'wifi', 'offline', 'beacon', 'sync', 'install'],
+        updated: '2026-10-28'
     },
     {
         id: 'install-network-name',

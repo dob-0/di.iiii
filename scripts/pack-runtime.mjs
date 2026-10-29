@@ -10,6 +10,8 @@
  *                on the far side installs a small, prebuilt dependency set
  *   shared/      the schema contracts serverXR loads at runtime
  *   scripts/di/  the CLI itself, so `di update` replaces the CLI too
+ *   docs/ai/public/  the words for language models (24 KB): serverXR answers
+ *                /llms.txt and /ai/… from it, so a pack run without nginx (the dev tier)
  *   scripts/     space-bundle.mjs + install-bundle.mjs, which back up and restore
  *
  * What stays out: the root dependency tree (~1 GB with three.js, MUI, pdfjs and
@@ -133,6 +135,10 @@ const main = async () => {
     await copy(path.join(ROOT, 'serverXR', 'package.json'), path.join(stage, 'serverXR', 'package.json'))
     await copy(path.join(ROOT, 'serverXR', 'package-lock.json'), path.join(stage, 'serverXR', 'package-lock.json'))
     await copy(path.join(ROOT, 'scripts', 'di'), path.join(stage, 'cli'))
+    // serverXR/src/aiPublic.js reads <root>/docs/ai/public; without it /llms.txt
+    // and /ai/… were a 404 on the dev tier, which runs the pack natively. Only
+    // that folder, in every profile: the dev tier packs the local profile.
+    await copy(path.join(ROOT, 'docs', 'ai', 'public'), path.join(stage, 'docs', 'ai', 'public'))
     // The SDK travels with the install, or `di mcp` is a command that only
     // works in a checkout — which would make "an agent can drive your own
     // di.iiii" true for developers and false for everyone the installer is
