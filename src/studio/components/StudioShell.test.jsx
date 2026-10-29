@@ -141,6 +141,27 @@ describe('StudioShell mobile chrome', () => {
         expect(screen.queryByTestId('gizmo-mode')).not.toBeInTheDocument()
     })
 
+    it('has Undo and Redo and the save line in the top bar: a phone has no Ctrl key', () => {
+        const onUndo = vi.fn()
+        const onRedo = vi.fn()
+        renderShell({
+            isMobile: true,
+            onUndo,
+            onRedo,
+            editHistory: { steps: [{ id: 1, label: 'Add box', applied: true }], cursor: 1 },
+            syncState: { pendingOpCount: 1 }
+        })
+        fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+        // One row of its own inside the bar, so the long save text can never push a third row.
+        const row = document.querySelector('.smb-topbar > .smb-status-row')
+        expect(row, 'status row is a direct child of the phone bar').toBeTruthy()
+        expect(row.querySelector('.smb-undo-redo')).toBeTruthy()
+        expect(row.querySelector('.smb-save-line')).toBeTruthy()
+        expect(onUndo).toHaveBeenCalledTimes(1)
+        expect(screen.getByRole('button', { name: 'Redo' })).toBeDisabled()
+        expect(document.querySelector('[data-save-state]')).toHaveTextContent('Saving\u2026')
+    })
+
     it('opens one window at a time as a bottom sheet and toggles it closed', () => {
         renderShell({ isMobile: true })
         fireEvent.click(screen.getByRole('button', { name: 'Objects' }))
