@@ -29,6 +29,7 @@
     <label class="master" title="Master level for every cube">
       <span>Master</span><input id="master" type="range" min="0" max="1" step="0.01"><b id="masterVal"></b>
     </label>
+    <button id="saveBtn" class="save" title="Write every look's changes to disk (Ctrl+S)">Saved</button>
     <button id="blackoutBtn" class="topbo" title="Every cube dark, the desk keeps its look (B)">Blackout</button>
     <button id="releaseBtn" title="The desk lets go of the cubes: dark, and free for a Laser Out or the show">Release</button>
     <button id="disarmBtn" class="danger" title="Every cube's output off. One click, always">Disarm all</button>
@@ -59,14 +60,10 @@
     <div class="panehead">
       <h2>Edit</h2>
       <input id="lookName" class="namefield" maxlength="40" placeholder="Name" aria-label="Look name">
-      <label class="check" title="Live: every change goes to the laser at once. Off: you change a preview, and Send puts it on the laser"><input type="checkbox" id="liveEdit"> Live</label>
     </div>
     <div class="preview">
-      <canvas id="preview" aria-label="Preview of the look being edited"></canvas>
-      <div class="sendrow">
-        <span class="muted" id="previewNote">Preview: only on this screen until you send it</span>
-        <button id="sendBtn" class="send" title="Put this look on the laser">▶ Send to laser</button>
-      </div>
+      <canvas id="preview" aria-label="Preview of the look open in Edit"></canvas>
+      <span class="muted previewnote" id="previewNote"></span>
     </div>
     <div class="editbody" id="editor">
       <div class="group">
@@ -91,12 +88,11 @@
         <div class="chips" id="lookCubes"></div>
       </div>
       <div class="actions">
-        <button id="storeBtn" title="Write this look into its tile">Store</button>
-        <button id="saveNewBtn" title="Keep this look as a new tile">Save as new</button>
+        <button id="copyBtn" title="A copy of this look as a new tile, to change without losing this one">Copy</button>
         <button id="deleteBtn" class="quiet" title="Remove the tile this look came from">Delete tile</button>
       </div>
     </div>
-    <p class="empty muted" id="editorEmpty">Click a look to edit it here. Change it and watch the preview; ▶ Send puts it on the laser, Store keeps it in its tile. Double-click a look (or press 1–9) to send it straight away; tick Live to send every change at once.</p>
+    <p class="empty muted" id="editorEmpty">Click a look’s NAME to open it here: change it and watch the preview. Click its PICTURE to send it to the laser (keys 1–9 too). Every look keeps its own changes; Save writes them all.</p>
   </aside>
 </main>
 

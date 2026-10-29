@@ -55,9 +55,10 @@ const FIND_GAP_MS = 5000
 //   GET  /laser/desk/api/view  what the engine keeps for each cube now (after the zone), rounded: the stage view
 //   GET  /laser/desk/api/thumbs a small picture of every look, for the bank's tiles
 //   POST /laser/desk/api/go    { look } — that look on the cubes        POST …/live { …fields } — edit the live look
-//   POST /laser/desk/api/send  { look, from? } — a look the page made (its Preview) on the cubes
 //   POST /laser/desk/api/store { id?, name?, look? } — the live look (or the page's Preview) into its tile, or a new one
 //   POST /laser/desk/api/looks/rename { id, name } · …/looks/delete { id } · …/looks/order { ids }
+//   POST /laser/desk/api/looks/edit { id, …fields } — change a look of the bank (the cubes follow when it is on them)
+//   POST /laser/desk/api/looks/copy { id } — a copy as a new tile after it · POST …/save {} — write desk.json now
 //   POST /laser/desk/api/master { level } · …/bpm { bpm } | { tap: true } · …/cube { id, on?, flipX?, size?, x?, y?, order? }
 //   POST /laser/desk/api/release {} · …/blackout { on } — stops: the STOPS_FROM_REMOTE gate, as /blackout
 //   GET  /laser/lib/laser.js    the desk's drawing code for the page (window.DiLaser): its tiles play the looks
@@ -275,9 +276,11 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   router.get('/desk/api/thumbs', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getDesk().thumbs()) })
   router.post('/desk/api/go', requireSameMachine, (req, res) => answer(res, getDesk().go(req.body?.look)))
   router.post('/desk/api/live', requireSameMachine, (req, res) => answer(res, getDesk().editLive(req.body || {})))
-  router.post('/desk/api/send', requireSameMachine, (req, res) => answer(res, getDesk().send(req.body?.look, req.body?.from)))
   router.post('/desk/api/store', requireSameMachine, (req, res) => answer(res, getDesk().store({ id: req.body?.id, name: req.body?.name, look: req.body?.look })))
   router.post('/desk/api/looks/rename', requireSameMachine, (req, res) => answer(res, getDesk().rename(req.body?.id, req.body?.name)))
+  router.post('/desk/api/looks/edit', requireSameMachine, (req, res) => answer(res, getDesk().editLook(req.body?.id, req.body || {})))
+  router.post('/desk/api/looks/copy', requireSameMachine, (req, res) => answer(res, getDesk().copyLook(req.body?.id)))
+  router.post('/desk/api/save', requireSameMachine, (req, res) => answer(res, getDesk().saveBank()))
   router.post('/desk/api/looks/delete', requireSameMachine, (req, res) => answer(res, getDesk().remove(req.body?.id)))
   router.post('/desk/api/looks/order', requireSameMachine, (req, res) => answer(res, getDesk().reorder(req.body?.ids)))
   router.post('/desk/api/master', requireSameMachine, (req, res) => answer(res, getDesk().setMaster(req.body?.level)))

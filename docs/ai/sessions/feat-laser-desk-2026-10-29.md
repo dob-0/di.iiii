@@ -50,13 +50,16 @@ The owner's ask: "lets create laser soft like how is lighting one" — inside di
 - **New seed looks reach a saved bank**: desk.json keeps `seeded` (the seed ids it has been offered); a bank without it
   counts the first fourteen as offered. A seed added later joins the end once; one the owner deleted is not re-offered.
   Found because the scratch desk had saved desk.json and never showed the new looks.
-- **Preview, then Send** (the owner: "i want for example change some shapes see results then plaay and send signal to
-  laser"): the editor (now "Edit") changes a Preview that only the page holds, drawn above its controls with
-  lib/laser.js on the first cube's field; ▶ Send to laser (`POST /laser/desk/api/send { look, from }`) puts it on the
-  cubes; Store / Save as new send the Preview as `{ look }` and leave the cubes alone. A click on a tile loads it into
-  the Preview (dashed outline); a double-click or keys 1–9 send it at once. The **Live** switch (per browser,
-  localStorage) is the desk as it was: clicks and changes reach the cubes at once. The bank header says "(changed, not
-  stored)" when what plays differs from its tile.
+- **Tiles are clips, as in Resolume** (the owner: "change some shapes see results then plaay and send signal to laser";
+  a Preview + ▶ Send + Live-switch version, 7d1c5a789, was "bad idea" — "like in resolume when we will click on the down
+  part of pattern look like in name its will be preview when on the shape its will go to laser and keep changes for each
+  scene qand add save bottom"). A tile is two buttons: its PICTURE sends the look to the laser (`go`; keys 1–9 too), its
+  NAME opens it in Edit, drawn on a Preview above the controls (lib/laser.js, the first cube's field). An edit changes
+  that look in the bank (`POST /laser/desk/api/looks/edit { id, …fields }`): every look keeps its own changes, and the
+  look on the laser shows each change at once, like a playing clip. Bank changes (edit, copy, rename, delete, order)
+  set `unsaved` and wait for **Save** (top bar, Ctrl+S, `POST /laser/desk/api/save`); any other write (BPM, master,
+  setup) and a clean stop write them too. Copy (`looks/copy`) puts a copy after the look. `send` is gone; `store` keeps
+  its `{ look }` option.
 - Wiki `laser-desk`; eslint gives `serverXR/src/laser/ui` browser globals like the light desk's ui.
 
 ## Tested

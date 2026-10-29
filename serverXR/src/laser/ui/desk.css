@@ -102,10 +102,15 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
   display: flex; flex-direction: column; padding: 0; background: var(--cell); border: 1px solid var(--line);
   text-align: left; min-height: 0;
 }
-.tile canvas { width: 100%; height: 64px; flex: none; display: block; background: var(--stagebg); }
-.tile span { flex: none; padding: 5px 6px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* A tile is two buttons, as a clip in Resolume: its picture sends the look to the laser, its name opens it in Edit. */
+.tile button { border: 0; padding: 0; min-height: 0; text-align: left; background: none; width: 100%; display: block; }
+.tile .pic canvas { width: 100%; height: 64px; display: block; background: var(--stagebg); }
+.tile .pic:hover canvas { box-shadow: inset 0 0 0 1px var(--accent); }
+.tile .name { padding: 5px 6px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-top: 1px solid var(--line); }
+.tile .name:hover { background: var(--pane2); }
 .tile.is-live { border-color: var(--accent); }
-.tile.is-live span { color: var(--accent); }
+.tile.is-live .name { color: var(--accent); }
+.tile.is-selected .name { background: var(--pane2); box-shadow: inset 0 -2px 0 var(--muted); }
 .tile.is-drag { opacity: .4; }
 .tile.is-over { border-color: #fff; }
 
@@ -147,16 +152,13 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; }
 .empty { padding: 12px 10px; margin: 0; }
 .editor.is-empty .editbody, .editor.is-empty .preview { display: none; }
-/* The Preview: the look being edited, drawn here on the desk's beat; Send puts it on the laser. */
+/* The Preview: the look open in Edit, drawn here on the desk's beat. */
 .preview { padding: 8px 10px 0; }
 .preview canvas { width: 100%; aspect-ratio: 3 / 2; display: block; background: var(--stagebg); border: 1px solid var(--line); }
-.sendrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 8px; }
-.sendrow .muted { font-size: 12px; }
-button.send { background: var(--accent); border-color: var(--accent); color: #031416; font-weight: 600; padding: 6px 14px; white-space: nowrap; flex: none; }
-button.send:hover { border-color: #fff; }
-button.send.is-sent { background: none; color: var(--accent); font-weight: 500; }
-.editor.is-live .sendrow button { display: none; }
-.tile.is-editing { outline: 1px dashed var(--muted); outline-offset: -3px; }
+.previewnote { display: block; padding-top: 6px; font-size: 12px; }
+.previewnote.is-live { color: var(--accent); }
+/* Save lights while the bank has changes desk.json does not have yet. */
+button.save.is-unsaved { background: var(--accent); border-color: var(--accent); color: #031416; font-weight: 600; }
 .editor:not(.is-empty) .empty { display: none; }
 
 /* ---- setup */

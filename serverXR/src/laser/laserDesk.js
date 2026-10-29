@@ -197,6 +197,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     let timer = null
     const sent = new Map() // cubeId → { key, end, held, points, at }
     let saveTimer = null
+    let dirty = false // the bank changed since desk.json was last written (Save)
     let loadMessage = null
 
     // ---- the file
@@ -229,8 +230,11 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             const tmp = file + '.tmp'
             fs.writeFileSync(tmp, JSON.stringify({ v: 1, bpm: show.bpm, master: show.master, looks: show.looks, cubes: show.cubes, seeded: show.seeded }, null, 1))
             fs.renameSync(tmp, file)
+            dirty = false
+            return true
         } catch (error) {
             log?.warn?.(`[laser desk] desk.json could not be written: ${error.message}`)
+            return false
         }
     }
     const save = () => { if (!saveTimer) { saveTimer = setTimeout(saveNow, SAVE_DELAY_MS); saveTimer.unref?.() } }
@@ -313,19 +317,41 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         return { ok: true, live: liveId }
     }
 
-    /**
-     * A look the page made, on the cubes: the editor's Preview, sent (2026-10-29, the owner: "change some shapes see
-     * results then play and send signal to laser"). `from` is the bank's look it was loaded from (its tile stays lit).
-     */
-    const send = (raw, from) => {
-        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, status: 400, error: 'look: the fields of a look' }
-        live = normaliseLook({ ...raw, id: undefined })
-        delete live.id
-        liveId = show.looks.some((l) => l.id === idOf(from)) ? idOf(from) : null
-        for (const s of sent.values()) s.key = null
-        tick()
-        startTicking()
-        return { ok: true, live: liveId }
+    // ---- the bank as the page edits it (2026-10-29, the owner, after a Preview-and-Send try: "like in resolume … keep
+    // changes for each scene and add save bottom"). Each look keeps its own changes: an edit changes the look in the bank
+    // at once, and a look on the cubes shows it at once, like a playing clip. Bank changes (edit, copy, rename, delete,
+    // order) are kept here and written by Save (or by any other write, and by a clean stop); `unsaved` says so.
+
+    /** Change a look of the bank; the cubes follow when it is the one on them. */
+    const editLook = (id, fields = {}) => {
+        const i = show.looks.findIndex((l) => l.id === idOf(id))
+        if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
+        show.looks[i] = normaliseLook({ ...fields, id: show.looks[i].id }, show.looks[i])
+        dirty = true
+        if (live && liveId === show.looks[i].id) {
+            const look = show.looks[i]
+            live = { ...look, cubes: Array.isArray(look.cubes) ? [...look.cubes] : 'all' }
+            tick()
+        }
+        return { ok: true, look: show.looks[i] }
+    }
+
+    /** A copy of a look as a new tile right after it (the page edits the copy). */
+    const copyLook = (id) => {
+        const i = show.looks.findIndex((l) => l.id === idOf(id))
+        if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
+        if (show.looks.length >= MAX_LOOKS) return { ok: false, status: 400, error: `the bank is full (${MAX_LOOKS} looks)` }
+        const name = `${show.looks[i].name} 2`.slice(0, 40)
+        const look = normaliseLook({ ...show.looks[i], id: newId(name), name })
+        show.looks.splice(i + 1, 0, look)
+        dirty = true
+        return { ok: true, id: look.id }
+    }
+
+    /** Save: the bank, the clock and the setup into desk.json, now. */
+    const saveBank = () => {
+        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
+        return saveNow() ? { ok: true } : { ok: false, status: 500, error: 'desk.json could not be written (see the server log)' }
     }
 
     /** Edit the live look (on the cubes at once). Starts from the defaults if nothing is live. */
@@ -374,7 +400,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         const look = show.looks.find((l) => l.id === idOf(id))
         if (!look) return { ok: false, status: 404, error: `no look "${id}"` }
         look.name = String(name ?? '').trim().slice(0, 40) || look.name
-        save()
+        dirty = true
         return { ok: true }
     }
 
@@ -383,7 +409,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
         show.looks.splice(i, 1)
         if (liveId === idOf(id)) liveId = null
-        save()
+        dirty = true
         return { ok: true }
     }
 
@@ -391,7 +417,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         if (!Array.isArray(ids)) return { ok: false, status: 400, error: 'ids: the looks in their new order' }
         const rank = new Map(ids.map((id, i) => [idOf(id), i]))
         show.looks.sort((a, b) => (rank.get(a.id) ?? 1e6) - (rank.get(b.id) ?? 1e6))
-        save()
+        dirty = true
         return { ok: true }
     }
 
@@ -476,6 +502,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             shapes: LASER_SHAPES,
             defaults: LOOK_DEFAULTS,
             loadMessage,
+            unsaved: dirty,
             cubes: orderedCubes(engine.cubes).map((c) => {
                 const s = sent.get(c.id)
                 return { id: c.id, ...cubeCfg(c.id), driving: Boolean(live && s && !s.held), held: s?.held ?? null, points: s?.points ?? 0 }
@@ -485,10 +512,10 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
 
     const close = () => {
         release()
-        if (saveTimer) { clearTimeout(saveTimer); saveNow() }
+        if (saveTimer || dirty) { clearTimeout(saveTimer); saveNow() }
     }
 
-    return { state, go, send, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBpm, tap, setCube, thumbs, view, tick, close }
+    return { state, go, editLook, copyLook, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBpm, tap, setCube, thumbs, view, tick, close }
 }
 
 module.exports = { createLaserDesk, normaliseLook, normaliseCube, lookPointsAt, capOf, hashPoints, beatsAt, SEED_LOOKS, LOOK_DEFAULTS, CUBE_DEFAULTS, TICK_MS, OUT }

@@ -159,14 +159,6 @@ module.exports = [
     note: `${SAME_MACHINE} ${OWN_PAGE} Frames only: nothing lights until the laser safety officer has armed.`
   },
   {
-    route: "POST /laser/desk/api/send",
-    summary: "put a look the page made on the cubes: { look, from? } — the editor's Preview, sent; `from` is the bank's look it was loaded from",
-    reach: "private",
-    role: "guest",
-    agent: false,
-    note: `${SAME_MACHINE} ${OWN_PAGE} Frames only: nothing lights until the laser safety officer has armed.`
-  },
-  {
     route: "POST /laser/desk/api/live",
     summary: "edit the live look on the cubes: any of { name, shape, colour, rainbow, level, size, height, x, rotation, spin, copies, points, cycle, pulse, pulseBeats, sweep, sweepBeats, mirror, phase, cubes }, each clamped",
     reach: "private",
@@ -185,6 +177,30 @@ module.exports = [
   {
     route: "POST /laser/desk/api/looks/rename",
     summary: "rename a tile of the laser desk's bank: { id, name }",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/looks/edit",
+    summary: "change a look of the laser desk's bank: { id, …fields } — kept in the bank until Save writes it; when that look is on the cubes they show the change at once",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE} Frames only: nothing lights until the laser safety officer has armed.`
+  },
+  {
+    route: "POST /laser/desk/api/looks/copy",
+    summary: "a copy of a look of the bank as a new tile right after it: { id } → { id } of the copy",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/save",
+    summary: "Save: write the laser desk's bank, clock and setup into <data>/laser/desk.json now",
     reach: "private",
     role: "guest",
     agent: false,

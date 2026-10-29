@@ -224,21 +224,45 @@ describe('the clock', () => {
     })
 })
 
-describe('the page\'s Preview (2026-10-29: change it, see it, then send it)', () => {
-    it('send puts a look the page made on the cubes, its tile lit; nothing reaches them before', () => {
+describe('each look keeps its own changes, and Save writes them (2026-10-29, "like in resolume")', () => {
+    it('an edit changes the look in the bank; the cubes follow only when it is the one on them', () => {
         const engine = fakeEngine(['cube-1'])
         const { desk } = deskWith(engine)
-        expect(engine.calls).toEqual([])
-        const preview = { ...SEED_LOOKS.find((l) => l.id === 'star'), colour: '#3050ff', spin: 0.5, evil: 1 }
-        expect(desk.send(preview, 'star')).toMatchObject({ ok: true, live: 'star' })
-        expect(desk.state().live).toMatchObject({ shape: 'star', colour: '#3050ff', spin: 0.5 })
-        expect(desk.state().live).not.toHaveProperty('evil')
-        expect(desk.state().liveId).toBe('star')
-        expect(engine.calls.filter((c) => c.kind === 'frame' && c.points.some(isLit))).toHaveLength(1)
-        expect(desk.send({ shape: 'spots' }, 'nope')).toMatchObject({ ok: true, live: null })
-        expect(desk.send('star')).toMatchObject({ ok: false, status: 400 })
+        expect(desk.editLook('star', { colour: '#3050ff', spin: 0.5, evil: 1 })).toMatchObject({ ok: true })
+        expect(desk.state().looks.find((l) => l.id === 'star')).toMatchObject({ id: 'star', colour: '#3050ff', spin: 0.5 })
+        expect(desk.state().looks.find((l) => l.id === 'star')).not.toHaveProperty('evil')
+        expect(engine.calls).toEqual([]) // a look not on the cubes: nothing sent
+        desk.go('star')
+        expect(desk.state().live).toMatchObject({ colour: '#3050ff', spin: 0.5 }) // the kept changes go with it
+        const frames = () => engine.calls.filter((c) => c.kind === 'frame' && c.points.some(isLit)).length
+        const before = frames()
+        desk.editLook('star', { shape: 'spots' })
+        expect(desk.state().live.shape).toBe('spots')
+        expect(frames()).toBe(before + 1) // the cubes showed it at once
+        desk.editLook('ring', { colour: '#ffffff' })
+        expect(desk.state().live.shape).toBe('spots') // another look: the cubes keep theirs
+        expect(desk.editLook('nope', {})).toMatchObject({ ok: false, status: 404 })
     })
-    it('store keeps the Preview in a tile or a new one, and leaves the cubes as they were', () => {
+    it('changes wait for Save (unsaved until then); a copy lands after its look; a clean stop keeps the work', () => {
+        const dir = tmp()
+        const { desk } = deskWith(fakeEngine(), { dir })
+        expect(desk.state().unsaved).toBe(false)
+        desk.editLook('wave', { colour: '#ffffff' })
+        expect(desk.copyLook('wave')).toMatchObject({ ok: true, id: 'wave-2' })
+        expect(desk.state().looks.map((l) => l.id).slice(3, 5)).toEqual(['wave', 'wave-2'])
+        expect(desk.state().unsaved).toBe(true)
+        expect(fs.existsSync(path.join(dir, 'desk.json'))).toBe(false)
+        expect(desk.saveBank()).toMatchObject({ ok: true })
+        expect(desk.state().unsaved).toBe(false)
+        const onDisk = JSON.parse(fs.readFileSync(path.join(dir, 'desk.json'), 'utf8'))
+        expect(onDisk.looks.find((l) => l.id === 'wave').colour).toBe('#ffffff')
+        expect(onDisk.looks.find((l) => l.id === 'wave-2').name).toBe('Wave 2')
+        desk.rename('wave-2', 'White wave')
+        expect(desk.state().unsaved).toBe(true)
+        desk.close()
+        expect(deskWith(fakeEngine(), { dir }).desk.state().looks.find((l) => l.id === 'wave-2').name).toBe('White wave')
+    })
+    it('store keeps a look the page sends in a tile or a new one, and leaves the cubes as they were', () => {
         const { desk } = deskWith(fakeEngine())
         desk.go('ring')
         const before = desk.state().live
