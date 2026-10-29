@@ -1,6 +1,6 @@
 import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import WikiPage from './WikiPage.jsx'
 
 vi.mock('../components/GridFloorBackground.jsx', () => ({ default: () => <canvas data-testid="mock-backdrop" /> }))
@@ -110,6 +110,15 @@ describe('WikiPage', () => {
 })
 
 describe('WikiPage backdrop (F138)', () => {
+    // jsdom has no scrollIntoView; the page calls it for a deep link left in the
+    // address by an earlier test. Without this the run ends with unhandled errors.
+    const realScroll = Element.prototype.scrollIntoView
+    beforeEach(() => {
+        window.history.replaceState(null, '', '/wiki')
+        Element.prototype.scrollIntoView = vi.fn()
+    })
+    afterEach(() => { Element.prototype.scrollIntoView = realScroll })
+
     it('starts no canvas by default; ?scene=1 brings the 3D backdrop back', async () => {
         const { container, unmount } = render(<WikiPage />)
         await new Promise(resolve => setTimeout(resolve, 30))
