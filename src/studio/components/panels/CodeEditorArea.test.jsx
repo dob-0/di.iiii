@@ -53,6 +53,9 @@ describe('CodeEditorArea (CodeMirror)', () => {
         const { ref } = await loaded()
         act(() => ref.current.setSelectionRange(3, 5))
         expect([ref.current.selectionStart, ref.current.selectionEnd, ref.current.value]).toEqual([3, 5, '<p>hi</p>'])
+        // past the end is clamped, as a textarea does (an insert whose text has not arrived yet)
+        act(() => ref.current.setSelectionRange(99, 99))
+        expect([ref.current.selectionStart, ref.current.selectionEnd]).toEqual([9, 9])
     })
 
     it('keeps the plain text box as a choice, remembered', async () => {
