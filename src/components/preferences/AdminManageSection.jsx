@@ -5,7 +5,6 @@ import {
     listServerSpaces,
     createServerSpace,
     updateServerSpace,
-    deleteServerSpace,
     getServerConfig,
     getSweepReport,
     patchServerConfig,
@@ -28,6 +27,8 @@ import {
 } from '../../studio/utils/studioRouting.js'
 import { buildAppSpacePath, buildPublicProjectPath, buildVanityProjectPath } from '../../utils/spaceRouting.js'
 import LoadingScreen from '../LoadingScreen.jsx'
+import { useSpaceDelete } from '../../studio/components/SpaceTrash.jsx'
+import { useAsk } from '../ui/useAsk.js'
 
 const ROLES = [
     { key: 'viewer', hint: 'Read-only access' },
@@ -129,14 +130,18 @@ export default function AdminManageSection({ onStats }) {
         }, 'Could not update space.')
     ), [runMutation, loadSpaces])
 
-    const removeSpace = useCallback((space) => {
-        if (!window.confirm(`Delete space "${space.label || space.id}" and all its projects? They go to the Trash for 30 days (Spaces page, Trash, Restore). A permanent space is refused.`)) return
-        runMutation(async () => {
-            await deleteServerSpace(space.id)
+    // The same delete as the Spaces page (SpaceTrash.jsx): one box that names
+    // what goes and the 30 days in the Trash, then Undo for 10 s.
+    const { startDelete, deleteUi } = useSpaceDelete({
+        isAdmin: true,
+        onChanged: async () => {
             setSelection({ type: 'root' })
             await loadSpaces()
-        }, 'Could not delete space.')
-    }, [runMutation, loadSpaces])
+        },
+        onMessage: setError
+    })
+    const removeSpace = useCallback((space) => startDelete(space), [startDelete])
+    const { ask, askDialog } = useAsk()
 
     const setGuestGlobal = useCallback((spaceId) => {
         const makeGlobal = globalSpaceId !== spaceId
@@ -181,8 +186,15 @@ export default function AdminManageSection({ onStats }) {
         }, 'Could not update project.')
     ), [runMutation, loadProjects])
 
-    const removeProject = useCallback((spaceId, project) => {
-        if (!window.confirm(`Delete project "${project.title || project.id}"? Moves to the trash for 30 days.`)) return
+    const removeProject = useCallback(async (spaceId, project) => {
+        const yes = await ask({
+            title: `Delete the project “${project.title || project.id}”?`,
+            body: 'It goes to the trash for 30 days. Until then you can bring it back from the trash in Studio.',
+            confirmLabel: 'Move to trash',
+            cancelLabel: 'Keep it',
+            danger: true
+        })
+        if (!yes) return
         runMutation(async () => {
             await deleteProject(project.id)
             if (selection.type === 'project' && selection.projectId === project.id) {
@@ -190,7 +202,7 @@ export default function AdminManageSection({ onStats }) {
             }
             await loadProjects(spaceId)
         }, 'Could not delete project.')
-    }, [runMutation, loadProjects, selection])
+    }, [ask, runMutation, loadProjects, selection])
 
     // ─── user / access actions ────────────────────────────────────
     const patchUser = useCallback((userId, patch) => (
@@ -301,7 +313,9 @@ export default function AdminManageSection({ onStats }) {
                         )
                     })}
                 </div>
-                {error && <div className="preferences-empty">{error}</div>}
+                {error && <div className="preferences-empty" role="status">{error}</div>}
+                {deleteUi}
+                {askDialog}
             </div>
 
             <div className="preferences-manage-detail">

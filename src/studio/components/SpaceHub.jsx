@@ -27,7 +27,9 @@ import { listProjects, getProject, updateProject } from '../../project/services/
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
 import InviteAMachine from '../../sync/InviteAMachine.jsx'
 import SpaceConstellation from './SpaceConstellation.jsx'
-import { SpaceDeleteDialog, SpaceTrashPanel } from './SpaceTrash.jsx'
+import { SpaceTrashPanel, useSpaceDelete } from './SpaceTrash.jsx'
+import { useAsk } from '../../components/ui/useAsk.js'
+import { VISIBILITY_SWITCH_LABEL, goPublicQuestion, visibilityLine } from '../utils/spaceVisibility.js'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { enterFromElement } from '../../components/entryTransition/entryTransition.js'
 import { buildScanPath, buildSpaceContentsPath } from '../../utils/spaceRouting.js'
@@ -392,9 +394,9 @@ export default function SpaceHub() {
     const [manageId, setManageId] = useState(null)
     // The space whose own-domain panel is open (SpaceDomainPanel), or null.
     const [domainsSpaceId, setDomainsSpaceId] = useState(null)
-    // Delete is a dialog that names what goes (SpaceTrash.jsx), and the Trash
-    // is where it goes: spaces this account owns, restorable for 30 days.
-    const [deleting, setDeleting] = useState(null)
+    // Delete is a dialog that names what goes (SpaceTrash.jsx useSpaceDelete,
+    // the same one the admin directory uses), and the Trash is where it goes:
+    // spaces this account owns, restorable for 30 days.
     const [trash, setTrash] = useState({ spaces: [], ttlMs: 0 })
     const [showTrash, setShowTrash] = useState(false)
     // 'grid' = the card shelves (default); 'list' = one dense row per space, which
@@ -640,10 +642,21 @@ export default function SpaceHub() {
         }
     }, [loadSpaces])
 
+    const { startDelete, deleteUi } = useSpaceDelete({
+        isAdmin,
+        onChanged: async () => {
+            setManageId(null)
+            await Promise.all([loadSpaces(), loadTrash()])
+        },
+        onMessage: setStatus
+    })
     const handleDelete = useCallback((space, e) => {
         e?.stopPropagation?.()
-        setDeleting(space)
-    }, [])
+        startDelete(space)
+    }, [startDelete])
+    // Going public asks first (it shows the space to people outside); going
+    // private does not. A failure is said in the page's notice line.
+    const { ask, askDialog } = useAsk()
 
     // `which`: 'share' (default, the constellation's one Copy link) hands out the
     // space's own domain when it has one; 'platform' / 'domain' are the card's
@@ -681,14 +694,16 @@ export default function SpaceHub() {
     }, [])
 
     const handleTogglePublic = useCallback(async (space, e) => {
-        e.stopPropagation()
+        e?.stopPropagation?.()
+        const next = !space.isPublic
+        if (next && !(await ask(goPublicQuestion(space)))) return
         try {
-            await updateServerSpace(space.id, { isPublic: !space.isPublic })
+            await updateServerSpace(space.id, { isPublic: next })
             await loadSpaces()
         } catch (err) {
-            alert(err.message || 'Could not update space.')
+            setStatus(`Could not change who can see “${spaceName(space)}”: ${err.message || 'try again'}.`)
         }
-    }, [loadSpaces])
+    }, [ask, loadSpaces])
 
     // Archive keeps the space whole (nothing is removed, the address still
     // answers) and takes it out of the default list; Unarchive is the same
@@ -932,97 +947,136 @@ export default function SpaceHub() {
         return (
             <>
             {canManage(space) && manageId === space.id && (
-                <div className="ssh-card-actions" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                    <button className="ssh-card-btn" onClick={e => handleRename(space, e)}>
-                        Rename
-                    </button>
-                    <button
-                        className="ssh-card-btn"
-                        onClick={e => handleEditBlurb(space, e)}
-                        title="One line, shown on this card and on every link to the space that is shared"
-                    >
-                        One line for visitors
-                    </button>
-                    <button
-                        className={`ssh-card-btn${space.isPublic ? ' ssh-card-btn--active' : ''}`}
-                        onClick={e => handleTogglePublic(space, e)}
-                    >
-                        {space.isPublic ? 'Public' : 'Private'}
-                    </button>
-                    <button className="ssh-card-btn" onClick={e => handleCopyInvite(space, e)}>
-                        {copiedInviteId === space.id ? 'Invite copied' : 'Invite'}
-                    </button>
-                    <button
-                        className={`ssh-card-btn${invites?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
-                        onClick={e => handleToggleInvites(space, e)}
-                        title="The invite links this space has handed out, and a way to stop one"
-                    >
-                        Invite links
-                    </button>
-                    <button
-                        className={`ssh-card-btn${machineInvite === space.id ? ' ssh-card-btn--active' : ''}`}
-                        onClick={e => { e.stopPropagation(); setMachineInvite(id => (id === space.id ? null : space.id)) }}
-                        title="Four words that let another di.iiii follow this space, live — valid 10 minutes"
-                    >
-                        Invite a machine
-                    </button>
-                    <button
-                        className={`ssh-card-btn${domainsSpaceId === space.id ? ' ssh-card-btn--active' : ''}`}
-                        onClick={e => { e.stopPropagation(); setDomainsSpaceId(id => (id === space.id ? null : space.id)) }}
-                        title="Show this space on a domain of your own"
-                    >
-                        Own domain
-                    </button>
-                    <button
-                        className={`ssh-card-btn${isLinking ? ' ssh-card-btn--active' : ''}`}
-                        onClick={e => handleOpenLinker(space, e)}
-                    >
-                        {space.publishedProjectId ? 'Change project' : 'Link project'}
-                    </button>
-                    <button
-                        className={`ssh-card-btn${previewMgr?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
-                        onClick={e => handleTogglePreviewMgr(space, e)}
-                    >
-                        Preview
-                    </button>
-                    <button
-                        className={`ssh-card-btn${github?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
-                        onClick={e => handleOpenGithub(space, e)}
-                    >
-                        GitHub sync
-                    </button>
-                    <button
-                        className={`ssh-card-btn${history?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
-                        onClick={e => handleToggleHistory(space, e)}
-                        title="Restore points: who changed this space, and a way back to before"
-                    >
-                        History
-                    </button>
-                    <button
-                        className="ssh-card-btn"
-                        onClick={e => handleSaveToFile(space, e)}
-                        title="One file holding this space, its history and its assets — open it on any di.iiii"
-                    >
-                        Save to file
-                    </button>
-                    {space.id !== defaultSpaceId && space.kind !== 'sandbox' && (
+                <div className="ssh-card-actions ssh-manage" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                    <div className="ssh-manage-group" role="group" aria-label="Name">
+                        <p className="ssh-manage-heading" aria-hidden="true">Name</p>
+                        <div className="ssh-manage-row">
+                            <button className="ssh-card-btn" onClick={e => handleRename(space, e)}>
+                                Rename
+                            </button>
+                            <button
+                                className="ssh-card-btn"
+                                onClick={e => handleEditBlurb(space, e)}
+                                title="One line, shown on this card and on every link to the space that is shared"
+                            >
+                                One line for visitors
+                            </button>
+                        </div>
+                    </div>
+                    <div className="ssh-manage-group" role="group" aria-label="Who can see it">
+                        <p className="ssh-manage-heading" aria-hidden="true">Who can see it</p>
                         <button
-                            className="ssh-card-btn"
-                            data-act="archive"
-                            onClick={e => handleToggleArchive(space, e)}
-                            title={isArchived(space)
-                                ? 'Bring this space back into the list'
-                                : 'Keep this space whole and take it out of the list. It stays under Archived.'}
+                            type="button"
+                            role="switch"
+                            aria-checked={Boolean(space.isPublic)}
+                            className={`ssh-switch${space.isPublic ? ' is-on' : ''}`}
+                            onClick={e => handleTogglePublic(space, e)}
                         >
-                            {isArchived(space) ? 'Unarchive' : 'Archive'}
+                            <span className="ssh-switch-track" aria-hidden="true"><span className="ssh-switch-knob" /></span>
+                            <span className="ssh-switch-label">{VISIBILITY_SWITCH_LABEL}</span>
+                            <span className="ssh-switch-state" aria-hidden="true">{space.isPublic ? 'On' : 'Off'}</span>
                         </button>
+                        <p className="ssh-manage-hint">{visibilityLine(space)}</p>
+                    </div>
+                    <div className="ssh-manage-group" role="group" aria-label="Invite people">
+                        <p className="ssh-manage-heading" aria-hidden="true">Invite people</p>
+                        <div className="ssh-manage-row">
+                            <button className="ssh-card-btn" onClick={e => handleCopyInvite(space, e)}>
+                                {copiedInviteId === space.id ? 'Invite copied' : 'Invite'}
+                            </button>
+                            <button
+                                className={`ssh-card-btn${invites?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                onClick={e => handleToggleInvites(space, e)}
+                                title="The invite links this space has handed out, and a way to stop one"
+                            >
+                                Invite links
+                            </button>
+                            <button
+                                className={`ssh-card-btn${machineInvite === space.id ? ' ssh-card-btn--active' : ''}`}
+                                onClick={e => { e.stopPropagation(); setMachineInvite(id => (id === space.id ? null : space.id)) }}
+                                title="Four words that let another di.iiii follow this space, live — valid 10 minutes"
+                            >
+                                Invite a machine
+                            </button>
+                        </div>
+                    </div>
+                    <div className="ssh-manage-group" role="group" aria-label="History and backup">
+                        <p className="ssh-manage-heading" aria-hidden="true">History and backup</p>
+                        <div className="ssh-manage-row">
+                            <button
+                                className={`ssh-card-btn${history?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                onClick={e => handleToggleHistory(space, e)}
+                                title="Restore points: who changed this space, and a way back to before"
+                            >
+                                History
+                            </button>
+                            <button
+                                className="ssh-card-btn"
+                                onClick={e => handleSaveToFile(space, e)}
+                                title="One file holding this space, its history and its assets — open it on any di.iiii"
+                            >
+                                Save to file
+                            </button>
+                        </div>
+                    </div>
+                    <details className="ssh-manage-group ssh-manage-more">
+                        <summary className="ssh-manage-heading">More: address, project, card picture, GitHub</summary>
+                        <div className="ssh-manage-row">
+                            <button
+                                className={`ssh-card-btn${domainsSpaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                onClick={e => { e.stopPropagation(); setDomainsSpaceId(id => (id === space.id ? null : space.id)) }}
+                                title="Show this space on a domain of your own"
+                            >
+                                Own domain
+                            </button>
+                            <button
+                                className={`ssh-card-btn${isLinking ? ' ssh-card-btn--active' : ''}`}
+                                onClick={e => handleOpenLinker(space, e)}
+                            >
+                                {space.publishedProjectId ? 'Change project' : 'Link project'}
+                            </button>
+                            <button
+                                className={`ssh-card-btn${previewMgr?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                onClick={e => handleTogglePreviewMgr(space, e)}
+                            >
+                                Preview
+                            </button>
+                            <button
+                                className={`ssh-card-btn${github?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                onClick={e => handleOpenGithub(space, e)}
+                            >
+                                GitHub sync
+                            </button>
+                        </div>
+                    </details>
+                    {space.id !== defaultSpaceId && space.kind !== 'sandbox' && (
+                        <div className="ssh-manage-group" role="group" aria-label="Put away">
+                            <p className="ssh-manage-heading" aria-hidden="true">Put away</p>
+                            <div className="ssh-manage-row">
+                                <button
+                                    className="ssh-card-btn"
+                                    data-act="archive"
+                                    onClick={e => handleToggleArchive(space, e)}
+                                    title={isArchived(space)
+                                        ? 'Bring this space back into the list'
+                                        : 'Keep this space whole and take it out of the list. It stays under Archived.'}
+                                >
+                                    {isArchived(space) ? 'Unarchive' : 'Archive'}
+                                </button>
+                            </div>
+                        </div>
                     )}
-                    <button
-                        className="ssh-card-btn ssh-card-btn--danger"
-                        onClick={e => handleDelete(space, e)}
-                    >
-                        Delete
-                    </button>
+                    <div className="ssh-manage-group ssh-manage-danger" role="group" aria-label="Delete">
+                        <div className="ssh-manage-row">
+                            <button
+                                className="ssh-card-btn ssh-card-btn--danger"
+                                onClick={e => handleDelete(space, e)}
+                            >
+                                Delete
+                            </button>
+                            <span className="ssh-manage-hint">Moves it to the Trash for 30 days.</span>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -1405,19 +1459,8 @@ export default function SpaceHub() {
                         onChanged={async () => { await Promise.all([loadSpaces(), loadTrash()]) }}
                     />
                 )}
-                {deleting && (
-                    <SpaceDeleteDialog
-                        space={deleting}
-                        isAdmin={isAdmin}
-                        onClose={() => setDeleting(null)}
-                        onDone={async (receipt) => {
-                            setDeleting(null)
-                            setManageId(null)
-                            await Promise.all([loadSpaces(), loadTrash()])
-                            if (receipt?.status === 'pending_approval') setStatus('Waiting for approval before it moves to the Trash.')
-                        }}
-                    />
-                )}
+                {deleteUi}
+                {askDialog}
 
                 {isGuest && (
                     <p className="ssh-guest-banner">
@@ -1427,7 +1470,7 @@ export default function SpaceHub() {
 
                 {status === 'loading...' && <LoadingScreen variant="inline" label="Loading" text="loading" />}
                 {status && status !== 'loading...' && (
-                    <p className={`ssh-status${status.includes('error') ? ' ssh-status-error' : ''}`}>
+                    <p className={`ssh-status${/error|could not/i.test(status) ? ' ssh-status-error' : ''}`} role="status">
                         {status}
                     </p>
                 )}
