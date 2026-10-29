@@ -566,6 +566,7 @@ export const WIKI_ARTICLES = [
                 'Fader — plain channel faders, for when a fixture is doing something no profile explains and you need to poke a channel by hand.',
                 'MIDI — map a controller. Mappings live with the desk, not in one browser, so the same knobs work from any screen you open it on.'
             ] },
+            'A screen reader or the keyboard can use the desk: the dimmer limits, the tempo box, the universe list, the zoom buttons and slider, and the fixture library all have names, and Tab reaches the library to scroll it with the arrow keys.',
             'Opened from a project — Projection\'s Light button, for one — the lighting desk knows which project sent you. Its top left reads ← and the project\'s name, and one press takes you back to that project in Studio; beside it, Studio, Nodes and Projection open the same project in each tool. It keeps that for as long as the tab is open, whichever of its five pages you are on. Opened on its own, at /light, it has only the one door home, to your spaces.',
             'One rule that matters more than any other: output is OFF until you switch it on, under OUTPUT. Until then the desk runs, the stage view moves, scenes recall — and nothing leaves the machine. A dev server on a shared wifi can never blast a frame at somebody else\'s rig by accident, and a rig only ever lights when a person decided it should.',
             'The rig is yours. Nothing in the desk is patched to any particular room — you name the fixtures, you set the addresses, you save the looks.',
@@ -1768,7 +1769,7 @@ export const WIKI_ARTICLES = [
             'An install that has a name (di name) can be opened to the wifi for guests. On the local home, press Wifi (or run di wifi): a door opens on this machine\u2019s wifi address, with the install\u2019s own certificate, and the panel shows a QR code. A phone, a headset or a laptop scans it and gets the padlock, so the camera, the microphone and WebXR work.',
             'A visitor is always a guest: their own sandbox and the open space, never your spaces. You, at this machine, stay the owner. The door answers the install\u2019s own name only; any other name gets a refusal.',
             'Another di can follow a space from you: di follow <space> --from <name> (the name is the first part of the address, shown on the panel). Following needs the space\u2019s own key from di invite; the wifi door hands out no keys.',
-            'Close it with Close door (or di wifi --stop). After a restart the install is private again; the name and certificate stay, so the wifi door is one press away. If the wifi address changes (a new router lease), the door follows it within ten seconds.',
+            'Close it with Close door (or di wifi --stop). After a restart the install is private again and points its name home by itself within a minute, so an old link stops answering instead of leading nowhere; the name and certificate stay, so the wifi door is one press away. If the wifi address changes (a new router lease), the door follows it within ten seconds.',
             { list: [
                 'di wifi \u2014 open the door, print the name, the link and the follow line',
                 'di wifi --status \u2014 is it open, and where',

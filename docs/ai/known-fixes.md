@@ -21,6 +21,12 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## Light desk controls had no accessible name; the fixture library could not be scrolled by keyboard (UX audit F129, 2026-10-29)
+
+Symptoms (axe, 4 critical): `#dimMaxH` `#dimMinH` (button-name), `#bpm` and the zoom slider (label), `#gridUniverse` (select-name), `#libTree` (scrollable-region-focusable).
+Fix: aria-labels in serverXR/src/lighting/ui/index.html (also on the zoom buttons and fit button); `#libTree` got `tabindex="0"`, `role="region"`, an aria-label. Nothing restyled, no behaviour removed.
+Guard: serverXR/src/lighting/deskNames.test.js (fails on the old html: "dimMaxH ... to match aria-label", "libTree ... tabindex").
+
 ## A wrong address opened something else, and empty or failed pages said nothing useful (UX audit F010, F070, F071, F142, F154, 2026-10-28)
 
 Symptoms (audit `~/work/agent-reports-2026-10-28/ux-audit`, captured at 4ef52d1b7): `/cinema-house/nope-xyz` showed Cinema House's own front page under the wrong address (title "Cinema House — di.iiii", resolve 404 in the network log); an empty space showed a visitor its name in bold and nothing else, while its `/projects` list said "Nothing is on show in this space yet." (two voices); the unknown-space card said "step through one of your own doors" and its one button was "Open Space" (the shared space, not the way home), the di.iiii mark plain text; the crash page printed "Work saved, nothing changed" on every failure and the raw error in code type; `/<space>/studio/director` on a space with no director was a page that only said "no director here", and bare `/scan` answered "Not found".

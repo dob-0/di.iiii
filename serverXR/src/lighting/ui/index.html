@@ -62,7 +62,7 @@
     <button id="topBlackout" class="blackout topbo" title="Blackout (B) — reaches every page">Blackout</button>
     <button id="goBtn" class="go" title="Step to the next desk scene">Next scene</button>
     <div class="bpm"><span>BPM</span><div class="bpmbar"><i id="bpmBar"></i></div></div>
-    <input type="number" id="bpm" class="bpmnum" value="120" min="20" max="300">
+    <input type="number" id="bpm" aria-label="Tempo in beats per minute" class="bpmnum" value="120" min="20" max="300">
     <button id="tapBtn" class="tap" title="Tap tempo — each tap also says WHERE the beat is, so waves start on the downbeat">Tap</button>
     <!-- Snap: hold a press until the next beat or bar. A finger lands where it lands;
          the music does not, and a light change that is 200ms late reads as a mistake. -->
@@ -242,7 +242,7 @@
           <div class="oflmodes" id="oflModes" hidden></div>
         </div>
         <div class="combobar" id="comboBar" hidden></div>
-        <div class="tree" id="libTree"></div>
+        <div class="tree" id="libTree" tabindex="0" role="region" aria-label="Fixture library"></div>
         <div class="lib-form">
           <div class="lib-sel" id="libSel">rgb (3 Channels)</div>
           <label class="frow"><span>DMX Universe</span><select id="pUniverse"></select></label>
@@ -262,7 +262,7 @@
     <div class="pane patch">
       <div class="pane-head"><h2>Patch</h2></div>
       <div class="patch-tools">
-        <select id="gridUniverse"></select>
+        <select id="gridUniverse" aria-label="Universe shown in the grid"></select>
         <button class="sq" id="uniPrev">‹</button>
         <button class="sq" id="uniNext">›</button>
         <span class="muted" id="patchInfo"></span>
@@ -292,10 +292,10 @@
         <button class="tool gridBtn" title="Arrange selection in a grid">⊞</button>
         <button class="tool circleBtn" title="Arrange selection in a circle">◎</button>
         <span class="sep"></span>
-        <button class="tool zoomOut">⊖</button>
-        <input type="range" class="zoom" min="25" max="400" value="100">
-        <button class="tool zoomIn">⊕</button>
-        <button class="tool fitBtn" title="Fit everything in view — pan with the middle button or Space + drag, zoom with the wheel">⤢</button>
+        <button class="tool zoomOut" aria-label="Zoom out">⊖</button>
+        <input type="range" class="zoom" aria-label="Zoom" min="25" max="400" value="100">
+        <button class="tool zoomIn" aria-label="Zoom in">⊕</button>
+        <button class="tool fitBtn" aria-label="Fit everything in view" title="Fit everything in view — pan with the middle button or Space + drag, zoom with the wheel">⤢</button>
       </div>
       <div class="stage">
         <div class="stage-inner"></div>
@@ -321,8 +321,8 @@
             <span class="vval" id="dimMaxVal">100.0%</span>
             <div class="vtrack" id="dimTrack">
               <i class="vfill" id="dimFill"></i>
-              <button class="vhandle" id="dimMaxH"></button>
-              <button class="vhandle" id="dimMinH"></button>
+              <button class="vhandle" id="dimMaxH" aria-label="Dimmer top limit"></button>
+              <button class="vhandle" id="dimMinH" aria-label="Dimmer bottom limit"></button>
             </div>
             <span class="vval" id="dimMinVal">0.0%</span>
           </div>
@@ -640,10 +640,10 @@
         <button class="tool gridBtn" title="Arrange selection in a grid">⊞</button>
         <button class="tool circleBtn" title="Arrange selection in a circle">◎</button>
         <span class="sep"></span>
-        <button class="tool zoomOut">⊖</button>
-        <input type="range" class="zoom" min="25" max="400" value="100">
-        <button class="tool zoomIn">⊕</button>
-        <button class="tool fitBtn" title="Fit everything in view — pan with the middle button or Space + drag, zoom with the wheel">⤢</button>
+        <button class="tool zoomOut" aria-label="Zoom out">⊖</button>
+        <input type="range" class="zoom" aria-label="Zoom" min="25" max="400" value="100">
+        <button class="tool zoomIn" aria-label="Zoom in">⊕</button>
+        <button class="tool fitBtn" aria-label="Fit everything in view" title="Fit everything in view — pan with the middle button or Space + drag, zoom with the wheel">⤢</button>
       </div>
       <div class="stage">
         <div class="stage-inner"></div>
