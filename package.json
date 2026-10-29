@@ -73,7 +73,7 @@
         "desk:bundle": "node serverXR/src/lighting/tools/desk-bundle.js",
         "test:desk-node": "node serverXR/src/lighting/tests/test-node-section.js",
         "test": "vitest run",
-        "test:raw": "vitest run raw/ project/ studio/ components/surfaceBar.embed algoVrithm/editListSourceOnThisPiece nodeLabelVocabulary copyVocabulary map/MapInspector map/lightingLink rigbuild/lookRules rigbuild/looks.test rigbuild/headMotion rigbuild/lookLevel rigbuild/lightPool.fit rigbuild/dmxPose rigbuild/readOnlySurfaces rigbuild/noWriteOnLoad objectComponents/beamMirror ../scripts/nodeAnatomy.test.js",
+        "test:raw": "vitest run raw/ project/ studio/ components/surfaceBar.embed algoVrithm/editListSourceOnThisPiece nodeLabelVocabulary copyVocabulary map/MapInspector map/lightingLink rigbuild/lookRules rigbuild/looks.test rigbuild/headMotion rigbuild/lookLevel rigbuild/lightPool.fit rigbuild/dmxPose rigbuild/readOnlySurfaces rigbuild/noWriteOnLoad objectComponents/beamMirror ../scripts/nodeAnatomy.test.js i18n/languages.test",
         "di": "node scripts/di/cli.mjs",
         "di:pack": "node scripts/pack-runtime.mjs",
         "check:works": "node scripts/works-boundary.mjs",
