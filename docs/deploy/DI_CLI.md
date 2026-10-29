@@ -32,7 +32,7 @@ di spaces      what is in this di.iiii
 di backup      write your whole di.iiii to one file
 di update      get the newest — never touches your work
 di channel     which channel this install follows: stable (releases) or dev (what dev.diiii.xyz serves)
-di autoupdate  on | off | status — keep it on its channel every 15 minutes (Linux)
+di autoupdate  on | off | status — keep it on its channel every 5 minutes (Linux)
 di doctor      what this machine can and cannot do
 di keeper get  a small model on this machine — works with no internet
 di ndi get     video in and out over the network — OBS, Resolume, a projector
@@ -403,13 +403,13 @@ and says so. `di update --rollback` returns to `previous`.
   unpacked.
 - No GitHub account is needed, ever: installs download public release files anonymously.
 - `di channel dev` remembers the channel; `di channel` shows it.
-- `di autoupdate on` installs a systemd **user** timer (Linux) that runs the update every 15 minutes. It skips and
+- `di autoupdate on` installs a systemd **user** timer (Linux) that runs the update every 5 minutes (an install that had it on at 15 is rewritten by its next tick). It skips and
   logs while the CPU package is above 85 C. `di autoupdate status` (and `di status`) show last check, last update and
   last error; the log is `~/.di/logs/autoupdate.log`, one line per run. `di autoupdate off` removes it.
   To run with nobody logged in: `loginctl enable-linger $USER`.
 - On a running di an automatic update restarts it, like `di update` does. Keep a show on `stable`, or `autoupdate off`.
 - Windows and macOS: not built. The equivalent is a Task Scheduler task or a LaunchAgent running
-  `di autoupdate run` every 15 minutes.
+  `di autoupdate run` every 5 minutes.
 
 Why and the limits: `docs/architecture/decisions/2026-10-05-release-channels.md`.
 

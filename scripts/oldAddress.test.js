@@ -25,6 +25,7 @@ const OLD = 'di-studio\\.xyz'
 // Whole files and folders that are dated logs or retired runbooks.
 const HISTORY = [
     'PROGRESS.md',                     // the dated log
+    'CURRENT.md',                      // its digest: the "Last session" title list session-land.mjs rewrites from the notes (2026-10-29: a note title named the old zone and the dev deploy's fold-mode run went red)
     'docs/ai/known-fixes.md',          // dated defect log
     'docs/ai/sessions/',               // notes that fold into PROGRESS.md
     'docs/ai/audit-',                  // dated audits (2026-06-22, 2026-06-24)
@@ -109,7 +110,8 @@ const ALLOWED = {
     'src/works/works.js': [1, 'links already printed with the old name still work'],
     'vite.config.js': [1, 'quotes the message the slim install printed'],
     'src/raw/director/DirectorPanel.jsx': [1, 'how the timeline used to fail on the hosted site'],
-    'src/timeline/timingOverlay.js': [1, 'how the timeline used to fail on the hosted site']
+    'src/timeline/timingOverlay.js': [1, 'how the timeline used to fail on the hosted site'],
+    'docs/ai/team-sync-by-network-name.md': [1, 'the 2026-10-29 decision that dropped the old zone']
 }
 
 const counts = () => {

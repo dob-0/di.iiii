@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import StudioControlCluster from './StudioControlCluster.jsx'
 import { buildStudioPreviewUrl } from '../utils/previewUrl.js'
+import { describeUnsaved } from '../../project/hooks/useProjectDocumentSync.js'
 
 const base = {
     spaceName: 'MOXIR',
@@ -124,5 +125,101 @@ describe('the Walk and Fly buttons', () => {
         render(<StudioControlCluster {...base} />)
         expect(screen.queryByRole('button', { name: 'Walk' })).toBeNull()
         expect(screen.queryByRole('button', { name: 'Fly' })).toBeNull()
+    })
+})
+
+// UX audit F025 + F089: undo was a key (a tablet has none) and saving was a 6 px dot. Both are words and buttons now.
+describe('Undo and Redo in the cluster header', () => {
+    it('draws no buttons until the Studio gives an undo call', () => {
+        render(<StudioControlCluster {...base} />)
+        expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull()
+        expect(screen.queryByRole('button', { name: 'Redo' })).toBeNull()
+    })
+
+    it('calls onUndo and onRedo, and is disabled at the ends of the history', () => {
+        const onUndo = vi.fn()
+        const onRedo = vi.fn()
+        const { rerender } = render(<StudioControlCluster {...base} onUndo={onUndo} onRedo={onRedo} canUndo canRedo={false} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+        expect(onUndo).toHaveBeenCalledTimes(1)
+        expect(screen.getByRole('button', { name: 'Redo' })).toBeDisabled()
+        rerender(<StudioControlCluster {...base} onUndo={onUndo} onRedo={onRedo} canUndo={false} canRedo />)
+        expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()
+        fireEvent.click(screen.getByRole('button', { name: 'Redo' }))
+        expect(onRedo).toHaveBeenCalledTimes(1)
+    })
+
+    it('stays visible when the cluster is collapsed', () => {
+        render(<StudioControlCluster {...base} onUndo={() => {}} onRedo={() => {}} canUndo canRedo />)
+        fireEvent.click(screen.getByTitle('Collapse'))
+        expect(screen.queryByText('Tools')).toBeNull()
+        expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
+    })
+})
+
+describe('the save line', () => {
+    const line = () => document.querySelector('[data-save-state]')
+
+    it('says Saved when nothing waits', () => {
+        render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 0, sceneStreamState: 'connected' }} />)
+        expect(line()).toHaveTextContent(/^Saved$/)
+        expect(line().dataset.saveState).toBe('saved')
+    })
+
+    it('says Saving… while edits wait, then Saved with the time they were acknowledged', () => {
+        const { rerender } = render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 2 }} />)
+        expect(line()).toHaveTextContent('Saving\u2026')
+        rerender(<StudioControlCluster {...base} syncState={{ pendingOpCount: 0 }} />)
+        expect(line()).toHaveTextContent(/^Saved \d\d:\d\d$/)
+    })
+
+    it('says Not saved, in words, when a sync failure waits', () => {
+        const { rerender } = render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, pendingSyncError: describeUnsaved('server unreachable', 1) }} />)
+        expect(line()).toHaveTextContent('Not saved: offline, keep this tab open')
+        expect(line().dataset.saveState).toBe('error')
+        rerender(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, pendingSyncError: 'session expired', authExpired: true }} />)
+        expect(line()).toHaveTextContent('Not saved: sign in again')
+    })
+})
+
+describe('the save line names the real cause', () => {
+    // Review of S03: every sync failure used to read "offline", also a refusal or a
+    // conflict that keeps coming back, so a pro would check a network that was fine.
+    it('says offline only when the server could not be reached', () => {
+        render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, pendingSyncError: describeUnsaved('sync is stuck behind concurrent edits, retrying shortly', 1) }} />)
+        expect(document.querySelector('[data-save-state]')).toHaveTextContent('Not saved: trying again, keep this tab open')
+        expect(document.querySelector('[data-save-state]')).not.toHaveTextContent(/offline/)
+    })
+})
+
+describe('the save line, review round 2 of S03', () => {
+    const line = () => document.querySelector('[data-save-state]')
+
+    it('says nothing before the project has loaded, and says so if it could not', () => {
+        const { rerender } = render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 0, hasLoaded: false, loadError: null }} />)
+        expect(line()).toBeNull()
+        rerender(<StudioControlCluster {...base} syncState={{ pendingOpCount: 0, hasLoaded: false, loadError: 'Failed to load project.' }} />)
+        expect(line()).toHaveTextContent('Not opened: reload this page')
+        expect(line().dataset.saveState).toBe('error')
+        rerender(<StudioControlCluster {...base} syncState={{ pendingOpCount: 0, hasLoaded: true, loadError: null }} />)
+        expect(line()).toHaveTextContent(/^Saved$/)
+    })
+
+    it('speaks to a screen reader only for a problem, not on every Saving / Saved flip', () => {
+        const { rerender } = render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1 }} />)
+        expect(line().getAttribute('aria-live')).toBe('off')
+        rerender(<StudioControlCluster {...base} syncState={{ pendingOpCount: 0 }} />)
+        expect(line().getAttribute('aria-live')).toBe('off')
+        rerender(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, pendingSyncError: describeUnsaved('server unreachable', 1) }} />)
+        expect(line().getAttribute('aria-live')).toBe('polite')
+        expect(screen.getByRole('status')).toBe(line())
+    })
+
+    it('the sync dot shows the scene connection only; a save failure is the line, not a second red sign', () => {
+        const { container } = render(<StudioControlCluster {...base} syncState={{ pendingOpCount: 1, sceneStreamState: 'connected', pendingSyncError: describeUnsaved('server unreachable', 1) }} />)
+        const dot = container.querySelector('.scc-sync-dot')
+        expect(dot.className).toContain('scc-sync-dot--connected')
+        expect(dot.className).not.toContain('--error')
+        expect(dot.getAttribute('title')).toBe('connected')
     })
 })
