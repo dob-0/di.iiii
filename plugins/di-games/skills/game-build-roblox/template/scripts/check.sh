@@ -25,10 +25,10 @@ for p in files:
 print(len(files), 'json files parse')"
 
 step "stylua --check"
-$T stylua --check src tests tests.luau scripts/check_place.luau
+$T stylua --check src tests tests.luau scripts/check_place.luau scripts/check_no_test_code.luau
 
 step "selene"
-$T selene src tests tests.luau scripts/check_place.luau
+$T selene src tests tests.luau scripts/check_place.luau scripts/check_no_test_code.luau
 
 step "rojo build"
 mkdir -p build
@@ -37,6 +37,13 @@ $T rojo build default.project.json -o build/__PROJECT_NAME__.rbxl
 step "place: the BUILT place holds the map where the plan says (round trip, origin, spawn, scripts)"
 # Born from a real bug: Rojo ignored "Position", every part sat at (0, 0, 0) and the tests (which read the JSON) passed.
 $T lune run scripts/check_place build/__PROJECT_NAME__.rbxl
+
+step "place: the shipped place holds no test-only code (scenario runners live in tests/place/ and in the test place only)"
+$T lune run scripts/check_no_test_code build/__PROJECT_NAME__.rbxl
+scripts/build-test.sh
+
+step "negative: a map placed with Position must FAIL check_place, a test place must FAIL check_no_test_code"
+scripts/negative_gate_test.sh
 
 step "luau-lsp: type check src against the Roblox API (pinned definitions)"
 source scripts/roblox-types.env

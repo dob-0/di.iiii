@@ -87,6 +87,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
     // the same person who decides whether the space itself is public.
     const [spaceMeta, setSpaceMeta] = useState(null)
     const [creatingTitle, setCreatingTitle] = useState(null)
+    const [createError, setCreateError] = useState('')
     const [renamingId, setRenamingId] = useState(null)
     const [renameValue, setRenameValue] = useState('')
     const [showArchived, setShowArchived] = useState(false)
@@ -285,18 +286,24 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
     }
 
     const submitNew = async (title) => {
-        const name = title.trim() || 'Untitled'
-        setCreatingTitle(null)
+        if (isBusy) return
+        // Only the name goes: the server keeps it unique inside this space and picks
+        // the project's id (docs/ai/decisions/2026-10-29-project-names-per-space.md).
+        // An empty name is named there ("Untitled", "Untitled 2"). The form stays
+        // open until the project exists, so a clash is read beside what was typed.
+        setCreateError('')
         setIsBusy(true)
         setStatus('creating...')
         try {
-            const res = await createProject(spaceId, { title: name, slug: name, source: tool.source })
+            const res = await createProject(spaceId, { title: title.trim(), source: tool.source })
+            setCreatingTitle(null)
             // Studio: a new project is empty, so it opens its project view, not the 3D editor.
             // Nodes keeps its own editor (the person chose that tool).
             if (openIn === 'nodes') openProject(res.project.id)
             else navigateToStudioPath(newProjectDestination({ projectId: res.project.id, spaceId }))
         } catch (e) {
-            setStatus(e.message || 'error')
+            setStatus('')
+            setCreateError(e.message || 'Could not make that project. Try again.')
             setIsBusy(false)
         }
     }
@@ -561,14 +568,19 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                                 ref={el => el?.focus()}
                                 placeholder="Project name"
                                 value={creatingTitle}
-                                onChange={e => setCreatingTitle(e.target.value)}
-                                onKeyDown={e => e.key === 'Escape' && setCreatingTitle(null)}
+                                aria-invalid={createError ? 'true' : undefined}
+                                aria-describedby={createError ? 'sh-new-error' : undefined}
+                                onChange={e => { setCreatingTitle(e.target.value); setCreateError('') }}
+                                onKeyDown={e => { if (e.key === 'Escape') { setCreatingTitle(null); setCreateError('') } }}
                             />
-                            <button className="sh-btn-new" type="submit">Create</button>
-                            <button className="sh-btn-cancel" type="button" onClick={() => setCreatingTitle(null)}>✕</button>
+                            <button className="sh-btn-new" type="submit" disabled={isBusy}>Create</button>
+                            <button className="sh-btn-cancel" type="button" onClick={() => { setCreatingTitle(null); setCreateError('') }}>✕</button>
                         </form>
                     )}
                 </div>
+                {creatingTitle !== null && createError && (
+                    <p id="sh-new-error" className="sh-status sh-status-error" role="alert">{createError}</p>
+                )}
 
                 {/* Secondary actions */}
                 <div className="sh-secondary-row">
