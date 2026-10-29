@@ -530,7 +530,39 @@ describe('the Nodes copy of the list', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Create' }))
 
         await waitFor(() => expect(navigate).toHaveBeenCalledWith('/lab/raw/projects/first-thing', { replace: false }))
-        expect(createProject).toHaveBeenCalledWith('lab', { title: 'First thing', slug: 'First thing', source: 'raw-v2' })
+        expect(createProject).toHaveBeenCalledWith('lab', { title: 'First thing', source: 'raw-v2' })
+    })
+
+    it('keeps the new-project form open with a plain message when the name is taken in this space', async () => {
+        listProjects.mockResolvedValue([])
+        createProject.mockRejectedValue(new Error('This space already has a project called "my scene". Pick another name.'))
+
+        render(<StudioHub spaceId="lab" />)
+        fireEvent.click(await screen.findByRole('button', { name: '+ New project' }))
+        fireEvent.change(screen.getByPlaceholderText('Project name'), { target: { value: 'my scene' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+        const alert = await screen.findByRole('alert')
+        expect(alert.textContent).toBe('This space already has a project called "my scene". Pick another name.')
+        const input = screen.getByPlaceholderText('Project name')
+        expect(input.value).toBe('my scene')
+        expect(input.getAttribute('aria-invalid')).toBe('true')
+        expect(navigateToStudioPath).not.toHaveBeenCalled()
+
+        // Typing a new name clears the message.
+        fireEvent.change(input, { target: { value: 'my scene too' } })
+        expect(screen.queryByRole('alert')).toBeNull()
+    })
+
+    it('sends an empty name as empty, for the server to name it', async () => {
+        listProjects.mockResolvedValue([])
+        createProject.mockResolvedValue({ project: { id: 'untitled' } })
+
+        render(<StudioHub spaceId="lab" />)
+        fireEvent.click(await screen.findByRole('button', { name: '+ New project' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+        await waitFor(() => expect(createProject).toHaveBeenCalledWith('lab', { title: '', source: 'studio-v3' }))
     })
 
     it('crosses to the Studio copy of the same list, where Studio crosses back', async () => {
