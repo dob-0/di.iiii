@@ -54,6 +54,16 @@ describe('every surface names itself and has one heading', () => {
         expect(src.match(/<main[ >]/g)).toHaveLength(1)
     })
 
+    it('the Studio project view puts its h1 inside its main region', () => {
+        const src = read('../studio/components/StudioEditor.jsx')
+        expect(src.indexOf('<main')).toBeLessThan(src.indexOf('<h1'))
+    })
+
+    it('the Studio hub, spaces and director views sit in a main region', () => {
+        const src = read('../studio/StudioApp.jsx')
+        expect(src).toContain('<main className="studio-page-main">{content}</main>')
+    })
+
     it('the chat home has exactly one h1 and a main region', () => {
         const src = read('../chat/ChatHomeSurface.jsx')
         expect(src.match(/component="h1"/g)).toHaveLength(1)

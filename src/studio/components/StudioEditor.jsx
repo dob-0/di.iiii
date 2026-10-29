@@ -1426,8 +1426,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const studioHeading = document.projectMeta?.title || projectId
     return (
         <>
-            <h1 className="studio-sr-only">{studioHeading}</h1>
             <main className="studio-page-main">
+            <h1 className="studio-sr-only">{studioHeading}</h1>
             <StudioShell
             document={document}
             walkBuild={(uiHidden) => (
