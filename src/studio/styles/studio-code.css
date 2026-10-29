@@ -1,4 +1,5 @@
-/* The code window's editor (CodeMirror 6). House mono, square corners, the studio's dark surface. */
+/* The code window's editor (CodeMirror 6). House mono, square corners, the studio's dark surface.
+   Rules inside the editor name .cm-editor too: the library's own theme has the same weight and may load later. */
 .di-code-editor {
     flex: 1;
     min-height: 220px;
@@ -22,17 +23,17 @@
 .di-code-editor .cm-editor.cm-focused {
     outline: none;
 }
-.di-code-editor .cm-scroller {
+.di-code-editor .cm-editor .cm-scroller {
     font-family: inherit;
     line-height: 1.5;
     overflow: auto;
 }
-.di-code-editor .cm-gutters {
+.di-code-editor .cm-editor .cm-gutters {
     background: transparent;
     color: rgba(255, 255, 255, 0.55);
     border-right: 1px solid rgba(255, 255, 255, 0.12);
 }
-.di-code-editor .cm-activeLine,
-.di-code-editor .cm-activeLineGutter {
+.di-code-editor .cm-editor .cm-activeLine,
+.di-code-editor .cm-editor .cm-activeLineGutter {
     background: rgba(255, 255, 255, 0.06);
 }

@@ -8,13 +8,19 @@
 
 ## Dependency provenance (rule: provenance and law) — read from node_modules/<pkg>/package.json and LICENSE, 2026-10-29
 All "license": "MIT", LICENSE first line "MIT License" (copyright Marijn Haverbeke and others):
-@codemirror/state 6.7.6 · view 6.43.15 · commands 6.11.1 · language 6.13.1 · search 6.7.2 · lang-javascript 6.2.5 · lang-html 6.4.12 · lang-css 6.3.1 (all exact in package.json/package-lock.json). `@lezer/highlight` 1.2.5 was already in the tree (now a direct dependency, exact). Transitive: lezer parsers, style-mod, w3c-keyname, crelt (from the lockfile; not individually read here).
+@codemirror/state 6.7.6 · view 6.43.15 · commands 6.11.1 · language 6.13.1 · search 6.7.2 · lang-javascript 6.2.5 · lang-html 6.4.12 · lang-css 6.3.1 (all exact in package.json/package-lock.json). `@lezer/highlight` 1.2.5 is new too (not in origin/dev's lockfile; corrected by the reviewer: `git show origin/dev:package-lock.json | grep -c lezer` = 0), a direct dependency, exact, MIT. Transitive (read by the reviewer from each node_modules/<pkg>/package.json, "license": "MIT"): @lezer/common, lr, html, css, javascript; style-mod; w3c-keyname; crelt; @marijn/find-cluster-break.
 Method source: CodeMirror 6 reference (codemirror.net/docs/ref) — tab-focus mode (`temporarilySetTabFocusMode`) is the library's own WCAG answer.
 
 ## Build size (`npm run build`, same machine, before = origin/dev with the deps installed but unused)
 - Before: vendor 791.10 kB (gzip 240.01), 304 js files, 7 974 833 bytes JS total.
 - After: vendor 791.10 kB unchanged (same hash); new `codemirror-vendor` 493.69 kB (gzip 171.60) + CodeMirrorBox 2.34 kB (gzip 1.19) + css 0.62 kB; 307 js files. Not in index.html: loads only when the Code window opens an editor.
 - Before adding the `manualChunks` entry the same code made vendor 1 285.81 kB (+495 kB on every route) — caught and fixed.
+
+## Review fixes (wave 3 reviewer)
+- The editor is marked dark (`EditorView.theme({}, { dark: true })`): before it, CodeMirror's light base theme drew a black caret, a light grey find bar and a light selection on the dark studio.
+- studio-code.css rules inside the editor name `.cm-editor` too, so they outweigh the library theme whatever loads last (mono font, gutters, active line).
+- A change from outside (asset insert, sync) replaces only the part that differs, so the cursor stays where it was.
+- "Use a plain text box" is at least 24 px tall (WCAG 2.5.8).
 
 ## Not done / owed
 - The 680 KB cinema-house file in a browser, desktop and phone, before/after pictures: not taken by this builder (see S18-work.json notes).

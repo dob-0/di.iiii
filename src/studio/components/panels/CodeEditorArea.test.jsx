@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { createRef } from 'react'
+import { EditorView } from '@codemirror/view'
 import { CodeEditorArea } from './CodeEditorArea.jsx'
 
 // UX audit F018 (slice S18): the code window's box was a bare textarea with no name, no line
@@ -66,5 +67,20 @@ describe('CodeEditorArea (CodeMirror)', () => {
         expect(window.localStorage.getItem('di.codeEditor.plain')).toBe('1')
         fireEvent.click(screen.getByRole('button', { name: 'Use the code editor' }))
         await waitFor(() => expect(document.querySelector('.cm-content')).not.toBeNull())
+    })
+
+    it('is marked dark, so the caret, selection and find bar are drawn for the dark studio', async () => {
+        const { content } = await loaded()
+        expect(EditorView.findFromDOM(content).state.facet(EditorView.darkTheme)).toBe(true)
+    })
+
+    it('a change from outside keeps the cursor where it was', async () => {
+        const ref = createRef()
+        const { rerender } = render(<CodeEditorArea ref={ref} value={'abc\ndef'} fileName="a.js" onCommit={() => {}} />)
+        await waitFor(() => { if (!document.querySelector('.cm-content')) throw new Error('not yet') })
+        act(() => ref.current.setSelectionRange(6, 6))
+        rerender(<CodeEditorArea ref={ref} value={'abc\ndefg'} fileName="a.js" onCommit={() => {}} />)
+        expect(ref.current.value).toBe('abc\ndefg')
+        expect(ref.current.selectionStart).toBe(6)
     })
 })

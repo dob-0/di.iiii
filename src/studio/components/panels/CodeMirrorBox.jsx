@@ -11,6 +11,9 @@ import { css } from '@codemirror/lang-css'
 import { useCodeCommit } from './codeBuffer.js'
 import '../../styles/studio-code.css'
 
+// The studio is dark: without this the library draws a black caret, a light find bar and a light selection.
+const darkSurface = EditorView.theme({}, { dark: true })
+
 // Colours for the dark studio surface (the library's default style is made for white paper).
 const houseHighlight = HighlightStyle.define([
     { tag: [t.keyword, t.operatorKeyword, t.controlKeyword], color: '#ff9ecb' },
@@ -39,8 +42,15 @@ export default forwardRef(function CodeMirrorBox({ value, onCommit, fileName, la
     const viewRef = useRef(null)
     const { flush, change } = useCodeCommit(value, onCommit, (next) => {
         const view = viewRef.current
-        if (!view || view.state.doc.toString() === next) return
-        view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } })
+        if (!view) return
+        // replace only the part that differs, so the cursor and the lines around stay where they were
+        const doc = view.state.doc.toString()
+        if (doc === next) return
+        let from = 0
+        while (from < doc.length && from < next.length && doc[from] === next[from]) from++
+        let end = 0
+        while (end < doc.length - from && end < next.length - from && doc[doc.length - 1 - end] === next[next.length - 1 - end]) end++
+        view.dispatch({ changes: { from, to: doc.length - end, insert: next.slice(from, next.length - end) } })
     })
     const flushRef = useRef(flush)
     const changeRef = useRef(change)
@@ -54,7 +64,7 @@ export default forwardRef(function CodeMirrorBox({ value, onCommit, fileName, la
                 extensions: [
                     lineNumbers(), highlightActiveLineGutter(), highlightActiveLine(), drawSelection(),
                     history(), indentOnInput(), bracketMatching(), highlightSelectionMatches(),
-                    syntaxHighlighting(houseHighlight),
+                    darkSurface, syntaxHighlighting(houseHighlight),
                     languageFor(fileName),
                     keymap.of([
                         { key: 'Escape', run: temporarilySetTabFocusMode },
@@ -78,7 +88,13 @@ export default forwardRef(function CodeMirrorBox({ value, onCommit, fileName, la
         get selectionStart() { return viewRef.current?.state.selection.main.from ?? 0 },
         get selectionEnd() { return viewRef.current?.state.selection.main.to ?? 0 },
         focus: () => viewRef.current?.focus(),
-        setSelectionRange: (anchor, head) => viewRef.current?.dispatch({ selection: { anchor, head }, scrollIntoView: true })
+        // clamp like a textarea does: the new text may not have reached the editor yet
+        setSelectionRange: (anchor, head) => {
+            const view = viewRef.current
+            if (!view) return
+            const len = view.state.doc.length
+            view.dispatch({ selection: { anchor: Math.min(anchor, len), head: Math.min(head ?? anchor, len) }, scrollIntoView: true })
+        }
     }), [])
 
     return <div ref={hostRef} className="di-code-editor" data-testid="code-editor" />

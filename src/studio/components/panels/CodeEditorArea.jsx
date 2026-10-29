@@ -80,7 +80,7 @@ export const CodeEditorArea = forwardRef(function CodeEditorArea({ value, onComm
                 component="button"
                 type="button"
                 onClick={() => choose(!plain)}
-                sx={{ alignSelf: 'flex-end', mt: 0.5, p: 0, border: 0, background: 'none', color: 'text.secondary', font: 'inherit', fontSize: '0.75rem', textDecoration: 'underline', cursor: 'pointer' }}
+                sx={{ alignSelf: 'flex-end', mt: 0.5, p: 0, minHeight: 24, border: 0, background: 'none', color: 'text.secondary', font: 'inherit', fontSize: '0.75rem', textDecoration: 'underline', cursor: 'pointer' }}
             >
                 {plain ? 'Use the code editor' : 'Use a plain text box'}
             </Box>
