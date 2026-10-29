@@ -1768,7 +1768,7 @@ export const WIKI_ARTICLES = [
             'An install that has a name (di name) can be opened to the wifi for guests. On the local home, press Wifi (or run di wifi): a door opens on this machine\u2019s wifi address, with the install\u2019s own certificate, and the panel shows a QR code. A phone, a headset or a laptop scans it and gets the padlock, so the camera, the microphone and WebXR work.',
             'A visitor is always a guest: their own sandbox and the open space, never your spaces. You, at this machine, stay the owner. The door answers the install\u2019s own name only; any other name gets a refusal.',
             'Another di can follow a space from you: di follow <space> --from <name> (the name is the first part of the address, shown on the panel). Following needs the space\u2019s own key from di invite; the wifi door hands out no keys.',
-            'Close it with Close door (or di wifi --stop). After a restart the install is private again; the name and certificate stay, so the wifi door is one press away. If the wifi address changes (a new router lease), the door follows it within ten seconds.',
+            'Close it with Close door (or di wifi --stop). After a restart the install is private again and points its name home by itself within a minute, so an old link stops answering instead of leading nowhere; the name and certificate stay, so the wifi door is one press away. If the wifi address changes (a new router lease), the door follows it within ten seconds.',
             { list: [
                 'di wifi \u2014 open the door, print the name, the link and the follow line',
                 'di wifi --status \u2014 is it open, and where',
