@@ -1,5 +1,10 @@
 name: CI
 
+# Shards: `npm run test` alone was 10.6 of the 13.5 min the PR job took (median of the
+# last 8 PR runs, 2026-10-29), so vitest runs in 3 parallel shards and the rest of
+# the job (lint, build, contracts, docs) runs beside them. `build-and-test` is the
+# summary job: branch protection requires that exact name.
+
 on:
   # No `push` trigger for dev/main: deploy-vps.yml / deploy-vps-dev.yml
   # call this workflow (workflow_call) as their gating `test` job, so a push
@@ -9,6 +14,10 @@ on:
   # Playwright installs on every deploy push for no benefit, since deploying
   # was already correctly gated).
   pull_request:
+    branches: [ dev, main ]
+  # GitHub's merge queue runs the required checks on a merge_group event, not
+  # pull_request. Ready for the queue; the repo setting is switched on separately.
+  merge_group:
     branches: [ dev, main ]
   # Lets deploy-vps.yml / deploy-vps-dev.yml gate their build-and-push
   # job on this same suite passing, instead of deploying regardless of test
@@ -33,17 +42,81 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same PR branch supersedes the running suite. Only
+# pull_request runs cancel: when deploy-vps*.yml call this workflow on a push
+# to dev/main, github.event_name is that push, so cancel-in-progress is false
+# and a deploy gate is never cancelled. The `ci-` prefix keeps the group
+# distinct from the callers' own deploy groups.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
+  # One third of the vitest suite per job (same `vitest run` as `npm run test`).
+  test:
+    name: test (shard ${{ matrix.shard }}/3)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      # Local to this runner, never pushed. The fold is deterministic (same
+      # notes, same PROGRESS/CURRENT inputs, same script), so this tree equals
+      # the one deploy-vps-dev.yml's `land` job commits to dev -- only the
+      # commit sha differs -- and the checks below are honest about it whether
+      # or not that push was accepted. On a push event actions/checkout leaves
+      # us on a local `dev` branch, which is what session-land.mjs insists on.
+      - name: Fold session notes in place (dev deploys only)
+        if: inputs.land_in_place
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          node scripts/session-land.mjs
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: |
+          if [ -f serverXR/package-lock.json ]; then
+            npm --prefix serverXR ci
+          else
+            npm --prefix serverXR install
+          fi
+
+      # High/critical only — low/moderate advisories churn too often on
+      # transitive deps to gate a deploy on; audit-2026-07-18 confirmed 0
+      # vulnerabilities at this threshold in both package trees at the time
+      # this step was added.
+      - name: Build
+        run: npm run build
+
+      - name: Run tests (shard ${{ matrix.shard }}/3)
+        run: npx vitest run --shard=${{ matrix.shard }}/3
+
+  # Everything except the vitest run, in parallel with the shards.
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       # Local to this runner, never pushed. The fold is deterministic (same
@@ -86,10 +159,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Run tests
-        run: npm run test
-
-      # Explicit guards: these suites are already covered by `npm run test`
+      # Explicit guards: these suites are already covered by the test shards
       # (the root vitest config globs serverXR/src/**). Re-running them as named
       # steps keeps the schema-drift / prod-503 contract guard visible in CI logs
       # and resilient to a future change to the vitest include glob.
@@ -124,7 +194,50 @@ jobs:
       - name: Check wiki / user-facing docs
         run: npm run docs:wiki:check
 
+  # Required check by name (branch protection): fails unless the shards and the
+  # checks job both passed. always() so a skipped/cancelled need still reports.
+  build-and-test:
+    needs: [test, checks]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every shard and the checks job
+        run: |
+          echo "test=${{ needs.test.result }} checks=${{ needs.checks.result }}"
+          [ "${{ needs.test.result }}" = success ] && [ "${{ needs.checks.result }}" = success ]
+
   # Behavioral browser checks (input-device contracts + responsive sweep) —
   # shared with the publish workflow, which gates deploys on the same suite.
   browser-checks:
     uses: ./.github/workflows/browser-checks.yml
+
+  # `engines` still promises Node 22.x, and the server uses the experimental
+  # node:sqlite, whose behaviour moves between majors. .nvmrc (24, what the
+  # Docker images run) is tested above; this job runs the build and the unit
+  # and server-contract suites on the supported older line.
+  node-22-compat:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: npm --prefix serverXR ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npm run test
+

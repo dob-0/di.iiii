@@ -22,7 +22,7 @@ vi.mock('./ndiLink.js', () => ({
 // read the rest of apiClient at import time.
 vi.mock('../services/apiClient.js', async (importOriginal) => ({
     ...(await importOriginal()),
-    apiBaseUrl: 'https://di-studio.xyz/serverXR'
+    apiBaseUrl: 'https://diiii.xyz/serverXR'
 }))
 
 import MapSourceView from './MapSourceView.jsx'

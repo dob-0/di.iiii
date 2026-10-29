@@ -14,6 +14,7 @@ export default function StudioFloatingPanel({
     minHeight = 80,
     maxHeight = 900,
     snapEdges = false,
+    windowKey,
     onPositionChange,
     onSizeChange,
     onCollapsedChange,
@@ -42,6 +43,7 @@ export default function StudioFloatingPanel({
             ref={panelRef}
             style={{ ...dragStyle, width }}
             className="sfp-shell"
+            data-window-key={windowKey}
             {...panelPointerProps}
         >
             <div className="sfp-header" {...dragProps}>
@@ -54,7 +56,7 @@ export default function StudioFloatingPanel({
                     {collapsed ? '▸' : '▾'}
                 </button>
                 {onClose && (
-                    <button className="sfp-close" onClick={onClose} title="Close">×</button>
+                    <button className="sfp-close" onClick={onClose} aria-label="Close" title="Close (bring it back from the Windows row of the control panel)">×</button>
                 )}
             </div>
             {!collapsed && (

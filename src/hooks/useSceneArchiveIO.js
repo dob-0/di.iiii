@@ -203,7 +203,7 @@ export function useSceneArchiveIO({
             renderSettings: sceneData.renderSettings || defaultRenderSettings
         }, 'Loaded project locally')
         if (!silent) {
-            alert('Project package loaded successfully!')
+            alert('Project package loaded.')
         }
     }, [
         clearSelection,

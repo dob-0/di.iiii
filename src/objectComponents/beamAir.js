@@ -89,7 +89,10 @@ export const atmosphereOf = (renderSettings) => {
 // clipped to flat white; a real beam's core clips but its shoulders keep the colour
 // and show the haze's grain.
 export const PROFILE_FLOOR = 0.02 // the hull ends where the beam has fallen to 2 %
-export const beamProfileExponent = (edge) => 2 + 6 * (1 - clamp(finite(edge, 0.2), 0, 1))
+// edge up to EDGE_MAX (2026-10-09): a rig lamp's profile from its class equivalent's field/beam ratio
+// (spotBeam.js profileExponentForRatio) can be softer than a Gaussian — the Proteus Excalibur's 2.0 is p 1.73
+export const EDGE_MAX = 1.2
+export const beamProfileExponent = (edge) => 2 + 6 * (1 - clamp(finite(edge, 0.2), 0, EDGE_MAX))
 export const beamProfileAt = (rho, p) => Math.exp(-Math.LN2 * Math.abs(rho) ** p)
 export const beamProfile = (rho, edge) => beamProfileAt(rho, beamProfileExponent(edge))
 /** How far out (in beam radii) the light is drawn: where the profile reaches PROFILE_FLOOR. */

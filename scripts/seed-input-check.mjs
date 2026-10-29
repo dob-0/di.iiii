@@ -4,7 +4,7 @@
  * scripts/input-check.mjs needs, against a fresh throwaway server.
  *
  * The exhibition route (/wcc/scene) hard-requires space `wcc` + project
- * `main`; space/project data is gitignored, so CI seeds a blank document
+ * `main`; space/project data is gitignored, so CI seeds a document with one object
  * through the normal API instead of committing fixtures. Idempotent.
  *
  * Usage: node scripts/seed-input-check.mjs [--to <url>] [--token <tok>]
@@ -51,4 +51,19 @@ if (!pub.ok) { console.error(`seed: publish failed HTTP ${pub.status}: ${pub.bod
 
 const doc = await fetch(`${BASE}/api/projects/main/document`)
 if (!doc.ok) { console.error(`seed: anonymous document read failed HTTP ${doc.status}`); process.exit(1) }
+
+// A project opens what it holds (src/shared/openingView.js): a blank one opens its plain
+// project view, not the 3D room the drag check drives. Put one object in it.
+const seeded = await doc.json().catch(() => ({}))
+if (!(seeded?.document?.entities || []).length) {
+    const r = await api('/api/projects/main/ops', {
+        method: 'POST',
+        body: JSON.stringify({
+            baseVersion: Number(seeded?.version) || 0,
+            ops: [{ opId: 'seed-input-check-1', clientId: 'seed-input-check', type: 'createEntity', payload: { entity: { id: 'seed-box', type: 'box' } } }],
+        }),
+    })
+    if (!r.ok) { console.error(`seed: put an object in main failed HTTP ${r.status}: ${r.body?.error}`); process.exit(1) }
+    console.log('seed: put one object in main')
+}
 console.log('seed: wcc/main ready (anonymous document read OK)')

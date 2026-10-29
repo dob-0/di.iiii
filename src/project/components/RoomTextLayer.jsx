@@ -26,7 +26,7 @@ export default function RoomTextLayer({ title, spaceId, entities = [], contentsH
             return {
                 id: entity.id,
                 label: reference.label || entity.name || 'a room',
-                href: portalHref(reference.spaceId || spaceId, reference.projectId)
+                href: portalHref(reference.spaceId || spaceId, reference.projectId, reference.anchor)
             }
         })
         .filter((door) => door.href), [entities, spaceId])

@@ -16,7 +16,7 @@
     --sc-hairline: rgba(255, 255, 255, 0.08);
     --sc-hairline-strong: rgba(255, 255, 255, 0.14);
     --sc-text-2: rgba(255, 255, 255, 0.62);
-    --sc-text-3: rgba(255, 255, 255, 0.38);
+    --sc-text-3: rgba(255, 255, 255, 0.64);
 
     position: fixed;
     inset: 0;
@@ -99,7 +99,7 @@
     margin-left: var(--di-space-3);
     padding: var(--di-space-1) var(--di-space-2);
     border: 1px solid var(--di-cyan-border);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     color: var(--di-cyan);
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
@@ -121,14 +121,14 @@
     display: block;
     margin-top: var(--di-space-1);
     font-family: var(--di-mono);
-    font-size: var(--di-text-2);
-    letter-spacing: 0.06em;
+    font-size: var(--di-text-4);
+    letter-spacing: 0;
     color: var(--sc-text-3);
 }
 
 .sc-row-when {
     font-family: var(--di-mono);
-    font-size: var(--di-text-2);
+    font-size: var(--di-text-4);
     color: var(--sc-text-3);
     font-variant-numeric: tabular-nums;
     text-align: right;

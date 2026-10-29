@@ -50,7 +50,7 @@
     box-shadow: none !important;
     text-transform: none !important;
     letter-spacing: 0.02em !important;
-    transition: background 0.1s !important;
+    transition: background var(--di-motion-fast) !important;
 }
 
 .landing-cta-primary:hover,
@@ -81,7 +81,7 @@
     box-shadow: none !important;
     text-transform: none !important;
     letter-spacing: 0.02em !important;
-    transition: border-color 0.1s, color 0.1s, background 0.1s !important;
+    transition: border-color var(--di-motion-fast), color var(--di-motion-fast), background var(--di-motion-fast) !important;
 }
 
 .landing-cta-ghost:hover,
@@ -113,13 +113,13 @@
     font-size: var(--di-text-4) !important;
     padding: var(--di-space-3) var(--di-space-5) !important;
     border-radius: 0 !important;
-    border: 1.5px solid var(--di-cyan) !important;
+    border: 1px solid var(--di-cyan) !important;
     text-decoration: none !important;
     cursor: pointer !important;
     box-shadow: none !important;
     text-transform: none !important;
     letter-spacing: 0.02em !important;
-    transition: background 0.1s, color 0.1s !important;
+    transition: background var(--di-motion-fast), color var(--di-motion-fast) !important;
 }
 
 .landing-cta-spaces:hover {
@@ -179,7 +179,7 @@
     top: 0;
     z-index: 100;
     height: 56px;
-    background: rgba(0, 0, 0, 0.88);
+    background: var(--di-scrim-strong);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--di-cyan-border);
@@ -196,7 +196,7 @@
     letter-spacing: -0.02em;
     color: var(--di-text);
     text-decoration: none;
-    transition: color 0.15s;
+    transition: color var(--di-motion-base);
 }
 
 .lp-nav-logo:hover { color: var(--di-cyan); }
@@ -216,7 +216,7 @@
     color: rgba(255, 255, 255, 0.72);
     text-decoration: none;
     letter-spacing: 0.01em;
-    transition: color 0.15s;
+    transition: color var(--di-motion-base);
 }
 
 .lp-nav-link:hover { color: var(--di-text); }
@@ -229,7 +229,7 @@
     border: 1px solid var(--di-cyan-border);
     padding: var(--di-space-2) var(--di-space-4);
     letter-spacing: 0.02em;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background var(--di-motion-base), border-color var(--di-motion-base);
 }
 
 .lp-nav-cta:hover {
@@ -258,8 +258,8 @@ body.is-landing .account-btn-wrapper {
 .lp-section-eyebrow {
     font-size: var(--di-text-3) !important;
     font-weight: 600 !important;
-    letter-spacing: 0.2em !important;
-    text-transform: uppercase !important;
+    letter-spacing: var(--di-label-tracking) !important;
+    text-transform: var(--di-label-case) !important;
     color: var(--di-cyan) !important;
     margin: 0 0 var(--di-space-3) !important;
     opacity: 0.85;
@@ -355,6 +355,7 @@ body.is-landing .account-btn-wrapper {
     align-items: center;
     gap: 0;
     opacity: 1;
+    /* Authored motion, over 0.2s on purpose: the copy fading off the room as the visitor walks in, and back when they leave. */
     transition: opacity 0.5s ease;
 }
 
@@ -386,7 +387,7 @@ body.is-landing .account-btn-wrapper {
     cursor: pointer;
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
-    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    transition: border-color var(--di-motion-base), background var(--di-motion-base), color var(--di-motion-base);
 }
 
 .lp-enter-exit:hover {
@@ -408,8 +409,8 @@ body.is-landing .account-btn-wrapper {
     z-index: 50;
     margin: 0;
     font-size: var(--di-text-3);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    letter-spacing: var(--di-label-tracking);
+    text-transform: var(--di-label-case);
     /* Was --di-text-muted at a further 0.6 opacity — 2.46:1, under the 4.5:1
        floor. The token alone already reads as quiet (5.28:1); stacking a
        second dimmer on top of it was the bug, not the intended look. */
@@ -420,8 +421,8 @@ body.is-landing .account-btn-wrapper {
 .lp-eyebrow {
     font-size: var(--di-text-3) !important;
     font-weight: 600 !important;
-    letter-spacing: 0.2em !important;
-    text-transform: uppercase !important;
+    letter-spacing: var(--di-label-tracking) !important;
+    text-transform: var(--di-label-case) !important;
     color: var(--di-cyan) !important;
     margin: 0 0 var(--di-space-5) !important;
     opacity: 0.7;
@@ -476,8 +477,8 @@ body.is-landing .account-btn-wrapper {
 .lp-hero-featured-label {
     font-size: var(--di-text-2) !important;
     font-weight: 600 !important;
-    letter-spacing: 0.16em !important;
-    text-transform: uppercase !important;
+    letter-spacing: var(--di-label-tracking) !important;
+    text-transform: var(--di-label-case) !important;
     color: var(--di-text-muted) !important;
     margin: 0 0 var(--di-space-3) !important;
     text-align: center;
@@ -488,7 +489,7 @@ body.is-landing .account-btn-wrapper {
     text-decoration: none;
     border-bottom: 1px solid var(--di-cyan-border);
     padding-bottom: var(--di-space-1);
-    transition: color 0.15s ease, border-color 0.15s ease;
+    transition: color var(--di-motion-base) ease, border-color var(--di-motion-base) ease;
 }
 
 .lp-cta-sub a:hover {
@@ -600,8 +601,8 @@ body.is-landing .account-btn-wrapper {
 .lp-example-cap {
     font-family: var(--di-mono) !important;
     font-size: var(--di-text-3) !important;
-    letter-spacing: 0.12em !important;
-    text-transform: uppercase !important;
+    letter-spacing: var(--di-label-tracking) !important;
+    text-transform: var(--di-label-case) !important;
     color: var(--di-cyan) !important;
     margin: 0 0 var(--di-space-3) !important;
 }
@@ -793,8 +794,8 @@ body.is-landing .account-btn-wrapper {
 .lp-ai-block-title {
     font-size: var(--di-text-3) !important;
     font-weight: 600 !important;
-    letter-spacing: 0.14em !important;
-    text-transform: uppercase !important;
+    letter-spacing: var(--di-label-tracking) !important;
+    text-transform: var(--di-label-case) !important;
     color: var(--di-cyan) !important;
     margin: 0 0 var(--di-space-4) !important;
     font-family: var(--di-mono) !important;
@@ -910,8 +911,8 @@ body.is-landing .account-btn-wrapper {
        alpha below ~0.46 clears the floor. It stays quieter than body copy by
        size, caps and letter-spacing rather than by being invisible. */
     color: var(--di-text-muted) !important;
-    letter-spacing: 0.14em !important;
-    text-transform: uppercase !important;
+    letter-spacing: var(--di-label-tracking) !important;
+    text-transform: var(--di-label-case) !important;
     font-family: var(--di-mono) !important;
 }
 
@@ -1001,7 +1002,7 @@ body.is-landing .account-btn-wrapper {
     font-size: var(--di-text-3);
     color: var(--di-text-muted);
     text-decoration: none;
-    transition: color 0.15s;
+    transition: color var(--di-motion-base);
 }
 
 .lp-footer-link:hover {
@@ -1014,8 +1015,15 @@ body.is-landing .account-btn-wrapper {
     font-size: var(--di-text-3);
     color: var(--di-text-muted);
     font-family: var(--di-mono);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    letter-spacing: var(--di-label-tracking);
+    text-transform: var(--di-label-case);
+}
+
+/* A name is spelled the way its owner spells it, inside a caps label too:
+   "thedi.studio", never "THEDI.STUDIO". */
+.lp-enter-note a,
+.lp-footer-note a {
+    text-transform: none;
 }
 
 /* base.css turns selection off globally — right for the editor shell, wrong for
@@ -1094,6 +1102,7 @@ body.is-landing .account-btn-wrapper {
 .lp-root--flying .lp-hero::after,
 .lp-root--inside .lp-hero::after {
     opacity: 0;
+    /* Authored motion, over 0.2s on purpose: the veil lifting off the room as the visitor arrives inside it. */
     transition: opacity 0.45s ease;
 }
 

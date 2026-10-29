@@ -46,6 +46,21 @@ export const resolveVanityProjectLink = async (spaceSegment, projectSegment) => 
     }
 }
 
+// The bare /{space} address. The server answers { movedTo } when the space's
+// front door left it in a recorded move and no front door was set since, and
+// only when this caller could open where it leads (serverXR/src/index.js
+// GET /api/resolve/:spaceSegment). null on a 404 — there is nothing to
+// forward and the space opens as it always did.
+export const resolveSpaceRoot = async (spaceSegment) => {
+    try {
+        const data = await apiFetch(`/api/resolve/${encodeURIComponent(spaceSegment)}`)
+        return { movedTo: data.movedTo || null }
+    } catch (error) {
+        if (error?.status === 404) return null
+        throw error
+    }
+}
+
 export const createServerSpace = async ({ label, slug, isPermanent = false } = {}) => {
     const data = await apiFetch('/api/spaces', {
         method: 'POST',
@@ -113,7 +128,9 @@ export const updateServerSpace = async (spaceId, updates = {}) => {
             // absent) still means "don't touch" — JSON.stringify drops it.
             ...(updates.slug !== undefined ? { slug: updates.slug } : {}),
             ...(updates.ownerUserId !== undefined ? { ownerUserId: updates.ownerUserId } : {}),
-            ...(updates.openInscriptions !== undefined ? { openInscriptions: updates.openInscriptions } : {})
+            ...(updates.openInscriptions !== undefined ? { openInscriptions: updates.openInscriptions } : {}),
+            // Archive: kept whole, out of the default list (spaces.archived_at).
+            ...(updates.archived !== undefined ? { archived: Boolean(updates.archived) } : {})
         }
     })
     return data.space
@@ -194,9 +211,32 @@ export const redeemSpaceInvite = async (token) =>
 export const getServerSpaceAssetUrl = (spaceId, assetId, { width } = {}) =>
     `${apiBaseUrl}/api/spaces/${resolveServerSpaceId(spaceId)}/assets/${assetId}${width ? `?w=${width}` : ''}`
 
-export const deleteServerSpace = async (spaceId) => {
-    await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}`, { method: 'DELETE' })
+// Delete is the soft delete: the space and its projects go to the trash and
+// come back with restoreServerSpace for 30 days. The answer says how many
+// projects went and until when it can be undone ({ trashed, projects,
+// restorableUntil }); a pending approval answers { status: 'pending_approval' }.
+export const deleteServerSpace = async (spaceId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}`, { method: 'DELETE' })
+
+// What a delete would take, read before the click so the confirm can name it:
+// { projects, bytes, protected, holdMs } — `protected` is 'permanent' | 'global' |
+// 'sandbox' | 'front-room' when the server will refuse.
+export const getSpaceFootprint = async (spaceId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/footprint`)
+
+// Spaces in the trash this account may restore, each with the number of
+// projects that went with it and `restorableUntil`.
+export const listTrashedSpaces = async () => {
+    const data = await apiFetch('/api/trash/spaces')
+    return { spaces: data.spaces || [], ttlMs: data.ttlMs || 0 }
 }
+
+export const restoreServerSpace = async (spaceId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/restore`, { method: 'POST' })
+
+// The one irreversible call: only for a space already in the trash.
+export const purgeServerSpace = async (spaceId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/purge`, { method: 'DELETE' })
 
 export const touchServerSpace = async (spaceId) => {
     const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/touch`, { method: 'POST' })
@@ -277,6 +317,13 @@ export const listGithubRepos = async ({ refresh = false } = {}) =>
 export const getServerConfig = async () => {
     const data = await apiFetch('/api/config')
     return data.config || {}
+}
+
+// The idle-space sweep, as an admin reads it: what comes due in the next 14
+// days (and whether it will be trashed or kept, and why), and what it did.
+export const getSweepReport = async () => {
+    const data = await apiFetch('/api/admin/sweep')
+    return { due: data.due || [], log: data.log || [], horizonMs: data.horizonMs || 0 }
 }
 
 export const patchServerConfig = async (updates = {}) => {

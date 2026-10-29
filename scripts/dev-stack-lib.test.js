@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+    classifyAttach,
     collectDependencyDrift,
     collectMissingSpaces,
     pagesAlreadyHere,
@@ -186,5 +187,26 @@ describe('pagesAlreadyHere', () => {
     it('is quiet on missing inputs', () => {
         expect(pagesAlreadyHere(null, null, null).size).toBe(0)
         expect(pagesAlreadyHere(new Map([['a', 'dev']]), undefined, undefined).size).toBe(0)
+    })
+})
+
+describe('classifyAttach', () => {
+    const mine = '/home/u/work/di.iiii-x/serverXR'
+
+    it('attaches to this checkout\'s own server', () => {
+        expect(classifyAttach({ ok: true, serverRoot: mine }, mine)).toEqual({ attach: true })
+    })
+
+    it('refuses the installed di or another tree, naming whose it is', () => {
+        const r = classifyAttach({ ok: true, serverRoot: '/home/u/.di/versions/0.4.16/serverXR', dataRoot: '/home/u/.local/share/di.iiii/data' }, mine)
+        expect(r.attach).toBe(false)
+        expect(r.message).toContain('/home/u/.di/versions/0.4.16/serverXR')
+        expect(r.message).toContain('/home/u/.local/share/di.iiii/data')
+        expect(r.message).toContain('Nothing was started or stopped')
+    })
+
+    it('refuses a server that cannot say whose it is, or no answer at all', () => {
+        expect(classifyAttach({ ok: true }, mine).attach).toBe(false)
+        expect(classifyAttach(null, mine).attach).toBe(false)
     })
 })

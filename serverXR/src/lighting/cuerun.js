@@ -15,6 +15,10 @@
 // A cue fires a LOOK the desk already holds, on the cue layer, through the same path
 // POST /api/looks/fire takes. A cue whose look is not on the desk is noted in `missing`
 // and its hold still runs: one absent look must not stall a looping show.
+// The arithmetic — which cue GO fires next, how far into its fade and hold a cue is — is the shared
+// cue clock's (shared/cueClock.cjs), the same lines the show's clock and the Cue node run.
+
+const { nextCueIndex, cueProgressAt } = require('./cueClock');
 
 const MAX_CUES = 200;
 const STR = 60;
@@ -38,7 +42,7 @@ function sanitizeCue(raw, i) {
   };
 }
 
-const EMPTY = () => ({ project: '', list: [], loop: false, index: -1, running: false, nextAt: null, missing: [] });
+const EMPTY = () => ({ project: '', list: [], loop: false, autoplay: false, index: -1, running: false, nextAt: null, missing: [] });
 
 function sanitizeCues(raw) {
   if (!raw || typeof raw !== 'object') return EMPTY();
@@ -48,6 +52,8 @@ function sanitizeCues(raw) {
     project: str(raw.project, 64),
     list,
     loop: raw.loop === true,
+    // "play in order": OFF unless somebody switched it on. A cue that was chosen holds.
+    autoplay: raw.autoplay === true,
     index,
     running: raw.running === true && index >= 0,
     nextAt: Number.isFinite(raw.nextAt) ? raw.nextAt : null,
@@ -78,11 +84,16 @@ function createCueRunner(desk) {
     const cue = c.list[i];
     c.index = i;
     c.running = true;
+    // When this cue went up, on this machine's clock: the show page (routes/showRoutes.js)
+    // tells "chosen by a person" from "the list moved on by itself" by it.
+    c.firedAt = now();
     const ok = desk.fire(cue);
     const missing = new Set(c.missing);
     if (ok) missing.delete(cue.lookId); else missing.add(cue.lookId);
     c.missing = [...missing];
-    if (cue.hold > 0) schedule(cue.hold * 1000);
+    // A chosen scene HOLDS (owner, 2026-10-09: "you press, the scene changes, and auto play
+    // stops"). The hold only counts down when "play in order" is on.
+    if (c.autoplay && cue.hold > 0) schedule(cue.hold * 1000);
     else { clear(); c.nextAt = null; }
     desk.save();
     return cue;
@@ -92,11 +103,8 @@ function createCueRunner(desk) {
     timer = null;
     const c = desk.cues();
     if (!c.running || !c.list.length) return;
-    let i = c.index + 1;
-    if (i >= c.list.length) {
-      if (!c.loop) { c.running = false; c.nextAt = null; desk.save(); return; }
-      i = 0;
-    }
+    const i = nextCueIndex(c.index, c.list.length, c.loop);
+    if (i < 0) { c.running = false; c.nextAt = null; desk.save(); return; }
     fireAt(i);
   }
 
@@ -107,12 +115,11 @@ function createCueRunner(desk) {
     if (Number.isInteger(index)) {
       if (index < 0 || index >= c.list.length) return { error: 'no such cue' };
       i = index;
+      // Any press of a named scene turns "play in order" off.
+      c.autoplay = false;
     } else {
-      i = c.index + 1;
-      if (i >= c.list.length) {
-        if (!c.loop) { stop(); return { ok: true, ended: true }; }
-        i = 0;
-      }
+      i = nextCueIndex(c.index, c.list.length, c.loop);
+      if (i < 0) { stop(); return { ok: true, ended: true }; }
     }
     fireAt(i);
     return { ok: true };
@@ -140,10 +147,22 @@ function createCueRunner(desk) {
     return { ok: true };
   }
 
+  // The one plain switch: play the list in order, each cue for its hold. OFF by default.
+  function setAutoplay(on) {
+    const c = desk.cues();
+    c.autoplay = on === true;
+    clear();
+    c.nextAt = null;
+    if (c.autoplay && c.running && c.index >= 0 && c.list[c.index] && c.list[c.index].hold > 0) schedule(c.list[c.index].hold * 1000);
+    desk.save();
+    return { ok: true };
+  }
+
   function load(body) {
     const prev = desk.cues();
-    const next = sanitizeCues({ project: body.project, list: body.list, loop: body.loop });
+    const next = sanitizeCues({ project: body.project, list: body.list, loop: body.loop, autoplay: body.autoplay });
     if (body.loop === undefined) next.loop = prev.loop;
+    if (body.keepIndex === true && body.autoplay === undefined) next.autoplay = prev.autoplay === true;
     const keep = body.keepIndex === true && prev.running && prev.index >= 0 && next.project === prev.project && next.list.length > 0;
     if (!keep) {
       clear();
@@ -156,7 +175,7 @@ function createCueRunner(desk) {
     next.missing = prev.missing;
     desk.setCues(next);
     const cue = next.list[next.index];
-    if (cue.hold > 0) {
+    if (next.autoplay && cue.hold > 0) {
       const left = prev.nextAt != null ? prev.nextAt - now() : null;
       schedule(left != null && left > 0 && left <= cue.hold * 1000 ? left : cue.hold * 1000);
     } else { clear(); next.nextAt = null; }
@@ -178,14 +197,23 @@ function createCueRunner(desk) {
     const c = desk.cues();
     if (!c.list.length) return null;
     const cue = c.list[c.index] || null;
+    // How far into its fade and hold the cue on the desk is, by the shared clock: the Cue node
+    // and the show's clock read the same two numbers.
+    const at = cue && c.running && Number.isFinite(c.firedAt)
+      ? cueProgressAt({ fadeMs: cue.fade * 1000, holdMs: cue.hold * 1000 }, c.firedAt, now())
+      : { progress: 0, fading: false };
     return {
       project: c.project,
       index: c.index,
       n: c.list.length,
       name: cue ? cue.name : null,
       loop: c.loop,
+      autoplay: c.autoplay === true,
       running: c.running,
       nextInMs: c.running && c.nextAt != null ? Math.max(0, c.nextAt - now()) : null,
+      firedAt: Number.isFinite(c.firedAt) ? c.firedAt : null,
+      progress: at.progress,
+      fading: at.fading,
       missing: c.missing,
     };
   }
@@ -198,7 +226,7 @@ function createCueRunner(desk) {
   // for tests: how many timers this runner holds (0 or 1, by construction)
   const pending = () => (timer ? 1 : 0);
 
-  return { go, back, stop, setLoop, load, resume, brief, full, close: clear, pending };
+  return { go, back, stop, setLoop, setAutoplay, load, resume, brief, full, close: clear, pending };
 }
 
 module.exports = { createCueRunner, sanitizeCues, MAX_CUES };

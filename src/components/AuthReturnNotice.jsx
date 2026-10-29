@@ -39,8 +39,10 @@ export default function AuthReturnNotice() {
         return () => { cancelled = true }
     }, [])
 
+    // Only good news goes by itself. A failure stays until it is closed: a
+    // person who looked away for six seconds never learned the sign-in failed.
     useEffect(() => {
-        if (!notice) return undefined
+        if (!notice || notice.tone === 'error') return undefined
         const timer = setTimeout(() => setNotice(null), AUTO_HIDE_MS)
         return () => clearTimeout(timer)
     }, [notice])
@@ -48,7 +50,7 @@ export default function AuthReturnNotice() {
     if (!notice) return null
 
     return (
-        <div className={`auth-return-notice auth-return-notice--${notice.tone}`} role="status">
+        <div className={`auth-return-notice auth-return-notice--${notice.tone}`} role={notice.tone === 'error' ? 'alert' : 'status'}>
             <span className="auth-return-notice-mark" aria-hidden="true">{notice.tone === 'ok' ? '◈' : '⚠'}</span>
             {notice.text}
             <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss">×</button>

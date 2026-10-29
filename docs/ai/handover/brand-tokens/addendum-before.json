@@ -1,0 +1,124 @@
+{
+  "perform-laptop-light": {
+    "rootScheme": "normal",
+    "rootAccent": "auto",
+    "natives": 2,
+    "tally": {
+      "checkbox:normal:auto": 1,
+      "range:normal:rgb(255, 255, 255)": 1
+    },
+    "pill": "999px"
+  },
+  "studio-inspector-laptop-light": {
+    "rootScheme": "normal",
+    "rootAccent": "auto",
+    "natives": 10,
+    "tally": {
+      "color:normal:auto": 2,
+      "range:normal:auto": 4,
+      "checkbox:normal:auto": 2,
+      "select-one:normal:auto": 2
+    },
+    "pill": "999px"
+  },
+  "equipment-order-laptop-light": {
+    "rootScheme": "normal",
+    "rootAccent": "auto",
+    "natives": 2,
+    "tally": {
+      "date:normal:auto": 2
+    },
+    "pill": "999px"
+  },
+  "perform-laptop-dark": {
+    "rootScheme": "normal",
+    "rootAccent": "auto",
+    "natives": 2,
+    "tally": {
+      "checkbox:normal:auto": 1,
+      "range:normal:rgb(255, 255, 255)": 1
+    },
+    "pill": "999px"
+  },
+  "studio-inspector-laptop-dark": {
+    "rootScheme": "normal",
+    "rootAccent": "auto",
+    "natives": 10,
+    "tally": {
+      "color:normal:auto": 2,
+      "range:normal:auto": 4,
+      "checkbox:normal:auto": 2,
+      "select-one:normal:auto": 2
+    },
+    "pill": "999px"
+  },
+  "equipment-order-laptop-dark": {
+    "rootScheme": "normal",
+    "rootAccent": "auto",
+    "natives": 2,
+    "tally": {
+      "date:normal:auto": 2
+    },
+    "pill": "999px"
+  },
+  "perform-phone-light": {
+    "rootScheme": "normal",
+    "rootAccent": "auto",
+    "natives": 1,
+    "tally": {
+      "checkbox:normal:auto": 1
+    },
+    "pill": "999px"
+  },
+  "studio-inspector-phone-light": {
+    "rootScheme": "normal",
+    "rootAccent": "auto",
+    "natives": 10,
+    "tally": {
+      "color:normal:auto": 2,
+      "range:normal:auto": 4,
+      "checkbox:normal:auto": 2,
+      "select-one:normal:auto": 2
+    },
+    "pill": "999px"
+  },
+  "equipment-order-phone-light": {
+    "rootScheme": "normal",
+    "rootAccent": "auto",
+    "natives": 2,
+    "tally": {
+      "date:normal:auto": 2
+    },
+    "pill": "999px"
+  },
+  "perform-phone-dark": {
+    "rootScheme": "normal",
+    "rootAccent": "auto",
+    "natives": 1,
+    "tally": {
+      "checkbox:normal:auto": 1
+    },
+    "pill": "999px"
+  },
+  "studio-inspector-phone-dark": {
+    "rootScheme": "normal",
+    "rootAccent": "auto",
+    "natives": 10,
+    "tally": {
+      "color:normal:auto": 2,
+      "range:normal:auto": 4,
+      "checkbox:normal:auto": 2,
+      "select-one:normal:auto": 2
+    },
+    "pill": "999px"
+  },
+  "equipment-order-phone-dark": {
+    "rootScheme": "normal",
+    "rootAccent": "auto",
+    "natives": 2,
+    "tally": {
+      "date:normal:auto": 2
+    },
+    "pill": "999px"
+  }
+}

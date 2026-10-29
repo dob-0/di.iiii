@@ -33,6 +33,20 @@ describe('presentationPreviewDocument', () => {
         expect(result).toContain('scrollIntoView')
     })
 
+    it('hands the shell #fragment down and scrolls to the element it names (N1248: "back to the works" opened at the top)', async () => {
+        const { JSDOM } = await import('jsdom')
+        const html = buildPresentationPreviewDocument('<!doctype html><html><head></head><body><div style="height:3000px"></div><section id="works">w</section></body></html>', '', 'https://x.test', '#works')
+        expect(html).toContain('window.diiPageHash = "#works"')
+        const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true })
+        let scrolled = null
+        dom.window.HTMLElement.prototype.scrollIntoView = function () { scrolled = this.id }
+        dom.window.dispatchEvent(new dom.window.Event('load'))
+        expect(scrolled).toBe('works')
+        const evil = buildPresentationPreviewDocument('<p>x</p>', '', '', '#a</script><script>window.pwned=1</script>')
+        const d2 = new JSDOM(evil, { runScripts: 'dangerously' })
+        expect(d2.window.pwned).toBeUndefined()
+    })
+
     it('hands the shell query down to the srcdoc page, which has no URL of its own', () => {
         const result = buildPresentationPreviewDocument('<main>Field</main>', '?just=bkyi')
 
@@ -208,10 +222,10 @@ describe('presentationPreviewDocument', () => {
 
         it('strips a prod host baked into a document served on any tier', () => {
             const result = buildPresentationPreviewDocument(
-                '<img src="https://di-studio.xyz/serverXR/api/projects/p1/assets/abc123.png">'
+                '<img src="https://diiii.xyz/serverXR/api/projects/p1/assets/abc123.png">'
             )
             expect(result).toContain('src="/serverXR/api/projects/p1/assets/abc123.png"')
-            expect(result).not.toContain('di-studio.xyz')
+            expect(result).not.toContain('diiii.xyz')
         })
 
         it('strips a host from a CSS url() reference to a space asset', () => {
@@ -223,7 +237,7 @@ describe('presentationPreviewDocument', () => {
 
         it('strips a host from an asset path with no /serverXR mount prefix', () => {
             const result = buildPresentationPreviewDocument(
-                '<img src="https://di-studio.xyz/api/projects/p1/assets/abc123.png">'
+                '<img src="https://diiii.xyz/api/projects/p1/assets/abc123.png">'
             )
             expect(result).toContain('src="/api/projects/p1/assets/abc123.png"')
         })
@@ -237,10 +251,10 @@ describe('presentationPreviewDocument', () => {
 
         it('leaves unrelated absolute URLs (og:image, external links) alone', () => {
             const result = buildPresentationPreviewDocument(
-                '<a href="https://di-studio.xyz">di-studio.xyz</a><meta property="og:image" content="https://di-studio.xyz/suite/og-image.png">'
+                '<a href="https://diiii.xyz">diiii.xyz</a><meta property="og:image" content="https://diiii.xyz/suite/og-image.png">'
             )
-            expect(result).toContain('href="https://di-studio.xyz"')
-            expect(result).toContain('content="https://di-studio.xyz/suite/og-image.png"')
+            expect(result).toContain('href="https://diiii.xyz"')
+            expect(result).toContain('content="https://diiii.xyz/suite/og-image.png"')
         })
     })
 })

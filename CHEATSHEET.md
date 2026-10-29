@@ -13,7 +13,7 @@ Quick reference. Full context: `CURRENT.md` (read it first) → `AGENTS.md` → 
 ## Commands you'll actually use
 
 ```bash
-npm run dev                          # start frontend (5173) + backend (4000)
+npm run dev                          # frontend (5173) + backend (4000); needs an absolute DATA_ROOT (or DI_SCRATCH=1). On aylmo: di-dev up <tree>
 npm run dev:browser                  # same, but also opens a fresh wiped Chromium profile
                                       # (closes/wipes on Ctrl+C — needs flatpak Chromium, Linux only)
 npm run lint                         # eslint src/
@@ -51,6 +51,6 @@ prod-only read reports the estate complete while quietly lacking it.
 
 ## Safety
 
-- Never run `space:push` without `--dry-run` first — it can write to production (`di-studio.xyz`).
+- Never run `space:push` without `--dry-run` first — it can write to production (`diiii.xyz`).
 - Never commit `.env`/`.env.local` files or print their values.
 - `dev` → the dev tier, dev.diiii.xyz · `main` → diiii.xyz (prod). Don't start routine work on `main`.

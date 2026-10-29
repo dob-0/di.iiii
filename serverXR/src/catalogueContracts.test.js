@@ -8,12 +8,11 @@
 //
 // Spec: docs/architecture/SPEC_agent_door.md §4.
 import { mkdtemp, rm } from 'node:fs/promises'
-import { spawn } from 'node:child_process'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const SERVER_ENTRY = path.join(HERE, 'index.js')
@@ -22,50 +21,29 @@ const VIEWER = 'catalogue-viewer-token'
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const getFreePort = () => new Promise((resolve, reject) => {
-  const probe = net.createServer()
-  probe.on('error', reject)
-  probe.listen(0, '127.0.0.1', () => {
-    const { port } = probe.address()
-    probe.close((error) => (error ? reject(error) : resolve(port)))
-  })
-})
-
 let server
 
 beforeAll(async () => {
   const cwd = await mkdtemp(path.join(os.tmpdir(), 'dii-catalogue-cwd-'))
   const dataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-catalogue-data-'))
-  const port = await getFreePort()
   const env = {
     ...process.env,
-    PORT: String(port),
     APP_BASE_PATH: '/serverXR',
     DATA_ROOT: dataRoot,
     ADMIN_API_TOKEN: ADMIN,
     VIEWER_API_TOKEN: VIEWER,
     AUTH_SESSION_SECRET: 'catalogue-session-secret',
     REQUIRE_AUTH: 'true',
-    CORS_ORIGINS: '*'
+    CORS_ORIGINS: '*',
+    // The Telegram routes register only when a bot secret is set. Set one, so
+    // they are walked and must be described like every other route.
+    TELEGRAM_LOGIN_SECRET: 'catalogue-telegram-secret'
   }
   delete env.API_TOKEN
   delete env.SPACES_DIR
   delete env.UPLOADS_DIR
-  const child = spawn(process.execPath, [SERVER_ENTRY], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] })
-  let logs = ''
-  child.stdout.on('data', (chunk) => { logs += chunk.toString() })
-  child.stderr.on('data', (chunk) => { logs += chunk.toString() })
+  const { child, port } = await spawnServerUntilReady({ entry: SERVER_ENTRY, cwd, env })
   const baseUrl = `http://127.0.0.1:${port}/serverXR`
-  const deadline = Date.now() + 25000
-  for (;;) {
-    if (child.exitCode !== null) throw new Error(`the server exited while booting (code ${child.exitCode})\n${logs}`)
-    try {
-      const res = await fetch(`${baseUrl}/api/health`)
-      if (res.ok) break
-    } catch { /* not up yet */ }
-    if (Date.now() > deadline) throw new Error(`the server never became healthy\n${logs}`)
-    await wait(200)
-  }
   server = {
     baseUrl,
     stop: async () => {

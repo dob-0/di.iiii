@@ -28,8 +28,15 @@
 const APP_SEGMENTS = [
     'admin', 'preferences', 'prefrenaces', 'preferances',
     'wiki', 'privacy', 'terms', 'tools', 'for-apps',
+    // `/shoot/{key}` — a crew's shared shoot sheet. Checked on diiii.xyz and
+    // dev.diiii.xyz before reserving (2026-10-07): nothing answers to the word.
+    'shoot',
     'beta', 'raw', 'seed', 'open_jam', 'studio', 'make', 'light',
     'spaces', 'projects', 'chat', 'login',
+    // `/device` — the browser half of `di login` (src/pages/DeviceLoginPage.jsx).
+    // Checked before reserving (2026-10-07): /serverXR/api/spaces/device and
+    // /serverXR/api/projects/device answer 404 on diiii.xyz and dev.diiii.xyz.
+    'device',
     // `/{space}/scan` — the phone collecting a place. Checked on all three
     // tiers before reserving (2026-09-22): nothing answers to the word.
     'scan',
@@ -54,7 +61,11 @@ const APP_SEGMENTS = [
     // order (docs/architecture/RIG_BUILD.md §13). Checked on all three tiers before
     // reserving (2026-09-28): /serverXR/api/spaces/equipment and /projects/equipment
     // answer 404 on diiii.xyz, dev.diiii.xyz and the local install.
-    'equipment'
+    'equipment',
+    // `/ai/setup` — how a person connects an assistant (src/pages/AiSetupPage.jsx);
+    // the rest of /ai/ is serverXR's. NOT checked against the tiers before
+    // reserving (2026-10-27): the session that added it could not reach them.
+    'ai'
 ]
 
 // Real directories under public/, plus the build's own output prefixes, served
@@ -94,6 +105,21 @@ const RESERVED_SPACE_SLUGS = new Set([...APP_SEGMENTS, ...STATIC_SEGMENTS, ...SH
 
 // Static directories do not shadow a project: they only ever match at the top
 // level, and a project always lives one segment deeper.
+//
+// This list covers a project's short name (PATCH /api/projects/:id) AND the id of
+// a NEW project (POST /api/spaces/:space/projects, refused with 400 since
+// 2026-10-26): with no short name the id IS the address, /{space}/{id}, and the
+// router drops these words in that position (src/utils/spaceRouting.js). The
+// store does not apply it (ensureProject, used by snapshot restore and the
+// open-jam bootstrap, takes any well-formed id); the create route does. The one
+// way past the route is `carried: true` in the create body, meant for the same
+// project arriving from another install, which keeps the id it has (the follower
+// sends it; the copy scripts do not yet). The route cannot check that: it takes
+// the caller's own word, and any editor can send it. Nobody should send it for a
+// project that is new, because that project would have a reserved word as its id
+// and open only at /{space}/p/{id}.
+// Two words can never be an id anyway: `p` is under 3 letters and `open_jam` has
+// an underscore (the store turns that into a hyphen).
 const RESERVED_PROJECT_SLUGS = new Set([...APP_SEGMENTS, ...SHAPE_SEGMENTS])
 
 module.exports = {

@@ -643,6 +643,13 @@ owed) was drawn white at full by the mirror, which assumed "no colour channel" m
 Such a fixture is now `known: false`, and the lamp keeps its authored light. See the
 known-fixes row and `useLightingMirror.test.jsx`.
 
+**Heads that move (2026-10-15).** A look may carry `heads: { pattern, period_s, pan_deg, tilt_deg, spatial, kinds }`
+(`components.rigLooks.looks[].heads`; patterns sweep, nod, circle, figure8, fan, wave, cross). One pure function,
+`serverXR/src/lighting/headMotion.js`, drives the desk's pan/tilt channels (16-bit, clamped, hung signs), and its client port
+`src/rigbuild/headMotion.js` drives the room, both from the server's clock and the look's fire time, so desk and room agree
+(pinned to 0.01 degree by `headMotion.test.js`). Offsets sit on the look's rest aim. From a vertical rest only the tilt
+patterns (nod, wave, circle, figure8) show. Session note: `PROGRESS.md`, 2026-10-15 "Looks move the moving heads" (folded from the branch's note).
+
 ### 11.5 Validated (2026-09-28, MOXIR, own dev stack :4383/:5383, a copy of the centred space)
 
 The data came from `space-bundle.mjs export moxir` on the local tier, taken after the
@@ -1952,11 +1959,22 @@ lamp carries a view-only `rigDmx` note (never written). The Studio's `liveLight`
 
 **While the desk is live and a lamp has a patched profile with a channel list, DMX wins** — attribute by
 attribute, for what the list controls; what it does not (a PAR's aim, set by hand on its clamp) keeps the
-look's pose. A lamp with no list, or not on the desk, is drawn as before. Overall: a page's own GO
+look's pose. A lamp with no list is drawn as before; one not on the desk is dark (below). Overall: a page's own GO
 (`explicit`) > DMX > the desk's look (by rule) > the show's clock (only where no desk answers, §16) > the
 document. So a look must reach the room as DMX: `deskLookValues.js` writes each designed look as values
 through each fixture's list (a lamp the look does not name is at 0), and `show-loop.mjs` puts those on the
 desk — the looping show plays through DMX and the room shows exactly what the desk sends.
+
+**Not the desk's (MOXIR 2026-10-17).** While the desk is live, a lamp it does not drive (no row on the desk) is
+drawn dark, as it is on the rig. A network laser — a LaserCube line: `fixture.dmx === false`, its picture in
+`beam.laser` — is never the desk's: it follows the laser server (`src/rigbuild/laserShowState.js`). It is drawn as
+the design holds it while `GET /laser/api/state` says the show plays and the cube that plays its group is armed
+(the player's own `show.cubes` map, a group being the line's id without its letters: rig-laser-1a…1f →
+rig-laser-1; the engine's `cubes[].armed`), else dark — a laser rests dark. One poll per page, every 2 s, only
+while the room follows a desk and holds a network laser; a failed, refused or slow (4 s) read reads dark.
+Limits: the room draws its own project's frames for every group the player maps to an armed cube (another
+project with the same line names would show this one's pictures), and the run's `tween` switch is not carried
+(the room blends only where the document's `frames.tween` says so).
 
 ### 18.5 The stream (`serverXR/src/lighting/dmxstream.js`, LIGHTING_DESK.md "The pushed frame")
 
@@ -2124,6 +2142,81 @@ the press PARs (#401–403) are on no look position, so every look leaves them d
 not the patch); the node and cable lengths from the rental house (it lists splitters, no node);
 the electrician's distribution; GDTF Share with the owner's login.
 
+### 19.5 MOXIR v2 — two universes, the cubes on the LAN (2026-10-09)
+
+Owner, 2026-10-09 20:32 (ledger N460.2, N462): *"laser cubes will work with the lan and no dmx, so 2 lasers of the poli and beams one univers, and the wash other ones right also smoke goes with the beams"*. The plan is `scripts/place/rigs/moxir-v2-patch-2026-10-09.json`, the format of §19.1, applied with `patch-plan.mjs --keep-circuits` (the v2 rig carries its own power plan).
+
+| port | universe | Art-Net | run | blocks (fixture # · first address) | used / free |
+|---|---|---|---|---|---|
+| A | U1 | 0.0.0 | one DMX line, 21 devices | 18 × UP-B380F 16ch #101–118 @001 · 2 × UP-LA40WF 32ch #131–132 @401 · 1 × UP-YZ31P 1ch #141 @501 | 353 / 159 |
+| B | U2 | 0.0.1 | at least two DMX lines (50 devices > 32) | 10 × UP-PL5403 8ch, the cut, #201–210 @001 · 40 × UP-PL5403 8ch, the planes, #221–260 @101 | 400 / 112 |
+| — | — | — | the show network | 6 × LaserCube Ultra MK2: the cube's UDP protocol on 45456 / 45457 / 45458, through di Nodes. **No DMX, no Art-Net, no address.** | — |
+
+Rules, and why: blocks start on 001, 401, 501 (U1) and 001, 101 (U2), so a fixture sits whole inside one universe and each block is
+followed by room for more of its own kind (beams 7, lasers 1, cut 2, planes 11); the lasers start 112 channels after the last beam, so
+a beam set wrong by up to seven units lands on free slots, never on a laser's channels. 50 washes cannot share one DMX line
+(ANSI E1.11: 32 devices), so U2 leaves its node on two lines or more; which unit sits on which line is the cabling plan, not the
+patch. The Minimal plan's half-spare rule (256) cannot hold with the owner's split, so `minSpare` is 100.
+
+Four additions to the planner, each with a test in `src/rigbuild/patchPlan.test.js`, none changing a plan that does not use them:
+
+- `order: "id-asc" | "id-desc"` walks a block by unit id (numbers inside ids count as numbers: `rig-par-2` before `rig-par-10`), so an address belongs to its unit and survives a change of its place (a new ground layout moves units, not their ids). The two Poligraf lasers are addressed this way, by the ids the entry-laser rig gives them (`rig-la40wf-entry-01` → U1.401, `rig-la40wf-entry-02` → U1.433, #873: the truss tower at z 48, house left); the beams by type, the PARs by the id groups `rig-par-cut` and `rig-par-planes`.
+- `units: N` on a block: the number of lamps it expects. A project with another count is an error before anything is written (a missing or extra unit is said once, not once per lamp).
+- A lamp the project keeps off DMX (`fixture.dmx === false`, as `epic-build.mjs` writes the cubes) takes no address and is no longer "in no block of the plan"; `planPatch` returns their ids as `offDmx`. A block that names such a lamp puts it on DMX and clears the flag in the same op (`dmx: null`; the schema keeps `dmx` only when false) with a warning saying so — this is how the smoke machine, written `dmx: false` by `epic-build.mjs`, goes onto U1.501 by the owner's decision.
+- `expectedRoom(plan)` makes one stand-in lamp per `units`, and the plan's `offDmx` devices, so the crew table and the checks work from the plan alone.
+
+Also fixed on the way: a lamp with no position name never converged (the planner wanted `position: ""`, the schema stores none), so a re-run wrote it again.
+
+**One command for a version onto the desk (2026-10-15, ledger N877):** `node scripts/rigbuild/version-to-desk.mjs --project <id> --api <base>/serverXR --token-file <f> --plan <plan.patch.json> [--dry-run] [--keep-others] [--no-start]` runs, in order, `patch-plan.mjs --keep-circuits`, `patch.mjs --unpatch` for every other project on the desk, `patch.mjs --exact`, `show-loop.mjs` (the document's own cues), then prints the desk per project, U1/U2 and the runner, and exits 1 if a step failed or another project is still on the desk. `--dry-run` writes nothing.
+
+Checked by `src/rigbuild/moxirV2Patch.test.js` (overlap, whole in one universe, 353 / 400, no LaserCube on any universe, the controls that make it fail on a wrong plan; `MOXIR_PATCH_FILE=` points it at any candidate). The crew's short table is `node scripts/rigbuild/patch-table.mjs --plan <plan> --out <dir> --pdf` (universe, start address, fixture, mode; Markdown, a page, CSV, a PDF through LibreOffice). The B380F's 16-channel map against the equivalent chart, and what is walked on the unit: `docs/moxir/b380f-16ch-map-check-2026-10-09.md`.
+
+Owed: the cabling plan (nodes, which unit on which line); the smoke machine's channel count (1 assumed, maybe 2); how the Poligraf laser and the smoke machine are addressed on the unit; the B380F's channels 11–16 on a real unit; the LaserCube stream on a real cube (#847); the 40 W lasers' safety numbers (NOHD, aerial clearance, the crossing zone with the cubes), which the patch does not touch.
+
+### 19.6 One chosen version on its desk — planned offline, applied with the desk stopped (2026-10-05)
+
+The owed rule of §19.4, as a script: `scripts/rigbuild/desk-plan.mjs`. Why (the MOXIR audit of
+2026-10-05, area B "show control", B1 and B2 — on branch `docs/moxir-audit-2026-10-05` until it lands): the moxir desk held the Minimal's
+loop and 241 fixtures of 7 other versions, U1–U4 full, so Known · full could not land at its
+planned addresses. The live routes (`patch.mjs --unpatch` × 7, `--exact`, `show-loop.mjs`) change
+a running desk step by step with no single undo; this makes the whole change ONE file, seen first.
+
+1. **Plan (dry run, the default).** The desk's own code (`serverXR/src/lighting/desk.js`, offline:
+   no port bound, nothing transmitted) loads a COPY of the space's show and is driven through its
+   own routes: every other project's rig fixtures off (`/api/rig/patch` with no lamps, on EVERY
+   universe — the desk runs one patch per space, and a lamp left on U3–U5 would still be sent its
+   old looks); the chosen project on at the document's universe, address and fixture number;
+   its 25 designed looks on with DMX values (`deskLookValues.js`), other projects' rig looks off;
+   the document's cue list (`mappingState.cues`) loaded with **loop OFF, not started**. A fixture
+   the operator added by hand (no `rigKey`) is kept.
+2. **Exact or fail.** Before the desk is asked (`exactProblems`): a lamp with no address, past 512,
+   two lamps of the document on one channel, a kept fixture on a lamp's channels or fixture
+   number. After (`exactVerdict`): any flag, any lamp not patched, moved, renumbered or placed as a
+   "copy" (rigpatch.js puts the second of two lamps sharing an address at the next free one,
+   with no flag — measured, `desk-plan.test.js`). Then the written show is checked on its own
+   (`planProblems`). Any problem: exit 1, no show written.
+3. **Gate.** `--gate <plan>` serves the PLANNED show on a throwaway offline desk and runs
+   `patch-sheet.mjs` against it: exit 1 on any other project's fixture in the plan's universes or
+   any lamp off its planned address. `moxir-2026-10-17-known-full.patch.json` is the Known · full
+   patch AS DOCUMENTED (it reproduces the document: `patch-plan.mjs` makes 0 ops) — not the
+   data-run plan W1 owes.
+4. **Apply / undo (the owner).** `di down`, `--apply <dir>`, `di up`. Apply refuses while the desk
+   answers (it would save over the file), while the machine's OUTPUT is on, if the live show
+   changed since the plan (sha256), or if the gate did not pass; it backs up `show.json` and
+   `show.prev.json` to `~/di-backups/<space>-desk-plan-<stamp>/` with a manifest, swaps atomically
+   and reads back. `--undo <backup>` restores (keeping the show it replaces beside the backup).
+   A space's show never carries `output` (desk.js `withoutRig`), so the plan cannot switch OUTPUT on.
+
+Measured on the moxir copy (2026-10-05, show sha256 1adeeb05…, document v2, dev == local):
+241 fixtures off (U1 62, U2 49, U3 36, U4 54, U5 40), 68 on (U1 57 / 512 ch, U2 11 / 176 ch),
+0 kept, 16 off-DMX lamps take no address; 25 looks on, 5 off; 10 cues, 114 s, loop off; gate PASS
+(negative control: the same gate on the unplanned show exits 1, 111 foreign fixtures, 68 lamps off
+their addresses). **At rest the planned desk is NOT dark**: a desk fixture rests at dimmer 255
+(engine.js `makeFixture`), so with no cue fired its frame has 227 non-zero channels on U1 and 44
+on U2 — OUTPUT on before the first GO lights every lamp. Owed: the owner's call (rest dark, or
+GO before OUTPUT, written in the night's run sheet). Also owed: the crew sheet says "maker's" for
+the PL5403 8ch / B380F 16ch lists, whose basis is TESTED on the Sevan units (audit B5).
+
 ## 20. The room as a camera sees it — beams in haze, exposure, the dark (2026-09-29)
 
 Owner: MOXIR "maximum close" to how the real night will look. Measured problem (dev visitor,
@@ -2286,6 +2379,28 @@ through the DJ lights the air behind him). Auto-exposure (an eye adapts to the r
 2002 key value) — the exposure is one fixed camera. A strobe-rate capture. The haze's σs is a choice checked
 against photographs, not a measurement of the hazers the hall will have.
 
+**Laser lines in the room's picture — core, halo, end spot, drawn after the bloom (2026-10-15).** A laser is drawn as a
+line source (`src/objectComponents/laserLine.js`, `laserLineMaterial.js`), its intensity per length σs·p(θ)·Φ·T/sinθ kept at
+any drawn width. Until 2026-10-15 each line was a ≥ 1.5 px soft ribbon fed into the room's bloom; from the floor (fov 70°,
+900 px: 1.556 mrad a pixel) MOXIR's cube lines are 6–7 × the screen's white after exposure 3.5, and the bloom spread them
+into one green slab (`scripts/measure/laser-look-diagnose.mjs`). The Studio looked right only because it draws the laser
+server's frames on top as 1-px GL lines (`src/rigbuild/LaserView.jsx`, Studio only); the room page has no such overlay. Now
+(shader job 2, the owner's look "a white core with the colour in the halo", decided from his words of 2026-10-15): each line
+is a CORE as wide as the beam or 1 px (a box with 1-px ramps) carrying 1 − haloShare, plus a HALO — a Gaussian of
+`haloRadiusCapped` (Fermi–Eyges, ≤ half the gap to the next line of the fan; a lone line takes the 0.5° scan step,
+ASSUMPTION) carrying haloShare = 1 − exp(−σs·s); a line far above white tone-maps to a white core in a coloured halo. The
+lines and their end spots are left out of the bloom input and drawn over the picture after the glow
+(`src/project/viewport/laserOverBloom.js`, three's selective-bloom pattern as an over-pass; lamps' bloom unchanged). Where a
+line meets its first surface it lights a dot as wide as the beam (4 cm at 40 m, 6 cm at 60 m), L = ρ·E/π, ρ 0.3 (ASSUMPTION).
+Arithmetic at the owner's camera, 20 m along the comb: core 3.7 ×, halo 0.54 × white (σ 1.4 px), lines 5.6 px apart, dip
+between two lines 0.03 of the peak (Rayleigh < 0.735). The owner confirmed the look on 2026-10-15 15:5x ("white core with
+colour halo"); it is tested (`laserLine.js` 9., `toneMapAces` = the room's ACESFilmic): the ACES shoulder whitens a green core
+gradually (whiteness 0.44 at 1 × white, 0.83 at 4 ×, 0.92 at 8 ×, 0.99 at 30 ×), the halo keeps the colour. From the floor
+(fov 60, exposure 1.5) a cube line seen along its fan is 80 / 30 / 8 × white at 5 / 10 / 20 m — a white 1-px core with a green
+halo; the 40 W heads seen side-on are 11 / 4 / 1.2 × — white near, pale green far. The room page and the Studio draw lasers
+through the same path since #972. OWED: the room page floor shots before/after and the lamp diff (held by heat, 88–100 °C) —
+`scripts/measure/laser-look-gpu-chain.sh`, hand-over in `PROGRESS.md`, 2026-10-15 "lasers drawn as lasers" (Job 3 of the branch note).
+
 ## 21. Scene deck — layer 1 (model, history, sync compare)
 
 The data layer under the owner's two scene screens (2026-09-30: A = a deck of scenes, B = a cue timeline over
@@ -2419,3 +2534,142 @@ version: `scripts/rigbuild/privatePrices.mjs`. It is never imported by `src/` an
 pack. `scripts/rigbuild/noSupplierPrices.test.js` fails if a price field with a number, or a
 "<n> AMD" / "<n>/day" text, comes back. A document that already holds rates (the dev project
 `moxir-hall-known-full`) is data, edited by the owner, not by this code.
+
+## 24. The show page — everyone sees the cue, the team chooses it (2026-10-08)
+
+Owner, 2026-10-08: *"I need a light-show UI for everyone, so they can see and choose the cue."*
+Then, on who may choose: *"create it now, we decide later; in the cloud version … it will be for
+everyone who is not connected to the system, but that's for the future."*
+
+**Where.** `/{space}/show/{project}` (id or slug) — `src/rigbuild/showRouting.js`,
+`ShowSurface.jsx`, `showApi.js`, `show.css`. The rig tools' address shape (cards, scenes, plot):
+three segments, the word in the middle. A page of its own and not a mode of the room, because the
+room is a WebGL scene and this is a remote for a phone in a dark hall: no canvas, no project
+document, no socket — one JSON a second (measured below). The room is a link ("see the room").
+`show` is NOT added to the reserved words: like `scenes`, the route needs three segments, so a space
+or a project called `show` keeps working (and `projectVisibilityContracts.test.js` uses a space by
+that name).
+
+**The API** (`serverXR/src/routes/showRoutes.js`, rules in `serverXR/src/show/showRemote.js`):
+
+| Call | Does |
+| --- | --- |
+| `GET /api/spaces/:space/show/:project` | the cues (act, title, one line, swatch, laser), the live cue, the setting, who you are and what blocks you |
+| `POST …/choose {index, cueId, name?}` | sends that cue to Light's cue runner (`lighting/cuerun.js`) — the same `load`/`go` the cards page's GO uses, in process |
+| `POST …/control {choosers}` | the operator's setting: `team` · `everyone` · `operator` |
+
+Registered ahead of the blanket `/api` role gates, because a visitor may choose when the setting is
+`everyone` and the blanket write gate refuses every non-editor; each handler makes the
+`requireReadRole` decision itself (public space, or viewer scope), and a private project is 404.
+
+**Who** (`whoIs`): *operator* = the space's owner, an admin, or the person at the machine on a
+`di up --guests` install; *member* = signed in, editor, in the space's scope; *visitor* = anyone
+else who may see the space. With sign-in off, everyone is the operator — what "auth off" has always
+meant (`getPublicAuthState`); the page says so and names `di up --lan --guests`.
+
+**Who may choose — a setting, decided later.** `team` (default: operator + members), `everyone`
+(visitors too), `operator` (choosing locked). The operator may always choose. Stored per project in
+`<DATA_ROOT>/show/control.json` with the last choice, so a restart neither unlocks a locked show nor
+forgets who chose. Open for the cloud mode the owner named: the setting says WHO, `decideChoose`'s
+`light` argument says WHERE Light is (`runtime`, `showSpace`, `runner`), and nothing ties the two. A
+cloud mode needs one new thing — a way for a hosted tier to hand a choice to the local Light (a
+relay; none exists today), not a new permission model.
+
+**Always, for everyone:** one choice per 10 s (`COOLDOWN_MS`, the operator included — his immediate
+hand is GO on the cards page and Light, which this never slows); a **laser moment is refused**
+(`shared/laserMoments.cjs`: the sign-off marker, a lit group of a laser type, or a lit group whose
+name says laser; a look the server cannot read counts as one) — the page shows "laser moment —
+operator only". Also refused, with a sentence: a stale card (`list-changed`), a look Light does not
+hold (`not-on-light`), Light running another space's show or playing another project's list, a show
+that plays by its own clock, a di.iiii with no Light.
+
+`LASER_TYPE_IDS` mirrors the library's `category: "laser"` (`up-la40wf`, `ext-lc-ultra-mk2`);
+`shared/laserMoments.test.js` fails when the library gains one. **Found, not changed:** the scene
+deck's own `LASER_TYPES` (`sceneDeck/model.js`) names only `up-la40wf`, so MOXIR v1.0's LaserCubes
+are invisible to `guardSceneChange` (DMX is still held at 0 by `deskLookValues.js`). Fixing it there
+would refuse every edit of v1.0's four laser looks — the owner's call.
+
+**Why in process and not through `/light`.** `/light` is loopback-only unless the install opened
+its devices to the LAN (`localRuntimeGuard.js`): a device route is a socket someone could aim.
+Going to a named cue of this project's list is not that. Everything else on `/light` stays behind
+its gate. `cuerun.js` now records `firedAt`, so "chosen by" shows only for the firing that choice made.
+
+**Measured (2026-10-08, Playwright Chromium 1234 headless, scratch stack and an auth-on throwaway
+server serving `dist/`):** page usable 330–360 ms after navigation (local); a choice on one phone
+shown on another phone in 266, 189 and 238 ms (three runs; the bound is the 1 s poll + one request);
+0 canvases, 0 three/fiber chunks loaded; corners ≤ 2 px; cards ≥ 90 CSS px tall; no horizontal
+scroll at 390 px. ShowSurface chunk 11.0 kB + 5.8 kB CSS + showClock 2.0 kB (uncompressed).
+
+**Owed:** a real phone on the guest address (needs #826 landed and the venue wifi); the cloud
+relay; the scene deck's laser list (above); `rigToolAccess` reads `session.local` as "everyone
+edits", which on a `di up --guests` install hands a guest the sign-in card on the cards/plot pages
+(found here; this page does not use that gate).
+
+
+### 24.x Simple buttons - a press holds (owner, 2026-10-09)
+
+*"I need so simple buttons: you press, the scene changes, and auto play stops. So simple." - "a cue is just like lego bricks, one scene after the other."*
+
+- **A press holds.** `POST .../choose` makes that scene live and it STAYS until someone presses another. The desk's cue runner (`serverXR/src/lighting/cuerun.js`) has an `autoplay` flag, OFF by default: a cue's `hold` only counts down while it is on. A named press (`go(index)`) turns it off. Choosing never loops (the show page loads the list with `loop: false`), so `live.nextIndex` is -1 and `live.nextInMs` is null unless autoplay is on.
+- **One switch.** `POST .../autoplay {autoplay: bool}` (operator only) is "play in order"; it sits behind the page's "settings" button. `POST /light/api/cues/autoplay` is the desk's side of it. The cards page and /light still call `go()` with no index for "next"; with autoplay off that step also holds.
+- **The page** is a grid of bricks (scene name + colour squares; the live one in ember red; a laser scene shown dashed, disabled, "operator only"). Who may press, "play in order" and the name field are behind one `settings` button, operator only. The room's chip list is the same bricks, two columns, compact.
+- **Kept:** laser scenes refused by the server (403) and written 0 by the desk; the permission setting; the cooldown; the operator lock. Lasers are never fired from these pages.
+- **Words:** "scene" on screen (Light's word, docs/ai/vocabulary.md). The server's own refusal sentences still say "cue" in places (owed).
+
+### 24.y Five favourite scenes, always in the room (owner, 2026-10-09)
+
+*"it's just to see the light shows, and in virtual - like the favourite 5 scene buttons there."*
+
+- **The row.** `src/rigbuild/RoomFavourites.jsx`, mounted by `RoomLookFollower` beside the SHOW chip: up to five bricks (colour swatch + short name; live one ember red), measured to sit just above the view bar (`[data-smart-view-bar]`), so it never covers Floor/DJ/Top or the chip. A tap is the same `POST .../choose`: cooldown, lock and permission are the server's; laser scenes are never in the row.
+- **Which five.** `POST .../favourites {favourites: [lookId, ...]}`, operator only, at most 5, each once, each a look of this show, never a laser scene (400 `bad-favourites`). Kept in the show's control state (`control.json`, `favourites`: null = never set). The answer carries `control.favourites` (effective: the operator's list, else the first five non-laser looks) and `favouritesSet`. Everyone reads the same five.
+- **Stars.** The operator sees a star on each non-laser brick of the SHOW list; a toggle posts the new list (at five, the oldest star leaves) and the row updates at once (window event `di:show-answer`).
+- **Tests.** `serverXR/src/showContracts.test.js` (operator only, <= 5, unknown/laser refused, shared, persisted), `showRemote.test.js`, `src/rigbuild/RoomFavourites.test.jsx`, `showApi.test.js`.
+
+
+## 25. Editing a scene in the Studio (2026-10-15)
+
+Until now a scene (a rig look and its cue) was built only by scripts. Since 2026-10-15 the Studio's Scenes window edits it, and the
+build script and the Studio build a look with the same function.
+
+**The data.** A rig look keeps its SOURCE next to what was built from it: `parts` `{part: [hex|null, level 0..1]}` (a part left out is
+off), `motion`, `heads`, `laser_colour`, `desk_caps` and `act` (schema: `normalizeRigLooks`, bounded; `shared/projectSchema.cjs` mirrors
+it). The project remembers which units belong to which part: `rigParts` `{ parts: {part: [unitId…]} }` on the show entity
+(`normalizeRigParts`; `epic-build.mjs` writes it from `fixtures[].part`, a laser's beams are the part `laser`). A project without it: each
+unit's `fixture.part` if it has one, else no parts, and the editor edits per unit (a look with no `parts` is seeded from its built
+levels). Written by `epic-build.mjs --looks-only --apply`, like the looks.
+
+**The one function.** `src/shared/buildLook.js` `buildLook(source, rigParts, units)` → `{colours, levels, aims}`. `epic-build.mjs`
+(`v1Looks`) and `src/studio/utils/sceneEdit.js` both call it. Parity (`src/shared/buildLook.test.js`): the 51 looks of
+`scripts/place/rigs/moxir-v2-11-2026-10-15.json` built by the script are byte-identical to what the script gave before the refactor
+(sha256 of colours, levels and aims), and `buildLook` from a stored look's source and the document alone gives the same for every look
+(0 differences).
+
+**The editor.** `ScenePicker.jsx` → `SceneEditor.jsx`: Edit on a scene row opens title, act, intent; one row per part (hex + swatch,
+level slider + number, "off"); motion (mode, bpm, depth, spatial, kinds, still); heads (pattern, period, pan, tilt, spatial); cue fade
+and hold; Play. New scene, Duplicate, Delete and the arrows (cue order) are the window's buttons. Every change is ops through the
+Studio's `applyLocalOps` (one undo each), and the look is rebuilt by `buildLook` in the same op.
+- **The flash rule is enforced, not only shown** (`sceneEdit.js` `FLASH`): glitch never (greyed, and `changeSceneOps` refuses it);
+  sparkle only at 20 bpm; every other mode at most 132 bpm (a bpm above it is clamped). Source: `scenes-design-report.md` "Decisions"
+  (flash ≤ 3 a second per lamp, `flashrate.cjs` on `fx.js`).
+- **Heads:** sweep and cross only pan; the editor warns that a head resting vertical shows nothing.
+- **Play** = the desk's GO on this cue: `playScene.js` loads the project's cue list on the desk (`deskCues.load`, as the cards page does)
+  and goes to the cue's index. With no desk it says why in the editor.
+
+**Limits, stated.** A look's lamps are found by the keys in its `aims`; a key the schema drops (`lookKey` allows no parentheses, so
+`named-v1-plane-1-(behind-the-DJ)-in0/up-b380f` of the v2-11 rig is dropped on every save, before this change too) is not rebuilt: owed,
+a separate fix with the owner's look (it would light those lamps). `desk_caps` is kept and shown in the data, not yet edited in the UI.
+Studio edits do not re-load the desk's cue list by themselves; Play does.
+
+## The 40 W lines: addresses and per-scene parts (2026-10-15, ledger N852)
+
+- **Addresses.** A rig unit's `dmx` block (universe, address, footprint, mode) is now what `epic-build.mjs` writes for laser and
+  smoke units too (`dmxOf`; a LaserCube with no block stays `dmx: false`, run over the LAN). `epic-build.mjs --patch-only [--apply]`
+  writes only the rig file's addresses into a project (fixture ops where the document differs), then `patch.mjs --exact` puts the desk
+  there. MOXIR v2.11: UP-LA40WF ×2 at **U1.401 and U1.433** (32 ch, the maker chart `scripts/place/fixtures/charts/up-la40wf.json`),
+  UP-YZ31P at **U1.501** (1 ch, ASSUMED) — the v2 patch plan's own blocks (owner N460.2).
+- **Parts.** A scene's `laser_lines` (laser_frames.py `validate_line`) drives the single-beam DMX lasers: `still` (the crossed X),
+  `sweep` (the X closes inward by up to `amplitude_deg` and opens, on the master clock), `lift` (rises above the aim, never below);
+  colour only one of the unit's 7 diode colours (chart ch 5); `base_lift_deg` / `base_yaw_in_deg` move the base aim by the unit's
+  ch 7 / ch 6 without moving the unit. Every ray takes the cubes' physics (first surface, column lines, the near crane ≥ 9.2 m,
+  ≤ 3 flashes a second). `laser-frames.mjs`: the rig's own frames now win for the 40 W too (the matrix stays the fallback).
+- **Limit.** The room draws a look's one laser colour for every line; a 40 W colour that differs from the cubes' is desk data only.

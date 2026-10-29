@@ -62,7 +62,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-1);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     color: var(--di-cyan);
 }
 
@@ -79,7 +79,7 @@
     justify-content: center;
     min-width: 44px;
     min-height: 44px;
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     background: var(--di-scrim);
     color: var(--di-ink);
     text-decoration: none;
@@ -142,7 +142,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     color: var(--di-cyan);
 }
 
@@ -179,6 +179,7 @@
    `transform-origin: 50% <radius>` — so it stays on the rim. Turned about its own
    end instead, the 36 ticks radiated out of the middle like a sunburst, escaped
    the circle and printed themselves through the readings beside it. */
+/* a drawing, not a control: stays round (owner, 2026-10-21). */
 .scan-ring {
     --scan-ring-size: 76px;
     --scan-ring-radius: 38px;
@@ -211,7 +212,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-1);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     color: var(--di-dim);
 }
 
@@ -307,7 +308,8 @@
 
 /* The one control that must never be mistaken for anything else, and the only
    one that takes `touch-action: none` — pressing it must not scroll the page,
-   and nothing else here may steal a scroll from somebody in gloves. */
+   and nothing else here may steal a scroll from somebody in gloves.
+   Square like every control (owner, 2026-10-21); the red mark inside stays round. */
 .scan-record {
     flex: 0 0 auto;
     display: flex;
@@ -318,15 +320,16 @@
     padding: 0;
     background: var(--di-scrim-strong);
     border: 2px solid var(--di-ink);
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     cursor: pointer;
     touch-action: none;
 }
 
+/* status dot, not a control: the red mark is square at rest and smaller while recording (owner rule, rectangles only). */
 .scan-record-mark {
     width: 52px;
     height: 52px;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     background: var(--di-danger);
     transition: border-radius var(--di-motion-base), width var(--di-motion-base), height var(--di-motion-base);
 }
@@ -389,7 +392,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-1);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     color: var(--di-cyan);
 }
 

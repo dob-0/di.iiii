@@ -1,6 +1,7 @@
 // @vitest-environment node
 
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -19,6 +20,11 @@ vi.setConfig({ testTimeout: 25_000, hookTimeout: 40_000 })
 
 const SERVER_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SERVER_ENTRY = path.join(SERVER_ROOT, 'src/index.js')
+
+// The one list of words a project may not be called (shared/reservedSegments.cjs):
+// the reserved-word tests below loop over it, so a word added there is covered
+// with no edit in this file.
+const { RESERVED_PROJECT_SLUGS } = createRequire(import.meta.url)('../../shared/reservedSegments.cjs')
 
 const activeServers = []
 
@@ -654,7 +660,7 @@ describe('project contracts', () => {
         expect(payload.error).not.toContain(server.dataRoot)
     })
 
-    it('repairs non-main project documents whose embedded space drifts back to main', async () => {
+    it('repairs non-main project documents whose embedded space drifts back to main (answer at once, disk on the next save)', async () => {
         const server = await startServer()
 
         const createSpaceResponse = await fetch(`${server.baseUrl}/api/spaces`, {
@@ -692,8 +698,56 @@ describe('project contracts', () => {
         expect(payload.document.projectMeta.id).toBe('gallery-project')
         expect(payload.document.projectMeta.spaceId).toBe('gallery')
 
+        // The GET answers with the repair but writes nothing (a read that wrote
+        // back raced saves -- audit 2026-10-09 F3); the next save, under the
+        // project's write lock, puts the repair on disk.
+        expect(JSON.parse(await readFile(documentPath, 'utf8')).projectMeta.spaceId).toBe('main')
+        const saveResponse = await fetch(`${server.baseUrl}/api/projects/gallery-project/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseVersion: 0, ops: [{ type: 'createEntity', payload: { entity: { id: 'e1', type: 'box' } } }] })
+        })
+        expect(saveResponse.status).toBe(200)
+
         const repaired = JSON.parse(await readFile(documentPath, 'utf8'))
         expect(repaired.projectMeta.spaceId).toBe('gallery')
+    })
+
+    // Audit 2026-10-09 F3, through the wire: GET /document is a read. It leaves
+    // document.json byte-for-byte, and a section this build does not know
+    // survives the GET and the next save (serverXR/src/projectRead.test.js
+    // holds the store half, with the read-vs-save race).
+    it('GET /document writes nothing, and a field this build does not know survives the next save', async () => {
+        const server = await startServer()
+        expect((await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Newer Data', slug: 'newer-data' })
+        })).status).toBe(201)
+        const documentPath = path.join(server.dataRoot, 'spaces', 'main', 'projects', 'newer-data', 'document.json')
+        const onDisk = JSON.parse(await readFile(documentPath, 'utf8'))
+        onDisk.timelineState = { cues: [{ id: 'cue-1', at: 12.5 }] }
+        onDisk.entities.push({ id: 'from-newer', type: 'box', futureField: { keep: true } })
+        delete onDisk.showState
+        await writeFile(documentPath, JSON.stringify(onDisk))
+        const bytesBefore = await readFile(documentPath)
+        const mtimeBefore = (await stat(documentPath)).mtimeMs
+
+        const read = await (await fetch(`${server.baseUrl}/api/projects/newer-data/document`)).json()
+        expect(read.document.timelineState).toEqual({ cues: [{ id: 'cue-1', at: 12.5 }] })
+        expect((await readFile(documentPath)).equals(bytesBefore)).toBe(true)
+        expect((await stat(documentPath)).mtimeMs).toBe(mtimeBefore)
+
+        const saved = await fetch(`${server.baseUrl}/api/projects/newer-data/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseVersion: 0, ops: [{ type: 'createEntity', payload: { entity: { id: 'added', type: 'sphere' } } }] })
+        })
+        expect(saved.status).toBe(200)
+        const after = JSON.parse(await readFile(documentPath, 'utf8'))
+        expect(after.timelineState).toEqual({ cues: [{ id: 'cue-1', at: 12.5 }] })
+        expect(after.entities.find(e => e.id === 'from-newer').futureField).toEqual({ keep: true })
+        expect(after.entities.some(e => e.id === 'added')).toBe(true)
     })
 
     // Regression test for audit finding #16: a client retry (e.g. the
@@ -855,13 +909,45 @@ describe('project contracts', () => {
         expect(first['bare-one'].layers).toEqual({})
         // A window (the outliner) is neither a thing nor a connection.
         expect(first['held-one'].layers).toEqual({
-            objects: 2, things: 2, lamps: 1, joinedLamps: 1, nodes: 2, wires: 1, pictureOuts: 1
+            objects: 2, things: 2, lamps: 1, joinedLamps: 1, stageLamps: 1, nodes: 2, wires: 1, pictureOuts: 1
         })
         // Asked again from the cache: the same answer, and still nothing written.
         const second = await list()
         expect(second['held-one'].layers).toEqual(first['held-one'].layers)
         expect(second['held-one'].documentVersion).toBe(newVersion)
         expect(await readFile(documentPath, 'utf8')).toBe(before)
+    })
+
+    // P1 (2026-10-13): the card said "empty" over 133 files because the count
+    // never read document.assets. The list now counts the files, the pictures
+    // and the videos, and a picture's file is not counted twice.
+    it('the project list counts files and media, so a project that holds files is not empty', async () => {
+        const server = await startServer()
+        const created = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Files', slug: 'files-one', source: 'studio-v3' })
+        })
+        expect(created.status).toBe(201)
+        const asset = (id, size) => ({ type: 'upsertAsset', payload: { asset: { id, name: `${id}.bin`, mimeType: 'application/octet-stream', size } } })
+        const submit = await fetch(`${server.baseUrl}/api/projects/files-one/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [
+                    asset('pic-1', 1048576),
+                    asset('doc-1', 2097152),
+                    asset('doc-2', 1048576),
+                    { type: 'createEntity', payload: { entity: { id: 'pic', type: 'image', name: 'Pic', components: { media: { assetId: 'pic-1' } } } } }
+                ]
+            })
+        })
+        expect(submit.status).toBe(200)
+        const response = await fetch(`${server.baseUrl}/api/spaces/main/projects`)
+        const { projects } = await response.json()
+        const held = projects.find((project) => project.id === 'files-one')
+        expect(held.layers).toEqual({ objects: 1, things: 1, images: 1, files: 2, fileBytes: 4194304 })
     })
 
     it('names the collision when a project title/slug collides with one in a different space', async () => {
@@ -890,6 +976,166 @@ describe('project contracts', () => {
         const collisionBody = await collision.json()
         expect(collisionBody.error).toBe('that name is taken on this di.iiii — try another')
         expect(collisionBody.error).not.toBe('Project already exists.')
+    })
+})
+
+// ── A reserved word is refused as a project's id unless the caller says it is carried ──
+// Added 2026-10-26 (fix-all, reserved names). A project with no short name is
+// opened at /{space}/{id}, and spaceRouting.js throws away a reserved word in
+// that position, so a project born with one (a title of "Privacy", "Plot" or
+// "Light") could be made but never opened at its own address. PATCH has refused
+// these words as a short name, and space creation as a space id, since the
+// slug-hijack fix; creating a project did not. One project was already in that
+// state when this was found: id `privacy`, in the space `main`.
+//
+// The guard sits in the create ROUTE, not in ensureProject: a snapshot restore
+// and the open-jam bootstrap call ensureProject themselves (projectStore.test.js
+// pins that). A follow makes a missing project through this very route, so the
+// route lets a request that says `carried: true` keep an id it already has. That
+// is the caller's own word, not a check: the route cannot tell a project that
+// exists elsewhere from a new one (the "caller's word" test below pins it).
+describe('a reserved word is refused as a project\'s id unless the caller says it is carried', () => {
+    const ID_SHAPE = /^[a-z0-9-]{3,64}$/
+    // `p` (under three letters) and `open_jam` (an underscore) can never be a
+    // project id, so there is nothing for the guard to stop. Every other word is
+    // checked, and a word added to the shared list is covered with no edit here.
+    const idShaped = [...RESERVED_PROJECT_SLUGS].filter((word) => ID_SHAPE.test(word))
+    const cap = (word) => word[0].toUpperCase() + word.slice(1)
+    const json = { 'Content-Type': 'application/json' }
+
+    const post = (server, spaceId, body) => fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+        method: 'POST',
+        headers: json,
+        body: JSON.stringify(body)
+    })
+    const reservedIdsIn = async (server, spaceId) => {
+        const { projects } = await (await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`)).json()
+        return projects.map((project) => project.id).filter((id) => RESERVED_PROJECT_SLUGS.has(id))
+    }
+    const sentence = (word) => `"${word}" is a reserved address and can't be a project name — try another.`
+
+    it('refuses every one of them, in a plain sentence, and makes nothing', async () => {
+        // A loop over nothing proves nothing: the list is 31 words today, 29 of them ids.
+        expect(idShaped.length).toBeGreaterThan(25)
+        const server = await startServer()
+
+        for (const word of idShaped) {
+            const answer = await post(server, 'main', { title: word, slug: word })
+            expect(answer.status, word).toBe(400)
+            expect((await answer.json()).error, word).toBe(sentence(word))
+            expect((await fetch(`${server.baseUrl}/api/projects/${word}`)).status, word).toBe(404)
+        }
+        expect(await reservedIdsIn(server, 'main')).toEqual([])
+    })
+
+    it('reads a word the way the router does: any case, either source, padding and marks', async () => {
+        const server = await startServer()
+
+        for (const word of idShaped) {
+            // The title alone is an id source ...
+            const shouted = await post(server, 'main', { title: word.toUpperCase() })
+            expect(shouted.status, word.toUpperCase()).toBe(400)
+            // ... and the studio's own shape is { title, slug: title }.
+            const typed = await post(server, 'main', { title: cap(word), slug: cap(word) })
+            expect(typed.status, cap(word)).toBe(400)
+        }
+        // Padding is trimmed, marks fall out of an id, and a space becomes the dash of `for-apps`.
+        for (const title of ['  Privacy  ', 'Privacy!', 'PRIVACY', 'For Apps']) {
+            expect((await post(server, 'main', { title })).status, title).toBe(400)
+        }
+        expect(await reservedIdsIn(server, 'main')).toEqual([])
+    })
+
+    it('still makes a project whose name only contains a reserved word', async () => {
+        const server = await startServer()
+
+        for (const [title, id] of [
+            ['Privacy Policy', 'privacy-policy'],
+            ['Tools Room', 'tools-room'],
+            ['Wiki notes', 'wiki-notes'],
+            ['Light desk', 'light-desk'],
+            ['The Plot', 'the-plot']
+        ]) {
+            const made = await post(server, 'main', { title, slug: title })
+            expect(made.status, title).toBe(201)
+            expect((await made.json()).project.id, title).toBe(id)
+            expect((await fetch(`${server.baseUrl}/api/projects/${id}`)).status, id).toBe(200)
+        }
+    })
+
+    it('takes `carried: true` on the caller\'s word: only the boolean true skips the reserved check', async () => {
+        const server = await startServer()
+
+        // A request that does not say it is carried: refused.
+        expect((await post(server, 'main', { slug: 'privacy', title: 'Privacy Policy' })).status).toBe(400)
+        // Only the boolean `true` counts, never a word that looks like it.
+        for (const carried of ['true', 'yes', 1, null, false]) {
+            const answer = await post(server, 'main', { slug: 'privacy', title: 'Privacy Policy', carried })
+            expect(answer.status, String(carried)).toBe(400)
+        }
+        expect(await reservedIdsIn(server, 'main')).toEqual([])
+
+        // The follower's request for a project it found on the other side: made, with its id.
+        // This server has no other side and makes it all the same: `carried` is the caller's
+        // own word, not a check. That is the design, pinned here so nobody reads it as one.
+        const made = await post(server, 'main', { slug: 'privacy', title: 'Privacy Policy', carried: true })
+        expect(made.status).toBe(201)
+        expect((await made.json()).project.id).toBe('privacy')
+        expect((await fetch(`${server.baseUrl}/api/projects/privacy`)).status).toBe(200)
+        // The flag changes nothing for an ordinary name.
+        expect((await post(server, 'main', { slug: 'ordinary-name', title: 'Ordinary', carried: true })).status).toBe(201)
+    })
+
+    it('answers "reserved" before "taken", and a carried copy of a taken id still meets the 409', async () => {
+        const server = await startServer()
+        expect((await post(server, 'main', { slug: 'privacy', title: 'Privacy Policy', carried: true })).status).toBe(201)
+        const other = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: json,
+            body: JSON.stringify({ label: 'Second Space', slug: 'second-space' })
+        })
+        expect(other.status).toBe(201)
+
+        // The same id asked for again in another space, by a person: the word is the news.
+        const chosen = await post(server, 'second-space', { slug: 'privacy', title: 'Privacy Policy' })
+        expect(chosen.status).toBe(400)
+        expect((await chosen.json()).error).toBe(sentence('privacy'))
+        // The follower asking for it: the project is on this install already, in another space, and
+        // the 409 is how it learns to move it here instead (follower.js, makeMissing).
+        const carried = await post(server, 'second-space', { slug: 'privacy', title: 'Privacy Policy', carried: true })
+        expect(carried.status).toBe(409)
+        expect((await carried.json()).error).toBe('that name is taken on this di.iiii — try another')
+    })
+
+    it('leaves a project that already holds a reserved id as it was: it takes edits and can be given a short name', async () => {
+        const server = await startServer()
+        expect((await post(server, 'main', { slug: 'privacy', title: 'Privacy Policy', carried: true })).status).toBe(201)
+
+        const edit = await fetch(`${server.baseUrl}/api/projects/privacy/ops`, {
+            method: 'POST',
+            headers: json,
+            body: JSON.stringify({ baseVersion: 0, ops: [{ type: 'createEntity', payload: { entity: { id: 'entity-1', type: 'box', name: 'Shared Box' } } }] })
+        })
+        expect(edit.status).toBe(200)
+        expect((await edit.json()).newVersion).toBe(1)
+
+        // A short name that is not a reserved word is the way out for a project whose id is one:
+        // /{space}/privacy-policy opens it, while its id stays what it always was.
+        const named = await fetch(`${server.baseUrl}/api/projects/privacy`, {
+            method: 'PATCH',
+            headers: json,
+            body: JSON.stringify({ slug: 'privacy-policy' })
+        })
+        expect(named.status).toBe(200)
+        expect((await named.json()).project.slug).toBe('privacy-policy')
+        expect((await fetch(`${server.baseUrl}/api/resolve/main/privacy-policy`)).status).toBe(200)
+        // The reserved word itself is still refused as a short name.
+        const refused = await fetch(`${server.baseUrl}/api/projects/privacy`, {
+            method: 'PATCH',
+            headers: json,
+            body: JSON.stringify({ slug: 'terms' })
+        })
+        expect(refused.status).toBe(400)
     })
 })
 
@@ -1417,5 +1663,83 @@ describe('a plane that is a screen (components.surface)', () => {
         expect(document.mappingState.surfaces.map((surface) => surface.id)).toContain('srf-wall')
         const screen = document.entities.find((entity) => entity.id === 'screen-1')
         expect(screen.components.surface).toEqual({ surfaceId: 'srf-wall' })
+    })
+})
+
+// ── A project name is unique only inside its own space ──
+// Added 2026-10-29 (ux-fix S21, finding F061; decision
+// docs/ai/decisions/2026-10-29-project-names-per-space.md). At a camp twenty
+// children, in twenty spaces, all type "my scene". Project ids stay global (every
+// /api/projects/:id link and every follow keys on them), so a person who types only
+// a name gets a free id when another space already holds it, and the name as the
+// project's short name, so /{space}/my-scene still opens it. A caller that names the
+// id (`slug`, `carried`) keeps the old answer: that id or a 409.
+describe('POST /api/spaces/:spaceId/projects — names per space', () => {
+    const json = { 'Content-Type': 'application/json' }
+    const post = (server, spaceId, body) => fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+        method: 'POST', headers: json, body: JSON.stringify(body)
+    })
+    const makeSpace = async (server, slug) => {
+        const made = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST', headers: json, body: JSON.stringify({ label: slug, slug })
+        })
+        expect(made.status).toBe(201)
+    }
+
+    it('lets two spaces each make "my scene" and an empty name, with no 409, and keeps the first id', async () => {
+        const server = await startServer()
+        await makeSpace(server, 'camp-ani')
+        await makeSpace(server, 'camp-aram')
+
+        const first = await post(server, 'camp-ani', { title: 'my scene', source: 'studio-v3' })
+        expect(first.status).toBe(201)
+        const firstProject = (await first.json()).project
+        expect(firstProject.id).toBe('my-scene')
+
+        const second = await post(server, 'camp-aram', { title: 'my scene', source: 'studio-v3' })
+        expect(second.status).toBe(201)
+        const secondProject = (await second.json()).project
+        expect(secondProject.id).toBe('my-scene-2')
+        expect(secondProject.title).toBe('my scene')
+        expect(secondProject.slug).toBe('my-scene')
+
+        // The first one's id and address are untouched; each space's address opens its own.
+        const byId = await (await fetch(`${server.baseUrl}/api/projects/my-scene`)).json()
+        expect(byId.project?.spaceId ?? byId.spaceId ?? byId.project?.space_id).toBe('camp-ani')
+        const ani = await (await fetch(`${server.baseUrl}/api/resolve/camp-ani/my-scene`)).json()
+        const aram = await (await fetch(`${server.baseUrl}/api/resolve/camp-aram/my-scene`)).json()
+        expect(JSON.stringify(ani)).toContain('"my-scene"')
+        expect(JSON.stringify(aram)).toContain('"my-scene-2"')
+
+        // An empty name is a real name in each space, never a clash.
+        for (const spaceId of ['camp-ani', 'camp-aram']) {
+            const untitled = await post(server, spaceId, { title: '', source: 'studio-v3' })
+            expect(untitled.status, spaceId).toBe(201)
+            expect((await untitled.json()).project.title).toBe('Untitled')
+            const again = await post(server, spaceId, { title: '', source: 'studio-v3' })
+            expect(again.status, spaceId).toBe(201)
+            expect((await again.json()).project.title).toBe('Untitled 2')
+        }
+    })
+
+    it('refuses the same name twice in one space, in plain words that name it', async () => {
+        const server = await startServer()
+        await makeSpace(server, 'camp-ani')
+        expect((await post(server, 'camp-ani', { title: 'My Scene' })).status).toBe(201)
+        const twice = await post(server, 'camp-ani', { title: 'my scene' })
+        expect(twice.status).toBe(409)
+        const body = await twice.json()
+        expect(body.code).toBe('name-taken-in-space')
+        expect(body.error).toBe('This space already has a project called "My Scene". Pick another name.')
+    })
+
+    it('keeps the exact-id door as it was: a slug taken in another space is still a 409', async () => {
+        const server = await startServer()
+        await makeSpace(server, 'camp-ani')
+        await makeSpace(server, 'camp-aram')
+        expect((await post(server, 'camp-ani', { title: 'Copy', slug: 'copy-of-it' })).status).toBe(201)
+        const copied = await post(server, 'camp-aram', { title: 'Copy', slug: 'copy-of-it' })
+        expect(copied.status).toBe(409)
+        expect((await copied.json()).error).toBe('that name is taken on this di.iiii — try another')
     })
 })

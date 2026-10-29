@@ -3,7 +3,14 @@
 
 const { fxActive, fxOrder, fxLevel, beatGrid } = require('./fx');
 const { lfoApply, isGenericChannels } = require('./lfo');
-const { layerValues } = require('./looks');
+const { layerValues, kindAllows } = require('./looks');
+const { headsFrame, headsPose } = require('./headMotion');
+const { motionFrame } = require('./lookMotion');
+const { recallHolds } = require('./holds');
+const { planStrip, claimedRanges, renderStrip } = require('./pixelstrip');
+
+// Roles that step, never fade (snapMask).
+const STEP_ROLES = new Set(['color', 'gobo', 'prism', 'rotation', 'frost', 'strobe', 'control', 'aux1', 'aux2']);
 
 // Generic profile library, named the way desks like Daslight name them:
 // the letters are the channel order.
@@ -186,7 +193,9 @@ function makeFixture(f = {}) {
   for (const role of PROFILES[profile].channels) {
     values[role] = own[role] != null ? own[role] : ROLE_DEFAULTS[role];
   }
-  values.dimmer = f.values && f.values.dimmer != null ? f.values.dimmer : 255;
+  // The dimmer comes up full so a patched lamp is visibly alive — UNLESS the chart says otherwise: a DMX laser's output
+  // rests at 0 (its profile default), and forcing 255 here left a 40 W laser at full on every re-patch (MOXIR 2026-10-17).
+  values.dimmer = f.values && f.values.dimmer != null ? f.values.dimmer : (own.dimmer != null ? own.dimmer : 255);
   return {
     id: f.id || `fx${Date.now().toString(36)}${nextId++}`,
     index: f.index || 1,
@@ -242,7 +251,13 @@ class Engine {
     // Audio envelope: attack-instant, release-decay. Lives on the engine, not the state,
     // because it is derived motion — nothing about it belongs in show.json.
     this.audioEnv = { level: 0, low: 0, mid: 0, high: 0, last: 0 };
+    // The latest live frame of each pixel strip (id -> { data: r,g,b,w per pixel, at }).
+    // Derived motion like the audio envelope: never saved, and stale after the strip's frameTtlMs.
+    this.stripFrames = new Map();
   }
+
+  setStripFrame(id, data, at = Date.now()) { this.stripFrames.set(id, { data, at }); }
+  dropStripFrame(id) { this.stripFrames.delete(id); }
 
   universes() {
     const set = new Set();
@@ -250,6 +265,10 @@ class Engine {
     for (const key of Object.keys(this.state.raw)) {
       const u = Number(key.split(':')[0]);
       if (Number.isInteger(u) && u >= 0) set.add(u);
+    }
+    for (const st of this.state.strips || []) {
+      const p = planStrip(st);
+      if (p.ok) for (const u of p.plan.universes) set.add(u);
     }
     if (set.size === 0) set.add(0);
     return [...set].sort((a, b) => a - b);
@@ -288,6 +307,12 @@ class Engine {
     // The tempo the operator tapped drives the stack too, not only the FX engine —
     // one clock, so Tap retimes every running look at the same moment.
     const stack = layerValues(state, state.fixtures, now, state.fx && state.fx.bpm, state.fx && state.fx.epoch);
+    // HEAD MOTION (headMotion.js): the live layers' looks that move their heads. Offsets sit on the REST pan/tilt read
+    // below through `val`, so a layer, an LFO or the stored value is still where the head rests. Null when nobody moves.
+    const heads = headsFrame(state, now, kindAllows);
+    // LOOK MOTION (lookMotion.js): the live layers' looks that move their LEVELS (a breathe, a chase, a strobe...). One
+    // multiplier per fixture, 0..255, applied below where the master and the global FX are. Null when no look moves.
+    const motion = motionFrame(state, now, kindAllows);
     const audioOn = this.audioActive(state, now);
     if (audioOn) this.audioTick(state, now);
     // IDENTIFY — "which lamp in this room is fixture 7?". It beats the stack, the LFOs
@@ -323,11 +348,17 @@ class Engine {
         if (lv && lv[role] != null) return lv[role];
         return f.values[role];
       };
+      const headPT = heads && heads.has(f.id) ? headsPose(heads.get(f.id), profile.channels, val) : null;
       const flash = ident(f.id);
       const level = flash != null ? flash * 255 : (f.on === false ? 0 : (val('dimmer') ?? 255));
       const dim = mapRange(level, lim.dimMin, lim.dimMax) / 255;
       let lvl = master;
-      if (fxOn && !noScale) {
+      // The look's own motion first (lookMotion.js), then the desk's global FX on top, as before; a generic-channel or an
+      // excluded profile sits out both. Two STROBES never stack on one lamp: a look that strobes is the one flashing
+      // source for its lamps and the global strobe sits out for them, so no lamp flashes faster than fx.js's cap.
+      const lm = motion && !noScale ? motion.get(f.id) : null;
+      if (lm) lvl *= lm.level / 255;
+      if (fxOn && !noScale && !(lm && lm.strobe && state.fx.mode === 'strobe')) {
         lvl *= fxLevel(state.fx, f, order.get(f.id) ?? 0, state.fixtures.length, now) / 255;
       }
       if (audioOn && !noScale) lvl *= this.audioMult(state, f, profile, now) / 255;
@@ -345,7 +376,7 @@ class Engine {
           v = dim * 255 * lvl;
         } else if (kind === 'position') {
           const src = lim.swapPT ? (role === 'pan' ? 'tilt' : 'pan') : role;
-          let raw = val(src) ?? 128;
+          let raw = (headPT && headPT[src] != null) ? headPT[src] : (val(src) ?? 128);
           const inv = role === 'pan' ? lim.invertPan : lim.invertTilt;
           if (inv) raw = 255 - raw;
           v = role === 'pan' ? mapRange(raw, lim.panMin, lim.panMax) : mapRange(raw, lim.tiltMin, lim.tiltMax);
@@ -359,12 +390,19 @@ class Engine {
           const base = flash != null ? held * flash : (val(role) ?? ROLE_DEFAULTS[role] ?? 0);
           v = base * (hasDimmerCh ? 1 : lvl * dim);
         } else {
-          v = val(role) ?? ROLE_DEFAULTS[role] ?? 0;   // control and fine pass through
+          v = (headPT && headPT[role] != null) ? headPT[role] : (val(role) ?? ROLE_DEFAULTS[role] ?? 0);   // control and fine pass through
         }
         buf[ch] = clamp8(v);
       });
     }
 
+    // PIXEL STRIPS (pixelstrip.js): each one writes its own universes, scaled by the master and
+    // by blackout like a lamp. A strip that cannot be planned writes nothing.
+    for (const st of state.strips || []) {
+      const p = planStrip(st);
+      if (!p.ok) continue;
+      renderStrip(st, p.plan, (u) => this.buffer(out, u), { now, frame: this.stripFrames.get(st.id) || null, scale: master });
+    }
     // Raw channel overrides sit on top of the fixtures, and ride the master and blackout
     // like everything else. They used to bypass both, so a shutter could be parked through
     // a blackout — but once manual channels became a control surface of their own (the
@@ -465,7 +503,26 @@ class Engine {
     // fade never ended, and every channel was written NaN — clamped to 0 — for ever.
     const n = +ms;
     if (!Number.isFinite(n) || n <= 0) { this.fade = null; return; }
-    this.fade = { from: this.snapshotLive(), start: Date.now(), ms: Math.min(60000, n) };
+    this.fade = { from: this.snapshotLive(), start: Date.now(), ms: Math.min(60000, n), snap: this.snapMask() };
+  }
+
+  // Channels that STEP rather than fade (a colour or gobo wheel, a prism, a shutter or function
+  // channel): sliding one through a crossfade shows every slot in between — a beam going
+  // red → light blue passed through the halves and other colours for the whole fade (MOXIR,
+  // 2026-10-17). They take the new value at the start of the fade, as a console's LTP channels do.
+  snapMask(state = this.state) {
+    const mask = new Map();
+    for (const f of (state && state.fixtures) || []) {
+      const p = PROFILES[f.profile];
+      if (!p || !Array.isArray(p.channels)) continue;
+      const u = f.universe | 0;
+      if (!mask.has(u)) mask.set(u, new Uint8Array(512));
+      p.channels.forEach((role, i) => {
+        const ch = (f.address | 0) - 1 + i;
+        if (STEP_ROLES.has(role) && ch >= 0 && ch < 512) mask.get(u)[ch] = 1;
+      });
+    }
+    return mask;
   }
 
   cancelFade() { this.fade = null; }
@@ -494,7 +551,8 @@ class Engine {
         for (const [u, tgt] of target) {
           const from = this.fade.from.get(u) || new Float64Array(512);
           const cur = this.buffer(this.live, u);
-          for (let i = 0; i < 512; i++) cur[i] = from[i] + (tgt[i] - from[i]) * t;
+          const snap = this.fade.snap && this.fade.snap.get(u);
+          for (let i = 0; i < 512; i++) cur[i] = snap && snap[i] ? tgt[i] : from[i] + (tgt[i] - from[i]) * t;
         }
         return this.toBuffers();
       }
@@ -551,6 +609,15 @@ class Engine {
       const w = (PROFILES[f.profile] || PROFILES.rgb).channels.length;
       for (let c = f.address; c < f.address + w && c <= 512; c++) used[c] = 1;
     }
+    // A pixel strip's channels are taken too: a lamp must never land on a strip.
+    for (const st of this.state.strips || []) {
+      const p = planStrip(st);
+      if (!p.ok) continue;
+      for (const r of claimedRanges(p.plan)) {
+        if (r.universe !== universe) continue;
+        for (let c = r.from; c <= r.to; c++) used[c] = 1;
+      }
+    }
     for (let a = 1; a + width - 1 <= 512; a++) {
       let free = true;
       for (let c = a; c < a + width; c++) if (used[c]) { free = false; break; }
@@ -580,14 +647,16 @@ class Engine {
     };
   }
 
-  recallScene(scene, fadeMs) {
+  // `owner` is the hand recalling it (holds.js): the scene's holds replace that hand's own
+  // and nobody else's. The chase and the interface recall as "owner".
+  recallScene(scene, fadeMs, owner) {
     if (!scene) return false;
     this.startFade(fadeMs != null ? fadeMs : scene.fadeMs);
     for (const sf of scene.fixtures) {
       const f = this.state.fixtures.find((x) => x.id === sf.id);
       if (f) { f.on = sf.on !== false; Object.assign(f.values, sf.values); }
     }
-    this.state.raw = { ...scene.raw };
+    recallHolds(this.state, scene.raw, owner);
     // A scene that knows its FX brings it along; an old scene without one leaves the
     // running effect alone, so recalling it never yanks a live effect out from under the rig.
     // The TEMPO is the one field a scene never brings: bpm belongs to the operator (Tap /

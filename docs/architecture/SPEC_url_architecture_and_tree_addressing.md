@@ -93,7 +93,7 @@ Two rules. Everything else is consequence.
 
 ### 2.1 Route table
 
-**Public host — `di-studio.xyz`** (the work; what gets shared)
+**Public host — `diiii.xyz`** (the work; what gets shared)
 
 | Path | Meaning |
 | --- | --- |
@@ -105,7 +105,7 @@ Two rules. Everything else is consequence.
 | `/-/p/{projectId}` | permanent id link, space-independent |
 | `/{space}/p/{projectId}` | **grandfathered** permanent id link — kept forever, never minted new |
 
-**Creator host — `studio.di-studio.xyz`** (the platform; never shared with visitors)
+**Creator host — `studio.diiii.xyz`** (the platform; never shared with visitors)
 
 | Path | Meaning |
 | --- | --- |
@@ -117,7 +117,7 @@ Two rules. Everything else is consequence.
 | `/-/settings` | account-level preferences |
 
 **Custom domain (Stage 3, later)** — `brid.ge/{...treePath}`: same tree, space segment
-dropped because the host implies it. Editor stays on `studio.di-studio.xyz` and never
+dropped because the host implies it. Editor stays on `studio.diiii.xyz` and never
 appears on the artist's domain.
 
 ### 2.2 Modes are panels, not routes
@@ -160,8 +160,8 @@ resolver shape.
 
 ### Stage 0 — the creator host exists
 
-Infrastructure only, no user-visible change. `studio.di-studio.xyz` serves the same
-bundle as `di-studio.xyz`; both hosts accept every current route. Nothing redirects
+Infrastructure only, no user-visible change. `studio.diiii.xyz` serves the same
+bundle as `diiii.xyz`; both hosts accept every current route. Nothing redirects
 yet. Verifiable on the dev tier as `<dev-tier host, to be picked>` (the owner picks the name with
 this stage).
 
@@ -253,7 +253,7 @@ Notes:
   `serializeAuthSessionCookie` and `serializeExpiredAuthSessionCookie`.
 - `serverXR/src/config.js` — new `AUTH_SESSION_COOKIE_DOMAIN` env. **Unset means
   host-only, i.e. exactly today's behaviour** — dev and self-host installs are
-  unaffected. Set to `.di-studio.xyz` in prod, `<dev-tier host, to be picked>` on the dev tier.
+  unaffected. Set to `.diiii.xyz` in prod, `<dev-tier host, to be picked>` on the dev tier.
 - `CORS_ORIGINS` gains the creator origin for both lanes.
 - `/api/resolve/:spaceSegment/:projectSegment` → `*path` (Stage 2 only).
 
@@ -261,7 +261,7 @@ Notes:
 
 Assign Security Auditor. Three specific items:
 
-1. **Cookie scope widening is the real risk.** `Domain=.di-studio.xyz` makes the
+1. **Cookie scope widening is the real risk.** `Domain=.diiii.xyz` makes the
    session cookie readable by *every* current and future subdomain. Any subdomain
    takeover becomes a session compromise. Enumerate existing subdomains, and treat
    the domain list as security-relevant config from then on.

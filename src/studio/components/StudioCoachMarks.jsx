@@ -89,7 +89,7 @@ function JamCoach({ entityCount }) {
     )
 }
 
-function GuestCoach({ authType, entityCount, hasSelection, selectTicks = 0, shareOpen, covered = false }) {
+function GuestCoach({ authType, entityCount, hasSelection, selectTicks = 0, shareOpen, createOpen = false, covered = false }) {
 
     const [stepIndex, setStepIndex] = useState(IDLE)
     // Which order this run follows, decided once when the coach arms — the
@@ -149,6 +149,12 @@ function GuestCoach({ authType, entityCount, hasSelection, selectTicks = 0, shar
     // A phone sheet takes the band the pill sits in; the pill waits behind it
     // (still counting) instead of lying over the sheet's own words.
     if (stepIndex === IDLE || covered) return null
+
+    // A hint is shown only while it is true (owner walk 2026-10-07, P7): "Open Create" with Create
+    // open, or "Tap an object" with one already selected, would be a lie. The step keeps its place
+    // and counting; only the pill waits.
+    if (stepId === 'add' && (createOpen || entityCount > 0)) return null
+    if (stepId === 'touch' && order === 'filled' && hasSelection) return null
 
     const dismiss = () => {
         markStudioCoachDone()

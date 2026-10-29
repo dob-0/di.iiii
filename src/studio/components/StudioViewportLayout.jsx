@@ -128,30 +128,35 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
 
     return (
         <div className="svl-pane">
-            {/* Split / close — top-left, appear on hover */}
-            <div className="svl-pane-controls">
-                <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h')} title="Split left/right">H</button>
-                <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'v')} title="Split top/bottom">V</button>
-                {isGraphViewEnabled() && (
-                    <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h', 'graph')} title="Split with a nodes view (dev preview)">N</button>
-                )}
-                {isGraphViewEnabled() && (
-                    <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h', 'world')} title="Split with the live Scene's 3D view (dev preview)">W</button>
-                )}
-                {!isRoot && (
-                    <button className="svl-ctrl-btn svl-ctrl-btn--close" onClick={() => onClose(node.id)} title="Close pane">×</button>
-                )}
-            </div>
+            {/* A page project (StudioShell pageOnly, S16): the page alone, no 3D chrome over it. */}
+            {!shared.pageOnly && (
+                <>
+                    {/* Split / close — top-left, appear on hover */}
+                    <div className="svl-pane-controls">
+                        <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h')} title="Split left/right">H</button>
+                        <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'v')} title="Split top/bottom">V</button>
+                        {isGraphViewEnabled() && (
+                            <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h', 'graph')} title="Split with a nodes view (dev preview)">N</button>
+                        )}
+                        {isGraphViewEnabled() && (
+                            <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h', 'world')} title="Split with the live Scene's 3D view (dev preview)">W</button>
+                        )}
+                        {!isRoot && (
+                            <button className="svl-ctrl-btn svl-ctrl-btn--close" onClick={() => onClose(node.id)} title="Close pane">×</button>
+                        )}
+                    </div>
 
-            {/* Axis gizmo — top-right like Blender */}
-            <div className="svl-gizmo-wrap">
-                <AxisGizmo current={viewKey} onSelect={switchView} />
-            </div>
+                    {/* Axis gizmo — top-right like Blender */}
+                    <div className="svl-gizmo-wrap">
+                        <AxisGizmo current={viewKey} onSelect={switchView} />
+                    </div>
 
-            {/* View label — bottom-left like Blender */}
-            <div className="svl-view-label">
-                {view.label}{view.ortho ? ' · Ortho' : ''}
-            </div>
+                    {/* View label — bottom-left like Blender */}
+                    <div className="svl-view-label">
+                        {view.label}{view.ortho ? ' · Ortho' : ''}
+                    </div>
+                </>
+            )}
 
             <div className="svl-canvas">
                 <StudioPresentationSurface
@@ -166,6 +171,8 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     onCursorLeave={shared.onCursorLeave}
                     xrStore={shared.xrStore}
                     editMode={shared.editMode}
+                    boxSelect={shared.boxSelect}
+                    onSelectEntities={shared.onSelectEntities}
                     setEditMode={shared.setEditMode}
                     gizmoMode={shared.gizmoMode}
                     setGizmoMode={shared.setGizmoMode}
@@ -173,6 +180,8 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     gizmoVisible={shared.gizmoVisible}
                     transformOp={shared.transformOp}
                     onTransformCommit={shared.onTransformCommit}
+                    onSceneOps={shared.onSceneOps}
+                    onPlayScene={shared.onPlayScene}
                     onTransformCommitMany={shared.onTransformCommitMany}
                     onTransformCancel={shared.onTransformCancel}
                     cameraView={cameraView}

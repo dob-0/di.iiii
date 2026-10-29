@@ -27,6 +27,11 @@ published project at 200 while the address bar said otherwise. See `docs/ai/know
   from the immutable id; project slugs unique per-space, space slugs unique platform-wide).
   `PATCH /api/spaces/:id` / `PATCH /api/projects/:id` accept `slug`; reserved-word and
   format validation, 409 on collision, never silent truncation/auto-suffixing.
+  **Amendment, 2026-10-26:** create is covered too — `POST /api/spaces/:id/projects` answers 400
+  for a reserved word as the id (on the cleaned-up id, before the 409), since with no slug the
+  id is the address `/{space}/{id}`; a follow bringing a project that already has such an id
+  sends `carried: true` and keeps it (the copy scripts do not yet). The route takes `carried`
+  on the caller's word and cannot check it; a project made new with it opens only at `/{space}/p/{id}`.
 - **3b — bare short-link routing**: `GET /api/resolve/:spaceSegment/:projectSegment`
   resolves slug-or-id to real ids (gated by the same `requireReadRole` every other route
   uses — a private space's slug is not distinguishable from a nonexistent one to an
@@ -44,7 +49,7 @@ published project at 200 while the address bar said otherwise. See `docs/ai/know
 
 > Prompted 2026-07-18 by a direct product ask: today's Studio project links are long and
 > internal (`https://dev.diiii.xyz/open/studio/projects/open-jam`, as the dev tier is named today), and the product
-> direction wants each space to feel like its own clean address (`di-studio.xyz/NPAK`),
+> direction wants each space to feel like its own clean address (`diiii.xyz/NPAK`),
 > eventually ownable enough that an artist could take their space to their own domain/hosting.
 > Written after a full audit of current routing + export code — several pieces of this already
 > exist and just aren't wired to a UI. See "What already exists" below before assuming a
@@ -127,7 +132,7 @@ config, zero code referencing "customDomain" anywhere in the repo. Would need:
 - A routing layer in front of the app that resolves `Host` header → spaceId before falling into
   today's path-based routing (`RootApp.jsx`'s `AppRouter`) — either a Caddy on-demand-TLS config
   keyed off a domain→spaceId lookup endpoint, or a reverse-proxy layer that rewrites incoming
-  requests to `di-studio.xyz/{spaceId}/...` internally.
+  requests to `diiii.xyz/{spaceId}/...` internally.
 - DNS/TLS is the artist's own responsibility (they point a CNAME, Caddy/Let's Encrypt handles the
   cert on demand) — this repo's job is only the Host-header→space resolution.
 - This is the piece that actually delivers "an artist can point their own domain at their space
@@ -151,7 +156,7 @@ packaging) is already built and presumably already tested — this is a UI + one
 3. **3b (shorter deep-links)** — needs a real UX decision first (global project namespace vs.
    space-as-primary-project), then is a routing change, not a data-model change.
 4. **3c (custom domains)** — largest, only worth building once there's actual artist demand for
-   "my own domain" specifically (vs. "a clean di-studio.xyz link," which 3a/3b already solve).
+   "my own domain" specifically (vs. "a clean diiii.xyz link," which 3a/3b already solve).
 5. IPFS pinning (`P2P_DISTRIBUTION.md` Phase 1) can proceed independently/in parallel — it's the
    content-addressed portability story, not the human-domain one.
 
@@ -163,7 +168,7 @@ packaging) is already built and presumably already tested — this is a UI + one
   determines whether 3b is even the right shape.
 - Vanity slugs: globally unique across all spaces, or does a slug only need to be unique per
   some namespace (doesn't matter today since there's one platform, but worth deciding once custom
-  domains exist and "npak.custom-domain.com" and "di-studio.xyz/npak" might diverge).
+  domains exist and "npak.custom-domain.com" and "diiii.xyz/npak" might diverge).
 - Custom domains: self-serve (artist enters their own domain, Caddy handles it automatically) or
   admin-mediated (artist asks, an admin wires it) for the first version? Self-serve is more
   "artist-owned" but is real new attack surface (domain verification, TLS issuance abuse) worth

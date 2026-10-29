@@ -606,7 +606,7 @@ export default function AssetPanel({ onClose, surfaceMode = 'floating' }) {
                                                     onClick={() => handleOptimizeAsset(asset)}
                                                     disabled={!requestManualMediaOptimization || isBusy}
                                                 >
-                                                    {isBusy ? 'Optimizing...' : 'Optimize This Asset'}
+                                                    {isBusy ? 'Optimizing...' : 'Optimize this asset'}
                                                 </button>
                                             )}
                                             {asset.usageCount === 0 && (

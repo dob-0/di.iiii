@@ -48,13 +48,13 @@ export const STUDIO_GUIDE_SECTIONS = [
         description: 'Select something, then move, rotate, and scale it in place.',
         icon: '✛',
         callouts: [
-            { icon: '⇄', title: 'Tab', detail: 'Switch between Navigate and Edit mode.' },
+            { icon: '⇄', title: 'E', detail: 'Switch between Navigate and Edit mode (the Navigate / Edit button does the same).' },
             { icon: '✥', title: 'G · R · S', detail: 'Grab, rotate, scale the selection.' },
             { icon: '◫', title: 'Objects window', detail: 'Exact values live in the inspector.' }
         ],
         steps: [
             'Click an object to select it',
-            'Press Tab to enter Edit mode',
+            'Press E to enter Edit mode',
             'G moves · R rotates · S scales',
             'X, Y or Z locks the axis mid-move'
         ]
@@ -90,30 +90,42 @@ export const STUDIO_SHORTCUT_SECTIONS = [
         title: 'Selection',
         rows: [
             ['Click', 'Select object'],
-            ['Ctrl / Shift + Click', 'Multi-select'],
+            ['Shift / Ctrl + Click', 'Add to the selection'],
+            ['Click a beam', 'Select its lamp; a lamp body in front of a beam wins'],
+            ['Click a locked object', 'Not picked: the click goes through; with only locked things under the pointer, the selection clears'],
+            ['Alt + Click a laser line', 'Select every line of its laser unit (Shift adds); the gizmo then moves the whole unit'],
+            ['Shift+G', 'Select grouped: every line of the laser unit(s) in the selection'],
             ['A', 'Select all'],
             ['Alt+A', 'Deselect all'],
             ['Esc', 'Deselect'],
+            ['Select tool or B, then drag', 'Box select: plain replaces, Shift adds, Ctrl removes'],
+            ['L', 'Lock the selection (locked objects cannot be picked, boxed or moved)'],
+            ['Alt+L', 'Unlock all (our own keys, Blender has no lock key)'],
+            ['Inspector Lock, outliner padlock', 'Lock from the panels; "Lock the hall" and "Unlock all" sit in Objects'],
         ]
     },
     {
         title: 'Transform',
         rows: [
-            ['G', 'Move (grab) mode'],
-            ['R', 'Rotate mode'],
-            ['S', 'Scale mode'],
+            ['G', 'Move: with a selection the drag starts at once (Blender grab); without, picks the gizmo mode'],
+            ['R', 'Rotate: starts at once with a selection'],
+            ['S', 'Scale: starts at once with a selection (never Select — that is the tool, or B)'],
             ['→ X / Y / Z', 'Constrain axis + start drag'],
             ['→ A', 'All axes (uniform)'],
+            ['→ Shift+X / Y / Z', 'Keep a plane: every axis but that one (Shift+Y = along the floor)'],
             ['Shift + drag', 'Fine / slow adjustment'],
+            ['Ctrl + drag', 'Snap: 0.5 m · 15° · 0.1 (gizmo too); Ctrl+Shift snaps to a tenth (5 cm · 1.5° · 0.01)'],
             ['Click · Enter · Space', 'Confirm'],
             ['Esc', 'Cancel'],
+            ['Alt+G / Alt+R / Alt+S', 'Clear location / rotation / scale of the selection (locked objects stay)'],
         ]
     },
     {
         title: 'Edit',
         rows: [
             ['Ctrl+C / X / V', 'Copy / Cut / Paste'],
-            ['Shift+D / Ctrl+D', 'Duplicate'],
+            ['Shift+D', 'Duplicate and move the copy at once (Esc leaves it in place)'],
+            ['Ctrl+D', 'Duplicate in place'],
             ['Del / Backspace', 'Delete selected'],
             ['Ctrl+G', 'Group selection'],
             ['Ctrl+Shift+G', 'Ungroup'],
@@ -125,7 +137,13 @@ export const STUDIO_SHORTCUT_SECTIONS = [
     {
         title: 'View',
         rows: [
-            ['Tab / E', 'Toggle Navigate ↔ Edit'],
+            ['E', 'Toggle Navigate ↔ Edit (Tab too, when "Blender keys" is on at the top of this page)'],
+            ['Tab', 'Move the focus to the next button or window (Shift+Tab goes back)'],
+            ['Esc', 'Close the window you are in (else the one opened last)'],
+            ['Walk / Fly buttons', 'Walk: eye height above the floor, W A S D move. Fly: free, Space up, Q down. Esc leaves'],
+            ['Building (walking or flying)', 'The hotbar: 1 to 0 pick a slot, E the inventory, left click places where the crosshair aims, right click removes, R turns, Ctrl+Z undoes each'],
+            ['H (walking)', 'Hide every panel but the crosshair; H again brings them back'],
+            ['Tab (walking)', 'Switch Walk ↔ Fly (Blender: Tab toggles gravity)'],
             ['T', 'Toggle gizmo visibility'],
             ['H', 'Hide / show UI'],
             // Mouse rows follow the chosen navigation preset: viewportMouseRows().
@@ -134,6 +152,7 @@ export const STUDIO_SHORTCUT_SECTIONS = [
             ['Numpad 4 / 6 / 8 / 2', 'Orbit 15° (or Shift+Arrows)'],
             ['Home', 'Frame the whole room'],
             ['Numpad .', 'Frame selection'],
+            ['SCENES window → Laser test', 'Draw each laser unit\'s whole scan field as a square on the walls, labelled width × height and distance in metres. Move a unit (Alt+click a line, then G) and its square follows. Nothing is saved'],
         ]
     },
     {

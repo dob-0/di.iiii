@@ -24,7 +24,8 @@ const {
     countProjectsBySpace,
     setProjectState,
     readProjectOps,
-    writeJson
+    writeJson,
+    writeProjectDocument
 } = require('./projectStore.js')
 const { initDb, closeDb } = require('./db.js')
 
@@ -155,25 +156,27 @@ describe('projectStore', () => {
         expect(after).toBe(before)
     })
 
-    it('readProjectDocument persists a self-heal correction back to disk', async () => {
+    // A read answers with the self-healed document but leaves the file alone;
+    // the correction reaches disk with the next save, which holds the write
+    // lock. A read that wrote back raced saves and lost edits (audit
+    // 2026-10-09, F3; serverXR/src/projectRead.test.js).
+    it('readProjectDocument self-heals in its answer only; the next save persists the correction', async () => {
         const spacesDir = await createSpacesDir()
         await ensureProject(spacesDir, 'main', 'stale-doc', { title: 'Stale' })
         const { documentPath } = getProjectPaths(spacesDir, 'main', 'stale-doc')
 
-        // Simulate a document with an unrecognized entity type — the kind of
-        // stale/malformed content normalizeEntity self-heals to 'box'. This
-        // is a content-level correction, not a version bump, so it exercises
-        // the general "existing differs from normalized" path, not just a
-        // version-number fast path.
+        // An unrecognized entity type -- the kind of stale/malformed content
+        // normalizeEntity self-heals to 'box'.
         const stale = await readJson(documentPath, null)
         stale.entities = [{ id: 'e1', type: 'not-a-real-type', components: {} }]
         await writeJson(documentPath, stale)
 
         const result = await readProjectDocument(spacesDir, 'main', 'stale-doc')
         expect(result.entities[0].type).toBe('box')
+        expect((await readJson(documentPath, null)).entities[0].type).toBe('not-a-real-type')
 
-        const onDisk = await readJson(documentPath, null)
-        expect(onDisk.entities[0].type).toBe('box')
+        await writeProjectDocument(spacesDir, 'main', 'stale-doc', result)
+        expect((await readJson(documentPath, null)).entities[0].type).toBe('box')
     })
 
     // Retention used to be by count alone, so a dormant project kept its last
@@ -210,5 +213,29 @@ describe('projectStore', () => {
 
         const kept = await readProjectOps(spacesDir, 'main', 'unbounded-project')
         expect(kept.map((op) => op.opId)).toEqual(['ancient', 'recent'])
+    })
+})
+
+// The reserved-word guard belongs to the create ROUTE (routes/projectRoutes.js),
+// never to this function: a snapshot restore (spaceStore.restoreSpaceProjectDocuments),
+// the open-jam bootstrap and a project already stored under such an id make their
+// project through here, and a project that exists must stay makeable and findable.
+// This pins that. It is a guard against a later "tidy-up" moving the check down
+// into the store, not a test of the new refusal (projectContracts.test.js is that).
+describe('ensureProject and a reserved word', () => {
+    it('makes and finds a project under every reserved id: the refusal is the route\'s, not the store\'s', async () => {
+        const { RESERVED_PROJECT_SLUGS } = require('../../shared/reservedSegments.cjs')
+        const ids = [...RESERVED_PROJECT_SLUGS].filter((word) => /^[a-z0-9-]{3,64}$/.test(word))
+        // A loop over nothing proves nothing.
+        expect(ids.length).toBeGreaterThan(25)
+        const spacesDir = await createSpacesDir()
+
+        for (const id of ids) {
+            const meta = await ensureProject(spacesDir, 'main', id, { title: `Old ${id}` })
+            expect(meta.id, id).toBe(id)
+            const found = await findProjectById(spacesDir, id)
+            expect(found?.projectId, id).toBe(id)
+            expect(found?.spaceId, id).toBe('main')
+        }
     })
 })

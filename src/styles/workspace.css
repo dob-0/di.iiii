@@ -207,7 +207,7 @@
     gap: var(--di-space-2);
     min-height: 30px;
     padding: 0 var(--di-space-3);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     background: rgba(255, 255, 255, 0.025);
     border: 1px solid var(--workspace-border);
     color: var(--workspace-text-soft);
@@ -220,11 +220,12 @@
     white-space: nowrap;
 }
 
+/* status dot, not a control: square like every light (owner rule, rectangles only). */
 .workspace-status-chip::before {
     content: '';
     width: 6px;
     height: 6px;
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     background: var(--di-cyan);
     flex: 0 0 auto;
 }
@@ -320,7 +321,7 @@
     min-width: 16px;
     height: 16px;
     padding: 0 var(--di-space-1);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     background: var(--di-line);
     color: var(--di-cyan);
     font-size: var(--di-text-1);

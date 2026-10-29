@@ -1,7 +1,7 @@
 import React from 'react'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import SpaceHub from './SpaceHub.jsx'
+import SpaceHub, { resetSpaceCardPosters } from './SpaceHub.jsx'
 import { WORKS } from '../../works/works.js'
 
 // Several tests here render the thirteen-card hub, which mounts thirteen preview
@@ -13,6 +13,7 @@ import { WORKS } from '../../works/works.js'
 vi.setConfig({ testTimeout: 20000 })
 
 
+const issueJoinCode = vi.fn()
 const listServerSpaces = vi.fn()
 const getServerConfig = vi.fn()
 const updateServerSpace = vi.fn()
@@ -20,10 +21,20 @@ const deleteServerSpace = vi.fn()
 const getApiAuthProviders = vi.fn()
 const uploadServerAsset = vi.fn()
 const purgeStaleSandboxes = vi.fn()
+const listTrashedSpaces = vi.fn()
+const getSpaceFootprint = vi.fn()
+const restoreServerSpace = vi.fn()
+const purgeServerSpace = vi.fn()
 
 let authState
 // Admin-only summary the hub's collapsed sandbox row renders from.
 let sandboxSummary = null
+
+vi.mock('../../sync/syncApi.js', async (importOriginal) => ({
+    ...(await importOriginal()),
+    issueJoinCode: (...args) => issueJoinCode(...args),
+    revokeJoinCode: vi.fn()
+}))
 
 vi.mock('../../hooks/useAuthSession.js', () => ({
     default: () => authState,
@@ -41,6 +52,10 @@ vi.mock('../../services/serverSpaces.js', () => ({
     createServerSpace: vi.fn(),
     updateServerSpace: (...args) => updateServerSpace(...args),
     deleteServerSpace: (...args) => deleteServerSpace(...args),
+    listTrashedSpaces: (...args) => listTrashedSpaces(...args),
+    getSpaceFootprint: (...args) => getSpaceFootprint(...args),
+    restoreServerSpace: (...args) => restoreServerSpace(...args),
+    purgeServerSpace: (...args) => purgeServerSpace(...args),
     patchServerConfig: vi.fn(),
     uploadServerAsset: (...args) => uploadServerAsset(...args),
     getServerSpaceAssetUrl: (spaceId, assetId) => `/serverXR/api/spaces/${spaceId}/assets/${assetId}`,
@@ -148,6 +163,12 @@ describe('SpaceHub', () => {
         updateServerSpace.mockReset()
         uploadServerAsset.mockReset()
         purgeStaleSandboxes.mockReset()
+        deleteServerSpace.mockReset()
+        listTrashedSpaces.mockReset()
+        listTrashedSpaces.mockResolvedValue({ spaces: [], ttlMs: 0 })
+        getSpaceFootprint.mockReset()
+        restoreServerSpace.mockReset()
+        purgeServerSpace.mockReset()
         probeLightingDesk.mockReset()
         probeLightingDesk.mockResolvedValue(false)
         sandboxSummary = null
@@ -168,7 +189,7 @@ describe('SpaceHub', () => {
     it('names /spaces itself in the tab, not the platform', async () => {
         listServerSpaces.mockResolvedValue([])
         render(<SpaceHub />)
-        await screen.findByText('Spaces')
+        await screen.findByRole('heading', { name: 'spaces' })
         expect(document.title).toBe('Spaces — di.iiii')
     })
 
@@ -185,6 +206,23 @@ describe('SpaceHub', () => {
         expect(screen.getByText('On this machine')).toBeTruthy()
     })
 
+    // P1 (2026-10-13): a work compiled into di.iiii's code has no project row,
+    // and its space card said "No projects yet" beside a finished work.
+    it('a space that holds a work compiled into di.iiii does not say "No projects yet"', async () => {
+        const compiledId = WORKS.find((work) => work.codeSpace).id
+        listServerSpaces.mockResolvedValue([
+            { id: compiledId, label: compiledId, isOwner: true, projectCount: 0, publishedCount: 0 },
+            { id: 'plain-space', label: 'Plain space', isOwner: true, projectCount: 0, publishedCount: 0 }
+        ])
+
+        render(<SpaceHub />)
+
+        const compiled = await findCard(compiledId)
+        expect(within(compiled).getByText("a work in di.iiii's code")).toBeTruthy()
+        expect(within(compiled).queryByText('No projects yet')).toBeNull()
+        expect(within(await findCard('plain-space')).getByText('No projects yet')).toBeTruthy()
+    })
+
     it('says nothing about lights on a tier with no desk', async () => {
         listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
 
@@ -193,6 +231,30 @@ describe('SpaceHub', () => {
         await findCard('mine')
         expect(screen.queryByText('Light')).toBeNull()
         expect(screen.queryByText('On this machine')).toBeNull()
+    })
+
+    // SPEC_space_own_domain.md: a second link line, under the platform one, for a space with a live own domain.
+    it('shows the own-domain link under the platform link, each with its own Copy', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'taronx', label: 'Taron', isOwner: false, isPublic: true, domain: 'yokozo.xyz' },
+            { id: 'plain', label: 'Plain', isOwner: false, isPublic: true, domain: null }
+        ])
+        const writeText = vi.fn().mockResolvedValue(undefined)
+        Object.assign(navigator, { clipboard: { writeText } })
+
+        render(<SpaceHub />)
+        await findCard('taronx')
+
+        const lines = [...cardOf('taronx').querySelectorAll('.ssh-live-link')]
+        expect(lines).toHaveLength(2)
+        expect(lines[0].querySelector('.ssh-live-url').textContent).toBe(`${window.location.origin}/taronx`)
+        expect(lines[1].querySelector('.ssh-live-url').textContent).toBe('https://yokozo.xyz/')
+        expect(cardOf('plain').querySelectorAll('.ssh-live-link')).toHaveLength(1)
+
+        fireEvent.click(lines[0].querySelector('.ssh-card-btn'))
+        await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(`${window.location.origin}/taronx`))
+        fireEvent.click(lines[1].querySelector('.ssh-card-btn'))
+        await waitFor(() => expect(writeText).toHaveBeenLastCalledWith('https://yokozo.xyz/'))
     })
 
     it('shows management actions only on spaces the account owns', async () => {
@@ -204,8 +266,8 @@ describe('SpaceHub', () => {
         render(<SpaceHub />)
 
         await findCard('mine')
-        // Resting, an owned card offers only Manage — the eight actions are behind it.
-        expect(cardActionsFor('mine')).toEqual(['Manage'])
+        // Resting, an owned card offers Edit and Manage — the eight actions are behind it.
+        expect(cardActionsFor('mine')).toEqual(['Edit', 'Manage'])
         openManageFor('mine')
         expect(cardActionsFor('mine')).toEqual(
             expect.arrayContaining(['Rename', 'Delete', 'GitHub sync'])
@@ -213,6 +275,42 @@ describe('SpaceHub', () => {
         // Someone else's public space: no management at all, only the live-link Copy.
         expect(cardActionsFor('theirs')).toEqual(['Copy'])
         expect(screen.getByText('View live')).toBeTruthy()
+    })
+
+    // UX S10 (F012, F055): a card opens the SPACE; the Studio is its Edit button;
+    // the card is not a button holding other buttons.
+    it('a card is a link to the space, with Edit beside it for the Studio, and no role=button on the card', async () => {
+        listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true, isPublic: true }])
+        render(<SpaceHub />)
+        const card = await findCard('mine')
+        expect(card.getAttribute('role')).not.toBe('button')
+        expect(card.getAttribute('tabindex')).toBeNull()
+        const link = screen.getByRole('link', { name: 'Mine' })
+        expect(link.getAttribute('href')).toBe('/mine')
+        mockEnter.mockClear()
+        fireEvent.click(link)
+        expect(mockEnter).toHaveBeenCalledWith('/mine')
+        mockEnter.mockClear()
+        fireEvent.click(within(card).getByRole('button', { name: 'Edit' }))
+        expect(mockEnter).toHaveBeenCalledWith('/mine/studio')
+    })
+
+    // 2026-10-20: "Invite a machine" in the Manage row must open its panel with the four words
+    // (a test on the agent screen saw nothing open).
+    it('Invite a machine opens the panel and shows the four words', async () => {
+        listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+        issueJoinCode.mockReset().mockResolvedValue({ id: 'jc1', code: 'amber-river-stone-lamp', expiresAt: Date.now() + 600000, now: Date.now(), addresses: ['http://192.168.1.5:5173'] })
+        const scroll = vi.fn()
+        Element.prototype.scrollIntoView = scroll
+        render(<SpaceHub />)
+        await findCard('mine')
+        openManageFor('mine')
+        fireEvent.click(within(cardOf('mine')).getByRole('button', { name: 'Invite a machine' }))
+        // the panel opens below the fold; it must be scrolled to
+        await waitFor(() => expect(scroll).toHaveBeenCalled())
+        expect(scroll.mock.contexts.some(el => el.classList.contains('ssh-project-linker'))).toBe(true)
+        await waitFor(() => expect(issueJoinCode).toHaveBeenCalledWith('mine'))
+        await waitFor(() => expect(cardOf('mine').textContent).toContain('amber-river-stone-lamp'))
     })
 
     // 2026-09-28: the server could revoke an invite link; nothing in the app asked it
@@ -301,14 +399,59 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        // Guest is scoped into main (open jam) — the card still opens the editor.
+        // Guest is scoped into main (open jam) — the card opens the space; Edit opens the editor (UX S10).
         fireEvent.click(await screen.findByText('Main Space'))
-        expect(mockEnter).toHaveBeenCalledWith('/main/studio')
-        expect(mockEnter).not.toHaveBeenCalledWith('/main')
+        expect(mockEnter).toHaveBeenCalledWith('/main')
+        expect(mockEnter).not.toHaveBeenCalledWith('/main/studio')
 
         // A public space outside the session scope goes straight to the live view.
         fireEvent.click(screen.getByText('Beyond Form'))
         expect(mockEnter).toHaveBeenCalledWith('/beyond-form')
+    })
+
+    // Audit 2026-10-21, G23: 10 of 11 public cards said nothing about what the
+    // space holds. A space that wrote its line shows it; one that did not
+    // shows nothing in its place (no placeholder pretending to be a line).
+    it('a card shows the space\'s one line for visitors, only when it has one', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'told', label: 'Told', isPublic: true, blurb: 'Nineteen films made by children in one town.' },
+            { id: 'silent', label: 'Silent', isPublic: true }
+        ])
+
+        render(<SpaceHub />)
+
+        await findCard('told')
+        expect(cardOf('told').querySelector('.ssh-space-blurb')?.textContent)
+            .toBe('Nineteen films made by children in one town.')
+        expect(cardOf('silent').querySelector('.ssh-space-blurb')).toBeNull()
+    })
+
+    it('the owner sets the line from Manage, and an empty answer clears it', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'mine', label: 'Mine', isOwner: true, isPublic: true, blurb: 'Old line.' }
+        ])
+        updateServerSpace.mockResolvedValue({})
+        const prompt = vi.spyOn(window, 'prompt')
+
+        render(<SpaceHub />)
+
+        await findCard('mine')
+        openManageFor('mine')
+        prompt.mockReturnValueOnce('  A new\nline.  ')
+        fireEvent.click(screen.getByRole('button', { name: 'One line for visitors' }))
+        await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('mine', { blurb: 'A new line.' }))
+        expect(prompt.mock.calls[0][1]).toBe('Old line.')
+
+        prompt.mockReturnValueOnce('')
+        fireEvent.click(screen.getByRole('button', { name: 'One line for visitors' }))
+        await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('mine', { blurb: '' }))
+
+        // Cancel writes nothing.
+        updateServerSpace.mockClear()
+        prompt.mockReturnValueOnce(null)
+        fireEvent.click(screen.getByRole('button', { name: 'One line for visitors' }))
+        expect(updateServerSpace).not.toHaveBeenCalled()
+        prompt.mockRestore()
     })
 
     it('shows the live public link with a copy action on public spaces', async () => {
@@ -378,7 +521,7 @@ describe('SpaceHub', () => {
         }
     })
 
-    // 13 public spaces: one more than the card grid's boot ceiling, so exactly
+    // 13 public spaces: more than the card grid's boot ceiling (4), so the
     // one card is left waiting and it is unambiguous what freed its slot.
     const thirteenPublicSpaces = Array.from({ length: 13 }, (_, index) => ({
         id: `s${index}`,
@@ -415,8 +558,8 @@ describe('SpaceHub', () => {
 
             await findCard('s0')
             await waitFor(() => expect(frameIn('s0')).not.toBeNull())
-            expect(frameIn('s11')).not.toBeNull()
-            expect(frameIn('s12')).toBeNull()
+            expect(frameIn('s3')).not.toBeNull()
+            expect(frameIn('s4')).toBeNull()
 
             // `load` fires when the iframe's HTML document arrives, which for
             // this app is ~100ms in -- before its chunks, its scene document or
@@ -424,7 +567,7 @@ describe('SpaceHub', () => {
             // at once and starve each other on a black loading screen.
             fireEvent.load(frameIn('s0'))
             await Promise.resolve()
-            expect(frameIn('s12')).toBeNull()
+            expect(frameIn('s4')).toBeNull()
 
             // the embedded app reports pixels; only then does the queue move on
             await settleEffects()
@@ -433,10 +576,38 @@ describe('SpaceHub', () => {
                 origin: window.location.origin,
                 source: frameIn('s0').contentWindow
             }))
-            await waitFor(() => expect(frameIn('s12')).not.toBeNull())
+            await waitFor(() => expect(frameIn('s4')).not.toBeNull())
             // the reporting iframe stays mounted — only its boot slot was freed
             expect(frameIn('s0')).not.toBeNull()
         } finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('swaps a painted card for its still, drops the frame and frees the slot', async () => {
+        everyCardVisible()
+        try {
+            resetSpaceCardPosters()
+            listServerSpaces.mockResolvedValue(thirteenPublicSpaces)
+            render(<SpaceHub />)
+            await findCard('s0')
+            await waitFor(() => expect(frameIn('s0')).not.toBeNull())
+            expect(frameIn('s4')).toBeNull()
+            await settleEffects()
+            fireEvent(window, new MessageEvent('message', {
+                data: { type: 'dii:preview-poster', spaceId: 's0', poster: 'data:image/jpeg;base64,AAAA' },
+                origin: window.location.origin,
+                source: frameIn('s0').contentWindow
+            }))
+            // the card now holds a picture and no WebGL context
+            await waitFor(() => expect(frameIn('s0')).toBeNull())
+            expect(cardOf('s0').querySelector('.ssh-card-poster').getAttribute('src')).toBe('data:image/jpeg;base64,AAAA')
+            // and its slot went to the next card
+            await waitFor(() => expect(frameIn('s4')).not.toBeNull())
+            // never more than the ceiling of live frames at once
+            expect(document.querySelectorAll('.ssh-card-preview iframe').length).toBeLessThanOrEqual(4)
+        } finally {
+            resetSpaceCardPosters()
             vi.unstubAllGlobals()
         }
     })
@@ -464,7 +635,7 @@ describe('SpaceHub', () => {
                 source: window
             }))
             await Promise.resolve()
-            expect(frameIn('s12')).toBeNull()
+            expect(frameIn('s4')).toBeNull()
         } finally {
             vi.unstubAllGlobals()
         }
@@ -480,10 +651,10 @@ describe('SpaceHub', () => {
 
             await findCard('s0')
             await waitFor(() => expect(frameIn('s0')).not.toBeNull())
-            expect(frameIn('s12')).toBeNull()
+            expect(frameIn('s4')).toBeNull()
 
             await act(async () => { await vi.advanceTimersByTimeAsync(12000) })
-            expect(frameIn('s12')).not.toBeNull()
+            expect(frameIn('s4')).not.toBeNull()
         } finally {
             vi.useRealTimers()
             vi.unstubAllGlobals()
@@ -499,15 +670,15 @@ describe('SpaceHub', () => {
 
             await findCard('s0')
             // Wait for the state the case is ABOUT, not for a duration: the
-            // queue is full (twelve card frames mounted) and s12 is the one
-            // card left waiting. Checking only s0 and then asserting s12 is
-            // absent was vacuous on a slow runner -- s12 is trivially absent
+            // queue is full (four card frames mounted) and s4 is the one
+            // card left waiting. Checking only s0 and then asserting s4 is
+            // absent was vacuous on a slow runner -- s4 is trivially absent
             // while the others are still mounting.
             await waitFor(() => {
-                expect(document.querySelectorAll('.ssh-card-preview iframe')).toHaveLength(12)
+                expect(document.querySelectorAll('.ssh-card-preview iframe')).toHaveLength(4)
             })
             expect(frameIn('s0')).not.toBeNull()
-            expect(frameIn('s12')).toBeNull()
+            expect(frameIn('s4')).toBeNull()
 
             // Under DI_PROFILE=local a work's route (wcc, algovrithm) is a
             // page of text with no canvas, so it never says preview-ready. It
@@ -520,7 +691,7 @@ describe('SpaceHub', () => {
             }))
 
             // the slot is freed like a paint would free it
-            await waitFor(() => expect(frameIn('s12')).not.toBeNull())
+            await waitFor(() => expect(frameIn('s4')).not.toBeNull())
             // and the card draws its own line in place of the scaled-down frame
             const card = cardOf('s0')
             expect(card.querySelector('.ssh-card-preview iframe')).toBeNull()
@@ -649,10 +820,10 @@ describe('SpaceHub', () => {
         expect(shelfLabels[1]).toMatch(/^Your sandbox/)
         expect(shelfLabels[2]).toMatch(/^Your spaces/)
 
-        // The open space is public but everyone can enter it — the card opens
-        // the editor, never the read-only live view.
+        // The open space is public and everyone can enter it — the card opens
+        // the space (UX S10); its Edit button opens the editor.
         fireEvent.click(cardOf('open'))
-        expect(mockEnter).toHaveBeenCalledWith('/open/studio')
+        expect(mockEnter).toHaveBeenCalledWith('/open')
         expect(mockEnter).toHaveBeenCalledTimes(1)
     })
 
@@ -884,6 +1055,19 @@ describe('SpaceHub', () => {
         expect(rootBlock).not.toMatch(/min-height:\s*100vh/)
     })
 
+    it('the "(opens in a new tab)" hint keeps a visible gap inside the inline-flex tools link', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const cssPath = ['src/studio/styles/studio-space-hub.css', 'studio/styles/studio-space-hub.css']
+            .map(p => path.join(cwd(), p))
+            .find(p => fs.existsSync(p))
+        const css = fs.readFileSync(cssPath, 'utf8')
+        // A flex container drops the leading space of its child, so the gap must be a margin.
+        expect(css.match(/\.ssh-tools-link\s*\{[^}]*\}/)?.[0]).toMatch(/display:\s*inline-flex/)
+        expect(css.match(/\.ssh-tools-newtab\s*\{[^}]*\}/)?.[0]).toMatch(/margin-left:\s*0?\.25em/)
+    })
+
     it('puts Open Space and the sandbox side by side from ~1024px up, stacked below it', async () => {
         const fs = await import('node:fs')
         const path = await import('node:path')
@@ -1012,5 +1196,265 @@ describe('SpaceHub', () => {
         await findCard('mine')
 
         expect(screen.getByRole('button', { name: /^Only you/ })).toBeTruthy()
+    })
+
+    // 2026-10-28 (UX S04, F015/F014): "Public"/"Private" was a one-click button
+    // that named the state, not the action, and published at once. It is a
+    // labelled switch with a line on who sees the space, and going public asks.
+    describe('who can see the space', () => {
+        const switchFor = (spaceId) => openManageFor(spaceId).querySelector('[role="switch"]')
+
+        it('one click on the switch does not make the space public until the question is answered yes', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'drafts', label: 'Drafts', isOwner: true, isPublic: false }])
+            updateServerSpace.mockResolvedValue({})
+            render(<SpaceHub />)
+            await findCard('drafts')
+
+            const toggle = switchFor('drafts')
+            expect(toggle).toBeTruthy()
+            expect(toggle.getAttribute('aria-checked')).toBe('false')
+            expect(toggle.textContent).toContain('Anyone with the link can see it')
+            expect(cardOf('drafts').textContent).toContain('Off: only you and the people you invite can open this space.')
+
+            fireEvent.click(toggle)
+            const question = await screen.findByRole('alertdialog')
+            expect(question.textContent).toContain('Make “Drafts” public?')
+            expect(updateServerSpace).not.toHaveBeenCalled()
+
+            fireEvent.click(screen.getByRole('button', { name: 'Keep it private' }))
+            await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+            expect(updateServerSpace).not.toHaveBeenCalled()
+
+            fireEvent.click(switchFor('drafts'))
+            fireEvent.click(await screen.findByRole('button', { name: 'Make it public' }))
+            await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('drafts', { isPublic: true }))
+        })
+
+        it('going private needs no question, and the line says who sees it now', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'show', label: 'Show', isOwner: true, isPublic: true }])
+            updateServerSpace.mockResolvedValue({})
+            render(<SpaceHub />)
+            await findCard('show')
+            const toggle = switchFor('show')
+            expect(toggle.getAttribute('aria-checked')).toBe('true')
+            expect(cardOf('show').textContent).toContain('On: anyone with the link can open this space, without signing in.')
+            fireEvent.click(toggle)
+            await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('show', { isPublic: false }))
+            expect(screen.queryByRole('alertdialog')).toBeNull()
+        })
+
+        it('a failure is said in the page notice, not in a browser alert', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'show', label: 'Show', isOwner: true, isPublic: true }])
+            updateServerSpace.mockRejectedValue(new Error('The server said no'))
+            const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+            try {
+                render(<SpaceHub />)
+                await findCard('show')
+                fireEvent.click(switchFor('show'))
+                const notice = await screen.findByText(/Could not change who can see “Show”: The server said no/)
+                expect(notice.getAttribute('role')).toBe('status')
+                expect(alertSpy).not.toHaveBeenCalled()
+            } finally {
+                alertSpy.mockRestore()
+            }
+        })
+
+        it('Manage is grouped, and Delete sits in its own group, apart from Archive', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            render(<SpaceHub />)
+            await findCard('mine')
+            const card = openManageFor('mine')
+            const groups = [...card.querySelectorAll('.ssh-manage [role="group"]')].map((g) => g.getAttribute('aria-label'))
+            expect(groups).toEqual(['Name', 'Who can see it', 'Invite people', 'History and backup', 'Put away', 'Delete'])
+            const buttonIn = (label) => [...card.querySelectorAll('.ssh-card-btn')].find((b) => b.textContent === label)
+            expect(buttonIn('Delete').closest('[role="group"]')).not.toBe(buttonIn('Archive').closest('[role="group"]'))
+            // the developer things are folded under More
+            expect(buttonIn('GitHub sync').closest('details')).toBeTruthy()
+        })
+    })
+
+    // 2026-10-05: Delete was a window.confirm that said "cannot be undone" and
+    // removed the directory. It is a dialog that names what goes now, and the
+    // space waits in the Trash.
+    describe('delete and the trash', () => {
+        const clickDelete = (spaceId) => {
+            const card = openManageFor(spaceId)
+            fireEvent.click([...card.querySelectorAll('.ssh-card-btn')].find((b) => b.textContent === 'Delete'))
+        }
+
+        it('names the projects and the size, says 30 days in the Trash, and moves the space there', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            getSpaceFootprint.mockResolvedValue({ projects: 3, bytes: 2 * 1024 * 1024, protected: null, holdMs: 30 * 24 * 3600 * 1000 })
+            deleteServerSpace.mockResolvedValue({ ok: true, trashed: true, projects: 3 })
+            const confirmSpy = vi.spyOn(window, 'confirm')
+
+            render(<SpaceHub />)
+            await findCard('mine')
+            clickDelete('mine')
+
+            const dialog = await screen.findByRole('dialog')
+            expect(dialog.textContent).toContain('Delete the space “Mine”?')
+            await waitFor(() => expect(dialog.textContent).toContain('3 projects go with it, 2.0 MB in all.'))
+            expect(dialog.textContent).toContain('Trash for 30 days')
+            // not the old browser confirm
+            expect(confirmSpy).not.toHaveBeenCalled()
+            expect(deleteServerSpace).not.toHaveBeenCalled()
+
+            fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }))
+            await waitFor(() => expect(deleteServerSpace).toHaveBeenCalledWith('mine'))
+            await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+            confirmSpy.mockRestore()
+        })
+
+        it('after a delete, the notice offers Undo, which brings the space back from the Trash', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            getSpaceFootprint.mockResolvedValue({ projects: 0, bytes: 0, protected: null })
+            deleteServerSpace.mockResolvedValue({ ok: true, trashed: true, projects: 0 })
+            restoreServerSpace.mockResolvedValue({ ok: true })
+            render(<SpaceHub />)
+            await findCard('mine')
+            clickDelete('mine')
+            await screen.findByText(/It is empty: no projects/)
+            fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }))
+            expect(await screen.findByText('“Mine” is in the Trash for 30 days.')).toBeTruthy()
+            fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+            await waitFor(() => expect(restoreServerSpace).toHaveBeenCalledWith('mine'))
+        })
+
+        it('Cancel deletes nothing', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            getSpaceFootprint.mockResolvedValue({ projects: 0, bytes: 0, protected: null })
+            render(<SpaceHub />)
+            await findCard('mine')
+            clickDelete('mine')
+            await screen.findByText(/It is empty: no projects/)
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+            expect(screen.queryByRole('dialog')).toBeNull()
+            expect(deleteServerSpace).not.toHaveBeenCalled()
+        })
+
+        it('a permanent space is refused up front; an admin can unmark it first', async () => {
+            authState = { ...authState, role: 'admin' }
+            listServerSpaces.mockResolvedValue([{ id: 'kept', label: 'Kept', isOwner: true, permanent: true }])
+            getSpaceFootprint.mockResolvedValue({ projects: 1, bytes: 10, protected: 'permanent' })
+            updateServerSpace.mockResolvedValue({})
+            render(<SpaceHub />)
+            await findCard('kept')
+            clickDelete('kept')
+            const dialog = await screen.findByRole('dialog')
+            await waitFor(() => expect(dialog.textContent).toContain('marked permanent'))
+            expect(screen.queryByRole('button', { name: 'Move to Trash' })).toBeNull()
+            fireEvent.click(screen.getByRole('button', { name: 'Unmark permanent' }))
+            await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('kept', { permanent: false }))
+            expect(await screen.findByRole('button', { name: 'Move to Trash' })).toBeTruthy()
+        })
+
+        it('the Trash lists what was deleted with days left, and Restore brings it back', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            listTrashedSpaces.mockResolvedValue({
+                spaces: [{ id: 'old-one', label: 'Old One', projectCount: 2, restorableUntil: Date.now() + 5 * 24 * 3600 * 1000 }],
+                ttlMs: 30 * 24 * 3600 * 1000
+            })
+            restoreServerSpace.mockResolvedValue({ ok: true })
+            render(<SpaceHub />)
+            await findCard('mine')
+            fireEvent.click(await screen.findByRole('button', { name: /^Trash · 1/ }))
+            const row = await waitFor(() => {
+                const el = document.querySelector('[data-trashed-space="old-one"]')
+                if (!el) throw new Error('no trash row')
+                return el
+            })
+            expect(row.textContent).toContain('Old One')
+            expect(row.textContent).toContain('2 projects · 5 days left')
+            fireEvent.click([...row.querySelectorAll('button')].find((b) => b.textContent === 'Restore'))
+            await waitFor(() => expect(restoreServerSpace).toHaveBeenCalledWith('old-one'))
+        })
+
+        it('Delete forever asks a second time before it purges', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            listTrashedSpaces.mockResolvedValue({
+                spaces: [{ id: 'old-one', label: 'Old One', projectCount: 0, restorableUntil: Date.now() + 3 * 24 * 3600 * 1000 }],
+                ttlMs: 0
+            })
+            purgeServerSpace.mockResolvedValue({ ok: true })
+            render(<SpaceHub />)
+            await findCard('mine')
+            fireEvent.click(await screen.findByRole('button', { name: /^Trash · 1/ }))
+            fireEvent.click(await screen.findByRole('button', { name: 'Delete forever…' }))
+            expect(purgeServerSpace).not.toHaveBeenCalled()
+            fireEvent.click(await screen.findByRole('button', { name: 'Remove for good' }))
+            await waitFor(() => expect(purgeServerSpace).toHaveBeenCalledWith('old-one'))
+        })
+
+        it('shows no Trash button when nothing is in it', async () => {
+            listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+            render(<SpaceHub />)
+            await findCard('mine')
+            expect(screen.queryByRole('button', { name: /^Trash/ })).toBeNull()
+        })
+    })
+
+    // 2026-10-07: the list view had no Manage and nobody could archive a space.
+    // Archive keeps the space whole (PATCH archived), takes it out of the default
+    // list and shows it under "Archived", where Unarchive is the same one action.
+    describe('list view Manage and archive', () => {
+        const spacesNow = () => ([
+            { id: 'mine', label: 'Mine', isOwner: true, isPublic: true, publishedProjectId: 'p1' },
+            { id: 'old', label: 'Old Show', isOwner: true, archivedAt: 1760000000000 },
+        ])
+        const manageBtn = (spaceId) => [...rowOf(spaceId).querySelectorAll('.ssh-card-btn')].find((b) => b.textContent === 'Manage')
+        const listPanelBtn = (label) => [...document.querySelectorAll('.ssh-list-manage .ssh-card-btn')].find((b) => b.textContent === label)
+
+        it('shows Manage on a list row, and it opens the same actions the card has', async () => {
+            localStorage.setItem('di_spaces_view', 'list')
+            listServerSpaces.mockResolvedValue(spacesNow())
+            render(<SpaceHub />)
+            await waitFor(() => expect(rowOf('mine')).toBeTruthy())
+            fireEvent.click(manageBtn('mine'))
+            expect(['Rename', 'Archive', 'Delete'].every((l) => listPanelBtn(l))).toBe(true)
+        })
+
+        it('keeps an archived space out of the default list and out of All', async () => {
+            localStorage.setItem('di_spaces_view', 'list')
+            listServerSpaces.mockResolvedValue(spacesNow())
+            render(<SpaceHub />)
+            await waitFor(() => expect(rowOf('mine')).toBeTruthy())
+            expect(rowOf('old')).toBeNull()
+            expect(screen.getByRole('button', { name: /^Archived/ }).textContent).toContain('1')
+        })
+
+        it('Archive sends archived: true and reloads', async () => {
+            localStorage.setItem('di_spaces_view', 'list')
+            listServerSpaces.mockResolvedValue(spacesNow())
+            updateServerSpace.mockResolvedValue({})
+            render(<SpaceHub />)
+            await waitFor(() => expect(rowOf('mine')).toBeTruthy())
+            fireEvent.click(manageBtn('mine'))
+            fireEvent.click(listPanelBtn('Archive'))
+            await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('mine', { archived: true }))
+        })
+
+        it('the Archived filter lists it, and Unarchive sends archived: false', async () => {
+            localStorage.setItem('di_spaces_view', 'list')
+            listServerSpaces.mockResolvedValue(spacesNow())
+            updateServerSpace.mockResolvedValue({})
+            render(<SpaceHub />)
+            await waitFor(() => expect(rowOf('mine')).toBeTruthy())
+            fireEvent.click(screen.getByRole('button', { name: /^Archived/ }))
+            await waitFor(() => expect(rowOf('old')).toBeTruthy())
+            expect(rowOf('mine')).toBeNull()
+            expect(rowOf('old').textContent).toContain('archived')
+            fireEvent.click(manageBtn('old'))
+            fireEvent.click(listPanelBtn('Unarchive'))
+            await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('old', { archived: false }))
+        })
+
+        it('offers no Archive to someone who does not manage the space', async () => {
+            localStorage.setItem('di_spaces_view', 'list')
+            listServerSpaces.mockResolvedValue([{ id: 'theirs', label: 'Theirs', isOwner: false, isPublic: true }])
+            render(<SpaceHub />)
+            await waitFor(() => expect(rowOf('theirs')).toBeTruthy())
+            expect(manageBtn('theirs')).toBeUndefined()
+        })
     })
 })

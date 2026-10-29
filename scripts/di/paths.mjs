@@ -37,6 +37,9 @@ export const paths = (home = diHome()) => ({
     // The artist's work. Never inside versions/, so update, rollback and
     // uninstall physically cannot reach it.
     data: path.join(home, 'data'),
+    // Working copies (a rehearsal of the data, a download). Beside data/, on the
+    // same filesystem, never os.tmpdir(): /tmp is a small tmpfs with a quota.
+    scratch: path.join(home, 'scratch'),
     env: path.join(home, 'di.env'),
     state: path.join(home, 'state.json'),
     logs: path.join(home, 'logs'),
@@ -58,6 +61,9 @@ export const paths = (home = diHome()) => ({
     // because the credentials for a DNS provider are the owner's business and
     // must never live inside di.
     dnsHook: path.join(home, 'dns-update'),
+    // This install's NETWORK NAME and its own certificate (docs/ai/team-sync-by-network-name.md §6).
+    // Never `tls/` above: that is what `di up` serves today, and a claim or a renewal must not be able to touch it.
+    name: path.join(home, 'name'),
     credentials: path.join(home, 'credentials.json'),
     // Taken automatically before an update that moves the schema, because
     // `--rollback` restores the app and an update moves more than the app.

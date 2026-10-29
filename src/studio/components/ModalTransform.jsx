@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Line } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import { Vector3 } from 'three'
+import {
+    pointerOnPivotPlane, pivotOnScreen, grabStep, constrainDelta, rotateAxis, rotateEulerAroundWorldAxis,
+    orbitAroundPivot, scaleStep, angleAround, distanceFrom, snapVector, snapScalar,
+    PLANE_OF_KEY, isPlane, indicesOf, typedRotateAxis, snapStepFor,
+} from '../utils/modalMotion.js'
 
-const AXIS_INDEX = { x: 0, y: 1, z: 2 }
-const ALL_INDICES = [0, 1, 2]
 const AXIS_VEC = {
     x: new Vector3(1, 0, 0),
     y: new Vector3(0, 1, 0),
@@ -12,19 +16,22 @@ const AXIS_VEC = {
 const AXIS_COLOR = { x: '#ff5a6a', y: '#7dd35f', z: '#5a8bff' }
 const LINE_LEN = 1000
 const MODE_LABEL = { translate: 'GRAB', rotate: 'ROTATE', scale: 'SCALE' }
-// Ctrl-held snap increments (Blender-style): world units / radians (15°) /
-// scale-factor steps. Snapping rounds the accumulated total, so tapping Ctrl
-// mid-drag snaps the current result instead of just future movement.
-const SNAP_STEP = { translate: 0.5, rotate: Math.PI / 12, scale: 0.1 }
-const snapTo = (value, step) => Math.round(value / step) * step
+// Ctrl-held snap increments live in modalMotion.js (snapStepFor: 0.5 m / 15° / 0.1, a tenth with
+// Shift). Snapping rounds the accumulated total, so tapping Ctrl mid-drag snaps the current result
+// instead of just future movement.
+
+const wrapAngle = (a) => ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI
 
 /**
- * V1-parity modal transform. G/R/S sets the mode, X/Y/Z locks the axis, then
- * moving the mouse applies (movementX+movementY)*sensitivity to that axis on
- * every selected entity independently (no shared pivot). Escape/Enter/Space
- * confirms; whatever moved stays. Colored axis line + HUD text give feedback.
+ * Blender's modal transform (owner 2026-10-13: "move … stuck, not like Blender"). G/R/S starts it;
+ * the object follows the cursor at once: grab in the plane through the pivot facing the camera,
+ * X/Y/Z slide along that axis, rotate by the angle the pointer turns around the pivot, scale by the
+ * pointer's distance to the pivot (src/studio/utils/modalMotion.js). Shift = fine, Ctrl = snap,
+ * typed numbers with an axis, click/Enter/Space confirm, Esc cancels. Colored axis line + HUD text.
  */
 export default function ModalTransform({ op, selectedEntities, controlsRef, onPreview, onCommit, onCancel, onStatus }) {
+    const camera = useThree((state) => state.camera)
+    const gl = useThree((state) => state.gl)
     const sessionRef = useRef(null)
     const cbRef = useRef({})
     const [hudLines, setHudLines] = useState([])
@@ -66,8 +73,13 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
         )
         let pivot = computePivot()
 
-        const session = { mode: op.mode, axis: op.axis || null, entities, moved: false, total: 0, numeric: '' }
+        const session = {
+            mode: op.mode, axis: op.axis || null, entities, moved: false, total: 0, numeric: '',
+            // the incremental drag: where the pointer was last, and what has accumulated since rebase
+            last: null, delta: new Vector3(), angle: 0, factor: 1,
+        }
         sessionRef.current = session
+        const canvasRect = () => gl?.domElement?.getBoundingClientRect?.() || { left: 0, top: 0, width: window.innerWidth || 1, height: window.innerHeight || 1 }
 
         // Fold the current values into the base so a mode/axis switch continues
         // from where the drag left off instead of re-deriving from the start.
@@ -78,6 +90,8 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             pivot = computePivot()
             session.total = 0
             session.numeric = ''
+            session.last = null
+            session.delta.set(0, 0, 0); session.angle = 0; session.factor = 1
         }
 
         const buildPreviewMap = () => {
@@ -90,24 +104,28 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
 
         const reportStatus = () => {
             const axisLabel = session.axis
-                ? ` · ${session.axis === 'all' ? 'ALL' : session.axis.toUpperCase()}`
+                ? ` · ${session.axis === 'all' ? 'ALL' : isPlane(session.axis) ? `${session.axis.toUpperCase()} PLANE` : session.axis.toUpperCase()}`
                 : ''
             const typed = session.numeric
                 ? ` · ${session.numeric}${session.mode === 'rotate' ? '°' : session.mode === 'scale' ? '×' : ''}`
                 : ''
-            const hint = session.axis ? ' · move mouse or type a value · CTRL snap · ENTER' : ' · pick X / Y / Z / A'
+            const hint = session.axis ? ' · move the mouse or type a value · CTRL snap · CTRL+SHIFT fine snap · SHIFT fine · ENTER' : ' · move the mouse · X / Y / Z lock an axis · SHIFT+X / Y / Z keep a plane · CTRL snap · SHIFT fine · ENTER'
             cbRef.current.onStatus?.({
                 text: `${MODE_LABEL[session.mode] || session.mode}${axisLabel}${typed}${typed ? ' · ENTER' : hint}`
             })
             if (session.axis && session.axis !== 'all') {
-                const u = AXIS_VEC[session.axis]
-                setHudLines([{
-                    axis: session.axis,
-                    points: [
-                        [pivot[0] - u.x * LINE_LEN, pivot[1] - u.y * LINE_LEN, pivot[2] - u.z * LINE_LEN],
-                        [pivot[0] + u.x * LINE_LEN, pivot[1] + u.y * LINE_LEN, pivot[2] + u.z * LINE_LEN],
-                    ]
-                }])
+                // one line for an axis, the plane's two for a plane
+                const axes = isPlane(session.axis) ? [...session.axis] : [session.axis]
+                setHudLines(axes.map((axis) => {
+                    const u = AXIS_VEC[axis]
+                    return {
+                        axis,
+                        points: [
+                            [pivot[0] - u.x * LINE_LEN, pivot[1] - u.y * LINE_LEN, pivot[2] - u.z * LINE_LEN],
+                            [pivot[0] + u.x * LINE_LEN, pivot[1] + u.y * LINE_LEN, pivot[2] + u.z * LINE_LEN],
+                        ]
+                    }
+                }))
             } else {
                 setHudLines([])
             }
@@ -152,7 +170,7 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
         // multi-selection turns/grows as one rigid arrangement; a single
         // entity's own position IS the pivot, so it just spins/scales in place.
         const applyTotal = (total) => {
-            const indices = session.axis === 'all' ? ALL_INDICES : [AXIS_INDEX[session.axis]]
+            const indices = indicesOf(session.axis)
             for (const e of session.entities) {
                 if (session.mode === 'translate') {
                     for (const idx of indices) e.pos[idx] = e.base.pos[idx] + total
@@ -163,24 +181,21 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
                         e.pos[idx] = pivot[idx] + (e.base.pos[idx] - pivot[idx]) * factor
                     }
                 } else if (session.mode === 'rotate') {
-                    for (const idx of indices) e.rot[idx] = e.base.rot[idx] + total
-                    // Orbit positions around the pivot only for a single locked
-                    // axis — 'all' has no meaningful orbit axis.
-                    if (session.axis !== 'all' && n > 1) {
-                        const v = new Vector3(
-                            e.base.pos[0] - pivot[0],
-                            e.base.pos[1] - pivot[1],
-                            e.base.pos[2] - pivot[2]
-                        ).applyAxisAngle(AXIS_VEC[session.axis], total)
-                        e.pos = [pivot[0] + v.x, pivot[1] + v.y, pivot[2] + v.z]
-                    }
+                    // A typed angle turns around the WORLD axis, the same turn the mouse makes (it used to add
+                    // the number to one Euler component, which is a world turn only for X: R Z 90 on a tilted
+                    // lamp went somewhere else than R Z by mouse). No axis = around the view axis (Blender).
+                    const axisVec = typedRotateAxis(camera, session.axis)
+                    e.rot = rotateEulerAroundWorldAxis(e.base.rot, axisVec, total)
+                    if (n > 1) e.pos = orbitAroundPivot(e.base.pos, pivot, axisVec, total)
                 }
             }
         }
 
         // Typed exact values (Blender-style): degrees for rotate, a scale
         // factor for scale, world units for translate. Mouse movement resumes
-        // control and discards the typed string.
+        // control and discards the typed string. R and S take a number with no
+        // axis too (R 90 turns around the view, S 2 doubles); G still wants an
+        // axis first (G X 2), since a free grab has no one direction to type.
         const applyNumericIfAny = () => {
             const value = parseFloat(session.numeric)
             if (!Number.isFinite(value)) return
@@ -193,20 +208,65 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             cbRef.current.onPreview?.(buildPreviewMap())
         }
 
-        const handlePointerMove = (event) => {
-            if (!session.axis) return
-            if (session.numeric) {
-                session.numeric = ''
-                reportStatus()
+        // Blender: the drag follows the cursor from where it is — the first move only takes the start.
+        const applyDrag = (snap, fine = false) => {
+            const step = snapStepFor(session.mode, fine)
+            if (session.mode === 'translate') {
+                const c = constrainDelta(session.delta, session.axis)
+                const d = snap ? snapVector(c, step) : c
+                for (const e of session.entities) e.pos = [e.base.pos[0] + d.x, e.base.pos[1] + d.y, e.base.pos[2] + d.z]
+            } else if (session.mode === 'rotate') {
+                const a = snap ? snapScalar(session.angle, step) : session.angle
+                const axisVec = rotateAxis(camera, session.axis)
+                for (const e of session.entities) {
+                    e.rot = rotateEulerAroundWorldAxis(e.base.rot, axisVec, a)
+                    if (n > 1) e.pos = orbitAroundPivot(e.base.pos, pivot, axisVec, a)
+                }
+            } else if (session.mode === 'scale') {
+                const f = Math.max(0.01, snap ? snapScalar(session.factor, step) : session.factor)
+                const indices = indicesOf(session.axis)
+                for (const e of session.entities) {
+                    for (const idx of indices) {
+                        e.scale[idx] = Math.max(0.01, e.base.scale[idx] * f)
+                        e.pos[idx] = pivot[idx] + (e.base.pos[idx] - pivot[idx]) * f
+                    }
+                }
             }
-            const sensitivity = event.shiftKey ? 0.002 : 0.02
-            const delta = ((event.movementX || 0) + (event.movementY || 0)) * sensitivity
-            if (delta === 0) return
-            session.total += delta
-            const effective = event.ctrlKey || event.metaKey
-                ? snapTo(session.total, SNAP_STEP[session.mode])
-                : session.total
-            applyTotal(effective)
+        }
+        const handlePointerMove = (event) => {
+            if (!camera) return
+            const rect = canvasRect()
+            const x = event.clientX, y = event.clientY
+            const precision = event.shiftKey ? 0.1 : 1
+            if (session.numeric) { session.numeric = ''; reportStatus() }
+            if (!session.last) {
+                const centre = pivotOnScreen(camera, rect, pivot)
+                session.last = {
+                    point: pointerOnPivotPlane(camera, rect, x, y, pivot),
+                    angle: angleAround(centre, x, y),
+                    dist: distanceFrom(centre, x, y),
+                    centre,
+                }
+                return
+            }
+            const last = session.last
+            if (session.mode === 'translate') {
+                const next = pointerOnPivotPlane(camera, rect, x, y, pivot)
+                if (!next || !last.point) return
+                // the FREE move; the constraint applies to the whole of it (applyDrag), so an X pressed mid-move
+                // puts the whole move on X, as Blender does
+                session.delta.add(grabStep(last.point, next, null, precision))
+                last.point = next
+            } else if (session.mode === 'rotate') {
+                const a = angleAround(last.centre, x, y)
+                session.angle += wrapAngle(a - last.angle) * precision
+                last.angle = a
+            } else if (session.mode === 'scale') {
+                const d = distanceFrom(last.centre, x, y)
+                session.factor *= scaleStep(last.dist, d, precision)
+                last.dist = d
+            }
+            applyDrag(event.ctrlKey || event.metaKey, event.shiftKey)
             session.moved = true
             cbRef.current.onPreview?.(buildPreviewMap())
         }
@@ -215,9 +275,17 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             const lower = event.key?.toLowerCase?.()
             if (lower === 'x' || lower === 'y' || lower === 'z' || lower === 'a') {
                 event.preventDefault(); event.stopImmediatePropagation()
-                const next = lower === 'a' ? 'all' : lower
+                // Shift+X/Y/Z: the plane that leaves that axis out (Blender's axis locking)
+                const next = lower === 'a' ? 'all' : event.shiftKey ? PLANE_OF_KEY[lower] : lower
                 session.axis = session.axis === next ? null : next
-                rebase()
+                // Blender: the constraint takes the WHOLE move from where it started — G, a free move, then X puts the
+                // object back on the X line through its start. Nothing is re-based here (the Studio walk 2026-10-13,
+                // PR #921, found G then X kept the Y part of the free move).
+                if (session.numeric && (session.axis || session.mode !== 'translate')) applyNumericIfAny()
+                else {
+                    session.numeric = ''
+                    if (session.moved) { applyDrag(false); cbRef.current.onPreview?.(buildPreviewMap()) }
+                }
                 reportStatus()
             } else if (lower === 'g' || lower === 'r' || lower === 's') {
                 event.preventDefault(); event.stopImmediatePropagation()
@@ -226,7 +294,7 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
                 session.axis = null
                 rebase()
                 reportStatus()
-            } else if (session.axis && (/^[0-9.-]$/.test(event.key) || event.key === 'Backspace')) {
+            } else if ((session.axis || session.mode !== 'translate') && (/^[0-9.-]$/.test(event.key) || event.key === 'Backspace')) {
                 event.preventDefault(); event.stopImmediatePropagation()
                 session.numeric = event.key === 'Backspace'
                     ? session.numeric.slice(0, -1)

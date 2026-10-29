@@ -1,4 +1,4 @@
-# di.iiii Ecosystem Map
+# Ecosystem Map
 
 This document describes the full system: what exists, how the parts relate, and who owns what.
 

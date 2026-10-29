@@ -1,7 +1,7 @@
 /* global __APP_VERSION__, __DI_WORKS__ */
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, ThemeProvider, Typography } from '@mui/material'
-import { diFontTheme } from '../styles/muiTheme.js'
+import { diTheme } from '../styles/muiTheme.js'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { buildWikiPath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
@@ -9,7 +9,7 @@ import { buildSpacesPath } from '../studio/utils/studioRouting.js'
 import { flyInside, REST_POSE } from './enterFlight.js'
 import PageDebris from './PageDebris.jsx'
 import { enterFromElement } from '../components/entryTransition/entryTransition.js'
-import { buildJamScenePath } from '../project/routing/jamRouting.js'
+import { buildJamPublicPath } from '../project/routing/jamRouting.js'
 import { WORK_IDS } from '../works/works.js'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
@@ -64,10 +64,15 @@ const FEATURED_SPACES = [
     { id: 'algovrithm', label: 'algovrithm', href: '/algovrithm', className: 'landing-cta-algo-vrithm' }
 ]
 
+// How many people the network names (spaces/network/people.json). A number,
+// not an import: the roster is 139 KB and the landing needs one integer of it.
+// landingFooterLinks.test.jsx fails the moment the roster and this disagree.
+const NETWORK_PEOPLE = 65
+
 // WHICH OF THOSE FOUR IS A DOOR ONTO SOMETHING, HERE.
 //
 // Two are works — code in this repo, compiled into the artifact (see
-// src/works/works.js). Two are spaces — rows on di-studio.xyz's database,
+// src/works/works.js). Two are spaces — rows on diiii.xyz's database,
 // which a fresh install does not have. The row used to be hidden whole on any
 // local install, and that was right for both halves at the time: the works
 // were stripped out of the local build and the spaces were never there.
@@ -92,13 +97,15 @@ export const featuredSpacesFor = ({ isLocalInstall = false } = {}) => FEATURED_S
 // disk. Not a separate "mode": one boolean, and the two hosted sentences
 // below get local-truthful variants. Voice matches the wiki's local-install
 // article ("Run di.iiii on your own machine").
-const LOCAL_STEP_OPEN = { n: '01', title: 'Open a space', body: 'Click "Step inside" or go to any space URL. This is your machine — everything here is yours to edit, no account involved.' }
+const LOCAL_STEP_OPEN = { n: '01', title: 'Open a space', body: 'Open the Spaces page or go to any space URL. This is your machine — everything here is yours to edit, no account involved.' }
 // The hero's two lines are the hosted pitch. "No download. No install." is
 // read, on a local install, by someone who has just done both. (The featured
 // row was hidden here too; it is filtered per chip now — see
 // featuredSpacesFor above.) Same one boolean, no second mode.
 const LOCAL_TAGLINE = 'Running on your own machine. Offline, no account, and the work stays in your home folder.'
-const LOCAL_CTA_SUB = 'no account, no quota. Studio is a room on the same desk.'
+// The line under the three buttons says what the first one does: the same
+// camera move into the scene behind the page as on a hosted install (openDoor).
+const LOCAL_CTA_SUB = 'no account, no quota. Step inside walks into the scene.'
 const LOCAL_FEATURE_SPACES = { icon: '✦', title: 'Your machine, your spaces', desc: 'This di.iiii runs locally. Create as many spaces as you like — no sign-in, no quota, and your work stays in your own home folder.' }
 
 // Step 04's promise reaches further than a local install goes: `di up` binds
@@ -121,10 +128,10 @@ const ROOM_TAGS = [
 ]
 
 const STEPS = [
-    { n: '01', title: 'Open a space', body: 'Click "Step inside" — you get a space of your own, no account needed. Sign in to keep it and to make more.' },
+    { n: '01', title: 'Open a space', body: 'Click "Step inside" to walk into the scene behind this page. Build in a private sandbox on the Spaces page — no account needed. Sign in to keep it.' },
     { n: '02', title: 'Add objects', body: 'A space holds projects — open one, then use the Create window for 3D shapes, text, images, or 3D models. Drag to position them.' },
-    { n: '03', title: 'Set up the scene', body: 'The Scene window sets the sky, background and lighting. Select an object and edit it in the Objects window.' },
-    { n: '04', title: 'Share or publish', body: 'Copy the space link to invite collaborators, or publish to make it live for the public.' }
+    { n: '03', title: 'Set up the scene', body: 'The Scene window sets the background and the lighting. Select an object and edit it in the Objects window.' },
+    { n: '04', title: 'Share or publish', body: 'Copy an invite link for collaborators, or set the project live and make the space public.' }
 ]
 
 const AUDIENCES = [
@@ -137,7 +144,7 @@ const AUDIENCES = [
             </svg>
         ),
         label: 'Artists & Creators',
-        desc: 'Build 3D exhibitions and installations a visitor opens from a link. No 3D software experience needed.'
+        desc: 'Build 3D exhibitions and installations a visitor opens from a link.'
     },
     {
         icon: (
@@ -148,7 +155,7 @@ const AUDIENCES = [
             </svg>
         ),
         label: 'Developers',
-        desc: 'Extend with node-based logic, connect via the serverXR API, embed in your own site, or build agent-driven experiences.'
+        desc: 'Extend with node-based logic, connect via the serverXR API, or drive di.iiii from an agent over MCP.'
     },
     {
         icon: (
@@ -162,7 +169,7 @@ const AUDIENCES = [
             </svg>
         ),
         label: 'Event Organizers',
-        desc: 'Create virtual venues, stage previews, and spatial layouts for live events, conferences, or art shows.'
+        desc: 'Create virtual venues, stage previews, and spatial layouts for live events or art shows.'
     },
     {
         icon: (
@@ -174,17 +181,17 @@ const AUDIENCES = [
             </svg>
         ),
         label: 'AI Agents',
-        desc: 'Access scene state, modify objects, and read space data via the serverXR REST API. Machine-readable endpoints at /serverXR/api/.'
+        desc: 'Read scene state and space data over the serverXR REST API; signed in, change objects too. The machine-readable list is at /serverXR/api/catalogue.'
     }
 ]
 
 const FEATURES = [
     { icon: '◈', title: 'The visit is the product', desc: 'What you make is exactly what a stranger opens — a link while it runs, a file when it ends. The editor is backstage.' },
-    { icon: '◉', title: 'Real-time collaboration', desc: 'See teammates\' cursors and changes live, in the same space.' },
+    { icon: '◉', title: 'Real-time collaboration', desc: 'See teammates\' cursors and changes live, in the same project.' },
     { icon: '⬡', title: 'WebXR ready', desc: 'Enter VR or AR from any supported browser — no app install.' },
-    { icon: '◫', title: 'Asset pipeline', desc: 'Upload images, 3D models, audio. Optimized and served automatically.' },
-    { icon: '◳', title: 'Spaces', desc: 'A space is a place that is yours — its own address, its own guest list, and the projects you make in it. Share by link. Lock editing or leave it open.' },
-    { icon: '◐', title: 'Publish anywhere', desc: 'Each space has a public URL. Export JSON. Embed or link directly.' },
+    { icon: '◫', title: 'Asset pipeline', desc: 'Upload images, 3D models, audio. Photos are stripped of location data; a large .glb can be optimized before it goes up.' },
+    { icon: '◳', title: 'Spaces', desc: 'A space is a place that is yours — its own address, its own guest list, and the projects you make in it. Share by link, keep it private or make it public.' },
+    { icon: '◐', title: 'Publish by link', desc: 'Set a project live and make the space public — anyone can open its address. Save a space as a .diiii file from your Spaces page, or read a project as JSON over the API.' },
     { icon: '◍', title: 'Guest & sandbox modes', desc: 'Visitors explore without an account — a shared global space, or a private sandbox each.' },
     { icon: '✦', title: '3 free spaces', desc: 'Sign in and create up to three of your own spaces for free. Admins are unlimited.' }
 ]
@@ -492,13 +499,13 @@ function LandingPageInner() {
                         <Button className="landing-cta-spaces" variant="outlined" size="large" href={studioHref} onClick={goThrough(studioHref)}>
                             The Spaces
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={buildJamScenePath()} onClick={goThrough(buildJamScenePath())}>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={buildJamPublicPath()} onClick={goThrough(buildJamPublicPath())}>
                             Open Space
                         </Button>
                     </Stack>
 
                     <Typography className="lp-cta-sub">
-                        {isLocalInstall ? LOCAL_CTA_SUB : 'no account, nothing to install — for you or for whoever opens your link.'}
+                        {isLocalInstall ? LOCAL_CTA_SUB : 'no account to start, nothing to install — for you, and for whoever you send a public link or an invite.'}
                     </Typography>
 
                     {featuredSpaces.length > 0 && (
@@ -602,7 +609,7 @@ function LandingPageInner() {
                     <Typography className="lp-section-eyebrow">Getting started</Typography>
                     <Typography className="lp-section-title" component="h2">How to use di.iiii</Typography>
                     <Typography className="lp-section-body">
-                        You can be building your first 3D room in under two minutes.
+                        Four steps, from a new space to a link you can share.
                     </Typography>
 
                     <Box className="lp-steps">
@@ -630,9 +637,9 @@ function LandingPageInner() {
             <Box className="lp-section" component="section" id="who">
                 <Box className="lp-section-inner">
                     <Typography className="lp-section-eyebrow">Audience</Typography>
-                    <Typography className="lp-section-title" component="h2">Made for everyone</Typography>
+                    <Typography className="lp-section-title" component="h2">Who uses it, and for what</Typography>
                     <Typography className="lp-section-body">
-                        di.iiii works for artists, developers, organizers, and automated systems alike.
+                        di.iiii works for artists, developers, organizers, and automated systems.
                     </Typography>
 
                     <Box className="lp-audience-grid">
@@ -675,7 +682,7 @@ function LandingPageInner() {
                     <Typography className="lp-section-title" component="h2">Learn how it works</Typography>
                     <Typography className="lp-section-body">
                         New here? The Wiki explains spaces, guest &amp; sandbox modes, free accounts,
-                        publishing, and the API — and it’s kept up to date as di.iiii grows.
+                        publishing, and the API.
                     </Typography>
 
                     {/* One door, not a card grid. This block used to lay out 18
@@ -761,15 +768,15 @@ function LandingPageInner() {
                         that vanishes because a server did.
                     </Typography>
                     <Stack direction="row" sx={{ gap: '16px', flexWrap: 'wrap', justifyContent: 'center', mb: 2, mt: 3 }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href={buildJamScenePath()} onClick={goThrough(buildJamScenePath())}>
-                            walk in and open your own room →
+                        <Button className="landing-cta-primary" variant="contained" size="large" href={buildJamPublicPath()} onClick={goThrough(buildJamPublicPath())}>
+                            walk into the Open Space →
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref} onClick={openDoor}>
                             Step inside
                         </Button>
                     </Stack>
                     <Typography className="lp-cta-sub" sx={{ mb: 3 }}>
-                        <a href={studioHref}>Already have spaces? Open Studio →</a>
+                        <a href={studioHref}>Already have spaces? Open your Spaces →</a>
                     </Typography>
                     <Typography className="lp-enter-note">
                         Armenia &nbsp;·&nbsp; Web XR &nbsp;·&nbsp; <a href="https://thedi.studio" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>thedi.studio</a>
@@ -792,12 +799,19 @@ function LandingPageInner() {
                         <a href={studioHref} onClick={openDoor} className="lp-footer-link">Step inside</a>
                         <a href={studioHref} className="lp-footer-link">Spaces</a>
                         <a href={buildWikiPath()} className="lp-footer-link">Wiki</a>
+                        {/* /network was linked only from /spaces, /suite and
+                            /for-apps from no page a visitor reads (audit
+                            2026-10-21, G26–G28). The count is checked against
+                            spaces/network/people.json by landingFooterLinks.test.jsx. */}
+                        <a href="/network" className="lp-footer-link">The network — {NETWORK_PEOPLE} people</a>
+                        <a href="/suite" className="lp-footer-link">Name and mark</a>
                         <a href="/privacy" className="lp-footer-link">Privacy</a>
                         <a href="/terms" className="lp-footer-link">Terms</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
                         {/* The nav row is hidden under 640px; this is the phone's way to it. */}
                         <a href="/support" className="lp-footer-link">Support</a>
                         <a href="https://www.instagram.com/di.iiiiiiiiiiiiiiiiiiiii/" target="_blank" rel="noopener noreferrer" className="lp-footer-link">Instagram</a>
+                        <a href="/for-apps" className="lp-footer-link">For apps</a>
                         <a href="/serverXR/api/health" className="lp-footer-link">API</a>
                     </nav>
                     <span className="lp-footer-note">Open source · Web XR · <a href="https://thedi.studio" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>thedi.studio</a></span>
@@ -816,7 +830,7 @@ function LandingPageInner() {
 // eagerly by the router (2026-07-17 perf audit).
 export default function LandingPage() {
     return (
-        <ThemeProvider theme={diFontTheme}>
+        <ThemeProvider theme={diTheme}>
             <LandingPageInner />
         </ThemeProvider>
     )

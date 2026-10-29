@@ -54,7 +54,7 @@ const TIMEOUT_MS = 30000
 export const TIERS = {
     local: { base: 'http://localhost:4000/serverXR', tokenKey: 'API_TOKEN' },
     dev: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
-    prod: { base: 'https://di-studio.xyz/serverXR', tokenKey: 'PROD_API_TOKEN' }
+    prod: { base: 'https://diiii.xyz/serverXR', tokenKey: 'PROD_API_TOKEN' }
 }
 
 // Same shape the render-time fix strips — kept here only for counting,

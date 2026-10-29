@@ -20,6 +20,7 @@
 // Boxes here are { min: [x, y, z], max: [x, y, z] } in world metres, Y up.
 
 export const VIEW_PRESET_IDS = ['floor', 'dj', 'top', 'side', 'rig', 'crane']
+export const VIEW_ID_SLUG = /^[a-z][a-z0-9-]{0,23}$/
 export const VIEW_PRESET_LABELS = {
     floor: 'Floor',
     dj: 'DJ',
@@ -546,7 +547,7 @@ export const computeViewPresets = (frame, {
     }
 
     const byId = new Map((authored || []).map((v) => [v.id, v]))
-    return VIEW_PRESET_IDS.map((id, index) => {
+    const builtIn = VIEW_PRESET_IDS.map((id, index) => {
         const computed = out[id]
         const own = byId.get(id)
         const view = own
@@ -563,11 +564,29 @@ export const computeViewPresets = (frame, {
             section: view.section || null
         }
     })
+    // Any other named camera the author placed (an 'entrance', an 'outside'): after the six, in the author's order,
+    // exactly where the author put it. No computed fallback exists for it, so there is no key (keys 1-6 are the six).
+    const extras = (authored || [])
+        .filter((v) => !VIEW_PRESET_IDS.includes(v.id))
+        .map((v) => ({
+            id: v.id,
+            key: '',
+            label: v.label || v.id,
+            title: v.label || v.id,
+            position: round3(v.position),
+            target: round3(v.target),
+            fov: v.fov ?? 50,
+            interior: false,
+            section: null,
+            authored: true
+        }))
+    return [...builtIn, ...extras]
 }
 
 /**
  * Authored views (`presentationState.viewPresets`), read, never written: a list of
- * { id, position, target, fov?, label? } whose id is one of the six. Anything else drops.
+ * { id, position, target, fov?, label? } whose id is a slug (a-z, 0-9, dash; at most 24). The six built-in ids replace
+ * the computed view; any other id is an extra named camera after them. Anything that is not a slug drops.
  * The rig agents' cameras.json names map: floor-15m → floor, dj-up → dj.
  */
 export const sanitizeViewPresets = (raw) => {
@@ -577,7 +596,7 @@ export const sanitizeViewPresets = (raw) => {
     for (const item of raw) {
         if (!item || typeof item !== 'object') continue
         const id = String(item.id || '')
-        if (!VIEW_PRESET_IDS.includes(id) || seen.has(id)) continue
+        if (!VIEW_ID_SLUG.test(id) || seen.has(id)) continue
         const position = vec3(item.position)
         const target = vec3(item.target)
         if (!position || !target) continue
@@ -596,10 +615,10 @@ export const sanitizeViewPresets = (raw) => {
 
 /** `#view-top` → 'top'. Anything else → null. */
 export const parseViewHash = (hash) => {
-    const m = /^#?view-([a-z]+)$/.exec(String(hash || '').trim())
-    return m && VIEW_PRESET_IDS.includes(m[1]) ? m[1] : null
+    const m = /^#?view-([a-z][a-z0-9-]{0,23})$/.exec(String(hash || '').trim())
+    return m ? m[1] : null
 }
-export const viewHash = (id) => (VIEW_PRESET_IDS.includes(id) ? `#view-${id}` : '')
+export const viewHash = (id) => (VIEW_ID_SLUG.test(String(id || '')) ? `#view-${id}` : '')
 
 /** The preset a key press names ('1'–'6'), or null. */
 export const presetForKey = (key) => {
@@ -662,4 +681,122 @@ export const reachInBox = (from, to, box) => {
         if (d < -1e-9 && b[i] < box.min[i]) k = Math.min(k, (box.min[i] - a[i]) / d)
     }
     return Math.max(0, Math.min(1, k))
+}
+
+/**
+ * Is the occlusion fade (the circle round the target that cuts the building away when it stands between the camera and
+ * the target) on for this scene? Off only when the author says so: presentationState.smartView.occlusionFade === false
+ * (owner 2026-10-12 04:55, MOXIR v2.6 Free camera beside the press: "what is this circle view thing" — in a show scene
+ * the building is the subject, a hole in it reads as a fault).
+ * @param {object} [presentationState]
+ * @returns {boolean}
+ */
+export const occlusionFadeEnabled = (presentationState) => presentationState?.smartView?.occlusionFade !== false
+// (2026-10-12 see-through: the switch now picks a mode too, occlusionFadeMode below; false still means off.)
+
+// ---------------------------------------------------------------------------------------
+// See-through, 2026-10-12 (owner, MOXIR v2.6: "there where are walls of the building again that pass-through thing, so I
+// think we need all 3"): (1) the camera never enters a solid (SmartView: camera-controls' colliderMeshes in free orbit,
+// the Unreal Spring Arm / Cinemachine Deoccluder push), (2) thin architecture near the lens fades by distance
+// (Cinemachine Deoccluder's occluder transparency), (3) authored layer toggles (The Sims "walls down", Capture / Depence
+// layer visibility). Docs: docs/architecture/SMART_VIEW.md "See-through".
+
+/**
+ * Which occlusion fade a scene uses: presentationState.smartView.occlusionFade
+ *   'near'   (default) the building's fragments within nearFadeM of the lens fade to NEAR_FADE_FLOOR
+ *   'circle' the 2026-09-29 circle round the target (CIRCLE_FRACTION of the screen) when the building stands between
+ *   false    off
+ * Anything else (true, a typo) reads as the default.
+ * @param {object} [presentationState]
+ * @returns {'near'|'circle'|false}
+ */
+export const occlusionFadeMode = (presentationState) => {
+    const value = presentationState?.smartView?.occlusionFade
+    if (value === false) return false
+    return value === 'circle' ? 'circle' : 'near'
+}
+
+export const NEAR_FADE_DEFAULT_M = 2.5
+export const NEAR_FADE_FLOOR = 0.15
+export const NEAR_FADE_RAMP_M = 1
+
+/** presentationState.smartView.nearFadeM, metres (default 2.5, held to 0.25-20). */
+export const nearFadeMeters = (presentationState) => {
+    const value = Number(presentationState?.smartView?.nearFadeM)
+    return Number.isFinite(value) && value > 0 ? Math.min(20, Math.max(0.25, value)) : NEAR_FADE_DEFAULT_M
+}
+
+/**
+ * The near fade's opacity for a building fragment `distance` metres from the lens: NEAR_FADE_FLOOR nearer than
+ * (nearM - ramp), a smoothstep up to 1 across the last `ramp` metres, 1 from nearM on. The shaders in SmartView.jsx
+ * (SV_FRAGMENT_BODY, SV_GHOST_BODY) compute the same curve.
+ */
+export const nearFadeOpacity = (distance, nearM = NEAR_FADE_DEFAULT_M, { floor = NEAR_FADE_FLOOR, ramp = NEAR_FADE_RAMP_M } = {}) => {
+    if (!(distance < nearM)) return 1
+    const start = nearM - Math.min(ramp, nearM)
+    const t = Math.min(1, Math.max(0, (distance - start) / Math.max(1e-6, nearM - start)))
+    return floor + (1 - floor) * t * t * (3 - 2 * t)
+}
+
+// 'cut' (2026-10-15, owner: "I want to see the whole building"): the camera's cutaway itself — off = nothing is cut from
+// outside, the building stands whole (its lit outer walls too); on = today's walls-down reading. Not a mesh group.
+export const VIEW_LAYER_IDS = ['roof', 'walls', 'machines', 'outside', 'cut']
+export const VIEW_LAYER_LABELS = { roof: 'Roof', walls: 'Walls', machines: 'Machines', outside: 'Outside', cut: 'Cut' }
+// The hall's material groups (hall.py v13 merges one mesh per material, named hall-<material>). 'shell' mixes the roof
+// deck and the walls in one mesh, so it is in no group: the cutaway's clip planes take its parts (planWithLayers).
+const LAYER_MATERIALS = {
+    roof: ['deck', 'skylight'],
+    walls: ['block', 'brick', 'glass', 'steel'],
+    machines: ['machine', 'press', 'rust']
+}
+
+/** The layer a building mesh belongs to, from its mesh and material names, or null (shell, frame, floor, …). */
+export const meshLayer = (name = '') => {
+    const words = String(name || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)
+    for (const [layer, materials] of Object.entries(LAYER_MATERIALS)) {
+        if (words.some((w) => materials.includes(w))) return layer
+    }
+    return null
+}
+
+/** The scene's outside: entities whose id starts rig-out- (MOXIR v2.6: ground, road, forecourt boxes). */
+export const isOutsideEntityId = (id) => /^rig-out-/.test(String(id || ''))
+
+export const allLayersOn = () => ({ roof: true, walls: true, machines: true, outside: true, cut: true })
+
+/** ?layers=walls,machines → the layers shown; no parameter = all shown; 'none' = all hidden. */
+export const parseLayersParam = (search = '') => {
+    let raw = null
+    try { raw = new URLSearchParams(search || '').get('layers') } catch { raw = null }
+    const layers = allLayersOn()
+    if (raw === null) return layers
+    const shown = new Set(String(raw).toLowerCase().split(/[\s,]+/).filter(Boolean))
+    for (const id of VIEW_LAYER_IDS) layers[id] = shown.has(id)
+    return layers
+}
+
+/** The ?layers= value for a layer state, or null when every layer is shown (the parameter goes). */
+export const layersParam = (layers) => {
+    if (VIEW_LAYER_IDS.every((id) => layers?.[id] !== false)) return null
+    return VIEW_LAYER_IDS.filter((id) => layers?.[id] !== false).join(',') || 'none'
+}
+
+/**
+ * The cutaway with the authored layers on top of the camera's own plan: Roof off holds the roof cut in place, Walls off
+ * all four wall cuts (`wallInset` inside their lines, as cutawayPlan), wherever the camera is; Cut off drops the camera's
+ * own cutaway (the whole building from outside).
+ */
+export const planWithLayers = (plan, frame, layers, { wallInset = 1.2 } = {}) => {
+    if (!frame || !layers) return plan
+    // Cut off: the camera's own cutaway is dropped, the building stands whole; Roof/Walls off still cut (authored).
+    const out = layers.cut === false ? { roof: null, xMax: null, xMin: null, zMax: null, zMin: null } : { ...plan }
+    if (layers.roof === false && Number.isFinite(frame.roofCut)) out.roof = frame.roofCut
+    if (layers.walls === false) {
+        const { min, max } = frame.bounds
+        out.xMax = max[0] - wallInset
+        out.xMin = min[0] + wallInset
+        out.zMax = max[2] - wallInset
+        out.zMin = min[2] + wallInset
+    }
+    return out
 }

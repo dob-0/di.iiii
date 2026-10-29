@@ -1,0 +1,58 @@
+{
+ "what": "MOXIR side line right goes BACK to its first order: U2.001 stands farthest from the audience (behind the DJ), U2.065 nearest. The end-for-end swap of side-right-swap-2026-10-17.json was wrong; the lamps swap back; addresses unchanged, the middle one (U2.033) stays.",
+ "source": "owner at the venue 2026-10-17 ~07:2x, with the side lines lit red-green-blue-yellow-pink by address (group-identify.mjs): one by one with U2.001 alone lit: 'farthest'; then 'you can change the direction and it will fixes'.",
+ "moves": [
+  {
+   "id": "rig-beam-planes-16",
+   "position": [
+    21.114,
+    0.7,
+    -26.727
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-11",
+   "position": [
+    20.594,
+    0.7,
+    18.953
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-18",
+   "position": [
+    21.114,
+    0.7,
+    -14.727
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "rig-beam-planes-15",
+   "position": [
+    20.594,
+    0.7,
+    6.953
+   ],
+   "rotation": [
+    3.1416,
+    0,
+    0
+   ]
+  }
+ ]
+}

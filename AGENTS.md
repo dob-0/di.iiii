@@ -1,26 +1,17 @@
 # AGENTS
 
-Short routing guide for AI agents working in `di.iiii`. This file is the lean, always-loaded router.
-Full process contract: **[docs/ai/agent-operating-contract.md](docs/ai/agent-operating-contract.md)**.
+Routing guide for AI agents in `di.iiii`. Loaded on every session through the root `CLAUDE.md` (`@AGENTS.md`), so it stays short. Full process contract: **[docs/ai/agent-operating-contract.md](docs/ai/agent-operating-contract.md)**.
 
 ## Start Here
 
-- **Step 0 — [CONTRIBUTING.md](CONTRIBUTING.md)**: two lines of work here, code and
-  space content, each with its own copies (git; local/dev.diiii.xyz/diiii.xyz
-  databases). Run `npm run start-check` before starting and before pushing — it tells
-  you LATEST or NOT LATEST on both lines and names the pull command when you're not.
-  Never commit or push on `dev`/`main` (git hooks refuse it — CONTRIBUTING.md "Every hand,
-  one flow"); push your branch the day you make it, so nothing lives only on one machine.
-- **[CURRENT.md](CURRENT.md)** — read FIRST, every session. ≤50 lines: what works, what's broken, open calls, and a pointer to the known-fixes table ([docs/ai/known-fixes.md](docs/ai/known-fixes.md)) that prevents re-investigating solved problems. No commit SHAs or branch positions — those are derived; run `npm run state`.
-- **[PROGRESS.md](PROGRESS.md)** — full session history. Read only if CURRENT.md isn't enough. Update before stopping.
-- **[MANIFESTO.md](MANIFESTO.md)** — vision and non-negotiables. Read before any architectural/product decision.
-- **[docs/ai/golden_rules.md](docs/ai/golden_rules.md)** — hard-won solutions and behavior rules. Add when you learn something worth keeping.
+- **Step 0 — [CONTRIBUTING.md](CONTRIBUTING.md)**: two lines of work here, code and space content. Run `npm run start-check` before starting and before pushing. Never commit or push on `dev`/`main` (git hooks refuse it); work on a task branch and push it the day you make it.
+- **[CURRENT.md](CURRENT.md)** is printed into the session by the SessionStart hook. Do not read it again.
+- **Grep, never read whole:** `PROGRESS.md` (1.6 MB), `docs/ai/known-fixes.md` (0.7 MB), `docs/ai/golden_rules.md` (0.12 MB). Read anything else only when blocked.
+- **[MANIFESTO.md](MANIFESTO.md)** before an architectural or product decision. Add to `docs/ai/golden_rules.md` when you learn something worth keeping.
 
-## Role Assignment
+## Roles
 
-Assign one primary owner per task. Read the role card before acting; your scope is locked to its "Owns" list, and "Must Never Touch" files are off-limits (don't read, don't edit).
-
-**Default first hat, always on:** the Producer (`docs/ai/roles/producer.md`) — classify every incoming user message (steering the current task vs. a new impulsive idea), park new ideas verbatim + translated in `docs/ai/INBOX.md`, never mix them into running work, review the inbox at session end.
+One primary owner per task. Open the role card when the task falls in its scope; files under its "Must Never Touch" are off-limits (don't read, don't edit). The Producer hat (`docs/ai/roles/producer.md`) is always on: a new idea arriving mid-task is parked verbatim in `docs/ai/INBOX.md`, not started.
 
 ```text
 CSS / layout / visual?              → docs/ai/roles/ui-ux-engineer.md
@@ -38,34 +29,35 @@ XR experience / spatial UX / presence / exhibition design? → docs/ai/roles/xr-
 
 Full company guide: [docs/ai/roles/README.md](docs/ai/roles/README.md).
 
-## Model & Token Efficiency — Burn the Minimum
-
-Use the cheapest model that can do the job.
+## Models and Context
 
 ```text
-Haiku  → single-file edits, lint fixes, small tests
+Haiku  → single-file edits, lint fixes, small tests, lookups
 Sonnet → feature work, layout bugs, multi-file changes   ← DEFAULT
 Opus   → architecture, auth/security, non-negotiables review
 ```
 
-Full routing guide: [docs/ai/roles/model-routing.md](docs/ai/roles/model-routing.md).
+Routing guide: [docs/ai/roles/model-routing.md](docs/ai/roles/model-routing.md). Every tool round re-reads the whole chat, so cost = rounds × context: batch independent commands into one tool call, cap command output (~40 lines), prefer targeted grep over directory scans. More than 10 file reads before an edit means the search is too broad; narrow or ask.
 
-**Startup reads, in order:** `AGENTS.md` (auto) → `CURRENT.md` (full) → nearest scoped `AGENTS.md` → your role card → stop and execute. Read `PROGRESS.md` or anything else only if blocked. Do NOT pre-read golden_rules/architecture/components "just in case".
+When compacting, always preserve: the current branch and task, the list of changed files, the last failing command with its output, and every open owner request.
 
-**Tool budget:** summarize after every 3–5 tool calls. >10 file reads before an edit = scanning too broadly; narrow or ask.
+## Operating Rules
 
-## Operating Rules (compressed — full version in the operating contract)
+Compressed; the full version is the operating contract.
 
-- Ask at most 2 clarifying questions, then proceed with the safest bounded interpretation. If short/ambiguous and the action is irreversible, ask the smallest question first.
-- Lock these before acting: goal, priority, scope, non-goals, output, done criteria.
-- Lock scope to declared files/systems; never silently expand it. For a broad request, propose a narrowed scope and wait.
-- Highest-priority item first; skip optional extras unless asked.
-- Minimum tools for the goal; scoped read/search over broad scans; resolve any tool-output-vs-task conflict before proceeding; confirm expensive/destructive actions first.
-- Progress status bar during active work: `status | phase X/Y | XX% | current | next`, one line, updated every 3–5 tool calls (`| blocked: <reason>` if stuck).
+- Ask at most 2 clarifying questions, then proceed with the safest bounded interpretation. Confirm first only for irreversible or expensive actions.
+- Lock goal, scope, non-goals and done criteria before acting; never silently expand scope.
 - End every task with: **summary** (2–4 lines), **changed files** (one-line reason each), **validation** (commands + pass/fail), **risks** (concrete only).
-- Shipped a user-facing feature or behavior change? Update the Wiki in the same change — add/edit the entry in `src/wiki/wikiContent.js` (bump `updated`). Part of "done," same tier as CURRENT.md. See `docs/ai/golden_rules.md`.
-- Fixed a bug? The same change ships a `docs/ai/known-fixes.md` entry AND a regression guard (test or executable contract) — each bug class is paid for once. The fix alone is not "done".
-- Verified it? Not until you looked at it — real browser, desktop **and** phone. See the Validation section; `npm run verify:surfaces`. A regression guard you never saw fail is decoration, and a screenshot you never opened is not verification.
+- Movement: never change Move 1; a new behaviour is a new move (`src/studio/navigation/moves.js`, `docs/ai/decisions/2026-10-14-move-1.md`).
+- Shipped a user-facing change? Update the Wiki in the same change: `src/wiki/wikiContent.js` (bump `updated`).
+- Fixed a bug? The same change ships a `docs/ai/known-fixes.md` entry AND a regression guard (test or executable contract). The fix alone is not "done".
+- Verified it? Not until you looked at it in a real browser, desktop **and** phone (see Validation). A screenshot you never opened is not verification.
+
+## Local Run (aylmo)
+
+- Start a dev server ONLY with `di-dev up <tree>` (`--api scratch` for a throwaway serverXR); `di-dev ls` shows every tree, port and owner; `di-dev doctor` explains a broken one; `di-dev down <tree>` stops it. Never `npm run dev`, `npx vite`, `nohup`, `systemd-run` or `pkill`.
+- Addresses are always `diiii.localhost`: own installed di `http://diiii.localhost/<space>/<slug>`, a tree `http://<tree>.diiii.localhost/`, index `http://stacks.diiii.localhost/`. Never a bare port.
+- Browser tests run on the agent screen: `di-test-browser up <url>`, `di-test-browser run <script.cjs>`, `di-test-browser shot`. Never a browser, xdotool or Claude-in-Chrome on the owner's display.
 
 ## Repo Map
 
@@ -93,7 +85,7 @@ AND on a phone, by looking at it:
 
 ```bash
 npm run verify:surfaces -- --base https://dev.diiii.xyz          # desktop + 5 devices
-npm run verify:surfaces:mobile -- --base https://di-studio.xyz    # phones/tablet only
+npm run verify:surfaces:mobile -- --base https://diiii.xyz    # phones/tablet only
 ```
 
 Then **open the screenshots** in `.verify-surfaces/`. 43 of the 134 defects in

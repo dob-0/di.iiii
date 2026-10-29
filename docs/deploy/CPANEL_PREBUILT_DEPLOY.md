@@ -28,7 +28,7 @@ It was a GitHub-to-cPanel Git flow:
 Branch and environment mapping:
 
 - `dev` -> `cpanel-staging` -> dev.diiii.xyz
-- `main` -> `cpanel-production` -> di-studio.xyz
+- `main` -> `cpanel-production` -> diiii.xyz
 
 That means:
 
@@ -147,8 +147,8 @@ git checkout main && git merge dev --no-edit && git push origin main && git chec
 7. Verify production:
 
 ```bash
-curl -s https://di-studio.xyz/serverXR/api/health
-npm run smoke -- --base-url https://di-studio.xyz
+curl -s https://diiii.xyz/serverXR/api/health
+npm run smoke -- --base-url https://diiii.xyz
 ```
 
 ## If cPanel Cannot Fast-Forward

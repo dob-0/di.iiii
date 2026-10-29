@@ -1,0 +1,1064 @@
+{
+  "site": "MOXIR hall, Charentsavan (owner's pin 40.406524, 44.636560)",
+  "date": "2026-10-08",
+  "layer": "site-2026-10-08 (AS FOUND on the owner's visit)",
+  "source": "FROM PHOTOS 2026-10-08",
+  "basis": "FROM PHOTOS 2026-10-08: estimates with ranges, each item names its photo. Nothing here is taped (the 10-08 media holds no tape or laser reading). hall.py tags this file \"estimate\".",
+  "frame": "hall.json frame, metres: x across (+x = house right, facing the DJ / the press), y up from the floor, z along (+z toward the NW entry door, 0 = the expansion joint). cranes_from_door_m counts from the ENTRY grid line (z 54): z = 54 - from_door.",
+  "order": "Put it LAST in the as-found chain: dims-2026-09-28, features-2026-09-28, crane-dj-2026-09-28, dims-2026-10-02, dims-2026-10-07, THIS. The show hall adds moxir-hall-show-cleared-2026-10-17.json after it. The SHOW position of the cranes is a design choice for the stage step (MOXIR.md 4: plan A1 near z 21 / far z -41): it is NOT in this file.",
+  "report": "~/Downloads/moxir/site-2026-10-08/REPORT.md (sheets/, frames/, data/); the per-reading record: moxir-hall-measured-2026-10-08.json measurements.<key> (commit 05329724).",
+  "cranes_from_door_m": [
+    11.5,
+    76.2
+  ],
+  "crane_bridge_bottom_each_m": [
+    7.6,
+    7.95
+  ],
+  "crane_bridge_bottom_basis": [
+    "FROM PHOTOS 2026-10-08, estimated on THIS crane (not taped): 7.6 m (5-95 % 7.20-8.12), photo 20261008_170604.jpg: the bridge depth from where its -x end meets the runway line (1-D cross-ratio, independent of the height), the underside from its elevation angle at that depth (Criminisi, Reid & Zisserman 2000). Replaces the ASSUMED-same-type 7.95. The laser reading (+-0.05 m) is still owed.",
+    "measured by photo (not taped): 7.95 m (5-95 % 7.69-8.24), photo 007, fronto-parallel two-depth metrology (Criminisi et al. 2000), 2026-09-29"
+  ],
+  "ranges": {
+    "cranes_from_door_m": [
+      [
+        6.8,
+        14.1
+      ],
+      null
+    ],
+    "crane_bridge_bottom_each_m": [
+      [
+        7.2,
+        8.12
+      ],
+      [
+        7.69,
+        8.24
+      ]
+    ]
+  },
+  "confidence": {
+    "cranes_from_door_m": "near crane MEDIUM-LOW (one fitted photo, two independent reads; the absolute z rests on the low block wall at grid z 18-30: one bay off = 6 m on every z); far crane: the 09-29 value kept, see as_found.far_crane (its range: moxir-hall-dims-2026-10-02.json / photo 007)",
+    "crane_bridge_bottom_each_m": "near MEDIUM-LOW (one photo, not taped), far MEDIUM (photo 007)"
+  },
+  "as_found": {
+    "near_crane": {
+      "z_m": 42.5,
+      "z_range_m": [
+        39.9,
+        47.2
+      ],
+      "from_entry_grid_m": 11.5,
+      "reads": [
+        "bridge -x end on the runway line (1-D cross-ratio): z 41.8 (39.9-43.9)",
+        "underside elevation with 7.95: z 43.7 (41.0-47.2)"
+      ],
+      "underside_m": 7.6,
+      "underside_range_m": [
+        7.2,
+        8.12
+      ],
+      "cab": {
+        "side": "+x (house right) - agrees with the model",
+        "bottom_m": 5.8,
+        "bottom_range_m": [
+          4.6,
+          6.7
+        ],
+        "modelled": "the cab keeps crane_cab_h_m 2.1 (photo 007, far crane, same type ASSUMED) under the 7.6 girders: bottom 5.5, inside the 4.6-6.7 range; a second cab-like box at the same end (u 800-915 v 1695-1820 in 170604) is NOT resolved and NOT modelled"
+      },
+      "trolley": "NOT SEEN: crane_trolley_x_m keeps the earlier layer's value",
+      "moved_seen": "no: the same place in 164131 t=218 s (16:45), 165313/165319 (16:53), 170604 (17:06); 183913 (18:39) shows no crane over z ~5",
+      "photos": "20261008_170604.jpg (c1, c2), 20261008_165313.jpg (c6), 20261008_164131.mp4 t=218 s (c5)",
+      "by": "agent photo analysis of the owner's 2026-10-08 Galaxy S24 media (session 014FYCkghfEarsbPeE6R5ki8)",
+      "basis": "FROM PHOTOS 2026-10-08",
+      "show_position": "NOT here: a design choice for the stage step (the owner is painting the new stage position)."
+    },
+    "far_crane": {
+      "used_z_m": -22.2,
+      "used_from_entry_m": 76.2,
+      "seen_10_08_z_range_m": [
+        -36,
+        -24
+      ],
+      "decision": "Kept at z -22.2 (the 2026-09-29 photo-007 metrology) and today's read recorded beside it, because: (1) today's read is LOW confidence - a rough cross-ratio on 4 left-row consoles in 183913, a dark frame (EV100 1.4, 8 vanishing-point segments, camera rotation only, no fitted position); photo 007 was a fitted read in daylight with a Monte Carlo range; (2) -22.2 lies 1.8 m outside today's range, less than the one-bay (6 m) anchor doubt of today's read; (3) no move was seen; (4) nearer the stage is the conservative side for any beam into the far half. The show position is a design choice (v1.0 plan A1 rolls it to -41).",
+      "owed": "a fitted view of the far crane (or a laser along the floor) on the next visit",
+      "photos": "20261008_183913.jpg (c3, c4)",
+      "by": "agent photo analysis of the owner's 2026-10-08 Galaxy S24 media (session 014FYCkghfEarsbPeE6R5ki8)",
+      "basis": "FROM PHOTOS 2026-10-08 (low confidence)"
+    },
+    "pendant_lamps": {
+      "lowest_bottom_m": 9.5,
+      "range_m": [
+        9.0,
+        10.0
+      ],
+      "seen_over_z_m": [
+        -5,
+        25
+      ],
+      "not_seen_z_m": [
+        -42,
+        -5
+      ],
+      "hang_under_chord_m": [
+        0.4,
+        1.3
+      ],
+      "live": "several LIT at 17:06 (170604 at u 2144 v 1359 -> about (-10, 9.5, 22); u 1005 v 1186 -> about (2.5-2.9, 18-19)): some lighting circuit is live",
+      "modelled": "25 boxes 0.6 x 0.6 m, y 9.5-10.6, one per bottom-chord node x -11.2/-6/0/6/+11.2, z 0/6/12/18/24 (massing group pendant-lamps)",
+      "treat_as": "the band y >= 9.0 m over x -12..12, z -5..25 is possibly occupied (a lit lamp reads off-node, at x ~2.7 +-2): no beam, truss or crane hook path through it without a look",
+      "laser_margin": "every lamp seen is >= 1.8 m above the laser lines (5.0-7.45 m)",
+      "photos": "20261008_170604.jpg (l1, l2), 20261008_183913.jpg (l3)",
+      "by": "agent photo analysis of the owner's 2026-10-08 Galaxy S24 media (session 014FYCkghfEarsbPeE6R5ki8)",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    "white_bags": {
+      "x_m": [
+        -0.6,
+        2.4
+      ],
+      "z_m": [
+        19.0,
+        23.0
+      ],
+      "y_m": [
+        0.0,
+        1.9
+      ],
+      "z_range_m": [
+        18.0,
+        24.0
+      ],
+      "how": "camera of 20261008_170604.jpg fitted in the hall frame (median of the 400-draw Monte Carlo, ~/Downloads/moxir/site-2026-10-08/data/fit-170604-montecarlo.json: (-2.16, 1.76, 5.90) m, facing +z, pitch 20.3 deg, f 1500 px, rms 5.8 px; pinhole resection on 5 left-row consoles, Hartley & Zisserman 2004 ch. 7, + the hall-axis vanishing point, Caprile & Torre 1990): the pile's front feet on the floor (y 0) at z 19.1-20.2, x -0.6..2.4; a person behind it at z 22.0; the top read on z 20.5 at 1.2-1.8 m (2.2 at the back, not resolved)",
+      "present": "yes on 10-08 (about 3 m nearer the press than the 10-07 read, z 22-26.5); the plan-B goal-post line z 20.5 runs through them",
+      "modelled": "NOT as massing (movable; the established rule of the 10-07 layer and the show-cleared layer: cleared_not_modelled). The box above is for checks and the stage step.",
+      "show": "cleared before the show (owner 2026-10-08: \"they will be moved before the show\")",
+      "photos": "20261008_170604.jpg (c1, m1)",
+      "by": "agent photo analysis of the owner's 2026-10-08 Galaxy S24 media (session 014FYCkghfEarsbPeE6R5ki8)",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    "cabin": {
+      "present": "no: its model place (x -12..-9, z 30.7-35.3) is in view of 170604 and holds only a ~0.7 m white block, timber and boards",
+      "modelled": "removed here (massing_remove prefab-cabin): the as-found hall no longer has it; the show-cleared layer names it too (hall.py notes it as already gone)",
+      "photos": "20261008_170604.jpg",
+      "by": "agent photo analysis of the owner's 2026-10-08 Galaxy S24 media (session 014FYCkghfEarsbPeE6R5ki8)",
+      "basis": "SEEN in photos (absence) 2026-10-08"
+    },
+    "plus_x_side": {
+      "seen": "an inclined gallery / conveyor with a grating deck and a stringer above it, falling toward the NW (+z); a long overhead pipe (~0.5 m) at ~2.6-3.5 m, level within the read, ending in a cyclone hood; the +x crane runway girder (box, with heavy duct pipes) above at ~7-8 m; no distinct 3-4.5 m pipe racks",
+      "modelled": "pipe-rack-1 moved to the long pipe; pipe-rack-2 and -3 removed (not seen as racks); the gallery as pipe-rack-gallery-1..4 (stepped boxes; the pipe-rack- prefix is kept ON PURPOSE so every check that looks for the +x rack clearance - occlusion.py, paint_plan.py, lights_beta_mix.py, the stage tie-off - sees the gallery); cyclone-hood-nw SUSPECTED",
+      "gallery_fit": {
+        "bias_m_per_m": 0.061,
+        "z0_unbiased": 31.0,
+        "grate_line": [
+          -0.074,
+          6.478
+        ],
+        "stringer_line": [
+          -0.065,
+          6.813
+        ],
+        "grate_seen_z": [
+          20.6,
+          26.6
+        ],
+        "stringer_seen_z": [
+          21.2,
+          34.7
+        ],
+        "pipe_top_corr": [
+          3.47,
+          3.44,
+          3.41
+        ],
+        "pipe_bottom_corr": [
+          2.98,
+          2.63
+        ],
+        "pipe_seen_z": [
+          22.7,
+          38.0
+        ],
+        "slope_deg": -4.0,
+        "segments": [
+          {
+            "z_m": [
+              6,
+              14.5
+            ],
+            "y_m": [
+              5.1,
+              7.4
+            ]
+          },
+          {
+            "z_m": [
+              14.5,
+              23
+            ],
+            "y_m": [
+              4.5,
+              6.9
+            ]
+          },
+          {
+            "z_m": [
+              23,
+              31.5
+            ],
+            "y_m": [
+              3.8,
+              6.3
+            ]
+          },
+          {
+            "z_m": [
+              31.5,
+              40
+            ],
+            "y_m": [
+              3.2,
+              5.8
+            ]
+          }
+        ]
+      },
+      "limits": "one fitted view; the gallery's x is not fixed by it; the bias correction assumes the residual error is linear in z over z 20-38 (a method written here, unvalidated); the tie-off window on the +x column at grid z 6 (3.2-3.6 m, MOXIR.md) now meets the gallery's SE end at 5.1-7.4 m, not a rack at 3-4.5: re-check it in the stage step",
+      "photos": "20261008_170604.jpg (m1), 20261008_165313.jpg (c6), 20261008_164131.mp4 t=190 s (m4), 20261008_165547.mp4 t=46 s (m6)",
+      "by": "agent photo analysis of the owner's 2026-10-08 Galaxy S24 media (session 014FYCkghfEarsbPeE6R5ki8)",
+      "basis": "FROM PHOTOS 2026-10-08 (LOW)"
+    }
+  },
+  "movable": {
+    "note": "Loose items seen on 10-08. NOT massing (movable; the 10-07 rule). Positions are not fitted unless a box is given. All must be gone or fenced before the show; who moves them and when is owed (MOXIR.md 6).",
+    "items": [
+      {
+        "id": "gas-cylinders",
+        "what": "loose compressed-gas cylinders (several, upright and lying)",
+        "where": "far half (165547 walk), NOT fitted",
+        "risk": "FIRE / pressure: keep away from any fire effect, pyro, hot lamp or cable run; remove before the show",
+        "photos": "20261008_165547.mp4 t=27 s (p1), t=183 s (n5)"
+      },
+      {
+        "id": "pressure-vessels",
+        "what": "five long 5-6 m pressure vessels on the floor",
+        "where": "beside the transformer and in front of the press, about x -6..0, z -2..+8 (10-02 note; not refitted)",
+        "photos": "20261008_165315.jpg (m3), 20261008_164131.mp4 t=242 s (m2)"
+      },
+      {
+        "id": "roller-table",
+        "what": "the low roller table (roller-conveyor in the massing, x 3.6-4.6, z 16.5-24, top 0.85)",
+        "where": "on +x, ending at the skip",
+        "note": "kept in the massing as the 10-07 layer has it; movable? not known",
+        "photos": "20261008_170604.jpg (m1)"
+      },
+      {
+        "id": "skip",
+        "what": "steel skip",
+        "box": {
+          "x_m": [
+            0.7,
+            3.0
+          ],
+          "z_m": [
+            18.4,
+            19.4
+          ],
+          "y_m": [
+            0.0,
+            0.75
+          ]
+        },
+        "how": "front bottom edge on the floor in 170604 at z 18.4, x 0.7-3.0; depth not resolved (1 m assumed)",
+        "photos": "20261008_170604.jpg (c1)"
+      },
+      {
+        "id": "white-bags",
+        "what": "white bulk bags",
+        "box": {
+          "x_m": [
+            -0.6,
+            2.4
+          ],
+          "z_m": [
+            19.0,
+            23.0
+          ],
+          "y_m": [
+            0.0,
+            1.9
+          ]
+        },
+        "see": "as_found.white_bags",
+        "photos": "20261008_170604.jpg"
+      },
+      {
+        "id": "forklift",
+        "what": "diesel forklift",
+        "where": "far half, NOT fitted",
+        "photos": "20261008_165547.mp4 t=130 s (n1)"
+      },
+      {
+        "id": "long-floor-pipes",
+        "what": "a bundle of long pipes lying on the floor",
+        "where": "along the +x row in the far half and beside the bags (m4), NOT fitted",
+        "risk": "trip hazard on a walkway",
+        "photos": "20261008_165547.mp4 t=39 s (n4), 20261008_164131.mp4 t=190 s (m4)"
+      },
+      {
+        "id": "parked-car",
+        "what": "a parked car in the side span by the side gate",
+        "where": "side span, NOT fitted",
+        "photos": "20261008_164131.mp4 t=58 s (n2)"
+      },
+      {
+        "id": "cabinet-shells",
+        "what": "gutted electrical cabinet shells (not a live board)",
+        "where": "far half, NOT fitted",
+        "photos": "20261008_165547.mp4 t=27 s, t=144 s (p1, p2)"
+      }
+    ]
+  },
+  "fixed_not_placed": {
+    "note": "Probably fixed, SEEN on 10-08 but with no fitted view: not drawn (a box at a guessed place would be a fabrication). Each needs one fitted photo or a tape on the next visit.",
+    "items": [
+      {
+        "id": "horizontal-tank",
+        "what": "a horizontal tank on legs",
+        "where": "far half (z < 0), NOT fitted",
+        "fixed": "probably",
+        "photos": "20261008_165547.mp4 t=35 s (m5)"
+      },
+      {
+        "id": "far-half-stair",
+        "what": "a steel stair at a far-half column",
+        "where": "far half, which column NOT known",
+        "fixed": "yes (bolted to a column, as seen)",
+        "photos": "20261008_165547.mp4 (REPORT 6)"
+      },
+      {
+        "id": "side-gate-mesh-door",
+        "what": "a side gate with a mesh door through a side span: TODAY'S WAY IN (not the public NW door)",
+        "where": "on a long side wall; which side and z NOT fitted (164131: yard -> gate t=36 s -> side span t=58 s -> nave)",
+        "fixed": "yes (a building opening)",
+        "photos": "20261008_164131.mp4 t=36 s (n3), t=58 s (n2)",
+        "matters_for": "the artists' route and the emergency exits: place it on the next visit"
+      },
+      {
+        "id": "small-white-block",
+        "what": "a small white block (~0.7 m)",
+        "where": "about x -12, z 50 (and timber / boards where the cabin stood)",
+        "photos": "20261008_170604.jpg"
+      }
+    ]
+  },
+  "massing_move": [
+    {
+      "id": "pipe-rack-1",
+      "label": "long overhead pipe on the +x side (was pipe rack 1), ending in a cyclone hood near the NW end",
+      "x_m": [
+        10.0,
+        10.7
+      ],
+      "y_m": [
+        2.6,
+        3.5
+      ],
+      "z_m": [
+        10.0,
+        40.0
+      ],
+      "photos": "20261008_170604.jpg (m1), 20261008_165313.jpg (c6)",
+      "confidence": "LOW: one fitted view, x assumed 10.5 +-1 m; seen z ~23-38, z 10-23 kept from the old rack (out of frame)",
+      "how": "camera of 20261008_170604.jpg fitted in the hall frame (median of the 400-draw Monte Carlo, ~/Downloads/moxir/site-2026-10-08/data/fit-170604-montecarlo.json: (-2.16, 1.76, 5.90) m, facing +z, pitch 20.3 deg, f 1500 px, rms 5.8 px; pinhole resection on 5 left-row consoles, Hartley & Zisserman 2004 ch. 7, + the hall-axis vanishing point, Caprile & Torre 1990): top and bottom edges read on x = 10.5 and corrected by the runway girder (see pipe-rack-gallery-*): top 3.41-3.47, bottom 2.63-2.98 over z 22.7-38.0 -> level within the read",
+      "basis": "FROM PHOTOS 2026-10-08"
+    }
+  ],
+  "massing_remove": [
+    {
+      "id": "pipe-rack-2",
+      "why": "not seen as a separate rack on 10-08: the +x side shows the inclined gallery and one long pipe (170604, 165313)",
+      "photos": "20261008_170604.jpg",
+      "basis": "SEEN in photos (absence) 2026-10-08"
+    },
+    {
+      "id": "pipe-rack-3",
+      "why": "as pipe-rack-2; the gallery boxes pipe-rack-gallery-1..4 take its place in every pipe-rack check",
+      "photos": "20261008_170604.jpg",
+      "basis": "SEEN in photos (absence) 2026-10-08"
+    },
+    {
+      "id": "prefab-cabin",
+      "why": "gone as found: its model place is empty in 170604 (a ~0.7 m block, timber, boards)",
+      "photos": "20261008_170604.jpg",
+      "basis": "SEEN in photos (absence) 2026-10-08"
+    }
+  ],
+  "massing_add": [
+    {
+      "id": "pipe-rack-gallery-1",
+      "label": "inclined gallery / conveyor on the +x side, segment 1 of 4 (stepped boxes: hall.py draws boxes, not a slope)",
+      "x_m": [
+        10.0,
+        11.6
+      ],
+      "y_m": [
+        5.1,
+        7.4
+      ],
+      "z_m": [
+        6,
+        14.5
+      ],
+      "material": "girder",
+      "photos": "20261008_170604.jpg (m1 crop); 20261008_165313.jpg (c6); 20261008_164131.mp4 t=190 s (m4)",
+      "confidence": "LOW: one fitted view; x not fixed by it (x 10.0-11.6 assumed, +-1 m); heights +-0.5 m; z 6-20 extrapolated (seen z ~20-35); slope -4 deg (descending toward the NW / +z) +-2 deg",
+      "how": "camera of 20261008_170604.jpg fitted in the hall frame (median of the 400-draw Monte Carlo, ~/Downloads/moxir/site-2026-10-08/data/fit-170604-montecarlo.json: (-2.16, 1.76, 5.90) m, facing +z, pitch 20.3 deg, f 1500 px, rms 5.8 px; pinhole resection on 5 left-row consoles, Hartley & Zisserman 2004 ch. 7, + the hall-axis vanishing point, Caprile & Torre 1990). Edges read on the plane x = 10.5: the grating bolt row (seen z 20.6-26.6) and the stringer above it (z 21.2-34.7). The +x crane runway girder in the same image region (level by function, bottom 7.06 m in the model) reads an apparent rise of 0.061 m/m (fit + residual lens error at the image edge), so that slope is subtracted with the runway reading true at z 31.0: the grating then falls 0.074 m/m and the stringer 0.065 m/m toward +z. Box = grating - 0.3 m to stringer + 1.0 m (rail), over the segment.",
+      "basis": "FROM PHOTOS 2026-10-08",
+      "slope_deg_toward_plus_z": -4.0
+    },
+    {
+      "id": "pipe-rack-gallery-2",
+      "label": "inclined gallery / conveyor on the +x side, segment 2 of 4 (stepped boxes: hall.py draws boxes, not a slope)",
+      "x_m": [
+        10.0,
+        11.6
+      ],
+      "y_m": [
+        4.5,
+        6.9
+      ],
+      "z_m": [
+        14.5,
+        23
+      ],
+      "material": "girder",
+      "photos": "20261008_170604.jpg (m1 crop); 20261008_165313.jpg (c6); 20261008_164131.mp4 t=190 s (m4)",
+      "confidence": "LOW: one fitted view; x not fixed by it (x 10.0-11.6 assumed, +-1 m); heights +-0.5 m; z 6-20 extrapolated (seen z ~20-35); slope -4 deg (descending toward the NW / +z) +-2 deg",
+      "how": "camera of 20261008_170604.jpg fitted in the hall frame (median of the 400-draw Monte Carlo, ~/Downloads/moxir/site-2026-10-08/data/fit-170604-montecarlo.json: (-2.16, 1.76, 5.90) m, facing +z, pitch 20.3 deg, f 1500 px, rms 5.8 px; pinhole resection on 5 left-row consoles, Hartley & Zisserman 2004 ch. 7, + the hall-axis vanishing point, Caprile & Torre 1990). Edges read on the plane x = 10.5: the grating bolt row (seen z 20.6-26.6) and the stringer above it (z 21.2-34.7). The +x crane runway girder in the same image region (level by function, bottom 7.06 m in the model) reads an apparent rise of 0.061 m/m (fit + residual lens error at the image edge), so that slope is subtracted with the runway reading true at z 31.0: the grating then falls 0.074 m/m and the stringer 0.065 m/m toward +z. Box = grating - 0.3 m to stringer + 1.0 m (rail), over the segment.",
+      "basis": "FROM PHOTOS 2026-10-08",
+      "slope_deg_toward_plus_z": -4.0
+    },
+    {
+      "id": "pipe-rack-gallery-3",
+      "label": "inclined gallery / conveyor on the +x side, segment 3 of 4 (stepped boxes: hall.py draws boxes, not a slope)",
+      "x_m": [
+        10.0,
+        11.6
+      ],
+      "y_m": [
+        3.8,
+        6.3
+      ],
+      "z_m": [
+        23,
+        31.5
+      ],
+      "material": "girder",
+      "photos": "20261008_170604.jpg (m1 crop); 20261008_165313.jpg (c6); 20261008_164131.mp4 t=190 s (m4)",
+      "confidence": "LOW: one fitted view; x not fixed by it (x 10.0-11.6 assumed, +-1 m); heights +-0.5 m; z 6-20 extrapolated (seen z ~20-35); slope -4 deg (descending toward the NW / +z) +-2 deg",
+      "how": "camera of 20261008_170604.jpg fitted in the hall frame (median of the 400-draw Monte Carlo, ~/Downloads/moxir/site-2026-10-08/data/fit-170604-montecarlo.json: (-2.16, 1.76, 5.90) m, facing +z, pitch 20.3 deg, f 1500 px, rms 5.8 px; pinhole resection on 5 left-row consoles, Hartley & Zisserman 2004 ch. 7, + the hall-axis vanishing point, Caprile & Torre 1990). Edges read on the plane x = 10.5: the grating bolt row (seen z 20.6-26.6) and the stringer above it (z 21.2-34.7). The +x crane runway girder in the same image region (level by function, bottom 7.06 m in the model) reads an apparent rise of 0.061 m/m (fit + residual lens error at the image edge), so that slope is subtracted with the runway reading true at z 31.0: the grating then falls 0.074 m/m and the stringer 0.065 m/m toward +z. Box = grating - 0.3 m to stringer + 1.0 m (rail), over the segment.",
+      "basis": "FROM PHOTOS 2026-10-08",
+      "slope_deg_toward_plus_z": -4.0
+    },
+    {
+      "id": "pipe-rack-gallery-4",
+      "label": "inclined gallery / conveyor on the +x side, segment 4 of 4 (stepped boxes: hall.py draws boxes, not a slope)",
+      "x_m": [
+        10.0,
+        11.6
+      ],
+      "y_m": [
+        3.2,
+        5.8
+      ],
+      "z_m": [
+        31.5,
+        40
+      ],
+      "material": "girder",
+      "photos": "20261008_170604.jpg (m1 crop); 20261008_165313.jpg (c6); 20261008_164131.mp4 t=190 s (m4)",
+      "confidence": "LOW: one fitted view; x not fixed by it (x 10.0-11.6 assumed, +-1 m); heights +-0.5 m; z 6-20 extrapolated (seen z ~20-35); slope -4 deg (descending toward the NW / +z) +-2 deg",
+      "how": "camera of 20261008_170604.jpg fitted in the hall frame (median of the 400-draw Monte Carlo, ~/Downloads/moxir/site-2026-10-08/data/fit-170604-montecarlo.json: (-2.16, 1.76, 5.90) m, facing +z, pitch 20.3 deg, f 1500 px, rms 5.8 px; pinhole resection on 5 left-row consoles, Hartley & Zisserman 2004 ch. 7, + the hall-axis vanishing point, Caprile & Torre 1990). Edges read on the plane x = 10.5: the grating bolt row (seen z 20.6-26.6) and the stringer above it (z 21.2-34.7). The +x crane runway girder in the same image region (level by function, bottom 7.06 m in the model) reads an apparent rise of 0.061 m/m (fit + residual lens error at the image edge), so that slope is subtracted with the runway reading true at z 31.0: the grating then falls 0.074 m/m and the stringer 0.065 m/m toward +z. Box = grating - 0.3 m to stringer + 1.0 m (rail), over the segment.",
+      "basis": "FROM PHOTOS 2026-10-08",
+      "slope_deg_toward_plus_z": -4.0
+    },
+    {
+      "id": "cyclone-hood-nw",
+      "label": "cyclone hood the long pipe ends in (one view: depth along the ray unresolved)",
+      "x_m": [
+        9.9,
+        11.1
+      ],
+      "y_m": [
+        0.0,
+        3.6
+      ],
+      "z_m": [
+        39.5,
+        42.0
+      ],
+      "material": "machine",
+      "photos": "20261008_170604.jpg (m1)",
+      "confidence": "SUSPECTED (one direction): it lies on the ray from about (2.7, z 20) to (11.35, z 45); placed where the long pipe (x ~10.5) meets that ray. If it is the modelled blower-cyclone, the pipe runs diagonally instead.",
+      "how": "camera of 20261008_170604.jpg fitted in the hall frame (median of the 400-draw Monte Carlo, ~/Downloads/moxir/site-2026-10-08/data/fit-170604-montecarlo.json: (-2.16, 1.76, 5.90) m, facing +z, pitch 20.3 deg, f 1500 px, rms 5.8 px; pinhole resection on 5 left-row consoles, Hartley & Zisserman 2004 ch. 7, + the hall-axis vanishing point, Caprile & Torre 1990): hood top (u 735, v 1565) and bottom (u 745, v 1700) in the 2400 px export read on x = 10.5: top 3.7 at z 40.1, bottom 0.6 at z 42.0, the runway correction applied to the top",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-m11.2-z0",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -11.5,
+        -10.9
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        -0.3,
+        0.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-m6-z0",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -6.3,
+        -5.7
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        -0.3,
+        0.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p0-z0",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -0.3,
+        0.3
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        -0.3,
+        0.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p6-z0",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        5.7,
+        6.3
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        -0.3,
+        0.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p11.2-z0",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        10.9,
+        11.5
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        -0.3,
+        0.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-m11.2-z6",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -11.5,
+        -10.9
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        5.7,
+        6.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-m6-z6",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -6.3,
+        -5.7
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        5.7,
+        6.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p0-z6",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -0.3,
+        0.3
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        5.7,
+        6.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p6-z6",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        5.7,
+        6.3
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        5.7,
+        6.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p11.2-z6",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        10.9,
+        11.5
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        5.7,
+        6.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-m11.2-z12",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -11.5,
+        -10.9
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        11.7,
+        12.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-m6-z12",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -6.3,
+        -5.7
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        11.7,
+        12.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p0-z12",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -0.3,
+        0.3
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        11.7,
+        12.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p6-z12",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        5.7,
+        6.3
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        11.7,
+        12.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p11.2-z12",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        10.9,
+        11.5
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        11.7,
+        12.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-m11.2-z18",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -11.5,
+        -10.9
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        17.7,
+        18.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-m6-z18",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -6.3,
+        -5.7
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        17.7,
+        18.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p0-z18",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -0.3,
+        0.3
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        17.7,
+        18.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p6-z18",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        5.7,
+        6.3
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        17.7,
+        18.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p11.2-z18",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        10.9,
+        11.5
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        17.7,
+        18.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-m11.2-z24",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -11.5,
+        -10.9
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        23.7,
+        24.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-m6-z24",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -6.3,
+        -5.7
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        23.7,
+        24.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p0-z24",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        -0.3,
+        0.3
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        23.7,
+        24.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p6-z24",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        5.7,
+        6.3
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        23.7,
+        24.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    },
+    {
+      "id": "pendant-lamp-p11.2-z24",
+      "label": "bell pendant lamp on a bottom-chord node (obstacle envelope)",
+      "x_m": [
+        10.9,
+        11.5
+      ],
+      "y_m": [
+        9.5,
+        10.6
+      ],
+      "z_m": [
+        23.7,
+        24.3
+      ],
+      "material": "steel",
+      "group": "pendant-lamps",
+      "photos": "20261008_170604.jpg (l1, l2 crops), 20261008_183913.jpg (l3 crop)",
+      "confidence": "SUSPECTED at every node (envelope): lamps are SEEN hanging at chord nodes over z ~-5..25, not each one located; bottom 9.5 m = the lowest lamp seen (range 9.0-10.0)",
+      "how": "single-view metrology in 170604 (Criminisi, Reid & Zisserman 2000): L1 bell bottom 10.2 m at about (-7.8, 16.7), L2 (lit) bottom 9.5 m at about (-10, 22); lamps hang 0.4-1.3 m under the 10.8 m chord. One lamp per 6 m node x -11.2/-6/0/6/+11.2 (the row nodes taken 0.8 m in, beside the column head), z 0-24.",
+      "basis": "FROM PHOTOS 2026-10-08"
+    }
+  ],
+  "notes": [
+    "2026-10-08 site layer (as found): near crane at the NW end z 42.5 (39.9-47.2), underside 7.6 (7.2-8.1) on this crane, cab +x; far crane kept at -22.2 (today low-confidence -24..-36); pendant lamps 9.5 m (9.0-10.0) over z -5..25, some live; white bags z 19-23, x -0.6..2.4 (movable, not massing); cabin gone; +x side = an inclined gallery falling ~4 deg toward the NW (5.1-7.4 m at the SE end, 3.2-5.8 at z 40) + a level pipe at 2.6-3.5 + a cyclone hood, replacing pipe racks 2-3; loose: gas cylinders (fire risk), vessels, skip, forklift, floor pipes, car; fixed not placed: horizontal tank, far-half stair, the side gate with the mesh door (today's way in).",
+    "Check pictures (each box projected onto 170604 with its fitted camera): the session report v11-site-report.md."
+  ]
+}

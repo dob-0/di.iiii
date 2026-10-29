@@ -235,3 +235,10 @@ export const collectFinishedHints = (state) => {
   }
   return hints
 }
+
+// What counts as "the recap happened" for the CURRENT.md freshness gate (N885,
+// 2026-10-20). CURRENT.md is written only by `npm run land` at merge time, and a
+// branch must not touch it -- so a branch's own session note IS its recap. Counting
+// only CURRENT.md made the gate unsatisfiable from every branch whenever dev's
+// last fold was older than the grace (10-19: 107 notes waiting, every push refused).
+export const CURRENT_MD_RECAP_PATHSPECS = ['CURRENT.md', 'docs/ai/sessions/*.md', ':(exclude)docs/ai/sessions/README.md']

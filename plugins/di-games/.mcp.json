@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "blender": {
+      "command": "uvx",
+      "args": ["--from", "mcp-for-blender==2.1.9", "mcp-for-blender"],
+      "env": {
+        "BLENDER_MCP_SAFE_MODE": "1",
+        "DISABLE_TELEMETRY": "true",
+        "BLENDER_HOST": "localhost"
+      }
+    }
+  }
+}

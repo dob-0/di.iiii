@@ -29,7 +29,7 @@ describe('the visitor viewer draws rectangles', () => {
 
     it('keeps the live scene\'s buttons and the sign-in notice off the pill token', () => {
         const scene = read('../../components/liveProjectScene.css')
-        const buttons = ['.live-scene-exit', '.live-scene-sound', '.live-scene-fly-btn', '.live-scene-vert-btn']
+        const buttons = ['.live-scene-exit', '.live-scene-sound', '.live-scene-fly-btn', '.live-scene-light-btn', '.live-scene-vert-btn']
         for (const selector of buttons) {
             const rule = scene.split('}').find((block) => block.includes(`${selector} {`) || block.includes(`${selector}{`))
             expect(rule, selector).toBeTruthy()
@@ -38,13 +38,13 @@ describe('the visitor viewer draws rectangles', () => {
         expect(read('../../components/authReturnNotice.css')).not.toMatch(round)
     })
 
-    // Wave 2. The jam surface and the kit page: every round corner left in these files is a
-    // named non-control mark, so a new pill or circle on a button fails here.
-    it('keeps the jam surface round only on its two non-control marks', () => {
-        const css = read('../../project/components/jamSurface.css')
+    // Wave 2. The jam surface and the kit page: the jam draws no round mark at all, its presence
+    // dot included (owner: rectangles only); a new pill or circle fails here.
+    it('keeps the jam surface square, its presence dot too', () => {
+        const css = read('../../project/components/jamSurface.css').replace(/\/\*[\s\S]*?\*\//g, '')
         const rounds = [...css.matchAll(/([^{}]+)\{[^}]*border-radius:\s*(var\(--di-radius-pill\)|999px|50%)/g)]
             .map((m) => m[1].trim())
-        expect(rounds).toEqual(['.jam-count-dot', '.jam-mine-swatch'])
+        expect(rounds).toEqual([])
     })
 
     it('draws every kit page control and tag with a 2 px corner', () => {

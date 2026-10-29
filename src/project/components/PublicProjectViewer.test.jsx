@@ -1,7 +1,9 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { useEffect } from 'react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PublicProjectViewer from './PublicProjectViewer.jsx'
 import { PREVIEW_ENTER_EXHIBITION_KIND, PREVIEW_HOST_MESSAGE_TYPE, PREVIEW_PAINT_CONFIRMED_KIND } from '../../utils/presentationPreviewDocument.js'
+import { getSpeedPreference, getTurnPreference, resetNavigationPreferenceMemory } from '../../studio/navigation/preference.js'
 
 const {
     syncState,
@@ -40,6 +42,8 @@ vi.mock('../services/projectsApi.js', () => ({
 
 const listSpaceContentsMock = vi.fn(async () => [{ id: 'p', slug: null, title: 'p', mode: 'scene', updatedAt: 0 }])
 
+const authState = vi.hoisted(() => ({ session: { requireAuth: false, authenticated: false, role: null, spaces: null } }))
+vi.mock('../../hooks/useAuthSession.js', () => ({ default: () => authState.session }))
 vi.mock('../../hooks/useXrAr.js', () => ({
     default: () => ({
         xrStore: {},
@@ -62,12 +66,17 @@ vi.mock('../../raw/PublicGraphSurface.jsx', () => ({
 }))
 
 vi.mock('../../studio/components/StudioViewport.jsx', () => ({
-    default: function MockStudioViewport({ document, enableNavigation, showChrome, lowPower, playTimelines }) {
+    default: function MockStudioViewport({ document, enableNavigation, showChrome, lowPower, playTimelines, smartView }) {
+        const layers = smartView?.layers
+        const onBuilding = smartView?.onBuilding
+        useEffect(() => { if (globalThis.__mockBuilding) onBuilding?.(true) }, [onBuilding])
         return (
             <div>
+                <div data-testid="viewport-layers">{`cut:${layers?.cut !== false} roof:${layers?.roof !== false}`}</div>
                 <div>viewer-scene:{document.presentationState?.entryView || 'scene'}</div>
                 <div data-testid="viewport-flags">{`nav:${enableNavigation} chrome:${showChrome} low:${lowPower}`}</div>
                 <div data-testid="viewport-timelines">{`play:${Boolean(playTimelines)}`}</div>
+                <div data-testid="viewport-fly">{`fly:${Boolean(smartView?.flyOn)}`}</div>
             </div>
         )
     }
@@ -92,6 +101,43 @@ describe('PublicProjectViewer', () => {
         buildProjectEventsUrlMock.mockClear()
     })
 
+    it('opens the plain project view, not an empty 3D room, for a project with no scene and no code', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: { projectMeta: { id: 'cinema', title: 'Cinema House' }, entities: [] }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="cinema-house" projectId="cinema" spaceLabel="Cinema House" />)
+
+        expect(await screen.findByTestId('project-plain-view')).toHaveTextContent('Cinema House')
+        expect(screen.queryByText(/viewer-scene/)).toBeNull()
+    })
+
+    it('opening a space whose one project is empty lands in the project view, with the choices for an editor', async () => {
+        authState.session = { requireAuth: true, authenticated: true, role: 'admin', spaces: null }
+        try {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: { projectMeta: { id: 'only', title: 'Only' }, entities: [], nodes: [] }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            render(<PublicProjectViewer spaceId="cinema-house" projectId="only" spaceLabel="Cinema House" />)
+
+            expect(await screen.findByTestId('project-plain-view')).toBeInTheDocument()
+            const choices = screen.getByTestId('project-choices')
+            // Each choice goes where it is done: the scene to the editor, code to the Code panel, pictures to Create.
+            expect(screen.getByTestId('choice-scene').getAttribute('href')).toMatch(/\/studio$/)
+            expect(screen.getByTestId('choice-code').getAttribute('href')).toMatch(/\/studio\?open=files$/)
+            expect(screen.getByTestId('choice-pictures').getAttribute('href')).toMatch(/\/studio\?open=create$/)
+            expect(choices).toHaveTextContent('Add a scene')
+            expect(screen.queryByText(/viewer-scene/)).toBeNull()
+        } finally {
+            authState.session = { requireAuth: false, authenticated: false, role: null, spaces: null }
+        }
+    })
+
     it('updates the public surface live when Studio changes the presentation entry view', async () => {
         getProjectDocumentMock.mockResolvedValue({
             version: 1,
@@ -105,7 +151,7 @@ describe('PublicProjectViewer', () => {
                     entryView: 'scene',
                     codeHtml: ''
                 },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({
@@ -161,7 +207,7 @@ describe('PublicProjectViewer', () => {
             document: {
                 projectMeta: { id: 'code-only', title: 'Code Only' },
                 presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>page</main>' },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -188,7 +234,7 @@ describe('PublicProjectViewer', () => {
                 document: {
                     projectMeta: { id: 'landing', title: 'the landing — the door' },
                     presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>door</main>' },
-                    entities: []
+                    entities: [{ id: 'e1', type: 'cube' }]
                 }
             })
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -227,7 +273,7 @@ describe('PublicProjectViewer', () => {
                     codeHtml: '<main>the lamp</main>',
                     deviceAccess: true
                 },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -259,7 +305,7 @@ describe('PublicProjectViewer', () => {
                     entryView: 'code',
                     codeHtml: '<button onclick="diiEnterExhibition()">Enter</button>'
                 },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({
@@ -306,7 +352,7 @@ describe('PublicProjectViewer', () => {
         document: {
             projectMeta: { id: 'live-project', title: 'Live Project' },
             presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
-            entities: []
+            entities: [{ id: 'e1', type: 'cube' }]
         }
     }
 
@@ -349,7 +395,7 @@ describe('PublicProjectViewer', () => {
                 document: {
                     projectMeta: { id: 'heavy-piece', title: 'Heavy Piece' },
                     presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>the piece</main>' },
-                    entities: []
+                    entities: [{ id: 'e1', type: 'cube' }]
                 }
             })
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -378,7 +424,7 @@ describe('PublicProjectViewer', () => {
                 document: {
                     projectMeta: { id: 'heavy-piece', title: 'Heavy Piece' },
                     presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>INITIALIZING SPACE... 0%</main>' },
-                    entities: []
+                    entities: [{ id: 'e1', type: 'cube' }]
                 }
             })
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -434,7 +480,7 @@ describe('PublicProjectViewer', () => {
                 document: {
                     projectMeta: { id: 'br-id-ge', title: 'br_id_ge' },
                     presentationState: { mode: 'code', entryView: 'code', codeHtml: '<h1>a bridge between worlds</h1>' },
-                    entities: []
+                    entities: [{ id: 'e1', type: 'cube' }]
                 }
             })
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -484,7 +530,7 @@ describe('PublicProjectViewer', () => {
             document: {
                 projectMeta: { id: 'heavy-piece', title: 'Heavy Piece' },
                 presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>the piece</main>' },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -532,7 +578,7 @@ describe('PublicProjectViewer', () => {
                 document: {
                     projectMeta: { id: 'live-project', title: 'Live Project' },
                     presentationState: { mode: 'code', entryView: 'code', codeHtml: '<p>the field</p>' },
-                    entities: []
+                    entities: [{ id: 'e1', type: 'cube' }]
                 }
             })
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -595,6 +641,70 @@ describe('PublicProjectViewer', () => {
         expect(await screen.findByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
     })
 
+    // Auto fly (viewport/autoFly.js): a button beside Walk / Fly; ?fly=1 starts the flight on open.
+    it('offers Auto fly beside Walk / Fly, and the button starts and stops the flight', async () => {
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+        const button = await screen.findByRole('button', { name: 'Auto fly' })
+        expect(button.style.borderRadius || '').not.toMatch(/999|50%/)
+        expect(screen.getByTestId('viewport-fly').textContent).toBe('fly:false')
+        fireEvent.click(button)
+        expect(screen.getByTestId('viewport-fly').textContent).toBe('fly:true')
+        expect(button.getAttribute('aria-pressed')).toBe('true')
+        fireEvent.click(button)
+        expect(screen.getByTestId('viewport-fly').textContent).toBe('fly:false')
+    })
+
+    it('starts the flight on open with ?fly=1', async () => {
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+        window.history.replaceState(null, '', '/main?fly=1')
+        try {
+            render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+            await screen.findByRole('button', { name: 'Auto fly' })
+            expect(screen.getByTestId('viewport-fly').textContent).toBe('fly:true')
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
+    // The standard move's settings (owner, 2026-10-13: "settable in settings that you can set how you want"): one small Move
+    // button with the other corner controls, writing the same per-device preference the Studio's Scene window writes.
+    it('offers Move with the other corner controls outside preview mode, and it sets the move', async () => {
+        resetNavigationPreferenceMemory()
+        try { window.localStorage.clear() } catch { /* no storage */ }
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Move' }))
+        fireEvent.change(screen.getByLabelText('Speed (metres a step)'), { target: { value: '2' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Where you stand' }))
+        expect(getSpeedPreference()).toBe(2)
+        expect(getTurnPreference()).toBe('place')
+        resetNavigationPreferenceMemory()
+        try { window.localStorage.clear() } catch { /* no storage */ }
+    })
+
+    it('has no Move button where there is no navigation (?preview=1)', async () => {
+        window.history.replaceState(null, '', '/main?preview=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+            expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+            expect(screen.queryByRole('button', { name: 'Move' })).toBeNull()
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
     // Regression guard: the published viewer's default (orbit) view is
     // StudioViewport, where authored keyframes used to play ONLY while the
     // editor's Timeline scrubber was being dragged. Published scenes therefore
@@ -651,6 +761,138 @@ describe('PublicProjectViewer', () => {
         fireEvent.click(versions)
         expect(screen.getByRole('link', { name: 'B' })).toBeInTheDocument()
         listSpaceContentsMock.mockResolvedValue([{ id: 'p', slug: null, title: 'p', mode: 'scene', updatedAt: 0 }])
+    })
+
+    // THE SCENE IS THE PAGE (owner 2026-10-13): a rig room opens with a few small closed controls, and the author's switches
+    // (presentationState.visitorChrome, set in the Studio under "What visitors see") take each one off.
+    describe('the view page of a rig room: clear by default, the author decides what exists', () => {
+        const rigDocument = (visitorChrome) => ({
+            version: 1,
+            document: {
+                ...sceneDocumentResponse.document,
+                presentationState: { ...sceneDocumentResponse.document.presentationState, ...(visitorChrome ? { visitorChrome } : {}) },
+                entities: [
+                    { id: 'lamp', components: { fixture: { type: 'spot' } } },
+                    { id: 'show', components: { rigVariant: { set: 's', id: 'a', title: 'A', siblings: [{ id: 'a', projectId: 'live-project', title: 'A' }, { id: 'b', projectId: 'p2', title: 'B' }] } } }
+                ]
+            }
+        })
+        const visit = async (visitorChrome) => {
+            window.localStorage.clear()
+            getProjectDocumentMock.mockResolvedValue(rigDocument(visitorChrome))
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+            listSpaceContentsMock.mockResolvedValue([{ id: 'live-project' }, { id: 'p2' }])
+            render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+            await screen.findByText('viewer-scene:scene')
+        }
+        it('first load: one Versions chip with its row closed, Walk / Fly, Display closed, nothing else open', async () => {
+            await visit()
+            const chip = await screen.findByTestId('rig-versions-chip')
+            expect(chip.getAttribute('aria-expanded')).toBe('false')
+            expect(screen.queryByRole('link', { name: 'B' })).toBeNull()
+            expect(screen.getByTestId('display-chip').getAttribute('aria-expanded')).toBe('false')
+            expect(screen.queryByTestId('scene-layers')).toBeNull()
+            expect(screen.getByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
+            fireEvent.click(chip)
+            expect(await screen.findByRole('link', { name: 'B' })).toBeInTheDocument()
+            expect(window.localStorage.getItem('di.panel.versions')).toBe('1')
+        })
+        it('the versions switch takes the chip away', async () => {
+            await visit({ versions: false })
+            await screen.findByRole('button', { name: 'Walk / Fly' })
+            expect(screen.queryByTestId('rig-versions-chip')).toBeNull()
+        })
+        it('the walk switch takes Walk / Fly and Quality away', async () => {
+            await visit({ walk: false })
+            await screen.findByTestId('rig-versions-chip')
+            expect(screen.queryByRole('button', { name: 'Walk / Fly' })).toBeNull()
+            expect(screen.queryByRole('button', { name: /^(Low|High)$/ })).toBeNull()
+        })
+        it('Edit in Studio is offered to a session that can edit, and not to one that cannot', async () => {
+            authState.session = { requireAuth: true, authenticated: true, role: 'editor', spaces: ['main'] }
+            await visit()
+            expect(await screen.findByTestId('edit-in-studio')).toBeInTheDocument()
+            cleanup()
+            authState.session = { requireAuth: true, authenticated: false, role: null, spaces: null }
+            await visit()
+            await screen.findByTestId('rig-versions-chip')
+            expect(screen.queryByTestId('edit-in-studio')).toBeNull()
+            authState.session = { requireAuth: false, authenticated: false, role: null, spaces: null }
+        })
+    })
+
+    describe('the scene bar of a rig room never wraps from 900 px (owner 2026-10-15: "why is the UI messed")', () => {
+        const visitRig = async () => {
+            window.localStorage.clear()
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: { ...sceneDocumentResponse.document, entities: [{ id: 'lamp', components: { fixture: { type: 'spot' } } }, { id: 'show', components: { rigVariant: { set: 's', id: 'a', title: 'A', siblings: [{ id: 'a', projectId: 'live-project', title: 'A' }, { id: 'b', projectId: 'p2', title: 'B' }] } } }] }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+            listSpaceContentsMock.mockResolvedValue([{ id: 'live-project' }, { id: 'p2' }])
+            render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+            await screen.findByText('viewer-scene:scene')
+            return screen.findByTestId('scene-bar')
+        }
+        it('is one row: two groups, the left one shrinks, the rules wrap only under 900 px', async () => {
+            const bar = await visitRig()
+            expect(bar.className).toBe('scene-bar')
+            expect(bar.style.flexWrap).toBe('') // the wrap is a media-query rule, never an inline style
+            expect(screen.getByTestId('scene-bar-left').className).toBe('scene-bar__left')
+            expect(screen.getByTestId('scene-bar-right').className).toBe('scene-bar__right')
+            const css = bar.querySelector('style').textContent
+            expect(css).toContain('.scene-bar{flex-wrap:nowrap}')
+            expect(css).toMatch(/\.scene-bar__left\{[^}]*flex:1 1 auto;flex-wrap:nowrap/)
+            expect(css).toMatch(/\.scene-bar__right\{[^}]*flex:0 0 auto;flex-wrap:nowrap/)
+            expect(css).toMatch(/@media \(max-width:899px\)\{\.scene-bar\{flex-wrap:wrap\}/)
+            // the versions chip is inside the left group (so it can take an ellipsis before the bar wraps), the Display chip in the right
+            expect(screen.getByTestId('scene-bar-left').contains(screen.getByTestId('rig-versions-chip'))).toBe(true)
+            expect(screen.getByTestId('scene-bar-right').contains(screen.getByTestId('display-chip'))).toBe(true)
+        })
+        describe('the building stands whole on the room page (owner 2026-10-15)', () => {
+            const openDisplay = async (search = '') => {
+                globalThis.__mockBuilding = true
+                window.history.replaceState(null, '', `/main/p/live-project${search}`)
+                await visitRig()
+                fireEvent.click(screen.getByTestId('display-chip'))
+            }
+            afterEach(() => { globalThis.__mockBuilding = false; window.history.replaceState(null, '', '/') })
+            it('Cut starts off, with no address parameter', async () => {
+                await openDisplay()
+                expect(await screen.findByTestId('viewport-layers')).toHaveTextContent('cut:false')
+                expect(screen.getByTestId('layer-cut').getAttribute('aria-pressed')).toBe('false')
+                expect(window.location.search).toBe('')
+            })
+            it('?layers= names the layers and wins', async () => {
+                await openDisplay('?layers=roof,walls,machines,outside,cut')
+                expect(await screen.findByTestId('viewport-layers')).toHaveTextContent('cut:true')
+            })
+            it('the Cut item toggles the cutaway and writes the address', async () => {
+                await openDisplay()
+                const cut = await screen.findByTestId('layer-cut')
+                expect(cut.title).toBe('Cut away the roof and the walls facing you from outside')
+                fireEvent.click(cut)
+                expect(screen.getByTestId('viewport-layers')).toHaveTextContent('cut:true')
+                expect(new URLSearchParams(window.location.search).get('layers')).toBe('roof,walls,machines,outside,cut')
+                fireEvent.click(screen.getByTestId('layer-cut'))
+                expect(screen.getByTestId('viewport-layers')).toHaveTextContent('cut:false')
+                expect(window.location.search).toBe('')
+            })
+        })
+        it('the Display menu lists its items as one width on the chip\'s left edge, rectangles', async () => {
+            await visitRig()
+            fireEvent.click(screen.getByTestId('display-chip'))
+            const menu = await screen.findByTestId('scene-display')
+            expect(menu.style.left).toBe('0px')
+            expect(menu.style.right).toBe('auto')
+            expect(parseFloat(menu.style.borderRadius)).toBeLessThanOrEqual(2)
+            // the rule must skip the <style> element itself, or the CSS text shows in the menu (2026-10-15)
+            expect(menu.querySelector('style').textContent).toContain('.scene-display>:not(style){display:flex;width:100%')
+            expect(menu.querySelector('style').textContent).not.toContain('.scene-display>*{')
+            const items = [...menu.querySelectorAll('button')]
+            expect(items.length).toBeGreaterThanOrEqual(2)
+            items.forEach((b) => expect(parseFloat(b.style.borderRadius || '2')).toBeLessThanOrEqual(2))
+        })
     })
 
     // Regression guard: the public viewer is the platform's widest audience and
@@ -861,7 +1103,7 @@ describe('PublicProjectViewer', () => {
                 document: {
                     projectMeta: { id: 'the-yard', title: 'The Yard' },
                     presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>yard</main>' },
-                    entities: []
+                    entities: [{ id: 'e1', type: 'cube' }]
                 }
             })
             await readyPromise
@@ -964,7 +1206,7 @@ describe('document title', () => {
             document: {
                 projectMeta: { id: 'front-page', title: 'Front Page' },
                 presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -982,7 +1224,7 @@ describe('document title', () => {
             document: {
                 projectMeta: { id: 'mery-petrosyan', title: 'Mery Petrosyan' },
                 presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
@@ -1005,14 +1247,54 @@ describe('document title', () => {
             document: {
                 projectMeta: { id: 'room', title: 'The Room' },
                 presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
-                entities: []
+                entities: [{ id: 'e1', type: 'cube' }]
             }
         })
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
 
-        render(<PublicProjectViewer spaceId="main" projectId="room" spaceLabel="di.iiii" showProjectInTitle />)
+        render(<PublicProjectViewer spaceId="main" projectId="room" spaceLabel="Home" spaceAddress="di-iiii" showProjectInTitle />)
 
         await screen.findByText('viewer-scene:scene')
         expect(document.title).toBe('di.iiii — public spaces on the open web')
+    })
+
+    // One name per space: the viewer is handed the word that was typed (/di-iiii) as spaceId, so the tab is asked of the
+    // record's id (spaceRecordId). "di.iiii — di.iiii" was the tab on the platform's own space reached by its address.
+    it('leaves the tab title alone for the platform\'s own space, reached by its address too', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'room', title: 'The Room' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: [{ id: 'e1', type: 'cube' }]
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        const { unmount } = render(<PublicProjectViewer spaceId="di-iiii" projectId="room" spaceLabel="Home" spaceAddress="di-iiii" spaceRecordId="main" />)
+        await screen.findByText('viewer-scene:scene')
+        expect(document.title).toBe('di.iiii — public spaces on the open web')
+        unmount()
+
+        // and on a project the address named
+        render(<PublicProjectViewer spaceId="di-iiii" projectId="room" spaceLabel="Home" spaceAddress="di-iiii" spaceRecordId="main" showProjectInTitle />)
+        await screen.findByText('viewer-scene:scene')
+        expect(document.title).toBe('di.iiii — public spaces on the open web')
+    })
+
+    it('names a space that has no name by its address', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'room', title: 'The Room' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: [{ id: 'e1', type: 'cube' }]
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="queerlab" projectId="room" spaceAddress="queer-lab" />)
+
+        await waitFor(() => expect(document.title).toBe('queer-lab — di.iiii'))
     })
 })

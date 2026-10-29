@@ -291,6 +291,18 @@ describe('applyProjectOps', () => {
     expect(typeof doc.worldState.ambientLight).toBe('object')
   })
 
+  it('worldState.headLight: { enabled: true } or null, set and cleared by a setWorldState patch (same inputs as src/components/headLight.test.js)', () => {
+    expect(normalizeProjectDocument({ worldState: { headLight: { enabled: true, junk: 1 } } }).worldState.headLight).toEqual({ enabled: true })
+    expect(normalizeProjectDocument({ worldState: {} }).worldState.headLight).toBeNull()
+    expect(normalizeProjectDocument({ worldState: { headLight: { enabled: false } } }).worldState.headLight).toBeNull()
+    expect(normalizeProjectDocument({ worldState: { headLight: { enabled: 'yes' } } }).worldState.headLight).toBeNull()
+    expect(normalizeProjectDocument({}).worldState.headLight).toBeNull()
+    const on = applyProjectOps({}, [{ type: 'setWorldState', payload: { patch: { headLight: { enabled: true } } } }])
+    expect(on.worldState.headLight).toEqual({ enabled: true })
+    const off = applyProjectOps(on, [{ type: 'setWorldState', payload: { patch: { headLight: null } } }])
+    expect(off.worldState.headLight).toBeNull()
+  })
+
   it('setWorkspaceState patches liveWorldNodeIdByScope without an explicit new op type, and does not wipe other scopes\' entries', () => {
     const afterFirst = applyProjectOps({}, [{
       type: 'setWorkspaceState',
@@ -1064,5 +1076,57 @@ describe('the ai camera effect on the CJS twin — the server keeps what the des
     const read = normalizeProjectDocument({ mappingState: { surfaces: [{ id: 'cam', effect: { kind: 'ai', prompt: 'x'.repeat(900), strength: 3 } }] } })
     expect(read.mappingState.surfaces[0].effect.prompt).toHaveLength(300)
     expect(read.mappingState.surfaces[0].effect.strength).toBe(1)
+  })
+})
+
+describe('fields this build does not know ride through the CJS twin (audit 2026-10-09 F3)', () => {
+  // A newer build's section or object field must survive every save here,
+  // or a rollback (or an older follower) deletes it for everyone. The ESM
+  // twin has the same case in src/shared/projectSchema.test.js.
+  const newer = () => ({
+    timelineState: { cues: [{ id: 'c1', at: 3 }] },
+    entities: [{ id: 'e1', type: 'box', futureField: { keep: 'me' }, components: { futureComponent: { a: 1 } } }]
+  })
+
+  it('keeps an unknown top-level section and an unknown object field through normalize', () => {
+    const read = normalizeProjectDocument(newer())
+    expect(read.timelineState).toEqual({ cues: [{ id: 'c1', at: 3 }] })
+    expect(read.entities[0].futureField).toEqual({ keep: 'me' })
+    expect(read.entities[0].components.futureComponent).toEqual({ a: 1 })
+  })
+
+  it('keeps them through an edit to the same object and a whole-document replace', () => {
+    const edited = applyProjectOps(normalizeProjectDocument(newer()), [
+      { type: 'updateEntity', payload: { entityId: 'e1', patch: { name: 'Renamed' } } }
+    ])
+    expect(edited.timelineState).toEqual({ cues: [{ id: 'c1', at: 3 }] })
+    expect(edited.entities[0]).toMatchObject({ name: 'Renamed', futureField: { keep: 'me' } })
+    const replaced = applyProjectOps(normalizeProjectDocument({}), [{ type: 'replaceDocument', payload: { document: newer() } }])
+    expect(replaced.timelineState).toEqual({ cues: [{ id: 'c1', at: 3 }] })
+  })
+
+  it('never lets a known key be overridden or the prototype be set by the carried fields', () => {
+    const read = normalizeProjectDocument(JSON.parse('{"version":99,"__proto__":{"polluted":true},"entities":[{"id":"e1","type":"nope"}]}'))
+    expect(read.version).toBe(PROJECT_DOCUMENT_VERSION)
+    expect(read.entities[0].type).toBe('box')
+    expect(({}).polluted).toBeUndefined()
+    expect(Object.getPrototypeOf(read)).toBe(Object.prototype)
+  })
+
+  it('is idempotent with carried fields', () => {
+    const once = normalizeProjectDocument(newer())
+    expect(normalizeProjectDocument(JSON.parse(JSON.stringify(once)))).toEqual(once)
+  })
+})
+
+// worldState.solidWalls (src/components/solidWalls.js): the server's mirror must normalize the switch the way the
+// client does, or a document saved by one side would be read differently by the other.
+describe('solidWalls mirror', () => {
+  it('is off by default and on only for an explicit enabled: true, keeping nothing else', () => {
+    expect(normalizeProjectDocument({}).worldState.solidWalls).toBe(null)
+    expect(normalizeProjectDocument({ worldState: { solidWalls: { enabled: true, radius: 9 } } }).worldState.solidWalls).toEqual({ enabled: true })
+    for (const off of [{ enabled: false }, {}, { enabled: 'yes' }, true, 'on', null]) {
+      expect(normalizeProjectDocument({ worldState: { solidWalls: off } }).worldState.solidWalls).toBe(null)
+    }
   })
 })

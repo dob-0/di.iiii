@@ -20,8 +20,9 @@ vi.mock('../utils/appNavigate.js', () => ({
     setAppNavigate: () => {}
 }))
 
+const mockSessionRole = vi.hoisted(() => ({ value: 'viewer' }))
 vi.mock('../hooks/useAuthSession.js', () => ({
-    default: () => ({ role: 'viewer', spaces: [], openSpaceId: 'open', sandboxSpaceId: null, requireAuth: true })
+    default: () => ({ role: mockSessionRole.value, spaces: [], openSpaceId: 'open', sandboxSpaceId: null, requireAuth: true })
 }))
 
 vi.mock('../hooks/useLocalInstall.js', () => ({
@@ -81,6 +82,48 @@ describe('a space\'s contents page', () => {
         expect(document.title).toBe(before)
     })
 
+    // One name per space (owner, 2026-09-14), on the platform's own space reached by its address: the page compared the
+    // word that was typed with 'main', so the tab read "di.iiii — di.iiii" and the bar "di.iiii · di.iiii". The space is
+    // named in data ("Home") and the tab is asked of the record's id, so it keeps the front door's title.
+    it('keeps the default tab and says the platform\'s own space by its name, reached by its address', async () => {
+        getServerSpaceMock.mockResolvedValue({ id: 'main', slug: 'di-iiii', label: 'Home', publishedProjectId: null })
+        listSpaceContentsMock.mockResolvedValue(contents)
+        document.title = 'di.iiii — public spaces on the open web'
+        render(<SpaceContentsPage spaceId="di-iiii" />)
+
+        expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Home')
+        expect(document.title).toBe('di.iiii — public spaces on the open web')
+        expect(document.querySelector('.sbar-home').textContent).toBe('di.iiii')
+        const where = document.querySelector('.sbar-where')
+        expect(where.textContent).toBe('Home')
+        expect(where).toHaveAttribute('href', '/di-iiii')
+    })
+
+    it('says the address for a space that has no name — in the bar, the heading and the tab', async () => {
+        getServerSpaceMock.mockResolvedValue({ id: 'queerlab', slug: 'queer-lab', label: '', publishedProjectId: null })
+        listSpaceContentsMock.mockResolvedValue(contents)
+        render(<SpaceContentsPage spaceId="queerlab" />)
+
+        expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('queer-lab')
+        const where = document.querySelector('.sbar-where')
+        expect(where.textContent).toBe('queer-lab')
+        expect(where).toHaveAttribute('href', '/queer-lab')
+        await waitFor(() => expect(document.title).toBe('queer-lab — di.iiii'))
+    })
+
+    it('says a named space\'s name in the bar and links it to the space\'s address, whichever address was typed', async () => {
+        listSpaceContentsMock.mockResolvedValue(contents)
+        for (const typed of ['dilijan', 'dilijan-camp']) {
+            getServerSpaceMock.mockResolvedValue({ id: 'dilijan', slug: 'dilijan-camp', label: 'Dilijan As A Screen', publishedProjectId: null })
+            const { unmount } = render(<SpaceContentsPage spaceId={typed} />)
+            await screen.findByRole('heading', { level: 1 })
+            const where = document.querySelector('.sbar-where')
+            expect(where.textContent, typed).toBe('Dilijan As A Screen')
+            expect(where, typed).toHaveAttribute('href', '/dilijan-camp')
+            unmount()
+        }
+    })
+
     // The server sends a private row to a member only (serverXR/src/projectVisibility.js);
     // the member is told that this one is not what a visitor sees.
     it('marks a private row as private, and no other', async () => {
@@ -121,7 +164,19 @@ describe('a space\'s contents page', () => {
     it('says so plainly when a space has nothing on show', async () => {
         listSpaceContentsMock.mockResolvedValue([])
         render(<SpaceContentsPage spaceId="br_id_ge" />)
-        expect(await screen.findByText(/Nothing is on show in this space yet/)).toBeTruthy()
+        expect(await screen.findByText(/Nothing here yet\. The owner has not shown anything\./)).toBeTruthy()
+    })
+
+    it('does not tell the owner that "the owner" has not shown anything', async () => {
+        mockSessionRole.value = 'admin'
+        try {
+            listSpaceContentsMock.mockResolvedValue([])
+            render(<SpaceContentsPage spaceId="br_id_ge" />)
+            expect(await screen.findByText('Nothing here yet.')).toBeTruthy()
+            expect(screen.queryByText(/The owner has not shown anything/)).toBeNull()
+        } finally {
+            mockSessionRole.value = 'viewer'
+        }
     })
     // The bug this page was reported for: the owner opened the WCC space,
     // counted eleven artist rooms and asked where the landing page was. It is

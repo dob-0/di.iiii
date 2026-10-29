@@ -1,0 +1,112 @@
+{
+ "light-desk-laptop-dark": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "light-desk-laptop-light": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "light-desk-phone-dark": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "light-desk-phone-light": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "preferences-laptop-dark": {
+  "changed_pct": 0.224,
+  "bbox": [
+   1211,
+   912,
+   2815,
+   1446
+  ]
+ },
+ "preferences-laptop-light": {
+  "changed_pct": 0.445,
+  "bbox": [
+   1213,
+   914,
+   2815,
+   1589
+  ]
+ },
+ "preferences-phone-dark": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "preferences-phone-light": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "rig-plot-laptop-dark": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "rig-plot-laptop-light": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "rig-plot-phone-dark": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "rig-plot-phone-light": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "studio-laptop-dark": {
+  "changed_pct": 0.004,
+  "bbox": [
+   58,
+   288,
+   2589,
+   1764
+  ]
+ },
+ "studio-laptop-light": {
+  "changed_pct": 0.004,
+  "bbox": [
+   58,
+   288,
+   2589,
+   1764
+  ]
+ },
+ "studio-phone-dark": {
+  "changed_pct": 0.005,
+  "bbox": [
+   229,
+   2238,
+   941,
+   2340
+  ]
+ },
+ "studio-phone-light": {
+  "changed_pct": 0.005,
+  "bbox": [
+   229,
+   2238,
+   941,
+   2340
+  ]
+ },
+ "viewer-laptop-dark": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "viewer-laptop-light": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "viewer-phone-dark": {
+  "changed_pct": 0.0,
+  "bbox": null
+ },
+ "viewer-phone-light": {
+  "changed_pct": 0.0,
+  "bbox": null
+ }
+}

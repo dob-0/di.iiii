@@ -1,0 +1,25 @@
+{
+ "title": "LaserCube content — 50 scenes (MOXIR)",
+ "source": "agent-reports-2026-10-15/moxir-50/scenes-tools/laser_sheet.py (laser content job)",
+ "date": "2026-10-15",
+ "intro_html": "<p><i>The six cubes, per scene (2026-10-15).</i></p>\n<p>Not yet seen on a cube or in the room: a design and its checks. Six LaserCube Ultra MK2 on the back crane girder (8.81 m), six\nlines each (the 36-line comb). The two UP-LA40WF 40 W wait for their DMX charts. Data: each scene's <code>laser</code> field;\nframes: di.iiii <code>scripts/place/laser_frames.py</code>; full report: agent-reports-2026-10-15/moxir-50/laser-content-report.md.</p>",
+ "notes_html": "<li>Patterns named from beam-show practice (Pangolin BEYOND effects: fan, beam sweep, tunnel, liquid sky; the comb/net is the rig's v2.8 MATRIX).</li>\n<li>The 10-14 jam: one cube lit from di (a circle) — the only real-cube proof so far.</li>\n<li>Safety: IEC 60825-1 and ILDA audience-scanning guidance — no beam ever goes below the cubes (8.81 m); the desk cap 0.16; the engine's\nfail-safes (200 ms frame timeout, still-beam guard). Plan legend: grey bay = the 24 m bay, blue band = lantern glazing (no ray may end\nthere), grey bars = cranes, black dots = cubes in the group.</li>",
+ "refs": [
+  [
+   "teaser-frames/t4-1.jpg",
+   "t4: red fans rising from the stage"
+  ],
+  [
+   "teaser-frames/t4-5.jpg",
+   "t4: blue-white fans"
+  ],
+  [
+   "teaser-frames/t5-2.jpg",
+   "t5: one long line in haze"
+  ],
+  [
+   "teaser-frames/t5-6.jpg",
+   "t5: crossing lines over the floor"
+  ]
+ ]
+}

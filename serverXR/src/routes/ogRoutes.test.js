@@ -4,7 +4,7 @@ const { ogHtml } = createRequire(import.meta.url)('./ogRoutes')
 
 describe('link preview cards', () => {
   it('names the space, not the platform', () => {
-    const h = ogHtml({ url: 'https://di-studio.xyz/br_id_ge', title: 'br_id_ge', description: 'a rite in five acts', image: '/og/br-id-ge.png' })
+    const h = ogHtml({ url: 'https://diiii.xyz/br_id_ge', title: 'br_id_ge', description: 'a rite in five acts', image: '/og/br-id-ge.png' })
     expect(h).toContain('<meta property="og:title" content="br_id_ge">')
     expect(h).not.toContain('browser-native XR authoring')
     // the whole point: the card must not be the platform tile
@@ -29,9 +29,9 @@ describe('link preview cards', () => {
   })
 
   it('sends a human on to the real page rather than dead-ending', () => {
-    const h = ogHtml({ url: 'https://di-studio.xyz/br_id_ge', title: 't', description: 'd' })
+    const h = ogHtml({ url: 'https://diiii.xyz/br_id_ge', title: 't', description: 'd' })
     expect(h).toContain('http-equiv="refresh"')
-    expect(h).toContain('rel="canonical" href="https://di-studio.xyz/br_id_ge"')
+    expect(h).toContain('rel="canonical" href="https://diiii.xyz/br_id_ge"')
   })
 })
 
@@ -54,7 +54,7 @@ describe('the og route, through the real mount', () => {
       loadSpaceMeta: async (h) => (h === 'br_id_ge'
         ? { title: 'br_id_ge', description: 'a rite', isPublic: true }
         : null),
-      siteOrigin: 'https://di-studio.xyz',
+      siteOrigin: 'https://diiii.xyz',
     })
     a.use('/serverXR', router)   // <- exactly what index.js does
     return a
@@ -101,8 +101,8 @@ describe('the og route, through the real mount', () => {
   // that just missed, which is a loop.
   it('points the bare-domain card at the origin, not at /og', async () => {
     const r = await hit('/serverXR/og/')
-    expect(r.body).toContain('rel="canonical" href="https://di-studio.xyz"')
-    expect(r.body).not.toContain('href="https://di-studio.xyz/og')
+    expect(r.body).toContain('rel="canonical" href="https://diiii.xyz"')
+    expect(r.body).not.toContain('href="https://diiii.xyz/og')
   })
 })
 
@@ -158,7 +158,7 @@ describe('the origin a card advertises', () => {
       loadSpaceMeta: async (h) => (h === 'main'
         ? { id: 'main', label: 'di.iiii', isPublic: true }
         : null),
-      siteOrigin: 'https://di-studio.xyz',
+      siteOrigin: 'https://diiii.xyz',
     })
     a.use('/serverXR', router)
     const r = await hit(a, '/serverXR/og/main')
@@ -180,29 +180,31 @@ describe('the origin a card advertises', () => {
       'x-forwarded-host': 'dev.diiii.xyz',
       'x-forwarded-proto': 'https',
     })
-    expect(r.body).toContain('content="https://dev.diiii.xyz/br_id_ge"')
+    // The space's own handle (its id here, no slug), not the spelling the
+    // link used: /br_id_ge and /br-id-ge are one page (audit G11, 2026-10-21).
+    expect(r.body).toContain('content="https://dev.diiii.xyz/br-id-ge"')
   })
 
   it('an explicit SITE_ORIGIN wins over anything the request claims', async () => {
-    const r = await hit(build('https://di-studio.xyz'), '/serverXR/og/br_id_ge', {
+    const r = await hit(build('https://diiii.xyz'), '/serverXR/og/br_id_ge', {
       host: 'evil.example',
       'x-forwarded-host': 'evil.example',
     })
-    expect(r.body).toContain('content="https://di-studio.xyz/br_id_ge"')
+    expect(r.body).toContain('content="https://diiii.xyz/br-id-ge"')
     expect(r.body).not.toContain('evil.example')
   })
 
   it('resolves the shared handle, not just the exact space id', async () => {
     // br_id_ge is the URL people share; br-id-ge is the id in the database.
-    const r = await hit(build('https://di-studio.xyz'), '/serverXR/og/br_id_ge')
+    const r = await hit(build('https://diiii.xyz'), '/serverXR/og/br_id_ge')
     expect(r.body).toContain('<meta property="og:title" content="br_id_ge">')
     expect(r.body).toContain('/og/br-id-ge.png')
     expect(r.body).not.toContain('browser-native XR authoring')
   })
 
   it('the fallback card carries an absolute image too', async () => {
-    const r = await hit(build('https://di-studio.xyz'), '/serverXR/og/no-such-space')
-    expect(r.body).toContain('content="https://di-studio.xyz/suite/og-image.png"')
+    const r = await hit(build('https://diiii.xyz'), '/serverXR/og/no-such-space')
+    expect(r.body).toContain('content="https://diiii.xyz/suite/og-image.png"')
   })
 })
 
@@ -221,7 +223,7 @@ describe('reserved top-level pages get their own card', () => {
       // None of these words can be a space — if this is ever reached for one
       // of them, the static-page check ran too late (or not at all).
       loadSpaceMeta: async () => { throw new Error('loadSpaceMeta must not be asked about a reserved page') },
-      siteOrigin: 'https://di-studio.xyz',
+      siteOrigin: 'https://diiii.xyz',
     })
     a.use('/serverXR', router)
     return a
@@ -254,7 +256,7 @@ describe('reserved top-level pages get their own card', () => {
   it('still names di.iiii as the site and points the url at the real page', async () => {
     const r = await hit('/serverXR/og/login')
     expect(r.body).toContain('<meta property="og:site_name" content="di.iiii">')
-    expect(r.body).toContain('content="https://di-studio.xyz/login"')
+    expect(r.body).toContain('content="https://diiii.xyz/login"')
   })
 })
 
@@ -283,7 +285,7 @@ describe('a project the URL itself names', () => {
         const project = PROJECTS[`${spaceId}:${segment}`]
         return (project && project.state === 'live') ? project : null
       },
-      siteOrigin: 'https://di-studio.xyz',
+      siteOrigin: 'https://diiii.xyz',
     })
     a.use('/serverXR', router)
     return a
@@ -300,7 +302,7 @@ describe('a project the URL itself names', () => {
   it('names the project, then the space, on the explicit /p/ shape', async () => {
     const r = await hit('/serverXR/og/wcc/p/mery-petrosyan')
     expect(r.body).toContain('<meta property="og:title" content="Mery Petrosyan — WCC Exhibition">')
-    expect(r.body).toContain('content="https://di-studio.xyz/wcc/p/mery-petrosyan"')
+    expect(r.body).toContain('content="https://diiii.xyz/wcc/p/mery-petrosyan"')
   })
 
   it('names the project on the vanity /{space}/{projectSlug} shape too', async () => {
@@ -373,5 +375,94 @@ describe('a card for a space on its own domain', () => {
     const r = await hit('/serverXR/og/', 'diiii.xyz')
     expect(r.body).toContain('/suite/og-image.png')
     expect(r.body).toContain('rel="canonical" href="https://diiii.xyz"')
+  })
+})
+
+// ── marketing audit 2026-10-21: G23 (a space's own line) and G25 (a card per
+// wiki article). Mounted like index.js mounts it; the wiki loader is the REAL
+// one, reading src/wiki/wikiContent.js, so a broken path or shape fails here.
+describe('a space\'s line for visitors, and one card per wiki article', () => {
+  const express = createRequire(import.meta.url)('express')
+  const { registerOgRoutes } = createRequire(import.meta.url)('./ogRoutes')
+  const { loadWikiArticles } = createRequire(import.meta.url)('../wikiIndex')
+
+  const app = (() => {
+    const a = express()
+    const router = express.Router()
+    registerOgRoutes(router, {
+      loadSpaceMeta: async (h) => ({
+        said: { id: 'said', label: 'Said', isPublic: true, blurb: 'Nineteen films made by children in one town.' },
+        quiet: { id: 'quiet', label: 'Quiet', isPublic: true, blurb: null },
+      })[h] || null,
+      siteOrigin: 'https://diiii.xyz',
+      loadWikiArticles,
+    })
+    a.use('/serverXR', router)
+    return a
+  })()
+
+  const hit = (path) => new Promise((resolve) => {
+    const server = app.listen(0, async () => {
+      const r = await fetch(`http://127.0.0.1:${server.address().port}${path}`)
+      const body = await r.text()
+      server.close(() => resolve({ status: r.status, body }))
+    })
+  })
+
+  it('a space that wrote its line is described by it, not by the formula', async () => {
+    const r = await hit('/serverXR/og/said')
+    expect(r.body).toContain('<meta property="og:description" content="Nineteen films made by children in one town.">')
+    expect(r.body).toContain('<meta name="description" content="Nineteen films made by children in one town.">')
+    expect(r.body).not.toContain('a space on di.iiii')
+  })
+
+  it('a space without one keeps the old sentence', async () => {
+    const r = await hit('/serverXR/og/quiet')
+    expect(r.body).toContain('Quiet — a space on di.iiii.')
+  })
+
+  it('reads every wiki article from the real wiki file', async () => {
+    const articles = await loadWikiArticles()
+    // 118 on 2026-10-21; the floor is the audit's 108 anchors.
+    expect(articles.size).toBeGreaterThanOrEqual(108)
+    for (const a of articles.values()) {
+      expect(a.title.length).toBeGreaterThan(0)
+      expect(a.summary.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('/wiki/{id} is its own page: title, description and canonical', async () => {
+    const articles = await loadWikiArticles()
+    const glossary = articles.get('glossary')
+    expect(glossary).toBeTruthy()
+    const r = await hit('/serverXR/og/wiki/glossary')
+    expect(r.status).toBe(200)
+    expect(r.body).toContain(`<title>${glossary.title} — Wiki — di.iiii</title>`)
+    expect(r.body).toContain('rel="canonical" href="https://diiii.xyz/wiki/glossary"')
+    expect(r.body).toContain('<meta property="og:url" content="https://diiii.xyz/wiki/glossary">')
+    expect(r.body).toContain('One word, one meaning.')
+  })
+
+  it('every article gets a different title from every other', async () => {
+    const articles = await loadWikiArticles()
+    const ids = [...articles.keys()].slice(0, 12)
+    const titles = new Set()
+    for (const id of ids) {
+      const r = await hit(`/serverXR/og/wiki/${id}`)
+      titles.add(r.body.match(/<title>(.*)<\/title>/)[1])
+    }
+    expect(titles.size).toBe(ids.length)
+  })
+
+  it('an id the wiki does not have gets the wiki\'s own card, canonical to /wiki', async () => {
+    const r = await hit('/serverXR/og/wiki/no-such-article')
+    expect(r.status).toBe(200)
+    expect(r.body).toContain('<title>Wiki — di.iiii</title>')
+    expect(r.body).toContain('rel="canonical" href="https://diiii.xyz/wiki"')
+  })
+
+  it('a wiki file that cannot be read gives an empty index, not a crash', async () => {
+    const missing = await loadWikiArticles('/nonexistent/wikiContent.js')
+    expect(missing.size).toBe(0)
   })
 })

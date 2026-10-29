@@ -7,8 +7,16 @@
 // personal install, which is still one person on their own machine). Loopback
 // stays absolute either way: a dev box with its port forwarded must still
 // refuse. Refusals are 404 (the surface does not advertise itself).
+//
+// Loopback is the machine, not the person: on an install that signs people in,
+// a member at the same machine must not read operator transcripts either. So
+// once the caller is local, the role is checked too, on the server: anyone
+// below admin gets 403 (UX audit 2026-10-28, F046/F150 — hiding the tab in the
+// page was the only gate).
 
 const { createAgentBoardStore } = require('../agentBoardStore')
+const { config } = require('../config')
+const { hasRequiredAuthRole } = require('../authAccess')
 
 const LOOPBACK_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
 
@@ -19,10 +27,23 @@ function isLocalOperatorRequest(req) {
   return LOOPBACK_ADDRESSES.has(address)
 }
 
-function registerAgentBoardRoutes(router, { store = createAgentBoardStore() } = {}) {
+function isAdminCaller(req, requireAuth) {
+  if (!requireAuth) return true
+  const state = req.authState
+  return Boolean(state?.authenticated) && hasRequiredAuthRole(state.role, 'admin')
+}
+
+function registerAgentBoardRoutes(router, {
+  store = createAgentBoardStore(),
+  requireAuth = () => config.requireAuth
+} = {}) {
   const requireLocalOperator = (req, res, next) => {
     if (!isLocalOperatorRequest(req)) {
       res.status(404).json({ error: 'not found' })
+      return
+    }
+    if (!isAdminCaller(req, requireAuth())) {
+      res.status(403).json({ error: 'admins only' })
       return
     }
     next()

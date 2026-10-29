@@ -143,13 +143,37 @@ const walk = (entry) => {
     ))
 }
 
+// A session note is transient: `npm run land` folds it into PROGRESS.md and deletes
+// it, so a lasting document that names one breaks the moment dev folds -- the dev
+// deploy of #971 failed exactly so (fixed by hand in #974; ledger N843). Refuse it
+// while the note still exists, before it reaches dev.
+const SESSION_NOTES = 'docs/ai/sessions/'
+const namesASessionNote = (hit) => (
+    hit.candidate.startsWith(SESSION_NOTES)
+    && hit.candidate !== SESSION_NOTES
+    && hit.candidate !== `${SESSION_NOTES}README.md`
+    && !hit.file.startsWith(SESSION_NOTES)
+)
+
 const files = SCAN.flatMap(walk)
-const missing = files
-    .flatMap(collect)
+const hits = files.flatMap(collect)
+const transient = hits.filter(namesASessionNote)
+const missing = hits
+    .filter(hit => !namesASessionNote(hit))
     .filter(hit => !fs.existsSync(path.join(ROOT, hit.candidate)))
 
 if (process.argv.includes('--list')) {
     console.log(`Scanned ${files.length} document(s).`)
+}
+
+if (transient.length) {
+    console.error(`Documents naming a session note, which the fold deletes (${transient.length}):\n`)
+    for (const hit of transient) {
+        console.error(`  ${hit.file}:${hit.line}`)
+        console.error(`    ${hit.candidate}`)
+    }
+    console.error('\nName PROGRESS.md (where the note lands) or the code it describes instead.')
+    process.exit(1)
 }
 
 if (!missing.length) {

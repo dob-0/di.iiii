@@ -47,3 +47,22 @@ describe('GET /api/follows — names other machines, so only the person at this 
     expect(res.statusCode).toBe(404)
   })
 })
+
+describe('GET /api/health — a server whose database does not answer is not healthy', () => {
+  const healthWith = (checkDb) => {
+    const handlers = {}
+    registerStatusRoutes({ get: (path, fn) => { handlers[path] = fn } }, { recentEvents: [], startedAt: 0, releaseInfo: {}, checkDb })
+    return call(handlers['/api/health'], { socket: { remoteAddress: '10.0.0.5' } })
+  }
+  it('answers 200 ok when the read succeeds', () => {
+    const res = healthWith(() => ({ ok: 1 }))
+    expect(res.statusCode).toBe(200)
+    expect(res.body.ok).toBe(true)
+  })
+  it('answers 503 ok:false when the read throws, without leaking the error to a remote caller', () => {
+    const res = healthWith(() => { throw new Error('database is locked') })
+    expect(res.statusCode).toBe(503)
+    expect(res.body.ok).toBe(false)
+    expect(res.body.databaseError).toBeUndefined()
+  })
+})

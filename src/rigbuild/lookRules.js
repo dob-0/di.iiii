@@ -131,7 +131,20 @@ export const AIM_RULES = {
         const r = (onX && p.x_rise_deg !== undefined ? p.x_rise_deg : end ? (p.rise_deg ?? 45) : (p.inner_rise_deg ?? p.rise_deg ?? 45)) * DEG
         return { dir: [(h[0] / d) * Math.cos(r), up * Math.sin(r), (h[1] / d) * Math.cos(r)] }
     },
-    'laser-into-roof': (slot, meta, ctx, p = {}) => ({ target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * (p.x_scale ?? 0.3), ctx.hall.geometry.truss_top_centre_m, ctx.stage.front + ctx.stage.into * (p.a ?? 14)] })
+    'laser-into-roof': (slot, meta, ctx, p = {}) => ({ target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * (p.x_scale ?? 0.3), ctx.hall.geometry.truss_top_centre_m, ctx.stage.front + ctx.stage.into * (p.a ?? 14)] }),
+    // the solid deck beside the lantern, never into it (rig-lib.mjs, audit A-03 2026-10-05)
+    'laser-beside-lantern': (slot, meta, ctx, p = {}) => {
+        const g = ctx.hall.geometry
+        const z = ctx.stage.front + ctx.stage.into * (p.a ?? 14)
+        const ax = axisOf(ctx)
+        const dx = slot.pos[0] - ax
+        const side = dx < 0 ? -1 : 1
+        const lantern = (g.lanterns || []).find((l) => z >= l.z_m[0] && z <= l.z_m[1] && ax >= l.x_m[0] && ax <= l.x_m[1])
+        const edge = lantern ? (side < 0 ? lantern.x_m[0] : lantern.x_m[1]) : ax
+        const inner = (g.column_inner_face_x_m ?? Infinity) - 0.5
+        const x = edge + side * ((p.clear_m ?? 1.5) + Math.abs(dx) * (p.x_spread ?? 0.6))
+        return { target: [Math.max(-inner, Math.min(inner, x)), g.deck_m ?? g.truss_top_centre_m, z] }
+    }
 }
 
 export const RULE_NAMES = Object.keys(AIM_RULES)

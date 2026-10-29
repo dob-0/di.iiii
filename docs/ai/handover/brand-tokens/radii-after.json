@@ -1,0 +1,122 @@
+{
+  "studio-laptop-light": {
+    "controls": 81,
+    "at2px": 2,
+    "at0": 79,
+    "token": "0"
+  },
+  "preferences-laptop-light": {
+    "controls": 26,
+    "at2px": 0,
+    "at0": 26,
+    "token": "0"
+  },
+  "viewer-laptop-light": {
+    "controls": 5,
+    "at2px": 5,
+    "at0": 0,
+    "token": "0"
+  },
+  "rig-plot-laptop-light": {
+    "controls": 33,
+    "at2px": 11,
+    "at0": 22,
+    "token": "0"
+  },
+  "light-desk-laptop-light": {
+    "controls": 56,
+    "at2px": 0,
+    "at0": 56,
+    "token": ""
+  },
+  "studio-laptop-dark": {
+    "controls": 81,
+    "at2px": 2,
+    "at0": 79,
+    "token": "0"
+  },
+  "preferences-laptop-dark": {
+    "controls": 26,
+    "at2px": 0,
+    "at0": 26,
+    "token": "0"
+  },
+  "viewer-laptop-dark": {
+    "controls": 5,
+    "at2px": 5,
+    "at0": 0,
+    "token": "0"
+  },
+  "rig-plot-laptop-dark": {
+    "controls": 33,
+    "at2px": 11,
+    "at0": 22,
+    "token": "0"
+  },
+  "light-desk-laptop-dark": {
+    "controls": 56,
+    "at2px": 0,
+    "at0": 56,
+    "token": ""
+  },
+  "studio-phone-light": {
+    "controls": 21,
+    "at2px": 2,
+    "at0": 16,
+    "token": "0"
+  },
+  "preferences-phone-light": {
+    "controls": 26,
+    "at2px": 0,
+    "at0": 26,
+    "token": "0"
+  },
+  "viewer-phone-light": {
+    "controls": 5,
+    "at2px": 5,
+    "at0": 0,
+    "token": "0"
+  },
+  "rig-plot-phone-light": {
+    "controls": 19,
+    "at2px": 9,
+    "at0": 10,
+    "token": "0"
+  },
+  "light-desk-phone-light": {
+    "controls": 56,
+    "at2px": 0,
+    "at0": 56,
+    "token": ""
+  },
+  "studio-phone-dark": {
+    "controls": 21,
+    "at2px": 2,
+    "at0": 16,
+    "token": "0"
+  },
+  "preferences-phone-dark": {
+    "controls": 26,
+    "at2px": 0,
+    "at0": 26,
+    "token": "0"
+  },
+  "viewer-phone-dark": {
+    "controls": 5,
+    "at2px": 5,
+    "at0": 0,
+    "token": "0"
+  },
+  "rig-plot-phone-dark": {
+    "controls": 19,
+    "at2px": 9,
+    "at0": 10,
+    "token": "0"
+  },
+  "light-desk-phone-dark": {
+    "controls": 56,
+    "at2px": 0,
+    "at0": 56,
+    "token": ""
+  }
+}

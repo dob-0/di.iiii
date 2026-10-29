@@ -34,3 +34,11 @@ describe('the hub\'s small buttons under a finger', () => {
         expect(rules[`${sel}|min-height`]).toBe('var(--di-touch-target)')
     })
 })
+
+// 2026-10-28 (UX S04): the grouped Manage panel's buttons, the "who can see
+// it" switch and the folded "More" line are a finger tall under a finger.
+describe('the space Manage panel under a finger', () => {
+    it.each(['.ssh-manage .ssh-card-btn', '.ssh-switch', '.ssh-manage-more > summary'])('%s is at least a finger tall', (sel) => {
+        expect(coarseRules('studio-space-hub.css')[`${sel}|min-height`]).toBe('var(--di-touch-target)')
+    })
+})

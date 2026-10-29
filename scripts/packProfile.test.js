@@ -10,11 +10,13 @@
 // install. src/works/localProfile.test.js asserts WHICH build gets which; this
 // file asserts that the cut, when it is made, still lands where it aims.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { PROGRAM_PUBLIC_DIRS, resolveBuildProfile } from '../src/works/buildProfile.js'
+import { PROGRAM_PUBLIC_DIRS, PROGRAM_PUBLIC_FILES, resolveBuildProfile } from '../src/works/buildProfile.js'
 import { workPublicDirs } from '../src/works/works.js'
 
+const { DEFAULT_BUNDLE_DIR } = createRequire(import.meta.url)('../serverXR/src/aiPublic.js')
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(join(ROOT, p), 'utf8')
 
@@ -66,8 +68,12 @@ describe('the local build profile still cuts where it thinks it does', () => {
         for (const name of [...PROGRAM_PUBLIC_DIRS, ...workPublicDirs()]) {
             expect(() => readFileSync(join(ROOT, 'public', name))).toThrow(/EISDIR|illegal operation on a directory/)
         }
+        // …and the root files the shell links, which must be files.
+        for (const name of PROGRAM_PUBLIC_FILES) {
+            expect(readFileSync(join(ROOT, 'public', name)).length).toBeGreaterThan(0)
+        }
         expect(resolveBuildProfile({ DI_PROFILE: 'local' }).publicInclude)
-            .toEqual([...PROGRAM_PUBLIC_DIRS, ...workPublicDirs()])
+            .toEqual([...PROGRAM_PUBLIC_DIRS, ...PROGRAM_PUBLIC_FILES, ...workPublicDirs()])
     })
 })
 
@@ -83,6 +89,15 @@ describe('the packer refuses the wrong dist', () => {
         expect(packer).toContain('marker.profile !== profile')
         expect(packer).not.toContain("dist', 'wcc'")
         expect(read('vite.config.js')).toContain("fileName: 'build-profile.json'")
+    })
+
+    it('carries docs/ai/public so /llms.txt and /ai/context answer without nginx', () => {
+        expect(packer).toContain("path.join(ROOT, 'docs', 'ai', 'public'), path.join(stage, 'docs', 'ai', 'public')")
+        // aiPublic.js resolves the folder two levels above serverXR/src — the stage root.
+        expect(DEFAULT_BUNDLE_DIR).toBe(join(ROOT, 'docs', 'ai', 'public'))
+        for (const name of ['llms.txt', 'context.md']) {
+            expect(readFileSync(join(ROOT, 'docs', 'ai', 'public', name), 'utf8').length).toBeGreaterThan(0)
+        }
     })
 
     it('records the profile in release.json', () => {

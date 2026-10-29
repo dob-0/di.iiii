@@ -1,0 +1,139 @@
+{
+  "id": "up-yz31p",
+  "code": "UP-YZ31P",
+  "identified": "EQUIVALENT",
+  "identifiedNote": "NOT FOUND — modelled on an EQUIVALENT (wattage unknown)",
+  "maker": "U-Plus Lighting",
+  "model": null,
+  "modelledOn": "Antari Z-1500 III fog machine",
+  "product": "equivalent: Antari Z-1500 III fog machine",
+  "makerChart": {
+    "file": "scripts/place/fixtures/charts/up-yz31p.json",
+    "modes": {
+      "1": "ASSUMED"
+    }
+  },
+  "category": "smoke-machine",
+  "modes": [
+    {
+      "name": "1ch",
+      "footprint": 1,
+      "channels": null,
+      "channelsSource": null,
+      "src": "ANTARI",
+      "basis": "EQUIVALENT"
+    },
+    {
+      "name": "1ch-assumed",
+      "footprint": 1,
+      "channels": [
+        {
+          "role": "aux1",
+          "label": "Fog output",
+          "cap": {
+            "haze": true
+          }
+        }
+      ],
+      "channelsSource": {
+        "basis": "ASSUMED",
+        "grade": "STILL ASSUMED",
+        "gradeWhy": "UP-YZ31P is on neither maker site (2026-09-29); UPlight's own multi-angle smoke machines (UP-F1500D … 3000DL) are 2ch — candidates for the rental house to confirm, not an identification",
+        "fixture": "Antari Z-1500 III fog machine",
+        "url": "https://antari.com/wp-content/uploads/Z-1500lllC.pdf",
+        "title": "Z-1500 III / Z-3000 III user manual",
+        "pages": "8",
+        "sha256": "3df177a72b7a6d1f98d42dc882671f00b74d9dbdf335bbc45ee1f7e79819aa17",
+        "accessed": "2026-09-28",
+        "fill": [
+          "fog is not drawn in the room"
+        ]
+      },
+      "assumed": "ASSUMED from Antari Z-1500 III manual p.8 — verify on the rental unit",
+      "src": null,
+      "basis": "ASSUMED"
+    }
+  ],
+  "defaultMode": "1ch",
+  "modesOwed": false,
+  "assumedMode": "1ch-assumed",
+  "power_w": {
+    "value": 1500,
+    "src": "ANTARI",
+    "basis": "EQUIVALENT"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 13.3,
+    "src": "ANTARI",
+    "basis": "EQUIVALENT"
+  },
+  "size_mm": {
+    "value": [
+      674,
+      235,
+      278
+    ],
+    "src": "ANTARI",
+    "basis": "EQUIVALENT",
+    "order": "L x W x H"
+  },
+  "pan_tilt_deg": null,
+  "ip": null,
+  "optics": {
+    "beam_deg": null,
+    "zoom_deg": null,
+    "lux": null,
+    "at_m": null,
+    "photometrySrc": null,
+    "photometryBasis": null
+  },
+  "fluid_ml_per_min": {
+    "value": 150,
+    "src": "ANTARI",
+    "basis": "EQUIVALENT"
+  },
+  "nozzle_d_mm": 50,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/smoke.glb",
+    "sidecar": "scripts/place/fixtures/glb/smoke.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": null,
+    "tiltY": null,
+    "lensY": 0.1,
+    "sizeAtHome_mm": {
+      "width_x": 239,
+      "depth_z": 684,
+      "height_y": 281
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "ANTARI": {
+      "url": "https://antari.com/wp-content/uploads/Z-1500lllC.pdf",
+      "what": "Antari Z-1500 III user manual — equivalent for UP-YZ31P"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "smoke",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "equivalent",
+    "date": "2026-09-28",
+    "sources": [
+      "ANTARI"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 0,
+      "datasheet": 0,
+      "equivalent": 5,
+      "assumed": 2,
+      "unknown": 0
+    }
+  }
+}

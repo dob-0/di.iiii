@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createProject, deleteProject, listProjects, updateProject } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { newProjectDestination } from '../utils/newProjectEntry.js'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
 
 // The Projects window: hop between the space's projects and do light
 // management (new / rename / delete) without leaving the editor for the hub.
@@ -14,6 +16,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
     const [renameValue, setRenameValue] = useState('')
     const [creating, setCreating] = useState(false)
     const [createValue, setCreateValue] = useState('')
+    const [createFailed, setCreateFailed] = useState(false)
 
     const loadRequestRef = useRef(0)
     const loadProjects = useCallback(async () => {
@@ -49,16 +52,22 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
 
     const submitCreate = async (e) => {
         e?.preventDefault?.()
-        const name = createValue.trim() || 'Untitled'
-        setCreating(false)
-        setCreateValue('')
+        if (busy) return
+        // Only the name goes: unique inside this space, the id picked by the server
+        // (docs/ai/decisions/2026-10-29-project-names-per-space.md). The form stays
+        // open until the project exists, so a clash is read beside what was typed.
+        setCreateFailed(false)
         setBusy(true)
         setStatus('creating...')
         try {
-            const res = await createProject(spaceId, { title: name, slug: name, source: 'studio-v3' })
-            navigateToStudioPath(buildStudioProjectPath(res.project.id, spaceId))
+            const res = await createProject(spaceId, { title: createValue.trim(), source: 'studio-v3' })
+            setCreating(false)
+            setCreateValue('')
+            // a new project is empty: it opens its project view, not the 3D editor
+            navigateToStudioPath(newProjectDestination({ projectId: res.project.id, spaceId }))
         } catch (err) {
             setStatus(err.message || 'create failed')
+            setCreateFailed(true)
             setBusy(false)
         }
     }
@@ -109,7 +118,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
         <div className="spp-root">
             <div className="spp-list">
                 {projects === null ? (
-                    <div className="spp-status">Loading projects…</div>
+                    <div className="spp-status"><LoadingScreen variant="inline" label="Loading projects" text="loading projects" /></div>
                 ) : projects.length === 0 ? (
                     <div className="spp-status">No projects in this space yet.</div>
                 ) : (
@@ -174,8 +183,8 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
                         ref={(el) => el?.focus()}
                         placeholder="project title"
                         value={createValue}
-                        onChange={(e) => setCreateValue(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Escape') { setCreating(false); setCreateValue('') } }}
+                        onChange={(e) => { setCreateValue(e.target.value); setCreateFailed(false) }}
+                        onKeyDown={(e) => { if (e.key === 'Escape') { setCreating(false); setCreateValue(''); setCreateFailed(false) } }}
                         aria-label="New project title"
                     />
                     <button type="submit" className="spp-icon" title="Create" aria-label="Create">✓</button>
@@ -185,7 +194,9 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
                     + New project
                 </button>
             )}
-            {status && <div className="spp-status">{status}</div>}
+            {status && (
+                <div className={`spp-status${createFailed ? ' spp-status-error' : ''}`} role={createFailed ? 'alert' : undefined}>{status}</div>
+            )}
         </div>
     )
 }

@@ -1,5 +1,5 @@
 import { Box, Button, Link, Stack, ThemeProvider, Typography } from '@mui/material'
-import { diFontTheme } from '../styles/muiTheme.js'
+import { diTheme } from '../styles/muiTheme.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { buildWikiPath } from '../utils/spaceRouting.js'
 
@@ -35,6 +35,14 @@ const ADDRESSES = {
         alsoArticle: 'di-cli-local',
         alsoLabel: 'Run di.iiii on your own machine'
     },
+    // `/scan` alone (audit F154, 2026-10-28): the camera page is
+    // /{space}/scan, and the bare word fell through to "Not found". Plain
+    // steps, no /{space}/ pattern: a child does not read a template (S07 review).
+    scan: {
+        body: 'Scanning happens inside a space. Open the space first, then add /scan to the end of its address. This address names no space, so there is nothing to scan here.',
+        article: 'spaces-and-projects',
+        articleLabel: 'Spaces and projects'
+    },
     projects: {
         body: 'A project list belongs to a space: /{space}/projects. On its own the word names no space, so there is nothing here to list.',
         article: 'spaces-and-projects',
@@ -48,7 +56,7 @@ export default function ReservedAddressCard({ word }) {
     const entry = ADDRESSES[word]
     if (!entry) return null
     return (
-        <ThemeProvider theme={diFontTheme}>
+        <ThemeProvider theme={diTheme}>
             <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
                 <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
                     <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>

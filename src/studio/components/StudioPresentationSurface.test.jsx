@@ -83,6 +83,24 @@ describe('StudioPresentationSurface', () => {
         expect(viewportPropsSpy).not.toHaveBeenCalled()
     })
 
+    // Owner 2026-10-28: a project that is a page opened the empty 3D grid because the stored mode defaults to 'scene'.
+    it('shows the page, not the empty 3D grid, for a project that holds code files and no scene (stored mode still the default)', () => {
+        const props = {
+            selectedEntityId: null, onSelectEntity: vi.fn(), cursors: {}, onCursorMove: vi.fn(), onCursorLeave: vi.fn(),
+            cameraView: { position: [0, 2, 5], target: [0, 0, 0] }, controlsRef: { current: null }, xrStore: {}, onCameraChange: vi.fn()
+        }
+        const { container, unmount } = render(
+            <StudioPresentationSurface {...props} document={buildDocument({ codeFiles: [{ name: 'index.html', content: '<main>A page</main>' }] })} />
+        )
+        expect(container.querySelector('iframe')?.getAttribute('srcdoc')).toContain('A page')
+        expect(viewportPropsSpy).not.toHaveBeenCalled()
+        unmount()
+
+        // a scene project that also holds code keeps the 3D scene
+        render(<StudioPresentationSurface {...props} document={{ ...buildDocument({ codeHtml: '<main>A page</main>' }), entities: [{ id: 'e1', type: 'box' }] }} />)
+        expect(screen.getByText('studio-viewport:free')).toBeInTheDocument()
+    })
+
     // known-fixes "Studio would not move on MOXIR": the mode alone locked the editor's
     // camera. A composed shot is where the camera starts; only locked: true holds it.
     it('starts at the fixed camera but lets it move when the shot is not locked', () => {
@@ -133,5 +151,14 @@ describe('StudioPresentationSurface', () => {
                 projection: 'orthographic'
             })
         }))
+    })
+
+    // Brief 2026-10-13 item 2: the view bar's gate was setEditMode, which nothing hands this
+    // surface, so the bar looked wired and was dead. The contract is explicit now.
+    it('hands the viewport an explicit "no view bar" and a wired Scenes picker', () => {
+        render(<StudioPresentationSurface document={buildDocument()} />)
+        const props = viewportPropsSpy.mock.calls.at(-1)[0]
+        expect(props.viewBar).toBe(false)
+        expect(typeof props.onRigLook).toBe('function')
     })
 })
