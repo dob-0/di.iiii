@@ -142,3 +142,21 @@ describe('StudioViewportLayout split controls stay reachable', () => {
         expect(root.dataset.stacked).toBeUndefined()
     })
 })
+
+// S16 (2026-10-29): on a page project the pane draws the page alone: no split buttons, axis ball or view name.
+describe('StudioViewportLayout on a page project', () => {
+    it('draws no H / V buttons, axis ball or "Perspective" when shared.pageOnly', () => {
+        const { container } = render(<StudioViewportLayout layout={singlePane} onSplit={vi.fn()} onClose={vi.fn()} onSetRatio={vi.fn()} shared={{ pageOnly: true }} />)
+        expect(screen.queryByTitle('Split left/right')).toBeNull()
+        expect(container.querySelector('.svl-gizmo-wrap')).toBeNull()
+        expect(screen.queryByText('Perspective')).toBeNull()
+        expect(screen.getByTestId('camera-view')).toBeInTheDocument()
+    })
+
+    it('keeps them on a scene project', () => {
+        const { container } = render(<StudioViewportLayout layout={singlePane} onSplit={vi.fn()} onClose={vi.fn()} onSetRatio={vi.fn()} shared={{}} />)
+        expect(screen.getByTitle('Split left/right')).toBeInTheDocument()
+        expect(container.querySelector('.svl-gizmo-wrap')).not.toBeNull()
+        expect(screen.getByText('Perspective')).toBeInTheDocument()
+    })
+})

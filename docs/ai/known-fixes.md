@@ -3,6 +3,24 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## A page project drew the 3D tools around its page (Studio, UX audit F017 / F001 / F139, slice S16 PR a, 2026-10-29)
+
+Symptom: a project that is a web page (the cinema-house copy) opened Studio on its page (#1161) but still drew the 3D tools over it:
+the Objects window, View | Edit, Navigate / Edit / Select / Walk / Fly, Create / Objects / Scene window buttons, the H V N W split
+buttons, the axis ball and "Perspective" (13 such buttons at 1440 px, 8 at 390 px; `ux-fix/wave3/S16/shots/counts-before.json`).
+Cause: `StudioShell.jsx` chose the toolset by "empty or not" only (`bare = … !layers.held`), and a page makes a project never empty
+(`project/layers.js`), so a page got the full scene toolset. Fix: `pageOnly` in `StudioShell.jsx` = the viewport opens on the page
+(`useViewportMode` = code, loaded), the project holds no scene (`holdsScene`), not the jam, not "⚒ All tools", and "Add a scene" not
+pressed for this project. Then the Objects and Scene windows, View | Edit (desk and phone), the cluster's Tools row, Create / Objects /
+Scene buttons, XR and Lights (`StudioControlCluster.jsx` `pageOnly`), and the pane's split buttons, axis ball and view name
+(`StudioViewportLayout.jsx` `shared.pageOnly`) are not drawn; the phone bar is Share, Code, Add a scene. Nothing is lost: **Add a scene**
+(cluster "Scene" row; phone bar) sets the viewport choice to scene and opens Create, every 3D tool back for the page's life; **⚒ All
+tools** keeps the old full screen on every project. Canvas: 0 on a page project before and after (#1161 already mounted no
+`StudioViewport` in code view); F139 is closed by #1161, measured here. A page that also holds a scene keeps its 3D tools.
+Regression tests (5 fail on origin/dev 8f20185c1): `StudioShell.test.jsx` "a page project shows page tools only" (+ the #1161 test's
+Objects line now expects no Objects), `StudioControlCluster.test.jsx` "a page project (pageOnly)", `StudioViewportLayout.test.jsx`
+"on a page project".
+
 ## A new box left the screen on the first pull: the pull turned the view, not the box (Studio, UX audit F030, 2026-10-29)
 
 Symptom: after adding a box from Create, the child and the senior pulled it; the view turned and the box left the screen, Position
