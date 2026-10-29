@@ -293,4 +293,24 @@ describe('FilesPanel', () => {
         fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Rename anyway' }))
         await waitFor(() => expect(names(spy)).toEqual(['home.html', 'style.css']))
     })
+
+    it('the rename Enter is consumed, so it cannot also press the question\'s focused button', async () => {
+        const spy = { current: null }
+        render(<Harness spy={spy} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Rename' }))
+        const input = screen.getByPlaceholderText('index.html')
+        fireEvent.change(input, { target: { value: 'home.html' } })
+        // fireEvent returns false when the handler called preventDefault
+        expect(fireEvent.keyDown(input, { key: 'Enter' })).toBe(false)
+        expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
+    })
+
+    it('draws its questions on the page body, not inside the (tall) panel that asked', async () => {
+        const spy = { current: null }
+        const { container } = render(<Harness spy={spy} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Delete file' }))
+        const dialog = await screen.findByRole('alertdialog')
+        expect(container.contains(dialog)).toBe(false)
+        expect(document.body.contains(dialog)).toBe(true)
+    })
 })

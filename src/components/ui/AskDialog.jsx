@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import './ui.css'
 
 // di.iiii's own question box. When something could be lost, ask here (named
@@ -14,9 +15,14 @@ import './ui.css'
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
 
 // Mounted only while open, so every question starts fresh: the field shows its
-// own defaultValue, never text typed into an earlier question.
+// own defaultValue, never text typed into an earlier question. It is drawn on
+// document.body, so it sits in the screen (the viewport) and never inside the
+// panel that asked: a tall panel (the Code panel on a phone) put the buttons
+// below the bottom bar.
 export default function AskDialog({ open, ...props }) {
-    return open ? <AskBox {...props} /> : null
+    if (!open) return null
+    const box = <AskBox {...props} />
+    return typeof document === 'undefined' ? box : createPortal(box, document.body)
 }
 
 function AskBox({

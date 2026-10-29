@@ -1877,7 +1877,12 @@ export function FilesPanel({
                             <TextField
                                 inputRef={(el) => el?.focus()} size="small" placeholder={activeFile.name}
                                 value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Enter') renameActiveFile(); if (e.key === 'Escape') setRenameValue(null) }}
+                                onKeyDown={(e) => {
+                                    // The question this may open takes focus during this key press; without preventDefault the
+                                    // same Enter then "presses" its safe button and closes it at once.
+                                    if (e.key === 'Enter') { e.preventDefault(); renameActiveFile() }
+                                    if (e.key === 'Escape') setRenameValue(null)
+                                }}
                                 sx={{ flex: 1 }}
                             />
                             <Button size="small" variant="contained" onClick={renameActiveFile} disabled={!renameValue.trim()}>Rename</Button>
