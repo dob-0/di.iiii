@@ -5,7 +5,7 @@ import {
     viewportMouseRows
 } from '../utils/studioGuide.js'
 import { useKeyPrefs, writeKeyPrefs } from '../utils/studioKeyPrefs.js'
-import { MOVE_HELP_NOTE } from '../navigation/useMoveSettings.js'
+import { MOVE_HELP_NOTE, VIEW_EDIT_HELP_NOTE } from '../navigation/useMoveSettings.js'
 import '../styles/studio-help.css'
 
 // Pure-CSS diagrams, one per guide section — same approach as Raw's
@@ -163,11 +163,12 @@ export default function StudioHelpDialog({ open, onClose, initialMode = 'basics'
                                 <span>Blender keys: Tab switches Navigate and Edit. Off, Tab moves the focus from button to button.</span>
                             </label>
                         </div>
-                        <p className="sh-help-shortcut-note">The tool picks the mouse: Navigate moves like Sketchfab, Edit exactly like Blender.</p>
+                        <p className="sh-help-shortcut-note">{VIEW_EDIT_HELP_NOTE}</p>
                         <p className="sh-help-shortcut-note">{MOVE_HELP_NOTE}</p>
+                        {/* View, and Edit with Pull to move, use 'studio'; Edit with Like Blender uses 'blender' (editMouse.js). */}
                         {['studio', 'blender'].map((id) => (
                             <div key={id} className="sh-help-shortcut-group">
-                                <div className="sh-help-shortcut-title">Mouse · {id === 'studio' ? 'Navigate (like Sketchfab)' : 'Edit (like Blender)'}</div>
+                                <div className="sh-help-shortcut-title">Mouse · {id === 'studio' ? 'View, and Edit with Pull to move (like Sketchfab)' : 'Edit with Like Blender (Scene, Move, Mouse in Edit)'}</div>
                                 {viewportMouseRows(id).map(([key, desc]) => (
                                     <div key={key} className="sh-help-shortcut-row">
                                         <code>{key}</code>
