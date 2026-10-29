@@ -980,6 +980,7 @@ export const WIKI_ARTICLES = [
                 'Drag to position; edit the selected object in the Objects window — the defaults for the whole scene live in the Scene window.',
                 'Light environment (Scene window): every version of the space is a row with its haze, ambient, exposure, bloom and surfaces. Try draws the view with that version’s light and writes nothing (Back returns); Take writes it to this project as one step, and Undo takes it back. Lamps are never carried.',
                 'In the Objects tree: double-click any object to rename it, and use the per-row circle (show/hide) and square (lock/unlock) toggles — hidden objects disappear from the scene; a locked one leaves the selection and cannot be picked or moved until it is unlocked.',
+                'The Objects list counts everything the scene shows. Things made in Nodes, in a template or in a page layer stand in the list too, marked with their kind; a Geo among them opens in Studio when you click it, the others have an Edit in Nodes button beside them.',
                 'Duplicate (Shift+D copies and starts moving the copy at once — Esc leaves it in place; Ctrl+D copies in place) and copy/paste (Ctrl+C / Ctrl+V) carry whole hierarchies — duplicating a group brings all of its children along, and copy works on multi-selections.',
                 'Drag an Objects-tree row onto a group to nest it (its position in the scene is kept), onto another object to make them siblings, or onto empty list space to move it back to the root.',
                 'Drop files straight onto the viewport — from your computer or from the Create window’s Files list — and they land in the scene at the point under your cursor.',
@@ -1001,7 +1002,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['studio', 'editor', 'basics'],
-        updated: '2026-10-28'
+        updated: '2026-10-29'
     },
     {
         id: 'studio-content-model',

@@ -147,7 +147,43 @@ function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, 
     )
 }
 
-export function StructurePanel({ entities = [], selectedEntityId, selectedEntityIds = [], onSelectEntity, onToggleSelectEntity, onGroupSelected, onUngroup, onRenameEntity, onToggleEntityVisible, onToggleEntityLocked, onReparentEntity }) {
+// A thing the scene shows that is a node, not a document entity (made in Nodes,
+// a template or a page layer). Listed so the count and the list match the scene.
+// A Geo opens (Studio goes inside it); the others are shown, not editable here.
+function NodeRow({ row, onOpen, onEditInNodes }) {
+    const open = row.isGeo && onOpen ? () => onOpen(row.id) : null
+    const label = row.name || row.id
+    return open ? (
+        <div
+            className="spa-item"
+            role="button"
+            tabIndex={0}
+            onClick={open}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    open()
+                }
+            }}
+            title="Open it to edit what stands inside"
+        >
+            <span className="spa-name">{label}</span>
+            <span className="spa-type">{row.type} · open</span>
+        </div>
+    ) : (
+        <div className="spa-item spa-item--static" title="Made in Nodes — edit it there">
+            <span className="spa-name">{label}</span>
+            <span className="spa-type">{row.type}</span>
+            {onEditInNodes && (
+                <button type="button" className="spa-node-edit" onClick={onEditInNodes} title="Made in Nodes — open Nodes to edit it" aria-label={`Edit ${label} in Nodes`}>
+                    Edit in Nodes
+                </button>
+            )}
+        </div>
+    )
+}
+
+export function StructurePanel({ entities = [], nodeRows = [], onOpenNodeRow, onEditNodeRowInNodes, selectedEntityId, selectedEntityIds = [], onSelectEntity, onToggleSelectEntity, onGroupSelected, onUngroup, onRenameEntity, onToggleEntityVisible, onToggleEntityLocked, onReparentEntity }) {
     const selectedIds = new Set(selectedEntityIds)
     const childMap = useMemo(() => {
         const map = new Map()
@@ -167,7 +203,7 @@ export function StructurePanel({ entities = [], selectedEntityId, selectedEntity
     return (
         <div className="scc-section">
             <div className="scc-section-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>Objects ({entities.length})</span>
+                <span>Objects ({entities.length + nodeRows.length})</span>
                 <span style={{ display: 'flex', gap: 4 }}>
                     {canGroup && onGroupSelected && (
                         <button className="scc-btn scc-btn--xs" onClick={onGroupSelected} title="Group selected (Ctrl+G)">Group</button>
@@ -177,7 +213,7 @@ export function StructurePanel({ entities = [], selectedEntityId, selectedEntity
                     )}
                 </span>
             </div>
-            {entities.length === 0 ? (
+            {entities.length + nodeRows.length === 0 ? (
                 <p className="sfp-empty">No objects yet.</p>
             ) : (
                 // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- drop-to-root target; rows stay native buttons
@@ -208,6 +244,7 @@ export function StructurePanel({ entities = [], selectedEntityId, selectedEntity
                             onReparentEntity={onReparentEntity}
                         />
                     ))}
+                    {nodeRows.map((row) => <NodeRow key={row.id} row={row} onOpen={onOpenNodeRow} onEditInNodes={onEditNodeRowInNodes} />)}
                 </div>
             )}
         </div>

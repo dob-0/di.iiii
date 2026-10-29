@@ -59,8 +59,10 @@ import {
     geoNodeInspectorValues,
     listGeoChildren,
     listGeoChoices,
+    listRoomNodes,
     nodeTransformPatch,
-    nodeValuesPatch
+    nodeValuesPatch,
+    roomNodeRow
 } from '../../project/graph/geoScope.js'
 
 // Inside a Geo, Create offers what exists as a node — the Create window's own
@@ -239,6 +241,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         [insideGeo, document, geoNode?.id]
     )
     const geoRows = useMemo(() => geoChildren.map(geoChildRow), [geoChildren])
+    const roomNodeRows = useMemo(
+        // Only where Studio draws them (graphRoom: never in a jam project).
+        () => (insideGeo || !geoAllowed || !document ? [] : listRoomNodes(document).map(roomNodeRow)),
+        [insideGeo, geoAllowed, document]
+    )
     const geoSelectedNode = insideGeo ? (geoChildren.find((node) => node.id === geoSelectedId) || null) : null
     const geoSelectedRow = geoSelectedNode ? geoChildRow(geoSelectedNode) : null
     const openGeo = useCallback((nextGeoId) => {
@@ -1447,6 +1454,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             selectedEntityId={insideGeo ? (geoSelectedRow?.id || null) : state.selectedEntityId}
             selectedEntityIds={insideGeo ? (geoSelectedRow ? [geoSelectedRow.id] : []) : selectedEntityIds}
             entities={insideGeo ? geoRows : entities}
+            nodeRows={roomNodeRows}
+            onOpenNodeRow={geoAllowed ? openGeo : undefined}
             graphRoom={graphRoom}
             geoSwitcher={geoAllowed ? {
                 geos: geoList,
