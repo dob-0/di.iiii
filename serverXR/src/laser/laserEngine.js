@@ -86,8 +86,8 @@ const BUFFER_MARGIN = 200
 // The longest stretch of missed time a tick makes up (a stall past it is dropped, not banked).
 const CATCH_UP_MAX_MS = 100
 // The most the engine keeps queued AHEAD in a cube's ring buffer, in ms of playing time. Whatever is
-// queued still plays after a blackout or a dark frame (they stop the feed, not the cube's buffer),
-// so this is also the most dark delay the cushion adds. Today's engine queues about 20 ms.
+// queued still plays after a blackout or a dark frame (they stop the feed, not the cube's buffer; a blackout clears it and sends output-off),
+// so for a dark frame this is also the most dark delay the cushion adds. Today's engine queues about 20 ms.
 // 40 ms covers the studio Mac's late ticks (p99 28-30 ms) and adds up to 20 ms of dark delay against
 // today; 20 ms keeps today's delay and gives up most of the catch-up gain. Owner's choice: 40 or 20.
 const LEAD_MS = 40
@@ -717,10 +717,15 @@ const createLaserEngine = ({
         return { ok: true, armed, kept: true }
     }
 
+    // Blackout from any source cuts the light at once, like a disarm or the SIGTERM path: the armed
+    // cubes get their ring buffer cleared, the park at centre and output-off (offAll), so nothing
+    // queued ahead (up to LEAD_MS) plays on. That leaves the run disarmed — lifting the blackout
+    // never turns output on by itself; the sign-off phrase arms again, as after any disarm.
     const blackout = () => {
         frames.all = null
         frames.byCube.clear()
         for (const c of live.values()) { c.playing = null; c.index = 0 }
+        if (armed) arm({ armed: false })
         return { ok: true, armed }
     }
 

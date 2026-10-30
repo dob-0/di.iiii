@@ -575,8 +575,32 @@ describe('the engine sends every point on time (catch-up pacing)', () => {
         tick(20, false) // the tick after: the engine feeds nothing lit; what is queued plays on
         return queue.filter(Boolean).length
     }
-    it('after a 100 ms stall, a blackout finds at most LEAD_MS of lit points queued', () => {
-        expect(litQueuedAfterStall((engine) => engine.blackout())).toBeLessThanOrEqual((RATE * 40) / 1000)
+    it('a blackout after a 100 ms stall clears the cube at once: no lit point queued, output-off within the same tick', () => {
+        const { engine, socket, clock, hear } = armedWith(ONE)
+        engine.setFrame('all', circle)
+        for (let i = 0; i < 10; i += 1) { clock.t += 20; engine.setFrame('all', circle); engine.tick() }
+        clock.t += 100 // the stall; the next tick queues LEAD_MS ahead
+        engine.setFrame('all', circle)
+        engine.tick()
+        socket.sent.length = 0
+        engine.blackout()
+        const sent = cmds(socket)
+        expect(sent.filter((b) => b[0] === 0x8d).length).toBeGreaterThanOrEqual(1) // ring buffer cleared
+        expect(sent.filter((b) => b[0] === 0x80)).toEqual([[0x80, 0], [0x80, 0]]) // output off, before any tick
+        expect(engine.state().armed).toBe(false)
+        socket.sent.length = 0
+        for (let i = 0; i < 5; i += 1) { clock.t += 20; hear('10.0.0.51', [0x8a, 0, 0, 0]); engine.tick() }
+        expect(litIn(dataTo(socket))).toBe(0)
+    })
+    it('lifting a blackout never turns output on by itself: only the sign-off arms again', () => {
+        const { engine, socket, clock } = armedWith(ONE)
+        engine.setFrame('all', circle)
+        engine.blackout()
+        socket.sent.length = 0
+        for (let i = 0; i < 5; i += 1) { clock.t += 20; engine.setFrame('all', circle); engine.tick() }
+        expect(cmds(socket).filter((b) => b[0] === 0x80 && b[1] === 1)).toEqual([])
+        expect(litIn(dataTo(socket))).toBe(0)
+        expect(engine.arm({ armed: true, confirm: 'wrong' }).ok).toBe(false)
     })
     it('after a 100 ms stall, a dark frame finds at most LEAD_MS of lit points queued', () => {
         const dark = Array.from({ length: 60 }, () => [0.2, 0.5, 0, 0, 0])
