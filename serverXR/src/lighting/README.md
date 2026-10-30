@@ -21,3 +21,5 @@ ignore it); one that answered and went quiet for 20 s is. `showBackup.js` copies
 leaves it for another show; before a manual reset run `node tools/backup-show.js <data dir>`.
 
 The output form follows the live output: on every poll it shows the desk's driver, serial port, mode, targets and refresh rate, except the one control being edited. A change posts only the changed key (`ui/outputPatch.js`), never the whole form, and the desk keeps every key a POST leaves out — so a page loaded earlier cannot post a stale driver over the live one (the USB output died that way on the show Mac, 2026-10-30). A POST whose values equal the current ones saves nothing and restarts nothing; a real driver change logs `output driver old -> new`.
+
+The B key and the MIDI blackout pad are one-way: they switch blackout on, never off, and B ignores key auto-repeat; releasing blackout is the button click. The "Press again to go live" arm survives the 1.5 s poll, ignores a second press within 400 ms and names the driver and port. The driver radios only choose; a "Switch to <driver>" button applies it, after a confirmation while output is on (`ui/panicKeys.js`).

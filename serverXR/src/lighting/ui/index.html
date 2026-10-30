@@ -545,6 +545,7 @@
         <div class="inline pad">
           <label><input type="radio" name="driver" value="artnet"> Art-Net</label>
           <label><input type="radio" name="driver" value="enttec"> DMX USB PRO</label>
+          <button class="sq" id="driverSwitch" hidden></button>
           <label class="muted" title="Frames per second on the wire. Lower it if the serial link reports skipped frames; below ~10 Hz fixtures fall back to their built-in programs.">refresh
             <input type="number" id="refreshHz" min="1" max="44" step="1" style="width:4.5em"> Hz</label>
         </div>
@@ -1034,6 +1035,7 @@
 <script src="show.js"></script>
 <script src="caps.js"></script>
 <script src="outputPatch.js"></script>
+<script src="panicKeys.js"></script>
 <script src="colour.js"></script>
 <script src="dmxfeed.js"></script>
 <script src="ask.js"></script>
