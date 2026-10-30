@@ -96,14 +96,17 @@ describe('Blackout always works (rows 6, 30, 31)', () => {
         key('B', { shiftKey: true })
         expect(sent('desk/api/blackout').map((p) => p.body.on)).toEqual([false])
     })
-    it('row 31: a second B within 400 ms, and a held B, are ignored', async () => {
+    it('row 31 (review D4): a held B is ignored; B (dark) is never gapped; the 400 ms gap guards Shift+B only', async () => {
         key('b')
         key('b')
         key('b', { repeat: true })
-        expect(sent('desk/api/blackout')).toHaveLength(1)
-        await sleep(450)
-        key('b')
         expect(sent('desk/api/blackout')).toHaveLength(2)
+        key('b', { shiftKey: true })
+        key('b', { shiftKey: true })
+        expect(sent('desk/api/blackout')).toHaveLength(3)
+        await sleep(450)
+        key('b', { shiftKey: true })
+        expect(sent('desk/api/blackout')).toHaveLength(4)
     })
 })
 

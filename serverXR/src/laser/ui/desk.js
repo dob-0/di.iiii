@@ -132,6 +132,7 @@
         if (!held('master')) master.value = desk.master
         $('masterVal').textContent = Math.round(Number(master.value) * 100) + '%'
         $('blackoutBtn').classList.toggle('is-on', desk.blackout)
+        if ($('blackoutKeepsArm') && !held('keepArm')) $('blackoutKeepsArm').checked = Boolean(desk.blackoutKeepsArm)
         $('releaseBtn').disabled = !desk.live && !desk.blackout
         const pill = $('safetyPill')
         pill.className = 'pill'
@@ -164,6 +165,9 @@
     // is Release or Shift+B (audit row 30).
     $('blackoutBtn').addEventListener('click', () => post('desk/api/blackout', { on: true }).then(refreshDesk))
     $('releaseBtn').addEventListener('click', () => post('desk/api/release').then(refreshDesk))
+    // "Blackout keeps the arm": the older desk blackout (dark, armed kept, Shift+B brings it back). Off = Blackout disarms.
+    const keepBox = $('blackoutKeepsArm')
+    if (keepBox) keepBox.addEventListener('change', () => post('desk/api/setting', { blackoutKeepsArm: keepBox.checked }).then(refreshDesk))
     $('disarmBtn').addEventListener('click', () => post('api/arm', { armed: false }).then(refreshEngine))
 
     // ---- pages
@@ -633,11 +637,13 @@
             const link = engine.sim ? el('span', { class: 'muted', text: 'sim' })
                 : e.connected ? el('span', { class: 'ok', text: 'answering' })
                     : el('span', { class: 'bad', text: e.ip ? 'no answer' : 'no address' })
-            const output = e.armed
+            const output = e.armed && e.stop && !engine.sim && desk.live
+                ? el('button', { class: 'danger', text: 'Stopped · press Go', title: 'Press a look (Go): the cube lights again on its next new picture that passes the guards', onclick: () => { if (desk.liveId) post('desk/api/go', { look: desk.liveId }).then(refreshDesk) } })
+                : e.armed
                 ? el('button', { class: 'danger', text: 'On · turn off', onclick: () => post('api/arm', { armed: false, cube: c.id, out: OUT }).then(refreshEngine) })
                 : el('button', { text: 'On', disabled: !e.ip, title: e.ip ? 'Arm this cube (the first On of a run asks for the phrase)' : 'No address: Find cubes, then Use these', onclick: () => arm(c.id) })
             const now = c.held ? el('span', { class: 'warn', text: 'held by another Out', title: c.held })
-                : e.stop && !engine.sim ? el('span', { class: 'warn', text: e.stop.text || e.stop.reason })
+                : e.stop && !engine.sim ? el('span', { class: 'warn', text: `${e.stop.text || e.stop.reason}${e.armed && desk.live ? ' — press Go' : ''}` })
                     : c.driving ? el('span', { text: `${c.lit} lit points` })
                         : c.dark ? el('span', { class: 'warn', text: desk.blackout ? 'dark · blackout' : c.offPercent > 0 ? `dark · ${c.offPercent} % off the field` : 'dark' })
                             : el('span', { class: 'muted', text: '—' })
@@ -768,8 +774,10 @@
         if (key === 'b' && !mod && !e.altKey) {
             e.preventDefault()
             const t = Date.now()
-            if (e.repeat || t - blackoutKeyAt < BLACKOUT_GAP_MS) return
-            blackoutKeyAt = t
+            if (e.repeat) return
+            // The gap guards the lift only: a panic retry of B (dark) is never dropped (review D4).
+            if (e.shiftKey && t - blackoutKeyAt < BLACKOUT_GAP_MS) return
+            if (e.shiftKey) blackoutKeyAt = t
             // B only ever goes dark; Shift+B lifts it, so a second press never lights the cubes (review 1218 M1).
             post('desk/api/blackout', { on: !e.shiftKey }).then(refreshDesk)
             return

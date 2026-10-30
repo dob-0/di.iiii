@@ -25,7 +25,8 @@ const fakeEngine = (ids = ['cube-1', 'cube-2', 'cube-3'], { refuse = () => null 
     return {
         calls,
         blackout: () => { blackouts += 1; for (const k of Object.keys(byCube)) delete byCube[k]; return { ok: true } },
-        state: () => ({ zone: { xMin: -1, xMax: 1, yMin: 0, yMax: 1 }, cubes: ids.map((id) => ({ id, name: id, path: null, info: null })) }),
+        arm: () => ({ ok: true }),
+        state: () => ({ sim: true, zone: { xMin: -1, xMax: 1, yMin: 0, yMax: 1 }, cubes: ids.map((id) => ({ id, name: id, path: null, info: null })) }),
         setFrame: (cube, points, out) => {
             calls.push({ kind: 'frame', cube, points, out })
             const e = refuse(cube)
