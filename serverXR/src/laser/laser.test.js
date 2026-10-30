@@ -214,7 +214,9 @@ describe('the laser engine', () => {
         engine.tick()
         for (const t of timers) t()
         expect(socket.sent.length).toBeGreaterThan(0)
-        for (const s of socket.sent) expect({ port: s.port, bytes: [...s.buf] }).toEqual({ port: proto.PORT.CMD, bytes: [0x77] })
+        // Only the info question, and output-off (always allowed, sent when the socket opens: row 8).
+        for (const s of socket.sent) expect([[0x77], [0x80, 0]]).toContainEqual([...s.buf])
+        for (const s of socket.sent) expect(s.port).toBe(proto.PORT.CMD)
         expect(new Set(socket.sent.map((s) => s.ip))).toEqual(new Set(['10.0.0.51', '10.0.0.52']))
     })
     it('shows each cube\'s info in the state once it has answered', () => {
@@ -447,8 +449,9 @@ describe('the signal-loss stop', () => {
 })
 
 describe('the still-beam guard', () => {
-    const holdStill = (rig, frame, ms) => {
-        rig.engine.setFrame('all', frame)
+    // `go`: a new Go from the desk, the person who brings a cube back after a still-beam stop (stage audit row 34).
+    const holdStill = (rig, frame, ms, go = false) => {
+        rig.engine.setFrame('all', frame, null, { go })
         for (let t = 0; t < ms; t += 20) { rig.at(20); rig.hear('10.0.0.51', [0x80]); rig.engine.alive('all'); rig.engine.tick() }
     }
     it('a still beam held 200 ms blanks the cube; a moving frame then switches it back on', () => {
@@ -463,8 +466,10 @@ describe('the still-beam guard', () => {
         rig.socket.sent.length = 0
         holdStill(rig, dot(), 100)
         expect(rig.socket.sent).toEqual([])
-        // A circle: back on.
+        // A circle: a moving frame alone leaves it dark; a new Go brings it back.
         holdStill(rig, circle, 20)
+        expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam', needsPerson: true })
+        holdStill(rig, circle, 20, true)
         expect(rig.engine.state().cubes[0].stop).toBe(null)
         expect(cmds(rig.socket)).toEqual([[0x8d], [0x8d], [0x8a], [0x80, 1]])
         expect(dataTo(rig.socket)).toEqual([])
@@ -622,5 +627,140 @@ describe('the engine sends every point on time (catch-up pacing)', () => {
                 if (lit) expect(Math.abs(x)).toBeLessThanOrEqual(0.2 + 1 / 0x800)
             }
         }
+    })
+})
+
+// Stage audit 2026-10-30 (rows 8, 33, 34, 36): what a stop does to a cube, what a restart leaves lit,
+// what an off-field point does, and what the engine says about the points it blanked.
+describe('stage audit fixes', () => {
+    const OFF = [0x80, 0]
+    const cmdsTo = (rig, ip) => rig.socket.sent.filter((s) => s.ip === ip && s.port === proto.PORT.CMD).map((s) => [...s.buf])
+    // 100 points along a sweep: a moving beam (two points would be a dwell, hence a still beam)
+    const line = Array.from({ length: 100 }, (_, i) => [-0.9 + (1.8 * i) / 99, 0.5, 1, 1, 1])
+    // One 20 ms step: the cube is heard, the frame kept alive (or not), the engine ticks.
+    const step = (rig, alive = true) => { rig.at(20); rig.hear('10.0.0.51', [0x80]); if (alive) rig.engine.alive('all'); rig.engine.tick() }
+
+    it('row 8: Disarm-all and Blackout send output-off to every addressed cube even when the engine thinks it is disarmed', () => {
+        for (const stop of [(e) => e.arm({ armed: false }), (e) => e.blackout()]) {
+            const rig = engineWith(CUBES)
+            expect(rig.engine.state().armed).toBe(false)
+            rig.socket.sent.length = 0
+            stop(rig.engine)
+            for (const ip of ['10.0.0.51', '10.0.0.52']) expect(cmdsTo(rig, ip).filter((b) => b[0] === 0x80 && b[1] === 0)).toHaveLength(2)
+        }
+    })
+    it('row 8: when the socket opens, every addressed cube gets output-off twice before anything else', () => {
+        const rig = engineWith(CUBES)
+        for (const ip of ['10.0.0.51', '10.0.0.52']) {
+            const mine = cmdsTo(rig, ip)
+            expect(mine.slice(0, 2)).toEqual([OFF, OFF])
+            expect(mine[2]).toEqual([0x77])
+        }
+    })
+
+    it('row 33: a raw point outside -1..1 is blanked and counted, not clamped lit onto the field edge', () => {
+        const rig = engineWith({ ...ONE, zone: { xMin: -1, xMax: 1, yMin: -1, yMax: 1 } })
+        const out = rig.engine.setFrame('all', [[0, 0, 1, 1, 1], [2, 0.5, 1, 1, 1], { x: 0.5, y: -3, r: 1, g: 0, b: 0 }, [-1.5, 0, 0, 0, 0]])
+        expect(out).toMatchObject({ ok: true, blanked: 2 })
+        const pts = rig.engine.frames().all
+        expect(pts[0].slice(2)).toEqual([1, 1, 1])
+        expect(pts[1].slice(2)).toEqual([0, 0, 0])
+        expect(pts[2].slice(2)).toEqual([0, 0, 0])
+        expect(pts.filter((p) => p[2] + p[3] + p[4] > 0)).toHaveLength(1)
+    })
+
+    it('row 36: the blanked and dropped counts are kept per cube and shown in the state', () => {
+        const rig = engineWith(CUBES)
+        rig.engine.setFrame('cube-1', [[0, 0.5, 1, 1, 1], [3, 0.5, 1, 1, 1], [0.1, 2, 1, 1, 1], ['x', 0, 1, 1, 1]])
+        let [one, two] = rig.engine.state().cubes
+        expect(one.pointLoss).toEqual({ blanked: 2, dropped: 1, blankedTotal: 2, droppedTotal: 1, frames: 1 })
+        expect(two.pointLoss).toEqual({ blanked: 0, dropped: 0, blankedTotal: 0, droppedTotal: 0, frames: 0 })
+        rig.engine.setFrame('cube-1', [[0, 0.5, 1, 1, 1], [3, 0.5, 1, 1, 1]])
+        ;[one] = rig.engine.state().cubes
+        expect(one.pointLoss).toMatchObject({ blanked: 1, dropped: 0, blankedTotal: 3, droppedTotal: 1, frames: 2 })
+    })
+
+    describe('row 34: a stopped cube stays dark until a person, or comes back by itself only for a moment', () => {
+        const stillStop = (config = ONE) => {
+            const rig = armedWith(config)
+            rig.engine.setFrame('all', dot())
+            for (let i = 0; i < 20; i++) step(rig)
+            expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
+            return rig
+        }
+        it('a still-beam stop is not undone by a later moving frame from any sender', () => {
+            const rig = stillStop()
+            rig.engine.setFrame('all', line)
+            for (let i = 0; i < 10; i++) step(rig)
+            expect(rig.engine.state().cubes[0]).toMatchObject({ armed: true, stop: { reason: 'still-beam', needsPerson: true } })
+            rig.socket.sent.length = 0
+            rig.at(60000) // minutes later, a keep-alive and a frame: still dark
+            rig.engine.setFrame('all', line)
+            step(rig)
+            expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
+            expect(rig.socket.sent.filter((s) => s.port === proto.PORT.CMD && s.buf[0] === 0x80 && s.buf[1] === 1)).toEqual([])
+        })
+        it('a new Go, On, or Release brings it back; each is a person', () => {
+            const go = stillStop()
+            step(go)
+            go.engine.setFrame('all', line, null, { go: true })
+            step(go)
+            expect(go.engine.state().cubes[0].stop).toBe(null)
+            const on = stillStop()
+            expect(on.engine.arm({ armed: true, cube: 'cube-1' }).ok).toBe(true)
+            expect(on.engine.state().cubes[0].stop).toBe(null)
+            const release = stillStop()
+            release.engine.arm({ armed: false, cube: 'cube-1' })
+            expect(release.engine.state().cubes[0]).toMatchObject({ armed: false, stop: null })
+        })
+        it('laser.json stopResume "legacy" keeps the old rule: any fresh moving frame resumes', () => {
+            const rig = stillStop({ ...ONE, stopResume: 'legacy' })
+            expect(rig.engine.state()).toMatchObject({ stopResume: 'legacy' })
+            expect(rig.engine.state().cubes[0].stop.needsPerson).toBe(false)
+            step(rig)
+            rig.engine.setFrame('all', line)
+            step(rig)
+            expect(rig.engine.state().cubes[0].stop).toBe(null)
+        })
+        it('over-temperature stays off: the cube is disarmed and a new Go does not light it', () => {
+            const rig = armedWith(ONE)
+            rig.answer('10.0.0.51', { out: 8, temp: 70 })
+            rig.engine.setFrame('all', line)
+            step(rig)
+            expect(rig.engine.state().cubes[0]).toMatchObject({ armed: false, stop: { reason: 'over-temperature' } })
+            rig.engine.setFrame('all', line, null, { go: true })
+            step(rig)
+            expect(rig.engine.state().cubes[0].armed).toBe(false)
+        })
+        it('a no-frame stop resumes by itself within 2 s for the same Out only', () => {
+            const rig = armedWith(ONE)
+            rig.engine.setFrame('cube-1', line, 'out-a')
+            for (let i = 0; i < 4; i++) step(rig, false)
+            for (let i = 0; i < 12 && !rig.engine.state().cubes[0].stop; i++) step(rig, false)
+            expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'no-frame' })
+            rig.at(500)
+            rig.engine.setFrame('cube-1', line, 'out-a')
+            step(rig)
+            expect(rig.engine.state().cubes[0].stop).toBe(null)
+        })
+        it('a no-frame stop does not resume for another Out, nor after 2 s: the cube is disarmed', () => {
+            const stopped = () => {
+                const rig = armedWith(ONE)
+                rig.engine.setFrame('all', line)
+                for (let i = 0; i < 14 && !rig.engine.state().cubes[0].stop; i++) step(rig, false)
+                expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'no-frame' })
+                return rig
+            }
+            const other = stopped()
+            other.at(300)
+            other.engine.setFrame('cube-1', line, 'out-b')
+            step(other)
+            expect(other.engine.state().cubes[0].stop).toMatchObject({ reason: 'no-frame' })
+            const late = stopped()
+            for (let i = 0; i < 120; i++) step(late, false) // 2.4 s
+            late.engine.setFrame('all', line)
+            step(late)
+            expect(late.engine.state().cubes[0]).toMatchObject({ armed: false, stop: { reason: 'no-frame' } })
+        })
     })
 })

@@ -1,4 +1,6 @@
+const fs = require('fs')
 const path = require('path')
+const crypto = require('crypto')
 const express = require('express')
 const { requireLocalRuntime, requireSameMachine, requireOwnPage } = require('../localRuntimeGuard')
 
@@ -8,6 +10,34 @@ const { requireLocalRuntime, requireSameMachine, requireOwnPage } = require('../
 // (requireLocalRuntime, mounted below). The one-line change is this constant.
 const STOPS_FROM_REMOTE = false
 const stopGate = STOPS_FROM_REMOTE ? (req, res, next) => next() : requireSameMachine
+
+// THE LOCAL TOKEN (stage audit row 9, 2026-10-30). A loopback POST with NO Origin and NO Referer (a script,
+// a curl, an agent: not di's own page) that would make light (arm on, frame, alive, show) must send the
+// token in the x-laser-token header. The token is a file under the data folder (laser/.token), made 0600
+// on first start and never sent to a page; a browser's same-origin request carries Origin and passes as
+// before. Stops (disarm, blackout, show stop) never need it. The boundary is still the machine itself:
+// a process of this user can read the file.
+const TOKEN_FILE = '.token'
+const TOKEN_HEADER = 'x-laser-token'
+const ensureToken = (laserDir) => {
+  const file = path.join(laserDir, TOKEN_FILE)
+  try {
+    const have = fs.readFileSync(file, 'utf8').trim()
+    if (have.length >= 32) return { file, token: have }
+  } catch { /* none yet */ }
+  fs.mkdirSync(laserDir, { recursive: true })
+  const token = crypto.randomBytes(32).toString('hex')
+  fs.writeFileSync(file, `${token}\n`, { mode: 0o600 })
+  fs.chmodSync(file, 0o600)
+  return { file, token }
+}
+const tokenGate = (token) => (req, res, next) => {
+  if (req.headers.origin !== undefined || req.headers.referer !== undefined) return next()
+  const sent = Buffer.from(String(req.headers[TOKEN_HEADER] || ''))
+  const want = Buffer.from(token)
+  if (sent.length === want.length && crypto.timingSafeEqual(sent, want)) return next()
+  res.status(403).json({ ok: false, error: 'no token', detail: `A request without Origin or Referer that makes light needs the local token (header ${TOKEN_HEADER}, file ${path.join('laser', TOKEN_FILE)} in di's data folder).` })
+}
 
 // One sweep at a time, and a pause after each: a sweep is 254 packets a network, and a button
 // pressed twice must not make it 508 (laserFind.js).
@@ -59,6 +89,7 @@ const PROBE_WAIT_MS = 800
 
 function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engineOptions = {}, findCubes, probeCube, now = Date.now, loadDocument } = {}) {
   const laserDir = path.join(dataDir, 'laser')
+  const needToken = tokenGate(ensureToken(laserDir).token)
   let engine = null
   const getEngine = () => {
     if (engine) return engine
@@ -94,12 +125,12 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   router.use((req, res, next) => (req.method === 'GET' || req.method === 'HEAD' ? next() : requireOwnPage(req, res, next)))
   router.use(express.json({ limit: '512kb' }))
   router.get('/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ ...getEngine().state(), show: player.state() }) })
-  router.post('/api/show', requireSameMachine, async (req, res) => {
+  router.post('/api/show', requireSameMachine, needToken, async (req, res) => {
     const out = await player.start({ project: req.body?.project, map: req.body?.map, reloadMs: req.body?.reloadMs, scale: req.body?.scale, tween: req.body?.tween })
     res.status(out.ok ? 200 : out.status || 400).json({ ...out, show: player.state() })
   })
   router.post('/api/show/stop', stopGate, (req, res) => res.json({ ok: true, ...player.stop(), show: player.state() }))
-  router.post('/api/show/still', requireSameMachine, async (req, res) => {
+  router.post('/api/show/still', requireSameMachine, needToken, async (req, res) => {
     const got = await player.resolve({ project: req.body?.project, map: req.body?.map, scale: req.body?.scale })
     if (!got.ok) return res.status(got.status || 400).json(got)
     const { stillBeams, ARM_PHRASE } = require('../laser/laserEngine')
@@ -133,17 +164,17 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
     res.json({ ok: true, project: got.project, approved: counts, total: Object.fromEntries(cubes.map((c) => [c.id, (c.stillBeams || []).length])), file, disarmed: true, wasArmed, state: getEngine().state() })
   })
   router.get('/api/frames', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getEngine().frames()) })
-  router.post('/api/frame', requireSameMachine, (req, res) => {
-    const out = getEngine().setFrame(req.body?.cube, req.body?.points, req.body?.out ?? null)
+  router.post('/api/frame', requireSameMachine, needToken, (req, res) => {
+    const out = getEngine().setFrame(req.body?.cube, req.body?.points, req.body?.out ?? null, { go: req.body?.go === true })
     res.status(out.ok ? 200 : 400).json(out)
   })
-  router.post('/api/alive', requireSameMachine, (req, res) => {
+  router.post('/api/alive', requireSameMachine, needToken, (req, res) => {
     const out = getEngine().alive(req.body?.cube, req.body?.out ?? null)
     res.status(out.ok ? 200 : 400).json(out)
   })
   router.post('/api/blackout', stopGate, (req, res) => res.json(getEngine().blackout()))
   // Arming is the strict gate; disarming is a stop and takes the stops' rule.
-  router.post('/api/arm', (req, res, next) => (req.body?.armed === true ? requireSameMachine : stopGate)(req, res, next), (req, res) => {
+  router.post('/api/arm', (req, res, next) => (req.body?.armed === true ? (a, b, n) => requireSameMachine(a, b, (e) => (e ? n(e) : needToken(a, b, n))) : stopGate)(req, res, next), (req, res) => {
     const out = getEngine().arm(req.body || {})
     res.status(out.ok ? 200 : 403).json(out)
   })
