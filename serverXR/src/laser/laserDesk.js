@@ -243,7 +243,7 @@ const hashPoints = (points) => {
  */
 const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: every = setInterval, clearInterval: stopEvery = clearInterval, log = null }) => {
     const file = path.join(dataDir, FILE)
-    const show = { bpm: 120, master: 1, looks: SEED_LOOKS.map((l) => ({ ...l })), cubes: {}, seeded: SEED_LOOKS.map((l) => l.id) }
+    const show = { bpm: 120, master: 1, looks: SEED_LOOKS.map((l) => ({ ...l })), cubes: {}, blackoutKeepsArm: false, seeded: SEED_LOOKS.map((l) => l.id) }
     let seedsAdded = false
     const clock = { bpm: 120, zero: now(), taps: [] }
     let live = null // the look on the cubes (a copy: editing it never touches the bank until Store)
@@ -268,6 +268,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             show.cubes[idOf(id)] = normaliseCube(c)
         }
         show.master = clamp(num(raw.master, 1), 0, 1)
+        show.blackoutKeepsArm = raw.blackoutKeepsArm === true
         show.bpm = clamp(num(raw.bpm, 120), BPM_MIN, BPM_MAX)
         clock.bpm = show.bpm
         // A seed look added since this bank was saved joins it at the end, once: `seeded` lists the seeds it has been
@@ -294,7 +295,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         try {
             fs.mkdirSync(dataDir, { recursive: true })
             const tmp = file + '.tmp'
-            fs.writeFileSync(tmp, JSON.stringify({ v: 1, bpm: show.bpm, master: show.master, looks: savedLooks, cubes: show.cubes, seeded: show.seeded }, null, 1))
+            fs.writeFileSync(tmp, JSON.stringify({ v: 1, bpm: show.bpm, master: show.master, blackoutKeepsArm: show.blackoutKeepsArm, looks: savedLooks, cubes: show.cubes, seeded: show.seeded }, null, 1))
             fs.renameSync(tmp, file)
             return true
         } catch (error) {
@@ -312,6 +313,9 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         .sort((a, b) => cubeCfg(a.c.id).order - cubeCfg(b.c.id).order || a.i - b.i)
         .map(({ c }) => c)
 
+    // A person's Go (a look pressed, a blackout lifted) counts once: the first frame after it carries `go: true`, so the
+    // engine may light a cube it stopped (still beam, frame too long). Nothing else the desk sends can (review D1).
+    let goSeq = 0
     let lastEngine = null
     let seenBlackouts = 0
     // The engine's Blackout (POST /laser/api/blackout, from any page) clears every frame. The desk must not draw
@@ -341,7 +345,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         const cubes = orderedCubes(st.cubes).filter((c) => cubeCfg(c.id).on)
         const t = now()
         cubes.forEach((cube, index) => {
-            const was = sent.get(cube.id) || { key: null, end: null, held: null, points: 0, at: 0 }
+            const was = sent.get(cube.id) || { key: null, end: null, held: null, points: 0, at: 0, seq: null }
             const drawn = live.cubes === 'all' || live.cubes.includes(cube.id)
             const stats = { lit: 0, off: 0 }
             const raw = blackout || !drawn ? [BLANK] : lookPointsAt(live, { t, clock, index, cube: cubeCfg(cube.id), master: show.master, stats })
@@ -354,11 +358,11 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
                 if (flat.points.length) { points = flat.points; end = flat.end }
             }
             const key = hashPoints(points)
-            const res = key === was.key && !was.held ? engine.alive(cube.id, OUT) : engine.setFrame(cube.id, points, OUT)
+            const res = key === was.key && !was.held ? engine.alive(cube.id, OUT) : engine.setFrame(cube.id, points, OUT, { go: was.seq !== goSeq })
             const count = { lit: points.filter(isLit).length, blanked: zoneCut, offField: stats.off, source: stats.lit }
             sent.set(cube.id, res.ok
-                ? { key, end, held: null, points: points.length, at: t, ...count }
-                : { key: null, end: was.end, held: res.error || 'refused', points: 0, at: t, lit: 0, blanked: 0, offField: 0, source: 0 })
+                ? { key, end, held: null, points: points.length, at: t, seq: goSeq, ...count }
+                : { key: null, end: was.end, held: res.error || 'refused', points: 0, at: t, seq: was.seq, lit: 0, blanked: 0, offField: 0, source: 0 })
         })
     }
     // The 50 ms tick never throws: an error is logged once per distinct message and the next tick runs (audit row 29).
@@ -392,7 +396,9 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         // Only cubes the desk drew on are touched: a desk that never drew must not build an engine to say so.
         if (sent.size) {
             const engine = getEngine()
-            for (const [id, s] of sent) if (!s.held) engine.setFrame(id, [BLANK], OUT)
+            // Dark first, then the cube is switched OFF (never resumed): a cube the desk let go of must not stay armed with
+            // output on for the next Out to light (review E2, desk half).
+            for (const [id, s] of sent) if (!s.held) { engine.setFrame(id, [BLANK], OUT); engine.arm({ armed: false, cube: id, out: OUT }) }
         }
         sent.clear()
         if (was) log?.info?.('[laser desk] released')
@@ -405,6 +411,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         live = { ...look, cubes: Array.isArray(look.cubes) ? [...look.cubes] : 'all' }
         liveId = look.id
         for (const s of sent.values()) s.key = null
+        goSeq += 1
         watchEngine()
         tick()
         startTicking()
@@ -623,13 +630,23 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     const setBlackout = (on) => {
         if (typeof on !== 'boolean') return { ok: false, status: 400, error: 'on: true or false' }
         blackout = on
-        // Blackout reaches the engine itself, whether the desk is released or another Out drives a cube (audit row 10).
-        if (on) { getEngine().blackout(); watchEngine() }
+        if (!on) goSeq += 1
+        // Blackout reaches the engine itself, whether the desk is released or another Out drives a cube (audit row 10): it
+        // disarms every cube. The setting "Blackout keeps the arm" keeps the older desk blackout instead (dark, armed kept,
+        // Shift+B brings it back at once); default off, the owner's choice for the show (D3, nothing we have is lost).
+        if (on && !show.blackoutKeepsArm) { getEngine().blackout(); watchEngine() }
         tick()
         return { ok: true, blackout }
     }
 
     // A new tempo keeps the beat where it is (no jump in the picture); a tap lands the beat on the tap.
+    const setBlackoutKeepsArm = (on) => {
+        if (typeof on !== 'boolean') return { ok: false, status: 400, error: 'on: true or false' }
+        show.blackoutKeepsArm = on
+        save()
+        return { ok: true, blackoutKeepsArm: on }
+    }
+
     const setBpm = (bpm) => {
         const b = clamp(num(bpm, clock.bpm), BPM_MIN, BPM_MAX)
         const t = now()
@@ -706,6 +723,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             liveId,
             blackout,
             master: show.master,
+            blackoutKeepsArm: show.blackoutKeepsArm,
             bpm: show.bpm,
             beat: beatsAt(clock, now()),
             looks: show.looks,
@@ -720,12 +738,14 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             cubes: orderedCubes(engine.cubes).map((c) => {
                 const s = sent.get(c.id)
                 const sending = Boolean(live && s && !s.held)
+                // What the ENGINE plays decides `driving`, not what the desk sent: a stopped or disarmed cube is dark (D2).
+                const plays = engine.sim || (c.armed && !c.stop)
                 const lit = sending ? s.lit : 0
                 const cut = sending ? s.offField + s.blanked : 0
                 return {
                     id: c.id, ...cubeCfg(c.id),
                     // `driving` is true only while something is LIT; a cube the desk feeds a dark picture is `dark` (rows 19, 24).
-                    driving: lit > 0, dark: sending && lit === 0, held: s?.held ?? null, points: s?.points ?? 0,
+                    driving: lit > 0 && plays, dark: sending && (lit === 0 || !plays), engineDark: sending && lit > 0 && !plays ? (c.stop ? 'stopped' : 'off') : null, held: s?.held ?? null, points: s?.points ?? 0,
                     lit, blanked: sending ? s.blanked : 0, offField: sending ? s.offField : 0,
                     offPercent: sending && s.source > 0 ? Math.min(100, Math.round((100 * cut) / s.source)) : 0
                 }
@@ -740,7 +760,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         else if (saveTimer) { clearTimeout(saveTimer); saveNow() }
     }
 
-    return { state, go, editLook, copyLook, pasteLook, undo, redo, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBpm, tap, setCube, thumbs, view, tick, close }
+    return { state, go, editLook, copyLook, pasteLook, undo, redo, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBlackoutKeepsArm, setBpm, tap, setCube, thumbs, view, tick, close }
 }
 
 module.exports = { createLaserDesk, normaliseLook, normaliseCube, lookPointsAt, capOf, hashPoints, beatsAt, SEED_LOOKS, LOOK_DEFAULTS, CUBE_DEFAULTS, TICK_MS, OUT }

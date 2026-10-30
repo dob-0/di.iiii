@@ -18,9 +18,10 @@ const isLit = (p) => p[2] > 0 || p[3] > 0 || p[4] > 0
 // A recording engine; `zone` is the keep-in zone; `broken` makes state() throw.
 const fake = ({ zone = { xMin: -1, xMax: 1, yMin: 0, yMax: 1 } } = {}) => {
     const e = { broken: null, blackouts: 0, sent: {} }
-    e.state = () => { if (e.broken) throw new Error(e.broken); return { zone, cubes: [{ id: 'cube-1', name: 'cube-1', path: null, info: null }] } }
+    e.state = () => { if (e.broken) throw new Error(e.broken); return { sim: true, zone, cubes: [{ id: 'cube-1', name: 'cube-1', path: null, info: null }] } }
     e.setFrame = (cube, points) => { e.sent[cube] = points; return { ok: true } }
     e.alive = () => ({ ok: true })
+    e.arm = () => ({ ok: true })
     e.blackout = () => { e.blackouts += 1; e.sent = {}; return { ok: true } }
     e.frames = () => ({ armed: false, sim: true, all: null, byCube: { ...e.sent }, cubes: ['cube-1'], stopped: {}, blackouts: e.blackouts })
     return e

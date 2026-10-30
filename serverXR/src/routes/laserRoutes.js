@@ -330,6 +330,7 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   router.post('/desk/api/master', requireSameMachine, (req, res) => answer(res, getDesk().setMaster(req.body?.level)))
   router.post('/desk/api/bpm', requireSameMachine, (req, res) => answer(res, req.body?.tap ? getDesk().tap() : getDesk().setBpm(req.body?.bpm)))
   router.post('/desk/api/cube', requireSameMachine, (req, res) => answer(res, getDesk().setCube(req.body?.id, req.body || {})))
+  router.post('/desk/api/setting', requireSameMachine, (req, res) => answer(res, getDesk().setBlackoutKeepsArm(req.body?.blackoutKeepsArm)))
   router.post('/desk/api/release', stopGate, (req, res) => answer(res, getDesk().release()))
   // Putting the cubes dark is a stop (stopGate); lifting the blackout lights them, so it is as strict as Arm. `on` is a
   // boolean or the route answers 400 — never a toggle (review 1218 M1).
