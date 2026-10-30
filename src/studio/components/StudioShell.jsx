@@ -45,6 +45,7 @@ import {
 } from './StudioShellPanels.jsx'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
 import ViewEditSwitch from './ViewEditSwitch.jsx'
+import { PlayButton, PlayHost, usePlay } from '../../project/components/PlayButton.jsx'
 
 // Raycast a viewport double-click into the scene's ground plane (y=0) so a
 // quick-inserted entity lands where the cursor pointed, not at a fixed default.
@@ -217,6 +218,8 @@ export default function StudioShell({
     const [viewportSelectTool, setViewportSelectTool] = useState(false)
     // Walk / Fly in the cluster (owner, 2026-10-13): the controller lives in the canvas, the buttons only ask it.
     const walkMode = useWalkMode()
+    // Play ▸ / Stop ■ (project/components/PlayButton.jsx): the walk over the editor, on a copy of the document. The editor stays mounted.
+    const play = usePlay()
     useEffect(() => {
         const toggle = () => setUiHidden((v) => !v)
         globalThis.document.addEventListener(UI_TOGGLE_EVENT, toggle)
@@ -895,6 +898,7 @@ export default function StudioShell({
                 {!isJam && rigHref ? (
                     <a className="sbar-link studio-rig-link" href={rigHref} title="The rig of this project: equipment, build, plot, cards, patch sheet, crew link">Rig</a>
                 ) : null}
+                {!isJam && document?.projectMeta?.id ? <PlayButton onPlay={play.start} /> : null}
             </SurfaceBar>
 
             {!uiHidden && !isMobile && (
@@ -1103,6 +1107,8 @@ export default function StudioShell({
             )}
 
             {walkBuild ? walkBuild(uiHidden) : null}
+
+            <PlayHost playing={play.playing} document={document} onStop={play.stop} />
 
             {uiHidden && !walkMode && (
                 <button className="sfp-show-ui-btn" onClick={() => setUiHidden(false)} title="Show UI (H)">

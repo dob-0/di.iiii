@@ -1,4 +1,5 @@
 import { getHostSpace } from './hostSpace.js'
+import { LANGUAGE_CODES } from '../i18n/languages.js'
 
 const APP_BASE_PATH = ((import.meta.env.BASE_URL) || '/').replace(/\/+$/, '') || '/'
 export const APP_PAGE_EDITOR = 'editor'
@@ -66,6 +67,8 @@ export const RESERVED_APP_SEGMENTS = [
     APP_PAGE_SHOOT,
     APP_PAGE_DEVICE,
     APP_PAGE_AI,
+    // The language codes (src/i18n/languages.js): /hy/… and /ru/… are language forms of an address.
+    ...LANGUAGE_CODES,
     'beta',
     'raw',
     'seed',
@@ -159,7 +162,8 @@ const getAppBasePrefix = () => (APP_BASE_PATH === '/' ? '' : APP_BASE_PATH)
 
 export const stripAppBasePath = (pathname = '/') => {
     if (!pathname) return '/'
-    if (APP_BASE_PATH !== '/' && pathname.startsWith(APP_BASE_PATH)) {
+    // A whole segment: base '/hy' does not own '/hyper/studio'.
+    if (APP_BASE_PATH !== '/' && (pathname === APP_BASE_PATH || pathname.startsWith(`${APP_BASE_PATH}/`))) {
         const stripped = pathname.slice(APP_BASE_PATH.length)
         return stripped || '/'
     }

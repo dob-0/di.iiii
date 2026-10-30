@@ -3,6 +3,7 @@ import LiveProjectScene from '../components/LiveProjectScene.jsx'
 import { isTypingTarget } from '../components/walkKeyboard.js'
 import { resolveHeadLight } from '../components/headLight.js'
 import { walkKeyHintText } from '../components/walkKeys.js'
+import { physicalKey, shortcutLetter } from '../components/physicalKey.js'
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../project/hooks/useOpHistory.js'
 import { useProjectStore } from '../project/state/projectStore.js'
@@ -278,7 +279,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
         if (!inventory) return undefined
         const hold = (e) => {
             if (isTypingTarget(e.target)) return
-            const k = e.key.toLowerCase()
+            const k = physicalKey(e)
             if (k === 'e' || k === 'escape') { e.preventDefault(); openInventory(false) }
             if (!(e.ctrlKey || e.metaKey)) e.stopPropagation()
         }
@@ -292,9 +293,11 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
     useEffect(() => {
         const onKey = (e) => {
             if (isTypingTarget(e.target)) return
-            const k = e.key.toLowerCase()
-            if ((e.ctrlKey || e.metaKey) && k === 'z' && !crew) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return }
-            if ((e.ctrlKey || e.metaKey) && k === 'y' && !crew) { e.preventDefault(); redo(); return }
+            const k = physicalKey(e)
+            // A shortcut follows the letter the layout types (as the browser's own do); a layout with no Latin letter falls back to the place.
+            const letter = shortcutLetter(e)
+            if ((e.ctrlKey || e.metaKey) && letter === 'z' && !crew) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return }
+            if ((e.ctrlKey || e.metaKey) && letter === 'y' && !crew) { e.preventDefault(); redo(); return }
             if (e.ctrlKey || e.metaKey || e.altKey) return
             if (k === 'h' && !crew) { if (legend) closeLegend(); else setLegend(true); return }
             if (k === 'e') { openInventory(true); return }

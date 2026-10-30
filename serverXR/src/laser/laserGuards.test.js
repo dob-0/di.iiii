@@ -368,7 +368,7 @@ describe('config and state', () => {
         expect(rig.engine.state().guard.path).toMatchObject({ litStep: 0.025, blankStep: 0.1, referenceRate: 30000, validated: false })
     })
     it('SET_RATE (0x82) is never sent by default; with guards.sendSetRate and a laser.json dacRate it goes before the clear and output-on', () => {
-        const cmdsOf = (rig) => rig.sent.filter((s) => s.port === proto.PORT.CMD && s.buf[0] !== 0x77).map((s) => [...s.buf])
+        const cmdsOf = (rig) => rig.sent.filter((s) => s.port === proto.PORT.CMD && s.buf[0] !== 0x77 && !(s.buf[0] === 0x80 && s.buf[1] === 0)).map((s) => [...s.buf])
         expect(cmdsOf(armed(ONE)).some((b) => b[0] === 0x82)).toBe(false)
         expect(cmdsOf(armed({ cubes: [{ id: 'cube-1', ip: '10.0.0.51', guards: { sendSetRate: true } }] })).some((b) => b[0] === 0x82)).toBe(false) // nothing asked
         const on = cmdsOf(armed({ dacRate: 30000, cubes: [{ id: 'cube-1', ip: '10.0.0.51', guards: { sendSetRate: true } }] }))
@@ -393,8 +393,9 @@ describe('round 2: the review\'s findings (reproduced first with the reviewer\'s
         rig.tick(20)
         expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'frame-too-long' })
         expect(rig.engine.state().cubes[0].path).toMatchObject({ overBudget: true, budget: 2000, pointsOut: null })
-        // A frame that fits brings it back.
-        rig.engine.setFrame('all', generateShape({ shape: 'circle', size: 0.5, height: 0.5, points: 500 }))
+        // A frame that fits brings it back once a person sends it (a new Go, a moment after the stop).
+        rig.tick(20)
+        rig.engine.setFrame('all', generateShape({ shape: 'circle', size: 0.5, height: 0.5, points: 500 }), null, { go: true })
         rig.tick(20)
         expect(rig.engine.state().cubes[0].stop).toBe(null)
     })

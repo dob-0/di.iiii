@@ -1,0 +1,52 @@
+/* PLAY (PlayLayer.jsx): the walk over the editor, with the PLAYING bar. Square, house tokens; red is the one alarm colour. */
+.play-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    background: var(--di-bg, #000);
+}
+
+.play-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-4, 1rem);
+    min-height: var(--di-touch-target, 44px);
+    padding: 0 var(--di-space-4, 1rem);
+    background: var(--di-danger, #f25f5c);
+    color: #140808;
+    font-family: var(--di-sans, system-ui, sans-serif);
+    font-size: var(--di-text-4, 0.875rem);
+    letter-spacing: var(--di-label-tracking, 0.08em);
+    border-radius: 0;
+}
+
+.play-bar-state { font-weight: 700; text-transform: uppercase; }
+.play-bar-note { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.play-stop,
+.play-button {
+    appearance: none;
+    border: 1px solid currentColor;
+    border-radius: 0;
+    font-family: var(--di-sans, system-ui, sans-serif);
+    font-size: var(--di-text-4, 0.875rem);
+    letter-spacing: var(--di-label-tracking, 0.08em);
+    text-transform: var(--di-label-case, uppercase);
+    min-height: var(--di-touch-target, 44px);
+    min-width: var(--di-touch-target, 44px);
+    padding: 0 var(--di-space-4, 1rem);
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.play-stop { background: #140808; color: #fff; border-color: #140808; }
+.play-stop:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.play-button { background: var(--di-scrim, rgba(0, 0, 0, 0.6)); color: var(--di-cyan, #5ce1e6); border-color: var(--di-cyan-border, currentColor); }
+.play-button:hover { background: rgba(var(--di-cyan-rgb, 92, 225, 230), 0.15); }
+.play-button:focus-visible { outline: 2px solid var(--di-cyan, #5ce1e6); outline-offset: 2px; }
