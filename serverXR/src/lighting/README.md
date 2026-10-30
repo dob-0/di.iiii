@@ -19,3 +19,5 @@ in plain words. It is on `GET /api/state` (`status.bus`) and `GET /api/summary` 
 to "<name> unreachable" with the reasons in its tooltip. An Art-Net node that never answered ArtPoll is not called unreachable (most
 ignore it); one that answered and went quiet for 20 s is. `showBackup.js` copies the show into `backups/` (newest 20) before the desk
 leaves it for another show; before a manual reset run `node tools/backup-show.js <data dir>`.
+
+The output form follows the live output: on every poll it shows the desk's driver, serial port, mode, targets and refresh rate, except the one control being edited. A change posts only the changed key (`ui/outputPatch.js`), never the whole form, and the desk keeps every key a POST leaves out — so a page loaded earlier cannot post a stale driver over the live one (the USB output died that way on the show Mac, 2026-10-30). A POST whose values equal the current ones saves nothing and restarts nothing; a real driver change logs `output driver old -> new`.

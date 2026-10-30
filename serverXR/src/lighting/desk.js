@@ -2292,6 +2292,8 @@ function createDesk(opts = {}) {
     'POST /api/input/release': (req, res) => { input.merger.release(); pushFrame(); json(res, { ok: true }); },
 
     'POST /api/output': (req, res, body) => {
+      const before = JSON.stringify(state.output);
+      const was = state.output.driver;
       if (body.mode) state.output.mode = body.mode === 'unicast' ? 'unicast' : 'broadcast';
       if (Array.isArray(body.targets)) state.output.targets = body.targets.map(validIp).filter(Boolean);
       if (body.refreshHz != null) state.output.refreshHz = Math.max(1, Math.min(44, body.refreshHz | 0));
@@ -2303,7 +2305,12 @@ function createDesk(opts = {}) {
       // switch. Selecting a port that will not open has to say so here — finding out by
       // noticing the rig is dark is how this project loses an evening.
       const wire = enttecDriver();
-      startLoop(); save();
+      // Values equal to the current ones change nothing: no save, no restart of the send loop.
+      if (JSON.stringify(state.output) !== before) {
+        // One line per real driver change, so a flip nobody meant is in the journal.
+        if (state.output.driver !== was) log('output driver ' + was + ' -> ' + state.output.driver);
+        startLoop(); save();
+      }
       json(res, {
         ok: true,
         output: state.output,

@@ -3350,14 +3350,16 @@ function buildOutput() {
   $('#artnetOut').hidden = serial;
   $('#serialOut').hidden = !serial;
   buildSerial();
-  // The guard is only here to stop a poll overwriting an address mid-type, so it protects
-  // the text fields and nothing else.
-  const typing = document.activeElement && document.activeElement.matches
-    && document.activeElement.matches('input[type=text], input[type=number]');
-  if (typing && document.activeElement.closest('.outbox')) return;
+  // The form follows the live output on every poll, except the one control being edited
+  // right now: a poll must not overwrite an address mid-type, and a form that keeps what
+  // it loaded is how a stale value ends up posted over the live one (2026-10-30).
+  const editing = document.activeElement;
+  const typing = editing && editing.matches && editing.matches('input[type=text], input[type=number]')
+    && editing.closest('.outbox');
   $$('input[name=mode]').forEach((r) => { r.checked = r.value === S.output.mode; });
-  $('#targets').value = S.output.targets.join(', ');
-  $('#refreshHz').value = S.output.refreshHz || 40;
+  if (editing !== $('#targets')) $('#targets').value = S.output.targets.join(', ');
+  if (editing !== $('#refreshHz')) $('#refreshHz').value = S.output.refreshHz || 40;
+  if (typing) return;
   const nodes = S.status.nodes;
   const sending = new Set(S.output.mode === 'unicast' ? S.output.targets : []);
   // Rebuilt only when something about the list changed. Every poll used to replace the
@@ -5417,10 +5419,13 @@ $('#saveOutput').addEventListener('click', () => {
   // invisible mode change on the wire.
   const bad = entries.filter((t) => !/^\d+\.\d+\.\d+\.\d+$/.test(t));
   if (bad.length) say(`${bad.join(', ')} ${bad.length === 1 ? 'is' : 'are'} not an IP address — fix it and apply again`, true);
-  post('api/output', {
+  // Only what differs from the live output travels (deskOutputPatch, outputPatch.js).
+  const patch = window.deskOutputPatch.outputPatch(null, S && S.output, {
     mode: ($$('input[name=mode]').find((r) => r.checked) || {}).value || 'broadcast',
     targets: entries,
-  }).then(pullState);
+  });
+  if (!Object.keys(patch).length) return pullState();
+  post('api/output', patch).then(pullState);
 });
 
 /* ---- more than one device at once ---- */
@@ -5504,7 +5509,7 @@ $('#outEnable').addEventListener('click', async () => {
     return;
   }
   outArmed = false;
-  const res = await post('api/output', { enabled: !on });
+  const res = await post('api/output', window.deskOutputPatch.outputPatch(null, null, 'enabled', !on));
   await pullState();
   if (res && res.error) return say(res.error, true);
   say(!on ? 'output ON — the rig is live' : 'output OFF — nothing is leaving this machine');
@@ -5514,7 +5519,8 @@ $('#outEnable').addEventListener('click', async () => {
 // choice about which cable the show is on, and having to press a second thing to make it
 // real is exactly how the desk ends up transmitting somewhere she is not looking.
 $$('input[name=driver]').forEach((r) => r.addEventListener('change', async () => {
-  const res = await post('api/output', { driver: r.value, serialPort: $('#serialPort').value });
+  // Only the driver: the serial port is the desk's own, and the form's copy may be old.
+  const res = await post('api/output', window.deskOutputPatch.outputPatch(null, S && S.output, 'driver', r.value));
   await pullState();
   if (res && res.error) say(res.error, true);   // #serialStat is rebuilt by the poll and would eat this
 }));
@@ -5524,12 +5530,12 @@ $$('input[name=driver]').forEach((r) => r.addEventListener('change', async () =>
 $('#refreshHz').addEventListener('change', async () => {
   const hz = Math.max(1, Math.min(44, Math.round(+$('#refreshHz').value) || 40));
   $('#refreshHz').value = hz;
-  const res = await post('api/output', { refreshHz: hz });
+  const res = await post('api/output', window.deskOutputPatch.outputPatch(null, null, 'refreshHz', hz));
   await pullState();
   if (res && res.error) say(res.error, true);
 });
 $('#serialPort').addEventListener('change', async () => {
-  const res = await post('api/output', { serialPort: $('#serialPort').value });
+  const res = await post('api/output', window.deskOutputPatch.outputPatch(null, null, 'serialPort', $('#serialPort').value));
   await pullState();
   if (res && res.error) say(res.error, true);   // #serialStat is rebuilt by the poll and would eat this
 });
