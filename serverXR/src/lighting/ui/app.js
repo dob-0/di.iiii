@@ -3324,8 +3324,12 @@ $('#audRelease').addEventListener('input', (e) => {
 
 // Set when a mode/targets control is changed, cleared by Apply: the form then stops following.
 let outDirty = false;
-let outArmed = false, outArmedAt = null, outLastPress = null;   // go-live arm (panicKeys.js)
+let outLastPress = null, outLastOn = null;   // go-live arm (panicKeys.js)
+const goArm = window.deskPanicKeys.createArm(
+  { set: (f, ms) => setTimeout(f, ms), clear: (h) => clearTimeout(h) },
+  () => buildOutput());
 let driverPending = null;   // a driver chosen on the radios, not yet switched to
+let driverLastLive = null;  // the live driver seen by the previous poll
 function buildOutput() {
   const n = S.status.nodes.length;
   const serial = S.output.driver === 'enttec';
@@ -3336,12 +3340,14 @@ function buildOutput() {
   // both status lines kept claiming unicast.
   const unicastEmpty = S.output.mode === 'unicast' && !S.output.targets.length;
   const on = !!S.output.enabled;
+  if (on !== outLastOn) goArm.cancel();   // output switched on or off (here or elsewhere) ends the arm
+  outLastOn = on;
   // The switch says which state it is IN, not which state pressing it would reach: an
   // operator glancing at this in the dark is asking "is the rig live?", not "what will
   // this button do?". The line beside it says the consequence in words.
   const btn = $('#outEnable');
   // While the go-live arm is live the poll leaves the prompt alone (it erased it every 1.5 s).
-  if (!window.deskPanicKeys.keepArmPrompt(outArmed)) {
+  if (!window.deskPanicKeys.keepArmPrompt(goArm.state.armed)) {
   btn.textContent = on ? 'Output is ON' : 'Output is OFF';
   btn.classList.toggle('on', on);
   $('#outEnableWhat').textContent = on
@@ -3358,6 +3364,8 @@ function buildOutput() {
   // port and the panel carried on showing Broadcast/Unicast until you clicked elsewhere.
   // The most consequential switch in the app read as broken at the moment of use.
   // A pending (not yet applied) choice keeps its radio; the poll must not snap it back.
+  driverPending = window.deskPanicKeys.driverPoll(driverPending, driverLastLive, S.output.driver || 'artnet');
+  driverLastLive = S.output.driver || 'artnet';
   if (!driverPending) $$('input[name=driver]').forEach((r) => { r.checked = r.value === (S.output.driver || 'artnet'); });
   paintDriverSwitch();
   $('#artnetOut').hidden = serial;
@@ -5525,17 +5533,16 @@ $('#sendAdd').addEventListener('click', async () => {
 $('#outEnable').addEventListener('click', async (e) => {
   const on = !!(S && S.output.enabled);
   const now = Date.now();
-  const act = window.deskPanicKeys.goLivePress({ on, armedAt: outArmed ? outArmedAt : null, lastPress: outLastPress }, now, e.detail);
+  const act = window.deskPanicKeys.goLivePress({ on, armedAt: goArm.state.armed ? goArm.state.armedAt : null, lastPress: outLastPress }, now, e.detail);
   outLastPress = now;
   if (act === 'ignore') return;   // a double click or a bounce never passes the two-press check
   if (act === 'arm') {
-    outArmed = true; outArmedAt = now;
+    goArm.start(now);
     $('#outEnable').textContent = 'Press again to go live';
     $('#outEnableWhat').textContent = window.deskPanicKeys.armPrompt(S && S.output.driver, S && S.output.serialPort);
-    setTimeout(() => { outArmed = false; outArmedAt = null; buildOutput(); }, window.deskPanicKeys.ARM_MS);
     return;
   }
-  outArmed = false; outArmedAt = null;
+  goArm.cancel();
   const res = await post('api/output', window.deskOutputPatch.outputPatch(null, null, 'enabled', !on));
   await pullState();
   if (res && res.error) return say(res.error, true);
