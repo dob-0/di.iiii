@@ -3318,6 +3318,8 @@ $('#audRelease').addEventListener('input', (e) => {
   if (S) postAudioCfg({ release: +e.target.value }, true);
 });
 
+// Set when a mode/targets control is changed, cleared by Apply: the form then stops following.
+let outDirty = false;
 function buildOutput() {
   const n = S.status.nodes.length;
   const serial = S.output.driver === 'enttec';
@@ -3356,9 +3358,13 @@ function buildOutput() {
   const editing = document.activeElement;
   const typing = editing && editing.matches && editing.matches('input[type=text], input[type=number]')
     && editing.closest('.outbox');
-  $$('input[name=mode]').forEach((r) => { r.checked = r.value === S.output.mode; });
-  if (editing !== $('#targets')) $('#targets').value = S.output.targets.join(', ');
-  if (editing !== $('#refreshHz')) $('#refreshHz').value = S.output.refreshHz || 40;
+  // While any control of the form is being edited, none follows the live state; edited
+  // values stay until Apply. (outputFormEditing, outputPatch.js)
+  if (!window.deskOutputPatch.outputFormEditing(editing, outDirty)) {
+    $$('input[name=mode]').forEach((r) => { r.checked = r.value === S.output.mode; });
+    $('#targets').value = S.output.targets.join(', ');
+    $('#refreshHz').value = S.output.refreshHz || 40;
+  }
   if (typing) return;
   const nodes = S.status.nodes;
   const sending = new Set(S.output.mode === 'unicast' ? S.output.targets : []);
@@ -5425,8 +5431,11 @@ $('#saveOutput').addEventListener('click', () => {
     targets: entries,
   });
   if (!Object.keys(patch).length) return pullState();
+  outDirty = false;
   post('api/output', patch).then(pullState);
 });
+$$('input[name=mode]').forEach((r) => r.addEventListener('change', () => { outDirty = true; }));
+$('#targets').addEventListener('input', () => { outDirty = true; });
 
 /* ---- more than one device at once ---- */
 // A universe list typed as "2" or "2,3" or "2 3". Empty means every universe the desk
