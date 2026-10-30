@@ -4,11 +4,12 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { laserPoster, laserToken } from './laser-play.mjs'
 
 const require = createRequire(import.meta.url)
-const routesFile = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../serverXR/src/routes/laserRoutes.js')
+const routesFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../serverXR/src/routes/laserRoutes.js')
 const express = createRequire(routesFile)('express')
 const { registerLaserRoutes } = require(routesFile)
 const cleanups = []
