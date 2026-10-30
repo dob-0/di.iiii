@@ -180,6 +180,50 @@ check('master is not applied twice to a fixture with a dimmer channel', async ()
   await POST('/api/master', { master: 255 });
 });
 
+check('a raw channel rides the master; the Fader stores 255 and shows what leaves', async () => {
+  // Deliberate (engine.js): raw holds ride the master so the panic path reaches the Fader.
+  // So 255 held at master 50% leaves at 128, and the state the page draws from says both.
+  await POST('/api/master', { master: 128 });
+  await POST('/api/raw', { universe: 14, channel: 3, value: 255 });
+  await settle();
+  assert.strictEqual(await wire(14, 3), 128, 'held 255 leaves at master 128');
+  const { body } = await GET('/api/state');
+  assert.strictEqual(body.raw['14:3'], 255, 'the hold stores 255, pre-master');
+  assert.strictEqual(body.master, 128, 'and the page can see the master that scales it');
+  await POST('/api/master', { master: 255 });
+  await settle();
+  assert.strictEqual(await wire(14, 3), 255, 'at full master the held 255 leaves as 255');
+  await POST('/api/raw', { clear: true });
+});
+
+check('broadcastAll is a way back and the status names the broadcast networks', async () => {
+  const on = await POST('/api/output', { broadcastAll: true });
+  assert.strictEqual(on.body.output.broadcastAll, true);
+  const { body } = await GET('/api/state');
+  assert.ok(Array.isArray(body.status.broadcast) && body.status.broadcast.includes('255.255.255.255'));
+  assert.ok(Array.isArray(body.status.broadcastExcluded) && body.status.broadcastExcluded.length === 0, 'nothing excluded with broadcastAll');
+  const off = await POST('/api/output', { broadcastAll: false });
+  assert.strictEqual(off.body.output.broadcastAll, false);
+});
+
+check('the broadcastAll checkbox is in the page and posts only its own key', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../ui/index.html'), 'utf8');
+  const js = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  assert.ok(/id="broadcastAll"/.test(html) && /also onto a laser network/.test(html));
+  assert.ok(js.includes("post('api/output', { broadcastAll: e.target.checked })"), 'posts the one changed key');
+  assert.ok(js.includes("S.output.driver === 'artnet' && S.output.mode === 'broadcast'"), 'shown only for Art-Net broadcast');
+});
+
+check('broadcastAll reaches the server as a boolean and a lone key leaves the rest alone', async () => {
+  const before = (await GET('/api/state')).body.output;
+  const on = await POST('/api/output', { broadcastAll: 1 });
+  assert.strictEqual(on.body.output.broadcastAll, true);
+  assert.strictEqual(on.body.output.mode, before.mode);
+  const off = await POST('/api/output', { broadcastAll: 0 });
+  assert.strictEqual(off.body.output.broadcastAll, false);
+  assert.strictEqual(off.body.output.mode, before.mode);
+});
+
 check('a raw override outranks the fixtures but not the blackout', async () => {
   await POST('/api/raw', { universe: 13, channel: 7, value: 200 });
   await settle();

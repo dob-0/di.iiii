@@ -1887,7 +1887,7 @@ function syncFaders() {
   }
   const total = Object.keys(S.raw).filter((k) => k.startsWith(fUni + ':')).length;
   $('#fOverCount').textContent = total
-    ? `${total} channel${total === 1 ? '' : 's'} held`
+    ? `${total} channel${total === 1 ? '' : 's'} held${S.master < 255 ? ` · master ${Math.round(S.master / 255 * 100)}% scales them: the small number under a fader is what leaves` : ''}`
     : 'nothing held — every fader is following the fixtures';
   if (document.activeElement !== $('#fMaster')) $('#fMaster').value = S.master;
   $('#fMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
@@ -3357,6 +3357,9 @@ function buildOutput() {
   if (typing && document.activeElement.closest('.outbox')) return;
   $$('input[name=mode]').forEach((r) => { r.checked = r.value === S.output.mode; });
   $('#targets').value = S.output.targets.join(', ');
+  // The way back from "broadcast keeps off the laser network": only meaningful for Art-Net broadcast.
+  $('#broadcastAllRow').hidden = !(S.output.driver === 'artnet' && S.output.mode === 'broadcast');
+  $('#broadcastAll').checked = !!S.output.broadcastAll;
   $('#refreshHz').value = S.output.refreshHz || 40;
   const nodes = S.status.nodes;
   const sending = new Set(S.output.mode === 'unicast' ? S.output.targets : []);
@@ -3365,11 +3368,12 @@ function buildOutput() {
   // longer existed. The age text is quantised to what is shown, not the millisecond.
   const ageText = (n) => n.ageMs == null ? 'never' : n.ageMs < 1500 ? 'now' : n.ageMs < 60000 ? Math.round(n.ageMs / 1000) : 'm' + Math.round(n.ageMs / 60000);
   const nodeSig = nodes.map((n) => [n.ip, n.name, n.shortName, n.manual, sending.has(n.ip), n.ageMs != null && n.ageMs > 20000, ageText(n)].join('|')).join(';');
-  const ifaceSig = S.status.interfaces.map((i) => i.iface + i.address + i.netmask).join() + S.status.broadcast.join();
+  const ifaceSig = S.status.interfaces.map((i) => i.iface + i.address + i.netmask).join() + S.status.broadcast.join() + (S.status.broadcastExcluded || []).map((e) => e.broadcast).join();
   if ($('#ifaces').dataset.sig !== ifaceSig) {
     $('#ifaces').dataset.sig = ifaceSig;
     $('#ifaces').innerHTML = S.status.interfaces.map((i) => `${i.iface} — ${i.address}/${i.netmask}`).join('<br>')
-      + '<br>broadcast: ' + S.status.broadcast.join(', ');
+      + '<br>broadcast: ' + S.status.broadcast.join(', ')
+      + (S.status.broadcastExcluded || []).map((e) => `<br>not sent to ${esc(e.broadcast)} (${esc(e.iface)}) — ${esc(e.reason)}`).join('');
   }
   $('#err').textContent = S.status.lastError
     ? (S.output.driver === 'enttec' ? '' : 'socket: ') + S.status.lastError
@@ -5410,6 +5414,9 @@ async function addNodeByIp() {
 $('#addNode').addEventListener('click', addNodeByIp);
 [$('#addNodeIp'), $('#addNodeName')].forEach((el) =>
   el.addEventListener('keydown', (e) => { if (e.key === 'Enter') addNodeByIp(); }));
+$('#broadcastAll').addEventListener('change', (e) => {
+  post('api/output', { broadcastAll: e.target.checked }).then(pullState);
+});
 $('#saveOutput').addEventListener('click', () => {
   const entries = $('#targets').value.split(',').map((s) => s.trim()).filter(Boolean);
   // The server silently drops anything that is not an address, and unicast with nothing

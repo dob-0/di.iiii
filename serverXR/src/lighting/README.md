@@ -19,3 +19,13 @@ in plain words. It is on `GET /api/state` (`status.bus`) and `GET /api/summary` 
 to "<name> unreachable" with the reasons in its tooltip. An Art-Net node that never answered ArtPoll is not called unreachable (most
 ignore it); one that answered and went quiet for 20 s is. `showBackup.js` copies the show into `backups/` (newest 20) before the desk
 leaves it for another show; before a manual reset run `node tools/backup-show.js <data dir>`.
+
+### Broadcast networks and the Fader
+
+In broadcast mode the desk sends Art-Net frames and ArtPolls to the broadcast address of every network it is on, except a network that
+carries a LaserCube: the cubes' addresses are read from `<data dir>/laser/laser.json` and an interface whose subnet holds one is left out
+(`broadcastPlan`, `artnet.js`). The limited broadcast `255.255.255.255` is dropped while another network is left, because the OS would
+send it out of the laser link too. `status.broadcast` lists the networks in use, `status.broadcastExcluded` the others with the reason
+"laser network", and `output.bus` routes carry the same; one log line names the skipped networks. The way back is `broadcastAll: true`
+(`POST /api/output`): every network, as before. The Fader sends raw channels, which ride the master on purpose (the panic path reaches
+them); a held 255 stores 255 and leaves at 255 x master, and the small number under each fader is what leaves.
