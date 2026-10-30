@@ -46,7 +46,7 @@ module.exports = [
   },
   {
     route: "POST /laser/api/blackout",
-    summary: "drop every kept laser frame at once: the cubes draw nothing",
+    summary: "drop every kept laser frame at once: the cubes draw nothing, output goes off, and the lasers stay disarmed until the sign-off phrase is typed again (the light desk's blackout does not reach the lasers)",
     reach: "private",
     role: "guest",
     agent: false,
