@@ -170,7 +170,9 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   router.use(express.json({ limit: '512kb' }))
   // The token at the router's entry, by path (review E3): everything that can light a cube, including the desk's
   // routes (mounted by the desk PR): go, live, a blackout LIFT (on: false). Stops (blackout on, release, disarm) never need it.
-  const LIGHTING_PATH = /^\/(?:api\/(?:frame|alive|show(?:\/still)?)|desk\/api\/(?:go|live))\/?$/
+  // Every desk POST can raise light (go, live, master, cube on, settings, looks), so all take it but the stops: release, and
+  // a blackout that goes ON (review R3).
+  const LIGHTING_PATH = /^\/(?:api\/(?:frame|alive|show(?:\/still)?)|desk\/api\/(?!release\/?$|blackout\/?$).+)\/?$/
   router.use((req, res, next) => {
     if (req.method !== 'POST') return next()
     const lights = LIGHTING_PATH.test(req.path) || (req.path.replace(/\/$/, '') === '/desk/api/blackout' && req.body?.on === false)

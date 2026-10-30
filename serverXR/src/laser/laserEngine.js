@@ -103,7 +103,7 @@ const SHUTDOWN_WAIT_MS = 250
 // A Laser Out holds its cube while it says so (frame, keep-alive, its 3-second check): 10 s of silence
 // (the editor closed, the tab gone) frees the cube for another Out.
 const CLAIM_TTL_MS = 10000
-// A dark frame nobody refreshes for this long: the cube is switched Off (review E2).
+// A dark frame (or no frame at all since On) nobody refreshes for this long: the cube is switched Off (review E2, R2).
 const DARK_IDLE_MS = 5000
 // A Go counts at most once per this long per Out (review E4).
 const GO_GAP_MS = 500
@@ -606,7 +606,13 @@ const createLaserEngine = ({
                 continue
             }
             const frame = framesFor(c.id)
-            if (frame && !frame.lit && !c.stop && t - frame.at > DARK_IDLE_MS) {
+            // The frame that tripped a stop and was kept through Off never lights the cube again (review R1): only a different one.
+            if (c.tripFrame) {
+                if (frame === c.tripFrame) continue
+                c.tripFrame = null
+            }
+            // No frame at all counts as dark, from the moment of On (review R2).
+            if ((!frame || !frame.lit) && !c.stop && t - Math.max(frame?.at ?? 0, c.armedAt ?? 0) > DARK_IDLE_MS) {
                 log?.warn?.(`[laser] ${c.id} dark and unrefreshed for ${DARK_IDLE_MS} ms: switching it OFF`)
                 armOne({ armed: false, cube: c.id })
                 continue
@@ -841,6 +847,7 @@ const createLaserEngine = ({
         // Round 3 (re-review R2-2): a cube that says it is over temperature is not armed at all.
         if (c.ip && c.info?.overTemperature) { c.stop = { reason: STOP.OVER_TEMPERATURE, at: t, detail: `${c.info.temperature} °C` }; return }
         c.armed = true
+        c.armedAt = t
         c.stop = null
         c.stillSince = null
         c.playing = null
@@ -867,7 +874,7 @@ const createLaserEngine = ({
             offAll(new Set(wasOn ? [c.id] : []), undefined, new Set([c.id]))
             c.armed = false
             c.stillSince = null
-            if (c.stop?.reason !== STOP.NO_INFO) c.stop = null
+            if (c.stop?.reason !== STOP.NO_INFO) { c.tripFrame = c.stop?.frame ?? c.tripFrame ?? null; c.stop = null }
             if (![...live.values()].some((x) => x.armed)) {
                 armed = false
                 if (timer) { stopEvery(timer); timer = null }
@@ -902,7 +909,7 @@ const createLaserEngine = ({
             offAll(armedIds())
             armed = false
             signedOff = false
-            for (const c of live.values()) { c.armed = false; c.stillSince = null; if (c.stop?.reason !== STOP.NO_INFO) c.stop = null }
+            for (const c of live.values()) { c.armed = false; c.stillSince = null; if (c.stop?.reason !== STOP.NO_INFO) { c.tripFrame = c.stop?.frame ?? c.tripFrame ?? null; c.stop = null } }
             if (timer) { stopEvery(timer); timer = null }
             return { ok: true, armed }
         }
