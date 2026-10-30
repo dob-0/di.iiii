@@ -42,6 +42,13 @@ describe('broadcastPlan', () => {
     expect(p.use).toEqual(['192.168.4.255', '10.42.1.255', '255.255.255.255']);
     expect(p.excluded).toEqual([]);
   });
+  it('broadcastAll switched back off excludes the laser network again', () => {
+    const args = { interfaces: ifs, cubeIps: ['10.42.1.196'] };
+    expect(broadcastPlan({ ...args, all: true }).use).toContain('10.42.1.255');
+    const off = broadcastPlan({ ...args, all: false });
+    expect(off.use).not.toContain('10.42.1.255');
+    expect(off.excluded.map((e) => e.broadcast)).toEqual(['10.42.1.255']);
+  });
   it('uses the interface mask: a /16 holds the cube, a /24 beside it does not', () => {
     const wide = { a: nic('10.42.1.1', '255.255.0.0') };
     expect(broadcastPlan({ interfaces: wide, cubeIps: ['10.42.9.9'] }).excluded[0].broadcast).toBe('10.42.255.255');

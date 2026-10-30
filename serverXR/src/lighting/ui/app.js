@@ -3357,6 +3357,9 @@ function buildOutput() {
   if (typing && document.activeElement.closest('.outbox')) return;
   $$('input[name=mode]').forEach((r) => { r.checked = r.value === S.output.mode; });
   $('#targets').value = S.output.targets.join(', ');
+  // The way back from "broadcast keeps off the laser network": only meaningful for Art-Net broadcast.
+  $('#broadcastAllRow').hidden = !(S.output.driver === 'artnet' && S.output.mode === 'broadcast');
+  $('#broadcastAll').checked = !!S.output.broadcastAll;
   $('#refreshHz').value = S.output.refreshHz || 40;
   const nodes = S.status.nodes;
   const sending = new Set(S.output.mode === 'unicast' ? S.output.targets : []);
@@ -5411,6 +5414,9 @@ async function addNodeByIp() {
 $('#addNode').addEventListener('click', addNodeByIp);
 [$('#addNodeIp'), $('#addNodeName')].forEach((el) =>
   el.addEventListener('keydown', (e) => { if (e.key === 'Enter') addNodeByIp(); }));
+$('#broadcastAll').addEventListener('change', (e) => {
+  post('api/output', { broadcastAll: e.target.checked }).then(pullState);
+});
 $('#saveOutput').addEventListener('click', () => {
   const entries = $('#targets').value.split(',').map((s) => s.trim()).filter(Boolean);
   // The server silently drops anything that is not an address, and unicast with nothing

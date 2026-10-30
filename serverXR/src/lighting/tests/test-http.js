@@ -206,6 +206,24 @@ check('broadcastAll is a way back and the status names the broadcast networks', 
   assert.strictEqual(off.body.output.broadcastAll, false);
 });
 
+check('the broadcastAll checkbox is in the page and posts only its own key', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../ui/index.html'), 'utf8');
+  const js = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  assert.ok(/id="broadcastAll"/.test(html) && /also onto a laser network/.test(html));
+  assert.ok(js.includes("post('api/output', { broadcastAll: e.target.checked })"), 'posts the one changed key');
+  assert.ok(js.includes("S.output.driver === 'artnet' && S.output.mode === 'broadcast'"), 'shown only for Art-Net broadcast');
+});
+
+check('broadcastAll reaches the server as a boolean and a lone key leaves the rest alone', async () => {
+  const before = (await GET('/api/state')).body.output;
+  const on = await POST('/api/output', { broadcastAll: 1 });
+  assert.strictEqual(on.body.output.broadcastAll, true);
+  assert.strictEqual(on.body.output.mode, before.mode);
+  const off = await POST('/api/output', { broadcastAll: 0 });
+  assert.strictEqual(off.body.output.broadcastAll, false);
+  assert.strictEqual(off.body.output.mode, before.mode);
+});
+
 check('a raw override outranks the fixtures but not the blackout', async () => {
   await POST('/api/raw', { universe: 13, channel: 7, value: 200 });
   await settle();
