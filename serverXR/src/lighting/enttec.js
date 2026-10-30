@@ -14,6 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { EventEmitter } = require('events');
 const { execFileSync } = require('child_process');
 
 const WINDOWS = process.platform === 'win32';
@@ -36,6 +37,9 @@ const MIN_CHANNELS = 24;
 // frame can be pushed across USB: at 250000 a 518-byte frame takes ~21ms, which leaves
 // room for 40Hz. At the 9600 Windows leaves an unconfigured port on, one frame would
 // take half a second and the desk would feel broken.
+// How long Identify waits for the widget's answer (it answers in a few ms when it is there).
+const IDENTIFY_REPLY_MS = 300;
+const POLL_MS = 10;
 const BAUD_CANDIDATES = [250000, 115200];
 
 // What a port is called on each platform, so a typo is refused before it is opened.
@@ -56,6 +60,23 @@ function frame(label, data) {
   data.copy(buf, 4);
   buf[buf.length - 1] = END;
   return buf;
+}
+
+// A data source over an open non-blocking handle: reads it on a timer, never waits.
+function fdDataSource(fd) {
+  const em = new EventEmitter();
+  const buf = Buffer.alloc(256);
+  const timer = setInterval(() => {
+    for (;;) {
+      let n;
+      try { n = fs.readSync(fd, buf, 0, buf.length, null); }
+      catch (e) { if (e.code !== 'EAGAIN') em.emit('error', e); return; }
+      if (n <= 0) return;
+      em.emit('data', Buffer.from(buf.subarray(0, n)));
+    }
+  }, POLL_MS);
+  em.close = () => clearInterval(timer);
+  return em;
 }
 
 function normalizePort(port) {
@@ -339,7 +360,7 @@ class Enttec {
   // beginning EN. Combined with a port that opens and a write that is accepted, that is
   // as much as can be established without a reply, and it is enough to tell a real widget
   // apart from a wrong port name, which is the mistake actually worth catching.
-  identify() {
+  async identify() {
     if (this.offline) return { ok: true, offline: true };
     if (!this.fd && !this.open()) return { ok: false, error: this.lastError };
     const info = describePort(this.port);
@@ -357,7 +378,7 @@ class Enttec {
     // POSIX ports are opened non-blocking, so the wait is bounded; Windows cannot bound a
     // read (see above), so there the answer stays registry-based and says it was not probed.
     let reply = null;
-    if (!WINDOWS) reply = this.readReply(300);
+    if (!WINDOWS) reply = await this.readReply(IDENTIFY_REPLY_MS);
     const dev = { vid: info.vid, pid: info.pid };
     const decided = decideIdentify({ port: this.port, device: dev, reply, unprobed: WINDOWS });
     return {
@@ -375,22 +396,31 @@ class Enttec {
     };
   }
 
-  // Read whatever the port sends within ms; null when nothing came.
-  readReply(ms) {
-    const chunks = [];
-    const buf = Buffer.alloc(256);
-    const until = Date.now() + ms;
-    const nap = new Int32Array(new SharedArrayBuffer(4));
-    while (Date.now() < until) {
-      try {
-        const n = fs.readSync(this.fd, buf, 0, buf.length, null);
-        if (n > 0) { chunks.push(Buffer.from(buf.subarray(0, n))); if (parseWidgetParams(Buffer.concat(chunks))) break; continue; }
-      } catch (e) {
-        if (e.code !== 'EAGAIN') break;
-      }
-      Atomics.wait(nap, 0, 0, 10);
-    }
-    return chunks.length ? Buffer.concat(chunks) : null;
+  // Read whatever the port sends within ms; resolves null when nothing came. Never blocks
+  // the event loop: the DMX/Art-Net frames this process sends keep their timing while a
+  // probe waits. `port` is anything with on('data'|'error'), off() and close() (the
+  // default polls this handle without waiting); it is closed on every path.
+  readReply(ms, port = fdDataSource(this.fd)) {
+    return new Promise((resolve) => {
+      const chunks = [];
+      let done = false;
+      let timer = null;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        try { port.off('data', onData); port.off('error', finish); } catch (e) {}
+        try { port.close(); } catch (e) {}
+        resolve(chunks.length ? Buffer.concat(chunks) : null);
+      };
+      const onData = (d) => {
+        chunks.push(Buffer.from(d));
+        if (parseWidgetParams(Buffer.concat(chunks))) finish();
+      };
+      port.on('data', onData);
+      port.on('error', finish);
+      timer = setTimeout(finish, ms);
+    });
   }
 
   status() {
@@ -537,4 +567,4 @@ function describePortPosix(port) {
   return { device: m ? 'USB serial' : null, serial: m ? m[1] : null };
 }
 
-module.exports = { Enttec, listPorts, describePort, frame, PORT_NAME, DEFAULT_PORT };
+module.exports = { Enttec, fdDataSource, listPorts, describePort, frame, PORT_NAME, DEFAULT_PORT };

@@ -56,3 +56,38 @@ describe('light desk title and wire line', () => {
     expect(wireName(undefined)).toBe('Art-Net')
   })
 })
+
+describe('Enttec.readReply is asynchronous', () => {
+  const { Enttec } = require('./enttec.js')
+  const { EventEmitter } = require('node:events')
+  const fake = () => { const p = new EventEmitter(); p.closed = 0; p.close = () => { p.closed++ }; return p }
+  const probe = new Enttec({ port: '/dev/ttyUSB0', offline: true })
+  it('a reply arriving in two chunks resolves whole and closes the port', async () => {
+    const p = fake()
+    const pending = probe.readReply(300, p)
+    setTimeout(() => p.emit('data', reply.subarray(0, 4)), 5)
+    setTimeout(() => p.emit('data', reply.subarray(4)), 20)
+    const got = await pending
+    expect(Buffer.compare(got, reply)).toBe(0)
+    expect(p.closed).toBe(1)
+  })
+  it('a timeout resolves "no answer" and closes the port, without blocking the loop', async () => {
+    const p = fake()
+    let ticks = 0
+    const iv = setInterval(() => { ticks++ }, 10)
+    const got = await probe.readReply(100, p)
+    clearInterval(iv)
+    expect(got).toBe(null)
+    expect(p.closed).toBe(1)
+    expect(ticks).toBeGreaterThanOrEqual(5)
+    expect(decideIdentify({ port: '/dev/ttyUSB0', device: node, reply: got }).label).toBe('no answer on /dev/ttyUSB0')
+  })
+  it('an error closes the port and resolves without throwing', async () => {
+    const p = fake()
+    const pending = probe.readReply(300, p)
+    setTimeout(() => p.emit('error', new Error('boom')), 5)
+    expect(await pending).toBe(null)
+    expect(p.closed).toBe(1)
+    expect(p.listenerCount('data')).toBe(0)
+  })
+})
