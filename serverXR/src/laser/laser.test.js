@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
-import { generateShape, LASER_SHAPES } from '../../../src/project/nodes/laser.shape/laserShapes.js'
+import { generateShape, LASER_SHAPES, MARK_SHAPES, MARK_MIN_SIZE } from '../../../src/project/nodes/laser.shape/laserShapes.js'
 
 const require = createRequire(import.meta.url)
 const proto = require('./lasercubeProtocol')
@@ -176,10 +176,10 @@ describe('still beams in a frame', () => {
         expect(found[0].x).toBeCloseTo(0.1, 2)
         expect(stillBeams(dot().map(([x, y]) => [x, y, 0, 0, 0]))).toEqual([])
     })
-    it('none of the Laser node\'s twelve shapes is still at size 0.05 or more; every one is at 0 (collapsed)', () => {
+    it('no Laser shape is still at size 0.05 or more (the sparkles from MARK_MIN_SIZE); every one is at 0 (collapsed)', () => {
         for (const shape of LASER_SHAPES) {
             for (const points of [120, 500]) {
-                for (const size of [0.5, 0.1, 0.05]) {
+                for (const size of MARK_SHAPES.includes(shape) ? [0.5, MARK_MIN_SIZE] : [0.5, 0.1, 0.05]) {
                     const frame = applyZone(generateShape({ shape, size, height: 0.5, points }), normaliseZone()).points
                     expect(stillBeams(frame), `${shape} size ${size} × ${points}`).toEqual([])
                 }
@@ -188,8 +188,10 @@ describe('still beams in a frame', () => {
             }
         }
     })
+    // The share was chosen on the first twelve shapes (circle … grid); the shapes added on 2026-10-29 are held in
+    // laserGuards.test.js, as the engine judges them (optimised).
     it('keeps the measured headroom the dwell share was chosen on (5.9 % / 21.0 % / 39.7 %)', () => {
-        const worst = (size) => Math.max(...LASER_SHAPES.flatMap((shape) => [120, 500].map((points) => dwellSpots(applyZone(generateShape({ shape, size, height: 0.5, points }), normaliseZone()).points, { minShare: 0 })[0].share)))
+        const worst = (size) => Math.max(...LASER_SHAPES.slice(0, 12).flatMap((shape) => [120, 500].map((points) => dwellSpots(applyZone(generateShape({ shape, size, height: 0.5, points }), normaliseZone()).points, { minShare: 0 })[0].share)))
         expect(worst(0.5)).toBeCloseTo(0.059, 2)
         expect(worst(0.1)).toBeCloseTo(0.21, 2)
         expect(worst(0.05)).toBeCloseTo(0.397, 2)

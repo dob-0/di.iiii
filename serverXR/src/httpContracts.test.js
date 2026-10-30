@@ -2087,9 +2087,11 @@ describe('server write contracts', () => {
                 // The lighting desk's interface is BROWSER code the server hands out as
                 // files (fetch there is the page talking to the desk), and its tests/ are
                 // a plain-node harness against a throwaway desk, run by vitest — neither
-                // is outbound HTTP from the server process.
+                // is outbound HTTP from the server process. The laser desk's page (src/laser/ui,
+                // 2026-10-29) is the same kind of file.
                 const rel = path.relative(SERVER_ROOT, fullPath)
                 if (rel.startsWith(path.join('src', 'lighting', 'ui')) || rel.startsWith(path.join('src', 'lighting', 'tests'))) continue
+                if (rel.startsWith(path.join('src', 'laser', 'ui'))) continue
                 const source = fs.readFileSync(fullPath, 'utf8')
                 for (const [index, line] of source.split('\n').entries()) {
                     const code = line.replace(/\/\/.*$/, '')

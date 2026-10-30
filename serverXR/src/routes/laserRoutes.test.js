@@ -3,6 +3,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import vm from 'node:vm'
 import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -64,6 +65,24 @@ describe('the lasers at /laser', () => {
     expect((await (await fetch(`${base}/laser/api/frames`)).json()).all).toEqual([[0, 0.5, 0, 1, 0], [0, 0, 0, 0, 0]])
     await post(`${base}/laser/api/blackout`, {})
     expect((await (await fetch(`${base}/laser/api/frames`)).json()).all).toBe(null)
+  })
+
+  it('the desk Blackout takes a true or false only, and lifting it is same-machine only (review 1218 M1)', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    const url = `${base}/laser/desk/api/blackout`
+    expect((await post(url, {})).status).toBe(400)
+    expect((await post(url, { on: 'false' })).status).toBe(400)
+    expect(await (await post(url, { on: true })).json()).toMatchObject({ ok: true, blackout: true })
+    // a second dark press stays dark; an empty post does not lift it
+    expect(await (await post(url, { on: true })).json()).toMatchObject({ blackout: true })
+    await post(url, {})
+    expect((await (await fetch(`${base}/laser/desk/api/state`)).json()).blackout).toBe(true)
+    // a peer that is not this machine (it came through a proxy): refused to lift
+    const viaProxy = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.9' }, body: JSON.stringify({ on: false }) })
+    expect(viaProxy.status).toBe(403)
+    expect((await (await fetch(`${base}/laser/desk/api/state`)).json()).blackout).toBe(true)
+    expect(await (await post(url, { on: false })).json()).toMatchObject({ ok: true, blackout: false })
   })
 
   it('refuses to arm without the sign-off phrase (403), and arms with it', async () => {
@@ -132,5 +151,23 @@ describe('the lasers at /laser', () => {
     delete process.env.NODE_ENV
     const { base } = await boot()
     expect((await post(`${base}/laser/api/show`, { project: 'x' })).status).toBe(501)
+  })
+
+  // The desk page's tiles play the looks with lib/laser.js (2026-10-29): it must draw what the desk sends the cubes.
+  it('serves the desk\'s drawing code to the page as one script, drawing every seed look as the server does', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    const res = await fetch(`${base}/laser/lib/laser.js`)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toMatch(/javascript/)
+    const window = {}
+    vm.runInNewContext(await res.text(), { window })
+    const { lookPointsAt, SEED_LOOKS } = require('../laser/laserDesk.js')
+    const clock = { bpm: 128, zero: 0 }
+    for (const look of SEED_LOOKS) {
+      for (const t of [0, 777, 5432]) expect(window.DiLaser.lookPointsAt(look, { t, clock }), `${look.id} at ${t}`).toEqual(lookPointsAt(look, { t, clock }))
+    }
+    expect(window.DiLaser.LASER_SHAPES).toEqual(require('../../../shared/laserShapes.cjs').LASER_SHAPES)
+    expect(window.DiLaser.lookBox(SEED_LOOKS[0])).toHaveLength(4)
   })
 })
