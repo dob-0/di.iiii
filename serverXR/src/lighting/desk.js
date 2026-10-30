@@ -2291,7 +2291,7 @@ function createDesk(opts = {}) {
     },
 
     // Which widget is on the port, and does it open — answerable without moving a light.
-    'POST /api/serial/identify': (req, res, body) => {
+    'POST /api/serial/identify': async (req, res, body) => {
       const port = body && body.port && PORT_NAME.test(String(body.port).trim()) ? portName(body.port) : state.output.serialPort;
       // A port the live output holds is never opened for a probe: say so instead.
       if (state.output.driver === 'enttec' && enttec && enttec.port === port) {
@@ -2300,8 +2300,8 @@ function createDesk(opts = {}) {
         return json(res, { ok: true, port, held: true, protocol: null, label: held.label, looksLikeEnttec: false, ports: listPorts(), device: d });
       }
       const probe = new Enttec({ port, offline: offline });
-      const result = probe.identify();
-      probe.close();
+      let result;
+      try { result = await probe.identify(); } finally { probe.close(); }
       json(res, { ok: !!result.ok, port, ...result, ports: listPorts(), device: describePort(port) });
     },
 
