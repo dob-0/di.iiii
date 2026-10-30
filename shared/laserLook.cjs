@@ -21,8 +21,10 @@ const beatsAt = (clock, t) => ((t - clock.zero) / 1000) * (clock.bpm / 60)
  * One cube's points for `look` at time t (ms): the Laser node's shape, moved on the beat, then the cube's own setup.
  * `index` is the cube's place among the desk's cubes (mirror, phase). A point the moves push out of the field is
  * blanked where it leaves, never dragged along the edge. Returns wire points (before the flatten), or [BLANK].
+ * `stats`, when given, is filled with `lit` (lit points the look drew) and `off` (of those, the ones pushed off the field
+ * and blanked), so a cut picture can be counted and shown (stage audit 2026-10-30, rows 19, 23).
  */
-const lookPointsAt = (look, { t, clock, index = 0, cube = CUBE_DEFAULTS, master = 1 }) => {
+const lookPointsAt = (look, { t, clock, index = 0, cube = CUBE_DEFAULTS, master = 1, stats = null }) => {
     const level = look.level * clamp(master, 0, 1)
     if (!(level > 0)) return [BLANK]
     const bpm = clock.bpm
@@ -51,6 +53,7 @@ const lookPointsAt = (look, { t, clock, index = 0, cube = CUBE_DEFAULTS, master 
         const x = (p[0] + dx) * flip + cube.x
         const y = p[1] + dy
         const inside = x >= -1 && x <= 1 && y >= -1 && y <= 1
+        if (stats && (p[2] > 0 || p[3] > 0 || p[4] > 0)) { stats.lit = (stats.lit || 0) + 1; if (!inside) stats.off = (stats.off || 0) + 1 }
         return inside ? [x, y, p[2], p[3], p[4]] : [clamp(x, -1, 1), clamp(y, -1, 1), 0, 0, 0]
     })
 }
