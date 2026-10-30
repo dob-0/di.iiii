@@ -161,3 +161,28 @@ describe('the lasers at /laser', () => {
     expect((await postBare(`${base}/laser/api/arm`, { armed: false })).status).toBe(200)
   })
 })
+
+describe('review fixes E3, E5, E6 (2026-10-30)', () => {
+  it('E3: the desk routes that light (go, live, a blackout lift) need the token at the router entry; a blackout ON does not', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    for (const [route, body] of [['go', { look: 'a' }], ['live', {}], ['blackout', { on: false }]]) {
+      const bare = await postBare(`${base}/laser/desk/api/${route}`, body)
+      expect(bare.status, route).toBe(403)
+      expect((await bare.json()).error).toBe('no token')
+      expect((await postBare(`${base}/laser/desk/api/${route}`, body, { 'x-laser-token': tokenOfBoot })).status, route).not.toBe(403)
+    }
+    expect((await postBare(`${base}/laser/desk/api/blackout`, { on: true })).status).not.toBe(403)
+  })
+  it('E6: the engine is built at server start when laser.json names an addressed cube, and not otherwise', async () => {
+    delete process.env.NODE_ENV
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dii-laser-boot-'))
+    fs.mkdirSync(path.join(dir, 'laser'), { recursive: true })
+    fs.writeFileSync(path.join(dir, 'laser', 'laser.json'), JSON.stringify({ cubes: [{ id: 'cube-1', ip: '10.0.0.9' }] }))
+    const sock = { sent: [], on: () => {}, bind: () => {}, close: () => {}, send: (b, port, ip, done) => { sock.sent.push({ port, ip, buf: Buffer.from(b) }); done?.() } }
+    const lane = registerLaserRoutes(express(), { dataDir: dir, log: null, engineOptions: { createSocket: () => sock } })
+    cleanups.push(async () => { await lane.close(); fs.rmSync(dir, { recursive: true, force: true }) })
+    expect(lane.hasEngine()).toBe(true)
+    expect(sock.sent.filter((s) => s.ip === '10.0.0.9' && s.buf[0] === 0x80 && s.buf[1] === 0)).toHaveLength(2)
+  })
+})
