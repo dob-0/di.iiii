@@ -600,7 +600,10 @@ describe('the engine sends every point on time (catch-up pacing)', () => {
         for (let i = 0; i < 5; i += 1) { clock.t += 20; engine.setFrame('all', circle); engine.tick() }
         expect(cmds(socket).filter((b) => b[0] === 0x80 && b[1] === 1)).toEqual([])
         expect(litIn(dataTo(socket))).toBe(0)
-        expect(engine.arm({ armed: true, confirm: 'wrong' }).ok).toBe(false)
+        expect(engine.state().armed).toBe(false)
+        // the sign-off is forgotten: a cube cannot be turned on again without the phrase
+        expect(engine.arm({ armed: true, cube: 'cube-1' })).toMatchObject({ ok: false, needsPhrase: true })
+        expect(engine.arm({ armed: true, cube: 'cube-1', confirm: ARM_PHRASE })).toMatchObject({ ok: true, cubeArmed: true })
     })
     it('after a 100 ms stall, a dark frame finds at most LEAD_MS (60 ms) of lit points queued', () => {
         const dark = Array.from({ length: 60 }, () => [0.2, 0.5, 0, 0, 0])
