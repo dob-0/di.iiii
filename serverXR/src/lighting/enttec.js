@@ -19,6 +19,8 @@ const { execFileSync } = require('child_process');
 const WINDOWS = process.platform === 'win32';
 const MAC = process.platform === 'darwin';
 
+const { parseWidgetParams, decideIdentify } = require('./identify');
+
 const START = 0x7e;
 const END = 0xe7;
 const LABEL_PARAMS = 3;
@@ -351,14 +353,44 @@ class Enttec {
         if (e.code !== 'EAGAIN') return { ok: false, error: `${this.port}: ${e.message}` };
       }
     }
+    // The widget protocol is the proof: ask for the parameters and read what comes back.
+    // POSIX ports are opened non-blocking, so the wait is bounded; Windows cannot bound a
+    // read (see above), so there the answer stays registry-based and says it was not probed.
+    let reply = null;
+    if (!WINDOWS) reply = this.readReply(300);
+    const dev = { vid: info.vid, pid: info.pid };
+    const decided = decideIdentify({ port: this.port, device: dev, reply, unprobed: WINDOWS });
     return {
       ok: true,
       baud: this.baud,
       device: info.device,
       serial: info.serial,
-      // ENTTEC serials start EN; anything else on an FTDI chip is some other widget.
-      looksLikeEnttec: /^EN/i.test(info.serial || ''),
+      vid: info.vid || null,
+      pid: info.pid || null,
+      protocol: decided.answered,
+      label: decided.label,
+      // Kept for older callers: true when the widget answered the protocol, or (Windows,
+      // unprobed) when the serial begins EN as an ENTTEC widget's does.
+      looksLikeEnttec: decided.answered === null ? /^EN/i.test(info.serial || '') : decided.answered,
     };
+  }
+
+  // Read whatever the port sends within ms; null when nothing came.
+  readReply(ms) {
+    const chunks = [];
+    const buf = Buffer.alloc(256);
+    const until = Date.now() + ms;
+    const nap = new Int32Array(new SharedArrayBuffer(4));
+    while (Date.now() < until) {
+      try {
+        const n = fs.readSync(this.fd, buf, 0, buf.length, null);
+        if (n > 0) { chunks.push(Buffer.from(buf.subarray(0, n))); if (parseWidgetParams(Buffer.concat(chunks))) break; continue; }
+      } catch (e) {
+        if (e.code !== 'EAGAIN') break;
+      }
+      Atomics.wait(nap, 0, 0, 10);
+    }
+    return chunks.length ? Buffer.concat(chunks) : null;
   }
 
   status() {
@@ -490,6 +522,7 @@ function describePortPosix(port) {
         if (!product) continue;
         const manufacturer = read('manufacturer');
         return {
+          vid: read('idVendor'), pid: read('idProduct'),
           device: manufacturer && !product.startsWith(manufacturer) ? `${manufacturer} ${product}` : product,
           serial: read('serial'),
         };

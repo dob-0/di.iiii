@@ -13,6 +13,7 @@ const zlib = require('zlib');
 const fs = require('fs');
 const path = require('path');
 const { ArtNet, broadcastAddresses, localAddresses } = require('./artnet');
+const { decideIdentify } = require('./identify');
 const { Enttec, listPorts, describePort, PORT_NAME, DEFAULT_PORT } = require('./enttec');
 const {
   Engine, PROFILES, makeFixture, DEFAULT_LIMITS, roleKinds, ROLE_DEFAULTS,
@@ -2261,11 +2262,15 @@ function createDesk(opts = {}) {
     // Which widget is on the port, and does it open — answerable without moving a light.
     'POST /api/serial/identify': (req, res, body) => {
       const port = body && body.port && PORT_NAME.test(String(body.port).trim()) ? portName(body.port) : state.output.serialPort;
-      const probe = state.output.driver === 'enttec' && enttec && enttec.port === port
-        ? enttec
-        : new Enttec({ port, offline: offline });
+      // A port the live output holds is never opened for a probe: say so instead.
+      if (state.output.driver === 'enttec' && enttec && enttec.port === port) {
+        const d = describePort(port);
+        const held = decideIdentify({ port, device: d, held: true });
+        return json(res, { ok: true, port, held: true, protocol: null, label: held.label, looksLikeEnttec: false, ports: listPorts(), device: d });
+      }
+      const probe = new Enttec({ port, offline: offline });
       const result = probe.identify();
-      if (probe !== enttec) probe.close();
+      probe.close();
       json(res, { ok: !!result.ok, port, ...result, ports: listPorts(), device: describePort(port) });
     },
 

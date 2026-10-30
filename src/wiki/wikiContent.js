@@ -562,7 +562,7 @@ export const WIKI_ARTICLES = [
         title: 'The lighting desk',
         summary: 'di.iiii carries a full lighting desk. Patch your rig, save looks as scenes, run them from a phone — and let a graph play it.',
         body: [
-            'A di.iiii running on your own machine has a lighting desk in it, at /light. Not a plugin and not a separate program: the same install that serves your projects also drives an Art-Net or ENTTEC rig, from the first fixture to the last scene of the night.',
+            'A di.iiii running on your own machine has a lighting desk in it, at /light. Not a plugin and not a separate program: the same install that serves your projects also drives an Art-Net or ENTTEC rig, from the first fixture to the last scene of the night. The top bar says Light and names the wire in use (Art-Net, ENTTEC on its port, or sACN), and Identify under OUTPUT decides by the widget\'s own answer, so a di.iiii node on USB is recognised as one.',
             'It opens on five pages, and they are five different jobs:',
             { list: [
                 'Setup — patch the rig. Add each fixture, give it a profile and an address, and drag it into place on a plan of the room, so the desk looks like the room you are standing in. The plan is not a fixed canvas — pan and zoom go as far out as the rig needs, so a truss run or a followspot off to one side has somewhere to sit.',
@@ -586,7 +586,7 @@ export const WIKI_ARTICLES = [
             'Before the desk throws something away — unpatching a fixture, clearing the MIDI map, a whiteout, deleting a scene, a layer, a look or a set, forgetting the Wi-Fi of a node, restarting or erasing the node — it asks one way: a bar at the foot of the page with Cancel and the action in words. It never freezes the page, so the panic key and the live output keep working while it waits. Cancel has the focus and Esc says no. The bar waits as long as you need; it never answers for you.',
         ],
         tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up', 'lan', 'phone', 'rig', 'fixture', 'marker', 'studio', 'index', 'positions', 'back', 'project', 'nodes', 'projection', 'input', 'console', 'grandma3', 'sacn', 'e1.31', 'visualiser', 'merge', 'htp', 'ltp'],
-        updated: '2026-10-29'
+        updated: '2026-10-30'
     },
     {
         id: 'ai-restyle-camera',
