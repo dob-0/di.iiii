@@ -31,3 +31,5 @@ send it out of the laser link too. `status.broadcast` lists the networks in use,
 "laser network", and `output.bus` routes carry the same; one log line names the skipped networks. The way back is `broadcastAll: true`
 (`POST /api/output`): every network, as before. The Fader sends raw channels, which ride the master on purpose (the panic path reaches
 them); a held 255 stores 255 and leaves at 255 x master, and the small number under each fader is what leaves.
+
+**Title and Identify.** The desk's title is "Light" with the show name, and a line beside it names the wire in use from the live output: "Art-Net", "ENTTEC on /dev/ttyUSB0" or "sACN" (the page title follows). Identify decides by the protocol: it asks the port for the widget's parameters and accepts a well-formed reply, so our vizzz node (1a86:7523) reads "ENTTEC protocol · vizzz node", an FTDI original "ENTTEC DMX USB Pro", and a silent port "no answer on <port>"; a port the live output holds is never opened for the probe.
