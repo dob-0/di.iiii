@@ -271,8 +271,16 @@ module.exports = [
     note: `${SAME_MACHINE} ${OWN_PAGE}`
   },
   {
+    route: "POST /laser/desk/api/setting",
+    summary: "the laser desk's setting \"Blackout keeps the arm\": { blackoutKeepsArm: true|false } — off (default): Blackout switches every cube off; on: the older desk blackout, dark with the arm kept",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
     route: "POST /laser/desk/api/release",
-    summary: "the laser desk lets go: every cube it drew on gets one blank frame and the desk stops sending, so a Laser Out or the show can take them",
+    summary: "the laser desk lets go: every cube it drew on gets one blank frame and is switched off, and the desk stops sending, so a Laser Out or the show can take them",
     reach: "private",
     role: "guest",
     agent: false,
