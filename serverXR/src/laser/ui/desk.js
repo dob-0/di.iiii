@@ -114,16 +114,7 @@
         g.lineCap = 'round'
         g.lineJoin = 'round'
         g.globalAlpha = dim ? 0.45 : 1
-        for (let i = 1; i < points.length; i += 1) {
-            const a = points[i - 1]
-            const b = points[i]
-            if (!(b[2] > 0 || b[3] > 0 || b[4] > 0)) continue
-            g.strokeStyle = `rgb(${Math.round(b[2] * 255)},${Math.round(b[3] * 255)},${Math.round(b[4] * 255)})`
-            g.beginPath()
-            g.moveTo(X(a[0]), Y(a[1]))
-            g.lineTo(X(b[0]), Y(b[1]))
-            g.stroke()
-        }
+        window.DiLaserDraw.strokeLitRuns(g, points, X, Y)
         g.globalAlpha = 1
     }
 
@@ -192,9 +183,12 @@
             box.dataset.ids = ids
             box.dataset.thumbs = String(thumbsAt)
             tileCanvases.clear()
+            tilesOnScreen.clear()
+            tileWatch?.disconnect()
             box.replaceChildren(...desk.looks.map((look, i) => {
                 const canvas = el('canvas')
                 tileCanvases.set(look.id, canvas)
+                tileWatch?.observe(canvas)
                 const pic = el('button', {
                     class: 'pic', title: `Send ${look.name} to the laser${i < 9 ? ` (key ${i + 1})` : ''}`,
                     onclick: () => sendLook(look.id)
@@ -237,6 +231,12 @@
     // lib/laser.js did not load keeps the server's still pictures.
     const TILE_MS = 50
     const tileCanvases = new Map() // look id → its tile's canvas
+    // Only the tiles on screen are drawn (a tile scrolled back into view plays at once); without IntersectionObserver
+    // (old browsers, tests) every tile counts as on screen.
+    const tilesOnScreen = new Set()
+    const tileWatch = typeof IntersectionObserver === 'function'
+        ? new IntersectionObserver((entries) => { for (const e of entries) (e.isIntersecting ? tilesOnScreen.add(e.target) : tilesOnScreen.delete(e.target)) })
+        : null
     const tileClock = { bpm: 120, zero: Date.now() }
     // The desk's beat as the server counted it at the last poll; a correction under 30 ms is the poll's own lag.
     const syncTileClock = () => {
@@ -251,7 +251,7 @@
         const t = Date.now()
         for (const look of desk.looks) {
             const canvas = tileCanvases.get(look.id)
-            if (!canvas) continue
+            if (!canvas || (tileWatch && !tilesOnScreen.has(canvas))) continue
             const points = window.DiLaser.lookPointsAt({ ...look, points: Math.min(look.points, 240) }, { t, clock: tileClock })
             drawFrame(canvas, points, { box: window.DiLaser.lookBox(look) })
         }
