@@ -174,6 +174,14 @@ describe('review fixes E3, E5, E6 (2026-10-30)', () => {
     }
     expect((await postBare(`${base}/laser/desk/api/blackout`, { on: true })).status).not.toBe(403)
   })
+  it('R3: every other desk POST (master, cube, setting) needs the token too; release and blackout ON do not', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    for (const route of ['master', 'cube', 'setting', 'bpm', 'store']) {
+      expect((await postBare(`${base}/laser/desk/api/${route}`, {})).status, route).toBe(403)
+    }
+    expect((await postBare(`${base}/laser/desk/api/release`, {})).status).not.toBe(403)
+  })
   it('E6: the engine is built at server start when laser.json names an addressed cube, and not otherwise', async () => {
     delete process.env.NODE_ENV
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dii-laser-boot-'))

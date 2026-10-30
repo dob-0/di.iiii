@@ -842,4 +842,28 @@ describe('stage audit review fixes: a stopped cube is never relit by the frame t
         step(rig)
         expect(rig.engine.state().cubes[0].stop).toBe(null)
     })
+    it('R1: Off then On does not relight the tripping frame, even while it is refreshed; a different frame lights it', () => {
+        const rig = stillStop()
+        expect(rig.engine.arm({ armed: false, cube: 'cube-1' }).ok).toBe(true)
+        rig.socket.sent.length = 0
+        expect(rig.engine.arm({ armed: true, cube: 'cube-1' }).ok).toBe(true)
+        for (let i = 0; i < 20; i++) step(rig)
+        expect(litIn(dataTo(rig.socket))).toBe(0)
+        rig.engine.setFrame('all', line)
+        for (let i = 0; i < 5; i++) step(rig)
+        expect(litIn(dataTo(rig.socket))).toBeGreaterThan(0)
+    })
+    it('R2: a cube switched On that never gets a frame is switched OFF after the dark idle time', () => {
+        const rig = armedWith(ONE)
+        step(rig)
+        expect(rig.engine.state().cubes[0].armed).toBe(true)
+        rig.at(6000)
+        rig.hear('10.0.0.51', [0x80])
+        rig.engine.tick()
+        expect(rig.engine.state().cubes[0].armed).toBe(false)
+        rig.socket.sent.length = 0
+        rig.engine.setFrame('all', line)
+        step(rig)
+        expect(litIn(dataTo(rig.socket))).toBe(0)
+    })
 })
