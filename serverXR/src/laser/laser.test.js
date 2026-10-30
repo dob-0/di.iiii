@@ -280,9 +280,9 @@ describe('the laser engine', () => {
             rig.engine.tick()
             return pointsIn(dataTo(rig.socket))
         }
-        expect(run({ dac: 20000, max: 40000 })).toBe(400) // 20 ms of 20 kpps
-        expect(run({ dac: 60000, max: 35000 })).toBe(700) // the maximum is the ceiling
-        expect(run({ dac: 30000, max: 35000 }, { ...ONE, dacRate: 25000 })).toBe(600) // laser.json's dacRate is only a request: the cube plays 30 kpps
+        expect(run({ dac: 20000, max: 40000 })).toBe(1200) // the priming: LEAD_MS (60 ms) of 20 kpps
+        expect(run({ dac: 60000, max: 35000 })).toBe(2100) // the maximum is the ceiling
+        expect(run({ dac: 30000, max: 35000 }, { ...ONE, dacRate: 25000 })).toBe(1800) // laser.json's dacRate is only a request: the cube plays 30 kpps
     })
     it('sends no more than a cube says it has room for', () => {
         const { engine, socket, hear } = armedSmallBuffer()
@@ -342,7 +342,7 @@ describe('the laser engine', () => {
         const longOut = guards.optimisePath(long, plan).points
         const circleOut = guards.optimisePath(circle, plan).points
         engine.setFrame('all', long)
-        engine.tick() // one tick at 30 kpps: the long frame's first 600 points (after the bridge from the centre)
+        engine.tick() // the first stream primes LEAD_MS (60 ms = 1800 points at 30 kpps): the long frame from the centre, wrapping if it is shorter
         const first = dataTo(socket).flatMap((s) => Array.from({ length: (s.buf.length - 4) / 10 }, (_, i) => s.buf.readUInt16LE(4 + i * 10)))
         const bridgeIn = guards.bridgePath([0, 0], longOut[0], plan).length
         engine.setFrame('all', circle)
@@ -352,10 +352,10 @@ describe('the laser engine', () => {
         const msgs = dataTo(socket)
         expect(pointsIn(msgs)).toBe(600)
         const xs = msgs.flatMap((s) => Array.from({ length: (s.buf.length - 4) / 10 }, (_, i) => s.buf.readUInt16LE(4 + i * 10)))
-        const rest = longOut.slice(600 - bridgeIn)
+        const rest = longOut.slice((first.length - bridgeIn) % longOut.length)
         const bridge = guards.bridgePath(longOut.at(-1), circleOut[0], plan)
         const want = [...rest, ...bridge, ...circleOut, ...circleOut].slice(0, 600).map((p) => proto.toDeviceCoord(p[0]))
-        expect(first.length).toBe(600)
+        expect(first.length).toBe(1800)
         expect(xs).toEqual(want)
     })
 })
@@ -529,7 +529,7 @@ describe('the engine sends every point on time (catch-up pacing)', () => {
     it('ticks 5 ms late still deliver the due points over 1 s within 1 %', () => {
         const gaps = Array.from({ length: 40 }, () => 25) // a 20 ms timer firing 5 ms late, every time
         const r = run({ gaps })
-        const due = (RATE * r.elapsed) / 1000
+        const due = (RATE * (r.elapsed - gaps[0] + 60)) / 1000 // the first tick sends the priming, LEAD_MS ahead, not its gap
         expect(Math.abs(r.sent - due) / due).toBeLessThan(0.01)
         expect(r.overflow).toBe(0)
     })
@@ -537,8 +537,8 @@ describe('the engine sends every point on time (catch-up pacing)', () => {
         const gaps = [20, 20, 20, 20, 40, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20]
         const r = run({ gaps })
         expect(r.overflow).toBe(0)
-        expect(r.underruns).toBeLessThanOrEqual(1) // the blocked tick itself; no cushion is built yet (owed: real-cube decision)
-        const due = (RATE * r.elapsed) / 1000
+        expect(r.underruns).toBe(0) // the priming holds 60 ms: a 40 ms tick eats the cushion, it does not starve the cube
+        const due = (RATE * (r.elapsed - gaps[0] + 60)) / 1000
         expect(Math.abs(r.sent - due) / due).toBeLessThan(0.02)
     })
     it('a long stall is not banked: the catch-up is capped and the buffer free count still caps the send', () => {
@@ -602,9 +602,9 @@ describe('the engine sends every point on time (catch-up pacing)', () => {
         expect(litIn(dataTo(socket))).toBe(0)
         expect(engine.arm({ armed: true, confirm: 'wrong' }).ok).toBe(false)
     })
-    it('after a 100 ms stall, a dark frame finds at most LEAD_MS of lit points queued', () => {
+    it('after a 100 ms stall, a dark frame finds at most LEAD_MS (60 ms) of lit points queued', () => {
         const dark = Array.from({ length: 60 }, () => [0.2, 0.5, 0, 0, 0])
-        expect(litQueuedAfterStall((engine) => engine.setFrame('all', dark))).toBeLessThanOrEqual((RATE * 40) / 1000)
+        expect(litQueuedAfterStall((engine) => engine.setFrame('all', dark))).toBeLessThanOrEqual((RATE * 60) / 1000)
     })
     it('every guard still applies to every point sent: a point outside the zone goes out blank', () => {
         const { engine, socket, clock } = armedWith({ zone: { xMin: -0.2, xMax: 0.2, yMin: 0, yMax: 1 }, cubes: ONE.cubes })

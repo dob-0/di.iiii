@@ -85,12 +85,16 @@ const TICK_MS = 20
 const BUFFER_MARGIN = 200
 // The longest stretch of missed time a tick makes up (a stall past it is dropped, not banked).
 const CATCH_UP_MAX_MS = 100
-// The most the engine keeps queued AHEAD in a cube's ring buffer, in ms of playing time. Whatever is
-// queued still plays after a blackout or a dark frame (they stop the feed, not the cube's buffer; a blackout clears it and sends output-off),
-// so for a dark frame this is also the most dark delay the cushion adds. Today's engine queues about 20 ms.
-// 40 ms covers the studio Mac's late ticks (p99 28-30 ms) and adds up to 20 ms of dark delay against
-// today; 20 ms keeps today's delay and gives up most of the catch-up gain. Owner's choice: 40 or 20.
-const LEAD_MS = 40
+// How far ahead the engine keeps a cube's ring buffer filled, in ms of playing time. The first stream
+// after a clear PRIMES the buffer this far (not one tick), so a late tick eats the cushion instead of
+// starving the cube; the cap in stream() keeps it from growing past it. A frame change or a dark
+// frame waits behind what is queued (up to LEAD_MS, 40 ms more than today's 20 ms), but a BLACKOUT,
+// a disarm and every stop clear the buffer and send output-off at once, so the cushion holds no light
+// after them. Measured on the studio Mac (fake cube, 3 runs a value, rehearsal bars 29 500 pts/s and
+// <= 0.5 % missing, ledger N1545): with the priming 40 ms failed 1 of 3 runs, 60 ms 3 of 3 (8 of 8 in a
+// second set), 80 ms 3 of 3; without it no value 40-120 passed (the misses were ticks of 26-46 ms
+// against a 20 ms queue, not stalls longer than the lead). So 60 is the smallest that passes.
+const LEAD_MS = 60
 const INFO_POLL_MS = 1000
 const SHUTDOWN_WAIT_MS = 250
 // A Laser Out holds its cube while it says so (frame, keep-alive, its 3-second check): 10 s of silence
@@ -514,7 +518,7 @@ const createLaserEngine = ({
         // last stream (the fraction carried), so a late tick sends the points it missed and the mean
         // rate is the DAC rate, not 600 / mean tick. A stall longer than CATCH_UP_MAX_MS is not
         // banked (the buffer would be past full), and the cube's free count still caps the send.
-        const dt = c.streamAt === null ? TICK_MS : Math.min(Math.max(0, t - c.streamAt), CATCH_UP_MAX_MS)
+        const dt = c.streamAt === null ? LEAD_MS : Math.min(Math.max(0, t - c.streamAt), CATCH_UP_MAX_MS)
         c.streamAt = t
         const due = c.streamCarry + (rate * dt) / 1000
         let room = Math.floor(due)
