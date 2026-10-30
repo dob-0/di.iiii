@@ -2538,7 +2538,11 @@ document.addEventListener('keydown', (e) => {
   if (['shift', 'control', 'alt', 'meta', 'capslock', ' ', 'tab', 'enter'].includes(key)) return;
   if (!(key.length === 1 || /^f\d{1,2}$/.test(key))) return;
   // The panic key stays the panic key even here: close the popover and fire it.
-  if (key === 'b') { closeBindPop(); toggleBlackout(); say('B is the blackout key everywhere — blackout toggled; pick another key to bind'); return; }
+  if (key === 'b') {
+    closeBindPop();
+    if (window.deskPanicKeys.blackoutKeyIntent(e, S)) { setBlackout(true); say('B is the blackout key everywhere — blackout on; pick another key to bind'); }
+    return;
+  }
   bindKey(key, bindTarget);
   closeBindPop();
 }, true);
@@ -3320,6 +3324,8 @@ $('#audRelease').addEventListener('input', (e) => {
 
 // Set when a mode/targets control is changed, cleared by Apply: the form then stops following.
 let outDirty = false;
+let outArmed = false, outArmedAt = null, outLastPress = null;   // go-live arm (panicKeys.js)
+let driverPending = null;   // a driver chosen on the radios, not yet switched to
 function buildOutput() {
   const n = S.status.nodes.length;
   const serial = S.output.driver === 'enttec';
@@ -3334,11 +3340,14 @@ function buildOutput() {
   // operator glancing at this in the dark is asking "is the rig live?", not "what will
   // this button do?". The line beside it says the consequence in words.
   const btn = $('#outEnable');
+  // While the go-live arm is live the poll leaves the prompt alone (it erased it every 1.5 s).
+  if (!window.deskPanicKeys.keepArmPrompt(outArmed)) {
   btn.textContent = on ? 'Output is ON' : 'Output is OFF';
   btn.classList.toggle('on', on);
   $('#outEnableWhat').textContent = on
     ? 'frames are leaving this machine'
     : 'nothing leaves this machine — the desk runs, the rig stays dark';
+  }
   $('#outSummary').textContent = (on ? '' : 'OFF · ') + (serial
     ? `${S.output.serialPort}${ser && ser.connected ? '' : ' — not open'}`
     : unicastEmpty ? 'unicast with no target — sending broadcast'
@@ -3348,7 +3357,9 @@ function buildOutput() {
   // focused, every later poll bailed out before the swap: the show moved onto the serial
   // port and the panel carried on showing Broadcast/Unicast until you clicked elsewhere.
   // The most consequential switch in the app read as broken at the moment of use.
-  $$('input[name=driver]').forEach((r) => { r.checked = r.value === (S.output.driver || 'artnet'); });
+  // A pending (not yet applied) choice keeps its radio; the poll must not snap it back.
+  if (!driverPending) $$('input[name=driver]').forEach((r) => { r.checked = r.value === (S.output.driver || 'artnet'); });
+  paintDriverSwitch();
   $('#artnetOut').hidden = serial;
   $('#serialOut').hidden = !serial;
   buildSerial();
@@ -4554,9 +4565,11 @@ function buildMidiTargets() {
 
   T.push({ group: 'Pads & buttons' });
 
-  pad('blackout', 'Blackout  (toggle)', () => {
-    midiLive.blackout = !midiLive.blackout;
-    midiSend('api/master', { blackout: midiLive.blackout });
+  pad('blackout', 'Blackout  (on)', () => {
+    // One-way like the B key: the mirror may be stale, and a toggle of it can un-blackout the rig.
+    const intent = window.deskPanicKeys.midiBlackoutIntent();
+    midiLive.blackout = intent.blackout;
+    midiSend('api/master', intent);
   });
   pad('chaseon', 'Chase run / stop', () => {
     midiLive.chase = !midiLive.chase;
@@ -4714,8 +4727,9 @@ function midiMapByNumber() {
 function buildMidi() {
   // While disarmed the desk is the authority on where everything sits, so takeover has
   // a true reference the moment you arm.
+  if (S) midiLive.blackout = !!S.blackout;   // armed too: the pad is one-way, the pill must not drift
   if (!midiArmed && S) {
-    midiLive.master = S.master; midiLive.blackout = !!S.blackout;
+    midiLive.master = S.master;
     midiLive.fxDepth = S.fx.depth; midiLive.fxBpm = S.fx.bpm;
     midiLive.fxMode = S.fx.mode; midiLive.fxOn = !!S.fx.enabled;
     midiLive.holdMs = S.chase.holdMs; midiLive.fadeMs = S.chase.fadeMs;
@@ -5279,10 +5293,11 @@ function paintBlackout(on, sels = BLACKOUT_ALL) {
   });
 }
 let blackoutPending = false;
-const toggleBlackout = async () => {
-  if (blackoutPending) return;   // two fast presses computed the same `want` and sent it twice
+const toggleBlackout = () => setBlackout(!S.blackout);
+// The B key and the MIDI pad only ever call this with true (blackoutKeyIntent, panicKeys.js).
+const setBlackout = async (want) => {
+  if (blackoutPending || !S) return;   // two fast presses computed the same `want` and sent it twice
   blackoutPending = true;
-  const want = !S.blackout;
   const pills = BLACKOUT_ALL;
   paintBlackout(want);
   pills.forEach((s) => { const el = $(s); if (el) el.classList.add('pending'); });
@@ -5523,32 +5538,57 @@ $('#sendAdd').addEventListener('click', async () => {
 // The wire switch. Turning output ON is the one action in this panel that can change a
 // room, so it is confirmed the first time it is pressed in a session — but only the
 // first: an operator who has decided to go live should not be asked again all night.
-let outArmed = false;
-$('#outEnable').addEventListener('click', async () => {
+$('#outEnable').addEventListener('click', async (e) => {
   const on = !!(S && S.output.enabled);
-  if (!on && !outArmed) {
-    outArmed = true;
+  const now = Date.now();
+  const act = window.deskPanicKeys.goLivePress({ on, armedAt: outArmed ? outArmedAt : null, lastPress: outLastPress }, now, e.detail);
+  outLastPress = now;
+  if (act === 'ignore') return;   // a double click or a bounce never passes the two-press check
+  if (act === 'arm') {
+    outArmed = true; outArmedAt = now;
     $('#outEnable').textContent = 'Press again to go live';
-    $('#outEnableWhat').textContent = 'this will start sending DMX to whatever is listening';
-    setTimeout(() => { outArmed = false; buildOutput(); }, 4000);
+    $('#outEnableWhat').textContent = window.deskPanicKeys.armPrompt(S && S.output.driver, S && S.output.serialPort);
+    setTimeout(() => { outArmed = false; outArmedAt = null; buildOutput(); }, window.deskPanicKeys.ARM_MS);
     return;
   }
-  outArmed = false;
+  outArmed = false; outArmedAt = null;
   const res = await post('api/output', window.deskOutputPatch.outputPatch(null, null, 'enabled', !on));
   await pullState();
   if (res && res.error) return say(res.error, true);
   say(!on ? 'output ON — the rig is live' : 'output OFF — nothing is leaving this machine');
 });
 
-// Switching driver takes effect immediately rather than behind an Apply button: it is a
-// choice about which cable the show is on, and having to press a second thing to make it
-// real is exactly how the desk ends up transmitting somewhere she is not looking.
-$$('input[name=driver]').forEach((r) => r.addEventListener('change', async () => {
+// The driver radios only CHOOSE; one button applies. A radio keeps focus after a click, so an
+// arrow key used to retarget live DMX (ENTTEC flipped to Art-Net mid-show, 2026-10-30).
+function paintDriverSwitch() {
+  const c = window.deskPanicKeys.driverChoice(driverPending, S && S.output.driver, S && S.output.enabled);
+  if (!c.visible) driverPending = null;
+  const b = $('#driverSwitch');
+  b.hidden = !c.visible; b.textContent = c.label;
+}
+$$('input[name=driver]').forEach((r) => {
+  r.addEventListener('change', () => {
+    driverPending = r.value;
+    paintDriverSwitch();
+    if (!$('#driverSwitch').hidden) return;
+    // chose the driver already applied: nothing to switch
+    driverPending = null;
+  });
+  r.addEventListener('click', () => { if (!r.matches(':focus-visible')) r.blur(); });
+});
+$('#driverSwitch').addEventListener('click', async () => {
+  const c = window.deskPanicKeys.driverChoice(driverPending, S && S.output.driver, S && S.output.enabled);
+  if (!c.visible) return;
+  const port = S.output.serialPort || 'its serial port';
+  if (c.confirm && !(await window.deskAsk.ask(`Output is live. Switch it to ${c.name}${driverPending === 'enttec' ? ' on ' + port : ''}?\n\nThe rig will be driven through the other cable.`, 'Switch to ' + c.name))) return;
+  const driver = driverPending;
+  driverPending = null;
   // Only the driver: the serial port is the desk's own, and the form's copy may be old.
-  const res = await post('api/output', window.deskOutputPatch.outputPatch(null, S && S.output, 'driver', r.value));
+  const res = await post('api/output', window.deskOutputPatch.outputPatch(null, S && S.output, 'driver', driver));
   await pullState();
-  if (res && res.error) say(res.error, true);   // #serialStat is rebuilt by the poll and would eat this
-}));
+  if (res && res.error) return say(res.error, true);   // #serialStat is rebuilt by the poll and would eat this
+  say(`driver switched to ${c.name}`);
+});
 // The README's remedy for "n skipped, the link cannot keep up" is to lower this. It had
 // no control anywhere in the interface. Restarting the send loop is a frame or two of
 // gap on the wire, which is why it commits on change, not on every keystroke.
@@ -5668,7 +5708,8 @@ document.addEventListener('keydown', (e) => {
   if ((e.key === 'b' || e.key === 'B') && !e.ctrlKey && !e.altKey && !e.metaKey && !isTypingTarget(e.target)) {
     e.preventDefault();
     if (bindTarget != null) closeBindPop();   // the menu yields to the panic key
-    toggleBlackout();
+    // One-way and never on auto-repeat: a held or doubled B must not switch the rig back on.
+    if (window.deskPanicKeys.blackoutKeyIntent(e, S)) setBlackout(true);
     return;
   }
   // While the scene popover is open, its capture-phase handler owns Esc and (in bind
