@@ -1,6 +1,8 @@
 // Fix round for #1233 (review D1–D4, D6, E2 desk half): each test fails on the PR head before this change.
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { createLaserDesk, OUT } from './laserDesk.js'
 
 const fakeEngine = (over = {}) => {
@@ -9,11 +11,16 @@ const fakeEngine = (over = {}) => {
     e.setFrame = (id, points, out, opts) => { e.calls.push({ op: 'frame', id, lit: points.filter((p) => p[2] || p[3] || p[4]).length, opts }); return { ok: true } }
     e.alive = () => { e.calls.push({ op: 'alive' }); return { ok: true } }
     e.arm = (a) => { e.calls.push({ op: 'arm', ...a }); return { ok: true } }
+    e.dark = (on) => { e.calls.push({ op: 'dark', on }); return { ok: true } }
     e.blackout = () => { e.blackouts += 1; e.calls.push({ op: 'blackout' }); return { ok: true } }
     e.frames = () => ({ armed: true, sim: e.sim, all: null, byCube: {}, cubes: ['cube-1'], stopped: {}, blackouts: e.blackouts })
     return Object.assign(e, over)
 }
-const make = (engine, extra = {}) => createLaserDesk({ getEngine: () => engine, dataDir: fs.mkdtempSync('/tmp/lfr-'), now: () => 1000, every: () => 1, stopEvery: () => {}, ...extra })
+// Temp dirs are removed after each test; the option names are the desk's own (setInterval / clearInterval), so no real timer runs (R8).
+const dirs = []
+const tmp = () => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'lfr-')); dirs.push(d); return d }
+afterEach(() => { for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true }) })
+const make = (engine, extra = {}) => createLaserDesk({ getEngine: () => engine, dataDir: tmp(), now: () => 1000, setInterval: () => 1, clearInterval: () => {}, ...extra })
 const frames = (e) => e.calls.filter((c) => c.op === 'frame')
 
 describe('D1 goSeq', () => {
@@ -54,7 +61,7 @@ describe('D2 readout from the engine', () => {
 })
 describe('D3 Blackout keeps the arm (setting, default off)', () => {
     it('default: Blackout reaches the engine; with the setting it does not, and it survives a reload', () => {
-        const dir = fs.mkdtempSync('/tmp/lfr-')
+        const dir = tmp()
         const e = fakeEngine(); const d = make(e, { dataDir: dir })
         expect(d.state().blackoutKeepsArm).toBe(false)
         d.setBlackout(true); expect(e.blackouts).toBe(1)

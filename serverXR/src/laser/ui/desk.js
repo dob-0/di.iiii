@@ -12,7 +12,9 @@
     const VIEW_MS = 80
     const SWATCHES = ['#ff2030', '#ffb020', '#ffffff', '#20d8ff', '#3050ff', '#8040ff', '#ff30c0', '#20ff60']
     const OUT = 'desk'
-    const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30, 31)
+    // look|cube pairs a Go was pressed for while stopped; cleared when the cube runs again. Stopped still after that Go = the look's own.
+const stillGone = new Set()
+const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30, 31)
     const WHEEL_MS = 400 // a slider value that moves within this of a wheel tick is the wheel's, and is undone (rows 2, 7)
 
     const $ = (id) => document.getElementById(id)
@@ -637,8 +639,12 @@
             const link = engine.sim ? el('span', { class: 'muted', text: 'sim' })
                 : e.connected ? el('span', { class: 'ok', text: 'answering' })
                     : el('span', { class: 'bad', text: e.ip ? 'no answer' : 'no address' })
+            // A look that is itself a still beam trips again on every Go: say so, rather than a button that does nothing (R7).
+            const stillKey = `${desk.liveId}|${c.id}`
+            if (!e.stop) stillGone.delete(stillKey)
+            const holdsStill = e.stop?.reason === 'still-beam' && stillGone.has(stillKey)
             const output = e.armed && e.stop && !engine.sim && desk.live
-                ? el('button', { class: 'danger', text: 'Stopped · press Go', title: 'Press a look (Go): the cube lights again on its next new picture that passes the guards', onclick: () => { if (desk.liveId) post('desk/api/go', { look: desk.liveId }).then(refreshDesk) } })
+                ? el('button', { class: 'danger', text: holdsStill ? 'This look holds a still beam: pick another look' : 'Stopped · press Go', title: 'Press a look (Go): the cube lights again on its next new picture that passes the guards', onclick: () => { if (desk.liveId) { stillGone.add(stillKey); post('desk/api/go', { look: desk.liveId }).then(refreshDesk) } } })
                 : e.armed
                 ? el('button', { class: 'danger', text: 'On · turn off', onclick: () => post('api/arm', { armed: false, cube: c.id, out: OUT }).then(refreshEngine) })
                 : el('button', { text: 'On', disabled: !e.ip, title: e.ip ? 'Arm this cube (the first On of a run asks for the phrase)' : 'No address: Find cubes, then Use these', onclick: () => arm(c.id) })
