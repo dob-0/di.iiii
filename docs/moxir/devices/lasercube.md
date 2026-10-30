@@ -61,3 +61,23 @@ reading of byte 4) does not mean "light on" — do not trust it as a light indic
 ## Empty buffer (asked 2026-10-30, ledger N1501.18)
 
 What a LaserCube Ultra does when its buffer runs empty (blank, or the last point held lit): **unknown, needs a real cube.** Not in this file, the 10-14 jam notes, or the protocol code. The engine counts nothing on a real cube; only the fake cube counts underruns (`scripts/laser/fake-cube-buffer.mjs`). Test with the output ARMED ONLY by the owner, at a safe aim, stopping the stream mid-figure and watching the beam.
+
+## Status byte (GET_FULL_INFO byte 5) on firmware 1.17 — TESTED 2026-10-30 (studio Mac, ledger N1561/N1562)
+
+| Row | Value | Source |
+|---|---|---|
+| Cube | LaserCube 7.5 W Ultra Mk2, firmware 1.17, Ethernet | real 64-byte reply, 10.42.1.196 |
+| Byte 5, laser dark and disarmed (20:44) | 2 | read from the cube |
+| Byte 5, beam lit, engine streaming (20:51-20:55) | 2 (the owner saw the beam) | read from the cube + the owner's eyes |
+| Meaning | bit 0 is NOT "output on" on this firmware; bit 1 is set either way | the two rows above |
+
+`parseFullInfo` therefore reports `outputEnabled: null` with `outputState: 'not reported by this firmware'` for 1.17 and keeps
+the raw `statusFlags`. Never say "output off" from this byte on 1.17. Other firmware keeps the bit-0 reading (UNVALIDATED).
+Real reply: `7700000111020000ff0fb8880000b88800000370177017ff20028cbfea06ab3c0a2a01c4020a4c617365724375626520372e355720556c747261204d6b320000`.
+
+## Find cubes — one sweep per network (2026-10-30, ledger N1563)
+
+Measured at the stage: `POST /serverXR/laser/api/find` swept 506 targets (venue wifi 10.158.133.0/24, then laser-net 10.42.1.0/24)
+and returned no cube; `sweep({ targets: ['10.42.1.196'] })` found it at once; a direct 0x77 got its reply in about 1 ms.
+Now each /24 is swept on its own socket, all at the same time, each with its own 2 ms gap. NOT reproduced on hardware: the
+unit test models the late ask with a virtual clock; whether order was the true cause on the Mac is unconfirmed.

@@ -224,8 +224,14 @@ describe('every stop: buffer cleared, beam parked blank at the centre, THEN outp
 })
 
 describe('the status byte (GET_FULL_INFO byte 5) is flags, read as Wicked Lasers\' driver reads it', () => {
-    it('2 on firmware 1.17 (the real cubes) is the interlock bit: output OFF (the 2026-10-14 reading that said "on")', () => {
-        expect(proto.parseFullInfo(infoAnswer({ flagsByte: 2 }))).toMatchObject({ outputEnabled: false, interlockEnabled: true, statusFlags: 2 })
+    it('2 on firmware 1.17 (the real cubes): output state UNKNOWN, flags kept (read 2 dark AND lit, 2026-10-30)', () => {
+        const fw117 = infoAnswer({ flagsByte: 2 }); fw117[4] = 17
+        expect(proto.parseFullInfo(fw117)).toMatchObject({ outputEnabled: null, outputState: 'not reported by this firmware', interlockEnabled: true, statusFlags: 2 })
+    })
+    it('the real 64-byte reply of 2026-10-30 (fw 1.17, beam lit, flags 2): outputEnabled is null, never false', () => {
+        const real = Buffer.from('7700000111020000ff0fb8880000b88800000370177017ff20028cbfea06ab3c0a2a01c4020a4c617365724375626520372e355720556c747261204d6b320000', 'hex')
+        expect(real.length).toBe(64)
+        expect(proto.parseFullInfo(real)).toMatchObject({ firmware: '1.17', outputEnabled: null, statusFlags: 2, modelName: 'LaserCube 7.5W Ultra Mk2' })
     })
     it('bit 0 is output enabled; ≥ 0.13: bit 2 warning, bit 3 over-temperature, bits 4-7 packet errors', () => {
         expect(proto.parseFullInfo(infoAnswer({ flagsByte: 0x3f }))).toMatchObject({ outputEnabled: true, interlockEnabled: true, temperatureWarning: true, overTemperature: true, packetErrors: 3 })
@@ -236,11 +242,11 @@ describe('the status byte (GET_FULL_INFO byte 5) is flags, read as Wicked Lasers
         expect(old(0x20)).toMatchObject({ outputEnabled: false, interlockEnabled: false, overTemperature: true })
         expect(old(0x08)).toMatchObject({ interlockEnabled: true, overTemperature: false })
     })
-    it('the real cube\'s answer (Ultra MK2 fw 1.17, armed then disarmed, read 2026-10-14): firmware 1.17, output OFF, rate 35000', () => {
+    it('the real cube\'s answer (Ultra MK2 fw 1.17, armed then disarmed, read 2026-10-14): firmware 1.17, output state unknown, rate 35000', () => {
         // The first 12 bytes the coordinator read from 10.42.0.184; the rest of the 64 is not known here (zeros).
         const real = Buffer.alloc(64)
         Buffer.from('7700000111020000ff0fb888', 'hex').copy(real)
-        expect(proto.parseFullInfo(real)).toMatchObject({ firmware: '1.17', outputEnabled: false, statusFlags: 2, interlockEnabled: true })
+        expect(proto.parseFullInfo(real)).toMatchObject({ firmware: '1.17', outputEnabled: null, statusFlags: 2, interlockEnabled: true })
         expect(real.readUInt32LE(10) & 0xffff).toBe(35000) // b8 88 = 35000; bytes 12-13 not in the sample
     })
     it('the temperature is a signed byte', () => {
