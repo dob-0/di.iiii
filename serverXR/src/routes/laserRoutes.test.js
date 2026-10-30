@@ -175,6 +175,8 @@ describe('the lasers at /laser', () => {
     }
     expect(window.DiLaser.LASER_SHAPES).toEqual(require('../../../shared/laserShapes.cjs').LASER_SHAPES)
     expect(window.DiLaser.lookBox(SEED_LOOKS[0])).toHaveLength(4)
+  })
+
   // Stage audit row 9: a loopback POST with no Origin needs the local token to make light.
   it('row 9: a no-Origin request that makes light needs the local token; stops and a same-origin page do not', async () => {
     delete process.env.NODE_ENV
