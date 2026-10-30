@@ -41,7 +41,39 @@
     return { visible: true, label: 'Switch to ' + name(pending), confirm: !!outputOn, name: name(pending) };
   }
 
-  const api = { ARM_MS, DOUBLE_MS, blackoutKeyIntent, midiBlackoutIntent, goLivePress, keepArmPrompt, armPrompt, driverChoice };
+  // One poll of the live driver. (pending, lastLive, live) -> the pending choice to keep.
+  // The live driver moving anywhere else (another page, the API) ends the choice at once:
+  // to the pending value it is done, to any other value the choice is stale. Either way the
+  // radios show the live value on this very poll.
+  function driverPoll(pending, lastLive, live) {
+    if (!pending) return null;
+    if (pending === live) return null;
+    if (lastLive != null && live !== lastLive) return null;
+    return pending;
+  }
+
+  // The go-live arm's timer. One handle: a new arm, a consume, or output switching cancels the
+  // old one, so an old timer can never clear a newer arm. timers = { set, clear }.
+  function createArm(timers, onExpire) {
+    let handle = null;
+    const state = { armed: false, armedAt: null };
+    function cancel() {
+      if (handle != null) timers.clear(handle);
+      handle = null; state.armed = false; state.armedAt = null;
+    }
+    function start(now) {
+      cancel();
+      state.armed = true; state.armedAt = now;
+      const mine = (handle = timers.set(() => {
+        if (handle !== mine) return;
+        handle = null; state.armed = false; state.armedAt = null;
+        onExpire();
+      }, ARM_MS));
+    }
+    return { state, start, cancel };
+  }
+
+  const api = { driverPoll, createArm, ARM_MS, DOUBLE_MS, blackoutKeyIntent, midiBlackoutIntent, goLivePress, keepArmPrompt, armPrompt, driverChoice };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.deskPanicKeys = api;
 })(typeof window !== 'undefined' ? window : this);
