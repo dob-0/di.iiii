@@ -180,6 +180,32 @@ check('master is not applied twice to a fixture with a dimmer channel', async ()
   await POST('/api/master', { master: 255 });
 });
 
+check('a raw channel rides the master; the Fader stores 255 and shows what leaves', async () => {
+  // Deliberate (engine.js): raw holds ride the master so the panic path reaches the Fader.
+  // So 255 held at master 50% leaves at 128, and the state the page draws from says both.
+  await POST('/api/master', { master: 128 });
+  await POST('/api/raw', { universe: 14, channel: 3, value: 255 });
+  await settle();
+  assert.strictEqual(await wire(14, 3), 128, 'held 255 leaves at master 128');
+  const { body } = await GET('/api/state');
+  assert.strictEqual(body.raw['14:3'], 255, 'the hold stores 255, pre-master');
+  assert.strictEqual(body.master, 128, 'and the page can see the master that scales it');
+  await POST('/api/master', { master: 255 });
+  await settle();
+  assert.strictEqual(await wire(14, 3), 255, 'at full master the held 255 leaves as 255');
+  await POST('/api/raw', { clear: true });
+});
+
+check('broadcastAll is a way back and the status names the broadcast networks', async () => {
+  const on = await POST('/api/output', { broadcastAll: true });
+  assert.strictEqual(on.body.output.broadcastAll, true);
+  const { body } = await GET('/api/state');
+  assert.ok(Array.isArray(body.status.broadcast) && body.status.broadcast.includes('255.255.255.255'));
+  assert.ok(Array.isArray(body.status.broadcastExcluded) && body.status.broadcastExcluded.length === 0, 'nothing excluded with broadcastAll');
+  const off = await POST('/api/output', { broadcastAll: false });
+  assert.strictEqual(off.body.output.broadcastAll, false);
+});
+
 check('a raw override outranks the fixtures but not the blackout', async () => {
   await POST('/api/raw', { universe: 13, channel: 7, value: 200 });
   await settle();

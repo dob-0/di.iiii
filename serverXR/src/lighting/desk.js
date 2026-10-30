@@ -12,7 +12,7 @@ const WORLD = 1000;
 const zlib = require('zlib');
 const fs = require('fs');
 const path = require('path');
-const { ArtNet, broadcastAddresses, localAddresses } = require('./artnet');
+const { ArtNet, broadcastPlan, localAddresses } = require('./artnet');
 const { Enttec, listPorts, describePort, PORT_NAME, DEFAULT_PORT } = require('./enttec');
 const {
   Engine, PROFILES, makeFixture, DEFAULT_LIMITS, roleKinds, ROLE_DEFAULTS,
@@ -108,6 +108,9 @@ function createDesk(opts = {}) {
     // waiting to be typed because it is the one address that is always the same — a show
     // with no defaults asks you to remember an IP in the dark. Remove it and it stays gone.
     output: { driver: 'artnet', serialPort: DEFAULT_PORT, mode: 'broadcast', targets: [], enabled: true,
+      // false: broadcast skips every network that carries a LaserCube (broadcastPlan, artnet.js).
+      // true: every network, as before the laser link was kept clean.
+      broadcastAll: false,
       // sACN's priority, 0..200. Two senders on one universe stop being a coin toss:
       // the higher number wins and the receiver ignores the other, which is the thing
       // Art-Net cannot express at all.
@@ -339,6 +342,7 @@ function createDesk(opts = {}) {
   const engine = new Engine(state);
   const artnet = new ArtNet({
     port: state.output.port,
+    plan: () => bcPlan(),
     // Tests bind an ephemeral local port so they never contend for 6454 with a running desk.
     bindPort,
     // ARTNET_OFFLINE=1 keeps a test run off the wire entirely.
@@ -709,9 +713,35 @@ function createDesk(opts = {}) {
     return [...manual, ...byIp.values()];
   }
 
+  // The cubes' addresses, read from the file the laser side keeps (<dataDir>/laser/laser.json,
+  // laserEngine.js header). Read here and never imported: the desk does not run the engine.
+  // Re-read at most every 5 s; a missing or broken file is no cubes.
+  let cubeCache = { at: 0, ips: [] };
+  function cubeIps() {
+    const now = Date.now();
+    if (now - cubeCache.at < 5000) return cubeCache.ips;
+    let ips = [];
+    try {
+      const cfg = JSON.parse(fs.readFileSync(path.join(DATA, 'laser', 'laser.json'), 'utf8'));
+      ips = (Array.isArray(cfg && cfg.cubes) ? cfg.cubes : []).map((c) => c && c.ip).filter((x) => typeof x === 'string');
+    } catch (e) { /* no file, no cubes */ }
+    cubeCache = { at: now, ips };
+    return ips;
+  }
+  let loggedPlan = '';
+  function bcPlan() {
+    const plan = broadcastPlan({ cubeIps: cubeIps(), all: !!(state && state.output && state.output.broadcastAll) });
+    const sig = plan.excluded.map((e) => e.broadcast).join();
+    if (sig !== loggedPlan) {
+      loggedPlan = sig;
+      if (plan.excluded.length) log(`[light] Art-Net broadcast skips ${plan.excluded.map((e) => `${e.broadcast} (${e.iface}, laser network)`).join(', ')}; sending to ${plan.use.join(', ')}`);
+    }
+    return plan;
+  }
+
   function targetsFor() {
     if (state.output.mode === 'unicast' && state.output.targets.length) return state.output.targets;
-    return broadcastAddresses();
+    return bcPlan().use;
   }
 
   // Which universes carry anything: the patched fixtures and the manual holds. Every one
@@ -1054,7 +1084,7 @@ function createDesk(opts = {}) {
     const o = state.output;
     const main = o.driver === 'enttec' ? { serial: enttec ? enttec.status() : null, serialPort: o.serialPort }
       : o.driver === 'sacn' ? { ready: offline || !!(sacn && sacn.ready), lastError: sacn && sacn.lastError, lastErrorAt: sacn && sacn.lastErrorAt, targets: o.targets }
-      : { ready: offline || !!artnet.ready, lastError: artnet.lastError, lastErrorAt: artnet.lastErrorAt, targets: o.mode === 'unicast' ? o.targets : [] };
+      : { ready: offline || !!artnet.ready, lastError: artnet.lastError, lastErrorAt: artnet.lastErrorAt, targets: o.mode === 'unicast' ? o.targets : [], networks: o.mode === 'unicast' ? [] : bcPlan().use, excluded: o.mode === 'unicast' ? [] : bcPlan().excluded };
     const routes = [{ id: 'main', name: 'Output', driver: o.driver, enabled: !!o.enabled, ...main }];
     for (const s of allExtras()) {
       const held = extraDrivers.get(s.id);
@@ -1205,7 +1235,8 @@ function createDesk(opts = {}) {
         identifying: Object.entries(state.identify || {}).filter(([, t]) => t > Date.now()).map(([id]) => id),
         nodes: nodeList(),
         interfaces: localAddresses(),
-        broadcast: broadcastAddresses(),
+        broadcast: bcPlan().use,
+        broadcastExcluded: bcPlan().excluded,
         // Whichever driver is live owns the counters the interface shows, so a frozen rig
         // reads as a frozen count on the page rather than an Art-Net count ticking happily
         // up while nothing leaves the serial port.
@@ -2300,6 +2331,7 @@ function createDesk(opts = {}) {
       if (body.driver) state.output.driver = ['enttec', 'sacn', 'artnet'].includes(body.driver) ? body.driver : 'artnet';
       if (body.priority != null) state.output.priority = Math.max(0, Math.min(200, body.priority | 0));
       if (body.enabled != null) state.output.enabled = !!body.enabled;
+      if (body.broadcastAll != null) state.output.broadcastAll = !!body.broadcastAll;
       if (body.serialPort && PORT_NAME.test(String(body.serialPort).trim())) state.output.serialPort = portName(body.serialPort);
       // Rebuild the driver before answering, so the reply carries the real outcome of the
       // switch. Selecting a port that will not open has to say so here — finding out by
