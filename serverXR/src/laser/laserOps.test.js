@@ -84,7 +84,7 @@ const startServer = async ({ config, findCubes } = {}) => {
     const call = async (method, route, body, headers = {}) => {
         const res = await fetch(`${base}${route}`, {
             method,
-            headers: { 'content-type': 'application/json', ...headers },
+            headers: { 'content-type': 'application/json', 'x-laser-token': fs.readFileSync(path.join(dataDir, 'laser', '.token'), 'utf8').trim(), ...headers },
             body: body === undefined ? undefined : JSON.stringify(body)
         })
         return { status: res.status, body: await res.json().catch(() => null) }
@@ -322,6 +322,7 @@ describe('only this machine\'s own page may drive the lasers', () => {
 
     // The review's setup: the server's own cors() as a non-production server has it (any origin,
     // credentials), so the preflight passes and only the laser gate stands in the way.
+    let tokenOfCors = ''
     const startWithCors = async (opts) => {
         const cors = require('cors')
         const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'laser-ops-'))
@@ -336,6 +337,7 @@ describe('only this machine\'s own page may drive the lasers', () => {
         const server = await new Promise((resolve) => { const s = app.listen(0, '127.0.0.1', () => resolve(s)) })
         servers.push(server)
         const port = server.address().port
+        tokenOfCors = fs.readFileSync(path.join(dataDir, 'laser', '.token'), 'utf8').trim()
         const raw = (method, route, body, headers = {}) => new Promise((resolve, reject) => {
             const data = body === undefined ? null : JSON.stringify(body)
             const req = http.request({ host: '127.0.0.1', port, method, path: `/laser/api${route}`, headers: { host: `127.0.0.1:${port}`, ...(data ? { 'content-type': 'application/json' } : {}), ...headers } }, (res) => {
@@ -395,7 +397,8 @@ describe('only this machine\'s own page may drive the lasers', () => {
         ['diiii.localhost:80 written out', () => ({ host: 'diiii.localhost:80', origin: 'http://diiii.localhost' })],
         ['a tree under diiii.localhost', () => ({ host: 'laser-ops.diiii.localhost', origin: 'http://laser-ops.diiii.localhost' })],
         ['a same-origin Referer, no Origin', (p) => ({ referer: `http://127.0.0.1:${p}/raw` })],
-        ['curl on this machine: no Origin, no Referer', () => ({})]
+        // a script on this machine carries the local token (stage audit row 9); without it the arm is refused (laserRoutes.test.js)
+        ['curl on this machine: no Origin, no Referer, with the local token', () => ({ 'x-laser-token': tokenOfCors })]
     ])('arms and disarms from this machine\'s own page: %s', async (_, make) => {
         const { raw, port } = await startWithCors()
         expect((await raw('POST', '/arm', { armed: true, confirm: ARM_PHRASE }, make(port))).body).toMatchObject({ ok: true, armed: true })

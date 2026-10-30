@@ -72,7 +72,7 @@ const start = async (config) => {
     servers.push(server)
     const base = `http://127.0.0.1:${server.address().port}/laser/api`
     const call = async (route, body) => {
-        const res = await fetch(`${base}${route}`, { method: body === undefined ? 'GET' : 'POST', headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
+        const res = await fetch(`${base}${route}`, { method: body === undefined ? 'GET' : 'POST', headers: { 'content-type': 'application/json', 'x-laser-token': fs.readFileSync(path.join(dataDir, 'laser', '.token'), 'utf8').trim() }, body: body === undefined ? undefined : JSON.stringify(body) })
         return { status: res.status, body: await res.json() }
     }
     return { dataDir, lasers, call }

@@ -23,15 +23,21 @@ afterEach(async () => {
   for (const [k, v] of Object.entries(envBefore)) { if (v == null) delete process.env[k]; else process.env[k] = v }
 })
 
+let tokenOfBoot = ''
+let dirOfBoot = ''
 const boot = async (extra = {}) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dii-laser-'))
   const app = express()
   const lane = registerLaserRoutes(app, { dataDir: dir, log: null, ...extra })
+  dirOfBoot = dir
+  tokenOfBoot = fs.readFileSync(path.join(dir, 'laser', '.token'), 'utf8').trim()
   const { server, base } = await listen(app)
   cleanups.push(() => new Promise((r) => { lane.close(); server.close(r); fs.rmSync(dir, { recursive: true, force: true }) }))
   return { base, lane }
 }
-const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+// A script's request (no Origin): it carries the local token, as a tool on this machine must (stage audit row 9).
+const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-laser-token': tokenOfBoot }, body: JSON.stringify(body) })
+const postBare = (url, body, headers = {}) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) })
 
 describe('the lasers at /laser', () => {
   it('is dormant until asked, then answers DISARMED with six sim cubes', async () => {
@@ -169,5 +175,26 @@ describe('the lasers at /laser', () => {
     }
     expect(window.DiLaser.LASER_SHAPES).toEqual(require('../../../shared/laserShapes.cjs').LASER_SHAPES)
     expect(window.DiLaser.lookBox(SEED_LOOKS[0])).toHaveLength(4)
+  })
+
+  // Stage audit row 9: a loopback POST with no Origin needs the local token to make light.
+  it('row 9: a no-Origin request that makes light needs the local token; stops and a same-origin page do not', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    const file = path.join(dirOfBoot, 'laser', '.token')
+    expect((fs.statSync(file).mode & 0o777).toString(8)).toBe('600')
+    const frame = { cube: 'cube-1', points: [[0, 0.5, 0, 1, 0]] }
+    for (const [route, body] of [['frame', frame], ['alive', { cube: 'cube-1' }], ['arm', { armed: true, confirm: ARM_PHRASE }], ['show', { project: 'x' }]]) {
+      const bare = await postBare(`${base}/laser/api/${route}`, body)
+      expect(bare.status, route).toBe(403)
+      expect((await bare.json()).error).toBe('no token')
+      expect((await postBare(`${base}/laser/api/${route}`, body, { 'x-laser-token': 'wrong' })).status, route).toBe(403)
+    }
+    expect((await postBare(`${base}/laser/api/frame`, frame, { 'x-laser-token': tokenOfBoot })).status).toBe(200)
+    // The page's own request (same Origin) works as before, no token.
+    expect((await postBare(`${base}/laser/api/frame`, frame, { origin: base })).status).toBe(200)
+    // Stops are never gated.
+    expect((await postBare(`${base}/laser/api/blackout`, {})).status).toBe(200)
+    expect((await postBare(`${base}/laser/api/arm`, { armed: false })).status).toBe(200)
   })
 })
