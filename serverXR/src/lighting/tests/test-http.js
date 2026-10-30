@@ -1348,6 +1348,22 @@ check('the serial port has to be a serial device', async () => {
   assert.strictEqual(body.output.serialPort, before);
 });
 
+check('a POST that leaves the driver out keeps it; a POST equal to the state saves nothing', async () => {
+  const was = (await GET('/api/state')).body.output;
+  const port = process.platform === 'win32' ? 'COM7' : '/dev/ttyUSB7';
+  await POST('/api/output', { driver: 'enttec', serialPort: port, enabled: false });
+  await POST('/api/output', { enabled: false });
+  assert.strictEqual((await GET('/api/state')).body.output.driver, 'enttec', 'enabled alone never moves the driver');
+  await sleep(700);   // the 400ms coalesced save has landed
+  const file = path.join(process.env.DATA_DIR, 'show.json');
+  const m0 = fs.statSync(file).mtimeMs;
+  await POST('/api/output', { driver: 'enttec', serialPort: port, enabled: false });
+  await POST('/api/output', {});
+  await sleep(700);
+  assert.strictEqual(fs.statSync(file).mtimeMs, m0, 'equal values: no save');
+  await POST('/api/output', { driver: was.driver, serialPort: was.serialPort, enabled: was.enabled });
+});
+
 check('the show file on disk is always a complete show', async () => {
   const dir = process.env.DATA_DIR;
   await POST('/api/master', { master: 254 });
