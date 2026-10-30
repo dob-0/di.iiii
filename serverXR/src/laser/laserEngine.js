@@ -351,6 +351,7 @@ const createLaserEngine = ({
     const frames = { all: null, byCube: new Map() }
     let blackouts = 0 // how many times Blackout was pressed: the desk latches when this rises (review 1218 S1)
     let armed = false
+    let darkLatch = false // the desk's Blackout in keep-arm mode: every armed cube plays blank, nobody's frame lights it, the arm stays (review R5)
     // Signed off for this run: the phrase was typed since the engine started or the last disarm-all.
     // Never written anywhere, never survives a restart (rule 1).
     let signedOff = false
@@ -605,14 +606,15 @@ const createLaserEngine = ({
                 armOne({ armed: false, cube: c.id })
                 continue
             }
-            const frame = framesFor(c.id)
+            const frame = darkLatch ? darkFrame(t) : framesFor(c.id)
             // The frame that tripped a stop and was kept through Off never lights the cube again (review R1): only a different one.
-            if (c.tripFrame) {
+            // The dark latch (keep-arm Blackout, R5) neither clears the trip frame nor lights anything.
+            if (c.tripFrame && !darkLatch) {
                 if (frame === c.tripFrame) continue
                 c.tripFrame = null
             }
             // No frame at all counts as dark, from the moment of On (review R2).
-            if ((!frame || !frame.lit) && !c.stop && t - Math.max(frame?.at ?? 0, c.armedAt ?? 0) > DARK_IDLE_MS) {
+            if (!darkLatch && (!frame || !frame.lit) && !c.stop && t - Math.max(frame?.at ?? 0, c.armedAt ?? 0) > DARK_IDLE_MS) {
                 log?.warn?.(`[laser] ${c.id} dark and unrefreshed for ${DARK_IDLE_MS} ms: switching it OFF`)
                 armOne({ armed: false, cube: c.id })
                 continue
@@ -697,6 +699,7 @@ const createLaserEngine = ({
         const t = now()
         return {
             armed,
+            dark: darkLatch,
             signedOff,
             sim: sim(),
             zone: { ...config.zone },
@@ -806,6 +809,15 @@ const createLaserEngine = ({
         frame.at = now()
         for (const c of live.values()) if (target === ALL_CUBES || c.id === target) c.lastFrameAt = frame.at
         return { ok: true, armed, kept: true }
+    }
+
+    // The dark latch: a fresh blank frame every tick, whoever sends. Unlike blackout() it keeps every cube armed and keeps
+    // the frames the senders post, so lifting it needs a new frame that passes the guards, not a new arm.
+    const darkFrame = (t) => ({ points: [[0, 0, 0, 0, 0]], at: t, lit: false, rawStill: [], preps: new Map() })
+    const dark = (on) => {
+        darkLatch = on === true
+        if (darkLatch) for (const c of live.values()) { c.playing = null; c.index = 0 }
+        return { ok: true, armed, dark: darkLatch }
     }
 
     // Blackout from any source cuts the light at once, like a disarm or the SIGTERM path: the armed
@@ -1018,7 +1030,7 @@ const createLaserEngine = ({
     // question starts, so the cubes' info is there by the time anyone arms.
     openSocket()
 
-    return { state, setFrame, alive, blackout, arm, frames: framesView, close: shutdown, shutdown, tick, canTake, upsertCube, heardAt }
+    return { state, setFrame, alive, blackout, dark, arm, frames: framesView, close: shutdown, shutdown, tick, canTake, upsertCube, heardAt }
 }
 
 module.exports = { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, DEFAULT_ZONE, TICK_MS, GUARD, STOP, CLAIM_TTL_MS }

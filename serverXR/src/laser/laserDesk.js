@@ -249,6 +249,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     let live = null // the look on the cubes (a copy: editing it never touches the bank until Store)
     let liveId = null // the bank's look it came from
     let blackout = false
+    let engineDark = false // the engine's dark latch is ours (keep-arm Blackout); only then is it lifted, and never by building an engine
     let timer = null
     const sent = new Map() // cubeId → { key, end, held, points, at }
     let saveTimer = null
@@ -386,12 +387,14 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
 
     // Every cube the desk drew on goes dark, and the desk stops sending: its hold on them runs out (CLAIM_TTL_MS),
     // so a Nodes Laser Out or the show player can take them.
+    const liftEngineDark = () => { if (engineDark) { engineDark = false; getEngine().dark(false) } }
     const release = () => {
         const was = live !== null
         live = null
         liveId = null
         // Release also lifts the desk's blackout (the top-bar Blackout button only ever turns it on; audit row 30).
         blackout = false
+        liftEngineDark()
         if (timer) { stopEvery(timer); timer = null }
         // Only cubes the desk drew on are touched: a desk that never drew must not build an engine to say so.
         if (sent.size) {
@@ -634,7 +637,11 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         // Blackout reaches the engine itself, whether the desk is released or another Out drives a cube (audit row 10): it
         // disarms every cube. The setting "Blackout keeps the arm" keeps the older desk blackout instead (dark, armed kept,
         // Shift+B brings it back at once); default off, the owner's choice for the show (D3, nothing we have is lost).
+        // In keep-arm mode the engine is darkened too, every cube and every sender, the arm kept (review R5): the latch
+        // holds until Blackout is lifted or the desk is released.
         if (on && !show.blackoutKeepsArm) { getEngine().blackout(); watchEngine() }
+        else if (on) { getEngine().dark(true); engineDark = true }
+        else liftEngineDark()
         tick()
         return { ok: true, blackout }
     }
