@@ -168,6 +168,14 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   const router = express.Router()
   router.use((req, res, next) => (req.method === 'GET' || req.method === 'HEAD' ? next() : requireOwnPage(req, res, next)))
   router.use(express.json({ limit: '512kb' }))
+  // The token at the router's entry, by path (review E3): everything that can light a cube, including the desk's
+  // routes (mounted by the desk PR): go, live, a blackout LIFT (on: false). Stops (blackout on, release, disarm) never need it.
+  const LIGHTING_PATH = /^\/(?:api\/(?:frame|alive|show(?:\/still)?)|desk\/api\/(?:go|live))\/?$/
+  router.use((req, res, next) => {
+    if (req.method !== 'POST') return next()
+    const lights = LIGHTING_PATH.test(req.path) || (req.path.replace(/\/$/, '') === '/desk/api/blackout' && req.body?.on === false)
+    return lights ? needToken(req, res, next) : next()
+  })
   router.get('/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ ...getEngine().state(), show: player.state() }) })
   router.post('/api/show', requireSameMachine, needToken, async (req, res) => {
     const out = await player.start({ project: req.body?.project, map: req.body?.map, reloadMs: req.body?.reloadMs, scale: req.body?.scale, tween: req.body?.tween })
@@ -343,6 +351,11 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
     res.type('application/javascript').send(deskLib)
   })
   router.use(express.static(path.join(__dirname, '../laser/ui'), { index: 'index.html', maxAge: 0 }))
+  // Output-off goes out at server start when laser.json names a cube with an address (review E6), not on the first page.
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(laserDir, 'laser.json'), 'utf8'))
+    if (Array.isArray(cfg?.cubes) && cfg.cubes.some((c) => c?.ip)) getEngine()
+  } catch { /* no file or unreadable: nothing is built until asked */ }
 
   for (const mount of mountPaths) app.use(mount, requireLocalRuntime, router)
 

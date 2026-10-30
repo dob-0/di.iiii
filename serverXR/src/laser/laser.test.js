@@ -710,6 +710,10 @@ describe('stage audit fixes', () => {
             expect(go.engine.state().cubes[0].stop).toBe(null)
             const on = stillStop()
             expect(on.engine.arm({ armed: true, cube: 'cube-1' }).ok).toBe(true)
+            // On is a yes, not a relight: it stays dark until a NEW frame that passes the guards (review E1).
+            expect(on.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
+            on.engine.setFrame('all', line)
+            step(on)
             expect(on.engine.state().cubes[0].stop).toBe(null)
             const release = stillStop()
             release.engine.arm({ armed: false, cube: 'cube-1' })
@@ -764,5 +768,80 @@ describe('stage audit fixes', () => {
             step(late)
             expect(late.engine.state().cubes[0]).toMatchObject({ armed: false, stop: { reason: 'no-frame' } })
         })
+    })
+})
+
+// Review fixes E1, E2, E4 (2026-10-30, fix round on the Opus review of #1232).
+describe('stage audit review fixes: a stopped cube is never relit by the frame that stopped it', () => {
+    const line = Array.from({ length: 100 }, (_, i) => [-0.9 + (1.8 * i) / 99, 0.5, 1, 1, 1])
+    const step = (rig) => { rig.at(20); rig.hear('10.0.0.51', [0x80]); rig.engine.alive('all'); rig.engine.tick() }
+    const stillStop = () => {
+        const rig = armedWith(ONE)
+        rig.engine.setFrame('all', dot())
+        for (let i = 0; i < 20; i++) step(rig)
+        expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
+        return rig
+    }
+    it('E1: On on a cube stopped for a still beam does not send the still dot again; a new passing frame lights it', () => {
+        const rig = stillStop()
+        rig.socket.sent.length = 0
+        expect(rig.engine.arm({ armed: true, cube: 'cube-1' }).ok).toBe(true)
+        for (let i = 0; i < 5; i++) step(rig)
+        expect(litIn(dataTo(rig.socket))).toBe(0)
+        expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
+        rig.engine.setFrame('all', line)
+        for (let i = 0; i < 5; i++) step(rig)
+        expect(rig.engine.state().cubes[0].stop).toBe(null)
+        expect(litIn(dataTo(rig.socket))).toBeGreaterThan(0)
+    })
+    it('E1: a new Go on the same still dot does not light it either', () => {
+        const rig = stillStop()
+        rig.socket.sent.length = 0
+        rig.engine.setFrame('all', dot(), null, { go: true })
+        for (let i = 0; i < 5; i++) step(rig)
+        expect(litIn(dataTo(rig.socket))).toBe(0)
+    })
+    it('E2: a cube whose Out let go (claim lapsed) is switched OFF, not left armed', () => {
+        const rig = armedWith(ONE)
+        rig.engine.setFrame('cube-1', line, 'out-a')
+        step(rig)
+        rig.socket.sent.length = 0
+        rig.at(11000) // CLAIM_TTL_MS is 10 s
+        rig.hear('10.0.0.51', [0x80])
+        rig.engine.tick()
+        expect(rig.engine.state().cubes[0].armed).toBe(false)
+        expect(cmds(rig.socket).filter((b) => b[0] === 0x80 && b[1] === 0)).toHaveLength(2)
+        rig.engine.setFrame('cube-1', line, 'out-b')
+        rig.at(20); rig.hear('10.0.0.51', [0x80]); rig.engine.tick()
+        expect(litIn(dataTo(rig.socket))).toBe(0)
+    })
+    it('E2: a dark frame nobody refreshes switches the cube OFF; a later Out cannot light it', () => {
+        const rig = armedWith(ONE)
+        rig.engine.setFrame('all', [[0, 0, 0, 0, 0]])
+        step(rig)
+        expect(rig.engine.state().cubes[0].armed).toBe(true)
+        rig.at(6000)
+        rig.hear('10.0.0.51', [0x80])
+        rig.engine.tick()
+        expect(rig.engine.state().cubes[0].armed).toBe(false)
+        rig.socket.sent.length = 0
+        rig.engine.setFrame('all', line)
+        step(rig)
+        expect(litIn(dataTo(rig.socket))).toBe(0)
+    })
+    it('E4: go counts only on a rising edge; a sender that sets it on every frame cannot resume a stopped cube', () => {
+        const rig = armedWith(ONE)
+        rig.engine.setFrame('all', dot(), 'o1', { go: true })
+        for (let i = 0; i < 20; i++) step(rig)
+        expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
+        rig.engine.setFrame('all', line, 'o1', { go: true })
+        step(rig)
+        expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
+        // a real Go: go off for a frame, then on, and 500 ms apart
+        rig.engine.setFrame('all', line, 'o1', { go: false })
+        rig.at(600)
+        rig.engine.setFrame('all', line, 'o1', { go: true })
+        step(rig)
+        expect(rig.engine.state().cubes[0].stop).toBe(null)
     })
 })
