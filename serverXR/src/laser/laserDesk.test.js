@@ -21,8 +21,10 @@ const clock = (bpm = 120, zero = 0) => ({ bpm, zero })
 const fakeEngine = (ids = ['cube-1', 'cube-2', 'cube-3'], { refuse = () => null } = {}) => {
     const calls = []
     const byCube = {}
+    let blackouts = 0
     return {
         calls,
+        blackout: () => { blackouts += 1; for (const k of Object.keys(byCube)) delete byCube[k]; return { ok: true } },
         state: () => ({ zone: { xMin: -1, xMax: 1, yMin: 0, yMax: 1 }, cubes: ids.map((id) => ({ id, name: id, path: null, info: null })) }),
         setFrame: (cube, points, out) => {
             calls.push({ kind: 'frame', cube, points, out })
@@ -32,7 +34,7 @@ const fakeEngine = (ids = ['cube-1', 'cube-2', 'cube-3'], { refuse = () => null 
             return { ok: true }
         },
         alive: (cube, out) => { calls.push({ kind: 'alive', cube, out }); const e = refuse(cube); return e ? { ok: false, error: e } : { ok: true } },
-        frames: () => ({ armed: false, sim: true, all: null, byCube: { ...byCube }, cubes: ids, stopped: {} })
+        frames: () => ({ armed: false, sim: true, all: null, byCube: { ...byCube }, cubes: ids, stopped: {}, blackouts })
     }
 }
 // A desk whose clock and ticks the test drives: no timers run.
@@ -256,10 +258,10 @@ describe('the desk on the engine', () => {
     it('a cube cannot be set smaller than 0.3, where no seed look is stopped as a still beam (review 1218 S3)', () => {
         const engine = fakeEngine()
         const { desk } = deskWith(engine)
-        desk.setCube('cube-1', { size: 0.1 })
-        expect(desk.state().cubes.find((c) => c.id === 'cube-1').size).toBe(0.3)
-        desk.setCube('cube-1', { size: 0 })
-        expect(desk.state().cubes.find((c) => c.id === 'cube-1').size).toBe(0.3)
+        expect(desk.setCube('cube-1', { size: 0.1 })).toMatchObject({ ok: false, status: 400 })
+        expect(desk.state().cubes.find((c) => c.id === 'cube-1').size).toBe(1)
+        expect(desk.setCube('cube-1', { size: 0 })).toMatchObject({ ok: false, status: 400 })
+        expect(desk.state().cubes.find((c) => c.id === 'cube-1').size).toBe(1)
     })
     it('a look on some cubes holds the rest dark; a cube off the desk is let go', () => {
         const engine = fakeEngine()

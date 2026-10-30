@@ -143,17 +143,32 @@ const normaliseLook = (raw = {}, base = LOOK_DEFAULTS) => {
 // (measured: 8 of 32 seed looks stop at 0.1, none at 0.3; review 1218 S3).
 const CUBE_SIZE_MIN = 0.3
 
-/** A cube's place on the desk (CUBE_DEFAULTS, shared/laserLook.cjs), every field in range. */
-const normaliseCube = (raw = {}, base = CUBE_DEFAULTS) => {
+const CUBE_RANGE = Object.freeze({ size: [CUBE_SIZE_MIN, 2], x: [-1, 1], y: [-1, 1], order: [-999, 999] })
+
+/**
+ * A cube's place on the desk (CUBE_DEFAULTS, shared/laserLook.cjs), every field in range. `strict` (a person's change):
+ * a field that is not a number or lies outside its range is REFUSED with a RangeError and nothing changes, never pulled
+ * to the extreme (stage audit 2026-10-30, row 25). The file's own values are read without it (clamped, and said).
+ */
+const normaliseCube = (raw = {}, base = CUBE_DEFAULTS, { strict = false } = {}) => {
     const r = raw && typeof raw === 'object' ? raw : {}
     const pick = (k) => (r[k] !== undefined ? r[k] : base[k])
+    const field = (k, d) => {
+        const [lo, hi] = CUBE_RANGE[k]
+        if (strict && r[k] !== undefined) {
+            const n = num(r[k], NaN)
+            if (!Number.isFinite(n)) throw new RangeError(`${k}: "${String(r[k]).slice(0, 20)}" is not a number`)
+            if (n < lo || n > hi) throw new RangeError(`${k}: ${n} is outside ${lo} to ${hi}; nothing was changed`)
+        }
+        return clamp(num(pick(k), d), lo, hi)
+    }
     return {
         on: bool(pick('on'), true),
         flipX: bool(pick('flipX')),
-        size: clamp(num(pick('size'), 1), CUBE_SIZE_MIN, 2),
-        x: clamp(num(pick('x'), 0), -1, 1),
-        y: clamp(num(pick('y'), 0), -1, 1),
-        order: Math.round(clamp(num(pick('order'), 0), -999, 999))
+        size: field('size', 1),
+        x: field('x', 0),
+        y: field('y', 0),
+        order: Math.round(field('order', 0))
     }
 }
 
@@ -244,7 +259,14 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     try {
         const raw = JSON.parse(fs.readFileSync(file, 'utf8'))
         if (Array.isArray(raw.looks)) show.looks = raw.looks.slice(0, MAX_LOOKS).map((l) => normaliseLook(l)).filter((l) => l.id)
-        if (raw.cubes && typeof raw.cubes === 'object') for (const [id, c] of Object.entries(raw.cubes)) if (idOf(id)) show.cubes[idOf(id)] = normaliseCube(c)
+        if (raw.cubes && typeof raw.cubes === 'object') for (const [id, c] of Object.entries(raw.cubes)) {
+            if (!idOf(id)) continue
+            try { normaliseCube(c, CUBE_DEFAULTS, { strict: true }) } catch (error) {
+                loadMessage = `${loadMessage ? loadMessage + '; ' : ''}desk.json: ${idOf(id)} placement ${error.message.replace('; nothing was changed', '')}; pulled to the nearest edge, check Setup`
+                log?.warn?.(`[laser desk] ${loadMessage}`)
+            }
+            show.cubes[idOf(id)] = normaliseCube(c)
+        }
         show.master = clamp(num(raw.master, 1), 0, 1)
         show.bpm = clamp(num(raw.bpm, 120), BPM_MIN, BPM_MAX)
         clock.bpm = show.bpm
@@ -311,15 +333,20 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         }
         return engine
     }
-    const tick = () => {
+    const tickOnce = () => {
         if (!live) return
         const engine = watchEngine()
-        const cubes = orderedCubes(engine.state().cubes).filter((c) => cubeCfg(c.id).on)
+        const st = engine.state()
+        const zone = st.zone
+        const cubes = orderedCubes(st.cubes).filter((c) => cubeCfg(c.id).on)
         const t = now()
         cubes.forEach((cube, index) => {
             const was = sent.get(cube.id) || { key: null, end: null, held: null, points: 0, at: 0 }
             const drawn = live.cubes === 'all' || live.cubes.includes(cube.id)
-            const raw = blackout || !drawn ? [BLANK] : lookPointsAt(live, { t, clock, index, cube: cubeCfg(cube.id), master: show.master })
+            const stats = { lit: 0, off: 0 }
+            const raw = blackout || !drawn ? [BLANK] : lookPointsAt(live, { t, clock, index, cube: cubeCfg(cube.id), master: show.master, stats })
+            // Lit points the look kept on the field but the engine's keep-in zone will blank (rows 19, 23, 36).
+            const zoneCut = zone ? raw.filter((p) => isLit(p) && (p[0] < zone.xMin || p[0] > zone.xMax || p[1] < zone.yMin || p[1] > zone.yMax)).length : 0
             let points = [BLANK]
             let end = was.end
             if (raw.some(isLit)) {
@@ -328,10 +355,23 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             }
             const key = hashPoints(points)
             const res = key === was.key && !was.held ? engine.alive(cube.id, OUT) : engine.setFrame(cube.id, points, OUT)
+            const count = { lit: points.filter(isLit).length, blanked: zoneCut, offField: stats.off, source: stats.lit }
             sent.set(cube.id, res.ok
-                ? { key, end, held: null, points: points.length, at: t }
-                : { key: null, end: was.end, held: res.error || 'refused', points: 0, at: t })
+                ? { key, end, held: null, points: points.length, at: t, ...count }
+                : { key: null, end: was.end, held: res.error || 'refused', points: 0, at: t, lit: 0, blanked: 0, offField: 0, source: 0 })
         })
+    }
+    // The 50 ms tick never throws: an error is logged once per distinct message and the next tick runs (audit row 29).
+    const tickErrors = new Set()
+    const tick = () => {
+        try { tickOnce() } catch (error) {
+            const message = String(error?.message || error)
+            if (!tickErrors.has(message)) {
+                if (tickErrors.size >= 50) tickErrors.clear()
+                tickErrors.add(message)
+                log?.warn?.(`[laser desk] tick failed: ${message} (the desk keeps ticking)`)
+            }
+        }
     }
 
     const startTicking = () => {
@@ -346,6 +386,8 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         const was = live !== null
         live = null
         liveId = null
+        // Release also lifts the desk's blackout (the top-bar Blackout button only ever turns it on; audit row 30).
+        blackout = false
         if (timer) { stopEvery(timer); timer = null }
         // Only cubes the desk drew on are touched: a desk that never drew must not build an engine to say so.
         if (sent.size) {
@@ -581,6 +623,8 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     const setBlackout = (on) => {
         if (typeof on !== 'boolean') return { ok: false, status: 400, error: 'on: true or false' }
         blackout = on
+        // Blackout reaches the engine itself, whether the desk is released or another Out drives a cube (audit row 10).
+        if (on) { getEngine().blackout(); watchEngine() }
         tick()
         return { ok: true, blackout }
     }
@@ -618,7 +662,12 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         const known = getEngine().state().cubes.some((c) => c.id === key)
         if (!known) return { ok: false, status: 404, error: `no cube "${id}"` }
         const wasOn = cubeCfg(key).on
-        show.cubes[key] = normaliseCube(fields, cubeCfg(key))
+        let next
+        try { next = normaliseCube(fields, cubeCfg(key), { strict: true }) } catch (error) {
+            if (error instanceof RangeError) return { ok: false, status: 400, error: `cube ${key}: ${error.message}` }
+            throw error
+        }
+        show.cubes[key] = next
         // Switched off on the desk: dark now, then the desk lets go of it.
         if (wasOn && !show.cubes[key].on && sent.has(key)) {
             if (!sent.get(key).held) getEngine().setFrame(key, [BLANK], OUT)
@@ -670,7 +719,16 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             canRedo: future.length > 0,
             cubes: orderedCubes(engine.cubes).map((c) => {
                 const s = sent.get(c.id)
-                return { id: c.id, ...cubeCfg(c.id), driving: Boolean(live && s && !s.held), held: s?.held ?? null, points: s?.points ?? 0 }
+                const sending = Boolean(live && s && !s.held)
+                const lit = sending ? s.lit : 0
+                const cut = sending ? s.offField + s.blanked : 0
+                return {
+                    id: c.id, ...cubeCfg(c.id),
+                    // `driving` is true only while something is LIT; a cube the desk feeds a dark picture is `dark` (rows 19, 24).
+                    driving: lit > 0, dark: sending && lit === 0, held: s?.held ?? null, points: s?.points ?? 0,
+                    lit, blanked: sending ? s.blanked : 0, offField: sending ? s.offField : 0,
+                    offPercent: sending && s.source > 0 ? Math.min(100, Math.round((100 * cut) / s.source)) : 0
+                }
             })
         }
     }
