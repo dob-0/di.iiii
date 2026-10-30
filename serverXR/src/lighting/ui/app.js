@@ -4261,6 +4261,12 @@ function safeBuild(name, fn) {
   }
 }
 
+// The wire the frames really leave on, named for the title line: pure, so test-wire can run it.
+function wireName(driver, serialPort) {
+  if (driver === 'enttec') return `ENTTEC on ${serialPort || 'no port'}`;
+  return driver === 'sacn' ? 'sACN' : 'Art-Net';
+}
+
 function renderAll(busy) {
   const st = S.status;
   const wire = S.output.driver === 'enttec'
@@ -4268,6 +4274,9 @@ function renderAll(busy) {
     : `${S.output.mode} · ${st.nodes.length} node${st.nodes.length === 1 ? '' : 's'}`;
   const whose = S.show && S.show.space && window.deskShow ? window.deskShow.whose(S.show) + ' · ' : '';
   $('#showName').textContent = `— ${whose}${S.fixtures.length} fixtures · ${st.universes.length} universe${st.universes.length === 1 ? '' : 's'} · ${wire}`;
+  const wl = wireName(S.output.driver, S.output.serialPort);
+  $('#wireLine').textContent = `· ${wl}`;
+  document.title = `Light · ${wl}`;
   paintShow(S.show);
   // Go steps the desk's SCENES, so with none it would press and do nothing: hide it then.
   // (MOXIR UI audit, 2026-10-01)
@@ -5543,9 +5552,11 @@ $('#identify').addEventListener('click', async () => {
   const at = new Date().toLocaleTimeString();
   if (!r.ok) { line.innerHTML = `<span class="bad">${esc(r.error || 'no widget on that port')}</span> <span class="muted">· ${at}</span>`; return; }
   const name = (r.device && r.device.device) || 'serial port';
-  line.innerHTML = r.looksLikeEnttec
-    ? `<span class="good">ENTTEC widget found</span> <span class="muted">· ${esc(name)} · serial ${esc(r.serial)} · ${r.baud} baud · ${at}</span>`
-    : `<span class="warn">Port opens, but this is not an ENTTEC widget</span> <span class="muted">· ${esc(name)}${r.serial ? ' · serial ' + esc(r.serial) : ''} · ${at}</span>`;
+  const sub = `${esc(name)}${r.serial ? ' · serial ' + esc(r.serial) : ''}${r.baud ? ' · ' + r.baud + ' baud' : ''} · ${at}`;
+  if (r.held) { line.innerHTML = `<span class="warn">${esc(r.label)}</span> <span class="muted">· ${sub}</span>`; return; }
+  line.innerHTML = r.protocol === false
+    ? `<span class="warn">${esc(r.label)}</span> <span class="muted">· port opens · ${sub}</span>`
+    : `<span class="good">${esc(r.label)}</span> <span class="muted">· ${sub}</span>`;
 });
 
 $('#snap').addEventListener('change', (e) => {

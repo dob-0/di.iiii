@@ -19,3 +19,5 @@ in plain words. It is on `GET /api/state` (`status.bus`) and `GET /api/summary` 
 to "<name> unreachable" with the reasons in its tooltip. An Art-Net node that never answered ArtPoll is not called unreachable (most
 ignore it); one that answered and went quiet for 20 s is. `showBackup.js` copies the show into `backups/` (newest 20) before the desk
 leaves it for another show; before a manual reset run `node tools/backup-show.js <data dir>`.
+
+**Title and Identify.** The desk's title is "Light" with the show name, and a line beside it names the wire in use from the live output: "Art-Net", "ENTTEC on /dev/ttyUSB0" or "sACN" (the page title follows). Identify decides by the protocol: it asks the port for the widget's parameters and accepts a well-formed reply, so our vizzz node (1a86:7523) reads "ENTTEC protocol · vizzz node", an FTDI original "ENTTEC DMX USB Pro", and a silent port "no answer on <port>"; a port the live output holds is never opened for the probe.
