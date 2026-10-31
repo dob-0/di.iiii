@@ -634,7 +634,7 @@ describe('the music (2026-10-31, the owner: "add audio analyze fully bpm sync as
 
 describe('the desk page on a phone (docs/ai/known-fixes.md: "Setup squeezed its panes on a phone")', () => {
     it('keeps every Setup pane as tall as it needs, so the cube table and the mapping square are not squeezed under Safety', () => {
-        const css = fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), 'ui', 'desk.css'), 'utf8')
+        const css = fs.readFileSync(require.resolve('./ui/desk.css'), 'utf8')
         const start = css.indexOf('@media (max-width: 760px) {')
         expect(start).toBeGreaterThan(-1)
         let depth = 0
