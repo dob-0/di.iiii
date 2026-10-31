@@ -136,6 +136,7 @@ const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { registerLaserRoutes } = require('./routes/laserRoutes')
+const { registerShowDeskRoutes } = require('./routes/showDeskRoutes')
 const { registerOscRoutes } = require('./routes/oscRoutes')
 const { registerNdiRoutes, scanAtBootFrom } = require('./routes/ndiRoutes')
 const { hasLocalRuntime } = require('./localRuntimeGuard')
@@ -534,6 +535,11 @@ const lasers = registerLaserRoutes(app, {
 // One scene drives both (2026-10-31, ledger N1587): a light scene recall puts the look that follows it live on the laser
 // desk when its switch is on (desk.json followLight) and the request passed the lasers' own guards. laser/sceneLink.js.
 require('./laser/sceneLink').linkLightToLaser({ lighting, lasers, log: logger })
+
+// The show desk (serverXR/src/showDesk, 2026-10-31) at /show/ — the lighting desk and the laser desk on one page. Only files: the
+// page sends the two desks' own routes from this same origin, so their guards apply as on their own pages. Mounted under the
+// base path only (a bare /show could shadow a space of that name). routes/showDeskRoutes.js.
+registerShowDeskRoutes(app, { mountPaths: [`${config.mountPath || ''}/show`.replace(/\/+/g, '/')] })
 
 // OSC (serverXR/src/osc) at /osc — the OSC In and OSC Out nodes' UDP, which a page cannot
 // open: the lasers' twin in shape (built on first use, local-only, 404 hosted).

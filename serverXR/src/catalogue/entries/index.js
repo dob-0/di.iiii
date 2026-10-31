@@ -14,6 +14,7 @@ const entries = {
   platform: require("./platform"),
   projects: require("./projects"),
   rig: require("./rig"),
+  showDesk: require("./showDesk"),
   spaces: require("./spaces")
 }
 

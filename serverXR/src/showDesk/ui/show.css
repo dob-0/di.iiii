@@ -1,0 +1,94 @@
+/* The show desk (showDesk/ui): one page for the lighting desk and the laser desk, one screen, no page scroll.
+   It loads the laser desk's stylesheet first (../laser/desk.css: the tokens, buttons, the top bar, the di.iiii mark, the
+   panes, the pill, the scene buttons and their marks) and only lays the page out here: no colour or font of its own.
+   Five rows: the top line, the status line, the scenes, the two halves, the links. The fixed rows are tokens, so
+   serverXR/src/showDesk/showDesk.test.js adds them up against a 758 px screen (jsdom has no layout engine). Square corners,
+   no animation, no transition: the only thing that moves is the laser preview. */
+:root {
+  --top-h: 60px;
+  --status-h: 30px;
+  --scenes-h: 176px;   /* the head and two rows of scene buttons; more scenes scroll inside the row, never the page */
+  --links-h: 34px;
+  --halves-min: 300px; /* the least the two halves are given */
+  --target: 44px;      /* a button the hand finds in the dark: at least 40 px */
+  --scene-btn-h: 62px;
+}
+html, body.showdesk { height: 100%; overflow: hidden; }
+body.showdesk {
+  display: grid; height: 100vh; min-height: 0; overflow: hidden; font-size: 14px;
+  grid-template-rows: var(--top-h) var(--status-h) var(--scenes-h) minmax(var(--halves-min), 1fr) var(--links-h);
+}
+body.showdesk button { min-height: var(--target); font-size: 14px; }
+body.showdesk input[type=range] { height: var(--target); accent-color: var(--accent); margin: 0; cursor: pointer; }
+
+/* ---- the top line: the mark, the title, what is on, and Blackout all at the far right in a fixed place */
+.showbar { position: static; flex-wrap: nowrap; align-items: center; gap: 14px; min-height: 0; height: var(--top-h); padding-right: 10px; }
+.showbar .title { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; flex: none; }
+.onnow { flex: 1 1 0; min-width: 0; margin: 0; display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+.onnow .nowpart { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.onnow .sep { color: var(--muted); flex: none; }
+.onnow .nowlaser { flex: none; font-size: 18px; padding: 6px 12px; border: 1px solid var(--line); }
+.blackoutall { flex: none; width: 220px; height: var(--target); font-size: 16px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.blackoutall .sub { display: block; font-size: 10px; font-weight: 500; letter-spacing: .02em; text-transform: none; }
+
+/* ---- the status line: what the last press did, or why it did not */
+.status { margin: 0; padding: 0 12px; line-height: var(--status-h); height: var(--status-h); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-bottom: 1px solid var(--line); color: var(--muted); }
+.status.is-ok { color: var(--text); }
+.status.is-error { background: #2a2210; color: #ffe7b8; }
+
+/* ---- scenes: the laser desk's scene buttons, bigger */
+.showscenes { border-width: 0 0 1px; min-height: 0; overflow: hidden; }
+.showscenes .panehead { padding: 6px 10px; }
+.showscenes .scenegrid {
+  --scene-h: var(--scene-btn-h);
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 6px; padding: 6px 8px;
+  max-height: calc(var(--scene-h) * 2 + 6px * 3); overflow-y: auto; min-height: 0;
+}
+.showscenes .scenebtn { gap: 3px; padding: 4px 8px; }
+.showscenes .scenebtn .scenename { font-size: 15px; }
+.showscenes .scenebtn .scenelook { font-size: 12px; }
+.showscenes .scenebtn .tag { font-size: 10px; }
+.scenedots { display: flex; gap: 4px; height: 8px; }
+.scenedots i { width: 8px; height: 8px; border: 1px solid var(--line); flex: none; }
+.scenebtn.is-busy { border-style: dashed; }
+
+/* ---- the two halves */
+.halves { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; min-height: 0; overflow: hidden; }
+.half { min-height: 0; overflow: hidden; }
+.halfhead { align-items: center; flex-wrap: nowrap; gap: 12px; min-height: 58px; }
+.halfhead h2 { font-size: 14px; flex: none; }
+.fader { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.halfhead .fader { flex: 1 1 auto; }
+.halfhead .fader input { flex: 1 1 auto; min-width: 80px; width: auto; }
+.fader b { font: 500 13px var(--mono); color: var(--text); width: 40px; text-align: right; flex: none; }
+.holdbtn { flex: none; }
+.lookname { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.halfnote { margin: 0; padding: 8px 10px; font-size: 13px; border-bottom: 1px solid var(--line); }
+
+.lamps { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 6px 10px; display: flex; flex-direction: column; gap: 6px; }
+.lamp { display: grid; grid-template-columns: var(--target) minmax(110px, 160px) 1fr 44px; align-items: center; gap: 10px; min-height: 56px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.lamp .swatch { width: var(--target); height: var(--target); border: 1px solid var(--line); background: var(--field); }
+.lamp .who { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lamp .who b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lamp .who span { font: 12px var(--mono); color: var(--muted); }
+.lamp b.val { font: 500 13px var(--mono); text-align: right; }
+
+.lasers { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 6px 10px; display: flex; flex-direction: column; gap: 8px; }
+.cubecard { flex: 1 1 auto; min-height: 220px; display: grid; grid-template-columns: minmax(200px, 1fr) minmax(160px, 1.1fr); gap: 10px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.cubecard .controls { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.cubecard .cubename { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.cubecard .cubename b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cubecard .cubestate { font-size: 18px; font-weight: 700; }
+.cubecard .cubestate.is-armed { color: #ffd9d5; }
+.cubecard .cubestate.is-warn { color: var(--warn); }
+.cubecard .onoff { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cubecard .onoff button { min-height: 56px; font-size: 18px; font-weight: 700; }
+.cubecard .stopline { margin: 0; font-size: 12px; color: var(--warn); }
+.cubecard .preview { position: relative; min-height: 0; background: var(--stagebg); border: 1px solid var(--line); }
+.cubecard .preview canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cubecard .preview .cap { position: absolute; left: 6px; top: 4px; font-size: 11px; color: var(--muted); }
+
+/* ---- the links to the full desks */
+.links { display: flex; align-items: center; gap: 18px; padding: 0 12px; border-top: 1px solid var(--line); background: var(--bar); font-size: 13px; overflow: hidden; white-space: nowrap; }
+.links a { color: var(--text); text-decoration: none; border: 1px solid var(--line); padding: 4px 10px; }
+.links a:hover { border-color: var(--accent); color: var(--accent); }

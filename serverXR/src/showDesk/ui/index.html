@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060607">
+<meta name="color-scheme" content="dark">
+<title>Show desk</title>
+<link rel="stylesheet" href="../laser/desk.css">
+<link rel="stylesheet" href="show.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3' y='17' width='10' height='12' fill='%2335d2dd'/><path d='M18 28 L29 5' stroke='%23ff2030' stroke-width='4'/></svg>">
+</head>
+<body class="showdesk">
+
+<!-- The show desk (serverXR/src/showDesk, 2026-10-31): the lighting desk and the laser desk on one page, for the person who
+     runs the show. It has no route of its own: every press is one of the two desks' own routes (../light/api/…,
+     ../laser/…), sent from this same origin, so their guards apply exactly as on their own pages. Nothing here posts
+     without a press; On is always a person's press on one cube; a guard's stop is shown, never lifted. -->
+<header class="topbar showbar">
+  <a class="homelink" href="/spaces" title="Back to di.iiii — your spaces">di.iiii</a>
+  <h1 class="title">Show desk</h1>
+  <p class="onnow" id="onNow" aria-live="polite">
+    <span class="nowpart" id="nowScene" title="The scene on the lights">…</span><span class="sep">·</span><span class="nowpart" id="nowLook" title="The look on the laser">…</span><span class="sep">·</span><b class="pill nowlaser" id="nowLaser" title="Whether any cube is On">Laser Off</b>
+  </p>
+  <button id="blackoutAll" class="danger topbo blackoutall" type="button" title="Lights and laser dark in one press (each desk's own Blackout). Press again to lift both. A second press within a moment is ignored.">Blackout all</button>
+</header>
+
+<p class="status" id="status" role="status"></p>
+
+<section class="pane showscenes" aria-label="Scenes">
+  <div class="panehead"><h2>Scenes</h2><span class="muted" id="scenesNote">Asking the lighting desk…</span></div>
+  <div class="scenegrid" id="scenes"></div>
+</section>
+
+<main class="halves">
+  <section class="pane half" id="lightsHalf" aria-label="Lights">
+    <div class="panehead halfhead">
+      <h2>Lights</h2>
+      <label class="fader master" title="The lighting desk's master: every lamp">
+        <span>Master</span><input id="lightMaster" type="range" min="0" max="255" step="1" value="255"><b id="lightMasterVal"></b>
+      </label>
+      <button id="releaseHolds" class="holdbtn" type="button" title="Let go of the channels held by hand on the lighting desk, so the scenes reach every lamp again" disabled>Release holds (0)</button>
+      <button id="releaseAllHolds" class="holdbtn" type="button" hidden>Release all holds</button>
+    </div>
+    <p class="muted halfnote" id="lightsNote" hidden></p>
+    <div class="lamps" id="lamps"></div>
+  </section>
+
+  <section class="pane half" id="laserHalf" aria-label="Laser">
+    <div class="panehead halfhead">
+      <h2>Laser</h2>
+      <label class="fader master" title="The laser desk's master: every cube">
+        <span>Master</span><input id="laserMaster" type="range" min="0" max="1" step="0.01" value="1"><b id="laserMasterVal"></b>
+      </label>
+      <span class="muted lookname" id="lookName"></span>
+    </div>
+    <p class="muted halfnote" id="laserNote" hidden></p>
+    <div class="lasers" id="lasers"></div>
+  </section>
+</main>
+
+<nav class="links" aria-label="The full desks">
+  <a href="../laser/">Laser desk</a>
+  <a href="../light/">Light desk</a>
+  <span class="muted">Each opens the full desk, with every tool.</span>
+</nav>
+
+<script src="../light/colour.js"></script>
+<script src="../laser/drawRuns.js"></script>
+<script src="../laser/sceneRow.js"></script>
+<script src="show.js"></script>
+</body>
+</html>

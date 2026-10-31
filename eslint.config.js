@@ -110,8 +110,9 @@ export default [
         // The lighting desk's interface (serverXR/src/lighting/ui) is plain browser
         // JavaScript the desk serves as files — no bundler, no modules — so it gets
         // browser globals, and the desk's own style keeps a named catch parameter.
-        // The laser desk's page (serverXR/src/laser/ui, 2026-10-29) is the same kind of file.
-        files: ['serverXR/src/lighting/ui/**/*.js', 'serverXR/src/laser/ui/**/*.js'],
+        // The laser desk's page (serverXR/src/laser/ui, 2026-10-29) is the same kind of file, and so is the show desk's
+        // (serverXR/src/showDesk/ui, 2026-10-31).
+        files: ['serverXR/src/lighting/ui/**/*.js', 'serverXR/src/laser/ui/**/*.js', 'serverXR/src/showDesk/ui/**/*.js'],
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'script',

@@ -2041,6 +2041,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-31'
     },
     {
+        id: 'show-desk',
+        category: 'Spaces & access',
+        title: 'The show desk',
+        summary: 'One screen for the person who runs a show: the lighting desk’s scenes and lamps and the laser desk’s cubes side by side, with one Blackout for both, at /serverXR/show/ on a di.iiii running on your own machine.',
+        body: [
+            'A di.iiii running on your own machine has a show desk at /serverXR/show/, beside the lighting desk (/light) and the laser desk (/laser). It is made for the night itself: one screen, no scrolling, big buttons you can find in a dark room. It keeps nothing of its own. Everything you press on it is the lighting desk’s or the laser desk’s own control, so each desk’s rules apply as they do on its own page, and the full desks are one click away in the row at the bottom (Laser desk, Light desk).',
+            'The top line says what is on: the scene on the lights, the look on the laser, and Laser On or Laser Off in big letters. At its right end, always in the same place, is Blackout all: one press puts the lights and the laser dark (each desk’s own Blackout); the button then says Lift blackout, and a second press lifts both. A second press within a moment is ignored, so a double-click never lifts the blackout it just set. When the laser desk’s Blackout switches the cubes off, lifting it leaves them Off until you press On.',
+            'Scenes are the lighting desk’s scenes, in its order. Each button shows the scene’s name, the laser look that follows it (set on the laser desk: Follows light scene) and small squares in the colours of the lamps in that scene. A press recalls the scene on the lights and puts its look on the laser: the same two steps as the Scenes row on the laser desk. The scene on the lights is marked; LIVE marks the scene whose look is on the laser. The line under the top bar says what the press did, or why a desk refused it.',
+            'Lights, the left half: a fader for every lamp the lighting desk has patched, any number and any kind, with a square that shows the colour it sends right now; the lighting desk’s Master; and Release holds with the number of channels held by hand. A channel held by hand beats every scene, so when a scene does not reach a lamp, look at that number first. Release all holds appears when a script or another page holds channels too.',
+            'Laser, the right half: for every cube, big On and Off buttons, its size and a small picture of what it draws now, with the laser desk’s Master and the name of the look on the cubes. On is always your press, one cube at a time; nothing on this page turns a cube on by itself. When a guard stops a cube (a still beam, a lost signal), its card says so; lift it on the Laser desk. The picture is calm: twice a second while every cube is Off, about twelve times a second while one is On, and still while the page is hidden.',
+            'With no lamps patched, no cubes set up, or a desk that does not answer, that half says so in plain words and the other half works on. The page reads each desk once a second and stops reading while it is hidden.'
+        ],
+        tags: ['show', 'desk', 'light', 'laser', 'lasercube', 'scenes', 'blackout', 'live', 'performance', 'safety'],
+        updated: '2026-10-31'
+    },
+    {
         id: 'lamp-node',
         category: 'Editing',
         title: 'Lamp — one stage lamp in the Nodes scene',
