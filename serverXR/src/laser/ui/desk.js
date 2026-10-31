@@ -254,9 +254,102 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         if (tileClock.bpm !== desk.bpm || Math.abs(zero - tileClock.zero) > 30) { tileClock.bpm = desk.bpm; tileClock.zero = zero }
     }
     let tilesDrawnAt = 0
+
+    // ---- calm drawing (2026-10-31; the rules and the why are in drawCalm.js). calm is the default: a tile is a still picture,
+    // drawn again only when its look, its size or the beat changes; the tile on the laser, the tile open in Edit and the tile
+    // under the pointer play. full keeps the older motion exactly (every tile on screen plays). The choice is kept per browser.
+    const calm = window.DiLaserCalm || null // a page that did not load drawCalm.js keeps the older motion
+    const MOTION_KEY = 'diLaserDeskMotion'
+    const storedMotion = () => { try { return window.localStorage.getItem(MOTION_KEY) } catch { return null } }
+    let motion = calm ? calm.normaliseMode(storedMotion()) : 'full'
+    let paintedKey = new WeakMap() // canvas → what its picture was last drawn from; the same picture is not drawn again
+    let hoverId = null // the tile under the pointer
+    let stillsChecked = { at: 0, key: '' }
+    let previewDrawnAt = 0
+    const sizeKey = (canvas) => `${canvas.clientWidth}x${canvas.clientHeight}@${Math.min(2, window.devicePixelRatio || 1)}`
+    // A moving picture (a playing tile, the Preview, a stage cube): drawn unless its points, size, box and zone are what the canvas shows.
+    const paintMoving = (canvas, points, opts) => {
+        const key = `m|${calm.frameHash(points)}|${sizeKey(canvas)}|${calm.zoneKey(opts.zone)}|${opts.box ? opts.box.join(',') : ''}`
+        if (paintedKey.get(canvas) === key) return
+        paintedKey.set(canvas, key)
+        drawFrame(canvas, points, opts)
+    }
+    // A still tile: the look at beat 0, drawn only when the look, the beat or the tile's size changed since.
+    const paintStill = (canvas, look) => {
+        const key = `s|${JSON.stringify(look)}|${tileClock.bpm}|${sizeKey(canvas)}`
+        if (paintedKey.get(canvas) === key) return
+        paintedKey.set(canvas, key)
+        const points = window.DiLaser.lookPointsAt({ ...look, points: Math.min(look.points, 240) }, { t: tileClock.zero, clock: tileClock })
+        drawFrame(canvas, points, { box: window.DiLaser.lookBox(look) })
+    }
+    const playCalm = (now) => {
+        const state = { liveId: desk.liveId, selected, hoverId }
+        const key = `${state.liveId}|${state.selected}|${state.hoverId}`
+        const playDue = now - tilesDrawnAt >= calm.PLAY_MS
+        const stillsDue = key !== stillsChecked.key || now - stillsChecked.at >= calm.STILL_CHECK_MS
+        if (playDue || stillsDue) {
+            if (playDue) tilesDrawnAt = now
+            if (stillsDue) stillsChecked = { at: now, key }
+            const t = Date.now()
+            for (const look of desk.looks) {
+                const canvas = tileCanvases.get(look.id)
+                if (!canvas || (tileWatch && !tilesOnScreen.has(canvas))) continue
+                const plays = calm.tilePlays('calm', look.id, state)
+                const tile = canvas.closest('.tile')
+                if (tile && tile.classList.contains('is-playing') !== plays) tile.classList.toggle('is-playing', plays)
+                if (plays) {
+                    if (playDue) paintMoving(canvas, window.DiLaser.lookPointsAt({ ...look, points: Math.min(look.points, 240) }, { t, clock: tileClock }), { box: window.DiLaser.lookBox(look) })
+                } else if (stillsDue || !paintedKey.has(canvas)) paintStill(canvas, look)
+            }
+        }
+        const look = editing()
+        const preview = $('preview')
+        if (look && preview.offsetParent && now - previewDrawnAt >= calm.PREVIEW_MS) {
+            previewDrawnAt = now
+            paintMoving(preview, window.DiLaser.lookPointsAt(look, { t: Date.now(), clock: tileClock, index: 0, cube: desk.cubes[0] }), { zone: engine?.zone })
+        }
+    }
+    // The Preview counts as in use while a look is open in Edit and the Edit pane is on screen.
+    const previewInUse = () => Boolean(editing()) && Boolean($('preview').offsetParent)
+    const stageMs = () => (calm
+        ? calm.stageIntervalMs({ mode: motion, armed: Boolean(engine?.cubes.some((c) => c.armed)), previewInUse: previewInUse() })
+        : VIEW_MS)
+    const motionButtons = new Map()
+    const applyMotion = () => {
+        document.body.dataset.motion = motion
+        paintedKey = new WeakMap() // whatever the other mode drew is not trusted
+        stillsChecked = { at: 0, key: '' }
+        for (const [m, b] of motionButtons) { b.classList.toggle('is-on', m === motion); b.setAttribute('aria-pressed', String(m === motion)) }
+        if (motion === 'full') for (const tile of $('tiles').children) tile.classList.remove('is-playing')
+    }
+    const setMotion = (next) => {
+        motion = calm ? calm.normaliseMode(next) : 'full'
+        try { window.localStorage.setItem(MOTION_KEY, motion) } catch { /* this browser keeps no setting: the choice lasts until the page reloads */ }
+        applyMotion()
+    }
+    if (calm) {
+        const box = el('div', { class: 'chips motion', role: 'group', 'aria-label': 'Motion', title: 'calm: pictures hold still except the look on the laser, the look open in Edit and the one under the pointer. full: every picture moves all the time (heavier on the computer).' },
+            el('span', { class: 'muted', text: 'Motion' }))
+        for (const m of calm.MODES) {
+            const b = el('button', { class: 'chip', type: 'button', text: m, title: m === 'calm' ? 'Pictures hold still, except the look on the laser, the look open in Edit and the one under the pointer' : 'Every picture moves all the time', onclick: () => setMotion(m) })
+            // As tall as the header's own line, so the control costs the tile bank no row (desk.css is not touched; CSSOM, never a style attribute).
+            Object.assign(b.style, { minHeight: '0', padding: '0 6px', lineHeight: '14px', fontSize: '11px' })
+            motionButtons.set(m, b)
+            box.append(b)
+        }
+        $('liveName').after(box)
+        $('tiles').addEventListener('pointerover', (e) => { hoverId = e.target.closest?.('.tile')?.dataset.id ?? null })
+        $('tiles').addEventListener('pointerleave', () => { hoverId = null })
+    }
+    applyMotion()
+
     const playTiles = (now) => {
-        requestAnimationFrame(playTiles)
-        if (!window.DiLaser || !desk || page !== 'control' || document.hidden || now - tilesDrawnAt < TILE_MS) return
+        // calm asks for a frame about every 33 ms, not 60 times a second; full asks as it always did.
+        if (calm && motion === 'calm') setTimeout(() => requestAnimationFrame(playTiles), calm.TICK_MS)
+        else requestAnimationFrame(playTiles)
+        if (!window.DiLaser || !desk || page !== 'control' || document.hidden) return
+        if (calm && motion === 'calm') { playCalm(now); return }
+        if (now - tilesDrawnAt < TILE_MS) return
         tilesDrawnAt = now
         const t = Date.now()
         for (const look of desk.looks) {
@@ -557,11 +650,15 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
             viewBusy = true
             try {
                 const v = await get('desk/api/view')
-                for (const [id, { canvas }] of stageCanvases) drawFrame(canvas, v.cubes[id], { zone: engine?.zone })
+                for (const [id, { canvas }] of stageCanvases) {
+                    // calm: a cube whose picture did not change since the last answer is not drawn again.
+                    if (calm && motion === 'calm') paintMoving(canvas, v.cubes[id], { zone: engine?.zone })
+                    else drawFrame(canvas, v.cubes[id], { zone: engine?.zone })
+                }
             } catch { /* the stage waits for the server */ }
             viewBusy = false
         }
-        setTimeout(pollView, VIEW_MS)
+        setTimeout(pollView, stageMs())
     }
 
     // ---- setup
