@@ -107,9 +107,14 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .removebtns { display: flex; gap: 8px; flex-wrap: wrap; }
 .removebtns button { min-height: 36px; padding: 6px 14px; }
 /* A link can propose a look set (?set=..., 2026-10-31): the same square question; one row per look: the new look's picture, name and id, now → new. */
+/* The question fits its pane: it shrinks (the list and the about lines scroll), so its title, note and buttons stay in view
+   on a short Looks pane (seen 2026-10-31 at 1278x758: the buttons fell under the Stage pane). */
+.setask { display: flex; flex-direction: column; flex: 0 0.001 auto; min-height: 0; overflow: hidden; } /* the tiles give way first */
+.setask > h2, .setask > .removenote, .setask > .removebtns { flex: none; }
+.setabout { flex: 0 1 auto; min-height: 1.6em; overflow: auto; }
 .setabout { margin: 0 0 8px; }
 .setabout p { margin: 0 0 2px; color: var(--muted); font-size: 13px; }
-.setlist { list-style: none; margin: 0 0 8px; padding: 0; max-height: 42vh; overflow: auto; }
+.setlist { flex: 1 1 auto; min-height: 52px; list-style: none; margin: 0 0 8px; padding: 0; max-height: 42vh; overflow: auto; }
 .setlist li { display: grid; grid-template-columns: 72px 1fr; column-gap: 10px; align-items: center; padding: 4px 0; border-top: 1px solid var(--line); }
 .setlist .setpic { grid-row: 1 / span 2; width: 72px; height: 44px; background: var(--stagebg); }
 .setlist .sethead, .setlist .setchange { min-width: 0; overflow-wrap: anywhere; }
