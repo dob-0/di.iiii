@@ -109,7 +109,7 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 /* A link can propose a look set (?set=..., 2026-10-31): the same square question; one row per look: the new look's picture, name and id, now → new. */
 /* The question fits its pane: it shrinks (the list and the about lines scroll), so its title, note and buttons stay in view
    on a short Looks pane (seen 2026-10-31 at 1278x758: the buttons fell under the Stage pane). */
-.setask { display: flex; flex-direction: column; flex: 0 0.001 auto; min-height: 0; overflow: hidden; } /* the tiles give way first */
+.setask { display: flex; flex-direction: column; flex: none; max-height: calc(100% - 52px); min-height: 0; overflow: hidden; } /* never taller than the pane under its head: the tiles give way, the about lines and the list scroll */
 .setask > h2, .setask > .removenote, .setask > .removebtns { flex: none; }
 .setabout { flex: 0 1 auto; min-height: 1.6em; overflow: auto; }
 .setabout { margin: 0 0 8px; }
