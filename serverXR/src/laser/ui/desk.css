@@ -222,3 +222,7 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
   .swatch, .swatches input[type=color] { height: 40px; }
   #page-setup { display: flex; flex-direction: column; }
 }
+
+/* ---- Follow light scenes (2026-10-31, the scene link): what the switch followed last, and the Edit select */
+.followstatus { font-size: 11px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#followsScene { width: 100%; border-radius: 0; }

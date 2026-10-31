@@ -94,6 +94,11 @@ const FIND_GAP_MS = 5000
 //   GET  /laser/lib/laser.js    the desk's drawing code for the page (window.DiLaser): its tiles play the looks
 // The desk is built on its first request, never at boot, and a start finds it RELEASED: nothing on the cubes until a
 // look is pressed. Its frames meet every rule of the engine (zone, guards, arming, one Out per cube) like any other.
+// The scene link (2026-10-31, laser/sceneLink.js): a light scene recall puts the look that follows it live on the desk,
+// when the switch is on and the recall's request passes this lane's own Go guards (originOf below).
+//   POST /laser/desk/api/follow          { on: true | false }: the switch, saved in desk.json (default off)
+//   POST /laser/desk/api/looks/follows   { id, scene }: the light scene one look follows ('' = none)
+//   GET  /laser/desk/api/follows         { on, links: { <scene id>: { look, name } } }: for the light desk's page
 // Who may call what (2026-10-14, review round 2): GET state and frames answer as before
 // (requireLocalRuntime). EVERY POST first passes requireOwnPage: Host is one of this machine's own
 // names and Origin (or Referer) is that same origin, so no other website and no rebound name can
@@ -123,7 +128,7 @@ const buildDeskLib = () => {
   ].join('\n')
 }
 
-function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engineOptions = {}, findCubes, probeCube, now = Date.now, loadDocument } = {}) {
+function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engineOptions = {}, findCubes, probeCube, now = Date.now, loadDocument, lightScenes = null } = {}) {
   const laserDir = path.join(dataDir, 'laser')
   const needToken = tokenGate(ensureToken(laserDir).token)
   let engine = null
@@ -145,8 +150,33 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   const getDesk = () => {
     if (desk) return desk
     const { createLaserDesk } = require('../laser/laserDesk')
-    desk = createLaserDesk({ dataDir: laserDir, getEngine, now, log })
+    desk = createLaserDesk({ dataDir: laserDir, getEngine, now, log, lightScenes })
     return desk
+  }
+  // ---- WHOSE HAND A LIGHT SCENE RECALL IS (2026-10-31, the scene link: laser/sceneLink.js). A recall on the light desk may
+  // move this desk's live look only when its request is one THIS lane would take for a Go. It is judged by the laser's own
+  // guards, run as they are (no copy of their rules): requireLocalRuntime (the mount), requireOwnPage (every POST), the
+  // token (needToken: every POST that makes light) and requireSameMachine (the Go route). All pass: 'page' when it came
+  // with an Origin or Referer (di's own page), else 'token' (no Origin: it carried the local token). Any refusal: null.
+  const sink = new Proxy(function () {}, { get: (_t, key) => (key === 'then' ? undefined : sink), apply: () => sink })
+  const passes = (guard, req) => {
+    let ok = false
+    try { guard(req, sink, (error) => { ok = error === undefined }) } catch { ok = false }
+    return ok
+  }
+  const GO_GUARDS = [requireLocalRuntime, requireOwnPage, needToken, requireSameMachine]
+  const originOf = (req) => {
+    if (!req || !req.headers) return null
+    if (!GO_GUARDS.every((guard) => passes(guard, req))) return null
+    return req.headers.origin !== undefined || req.headers.referer !== undefined ? 'page' : 'token'
+  }
+  // The desk when the link can act: built, or desk.json says the switch is on. A machine with the link off builds and writes nothing.
+  const followingDesk = () => {
+    if (desk) return desk
+    try {
+      const raw = JSON.parse(fs.readFileSync(path.join(laserDir, 'desk.json'), 'utf8'))
+      return raw?.followLight === true ? getDesk() : null
+    } catch { return null }
   }
   // Disarm, close and forget the engine; the next request builds it from laser.json again.
   const reload = async () => {
@@ -334,6 +364,10 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   router.post('/desk/api/bpm', requireSameMachine, (req, res) => answer(res, req.body?.tap ? getDesk().tap() : getDesk().setBpm(req.body?.bpm)))
   router.post('/desk/api/cube', requireSameMachine, (req, res) => answer(res, getDesk().setCube(req.body?.id, req.body || {})))
   router.post('/desk/api/setting', requireSameMachine, (req, res) => answer(res, getDesk().setBlackoutKeepsArm(req.body?.blackoutKeepsArm)))
+  // The scene link (laser/sceneLink.js): the switch, the light scene one look follows, the map the light desk's page shows.
+  router.post('/desk/api/follow', requireSameMachine, (req, res) => answer(res, getDesk().setFollowLight(req.body?.on)))
+  router.post('/desk/api/looks/follows', requireSameMachine, (req, res) => answer(res, getDesk().setFollows(req.body?.id, req.body?.scene)))
+  router.get('/desk/api/follows', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(followingDesk()?.followMap() ?? { ok: true, on: false, links: {} }) })
   router.post('/desk/api/release', stopGate, (req, res) => answer(res, getDesk().release()))
   // Putting the cubes dark is a stop (stopGate); lifting the blackout lights them, so it is as strict as Arm. `on` is a
   // boolean or the route answers 400 — never a toggle (review 1218 M1).
@@ -369,6 +403,9 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
     getEngine,
     getDesk,
     hasEngine: () => engine !== null,
+    // The scene link (laser/sceneLink.js, index.js): whose hand a light request is, and the desk when the link can act.
+    originOf,
+    followingDesk,
     reload,
     // Every cube blanked and switched off, the socket closed; resolves when the messages have left.
     close: () => {

@@ -71,6 +71,14 @@ function createDesk(opts = {}) {
   // The host's own account of its bind ({ lan, addresses }), asked per status read.
   // Null when nobody told the desk — the interface then trusts the interface list.
   const listen = typeof opts.listen === 'function' ? opts.listen : null;
+  // WHOSE HAND A SCENE RECALL IS (2026-10-31, the scene link). The host may give `sceneOrigin(req)`: it says whether the
+  // request is one the lasers would also obey ('page' = di's own page, 'token' = a request with the local token) or null.
+  // The answer rides with the scene event (engine.onScene) so a listener that moves something guarded — the laser's live
+  // look — can refuse a recall that only the light desk would have accepted. Without it every recall is nobody's (null).
+  const sceneOrigin = typeof opts.sceneOrigin === 'function' ? opts.sceneOrigin : null;
+  const originOf = (req) => {
+    try { const o = sceneOrigin ? sceneOrigin(req) : null; return typeof o === 'string' && o ? o : null; } catch (e) { return null; }
+  };
   const log = opts.log || console.log;
   // True when this desk found no show to load. It stays true only until the first write,
   // and it is what stops an empty desk from silently replacing a real one. Set again by
@@ -2182,11 +2190,13 @@ function createDesk(opts = {}) {
       // The hand recalling it: the scene's holds replace that hand's own (holds.js).
       const recallOwner = holds.holdOwner(body.owner);
       if (!recallOwner) return json(res, { error: 'owner must be 1-40 letters, digits or . _ : @ -' }, 400);
+      // Whose hand this is, read NOW from the request: a recall that waits for its beat keeps the answer it had when it was asked.
+      const origin = originOf(req);
       if (wait > 0) {
         const at = Date.now() + wait;
         pending.push(setTimeout(() => {
           if (state.chase.enabled) { state.chase.enabled = false; engine.chase.running = false; }
-          engine.recallScene(scene, body.fadeMs, recallOwner);
+          engine.recallScene(scene, body.fadeMs, recallOwner, { origin });
           save(); pushFrame();
         }, wait));
         return json(res, { ok: true, quantized: body.quantize, at, inMs: wait });
@@ -2206,7 +2216,7 @@ function createDesk(opts = {}) {
       // otherwise invisible until something looks wrong.
       const fxWasOn = fxActive(state.fx);
       const rawBefore = Object.keys(state.raw);
-      const ok = engine.recallScene(scene, body.fadeMs, recallOwner);
+      const ok = engine.recallScene(scene, body.fadeMs, recallOwner, { origin });
       const out = { ok };
       if (chasePaused) out.chasePaused = true;
       if (ok) {
@@ -2221,6 +2231,7 @@ function createDesk(opts = {}) {
 
     'POST /api/chase': (req, res, body) => {
       const wasEmpty = state.chase.sceneIds.length === 0;
+      const wasOn = !!state.chase.enabled;
       Object.assign(state.chase, {
         enabled: body.enabled != null ? !!body.enabled : state.chase.enabled,
         sceneIds: Array.isArray(body.sceneIds)
@@ -2239,6 +2250,11 @@ function createDesk(opts = {}) {
       if (state.chase.sceneIds.length === 0) state.chase.enabled = false;
       else if (wasEmpty && state.chase.enabled && body.enabled !== true) state.chase.enabled = false;
       if (!state.chase.enabled) engine.chase.running = false;
+      // Whose hand the chase's steps are (the scene link reads it): the request that turned the chase on. Any other
+      // request that touches a chase already running and is not a hand the lasers obey takes the answer away.
+      if (!state.chase.enabled) engine.chaseOrigin = null;
+      else if (!wasOn || body.enabled === true) engine.chaseOrigin = originOf(req);
+      else if (!originOf(req)) engine.chaseOrigin = null;
       save(); json(res, { ok: true, chase: state.chase });
     },
 
@@ -2520,6 +2536,7 @@ function createDesk(opts = {}) {
     input.configure(state.output.input, { lanAllowed });
     engine.cancelFade();
     engine.chase = { running: false, index: 0, nextAt: 0 };
+    engine.chaseOrigin = null;
     stateVersion++;
     rememberLoaded();
     log('  loaded ' + who() + ' — ' + showFile());
@@ -2630,6 +2647,10 @@ function createDesk(opts = {}) {
     // /api/cues routes call, so there is still ONE clock.
     cueRunner,
     hasLook: (id) => state.looks.some((l) => l.id === id),
+    // SCENE EVENT (2026-10-31): `fn({ id, name })` when a scene becomes active, however it was recalled (engine.onScene).
+    // `scenes()` is the library as { id, name }, read through to the show that is loaded now.
+    onScene: (fn) => engine.onScene(fn),
+    scenes: () => state.scenes.map((s) => ({ id: s.id, name: s.name })),
     get state() { return state; },
     get showFile() { return showFile(); },
     get show() { return showInfo(); },

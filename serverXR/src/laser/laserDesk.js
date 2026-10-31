@@ -26,6 +26,8 @@ const { LASER_SHAPES, shapeListOf, parseLaserColour } = require('../../../shared
 const { flattenLaserPaths, FRAME_MAX_POINTS } = require('../../../shared/laserFrame.cjs')
 // A look drawn at a moment lives in shared/ (2026-10-29): the page's tiles play the looks with the same code.
 const { CUBE_DEFAULTS, beatsAt, lookPointsAt } = require('../../../shared/laserLook.cjs')
+// Follow the light desk (2026-10-31): the pure part and the origin rule live in sceneLink.js.
+const { sceneIdOf, fillLinks, mayDrive } = require('./sceneLink')
 
 const TICK_MS = 50 // as the show player: well inside the engine's signal-loss stop (FRAME_TIMEOUT_MS 200)
 const OUT = 'desk' // the desk's Laser Out name in the engine (one sender per cube)
@@ -72,7 +74,10 @@ const LOOK_DEFAULTS = Object.freeze({
     sweepBeats: 4,
     mirror: false, // every second cube mirrored (x → −x)
     phase: 0, // beats each cube runs behind the one before it (a chase across the cubes)
-    cubes: 'all' // 'all' or the cube ids this look draws on; the others are held dark
+    cubes: 'all', // 'all' or the cube ids this look draws on; the others are held dark
+    // The light scene this look follows (sceneLink.js): null = never set (the first fill may set it), '' = none, else the
+    // scene's id. A setting of the desk, not part of the picture: it is left out of samePicture and Save never copies it.
+    follows: null
 })
 
 const shapeOf = (v) => {
@@ -86,11 +91,14 @@ const colourOf = (v) => {
     return '#' + rgb.map((c) => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
 }
 const idOf = (v) => String(v ?? '').trim().replace(/[^a-z0-9_-]/gi, '').slice(0, 40)
+const followsOf = (v) => (v === null || v === undefined ? null : sceneIdOf(v))
+/** Fields from a page's edit without the link: a link is set by setFollows only (one scene, one look). */
+const withoutFollows = (fields) => { const { follows: _link, ...rest } = fields && typeof fields === 'object' ? fields : {}; return rest }
 const clone = (v) => JSON.parse(JSON.stringify(v))
 /** Two looks draw the same picture: every field but the name (both normalised, so the fields come in one order). */
 const samePicture = (a, b) => {
-    const { name: _a, ...pa } = a
-    const { name: _b, ...pb } = b
+    const { name: _a, follows: _fa, ...pa } = a
+    const { name: _b, follows: _fb, ...pb } = b
     return JSON.stringify(pa) === JSON.stringify(pb)
 }
 /** An id from a name that is not in `taken`: "star", "star-2"… */
@@ -135,7 +143,8 @@ const normaliseLook = (raw = {}, base = LOOK_DEFAULTS) => {
         sweepBeats: clamp(num(pick('sweepBeats'), 4), 0.25, 64),
         mirror: bool(pick('mirror')),
         phase: clamp(num(pick('phase'), 0), 0, 16),
-        cubes: Array.isArray(cubes) ? [...new Set(cubes.map(idOf).filter(Boolean))].slice(0, 64) : 'all'
+        cubes: Array.isArray(cubes) ? [...new Set(cubes.map(idOf).filter(Boolean))].slice(0, 64) : 'all',
+        follows: followsOf(pick('follows'))
     }
 }
 
@@ -241,9 +250,9 @@ const hashPoints = (points) => {
  * @param {{ dataDir: string, getEngine: () => object, now?: () => number, setInterval?: Function,
  *   clearInterval?: Function, log?: object }} opts
  */
-const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: every = setInterval, clearInterval: stopEvery = clearInterval, log = null }) => {
+const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: every = setInterval, clearInterval: stopEvery = clearInterval, log = null, lightScenes: scenesOfLight = null }) => {
     const file = path.join(dataDir, FILE)
-    const show = { bpm: 120, master: 1, looks: SEED_LOOKS.map((l) => ({ ...l })), cubes: {}, blackoutKeepsArm: false, seeded: SEED_LOOKS.map((l) => l.id) }
+    const show = { bpm: 120, master: 1, looks: SEED_LOOKS.map((l) => ({ ...l })), cubes: {}, blackoutKeepsArm: false, seeded: SEED_LOOKS.map((l) => l.id), followLight: false }
     let seedsAdded = false
     const clock = { bpm: 120, zero: now(), taps: [] }
     let live = null // the look on the cubes (a copy: editing it never touches the bank until Store)
@@ -255,6 +264,8 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     let saveTimer = null
     let dirty = false // the bank changed since desk.json was last written (Save)
     let loadMessage = null
+    // Follow the light desk (sceneLink.js). `lastFollow` is the newest scene the link was asked about, for the page.
+    let lastFollow = null
 
     // ---- the file
     try {
@@ -270,6 +281,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         }
         show.master = clamp(num(raw.master, 1), 0, 1)
         show.blackoutKeepsArm = raw.blackoutKeepsArm === true
+        show.followLight = raw.followLight === true
         show.bpm = clamp(num(raw.bpm, 120), BPM_MIN, BPM_MAX)
         clock.bpm = show.bpm
         // A seed look added since this bank was saved joins it at the end, once: `seeded` lists the seeds it has been
@@ -296,7 +308,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         try {
             fs.mkdirSync(dataDir, { recursive: true })
             const tmp = file + '.tmp'
-            fs.writeFileSync(tmp, JSON.stringify({ v: 1, bpm: show.bpm, master: show.master, blackoutKeepsArm: show.blackoutKeepsArm, looks: savedLooks, cubes: show.cubes, seeded: show.seeded }, null, 1))
+            fs.writeFileSync(tmp, JSON.stringify({ v: 1, bpm: show.bpm, master: show.master, blackoutKeepsArm: show.blackoutKeepsArm, followLight: show.followLight, looks: savedLooks, cubes: show.cubes, seeded: show.seeded }, null, 1))
             fs.renameSync(tmp, file)
             return true
         } catch (error) {
@@ -317,6 +329,9 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     // A person's Go (a look pressed, a blackout lifted) counts once: the first frame after it carries `go: true`, so the
     // engine may light a cube it stopped (still beam, frame too long). Nothing else the desk sends can (review D1).
     let goSeq = 0
+    // The Go a cube the desk has no record of counts as seen (null = none seen: its first frame is a Go). The scene link sets
+    // it to the newest Go, so the link's frames never carry go: true (a Go is a person's: stopResume "person").
+    let linkBase = null
     let lastEngine = null
     let seenBlackouts = 0
     // The engine's Blackout (POST /laser/api/blackout, from any page) clears every frame. The desk must not draw
@@ -346,7 +361,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         const cubes = orderedCubes(st.cubes).filter((c) => cubeCfg(c.id).on)
         const t = now()
         cubes.forEach((cube, index) => {
-            const was = sent.get(cube.id) || { key: null, end: null, held: null, points: 0, at: 0, seq: null }
+            const was = sent.get(cube.id) || { key: null, end: null, held: null, points: 0, at: 0, seq: linkBase }
             const drawn = live.cubes === 'all' || live.cubes.includes(cube.id)
             const stats = { lit: 0, off: 0 }
             const raw = blackout || !drawn ? [BLANK] : lookPointsAt(live, { t, clock, index, cube: cubeCfg(cube.id), master: show.master, stats })
@@ -408,16 +423,22 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         return { ok: true }
     }
 
-    const go = (id) => {
-        const look = show.looks.find((l) => l.id === idOf(id))
-        if (!look) return { ok: false, status: 404, error: `no look "${id}"` }
+    // The look on the cubes. `person`: a person's Go, which counts once (goSeq) and so may light a cube the engine stopped
+    // (stopResume "person"). The scene link is not a person: it changes the live look and nothing else (followScene).
+    const putLive = (look, { person }) => {
         live = { ...look, cubes: Array.isArray(look.cubes) ? [...look.cubes] : 'all' }
         liveId = look.id
         for (const s of sent.values()) s.key = null
-        goSeq += 1
+        if (person) goSeq += 1
+        else { linkBase = goSeq; for (const s of sent.values()) s.seq = goSeq } // the link is never a Go, also for a cube it has not drawn on
         watchEngine()
         tick()
         startTicking()
+    }
+    const go = (id) => {
+        const look = show.looks.find((l) => l.id === idOf(id))
+        if (!look) return { ok: false, status: 404, error: `no look "${id}"` }
+        putLive(look, { person: true })
         return { ok: true, live: liveId }
     }
 
@@ -431,7 +452,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         const i = show.looks.findIndex((l) => l.id === idOf(id))
         if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
         remember('edit', show.looks[i].id)
-        show.looks[i] = normaliseLook({ ...fields, id: show.looks[i].id }, show.looks[i])
+        show.looks[i] = normaliseLook({ ...withoutFollows(fields), id: show.looks[i].id }, show.looks[i])
         dirty = true
         if (live && liveId === show.looks[i].id) {
             const look = show.looks[i]
@@ -447,7 +468,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
         if (show.looks.length >= MAX_LOOKS) return { ok: false, status: 400, error: `the bank is full (${MAX_LOOKS} looks)` }
         const name = `${show.looks[i].name} 2`.slice(0, 40)
-        const look = normaliseLook({ ...show.looks[i], id: newId(name), name })
+        const look = normaliseLook({ ...show.looks[i], id: newId(name), name, follows: null }) // a copy never takes the link
         remember('copy')
         show.looks.splice(i + 1, 0, look)
         dirty = true
@@ -476,7 +497,9 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     }
     // The bank as it was; the look on the laser shows its picture there (or the cubes play on when it is gone).
     const restore = (snap) => {
-        show.looks = clone(snap.looks)
+        // The links are a setting of the desk, not part of the bank's history: an undo brings the pictures back and the links stay as they are now.
+        const links = new Map(show.looks.map((l) => [l.id, l.follows ?? null]))
+        show.looks = clone(snap.looks).map((l) => (links.has(l.id) ? { ...l, follows: links.get(l.id) } : l))
         const has = (id) => id !== null && show.looks.some((l) => l.id === id)
         if (!has(liveId)) liveId = has(snap.liveId) ? snap.liveId : null
         dirty = JSON.stringify(show.looks) !== JSON.stringify(savedLooks)
@@ -507,7 +530,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         const base = normaliseLook({ ...raw, id: undefined })
         const names = new Set(show.looks.map((l) => l.name))
         const name = names.has(base.name) ? nextName(base.name, names) : base.name
-        const look = normaliseLook({ ...base, id: newId(name), name })
+        const look = normaliseLook({ ...base, id: newId(name), name, follows: null })
         remember('paste')
         const i = show.looks.findIndex((l) => l.id === idOf(after))
         show.looks.splice(i < 0 ? show.looks.length : i + 1, 0, look)
@@ -548,7 +571,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             const id = freeId(name, ids)
             ids.add(id)
             kept.push(clone(was))
-            made.push(normaliseLook({ ...look, id, name }))
+            made.push(normaliseLook({ ...look, id, name, follows: null })) // the new scene does not take the saved one's link
             created.push({ from: look.id, id })
         }
         if (kept.length + made.length > MAX_LOOKS) return { ok: false, status: 400, error: `the bank is full (${MAX_LOOKS} looks): delete some, then Save` }
@@ -564,7 +587,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     const editLive = (fields = {}) => {
         if (!live) return { ok: false, status: 409, error: 'nothing is live — press a look first' }
         const base = live
-        live = normaliseLook({ ...fields, id: undefined }, base)
+        live = normaliseLook({ ...withoutFollows(fields), id: undefined }, base)
         delete live.id
         tick()
         startTicking()
@@ -585,11 +608,11 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         if (id) {
             const i = show.looks.findIndex((l) => l.id === idOf(id))
             if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
-            show.looks[i] = normaliseLook({ ...from, id: show.looks[i].id, name: name ?? show.looks[i].name })
+            show.looks[i] = normaliseLook({ ...from, id: show.looks[i].id, name: name ?? show.looks[i].name, follows: show.looks[i].follows })
             stored = show.looks[i].id
         } else {
             if (show.looks.length >= MAX_LOOKS) return { ok: false, status: 400, error: `the bank is full (${MAX_LOOKS} looks)` }
-            const look = normaliseLook({ ...from, id: newId(name || from.name), name: name || from.name })
+            const look = normaliseLook({ ...from, id: newId(name || from.name), name: name || from.name, follows: null })
             show.looks.push(look)
             stored = look.id
         }
@@ -742,6 +765,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             added: addedIds(),
             canUndo: past.length > 0,
             canRedo: future.length > 0,
+            follow: followState(),
             cubes: orderedCubes(engine.cubes).map((c) => {
                 const s = sent.get(c.id)
                 const sending = Boolean(live && s && !s.held)
@@ -760,6 +784,75 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         }
     }
 
+    // ---- Follow the light desk (2026-10-31, the owner: "one scene drives both"; sceneLink.js has the rules)
+    const lightScenes = () => {
+        try {
+            const list = scenesOfLight ? scenesOfLight() : []
+            return Array.isArray(list) ? list.map((s) => ({ id: sceneIdOf(s?.id), name: String(s?.name ?? '').slice(0, 80) })).filter((s) => s.id) : []
+        } catch { return [] }
+    }
+    // A link is a setting of the desk, written in the bank AND in what was last saved: never an unsaved change, never a new scene at Save.
+    const writeFollows = (id, scene) => {
+        for (const list of [show.looks, savedLooks]) { const l = list.find((x) => x.id === id); if (l) l.follows = scene }
+        if (live && liveId === id) live.follows = scene
+    }
+    const fillFollows = () => {
+        const found = fillLinks(show.looks, lightScenes())
+        for (const f of found) writeFollows(f.look, f.scene)
+        if (found.length) save()
+        return found
+    }
+    const setFollowLight = (on) => {
+        if (typeof on !== 'boolean') return { ok: false, status: 400, error: 'on: true or false' }
+        show.followLight = on
+        const filled = on ? fillFollows().length : 0
+        save()
+        return { ok: true, followLight: on, filled }
+    }
+    const setFollows = (id, scene) => { // one scene, one look; '' = none (never refilled)
+        const look = show.looks.find((l) => l.id === idOf(id))
+        if (!look) return { ok: false, status: 404, error: `no look "${id}"` }
+        if (typeof scene !== 'string') return { ok: false, status: 400, error: 'scene: the id of a light scene, or "" for none' }
+        const want = sceneIdOf(scene)
+        const moved = []
+        if (want) for (const other of show.looks) if (other.id !== look.id && other.follows === want) { writeFollows(other.id, ''); moved.push(other.id) }
+        writeFollows(look.id, want)
+        save()
+        return { ok: true, id: look.id, follows: want, moved }
+    }
+    // A light scene became active (sceneLink.js linkLightToLaser): the look that follows it goes live, and that is all.
+    // No arm, no Go (putLive person: false), no Blackout lifted, Master and BPM untouched. A person's Release does not pause
+    // it (the lead, 2026-10-31): Release switched the cubes off, and nothing reaches a cube until a person presses On.
+    const followScene = (scene) => { // scene = { id, name, origin }
+        if (!show.followLight) return { ok: true, followed: false, why: 'off' }
+        const id = sceneIdOf(scene?.id)
+        const name = String(scene?.name ?? '').slice(0, 80)
+        const miss = (why) => { lastFollow = { scene: { id, name }, look: null, name: null, why, at: now() }; return { ok: true, followed: false, why } }
+        // The hand is checked again here (sceneLink.js refuses first): only di's own page or the local token move the live look.
+        if (!mayDrive(scene?.origin)) return miss('origin')
+        if (!id) return miss('no scene')
+        let look = show.looks.find((l) => l.follows === id)
+        if (!look) { fillFollows(); look = show.looks.find((l) => l.follows === id) }
+        if (!look) return miss('no look')
+        // The look already live stays as it is (a change made to it live is kept).
+        if (!(live && liveId === look.id)) putLive(look, { person: false })
+        lastFollow = { scene: { id, name }, look: look.id, name: look.name, why: null, at: now() }
+        return { ok: true, followed: true, look: look.id }
+    }
+    // What a recall would follow now, for the light desk's page: the links set, and those the first fill would set
+    // (shown, not written: a GET writes nothing).
+    const followMap = () => {
+        const links = {}
+        if (!show.followLight) return { ok: true, on: false, links }
+        const fill = new Map(fillLinks(show.looks, lightScenes()).map((f) => [f.look, f.scene]))
+        for (const l of show.looks) {
+            const scene = l.follows || fill.get(l.id)
+            if (scene && !links[scene]) links[scene] = { look: l.id, name: l.name }
+        }
+        return { ok: true, on: true, links }
+    }
+    const followState = () => ({ on: show.followLight, scenes: lightScenes(), last: lastFollow })
+
     // A clean stop keeps the work as Save would.
     const close = () => {
         release()
@@ -767,7 +860,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         else if (saveTimer) { clearTimeout(saveTimer); saveNow() }
     }
 
-    return { state, go, editLook, copyLook, pasteLook, undo, redo, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBlackoutKeepsArm, setBpm, tap, setCube, thumbs, view, tick, close }
+    return { state, go, editLook, copyLook, pasteLook, undo, redo, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBlackoutKeepsArm, setBpm, tap, setCube, thumbs, view, tick, close, setFollowLight, setFollows, followScene, followMap }
 }
 
 module.exports = { createLaserDesk, normaliseLook, normaliseCube, lookPointsAt, capOf, hashPoints, beatsAt, SEED_LOOKS, LOOK_DEFAULTS, CUBE_DEFAULTS, TICK_MS, OUT }

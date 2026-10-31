@@ -254,6 +254,30 @@ class Engine {
     // The latest live frame of each pixel strip (id -> { data: r,g,b,w per pixel, at }).
     // Derived motion like the audio envelope: never saved, and stale after the strip's frameTtlMs.
     this.stripFrames = new Map();
+    // Who is told when a scene becomes active (onScene). Derived, never saved.
+    this.sceneListeners = new Set();
+    // Whose hand started the running chase ('page' | 'token' | null, see sceneOrigin in desk.js). Not saved: a chase
+    // that comes back from the show file on a restart was started by nobody in this process, so it has none.
+    this.chaseOrigin = null;
+  }
+
+  // SCENE EVENT (2026-10-31): recallScene below is the ONE place a scene becomes active — a click, a key, a MIDI note,
+  // a quantised recall that waited for its beat and every step of the chase all end here — so this is the one place to
+  // listen. `fn({ id, name, origin })` runs right after the scene is on; a listener that throws never breaks a recall.
+  // `origin` says whose hand the recall came from ('page' = di's own page, 'token' = a request with the local token,
+  // null = anyone else, or nobody who said); a listener that lets the scene move something guarded must read it.
+  // Returns the function that stops listening.
+  onScene(fn) {
+    if (typeof fn !== 'function') return () => {};
+    this.sceneListeners.add(fn);
+    return () => { this.sceneListeners.delete(fn); };
+  }
+
+  announceScene(scene, meta) {
+    const origin = meta && typeof meta.origin === 'string' && meta.origin ? meta.origin : null;
+    for (const fn of [...this.sceneListeners]) {
+      try { fn({ id: scene.id, name: scene.name, origin }); } catch (e) { /* a listener never breaks a recall */ }
+    }
   }
 
   setStripFrame(id, data, at = Date.now()) { this.stripFrames.set(id, { data, at }); }
@@ -649,7 +673,8 @@ class Engine {
 
   // `owner` is the hand recalling it (holds.js): the scene's holds replace that hand's own
   // and nobody else's. The chase and the interface recall as "owner".
-  recallScene(scene, fadeMs, owner) {
+  // `meta.origin` rides along to the scene event (onScene): whose hand this recall is.
+  recallScene(scene, fadeMs, owner, meta) {
     if (!scene) return false;
     this.startFade(fadeMs != null ? fadeMs : scene.fadeMs);
     for (const sf of scene.fixtures) {
@@ -681,6 +706,7 @@ class Engine {
     // without one leaves the current setting alone.
     if (scene.audioCfg) this.state.audioCfg = sanitizeAudioCfg(scene.audioCfg);
     this.state.activeScene = scene.id;
+    this.announceScene(scene, meta);
     return true;
   }
 
@@ -692,7 +718,8 @@ class Engine {
     if (now < this.chase.nextAt) return;
     this.chase.index = (this.chase.index + 1) % c.sceneIds.length;
     const scene = this.state.scenes.find((s) => s.id === c.sceneIds[this.chase.index]);
-    if (scene) this.recallScene(scene, c.fadeMs);
+    // A chase step is a sequence a request started: it carries that request's origin, never one of its own.
+    if (scene) this.recallScene(scene, c.fadeMs, undefined, { origin: this.chaseOrigin });
     // On the music, or on a wall clock. `sync: 'beat'` steps every `c.beats` beats of the
     // desk's tempo grid and lands on the grid rather than a hold time after the last step,
     // so a chase cannot drift out of the track over a five-minute record the way a

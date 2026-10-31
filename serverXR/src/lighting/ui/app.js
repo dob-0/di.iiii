@@ -2027,6 +2027,31 @@ function sceneStrip(sc, n = 14) {
   }).join('') || '<i style="background:#444"></i>';
 }
 
+// ---- The laser look each scene puts live (2026-10-31, the scene link: serverXR/src/laser/sceneLink.js). Read from the
+// laser desk (GET laser/desk/api/follows) every 5 s while it answers, backing off to 60 s when it does not; shown small
+// on each scene. Nothing shows while the laser desk's "Follow light scenes" is off.
+let LASER_LINKS = { on: false, links: {} };
+let laserLinksWait = 5000;
+const laserLinksUrl = () => location.pathname.replace(/\/light(\/.*)?$/, '/') + 'laser/desk/api/follows';
+async function pollLaserLinks() {
+  try {
+    const r = await fetch(laserLinksUrl(), { cache: 'no-store' });
+    if (!r.ok) throw new Error(String(r.status));
+    const j = await r.json();
+    LASER_LINKS = j && j.on && j.links && typeof j.links === 'object' ? { on: true, links: j.links } : { on: false, links: {} };
+    laserLinksWait = 5000;
+  } catch (e) {
+    LASER_LINKS = { on: false, links: {} };
+    laserLinksWait = Math.min(60000, laserLinksWait * 2);
+  }
+  setTimeout(pollLaserLinks, laserLinksWait);
+}
+const laserLinkOf = (sc) => { const l = LASER_LINKS.on ? LASER_LINKS.links[sc.id] : null; return l ? String(l.name || l.look || '') : ''; };
+const laserLinksSig = () => (LASER_LINKS.on ? Object.entries(LASER_LINKS.links).map(([k, v]) => k + '=' + (v && v.name)).join(',') : 'off');
+const laserNoteOf = (sc) => { const n = laserLinkOf(sc); return n ? ' · laser: ' + esc(n) : ''; };
+const laserTnoteOf = (sc) => { const n = laserLinkOf(sc); return n ? `<i class="tnote tlaser">laser: ${esc(n)}</i>` : ''; };
+pollLaserLinks();
+
 function buildBank() {
   // The library runs to hundreds of scenes, so: filter by substring, one delegated click
   // listener on the list (wired once, below) instead of one per row, and the scroll
@@ -2042,7 +2067,8 @@ function buildBank() {
   // 500 rows of innerHTML just to move the highlight one row.
   const sig = scenes.map((sc) => sc.id + sc.name + sc.fadeMs + sceneHealth(sc).missing + sceneHealth(sc).dead).join('|')
     + '#' + q
-    + '#' + Object.entries(sceneHotkeys).map(([k, n]) => k + n).join(',');
+    + '#' + Object.entries(sceneHotkeys).map(([k, n]) => k + n).join(',')
+    + '#' + laserLinksSig();
   if (list.dataset.sig !== sig) {
   list.dataset.sig = sig;
   const keepScroll = list.scrollTop;
@@ -2059,7 +2085,7 @@ function buildBank() {
     const note = h.dead ? ' · nothing patched' : h.missing ? ` · ${h.missing} missing` : '';
     const hk = keyOf[sc.name];
     html += `<div class="bankrow${h.dead ? ' dead' : ''}" data-id="${sc.id}">
-       <div class="txt"><span class="nm">${esc(sc.name)}</span><span class="sub">Fade ${(sc.fadeMs / 1000).toFixed(1)}s${note}</span></div>
+       <div class="txt"><span class="nm">${esc(sc.name)}</span><span class="sub">Fade ${(sc.fadeMs / 1000).toFixed(1)}s${note}${laserNoteOf(sc)}</span></div>
        ${hk ? `<i class="hk" title="press ${esc(hotkeyLabel(hk))} to fire this scene">${esc(hotkeyLabel(hk))}</i>` : ''}
        <div class="bar"></div></div>`;
   }
@@ -2197,7 +2223,7 @@ function buildTouch() {
   // that is all looks and cues (MOXIR) has no scenes and does not need telling to save any.
   const hasLooks = looksOf().length > 0;
   const hasCues = !!(CUES && CUES.n);
-  const sig = scenes.map((sc) => sc.id + sc.name + sceneHealth(sc).dead + sceneHealth(sc).missing).join('|') + '#' + q + '#' + (hasLooks || hasCues ? 1 : 0);
+  const sig = scenes.map((sc) => sc.id + sc.name + sceneHealth(sc).dead + sceneHealth(sc).missing).join('|') + '#' + q + '#' + (hasLooks || hasCues ? 1 : 0) + '#' + laserLinksSig();
   if (wrap.dataset.sig !== sig) {
   wrap.dataset.sig = sig;
   // Same group headers as the bank. Headers are not .tbtn, so the delegated click and
@@ -2210,7 +2236,7 @@ function buildTouch() {
     const h = sceneHealth(sc);
     html += `<button class="tbtn${h.dead ? ' dead' : ''}" data-id="${sc.id}">
        <div class="strip">${sceneStrip(sc)}</div><span>${esc(sc.name)}</span>
-       ${h.dead ? '<i class="tnote">nothing patched</i>' : h.missing ? `<i class="tnote">${h.missing} missing</i>` : ''}</button>`;
+       ${h.dead ? '<i class="tnote">nothing patched</i>' : h.missing ? `<i class="tnote">${h.missing} missing</i>` : ''}${laserTnoteOf(sc)}</button>`;
   }
   wrap.innerHTML = html || (q
     ? `<p class="muted">no scene matches "${esc(q)}"</p>`

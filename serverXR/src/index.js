@@ -512,7 +512,10 @@ const lighting = registerLightingRoutes(app, {
   },
   mountPaths: [...new Set(['/light', `${config.mountPath || ''}/light`.replace(/\/+/g, '/')])],
   offline: process.env.ARTNET_OFFLINE === '1',
-  listen: describeListenNow
+  listen: describeListenNow,
+  // Whose hand a scene recall is (the scene link, laser/sceneLink.js): judged by the lasers' own guards. `lasers` is
+  // defined below; this runs at request time, and the desk turns any throw into null (nobody's hand).
+  sceneOrigin: (req) => lasers.originOf(req)
 })
 
 // The lasers (serverXR/src/laser) at /laser — MOXIR's LaserCubes driven from the Nodes editor: the
@@ -524,8 +527,13 @@ const lasers = registerLaserRoutes(app, {
   loadDocument: async (projectId) => {
     const project = await resolveProjectContext(projectId)
     return project ? readProjectDocument(SPACES_DIR, project.spaceId, project.projectId) : null
-  }
+  },
+  // The light desk's scenes, for the laser desk's "Follows light scene" (never builds the light desk).
+  lightScenes: () => lighting.scenes()
 })
+// One scene drives both (2026-10-31, ledger N1587): a light scene recall puts the look that follows it live on the laser
+// desk when its switch is on (desk.json followLight) and the request passed the lasers' own guards. laser/sceneLink.js.
+require('./laser/sceneLink').linkLightToLaser({ lighting, lasers, log: logger })
 
 // OSC (serverXR/src/osc) at /osc — the OSC In and OSC Out nodes' UDP, which a page cannot
 // open: the lasers' twin in shape (built on first use, local-only, 404 hosted).

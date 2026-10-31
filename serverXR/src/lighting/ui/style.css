@@ -1478,3 +1478,6 @@ button.ndrow:hover { outline: 1px solid var(--muted); }
 .deskask button { min-height: 44px; min-width: 88px; padding: 0 16px; font: inherit; font-weight: 600; border-radius: 0; cursor: pointer; }
 .deskask-no { background: none; border: 1px solid var(--muted); color: var(--text); }
 .deskask-yes { background: var(--danger); border: 1px solid var(--danger); color: #041012; }   /* dark-on-fill, like .blackout.on */
+
+/* ---- The laser look a scene puts live (2026-10-31, the scene link): small, never the alarm colour of a .tnote */
+.tbtn .tnote.tlaser { color: var(--muted); font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
