@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, afterAll } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -29,6 +29,15 @@ const fakeFetch = async (url, opts = {}) => {
     return json({})
 }
 
+const pageTimers = new Set()
+const realSetTimeout = globalThis.setTimeout
+const realSetInterval = globalThis.setInterval
+afterAll(() => {
+    for (const id of pageTimers) { clearTimeout(id); clearInterval(id) }
+    globalThis.setTimeout = realSetTimeout
+    globalThis.setInterval = realSetInterval
+})
+
 beforeAll(async () => {
     window.localStorage.setItem('diLaserDeskMotion', 'full')
     const html = fs.readFileSync(path.join(here, 'index.html'), 'utf8')
@@ -41,6 +50,10 @@ beforeAll(async () => {
     window.DiLaserDraw = require('./drawRuns.js')
     window.DiLaserCalm = require('./drawCalm.js')
     window.DiLaser = laserLook
+    // The page keeps polling with timers; collect them so afterAll can stop them (else they fire after the
+    // window is gone: 'document is not defined', an unhandled error that fails the whole run).
+    globalThis.setTimeout = (fn, ms, ...a) => { const id = realSetTimeout(fn, ms, ...a); pageTimers.add(id); return id }
+    globalThis.setInterval = (fn, ms, ...a) => { const id = realSetInterval(fn, ms, ...a); pageTimers.add(id); return id }
     new Function(fs.readFileSync(path.join(here, 'desk.js'), 'utf8'))()
     await sleep(300)
 })
