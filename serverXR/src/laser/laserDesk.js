@@ -260,6 +260,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     let blackout = false
     let engineDark = false // the engine's dark latch is ours (keep-arm Blackout); only then is it lifted, and never by building an engine
     let timer = null
+    let holding = false // the desk's own On with nothing live: it keeps its hold (N1591)
     const sent = new Map() // cubeId → { key, end, held, points, at }
     let saveTimer = null
     let dirty = false // the bank changed since desk.json was last written (Save)
@@ -353,8 +354,22 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         }
         return engine
     }
+    // The desk's own On with nothing live (N1591): in darkOff 'never' the desk keeps its hold on the cubes it armed (out
+    // 'desk'), so "its Out let go" does not switch them off after CLAIM_TTL_MS. alive() touches the hold; the only desk frame
+    // an idle desk can have left is the BLANK of a Release, so nothing is lit by it. The hold is this tick: a desk that stops
+    // (crash, restart, Release) stops holding, and the engine's Out-let-go rule switches the cube off as before. In 'auto'
+    // nothing is held (the 5 s rule decides, unchanged). The lane calls keepHold() after a desk On.
+    const holdIdle = () => {
+        if (!holding) return
+        const engine = getEngine()
+        const st = engine.state()
+        const mine = st.darkOff === 'never' ? st.cubes.filter((c) => c.armed && c.claimedBy === OUT) : []
+        for (const c of mine) engine.alive(c.id, OUT)
+        if (!mine.length) { holding = false; if (timer) { stopEvery(timer); timer = null } }
+    }
+    const keepHold = () => { holding = true; startTicking(); return { ok: true } }
     const tickOnce = () => {
-        if (!live) return
+        if (!live) return holdIdle()
         const engine = watchEngine()
         const st = engine.state()
         const zone = st.zone
@@ -414,6 +429,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         // Release also lifts the desk's blackout (the top-bar Blackout button only ever turns it on; audit row 30).
         blackout = false
         liftEngineDark()
+        holding = false
         if (timer) { stopEvery(timer); timer = null }
         // Only cubes the desk drew on are touched: a desk that never drew must not build an engine to say so.
         if (sent.size) {
@@ -864,7 +880,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         else if (saveTimer) { clearTimeout(saveTimer); saveNow() }
     }
 
-    return { state, go, editLook, copyLook, pasteLook, undo, redo, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBlackoutKeepsArm, setBpm, tap, setCube, thumbs, view, tick, close, setFollowLight, setFollows, followScene, followMap }
+    return { keepHold, state, go, editLook, copyLook, pasteLook, undo, redo, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBlackoutKeepsArm, setBpm, tap, setCube, thumbs, view, tick, close, setFollowLight, setFollows, followScene, followMap }
 }
 
 module.exports = { createLaserDesk, normaliseLook, normaliseCube, lookPointsAt, capOf, hashPoints, beatsAt, SEED_LOOKS, LOOK_DEFAULTS, CUBE_DEFAULTS, TICK_MS, OUT }
