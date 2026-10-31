@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
-import { KIND_IDS, bestFor, countByKind, findSecretLike, validateResources } from './resourceModel.mjs'
+import { KIND_IDS, bestFor, notForOthers, unchecked, countByKind, findSecretLike, validateResources } from './resourceModel.mjs'
 
 const example = JSON.parse(fs.readFileSync(path.join(__dirname, 'example.resources.json'), 'utf8'))
 const clone = () => JSON.parse(JSON.stringify(example))
@@ -74,5 +74,22 @@ describe('bestFor — the pick per job', () => {
         expect(bestFor(example, 'chat', { who: 'others' }).map((r) => r.id)).toEqual(['local-4b'])
         expect(bestFor(example, 'gpu-big', { who: 'others' }).map((r) => r.id)).toEqual(['cloud-a100'])
         expect(bestFor(example, 'gpu-big').map((r) => r.id)).toEqual(['desk-pc', 'cloud-a100'])
+    })
+})
+
+describe('plain words and the pick edges', () => {
+    it('refuses a plain line that is not one short sentence', () => {
+        const doc = JSON.parse(JSON.stringify(example))
+        doc.resources[0].plain = 'x'.repeat(141)
+        expect(validateResources(doc).join()).toMatch(/plain must be one short sentence/)
+    })
+    it('says a job is not for others only when no shared resource is meant for it', () => {
+        const doc = { resources: [{ id: 'a', bestFor: ['t'], use: 'ours', state: 'works' }, { id: 'b', bestFor: ['u'], use: 'shared', state: 'down' }] }
+        expect(notForOthers(doc, 't')).toBe(true)
+        expect(notForOthers(doc, 'u')).toBe(false)
+    })
+    it('lists unchecked candidates the pick would otherwise hide', () => {
+        const doc = { resources: [{ id: 'a', bestFor: ['t'], use: 'shared', state: 'unchecked' }] }
+        expect(unchecked(doc, 't', { who: 'others' }).map((row) => row.id)).toEqual(['a'])
     })
 })
