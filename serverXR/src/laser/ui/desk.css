@@ -97,6 +97,7 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .tiles {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; padding: 8px;
   overflow: auto; align-content: start;
+  grid-auto-rows: max-content; /* rows keep picture + name and the bank scrolls; .tile has min-height 0, so auto rows would shrink to share the pane's height */
 }
 .tile {
   display: flex; flex-direction: column; padding: 0; background: var(--cell); border: 1px solid var(--line);
