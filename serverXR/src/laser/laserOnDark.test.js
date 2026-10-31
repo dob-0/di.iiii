@@ -324,3 +324,63 @@ describe("darkOff 'never': On stays On until Off (N1591)", () => {
         expect(rig.switchedOffDark()).toBe(true)
     })
 })
+
+// Review O1/O2 (copy 9, 2026-10-31): Release switches off a cube the desk holds by its own On, in both modes; the hold's limits.
+// H1/H11/H12/H13 are the reviewer's mutations: each test below names the one it catches.
+describe("Release and the desk's own hold (review O1, O2; N1591)", () => {
+    // What the lane does after a cube's own On on the desk (POST /api/arm, out 'desk'): the engine's On, then desk.keepHold().
+    const deskOn = (rig, d) => { const r = rig.on(); d.keepHold(); return r }
+    const CIRCLE = Array.from({ length: 120 }, (_, i) => [0.3 * Math.cos((i / 120) * 2 * Math.PI), 0.3 * Math.sin((i / 120) * 2 * Math.PI), 1, 1, 1])
+    it("O1 'never': a cube's own On held 30 s, then Release: Off at once; a Go or a desk frame right after lights nothing", () => {
+        const rig = rigOf({ darkOff: 'never' }); const d = deskOf(rig)
+        deskOn(rig, d); run(rig, d, 30000)
+        expect(rig.cube()).toMatchObject({ armed: true, claimedBy: 'desk' })
+        d.release()
+        expect(rig.cube()).toMatchObject({ armed: false })
+        const t1 = rig.clock.t
+        d.go(lookIn(d, STILL)); run(rig, d, 2000)
+        rig.engine.setFrame('cube-1', CIRCLE, OUT); run(rig, d, 1000)
+        expect(rig.cube().armed).toBe(false)
+        expect(rig.litSince(t1)).toBe(0)
+    }, 30000)
+    it("O1 'auto': a cube's own On, 1 s, then Release: Off at once; a Go right after lights nothing", () => {
+        const rig = rigOf({ darkOff: 'auto' }); const d = deskOf(rig)
+        deskOn(rig, d); run(rig, d, 1000)
+        d.release()
+        expect(rig.cube()).toMatchObject({ armed: false })
+        const t1 = rig.clock.t
+        d.go(lookIn(d, STILL)); run(rig, d, 2000)
+        expect(rig.litSince(t1)).toBe(0)
+    })
+    it("O2/H1 'auto': the hold never runs: keepHold starts no tick, and a Release's blank frame does not keep the own On on (Off at 5 s)", () => {
+        const rig = rigOf({ darkOff: 'auto' })
+        let started = 0
+        const d = createLaserDesk({ dataDir: tmp(), getEngine: () => rig.engine, now: () => rig.clock.t, setInterval: () => { started += 1; return 1 }, clearInterval: () => {}, log: null })
+        d.setCube('cube-1', { y: -1, size: 2 })
+        d.go(lookIn(d, STILL)); rig.on(); run(rig, d, 1000); d.release() // the desk leaves its blank frame on the cube
+        started = 0
+        expect(deskOn(rig, d).ok).toBe(true)
+        expect(started).toBe(0)
+        run(rig, d, 6000)
+        expect(rig.cube()).toMatchObject({ armed: false, offBy: { reason: OFF.DARK_IDLE } })
+    })
+    it("O2/H11 'never': the hold stops when no held cube is On: after an Off, a later On without a new desk On lapses at 10 s", () => {
+        const rig = rigOf({ darkOff: 'never' }); const d = deskOf(rig)
+        deskOn(rig, d); run(rig, d, 1000)
+        rig.off(); run(rig, d, 1000)
+        rig.on(); run(rig, d, 11000)
+        expect(rig.cube()).toMatchObject({ armed: false, offBy: { reason: OFF.OUT_LET_GO } })
+    })
+    it("O2/H12 'never': Release ends the hold: a cube armed again without a new desk On lapses at 10 s", () => {
+        const rig = rigOf({ darkOff: 'never' }); const d = deskOf(rig)
+        deskOn(rig, d); run(rig, d, 1000)
+        d.release()
+        rig.on(); run(rig, d, 11000)
+        expect(rig.cube()).toMatchObject({ armed: false, offBy: { reason: OFF.OUT_LET_GO } })
+    })
+    it("O2/H13 'never': All on is not claimed by the hold: only cubes the desk holds are kept", () => {
+        const rig = rigOf({ darkOff: 'never' }); const d = deskOf(rig)
+        rig.engine.arm({ armed: true }); d.keepHold(); run(rig, d, 2000)
+        expect(rig.cube()).toMatchObject({ armed: true, claimedBy: null })
+    })
+})
