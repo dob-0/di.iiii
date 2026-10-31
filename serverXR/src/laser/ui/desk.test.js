@@ -301,3 +301,35 @@ describe("darkOff 'never' (the default, N1591): On stays On; its card says so pl
         expect(card().textContent).toBe('On, nothing to draw. Pick a look.')
     })
 })
+
+describe('the follow status is short and its full sentence is the title; Setup > Safety names the modes in words (Projector Room 2026-10-31)', () => {
+    const status = () => document.querySelector('#followStatus')
+    const refresh = async () => { document.querySelector('#tapBtn').click(); await settle() }
+    it('one name when the scene and its look share it, both when they differ, the reason when none follows; the title is the whole sentence', async () => {
+        desk.follow = { on: true, scenes: [], last: { scene: { id: 'muth05', name: 'MUTH 05 Catacomb' }, look: 'l1', name: 'MUTH 05 Catacomb' } }
+        await refresh()
+        expect(status().textContent).toBe('Followed MUTH 05 Catacomb')
+        expect(status().title).toBe('Last light scene followed: MUTH 05 Catacomb. The laser look it put live: MUTH 05 Catacomb.')
+        desk.follow.last = { scene: { id: 's2', name: 'Intro' }, look: 'l2', name: 'Glint' }
+        await refresh()
+        expect(status().textContent).toBe('Followed Intro → Glint')
+        desk.follow.last = { scene: { id: 's3', name: 'Outro' }, look: null, why: 'no look' }
+        await refresh()
+        expect(status().textContent).toBe('Outro: not followed (no look follows it)')
+        desk.follow.last = null
+        await refresh()
+        expect(status().textContent).toBe('')
+        expect(status().title).toBe('')
+    })
+    it('Setup > Safety says the sign-off and dark-rule modes in plain words, never as setting names', async () => {
+        Object.assign(engine, { sim: false, signOff: 'phrase', darkOff: 'auto' })
+        await sleep(1100)
+        expect(document.querySelector('#safetySignOff').textContent).toBe("on (the laser safety officer's phrase is asked)")
+        expect(document.querySelector('#safetyDark').textContent).toBe('on (it switches itself off after 5 s)')
+        Object.assign(engine, { signOff: 'click', darkOff: 'never' })
+        await sleep(1100)
+        expect(document.querySelector('#safetySignOff').textContent).toBe('off (On is one click)')
+        expect(document.querySelector('#safetyDark').textContent).toBe('off (On stays on until Off)')
+        expect(document.querySelector('#page-setup .notes').textContent).not.toMatch(/DI_LASER/)
+    })
+})

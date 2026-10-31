@@ -137,6 +137,10 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         $('blackoutBtn').classList.toggle('is-on', desk.blackout)
         if ($('blackoutKeepsArm') && !held('keepArm')) $('blackoutKeepsArm').checked = Boolean(desk.blackoutKeepsArm)
         $('releaseBtn').disabled = !desk.live && !desk.blackout
+        // Setup > Safety says the engine's two modes in plain words (the setting names belong in the wiki, not on the operator's screen).
+        const signOffLine = $('safetySignOff'), darkLine = $('safetyDark')
+        if (engine && signOffLine) signOffLine.textContent = engine.signOff === 'phrase' ? "on (the laser safety officer's phrase is asked)" : 'off (On is one click)'
+        if (engine && darkLine) darkLine.textContent = engine.darkOff === 'never' ? 'off (On stays on until Off)' : 'on (it switches itself off after 5 s)'
         const pill = $('safetyPill')
         pill.className = 'pill'
         if (!engine) { pill.textContent = 'Laser engine: no answer'; pill.classList.add('is-warn'); return }
@@ -968,9 +972,20 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         if (followBox && !held('followLight')) followBox.checked = Boolean(f.on)
         const status = $('followStatus')
         const last = f.on ? f.last : null
-        if (status) status.textContent = !last ? '' : last.look
-            ? `${last.scene.name || last.scene.id} → ${last.name || last.look}`
-            : `${last.scene.name || last.scene.id}: not followed (${FOLLOW_WHY[last.why] || last.why})`
+        let text = '', full = ''
+        if (last) {
+            const scene = last.scene.name || last.scene.id
+            const why = FOLLOW_WHY[last.why] || last.why
+            if (last.look) {
+                const look = last.name || last.look
+                text = look === scene ? `Followed ${scene}` : `Followed ${scene} → ${look}`
+                full = `Last light scene followed: ${scene}. The laser look it put live: ${look}.`
+            } else {
+                text = `${scene}: not followed (${why})`
+                full = `Last light scene: ${scene}. Not followed: ${why}.`
+            }
+        }
+        if (status) { status.textContent = text; status.title = full }
         if (!followPick || held('follows') || document.activeElement === followPick) return
         const look = selected ? desk.looks.find((l) => l.id === selected) : null
         followPick.disabled = !look

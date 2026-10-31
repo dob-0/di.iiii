@@ -1014,7 +1014,7 @@ body.space .stage { cursor: grab; }
 .bankrow .txt { min-width: 0; overflow: hidden; }
 .bankrow .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bankrow:has(.hk) .nm { padding-right: 34px; }
-.bankrow .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bankrow .sub { display: block; margin-right: -8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* block: text-overflow does nothing on an inline span, so the laser note was cut at the column edge with no ellipsis; -8px lets it use the row's right padding as it did, so a note that fitted still fits */
 /* tile names may wrap (the tile is tall), but must never widen the tile: a long
    unbroken name was forcing every second column ~40% off a phone screen */
 .tbtn span { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
@@ -1481,3 +1481,10 @@ button.ndrow:hover { outline: 1px solid var(--muted); }
 
 /* ---- The laser look a scene puts live (2026-10-31, the scene link): small, never the alarm colour of a .tnote */
 .tbtn .tnote.tlaser { color: var(--muted); font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- The scene list's filter keeps a usable width (2026-10-31, Projector Room). In the ~230 px list column the clear button and the three kind buttons left the box 42 px
+   ("filte"); this predates the scene link (the same 42 px with Follow off). The box now takes the whole first row and the buttons wrap under it. */
+.scenesearch { flex-wrap: wrap; }
+#sceneFilter { flex: 1 1 100%; }
+.scenesearch .kindbtn { order: 1; }
+#sceneFilterClear { order: 2; margin-left: auto; }

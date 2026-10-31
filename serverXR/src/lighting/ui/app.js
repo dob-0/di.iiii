@@ -2048,8 +2048,8 @@ async function pollLaserLinks() {
 }
 const laserLinkOf = (sc) => { const l = LASER_LINKS.on ? LASER_LINKS.links[sc.id] : null; return l ? String(l.name || l.look || '') : ''; };
 const laserLinksSig = () => (LASER_LINKS.on ? Object.entries(LASER_LINKS.links).map(([k, v]) => k + '=' + (v && v.name)).join(',') : 'off');
-const laserNoteOf = (sc) => { const n = laserLinkOf(sc); return n ? ' · laser: ' + esc(n) : ''; };
-const laserTnoteOf = (sc) => { const n = laserLinkOf(sc); return n ? `<i class="tnote tlaser">laser: ${esc(n)}</i>` : ''; };
+const laserNoteOf = (sc) => { const n = laserLinkOf(sc); return n ? ` · <span class="lasernote" title="laser: ${esc(n)}">laser: ${esc(n)}</span>` : ''; };
+const laserTnoteOf = (sc) => { const n = laserLinkOf(sc); return n ? `<i class="tnote tlaser" title="laser: ${esc(n)}">laser: ${esc(n)}</i>` : ''; };
 pollLaserLinks();
 
 function buildBank() {
