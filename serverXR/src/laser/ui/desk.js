@@ -1040,6 +1040,132 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
     new ResizeObserver(barHeight).observe(bar)
     barHeight()
 
+    // ---- Scenes row (2026-10-31, N1612; the rules are in sceneRow.js). One button per light-desk scene, in the light desk's own
+    // order. A press recalls the scene on the light desk (../light/api/scenes/recall) and puts the look that follows it on the
+    // cubes with this desk's own Go (desk/api/go, the route a tile's picture click uses), whatever "Follow light scenes" says.
+    // It sends nothing else: no arm, no Blackout, no Master, no BPM. Its own block: it reads the two desks with its own poll
+    // (once a second; not while the page is hidden or on Setup) and is drawn in place, so a poll never swaps a button under a hand.
+    const sceneApi = window.DiSceneRow
+    const sceneBox = $('sceneRow')
+    const sceneGrid = $('sceneGrid')
+    const sceneNote = $('sceneNote')
+    if (sceneApi && sceneBox && sceneGrid && sceneNote) {
+        const sr = { list: [], active: null, table: {}, lightOk: null, lightBlackout: false, polls: 0, say: null, busy: false, btns: new Map(), listSig: null }
+        const sceneGet = async (url) => {
+            const ctl = new AbortController()
+            const timer = setTimeout(() => ctl.abort(), sceneApi.LIGHT_TIMEOUT_MS)
+            try {
+                const r = await fetch(url, { cache: 'no-store', signal: ctl.signal })
+                if (!r.ok) throw new Error(`${url}: ${r.status}`)
+                return await r.json()
+            } finally { clearTimeout(timer) }
+        }
+        // POST under the light desk's routes. Answers { ok, status?, error?, down?, timeout?, gone? } and never throws.
+        const lightPost = async (path, body) => {
+            const ctl = new AbortController()
+            const timer = setTimeout(() => ctl.abort(), sceneApi.LIGHT_TIMEOUT_MS)
+            try {
+                const r = await fetch(sceneApi.LIGHT_API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal })
+                const out = await r.json().catch(() => ({}))
+                if (!r.ok) return { ok: false, status: r.status, error: out.error || '' }
+                if (out.ok === false || out.error) return { ok: false, error: out.error || '', gone: !out.error }
+                return { ok: true, ...out }
+            } catch (error) {
+                return { ok: false, down: true, timeout: Boolean(error && error.name === 'AbortError') }
+            } finally { clearTimeout(timer) }
+        }
+        // The same steps as a tile's picture (sendLook): send what is still pending, Go, read the desk again.
+        const goSceneLook = async (lookId) => {
+            await flush()
+            const out = await post(sceneApi.GO_PATH, { look: lookId })
+            await refreshDesk()
+            return { ok: out.ok === true, error: out.error }
+        }
+        const setText = (node, value) => { if (node.textContent !== value) node.textContent = value }
+        const paintSceneRow = () => {
+            const items = sceneApi.sceneItems({ scenes: sr.list, activeScene: sr.active, table: sr.table, liveId: desk ? desk.liveId : null })
+            const listSig = JSON.stringify(items.map((i) => [i.id, i.name]))
+            if (listSig !== sr.listSig) { // the buttons are built again only when the list of scenes changes
+                sr.listSig = listSig
+                sr.btns.clear()
+                sceneGrid.replaceChildren(...items.map((i) => {
+                    const parts = {
+                        nameText: el('span', { class: 'scenetext' }),
+                        lookText: el('span', { class: 'scenetext' }),
+                        liveTag: el('b', { class: 'tag', text: 'LIVE', hidden: true })
+                    }
+                    parts.btn = el('button', { type: 'button', class: 'scenebtn', 'data-id': i.id, 'aria-pressed': 'false', onclick: () => pressSceneBtn(i.id) },
+                        el('span', { class: 'scenename' }, parts.nameText), el('span', { class: 'scenelook' }, parts.lookText, parts.liveTag))
+                    sr.btns.set(i.id, parts)
+                    return parts.btn
+                }))
+            }
+            for (const i of items) { // marks and words in place
+                const p = sr.btns.get(i.id)
+                setText(p.nameText, i.name)
+                setText(p.lookText, sceneApi.lookLine(i))
+                p.liveTag.hidden = !i.laser
+                const cls = 'scenebtn' + (i.lights ? ' is-lights' : '') + (i.laser ? ' is-laser' : '')
+                if (p.btn.className !== cls) p.btn.className = cls
+                const pressed = i.lights ? 'true' : 'false'
+                if (p.btn.getAttribute('aria-pressed') !== pressed) p.btn.setAttribute('aria-pressed', pressed)
+                const title = sceneApi.titleOf(i)
+                if (p.btn.title !== title) p.btn.title = title
+            }
+            if (sr.say && Date.now() - sr.say.at > sceneApi.NOTE_MS) sr.say = null
+            let words = ''
+            let bad = false
+            if (sr.say) { words = sr.say.text; bad = sr.say.kind === 'error' }
+            else if (sr.lightOk === false) { bad = true; words = items.length ? 'The light desk is not answering. The marks are from its last answer.' : 'The light desk is not answering, so there are no scenes to show.' }
+            else if (sr.lightOk === true) { // the scene the lights are on, in words (the button is marked too: border, bar, aria-pressed)
+                const on = items.find((i) => i.lights)
+                words = !items.length ? 'The light desk has no scenes.' : on ? `Lights on: ${on.name}.` : 'No light scene is on yet.'
+            }
+            setText(sceneNote, words)
+            sceneNote.className = bad ? 'muted is-error' : 'muted'
+        }
+        const pollScenes = async () => {
+            if (page !== 'control') return
+            sr.polls += 1
+            const [light, map] = await Promise.allSettled([sceneGet(sceneApi.LIGHT_API + 'summary'), sceneGet('desk/api/follows')])
+            if (light.status === 'fulfilled') {
+                const sum = light.value || {}
+                sr.lightOk = true
+                sr.active = typeof sum.activeScene === 'string' ? sum.activeScene : null
+                sr.lightBlackout = sum.blackout === true
+                const count = Number(sum.scenes)
+                if (sr.polls === 1 || (Number.isFinite(count) && count !== sr.list.length) || sr.polls % sceneApi.LIST_EVERY === 0) {
+                    try {
+                        const j = await sceneGet(sceneApi.LIGHT_API + 'scenes/summary')
+                        if (Array.isArray(j.scenes)) sr.list = j.scenes.map((s) => ({ id: s.id, name: s.name }))
+                    } catch { /* the next poll tries again */ }
+                }
+            } else sr.lightOk = false
+            if (map.status === 'fulfilled' && map.value) sr.table = map.value.table || map.value.links || {}
+            paintSceneRow()
+        }
+        const pressSceneBtn = async (id) => {
+            if (sr.busy) return // a second press while the first is on its way is the same press
+            const item = sceneApi.sceneItems({ scenes: sr.list, table: sr.table }).find((i) => i.id === id)
+            if (!item) return
+            sr.busy = true
+            try {
+                const out = await sceneApi.pressScene({
+                    scene: { id: item.id, name: item.name },
+                    link: item.look ? { look: item.look.id, name: item.look.name } : null,
+                    lightPost,
+                    goLook: goSceneLook,
+                    blackout: { laser: Boolean(desk && desk.blackout), light: sr.lightBlackout }
+                })
+                sr.say = { text: out.text, kind: out.kind, at: Date.now() }
+            } finally { sr.busy = false }
+            await pollScenes() // the light desk's active scene as it is now; paints the row
+        }
+        sceneBox.title = "One press recalls the scene on the light desk and puts the laser look that follows it on the cubes. The scene the lights are on has a bright border; the look on the cubes says LIVE."
+        sceneBox.hidden = false
+        loop(pollScenes, sceneApi.POLL_MS)
+    }
+
     refreshThumbs()
     loop(refreshEngine, POLL_ENGINE_MS)
     loop(refreshDesk, POLL_DESK_MS)

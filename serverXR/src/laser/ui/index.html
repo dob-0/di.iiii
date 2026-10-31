@@ -52,6 +52,11 @@
       <span class="muted" id="liveName">Nothing on the cubes. Press a look.</span>
       <span class="pill is-warn" id="cubeNote" role="status" hidden></span>
     </div>
+    <!-- Scenes (2026-10-31, N1612): one press recalls a light scene and puts the laser look that follows it on the cubes. desk.js fills it; sceneRow.js holds the rules. -->
+    <div class="scenerow" id="sceneRow" role="group" aria-label="Scenes" hidden>
+      <div class="scenehead"><h2>Scenes</h2><span class="muted" id="sceneNote" role="status"></span></div>
+      <div class="scenegrid" id="sceneGrid"></div>
+    </div>
     <div class="tiles" id="tiles"></div>
   </section>
 
@@ -182,6 +187,7 @@
 <script src="lib/laser.js"></script>
 <script src="drawRuns.js"></script>
 <script src="drawCalm.js"></script>
+<script src="sceneRow.js"></script>
 <script src="desk.js"></script>
 </body>
 </html>

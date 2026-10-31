@@ -373,7 +373,7 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   // The scene link (laser/sceneLink.js): the switch, the light scene one look follows, the map the light desk's page shows.
   router.post('/desk/api/follow', requireSameMachine, (req, res) => answer(res, getDesk().setFollowLight(req.body?.on)))
   router.post('/desk/api/looks/follows', requireSameMachine, (req, res) => answer(res, getDesk().setFollows(req.body?.id, req.body?.scene)))
-  router.get('/desk/api/follows', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(followingDesk()?.followMap() ?? { ok: true, on: false, links: {} }) })
+  router.get('/desk/api/follows', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(followingDesk()?.followMap() ?? { ok: true, on: false, links: {}, table: {} }) })
   router.post('/desk/api/release', stopGate, (req, res) => answer(res, getDesk().release()))
   // Putting the cubes dark is a stop (stopGate); lifting the blackout lights them, so it is as strict as Arm. `on` is a
   // boolean or the route answers 400 — never a toggle (review 1218 M1).
