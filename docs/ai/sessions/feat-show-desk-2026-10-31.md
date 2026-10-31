@@ -95,3 +95,28 @@ all should be the loudest thing while a cube is On; the white "on" fill is harsh
 more cubes, lamps and scenes than fit; a known-fixes entry for the toggle. Seen on this run: the laser Master fader gets
 shorter while " · blackout on" shows beside the look name (the look name is not fixed width; it was so before too).
 
+
+## 19:40-20:15 · the live version (owner 19:2x: "where to edit scenes real time"; 19:3x "we come from TouchDesigner"; 19:5x touch, dots)
+
+Built on 3ea40f800, in `serverXR/src/showDesk/ui/{index.html,show.js,show.css}`, `ui/midi/{xone-k2.json,README.md}`,
+`showDesk.test.js`, the wiki article `show-desk`:
+- Layout "Console" (underground/ui-1): top line (title, what is on, status + unsaved state; Blackout all 283x56 at the right
+  with Lift lights / Lift laser under it), one row of scene keys numbered 00.., the live strip, one fader bank (upright
+  lamp faders with colour swatches under them, Lights master with Release holds, Laser master, per cube Size + preview + On/Off),
+  the links + MIDI line. Every control and safety rule of 3ea40f800 is kept (all its tests pass unchanged in meaning; the
+  layout tests were rewritten for the new rows, the lifts test now pins the lifts under Blackout all and never in the bank).
+- Live strip (touch-first): colour pads 56 px (laser desk SWATCHES + #e0001a #f0eaff #7a20ff), Rainbow, shape pads
+  (spots first), effect pads Pulse/Sweep/Spin/Cycle (tap off, tap again on at the last depth) with depth faders, Mirror,
+  faders for level, size, copies, rotation, phase, pulseBeats, sweepBeats, points, BPM + Tap, an XY pad (x, height).
+  Routes: `../laser/desk/api/looks/edit {id: liveId, field}` (per field <= 1 per 60 ms, last wins, never without a live
+  look), `../laser/desk/api/bpm {bpm}|{tap:true}`; lamp swatches `../light/api/fixture {id, values:{r,g,b,(other emitters 0)}, on:true}`.
+- Save scene = `../light/api/scenes/update {id: lit scene, restage: true}` + `../laser/desk/api/store {id: liveId, look}`
+  (NOT desk/api/save: it copies a changed look to "<name> 2" and moves the live id off the scene link; lead's correction).
+  The lit scene is kept by the page, because the lighting desk's POST /api/fixture clears its activeScene (desk.js:1680).
+  Undo = `../laser/desk/api/undo` + `../light/api/scenes/recall {id: lit scene}`. Status: "unsaved changes" from the laser
+  desk's `unsaved`; "lamps: saved on Save scene" (the lighting desk has no unsaved flag for scenes).
+- MIDI (Web MIDI in the page): default K2 map (see ui/midi/README.md), pick-up for faders/pots, relative encoders step from
+  the screen value, Learn (tap Learn, tap a target, move a control; localStorage), Export map. MIDI_OK is the whitelist of
+  targets; On/Off/lifts/Undo/Save/Release are not in it, and a stored map is read through it.
+- Tests: `npx vitest run serverXR/src/showDesk` -> 47 passed; the brief's set -> see the report. Not tested: a real K2,
+  the stage machine, Chromium's MIDI permission prompt there.

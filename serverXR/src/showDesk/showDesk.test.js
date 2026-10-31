@@ -35,7 +35,7 @@ const fresh = () => {
             { id: 'dark', name: 'Dark', fixtures: [] }
         ]
     }
-    desk = { liveId: 'ring', live: { name: 'Ring' }, master: 0.8, blackout: false, looks: [{ id: 'ring', name: 'Ring' }, { id: 'wave', name: 'Wave' }], cubes: [{ id: 'cube-a', size: 1.2, order: 0 }, { id: 'cube-b', size: 1, order: 1 }] }
+    desk = { liveId: 'ring', live: { name: 'Ring' }, master: 0.8, blackout: false, bpm: 120, unsaved: false, looks: [{ id: 'ring', name: 'Ring', shape: 'circle', colour: '#ff2030', rainbow: false, level: 1, size: 0.5, height: 0, x: 0, rotation: 0, spin: 0, copies: 0, points: 300, cycle: 0, pulse: 0.3, pulseBeats: 1, sweep: 0, sweepBeats: 4, mirror: false, phase: 0, follows: 'warm' }, { id: 'wave', name: 'Wave', shape: 'wave', colour: '#20d8ff', level: 1, pulse: 0 }], cubes: [{ id: 'cube-a', size: 1.2, order: 0 }, { id: 'cube-b', size: 1, order: 1 }] }
     engine = { sim: false, signOff: 'click', zone: { xMin: -1, xMax: 1, yMin: -1, yMax: 1 }, cubes: [{ id: 'cube-a', name: 'Left cube', ip: '10.0.0.2', connected: true, armed: false, stop: null }, { id: 'cube-b', name: 'Right cube', ip: '10.0.0.3', connected: true, armed: false, stop: null }] }
     table = { warm: { look: 'ring', name: 'Ring' }, blue: { look: 'wave', name: 'Wave' } }
     posts = []
@@ -88,8 +88,22 @@ const fakeFetch = async (url, opts = {}) => {
     if (url === '../laser/desk/api/blackout') { desk.blackout = body.on; return reply({ ok: true, blackout: body.on }) }
     if (url === '../laser/desk/api/master') { desk.master = body.level; return reply({ ok: true }) }
     if (url === '../laser/desk/api/cube') { desk.cubes.find((c) => c.id === body.id).size = body.size; return reply({ ok: true }) }
+    if (url === '../laser/desk/api/looks/edit') {
+        const l = desk.looks.find((x) => x.id === body.id)
+        if (!l) return reply({ ok: false, error: 'no such look' }, 404)
+        Object.assign(l, body)
+        desk.unsaved = true
+        return reply({ ok: true })
+    }
+    if (url === '../laser/desk/api/store') { const i = desk.looks.findIndex((x) => x.id === body.id); desk.looks[i] = { ...body.look, id: body.id }; desk.unsaved = false; return reply({ ok: true }) }
+    if (url === '../laser/desk/api/save') { desk.liveId = `${desk.liveId} 2`; return reply({ ok: true }) } // the real desk copies a changed look
+    if (url === '../laser/desk/api/undo') return reply({ ok: true })
+    if (url === '../laser/desk/api/bpm') { if (body.bpm != null) desk.bpm = body.bpm; return reply({ ok: true, bpm: desk.bpm }) }
+    if (url === '../light/api/scenes/update') return reply({ ok: true, scene: { id: body.id } })
     return reply({ error: 'not in the fake' }, 404)
 }
+let midiIn = null
+const midi = (...bytes) => midiIn.onmidimessage({ data: Uint8Array.from(bytes) })
 
 const $ = (id) => document.getElementById(id)
 const refresh = () => window.DiShowDesk.refresh()
@@ -123,6 +137,9 @@ beforeAll(async () => {
     window.deskColour = require('../lighting/ui/colour.js')
     window.DiLaserDraw = require('../laser/ui/drawRuns.js')
     window.DiSceneRow = require('../laser/ui/sceneRow.js')
+    try { window.localStorage.removeItem('diShowDesk.midiMap.v1') } catch { /* no storage: the default map */ }
+    midiIn = { name: 'XONE:K2', onmidimessage: null }
+    Object.defineProperty(window.navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map([['k2', midiIn]]), onstatechange: null }) })
     new Function(fs.readFileSync(path.join(UI, 'show.js'), 'utf8'))()
     await refresh()
     await refresh()
@@ -400,30 +417,40 @@ describe('one screen, 1278 x 758, no page scroll', () => {
     const css = fs.readFileSync(path.join(UI, 'show.css'), 'utf8')
     const token = (name) => Number((css.match(new RegExp(`--${name}:\\s*(\\d+)px`)) || [])[1])
     const rule = (selector) => (css.match(new RegExp(`(^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`)) || [])[2] || ''
-    it('the fixed rows and the least the halves get add up inside 758 px', () => {
-        const rows = ['top-h', 'status-h', 'scenes-h', 'links-h', 'halves-min'].map(token)
+    it('the fixed rows and the least the bank gets add up inside 758 px', () => {
+        const rows = ['top-h', 'scenes-h', 'live-h', 'links-h', 'bank-min'].map(token)
         expect(rows.every((n) => n > 0)).toBe(true)
         expect(rows.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(758)
-        expect(rule('body.showdesk')).toMatch(/grid-template-rows:\s*var\(--top-h\) var\(--status-h\) var\(--scenes-h\) minmax\(var\(--halves-min\), 1fr\) var\(--links-h\)/)
+        expect(rule('body.showdesk')).toMatch(/grid-template-rows:\s*var\(--top-h\) var\(--scenes-h\) var\(--live-h\) minmax\(var\(--bank-min\), 1fr\) var\(--links-h\)/)
         expect(rule('body.showdesk')).toMatch(/height:\s*100vh/)
         expect(rule('body.showdesk')).toMatch(/overflow:\s*hidden/)
         expect(rule('html, body.showdesk')).toMatch(/overflow:\s*hidden/)
     })
-    it('the five rows are the body\'s five areas, in order', () => {
+    it('the five rows are the body\'s five areas, in order: the top line, the scene keys, the live strip, the bank, the links', () => {
         const areas = [...document.body.children].filter((n) => n.tagName !== 'SCRIPT').map((n) => n.id || n.className.split(' ').pop())
-        expect(areas).toEqual(['showbar', 'status', 'showscenes', 'halves', 'links'])
+        expect(areas).toEqual(['showbar', 'showscenes', 'live', 'bank', 'links'])
     })
-    it('two rows of scene buttons fit the scenes row; more scroll inside it', () => {
-        expect(32 + 2 * token('scene-btn-h') + 3 * 6).toBeLessThanOrEqual(token('scenes-h'))
-        expect(css).toMatch(/\.showscenes \.scenegrid \{[^}]*overflow-y: auto/)
-        for (const list of ['.lamps', '.lasers']) expect(rule(list)).toMatch(/min-height:\s*0;[^]*overflow-y:\s*auto/)
+    it('the scene keys are one row that scrolls inside itself; the lamps, the cubes and the shapes scroll inside their own row', () => {
+        expect(token('scene-btn-h') + 10).toBeLessThanOrEqual(token('scenes-h'))
+        expect(css).toMatch(/\.showscenes \.scenegrid \{[^}]*grid-auto-flow: column;[^}]*overflow-x: auto/)
+        for (const list of ['.lamps', '.lasers', '.shapes']) expect(rule(list)).toMatch(/overflow-x:\s*auto/)
     })
-    it('targets are at least 40 px, and Blackout all keeps a fixed width at the far right', () => {
-        expect(token('target')).toBeGreaterThanOrEqual(40)
-        expect(token('scene-btn-h')).toBeGreaterThanOrEqual(40)
+    it('targets are 44 px at least, colour pads 56; Blackout all a fixed width at the far right with the two lifts under it', () => {
+        expect(token('target')).toBeGreaterThanOrEqual(44)
+        expect(token('pad')).toBeGreaterThanOrEqual(56)
+        expect(token('scene-btn-h')).toBeGreaterThanOrEqual(44)
         expect(rule('.blackoutall')).toMatch(/flex:\s*none;\s*width:\s*\d+px/)
-        const bar = $('blackoutAll').parentElement
-        expect(bar.lastElementChild).toBe($('blackoutAll'))
+        const stops = $('blackoutAll').parentElement
+        expect(stops.parentElement.lastElementChild).toBe(stops)
+        expect(stops.firstElementChild).toBe($('blackoutAll'))
+        expect([...stops.querySelectorAll('.lifts .liftbtn')].map((b) => b.id)).toEqual(['liftLights', 'liftLaser'])
+        expect($('bank').querySelector('.liftbtn')).toBeNull()
+    })
+    it('Save scene and Undo sit in the live strip, away from Blackout all', () => {
+        for (const id of ['saveScene', 'undoBtn']) {
+            expect($(id).closest('#live')).not.toBeNull()
+            expect($(id).closest('.showbar')).toBeNull()
+        }
     })
     it('the faders are square, like the lighting desk\'s: no native look, both thumbs and tracks radius 0, tokens only', () => {
         const flat = css.replace(/\/\*[\s\S]*?\*\//g, '')
@@ -438,16 +465,12 @@ describe('one screen, 1278 x 758, no page scroll', () => {
         expect(block('::-webkit-slider-thumb')).toMatch(/margin-top:\s*calc\(\(6px - var\(--target\)\) \/ 2\)/) // centred on the track
         expect(flat).not.toMatch(/accent-color/)
     })
-    it('the lifts sit at the head of their own half, never in the top line beside Blackout all', () => {
-        expect($('liftLights').closest('#lightsHalf')).not.toBeNull()
-        expect($('liftLaser').closest('#laserHalf')).not.toBeNull()
-        expect($('blackoutAll').parentElement.querySelector('.liftbtn')).toBeNull()
-    })
     it('brings no colour of its own: every colour it names is one the laser desk already uses', () => {
         const deskCss = fs.readFileSync(path.join(here, '../laser/ui/desk.css'), 'utf8')
         const deskJs = fs.readFileSync(path.join(here, '../laser/ui/desk.js'), 'utf8')
         const named = [...css.matchAll(/#[0-9a-f]{3,8}\b/gi), ...fs.readFileSync(path.join(UI, 'show.js'), 'utf8').matchAll(/#[0-9a-f]{6}\b|rgba\([^)]*\)/gi)].map((m) => m[0].toLowerCase())
-        for (const c of named) expect(deskCss.toLowerCase().includes(c) || deskJs.toLowerCase().includes(c), c).toBe(true)
+        const palette = ['#e0001a', '#f0eaff', '#7a20ff'] // the show palette's own colours (brief 2026-10-31), used only as swatches
+        for (const c of named) expect(deskCss.toLowerCase().includes(c) || deskJs.toLowerCase().includes(c) || palette.includes(c), c).toBe(true)
         expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/font-family|@font-face|transition|animation/)
     })
 })
@@ -457,5 +480,170 @@ describe('the lamp colours are the lighting desk\'s own', () => {
         const app = fs.readFileSync(path.join(here, '../lighting/ui/app.js'), 'utf8')
         const block = app.match(/const EMITTER_MIX = (\{[\s\S]*?\});/)[1]
         expect(require('../lighting/ui/colour.js').EMITTER_MIX).toEqual(new Function(`return (${block})`)())
+    })
+})
+
+describe('the live strip plays the live look with the laser desk\'s own looks/edit', () => {
+    const edits = () => posts.filter((p) => p.url === '../laser/desk/api/looks/edit').map((p) => p.body)
+    it('a fader: only after a move, only with the live id, at most one per 60 ms per field, the last value wins', async () => {
+        await sleep(150)
+        expect(edits()).toEqual([])
+        const input = document.querySelector('#liveRowA input[data-midi="live:level"]')
+        for (const v of [0.1, 0.2, 0.3, 0.4, 0.5]) { input.value = String(v); input.dispatchEvent(new Event('input')) }
+        await settle()
+        expect(edits().length).toBeGreaterThan(0)
+        expect(edits().length).toBeLessThan(5)
+        expect(edits().every((b) => b.id === 'ring' && Object.keys(b).sort().join() === 'id,level')).toBe(true)
+        expect(edits().at(-1).level).toBe(0.5)
+    })
+    it('nothing is sent while no look is live, by a fader, a pad or MIDI; the strip says so', async () => {
+        desk.liveId = null
+        desk.live = null
+        await refresh()
+        expect($('liveName').textContent).toBe('No look is live: press a scene')
+        const input = document.querySelector('#liveRowA input[data-midi="live:size"]')
+        expect(input.disabled).toBe(true)
+        input.value = '0.2'
+        input.dispatchEvent(new Event('input'))
+        await press(document.querySelector('.colourpad'))
+        await press(document.querySelector('.shapepad'))
+        midi(0xbe, 4, 64)
+        await settle()
+        expect(edits()).toEqual([])
+    })
+    it('a pad press posts one looks/edit with its field: colour, shape (spots, the dots, first), an effect off and back on, mirror', async () => {
+        expect(document.querySelector('#liveShapes .shapepad').dataset.shape).toBe('spots')
+        await press(document.querySelector('.colourpad[data-colour="#7a20ff"]'))
+        await press(document.querySelector('.shapepad[data-shape="spots"]'))
+        await press(document.querySelector('[data-effect="pulse"]'))
+        await press(document.querySelector('[data-effect="pulse"]'))
+        await press($('liveMirror'))
+        expect(edits()).toEqual([
+            { id: 'ring', colour: '#7a20ff', rainbow: false }, { id: 'ring', shape: 'spots' }, { id: 'ring', pulse: 0 }, { id: 'ring', pulse: 0.3 }, { id: 'ring', mirror: true }
+        ])
+    })
+    it('the XY pad posts x and height of the live look, throttled, the last place wins', async () => {
+        const pad = $('xyPad')
+        pad.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 200, right: 200, bottom: 200 })
+        pad.dispatchEvent(new window.MouseEvent('pointerdown', { clientX: 150, clientY: 50, bubbles: true }))
+        for (const [x, y] of [[160, 40], [170, 30], [180, 20]]) pad.dispatchEvent(new window.MouseEvent('pointermove', { clientX: x, clientY: y, bubbles: true }))
+        pad.dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true }))
+        await settle()
+        const xs = edits().filter((b) => 'x' in b)
+        expect(xs.length).toBeGreaterThan(0)
+        expect(xs.length).toBeLessThan(4)
+        expect(xs.at(-1)).toEqual({ id: 'ring', x: 0.8 })
+        expect(edits().filter((b) => 'height' in b).at(-1)).toEqual({ id: 'ring', height: 0.8 })
+    })
+    it('the lamp swatches: the lighting desk\'s fixture route with that lamp\'s own colour keys; a dimmer-only lamp has none', async () => {
+        await press(lampRow('f1').querySelector('.lampcolours [data-colour="#e0001a"]'))
+        await press(lampRow('f2').querySelector('.lampcolours [data-colour="#20d8ff"]'))
+        expect(lampRow('f3').querySelectorAll('.lampcolours button').length).toBe(0)
+        expect(posts).toEqual([
+            { url: '../light/api/fixture', body: { id: 'f1', values: { r: 224, g: 0, b: 26 }, on: true } },
+            { url: '../light/api/fixture', body: { id: 'f2', values: { r: 32, g: 216, b: 255, w: 0 }, on: true } }
+        ])
+    })
+    it('Save scene: the lit scene restaged (even after the desk forgot it) and the live look stored in place; never desk/api/save', async () => {
+        light.activeScene = null // the lighting desk forgets its scene once a lamp is changed by hand
+        await refresh()
+        expect($('nowScene').textContent).toBe('Warm open · changed')
+        await press($('saveScene'))
+        expect(posts).toEqual([
+            { url: '../light/api/scenes/update', body: { id: 'warm', restage: true } },
+            { url: '../laser/desk/api/store', body: { id: 'ring', look: expect.objectContaining({ id: 'ring', name: 'Ring', shape: 'circle', follows: 'warm' }) } }
+        ])
+        expect(posts.some((p) => p.url === '../laser/desk/api/save')).toBe(false)
+        expect(desk.liveId).toBe('ring')
+        expect(desk.looks.find((l) => l.id === 'ring').follows).toBe('warm')
+        expect(table.warm).toEqual({ look: 'ring', name: 'Ring' })
+    })
+    it('Undo: the laser desk\'s own undo, then the lit light scene recalled', async () => {
+        await press($('undoBtn'))
+        expect(posts).toEqual([{ url: '../laser/desk/api/undo', body: {} }, { url: '../light/api/scenes/recall', body: { id: 'warm' } }])
+    })
+    it('the status says unsaved changes while the laser desk reports them', async () => {
+        desk.unsaved = true
+        await refresh()
+        expect($('saveState').textContent).toMatch(/^unsaved changes · laser: unsaved · lamps: saved on Save scene$/)
+    })
+    it('BPM and Tap: the laser desk\'s own bpm route', async () => {
+        await press($('tapBtn'))
+        await slide($('bpm'), 128)
+        expect(posts).toEqual([{ url: '../laser/desk/api/bpm', body: { tap: true } }, { url: '../laser/desk/api/bpm', body: { bpm: 128 } }])
+    })
+    it('the shapes are the laser desk\'s own list (shared/laserShapes.cjs)', () => {
+        const src = fs.readFileSync(path.join(UI, 'show.js'), 'utf8')
+        const copy = new Function(`return ${src.match(/const SHAPES = (\[[\s\S]*?\])/)[1]}`)()
+        expect(copy).toEqual(require('../../../shared/laserShapes.cjs').LASER_SHAPES)
+    })
+})
+
+describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
+    it('the MIDI line names the device; the default map uses the K2\'s own numbers on channel 15 (14 on the wire)', () => {
+        expect($('midiLine').textContent).toBe('MIDI: XONE:K2')
+        const k2 = JSON.parse(fs.readFileSync(path.join(UI, 'midi/xone-k2.json'), 'utf8'))
+        const num = (control) => k2.find((c) => c.control === control).number
+        const map = window.DiShowDesk.midiMap()
+        expect(map.find((m) => m.target === 'light-master')).toMatchObject({ kind: 'cc', ch: 14, num: num('fader 4') })
+        expect(map.find((m) => m.target === 'lamp:0')).toMatchObject({ kind: 'cc', ch: 14, num: num('fader 1') })
+        expect(map.find((m) => m.target === 'live:rotation')).toMatchObject({ kind: 'cc', ch: 14, num: num('encoder 1'), relative: true })
+    })
+    it('a fader picks up: nothing moves or posts until the control passes the screen\'s value, then it follows', async () => {
+        midi(0xbe, 19, 0)
+        midi(0xbe, 19, 40)
+        await settle()
+        expect(posts).toEqual([])
+        expect($('lightMaster').value).toBe('255')
+        midi(0xbe, 19, 127)
+        await settle()
+        midi(0xbe, 19, 100)
+        await settle()
+        expect(posts.at(-1)).toEqual({ url: '../light/api/master', body: { master: 201 } })
+    })
+    it('a pot on the live look picks up too, then posts looks/edit with the live id', async () => {
+        midi(0xbe, 4, 0) // level is 1 on the screen: a pot at 0 waits
+        await settle()
+        expect(posts).toEqual([])
+        midi(0xbe, 4, 127)
+        midi(0xbe, 4, 64)
+        await settle()
+        expect(posts.filter((p) => p.url === '../laser/desk/api/looks/edit').at(-1)).toEqual({ url: '../laser/desk/api/looks/edit', body: { id: 'ring', level: 0.5 } })
+    })
+    it('a button presses its scene key: matrix B is scene 01', async () => {
+        midi(0x9e, 37, 127)
+        await settle()
+        expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
+    })
+    it('the Blackout button (matrix P) sends only the two dark routes', async () => {
+        midi(0x9e, 27, 127)
+        await settle()
+        expect(posts).toEqual(DARK)
+    })
+    it('no MIDI message of any kind, channel, number or value reaches On, Off, a lift, Undo, Save or Release', async () => {
+        desk.blackout = true
+        light.blackout = true
+        light.raw = { '0:1': 255 }
+        await refresh()
+        for (let ch = 0; ch < 16; ch += 1) {
+            for (let n = 0; n < 128; n += 1) for (const v of [0, 1, 64, 127]) { midi(0xb0 | ch, n, v); midi(0x90 | ch, n, v); midi(0x80 | ch, n, v) }
+        }
+        await sleep(400)
+        await refresh()
+        const bad = posts.filter((p) => p.url === '../laser/api/arm' || /\/(undo|store|save|scenes\/update|raw|release)$/.test(p.url) || p.body.blackout === false || p.body.on === false)
+        expect(bad).toEqual([])
+        expect(posts.length).toBeGreaterThan(0)
+    })
+    it('Learn maps one control to a fader; On, Off, a lift, Undo and Save cannot be picked', async () => {
+        await press($('midiLearn'))
+        for (const n of [cubeCard('cube-a').querySelector('.cubeon'), cubeCard('cube-a').querySelector('.cubeoff'), $('liftLights'), $('undoBtn'), $('saveScene')]) n.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }))
+        midi(0xb0, 7, 10)
+        expect(window.DiShowDesk.midiMap().some((m) => m.ch === 0 && m.num === 7)).toBe(false)
+        $('lightMaster').dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }))
+        $('lightMaster').dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true }))
+        midi(0xb0, 7, 10)
+        expect(window.DiShowDesk.midiMap()).toContainEqual({ kind: 'cc', ch: 0, num: 7, target: 'light-master' })
+        await settle()
+        expect(posts.filter((p) => p.url === '../laser/api/arm' || p.url.endsWith('/undo') || p.url.endsWith('/store'))).toEqual([])
     })
 })

@@ -1,22 +1,26 @@
-/* The show desk (showDesk/ui): one page for the lighting desk and the laser desk, one screen, no page scroll.
+/* The show desk (showDesk/ui): one page for the lighting desk and the laser desk, one screen, no page scroll, laid out like a
+   console (the owner, 2026-10-31: "all feels separate, make them next to each other, touch, fader, midi").
    It loads the laser desk's stylesheet first (../laser/desk.css: the tokens, buttons, the top bar, the di.iiii mark, the
    panes, the pill, the scene buttons and their marks) and only lays the page out here: no colour or font of its own.
-   Five rows: the top line, the status line, the scenes, the two halves, the links. The fixed rows are tokens, so
-   serverXR/src/showDesk/showDesk.test.js adds them up against a 758 px screen (jsdom has no layout engine). Square corners,
-   no animation, no transition: the only thing that moves is the laser preview. */
+   Five rows: the top line (title, what is on, the status; the stops at the right), the scene keys, the live strip, the
+   fader bank, the links and MIDI line. The fixed rows are tokens, so serverXR/src/showDesk/showDesk.test.js adds them up
+   against a 758 px screen (jsdom has no layout engine). Square corners, no animation, no transition: the only thing that
+   moves is the laser preview. */
 :root {
-  --top-h: 60px;
+  --top-h: 104px;      /* the title line and the status at the left; Blackout all (56) and the two lifts (44) at the right */
   --status-h: 30px;
-  --scenes-h: 176px;   /* the head and two rows of scene buttons; more scenes scroll inside the row, never the page */
-  --links-h: 34px;
-  --halves-min: 300px; /* the least the two halves are given */
-  --target: 44px;      /* a button the hand finds in the dark: at least 40 px */
-  --scene-btn-h: 62px;
+  --scenes-h: 72px;    /* one row of scene keys; more scenes scroll inside the row, never the page */
+  --live-h: 250px;     /* the live strip: colours, shapes, effects, two rows of faders; the XY pad at the right */
+  --bank-min: 260px;   /* the least the fader bank is given */
+  --links-h: 48px;
+  --target: 44px;      /* a button the hand finds in the dark: at least 44 px */
+  --pad: 56px;         /* a colour pad */
+  --scene-btn-h: 60px;
 }
 html, body.showdesk { height: 100%; overflow: hidden; }
 body.showdesk {
   display: grid; height: 100vh; min-height: 0; overflow: hidden; font-size: 14px;
-  grid-template-rows: var(--top-h) var(--status-h) var(--scenes-h) minmax(var(--halves-min), 1fr) var(--links-h);
+  grid-template-rows: var(--top-h) var(--scenes-h) var(--live-h) minmax(var(--bank-min), 1fr) var(--links-h);
 }
 body.showdesk button { min-height: var(--target); font-size: 14px; }
 /* Faders: the lighting desk's square ones (lighting/ui/style.css, sliders), tokens only: no native round thumb or pill track */
@@ -25,80 +29,137 @@ body.showdesk input[type=range]::-webkit-slider-runnable-track { height: 6px; ba
 body.showdesk input[type=range]::-moz-range-track { height: 6px; background: var(--field); border: 1px solid var(--line); border-radius: 0; }
 body.showdesk input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: var(--target); margin-top: calc((6px - var(--target)) / 2); border: 0; border-radius: 0; background: var(--text); }
 body.showdesk input[type=range]::-moz-range-thumb { width: 22px; height: var(--target); border: 0; border-radius: 0; background: var(--text); }
+body.showdesk input[type=range]:disabled { cursor: default; opacity: .45; }
+/* Upright faders in the bank (a console's posture): the same square track and thumb, turned; the top is the most */
+body.showdesk input.vfader { writing-mode: vertical-lr; direction: rtl; width: var(--target); height: auto; flex: 1 1 0; min-height: 48px; align-self: center; }
+body.showdesk input.vfader::-webkit-slider-runnable-track { width: 6px; height: 100%; }
+body.showdesk input.vfader::-webkit-slider-thumb { width: var(--target); height: 22px; margin-top: 0; margin-left: calc((6px - var(--target)) / 2); }
+body.showdesk input.vfader::-moz-range-track { width: 6px; height: 100%; }
+body.showdesk input.vfader::-moz-range-thumb { width: var(--target); height: 22px; }
+/* The live strip is played with fingers: its thumbs are a full target square */
+body.showdesk .livestrip input[type=range]::-webkit-slider-thumb { width: var(--target); }
+body.showdesk .livestrip input[type=range]::-moz-range-thumb { width: var(--target); }
 
-/* ---- the top line: the mark, the title, what is on, and Blackout all at the far right in a fixed place */
-.showbar { position: static; flex-wrap: nowrap; align-items: center; gap: 14px; min-height: 0; height: var(--top-h); padding-right: 10px; }
+/* ---- the top line: the mark, the title, what is on, the status; the stops at the far right in a fixed place */
+.showbar { position: static; flex-wrap: nowrap; align-items: stretch; gap: 14px; min-height: 0; height: var(--top-h); padding: 4px 8px 4px 0; }
+.showbar .homelink { align-self: center; }
+.titleblock { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+.titleline { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .showbar .title { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; flex: none; }
 .onnow { flex: 1 1 0; min-width: 0; margin: 0; display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; }
 .onnow .nowpart { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .onnow .sep { color: var(--muted); flex: none; }
 .onnow .nowlabel { flex: none; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .onnow .nowlaser { flex: none; font-size: 18px; padding: 6px 12px; border: 1px solid var(--line); }
-.blackoutall { flex: none; width: 220px; height: var(--target); font-size: 16px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.statusline { display: flex; align-items: center; gap: 12px; min-width: 0; height: var(--status-h); }
+.stops { flex: none; width: 283px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+.blackoutall { flex: none; width: 283px; height: 56px; min-height: 56px; font-size: 16px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-width: 2px; }
 .blackoutall .sub { display: block; font-size: 10px; font-weight: 500; letter-spacing: .02em; text-transform: none; }
+.lifts { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.liftbtn { min-height: var(--target); }
 
-/* ---- the status line: what the last press did, or why it did not */
-.status { margin: 0; padding: 0 12px; line-height: var(--status-h); height: var(--status-h); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-bottom: 1px solid var(--line); color: var(--muted); }
+/* ---- the status line: what the last press did, or why it did not; beside it whether anything is unsaved */
+.status { flex: 1 1 0; min-width: 0; margin: 0; padding: 0 8px; line-height: var(--status-h); height: var(--status-h); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border: 1px solid var(--line); color: var(--muted); }
 .status.is-ok { color: var(--text); }
 .status.is-error { background: #2a2210; color: #ffe7b8; }
+.savestate { flex: none; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.savestate.is-unsaved { color: var(--warn); }
 
-/* ---- scenes: the laser desk's scene buttons, bigger */
-.showscenes { border-width: 0 0 1px; min-height: 0; overflow: hidden; }
-.showscenes .panehead { padding: 6px 10px; }
+/* ---- scenes: one row of big keys in play order, the live one marked */
+.showscenes { display: grid; grid-template-columns: 112px 1fr; border-width: 1px 0; min-height: 0; overflow: hidden; }
+.showscenes .panehead { flex-direction: column; align-items: flex-start; gap: 2px; padding: 4px 8px; overflow: hidden; border: 0; }
+.showscenes .panehead .muted { font-size: 10px; line-height: 1.25; }
 .showscenes .scenegrid {
   --scene-h: var(--scene-btn-h);
-  grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 6px; padding: 6px 8px; /* five across at 1278 px: a scene's whole name */
-  max-height: calc(var(--scene-h) * 2 + 6px * 3); overflow-y: auto; min-height: 0;
+  grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(112px, 1fr); gap: 4px; padding: 5px 6px;
+  overflow-x: auto; overflow-y: hidden; min-height: 0;
 }
-.showscenes .scenebtn { gap: 3px; padding: 4px 8px; }
-.showscenes .scenebtn .scenename { font-size: 15px; }
-.showscenes .scenebtn .scenelook { font-size: 12px; }
+.showscenes .scenebtn { gap: 2px; padding: 3px 6px; height: var(--scene-btn-h); }
+.showscenes .scenebtn .scenename { font-size: 14px; }
+.showscenes .scenebtn .scenenum { font: 600 12px var(--mono); color: var(--muted); margin-right: 6px; }
+.showscenes .scenebtn .scenelook { font-size: 11px; }
 .showscenes .scenebtn .tag { font-size: 10px; }
 .scenedots { display: flex; gap: 4px; height: 8px; }
 .scenedots i { width: 8px; height: 8px; border: 1px solid var(--line); flex: none; }
 .scenebtn.is-busy { border-style: dashed; }
+.scenebtn.is-edited { outline: 2px dashed var(--warn); outline-offset: -2px; }
 
-/* ---- the two halves */
-.halves { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; min-height: 0; overflow: hidden; }
-.half { min-height: 0; overflow: hidden; }
-.halfhead { align-items: center; flex-wrap: nowrap; gap: 12px; min-height: 58px; }
-.halfhead h2 { font-size: 14px; flex: none; }
-.fader { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.halfhead .fader { flex: 1 1 auto; }
-.halfhead .fader input { flex: 1 1 auto; min-width: 80px; width: auto; }
-.fader b { font: 500 13px var(--mono); color: var(--text); width: 40px; text-align: right; flex: none; }
-.holdbtn { flex: none; }
-/* Each desk's own Lift blackout, at the head of its half: far from Blackout all (top right), a fixed width so nothing
-   under the hand moves when a blackout comes and goes. The lights head may wrap when Release all holds shows too. */
-.liftbtn { flex: none; width: 128px; }
-#lightsHalf .halfhead { flex-wrap: wrap; }
-.lookname { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-.halfnote { margin: 0; padding: 8px 10px; font-size: 13px; border-bottom: 1px solid var(--line); }
+/* ---- the live strip: the live laser look under the fingers */
+.livestrip { display: grid; grid-template-columns: 1fr 236px; gap: 8px; padding: 4px 8px; min-height: 0; overflow: hidden; border-bottom: 1px solid var(--line); }
+.liveleft { display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: 0; }
+.liverow { display: flex; align-items: center; gap: 4px; min-width: 0; flex: none; height: var(--target); }
+.liverow:first-child { height: var(--pad); }
+.liverow .grow { flex: 1 1 auto; }
+.colours { display: flex; gap: 4px; }
+.pad { min-height: var(--target); padding: 0 10px; border: 1px solid var(--line); border-radius: 0; background: var(--field); color: var(--text); font-size: 13px; white-space: nowrap; }
+.pad.is-on { box-shadow: inset 0 0 0 3px var(--text); }
+.pad:disabled { opacity: .45; }
+.colourpad { width: var(--pad); height: var(--pad); min-height: var(--pad); padding: 0; }
+.colourpad.is-on { box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 6px var(--text); }
+.togglepad { height: var(--pad); min-height: var(--pad); }
+.shapes { overflow-x: auto; overflow-y: hidden; }
+.shapepad { flex: none; height: var(--target); }
+.effects .effect { display: flex; align-items: center; gap: 2px; flex: 1 1 0; min-width: 0; }
+.effectpad { flex: none; display: flex; flex-direction: column; justify-content: center; line-height: 1.1; min-width: 72px; height: var(--target); }
+.effectpad .val { font: 500 11px var(--mono); color: var(--muted); }
+.effects .effect input { flex: 1 1 auto; min-width: 60px; width: auto; }
+.effects > .effectpad { flex: none; }
+.hfader { display: flex; align-items: center; gap: 6px; flex: 1 1 0; min-width: 0; }
+.hfader span { flex: none; font-size: 12px; color: var(--muted); width: 72px; }
+.hfader input { flex: 1 1 auto; min-width: 50px; width: auto; }
+.hfader .val, .strip .val { font: 500 12px var(--mono); color: var(--text); width: 44px; text-align: right; flex: none; }
+.actbtn { flex: none; padding: 0 14px; }
+.liveright { display: flex; flex-direction: column; gap: 4px; min-height: 0; }
+.livename { margin: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 18px; flex: none; }
+.livestrip.is-idle .livename { color: var(--warn); }
+.xypad { position: relative; flex: 1 1 auto; min-height: 0; background: var(--stagebg); border: 1px solid var(--line); touch-action: none; cursor: crosshair; }
+.xydot { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; background: var(--text); left: 50%; top: 50%; }
+.livestrip.is-idle .xydot { opacity: .3; }
 
-.lamps { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 6px 10px; display: flex; flex-direction: column; gap: 6px; }
-.lamp { display: grid; grid-template-columns: var(--target) minmax(110px, 160px) 1fr 44px; align-items: center; gap: 10px; min-height: 56px; padding: 4px 0; border-bottom: 1px solid var(--line); }
-.lamp .swatch { width: var(--target); height: var(--target); border: 1px solid var(--line); background: var(--field); }
-.lamp .who { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.lamp .who b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lamp .who span { font: 12px var(--mono); color: var(--muted); }
-.lamp b.val { font: 500 13px var(--mono); text-align: right; }
+/* ---- the fader bank: Light lamps · Lights master · Laser master · Size · the cube */
+.bank { display: flex; gap: 6px; padding: 6px 8px; min-height: 0; min-width: 0; overflow: hidden; }
+.bankpart { display: flex; gap: 6px; min-height: 0; min-width: 0; }
+#lightsHalf { flex: 0 1 auto; }
+#laserHalf { flex: 1 1 auto; }
+.strip { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 4px 6px; border: 1px solid var(--line); background: var(--pane); min-height: 0; flex: none; }
+.striphead { display: flex; align-items: center; gap: 6px; min-width: 0; flex: none; }
+.striphead b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.strip .val { width: auto; text-align: center; }
+.strip .cap { font-size: 11px; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.masterstrip { width: 108px; background: var(--cell); }
+.holdbtn { flex: none; font-size: 12px; padding: 0 4px; white-space: normal; line-height: 1.1; }
+.lookname { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.halfnote { margin: 0; padding: 8px; font-size: 13px; max-width: 280px; }
 
-.lasers { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 6px 10px; display: flex; flex-direction: column; gap: 8px; }
-.cubecard { flex: 1 1 auto; min-height: 220px; display: grid; grid-template-columns: minmax(200px, 1fr) minmax(160px, 1.1fr); gap: 10px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
-.cubecard .controls { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.cubecard .cubename { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-.cubecard .cubename b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cubecard .cubestate { font-size: 18px; font-weight: 700; }
+.lamps { display: flex; gap: 6px; min-height: 0; min-width: 0; overflow-x: auto; overflow-y: hidden; }
+.lamp.strip { width: 196px; }
+.lamp .swatch { width: 22px; height: 22px; border: 1px solid var(--line); background: var(--field); flex: none; }
+.lamp .who { min-width: 0; display: flex; flex-direction: column; }
+.lamp .who b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lamp .who span { font: 11px var(--mono); color: var(--muted); white-space: nowrap; }
+.lampcolours { display: grid; grid-template-columns: repeat(4, var(--target)); gap: 4px; justify-content: center; flex: none; }
+.lampcolours .swatch { width: var(--target); height: var(--target); min-height: var(--target); padding: 0; border: 1px solid var(--line); border-radius: 0; }
+
+.lasers { display: flex; gap: 6px; flex: 1 1 auto; min-height: 0; min-width: 0; overflow-x: auto; overflow-y: hidden; }
+.cubecard { display: flex; gap: 6px; flex: 1 0 auto; min-height: 0; min-width: 300px; }
+.sizestrip { width: 76px; }
+.cubecard .controls { display: flex; flex-direction: column; gap: 4px; flex: 1 1 auto; min-width: 210px; min-height: 0; }
+.cubecard .cubename { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: none; }
+.cubecard .cubename b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cubecard .cubestate { font-size: 16px; font-weight: 700; }
 .cubecard .cubestate.is-armed { color: #ffd9d5; }
 .cubecard .cubestate.is-warn { color: var(--warn); }
-.cubecard .onoff { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cubecard .onoff { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex: none; }
 .cubecard .onoff button { min-height: 56px; font-size: 18px; font-weight: 700; }
-.cubecard .stopline { margin: 0; font-size: 12px; color: var(--warn); }
-.cubecard .preview { position: relative; min-height: 0; background: var(--stagebg); border: 1px solid var(--line); }
+.cubecard .stopline { margin: 0; font-size: 12px; color: var(--warn); flex: none; }
+.cubecard .preview { position: relative; flex: 1 1 auto; min-height: 40px; background: var(--stagebg); border: 1px solid var(--line); }
 .cubecard .preview canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .cubecard .preview .cap { position: absolute; left: 6px; top: 4px; font-size: 11px; color: var(--muted); }
 
-/* ---- the links to the full desks */
-.links { display: flex; align-items: center; gap: 18px; padding: 0 12px; border-top: 1px solid var(--line); background: var(--bar); font-size: 13px; overflow: hidden; white-space: nowrap; }
-.links a { color: var(--text); text-decoration: none; border: 1px solid var(--line); padding: 4px 10px; }
+/* ---- the links to the full desks, and the MIDI line */
+.links { display: flex; align-items: center; gap: 10px; padding: 0 8px; border-top: 1px solid var(--line); background: var(--bar); font-size: 13px; overflow: hidden; white-space: nowrap; }
+.links a { color: var(--text); text-decoration: none; border: 1px solid var(--line); padding: 0 12px; min-height: var(--target); display: inline-flex; align-items: center; }
 .links a:hover { border-color: var(--accent); color: var(--accent); }
+.midiline { font: 500 12px var(--mono); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#midiLearn.is-on { box-shadow: inset 0 0 0 3px var(--accent); }
+.miditext { position: fixed; right: 8px; bottom: calc(var(--links-h) + 4px); width: 420px; height: 260px; background: var(--pane); color: var(--text); border: 1px solid var(--line); border-radius: 0; font: 11px var(--mono); }
