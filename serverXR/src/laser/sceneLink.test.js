@@ -98,6 +98,16 @@ describe('the desk follows a light scene: the live look and nothing else', () =>
         expect(st.follow).toMatchObject({ on: true, last: { look: 'muth-05-catacomb', scene: { id: 'muth05' } } })
         expect(desk.followMap().links.muth05).toEqual({ look: 'muth-05-catacomb', name: 'MUTH 05 Catacomb' })
     })
+    it('followMap: table is the same map whatever the switch says; links only while it is on (the Scenes row plays from table)', () => {
+        const off = deskWith({ followLight: false }).desk.followMap()
+        expect(off).toMatchObject({ ok: true, on: false, links: {} })
+        expect(off.table.muth05).toEqual({ look: 'muth-05-catacomb', name: 'MUTH 05 Catacomb' })
+        expect(Object.keys(off.table).sort()).toEqual(['muth01', 'muth05', 'muth09'])
+        const on = deskWith({ followLight: true }).desk.followMap()
+        expect(on.on).toBe(true)
+        expect(on.links).toEqual(on.table)
+        expect(on.table).toEqual(off.table)
+    })
     it('no link, no change; switch off, no change; not a hand the lasers obey, no change', () => {
         const { desk, engine } = deskWith()
         expect(desk.followScene(page('muth77'))).toMatchObject({ followed: false, why: 'no look' })

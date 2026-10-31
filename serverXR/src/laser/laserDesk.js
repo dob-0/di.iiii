@@ -871,17 +871,18 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         lastFollow = { scene: { id, name }, look: look.id, name: look.name, why: null, at: now() }
         return { ok: true, followed: true, look: look.id }
     }
-    // What a recall would follow now, for the light desk's page: the links set, and those the first fill would set
-    // (shown, not written: a GET writes nothing).
+    // What a recall would follow now: the links set, and those the first fill would set (shown, not written: a GET writes
+    // nothing). `links` is for the light desk's page and is empty while the switch is off (that page shows a scene's laser look
+    // only then). `table` is the same map whatever the switch says: the laser desk's Scenes row plays from it, so a press there
+    // works with "Follow light scenes" off as well as on (2026-10-31, N1612).
     const followMap = () => {
-        const links = {}
-        if (!show.followLight) return { ok: true, on: false, links }
+        const table = {}
         const fill = new Map(fillLinks(show.looks, lightScenes()).map((f) => [f.look, f.scene]))
         for (const l of show.looks) {
             const scene = l.follows || fill.get(l.id)
-            if (scene && !links[scene]) links[scene] = { look: l.id, name: l.name }
+            if (scene && !Object.prototype.hasOwnProperty.call(table, scene)) table[scene] = { look: l.id, name: l.name }
         }
-        return { ok: true, on: true, links }
+        return { ok: true, on: Boolean(show.followLight), links: show.followLight ? table : {}, table }
     }
     const followState = () => ({ on: show.followLight, scenes: lightScenes(), last: lastFollow })
 

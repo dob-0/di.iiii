@@ -250,3 +250,29 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
 #followsScene:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 #followsScene:disabled { opacity: .45; }
 #followsScene option { background: var(--pane2); color: var(--text); }
+
+/* ---- Scenes row (2026-10-31, N1612): one press recalls a light scene and puts the laser look that follows it on the cubes.
+   Buttons only: no animation, no transition. Two lines of buttons at most; a longer list scrolls inside the row and never
+   pushes the page. Square corners, the page's own tokens. */
+.scenerow { flex: none; padding: 6px 8px; border-bottom: 1px solid var(--line); background: var(--pane); }
+.scenehead { display: flex; align-items: baseline; gap: 10px; min-height: 18px; margin-bottom: 4px; }
+.scenehead .muted { font-size: 11px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scenehead .is-error { color: #ff9b93; }
+.scenegrid {
+  --scene-h: 38px; /* a button the hand finds in the dark: at least 36 px tall */
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); grid-auto-rows: var(--scene-h); gap: 4px;
+  max-height: calc(var(--scene-h) * 2 + 4px); overflow-y: auto;
+}
+.scenebtn {
+  display: flex; flex-direction: column; justify-content: center; gap: 1px; height: var(--scene-h); min-height: 36px;
+  padding: 3px 6px; text-align: left; background: var(--cell); overflow: hidden;
+}
+.scenebtn:active { border-color: var(--accent); }
+.scenebtn > span { display: flex; align-items: baseline; gap: 6px; min-width: 0; line-height: 1.2; }
+.scenebtn .scenename { font-size: 11.5px; }
+.scenebtn .scenelook { font-size: 10px; color: var(--muted); }
+.scenebtn .scenetext { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scenebtn .tag { flex: none; font: 600 9px/1 var(--mono); letter-spacing: .06em; color: var(--accent); }
+.scenebtn.is-lights { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.scenebtn.is-lights .scenename .scenetext { color: #fff; font-weight: 600; }
+.scenebtn.is-laser .scenelook { color: var(--accent); }

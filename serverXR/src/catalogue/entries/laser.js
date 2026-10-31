@@ -200,7 +200,7 @@ module.exports = [
   },
   {
     route: "GET /laser/desk/api/follows",
-    summary: "whether Follow light scenes is on, and which look follows each lighting desk scene: { on, links: { <scene id>: { look, name } } } — for the lighting desk's page",
+    summary: "whether Follow light scenes is on, and which look follows each lighting desk scene: { on, links: { <scene id>: { look, name } }, table } — links is empty while the switch is off (the lighting desk's page shows a scene's laser look only then); table is the same map whatever the switch says, which the laser desk's Scenes row plays from",
     reach: "read",
     role: "guest",
     agent: false,
