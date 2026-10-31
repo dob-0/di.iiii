@@ -8,7 +8,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -442,7 +442,7 @@ describe('one screen, 1278 x 758, no page scroll', () => {
         expect(token('pad')).toBe(40)
         expect(token('scene-btn-h')).toBeGreaterThanOrEqual(44)
         expect(rule('.blackoutall')).toMatch(/flex:\s*none;\s*width:\s*var\(--bo-w\)/)
-        expect([token('bo-w'), token('bo-h'), token('lift-w'), token('lift-h'), token('top-h')]).toEqual([160, 44, 100, 32, 64]) // Touch: one dense top line (the owner, 21:1x)
+        expect([token('bo-w'), token('bo-h'), token('lift-w'), token('lift-h'), token('top-h')]).toEqual([160, 48, 100, 40, 56]) // Touch: one dense top line (the owner, 21:1x)
         const stops = $('blackoutAll').parentElement
         expect(stops.parentElement.lastElementChild).toBe(stops)
         expect(stops.firstElementChild).toBe($('blackoutAll'))
@@ -532,16 +532,16 @@ describe('two densities: Touch and Compact', () => {
         expect(decls.length).toBeGreaterThan(30)
         for (const d of decls) expect(d).toMatch(/^--[a-z-]+:\s*\S/)
         const want = { 'thumb-lw': 16, 'thumb-lh': 10, 'thumb-uw': 10, 'thumb-uh': 16, track: 3, 'fader-h': 20, pad: 26, 'lamp-pad': 22, 'scene-btn-h': 52,
-            'shape-h': 26, 'shape-font': 12, 'fx-font': 12, 'knob-font': 12, row: 26, 'preview-w': 132, 'bo-w': 140, 'bo-h': 36, 'lift-w': 90, 'lift-h': 28, 'top-h': 48, 'look-font': 10 }
+            'shape-h': 26, 'shape-font': 12, 'fx-font': 12, 'knob-font': 12, row: 26, 'preview-w': 132, 'bo-w': 140, 'bo-h': 40, 'lift-w': 90, 'lift-h': 34, 'top-h': 44, 'look-font': 10 }
         for (const [name, px] of Object.entries(want)) expect(compact(name), name).toBe(px)
         expect(block).toMatch(/--preview-ar:\s*132 \/ 100;/)
         expect(block).toMatch(/--scene-dir:\s*row;/) // the number and the name on one line
         expect(block).not.toMatch(/--master-fader-w/) // the masters stay 44 px wide
         expect(token('master-fader-w')).toBe(44)
-        const rows = ['top-h', 'scenes-h', 'live-h', 'bank-max', 'links-h'].map(compact)
+        const rows = ['top-h', 'scenes-h', 'live-h', 'bank-min', 'links-h'].map(compact)
         expect(rows.every((n) => n > 0)).toBe(true)
         expect(rows.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(660)
-        expect(compact('bank-min')).toBe(compact('bank-max'))
+        expect(block).toMatch(/--bank-max:\s*1fr;/) // Compact too: the bank takes the rest of the screen
         expect(compact('scene-btn-h') + 10).toBeLessThanOrEqual(compact('scenes-h'))
         expect(compact('shapes-h')).toBeGreaterThanOrEqual(2 * compact('shape-h') + 3)
         expect(compact('pad') + compact('shapes-h') + 3 * compact('row') + 4 * 4 + 2 * 2 + 1).toBeLessThanOrEqual(compact('live-h'))
@@ -574,6 +574,102 @@ describe('two densities: Touch and Compact', () => {
         expect(token('gap-stop')).toBeGreaterThanOrEqual(24)
         expect(Number.isNaN(compact('gap-stop')) || compact('gap-stop') >= 24).toBe(true)
         expect(css).toMatch(/\n\.stops \{[^}]*gap:\s*var\(--gap-stop\)/)
+    })
+})
+
+describe('two arrangements of the bank: Rows and Upright', () => {
+    const css = fs.readFileSync(path.join(UI, 'show.css'), 'utf8')
+    const html = fs.readFileSync(path.join(UI, 'index.html'), 'utf8')
+    const js = fs.readFileSync(path.join(UI, 'show.js'), 'utf8')
+    const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const buttons = () => [...$('bankMode').querySelectorAll('button[data-bank]')]
+    const pressed = () => buttons().map((b) => b.getAttribute('aria-pressed'))
+    const blocks = (head) => [...css.matchAll(new RegExp(`\\n${esc(head)}\\s*\\{([^}]*)\\}`, 'g'))].map((m) => m[1]).join(';')
+    const last = (src, name) => { const all = [...src.matchAll(new RegExp(`(?:^|[\\s;])--${name}:\\s*(\\d+)px`, 'g'))]; return all.length ? Number(all[all.length - 1][1]) : NaN } // a later declaration wins, as in the cascade
+    const from = css.indexOf('/* ---- Rows: the bank as rows'), to = css.indexOf('/* ---- the gaps outside the bank')
+    const rows = css.slice(from, to).replace(/\/\*[\s\S]*?\*\//g, '') // the Rows block, comments out
+    it('a Rows · Upright switch sits in the bottom line before Touch · Compact; Rows is the default; a press sets body[data-bank] and keeps the choice in this browser; nothing is sent', async () => {
+        expect($('bankMode').closest('.links')).not.toBeNull()
+        expect($('bankMode').nextElementSibling).toBe($('density'))
+        expect(buttons().map((b) => b.textContent)).toEqual(['Rows', 'Upright'])
+        expect(buttons().every((b) => !b.dataset.midi)).toBe(true) // MIDI never reaches it
+        expect(html).toMatch(/<body class="showdesk" data-bank="rows">/) // Rows from the first paint: the page never jumps
+        expect(document.body.dataset.bank).toBe('rows')
+        expect(pressed()).toEqual(['true', 'false'])
+        posts = []
+        buttons()[1].click()
+        expect(document.body.dataset.bank).toBe('upright')
+        expect(window.localStorage.getItem('diShowDesk.bank.v1')).toBe('upright')
+        expect(pressed()).toEqual(['false', 'true'])
+        buttons()[0].click()
+        expect(document.body.dataset.bank).toBe('rows')
+        expect(window.localStorage.getItem('diShowDesk.bank.v1')).toBe('rows')
+        expect(pressed()).toEqual(['true', 'false'])
+        await settle()
+        expect(posts).toEqual([])
+    })
+    it('the stored choice wins, anything else is Rows; a browser that keeps nothing still switches, without an error', () => {
+        const pick = window.DiShowDesk.pickBank
+        expect([pick('upright'), pick('rows'), pick(null), pick(undefined), pick('huge'), pick('')]).toEqual(['upright', 'rows', 'rows', 'rows', 'rows', 'rows'])
+        expect(js).toMatch(/try \{ storedBank = window\.localStorage\.getItem\(BANK_KEY\) \} catch/) // the read is guarded as well as the write
+        const errors = []
+        const onError = (e) => { errors.push(e.message); e.preventDefault() }
+        window.addEventListener('error', onError) // a throw inside a listener is not thrown by click(): it is reported here
+        const set = vi.spyOn(window.Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('storage blocked') })
+        try {
+            buttons()[1].click()
+            expect(set).toHaveBeenCalled()
+            expect(document.body.dataset.bank).toBe('upright') // the switch worked; only the keeping failed
+        } finally {
+            set.mockRestore()
+            window.removeEventListener('error', onError)
+            buttons()[0].click()
+        }
+        expect(errors).toEqual([])
+        expect(document.body.dataset.bank).toBe('rows')
+    })
+    it('nothing is lost: every Upright rule is still in show.css, every Rows rule is scoped to body[data-bank="rows"], and the nodes of the holds state are there', () => {
+        expect(css).toMatch(/\n\.lamp\.strip \{ width: 226px; position: relative; \}/) // the upright lamp strip
+        expect(css).toMatch(/\n\.sizestrip \{ width: 56px; \}/) // the upright Size strip
+        expect(css).toMatch(/\n\.masterstrip \{ width: var\(--master-w\); background: var\(--cell\); \}/) // the upright master strip
+        expect(css).toMatch(/\n\.showbank \{ display: flex;/) // the console posture is the base; Rows is laid over it
+        expect(from).toBeGreaterThan(0)
+        expect(to).toBeGreaterThan(from)
+        const heads = rows.split('}').map((r) => r.split('{')[0].trim()).filter(Boolean)
+        expect(heads.length).toBeGreaterThan(30)
+        for (const h of heads) {
+            if (h === ':root' || h === 'body.showdesk[data-density="compact"]') continue // the token blocks: names only
+            expect(h, h).toContain('[data-bank="rows"]')
+        }
+        const base = css.slice(0, from)
+        const names = [...rows.matchAll(/(--[a-z-]+):/g)].map((m) => m[1])
+        expect(names.length).toBeGreaterThan(14)
+        expect(names.filter((n) => base.includes(`${n}:`)), 'Rows redefines a token Upright reads').toEqual([])
+        const all = $('releaseAllHolds')
+        const card = all.closest('.masterstrip')
+        expect(card).not.toBeNull()
+        for (const node of [card.querySelector('.cap'), card.querySelector('#releaseHolds'), card.querySelector('.striphead')]) expect(node).not.toBeNull()
+        expect(rows).toMatch(/grid-template-columns:\s*minmax\(min-content, auto\) auto auto minmax\(0, 1fr\) auto/) // a track holding an overflow: hidden item starts at 0
+        expect(rows).toMatch(/\.masterstrip \.cap \{[^}]*white-space:\s*normal/)
+        expect(rows).toMatch(/\.masterstrip:has\(#releaseAllHolds:not\(\[hidden\]\)\) \.holdbtn \{[^}]*font-size:\s*12px/)
+    })
+    it('Rows fit: three lamp rows, their gaps, the cubes\' least line and the bank\'s padding add up inside the least the bank gets, in both densities; each part has its own grid area', () => {
+        const root = blocks(':root'), compactAll = blocks('body.showdesk[data-density="compact"]')
+        const touch = (n) => last(root, n)
+        const compact = (n) => { const v = last(compactAll, n); return Number.isNaN(v) ? touch(n) : v }
+        for (const [name, get] of [['Touch', touch], ['Compact', compact]]) {
+            expect(3 * get('lamp-row') + 3 * get('bank-gap') + get('cube-row-min') + 12, name).toBeLessThanOrEqual(get('bank-min'))
+            for (const t of ['bank-fader-h', 'row-pad', 'hold-h', 'onoff-h']) expect(get(t), `${name} ${t}`).toBeGreaterThanOrEqual(22) // no control under 22 px
+        }
+        const areas = (rows.match(/\[data-bank="rows"\] \.showbank \{[^}]*grid-template-areas:\s*([^;]+);/) || [])[1] || ''
+        expect([...areas.matchAll(/"([^"]+)"/g)].map((m) => m[1].trim().split(/\s+/))).toEqual([['lamps', 'mlight'], ['lamps', 'mlaser'], ['cubes', 'cubes']])
+        expect(rows).toMatch(/\.bankpart \{ display: contents; \}/) // the two halves vanish, so their parts are the grid's own children
+        const area = (sel) => (rows.match(new RegExp(`${esc(sel)} \\{[^}]*grid-area:\\s*(\\w+)`)) || [])[1]
+        expect([area('#lightsHalf > .masterstrip'), area('#laserHalf > .masterstrip'), area('.lamps'), area('.lasers')]).toEqual(['mlight', 'mlaser', 'lamps', 'cubes'])
+        expect(document.querySelector('#lightsHalf > .masterstrip')).not.toBeNull()
+        expect(document.querySelector('#laserHalf > .masterstrip')).not.toBeNull()
+        expect($('lamps').closest('#lightsHalf')).not.toBeNull()
+        expect($('lasers').closest('#laserHalf')).not.toBeNull()
     })
 })
 
