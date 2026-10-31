@@ -3,6 +3,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import vm from 'node:vm'
 import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -132,5 +133,23 @@ describe('the lasers at /laser', () => {
     delete process.env.NODE_ENV
     const { base } = await boot()
     expect((await post(`${base}/laser/api/show`, { project: 'x' })).status).toBe(501)
+  })
+
+  // The desk page's tiles play the looks with lib/laser.js (2026-10-29): it must draw what the desk sends the cubes.
+  it('serves the desk\'s drawing code to the page as one script, drawing every seed look as the server does', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    const res = await fetch(`${base}/laser/lib/laser.js`)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toMatch(/javascript/)
+    const window = {}
+    vm.runInNewContext(await res.text(), { window })
+    const { lookPointsAt, SEED_LOOKS } = require('../laser/laserDesk.js')
+    const clock = { bpm: 128, zero: 0 }
+    for (const look of SEED_LOOKS) {
+      for (const t of [0, 777, 5432]) expect(window.DiLaser.lookPointsAt(look, { t, clock }), `${look.id} at ${t}`).toEqual(lookPointsAt(look, { t, clock }))
+    }
+    expect(window.DiLaser.LASER_SHAPES).toEqual(require('../../../shared/laserShapes.cjs').LASER_SHAPES)
+    expect(window.DiLaser.lookBox(SEED_LOOKS[0])).toHaveLength(4)
   })
 })

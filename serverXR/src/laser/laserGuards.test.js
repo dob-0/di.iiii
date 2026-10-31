@@ -5,9 +5,10 @@ import os from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
-import { generateShape, LASER_SHAPES } from '../../../src/project/nodes/laser.shape/laserShapes.js'
+import { generateShape, LASER_SHAPES, MARK_SHAPES, MARK_MIN_SIZE } from '../../../src/project/nodes/laser.shape/laserShapes.js'
 
 const require = createRequire(import.meta.url)
+const { flattenLaserPaths } = require('../../../shared/laserFrame.cjs')
 const proto = require('./lasercubeProtocol')
 const g = require('./laserGuards')
 const { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE } = require('./laserEngine')
@@ -253,13 +254,13 @@ describe('the status byte (GET_FULL_INFO byte 5) is flags, read as Wicked Lasers
     })
 })
 
-describe('the Laser node\'s twelve shapes, as the guards draw them, still pass the still-beam guard', () => {
-    it('none is still at size 0.5, 0.1 and 0.05 (120 and 500 points, 30 and 35 kpps); every one is when collapsed', () => {
+describe('the Laser node\'s shapes, as the guards draw them, still pass the still-beam guard', () => {
+    it('none is still at size 0.5, 0.1 and 0.05 (the sparkles: 0.5 and MARK_MIN_SIZE; 120 and 500 points, 30 and 35 kpps); every one is when collapsed', () => {
         for (const rate of [30000, 35000]) {
             const plan = at(rate)
             for (const shape of LASER_SHAPES) {
                 for (const points of [120, 500]) {
-                    for (const size of [0.5, 0.1, 0.05]) {
+                    for (const size of MARK_SHAPES.includes(shape) ? [0.5, MARK_MIN_SIZE] : [0.5, 0.1, 0.05]) {
                         const frame = g.optimisePath(applyZone(generateShape({ shape, size, height: 0.5, points }), normaliseZone()).points, plan).points
                         expect(stillBeams(frame), `${shape} size ${size} × ${points} at ${rate}`).toEqual([])
                     }
@@ -269,11 +270,84 @@ describe('the Laser node\'s twelve shapes, as the guards draw them, still pass t
             }
         }
     })
+    const worstOf = (shapes, size) => Math.max(...shapes.flatMap((shape) => [120, 500].map((points) => dwellSpots(g.optimisePath(applyZone(generateShape({ shape, size, height: 0.5, points }), normaliseZone()).points, at(30000)).points, { minShare: 0 })[0].share)))
     it('keeps the measured headroom (worst share in one window at 30 kpps: 6.4 % / 21.7 % / 38.8 %; 2026-10-17: the galaxy at 0.1)', () => {
-        const worst = (size) => Math.max(...LASER_SHAPES.flatMap((shape) => [120, 500].map((points) => dwellSpots(g.optimisePath(applyZone(generateShape({ shape, size, height: 0.5, points }), normaliseZone()).points, at(30000)).points, { minShare: 0 })[0].share)))
-        expect(worst(0.5)).toBeCloseTo(0.064, 2)
-        expect(worst(0.1)).toBeCloseTo(0.217, 2)
-        expect(worst(0.05)).toBeCloseTo(0.388, 2)
+        const twelve = LASER_SHAPES.slice(0, 12)
+        expect(worstOf(twelve, 0.5)).toBeCloseTo(0.064, 2)
+        expect(worstOf(twelve, 0.1)).toBeCloseTo(0.217, 2)
+        expect(worstOf(twelve, 0.05)).toBeCloseTo(0.388, 2)
+    })
+    // 2026-10-29: the minimal figures (arc … chevron, glint) and the sparkles. At 0.5 the bars put 7.3 % in one window
+    // (a level line's end dwell and the hop to the next), more than the twelve's 6.4 % and far from the 50 % stop.
+    it('the shapes added on 2026-10-29 keep the headroom: figures 7.3 % / 16.3 % / 32.0 %, sparkles 4.1 % and 7.7 % at their smallest', () => {
+        const marks = ['sparkle', 'twinkle', 'spots']
+        const figures = LASER_SHAPES.slice(12, 24).filter((s) => !marks.includes(s))
+        expect(worstOf(figures, 0.5)).toBeCloseTo(0.073, 2)
+        expect(worstOf(figures, 0.1)).toBeCloseTo(0.163, 2)
+        expect(worstOf(figures, 0.05)).toBeCloseTo(0.32, 2)
+        expect(worstOf(marks, 0.5)).toBeCloseTo(0.041, 2)
+        expect(worstOf(marks, MARK_MIN_SIZE)).toBeCloseTo(0.077, 2)
+    })
+    // 2026-10-30: the scenes of lines, circles and dots (planets … morse). A dot is a small ring that shrinks into the
+    // window with the picture; the lines and circles around it keep the frame a stroke, morse's dashes only from
+    // MARK_MIN_SIZE (it is a mark shape). They move on the beat, so they are held at every quarter beat as well, as sent.
+    const SCENES = LASER_SHAPES.slice(24, 32)
+    it('the scenes keep the headroom: 6.1 % / 20.1 % / 33.5 %, morse 6.9 % and 15.1 % at its smallest', () => {
+        expect(SCENES).toEqual(['planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse'])
+        const figures = SCENES.filter((s) => !MARK_SHAPES.includes(s))
+        expect(worstOf(figures, 0.5)).toBeCloseTo(0.061, 2)
+        expect(worstOf(figures, 0.1)).toBeCloseTo(0.201, 2)
+        expect(worstOf(figures, 0.05)).toBeCloseTo(0.335, 2)
+        expect(worstOf(['morse'], 0.5)).toBeCloseTo(0.069, 2)
+        expect(worstOf(['morse'], MARK_MIN_SIZE)).toBeCloseTo(0.151, 2)
+    })
+    it('the scenes as sent are never still at any quarter beat over 16, and never put 40 % in one window', () => {
+        const plan = at(30000)
+        for (const shape of SCENES) {
+            for (const size of MARK_SHAPES.includes(shape) ? [0.5, MARK_MIN_SIZE] : [0.5, 0.1, 0.05]) {
+                for (let beat = 0; beat < 16; beat += 0.25) {
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape, size, height: 0.5, points: 300, beat }), { budget: null }).points, normaliseZone()).points, plan).points
+                    expect(stillBeams(frame), `${shape} ${size} beat ${beat}`).toEqual([])
+                    expect(dwellSpots(frame, { minShare: 0 })[0].share, `${shape} ${size} beat ${beat}`).toBeLessThan(0.4)
+                }
+            }
+        }
+    })
+    // 2026-10-31: unfold, one line that is a pulsing circle, a spiral, the square's edge and a circle again over 16 beats.
+    // Every moment is one stroke (no blank move), and the spiral's eye never holds the beam: held at every eighth of a beat.
+    it('unfold is one line at every moment of its loop, never still, never 40 % in one window', () => {
+        expect(LASER_SHAPES[32]).toBe('unfold')
+        const plan = at(30000)
+        for (const size of [0.5, 0.1, 0.05]) {
+            for (const points of [120, 900]) {
+                for (let beat = 0; beat < 16; beat += 0.125) {
+                    const drawn = generateShape({ shape: 'unfold', size, height: 0.5, points, beat })
+                    expect(drawn.every((p) => p[2] > 0 || p[3] > 0 || p[4] > 0), `unfold ${size} × ${points} beat ${beat}: one stroke`).toBe(true)
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(drawn, { budget: null }).points, normaliseZone()).points, plan).points
+                    expect(stillBeams(frame), `unfold ${size} × ${points} beat ${beat}`).toEqual([])
+                    expect(dwellSpots(frame, { minShare: 0 })[0].share, `unfold ${size} × ${points} beat ${beat}`).toBeLessThan(0.4)
+                }
+            }
+        }
+    })
+    // As the desk and Laser Out send them: flattened, a blank point before every mark, so the frame's last mark never
+    // joins its first into one stroke when the frame loops.
+    it('the sparkles as sent are never still from MARK_MIN_SIZE up, at any half beat or turn; at 0.05 they are dots, which the engine stops', () => {
+        const sent = (shape, size, beat, rotation) => applyZone(flattenLaserPaths(generateShape({ shape, size, height: 0.5, points: 300, rotation, beat }), { budget: null }).points, normaliseZone()).points
+        for (const shape of MARK_SHAPES) {
+            for (let beat = 0; beat < 24; beat += 0.5) {
+                for (const rotation of [0, 0.0625, 0.125]) {
+                    for (const size of [0.5, MARK_MIN_SIZE]) {
+                        const frame = sent(shape, size, beat, rotation)
+                        expect(stillBeams(frame), `${shape} ${size} beat ${beat} turn ${rotation}`).toEqual([])
+                        expect(stillBeams(g.optimisePath(frame, at(35000)).points), `${shape} ${size} beat ${beat} turn ${rotation}, optimised`).toEqual([])
+                    }
+                }
+                const dots = stillBeams(sent(shape, 0.05, beat, 0))
+                expect(dots.length, `${shape} 0.05 beat ${beat}`).toBeGreaterThan(0)
+                expect(dots.every((d) => d.kind === 'dot')).toBe(true)
+            }
+        }
     })
     it('the engine judges the optimised frame: a moving circle held 2 s is never stopped', () => {
         const rig = armed(ONE)
@@ -422,7 +496,7 @@ describe('round 2: the review\'s findings (reproduced first with the reviewer\'s
         const parsed = proto.parseFullInfo(infoAnswer(info))
         expect(parsed).toMatchObject({ dacRate: 35000, maxDacRate: 35000, rxBufferSize: 6000, rxBufferFree: 6000 })
         expect(g.frameBudget(parsed.dacRate, parsed.rxBufferSize)).toBe(2333)
-        expect(LASER_SHAPES.length).toBe(12)
+        expect(LASER_SHAPES.length).toBe(33)
         for (const shape of LASER_SHAPES) {
             const rig = armed(ONE, info)
             rig.engine.setFrame('all', generateShape({ shape, size: 0.5, height: 0.5, points: 1992 }))
