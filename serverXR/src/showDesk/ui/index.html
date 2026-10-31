@@ -12,61 +12,98 @@
 </head>
 <body class="showdesk">
 
-<!-- The show desk (serverXR/src/showDesk, 2026-10-31): the lighting desk and the laser desk on one page, for the person who
-     runs the show. It has no route of its own: every press is one of the two desks' own routes (../light/api/…,
-     ../laser/…), sent from this same origin, so their guards apply exactly as on their own pages. Nothing here posts
-     without a press; On is always a person's press on one cube; a guard's stop is shown, never lifted. Blackout all (and B)
-     only ever goes dark; each desk's blackout is lifted on its own, under Lights or Laser (or Shift+B), and only when that
-     desk answered and says it is dark. -->
+<!-- The show desk (serverXR/src/showDesk, 2026-10-31): the lighting desk and the laser desk on one page, laid out like a
+     console: the stops at the top right, one row of scene keys, the live strip (the live laser look under the fingers), and
+     one fader bank across the bottom. It has no route of its own: every press is one of the two desks' own routes
+     (../light/api/…, ../laser/…), sent from this same origin, so their guards apply exactly as on their own pages. Nothing
+     here posts without a press or a move; On is always a person's press on one cube; a guard's stop is shown, never lifted.
+     Blackout all (and B) only ever goes dark; each desk's blackout is lifted on its own (Lift lights / Lift laser, or
+     Shift+B), and only when that desk answered and says it is dark. MIDI never reaches On, Off, a lift, Undo or Save. -->
 <header class="topbar showbar">
   <a class="homelink" href="/spaces" title="Back to di.iiii — your spaces">di.iiii</a>
-  <h1 class="title">Show desk</h1>
-  <p class="onnow" id="onNow" aria-live="polite">
-    <span class="nowlabel">lights</span><span class="nowpart" id="nowScene" title="The scene on the lights">…</span><span class="sep">·</span><span class="nowlabel">laser</span><span class="nowpart" id="nowLook" title="The look on the laser">…</span><span class="sep">·</span><b class="pill nowlaser" id="nowLaser" title="Whether any cube is On">Laser Off</b>
-  </p>
-  <button id="blackoutAll" class="danger topbo blackoutall" type="button" title="Lights and laser dark in one press (each desk's own Blackout). It only ever goes dark: pressing again keeps them dark. Lift each under Lights or Laser. Key: B.">Blackout all</button>
+  <div class="titleblock">
+    <div class="titleline">
+      <h1 class="title">Show desk</h1>
+      <p class="onnow" id="onNow" aria-live="polite">
+        <span class="nowlabel">lights</span><span class="nowpart" id="nowScene" title="The scene on the lights">…</span><span class="sep">·</span><span class="nowlabel">laser</span><span class="nowpart" id="nowLook" title="The look on the laser">…</span><span class="sep">·</span><b class="pill nowlaser" id="nowLaser" title="Whether any cube is On">Laser Off</b>
+      </p>
+    </div>
+    <div class="statusline">
+      <p class="status" id="status" role="status"></p>
+      <span class="savestate" id="saveState" title="The laser desk says when its looks have changes not yet written; the lamps are written into the lit scene by Save scene"></span>
+    </div>
+  </div>
+  <div class="stops">
+    <button id="blackoutAll" class="danger topbo blackoutall" type="button" data-midi="blackout" title="Lights and laser dark in one press (each desk's own Blackout). It only ever goes dark: pressing again keeps them dark. Lift each with Lift lights or Lift laser. Key: B.">Blackout all</button>
+    <div class="lifts">
+      <button id="liftLights" class="liftbtn" type="button" aria-label="Lift the lights blackout" title="The lights blackout is off." disabled>Lift lights</button>
+      <button id="liftLaser" class="liftbtn" type="button" aria-label="Lift the laser blackout" title="The laser blackout is off." disabled>Lift laser</button>
+    </div>
+  </div>
 </header>
-
-<p class="status" id="status" role="status"></p>
 
 <section class="pane showscenes" aria-label="Scenes">
   <div class="panehead"><h2>Scenes</h2><span class="muted" id="scenesNote">Asking the lighting desk…</span></div>
   <div class="scenegrid" id="scenes"></div>
 </section>
 
-<main class="halves">
-  <section class="pane half" id="lightsHalf" aria-label="Lights">
-    <div class="panehead halfhead">
-      <h2>Lights</h2>
-      <button id="liftLights" class="liftbtn" type="button" aria-label="Lift the lights blackout" title="The lights blackout is off." disabled>Lift blackout</button>
-      <label class="fader master" title="The lighting desk's master: every lamp">
-        <span>Master</span><input id="lightMaster" type="range" min="0" max="255" step="1" value="255"><b id="lightMasterVal"></b>
-      </label>
-      <button id="releaseHolds" class="holdbtn" type="button" title="Let go of the channels held by hand on the lighting desk, so the scenes reach every lamp again" disabled>Release holds (0)</button>
-      <button id="releaseAllHolds" class="holdbtn" type="button" hidden>Release all holds</button>
+<section class="livestrip" id="live" aria-label="The live laser look">
+  <div class="liveleft">
+    <div class="liverow">
+      <div class="colours" id="liveColours" role="group" aria-label="Colour of the live look"></div>
+      <span class="grow"></span>
+      <button id="saveScene" class="actbtn" type="button" title="Write the lamps as they are now into the lit light scene, and the live laser look as it plays now into its own look">Save scene</button>
+      <button id="undoBtn" class="actbtn" type="button" title="The laser desk's Undo (one step), and the lit light scene recalled as it was written">Undo</button>
     </div>
+    <div class="liverow shapes" id="liveShapes" role="group" aria-label="Shape of the live look"></div>
+    <div class="liverow effects" id="liveEffects" role="group" aria-label="Effects of the live look">
+    </div>
+    <div class="liverow faders" id="liveRowA"></div>
+    <div class="liverow faders more" id="liveRowB">
+      <label class="hfader bpmfader" title="The laser desk's beat: pulse and sweep count it"><span>BPM</span><input id="bpm" type="range" min="20" max="300" step="1" value="120" aria-label="Beats per minute of the laser desk"><b id="bpmVal" class="val"></b></label>
+      <button id="tapBtn" class="actbtn" type="button" title="Tap the beat (the laser desk's own Tap)">Tap</button>
+    </div>
+  </div>
+  <div class="liveright">
+    <p class="livename" id="liveName">No look is live: press a scene</p>
+    <div class="xypad" id="xyPad" role="group" aria-label="Where the live look sits: x across, height up" title="Drag: x across, height up"><i class="xydot" id="xyDot" aria-hidden="true"></i></div>
+  </div>
+</section>
+
+<main class="showbank" id="bank">
+  <section class="bankpart" id="lightsHalf" aria-label="Lights">
     <p class="muted halfnote" id="lightsNote" hidden></p>
     <div class="lamps" id="lamps"></div>
+    <div class="strip masterstrip">
+      <div class="striphead"><b>Lights</b></div>
+      <button id="releaseHolds" class="holdbtn" type="button" title="Let go of the channels held by hand on the lighting desk, so the scenes reach every lamp again" disabled>Release holds (0)</button>
+      <button id="releaseAllHolds" class="holdbtn" type="button" hidden>Release all holds</button>
+      <input id="lightMaster" class="vfader" type="range" min="0" max="255" step="1" value="255" data-midi="light-master" aria-label="Lights master: every lamp">
+      <b id="lightMasterVal" class="val"></b>
+      <span class="cap">Lights master</span>
+    </div>
   </section>
-
-  <section class="pane half" id="laserHalf" aria-label="Laser">
-    <div class="panehead halfhead">
-      <h2>Laser</h2>
-      <button id="liftLaser" class="liftbtn" type="button" aria-label="Lift the laser blackout" title="The laser blackout is off." disabled>Lift blackout</button>
-      <label class="fader master" title="The laser desk's master: every cube">
-        <span>Master</span><input id="laserMaster" type="range" min="0" max="1" step="0.01" value="1"><b id="laserMasterVal"></b>
-      </label>
+  <section class="bankpart" id="laserHalf" aria-label="Laser">
+    <div class="strip masterstrip">
+      <div class="striphead"><b>Laser</b></div>
       <span class="muted lookname" id="lookName"></span>
+      <input id="laserMaster" class="vfader" type="range" min="0" max="1" step="0.01" value="1" data-midi="laser-master" aria-label="Laser master: every cube">
+      <b id="laserMasterVal" class="val"></b>
+      <span class="cap">Laser master</span>
     </div>
     <p class="muted halfnote" id="laserNote" hidden></p>
     <div class="lasers" id="lasers"></div>
   </section>
 </main>
 
-<nav class="links" aria-label="The full desks">
+<nav class="links" aria-label="The full desks and MIDI">
   <a href="../laser/">Laser desk</a>
   <a href="../light/">Light desk</a>
-  <span class="muted">Each opens the full desk, with every tool.</span>
+  <span class="midiline" id="midiLine">MIDI: asking</span>
+  <button id="midiLearn" class="actbtn" type="button" aria-pressed="false" title="Tap Learn, tap a fader, a scene key or Blackout all, then move one control on the controller">Learn</button>
+  <button id="midiExport" class="actbtn" type="button" title="The MIDI map of this browser, as text to copy">Export map</button>
+  <span class="muted">The Light desk has its own MIDI page too.</span>
+  <textarea id="midiMapText" class="miditext" readonly hidden aria-label="The MIDI map of this browser"></textarea>
 </nav>
 
 <script src="../light/colour.js"></script>

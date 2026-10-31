@@ -10,6 +10,10 @@
 // Blackout all and the B key only ever go dark; a blackout is lifted per desk (Lift blackout under Lights or Laser, or
 // Shift+B), and only for a desk that answered its last read and says it is dark (review 2026-10-31, must-fix 1, 2 and 4).
 // The laser desk's hardest lesson, kept: a poll never moves a fader the person touched in the last HOLD_MS.
+// Live (2026-10-31, the owner: "where to edit scenes real time"): the live strip plays the look that is live now with the
+// laser desk's own looks/edit (pads and faders), the lamps take colours by the lighting desk's own fixture route, Save scene
+// and Undo are the two desks' own save/undo/recall, and MIDI (a controller in this page) moves the same faders and presses the
+// same scene keys and Blackout all. MIDI never reaches On, Off, a lift, Undo, Save or Release: they are not targets at all.
 'use strict'
 ;(() => {
     const LIGHT = '../light/api/'
@@ -27,6 +31,34 @@
     const NOTE_MS = 12000 // how long the words about a press stay
     const MAX_DOTS = 12
     const EMITTERS = ['r', 'g', 'b', 'w', 'a', 'y', 'warm', 'cool', 'uv', 'lime']
+    const LIVE_SEND_MS = 60 // the live strip sends each field at most this often; the last value always goes
+    // The laser desk's own swatches (laser/ui/desk.js SWATCHES), then the extra colours of the show's palette.
+    const SWATCHES = ['#ff2030', '#ffb020', '#ffffff', '#20d8ff', '#3050ff', '#8040ff', '#ff30c0', '#20ff60', '#e0001a', '#f0eaff', '#7a20ff']
+    // A copy of shared/laserShapes.cjs LASER_SHAPES (showDesk.test.js keeps it equal); the desk's own `shapes` wins when it
+    // sends one. "spots" (dots) comes first on the strip, so any live look becomes dots with one tap.
+    const SHAPES = ['circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid',
+        'arc', 'cross', 'bars', 'rings', 'corners', 'chevron', 'glint', 'sparkle', 'twinkle', 'lines', 'spots', 'wobble',
+        'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse']
+    // Every field of a look the laser desk knows (laser/laserDesk.js normaliseLook): its range there, its step here.
+    const LIVE = {
+        level: { label: 'Level', min: 0, max: 1, step: 0.01, pct: true },
+        size: { label: 'Size', min: 0, max: 1, step: 0.01, pct: true },
+        height: { label: 'Height', min: -1, max: 1, step: 0.01 },
+        x: { label: 'X', min: -1, max: 1, step: 0.01 },
+        copies: { label: 'Copies', min: 0, max: 24, step: 1 },
+        rotation: { label: 'Rotation', min: -1, max: 1, step: 0.01 },
+        spin: { label: 'Spin', min: -4, max: 4, step: 0.01, on: 0.5 },
+        pulse: { label: 'Pulse', min: 0, max: 1, step: 0.01, pct: true, on: 0.5 },
+        sweep: { label: 'Sweep', min: 0, max: 1, step: 0.01, pct: true, on: 0.5 },
+        cycle: { label: 'Cycle', min: 0, max: 64, step: 0.25, on: 4 },
+        phase: { label: 'Phase', min: 0, max: 16, step: 0.05 },
+        pulseBeats: { label: 'Pulse beats', min: 0.25, max: 64, step: 0.25 },
+        sweepBeats: { label: 'Sweep beats', min: 0.25, max: 64, step: 0.25 },
+        points: { label: 'Points', min: 16, max: 1992, step: 1 }
+    }
+    const EFFECTS = ['pulse', 'sweep', 'spin', 'cycle'] // a pad each: a tap turns it off, a tap again back on at its last depth
+    const ROW_A = ['level', 'size', 'copies', 'rotation']
+    const ROW_B = ['phase', 'pulseBeats', 'sweepBeats', 'points']
 
     const $ = (id) => document.getElementById(id)
     const el = (tag, props = {}, ...kids) => {
@@ -216,7 +248,8 @@
 
     // ---- the top line and Blackout all
     const renderTop = () => {
-        setText($('nowScene'), S.light ? (activeSceneName() || 'No scene') : 'Lights: no answer')
+        const lit = litSceneOf()
+        setText($('nowScene'), S.light ? (activeSceneName() || (lit ? `${lit.name || lit.id} · changed` : 'No scene')) : 'Lights: no answer')
         const look = liveLook()
         setText($('nowLook'), S.desk ? (look ? look.name : 'No laser look') : 'Laser: no answer')
         const armed = cubesArmed().length
@@ -226,7 +259,7 @@
         const bo = blackoutState()
         const btn = $('blackoutAll')
         // The button only ever says "Blackout all": it has no lift. Its sub-line says what is dark and where the lifts are.
-        const sub = bo.lights && bo.laser ? 'On · lift it under Lights or Laser' : bo.lights ? 'The lights blackout is on' : bo.laser ? 'The laser blackout is on' : ''
+        const sub = bo.lights && bo.laser ? 'On · Lift lights or Lift laser lifts it' : bo.lights ? 'The lights blackout is on' : bo.laser ? 'The laser blackout is on' : ''
         if (btn.dataset.label !== sub) {
             btn.dataset.label = sub
             btn.replaceChildren(document.createTextNode('Blackout all'), ...(sub ? [el('span', { class: 'sub', text: sub })] : []))
@@ -259,7 +292,7 @@
         }
         const bad = [lights.ok ? '' : `the lighting desk: ${lights.error}`, laser.ok ? '' : `the laser desk: ${laser.error}`].filter(Boolean)
         await tick()
-        say(bad.length ? `Blackout did not reach ${bad.join('; ')}.` : 'Blackout: lights and laser are dark. Lift each under Lights or Laser.', bad.length ? 'error' : 'ok')
+        say(bad.length ? `Blackout did not reach ${bad.join('; ')}.` : 'Blackout: lights and laser are dark. Lift each with Lift lights or Lift laser.', bad.length ? 'error' : 'ok')
     }
     // Lifting is per half, each with its desk's own route and body: the lighting desk's master {blackout:false} (its own
     // Blackout button), the laser desk's blackout {on:false} (its Shift+B). A half is lifted only when it answered its last
@@ -330,16 +363,17 @@
         if (sig !== sceneSig) {
             sceneSig = sig
             sceneBtns.clear()
-            $('scenes').replaceChildren(...items.map((i) => {
+            $('scenes').replaceChildren(...items.map((i, index) => {
                 const parts = {
+                    num: el('b', { class: 'scenenum', text: String(index).padStart(2, '0') }),
                     nameText: el('span', { class: 'scenetext' }),
                     lookText: el('span', { class: 'scenetext' }),
                     liveTag: el('b', { class: 'tag', text: 'LIVE', hidden: true }),
                     dots: el('span', { class: 'scenedots', 'aria-hidden': 'true' }),
                     dotSig: null
                 }
-                parts.btn = el('button', { type: 'button', class: 'scenebtn', 'data-id': i.id, 'aria-pressed': 'false', onclick: () => pressScene(i.id) },
-                    el('span', { class: 'scenename' }, parts.nameText), el('span', { class: 'scenelook' }, parts.lookText, parts.liveTag), parts.dots)
+                parts.btn = el('button', { type: 'button', class: 'scenebtn', 'data-id': i.id, 'data-midi': `scene:${index}`, 'aria-pressed': 'false', onclick: () => { if (!learning) pressScene(i.id) } },
+                    el('span', { class: 'scenename' }, parts.num, parts.nameText), el('span', { class: 'scenelook' }, parts.lookText, parts.liveTag), parts.dots)
                 sceneBtns.set(i.id, parts)
                 return parts.btn
             }))
@@ -350,7 +384,8 @@
             setText(p.nameText, i.name)
             setText(p.lookText, i.look ? `laser: ${i.look.name}` : 'lights only')
             p.liveTag.hidden = !i.laser
-            setClass(p.btn, `scenebtn${i.lights ? ' is-lights' : ''}${i.laser ? ' is-laser' : ''}${sceneBusy === i.id ? ' is-busy' : ''}`)
+            const edited = Boolean(S.light && !S.light.activeScene && litScene === i.id)
+            setClass(p.btn, `scenebtn${i.lights ? ' is-lights' : ''}${i.laser ? ' is-laser' : ''}${edited ? ' is-edited' : ''}${sceneBusy === i.id ? ' is-busy' : ''}`)
             const pressed = i.lights ? 'true' : 'false'
             if (p.btn.getAttribute('aria-pressed') !== pressed) p.btn.setAttribute('aria-pressed', pressed)
             const dots = sceneDots(i.id)
@@ -392,6 +427,7 @@
         if (window.DiSceneRow) ({ light, laser } = await window.DiSceneRow.pressScene({ scene: { id, name }, link, lightPost, goLook }))
         else light = await lightPost('scenes/recall', { id })
         sceneBusy = false
+        if (light && light.ok) { litScene = id; lampsEdited = false }
         const words = pressWords({ name, link, light, laser })
         say(words.text, words.kind)
         await tick()
@@ -422,18 +458,26 @@
         if (sig !== lampSig) {
             lampSig = sig
             lampRows.clear()
-            $('lamps').replaceChildren(...fixtures.map((f) => {
+            $('lamps').replaceChildren(...fixtures.map((f, index) => {
                 const key = `lamp:${f.id}`
                 const parts = {
                     swatch: el('span', { class: 'swatch', 'aria-hidden': 'true' }),
                     name: el('b'),
                     where: el('span'),
-                    input: el('input', { type: 'range', min: '0', max: '255', step: '1', 'aria-label': `Level of ${f.name || f.id}` }),
-                    val: el('b', { class: 'val' })
+                    input: el('input', { type: 'range', class: 'vfader', min: '0', max: '255', step: '1', 'data-midi': `lamp:${index}`, 'aria-label': `Level of ${f.name || f.id}` }),
+                    val: el('b', { class: 'val' }),
+                    colours: el('div', { class: 'lampcolours', role: 'group', 'aria-label': `Colour of ${f.name || f.id}` })
                 }
-                bindFader(parts.input, key, (v) => post(LIGHT + 'fixture', { id: f.id, values: { dimmer: v }, on: true }), (v) => setText(parts.val, pct(v, 255)))
+                bindFader(parts.input, key, (v) => { lampsEdited = true; return post(LIGHT + 'fixture', { id: f.id, values: { dimmer: v }, on: true }) }, (v) => setText(parts.val, pct(v, 255)))
+                // The same colours as the live strip, as this lamp's own colour channels (its profile on the lighting desk)
+                if (Object.keys(lampColour(f, '#ffffff')).length) {
+                    parts.colours.append(...SWATCHES.map((c) => el('button', {
+                        type: 'button', class: 'swatch', 'data-colour': c, style: `background:${c}`, title: `${f.name || f.id}: ${c}`, 'aria-label': `${f.name || f.id} in ${c}`, onclick: () => pressLampColour(f.id, c)
+                    })))
+                }
                 lampRows.set(f.id, parts)
-                return el('div', { class: 'lamp', 'data-id': f.id }, parts.swatch, el('span', { class: 'who' }, parts.name, parts.where), parts.input, parts.val)
+                return el('div', { class: 'lamp strip', 'data-id': f.id },
+                    el('div', { class: 'striphead' }, parts.swatch, el('span', { class: 'who' }, parts.name, parts.where)), parts.input, parts.val, parts.colours)
             }))
         }
         for (const f of fixtures) {
@@ -449,6 +493,28 @@
             putFader(p.input, `lamp:${f.id}`, level)
             setText(p.val, f.on === false && !held(`lamp:${f.id}`) ? 'off' : pct(held(`lamp:${f.id}`) ? p.input.value : level, 255))
         }
+    }
+    // A colour on a lamp: r, g, b from the colour, every other emitter of its profile at 0, the dimmer left to its fader.
+    const lampColour = (f, hex) => {
+        const n = parseInt(String(hex).slice(1), 16)
+        const rgb = { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 }
+        const chans = chansOf(f)
+        const values = {}
+        if (!chans.some((k) => own(rgb, k))) return values
+        for (const k of chans) {
+            if (own(rgb, k)) values[k] = rgb[k]
+            else if (EMITTERS.includes(k)) values[k] = 0
+        }
+        return values
+    }
+    const pressLampColour = async (id, hex) => {
+        const f = fixturesOf().find((x) => x.id === id)
+        const values = f ? lampColour(f, hex) : {}
+        if (!Object.keys(values).length) return
+        lampsEdited = true
+        const r = await post(LIGHT + 'fixture', { id: f.id, values, on: true })
+        if (!r.ok) say(`${f.name || f.id} did not change colour: ${r.error}.`, 'error')
+        await tick()
     }
     const pressRelease = async (all) => {
         const h = holdsOf()
@@ -494,7 +560,7 @@
         if (sig !== cubeSig) {
             cubeSig = sig
             cubeCards.clear()
-            $('lasers').replaceChildren(...ids.map((id) => {
+            $('lasers').replaceChildren(...ids.map((id, index) => {
                 const key = `size:${id}`
                 const parts = {
                     name: el('b'),
@@ -502,19 +568,19 @@
                     on: el('button', { type: 'button', class: 'cubeon', onclick: () => pressArm(id, true) }, 'On'),
                     off: el('button', { type: 'button', class: 'cubeoff', onclick: () => pressArm(id, false) }, 'Off'),
                     stop: el('p', { class: 'stopline', hidden: true }),
-                    size: el('input', { type: 'range', min: '0.3', max: '3', step: '0.01', 'aria-label': `Size of ${id}` }),
+                    size: el('input', { type: 'range', class: 'vfader', min: '0.3', max: '3', step: '0.01', 'data-midi': `size:${index}`, 'aria-label': `Size of ${id}` }),
                     sizeVal: el('b'),
                     canvas: el('canvas', { 'aria-label': `What ${id} draws now` })
                 }
                 bindFader(parts.size, key, (v) => post(DESK + 'cube', { id, size: v }), (v) => setText(parts.sizeVal, `×${v.toFixed(2)}`))
                 cubeCards.set(id, parts)
                 return el('div', { class: 'cubecard', 'data-id': id },
+                    el('div', { class: 'strip sizestrip' }, el('span', { class: 'striphead' }, el('b', { text: 'Size' })), parts.size, parts.sizeVal),
                     el('div', { class: 'controls' },
                         el('div', { class: 'cubename' }, parts.name, parts.state),
-                        el('div', { class: 'onoff' }, parts.on, parts.off),
+                        el('div', { class: 'preview' }, parts.canvas, el('span', { class: 'cap', text: 'What it draws now' })),
                         parts.stop,
-                        el('label', { class: 'fader' }, el('span', { class: 'muted', text: 'Size' }), parts.size, parts.sizeVal)),
-                    el('div', { class: 'preview' }, parts.canvas, el('span', { class: 'cap', text: 'What it draws now' })))
+                        el('div', { class: 'onoff' }, parts.on, parts.off)))
             }))
         }
         for (const id of ids) {
@@ -550,6 +616,337 @@
         await tick()
     }
 
+    // ---- the live strip: the look that is live on the laser, under the fingers. Every move is the laser desk's own
+    // looks/edit for the look live NOW (laser/ui/desk.js edit()): a fader sends its field at most every LIVE_SEND_MS, the
+    // last value always; a pad sends one looks/edit per press. Nothing is sent while no look is live.
+    let litScene = null // the light scene last lit: the lighting desk forgets its active scene once a lamp is changed by hand
+    let lampsEdited = false
+    const liveInputs = new Map()
+    const liveVals = new Map()
+    const lastDepth = new Map() // look:field → the depth an effect had before a tap turned it off
+    const litSceneOf = () => (litScene ? scenesOf().find((s) => s.id === litScene) || null : null)
+    const liveLookFull = () => {
+        if (!S.desk || !S.desk.liveId) return null
+        const l = (Array.isArray(S.desk.looks) ? S.desk.looks : []).find((x) => x && x.id === S.desk.liveId)
+        return { ...(S.desk.live && typeof S.desk.live === 'object' ? S.desk.live : {}), ...(l || {}), id: S.desk.liveId }
+    }
+    const fmtLive = (k, v) => (LIVE[k].pct ? `${Math.round(v * 100)}%` : LIVE[k].step >= 1 ? String(Math.round(v)) : v.toFixed(2))
+    const noLook = () => say('No look is live: press a scene.', 'error')
+    const keepLocal = (fields) => {
+        const l = S.desk && (Array.isArray(S.desk.looks) ? S.desk.looks : []).find((x) => x && x.id === S.desk.liveId)
+        if (l) Object.assign(l, fields)
+        if (S.desk && S.desk.live && typeof S.desk.live === 'object') Object.assign(S.desk.live, fields)
+    }
+    const liveSenders = new Map()
+    const sendLive = (field, value) => {
+        const look = liveLook()
+        if (!look) { noLook(); return }
+        const s = liveSenders.get(field) || { timer: null, last: 0, value: null, id: null }
+        liveSenders.set(field, s)
+        s.value = value
+        s.id = look.id
+        keepLocal({ [field]: value })
+        if (s.timer) return
+        s.timer = setTimeout(async () => {
+            s.timer = null
+            s.last = Date.now()
+            if (!S.desk || S.desk.liveId !== s.id) return // that look is no longer live: nothing goes to it
+            const r = await post(DESK + 'looks/edit', { id: s.id, [field]: s.value })
+            if (!r.ok) say(`The live look did not change: ${r.error}.`, 'error')
+        }, Math.max(0, s.last + LIVE_SEND_MS - Date.now()))
+    }
+    const editLive = async (fields) => {
+        const look = liveLook()
+        if (!look) { noLook(); return }
+        keepLocal(fields)
+        renderLive()
+        const r = await post(DESK + 'looks/edit', { id: look.id, ...fields })
+        if (!r.ok) say(`The live look did not change: ${r.error}.`, 'error')
+        await tick()
+    }
+    const pressEffect = (k) => {
+        const look = liveLookFull()
+        if (!look) { noLook(); return }
+        const cur = Number(look[k]) || 0
+        const mem = `${look.id}:${k}`
+        if (cur !== 0) {
+            lastDepth.set(mem, cur)
+            editLive({ [k]: 0 })
+        } else editLive({ [k]: lastDepth.get(mem) || LIVE[k].on })
+    }
+    const toggleLive = (k) => { const l = liveLookFull(); if (l) editLive({ [k]: !l[k] }); else noLook() }
+    const liveFader = (k, box) => {
+        const key = `live:${k}`
+        const input = el('input', { type: 'range', min: String(LIVE[k].min), max: String(LIVE[k].max), step: String(LIVE[k].step), 'data-midi': key, 'aria-label': `${LIVE[k].label} of the live look`, disabled: true })
+        const val = el('b', { class: 'val' })
+        input.addEventListener('input', () => {
+            touch(key)
+            const v = LIVE[k].step >= 1 ? Math.round(Number(input.value)) : Number(input.value)
+            setText(val, fmtLive(k, v))
+            sendLive(k, v)
+            if (k === 'x' || k === 'height') drawXY()
+        })
+        input.addEventListener('pointerdown', () => { dragging.add(key); touch(key) })
+        for (const ev of ['pointerup', 'pointercancel', 'blur', 'change']) input.addEventListener(ev, () => { dragging.delete(key); touch(key) })
+        liveInputs.set(k, input)
+        liveVals.set(k, val)
+        if (box) box.append(el('label', { class: 'hfader' }, el('span', { text: LIVE[k].label }), input, val))
+        return input
+    }
+    // The XY pad: x across, height up, the finger is the beam's place; both through the same throttled looks/edit.
+    const drawXY = () => {
+        const dot = $('xyDot')
+        const x = Number(liveInputs.get('x').value)
+        const h = Number(liveInputs.get('height').value)
+        dot.style.left = `${((x + 1) / 2) * 100}%`
+        dot.style.top = `${(1 - (h + 1) / 2) * 100}%`
+    }
+    const bindXY = () => {
+        const pad = $('xyPad')
+        let down = false
+        const move = (e) => {
+            const r = pad.getBoundingClientRect()
+            const fx = Math.min(1, Math.max(0, (e.clientX - r.left) / (r.width || 1)))
+            const fy = Math.min(1, Math.max(0, (e.clientY - r.top) / (r.height || 1)))
+            for (const [k, v] of [['x', fx * 2 - 1], ['height', 1 - fy * 2]]) {
+                const input = liveInputs.get(k)
+                input.value = String(Math.round(v * 100) / 100)
+                input.dispatchEvent(new Event('input'))
+            }
+        }
+        const up = () => {
+            down = false
+            for (const k of ['live:x', 'live:height']) { dragging.delete(k); touch(k) }
+        }
+        pad.addEventListener('pointerdown', (e) => {
+            if (!liveLook()) { noLook(); return }
+            down = true
+            dragging.add('live:x')
+            dragging.add('live:height')
+            try { if (pad.setPointerCapture && e.pointerId !== undefined) pad.setPointerCapture(e.pointerId) } catch { /* a synthetic press has no pointer to hold */ }
+            move(e)
+        })
+        pad.addEventListener('pointermove', (e) => { if (down) move(e) })
+        for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(ev, up)
+    }
+    const buildLive = () => {
+        $('liveColours').append(...SWATCHES.map((c) => el('button', { type: 'button', class: 'pad colourpad', 'data-colour': c, style: `background:${c}`, title: `Colour ${c}`, 'aria-label': `Colour ${c}`, disabled: true, onclick: () => editLive({ colour: c, rainbow: false }) })),
+            el('button', { type: 'button', class: 'pad togglepad', id: 'liveRainbow', 'aria-pressed': 'false', disabled: true, onclick: () => toggleLive('rainbow') }, 'Rainbow'))
+        for (const k of EFFECTS) {
+            const input = liveFader(k, null)
+            $('liveEffects').append(el('div', { class: 'effect' },
+                el('button', { type: 'button', class: 'pad effectpad', 'data-effect': k, 'aria-pressed': 'false', disabled: true, title: `${LIVE[k].label}: a tap turns it off, a tap again on at its last depth`, onclick: () => pressEffect(k) },
+                    el('span', { text: LIVE[k].label }), liveVals.get(k)), input))
+        }
+        $('liveEffects').append(el('button', { type: 'button', class: 'pad effectpad', id: 'liveMirror', 'aria-pressed': 'false', disabled: true, onclick: () => toggleLive('mirror') }, 'Mirror'))
+        for (const k of ROW_A) liveFader(k, $('liveRowA'))
+        for (const k of ROW_B) liveFader(k, $('liveRowB'))
+        for (const k of ['x', 'height']) { const input = liveFader(k, null); input.hidden = true; input.classList.add('xyval'); $('xyPad').append(input) }
+        bindXY()
+    }
+    let shapeSig = null
+    const renderLive = () => {
+        const look = liveLookFull()
+        const on = Boolean(look)
+        setText($('liveName'), !S.desk ? `Laser: no answer (${S.deskErr})` : look ? `Live: ${look.name || look.id}` : 'No look is live: press a scene')
+        $('live').classList.toggle('is-idle', !on)
+        for (const [k, input] of liveInputs) {
+            input.disabled = !on
+            const v = look ? Number(look[k]) : NaN
+            if (Number.isFinite(v)) {
+                putFader(input, `live:${k}`, v)
+                if (!held(`live:${k}`)) setText(liveVals.get(k), fmtLive(k, v))
+            } else if (!on) setText(liveVals.get(k), '')
+        }
+        const shapes = S.desk && Array.isArray(S.desk.shapes) && S.desk.shapes.length ? S.desk.shapes : SHAPES
+        const order = shapes.includes('spots') ? ['spots', ...shapes.filter((s) => s !== 'spots')] : shapes
+        if (order.join() !== shapeSig) {
+            shapeSig = order.join()
+            $('liveShapes').replaceChildren(...order.map((s) => el('button', { type: 'button', class: 'pad shapepad', 'data-shape': s, 'aria-pressed': 'false', onclick: () => editLive({ shape: s }) }, s === 'spots' ? 'spots · dots' : s)))
+        }
+        const mark = (b, p) => {
+            b.disabled = !on
+            b.classList.toggle('is-on', p)
+            if (b.getAttribute('aria-pressed') !== null) b.setAttribute('aria-pressed', p ? 'true' : 'false')
+        }
+        for (const b of $('liveShapes').children) mark(b, Boolean(look && look.shape === b.dataset.shape))
+        for (const b of $('liveColours').querySelectorAll('.colourpad')) mark(b, Boolean(look && !look.rainbow && String(look.colour || '').toLowerCase() === b.dataset.colour))
+        mark($('liveRainbow'), Boolean(look && look.rainbow))
+        mark($('liveMirror'), Boolean(look && look.mirror))
+        for (const b of $('liveEffects').querySelectorAll('[data-effect]')) mark(b, Boolean(look && Number(look[b.dataset.effect])))
+        if (S.desk && Number.isFinite(Number(S.desk.bpm))) {
+            putFader($('bpm'), 'bpm', Number(S.desk.bpm))
+            if (!held('bpm')) setText($('bpmVal'), String(Math.round(Number(S.desk.bpm))))
+        }
+        drawXY()
+    }
+    const renderSave = () => {
+        const laser = Boolean(S.desk && S.desk.unsaved)
+        const n = $('saveState')
+        setText(n, `${laser || lampsEdited ? 'unsaved changes' : 'no unsaved changes'} · laser: ${S.desk ? (laser ? 'unsaved' : 'saved') : 'no answer'} · lamps: saved on Save scene`)
+        n.classList.toggle('is-unsaved', laser || lampsEdited)
+    }
+    // Save scene: the lamps as they are now into the lit light scene (the lighting desk's scenes/update with restage, its
+    // own Update), and the live look into its own tile on the laser desk (desk/api/store {id, look}: same id, name and
+    // follows; desk/api/save would copy a changed look to "<name> 2" and move the live look off the scene's link).
+    const pressSave = async () => {
+        const scene = litSceneOf()
+        const st = await get(DESK + 'state')
+        const liveId = st.ok && typeof st.liveId === 'string' && st.liveId ? st.liveId : null
+        const look = liveId ? (Array.isArray(st.looks) ? st.looks : []).find((l) => l && l.id === liveId) || (st.live && typeof st.live === 'object' ? st.live : null) : null
+        const [lights, laser] = await Promise.all([
+            scene ? post(LIGHT + 'scenes/update', { id: scene.id, restage: true }) : Promise.resolve(null),
+            liveId && look ? post(DESK + 'store', { id: liveId, look }) : Promise.resolve(null)
+        ])
+        if (lights && lights.ok) lampsEdited = false
+        const words = [
+            !scene ? 'No light scene is lit, so no light scene was written.' : lights.ok ? `${scene.name || scene.id}: the lamps as they are now are written into it.` : `The light scene was not written: ${lights.error}.`,
+            !laser ? (st.ok ? 'No look is live on the laser, so no look was written.' : `The laser desk did not answer (${st.error}).`) : laser.ok ? `Laser look ${look.name || liveId} is written as it plays now.` : `The laser look was not written: ${laser.error}.`
+        ]
+        say(words.join(' '), (lights && !lights.ok) || (laser && !laser.ok) || !st.ok ? 'error' : 'ok')
+        await tick()
+    }
+    // Undo: the laser desk's own Undo (one step of its history), then the lit light scene recalled as it was written.
+    const pressUndo = async () => {
+        const laser = S.desk ? await post(DESK + 'undo', {}) : null
+        const scene = litSceneOf()
+        const lights = scene ? await post(LIGHT + 'scenes/recall', { id: scene.id }) : null
+        if (lights && lights.ok) lampsEdited = false
+        const words = [
+            !laser ? '' : laser.ok ? 'Laser: the last change is undone.' : `Laser: nothing undone (${laser.error}).`,
+            !scene ? '' : lights.ok ? `Lights: ${scene.name || scene.id} recalled as it was written.` : `Lights did not change: ${lights.error}.`
+        ].filter(Boolean)
+        say(words.join(' ') || 'Nothing to undo.', (laser && !laser.ok) || (lights && !lights.ok) ? 'error' : 'ok')
+        await tick()
+    }
+
+    // ---- MIDI (the W3C Web MIDI API, in this page). A controller's faders and pots move the faders above with pick-up (soft
+    // takeover: a control moves nothing until it passes the value on the screen, so nothing jumps); relative encoders step
+    // from the screen's value; buttons press scene keys and Blackout all (dark only). The map is data: the default is the
+    // Xone:K2's (midi/xone-k2.json, from its maker's guide: channel 15, 14 on the wire); Learn changes it in this browser only.
+    // On, Off, the lifts, Undo, Save and Release are never a target: MIDI_OK names every target there is, and a stored map is
+    // read through it. The lighting desk has its own MIDI page as well (its own map, its own controls).
+    const MIDI_KEY = 'diShowDesk.midiMap.v1'
+    const K2 = 14
+    const MIDI_OK = /^(lamp:\d{1,3}|size:\d{1,3}|scene:\d{1,3}|live:(level|size|height|x|copies|rotation|spin|pulse|sweep|cycle|phase|pulseBeats|sweepBeats|points)|light-master|laser-master|blackout|spare)$/
+    const PRESS = /^(scene:\d{1,3}|blackout)$/
+    const SCENE_NOTES = [36, 37, 38, 39, 32, 33, 34, 35, 28, 29] // the K2's matrix A to J
+    const MIDI_DEFAULT = [
+        ...[16, 17, 18].map((num, i) => ({ kind: 'cc', ch: K2, num, target: `lamp:${i}` })),
+        { kind: 'cc', ch: K2, num: 19, target: 'light-master' },
+        ...['level', 'size', 'height', 'copies'].map((k, i) => ({ kind: 'cc', ch: K2, num: 4 + i, target: `live:${k}` })),
+        ...['spin', 'pulse', 'sweep'].map((k, i) => ({ kind: 'cc', ch: K2, num: 8 + i, target: `live:${k}` })),
+        { kind: 'cc', ch: K2, num: 11, target: 'laser-master' },
+        { kind: 'cc', ch: K2, num: 12, target: 'size:0' },
+        ...[13, 14, 15].map((num) => ({ kind: 'cc', ch: K2, num, target: 'spare' })),
+        ...['rotation', 'x', 'cycle', 'phase'].map((k, i) => ({ kind: 'cc', ch: K2, num: i, target: `live:${k}`, relative: true })),
+        ...SCENE_NOTES.map((num, i) => ({ kind: 'note', ch: K2, num, target: `scene:${i}` })),
+        { kind: 'note', ch: K2, num: 27, target: 'blackout' } // matrix P: the far corner, away from the scene keys
+    ]
+    const midiValid = (m) => Boolean(m && (m.kind === 'cc' || m.kind === 'note') && Number.isInteger(m.ch) && m.ch >= 0 && m.ch < 16
+        && Number.isInteger(m.num) && m.num >= 0 && m.num < 128 && typeof m.target === 'string' && MIDI_OK.test(m.target)
+        && (m.target === 'spare' || PRESS.test(m.target) === (m.kind === 'note')))
+    const midiLoad = () => {
+        try {
+            const saved = JSON.parse(window.localStorage.getItem(MIDI_KEY) || 'null')
+            if (Array.isArray(saved)) return saved.filter(midiValid).map((m) => ({ kind: m.kind, ch: m.ch, num: m.num, target: m.target, ...(m.relative === true ? { relative: true } : {}) }))
+        } catch { /* nothing stored, or no storage here: the default map */ }
+        return MIDI_DEFAULT.map((m) => ({ ...m }))
+    }
+    let midiMap = midiLoad()
+    let midiNames = null
+    let midiWhy = 'asking'
+    let learning = null
+    const pickup = new Map()
+    const midiLine = (note = '') => {
+        const base = midiNames && midiNames.length ? `MIDI: ${midiNames.join(', ')}` : `MIDI: ${midiNames ? 'none seen' : midiWhy}`
+        const learn = !learning ? '' : learning.target ? ` · Learn: move one control for ${learning.target}` : ' · Learn: tap a fader, a scene key or Blackout all'
+        setText($('midiLine'), `${base}${learn}${note ? ` · ${note}` : ''}`)
+        $('midiLearn').classList.toggle('is-on', Boolean(learning))
+        $('midiLearn').setAttribute('aria-pressed', learning ? 'true' : 'false')
+    }
+    const midiInput = (target) => {
+        const [kind, rest] = target.split(':')
+        if (kind === 'lamp') { const f = fixturesOf()[Number(rest)]; return f && lampRows.get(f.id) ? lampRows.get(f.id).input : null }
+        if (kind === 'size') { const id = cubeIds()[Number(rest)]; return id && cubeCards.get(id) ? cubeCards.get(id).size : null }
+        if (kind === 'live') return liveInputs.get(rest) || null
+        if (target === 'light-master') return $('lightMaster')
+        if (target === 'laser-master') return $('laserMaster')
+        return null
+    }
+    const midiMove = (m, raw) => {
+        const input = midiInput(m.target)
+        if (!input || input.disabled) return
+        const min = Number(input.min)
+        const max = Number(input.max)
+        const span = max - min
+        const cur = Number(input.value)
+        let next
+        if (m.relative) next = cur + ((raw < 64 ? raw : raw - 128) * span) / 200 // two's complement steps from the screen's value
+        else {
+            const t = min + (raw / 127) * span
+            const tol = span / 50
+            const p = pickup.get(m.target) || { last: null, own: false, set: null }
+            if (p.own && p.set !== null && Math.abs(cur - p.set) > tol) p.own = false // the screen moved under it: pick up again
+            if (!p.own && (Math.abs(t - cur) <= tol || (p.last !== null && (p.last - cur) * (t - cur) <= 0))) p.own = true
+            p.last = t
+            pickup.set(m.target, p)
+            if (!p.own) { midiLine(`${m.target} waits until it passes the screen`); return }
+            next = t
+        }
+        const step = Number(input.step) || 0
+        const places = (String(input.step).split('.')[1] || '').length
+        const stepped = step > 0 ? Number((Math.round((next - min) / step) * step + min).toFixed(places)) : next
+        input.value = String(Math.min(max, Math.max(min, stepped)))
+        if (!m.relative) pickup.get(m.target).set = Number(input.value)
+        input.dispatchEvent(new Event('input'))
+    }
+    const midiPress = (m) => {
+        if (m.target === 'blackout') { pressBlackout(); return }
+        const item = sceneItems()[Number(m.target.split(':')[1])]
+        if (item) pressScene(item.id)
+    }
+    const midiLearnSet = (ctl) => {
+        const target = learning.target
+        const want = PRESS.test(target) ? 'note' : 'cc'
+        if (ctl.kind !== want) { midiLine(`${target} takes a ${want === 'note' ? 'button' : 'fader or a knob'}`); return }
+        const known = MIDI_DEFAULT.find((d) => d.kind === ctl.kind && d.ch === ctl.ch && d.num === ctl.num)
+        midiMap = midiMap.filter((m) => m.target !== target && !(m.kind === ctl.kind && m.ch === ctl.ch && m.num === ctl.num))
+        midiMap.push({ ...ctl, target, ...(known && known.relative ? { relative: true } : {}) })
+        try { window.localStorage.setItem(MIDI_KEY, JSON.stringify(midiMap)) } catch { /* this browser keeps nothing: the map lasts until a reload */ }
+        learning = null
+        pickup.delete(target)
+        midiLine(`learned: ${target}`)
+    }
+    const onMidi = (e) => {
+        const d = e && e.data
+        if (!d || d.length < 3) return
+        const type = d[0] & 0xf0
+        const kind = type === 0xb0 ? 'cc' : type === 0x90 && d[2] > 0 ? 'note' : null
+        if (!kind) return
+        const ctl = { kind, ch: d[0] & 0x0f, num: d[1] }
+        if (learning && learning.target) { midiLearnSet(ctl); return }
+        const m = midiMap.find((x) => x.kind === ctl.kind && x.ch === ctl.ch && x.num === ctl.num)
+        if (!m || !midiValid(m) || m.target === 'spare') return
+        if (kind === 'cc') midiMove(m, d[2])
+        else midiPress(m)
+    }
+    const startMidi = async () => {
+        const nav = window.navigator
+        if (!nav || typeof nav.requestMIDIAccess !== 'function') { midiWhy = 'not in this browser'; midiLine(); return }
+        try {
+            const access = await nav.requestMIDIAccess({ sysex: false })
+            const hook = () => {
+                const names = []
+                for (const input of access.inputs.values()) { input.onmidimessage = onMidi; names.push(input.name || 'a device') }
+                midiNames = names
+                midiLine()
+            }
+            access.onstatechange = hook
+            hook()
+        } catch (error) { midiWhy = `refused (${(error && error.name) || 'no answer'})`; midiLine() }
+    }
+
     // ---- one read of each desk a second, paused while the page is hidden
     let ticking = null
     const render = () => {
@@ -557,6 +954,8 @@
         renderScenes()
         renderLights()
         renderLaser()
+        renderLive()
+        renderSave()
     }
     const tick = () => {
         if (ticking) return ticking
@@ -566,6 +965,7 @@
                 get(LIGHT + 'state'), get(DESK + 'state'), get(LASER + 'state'), wantFollows ? get(DESK + 'follows') : Promise.resolve(null)
             ])
             S.light = light.ok ? light : null
+            if (S.light && typeof S.light.activeScene === 'string' && S.light.activeScene) litScene = S.light.activeScene
             S.lightErr = light.ok ? '' : light.error
             S.desk = desk.ok ? desk : null
             S.deskErr = desk.ok ? '' : desk.error
@@ -613,7 +1013,32 @@
     bindFader($('lightMaster'), 'light-master', (v) => post(LIGHT + 'master', { master: v }), (v) => setText($('lightMasterVal'), pct(v, 255)))
     bindFader($('laserMaster'), 'laser-master', (v) => post(DESK + 'master', { level: v }), (v) => setText($('laserMasterVal'), pct(v, 1)))
 
+    bindFader($('bpm'), 'bpm', (v) => post(DESK + 'bpm', { bpm: v }), (v) => setText($('bpmVal'), String(Math.round(v))))
+    $('tapBtn').addEventListener('click', async () => {
+        const r = await post(DESK + 'bpm', { tap: true })
+        if (!r.ok) say(`Tap did not reach the laser desk: ${r.error}.`, 'error')
+        await tick()
+    })
+    $('saveScene').addEventListener('click', pressSave)
+    $('undoBtn').addEventListener('click', pressUndo)
+    $('midiLearn').addEventListener('click', () => { learning = learning ? null : { target: null }; midiLine() })
+    $('midiExport').addEventListener('click', () => {
+        const box = $('midiMapText')
+        box.hidden = !box.hidden
+        if (!box.hidden) { box.value = JSON.stringify(midiMap, null, 1); box.select() }
+    })
+    // Learn: a tap on a fader, a scene key or Blackout all picks what the next control moved is mapped to. Blackout all still
+    // goes dark on that tap (a stop always works); a scene key in Learn only picks.
+    document.addEventListener('pointerdown', (e) => {
+        if (!learning) return
+        const n = e.target && typeof e.target.closest === 'function' ? e.target.closest('[data-midi]') : null
+        if (n && MIDI_OK.test(n.dataset.midi)) { learning.target = n.dataset.midi; midiLine() }
+    }, true)
+
     // For the page's tests and a person at the console: read-only views and one refresh. Nothing here sends a press.
-    window.DiShowDesk = { refresh: tick, holdsOf, blackoutState, state: S }
+    window.DiShowDesk = { refresh: tick, holdsOf, blackoutState, state: S, midiMap: () => midiMap.map((m) => ({ ...m })) }
+    buildLive()
+    midiLine()
+    startMidi()
     tick().then(() => { schedulePoll(); scheduleView() })
 })()
