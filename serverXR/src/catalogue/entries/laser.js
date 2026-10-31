@@ -183,6 +183,30 @@ module.exports = [
     note: `${SAME_MACHINE} ${OWN_PAGE}`
   },
   {
+    route: "POST /laser/desk/api/follow",
+    summary: "switch Follow light scenes on or off: { on: true | false } — while on, a scene picked on the lighting desk puts the look that follows it live here; it never arms, never sends a Go, never lifts a Blackout; saved with the desk (off until ticked)",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/looks/follows",
+    summary: "set the lighting desk scene one look of the bank follows: { id, scene } ('' = none) — kept in the bank until Save writes it",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "GET /laser/desk/api/follows",
+    summary: "whether Follow light scenes is on, and which look follows each lighting desk scene: { on, links: { <scene id>: { look, name } } } — for the lighting desk's page",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: LOCAL
+  },
+  {
     route: "POST /laser/desk/api/looks/edit",
     summary: "change a look of the laser desk's bank: { id, …fields } — kept in the bank until Save writes it; when that look is on the cubes they show the change at once",
     reach: "private",
