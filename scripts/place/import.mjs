@@ -18,6 +18,7 @@
  *   --title <text>      what the hall is called in the room
  *   --sources <dir>     the footage folder (default: the one frames.json names)
  *   --no-sources        skip the second project
+ *   --keep-front-door   leave the space's front door (publishedProjectId) as it is
  *   --replace           the hall project already holds a room: swap the model (its other
  *                       components, the night, fog, spawn and opening shot are KEPT —
  *                       they belong to the rig; add --reset-view to write the defaults)
@@ -288,6 +289,7 @@ const main = async () => {
         say(`  create project ${hallProject}, upload place.glb, hang it static on the floor`)
         say(`  set the spawn at ${JSON.stringify(place.spawn)} and the walkable floor`)
         if (!args['no-sources']) say(`  create project ${sourcesProject} and carry the footage into it`)
+        say(args['keep-front-door'] ? '  keep the space\'s front door as it is' : `  make ${hallProject} the space's front door`)
         return
     }
 
@@ -377,8 +379,11 @@ const main = async () => {
         }
     }
 
-    // The front door of the space opens the hall.
-    await client.patch(`/api/spaces/${name}`, { publishedProjectId: hallProject, permanent: true })
+    // The front door of the space opens the hall — unless the space already has
+    // a front door someone chose (--keep-front-door): then the hall is added
+    // beside it and the door is left as it was (rule: nothing we have is lost).
+    if (args['keep-front-door']) say(`  front door kept as it was (--keep-front-door); the hall is the project ${hallProject}`)
+    else await client.patch(`/api/spaces/${name}`, { publishedProjectId: hallProject, permanent: true })
 
     const site = api.replace(/\/serverXR$/, '')
     writeJson(path.join(work, 'import.json'), {
