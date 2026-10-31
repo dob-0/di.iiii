@@ -925,6 +925,9 @@
         const kind = type === 0xb0 ? 'cc' : type === 0x90 && d[2] > 0 ? 'note' : null
         if (!kind) return
         const ctl = { kind, ch: d[0] & 0x0f, num: d[1] }
+        // The panic button comes first: while Learn waits for a control, the Blackout button still blacks out and is
+        // never learned onto something else (review 2026-10-31 M1).
+        if (kind === 'note' && midiMap.some((x) => x.target === 'blackout' && x.kind === 'note' && x.ch === ctl.ch && x.num === ctl.num)) { pressBlackout(); return }
         if (learning && learning.target) { midiLearnSet(ctl); return }
         const m = midiMap.find((x) => x.kind === ctl.kind && x.ch === ctl.ch && x.num === ctl.num)
         if (!m || !midiValid(m) || m.target === 'spare') return

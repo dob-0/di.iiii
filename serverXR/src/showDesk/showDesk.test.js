@@ -634,6 +634,23 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         expect(bad).toEqual([])
         expect(posts.length).toBeGreaterThan(0)
     })
+    it('while Learn waits for a control, the Blackout button still blacks out and is not learned', async () => {
+        await press($('midiLearn'))
+        $('lightMaster').dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }))
+        $('lightMaster').dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true }))
+        midi(0x9e, 27, 127)
+        await settle()
+        expect(posts).toEqual(DARK)
+        const sceneKey = document.querySelector('[data-midi^="scene:"]')
+        if (sceneKey) {
+            sceneKey.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }))
+            sceneKey.dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true }))
+            midi(0x9e, 27, 127)
+            await settle()
+        }
+        expect(window.DiShowDesk.midiMap().filter((m) => m.kind === 'note' && m.ch === 14 && m.num === 27).map((m) => m.target)).toEqual(['blackout'])
+        expect(posts.filter((p) => p.url === '../light/api/scenes/recall')).toEqual([])
+    })
     it('Learn maps one control to a fader; On, Off, a lift, Undo and Save cannot be picked', async () => {
         await press($('midiLearn'))
         for (const n of [cubeCard('cube-a').querySelector('.cubeon'), cubeCard('cube-a').querySelector('.cubeoff'), $('liftLights'), $('undoBtn'), $('saveScene')]) n.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }))
