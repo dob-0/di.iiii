@@ -7,8 +7,8 @@ against a real L4.
 
 This file is executed on the Colab VM, repeatedly, by scripts/place/colab-job.mjs:
 
-  first call   unpacks /content/place/images.tar, fetches Meshroom, starts
-               meshroom_batch DETACHED, and returns at once
+  first call   spawns run.sh detached (it unpacks the frames, fetches Meshroom, starts
+               meshroom_batch), and returns at once
   later calls  report how it is going
 
 Detached on purpose. A Colab runtime can vanish mid-job and a websocket can
@@ -22,10 +22,8 @@ Every call prints one machine-readable line the driver reads:
 """
 import json
 import os
-import shutil
 import subprocess
 import sys
-import tarfile
 import time
 
 ROOT = '/content/place'
@@ -121,42 +119,12 @@ def tail(path, lines=12):
 PARTS_DIR = '/content/parts'
 
 
-def assemble_tar():
-    """Put the uploaded pieces back together.
-
-    The frames arrive split: `colab upload` goes through Jupyter's contents
-    API, which base64s the whole file into one JSON body, and a hall's worth
-    of photos answers 500 (2026-09-21). Each piece is small enough to land.
-    """
-    if os.path.exists(IMAGES_TAR):
-        return
-    if not os.path.isdir(PARTS_DIR):
-        raise SystemExit(f'no {IMAGES_TAR} and no {PARTS_DIR} on this VM')
-    names = sorted(name for name in os.listdir(PARTS_DIR) if 'images.tar.' in name)
-    if not names:
-        raise SystemExit(f'{PARTS_DIR} is empty — nothing to put together')
-    with open(IMAGES_TAR, 'wb') as whole:
-        for name in names:
-            with open(os.path.join(PARTS_DIR, name), 'rb') as piece:
-                shutil.copyfileobj(piece, whole)
-
-
-def unpack_images():
-    os.makedirs(IMAGES_DIR, exist_ok=True)
-    assemble_tar()
-    if not os.path.exists(IMAGES_TAR):
-        raise SystemExit(f'no {IMAGES_TAR} on this VM — upload it first')
-    with tarfile.open(IMAGES_TAR) as archive:
-        archive.extractall(IMAGES_DIR)
-    # A tar of a folder lands one level deep; flatten so Meshroom sees images.
-    entries = [os.path.join(IMAGES_DIR, name) for name in os.listdir(IMAGES_DIR)]
-    if len(entries) == 1 and os.path.isdir(entries[0]):
-        inner = entries[0]
-        for name in os.listdir(inner):
-            shutil.move(os.path.join(inner, name), os.path.join(IMAGES_DIR, name))
-        os.rmdir(inner)
-    return len([n for n in os.listdir(IMAGES_DIR)
-                if os.path.isfile(os.path.join(IMAGES_DIR, n))])
+def image_count():
+    try:
+        return len([n for n in os.listdir(IMAGES_DIR)
+                    if os.path.isfile(os.path.join(IMAGES_DIR, n))])
+    except OSError:
+        return 0
 
 
 # The whole job — fetch, unpack, reconstruct — as one detached shell script.
@@ -175,7 +143,31 @@ cd {root}
 # that forked and left.
 ( while [ ! -f {root}/finished ]; do touch {root}/beat; sleep 15; done ) &
 touch {root}/beat
+# One job per box. The driver re-sends the start call when its websocket
+# drops before the status line comes back (2026-10-31: the A100 start exec
+# died with "Connection was lost"), so a second copy must bow out at once.
+exec 9>{root}/run.lock
+if ! flock -n 9; then echo "ALREADY RUNNING $(date -u)"; exit 0; fi
 echo "START $(date -u)"
+# Put the uploaded pieces back together and unpack — here, detached, not in
+# the start exec. `colab upload` goes through Jupyter's contents API, which
+# base64s the file into one JSON body and answers 500 for a hall's worth of
+# photos (2026-09-21), so the frames arrive split.
+if [ ! -f {tar} ]; then
+  cat {parts}/images.tar.* > {tar}.part && mv {tar}.part {tar} \
+    || {{ echo "NO FRAMES: no {tar} and no pieces in {parts}"; touch {root}/finished; exit 1; }}
+fi
+mkdir -p {images}
+if [ -z "$(ls -A {images})" ]; then
+  tar -xf {tar} -C {images} || {{ echo "UNTAR FAILED"; touch {root}/finished; exit 1; }}
+  # A tar of a folder lands one level deep; flatten so Meshroom sees images.
+  only="$(ls -A {images})"
+  if [ "$(printf '%s\n' "$only" | wc -l)" = 1 ] && [ -d "{images}/$only" ]; then
+    find "{images}/$only" -mindepth 1 -maxdepth 1 -exec mv -t {images} {{}} +
+    rmdir "{images}/$only"
+  fi
+fi
+echo "IMAGES $(find {images} -maxdepth 1 -type f | wc -l) at $(date -u)"
 if [ ! -d {home} ]; then
   # In parallel, and resumable. The tarball is ~9 GB (it carries CUDA), and a
   # single-stream wget took over an hour on Colab — long enough for the
@@ -212,11 +204,14 @@ touch {root}/finished
 def start():
     os.makedirs(OUT_DIR, exist_ok=True)
     os.makedirs(CACHE_DIR, exist_ok=True)
-    count = unpack_images()
+    # Nothing slow here: this runs inside a `colab exec` whose websocket can
+    # drop at any second. Unpacking, the download and Meshroom all happen in
+    # run.sh, detached; this call writes the script, spawns it and returns.
     script = os.path.join(ROOT, 'run.sh')
     with open(script, 'w') as handle:
         handle.write(RUN_SH.format(root=ROOT, home=MESHROOM_HOME, url=MESHROOM_URL,
-                                   images=IMAGES_DIR, out=OUT_DIR, cache=CACHE_DIR))
+                                   images=IMAGES_DIR, out=OUT_DIR, cache=CACHE_DIR,
+                                   tar=IMAGES_TAR, parts=PARTS_DIR))
     os.chmod(script, 0o755)
     log = open(LOG, 'ab')
     # NOT setsid. `start_new_session=True` already detaches the child into its
@@ -227,8 +222,8 @@ def start():
     process = subprocess.Popen(['bash', script], stdout=log,
                                stderr=subprocess.STDOUT, cwd=ROOT,
                                start_new_session=True)
-    write_state({'pid': process.pid, 'startedAt': time.time(), 'images': count})
-    status(state='started', pid=process.pid, images=count)
+    write_state({'pid': process.pid, 'startedAt': time.time()})
+    status(state='started', pid=process.pid)
 
 
 def heartbeat_age():
@@ -260,7 +255,8 @@ def report():
         status(state='done', result=result, folder=folder, files=textures,
                elapsed=elapsed, running=running)
     elif running:
-        status(state='running', elapsed=elapsed, beat=beat, log=tail(LOG, 6))
+        status(state='running', elapsed=elapsed, beat=beat, images=image_count(),
+               log=tail(LOG, 6))
     else:
         step = failing_step_log()
         status(state='failed', elapsed=elapsed, beat=beat, finished=finished,

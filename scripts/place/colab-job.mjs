@@ -103,6 +103,9 @@ export const readsAsLostSession = (output = '') => /Session .*not found|no such 
 // A wedged websocket is worth retrying; six in a row is not a wedge.
 export const SILENT_POLLS_BEFORE_GIVING_UP = 6
 
+// The start call is retried the same way; it is idempotent on the box.
+export const START_ATTEMPTS = 4
+
 // The frames go up in pieces.
 //
 // `colab upload` posts through Jupyter's contents API, which carries the file
@@ -422,12 +425,27 @@ const main = async () => {
         }
 
         say('Starting Meshroom …')
-        const started = colab(['exec', '-s', session, '-f', path.join(PLACE_DIR, 'reconstruct.py')])
-        const first = parseStatusLines(started.out).pop()
-        if (!first || first.state === 'error') {
-            throw new Error(`Meshroom would not start: ${first?.error || 'no status came back'}`)
+        // The start call only spawns run.sh on the box and returns, so it gets
+        // a poll's short timeout. When its websocket drops before the status
+        // line comes back ("Connection was lost", A100, 2026-10-31), ask again:
+        // reconstruct.py reports an existing job instead of starting a second,
+        // and run.sh holds a lock, so a repeat is harmless.
+        let first = null
+        for (let attempt = 1; attempt <= START_ATTEMPTS && !first; attempt += 1) {
+            const started = colab(['exec', '-s', session, '-f', path.join(PLACE_DIR, 'reconstruct.py')], {
+                timeout: POLL_TIMEOUT_MS
+            })
+            if (readsAsLostSession(started.out)) throw new Error(`Colab lost the session "${session}" at the start.`)
+            first = parseStatusLines(started.out).pop() || null
+            if (!first && attempt < START_ATTEMPTS) {
+                warn(`  (no answer to the start call — asking again, ${attempt}/${START_ATTEMPTS})`)
+                await sleep(30_000)
+            }
         }
-        say(`  ${first.images || '?'} frames in, working. This takes the better part of an hour.`)
+        if (!first || first.state === 'error' || first.state === 'failed') {
+            throw new Error(`Meshroom would not start: ${first?.error || first?.state || 'no status came back'}`)
+        }
+        say(`  ${first.state} on the box, detached. This takes the better part of an hour.`)
 
         const deadline = Date.now() + timeoutMinutes * 60_000
         let result = null
