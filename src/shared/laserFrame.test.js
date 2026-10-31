@@ -41,7 +41,7 @@ describe('frame v2: paths between laser nodes, flattened at Laser Out', () => {
         const fs = await import('node:fs')
         const { buildTwin } = await twinTool()
         const dir = path.dirname(fileURLToPath(import.meta.url))
-        expect(fs.readFileSync(path.join(dir, 'laserFrame.js'), 'utf8')).toBe(buildTwin(fs.readFileSync(path.join(dir, '../../shared/laserFrame.cjs'), 'utf8')))
+        expect(fs.readFileSync(path.join(dir, 'laserFrame.js'), 'utf8').replace(/\r\n/g, '\n')).toBe(buildTwin(fs.readFileSync(path.join(dir, '../../shared/laserFrame.cjs'), 'utf8')))
     })
     it('the twins agree on a flatten', () => {
         const frame = v2([...many(10), ring(0, 0.5, 0.3)])
