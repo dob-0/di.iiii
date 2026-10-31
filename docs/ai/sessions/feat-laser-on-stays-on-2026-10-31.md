@@ -18,6 +18,9 @@
   `engine.alive(id, 'desk')` for the cubes it holds, in `'never'` only, and stops when none is left (Release stops it).
   A desk that stops (crash, restart) stops holding and the Out-let-go rule switches the cube off as before. In `'auto'`
   nothing is held (alive() would keep a Release's blank frame fresh and the 5 s rule would never fire).
-- Tests: laser + routes + shutdown contracts + wiki 377 passed (22 files); 9 of the first 11 new tests fail on the code
+- Review of copy 9 (O1, must-fix): Release switched off only the cubes the desk drew on; a cube armed by its own On while
+  nothing was live stayed armed up to 10 s and a Go lit it. Release now also blanks and switches off every armed cube the
+  desk holds, in both modes; in 'auto' keepHold starts nothing (O2). Tests name the reviewer's mutations H1, H11, H12, H13.
+- Tests: laser + routes + shutdown contracts + wiki 383 passed (22 files); 9 of the first 11 new tests fail on the code
   before (the other 2 check that the signal-loss and still-beam stops still fire in `'never'`). Not tested: the real
   cube, the Mac's page, the page on the agent screen.

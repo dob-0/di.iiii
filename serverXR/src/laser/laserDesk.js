@@ -252,6 +252,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     let engineDark = false // the engine's dark latch is ours (keep-arm Blackout); only then is it lifted, and never by building an engine
     let timer = null
     let holding = false // the desk's own On with nothing live: it keeps its hold (N1591)
+    let ownOn = false // a cube's own On on the desk happened (the lane said so): Release switches such cubes off (review O1)
     const sent = new Map() // cubeId → { key, end, held, points, at }
     let saveTimer = null
     let dirty = false // the bank changed since desk.json was last written (Save)
@@ -352,7 +353,14 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         for (const c of mine) engine.alive(c.id, OUT)
         if (!mine.length) { holding = false; if (timer) { stopEvery(timer); timer = null } }
     }
-    const keepHold = () => { holding = true; startTicking(); return { ok: true } }
+    const keepHold = () => {
+        ownOn = true
+        // The hold runs only in darkOff 'never'; in 'auto' the desk starts nothing (the 5 s rule decides, unchanged: review O2).
+        if (getEngine().state().darkOff !== 'never') return { ok: true, holding: false }
+        holding = true
+        startTicking()
+        return { ok: true, holding: true }
+    }
     const tickOnce = () => {
         if (!live) return holdIdle()
         const engine = watchEngine()
@@ -416,13 +424,17 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         liftEngineDark()
         holding = false
         if (timer) { stopEvery(timer); timer = null }
-        // Only cubes the desk drew on are touched: a desk that never drew must not build an engine to say so.
-        if (sent.size) {
+        // Only cubes the desk drew on or armed by its own On are touched: a desk that did neither must not build an engine to say so.
+        if (sent.size || ownOn) {
             const engine = getEngine()
             // Dark first, then the cube is switched OFF (never resumed): a cube the desk let go of must not stay armed with
-            // output on for the next Out to light (review E2, desk half).
-            for (const [id, s] of sent) if (!s.held) { engine.setFrame(id, [BLANK], OUT); engine.arm({ armed: false, cube: id, out: OUT }) }
+            // output on for the next Out to light (review E2, desk half). That includes a cube armed by its own On while
+            // nothing was live: the desk holds it but never drew on it, so it is not in `sent` (review O1, N1591).
+            const off = [...sent].filter(([, s]) => !s.held).map(([id]) => id)
+            for (const c of engine.state().cubes) if (c.armed && c.claimedBy === OUT && !off.includes(c.id)) off.push(c.id)
+            for (const id of off) { engine.setFrame(id, [BLANK], OUT); engine.arm({ armed: false, cube: id, out: OUT }) }
         }
+        ownOn = false
         sent.clear()
         if (was) log?.info?.('[laser desk] released')
         return { ok: true }
