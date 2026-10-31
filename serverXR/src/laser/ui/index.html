@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#060607">
 <meta name="color-scheme" content="dark">
 <title>Laser desk</title>
+<!-- The layout (Grid | Classic) is chosen here, before the first paint: layoutMode.js sets html[data-layout]; without it the page is Classic. -->
+<script src="layoutMode.js"></script>
 <link rel="stylesheet" href="desk.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M4 28 L28 4' stroke='%23ff2030' stroke-width='4'/></svg>">
 </head>
@@ -27,6 +29,11 @@
     <button class="page-tab is-active" data-page="control">Control</button>
     <button class="page-tab" data-page="setup">Setup</button>
   </nav>
+  <!-- Layout (2026-10-31, the owner: "the place is not used right, the windows inside are managed not right"): Grid is the new default, Classic is the layout before it, kept whole. Kept per browser (layoutMode.js); ?layout=classic|grid too. Shown from 1240x640 up; below that the page is Classic. -->
+  <div class="layoutswitch" role="group" aria-label="Layout">
+    <button type="button" data-layout="grid" aria-pressed="false" title="Grid: the Looks fill the page, the cubes and masters sit at the right, every edit group is in a strip at the bottom">Grid</button>
+    <button type="button" data-layout="classic" aria-pressed="false" title="Classic: the layout before 2026-10-31, with Edit as a column at the right">Classic</button>
+  </div>
   <!-- Row 1, right of the page tabs: what the desk does. The follow status sits here (fixed width, ellipsis), never among the stops. -->
   <div class="options">
     <label class="muted" title="Off: Blackout switches every cube off (On and the phrase bring it back). On: the older blackout, dark with the arm kept; Shift+B brings it back."><input type="checkbox" id="blackoutKeepsArm"> Blackout keeps the arm</label>
@@ -98,7 +105,7 @@
     <div class="tiles" id="tiles"></div>
   </section>
 
-  <section class="stage pane" aria-label="Stage">
+  <section class="stage pane" aria-label="Stage" title="What each cube holds now, after its keep-in zone (the shaded part is never drawn)">
     <div class="panehead">
       <h2>Stage</h2>
       <span class="muted">What each cube holds now, after its keep-in zone (the shaded part is never drawn)</span>
@@ -132,7 +139,7 @@
           <label class="check"><input type="checkbox" id="rainbow"> Rainbow</label>
         </div>
         <div class="swatches" id="swatches"></div>
-        <div class="grouphead mine-head"><span>My colours</span><span class="muted" id="myColoursHint">+ opens a palette to choose from</span></div>
+        <div class="grouphead mine-head"><span>My colours</span><span class="muted" id="myColoursHint" title="+ opens a palette to choose from">+ opens a palette to choose from</span></div>
         <div class="swatches" id="myColours"></div>
         <!-- The palette + opens (2026-10-31, the owner: "show me color pallet when +"): choose a colour, it is kept in My colours. -->
         <div class="chooser" id="colourChooser" hidden>

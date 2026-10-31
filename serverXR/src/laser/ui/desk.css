@@ -336,3 +336,134 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
 .scenebtn.is-lights { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
 .scenebtn.is-lights .scenename .scenetext { color: #fff; font-weight: 600; }
 .scenebtn.is-laser .scenelook { color: var(--accent); }
+
+/* ---- The Grid layout (2026-10-31, the owner: "fix the laser desk: the place is not used right, the windows inside are managed not right, it is ugly and not logical").
+   The Looks grid is the biggest thing on the page (9 fixed columns), the masters and the cubes sit in a rail at the right, every edit group is in a strip along the bottom, and the
+   stops stand alone at the right end of the bar. CLASSIC IS KEPT WHOLE AS A MODE: every rule above this line is untouched, and every rule below is under html[data-layout="grid"]
+   inside ONE size query (1240 x 640 and up), so below that size, with ?layout=classic, or when layoutMode.js did not run, the page is Classic. No element is moved in the HTML
+   (display: contents on the bar's wrappers puts the masters in the rail), no control is removed, desk.js is not touched. Tokens are the page's own (var(--pane) ...); the only new
+   ones are the --g-* sizes below. Square corners: no border-radius here but 0. Measured on the real page (desk.js running) at 1280x670, 1280x700, 1278x758 and 1240x640:
+   docs/ai/sessions/feat-laser-desk-layout-2026-10-31.md; why: docs/ai/decisions/2026-10-31-laser-desk-layout.md. */
+@media (min-width: 1240px) and (min-height: 640px) {
+
+html[data-layout="grid"] {
+  --g-gap: 6px; --g-side: 8px;
+  --g-bar: 50px; --g-tools: 118px; --g-opts: 80px; --g-edit: 196px; --g-rail: 232px;
+  --g-scenes: 88px; --g-head: 24px; --g-cols: 9; --g-pic: 56px; --g-stage: 96px;
+}
+
+/* ---- the page: ONE grid, nothing scrolls. Row 1 = the bar (its items sit in the four auto tracks); the last column = the rail. */
+html[data-layout="grid"] body {
+  display: grid; height: 100vh; min-height: 0; overflow: hidden; gap: var(--g-gap); padding: 0 var(--g-side) var(--g-gap);
+  grid-template-columns: auto auto auto auto minmax(0, 1fr) var(--g-rail);
+  grid-template-rows: var(--g-bar) var(--g-tools) var(--g-opts) var(--g-stage) minmax(0, 1fr) var(--g-edit);
+}
+html[data-layout="grid"] body::before { content: ''; grid-area: 1 / 1 / 2 / -1; margin: 0 calc(var(--g-side) * -1); background: var(--bar); border-bottom: 1px solid var(--line); }
+html[data-layout="grid"] .topbar, html[data-layout="grid"] .topright, html[data-layout="grid"] #page-control { display: contents; }
+
+/* ---- row 1: the bar. di.iiii, Show/Light/Laser, Control/Setup, the layout switch; the stops at the right end, in their own tracks. */
+html[data-layout="grid"] .homelink { grid-area: 1 / 1; margin: 0; }
+html[data-layout="grid"] .deskswitch { grid-area: 1 / 2; margin: 0; }
+html[data-layout="grid"] .pages { grid-area: 1 / 3; align-self: center; }
+html[data-layout="grid"] .layoutswitch { grid-area: 1 / 4; align-self: center; }
+html[data-layout="grid"] .stops { grid-area: 1 / 5 / 2 / 7; justify-self: end; margin: 0; position: relative; z-index: 60; }
+html[data-layout="grid"] .notice { grid-area: 5 / 6; align-self: start; margin: 0; z-index: 6; border: 1px solid var(--warn); padding: 6px 8px; max-height: 100%; overflow: auto; font-size: 12px; }
+
+/* ---- the rail (last column): masters, then the follow switches, then the cubes */
+html[data-layout="grid"] .tools { grid-area: 2 / 6; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; padding: 6px 8px; background: var(--pane); border: 1px solid var(--line); min-height: 0; overflow: hidden; }
+html[data-layout="grid"] .tools .bpm { flex: 1 1 auto; }
+html[data-layout="grid"] .tools .bpm input { flex: 1 1 auto; width: 0; min-width: 48px; }
+html[data-layout="grid"] #tapBtn { flex: 0 0 64px; }
+html[data-layout="grid"] .tools .master { flex: 1 1 100%; }
+html[data-layout="grid"] .tools .master input { flex: 1 1 auto; width: 0; min-width: 40px; height: 24px; }
+html[data-layout="grid"] #undoBtn, html[data-layout="grid"] #redoBtn, html[data-layout="grid"] #keysBtn { flex: 0 0 34px; }
+html[data-layout="grid"] #saveBtn { flex: 1 1 auto; }
+html[data-layout="grid"] .options { grid-area: 3 / 6; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; padding: 4px 8px; background: var(--pane); border: 1px solid var(--line); min-width: 0; overflow: hidden; }
+html[data-layout="grid"] .options > label { display: flex; align-items: center; gap: 6px; min-height: 24px; }
+html[data-layout="grid"] .options .followstatus { flex: none; width: 100%; }
+html[data-layout="grid"] .stage { grid-area: 4 / 6; overflow: hidden; }
+html[data-layout="grid"] .stage > .panehead { flex: none; padding: 3px 8px; }
+html[data-layout="grid"] .stage > .panehead .muted { display: none; }
+/* the Stage is ONE LINE of small cube pictures (owner, 2026-10-31 23:0x, pink ring: "this is so big and it can be small"): 96 px high, each cube a square picture with its words beside it;
+   more cubes than the rail holds scroll sideways (a taller zone for 3+ cubes is owed) */
+html[data-layout="grid"] .cubes { display: flex; flex-wrap: nowrap; align-items: stretch; gap: 6px; padding: 4px 6px; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: var(--cell2) var(--pane); }
+html[data-layout="grid"] .cube { flex: 0 0 auto; width: 212px; max-width: none; min-width: 0; flex-direction: row; }
+html[data-layout="grid"] .one-cube .cube { flex: 1 1 auto; width: auto; }
+html[data-layout="grid"] .cube canvas { flex: none; width: 62px; height: 100%; }
+html[data-layout="grid"] .cube .cap { flex: 1 1 auto; flex-direction: column; flex-wrap: nowrap; justify-content: center; min-width: 0; gap: 1px; padding: 3px 6px; overflow: hidden; }
+html[data-layout="grid"] .cube .cap b { min-width: 0; }
+html[data-layout="grid"] .cube .cut { flex-basis: auto; font-size: 10px; line-height: 1.15; }
+
+/* ---- the Looks pane (columns 1-5, rows 2-4): Scenes first, then the head, then the grid */
+html[data-layout="grid"] .bank { grid-area: 2 / 1 / 6 / 6; position: relative; min-height: 0; }
+html[data-layout="grid"] .bank > #sceneRow { order: -2; }
+html[data-layout="grid"] .bank > .panehead { order: -1; flex: none; min-height: var(--g-head); padding: 2px 10px; align-items: center; flex-wrap: nowrap; gap: 10px; }
+html[data-layout="grid"] #cubeNote { flex: 0 1 auto; min-width: 0; max-width: 60%; padding: 1px 8px; line-height: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-layout="grid"] #liveName { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-layout="grid"] .scenerow { flex: none; height: var(--g-scenes); display: grid; grid-template-columns: 150px minmax(0, 1fr); column-gap: 8px; align-items: start; padding: 3px 8px; }
+html[data-layout="grid"] .scenehead { flex-direction: column; align-items: flex-start; gap: 3px; margin: 0; }
+html[data-layout="grid"] .scenehead .muted { white-space: normal; overflow-x: hidden; overflow-y: auto; max-height: 56px; font-size: 11px; line-height: 1.25; scrollbar-width: thin; scrollbar-color: var(--cell2) var(--pane); }
+html[data-layout="grid"] .scenegrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+html[data-layout="grid"] .tiles { flex: 1 1 0; grid-template-columns: repeat(var(--g-cols), minmax(0, 1fr)); padding: 4px 6px; counter-reset: tile; scrollbar-width: thin; scrollbar-color: var(--cell2) var(--pane); }
+html[data-layout="grid"] .tile { counter-increment: tile; }
+html[data-layout="grid"] .tile .pic canvas { height: var(--g-pic); }
+html[data-layout="grid"] .tile:nth-child(-n+9) .pic, html[data-layout="grid"] .tile.is-live .pic { position: relative; }
+html[data-layout="grid"] .tile:nth-child(-n+9) .pic::after { content: counter(tile); position: absolute; top: 2px; left: 4px; font: 600 10px/1 var(--mono); color: var(--muted); }
+html[data-layout="grid"] .tile.is-live .pic::before { content: 'LIVE'; position: absolute; top: 2px; right: 4px; font: 600 9px/1 var(--mono); letter-spacing: .06em; color: var(--accent); }
+/* a question from a link covers the grid only: scenes, rail, strip and stops stay put and stay operable */
+html[data-layout="grid"] .bank > .removeask { position: absolute; z-index: 5; left: 6px; right: 6px; top: calc(var(--g-scenes) + var(--g-head) + 6px); bottom: 6px; margin: 0; display: flex; flex-direction: column; max-height: none; overflow: hidden; }
+html[data-layout="grid"] .bank > .removeask .setabout { flex: none; overflow: visible; min-height: 0; }
+html[data-layout="grid"] .bank > .removeask .removelist, html[data-layout="grid"] .bank > .removeask .setlist { flex: 1 1 auto; min-height: 0; max-height: none; overflow: auto; }
+
+/* ---- the edit strip (row 5, full width): identity | Colour, Picture, Movement, Follows/Copy/Delete over the Shape chips */
+html[data-layout="grid"] .editor { grid-area: 6 / 1 / 7 / 7; position: relative; overflow: visible; display: grid; grid-template-columns: 150px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); column-gap: 10px; padding: 4px 8px; }
+html[data-layout="grid"] .editor > .panehead { grid-area: 1 / 1; padding: 0; border: 0; flex-wrap: nowrap; gap: 6px; align-items: center; }
+html[data-layout="grid"] .editor .namefield { min-width: 0; width: 0; padding: 4px 6px; }
+html[data-layout="grid"] .editor > .preview { grid-area: 2 / 1; padding: 6px 0 0; min-height: 0; overflow: hidden; }
+html[data-layout="grid"] .editor .previewnote { font-size: 11px; line-height: 13px; padding-top: 3px; }
+html[data-layout="grid"] .editor > .editbody { grid-area: 1 / 2 / 3 / 3; padding: 0; min-width: 0; display: grid; grid-template-columns: 232px minmax(0, 1fr) minmax(0, 1fr) 132px; grid-template-rows: auto auto; column-gap: 12px; row-gap: 2px; align-content: start; }
+html[data-layout="grid"] .editor > .empty { grid-area: 1 / 2 / 3 / 3; padding: 0; }
+html[data-layout="grid"] .editbody .group { padding: 0; border: 0; min-width: 0; }
+html[data-layout="grid"] .editbody .grouphead { margin-bottom: 2px; font-size: 11px; line-height: 1.2; }
+html[data-layout="grid"] .editbody > #followGroup { grid-area: 1 / 4; align-self: start; }
+html[data-layout="grid"] .editbody > .group:nth-child(3) { grid-area: 1 / 1; }
+html[data-layout="grid"] .editbody > #pictureFields { grid-area: 1 / 2; }
+html[data-layout="grid"] .editbody > #moveFields { grid-area: 1 / 3; }
+html[data-layout="grid"] .editbody > .actions { grid-area: 1 / 4; align-self: end; padding-top: 0; flex-wrap: nowrap; }
+html[data-layout="grid"] .editbody > .actions button { flex: 1 1 0; min-height: 28px; padding: 3px 4px; }
+html[data-layout="grid"] .editbody > .group:nth-child(2) { grid-area: 2 / 1 / 3 / 5; display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 3px; max-height: 54px; overflow-y: auto; scrollbar-width: thin; }
+html[data-layout="grid"] body:not(.one-cube) .editbody > .group:nth-child(2) { grid-area: 2 / 1 / 3 / 4; }
+html[data-layout="grid"] body:not(.one-cube) .editbody > .group.multi { grid-area: 1 / 4; align-self: end; }
+html[data-layout="grid"] body:not(.one-cube) .editbody > .actions { grid-area: 2 / 4; }
+html[data-layout="grid"] .editbody > .group:nth-child(2) > .grouphead { flex: none; margin: 0 8px 0 0; gap: 10px; }
+html[data-layout="grid"] .editbody > .group:nth-child(2) > .chips { display: contents; }
+html[data-layout="grid"] .editbody > .group:nth-child(2) > #cycleField { flex: 0 0 200px; order: -1; }
+html[data-layout="grid"] .editbody .chip { min-height: 24px; padding: 1px 7px; font-size: 11.5px; }
+html[data-layout="grid"] .editbody .check { min-height: 22px; }
+html[data-layout="grid"] .editbody .swatches { grid-template-columns: repeat(9, 24px); gap: 2px; }
+html[data-layout="grid"] .editbody .swatch, html[data-layout="grid"] .editbody .swatches input[type=color], html[data-layout="grid"] .editbody .addcolour { height: 24px; min-height: 0; }
+html[data-layout="grid"] .editbody .mine .del { border-radius: 0; }
+html[data-layout="grid"] .editbody .mine-head { margin-top: 5px; }
+html[data-layout="grid"] #myColoursHint { flex: 1 1 0; min-width: 0; margin-left: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-layout="grid"] #pictureFields, html[data-layout="grid"] #moveFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 10px; align-content: start; }
+html[data-layout="grid"] #pictureFields > .grouphead, html[data-layout="grid"] #moveFields > .grouphead { grid-column: 1 / -1; }
+html[data-layout="grid"] .editbody .field { grid-template-columns: 62px minmax(0, 1fr) 36px; gap: 5px; padding: 0; min-height: 24px; }
+html[data-layout="grid"] .editbody .field input[type=range] { height: 24px; }
+html[data-layout="grid"] .editbody .field label { font-size: 10.5px; white-space: nowrap; }
+html[data-layout="grid"] .editbody .field output { font-size: 10.5px; }
+html[data-layout="grid"] #followsScene { min-height: 28px; padding: 3px 6px; }
+/* the colour palette (+) is docked INSIDE the strip, over the Picture and Movement columns (Colour, the preview, the Looks and the stops stay in view); two columns so it fits the strip: the palette | the title, Close and any colour. User-opened; Esc or Close shuts it. */
+html[data-layout="grid"] .chooser { position: absolute; z-index: 5; top: 3px; bottom: 3px; left: 413px; width: 560px; margin: 0; padding: 8px; display: grid; grid-template-columns: 322px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); column-gap: 12px; align-content: start; overflow: auto; }
+html[data-layout="grid"] .chooser > .grouphead { grid-area: 1 / 2; align-self: start; margin: 0; }
+html[data-layout="grid"] .chooser > .chooser-grid { grid-area: 1 / 1 / 3 / 2; align-content: start; }
+html[data-layout="grid"] .chooser > .chooser-any { grid-area: 2 / 2; align-self: start; flex-wrap: wrap; margin-top: 10px; }
+
+/* ---- Setup keeps its two panes, in the area under the bar */
+html[data-layout="grid"] #page-setup { grid-area: 2 / 1 / 7 / 6; }
+
+}
+
+/* the layout switch (Classic and Grid both show it): two plain square buttons */
+.layoutswitch { display: flex; gap: 3px; align-self: center; margin: 0 8px; }
+.layoutswitch button { min-height: 28px; padding: 3px 10px; font-size: 12px; }
+@media (max-width: 1239px), (max-height: 639px) { .layoutswitch { display: none; } }
