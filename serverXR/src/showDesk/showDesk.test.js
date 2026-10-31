@@ -779,7 +779,7 @@ describe('the live strip plays the live look with the laser desk\'s own looks/ed
 
 describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
     it('the MIDI line names the device; the default map uses the K2\'s own numbers on channel 15 (14 on the wire)', () => {
-        expect($('midiLine').textContent).toBe('MIDI: XONE:K2')
+        expect($('midiLine').textContent).toMatch(/^MIDI: XONE:K2( · heard .+)?$/) // an earlier test's message may be the last one heard
         const k2 = JSON.parse(fs.readFileSync(path.join(UI, 'midi/xone-k2.json'), 'utf8'))
         const num = (control) => k2.find((c) => c.control === control).number
         const map = window.DiShowDesk.midiMap()
@@ -813,6 +813,19 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         midi(0x9e, 37, 127)
         await settle()
         expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
+    })
+    it('any channel: a K2 set to channel 1 still drives the same rows, and the line says what it heard', async () => {
+        midi(0x90, 37, 127) // matrix B on channel 1 (0 on the wire), not the map's 15
+        await settle()
+        expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
+        expect($('midiLine').textContent).toContain('heard note 37 ch 1 → scene:1')
+        midi(0xb3, 99, 10) // a number the map does not hold, on any channel
+        expect($('midiLine').textContent).toContain('heard CC 99 ch 4 → not mapped')
+    })
+    it('any channel: the Blackout button on another channel still blacks out', async () => {
+        midi(0x95, 27, 127)
+        await settle()
+        expect(posts).toEqual(DARK)
     })
     it('the Blackout button (matrix P) sends only the two dark routes', async () => {
         midi(0x9e, 27, 127)

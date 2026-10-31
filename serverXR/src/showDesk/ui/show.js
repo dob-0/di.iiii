@@ -859,10 +859,16 @@
     let midiWhy = 'asking'
     let learning = null
     const pickup = new Map()
+    // Any channel (owner 2026-11-01, "make all mapped, maybe they do not trigger the right one"): a control that matches
+    // the map on its own channel wins; when none does, the same kind and number on ANY channel takes that row, so a K2
+    // set to another MIDI channel (or another controller) still drives the desk. The exact-channel map is kept whole.
+    const midiFind = (ctl) => midiMap.find((x) => x.kind === ctl.kind && x.ch === ctl.ch && x.num === ctl.num)
+        || midiMap.find((x) => x.kind === ctl.kind && x.num === ctl.num)
+    let midiLast = ''
     const midiLine = (note = '') => {
         const base = midiNames && midiNames.length ? `MIDI: ${midiNames.join(', ')}` : `MIDI: ${midiNames ? 'none seen' : midiWhy}`
         const learn = !learning ? '' : learning.target ? ` · Learn: move one control for ${learning.target}` : ' · Learn: tap a fader, a scene key or Blackout all'
-        setText($('midiLine'), `${base}${learn}${note ? ` · ${note}` : ''}`)
+        setText($('midiLine'), `${base}${learn}${midiLast ? ` · heard ${midiLast}` : ''}${note ? ` · ${note}` : ''}`)
         $('midiLearn').classList.toggle('is-on', Boolean(learning))
         $('midiLearn').setAttribute('aria-pressed', learning ? 'true' : 'false')
     }
@@ -928,9 +934,11 @@
         const ctl = { kind, ch: d[0] & 0x0f, num: d[1] }
         // The panic button comes first: while Learn waits for a control, the Blackout button still blacks out and is
         // never learned onto something else (review 2026-10-31 M1).
-        if (kind === 'note' && midiMap.some((x) => x.target === 'blackout' && x.kind === 'note' && x.ch === ctl.ch && x.num === ctl.num)) { pressBlackout(); return }
+        const m = midiFind(ctl)
+        midiLast = `${kind === 'cc' ? 'CC' : 'note'} ${ctl.num} ch ${ctl.ch + 1} → ${m && m.target !== 'spare' ? m.target : 'not mapped'}`
+        if (kind === 'note' && m && m.target === 'blackout') { midiLine(); pressBlackout(); return }
         if (learning && learning.target) { midiLearnSet(ctl); return }
-        const m = midiMap.find((x) => x.kind === ctl.kind && x.ch === ctl.ch && x.num === ctl.num)
+        midiLine()
         if (!m || !midiValid(m) || m.target === 'spare') return
         if (kind === 'cc') midiMove(m, d[2])
         else midiPress(m)
