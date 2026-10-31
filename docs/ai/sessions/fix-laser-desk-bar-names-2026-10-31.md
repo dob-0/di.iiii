@@ -8,8 +8,8 @@
   status moved to an `.options` row beside the page tabs; the status has a 200 px basis that only shrinks, an ellipsis, and its whole
   sentence as the title. Measured with the longest real names and pills: bar 91 px, Disarm all x 1181-1268 (1278) and 1003-1090 (1100),
   y 52, the same for every status text and pill text.
-- The show row needs about 1062 px with the longest Mac pill ("Disarmed · 1 cube · 1 stopped"); narrower, its left tools wrap inside their
-  own box (900 px: bar 128 px) and the stops stay at the right end of the first line. The whole header stays two rows: one row would need
+- The show row needs about 1022 px with the longest pill (210 px, "Disarmed · 1 cube · 1 stopped"; computed from the measured parts, seen
+  fitting at 1100 and wrapping at 900); narrower, its left tools wrap inside their own box (900 px: bar 128 px) and the stops stay at the right end of the first line. The whole header stays two rows: one row would need
   about 1500 px for its 15 controls, so "one row" is met for the controls row, not for the tabs.
 - The status reads "Followed MUTH 05 Catacomb" (one name when the scene and the look share it), "Followed A → B" when they differ.
 - Tiles: names wrap (a look name is at most 40 characters, cut server-side in `normaliseLook`), no ellipsis anywhere: 10 of 72 were cut, 0
