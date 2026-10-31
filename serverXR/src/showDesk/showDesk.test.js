@@ -103,6 +103,7 @@ const fakeFetch = async (url, opts = {}) => {
     return reply({ error: 'not in the fake' }, 404)
 }
 let midiIn = null
+let midiAccess = null
 const midi = (...bytes) => midiIn.onmidimessage({ data: Uint8Array.from(bytes) })
 
 const $ = (id) => document.getElementById(id)
@@ -137,9 +138,10 @@ beforeAll(async () => {
     window.deskColour = require('../lighting/ui/colour.js')
     window.DiLaserDraw = require('../laser/ui/drawRuns.js')
     window.DiSceneRow = require('../laser/ui/sceneRow.js')
-    try { window.localStorage.removeItem('diShowDesk.midiMap.v1') } catch { /* no storage: the default map */ }
+    try { window.localStorage.removeItem('diShowDesk.midiMap.v1'); window.localStorage.removeItem('diShowDesk.midiChannel.v1') } catch { /* no storage: the default map, any channel */ }
     midiIn = { name: 'XONE:K2', onmidimessage: null }
-    Object.defineProperty(window.navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map([['k2', midiIn]]), onstatechange: null }) })
+    Object.defineProperty(window.navigator, 'requestMIDIAccess', { configurable: true, value: async () => { midiAccess = { inputs: new Map([['k2', midiIn]]), onstatechange: null }; return midiAccess } })
+    window.DiShowMidi = require('./ui/midiMap.js')
     new Function(fs.readFileSync(path.join(UI, 'show.js'), 'utf8'))()
     await refresh()
     await refresh()
@@ -497,7 +499,7 @@ describe('two densities: Touch and Compact', () => {
     const buttons = () => [...$('density').querySelectorAll('button[data-density]')]
     it('a Touch · Compact switch sits in the bottom line, next to the MIDI line', () => {
         expect($('density').closest('.links')).not.toBeNull()
-        expect($('density').nextElementSibling).toBe($('midiLine'))
+        expect($('density').nextElementSibling.contains($('midiLine'))).toBe(true) // the MIDI block (the line, and under it the In line)
         expect(buttons().map((b) => b.textContent)).toEqual(['Touch', 'Compact'])
         expect($('density').textContent.replace(/\s+/g, '')).toBe('Touch·Compact')
         expect(buttons().every((b) => !b.dataset.midi)).toBe(true) // MIDI never reaches it
@@ -784,7 +786,7 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         const num = (control) => k2.find((c) => c.control === control).number
         const map = window.DiShowDesk.midiMap()
         expect(map.find((m) => m.target === 'light-master')).toMatchObject({ kind: 'cc', ch: 14, num: num('pot 12') }) // fader 4 is dead on the owner's K2
-        expect(map.find((m) => m.kind === 'cc' && m.num === num('fader 4'))).toMatchObject({ target: 'spare' })
+        expect(map.find((m) => m.kind === 'cc' && m.num === num('fader 4'))).toMatchObject({ target: 'lamp:3' }) // 2026-11-01 (N1718): every control does something; a dead fader sends nothing, so this costs nothing
         expect(map.find((m) => m.target === 'lamp:0')).toMatchObject({ kind: 'cc', ch: 14, num: num('fader 1') })
         expect(map.find((m) => m.target === 'live:rotation')).toMatchObject({ kind: 'cc', ch: 14, num: num('encoder 1'), relative: true })
     })
@@ -862,6 +864,132 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         expect(window.DiShowDesk.midiMap()).toContainEqual({ kind: 'cc', ch: 0, num: 7, target: 'light-master' })
         await settle()
         expect(posts.filter((p) => p.url === '../laser/api/arm' || p.url.endsWith('/undo') || p.url.endsWith('/store'))).toEqual([])
+    })
+})
+
+// 2026-11-01 (the owner, ledger N1718: "make all mapped, that maybe they not trigger the right one"): the controller is heard on
+// any MIDI channel unless one is picked, the In line says each message and where it went, and the K2's other controls act.
+// The rules themselves (the K2 table against the maker's chart, the matcher, the merge, the words) are in midiMap.test.js.
+describe('MIDI: any channel, the channel picker, the In line, and the rest of the K2', () => {
+    const pickChannel = (value) => { $('midiChannel').value = value; $('midiChannel').dispatchEvent(new Event('change')) }
+    const heardLine = () => $('midiIn').textContent
+    const editPosts = () => posts.filter((p) => p.url === '../laser/desk/api/looks/edit')
+    const liveInput = (k) => document.querySelector(`[data-midi="live:${k}"]`)
+    it('the controller is heard on any channel by default: a K2 set to channel 1 still presses its scene key, and the In line names the channel it came on', async () => {
+        expect($('midiChannel').value).toBe('any')
+        midi(0x90, 37, 127) // matrix B on channel 1 (0 on the wire), not the map's 15
+        await settle()
+        expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
+        expect(heardLine()).toBe('In: ch 1 · note 37 · 127 → scene:1 (map: ch 15)')
+    })
+    it('a pot on another channel follows with pick-up as ever; a number the map does not hold says unmapped', async () => {
+        midi(0xb3, 4, 0) // level is 1 on the screen: a pot at 0 waits
+        await settle()
+        expect(posts).toEqual([])
+        midi(0xb3, 4, 127)
+        midi(0xb3, 4, 64)
+        await settle()
+        expect(editPosts().at(-1).body).toEqual({ id: 'ring', level: 0.5 })
+        midi(0xb3, 99, 10)
+        await sleep(60)
+        expect(heardLine()).toBe('In: ch 4 · CC 99 · 10 → unmapped')
+    })
+    it('the channel picker: Channel 15 is the old way (other channels are ignored and the line says so); the choice is kept in this browser', async () => {
+        pickChannel('15')
+        expect(window.DiShowDesk.midiChannel()).toBe(14)
+        expect(window.localStorage.getItem('diShowDesk.midiChannel.v1')).toBe('15')
+        midi(0x90, 37, 127)
+        await settle()
+        expect(posts).toEqual([])
+        expect(heardLine()).toBe('In: ch 1 · note 37 · 127 → ignored, desk on ch 15')
+        midi(0x9e, 37, 127)
+        await settle()
+        expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
+        pickChannel('any')
+        expect(window.DiShowDesk.midiChannel()).toBe('any')
+        expect(window.localStorage.getItem('diShowDesk.midiChannel.v1')).toBe('any')
+    })
+    it('on a picked channel, Blackout all answers on that channel only (dark only, as ever)', async () => {
+        pickChannel('3')
+        midi(0x95, 27, 127) // channel 6: not heard
+        await settle()
+        expect(posts).toEqual([])
+        midi(0x92, 27, 127) // channel 3
+        await settle()
+        expect(posts).toEqual(DARK)
+        pickChannel('any')
+    })
+    it('the In line is lit for 300 ms after a message and then dark; with no port it says so, with one it names it', async () => {
+        midi(0xb0, 99, 5)
+        await sleep(60)
+        expect($('midiIn').classList.contains('is-lit')).toBe(true)
+        await sleep(360)
+        expect($('midiIn').classList.contains('is-lit')).toBe(false)
+        midiAccess.inputs.clear()
+        midiAccess.onstatechange()
+        expect(heardLine()).toBe('In: no MIDI port')
+        midiAccess.inputs.set('k2', midiIn)
+        midiAccess.onstatechange()
+        expect(heardLine()).toBe('In: XONE:K2 · nothing heard yet')
+    })
+    it('a push on an encoder sets its field back to the laser desk\'s own default (its state\'s, else the page\'s copy)', async () => {
+        desk.looks[0].rotation = 0.5
+        desk.looks[0].pulseBeats = 8
+        desk.defaults = { pulseBeats: 2 }
+        await refresh()
+        expect(liveInput('rotation').value).toBe('0.5')
+        midi(0x9e, 52, 127) // encoder 1 push: rotation, the page's copy of the default (0)
+        await settle()
+        expect(editPosts().at(-1).body).toEqual({ id: 'ring', rotation: 0 })
+        midi(0x9e, 13, 127) // encoder 5 push: pulse beats, the desk state's default (2) wins over the copy (1)
+        await settle()
+        expect(editPosts().at(-1).body).toEqual({ id: 'ring', pulseBeats: 2 })
+    })
+    it('a switch under a pot parks it: the pot moves nothing until it passes the screen\'s value again', async () => {
+        midi(0xbe, 4, 127)
+        midi(0xbe, 4, 64)
+        await settle()
+        expect(editPosts().at(-1).body).toEqual({ id: 'ring', level: 0.5 })
+        posts = []
+        midi(0x9e, 48, 127) // pot switch 1: park the level
+        expect($('midiLine').textContent).toContain('live:level parked')
+        midi(0xbe, 4, 90)
+        await settle()
+        expect(editPosts()).toEqual([])
+        expect($('midiLine').textContent).toContain('live:level waits until it passes the screen')
+        midi(0xbe, 4, 50) // across the screen's value: it follows again
+        await settle()
+        expect(editPosts().at(-1).body.level).toBeCloseTo(50 / 127, 2)
+    })
+    it('the two bottom corners step the scenes from the lit one, never past the ends', async () => {
+        midi(0x9e, 15, 127) // exit setup button: next, from Warm to Blue
+        await settle()
+        expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
+        light.activeScene = 'dark'
+        await refresh()
+        posts = []
+        midi(0x9e, 15, 127) // next at the last scene: nothing
+        await settle()
+        expect(posts).toEqual([])
+        midi(0x9e, 12, 127) // layer button: previous, from Dark to Blue
+        await settle()
+        expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
+        light.activeScene = 'warm'
+        await refresh()
+        posts = []
+        midi(0x9e, 12, 127) // previous at the first scene: nothing
+        await settle()
+        expect(posts).toEqual([])
+    })
+    it('the K2 map button opens the sheet: 58 controls, two to a line, from the same rows the page maps by', () => {
+        expect($('midiSheet').hidden).toBe(true)
+        $('midiSheetBtn').click()
+        expect($('midiSheet').hidden).toBe(false)
+        expect($('midiSheetBtn').getAttribute('aria-expanded')).toBe('true')
+        expect($('midiSheet').querySelectorAll('tbody tr').length).toBe(29)
+        expect($('midiSheet').textContent).toContain('Next scene')
+        $('midiSheetBtn').click()
+        expect($('midiSheet').hidden).toBe(true)
     })
 })
 

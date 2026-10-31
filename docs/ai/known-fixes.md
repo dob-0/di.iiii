@@ -1736,3 +1736,14 @@ give it a min-content floor), lets `.cap` wrap, and in the holds state sets the 
 (Compact `--hold-h: 30px`). Re-measured in this build by `holds-probe.cjs`: label 70.3 x 29.9 (Touch 73 x 29.9), buttons 77.5 x 30
 (Touch 80.1 x 32), no overlap, nothing cut, 0 page errors; without the holds state the buttons stay 120.3 x 28.
 Guard: `showDesk.test.js` "nothing is lost: every Upright rule is still in show.css …" (the track, the wrap and the holds-state rule are asserted).
+
+## Show desk: a controller on another MIDI channel did nothing, and nothing said so (2026-11-01, N1718)
+Symptom: the owner, with the Xone:K2 on the stage Mac: "make all mapped, that maybe they not trigger the right one". A K2 set to any MIDI channel but 15, or a
+control the map did not hold (CC 13, 14, 19, the bottom row, the switches under the pots), moved nothing and the page said nothing.
+Cause: `show.js` `onMidi` matched a row only when kind, channel (14 on the wire) and number were all equal, and returned without a word otherwise. The
+K2's channel is a setup option (AP8509 p. 11: 15 by default), so a unit set otherwise looked dead.
+Fix: `ui/midiMap.js` (one table of all 58 K2 controls, the matcher, the words): the desk hears any channel by default (a row on the message's own channel
+wins), a Channel picker (any, 1 to 16; "15" is the old way), an In line (channel, kind, number, value, target or `unmapped`, lit 300 ms), the K2 map sheet.
+A stored (Learn) map wins and the default rows it lacks are added. Lifts, On, Off, Undo, Save and Release stay off MIDI.
+Guard: `midiMap.test.js` (the table equals `ui/midi/xone-k2.json`, today's assignments kept, any channel against a picked one, the merge, the In line's
+words, the README table equals the code) and `showDesk.test.js` "MIDI: any channel, the channel picker, the In line, and the rest of the K2".

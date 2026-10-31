@@ -823,48 +823,58 @@
     // ---- MIDI (the W3C Web MIDI API, in this page). A controller's faders and pots move the faders above with pick-up (soft
     // takeover: a control moves nothing until it passes the value on the screen, so nothing jumps); relative encoders step
     // from the screen's value; buttons press scene keys and Blackout all (dark only). The map is data: the default is the
-    // Xone:K2's (midi/xone-k2.json, from its maker's guide: channel 15, 14 on the wire); Learn changes it in this browser only.
-    // On, Off, the lifts, Undo, Save and Release are never a target: MIDI_OK names every target there is, and a stored map is
-    // read through it. The lighting desk has its own MIDI page as well (its own map, its own controls).
+    // Xone:K2's (midiMap.js is its one table; midi/xone-k2.json is the maker's chart it is tested against: channel 15, 14 on
+    // the wire); Learn changes it in this browser only. On, Off, the lifts, Undo, Save and Release are never a target:
+    // midiMap.js isTarget() names every target there is, and a stored map is read through it. The lighting desk has its own
+    // MIDI page as well (its own map, its own controls).
+    // 2026-11-01 (the owner, ledger N1718: "make all mapped, that maybe they not trigger the right one"): every control of the
+    // K2 does something (the K2 map button shows the table); the page hears the controller on ANY MIDI channel unless one is
+    // picked in the bottom line (the old way is "Channel 15"); the In line says each message and where it went, so a wrong
+    // channel or number shows at once. A button under a pot parks that pot, a push on an encoder sets its field back to the
+    // laser desk's own default, the two bottom corners step the scenes; none of them can lift, arm, save or undo.
+    const MIDI = window.DiShowMidi || null
     const MIDI_KEY = 'diShowDesk.midiMap.v1'
-    const K2 = 14
-    const MIDI_OK = /^(lamp:\d{1,3}|size:\d{1,3}|scene:\d{1,3}|live:(level|size|height|x|copies|rotation|spin|pulse|sweep|cycle|phase|pulseBeats|sweepBeats|points)|light-master|laser-master|blackout|spare)$/
-    const PRESS = /^(scene:\d{1,3}|blackout)$/
-    const SCENE_NOTES = [36, 37, 38, 39, 32, 33, 34, 35, 28, 29] // the K2's matrix A to J
-    const MIDI_DEFAULT = [
-        ...[16, 17, 18].map((num, i) => ({ kind: 'cc', ch: K2, num, target: `lamp:${i}` })),
-        { kind: 'cc', ch: K2, num: 19, target: 'spare' }, // fader 4 is dead on the owner's K2 (2026-10-31): never mapped
-        ...['level', 'size', 'height', 'copies'].map((k, i) => ({ kind: 'cc', ch: K2, num: 4 + i, target: `live:${k}` })),
-        ...['spin', 'pulse', 'sweep'].map((k, i) => ({ kind: 'cc', ch: K2, num: 8 + i, target: `live:${k}` })),
-        { kind: 'cc', ch: K2, num: 11, target: 'laser-master' },
-        { kind: 'cc', ch: K2, num: 12, target: 'size:0' },
-        { kind: 'cc', ch: K2, num: 15, target: 'light-master' }, // pot 12, right above the dead fader 4
-        ...[13, 14].map((num) => ({ kind: 'cc', ch: K2, num, target: 'spare' })),
-        ...['rotation', 'x', 'cycle', 'phase'].map((k, i) => ({ kind: 'cc', ch: K2, num: i, target: `live:${k}`, relative: true })),
-        ...SCENE_NOTES.map((num, i) => ({ kind: 'note', ch: K2, num, target: `scene:${i}` })),
-        { kind: 'note', ch: K2, num: 27, target: 'blackout' } // matrix P: the far corner, away from the scene keys
-    ]
-    const midiValid = (m) => Boolean(m && (m.kind === 'cc' || m.kind === 'note') && Number.isInteger(m.ch) && m.ch >= 0 && m.ch < 16
-        && Number.isInteger(m.num) && m.num >= 0 && m.num < 128 && typeof m.target === 'string' && MIDI_OK.test(m.target)
-        && (m.target === 'spare' || PRESS.test(m.target) === (m.kind === 'note')))
+    const MIDI_DEFAULT = MIDI ? MIDI.defaultMap() : []
     const midiLoad = () => {
         try {
             const saved = JSON.parse(window.localStorage.getItem(MIDI_KEY) || 'null')
-            if (Array.isArray(saved)) return saved.filter(midiValid).map((m) => ({ kind: m.kind, ch: m.ch, num: m.num, target: m.target, ...(m.relative === true ? { relative: true } : {}) }))
+            // A map stored by Learn wins; the default rows it does not hold are added (a K2 control new to the defaults works too).
+            if (MIDI && Array.isArray(saved)) return MIDI.mergeMaps(saved.filter(MIDI.validRow).map((m) => ({ kind: m.kind, ch: m.ch, num: m.num, target: m.target, ...(m.relative === true ? { relative: true } : {}) })), MIDI_DEFAULT)
         } catch { /* nothing stored, or no storage here: the default map */ }
         return MIDI_DEFAULT.map((m) => ({ ...m }))
     }
     let midiMap = midiLoad()
+    let midiChannel = 'any'
+    try { if (MIDI) midiChannel = MIDI.channelOf(window.localStorage.getItem(MIDI.CHANNEL_KEY)) } catch { /* this browser keeps nothing: any channel */ }
     let midiNames = null
-    let midiWhy = 'asking'
+    let midiWhy = MIDI ? 'asking' : 'midiMap.js did not load'
+    let midiHeard = '' // the last message, as the In line says it
+    let midiPaint = null
+    let midiOff = null
     let learning = null
     const pickup = new Map()
+    const midiInText = () => {
+        if (midiHeard) return `In: ${midiHeard}`
+        if (midiNames && midiNames.length) return `In: ${midiNames.join(', ')} · nothing heard yet`
+        return midiNames ? 'In: no MIDI port' : `In: no MIDI port (${midiWhy})`
+    }
     const midiLine = (note = '') => {
         const base = midiNames && midiNames.length ? `MIDI: ${midiNames.join(', ')}` : `MIDI: ${midiNames ? 'none seen' : midiWhy}`
         const learn = !learning ? '' : learning.target ? ` · Learn: move one control for ${learning.target}` : ' · Learn: tap a fader, a scene key or Blackout all'
         setText($('midiLine'), `${base}${learn}${note ? ` · ${note}` : ''}`)
+        setText($('midiIn'), midiInText())
         $('midiLearn').classList.toggle('is-on', Boolean(learning))
         $('midiLearn').setAttribute('aria-pressed', learning ? 'true' : 'false')
+    }
+    // The In line is painted at most every 30 ms (a pot sends hundreds of messages a second) and lit for 300 ms after the last.
+    const midiInPaint = () => {
+        midiPaint = null
+        const node = $('midiIn')
+        if (!node) return
+        setText(node, midiInText())
+        node.classList.add('is-lit')
+        clearTimeout(midiOff)
+        midiOff = setTimeout(() => node.classList.remove('is-lit'), 300)
     }
     const midiInput = (target) => {
         const [kind, rest] = target.split(':')
@@ -902,14 +912,43 @@
         if (!m.relative) pickup.get(m.target).set = Number(input.value)
         input.dispatchEvent(new Event('input'))
     }
+    // A scene key beyond the matrix, the two bottom corners: the next or the previous scene in the lighting desk's order.
+    const stepScene = (dir) => {
+        const items = sceneItems()
+        if (!items.length) return
+        const at = items.findIndex((i) => i.lights)
+        const to = at < 0 ? (dir > 0 ? 0 : items.length - 1) : at + dir
+        if (to >= 0 && to < items.length) pressScene(items[to].id)
+    }
+    // A push on an encoder: its field back to the laser desk's own default (its state serves them; midiMap.js holds a copy).
+    const resetTo = (key) => {
+        const d = S.desk && S.desk.defaults
+        return d && typeof d[key] === 'number' ? d[key] : MIDI.RESET_TO[key]
+    }
+    const midiSet = (target, value) => {
+        const input = midiInput(target)
+        if (!input || input.disabled) return
+        const min = Number(input.min)
+        const max = Number(input.max)
+        const step = Number(input.step) || 0
+        const places = (String(input.step).split('.')[1] || '').length
+        const stepped = step > 0 ? Number((Math.round((value - min) / step) * step + min).toFixed(places)) : value
+        input.value = String(Math.min(max, Math.max(min, stepped)))
+        pickup.delete(target)
+        input.dispatchEvent(new Event('input'))
+    }
     const midiPress = (m) => {
-        if (m.target === 'blackout') { pressBlackout(); return }
-        const item = sceneItems()[Number(m.target.split(':')[1])]
+        const t = m.target
+        if (t === 'blackout') { pressBlackout(); return }
+        if (t === 'scene:next' || t === 'scene:prev') { stepScene(t === 'scene:next' ? 1 : -1); return }
+        if (t.startsWith('reset:')) { midiSet(`live:${t.slice(6)}`, resetTo(t.slice(6))); return }
+        if (t.startsWith('park:')) { pickup.delete(t.slice(5)); midiLine(`${t.slice(5)} parked: it waits until it passes the screen`); return }
+        const item = sceneItems()[Number(t.split(':')[1])]
         if (item) pressScene(item.id)
     }
     const midiLearnSet = (ctl) => {
         const target = learning.target
-        const want = PRESS.test(target) ? 'note' : 'cc'
+        const want = MIDI.isPress(target) ? 'note' : 'cc'
         if (ctl.kind !== want) { midiLine(`${target} takes a ${want === 'note' ? 'button' : 'fader or a knob'}`); return }
         const known = MIDI_DEFAULT.find((d) => d.kind === ctl.kind && d.ch === ctl.ch && d.num === ctl.num)
         midiMap = midiMap.filter((m) => m.target !== target && !(m.kind === ctl.kind && m.ch === ctl.ch && m.num === ctl.num))
@@ -920,23 +959,25 @@
         midiLine(`learned: ${target}`)
     }
     const onMidi = (e) => {
-        const d = e && e.data
-        if (!d || d.length < 3) return
-        const type = d[0] & 0xf0
-        const kind = type === 0xb0 ? 'cc' : type === 0x90 && d[2] > 0 ? 'note' : null
-        if (!kind) return
-        const ctl = { kind, ch: d[0] & 0x0f, num: d[1] }
+        const msg = MIDI.parse(e && e.data)
+        if (!msg) return
+        const found = MIDI.find(midiMap, msg, midiChannel)
+        const said = MIDI.heard(msg, found, midiChannel)
+        if (said) { midiHeard = said; if (!midiPaint) midiPaint = setTimeout(midiInPaint, 30) }
+        if (!msg.kind || found.why === 'channel') return // shown on the In line; not for this desk (a channel is picked)
+        const ctl = { kind: msg.kind, ch: msg.ch, num: msg.num }
+        const m = found.row
         // The panic button comes first: while Learn waits for a control, the Blackout button still blacks out and is
         // never learned onto something else (review 2026-10-31 M1).
-        if (kind === 'note' && midiMap.some((x) => x.target === 'blackout' && x.kind === 'note' && x.ch === ctl.ch && x.num === ctl.num)) { pressBlackout(); return }
+        if (msg.kind === 'note' && m && m.target === 'blackout') { pressBlackout(); return }
         if (learning && learning.target) { midiLearnSet(ctl); return }
-        const m = midiMap.find((x) => x.kind === ctl.kind && x.ch === ctl.ch && x.num === ctl.num)
-        if (!m || !midiValid(m) || m.target === 'spare') return
-        if (kind === 'cc') midiMove(m, d[2])
+        if (!m || !MIDI.validRow(m) || m.target === 'spare') return
+        if (msg.kind === 'cc') midiMove(m, msg.val)
         else midiPress(m)
     }
     const startMidi = async () => {
         const nav = window.navigator
+        if (!MIDI) { midiLine(); return }
         if (!nav || typeof nav.requestMIDIAccess !== 'function') { midiWhy = 'not in this browser'; midiLine(); return }
         try {
             const access = await nav.requestMIDIAccess({ sysex: false })
@@ -944,6 +985,7 @@
                 const names = []
                 for (const input of access.inputs.values()) { input.onmidimessage = onMidi; names.push(input.name || 'a device') }
                 midiNames = names
+                if (!names.length) midiHeard = '' // no port: the In line says so, not the last message of a port that went
                 midiLine()
             }
             access.onstatechange = hook
@@ -1031,12 +1073,41 @@
         box.hidden = !box.hidden
         if (!box.hidden) { box.value = JSON.stringify(midiMap, null, 1); box.select() }
     })
+    // The MIDI channel the page listens on (the owner, 2026-11-01, N1718): any (the default), or one. Kept per browser.
+    const chanSel = $('midiChannel')
+    if (chanSel && MIDI) {
+        chanSel.replaceChildren(...MIDI.CHANNEL_CHOICES.map((c) => el('option', { value: c, text: c === 'any' ? 'Any' : c === '15' ? '15 (K2)' : c })))
+        chanSel.value = MIDI.channelText(midiChannel)
+        chanSel.addEventListener('change', () => {
+            midiChannel = MIDI.channelOf(chanSel.value)
+            try { window.localStorage.setItem(MIDI.CHANNEL_KEY, MIDI.channelText(midiChannel)) } catch { /* this browser keeps nothing: the choice lasts until a reload */ }
+            midiLine(`listening on ${MIDI.channelLabel(midiChannel)}`)
+        })
+    }
+    // The K2 sheet: the one table of what each control does, read from the same rows the page maps by (two controls a line).
+    const sheetBtn = $('midiSheetBtn')
+    const sheetBox = $('midiSheet')
+    if (sheetBtn && sheetBox && MIDI) {
+        const rows = MIDI.sheet()
+        const half = Math.ceil(rows.length / 2)
+        const cells = (r) => (r ? [el('th', { scope: 'row', text: r.control }), el('td', { text: r.midi }), el('td', { text: r.does })] : [el('td'), el('td'), el('td')])
+        const lines = []
+        for (let i = 0; i < half; i += 1) lines.push(el('tr', {}, ...cells(rows[i]), ...cells(rows[i + half])))
+        sheetBox.append(
+            el('p', { text: 'Xone:K2, the default map (Latching Layers off). The controller is heard on any MIDI channel unless one is picked in the bottom line; the K2 sends on channel 15 until it is set otherwise.' }),
+            el('table', {}, el('tbody', {}, ...lines)),
+            el('p', { text: 'Park: the knob does nothing until it passes the value on the screen again. Reset: the field goes back to the laser desk\'s own default. Next and previous scene step the lighting desk\'s scenes in its order. On, Off, the lifts, Undo, Save and Release are never on MIDI. Learn changes the map in this browser; Export map shows the map in use. The Light desk has its own MIDI page too.' }))
+        sheetBtn.addEventListener('click', () => {
+            sheetBox.hidden = !sheetBox.hidden
+            sheetBtn.setAttribute('aria-expanded', sheetBox.hidden ? 'false' : 'true')
+        })
+    }
     // Learn: a tap on a fader, a scene key or Blackout all picks what the next control moved is mapped to. Blackout all still
     // goes dark on that tap (a stop always works); a scene key in Learn only picks.
     document.addEventListener('pointerdown', (e) => {
         if (!learning) return
         const n = e.target && typeof e.target.closest === 'function' ? e.target.closest('[data-midi]') : null
-        if (n && MIDI_OK.test(n.dataset.midi)) { learning.target = n.dataset.midi; midiLine() }
+        if (n && MIDI && MIDI.isTarget(n.dataset.midi)) { learning.target = n.dataset.midi; midiLine() }
     }, true)
 
     // Density (the owner, 2026-10-31 20:5x, at the stage Mac, a laptop screen with a mouse: "fix the UI, it is huge … it's
@@ -1091,7 +1162,7 @@
     new MutationObserver(noteToTitle).observe(scenesNote, { childList: true, characterData: true, subtree: true })
 
     // For the page's tests and a person at the console: read-only views and one refresh. Nothing here sends a press.
-    window.DiShowDesk = { refresh: tick, holdsOf, blackoutState, state: S, midiMap: () => midiMap.map((m) => ({ ...m })), pickDensity, pickBank }
+    window.DiShowDesk = { refresh: tick, holdsOf, blackoutState, state: S, midiMap: () => midiMap.map((m) => ({ ...m })), midiChannel: () => midiChannel, pickDensity, pickBank }
     buildLive()
     midiLine()
     startMidi()

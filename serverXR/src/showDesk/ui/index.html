@@ -102,16 +102,19 @@
   <a href="../light/">Light desk</a>
   <span class="density" id="bankMode" role="group" aria-label="Arrangement of the faders: Rows, one lamp in each row with lying faders, or Upright, the console posture"><button type="button" data-bank="rows" aria-pressed="false" title="One lamp in each row, lying faders, the cubes in one line">Rows</button><span class="sep" aria-hidden="true">·</span><button type="button" data-bank="upright" aria-pressed="false" title="The console posture: upright faders, one strip for each lamp">Upright</button></span>
   <span class="density" id="density" role="group" aria-label="Size of the desk: Touch for a hand on a touch screen, Compact for a mouse"><button type="button" data-density="touch" aria-pressed="false" title="Sizes for a hand on a touch screen">Touch</button><span class="sep" aria-hidden="true">·</span><button type="button" data-density="compact" aria-pressed="false" title="Smaller sizes for a mouse on a laptop screen">Compact</button></span>
-  <span class="midiline" id="midiLine">MIDI: asking</span>
+  <div class="midistack"><span class="midiline" id="midiLine">MIDI: asking</span><span class="midiin" id="midiIn" title="The last MIDI message the page heard: its channel, kind, number and value, then what it did. Lit for a moment on each message, so a wrong channel or number shows at once.">In: no MIDI port</span></div>
+  <label class="midichan" title="The MIDI channel the controller sends on. Any channel hears the controller whatever channel it is set to; Channel 15 is the Xone:K2's own, and the way this page listened before.">Channel <select id="midiChannel" aria-label="MIDI channel the controller sends on"><option value="any">Any channel</option></select></label>
   <button id="midiLearn" class="actbtn" type="button" aria-pressed="false" title="Tap Learn, tap a fader, a scene key or Blackout all, then move one control on the controller">Learn</button>
   <button id="midiExport" class="actbtn" type="button" title="The MIDI map of this browser, as text to copy">Export map</button>
-  <span class="muted">The Light desk has its own MIDI page too.</span>
+  <button id="midiSheetBtn" class="actbtn" type="button" aria-expanded="false" aria-controls="midiSheet" title="What each control of the Xone:K2 does">K2 map</button>
   <textarea id="midiMapText" class="miditext" readonly hidden aria-label="The MIDI map of this browser"></textarea>
+  <div id="midiSheet" class="midisheet" hidden role="region" aria-label="What each control of the Xone:K2 does"></div>
 </nav>
 
 <script src="../light/colour.js"></script>
 <script src="../laser/drawRuns.js"></script>
 <script src="../laser/sceneRow.js"></script>
+<script src="midiMap.js"></script>
 <script src="show.js"></script>
 </body>
 </html>

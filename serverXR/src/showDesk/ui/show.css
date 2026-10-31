@@ -223,6 +223,20 @@ body.showdesk .liftbtn { width: var(--lift-w); height: var(--lift-h); min-height
 .density button[aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--accent); }
 #midiLearn.is-on { box-shadow: inset 0 0 0 3px var(--accent); }
 .miditext { position: fixed; right: 8px; bottom: calc(var(--links-h) + 4px); width: 420px; height: 260px; background: var(--pane); color: var(--text); border: 1px solid var(--line); border-radius: 0; font: 11px var(--mono); }
+/* the In line (the last MIDI message, lit 300 ms on each), the channel picker and the K2 sheet (2026-11-01, N1718); square, like the rest */
+.midistack { display: flex; flex-direction: column; justify-content: center; flex: 1 1 0; min-width: 0; line-height: 1.2; }
+.midistack > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.midiin { font: 500 11px var(--mono); padding: 0 4px; }
+.midiin.is-lit { box-shadow: inset 0 0 0 2px var(--accent); }
+.midichan { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 12px; }
+.midichan select { font: inherit; min-height: 32px; color: var(--text); background: var(--pane); border: 1px solid var(--line); border-radius: 0; padding: 0 4px; }
+.midisheet { position: fixed; right: 8px; bottom: calc(var(--links-h) + 4px); width: min(900px, calc(100vw - 16px)); max-height: calc(100vh - var(--links-h) - 16px); overflow: auto; background: var(--pane); color: var(--text); border: 1px solid var(--line); border-radius: 0; padding: 8px 10px; font-size: 12px; z-index: 5; white-space: normal; }
+.midisheet[hidden] { display: none; }
+.midisheet p { margin: 0 0 6px; }
+.midisheet table { border-collapse: collapse; width: 100%; }
+.midisheet th, .midisheet td { text-align: left; font-weight: 500; padding: 1px 6px; border-bottom: 1px solid var(--line); }
+.midisheet th { font: 500 12px var(--mono); white-space: nowrap; }
+.midisheet td:nth-child(2), .midisheet td:nth-child(5) { font: 500 12px var(--mono); color: var(--muted); white-space: nowrap; }
 
 /* ---- Compact: the same desk for a mouse on a laptop screen (the owner, 2026-10-31 20:5x, at the stage Mac, 1280 x 800
    with a mouse: "fix the UI, it is huge … it's not the touch screen"). Only tokens change here; every size above stays
