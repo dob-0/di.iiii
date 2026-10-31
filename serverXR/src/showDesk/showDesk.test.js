@@ -749,3 +749,23 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         expect(posts.filter((p) => p.url === '../laser/api/arm' || p.url.endsWith('/undo') || p.url.endsWith('/store'))).toEqual([])
     })
 })
+
+// Two pages of the show desk (the stage Mac and the Arch desk) meet only through the desks' state: each page reads both
+// desks every POLL_MS (1 s) while it is visible, and leaves a fader under a hand alone until 1 s after it is let go.
+describe('two pages on two machines meet through the poll', () => {
+    it('a change made on another page shows here within 2.5 s, with no press on this page', async () => {
+        const wasHidden = document.hidden
+        if (wasHidden) { Object.defineProperty(document, 'hidden', { configurable: true, get: () => false }); document.dispatchEvent(new Event('visibilitychange')) }
+        try {
+            await sleep(1100) // past the hold of any fader the test before touched
+            const want = $('lightMaster').value === '128' ? '64' : '128'
+            light.master = Number(want)
+            const t0 = Date.now()
+            while ($('lightMaster').value !== want && Date.now() - t0 < 2500) await sleep(50)
+            expect($('lightMaster').value).toBe(want)
+            expect(Date.now() - t0).toBeLessThanOrEqual(2500)
+        } finally {
+            if (wasHidden) { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')) }
+        }
+    }, 10000)
+})

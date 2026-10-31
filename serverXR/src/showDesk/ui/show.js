@@ -24,7 +24,7 @@
     const FOLLOWS_EVERY = 20 // the scene → look table is read again every 20th poll
     const VIEW_IDLE_MS = 500 // the preview while no cube is On
     const VIEW_ARMED_MS = 80 // the preview while a cube is On
-    const HOLD_MS = 1500
+    const HOLD_MS = 1000 // a fader under a hand is left to it; the poll moves it again 1 s after it is let go (the owner, 21:2x)
     const SEND_MS = 50 // a fader sends at most this often; the last value always goes
     const BLACKOUT_GAP_MS = 600 // a second lift of the same half inside this is ignored; going dark is never gapped (a panic retry always goes)
     const TIMEOUT_MS = 4000 // a desk that does not answer is said so; nothing waits on it for good

@@ -186,3 +186,10 @@ cut "Lights", "Laser" and "Release holds (0)". `--master-w: 44px` in the Compact
 Open: at 1280 the one-line top cuts the scene and look names (Touch "MUTH…", Compact "MUTH 05 …"); Compact scene keys
 cut every name; "Sweep beats" is cut at 12 px; not seen on the stage Mac's Chromium; no touch screen tried.
 Tests: `npx vitest run serverXR/src/showDesk serverXR/src/httpContracts.test.js` -> Tests 153 passed (153); eslint 0.
+
+## Two pages, one state (21:2x: "my desk here and the Arch desk are not synced")
+show.js already reads both desks every 1 s (`POLL_MS = 1000`, show.js:23, while the page is visible) and redraws scenes,
+the live look, lamps and status from it, so the poll rate is not the cause. Changed: `HOLD_MS` 1500 -> 1000 (a held fader
+follows the poll 1 s after it is let go). Test: a change on the fake server shows within 2.5 s with no press.
+Open hypotheses for the two machines: the other page hidden (the poll pauses while `document.hidden`); the two pages on
+two different servers (aylmo's own di vs the stage Mac); a guard refusing the other machine's reads.
