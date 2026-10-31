@@ -27,6 +27,7 @@ body.showdesk input[type=range] { height: var(--target); accent-color: var(--acc
 .onnow { flex: 1 1 0; min-width: 0; margin: 0; display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; }
 .onnow .nowpart { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .onnow .sep { color: var(--muted); flex: none; }
+.onnow .nowlabel { flex: none; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .onnow .nowlaser { flex: none; font-size: 18px; padding: 6px 12px; border: 1px solid var(--line); }
 .blackoutall { flex: none; width: 220px; height: var(--target); font-size: 16px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .blackoutall .sub { display: block; font-size: 10px; font-weight: 500; letter-spacing: .02em; text-transform: none; }
@@ -41,7 +42,7 @@ body.showdesk input[type=range] { height: var(--target); accent-color: var(--acc
 .showscenes .panehead { padding: 6px 10px; }
 .showscenes .scenegrid {
   --scene-h: var(--scene-btn-h);
-  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 6px; padding: 6px 8px;
+  grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 6px; padding: 6px 8px; /* five across at 1278 px: a scene's whole name */
   max-height: calc(var(--scene-h) * 2 + 6px * 3); overflow-y: auto; min-height: 0;
 }
 .showscenes .scenebtn { gap: 3px; padding: 4px 8px; }
