@@ -331,8 +331,15 @@ const createLaserEngine = ({
     log = console,
     setInterval: every = setInterval,
     clearInterval: stopEvery = clearInterval,
-    setTimeout: later = setTimeout
+    setTimeout: later = setTimeout,
+    // How a run is signed off before the first On (owner 2026-10-30/31: "delete the sign-off thing"):
+    //   'click'  (the product's default since 2026-10-31) On is the person's yes; no phrase is typed.
+    //   'phrase' the older mode, kept (rule: nothing we have is ever lost): the first On of a run takes
+    //            ARM_PHRASE typed exactly. The server picks it with DI_LASER_SIGN_OFF=phrase.
+    signOff = 'phrase'
 } = {}) => {
+    if (signOff !== 'click' && signOff !== 'phrase') throw new Error(`laser engine: signOff must be 'click' or 'phrase', not ${JSON.stringify(signOff)}`)
+    const phraseNeeded = () => signOff === 'phrase'
     const config = readConfig(dataDir)
     for (const c of config.cubes) if (c.addressRefused) log?.warn?.(`[laser] ${c.id}: laser.json address not used: ${c.addressRefused}`)
     const liveEntry = (c) => ({
@@ -701,6 +708,7 @@ const createLaserEngine = ({
             armed,
             dark: darkLatch,
             signedOff,
+            signOff,
             sim: sim(),
             zone: { ...config.zone },
             stopResume: config.stopResume,
@@ -897,7 +905,7 @@ const createLaserEngine = ({
         const held = heldByOther(c.id, out)
         if (held) return { ok: false, armed, error: `not on: ${held}` }
         if (!c.ip) return { ok: false, armed, error: `not on: ${c.id} has no address — give the Laser Out its cube's IP` }
-        if (!signedOff && confirm !== ARM_PHRASE) {
+        if (phraseNeeded() && !signedOff && confirm !== ARM_PHRASE) {
             return { ok: false, armed, needsPhrase: true, error: confirm ? 'not on: that is not the sign-off phrase. Type it exactly, as the laser safety officer agreed it.' : 'not on: the first ON of a run takes the sign-off phrase' }
         }
         openSocket()
@@ -926,7 +934,7 @@ const createLaserEngine = ({
             return { ok: true, armed }
         }
         // The phrase is never echoed (nor in state()): it is typed by the officer, not copied from a hint.
-        if (confirm !== ARM_PHRASE) return { ok: false, armed, error: 'not armed: that is not the sign-off phrase. Type it exactly, as the laser safety officer agreed it.' }
+        if (phraseNeeded() && confirm !== ARM_PHRASE) return { ok: false, armed, error: 'not armed: that is not the sign-off phrase. Type it exactly, as the laser safety officer agreed it.' }
         openSocket()
         const t = now()
         for (const c of live.values()) armCube(c, t)
