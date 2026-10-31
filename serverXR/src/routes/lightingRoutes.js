@@ -23,8 +23,11 @@ const SPACE_ID = /^[a-z0-9-]{3,48}$/
 // file (scripts/space-bundle.mjs). This machine's own show stays where it always was,
 // <dataDir>/lighting/show.json. `findSpace(id)` answers { label } for a space that is
 // here, null for one that is not; without it (and `spacesDir`) the desk keeps one show.
-function registerLightingRoutes(app, { dataDir, spacesDir = null, findSpace = null, mountPaths = ['/light'], offline = false, log, listen = null } = {}) {
+function registerLightingRoutes(app, { dataDir, spacesDir = null, findSpace = null, mountPaths = ['/light'], offline = false, log, listen = null, sceneOrigin = null } = {}) {
   let desk = null
+  // Who listens for a scene becoming active (onSceneRecall). Kept here, not on the desk, because the desk is built
+  // on the first request and can be closed and built again: the listeners are attached to every desk this lane builds.
+  const sceneListeners = new Set()
   const getDesk = () => {
     if (desk) return desk
     const { createDesk } = require('../lighting/desk')
@@ -36,11 +39,14 @@ function registerLightingRoutes(app, { dataDir, spacesDir = null, findSpace = nu
       // How the server around the desk listens — the Phone box reads it, so a
       // loopback-only `di up` stops printing a phone URL no phone can open.
       listen,
+      // Whose hand a scene recall is (see sceneOrigin in lighting/desk.js): the host decides, the desk only carries it.
+      sceneOrigin,
       log,
       spaces: spacesDir && typeof findSpace === 'function'
         ? { dir: (id) => path.join(spacesDir, id, 'lighting'), find: findSpace }
         : null
     })
+    for (const fn of sceneListeners) desk.onScene(fn)
     return desk
   }
 
@@ -83,6 +89,17 @@ function registerLightingRoutes(app, { dataDir, spacesDir = null, findSpace = nu
     // browser already opened, without starting the 40 Hz loop on an install
     // that has no lights.
     hasDesk: () => desk !== null,
+    // SCENE EVENT (2026-10-31): `fn({ id, name })` when a scene becomes active on this lane's desk, however it was
+    // recalled (a click, a key, a beat-quantised recall, a chase step). Registering never builds the desk; the
+    // listener is attached when it is built, and again to any desk built after a close. Returns the unsubscribe.
+    onSceneRecall: (fn) => {
+      if (typeof fn !== 'function') return () => {}
+      sceneListeners.add(fn)
+      const off = desk ? desk.onScene(fn) : null
+      return () => { sceneListeners.delete(fn); if (off) off() }
+    },
+    // The scene library as { id, name }, for a caller that must not build the desk: [] until it is built.
+    scenes: () => (desk ? desk.scenes() : []),
     // Only the desk that was actually built is closed; asking never builds one.
     close: () => { if (desk) { desk.close(); desk = null } }
   }

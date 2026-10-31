@@ -946,6 +946,42 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
     })
 
     // ---- polling
+    // ---- Follow light scenes (2026-10-31; serverXR/src/laser/sceneLink.js): the switch in the top bar, what it followed
+    // last, and in Edit the light scene the open look follows. Its own block, called once from refreshDesk.
+    const FOLLOW_WHY = { origin: 'not from di\'s own page', 'no look': 'no look follows it', 'no scene': 'no scene', off: 'off' }
+    const followBox = $('followLight')
+    const followPick = $('followsScene')
+    const renderFollow = () => {
+        const f = desk && desk.follow
+        if (!f) return
+        if (followBox && !held('followLight')) followBox.checked = Boolean(f.on)
+        const status = $('followStatus')
+        const last = f.on ? f.last : null
+        if (status) status.textContent = !last ? '' : last.look
+            ? `${last.scene.name || last.scene.id} → ${last.name || last.look}`
+            : `${last.scene.name || last.scene.id}: not followed (${FOLLOW_WHY[last.why] || last.why})`
+        if (!followPick || held('follows') || document.activeElement === followPick) return
+        const look = selected ? desk.looks.find((l) => l.id === selected) : null
+        followPick.disabled = !look
+        const scenes = Array.isArray(f.scenes) ? f.scenes : []
+        const want = look && typeof look.follows === 'string' ? look.follows : ''
+        const unset = Boolean(look && look.follows == null)
+        const sig = JSON.stringify([scenes, want, unset])
+        if (followPick.dataset.sig === sig) return
+        followPick.dataset.sig = sig
+        followPick.replaceChildren()
+        const add = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; followPick.append(o) }
+        add('', unset ? 'not set (matched by name)' : 'none')
+        for (const s of scenes) add(s.id, s.name || s.id)
+        if (want && !scenes.some((s) => s.id === want)) add(want, `(missing) ${want}`)
+        followPick.value = want
+    }
+    if (followBox) followBox.addEventListener('change', () => { touched.set('followLight', Date.now()); post('desk/api/follow', { on: followBox.checked }).then(refreshDesk) })
+    if (followPick) followPick.addEventListener('change', () => {
+        touched.set('follows', Date.now())
+        if (selected) post('desk/api/looks/follows', { id: selected, scene: followPick.value }).then(refreshDesk)
+    })
+
     const refreshDesk = async () => {
         try {
             desk = await get('desk/api/state')
@@ -965,6 +1001,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         renderTop()
         renderTiles()
         renderEditor()
+        renderFollow()
         renderStage()
         if (page === 'setup' && !setupHeld()) renderSetup()
     }

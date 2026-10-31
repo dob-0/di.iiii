@@ -36,6 +36,8 @@
     <button id="blackoutBtn" class="topbo" title="Every cube dark, the desk keeps its look (B). Pressing it again does nothing: lift it with Release or Shift+B">Blackout</button>
     <button id="releaseBtn" title="The desk lets go of the cubes: dark, and free for a Laser Out or the show">Release</button>
     <label class="muted" title="Off: Blackout switches every cube off (On and the phrase bring it back). On: the older blackout, dark with the arm kept; Shift+B brings it back."><input type="checkbox" id="blackoutKeepsArm"> Blackout keeps the arm</label>
+    <label class="muted" id="followLabel" title="On: picking a scene on the light desk puts the look that follows it live here (from di's own page, or with the local token). It never arms, never lifts a Blackout and never changes Master or BPM."><input type="checkbox" id="followLight"> Follow light scenes</label>
+    <span class="muted followstatus" id="followStatus"></span>
     <button id="disarmBtn" class="danger" title="Every cube's output off. One click, always">Disarm all</button>
   </div>
 </header>
@@ -83,6 +85,10 @@
           <label class="check"><input type="checkbox" id="rainbow"> Rainbow</label>
         </div>
         <div class="swatches" id="swatches"></div>
+      </div>
+      <div class="group" id="followGroup">
+        <div class="grouphead"><span>Follows light scene</span></div>
+        <select id="followsScene" title="The light scene that puts this look live while Follow light scenes is on. One scene, one look."></select>
       </div>
       <div class="group" id="pictureFields"><div class="grouphead"><span>Picture</span></div></div>
       <div class="group" id="moveFields"><div class="grouphead"><span>Movement</span>
