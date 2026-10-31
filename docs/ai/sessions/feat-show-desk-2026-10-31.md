@@ -120,3 +120,32 @@ Built on 3ea40f800, in `serverXR/src/showDesk/ui/{index.html,show.js,show.css}`,
   targets; On/Off/lifts/Undo/Save/Release are not in it, and a stored map is read through it.
 - Tests: `npx vitest run serverXR/src/showDesk` -> 47 passed; the brief's set -> see the report. Not tested: a real K2,
   the stage machine, Chromium's MIDI permission prompt there.
+
+## Space pass (20:2x-20:4x; the owner on the 7fc2aa974 picture: "UI ok, but some things there are huge; you can optimize to use the space right")
+
+Layout and sizes only (`ui/show.css`), no logic, no route, no control added or removed. Measured on the agent screen
+(lane 2) at 1278x758 and 1920x1080, scratch serverXR (`di-dev up show --api scratch`) seeded with the 19:57 saved light
+state (3 lamps, 10 scenes, output.enabled set false); the scratch laser desk had 6 cubes and no MUTH looks.
+Shots and numbers: ~/work/agent-reports-2026-10-31/projector-room/show-space/ (1-rest-1278, 2-after-scene-1278, 3-1920, measure.json).
+
+| What | Before (7fc2aa974) | After |
+|---|---|---|
+| Fader thumbs | live strip 44x44, bank 44x22 | 44x22 on every fader (lying: 44 along the travel, rows 34; upright: 44 across) |
+| Colour pads | 56 px, gap 4 | 40x40, gap 4, one row |
+| Lamp colours | 4x3 grid of 44 px per lamp | 32 px in two rows (6+5) per lamp (brief's fallback, see below) |
+| Scene keys | min 112 px, name cut, row scrolled | 117x70 at 1278: number, full name (12 px, two lines at most), look; scrollWidth 1206 = clientWidth, 0 names cut |
+| Shapes | one row of 44 px, scrolled | two rows of 36 px, 13 px text, spots · dots first; scrollWidth 1054 = clientWidth |
+| Effects + knobs | three flex rows | one grid of five equal columns (208 px at 1278, 336 at 1920); values right-aligned, one edge |
+| Lamp fader travel | ~80 px | 142 px at 1278, 464 at 1920 |
+| Preview / Size strip | ~216x169 (flex) / 76 px | 166x125 (4:3) / 56 px |
+| Lifts | 4 px under Blackout all | beside it, 24 px clear (measured 24 and 24); Blackout all 283x56 -> 220x91 |
+| Rows | 104 / 72 / 250 / >=260 / 48 | 100 / 80 / 238 / >=260 (294 at 1278) / 46; page scroll = viewport at both sizes |
+
+Choices: the shared palette (last-touched lamp) was not built: selecting a lamp by touching its fader can move its level,
+and it is new logic on show night; the per-lamp 32 px pads are the brief's fallback. The brief's "22 wide, 44 tall on
+upright faders" was read as the lighting desk's turned cap (`lighting/ui/style.css` .vwrap 18x26 before its turn); on
+the screen the upright caps stay 44 wide x 22 tall (a 44-tall cap costs 22 px of travel on every lamp fader).
+Limits: the lamp swatches (32x32) are under the 44-in-one-direction rule; at 1920 each cube card keeps ~390 px of pane
+under On/Off (6 scratch cubes, cards do not widen; with the show's 2 cubes they widen); the "rest" shot shows the scene
+the first run pressed (the scratch desk kept it). Tests: `npx vitest run serverXR/src/showDesk serverXR/src/httpContracts.test.js`
+-> 146 passed (one new: the lifts stand 24 px clear of Blackout all); eslint exit 0.

@@ -1717,3 +1717,11 @@ Symptom: on the stage Mac, `[laser] cube-1 ON` at 15:08:56, then `dark and unref
 Cause: (1) by design (review R2): nothing was live on the desk (the live look is not kept over a restart; the 14:52 install restarted the server), so the engine held no frame and switched the cube off 5 s after On. The engine kept no record of why, so the page could not say it. Read on the Mac at 15:25: blackouts 0, every stop counter 0, 23 °C, power scale 1. (2) a desk bug found by replaying the sequences on a fake cube: when the desk's picture for a cube was dark (all off the field, a look not drawn on that cube, or the desk in blackout) and a Blackout from another page cleared the engine's frames, the desk's key did not change. It sent keep-alives (`alive()` answered `kept: false`) and counted them as sent, so the engine had no frame and switched the cube off 5 s after the next On. The same dark picture without that Blackout keeps the cube on.
 Fix: `serverXR/src/laser/laserDesk.js` tickOnce posts the picture again when `alive()` answers `kept: false`. `laserEngine.js` keeps `offBy` (dark-idle, out-let-go) on a cube the engine switched off, until its next On, and reports `darkOffInMs` (the countdown, only while nobody refreshes) and `guard.darkIdleMs` in state(). `ui/desk.js` + `ui/index.html` say it in the Looks head, on the cube's card and in its Setup row; one `desk.css` rule lets the note wrap on a phone. No guard value changed (DARK_IDLE_MS 5000 and FRAME_TIMEOUT_MS 200, as before).
 Guard: `serverXR/src/laser/laserOnDark.test.js` (16: 13 replayed sequences, 3 for the countdown and `offBy`; 4 fail on the code before) and `serverXR/src/laser/ui/desk.test.js` (2 new, both fail before).
+
+
+## Show desk: the two lifts sat 4 px under Blackout all (2026-10-31)
+Symptom: on the show desk (`serverXR/src/showDesk/ui`) Lift lights and Lift laser sat 4-6 px under Blackout all, so a
+panic re-press that landed a little low lifted a desk (found by the 20:xx audit, before the show).
+Fix: `show.css` puts the lifts beside Blackout all, `--gap-stop: 24px` clear of it (`.stops` row-reverse); Blackout all
+is the full height of the top line (220x91). Measured in a browser: 24 px from each lift at 1278x758 and 1920x1080.
+Guard: `serverXR/src/showDesk/showDesk.test.js` "the lifts stand 24 px clear of Blackout all".

@@ -435,9 +435,9 @@ describe('one screen, 1278 x 758, no page scroll', () => {
         expect(css).toMatch(/\.showscenes \.scenegrid \{[^}]*grid-auto-flow: column;[^}]*overflow-x: auto/)
         for (const list of ['.lamps', '.lasers', '.shapes']) expect(rule(list)).toMatch(/overflow-x:\s*auto/)
     })
-    it('targets are 44 px at least, colour pads 56; Blackout all a fixed width at the far right with the two lifts under it', () => {
+    it('targets are 44 px at least in one direction, colour pads 40; Blackout all a fixed width at the far right, the two lifts beside it', () => {
         expect(token('target')).toBeGreaterThanOrEqual(44)
-        expect(token('pad')).toBeGreaterThanOrEqual(56)
+        expect(token('pad')).toBe(40)
         expect(token('scene-btn-h')).toBeGreaterThanOrEqual(44)
         expect(rule('.blackoutall')).toMatch(/flex:\s*none;\s*width:\s*\d+px/)
         const stops = $('blackoutAll').parentElement
@@ -445,6 +445,12 @@ describe('one screen, 1278 x 758, no page scroll', () => {
         expect(stops.firstElementChild).toBe($('blackoutAll'))
         expect([...stops.querySelectorAll('.lifts .liftbtn')].map((b) => b.id)).toEqual(['liftLights', 'liftLaser'])
         expect($('bank').querySelector('.liftbtn')).toBeNull()
+    })
+    it('the lifts stand 24 px clear of Blackout all: a panic press that lands a little off it lifts nothing', () => {
+        expect(token('gap-stop')).toBeGreaterThanOrEqual(24)
+        expect(rule('.stops')).toMatch(/flex-direction:\s*row-reverse;[^}]*gap:\s*var\(--gap-stop\)/)
+        expect(rule('.lifts')).not.toMatch(/margin/)
+        expect(rule('.blackoutall')).not.toMatch(/margin/)
     })
     it('Save scene and Undo sit in the live strip, away from Blackout all', () => {
         for (const id of ['saveScene', 'undoBtn']) {
@@ -458,11 +464,11 @@ describe('one screen, 1278 x 758, no page scroll', () => {
         expect(block('')).toMatch(/-webkit-appearance:\s*none;\s*appearance:\s*none/)
         for (const thumb of ['::-webkit-slider-thumb', '::-moz-range-thumb']) {
             expect(block(thumb)).toMatch(/border-radius:\s*0;/)
-            expect(block(thumb)).toMatch(/width:\s*22px;\s*height:\s*var\(--target\)/)
+            expect(block(thumb)).toMatch(/width:\s*var\(--target\);\s*height:\s*22px/) // 44 x 22: 44 where the hand finds it
             expect(block(thumb)).toMatch(/background:\s*var\(--text\)/)
         }
         for (const track of ['::-webkit-slider-runnable-track', '::-moz-range-track']) expect(block(track)).toMatch(/height:\s*6px;\s*background:\s*var\(--field\);\s*border:\s*1px solid var\(--line\);\s*border-radius:\s*0;/)
-        expect(block('::-webkit-slider-thumb')).toMatch(/margin-top:\s*calc\(\(6px - var\(--target\)\) \/ 2\)/) // centred on the track
+        expect(block('::-webkit-slider-thumb')).toMatch(/margin-top:\s*calc\(\(6px - 22px\) \/ 2\)/) // centred on the track
         expect(flat).not.toMatch(/accent-color/)
     })
     it('brings no colour of its own: every colour it names is one the laser desk already uses', () => {
