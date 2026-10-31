@@ -136,7 +136,8 @@ const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { registerLaserRoutes } = require('./routes/laserRoutes')
-const { registerShowDeskRoutes } = require('./routes/showDeskRoutes')
+const { registerShowDeskRoutes, observeDeskWrites } = require('./routes/showDeskRoutes')
+const { createTouchBoard } = require('./touchBoard')
 const { registerOscRoutes } = require('./routes/oscRoutes')
 const { registerNdiRoutes, scanAtBootFrom } = require('./routes/ndiRoutes')
 const { hasLocalRuntime } = require('./localRuntimeGuard')
@@ -503,6 +504,15 @@ if (config.minFreeDiskBytes > 0) {
 // `di up --lan` is the only thing that changes it.
 const describeListenNow = () => describeListen({ host: config.host })
 
+// Who is on the show desk (2026-10-31, the owner: "make colours like if someone is active, that is coloured around"). One
+// in-memory board (touchBoard.js), fed by an observer registered BEFORE the two desks' mounts below: it tells the board about a
+// write only after the desk answered it with a status below 400 (routes/showDeskRoutes.js), and changes nothing else. The same
+// mount paths go to the observer and to the desks.
+const touchBoard = createTouchBoard()
+const lightMounts = [...new Set(['/light', `${config.mountPath || ''}/light`.replace(/\/+/g, '/')])]
+const laserMounts = [...new Set(['/laser', `${config.mountPath || ''}/laser`.replace(/\/+/g, '/')])]
+observeDeskWrites(app, { mountPaths: [...lightMounts, ...laserMounts], board: touchBoard })
+
 const lighting = registerLightingRoutes(app, {
   dataDir: config.directories.dataDir,
   // A space's show lives beside its scene, and only a space that is here has one.
@@ -511,7 +521,7 @@ const lighting = registerLightingRoutes(app, {
     const meta = await loadSpaceMeta(id)
     return meta ? { label: meta.label || id } : null
   },
-  mountPaths: [...new Set(['/light', `${config.mountPath || ''}/light`.replace(/\/+/g, '/')])],
+  mountPaths: lightMounts,
   offline: process.env.ARTNET_OFFLINE === '1',
   listen: describeListenNow,
   // Whose hand a scene recall is (the scene link, laser/sceneLink.js): judged by the lasers' own guards. `lasers` is
@@ -523,7 +533,7 @@ const lighting = registerLightingRoutes(app, {
 // desk's twin (built on first use, local-only, 404 hosted), and DISARMED at every start.
 const lasers = registerLaserRoutes(app, {
   dataDir: config.directories.dataDir,
-  mountPaths: [...new Set(['/laser', `${config.mountPath || ''}/laser`.replace(/\/+/g, '/')])],
+  mountPaths: laserMounts,
   // The show player reads a project's document the way the project API does (laser/laserShow.js).
   loadDocument: async (projectId) => {
     const project = await resolveProjectContext(projectId)
@@ -536,10 +546,11 @@ const lasers = registerLaserRoutes(app, {
 // desk when its switch is on (desk.json followLight) and the request passed the lasers' own guards. laser/sceneLink.js.
 require('./laser/sceneLink').linkLightToLaser({ lighting, lasers, log: logger })
 
-// The show desk (serverXR/src/showDesk, 2026-10-31) at /show/ — the lighting desk and the laser desk on one page. Only files: the
-// page sends the two desks' own routes from this same origin, so their guards apply as on their own pages. Mounted under the
-// base path only (a bare /show could shadow a space of that name). routes/showDeskRoutes.js.
-registerShowDeskRoutes(app, { mountPaths: [`${config.mountPath || ''}/show`.replace(/\/+/g, '/')] })
+// The show desk (serverXR/src/showDesk, 2026-10-31) at /show/ — the lighting desk and the laser desk on one page. The page's files
+// plus one read, GET /show/api/who (the touch board above); the page sends the two desks' own routes from this same origin, so
+// their guards apply as on their own pages. Mounted under the base path only (a bare /show could shadow a space of that name).
+// routes/showDeskRoutes.js.
+registerShowDeskRoutes(app, { mountPaths: [`${config.mountPath || ''}/show`.replace(/\/+/g, '/')], board: touchBoard })
 
 // OSC (serverXR/src/osc) at /osc — the OSC In and OSC Out nodes' UDP, which a page cannot
 // open: the lasers' twin in shape (built on first use, local-only, 404 hosted).

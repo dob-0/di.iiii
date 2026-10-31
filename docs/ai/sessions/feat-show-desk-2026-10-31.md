@@ -26,11 +26,14 @@ says so in plain words. No production name in code, defaults or test expectation
 - Size: `POST ../laser/desk/api/cube {id, size}` · Laser master: `POST ../laser/desk/api/master {level}`
 - Reads: light `api/state`, laser `desk/api/state` + `api/state` once a second; `desk/api/follows` every 20th poll;
   `desk/api/view` 500 ms while every cube is Off, 80 ms while one is On; all paused while hidden
+- Who is on (2026-10-31, `feat-show-desk-presence-2026-10-31.md`): every request the page sends names its browser, `X-Di-Client`
+  (12 hex), `X-Di-Label` (the name, percent-encoded) and, on a write, `X-Di-Control` (the control touched); the tick adds one read,
+  `GET api/who` (`/show/api/who`: the touch board, ages in ms, in memory). The two desks' routes are unchanged and ignore the headers.
 
 ## Where it lives
 
 `serverXR/src/showDesk/ui/` (index.html, show.css on top of ../laser/desk.css, show.js), `routes/showDeskRoutes.js`
-(files only, requireLocalRuntime; base path only), catalogue `entries/showDesk.js` (GET /show), wiki `show-desk`,
+(the files plus the one read GET api/who, requireLocalRuntime; base path only), catalogue `entries/showDesk.js` (GET /show, GET /show/api/who), wiki `show-desk`,
 `lighting/ui/colour.js` exports `EMITTER_MIX`/`mixOf` (equal to app.js's table, guarded). Tests:
 `serverXR/src/showDesk/showDesk.test.js` (23), `routes/showDeskRoutes.test.js` (3); the copy-words test reads the page.
 
