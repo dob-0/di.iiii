@@ -1,6 +1,6 @@
 ---
 name: job-end-gate
-description: The end of every job — physics check (when a rig was touched), the sterile check (nothing running, open or left behind), the cost line, and what was built and where it now lives in di.iiii. Use as the last step of any job before reporting done.
+description: The end of every job — physics check (when a rig was touched), the sterile check (nothing running, open or left behind), the scratch-keep step, the LESSON/SLIP closure check, the cost line, and what was built and where it now lives in di.iiii. Use as the last step of any job before reporting done.
 ---
 
 # job-end-gate
@@ -21,6 +21,9 @@ Run, read the output, say it:
 - Two kinds of open things: pages and apps opened FOR the owner (di-show, di-open) stay until he closes them and are named "left for you: …"; everything else the job opened is closed by the job.
 No `di-sterile` tool exists yet (owed, ledger 10-12); this list is the manual form.
 
+## 2b. Scratch-keep (nothing that ran is lost)
+Every script the job wrote outside a repo and RAN against a live surface (a window, a desk or browser door, a show machine, a crew message) is kept before the job ends: `scratch-keep` (di-atlas `tools/scratch-keep`, slice S01) copies it into the job's report folder with a manifest row (sha256, args, host, start, end, exit code) after a secret scan. Until that tool is installed: copy by hand into `<report folder>/scripts/`, `sha256sum` into `MANIFEST.txt`, grep for tokens before the copy. Each kept script that must become a tool opens a row with an owner. Scratch folders are tmpfs: a reboot loses what is not kept (gap G20, 107 of 144 scripts on 31 Oct).
+
 ## 3. Cost line
 Tool calls, minutes, tokens for the job, each against the last comparable job (on a di-atlas machine `python3 ~/di-health/usage/usage_week.py`, V: file exists; elsewhere your plan's own usage page). Name the account. Measured, never felt.
 
@@ -29,6 +32,9 @@ A table of every tool, script, button, rule or data piece the job made, and wher
 
 ## 5. Review (one line each)
 Meant to happen · happened · why they differ · what changes now (a durable change in one place: tool, test, guard, brief template, or skill — with its before/after number). A lesson not yet a change is an open row.
+
+## 5b. LESSON and SLIP rows close with proof
+Every LESSON or SLIP row the job wrote or touched has either its closing commit or test hash with the before/after number, or an owner, a due date (4 or 8 weeks), a tracking id and the check that fails if the slip returns (SRE postmortem action items; Atlassian's 4 or 8 week objective). A note never closes a row. Check: `grep -nE 'LESSON|SLIP' <ledger>` for the job's rows, each with one of the two; a row with neither is named in the report as open (gap G13).
 
 ## 6. Report ends with
 `sterile: yes` plus the check's output, or what stays and why; the cost line; the owner's asks and their state.

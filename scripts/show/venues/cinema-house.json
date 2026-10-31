@@ -1,0 +1,29 @@
+{
+  "venue": "cinema-house",
+  "production": "hosq-rea-opening-2026-11-07",
+  "names": ["hosq", "cinema house"],
+  "about": "Cinema House, Yerevan (a place): the hosq x ReA opening, set-up Fri 6 Nov evening, opening Sat 7 Nov 18:00-19:00.",
+  "confirmed": false,
+  "toConfirm": [
+    "which hall is ours, and which machine runs the show (host, user, api)",
+    "whether a laser, a light output, a MIDI controller and a watch of ours are there (each: an object, or false)",
+    "the USB port plan and the links of that machine",
+    "the crew group and the people's roles (the roster lives in di.bo, S07)"
+  ],
+  "sources": {
+    "the place, the dates, the group": "di-atlas venues/cinema-house-2026-11-07.md (origin/master, read 2026-11-01 02:4x): rooms, power, projectors and sound are '?' until the scan; the production has its own Telegram group (line 3). Cited, not copied: every unknown stays null."
+  },
+  "dates": { "setup": "2026-11-06 evening", "opening": "2026-11-07T18:00+04:00" },
+  "host": null,
+  "user": null,
+  "api": null,
+  "ports": [],
+  "links": [],
+  "posture": null,
+  "laser": null,
+  "light": null,
+  "midi": null,
+  "watch": null,
+  "crew": { "group": null, "people": null, "note": "the production's own Telegram group (sheet line 3); its id is not copied here: the di.bo roster (S07)" },
+  "palette": null
+}

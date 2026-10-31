@@ -1,0 +1,99 @@
+{
+  "venue": "projector-room",
+  "production": "hayfilm-moct-2026-10-31",
+  "names": [
+    "hayfilm",
+    "moct"
+  ],
+  "about": "The Projector Room at Hayfilm (a place), the MOCT night 31 Oct to 1 Nov 2026: the stage machine (studio-mac, Arch Linux) runs laser + light only (owner 2026-10-29, ledger N1501).",
+  "confirmed": false,
+  "toConfirm": [
+    "host and user: in the operator machine's own copy of this file (~/.di/data/show/venues/), never in this public repo",
+    "the USB port plan: paths and vidpids read with lsusb -t in daylight; the laser LAN off the VIA hub is his hardware call (G12)",
+    "the laser LAN interface name",
+    "posture: the governor he wants held, and no_turbo (one writer per knob, S14)",
+    "laser: the safety officer, the operator, the zone, the stop-rate and stop-path limits (G06)",
+    "midi: the desk state path that reports heardAt (S14)",
+    "watch: the unit and its CSV (S11)"
+  ],
+  "sources": {
+    "host, user, api": "the night's tools used the stage machine's tailnet address and its own user (di-atlas show-go.sh:7, checkpoint.sh:9); this repo is public, so host and user stay out of it: put them in ~/.di/data/show/venues/projector-room.json on the operator's machine, or pass DI_SHOW_HOST / --host. api from checkpoint.sh:16",
+    "packsDir": "di-atlas a0ffd48 checkpoint.sh RESTORE step (/home/dob/.cache/di-room-desk/look/di-runtime-<version>.tar.gz)",
+    "ports": "audit GAPS.md G12 (ledger N1712, N1712.2, N1712.3): observed positions on the night, not yet a plan",
+    "posture": "di-atlas show-posture.sh header (owner 2026-10-31: 'i need to use full arch resources'); GAPS.md G07 (performance at 17:59, N1619.1)",
+    "palette": "owner's rule 2026-10-31 'Lights and laser are one scene': MOCT palette deep red, purple, white, amber"
+  },
+  "host": null,
+  "user": null,
+  "api": "http://127.0.0.1:4000/serverXR",
+  "packsDir": "~/.cache/di-room-desk/look",
+  "ports": [
+    {
+      "role": "desk-midi",
+      "device": "Allen & Heath Xone:K2",
+      "path": null,
+      "vidpid": null,
+      "driver": null,
+      "speedMbps": null,
+      "note": "worked on the machine's own port, flooded on the VIA hub (N1712.3)"
+    },
+    {
+      "role": "dmx",
+      "device": "CH340 USB serial (DMX dongle)",
+      "path": "1-2.1",
+      "vidpid": null,
+      "driver": null,
+      "speedMbps": null,
+      "note": "on hub port 1-2.1 since N1712.2 (observed)"
+    },
+    {
+      "role": "laser-lan",
+      "device": "RTL8153 USB Ethernet",
+      "path": null,
+      "vidpid": null,
+      "driver": null,
+      "speedMbps": null,
+      "note": "was on hub port 1-2.4 with link-lost x3 at 00:09 (N1712); where it goes is his hardware call (G12)"
+    }
+  ],
+  "links": [
+    {
+      "role": "laser-lan",
+      "iface": null
+    }
+  ],
+  "posture": {
+    "governor": "performance",
+    "noTurbo": null,
+    "acOnline": 1,
+    "driver": null
+  },
+  "laser": {
+    "lso": null,
+    "operator": null,
+    "zone": null,
+    "stopRateMaxPerHour": null,
+    "stopPathMaxMs": null
+  },
+  "light": {},
+  "midi": {
+    "device": "Allen & Heath Xone:K2",
+    "statePath": null,
+    "field": "midi.heardAt"
+  },
+  "watch": {
+    "unit": null,
+    "csv": null
+  },
+  "crew": {
+    "group": null,
+    "people": null,
+    "note": "the crew roster per production lives in di.bo (S07); not copied here"
+  },
+  "palette": [
+    "deep red",
+    "purple",
+    "white",
+    "amber"
+  ]
+}
