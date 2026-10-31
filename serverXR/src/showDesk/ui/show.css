@@ -21,7 +21,10 @@ html, body.showdesk { height: 100%; overflow: hidden; }
 body.showdesk {
   display: grid; height: 100vh; min-height: 0; overflow: hidden; font-size: 14px;
   grid-template-rows: var(--top-h) var(--scenes-h) var(--live-h) minmax(var(--bank-min), 1fr) var(--links-h);
+  grid-template-columns: minmax(0, 1fr); grid-template-areas: none;
 }
+/* desk.css names grid areas for its own page (.bank, .stops…): here every row is one full-width cell, in order */
+body.showdesk > * { grid-area: auto; grid-column: 1 / -1; min-width: 0; }
 body.showdesk button { min-height: var(--target); font-size: 14px; }
 /* Faders: the lighting desk's square ones (lighting/ui/style.css, sliders), tokens only: no native round thumb or pill track */
 body.showdesk input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; height: var(--target); margin: 0; cursor: pointer; }
@@ -52,7 +55,7 @@ body.showdesk .livestrip input[type=range]::-moz-range-thumb { width: var(--targ
 .onnow .nowlabel { flex: none; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .onnow .nowlaser { flex: none; font-size: 18px; padding: 6px 12px; border: 1px solid var(--line); }
 .statusline { display: flex; align-items: center; gap: 12px; min-width: 0; height: var(--status-h); }
-.stops { flex: none; width: 283px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+.stops { flex: none; width: 283px; margin-left: 0; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 4px; min-height: 0; }
 .blackoutall { flex: none; width: 283px; height: 56px; min-height: 56px; font-size: 16px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-width: 2px; }
 .blackoutall .sub { display: block; font-size: 10px; font-weight: 500; letter-spacing: .02em; text-transform: none; }
 .lifts { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
@@ -117,9 +120,9 @@ body.showdesk .livestrip input[type=range]::-moz-range-thumb { width: var(--targ
 .livestrip.is-idle .xydot { opacity: .3; }
 
 /* ---- the fader bank: Light lamps · Lights master · Laser master · Size · the cube */
-.bank { display: flex; gap: 6px; padding: 6px 8px; min-height: 0; min-width: 0; overflow: hidden; }
+.showbank { display: flex; gap: 6px; padding: 6px 8px; min-height: 0; min-width: 0; overflow: hidden; }
 .bankpart { display: flex; gap: 6px; min-height: 0; min-width: 0; }
-#lightsHalf { flex: 0 1 auto; }
+#lightsHalf { flex: none; } /* every lamp strip and the Lights master in full; more cubes scroll inside the laser part */
 #laserHalf { flex: 1 1 auto; }
 .strip { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 4px 6px; border: 1px solid var(--line); background: var(--pane); min-height: 0; flex: none; }
 .striphead { display: flex; align-items: center; gap: 6px; min-width: 0; flex: none; }

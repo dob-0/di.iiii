@@ -259,7 +259,7 @@
         const bo = blackoutState()
         const btn = $('blackoutAll')
         // The button only ever says "Blackout all": it has no lift. Its sub-line says what is dark and where the lifts are.
-        const sub = bo.lights && bo.laser ? 'On · lift it under Lights or Laser' : bo.lights ? 'The lights blackout is on' : bo.laser ? 'The laser blackout is on' : ''
+        const sub = bo.lights && bo.laser ? 'On · Lift lights or Lift laser lifts it' : bo.lights ? 'The lights blackout is on' : bo.laser ? 'The laser blackout is on' : ''
         if (btn.dataset.label !== sub) {
             btn.dataset.label = sub
             btn.replaceChildren(document.createTextNode('Blackout all'), ...(sub ? [el('span', { class: 'sub', text: sub })] : []))
@@ -292,7 +292,7 @@
         }
         const bad = [lights.ok ? '' : `the lighting desk: ${lights.error}`, laser.ok ? '' : `the laser desk: ${laser.error}`].filter(Boolean)
         await tick()
-        say(bad.length ? `Blackout did not reach ${bad.join('; ')}.` : 'Blackout: lights and laser are dark. Lift each under Lights or Laser.', bad.length ? 'error' : 'ok')
+        say(bad.length ? `Blackout did not reach ${bad.join('; ')}.` : 'Blackout: lights and laser are dark. Lift each with Lift lights or Lift laser.', bad.length ? 'error' : 'ok')
     }
     // Lifting is per half, each with its desk's own route and body: the lighting desk's master {blackout:false} (its own
     // Blackout button), the laser desk's blackout {on:false} (its Shift+B). A half is lifted only when it answered its last

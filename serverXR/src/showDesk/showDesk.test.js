@@ -216,7 +216,7 @@ describe('the presses post exactly the desks\' own routes', () => {
         expect(JSON.stringify(posts)).not.toMatch(/"blackout":false|"on":false/)
         expect(posts.some((p) => p.url.endsWith('/arm'))).toBe(false)
         expect($('blackoutAll').textContent).toMatch(/^Blackout all/)
-        expect($('blackoutAll').textContent).toContain('lift it under Lights or Laser')
+        expect($('blackoutAll').textContent).toContain('Lift lights or Lift laser lifts it')
         expect(light.blackout && desk.blackout).toBe(true)
     })
     it('each desk is lifted on its own, only when it answered and its blackout is on, with that desk\'s own route', async () => {
