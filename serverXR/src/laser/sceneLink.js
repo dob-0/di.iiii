@@ -21,7 +21,7 @@
 'use strict'
 
 /** The id of a light scene as a look keeps it: no control characters, at most 80. '' when it is not a string. */
-const sceneIdOf = (v) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 80) : '')
+const sceneIdOf = (v) => (typeof v === 'string' ? v.replace(/\p{Cc}/gu, '').trim().slice(0, 80) : '')
 
 /** The origins that may drive the lasers: di's own page, or a request that carried the local token. */
 const DRIVES = new Set(['page', 'token'])
