@@ -1,0 +1,10 @@
+# The 30 s re-check of one hot-plugged USB device: its error lines since the plug and its planned port (venue profile).
+# Exit 1 = a flood, 2 = not on its planned port; both are results written to events.log, not failures of the unit.
+[Unit]
+Description=di stage watch: re-check USB device %I
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/di-stage-watch
+ExecStart=@NODE@ @WATCH_DIR@/watch.mjs recheck %I $DI_STAGE_WATCH_ARGS
+SuccessExitStatus=1 2

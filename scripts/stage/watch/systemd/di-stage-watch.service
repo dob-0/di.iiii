@@ -1,0 +1,27 @@
+# The stage watch (scripts/stage/watch/README.md; gap G04, plan S11). Rendered by install.sh: @NODE@ and @WATCH_DIR@.
+# Root: /dev/kmsg needs CAP_SYSLOG on a machine with kernel.dmesg_restrict=1, and the cut mode writes sysfs.
+[Unit]
+Description=di stage watch: the show machine's recorder (USB errors, heat, link)
+Documentation=file:@WATCH_DIR@/README.md
+After=local-fs.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/di-stage-watch
+ExecStart=@NODE@ @WATCH_DIR@/watch.mjs run $DI_STAGE_WATCH_ARGS
+Restart=always
+RestartSec=2
+# A share, not a promise (systemd.resource-control(5): CPUWeight is relative and states no latency). Unvalidated.
+CPUWeight=200
+RuntimeDirectory=di-stage-watch
+RuntimeDirectoryMode=0755
+StateDirectory=di-stage-watch
+LogsDirectory=di-stage-watch
+LogsDirectoryMode=0755
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

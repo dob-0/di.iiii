@@ -1,0 +1,9 @@
+# Started by the udev rule when a USB device is plugged (systemd.device(5) SYSTEMD_WANTS); fires once, 30 s later.
+[Unit]
+Description=di stage watch: re-check USB device %I 30 s after it was plugged
+
+[Timer]
+OnActiveSec=30s
+AccuracySec=1s
+RemainAfterElapse=no
+Unit=di-stage-watch-recheck@%i.service
