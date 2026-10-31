@@ -21,6 +21,7 @@
      Shift+B), and only when that desk answered and says it is dark. MIDI never reaches On, Off, a lift, Undo or Save. -->
 <header class="topbar showbar">
   <a class="homelink" href="/spaces" title="Back to di.iiii — your spaces">di.iiii</a>
+  <nav class="deskswitch" aria-label="The desks"><a href="./" aria-current="page">Show</a><span class="sep" aria-hidden="true">·</span><a href="../light/">Light</a><span class="sep" aria-hidden="true">·</span><a href="../laser/">Laser</a></nav>
   <div class="titleblock">
     <div class="titleline">
       <h1 class="title">Show desk</h1>
@@ -99,6 +100,7 @@
 <nav class="links" aria-label="The full desks and MIDI">
   <a href="../laser/">Laser desk</a>
   <a href="../light/">Light desk</a>
+  <span class="density" id="density" role="group" aria-label="Size of the desk: Touch for a hand on a touch screen, Compact for a mouse"><button type="button" data-density="touch" aria-pressed="false" title="Sizes for a hand on a touch screen">Touch</button><span class="sep" aria-hidden="true">·</span><button type="button" data-density="compact" aria-pressed="false" title="Smaller sizes for a mouse on a laptop screen">Compact</button></span>
   <span class="midiline" id="midiLine">MIDI: asking</span>
   <button id="midiLearn" class="actbtn" type="button" aria-pressed="false" title="Tap Learn, tap a fader, a scene key or Blackout all, then move one control on the controller">Learn</button>
   <button id="midiExport" class="actbtn" type="button" title="The MIDI map of this browser, as text to copy">Export map</button>

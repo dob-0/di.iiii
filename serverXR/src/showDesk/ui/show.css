@@ -10,22 +10,45 @@
    shapes in two rows, the effects and knobs in one grid of five equal columns, the lamp faders longer, the preview 4:3,
    and the two lifts 24 px clear of Blackout all (a panic press that lands a little off it lifts nothing). */
 :root {
-  --top-h: 100px;      /* the title line and the status at the left; at the right the two lifts, 24 px clear, then Blackout all */
+  --top-h: 64px;       /* one dense line (the owner, 21:1x): the mark, the desks, what is on, the status; at the right the two lifts, 24 px clear, then Blackout all */
+  --top-pad: 4px;      /* above and below the top line's content */
   --status-h: 30px;
+  --now-pad: 6px 12px; /* the box round the laser's state in the top line */
+  --now-font: 16px;    /* what is on, and the laser's state */
+  --track: 4px;        /* a fader's drawn track; the input stays the hit area */
   --scenes-h: 80px;    /* one row of scene keys: number, name (two lines at most), look; more scenes scroll in the row, never the page */
   --live-h: 238px;     /* the live strip: colours (40), shapes in two rows (2 x 36 + 3), the effects and knobs grid (3 x 34); the XY pad */
   --bank-min: 260px;   /* the least the fader bank is given */
+  --bank-max: 1fr;     /* the bank takes the rest of the screen; Compact gives it a fixed height and leaves air below */
   --links-h: 46px;
   --target: 44px;      /* a button the hand finds in the dark: at least 44 px in one direction */
   --pad: 40px;         /* a colour pad */
   --row: 34px;         /* one row of the effects and knobs grid */
   --scene-btn-h: 70px;
-  --gap-stop: 24px;    /* the clear space between Blackout all and the lifts */
+  --gap-stop: 24px;    /* the clear space between Blackout all and the lifts, in both densities */
+  /* the sizes the Compact density changes (at the end of this file); here each is the Touch size it always was */
+  --fader-h: 32px;     /* a lying fader's height: its hit area */
+  --thumb-lw: 24px; --thumb-lh: 14px; /* a lying fader's drawn cap, along x across (the owner, 21:2x: "why so ugly"); the
+                                         light desk's turned cap (lighting/ui/style.css .vwrap) is the reference */
+  --thumb-uw: 14px; --thumb-uh: 24px; /* an upright fader's drawn cap: across x along */
+  --vfader-w: 44px;    /* an upright fader's width: its hit area */
+  --master-fader-w: 44px; /* the Lights and Laser masters: 44 px wide in both densities */
+  --master-w: 96px;    /* a master's strip */
+  --lamp-pad: 32px;    /* a lamp's colour pad */
+  --shape-h: 36px; --shape-font: 13px; --shapes-h: 75px; /* a shape pad; the two rows of them */
+  --fx-font: 14px; --knob-font: 11px; /* the effect pads; the knobs' names */
+  --scene-dir: column; --scene-wrap: normal; --scene-cut: clip; --scene-text-h: 30px; --scene-text-flex: none;
+  --look-font: 11px; --dots-top: 6px; --dots-bottom: auto; /* a scene key's look line; its dots */
+  --bo-w: 160px; --bo-h: 44px; --bo-align: center; --bo-ls: .06em; /* Blackout all: the loudest by its colour and weight */
+  --lift-w: 100px; --lift-h: 32px; /* each lift, side by side */
+  --desk-h: 44px;      /* the Show · Light · Laser links in the top line */
+  --cube-wrap: nowrap; --cube-name-flex: 0 1 auto; /* a cube's name line; Compact wraps its state under a whole name */
+  --preview-w: 166px; --preview-grow: 1; --preview-ar: 4 / 3; /* what a cube draws */
 }
 html, body.showdesk { height: 100%; overflow: hidden; }
 body.showdesk {
   display: grid; height: 100vh; min-height: 0; overflow: hidden; font-size: 14px;
-  grid-template-rows: var(--top-h) var(--scenes-h) var(--live-h) minmax(var(--bank-min), 1fr) var(--links-h);
+  grid-template-rows: var(--top-h) var(--scenes-h) var(--live-h) minmax(var(--bank-min), var(--bank-max)) var(--links-h);
   grid-template-columns: minmax(0, 1fr); grid-template-areas: none;
 }
 /* desk.css names grid areas for its own page (.bank, .stops…): here every row is one full-width cell, in order */
@@ -34,61 +57,74 @@ body.showdesk button { min-height: var(--target); font-size: 14px; }
 /* Faders: square, the lighting desk's kind (lighting/ui/style.css .vwrap: a cap short along the travel of its upright faders,
    long across it), tokens only, no native round thumb or pill track. Every thumb is 44 x 22 on the screen: across an upright
    fader, along a lying one, so the hand always has 44 px and a lying fader needs only a 34 px row. */
-body.showdesk input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; height: 32px; margin: 0; cursor: pointer; }
-body.showdesk input[type=range]::-webkit-slider-runnable-track { height: 6px; background: var(--field); border: 1px solid var(--line); border-radius: 0; }
-body.showdesk input[type=range]::-moz-range-track { height: 6px; background: var(--field); border: 1px solid var(--line); border-radius: 0; }
-body.showdesk input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: var(--target); height: 22px; margin-top: calc((6px - 22px) / 2); border: 0; border-radius: 0; background: var(--text); }
-body.showdesk input[type=range]::-moz-range-thumb { width: var(--target); height: 22px; border: 0; border-radius: 0; background: var(--text); }
+body.showdesk input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; height: var(--fader-h); margin: 0; cursor: pointer; }
+body.showdesk input[type=range]::-webkit-slider-runnable-track { height: var(--track); background: var(--line); border: 0; border-radius: 0; }
+body.showdesk input[type=range]::-moz-range-track { height: var(--track); background: var(--line); border: 0; border-radius: 0; }
+body.showdesk input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: var(--thumb-lw); height: var(--thumb-lh); margin-top: calc((var(--track) - var(--thumb-lh)) / 2); border: 0; border-radius: 0; background: var(--muted); }
+body.showdesk input[type=range]::-moz-range-thumb { width: var(--thumb-lw); height: var(--thumb-lh); border: 0; border-radius: 0; background: var(--muted); }
+/* a 2-step look: every cap muted; only the live look's faders, while a look is live, drawn in full */
+#live:not(.is-idle) input[type=range]::-webkit-slider-thumb { background: var(--text); }
+#live:not(.is-idle) input[type=range]::-moz-range-thumb { background: var(--text); }
 body.showdesk input[type=range]:disabled { cursor: default; opacity: .45; }
 /* Upright faders in the bank (a console's posture): the same square track and thumb, turned; the top is the most */
-body.showdesk input.vfader { writing-mode: vertical-lr; direction: rtl; width: var(--target); height: auto; flex: 1 1 0; min-height: 48px; align-self: center; }
-body.showdesk input.vfader::-webkit-slider-runnable-track { width: 6px; height: 100%; }
-body.showdesk input.vfader::-webkit-slider-thumb { width: var(--target); height: 22px; margin-top: 0; margin-left: calc((6px - var(--target)) / 2); }
-body.showdesk input.vfader::-moz-range-track { width: 6px; height: 100%; }
-body.showdesk input.vfader::-moz-range-thumb { width: var(--target); height: 22px; }
+body.showdesk input.vfader { writing-mode: vertical-lr; direction: rtl; width: var(--vfader-w); height: auto; flex: 1 1 0; min-height: 48px; align-self: center; }
+body.showdesk input.vfader::-webkit-slider-runnable-track { width: var(--track); height: 100%; }
+body.showdesk input.vfader::-webkit-slider-thumb { width: var(--thumb-uw); height: var(--thumb-uh); margin-top: 0; margin-left: calc((var(--track) - var(--thumb-uw)) / 2); }
+body.showdesk input.vfader::-moz-range-track { width: var(--track); height: 100%; }
+body.showdesk input.vfader::-moz-range-thumb { width: var(--thumb-uw); height: var(--thumb-uh); }
+body.showdesk .masterstrip input.vfader { width: var(--master-fader-w); }
 
 /* ---- the top line: the mark, the title, what is on, the status; the stops at the far right in a fixed place */
-.showbar { position: static; flex-wrap: nowrap; align-items: stretch; gap: 14px; min-height: 0; height: var(--top-h); padding: 4px 8px 4px 0; }
+.showbar { position: static; flex-wrap: nowrap; align-items: stretch; gap: 14px; min-height: 0; height: var(--top-h); padding: var(--top-pad) 8px var(--top-pad) 0; }
 .showbar .homelink { align-self: center; }
-.titleblock { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
-.titleline { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.showbar .title { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; flex: none; }
-.onnow { flex: 1 1 0; min-width: 0; margin: 0; display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+/* the desks: Show · Light · Laser, plain links in this window, this page marked (the owner, 21:0x: "add buttons so I can
+   easily go from one desk to the other"); the Light and Laser desks carry the same switch, class deskswitch */
+.deskswitch { align-self: center; display: flex; align-items: center; gap: 4px; flex: none; }
+.deskswitch .sep { color: var(--muted); }
+.deskswitch a { display: inline-flex; align-items: center; min-height: var(--desk-h); padding: 0 12px; border: 1px solid var(--line); color: var(--text); text-decoration: none; font-size: 14px; }
+.deskswitch a:hover { border-color: var(--accent); color: var(--accent); }
+.deskswitch a[aria-current="page"] { border-color: var(--accent); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.titleblock { flex: 1 1 0; min-width: 0; display: flex; flex-direction: row; align-items: center; gap: 12px; }
+.titleline { display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1 1 auto; }
+/* the page's name stays for screen readers; on the screen the desk switch marks Show */
+.showbar .title { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.onnow { flex: 0 1 auto; min-width: 0; margin: 0; display: flex; align-items: center; gap: 10px; font-size: var(--now-font); font-weight: 600; white-space: nowrap; overflow: hidden; }
 .onnow .nowpart { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .onnow .sep { color: var(--muted); flex: none; }
 .onnow .nowlabel { flex: none; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-.onnow .nowlaser { flex: none; font-size: 18px; padding: 6px 12px; border: 1px solid var(--line); }
-.statusline { display: flex; align-items: center; gap: 12px; min-width: 0; height: var(--status-h); }
+.onnow .nowlaser { flex: none; font-size: var(--now-font); padding: var(--now-pad); border: 1px solid var(--line); }
+.statusline { flex: 0 1 220px; display: flex; align-items: center; gap: 8px; min-width: 120px; height: var(--status-h); }
 /* Blackout all at the far right, the full height of the line; the two lifts at its left, 24 px clear of it, one over the other */
-.stops { flex: none; margin-left: 0; display: flex; flex-direction: row-reverse; align-items: stretch; gap: var(--gap-stop); min-height: 0; }
-.blackoutall { flex: none; width: 220px; height: auto; min-height: 56px; font-size: 16px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-width: 2px; }
+.stops { flex: none; margin-left: 0; display: flex; flex-direction: row-reverse; align-items: center; gap: var(--gap-stop); min-height: 0; }
+.blackoutall { flex: none; width: var(--bo-w); height: var(--bo-h); align-self: var(--bo-align); min-height: 0; font-size: 16px; font-weight: 700; letter-spacing: var(--bo-ls); text-transform: uppercase; border-width: 2px; white-space: nowrap; padding: 0 6px; }
 .blackoutall .sub { display: block; font-size: 10px; font-weight: 500; letter-spacing: .02em; text-transform: none; }
-.lifts { display: grid; grid-template-columns: 124px; grid-auto-rows: var(--target); align-content: center; gap: 4px; }
-.liftbtn { min-height: var(--target); }
+.lifts { display: flex; align-items: center; gap: 4px; }
+body.showdesk .liftbtn { width: var(--lift-w); height: var(--lift-h); min-height: var(--lift-h); padding: 0 6px; }
 
 /* ---- the status line: what the last press did, or why it did not; beside it whether anything is unsaved */
-.status { flex: 1 1 0; min-width: 0; margin: 0; padding: 0 8px; line-height: var(--status-h); height: var(--status-h); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border: 1px solid var(--line); color: var(--muted); }
+.status { flex: 1 1 0; min-width: 100px; margin: 0; padding: 0 8px; line-height: var(--status-h); height: var(--status-h); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border: 1px solid var(--line); color: var(--muted); }
 .status.is-ok { color: var(--text); }
 .status.is-error { background: #2a2210; color: #ffe7b8; }
-.savestate { flex: none; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.savestate { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 12px; color: var(--muted); white-space: nowrap; }
 .savestate.is-unsaved { color: var(--warn); }
 
 /* ---- scenes: one row of keys in play order, the live one marked; each key: its number (and dots), its name in full, its look */
 .showscenes { display: grid; grid-template-columns: 72px 1fr; border-width: 1px 0; min-height: 0; overflow: hidden; }
-.showscenes .panehead { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 2px; padding: 4px 8px; overflow: hidden; border: 0; }
-.showscenes .panehead .muted { font-size: 10px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: break-word; }
+.showscenes .panehead { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; justify-content: center; gap: 2px; padding: 4px 8px; overflow: hidden; border: 0; }
+/* the row is labelled just Scenes; the explainer is the row's title (the owner, 21:1x), its words kept for screen readers */
+.showscenes .panehead .muted { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .showscenes .scenegrid {
   --scene-h: var(--scene-btn-h);
   grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(96px, 1fr); gap: 3px; padding: 5px 4px;
   overflow-x: auto; overflow-y: hidden; min-height: 0;
 }
 .showscenes .scenebtn { position: relative; justify-content: flex-start; gap: 1px; padding: 3px 6px; height: var(--scene-btn-h); }
-.showscenes .scenebtn .scenename { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; font-size: 12px; line-height: 15px; }
-.showscenes .scenebtn .scenename .scenetext { flex: none; max-width: 100%; white-space: normal; overflow-wrap: break-word; text-overflow: clip; max-height: 30px; }
+.showscenes .scenebtn .scenename { display: flex; flex-direction: var(--scene-dir); align-items: flex-start; column-gap: 6px; min-width: 0; max-width: 100%; font-size: 12px; line-height: 15px; }
+.showscenes .scenebtn .scenename .scenetext { flex: var(--scene-text-flex); max-width: 100%; white-space: var(--scene-wrap); overflow-wrap: break-word; text-overflow: var(--scene-cut); max-height: var(--scene-text-h); }
 .showscenes .scenebtn .scenenum { font: 600 12px var(--mono); line-height: 15px; color: var(--muted); margin: 0; }
-.showscenes .scenebtn .scenelook { display: flex; align-items: baseline; gap: 4px; min-width: 0; margin-top: auto; font-size: 11px; line-height: 13px; }
+.showscenes .scenebtn .scenelook { display: flex; align-items: baseline; gap: 4px; min-width: 0; margin-top: auto; font-size: var(--look-font); line-height: 13px; }
 .showscenes .scenebtn .tag { font-size: 10px; }
-.showscenes .scenebtn .scenedots { position: absolute; top: 6px; right: 6px; max-width: 60%; overflow: hidden; }
+.showscenes .scenebtn .scenedots { position: absolute; top: var(--dots-top); bottom: var(--dots-bottom); right: 6px; max-width: 60%; overflow: hidden; }
 .scenedots { display: flex; gap: 4px; height: 8px; }
 .scenedots i { width: 8px; height: 8px; border: 1px solid var(--line); flex: none; }
 .scenebtn.is-busy { border-style: dashed; }
@@ -97,7 +133,7 @@ body.showdesk input.vfader::-moz-range-thumb { width: var(--target); height: 22p
 /* ---- the live strip: the live laser look under the fingers. One grid of five equal columns: the colours and the shapes
    across it, then Pulse Sweep Spin Cycle Mirror · Level Size Copies Rotation BPM · Phase Pulse-beats Sweep-beats Points Tap */
 .livestrip { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 8px; padding: 2px 8px; min-height: 0; overflow: hidden; border-bottom: 1px solid var(--line); }
-.liveleft { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: var(--pad) 75px repeat(3, var(--row)); gap: 4px; align-content: start; min-width: 0; min-height: 0; }
+.liveleft { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: var(--pad) var(--shapes-h) repeat(3, var(--row)); gap: 4px; align-content: start; min-width: 0; min-height: 0; }
 .liveleft > .liverow:first-child, .liveleft > .shapes { grid-column: 1 / -1; }
 .liveleft > .effects, .liveleft > .faders { display: contents; }
 .liverow { display: flex; align-items: center; gap: 4px; min-width: 0; height: var(--target); }
@@ -112,14 +148,14 @@ body.showdesk input.vfader::-moz-range-thumb { width: var(--target); height: 22p
 .livestrip .togglepad, .liverow:first-child .actbtn { height: var(--pad); min-height: var(--pad); }
 .shapes { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 3px; height: auto; overflow-x: auto; overflow-y: hidden; }
 .shapes::after { content: ''; flex: 8 1 0; } /* the last row keeps its pads near their size instead of stretching three across the screen */
-.shapes .shapepad { flex: 1 1 auto; min-width: var(--target); height: 36px; min-height: 36px; padding: 0 4px; font-size: 13px; }
+.shapes .shapepad { flex: 1 1 auto; min-width: var(--target); height: var(--shape-h); min-height: var(--shape-h); padding: 0 4px; font-size: var(--shape-font); }
 .effects .effect { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 4px; min-width: 0; height: var(--row); }
-.effects .effectpad { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0; width: 76px; height: var(--row); min-height: var(--row); padding: 0 6px; line-height: 1.1; }
+.effects .effectpad { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0; width: 76px; height: var(--row); min-height: var(--row); padding: 0 6px; line-height: 1.1; font-size: var(--fx-font); }
 .effectpad .val { font: 500 11px var(--mono); color: var(--muted); text-align: right; }
 .effects .effect input { width: 100%; min-width: 0; }
 .effects > .effectpad { width: auto; justify-content: center; }
 .hfader { display: grid; grid-template-columns: 76px minmax(0, 1fr); grid-template-rows: 1fr 1fr; column-gap: 4px; align-items: center; min-width: 0; height: var(--row); }
-.hfader span { grid-column: 1; grid-row: 1; align-self: end; font-size: 11px; line-height: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hfader span { grid-column: 1; grid-row: 1; align-self: end; font-size: var(--knob-font); line-height: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hfader .val { grid-column: 1; grid-row: 2; align-self: start; font: 500 12px var(--mono); line-height: 14px; color: var(--text); text-align: right; }
 .hfader input { grid-column: 2; grid-row: 1 / -1; width: 100%; min-width: 0; }
 .liveleft .bpmfader { grid-row: 4; grid-column: 5; }
@@ -142,7 +178,7 @@ body.showdesk input.vfader::-moz-range-thumb { width: var(--target); height: 22p
 .striphead b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .strip .val { font: 500 12px var(--mono); color: var(--text); text-align: center; flex: none; }
 .strip .cap { font-size: 11px; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.masterstrip { width: 96px; background: var(--cell); }
+.masterstrip { width: var(--master-w); background: var(--cell); }
 .holdbtn { flex: none; font-size: 12px; padding: 0 4px; white-space: normal; line-height: 1.1; }
 .lookname { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .halfnote { margin: 0; padding: 8px; font-size: 13px; max-width: 280px; }
@@ -155,23 +191,23 @@ body.showdesk input.vfader::-moz-range-thumb { width: var(--target); height: 22p
 .lamp .who { min-width: 0; display: flex; flex-direction: column; padding-right: 36px; }
 .lamp .who b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lamp .who span { font: 11px var(--mono); color: var(--muted); white-space: nowrap; }
-.lampcolours { display: grid; grid-template-columns: repeat(6, 32px); grid-auto-rows: 32px; gap: 4px; justify-content: center; flex: none; }
-.lampcolours .swatch { width: 32px; height: 32px; min-height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 0; }
+.lampcolours { display: grid; grid-template-columns: repeat(6, var(--lamp-pad)); grid-auto-rows: var(--lamp-pad); gap: 4px; justify-content: center; flex: none; }
+.lampcolours .swatch { width: var(--lamp-pad); height: var(--lamp-pad); min-height: var(--lamp-pad); padding: 0; border: 1px solid var(--line); border-radius: 0; }
 
 /* a cube: its Size fader, its name and state, what it draws (4:3, as wide as the column), On and Off right under it */
 .lasers { display: flex; gap: 6px; flex: 1 1 auto; min-height: 0; min-width: 0; overflow-x: auto; overflow-y: hidden; }
 .cubecard { display: flex; gap: 6px; flex: 1 0 auto; min-height: 0; min-width: 0; }
 .sizestrip { width: 56px; }
-.cubecard .controls { display: flex; flex-direction: column; gap: 4px; flex: 1 0 166px; min-width: 166px; min-height: 0; }
-.cubecard .cubename { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: none; }
-.cubecard .cubename b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cubecard .controls { display: flex; flex-direction: column; gap: 4px; flex: var(--preview-grow) 0 var(--preview-w); min-width: var(--preview-w); min-height: 0; }
+.cubecard .cubename { display: flex; flex-wrap: var(--cube-wrap); align-items: baseline; column-gap: 10px; min-width: 0; flex: none; }
+.cubecard .cubename b { flex: var(--cube-name-flex); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cubecard .cubestate { font-size: 16px; font-weight: 700; }
 .cubecard .cubestate.is-armed { color: #ffd9d5; }
 .cubecard .cubestate.is-warn { color: var(--warn); }
 .cubecard .onoff { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex: none; }
 .cubecard .onoff button { min-height: 56px; font-size: 18px; font-weight: 700; }
 .cubecard .stopline { margin: 0; font-size: 12px; color: var(--warn); flex: none; }
-.cubecard .preview { position: relative; flex: none; width: 100%; aspect-ratio: 4 / 3; min-height: 0; background: var(--stagebg); border: 1px solid var(--line); }
+.cubecard .preview { position: relative; flex: none; width: 100%; aspect-ratio: var(--preview-ar); min-height: 0; background: var(--stagebg); border: 1px solid var(--line); }
 .cubecard .preview canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .cubecard .preview .cap { position: absolute; left: 6px; top: 4px; font-size: 11px; color: var(--muted); }
 
@@ -180,5 +216,28 @@ body.showdesk input.vfader::-moz-range-thumb { width: var(--target); height: 22p
 .links a { color: var(--text); text-decoration: none; border: 1px solid var(--line); padding: 0 12px; min-height: var(--target); display: inline-flex; align-items: center; }
 .links a:hover { border-color: var(--accent); color: var(--accent); }
 .midiline { font: 500 12px var(--mono); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* the Touch · Compact switch: two square buttons, the pressed one marked like Learn */
+.density { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.density .sep { color: var(--muted); }
+.density button { padding: 0 10px; font-size: 13px; }
+.density button[aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--accent); }
 #midiLearn.is-on { box-shadow: inset 0 0 0 3px var(--accent); }
 .miditext { position: fixed; right: 8px; bottom: calc(var(--links-h) + 4px); width: 420px; height: 260px; background: var(--pane); color: var(--text); border: 1px solid var(--line); border-radius: 0; font: 11px var(--mono); }
+
+/* ---- Compact: the same desk for a mouse on a laptop screen (the owner, 2026-10-31 20:5x, at the stage Mac, 1280 x 800
+   with a mouse: "fix the UI, it is huge … it's not the touch screen"). Only tokens change here; every size above stays
+   as the Touch density. show.js sets body[data-density] from the Touch · Compact switch in the bottom line (kept per
+   browser, diShowDesk.density.v1), or, until one is chosen, from the pointer: a fine one and no coarse one means Compact.
+   The rows add up to 620 px (48 + 62 + 182 + 296 + 32), so the page fits the stage Mac's ~1280 x 700 browser window with
+   air below; the lifts stay 24 px clear of Blackout all; nothing is under 22 px in both directions. */
+body.showdesk[data-density="compact"] {
+  --top-h: 48px; --top-pad: 2px; --status-h: 26px; --now-pad: 3px 8px; --now-font: 14px;
+  --scenes-h: 62px; --scene-btn-h: 52px;
+  --scene-dir: row; --scene-wrap: nowrap; --scene-cut: ellipsis; --scene-text-h: 15px; --scene-text-flex: 0 1 auto;
+  --look-font: 10px; --dots-top: auto; --dots-bottom: 6px;
+  --live-h: 182px; --pad: 26px; --row: 26px; --shape-h: 26px; --shape-font: 12px; --shapes-h: 55px; --fx-font: 12px; --knob-font: 12px;
+  --bank-min: 296px; --bank-max: 296px; --links-h: 32px;
+  --target: 26px; --fader-h: 20px; --track: 3px; --thumb-lw: 16px; --thumb-lh: 10px; --thumb-uw: 10px; --thumb-uh: 16px; --vfader-w: 22px;
+  --lamp-pad: 22px; --cube-wrap: wrap; --cube-name-flex: none; --preview-w: 132px; --preview-grow: 0; --preview-ar: 132 / 100;
+  --bo-w: 140px; --bo-h: 36px; --bo-ls: .02em; --lift-w: 90px; --lift-h: 28px; --desk-h: 28px;
+}

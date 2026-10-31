@@ -414,6 +414,7 @@ describe('a half that is missing says so', () => {
 // whole screen with no page scroll, the fixed rows are tokens that add up inside 758 px, and every list that can grow
 // scrolls inside its own area. The real fit is measured in a browser at 1278 x 758 (the session note has the numbers).
 describe('one screen, 1278 x 758, no page scroll', () => {
+    beforeAll(() => { document.querySelector('#density [data-density="touch"]').click() }) // these are the Touch sizes
     const css = fs.readFileSync(path.join(UI, 'show.css'), 'utf8')
     const token = (name) => Number((css.match(new RegExp(`--${name}:\\s*(\\d+)px`)) || [])[1])
     const rule = (selector) => (css.match(new RegExp(`(^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`)) || [])[2] || ''
@@ -421,7 +422,8 @@ describe('one screen, 1278 x 758, no page scroll', () => {
         const rows = ['top-h', 'scenes-h', 'live-h', 'links-h', 'bank-min'].map(token)
         expect(rows.every((n) => n > 0)).toBe(true)
         expect(rows.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(758)
-        expect(rule('body.showdesk')).toMatch(/grid-template-rows:\s*var\(--top-h\) var\(--scenes-h\) var\(--live-h\) minmax\(var\(--bank-min\), 1fr\) var\(--links-h\)/)
+        expect(rule('body.showdesk')).toMatch(/grid-template-rows:\s*var\(--top-h\) var\(--scenes-h\) var\(--live-h\) minmax\(var\(--bank-min\), var\(--bank-max\)\) var\(--links-h\)/)
+        expect(css).toMatch(/:root \{[^}]*--bank-max:\s*1fr;/) // Touch: the bank takes the rest of the screen
         expect(rule('body.showdesk')).toMatch(/height:\s*100vh/)
         expect(rule('body.showdesk')).toMatch(/overflow:\s*hidden/)
         expect(rule('html, body.showdesk')).toMatch(/overflow:\s*hidden/)
@@ -439,7 +441,8 @@ describe('one screen, 1278 x 758, no page scroll', () => {
         expect(token('target')).toBeGreaterThanOrEqual(44)
         expect(token('pad')).toBe(40)
         expect(token('scene-btn-h')).toBeGreaterThanOrEqual(44)
-        expect(rule('.blackoutall')).toMatch(/flex:\s*none;\s*width:\s*\d+px/)
+        expect(rule('.blackoutall')).toMatch(/flex:\s*none;\s*width:\s*var\(--bo-w\)/)
+        expect([token('bo-w'), token('bo-h'), token('lift-w'), token('lift-h'), token('top-h')]).toEqual([160, 44, 100, 32, 64]) // Touch: one dense top line (the owner, 21:1x)
         const stops = $('blackoutAll').parentElement
         expect(stops.parentElement.lastElementChild).toBe(stops)
         expect(stops.firstElementChild).toBe($('blackoutAll'))
@@ -464,11 +467,13 @@ describe('one screen, 1278 x 758, no page scroll', () => {
         expect(block('')).toMatch(/-webkit-appearance:\s*none;\s*appearance:\s*none/)
         for (const thumb of ['::-webkit-slider-thumb', '::-moz-range-thumb']) {
             expect(block(thumb)).toMatch(/border-radius:\s*0;/)
-            expect(block(thumb)).toMatch(/width:\s*var\(--target\);\s*height:\s*22px/) // 44 x 22: 44 where the hand finds it
-            expect(block(thumb)).toMatch(/background:\s*var\(--text\)/)
+            expect(block(thumb)).toMatch(/width:\s*var\(--thumb-lw\);\s*height:\s*var\(--thumb-lh\)/) // Touch 44 x 22: 44 where the hand finds it
+            expect(block(thumb)).toMatch(/background:\s*var\(--muted\)/)
         }
-        for (const track of ['::-webkit-slider-runnable-track', '::-moz-range-track']) expect(block(track)).toMatch(/height:\s*6px;\s*background:\s*var\(--field\);\s*border:\s*1px solid var\(--line\);\s*border-radius:\s*0;/)
-        expect(block('::-webkit-slider-thumb')).toMatch(/margin-top:\s*calc\(\(6px - 22px\) \/ 2\)/) // centred on the track
+        for (const track of ['::-webkit-slider-runnable-track', '::-moz-range-track']) expect(block(track)).toMatch(/height:\s*var\(--track\);\s*background:\s*var\(--line\);\s*border:\s*0;\s*border-radius:\s*0;/)
+        expect(flat).toMatch(/#live:not\(\.is-idle\) input\[type=range\]::-webkit-slider-thumb \{ background: var\(--text\); \}/) // full strength only for the live look
+        expect(block('::-webkit-slider-thumb')).toMatch(/margin-top:\s*calc\(\(var\(--track\) - var\(--thumb-lh\)\) \/ 2\)/) // centred on the track
+        expect(['thumb-lw', 'thumb-lh', 'thumb-uw', 'thumb-uh', 'fader-h', 'track'].map(token)).toEqual([24, 14, 14, 24, 32, 4]) // Touch: small caps, a 32 px hit area (the owner, 21:2x)
         expect(flat).not.toMatch(/accent-color/)
     })
     it('brings no colour of its own: every colour it names is one the laser desk already uses', () => {
@@ -478,6 +483,97 @@ describe('one screen, 1278 x 758, no page scroll', () => {
         const palette = ['#e0001a', '#f0eaff', '#7a20ff'] // the show palette's own colours (brief 2026-10-31), used only as swatches
         for (const c of named) expect(deskCss.toLowerCase().includes(c) || deskJs.toLowerCase().includes(c) || palette.includes(c), c).toBe(true)
         expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/font-family|@font-face|transition|animation/)
+    })
+})
+
+// Two densities (the owner, 2026-10-31 20:5x, at the stage Mac with a mouse: "fix the UI, it is huge … it's not the touch
+// screen"): Touch keeps the sizes above; Compact is one block of tokens on body[data-density="compact"]; the switch is the
+// only logic. The real fit is measured in a browser at 1278 x 758 and 1280 x 700 (the session note has the numbers).
+describe('two densities: Touch and Compact', () => {
+    const css = fs.readFileSync(path.join(UI, 'show.css'), 'utf8')
+    const token = (name) => Number((css.match(new RegExp(`--${name}:\\s*(\\d+)px`)) || [])[1])
+    const block = (css.match(/\nbody\.showdesk\[data-density="compact"\]\s*\{([^}]*)\}/) || [])[1] || ''
+    const compact = (name) => Number((block.match(new RegExp(`(?:^|[\\s;])--${name}:\\s*(\\d+)px`)) || [])[1])
+    const buttons = () => [...$('density').querySelectorAll('button[data-density]')]
+    it('a Touch · Compact switch sits in the bottom line, next to the MIDI line', () => {
+        expect($('density').closest('.links')).not.toBeNull()
+        expect($('density').nextElementSibling).toBe($('midiLine'))
+        expect(buttons().map((b) => b.textContent)).toEqual(['Touch', 'Compact'])
+        expect($('density').textContent.replace(/\s+/g, '')).toBe('Touch·Compact')
+        expect(buttons().every((b) => !b.dataset.midi)).toBe(true) // MIDI never reaches it
+    })
+    it('a press sets body[data-density] and keeps the choice in this browser; nothing is sent', async () => {
+        posts = []
+        buttons()[1].click()
+        expect(document.body.dataset.density).toBe('compact')
+        expect(window.localStorage.getItem('diShowDesk.density.v1')).toBe('compact')
+        expect(buttons().map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true'])
+        buttons()[0].click()
+        expect(document.body.dataset.density).toBe('touch')
+        expect(window.localStorage.getItem('diShowDesk.density.v1')).toBe('touch')
+        expect(buttons().map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false'])
+        await settle()
+        expect(posts).toEqual([])
+    })
+    it('the stored choice wins; until one is made, a fine pointer and no coarse one means Compact, anything else Touch', () => {
+        const pick = window.DiShowDesk.pickDensity
+        const media = (fine, coarse) => (q) => ({ matches: q === '(pointer: fine)' ? fine : q === '(any-pointer: coarse)' ? coarse : false })
+        expect(pick(null, media(true, false))).toBe('compact')
+        expect(pick(null, media(true, true))).toBe('touch')
+        expect(pick(null, media(false, true))).toBe('touch')
+        expect(pick(null, null)).toBe('touch') // jsdom and old browsers: no matchMedia
+        expect(pick(null, () => { throw new Error('no') })).toBe('touch')
+        expect(pick('touch', media(true, false))).toBe('touch')
+        expect(pick('compact', media(false, true))).toBe('compact')
+        expect(pick('huge', media(true, false))).toBe('compact')
+    })
+    it('Compact is tokens only, with the asked sizes; the rows fit a 1280 x 700 window with air below', () => {
+        const decls = block.split(';').map((d) => d.trim()).filter(Boolean)
+        expect(decls.length).toBeGreaterThan(30)
+        for (const d of decls) expect(d).toMatch(/^--[a-z-]+:\s*\S/)
+        const want = { 'thumb-lw': 16, 'thumb-lh': 10, 'thumb-uw': 10, 'thumb-uh': 16, track: 3, 'fader-h': 20, pad: 26, 'lamp-pad': 22, 'scene-btn-h': 52,
+            'shape-h': 26, 'shape-font': 12, 'fx-font': 12, 'knob-font': 12, row: 26, 'preview-w': 132, 'bo-w': 140, 'bo-h': 36, 'lift-w': 90, 'lift-h': 28, 'top-h': 48, 'look-font': 10 }
+        for (const [name, px] of Object.entries(want)) expect(compact(name), name).toBe(px)
+        expect(block).toMatch(/--preview-ar:\s*132 \/ 100;/)
+        expect(block).toMatch(/--scene-dir:\s*row;/) // the number and the name on one line
+        expect(block).not.toMatch(/--master-fader-w/) // the masters stay 44 px wide
+        expect(token('master-fader-w')).toBe(44)
+        const rows = ['top-h', 'scenes-h', 'live-h', 'bank-max', 'links-h'].map(compact)
+        expect(rows.every((n) => n > 0)).toBe(true)
+        expect(rows.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(660)
+        expect(compact('bank-min')).toBe(compact('bank-max'))
+        expect(compact('scene-btn-h') + 10).toBeLessThanOrEqual(compact('scenes-h'))
+        expect(compact('shapes-h')).toBeGreaterThanOrEqual(2 * compact('shape-h') + 3)
+        expect(compact('pad') + compact('shapes-h') + 3 * compact('row') + 4 * 4 + 2 * 2 + 1).toBeLessThanOrEqual(compact('live-h'))
+        expect(compact('lift-h') + 2 * compact('top-pad')).toBeLessThanOrEqual(compact('top-h')) // the lifts side by side
+        expect(compact('bo-h') + 2 * compact('top-pad')).toBeLessThanOrEqual(compact('top-h'))
+        for (const [a, b] of [['pad', 'pad'], // the inputs are the controls; the caps are only drawn ['lamp-pad', 'lamp-pad'], ['shape-h', 'target'],
+            ['row', 'row'], ['lift-w', 'lift-h'], ['bo-w', 'bo-h'], ['target', 'target'], ['vfader-w', 'vfader-w']]) {
+            expect(Math.max(compact(a), compact(b)), `${a} x ${b}`).toBeGreaterThanOrEqual(22)
+        }
+    })
+    it('the top line has the desk switch after the mark: Show (this page, marked) · Light · Laser, plain links in this window', () => {
+        const sw = document.querySelector('.showbar > .deskswitch')
+        expect(sw).not.toBeNull()
+        expect(sw.previousElementSibling.classList.contains('homelink')).toBe(true)
+        const links = [...sw.querySelectorAll('a')]
+        expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([['Show', './'], ['Light', '../light/'], ['Laser', '../laser/']])
+        expect(links.map((a) => a.getAttribute('aria-current'))).toEqual(['page', null, null])
+        expect(links.every((a) => !a.hasAttribute('target'))).toBe(true)
+        expect(token('desk-h')).toBeGreaterThanOrEqual(44)
+        expect(compact('desk-h')).toBeGreaterThanOrEqual(28)
+        expect([...document.querySelectorAll('.links a')].map((a) => a.getAttribute('href'))).toEqual(['../laser/', '../light/']) // the bottom links stay
+    })
+    it('the scene row is labelled just Scenes; its explainer is the row\'s title, its words kept for screen readers', () => {
+        expect(document.querySelector('.showscenes .panehead h2').textContent).toBe('Scenes')
+        expect(document.querySelector('.showscenes').title).toBe($('scenesNote').textContent)
+        expect($('scenesNote').textContent.length).toBeGreaterThan(0)
+        expect(css).toMatch(/\n\.showscenes \.panehead \.muted \{ position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect\(0 0 0 0\)/)
+    })
+    it('the lifts stand 24 px clear of Blackout all in both densities', () => {
+        expect(token('gap-stop')).toBeGreaterThanOrEqual(24)
+        expect(Number.isNaN(compact('gap-stop')) || compact('gap-stop') >= 24).toBe(true)
+        expect(css).toMatch(/\n\.stops \{[^}]*gap:\s*var\(--gap-stop\)/)
     })
 })
 
