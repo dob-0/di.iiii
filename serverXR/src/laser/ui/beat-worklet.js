@@ -1,6 +1,7 @@
 // The laser desk's beat listener, on the audio thread (from Emily's Jam VJ, ~/dev/jam-vj/beat-worklet.js). Every 512
 // samples it reports how much energy the bass (a low-pass at 120 Hz, where the kick lives) and the whole signal carried,
 // with the audio clock time, so the page can find the beat (listen.js). It runs even when the page is behind others.
+/* global AudioWorkletProcessor, sampleRate, currentTime, registerProcessor -- the audio thread's own names */
 class BeatListener extends AudioWorkletProcessor {
   constructor () {
     super()
