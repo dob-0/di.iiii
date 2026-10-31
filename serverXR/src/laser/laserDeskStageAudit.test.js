@@ -76,7 +76,7 @@ describe('row 25: a placement out of range is refused, not clamped', () => {
         const { desk } = deskOn(fake())
         expect(desk.setCube('cube-1', { y: -5 })).toMatchObject({ ok: false, status: 400 })
         expect(desk.setCube('cube-1', { x: 'abc' })).toMatchObject({ ok: false, status: 400 })
-        expect(desk.setCube('cube-1', { size: 0.1 }).error).toMatch(/size: 0.1 is outside 0.3 to 2/)
+        expect(desk.setCube('cube-1', { size: 0.1 }).error).toMatch(/size: 0.1 is outside 0.3 to 3/)
         expect(cube(desk)).toMatchObject({ y: 0, x: 0, size: 1 })
     })
     it('a value in range is kept, the edges included', () => {
@@ -147,5 +147,27 @@ describe('row 29: the tick catches its own errors', () => {
         engine.broken = null
         desk.editLive({ size: 0.4 })
         expect(engine.sent['cube-1'].some(isLit)).toBe(true)
+    })
+})
+
+// Owner 2026-10-31 15:5x "lasers are small now" (ledger N1590): a cube's Size goes up to 3, so the show's 0.3 looks can
+// reach TouchDesigner's ±0.79 (docs/moxir/devices/lasercube.md, TESTED 2026-10-17); a picture still stops at the field's edge.
+describe('a cube Size up to 3 (N1590)', () => {
+    it('Size 2.8 is kept, 3 is the edge, 3.1 is refused', () => {
+        const { desk } = deskOn(fake())
+        expect(desk.setCube('cube-1', { size: 2.8 })).toMatchObject({ ok: true })
+        expect(cube(desk)).toMatchObject({ size: 2.8 })
+        expect(desk.setCube('cube-1', { size: 3 })).toMatchObject({ ok: true })
+        expect(desk.setCube('cube-1', { size: 3.1 }).error).toMatch(/size: 3.1 is outside 0.3 to 3/)
+        expect(cube(desk)).toMatchObject({ size: 3 })
+    })
+    it('a 0.3 ring at Size 2.8 spans about 0.84 of the half-field, and a 0.5 ring at Size 3 never leaves the field', () => {
+        const { lookPointsAt, normaliseLook } = require('./laserDesk')
+        const ring = (size) => normaliseLook({ id: 'r', name: 'r', shape: 'circle', colour: '#ff0000', level: 1, size, height: 0, points: 300 })
+        const reach = (pts) => Math.max(...pts.filter(isLit).map((p) => Math.abs(p[0])))
+        const at = (look, size) => lookPointsAt(look, { t: 0, clock: { bpm: 120, zero: 0 }, cube: { on: true, flipX: false, size, x: 0, y: 0, order: 0 } })
+        expect(reach(at(ring(0.3), 2))).toBeCloseTo(0.6, 1)
+        expect(reach(at(ring(0.3), 2.8))).toBeCloseTo(0.84, 1)
+        for (const p of at(ring(0.5), 3)) { expect(Math.abs(p[0])).toBeLessThanOrEqual(1); expect(Math.abs(p[1])).toBeLessThanOrEqual(1) }
     })
 })

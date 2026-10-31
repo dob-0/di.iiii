@@ -780,7 +780,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
                 el('td', {}, output),
                 el('td', {}, check('on')),
                 el('td', {}, check('flipX')),
-                el('td', {}, slider('size', 0.3, 2, 0.05)),
+                el('td', {}, slider('size', 0.3, 3, 0.05)),
                 el('td', {}, slider('x', -1, 1, 0.01)),
                 el('td', {}, slider('y', -1, 1, 0.01)),
                 el('td', {}, now)

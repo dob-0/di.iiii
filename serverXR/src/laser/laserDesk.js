@@ -143,7 +143,7 @@ const normaliseLook = (raw = {}, base = LOOK_DEFAULTS) => {
 // (measured: 8 of 32 seed looks stop at 0.1, none at 0.3; review 1218 S3).
 const CUBE_SIZE_MIN = 0.3
 
-const CUBE_RANGE = Object.freeze({ size: [CUBE_SIZE_MIN, 2], x: [-1, 1], y: [-1, 1], order: [-999, 999] })
+const CUBE_RANGE = Object.freeze({ size: [CUBE_SIZE_MIN, 3], x: [-1, 1], y: [-1, 1], order: [-999, 999] })
 
 /**
  * A cube's place on the desk (CUBE_DEFAULTS, shared/laserLook.cjs), every field in range. `strict` (a person's change):
