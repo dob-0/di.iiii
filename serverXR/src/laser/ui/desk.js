@@ -618,6 +618,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         const live = editing()
         const box = $('page-control').querySelector('.editor')
         box.classList.toggle('is-empty', !live)
+        $('editor').toggleAttribute('inert', !live) // nothing open: Edit stays drawn (dimmed in Grid) but takes no focus or click; Classic hides it
         const onLaser = Boolean(live && desk.live && desk.liveId === live.id)
         const note = $('previewNote')
         note.classList.toggle('is-live', onLaser)
@@ -626,7 +627,11 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
             ? 'On the laser: your changes show there at once'
             : 'Preview only. Click the look’s picture to send it to the laser')
             + (changed ? `. Save keeps your changes as a new scene; the saved ${live.name} stays as it was` : '')
-        if (!live) return
+        if (!live) { // Edit holds nothing: close the palette, keep the shape, colour and cube chips drawn (none marked) so the panel has no holes
+            if (!$('colourChooser').hidden) showChooser(false)
+            if (desk) { renderShapes(); renderSwatches(); renderLookCubes() }
+            return
+        }
         if (!held('name') && document.activeElement !== $('lookName')) $('lookName').value = live.name
         if (!held('shape')) $('cycleMode').checked = live.shape.includes(',') || live.cycle > 0
         $('cycleField').hidden = !$('cycleMode').checked
@@ -1690,6 +1695,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
                 words = !items.length ? 'The light desk has no scenes.' : on ? `Lights on: ${on.name}.` : 'No light scene is on yet.'
             }
             setText(sceneNote, words)
+            sceneBox.parentElement.classList.toggle('no-scenes', !items.length) // no light scenes: the Scenes row is one line (Grid CSS)
             sceneNote.className = bad ? 'muted is-error' : 'muted'
         }
         const pollScenes = async () => {

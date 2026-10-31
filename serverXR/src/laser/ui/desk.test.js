@@ -333,3 +333,19 @@ describe('the follow status is short and its full sentence is the title; Setup >
         expect(document.querySelector('#page-setup .notes').textContent).not.toMatch(/DI_LASER/)
     })
 })
+
+describe('Edit at rest is drawn but inert, and a look frees it (2026-11-01: the Grid layout shows Edit dimmed instead of hiding it)', () => {
+    const body = () => document.querySelector('#editor')
+    it('nothing open: #editor is inert and still draws its shape chips and 17 swatches, none marked; a click on a look name frees it; Esc shuts it again', async () => {
+        key('Escape'); key('Escape'); await settle()
+        expect(body().hasAttribute('inert')).toBe(true)
+        expect(document.querySelector('.editor').classList.contains('is-empty')).toBe(true)
+        expect(document.querySelectorAll('#shapes .chip').length).toBeGreaterThan(0)
+        expect(document.querySelectorAll('#swatches .swatch')).toHaveLength(17)
+        expect(document.querySelectorAll('#swatches .swatch.is-on')).toHaveLength(0)
+        document.querySelector('#tiles .tile .name').click(); await settle()
+        expect(body().hasAttribute('inert')).toBe(false)
+        key('Escape'); await settle()
+        expect(body().hasAttribute('inert')).toBe(true)
+    })
+})

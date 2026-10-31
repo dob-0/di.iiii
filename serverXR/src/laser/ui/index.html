@@ -29,9 +29,9 @@
     <button class="page-tab is-active" data-page="control">Control</button>
     <button class="page-tab" data-page="setup">Setup</button>
   </nav>
-  <!-- Layout (2026-10-31, the owner: "the place is not used right, the windows inside are managed not right"): Grid is the new default, Classic is the layout before it, kept whole. Kept per browser (layoutMode.js); ?layout=classic|grid too. Shown from 1240x640 up; below that the page is Classic. -->
+  <!-- Layout (2026-10-31, the owner: "the place is not used right, the windows inside are managed not right"): Grid is the new default, Classic is the layout before it, kept whole. Kept per browser (layoutMode.js); ?layout=classic|grid too. The switch is shown from 1240x640 up; the Grid itself applies from 1000x600, and below that the page is Classic. From 1240 px wide Edit is a column at the right under the cubes, below that a strip at the bottom; the first paint is Edit at rest (is-empty, inert), desk.js sets both from then on (2026-11-01). -->
   <div class="layoutswitch" role="group" aria-label="Layout">
-    <button type="button" data-layout="grid" aria-pressed="false" title="Grid: the Looks fill the page, the cubes and masters sit at the right, every edit group is in a strip at the bottom">Grid</button>
+    <button type="button" data-layout="grid" aria-pressed="false" title="Grid: the Looks fill the page; the masters, the cubes and Edit sit at the right (below 1240 px wide, Edit is a strip at the bottom)">Grid</button>
     <button type="button" data-layout="classic" aria-pressed="false" title="Classic: the layout before 2026-10-31, with Edit as a column at the right">Classic</button>
   </div>
   <!-- Row 1, right of the page tabs: what the desk does. The follow status sits here (fixed width, ellipsis), never among the stops. -->
@@ -113,7 +113,7 @@
     <div class="cubes" id="stage"></div>
   </section>
 
-  <aside class="editor pane" aria-label="Edit a look">
+  <aside class="editor pane is-empty" aria-label="Edit a look">
     <div class="panehead">
       <h2>Edit</h2>
       <input id="lookName" class="namefield" maxlength="40" placeholder="Name" aria-label="Look name">
@@ -122,7 +122,7 @@
       <canvas id="preview" aria-label="Preview of the look open in Edit"></canvas>
       <span class="muted previewnote" id="previewNote"></span>
     </div>
-    <div class="editbody" id="editor">
+    <div class="editbody" id="editor" inert>
       <div class="group" id="followGroup">
         <div class="grouphead"><span>Follows light scene</span></div>
         <select id="followsScene" title="The light scene that puts this look live while Follow light scenes is on. One scene, one look."></select>

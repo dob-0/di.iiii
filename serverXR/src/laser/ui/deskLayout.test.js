@@ -5,7 +5,9 @@
 // 1. every Grid rule is under html[data-layout="grid"] inside ONE size query at the end of desk.css; nothing of Classic sits under it or above it with a data-layout in it,
 // 2. nothing is lost: every id of Classic's index.html is still there, the .editbody child order the Grid rules count on is pinned, the base rules of the stops are the ones Classic had,
 // 3. the signature: no radius but 0, no colour literal (the page's own tokens), no :has() and no aspect-ratio (browser risk), nothing hidden without its words in a title,
-// 4. the four fixes of the build (the hint is an ellipsis not a hole, the palette is docked in the strip, the stops stay above the Keys sheet).
+// 4. the four fixes of the build (the hint is an ellipsis not a hole, the palette is docked in the strip, the stops stay above the Keys sheet),
+// 5. from 1240 px wide Edit is a column at the right (one query nested at the end of the Grid block; the strip stays below that), Edit holding nothing is drawn, dimmed and inert with its help in its own cell,
+//    Follows, Cubes and Copy/Delete never share a cell, and the Scenes row is one line when the light desk has none (2026-11-01, the owner: "why there are still colour full things and still too many gaps in the ui").
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -34,6 +36,25 @@ const gridRules = gridBlock ? rulesOf(gridBlock.body) : []
 const afterRules = gridBlock ? rulesOf(css.slice(gridBlock.end + 1)) : []
 const beforeCss = queryAt >= 0 ? css.slice(0, queryAt) : css
 const grid = (selector) => gridRules.find((r) => r.selector === `${SCOPE} ${selector}`)?.declarations ?? null
+// The wide query: nested at the end of the Grid block, so grid() keeps returning the FIRST (base) rule and wide() the rule of the column.
+const WIDE_QUERY = '@media (min-width: 1240px)'
+const gridBody = gridBlock ? stripComments(gridBlock.body) : ''
+const wideAt = gridBody.indexOf(WIDE_QUERY)
+const wideBlock = wideAt >= 0 ? blockAt(gridBody, gridBody.indexOf('{', wideAt)) : null
+const wideRules = wideBlock ? rulesOf(wideBlock.body) : []
+const wide = (selector) => wideRules.find((r) => r.selector === `${SCOPE} ${selector}`)?.declarations ?? null
+// grid-area is "row-start / column-start / row-end / column-end" ("row / column" is one cell); two boxes meet when both their row ranges and their column ranges overlap.
+const areaOf = (declarations) => {
+  const m = declarations?.match(/grid-area:\s*([\d\s/]+)(?:;|$)/)
+  if (!m) return null
+  const n = m[1].split('/').map((x) => Number(x.trim()))
+  return n.length === 2 ? { r1: n[0], c1: n[1], r2: n[0] + 1, c2: n[1] + 1 } : { r1: n[0], c1: n[1], r2: n[2], c2: n[3] }
+}
+const meet = (a, b) => a.r1 < b.r2 && b.r1 < a.r2 && a.c1 < b.c2 && b.c1 < a.c2
+const expectDisjoint = (cells) => {
+  for (const [name, box] of cells) expect(box, `${name} has a grid-area`).not.toBeNull()
+  for (let i = 0; i < cells.length; i++) for (let j = i + 1; j < cells.length; j++) expect(meet(cells[i][1], cells[j][1]), `${cells[i][0]} and ${cells[j][0]} share a cell`).toBe(false)
+}
 // A top-level Classic rule (a selector at the start of a line), whitespace folded.
 const classic = (selector) => {
   const escaped = selector.replace(/[.#]/g, '\\$&')
@@ -83,8 +104,8 @@ describe('nothing is lost', () => {
   it('the .editbody children keep their order: the Grid rules place Shape as child 2 and Colour as child 3', () => {
     const label = (c) => (c.id ? `#${c.id}` : c.querySelector('#shapes') ? 'group:Shape' : c.querySelector('#swatches') ? 'group:Colour' : c.querySelector('#lookCubes') ? 'group.multi:Cubes' : `.${[...c.classList].join('.')}`)
     expect([...doc.getElementById('editor').children].map(label)).toEqual(['#followGroup', 'group:Shape', 'group:Colour', '#pictureFields', '#moveFields', 'group.multi:Cubes', '.actions'])
-    expect(grid('.editbody > .group:nth-child(2)')).toMatch(/grid-area: 2 \/ 1 \/ 3 \/ 5/)
-    expect(grid('.editbody > .group:nth-child(3)')).toMatch(/grid-area: 1 \/ 1/)
+    expect(grid('.editbody > .group:nth-child(2)')).toMatch(/grid-area: 3 \/ 1 \/ 4 \/ 4/)
+    expect(grid('.editbody > .group:nth-child(3)')).toMatch(/grid-area: 1 \/ 1 \/ 3 \/ 2/)
   })
   it('the base rules of the top bar and the stops are the ones Classic had (the Grid block overrides them only under its own scope)', () => {
     expect(classic('.stops')).toBe('flex: none; margin-left: auto; display: flex; align-items: center; gap: 6px; min-height: 30px;')
@@ -180,5 +201,102 @@ describe('the fixes of the build', () => {
     expect(grid('.editbody .chip')).toMatch(/min-height: 24px/)
     expect(grid('.editbody .swatches')).toMatch(/repeat\(9, 24px\)/)
     expect(grid('.editbody > .actions button')).toMatch(/min-height: 28px/)
+  })
+})
+
+describe('Edit in the right column from 1240 px wide (2026-11-01, the owner: "why there are still colour full things and still too many gaps in the ui")', () => {
+  it('there is exactly one wide query, nested as the LAST thing in the Grid block, and every rule in it is scoped', () => {
+    expect(css.split(WIDE_QUERY).length - 1).toBe(1)
+    expect(wideBlock, 'the wide query is not nested inside the Grid block').not.toBeNull()
+    expect(wideRules.length).toBeGreaterThan(30)
+    expect(wideRules.flatMap((r) => r.selector.split(',').map((s) => s.trim())).filter((s) => !s.startsWith(SCOPE)), 'a wide rule that is not scoped would change Classic').toEqual([])
+    expect(gridBody.slice(wideBlock.end + 1).trim(), 'nothing follows the wide query inside the Grid block').toBe('')
+  })
+  it('the strip is kept below it (the 196 px row at the bottom); from it the page has five rows, a 440 px rail, and Edit is the last cell of the rail with its own scroll', () => {
+    expect(gridRules.find((r) => r.selector === SCOPE)?.declarations).toMatch(/--g-edit: 196px/)
+    expect(grid('body')).toMatch(/grid-template-rows: var\(--g-bar\) var\(--g-tools\) var\(--g-opts\) var\(--g-stage\) minmax\(0, 1fr\) var\(--g-edit\);/)
+    expect(grid('.editor')).toMatch(/grid-area: 6 \/ 1 \/ 7 \/ 7/)
+    expect(wideRules.find((r) => r.selector === SCOPE)?.declarations).toMatch(/--g-rail: 440px/)
+    expect(Number(wideRules.find((r) => r.selector === SCOPE)?.declarations.match(/--g-tools: (\d+)px/)?.[1]), 'the masters need 73 px inside their border (measured 2026-11-01: 73 against 70 at 72 px)').toBeGreaterThanOrEqual(75)
+    expect(wide('body')).toMatch(/grid-template-rows: var\(--g-bar\) var\(--g-tools\) var\(--g-opts\) var\(--g-stage\) minmax\(0, 1fr\);/)
+    expect(wide('body')).not.toMatch(/--g-edit/)
+    expect(wide('.editor')).toMatch(/grid-area: 5 \/ 6 \/ 6 \/ 7/)
+    expect(grid('.editor')).toMatch(/overflow-y: auto/)
+    expect(grid('.editor')).toMatch(/position: relative/)
+    expect(wide('.notice')).toMatch(/grid-area: 5 \/ 1 \/ 6 \/ 6/)
+    expect(wide('#page-setup')).toMatch(/grid-area: 2 \/ 1 \/ 6 \/ 6/)
+    expect(wide('.editbody > .group:nth-child(3) > .chooser')).toMatch(/position: static/)
+  })
+  it('every group has its own cell in the column, in the DOM order (the tab order): Follows, Shape, Colour, Picture, Movement, Copy/Delete; with 2+ cubes the Cubes sit between Picture and Copy', () => {
+    const cells = [['.editbody > #followGroup', '1 / 1 / 2 / 3'], ['.editbody > .group:nth-child(2)', '2 / 1 / 3 / 3'], ['.editbody > .group:nth-child(3)', '3 / 1 / 4 / 3'],
+      ['.editbody > #pictureFields', '4 / 1 / 7 / 2'], ['.editbody > #moveFields', '4 / 2 / 5 / 3'], ['.editbody > .actions', '6 / 2 / 7 / 3'],
+      ['body:not(.one-cube) .editbody > #pictureFields', '4 / 1 / 5 / 2'], ['body:not(.one-cube) .editbody > .group.multi', '5 / 1 / 6 / 3']]
+    for (const [selector, area] of cells) expect(wide(selector), selector).toContain(`grid-area: ${area};`)
+    const one = ['.editbody > #followGroup', '.editbody > .group:nth-child(2)', '.editbody > .group:nth-child(3)', '.editbody > #pictureFields', '.editbody > #moveFields', '.editbody > .actions']
+    expectDisjoint(one.map((s) => [s, areaOf(wide(s))]))
+    const many = one.map((s) => (s.endsWith('#pictureFields') ? `body:not(.one-cube) ${s}` : s)).concat('body:not(.one-cube) .editbody > .group.multi')
+    expectDisjoint(many.map((s) => [s, areaOf(wide(s))]))
+  })
+  it('every control the column sizes is 22 px or more, and the value track holds "-0.125/b" in 10.5 px mono (8 x 0.6 x 10.5 = 50.4 px; the track is 52)', () => {
+    expect(wide('.editbody .field input[type=range]')).toMatch(/height: 22px/)
+    expect(wideRules.find((r) => r.selector.includes('.addcolour'))?.declarations).toMatch(/height: 22px/)
+    expect(wide('#followsScene')).toMatch(/min-height: 26px/)
+    const track = Number(wide('.editbody .field')?.match(/grid-template-columns: 70px minmax\(0, 1fr\) (\d+)px/)?.[1])
+    expect(track).toBe(52)
+    expect(track).toBeGreaterThanOrEqual(8 * 0.6 * 10.5)
+  })
+})
+
+describe('the help is never over a control; Edit at rest is drawn, dimmed and inert', () => {
+  it('the help and the Edit body never share a cell: in the strip (row 2, column 1 against rows 1-2, column 2) and in the column (rows 2-3 against row 3)', () => {
+    for (const [help, body] of [[grid('.editor > .empty'), grid('.editor > .editbody')], [wide('.editor > .empty'), wide('.editor > .editbody')]]) {
+      expect(areaOf(help), help).not.toBeNull()
+      expect(areaOf(body), body).not.toBeNull()
+      expect(meet(areaOf(help), areaOf(body)), `${help} against ${body}`).toBe(false)
+    }
+  })
+  it('in the column the help keeps its own row: min-height auto (an auto row first takes its item\'s minimum size, and the strip\'s min-height 0 let the row collapse so the help lay over the body: 12 overlaps measured at 1280x770)', () => {
+    expect(grid('.editor > .empty')).toMatch(/min-height: 0/)
+    expect(wide('.editor > .empty')).toMatch(/min-height: auto/)
+    expect(wide('.editor > .empty')).not.toMatch(/overflow-y|[^-]height: \d/)
+  })
+  it('Edit holding nothing is dimmed (opacity .45) with grey swatches, and it is not hidden (so the Looks never jump when a look opens)', () => {
+    expect(grid('.editor.is-empty > .editbody')).toMatch(/opacity: \.45/)
+    expect(grid('.editor.is-empty .swatches')).toMatch(/filter: grayscale\(1\)/)
+    expect(grid('.editor.is-empty > .editbody')).not.toMatch(/filter|display/)
+  })
+  it('Classic is unchanged: it still hides the body and the preview of an empty Edit, and shows the help only while Edit is empty', () => {
+    expect(stripComments(beforeCss)).toMatch(/\.editor\.is-empty \.editbody, \.editor\.is-empty \.preview \{ display: none; \}/)
+    expect(stripComments(beforeCss)).toMatch(/\.editor:not\(\.is-empty\) \.empty \{ display: none; \}/)
+  })
+  it('the first paint is the rest state (the aside is is-empty, the body is inert) and desk.js sets both from then on', () => {
+    expect(doc.querySelector('aside.editor').classList.contains('is-empty')).toBe(true)
+    expect(doc.getElementById('editor').hasAttribute('inert')).toBe(true)
+    expect(fs.readFileSync(path.join(here, 'desk.js'), 'utf8')).toMatch(/\$\('editor'\)\.toggleAttribute\('inert', !live\)/)
+  })
+})
+
+describe('Follows, Cubes and Copy/Delete never share a cell (measured 2026-11-01 with 6 cubes: the Follows select lay over the Cubes chips, 1360 + 726 px2)', () => {
+  it('in the strip, each group has its own cell', () => {
+    const names = ['#followGroup', '.group:nth-child(2)', '.group:nth-child(3)', '#pictureFields', '#moveFields', '.group.multi', '.actions']
+    expectDisjoint(names.map((s) => [s, areaOf(grid(`.editbody > ${s}`))]))
+  })
+  it('no body:not(.one-cube) rule puts the Cubes in row 1, where the Follows select is', () => {
+    const multi = gridRules.filter((r) => /body:not\(\.one-cube\)/.test(r.selector) && /\.group\.multi/.test(r.selector))
+    for (const r of multi) expect(areaOf(r.declarations).r1, r.selector).not.toBe(1)
+  })
+})
+
+describe('Scenes: one line when the light desk has none', () => {
+  it('desk.js marks the Looks pane .no-scenes, and the row shrinks to one 24 px line whose words are clipped (their full words are the title: layoutMode.js CLIPPED), the link question moving up with it', () => {
+    expect(fs.readFileSync(path.join(here, 'desk.js'), 'utf8')).toMatch(/toggle\('no-scenes'/)
+    expect(grid('.bank.no-scenes')).toMatch(/--g-scenes: 24px/)
+    expect(grid('.bank.no-scenes > .scenerow')).toMatch(/grid-template-columns: minmax\(0, 1fr\)/)
+    expect(grid('.bank.no-scenes > .scenerow')).toMatch(/padding: 2px 8px/)
+    expect(grid('.bank.no-scenes > .scenerow > .scenehead')).toMatch(/flex-direction: row/)
+    expect(grid('.bank.no-scenes > .scenerow .scenehead .muted')).toMatch(/white-space: nowrap/)
+    expect(grid('.bank.no-scenes > .scenerow .scenehead .muted')).toMatch(/text-overflow: ellipsis/)
+    expect(grid('.bank > .removeask')).toMatch(/top: calc\(var\(--g-scenes\)/)
+    expect(fs.readFileSync(path.join(here, 'layoutMode.js'), 'utf8')).toMatch(/CLIPPED = \[[^\]]*'sceneNote'/)
   })
 })

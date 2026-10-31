@@ -1736,3 +1736,17 @@ give it a min-content floor), lets `.cap` wrap, and in the holds state sets the 
 (Compact `--hold-h: 30px`). Re-measured in this build by `holds-probe.cjs`: label 70.3 x 29.9 (Touch 73 x 29.9), buttons 77.5 x 30
 (Touch 80.1 x 32), no overlap, nothing cut, 0 page errors; without the holds state the buttons stay 120.3 x 28.
 Guard: `showDesk.test.js` "nothing is lost: every Upright rule is still in show.css …" (the track, the wrap and the holds-state rule are asserted).
+
+## The laser desk (Grid): Edit's help lay over the slider labels with nothing open (2026-11-01, the owner: "why there are still colour full things and still too many gaps in the ui")
+
+Symptom: with no look open, the Edit strip drew its help ("Click a look's NAME to open it…", "My colours + opens a palette…") over the labels Rainbow, Size, Spin, Mirror and the Follows select. Measured on the real page, nothing open: 13 and 9 text overlaps (real bank, 1280x770 and 1598x771), 15 and 11 (fresh bank), every one against `p#editorEmpty`.
+Cause, three layers found one after the other: (1) the Grid's `.editor > .editbody { display: grid }` (specificity 0,3,1) outranks Classic's `.editor.is-empty .editbody { display: none }` (0,3,0), so Edit was drawn at rest and nobody had planned that; (2) the help had the body's own cells (`grid-area: 1 / 2 / 3 / 3`); (3) with the help moved into its own row in the column, the strip's `min-height: 0` still applied, and an `auto` grid row first takes its item's minimum size, which was 0: the row collapsed and the text overflowed onto the body (12 overlaps measured at 1280x770 with the first build of the column).
+Fix: Edit holding nothing is drawn where it is ON PURPOSE (nothing jumps when a look opens): dimmed (`opacity: .45`, grey swatches), inert (`desk.js` sets `inert` on `#editor` while nothing is open; `index.html` paints the first frame that way), and the help sits in its own cell where the preview goes (strip: row 2, column 1; column: row 2 with `min-height: auto`). Measured after: 0 overlaps, text and control, nothing open and a look open, both banks, four window sizes.
+Guard: `deskLayout.test.js` "the help is never over a control; Edit at rest is drawn, dimmed and inert" (the help's cell and the body's cell do not meet in the strip or the column, `min-height: auto` in the column, opacity, grayscale, Classic's two rules unchanged, the first paint) and `desk.test.js` "Edit at rest is drawn but inert, and a look frees it".
+
+## The laser desk (Grid): Follows lay over Cubes with two or more cubes (2026-11-01, found while measuring the same screenshot)
+
+Symptom: with the six simulated cubes, the "Follows light scene" select lay over the Cubes chips in the Edit strip: control against control 1360 + 726 px2, text 307 + 62 px2 at 1598x771.
+Cause: both had `grid-area: 1 / 4`; the rule `body:not(.one-cube) .editbody > .group.multi { grid-area: 1 / 4 }` put the Cubes into the cell of Follows.
+Fix: every group has a cell of its own in the strip (Colour 1/1/3/2, Picture 1/2/3/3, Movement 1/3/2/4, Follows 1/4/2/5, Cubes 2/3/3/5, Shape 3/1/4/4, Copy and Delete 3/4/4/5), the three `body:not(.one-cube)` rules are gone, and the column from 1240 px has its own placement (Cubes 5/1/6/3 with two or more cubes, Picture shortened to row 4).
+Guard: `deskLayout.test.js` "Follows, Cubes and Copy/Delete never share a cell" (the cells are pairwise apart in the strip, and in the column; no `body:not(.one-cube)` rule puts the Cubes in row 1).

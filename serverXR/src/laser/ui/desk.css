@@ -338,10 +338,12 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
 .scenebtn.is-laser .scenelook { color: var(--accent); }
 
 /* ---- The Grid layout (2026-10-31, the owner: "fix the laser desk: the place is not used right, the windows inside are managed not right, it is ugly and not logical").
-   The Looks grid is the biggest thing on the page (9 fixed columns), the masters and the cubes sit in a rail at the right, every edit group is in a strip along the bottom, and the
-   stops stand alone at the right end of the bar. CLASSIC IS KEPT WHOLE AS A MODE: every rule above this line is untouched, and every rule below is under html[data-layout="grid"]
+   The Looks grid is the biggest thing on the page (9 fixed columns), the masters and the cubes sit in a rail at the right, and the stops stand alone at the right end of the bar.
+   From 1240 px wide (the nested query at the end; 2026-11-01, the owner: "why there are still colour full things and still too many gaps in the ui") Edit is a column in that rail and the
+   Looks take the full height; below that, Edit is the strip along the bottom, every edit group in it. Edit holding nothing stays drawn, dimmed and inert, and its help sits where the preview goes.
+   CLASSIC IS KEPT WHOLE AS A MODE: every rule above this line is untouched, and every rule below is under html[data-layout="grid"]
    inside ONE size query (1000 x 600 and up; 1240 x 640 until 2026-10-31 23:5x, when the owner's portrait tab of 1078 px fell back to Classic), so below that size, with ?layout=classic, or when layoutMode.js did not run, the page is Classic. No element is moved in the HTML
-   (display: contents on the bar's wrappers puts the masters in the rail), no control is removed, desk.js is not touched. Tokens are the page's own (var(--pane) ...); the only new
+   (display: contents on the bar's wrappers puts the masters in the rail), no control is removed, desk.js only marks Edit inert while it holds nothing and marks the Looks pane .no-scenes. Tokens are the page's own (var(--pane) ...); the only new
    ones are the --g-* sizes below. Square corners: no border-radius here but 0. Measured on the real page (desk.js running) at 1280x670, 1280x700, 1278x758 and 1240x640:
    docs/ai/sessions/feat-laser-desk-layout-2026-10-31.md; why: docs/ai/decisions/2026-10-31-laser-desk-layout.md. */
 @media (min-width: 1000px) and (min-height: 600px) {
@@ -414,27 +416,36 @@ html[data-layout="grid"] .tile.is-live .pic::before { content: 'LIVE'; position:
 html[data-layout="grid"] .bank > .removeask { position: absolute; z-index: 5; left: 6px; right: 6px; top: calc(var(--g-scenes) + var(--g-head) + 6px); bottom: 6px; margin: 0; display: flex; flex-direction: column; max-height: none; overflow: hidden; }
 html[data-layout="grid"] .bank > .removeask .setabout { flex: none; overflow: visible; min-height: 0; }
 html[data-layout="grid"] .bank > .removeask .removelist, html[data-layout="grid"] .bank > .removeask .setlist { flex: 1 1 auto; min-height: 0; max-height: none; overflow: auto; }
+/* no light scenes: the Scenes row is one line (the note keeps its words in its title, layoutMode.js CLIPPED), and the link question moves up with it */
+html[data-layout="grid"] .bank.no-scenes { --g-scenes: 24px; }
+html[data-layout="grid"] .bank.no-scenes > .scenerow { grid-template-columns: minmax(0, 1fr); align-items: center; padding: 2px 8px; }
+html[data-layout="grid"] .bank.no-scenes > .scenerow > .scenehead { flex-direction: row; align-items: baseline; gap: 10px; min-width: 0; }
+html[data-layout="grid"] .bank.no-scenes > .scenerow .scenehead .muted { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: none; }
 
 /* ---- the edit strip (row 5, full width): identity | Colour, Picture, Movement, Follows/Copy/Delete over the Shape chips */
-html[data-layout="grid"] .editor { grid-area: 6 / 1 / 7 / 7; position: relative; overflow: visible; display: grid; grid-template-columns: 150px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); column-gap: 10px; padding: 4px 8px; }
+html[data-layout="grid"] .editor { grid-area: 6 / 1 / 7 / 7; position: relative; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--cell2) var(--pane); display: grid; grid-template-columns: 150px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); column-gap: 10px; padding: 4px 8px; }
 html[data-layout="grid"] .editor > .panehead { grid-area: 1 / 1; padding: 0; border: 0; flex-wrap: nowrap; gap: 6px; align-items: center; }
 html[data-layout="grid"] .editor .namefield { min-width: 0; width: 0; padding: 4px 6px; }
 html[data-layout="grid"] .editor > .preview { grid-area: 2 / 1; padding: 6px 0 0; min-height: 0; overflow: hidden; }
 html[data-layout="grid"] .editor .previewnote { font-size: 11px; line-height: 13px; padding-top: 3px; }
-html[data-layout="grid"] .editor > .editbody { grid-area: 1 / 2 / 3 / 3; padding: 0; min-width: 0; display: grid; grid-template-columns: 232px minmax(0, 1fr) minmax(0, 1fr) 132px; grid-template-rows: auto auto; column-gap: 12px; row-gap: 2px; align-content: start; }
-html[data-layout="grid"] .editor > .empty { grid-area: 1 / 2 / 3 / 3; padding: 0; }
+html[data-layout="grid"] .editor > .editbody { grid-area: 1 / 2 / 3 / 3; padding: 0; min-width: 0; display: grid; grid-template-columns: 232px minmax(0, 1fr) minmax(0, 1fr) 132px; grid-template-rows: auto auto auto; column-gap: 12px; row-gap: 2px; align-content: start; }
+html[data-layout="grid"] .editor > .empty { grid-area: 2 / 1; padding: 4px 0 0; min-height: 0; overflow-y: auto; font-size: 11px; line-height: 1.3; scrollbar-width: thin; }
+/* Edit holding nothing stays drawn where it is (no jump when a look opens), dimmed like a disabled control and inert (desk.js): no focus, no click, as Classic hides it. The help sits where the preview goes (Classic hides the preview at rest), never over a control. */
+html[data-layout="grid"] .editor.is-empty > .editbody { opacity: .45; }
+html[data-layout="grid"] .editor.is-empty .swatches { filter: grayscale(1); }
 html[data-layout="grid"] .editbody .group { padding: 0; border: 0; min-width: 0; }
 html[data-layout="grid"] .editbody .grouphead { margin-bottom: 2px; font-size: 11px; line-height: 1.2; }
-html[data-layout="grid"] .editbody > #followGroup { grid-area: 1 / 4; align-self: start; }
-html[data-layout="grid"] .editbody > .group:nth-child(3) { grid-area: 1 / 1; }
-html[data-layout="grid"] .editbody > #pictureFields { grid-area: 1 / 2; }
-html[data-layout="grid"] .editbody > #moveFields { grid-area: 1 / 3; }
-html[data-layout="grid"] .editbody > .actions { grid-area: 1 / 4; align-self: end; padding-top: 0; flex-wrap: nowrap; }
+html[data-layout="grid"] .editbody > #followGroup { grid-area: 1 / 4 / 2 / 5; align-self: start; }
+html[data-layout="grid"] .editbody > .group:nth-child(3) { grid-area: 1 / 1 / 3 / 2; }
+html[data-layout="grid"] .editbody > #pictureFields { grid-area: 1 / 2 / 3 / 3; }
+html[data-layout="grid"] .editbody > #moveFields { grid-area: 1 / 3 / 2 / 4; }
+html[data-layout="grid"] .editbody > .actions { grid-area: 3 / 4 / 4 / 5; align-self: end; padding-top: 0; flex-wrap: nowrap; }
 html[data-layout="grid"] .editbody > .actions button { flex: 1 1 0; min-height: 28px; padding: 3px 4px; }
-html[data-layout="grid"] .editbody > .group:nth-child(2) { grid-area: 2 / 1 / 3 / 5; display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 3px; max-height: 54px; overflow-y: auto; scrollbar-width: thin; }
-html[data-layout="grid"] body:not(.one-cube) .editbody > .group:nth-child(2) { grid-area: 2 / 1 / 3 / 4; }
-html[data-layout="grid"] body:not(.one-cube) .editbody > .group.multi { grid-area: 1 / 4; align-self: end; }
-html[data-layout="grid"] body:not(.one-cube) .editbody > .actions { grid-area: 2 / 4; }
+html[data-layout="grid"] .editbody > .group:nth-child(2) { grid-area: 3 / 1 / 4 / 4; display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 3px; max-height: 54px; overflow-y: auto; scrollbar-width: thin; }
+/* Cubes (2+ cubes) has its own cell under Movement. It shared 1 / 4 with Follows, and the select lay over the chips (measured 2026-11-01 with 6 cubes: 1360 + 726 px2). */
+html[data-layout="grid"] .editbody > .group.multi { grid-area: 2 / 3 / 3 / 5; align-self: start; display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+html[data-layout="grid"] .editbody > .group.multi > .grouphead { flex: none; margin: 0 8px 0 0; }
+html[data-layout="grid"] .editbody > .group.multi > .chips { display: contents; }
 html[data-layout="grid"] .editbody > .group:nth-child(2) > .grouphead { flex: none; margin: 0 8px 0 0; gap: 10px; }
 html[data-layout="grid"] .editbody > .group:nth-child(2) > .chips { display: contents; }
 html[data-layout="grid"] .editbody > .group:nth-child(2) > #cycleField { flex: 0 0 200px; order: -1; }
@@ -460,6 +471,54 @@ html[data-layout="grid"] .chooser > .chooser-any { grid-area: 2 / 2; align-self:
 
 /* ---- Setup keeps its two panes, in the area under the bar */
 html[data-layout="grid"] #page-setup { grid-area: 2 / 1 / 7 / 6; }
+
+/* ---- from 1240 px wide (2026-11-01, the owner: "why there are still colour full things and still too many gaps in the ui"; his ring of 10-31: the Looks and Edit side by side):
+   Edit is a column at the right under the masters, the follow switches and the cubes; the Looks run to the bottom. The visual order of Edit is its DOM order (the tab order). */
+@media (min-width: 1240px) {
+/* --g-tools 75: the masters need 73 px inside their border (measured 2026-11-01 at 1280x770: scrollHeight 73 against clientHeight 70 at 72 px, so 3 px of content were cut) */
+html[data-layout="grid"] { --g-rail: 440px; --g-tools: 75px; --g-opts: 50px; }
+html[data-layout="grid"] body { grid-template-rows: var(--g-bar) var(--g-tools) var(--g-opts) var(--g-stage) minmax(0, 1fr); }
+html[data-layout="grid"] #page-setup { grid-area: 2 / 1 / 6 / 6; }
+html[data-layout="grid"] .notice { grid-area: 5 / 1 / 6 / 6; align-self: end; justify-self: start; margin: 0 6px 6px; max-height: 40%; }
+html[data-layout="grid"] .tools { padding: 3px 8px; gap: 4px 6px; }
+html[data-layout="grid"] .tools .master { flex: 1 1 240px; }
+html[data-layout="grid"] .options { flex-direction: row; flex-wrap: wrap; align-items: center; align-content: center; column-gap: 14px; row-gap: 2px; padding: 3px 8px; }
+html[data-layout="grid"] .options .followstatus { flex: 1 1 100%; }
+html[data-layout="grid"] .cube { width: 132px; }
+html[data-layout="grid"] .editor { grid-area: 5 / 6 / 6 / 7; grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: none; align-content: start; column-gap: 8px; row-gap: 3px; padding: 3px 5px 4px; }
+html[data-layout="grid"] .editor > .panehead { grid-area: 1 / 2 / 2 / 3; }
+html[data-layout="grid"] .editor.is-empty > .panehead { grid-area: 1 / 1 / 2 / 3; }
+/* the help keeps its OWN row in the column: min-height auto, because an auto row first takes its item's minimum size and the strip's min-height 0 made that 0, so the help lay over the body (measured 2026-11-01: 12 overlaps at 1280x770) */
+html[data-layout="grid"] .editor > .empty { grid-area: 2 / 1 / 3 / 3; padding: 2px 0 0; min-height: auto; overflow: visible; }
+html[data-layout="grid"] .editor:not(.is-empty) > .preview { display: contents; }
+html[data-layout="grid"] .editor .preview canvas { grid-area: 1 / 1 / 3 / 2; align-self: start; }
+html[data-layout="grid"] .editor .previewnote { grid-area: 2 / 2 / 3 / 3; padding-top: 0; }
+html[data-layout="grid"] .editor > .editbody { grid-area: 3 / 1 / 4 / 3; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: none; column-gap: 10px; row-gap: 3px; }
+html[data-layout="grid"] .editbody > #followGroup { grid-area: 1 / 1 / 2 / 3; display: flex; align-items: center; gap: 8px; }
+html[data-layout="grid"] .editbody > #followGroup > .grouphead { flex: none; margin: 0; }
+html[data-layout="grid"] #followsScene { flex: 1 1 auto; width: auto; min-height: 26px; }
+html[data-layout="grid"] .editbody > .group:nth-child(2) { grid-area: 2 / 1 / 3 / 3; max-height: none; overflow: visible; gap: 2px; }
+html[data-layout="grid"] .editbody > .group:nth-child(2) .chip { flex: 1 0 auto; padding: 1px 5px; font-size: 11px; }
+html[data-layout="grid"] .editbody > .group:nth-child(2) > #cycleField { order: 0; flex: 1 1 100%; }
+html[data-layout="grid"] .editbody > .group:nth-child(3) { grid-area: 3 / 1 / 4 / 3; display: grid; grid-template-columns: 72px minmax(0, 1fr); column-gap: 8px; row-gap: 2px; }
+html[data-layout="grid"] .editbody > .group:nth-child(3) > .grouphead:first-child { grid-area: 1 / 1 / 3 / 2; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6px; margin: 0; }
+html[data-layout="grid"] .editbody > .group:nth-child(3) > #swatches { grid-area: 1 / 2 / 3 / 3; grid-template-columns: repeat(9, minmax(0, 1fr)); }
+html[data-layout="grid"] .editbody > .group:nth-child(3) > .mine-head { grid-area: 3 / 1 / 4 / 2; margin: 0; }
+html[data-layout="grid"] .editbody > .group:nth-child(3) > #myColours { grid-area: 3 / 2 / 4 / 3; grid-template-columns: repeat(9, minmax(0, 1fr)); }
+html[data-layout="grid"] .editbody > .group:nth-child(3) > .chooser { grid-area: 4 / 1 / 5 / 3; position: static; width: auto; margin: 2px 0 0; grid-template-columns: minmax(0, 1fr); }
+html[data-layout="grid"] .chooser > .grouphead { grid-area: 1 / 1; }
+html[data-layout="grid"] .chooser > .chooser-grid { grid-area: 2 / 1; }
+html[data-layout="grid"] .chooser > .chooser-any { grid-area: 3 / 1; margin-top: 6px; }
+html[data-layout="grid"] .editbody .swatch, html[data-layout="grid"] .editbody .swatches input[type=color], html[data-layout="grid"] .editbody .addcolour { height: 22px; }
+html[data-layout="grid"] #pictureFields, html[data-layout="grid"] #moveFields { grid-template-columns: minmax(0, 1fr); row-gap: 1px; }
+html[data-layout="grid"] .editbody .field { grid-template-columns: 70px minmax(0, 1fr) 52px; gap: 4px; min-height: 22px; }
+html[data-layout="grid"] .editbody .field input[type=range] { height: 22px; }
+html[data-layout="grid"] .editbody > #pictureFields { grid-area: 4 / 1 / 7 / 2; }
+html[data-layout="grid"] .editbody > #moveFields { grid-area: 4 / 2 / 5 / 3; }
+html[data-layout="grid"] .editbody > .actions { grid-area: 6 / 2 / 7 / 3; align-self: start; }
+html[data-layout="grid"] body:not(.one-cube) .editbody > #pictureFields { grid-area: 4 / 1 / 5 / 2; }
+html[data-layout="grid"] body:not(.one-cube) .editbody > .group.multi { grid-area: 5 / 1 / 6 / 3; }
+}
 
 }
 
