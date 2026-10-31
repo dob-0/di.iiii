@@ -583,6 +583,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         if (moved) selected = moved.id
         await refreshDesk()
         renderEditor()
+        return out
     }
     $('saveBtn').addEventListener('click', saveAll)
     $('copyBtn').addEventListener('click', async () => {
@@ -868,6 +869,187 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         renderEditor()
     }
     const duplicateSelected = () => $('copyBtn').click()
+
+    // ---- A link can propose removals (2026-10-31, ledger N1586): the page opens with ?remove=<id>,<id>,... and a person is asked.
+    // Scripts and agents cannot delete looks (the laser routes answer only this page), so this is how they ask. The link is a
+    // proposal, never a command: nothing is sent until Remove is tapped; the page decides what may go (the look on the laser
+    // never goes); what goes is the Edit pane's own delete, one look at a time, then the page's own Save. Undo steps exactly
+    // that back through the desk's undo and Saves again. The block: parseRemoveLink, planRemoval, paintRemoveAsk, showRemoveAsk,
+    // confirmRemoval, undoRemoval, keepRemoveAsk, startRemoveAsk (called once at the end), and one line in refreshDesk.
+    const REMOVE_MAX = 200 // ids in one link
+    const REMOVE_ID = /^[A-Za-z0-9_-]{1,40}$/ // the desk's own look-id alphabet and length (laserDesk.js idOf)
+    // phase: none | wait (the link is read, the desk has not answered yet) | ask | busy | done | undone | refused
+    const removeAsk = { phase: 'none', ids: [], plan: null, title: '', note: '', rows: [], removed: [], undoSteps: 0, after: null }
+    const refusedAnswer = (out) => out.ok === false || (out.status ?? 200) >= 400
+
+    // The ids a link proposes, or why it cannot be read: { ids } or { error }; null when the link has no ?remove.
+    const parseRemoveLink = (search) => {
+        const params = new URLSearchParams(search)
+        if (!params.has('remove')) return null
+        const parts = params.getAll('remove').join(',').split(',').filter((s) => s !== '')
+        if (!parts.length) return { error: 'The link names no looks.' }
+        if (parts.length > REMOVE_MAX) return { error: `The link names ${parts.length} looks. One link may name at most ${REMOVE_MAX}.` }
+        const bad = parts.filter((s) => !REMOVE_ID.test(s))
+        if (bad.length) {
+            const shown = bad.slice(0, 3).map((s) => `"${s.slice(0, 40)}"`).join(', ')
+            return { error: `The link has ${bad.length === 1 ? 'an id' : 'ids'} that no look can have: ${shown}${bad.length > 3 ? ' ...' : ''}. A look id is letters, digits, - and _ only.` }
+        }
+        return { ids: [...new Set(parts)] }
+    }
+
+    // What a tap would do with the bank as it is now: the looks that go, the one that stays because it is on the laser,
+    // and the ids that are not in the bank.
+    const planRemoval = (ids) => {
+        const byId = new Map(desk.looks.map((l) => [l.id, l]))
+        const rows = ids.map((id) => {
+            const look = byId.get(id)
+            if (!look) return { id, name: id, state: 'missing' }
+            return { id, name: look.name || id, state: id === desk.liveId ? 'live' : 'go' }
+        })
+        return { rows, go: rows.filter((r) => r.state === 'go').map((r) => r.id) }
+    }
+
+    const paintRemoveAsk = () => {
+        const a = removeAsk
+        const box = $('removeAsk')
+        box.hidden = a.phase === 'none' || a.phase === 'wait'
+        box.dataset.phase = a.phase
+        $('removeTitle').textContent = a.title
+        $('removeNote').textContent = a.note
+        const list = $('removeList')
+        list.textContent = ''
+        for (const r of a.rows) {
+            const li = document.createElement('li')
+            li.className = `is-${r.state}`
+            li.append(r.name) // a text node: a look's name is never read as markup
+            if (r.state !== 'go') {
+                const tag = document.createElement('span')
+                tag.className = 'tag'
+                tag.textContent = r.state === 'live' ? 'kept: it is on the laser' : 'not found'
+                li.append(tag)
+            }
+            list.append(li)
+        }
+        list.hidden = !a.rows.length
+        const going = a.plan ? a.plan.go.length : 0
+        const asking = a.phase === 'ask' && going > 0
+        const busy = a.phase === 'busy'
+        $('removeGo').hidden = !(asking || (busy && a.rows.length > 0))
+        $('removeGo').textContent = `Remove ${going}`
+        $('removeGo').disabled = busy
+        $('removeUndo').hidden = !(a.phase === 'done' && a.undoSteps > 0)
+        $('removeKeep').textContent = asking || (busy && a.rows.length > 0) ? 'Keep them' : 'Close'
+        $('removeKeep').disabled = busy
+    }
+    const sayRemoveAsk = (phase, title, note = '', rows = []) => {
+        Object.assign(removeAsk, { phase, title, note, rows })
+        paintRemoveAsk()
+    }
+    const dropRemoveQuery = () => {
+        try {
+            const url = new URL(location.href)
+            if (!url.searchParams.has('remove')) return
+            url.searchParams.delete('remove')
+            history.replaceState(history.state, '', url.pathname + url.search + url.hash)
+        } catch { /* a page that cannot rewrite its address keeps the link; the panel is closed either way */ }
+    }
+
+    // The question, asked on the first answer from the desk (only then are the looks' names known) and again if the bank moved.
+    const showRemoveAsk = (changed = false) => {
+        const plan = planRemoval(removeAsk.ids)
+        removeAsk.plan = plan
+        const n = plan.go.length
+        const title = n === 0 ? 'Nothing to remove.' : n === 1 ? 'Remove this look from the bank?' : `Remove these ${n} looks from the bank?`
+        const note = [
+            changed ? 'The bank changed while this was open. Check the list, then tap again.' : '',
+            n && desk.unsaved ? 'The bank has other changes that are not saved yet. Remove saves them too.' : ''
+        ].filter(Boolean).join(' ')
+        sayRemoveAsk('ask', title, note, plan.rows)
+        $('removeKeep').focus() // the safe answer has the focus: Enter alone removes nothing
+    }
+
+    const confirmRemoval = async () => {
+        if (removeAsk.phase !== 'ask' || !removeAsk.plan.go.length) return // one tap, one removal
+        const asked = removeAsk.plan.go
+        sayRemoveAsk('busy', `Removing ${asked.length === 1 ? '1 look' : `${asked.length} looks`}...`, '', removeAsk.plan.rows)
+        await flush()
+        await refreshDesk()
+        // What was confirmed is what goes: if the bank moved since the question (another look went live, one was deleted), ask again.
+        const now = planRemoval(removeAsk.ids)
+        if (now.go.join() !== asked.join()) { showRemoveAsk(true); return }
+        const gone = []
+        let stopped = ''
+        let unsaved = ''
+        let steps = 0
+        try {
+            for (const id of asked) {
+                const out = await post('desk/api/looks/delete', { id })
+                if (refusedAnswer(out)) { stopped = out.error || `refused (${out.status})`; break }
+                gone.push(id)
+            }
+            steps = gone.length
+            if (gone.length && !stopped) {
+                const out = await saveAll() // the page's own Save
+                if (!out || refusedAnswer(out)) unsaved = (out && out.error) || 'the desk did not answer'
+                else if ((out.created || []).length) steps += 1 // a Save that also made scenes from other edits is one more step
+            } else await refreshDesk()
+        } catch (error) {
+            stopped = stopped || error.message
+        }
+        removeAsk.removed = gone
+        removeAsk.undoSteps = gone.length ? steps : 0
+        removeAsk.after = { ids: desk.looks.map((l) => l.id), unsaved: Boolean(desk.unsaved) }
+        const extra = []
+        if (now.rows.some((r) => r.state === 'live')) extra.push('1 kept: it is on the laser')
+        const missing = now.rows.filter((r) => r.state === 'missing').length
+        if (missing) extra.push(`${missing} not found`)
+        const head = stopped ? [`Stopped: ${stopped}`, 'not saved'] : unsaved ? [`Not saved: ${unsaved}`] : ['Saved']
+        dropRemoveQuery()
+        sayRemoveAsk('done', stopped ? `Removed ${gone.length} of ${asked.length}` : `Removed ${gone.length}`, [...head, ...extra].join(' · '))
+    }
+
+    const undoRemoval = async () => {
+        if (removeAsk.phase !== 'done' || !removeAsk.undoSteps) return
+        const { removed, undoSteps, after, title } = removeAsk
+        sayRemoveAsk('busy', 'Bringing them back...')
+        await flush()
+        await refreshDesk()
+        // Undo here steps back exactly this removal: if the bank moved after it, a step back would take that change instead.
+        if (desk.looks.map((l) => l.id).join() !== after.ids.join() || Boolean(desk.unsaved) !== after.unsaved) {
+            removeAsk.undoSteps = 0
+            sayRemoveAsk('done', title, 'The bank changed after this, so Undo here would take that change back too. Use Undo in the top bar, one step at a time.')
+            return
+        }
+        for (let i = 0; i < undoSteps; i += 1) {
+            const out = await post('desk/api/undo')
+            if (refusedAnswer(out) || out.undone === false) break
+        }
+        await refreshDesk()
+        const back = removed.filter((id) => desk.looks.some((l) => l.id === id)).length
+        let note = ''
+        if (back) {
+            const out = await saveAll() // the removal was saved, so its undo is saved too
+            note = !out || refusedAnswer(out) ? `Not saved: ${(out && out.error) || 'the desk did not answer'}` : 'Saved'
+        }
+        sayRemoveAsk('undone', back === removed.length ? `Brought back ${back}` : `Brought back ${back} of ${removed.length}`, note)
+    }
+
+    const keepRemoveAsk = () => {
+        if (removeAsk.phase === 'busy') return
+        sayRemoveAsk('none', '', '')
+        dropRemoveQuery()
+    }
+
+    const startRemoveAsk = () => {
+        $('removeGo').addEventListener('click', confirmRemoval)
+        $('removeUndo').addEventListener('click', undoRemoval)
+        $('removeKeep').addEventListener('click', keepRemoveAsk)
+        const link = parseRemoveLink(location.search)
+        if (!link) return
+        if (link.error) { sayRemoveAsk('refused', 'Nothing was removed.', link.error); return }
+        removeAsk.ids = link.ids
+        removeAsk.phase = 'wait'
+    }
     // Arrows walk the bank as it is laid out: left/right one look, up/down one row.
     const moveSelection = (key) => {
         const tiles = [...$('tiles').children]
@@ -1029,6 +1211,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         renderEditor()
         renderFollow()
         renderStage()
+        if (removeAsk.phase === 'wait') showRemoveAsk() // a link proposed removals: ask once the looks' names are known
         if (page === 'setup' && !setupHeld()) renderSetup()
     }
     const refreshEngine = async () => {
@@ -1181,6 +1364,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         loop(pollScenes, sceneApi.POLL_MS)
     }
 
+    startRemoveAsk()
     refreshThumbs()
     loop(refreshEngine, POLL_ENGINE_MS)
     loop(refreshDesk, POLL_DESK_MS)
