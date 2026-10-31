@@ -18,8 +18,8 @@
   was cut with no ellipsis; it is now a block with an ellipsis and its whole text as the title (bank row and Touch tile); `margin-right: -8px`
   keeps notes that fitted fitting. The filter box was 42 px with Follow off too (it predates a749f8443, which changed no markup or rule of it):
   it now takes the first row (209 px) and the buttons wrap under it.
-- Edit: "Follows light scene" is a compact row under the preview, above Shape, in the page's own tokens (it was a native mid-grey select below
-  the fold). Setup > Safety says the sign-off and dark-rule modes from the engine's state in plain words; the DI_LASER_ names stay in the wiki.
+- Edit: "Follows light scene" is a full-width select under the preview, above Shape, in the page's own tokens (it was a native mid-grey select
+  below the fold). An inline label beside it was tried and clipped a 23-character name at the arrow, so the label stays above. Setup > Safety says the sign-off and dark-rule modes from the engine's state in plain words; the DI_LASER_ names stay in the wiki.
 - Phone (390 px, one look): the pill first, the three stops together, the options last. That order is new.
 - Tests: `deskCss.test.js` (DOM and rule tests), `desk.test.js` (status text, Safety lines), `lighting/ui/sceneListCss.test.js`; the nine new
   rule tests fail on the original css, html and app.js. `npx vitest run serverXR/src/laser serverXR/src/lighting src/wiki`: 31 files, 466 tests passed.

@@ -244,9 +244,7 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
 
 /* ---- Follow light scenes (2026-10-31, the scene link): what the switch followed last, and the Edit select */
 .followstatus { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Edit > Follows light scene: one compact row under the preview, dark like the other controls (it was the native light-grey select, the brightest block of the pane at night). */
-#followGroup { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0 10px; }
-#followGroup .grouphead { margin-bottom: 0; white-space: nowrap; }
+/* Edit > Follows light scene: full width right under the preview (above Shape), dark like the other controls (it was the native light-grey select, the brightest block of the pane at night). */
 #followsScene { width: 100%; min-width: 0; min-height: 30px; padding: 5px 7px; border-radius: 0; background: var(--field); color: var(--text); border: 1px solid var(--line); }
 #followsScene:hover:not(:disabled) { border-color: var(--muted); }
 #followsScene:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
