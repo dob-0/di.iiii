@@ -149,3 +149,47 @@ Limits: the lamp swatches (32x32) are under the 44-in-one-direction rule; at 192
 under On/Off (6 scratch cubes, cards do not widen; with the show's 2 cubes they widen); the "rest" shot shows the scene
 the first run pressed (the scratch desk kept it). Tests: `npx vitest run serverXR/src/showDesk serverXR/src/httpContracts.test.js`
 -> 146 passed (one new: the lifts stand 24 px clear of Blackout all); eslint exit 0.
+
+## Touch · Compact, the desk switch, one top line, small caps (2026-10-31 20:55–21:45, Opus agent for dob-fa)
+The owner at the stage Mac (1280 x 800 with a mouse; the browser window is ~1280 x 700): "fix the UI, it is huge … it's
+not the touch screen"; 21:0x "add buttons so I can easily go from one desk to the other"; 21:1x the top part "uses the
+space badly"; 21:2x the sliders "why so ugly".
+- Two densities, nothing lost: Touch (the hand sizes) and Compact (`body[data-density="compact"]`, one block of tokens at
+  the end of show.css). The switch "Touch · Compact" sits in the bottom line before the MIDI line; the choice is kept per
+  browser (`diShowDesk.density.v1`); until one is made, `(pointer: fine)` and no `(any-pointer: coarse)` means Compact.
+- "Show · Light · Laser" (class `deskswitch`) after the mark: plain links ./ ../light/ ../laser/, Show marked
+  aria-current="page"; 44 tall in Touch, 28 in Compact. The bottom links stay.
+- The top part is one line: Touch 64, Compact 48. Blackout all 160x44 / 140x36 (one line; its colour and weight kept);
+  the lifts side by side 100x32 / 90x28, 24 px clear of it in both. "Show desk" stays as the h1 for screen readers; the
+  scene row is labelled "Scenes", its explainer is the row's title (#scenesNote kept for screen readers).
+- Faders: tracks 4 / 3 px in var(--line); caps 24x14 lying, 14x24 upright / 16x10, 10x16; caps muted, var(--text) only in
+  the live strip while a look is live; the inputs stay the hit area, 32 / 20 tall.
+
+Measured on the agent screen (lane 2; scratch serverXR seeded with the 19:57 light state: 3 lamps, 10 scenes,
+output.enabled false); numbers in agent-reports-2026-10-31/projector-room/show-compact/measure.json; CSS px:
+
+| | Touch | Compact |
+|---|---|---|
+| rows at 1278x758 | 64/80/238/330/46 = 758 | 48/62/182/296/32 = 620, air below |
+| 1280x700 (the stage window) | fits, bottom line ends at 700 | fits, bottom line ends at 620 |
+| scene keys | 117x70, 0 names cut | 117x52, number + name on one line, 10 of 10 names cut (…) |
+| colour pads, lamp pads | 40, 32 | 26, 22 in 2 rows |
+| shapes | 2 rows of 36, 13 px | 2 rows of 26, 12 px, no scrollbar |
+| effect pads, knob rows | 76x34 at 14 px, 34 | 76x26 at 12 px, 26 |
+| lamp fader (1278x758) | 44x200 | 22x186; the two masters 44 wide in both |
+| preview | 166x125 | 132x100 |
+| Blackout all, lifts, gap | 160x44, 100x32, 24 | 140x36, 90x28, 24 |
+| smallest control | the di.iiii mark 71x25 | the lying faders 128x20; 0 under 22 px in both directions |
+
+"masters 44 wide" was read as the master faders (44 in both densities); their strips stay 96, because 44-wide strips
+cut "Lights", "Laser" and "Release holds (0)". `--master-w: 44px` in the Compact block builds the other reading.
+Open: at 1280 the one-line top cuts the scene and look names (Touch "MUTH…", Compact "MUTH 05 …"); Compact scene keys
+cut every name; "Sweep beats" is cut at 12 px; not seen on the stage Mac's Chromium; no touch screen tried.
+Tests: `npx vitest run serverXR/src/showDesk serverXR/src/httpContracts.test.js` -> Tests 153 passed (153); eslint 0.
+
+## Two pages, one state (21:2x: "my desk here and the Arch desk are not synced")
+show.js already reads both desks every 1 s (`POLL_MS = 1000`, show.js:23, while the page is visible) and redraws scenes,
+the live look, lamps and status from it, so the poll rate is not the cause. Changed: `HOLD_MS` 1500 -> 1000 (a held fader
+follows the poll 1 s after it is let go). Test: a change on the fake server shows within 2.5 s with no press.
+Open hypotheses for the two machines: the other page hidden (the poll pauses while `document.hidden`); the two pages on
+two different servers (aylmo's own di vs the stage Mac); a guard refusing the other machine's reads.

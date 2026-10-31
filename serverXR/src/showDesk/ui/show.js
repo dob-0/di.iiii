@@ -24,7 +24,7 @@
     const FOLLOWS_EVERY = 20 // the scene → look table is read again every 20th poll
     const VIEW_IDLE_MS = 500 // the preview while no cube is On
     const VIEW_ARMED_MS = 80 // the preview while a cube is On
-    const HOLD_MS = 1500
+    const HOLD_MS = 1000 // a fader under a hand is left to it; the poll moves it again 1 s after it is let go (the owner, 21:2x)
     const SEND_MS = 50 // a fader sends at most this often; the last value always goes
     const BLACKOUT_GAP_MS = 600 // a second lift of the same half inside this is ignored; going dark is never gapped (a panic retry always goes)
     const TIMEOUT_MS = 4000 // a desk that does not answer is said so; nothing waits on it for good
@@ -1039,8 +1039,40 @@
         if (n && MIDI_OK.test(n.dataset.midi)) { learning.target = n.dataset.midi; midiLine() }
     }, true)
 
+    // Density (the owner, 2026-10-31 20:5x, at the stage Mac, a laptop screen with a mouse: "fix the UI, it is huge … it's
+    // not the touch screen"): Touch keeps the sizes for a hand; Compact is a block of smaller tokens in show.css. Only
+    // body[data-density] changes: no route, no press, no size in code. The choice is kept per browser; until one is made,
+    // a fine pointer and no coarse one means Compact, anything else Touch.
+    const DENSITY_KEY = 'diShowDesk.density.v1'
+    const pickDensity = (stored, matchMedia) => {
+        if (stored === 'touch' || stored === 'compact') return stored
+        const has = (query) => { try { return typeof matchMedia === 'function' && Boolean(matchMedia(query).matches) } catch { return false } }
+        return has('(pointer: fine)') && !has('(any-pointer: coarse)') ? 'compact' : 'touch'
+    }
+    const densityButtons = [...$('density').querySelectorAll('button[data-density]')]
+    const showDensity = (mode) => {
+        document.body.dataset.density = mode
+        for (const b of densityButtons) b.setAttribute('aria-pressed', String(b.dataset.density === mode))
+    }
+    let storedDensity = null
+    try { storedDensity = window.localStorage.getItem(DENSITY_KEY) } catch { /* this browser keeps nothing: the pointer decides */ }
+    showDensity(pickDensity(storedDensity, typeof window.matchMedia === 'function' ? window.matchMedia.bind(window) : null))
+    for (const b of densityButtons) {
+        b.addEventListener('click', () => {
+            showDensity(b.dataset.density)
+            try { window.localStorage.setItem(DENSITY_KEY, b.dataset.density) } catch { /* this browser keeps nothing: the choice lasts until a reload */ }
+        })
+    }
+
+    // The scene row is labelled just Scenes; its explainer is the row's title (the owner, 21:1x: the top part "uses the
+    // space badly"). The words stay in #scenesNote for screen readers.
+    const scenesNote = $('scenesNote')
+    const noteToTitle = () => { scenesNote.closest('.showscenes').title = scenesNote.textContent }
+    noteToTitle()
+    new MutationObserver(noteToTitle).observe(scenesNote, { childList: true, characterData: true, subtree: true })
+
     // For the page's tests and a person at the console: read-only views and one refresh. Nothing here sends a press.
-    window.DiShowDesk = { refresh: tick, holdsOf, blackoutState, state: S, midiMap: () => midiMap.map((m) => ({ ...m })) }
+    window.DiShowDesk = { refresh: tick, holdsOf, blackoutState, state: S, midiMap: () => midiMap.map((m) => ({ ...m })), pickDensity }
     buildLive()
     midiLine()
     startMidi()
