@@ -20,6 +20,14 @@ describe('render-resources', () => {
         expect(html).toContain('border-radius:0')
     })
 
+    it('shows plain state words, a glossary and "not for others" where a job is ours only', () => {
+        const html = renderResourcesHtml(example)
+        expect(html).toContain('works now')
+        expect(html).toContain('Words on this page')
+        expect(html).toContain('<details><summary>How we know</summary>')
+        expect(html).not.toMatch(/<table/)
+    })
+
     it('escapes text from the file', () => {
         const doc = JSON.parse(JSON.stringify(example))
         doc.resources[0].what = '<script>alert(1)</script>'

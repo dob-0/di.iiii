@@ -35,6 +35,29 @@ export const KIND_IDS = KINDS.map((kind) => kind.id)
 // `down` = it did not answer. `off` = it is powered down or not joined, on
 // purpose. `unchecked` = no call was possible or none was made; say why.
 export const STATES = ['works', 'spent', 'down', 'off', 'unchecked']
+// The words a person reads for each state (the ids stay in the file).
+export const STATE_WORDS = {
+    works: 'works now',
+    spent: 'credit used up',
+    down: 'not answering',
+    off: 'switched off',
+    unchecked: 'not checked'
+}
+
+// Plain words for the terms that stay in the details of a row.
+export const GLOSSARY = [
+    ['GPU / graphics card', 'the part of a computer that draws pictures and runs big models fast'],
+    ['VRAM', 'the memory on the graphics card; a model or scene must fit in it'],
+    ['units (Colab)', 'what a rented Google Colab graphics card costs per hour'],
+    ['model, token', 'a model is the program that answers; a token is a small piece of a word it reads or writes'],
+    ['tailnet', 'our private network (Tailscale) that joins our machines wherever they are'],
+    ['ssh', 'logging into another machine from here to run a command on it'],
+    ['HTTP 530, 200', 'what a web address answers: 200 = fine; 530 = the door is there but nothing is behind it'],
+    ['Q4_K_M', 'a size of a model squeezed to fit a small machine'],
+    ['aarch64, arm64, Darwin', 'the kind of chip or system (Raspberry Pi, phone, Mac)'],
+    ['DMX, Art-Net', 'the signals that control stage lamps']
+]
+
 const NEEDS_PROOF = new Set(['works', 'spent', 'down'])
 
 // Who may use it. `ours` = the team's own work only (a plan login that cannot
@@ -109,6 +132,7 @@ export const validateResources = (doc) => {
         if (!STATES.includes(row.state)) errors.push(`${at}: state must be one of ${STATES.join(', ')}`)
         if (!USES.includes(row.use)) errors.push(`${at}: use must be one of ${USES.join(', ')}`)
         if (NEEDS_PROOF.has(row.state)) checkEvidence(row.proof, `${at}: proof for "${row.state}"`, errors)
+        if (row.plain != null && (typeof row.plain !== 'string' || row.plain.length > 140)) errors.push(`${at}: plain must be one short sentence (up to 140 characters)`)
         if (row.state === 'unchecked' && !row.why) errors.push(`${at}: unchecked needs a why`)
         ;(row.facts || []).forEach((fact, factIndex) => checkEvidence(fact, `${at}: facts[${factIndex}]`, errors))
         ;(row.bestFor || []).forEach((task) => {
@@ -130,6 +154,19 @@ export const bestFor = (doc, task, { who = 'ours' } = {}) => {
         .filter((row) => row.state === 'works' && allowed.has(row.use))
         .sort((a, b) => (a.order ?? 99) - (b.order ?? 99) || String(a.name).localeCompare(String(b.name)))
 }
+
+// What is best for `task` and may be used by `who`, but was not checked, so
+// the pick can say "not checked" instead of hiding it.
+export const unchecked = (doc, task, { who = 'ours' } = {}) => {
+    const allowed = who === 'others' ? new Set(['shared']) : new Set(['ours', 'shared', 'owner'])
+    return (doc?.resources || [])
+        .filter((row) => (row.bestFor || []).includes(task) && row.state === 'unchecked' && allowed.has(row.use))
+}
+
+// True when no resource at all is meant for `who` on this job (so "nothing works
+// today" would be wrong: the job is simply not for them).
+export const notForOthers = (doc, task) => !(doc?.resources || [])
+    .some((row) => (row.bestFor || []).includes(task) && row.use === 'shared')
 
 export const countByKind = (doc) => Object.fromEntries(
     KIND_IDS.map((kind) => [kind, (doc?.resources || []).filter((row) => row.kind === kind).length])
