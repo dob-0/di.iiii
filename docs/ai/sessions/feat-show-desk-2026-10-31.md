@@ -193,3 +193,55 @@ the live look, lamps and status from it, so the poll rate is not the cause. Chan
 follows the poll 1 s after it is let go). Test: a change on the fake server shows within 2.5 s with no press.
 Open hypotheses for the two machines: the other page hidden (the poll pauses while `document.hidden`); the two pages on
 two different servers (aylmo's own di vs the stage Mac); a guard refusing the other machine's reads.
+
+## Rows · Upright: the fader bank as rows (2026-10-31 22:3x-23:5x, branch feat/show-desk-gaps-2026-10-31 from c19a83534)
+The owner at 22:0x: "update the UI, fix all gaps, look: the faders area is not used right". Method: an audit of the page with its own
+instrument (nine gaps), two designs (Rows, Tiles), a judge; Rows won, with Tiles' colour monitor grafted at row size. Reports:
+agent-reports-2026-10-31/projector-room/show-gaps/ (audit.md, design-lamps-as-rows.md, judge/judge.md, build/, REPORT.md).
+- Rows (default): one lamp = one row (colour tab, name and patch line, a lying level fader, the level, 11 colour pads); the two masters
+  are two short lying faders at the right of the rows; the cubes are one line under them, one card each (name and state, picture,
+  On and Off, a lying Size fader). No element moved: grid placement only (`.bankpart { display: contents }`), so `show.js` render code,
+  ids and `data-midi` are as they were. Compact 1280x700: 44 | 62 | 182 | 380 | 32 = 700; Touch: 56 | 80 | 238 | 280 | 46 = 700.
+- Upright (the console posture, chosen at the 20:2x space pass): the same page with `body[data-bank="upright"]`; a Rows · Upright
+  switch in the bottom line before Touch · Compact, kept per browser in `diShowDesk.bank.v1`. Every Upright rule stays in show.css
+  untouched (a test asserts it). Undo of the default: the Upright button, or `data-bank="upright"` on the body in index.html.
+- The audit's gaps closed: the dead band under the bottom line (`--bank-max` 1fr in Compact too), the lamp card holes, the cube strip
+  cut off, the masters' side air, the colour pads' side air, the Live strip's colours row, the bottom line's right end (the new switch),
+  the top line's slack (56 / 44 tall; Blackout all 48 / 40, lifts 40 / 34). Partly: the air under the cube name (kept for the stop text).
+- The lamp's swatch is a 22 px tab as high as its row (graft from Tiles; the colour logic is show.js's, no brightness filter).
+
+Measured with the audit's own script (measure-show-desk.cjs, headless Chromium, the harness with the seeded 3 lamps, 10 scenes, 2 cubes),
+base c19a83534 against this build, CSS px, Compact 1280x700 | Touch 1280x700 | Compact 1278x758 | Touch 1278x758:
+
+| | before | after |
+|---|---|---|
+| empty share of the whole screen, A | 58.3 / 42.6 / 61.5 / 45.1 % | 40.8 / 35.6 / 43.8 / 37.7 % |
+| dead band under the bottom line | 80 / 0 / 138 / 0 | 0 / 0 / 0 / 0 |
+| cube strip overflow (the 2 cubes) | 30 / 98 / 32 / 100 | 0 / 0 / 0 / 0 |
+| fader bank empty share, A | 69.8 / 57.4 / 69.8 / 60.7 % | 47.9 / 46.9 / 52.2 / 49.6 % |
+
+By the instrument's own definition a small mark is up to 48 px; the Compact tab (22 x 54) is not one, so it counts the tab as empty (Compact is 0.2 point above the design's 40.6; Touch, a 22 x 38 tab, is 0.1 under).
+DOM rects of the build, four screens: no page scroll, no inner scroller, 0 overlaps between controls, 0 controls under 22 px in both
+directions, 0 card children outside or cut, 0 console and page errors; 136 controls against 134, none missing, only the two new Rows and
+Upright buttons added, every control 100 % visible. Controls with one side under 22 px: the 13 lying faders of the Live strip, 128 x 20 in Compact, the same 13 at c19a83534. The page needs
+636 px in Compact (was 620, summed from the base tokens) and 688 in Touch (was 688): at 1280x636 and 1280x688 the bank is 316 and 268
+high, 0 problems.
+
+Found and fixed while building (states the audit never shows; probes in build/):
+- "Release all holds" shown: the Lights label was cut to 34.7 px ("Lig…", Touch 37.3) and both hold buttons overflowed. Cause: a grid track
+  that holds an `overflow: hidden` item starts at 0 (docs/ai/known-fixes.md). Now 70.3 x 29.9 (Touch 73 x 29.9), buttons 77.5 x 30 (80.1 x 32).
+- 3 cubes or more: the cube line scrolls sideways and its scrollbar takes 15 px of its height, but the picture was sized from the line
+  (`100cqh` ignores the scrollbar), so it was 152 px in a 149 px card (Touch 100 in 97), cut at both ends. The card is now the size
+  container: the picture is 180.8 x 137 (Touch 113.3 x 85); with 2 cubes it is as before, 200.6 x 152 (133.3 x 100).
+- 5 lamps, 3 cubes and a stopped cube in Touch (the stop text is three lines): the card needs 109 px of its 95; it scrolls inside itself
+  (`align-content: safe center`), nothing is cut off. 5 lamps: the list scrolls inside itself (336 in 200 Compact, 256 in 152 Touch).
+
+Costs of Rows, said to the owner: Rows is the default because his 22:0x ask is the word; Compact needs 636 px (was 620); the Size fader is
+181 px long in Compact (was 214.6); the Touch cube picture is 133 x 100 (was 166 x 124.5); lamps beyond three scroll inside their list.
+Not seen: the stage Mac's browser, a touch screen, a real MIDI controller on a lying fader, real cubes, the owner; browsers older than
+Chromium 105 (container query units, `:has()`, `display: contents`) have only the fallback heights.
+Lights and laser: no scene, colour, palette or look changed; both halves were arranged in the same job and measured on one page.
+Tests: `npx vitest run serverXR/src/showDesk serverXR/src/httpContracts.test.js` -> Tests 159 passed (159) (showDesk.test.js 57 -> 61: the
+switch, the stored choice and a throwing storage, nothing lost / every Rows rule scoped, the rows fit and the grid areas); eslint exit 0.
+Owed: the layout gate (measure-show-desk.cjs, gate.cjs, the harness) lives only in the agent-reports folder; it moves into scripts/ as a
+repo tool (ledger row, owner: the next show-desk job); a look on the stage Mac's own browser.

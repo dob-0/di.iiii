@@ -1064,6 +1064,25 @@
         })
     }
 
+    // The arrangement of the faders (the owner, 2026-10-31 22:0x: "the faders area is not used right"): Rows is one lamp in each row
+    // with lying faders; Upright is the console posture the desk had until then. Only body[data-bank] changes: no route, no press.
+    const BANK_KEY = 'diShowDesk.bank.v1'
+    const bankButtons = [...$('bankMode').querySelectorAll('button[data-bank]')]
+    const pickBank = (stored) => (stored === 'upright' ? 'upright' : 'rows') // anything else, or nothing stored: Rows
+    const showBank = (mode) => {
+        document.body.dataset.bank = mode
+        for (const b of bankButtons) b.setAttribute('aria-pressed', String(b.dataset.bank === mode))
+    }
+    let storedBank = null
+    try { storedBank = window.localStorage.getItem(BANK_KEY) } catch { /* this browser keeps nothing: Rows */ }
+    showBank(pickBank(storedBank))
+    for (const b of bankButtons) {
+        b.addEventListener('click', () => {
+            showBank(b.dataset.bank)
+            try { window.localStorage.setItem(BANK_KEY, b.dataset.bank) } catch { /* this browser keeps nothing: the choice lasts until a reload */ }
+        })
+    }
+
     // The scene row is labelled just Scenes; its explainer is the row's title (the owner, 21:1x: the top part "uses the
     // space badly"). The words stay in #scenesNote for screen readers.
     const scenesNote = $('scenesNote')
@@ -1072,7 +1091,7 @@
     new MutationObserver(noteToTitle).observe(scenesNote, { childList: true, characterData: true, subtree: true })
 
     // For the page's tests and a person at the console: read-only views and one refresh. Nothing here sends a press.
-    window.DiShowDesk = { refresh: tick, holdsOf, blackoutState, state: S, midiMap: () => midiMap.map((m) => ({ ...m })), pickDensity }
+    window.DiShowDesk = { refresh: tick, holdsOf, blackoutState, state: S, midiMap: () => midiMap.map((m) => ({ ...m })), pickDensity, pickBank }
     buildLive()
     midiLine()
     startMidi()

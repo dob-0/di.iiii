@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="show.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3' y='17' width='10' height='12' fill='%2335d2dd'/><path d='M18 28 L29 5' stroke='%23ff2030' stroke-width='4'/></svg>">
 </head>
-<body class="showdesk">
+<body class="showdesk" data-bank="rows">
 
 <!-- The show desk (serverXR/src/showDesk, 2026-10-31): the lighting desk and the laser desk on one page, laid out like a
      console: the stops at the top right, one row of scene keys, the live strip (the live laser look under the fingers), and
@@ -100,6 +100,7 @@
 <nav class="links" aria-label="The full desks and MIDI">
   <a href="../laser/">Laser desk</a>
   <a href="../light/">Light desk</a>
+  <span class="density" id="bankMode" role="group" aria-label="Arrangement of the faders: Rows, one lamp in each row with lying faders, or Upright, the console posture"><button type="button" data-bank="rows" aria-pressed="false" title="One lamp in each row, lying faders, the cubes in one line">Rows</button><span class="sep" aria-hidden="true">·</span><button type="button" data-bank="upright" aria-pressed="false" title="The console posture: upright faders, one strip for each lamp">Upright</button></span>
   <span class="density" id="density" role="group" aria-label="Size of the desk: Touch for a hand on a touch screen, Compact for a mouse"><button type="button" data-density="touch" aria-pressed="false" title="Sizes for a hand on a touch screen">Touch</button><span class="sep" aria-hidden="true">·</span><button type="button" data-density="compact" aria-pressed="false" title="Smaller sizes for a mouse on a laptop screen">Compact</button></span>
   <span class="midiline" id="midiLine">MIDI: asking</span>
   <button id="midiLearn" class="actbtn" type="button" aria-pressed="false" title="Tap Learn, tap a fader, a scene key or Blackout all, then move one control on the controller">Learn</button>

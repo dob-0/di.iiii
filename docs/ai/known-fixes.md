@@ -1725,3 +1725,14 @@ panic re-press that landed a little low lifted a desk (found by the 20:xx audit,
 Fix: `show.css` puts the lifts beside Blackout all, `--gap-stop: 24px` clear of it (`.stops` row-reverse); Blackout all
 is the full height of the top line (220x91). Measured in a browser: 24 px from each lift at 1278x758 and 1920x1080.
 Guard: `serverXR/src/showDesk/showDesk.test.js` "the lifts stand 24 px clear of Blackout all".
+
+## Show desk: a label next to an overflow: hidden item was cut to 35 px, and white-space: normal did not help (2026-10-31, Rows)
+Symptom: on the show desk in Rows (`body[data-bank="rows"]`), with "Release all holds" shown (`show.js`: `all.hidden = h.others === 0`),
+the Lights master label read "Lig…" (34.7 px; Touch 37.3) and both hold buttons overflowed their card by their second text line.
+Cause: the label (`.strip .cap`) is `overflow: hidden`, so the grid track that holds it starts at 0 and shrinks to nothing; a bare
+`white-space: normal` on the label does not change the track (still 34.7 px). Found by probing a state the audit never shows.
+Fix: `show.css` makes column 1 of `.masterstrip` `minmax(min-content, auto)` (a track that holds an `overflow: hidden` item starts at 0;
+give it a min-content floor), lets `.cap` wrap, and in the holds state sets the hold buttons to 12 px / 13 px with 4 px padding
+(Compact `--hold-h: 30px`). Re-measured in this build by `holds-probe.cjs`: label 70.3 x 29.9 (Touch 73 x 29.9), buttons 77.5 x 30
+(Touch 80.1 x 32), no overlap, nothing cut, 0 page errors; without the holds state the buttons stay 120.3 x 28.
+Guard: `showDesk.test.js` "nothing is lost: every Upright rule is still in show.css …" (the track, the wrap and the holds-state rule are asserted).
