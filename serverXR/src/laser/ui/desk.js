@@ -128,6 +128,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         // One cube (a small event): mirror, chase, the cube picker and the order step aside — they need two.
         document.body.classList.toggle('one-cube', desk.cubes.length <= 1)
         renderSaveState()
+        renderCubeNote()
         const bpm = $('bpm')
         if (document.activeElement !== bpm && !held('bpm')) bpm.value = desk.bpm
         const master = $('master')
@@ -509,6 +510,19 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
 
     // ---- the stage
     const nameOf = (id) => engine?.cubes.find((c) => c.id === id)?.name || id
+    // The engine's dark rule (R2), said where the operator looks (N1585): a cube On with nothing to draw counts down to
+    // its own Off; a cube the engine switched off says why until its next On. The engine's numbers and words, not the page's.
+    const darkNote = (e) => {
+        if (!e || !engine || engine.sim) return null
+        if (e.armed && e.darkOffInMs != null) return `On with nothing to draw: it switches itself off in ${Math.ceil(e.darkOffInMs / 1000)} s.${desk?.live ? '' : ' Pick a look.'}`
+        if (!e.armed && e.offBy) return `${e.offBy.text}. ${e.offBy.reason === 'dark-idle' && !desk?.live ? 'Pick a look, then On.' : 'Press On to use it again.'}`
+        return null
+    }
+    const renderCubeNote = () => {
+        const notes = (engine?.cubes || []).map((e) => [e, darkNote(e)]).filter(([, text]) => text)
+        $('cubeNote').hidden = notes.length === 0
+        $('cubeNote').textContent = notes.map(([e, text]) => (engine.cubes.length > 1 ? `${nameOf(e.id)}: ${text}` : text)).join(' · ')
+    }
     const stageCanvases = new Map()
     const renderStage = (force = false) => {
         if (!desk) return
@@ -546,6 +560,12 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
             view.state.title = c.held || e?.stop?.text || ''
             // A picture cut by the field's edge or the keep-in zone says so; a dark cube is not shown as "on" (rows 19, 23, 24).
             if (c.dark && c.on && !c.held && !desk.blackout && text === 'on') view.state.textContent = 'on · dark'
+            const note = c.on && !c.held ? darkNote(e) : null
+            if (note) {
+                view.state.textContent = e.armed ? `on · nothing to draw · off in ${Math.ceil(e.darkOffInMs / 1000)} s` : e.offBy.reason === 'dark-idle' ? 'off · had nothing to draw' : 'off · its Out stopped'
+                view.state.className = 'state is-held'
+                view.state.title = note
+            }
             view.cut.hidden = !(c.offPercent > 0)
             view.cut.textContent = c.offPercent > 0 ? `${c.offPercent} % of this look is off the field` : ''
             view.cut.title = `${c.offField || 0} lit points pushed off the field, ${c.blanked || 0} outside the keep-in zone; the cube does not draw them`
@@ -651,6 +671,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
                 : el('button', { text: 'On', disabled: !e.ip, title: e.ip ? 'Arm this cube (in phrase mode the first On of a run asks for the phrase)' : 'No address: Find cubes, then Use these', onclick: () => arm(c.id) })
             const now = c.held ? el('span', { class: 'warn', text: 'held by another Out', title: c.held })
                 : e.stop && !engine.sim ? el('span', { class: 'warn', text: `${e.stop.text || e.stop.reason}${e.armed && desk.live ? ' — press Go' : ''}` })
+                    : darkNote(e) ? el('span', { class: 'warn', text: darkNote(e) })
                     : c.driving ? el('span', { text: `${c.lit} lit points` })
                         : c.dark ? el('span', { class: 'warn', text: desk.blackout ? 'dark · blackout' : c.offPercent > 0 ? `dark · ${c.offPercent} % off the field` : 'dark' })
                             : el('span', { class: 'muted', text: '—' })

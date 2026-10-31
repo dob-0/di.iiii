@@ -167,6 +167,13 @@ const STOP_TEXT = Object.freeze({
     [STOP.FRAME_TOO_LONG]: `stopped: the frame needs more points than one pass may take (${Math.round(guardsLib.FRAME_MAX_MS)} ms at the cube's rate) once the galvo guards are in — simplify it, then send a new Go or press On`,
     [STOP.OVER_TEMPERATURE]: 'stopped: the cube reports over-temperature — let it cool, then arm again'
 })
+// Why the ENGINE itself switched a cube Off (not a stop: an Off is never resumed, a person presses On). Kept on the cube
+// and said on the desk until its next On (N1585, 2026-10-31: an On with nothing live went off after 5 s, unexplained).
+const OFF = Object.freeze({ DARK_IDLE: 'dark-idle', OUT_LET_GO: 'out-let-go' })
+const OFF_TEXT = Object.freeze({
+    [OFF.DARK_IDLE]: `Off: it had nothing to draw for ${DARK_IDLE_MS / 1000} s`,
+    [OFF.OUT_LET_GO]: 'Off: the Out that held it stopped sending'
+})
 
 const clampTo = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v)
 const isLit = (p) => p[2] > 0 || p[3] > 0 || p[4] > 0
@@ -345,6 +352,7 @@ const createLaserEngine = ({
     const liveEntry = (c) => ({
         ...c,
         lastFrameAt: null,
+        offBy: null,
         info: null, infoAt: null, heardAt: null,
         bufferFree: null, bufferAt: null, sentSince: 0, streamAt: null, streamCarry: 0,
         playing: null, index: 0, message: 0, frameNum: 0, lastPoint: [0, 0],
@@ -611,6 +619,7 @@ const createLaserEngine = ({
                 claims.delete(c.id)
                 log?.warn?.(`[laser] ${c.id} its Out let go: switching it OFF`)
                 armOne({ armed: false, cube: c.id })
+                c.offBy = { reason: OFF.OUT_LET_GO, at: t }
                 continue
             }
             const frame = darkLatch ? darkFrame(t) : framesFor(c.id)
@@ -624,6 +633,7 @@ const createLaserEngine = ({
             if (!darkLatch && (!frame || !frame.lit) && !c.stop && t - Math.max(frame?.at ?? 0, c.armedAt ?? 0) > DARK_IDLE_MS) {
                 log?.warn?.(`[laser] ${c.id} dark and unrefreshed for ${DARK_IDLE_MS} ms: switching it OFF`)
                 armOne({ armed: false, cube: c.id })
+                c.offBy = { reason: OFF.DARK_IDLE, at: t }
                 continue
             }
             const prep = prepare(c, frame)
@@ -702,6 +712,16 @@ const createLaserEngine = ({
             cubeOverTemperature: Boolean(c.info?.overTemperature)
         }
     }
+    // How long before the dark rule (R2, in tick) switches this cube Off, for the desk to count down: only while it
+    // counts — armed, not stopped, no dark latch, nothing lit, and nobody refreshing (no frame, none since On, or one
+    // older than FRAME_TIMEOUT_MS). null otherwise. Reporting only: the rule and its time are tick()'s (N1585).
+    const darkOffIn = (c, t) => {
+        if (!armed || !c.armed || c.stop || darkLatch) return null
+        const frame = framesFor(c.id)
+        if (frame?.lit) return null
+        if (frame && frame.at > (c.armedAt ?? 0) && t - frame.at <= GUARD.FRAME_TIMEOUT_MS) return null
+        return Math.max(0, DARK_IDLE_MS - (t - Math.max(frame?.at ?? 0, c.armedAt ?? 0)))
+    }
     const state = () => {
         const t = now()
         return {
@@ -718,6 +738,7 @@ const createLaserEngine = ({
                 stillWindowDeg: GUARD.STILL_WINDOW_DEG,
                 stillDwellShare: GUARD.STILL_DWELL_SHARE,
                 stillHoldMs: GUARD.STILL_HOLD_MS,
+                darkIdleMs: DARK_IDLE_MS,
                 validated: GUARD.VALIDATED,
                 path: { ...config.guards, referenceRate: guardsLib.REFERENCE_RATE }
             },
@@ -739,6 +760,8 @@ const createLaserEngine = ({
                 serialMismatch: serialMismatch(c),
                 addressRefused: c.addressRefused,
                 lastFrameAt: c.lastFrameAt,
+                offBy: c.offBy ? { reason: c.offBy.reason, text: OFF_TEXT[c.offBy.reason], at: c.offBy.at } : null,
+                darkOffInMs: darkOffIn(c, t),
                 guards: c.guards,
                 path: pathView(c),
                 temperature: temperatureView(c)
@@ -868,6 +891,7 @@ const createLaserEngine = ({
         if (c.ip && c.info?.overTemperature) { c.stop = { reason: STOP.OVER_TEMPERATURE, at: t, detail: `${c.info.temperature} °C` }; return }
         c.armed = true
         c.armedAt = t
+        c.offBy = null
         c.stop = null
         c.stillSince = null
         c.playing = null
@@ -1041,4 +1065,4 @@ const createLaserEngine = ({
     return { state, setFrame, alive, blackout, dark, arm, frames: framesView, close: shutdown, shutdown, tick, canTake, upsertCube, heardAt }
 }
 
-module.exports = { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, DEFAULT_ZONE, TICK_MS, GUARD, STOP, CLAIM_TTL_MS }
+module.exports = { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, DEFAULT_ZONE, TICK_MS, GUARD, STOP, OFF, CLAIM_TTL_MS }
