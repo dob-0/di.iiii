@@ -167,6 +167,105 @@
 
     $('bpm').addEventListener('change', (e) => { touched.set('bpm', Date.now()); post('desk/api/bpm', { bpm: Number(e.target.value) }).then(refreshDesk) })
     $('tapBtn').addEventListener('click', () => post('desk/api/bpm', { tap: true }).then(refreshDesk))
+
+    // ---- the music (2026-10-31, the owner: "add audio analyze fully bpm sync as well"), as Resolume's Auto BPM. This page
+    // listens (listen.js) and posts the bass and the kicks to the desk about 20 times a second, for looks with Audio; with
+    // Auto on, every tempo the listener has locked to moves the desk's clock (desk/api/sync), its beat on the music's.
+    // Only a page with Audio on sends anything. The input, Auto and the offset stay in this browser.
+    const AUDIO_POST_MS = 50
+    const KEY_INPUT = 'laserDesk.audioInput'
+    const KEY_OFFSET = 'laserDesk.audioOffset'
+    const KEY_AUTO = 'laserDesk.auto'
+    const remembered = (key, fallback) => { try { return localStorage.getItem(key) ?? fallback } catch { return fallback } }
+    const remember_ = (key, value) => { try { localStorage.setItem(key, value) } catch { /* a private window forgets */ } }
+    let auto = remembered(KEY_AUTO, '0') === '1'
+    // 40 ms: what the listener's beat ran behind the kicks of a 128 BPM test track (2026-10-31); the laser's own delay comes on top.
+    let offsetMs = Number(remembered(KEY_OFFSET, '40'))
+    if (!Number.isFinite(offsetMs)) offsetMs = 40
+    let audioPostAt = 0
+    let kickPending = false
+    let heard = null // the listener's last word: { bpm, locked } or { status }
+    // Fire-and-forget, as the light desk sends its levels: post() is for a person's clicks (its notices, its waits).
+    const firePost = (url, body) => {
+        try { fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {}) } catch { /* a lost level costs nothing */ }
+    }
+    const setMeter = (id, v) => { const bar = $(id)?.querySelector('i'); if (bar) bar.style.width = Math.round(Math.max(0, Math.min(1, v)) * 100) + '%' }
+    const renderAudio = () => {
+        const on = window.DeskListen.on
+        $('audioBtn').classList.toggle('is-on', on)
+        $('autoBtn').disabled = !on
+        $('autoBtn').classList.toggle('is-on', on && auto)
+        const text = $('heard')
+        text.classList.toggle('is-locked', Boolean(on && heard?.locked))
+        text.textContent = !on ? '' : heard?.bpm ? `${heard.bpm.toFixed(1)} ${heard.locked ? (auto ? '· following' : '· locked') : '· finding'}` : heard?.status || 'listening…'
+        if (!on) for (const id of ['audioMeter', 'mLow', 'mMid', 'mHigh', 'mLevel']) setMeter(id, 0)
+    }
+    const onLevels = ({ low, level, mid, high }) => {
+        const t = performance.now()
+        if (t - audioPostAt < AUDIO_POST_MS) return
+        audioPostAt = t
+        firePost('desk/api/audio', { low, level, kick: kickPending })
+        kickPending = false
+        setMeter('audioMeter', level)
+        setMeter('mLow', low); setMeter('mMid', mid); setMeter('mHigh', high); setMeter('mLevel', level)
+    }
+    const onKick = () => {
+        kickPending = true
+        const dot = $('beatDot')
+        dot.classList.add('hit')
+        setTimeout(() => dot.classList.remove('hit'), 120)
+    }
+    const onTempo = ({ bpm, lastBeat, locked }) => {
+        heard = { bpm, locked }
+        if (auto && locked) firePost('desk/api/sync', { bpm: Math.round(bpm * 100) / 100, beatAt: lastBeat - offsetMs })
+        renderAudio()
+    }
+    const onStatus = ({ state, seconds }) => {
+        heard = { status: state === 'listening' ? `listening… ${Math.round(seconds)} s` : state === 'quiet' ? 'quiet' : 'no beat heard' }
+        renderAudio()
+    }
+    const fillInputs = async () => {
+        const list = (await window.DeskListen.inputs()).filter((d) => d.deviceId && d.deviceId !== 'default')
+        const want = remembered(KEY_INPUT, '')
+        $('audioInput').replaceChildren(
+            el('option', { value: '', text: 'This computer\'s default input' }),
+            ...list.map((d, i) => el('option', { value: d.deviceId, text: d.label || `Input ${i + 1}` })))
+        $('audioInput').value = list.some((d) => d.deviceId === want) ? want : ''
+    }
+    const startAudio = async () => {
+        if (!navigator.mediaDevices?.getUserMedia) {
+            notice('This browser will not open a microphone here: open the desk at http://127.0.0.1 or localhost (or HTTPS).')
+            return
+        }
+        try {
+            const label = await window.DeskListen.start({ deviceId: remembered(KEY_INPUT, '') || undefined, onLevels, onKick, onTempo, onStatus })
+            heard = null
+            $('audioStatus').textContent = `Listening: ${label}`
+            fillInputs()
+        } catch (error) {
+            notice(`The desk could not listen (${error.message}). Allow the microphone for this page, or pick another input in Setup → Audio.`)
+        }
+        renderAudio()
+    }
+    const stopAudio = () => {
+        window.DeskListen.stop()
+        heard = null
+        $('audioStatus').textContent = 'Not listening.'
+        renderAudio()
+    }
+    $('audioBtn').addEventListener('click', () => (window.DeskListen.on ? stopAudio() : startAudio()))
+    $('autoBtn').addEventListener('click', () => { auto = !auto; remember_(KEY_AUTO, auto ? '1' : '0'); renderAudio() })
+    $('resyncBtn').addEventListener('click', () => post('desk/api/sync', { resync: true }).then(refreshDesk))
+    $('audioInput').addEventListener('change', (e) => { remember_(KEY_INPUT, e.target.value); if (window.DeskListen.on) startAudio() })
+    $('audioOffset').value = String(offsetMs)
+    $('audioOffsetVal').textContent = `${offsetMs} ms`
+    $('audioOffset').addEventListener('input', (e) => {
+        offsetMs = Number(e.target.value)
+        remember_(KEY_OFFSET, String(offsetMs))
+        $('audioOffsetVal').textContent = `${offsetMs} ms`
+    })
+    fillInputs()
+    renderAudio()
     let masterTimer = null
     $('master').addEventListener('input', (e) => {
         touched.set('master', Date.now())
@@ -186,7 +285,7 @@
             $('page-control').hidden = page !== 'control'
             $('page-setup').hidden = page !== 'setup'
             if (page === 'setup') renderSetup()
-            else renderStage(true)
+            else { mapTestOff(); renderStage(true) }
         })
     }
 
@@ -292,6 +391,7 @@
         { key: 'pulseBeats', label: 'Pulse every', min: 0.25, max: 16, step: 0.25, fmt: (v) => `${v} b` },
         { key: 'sweep', label: 'Sweep', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? v.toFixed(2) : 'off'), title: 'The picture swings across the field' },
         { key: 'sweepBeats', label: 'Sweep every', min: 0.25, max: 16, step: 0.25, fmt: (v) => `${v} b` },
+        { key: 'react', label: 'Audio', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + '%' : 'off'), title: 'The size rides on the music: the bass swells it, each kick punches it to full (Audio on, in the top bar)' },
         { key: 'phase', label: 'Chase', min: 0, max: 4, step: 0.125, fmt: (v) => (v ? `${v} b` : 'off'), title: 'Beats each cube runs behind the one before it', multi: true }
     ]
     const CYCLE = { key: 'cycle', label: 'Each shape', min: 0.5, max: 32, step: 0.5, fmt: (v) => `${v} b` }
@@ -704,8 +804,180 @@
             )
         })
         $('cubeRows').replaceChildren(...rows)
+        renderMap()
     }
     $('allOnBtn').addEventListener('click', () => arm(null))
+
+    // ---- mapping (2026-10-31, the owner: "i need to mapp laser"): a cube's whole field pinned to four corners, dragged
+    // on its field as Resolume's corner pin. Test picture puts the square, cross and diagonals on the cube through the
+    // map, so each corner can be laid on the wall; it goes off when Setup is left, so a show never starts on it.
+    const FULL = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
+    const CORNER_NAMES = ['bottom left', 'bottom right', 'top right', 'top left']
+    const MAP_SEND_MS = 60
+    let mapId = null
+    let mapSel = null // the corner the arrow keys move
+    let mapDrag = null // the corner under the pointer
+    let mapLocal = null // { id, corners } while the person moves them, until the desk has them
+    let mapTouchedAt = 0
+    let mapSendTimer = null
+    const clampField = (v) => Math.max(-1, Math.min(1, v))
+    const mapCube = () => desk?.cubes.find((c) => c.id === mapId) || desk?.cubes[0] || null
+    const mapCorners = (c) => (mapLocal && mapLocal.id === c.id ? mapLocal.corners : (c.corners || FULL))
+    const mapGeom = (canvas) => {
+        const w = canvas.clientWidth
+        const h = canvas.clientHeight
+        return { cx: w / 2, cy: h / 2, s: (Math.min(w, h) / 2) * 0.9 }
+    }
+    const fieldToPx = (canvas, [x, y]) => { const { cx, cy, s } = mapGeom(canvas); return [cx + x * s, cy - y * s] }
+    const pxToField = (canvas, px, py) => { const { cx, cy, s } = mapGeom(canvas); return [clampField((px - cx) / s), clampField((cy - py) / s)] }
+    const sendCorners = (now) => {
+        if (mapSendTimer) { clearTimeout(mapSendTimer); mapSendTimer = null }
+        const fire = () => { mapSendTimer = null; if (mapLocal) post('desk/api/cube', { id: mapLocal.id, corners: mapLocal.corners }) }
+        if (now) fire()
+        else mapSendTimer = setTimeout(fire, MAP_SEND_MS)
+    }
+    const moveCorner = (c, i, at) => {
+        const corners = mapCorners(c).map((p) => [...p])
+        corners[i] = [Math.round(clampField(at[0]) * 1000) / 1000, Math.round(clampField(at[1]) * 1000) / 1000]
+        mapLocal = { id: c.id, corners }
+        mapTouchedAt = Date.now()
+        drawMap()
+    }
+    const drawMap = () => {
+        const canvas = $('mapCanvas')
+        const c = mapCube()
+        if (!canvas || !c || page !== 'setup') return
+        const dpr = Math.min(2, window.devicePixelRatio || 1)
+        const w = Math.max(1, Math.round(canvas.clientWidth * dpr))
+        const h = Math.max(1, Math.round(canvas.clientHeight * dpr))
+        if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h }
+        const g = canvas.getContext('2d')
+        g.setTransform(dpr, 0, 0, dpr, 0, 0)
+        g.clearRect(0, 0, w, h)
+        const corners = mapCorners(c)
+        const pin = window.DiLaser?.cornerPin ? window.DiLaser.cornerPin(corners) : null
+        const at = (x, y) => fieldToPx(canvas, pin ? pin(x, y) : [x, y])
+        const stroke = (pts, colour, width = 1, dash = []) => {
+            g.beginPath()
+            pts.forEach(([x, y], k) => { const [px, py] = at(x, y); if (k) g.lineTo(px, py); else g.moveTo(px, py) })
+            g.strokeStyle = colour; g.lineWidth = width; g.setLineDash(dash); g.stroke(); g.setLineDash([])
+        }
+        // The cube's whole field, unmapped: where the corners can go.
+        g.strokeStyle = '#26262a'; g.lineWidth = 1
+        const [fx0, fy0] = fieldToPx(canvas, [-1, 1])
+        const [fx1, fy1] = fieldToPx(canvas, [1, -1])
+        g.strokeRect(fx0, fy0, fx1 - fx0, fy1 - fy0)
+        // The mapped field: a grid through the map, then the test picture's square, cross and diagonals.
+        const line = (x0, y0, x1, y1, n = 24) => Array.from({ length: n + 1 }, (_, k) => [x0 + ((x1 - x0) * k) / n, y0 + ((y1 - y0) * k) / n])
+        for (let k = 1; k < 4; k += 1) {
+            const v = -1 + k * 0.5
+            stroke(line(v, -1, v, 1), '#2c3a3c')
+            stroke(line(-1, v, 1, v), '#2c3a3c')
+        }
+        stroke(line(-1, -1, 1, 1), '#4a5a5c')
+        stroke(line(-1, 1, 1, -1), '#4a5a5c')
+        stroke([...line(-1, -1, 1, -1), ...line(1, -1, 1, 1), ...line(1, 1, -1, 1), ...line(-1, 1, -1, -1)], '#35d2dd', 2)
+        // The corners: a hard square each, the chosen one filled.
+        corners.forEach((p, i) => {
+            const [px, py] = fieldToPx(canvas, p)
+            const r = 7
+            g.fillStyle = i === mapSel ? '#35d2dd' : '#060607'
+            g.strokeStyle = i === mapDrag || i === mapSel ? '#fff' : '#35d2dd'
+            g.lineWidth = 2
+            g.fillRect(px - r, py - r, r * 2, r * 2)
+            g.strokeRect(px - r, py - r, r * 2, r * 2)
+        })
+        if (!pin && corners.some((p, i) => p[0] !== FULL[i][0] || p[1] !== FULL[i][1])) {
+            g.fillStyle = '#e0a84a'; g.font = '12px system-ui, sans-serif'
+            g.fillText('These corners cross or line up: the cube keeps its whole field.', 10, 18)
+        }
+        $('mapReadout').textContent = mapSel === null ? ''
+            : `${CORNER_NAMES[mapSel]} ${corners[mapSel][0].toFixed(3)}, ${corners[mapSel][1].toFixed(3)}`
+    }
+    const renderMap = () => {
+        const c = mapCube()
+        $('mapPane').hidden = !c
+        if (!c) return
+        mapId = c.id
+        // The desk has the corners once it says the same: then its copy is the one drawn.
+        if (mapLocal && !mapDrag && !mapSendTimer && Date.now() - mapTouchedAt > HOLD_MS) mapLocal = null
+        const select = $('mapCube')
+        const ids = desk.cubes.map((x) => x.id).join(',')
+        if (select.dataset.ids !== ids) {
+            select.dataset.ids = ids
+            select.replaceChildren(...desk.cubes.map((x) => el('option', { value: x.id, text: nameOf(x.id) })))
+        }
+        select.value = c.id
+        $('mapFlipY').checked = Boolean(c.flipY)
+        const testing = (desk.mapTest || []).includes(c.id)
+        $('mapTestBtn').classList.toggle('is-on', testing)
+        $('mapTestBtn').textContent = testing ? 'Test picture · on' : 'Test picture'
+        drawMap()
+    }
+    const mapCanvas = $('mapCanvas')
+    mapCanvas.addEventListener('pointerdown', (e) => {
+        const c = mapCube()
+        if (!c) return
+        const rect = mapCanvas.getBoundingClientRect()
+        const px = e.clientX - rect.left
+        const py = e.clientY - rect.top
+        let best = null
+        mapCorners(c).forEach((p, i) => {
+            const [cx, cy] = fieldToPx(mapCanvas, p)
+            const d = Math.hypot(cx - px, cy - py)
+            if (d <= 28 && (best === null || d < best.d)) best = { i, d }
+        })
+        mapSel = best ? best.i : null
+        mapDrag = best ? best.i : null
+        if (best) { mapCanvas.setPointerCapture(e.pointerId); e.preventDefault() }
+        mapCanvas.focus()
+        drawMap()
+    })
+    mapCanvas.addEventListener('pointermove', (e) => {
+        const c = mapCube()
+        if (mapDrag === null || !c) return
+        const rect = mapCanvas.getBoundingClientRect()
+        moveCorner(c, mapDrag, pxToField(mapCanvas, e.clientX - rect.left, e.clientY - rect.top))
+        sendCorners(false)
+    })
+    const endDrag = () => { if (mapDrag === null) return; mapDrag = null; sendCorners(true); drawMap() }
+    mapCanvas.addEventListener('pointerup', endDrag)
+    mapCanvas.addEventListener('pointercancel', endDrag)
+    // The arrow keys move the chosen corner (1–4 choose one) and stay here: the desk's own keys (1–9 send a look, the
+    // arrows open looks) must not fire while a corner is being placed.
+    mapCanvas.addEventListener('keydown', (e) => {
+        const c = mapCube()
+        if (!c) return
+        if (['1', '2', '3', '4'].includes(e.key)) { mapSel = Number(e.key) - 1; drawMap() }
+        else if (e.key in { ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1 } && mapSel !== null) {
+            const step = e.shiftKey ? 0.02 : 0.002
+            const [x, y] = mapCorners(c)[mapSel]
+            const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0
+            const dy = e.key === 'ArrowDown' ? -step : e.key === 'ArrowUp' ? step : 0
+            moveCorner(c, mapSel, [x + dx, y + dy])
+            sendCorners(false)
+        } else if (e.key === 'Escape') { mapSel = null; drawMap() }
+        else return
+        e.preventDefault()
+        e.stopPropagation()
+    })
+    $('mapCube').addEventListener('change', (e) => { mapId = e.target.value; mapSel = null; mapLocal = null; renderMap() })
+    $('mapFlipY').addEventListener('change', (e) => { const c = mapCube(); if (c) setCube(c.id, { flipY: e.target.checked }).then(renderMap) })
+    $('mapResetBtn').addEventListener('click', () => {
+        const c = mapCube()
+        if (!c) return
+        mapLocal = { id: c.id, corners: FULL.map((p) => [...p]) }
+        mapTouchedAt = Date.now()
+        sendCorners(true)
+        drawMap()
+    })
+    $('mapTestBtn').addEventListener('click', () => {
+        const c = mapCube()
+        if (!c) return
+        post('desk/api/maptest', { id: c.id, on: !(desk.mapTest || []).includes(c.id) }).then(refreshDesk).then(renderMap)
+    })
+    const mapTestOff = () => { for (const id of desk?.mapTest || []) post('desk/api/maptest', { id, on: false }).then(refreshDesk) }
+    window.addEventListener('resize', () => { if (page === 'setup') drawMap() })
     let found = []
     $('findBtn').addEventListener('click', async () => {
         const b = $('findBtn')
@@ -842,6 +1114,7 @@
             if (selected) { e.preventDefault(); deleteSelected() }
         } else if (key === 'b') $('blackoutBtn').click()
         else if (key === 't') $('tapBtn').click()
+        else if (key === 'r') $('resyncBtn').click()
     })
 
     // ---- polling

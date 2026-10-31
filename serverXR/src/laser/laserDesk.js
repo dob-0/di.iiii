@@ -25,7 +25,7 @@ const path = require('path')
 const { LASER_SHAPES, shapeListOf, parseLaserColour } = require('../../../shared/laserShapes.cjs')
 const { flattenLaserPaths, FRAME_MAX_POINTS } = require('../../../shared/laserFrame.cjs')
 // A look drawn at a moment lives in shared/ (2026-10-29): the page's tiles play the looks with the same code.
-const { CUBE_DEFAULTS, beatsAt, lookPointsAt } = require('../../../shared/laserLook.cjs')
+const { CUBE_DEFAULTS, normaliseCorners, beatsAt, lookPointsAt } = require('../../../shared/laserLook.cjs')
 
 const TICK_MS = 50 // as the show player: well inside the engine's signal-loss stop (FRAME_TIMEOUT_MS 200)
 const OUT = 'desk' // the desk's Laser Out name in the engine (one sender per cube)
@@ -40,6 +40,11 @@ const BLANK = [0, 0, 0, 0, 0]
 // points, a 25 % margin for the galvo guards' extra points).
 const FRAME_CAP_S = 0.067
 const TAP_GAP_MS = 2000 // a tap more than this after the last one starts a new count
+// The music, heard by a desk page (ui/listen.js) and posted here about 20 times a second. Older than this, the desk
+// hears nothing: looks with Audio draw at their own size again.
+const AUDIO_STALE_MS = 600
+const KICK_FALL_MS = 140 // a kick swells the picture at once and lets go over this
+const SYNC_REACH_MS = 10000 // a beat the page reports must be this close to now
 const BPM_MIN = 20
 const BPM_MAX = 300
 
@@ -72,6 +77,7 @@ const LOOK_DEFAULTS = Object.freeze({
     sweepBeats: 4,
     mirror: false, // every second cube mirrored (x → −x)
     phase: 0, // beats each cube runs behind the one before it (a chase across the cubes)
+    react: 0, // 0…1: the size rides on the music's bass and kicks while the desk hears it (Audio, in the top bar)
     cubes: 'all' // 'all' or the cube ids this look draws on; the others are held dark
 })
 
@@ -141,6 +147,7 @@ const normaliseLook = (raw = {}, base = LOOK_DEFAULTS) => {
         sweepBeats: clamp(num(pick('sweepBeats'), 4), 0.25, 64),
         mirror: bool(pick('mirror')),
         phase: clamp(num(pick('phase'), 0), 0, 16),
+        react: clamp(num(pick('react'), 0), 0, 1),
         cubes: Array.isArray(cubes) ? [...new Set(cubes.map(idOf).filter(Boolean))].slice(0, 64) : 'all'
     }
 }
@@ -152,12 +159,18 @@ const normaliseCube = (raw = {}, base = CUBE_DEFAULTS) => {
     return {
         on: bool(pick('on'), true),
         flipX: bool(pick('flipX')),
+        flipY: bool(pick('flipY')),
         size: clamp(num(pick('size'), 1), 0, 2),
         x: clamp(num(pick('x'), 0), -1, 1),
         y: clamp(num(pick('y'), 0), -1, 1),
-        order: Math.round(clamp(num(pick('order'), 0), -999, 999))
+        order: Math.round(clamp(num(pick('order'), 0), -999, 999)),
+        corners: normaliseCorners(pick('corners'), normaliseCorners(base.corners))
     }
 }
+
+// The picture a cube shows while it is being mapped: the whole field's square, its cross and both diagonals (the
+// alignment picture, shape grid), so each corner and the middle can be laid on the wall. White, at the master.
+const MAP_TEST_LOOK = Object.freeze({ shape: 'grid', colour: '#ffffff', size: 1, height: 0, x: 0, points: 900 })
 
 // The first bank (an empty desk.json): the node's shapes and the owner's four TouchDesigner scenes, each with a move.
 // Colours as the owner's light desk keeps them: complementary pairs, no green (it can be picked, it is not a default).
@@ -197,7 +210,9 @@ const SEED_LOOKS = [
     { id: 'clock', name: 'Clock', shape: 'clock', colour: '#ffffff', size: 0.5, points: 400 },
     { id: 'horizon', name: 'Horizon', shape: 'horizon', colour: '#ffb020', size: 0.5, points: 400 },
     { id: 'morse', name: 'Morse', shape: 'morse', colour: '#20d8ff', size: 0.5, points: 400 },
-    { id: 'scenes', name: 'Scenes', shape: 'planets,pendulum,radar,constellation,horizon', cycle: 16, colour: '#ff30c0', size: 0.5, points: 400 }
+    { id: 'scenes', name: 'Scenes', shape: 'planets,pendulum,radar,constellation,horizon', cycle: 16, colour: '#ff30c0', size: 0.5, points: 400 },
+    // 2026-10-31: a circle pulsing, winding into a spiral that runs out into the line round the whole square, and back.
+    { id: 'unfold', name: 'Unfold', shape: 'unfold', colour: '#20d8ff', size: 0.5, points: 900 }
 ].map((look) => normaliseLook(look))
 // The seed looks a bank saved before `seeded` was kept (2026-10-29 evening) had been offered: the first fourteen.
 const FIRST_SEEDS = ['ring', 'star', 'fan', 'wave', 'triangle', 'square', 'spiral', 'scan', 'galaxy', 'sunflower', 'noisy', 'grid', 'td-cycle', 'pairs']
@@ -238,6 +253,11 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     let blackout = false
     let timer = null
     const sent = new Map() // cubeId → { key, end, held, points, at }
+    const mapTest = new Set() // cubes showing the mapping picture instead of the live look (not saved)
+    const testLook = normaliseLook(MAP_TEST_LOOK)
+    // The music a desk page last posted (hearAudio, below): the bass and the last kick, for looks with Audio.
+    let audio = { low: 0, level: 0, kickAt: -Infinity, at: -Infinity }
+    const audioAt = (t) => (t - audio.at > AUDIO_STALE_MS ? null : Math.max(audio.low, Math.exp(-(t - audio.kickAt) / KICK_FALL_MS)))
     let saveTimer = null
     let dirty = false // the bank changed since desk.json was last written (Save)
     let loadMessage = null
@@ -295,7 +315,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
 
     let lastEngine = null
     const tick = () => {
-        if (!live) return
+        if (!live && !mapTest.size) return
         const engine = getEngine()
         // A config reload (Use these) builds a new engine with no frames: everything is sent again, not kept alive.
         if (engine !== lastEngine) { for (const s of sent.values()) s.key = null; lastEngine = engine }
@@ -312,9 +332,16 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         const cubes = orderedCubes(engine.state().cubes).filter((c) => cubeCfg(c.id).on)
         const t = now()
         cubes.forEach((cube, index) => {
+            // No look live: only a cube being mapped is the desk's; the others stay with whoever has them.
+            if (!live && !mapTest.has(cube.id)) return
             const was = sent.get(cube.id) || { key: null, end: null, held: null, points: 0, at: 0 }
-            const drawn = live.cubes === 'all' || live.cubes.includes(cube.id)
-            const raw = blackout || !drawn ? [BLANK] : lookPointsAt(live, { t, clock, index, cube: cubeCfg(cube.id), master: show.master })
+            const cfg = cubeCfg(cube.id)
+            const drawn = live && (live.cubes === 'all' || live.cubes.includes(cube.id))
+            // Mapping: the alignment picture over the cube's whole field (its size and offset left out), through its map.
+            const raw = blackout ? [BLANK]
+                : mapTest.has(cube.id) ? lookPointsAt(testLook, { t, clock, index: 0, cube: { ...cfg, size: 1, x: 0, y: 0 }, master: show.master })
+                    : !drawn ? [BLANK]
+                        : lookPointsAt(live, { t, clock, index, cube: cfg, master: show.master, audio: audioAt(t) })
             let points = [BLANK]
             let end = was.end
             if (raw.some(isLit)) {
@@ -338,9 +365,10 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     // Every cube the desk drew on goes dark, and the desk stops sending: its hold on them runs out (CLAIM_TTL_MS),
     // so a Nodes Laser Out or the show player can take them.
     const release = () => {
-        const was = live !== null
+        const was = live !== null || mapTest.size > 0
         live = null
         liveId = null
+        mapTest.clear()
         if (timer) { stopEvery(timer); timer = null }
         // Only cubes the desk drew on are touched: a desk that never drew must not build an engine to say so.
         if (sent.size) {
@@ -606,6 +634,35 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         return { ok: true, bpm: show.bpm, taps: clock.taps.length }
     }
 
+    // ---- the music (2026-10-31, the owner: "add audio analyze fully bpm sync as well"), as Resolume's Auto BPM: a desk
+    // page listens (ui/listen.js), posts the bass and the kicks for looks with Audio, and, with Auto on, the tempo it
+    // has locked to and when a beat fell. The clock takes that tempo and moves its zero so that beat lands on a whole
+    // beat, the one nearest the count it was at: the beat count runs on, so a 16-beat scene does not restart.
+    const hearAudio = ({ low, level, kick } = {}) => {
+        const t = now()
+        audio = { low: clamp(num(low, 0), 0, 1), level: clamp(num(level, 0), 0, 1), kickAt: kick === true ? t : audio.kickAt, at: t }
+        return { ok: true }
+    }
+    const followBeat = ({ bpm, beatAt } = {}) => {
+        const b = Number(bpm)
+        const at = Number(beatAt)
+        const t = now()
+        if (!Number.isFinite(b) || b < BPM_MIN || b > BPM_MAX) return { ok: false, status: 400, error: `bpm ${BPM_MIN}…${BPM_MAX}` }
+        if (!Number.isFinite(at) || Math.abs(at - t) > SYNC_REACH_MS) return { ok: false, status: 400, error: 'beatAt: the time a beat fell, in ms, within 10 s of now' }
+        const k = Math.round(beatsAt(clock, at))
+        clock.bpm = b
+        clock.zero = at - (k * 60000) / b
+        const shown = Math.round(b * 10) / 10
+        if (shown !== show.bpm) { show.bpm = shown; save() }
+        return { ok: true, bpm: show.bpm, beat: beatsAt(clock, t) }
+    }
+    // Resync: beat one is now (Resolume's Resync), every scene from its start.
+    const resync = () => {
+        clock.zero = now()
+        clock.taps = []
+        return { ok: true, bpm: show.bpm }
+    }
+
     const setCube = (id, fields = {}) => {
         const key = idOf(id)
         if (!key) return { ok: false, status: 400, error: 'which cube' }
@@ -621,6 +678,26 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         save()
         tick()
         return { ok: true, cube: show.cubes[key] }
+    }
+
+    // Mapping: the cube shows the alignment picture through its map while its corners are moved; off gives it back to
+    // the live look, or dark when there is none.
+    const setMapTest = (id, on) => {
+        const key = idOf(id)
+        if (!key) return { ok: false, status: 400, error: 'which cube' }
+        if (!getEngine().state().cubes.some((c) => c.id === key)) return { ok: false, status: 404, error: `no cube "${id}"` }
+        if (on) {
+            mapTest.add(key)
+            startTicking()
+        } else if (mapTest.delete(key)) {
+            const drawn = live && (live.cubes === 'all' || live.cubes.includes(key))
+            if (!drawn && sent.has(key)) {
+                if (!sent.get(key).held) getEngine().setFrame(key, [BLANK], OUT)
+                sent.delete(key)
+            }
+        }
+        tick()
+        return { ok: true, mapTest: [...mapTest] }
     }
 
     /** A small picture of every look (first cube, at the beat's start), for the bank's tiles. */
@@ -663,9 +740,11 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             added: addedIds(),
             canUndo: past.length > 0,
             canRedo: future.length > 0,
+            mapTest: [...mapTest],
+            hearing: now() - audio.at <= AUDIO_STALE_MS,
             cubes: orderedCubes(engine.cubes).map((c) => {
                 const s = sent.get(c.id)
-                return { id: c.id, ...cubeCfg(c.id), driving: Boolean(live && s && !s.held), held: s?.held ?? null, points: s?.points ?? 0 }
+                return { id: c.id, ...cubeCfg(c.id), driving: Boolean((live || mapTest.has(c.id)) && s && !s.held), held: s?.held ?? null, points: s?.points ?? 0 }
             })
         }
     }
@@ -677,7 +756,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         else if (saveTimer) { clearTimeout(saveTimer); saveNow() }
     }
 
-    return { state, go, setPalette, editLook, copyLook, pasteLook, undo, redo, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBpm, tap, setCube, thumbs, view, tick, close }
+    return { state, go, setPalette, editLook, copyLook, pasteLook, undo, redo, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBpm, tap, hearAudio, followBeat, resync, setCube, setMapTest, thumbs, view, tick, close }
 }
 
 module.exports = { createLaserDesk, normaliseLook, normaliseCube, lookPointsAt, capOf, hashPoints, beatsAt, SEED_LOOKS, LOOK_DEFAULTS, CUBE_DEFAULTS, TICK_MS, OUT }

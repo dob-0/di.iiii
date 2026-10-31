@@ -20,12 +20,22 @@
     <button class="page-tab is-active" data-page="control">Control</button>
     <button class="page-tab" data-page="setup">Setup</button>
   </nav>
-  <div class="topright">
-    <span class="pill" id="safetyPill" title="What the cubes can do right now">…</span>
+  <!-- The clock and the music (2026-10-31), as Resolume's: BPM, Tap, Audio listens here, Auto makes the clock follow it,
+       Resync puts beat one now. Kept apart from the stops, so a narrow window never splits Blackout and Disarm all. -->
+  <div class="tempo">
     <label class="bpm" title="Beats per minute: every move runs on this clock">
       <span>BPM</span><input id="bpm" type="number" min="20" max="300" step="0.1" inputmode="decimal">
     </label>
     <button id="tapBtn" title="Tap the beat (T)">Tap</button>
+    <button id="audioBtn" title="Listen to the music through this computer's microphone or sound card (Setup → Audio picks which)">Audio</button>
+    <span class="meter" id="audioMeter" aria-hidden="true"><i></i></span>
+    <span class="beatdot" id="beatDot" aria-hidden="true"></span>
+    <button id="autoBtn" title="Auto BPM: the desk's tempo and its beat follow the music once it has locked (Audio on)" disabled>Auto</button>
+    <button id="resyncBtn" title="Resync: beat one is now, every scene from its start (R)">Resync</button>
+    <span class="heard mono" id="heard"></span>
+  </div>
+  <div class="topright">
+    <span class="pill" id="safetyPill" title="What the cubes can do right now">…</span>
     <label class="master" title="Master level for every cube">
       <span>Master</span><input id="master" type="range" min="0" max="1" step="0.01"><b id="masterVal"></b>
     </label>
@@ -138,6 +148,39 @@
       </div>
     </div>
   </section>
+  <!-- Mapping (2026-10-31, the owner: "i need to mapp laser"): Resolume's corner pin for a cube's whole field. -->
+  <section class="pane mappane" id="mapPane">
+    <div class="panehead">
+      <h2>Mapping</h2>
+      <select id="mapCube" class="multi" aria-label="The cube to map"></select>
+      <span class="muted">Drag a corner onto your wall. Click a corner, then the arrow keys move it a little (Shift: more).</span>
+    </div>
+    <div class="mapwrap"><canvas id="mapCanvas" tabindex="0" aria-label="The cube's field: drag its four corners"></canvas></div>
+    <div class="actions">
+      <button id="mapTestBtn" title="The cube shows its square, cross and diagonals through the map instead of the look, so each corner can be laid on the wall">Test picture</button>
+      <label class="mapcheck"><input type="checkbox" id="mapFlipY"> Upside down</label>
+      <button id="mapResetBtn" class="quiet" title="The corners back to the whole field">Reset</button>
+      <span class="muted mono" id="mapReadout"></span>
+    </div>
+  </section>
+  <!-- The music (2026-10-31, the owner: "add audio analyze fully bpm sync as well"). -->
+  <section class="pane audiopane" id="audioPane">
+    <div class="panehead">
+      <h2>Audio</h2>
+      <span class="muted" id="audioNote">Audio, in the top bar, listens to the music; the browser asks once for the microphone.</span>
+    </div>
+    <div class="audiogrid">
+      <label class="field"><span>Input</span><select id="audioInput"><option value="">This computer's default input</option></select></label>
+      <label class="field" title="The laser runs this much ahead of the beat it hears, for the time the sound and the frames take. Raise it if the laser lags the music"><span>Laser ahead</span><input id="audioOffset" type="range" min="-150" max="250" step="5" value="40"><b id="audioOffsetVal">40 ms</b></label>
+      <div class="bands">
+        <span>Low</span><span class="meter" id="mLow"><i></i></span>
+        <span>Mid</span><span class="meter" id="mMid"><i></i></span>
+        <span>High</span><span class="meter" id="mHigh"><i></i></span>
+        <span>Level</span><span class="meter" id="mLevel"><i></i></span>
+      </div>
+      <p class="muted" id="audioStatus">Not listening.</p>
+    </div>
+  </section>
   <section class="pane notes">
     <h2>Safety</h2>
     <ul>
@@ -177,12 +220,13 @@
       <dt>Ctrl+S</dt><dd>Save: every changed look becomes a new scene</dd>
       <dt>F2</dt><dd>Rename the look in Edit</dd>
       <dt>Esc</dt><dd>Close Edit (or this list)</dd>
-      <dt>B · T · ?</dt><dd>Blackout · tap the beat · this list</dd>
+      <dt>B · T · R · ?</dt><dd>Blackout · tap the beat · resync (beat one now) · this list</dd>
     </dl>
   </div>
 </div>
 
 <script src="lib/laser.js"></script>
+<script src="listen.js"></script>
 <script src="desk.js"></script>
 </body>
 </html>

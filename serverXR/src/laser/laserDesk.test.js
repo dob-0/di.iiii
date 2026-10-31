@@ -6,7 +6,7 @@ import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { createLaserDesk, normaliseLook, lookPointsAt, capOf, SEED_LOOKS, LOOK_DEFAULTS, OUT } = require('./laserDesk')
+const { createLaserDesk, normaliseLook, lookPointsAt, capOf, SEED_LOOKS, LOOK_DEFAULTS, CUBE_DEFAULTS, OUT } = require('./laserDesk')
 const { createLaserEngine } = require('./laserEngine')
 const { FRAME_MAX_POINTS } = require('../../../shared/laserFrame.cjs')
 
@@ -478,5 +478,173 @@ describe('the desk on the real engine (sim: no addresses, nothing sent)', () => 
         }
         desk.close()
         engine.shutdown()
+    })
+})
+
+describe('mapping a cube (2026-10-31, the owner: "i need to mapp laser")', () => {
+    const { cornerPin, normaliseCorners, FULL_CORNERS } = require('../../../shared/laserLook.cjs')
+    const QUAD = [[-0.8, -0.6], [0.9, -0.9], [0.7, 0.8], [-0.6, 0.5]]
+    const extent = (points) => {
+        const lit = points.filter(isLit)
+        const xs = lit.map((p) => p[0])
+        const ys = lit.map((p) => p[1])
+        return [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]
+    }
+
+    it('the corner pin puts the field\'s corners on the four corners and keeps straight lines straight', () => {
+        expect(cornerPin(FULL_CORNERS)).toBe(null)
+        const pin = cornerPin(QUAD)
+        FULL_CORNERS.forEach(([x, y], i) => {
+            expect(pin(x, y)[0]).toBeCloseTo(QUAD[i][0], 9)
+            expect(pin(x, y)[1]).toBeCloseTo(QUAD[i][1], 9)
+        })
+        const [a, b, m] = [pin(-1, -1), pin(1, -1), pin(0.3, -1)]
+        expect((b[0] - a[0]) * (m[1] - a[1]) - (b[1] - a[1]) * (m[0] - a[0])).toBeCloseTo(0, 9)
+    })
+    it('corners that cross or line up keep the whole field; anything but four pairs is the whole field', () => {
+        expect(cornerPin([[-1, -1], [1, 1], [1, -1], [-1, 1]])).toBe(null)
+        expect(cornerPin([[-1, -1], [0, 0], [1, 1], [-1, 1]])).toBe(null)
+        expect(normaliseCorners('x')).toBe(FULL_CORNERS)
+        expect(normaliseCorners([[0, 0], [1, 1]])).toBe(FULL_CORNERS)
+        expect(normaliseCorners([[2, -3], [0, 0], [1, 1], [0, 1]])).toEqual([[1, -1], [0, 0], [1, 1], [0, 1]])
+    })
+    it('a look is placed in the cube\'s field first, then the field is pinned; upside down mirrors it top to bottom', () => {
+        const look = normaliseLook({ shape: 'square', size: 1, height: 0, x: 0, points: 400, pulse: 0 })
+        const plain = lookPointsAt(look, { t: 0, clock: clock(), cube: { ...CUBE_DEFAULTS } })
+        expect(extent(plain)).toEqual([-1, 1, -1, 1])
+        const [x0, x1, y0, y1] = extent(lookPointsAt(look, { t: 0, clock: clock(), cube: { ...CUBE_DEFAULTS, corners: QUAD } }))
+        expect(x0).toBeCloseTo(-0.8, 2); expect(x1).toBeCloseTo(0.9, 2); expect(y0).toBeCloseTo(-0.9, 2); expect(y1).toBeCloseTo(0.8, 2)
+        const tri = normaliseLook({ shape: 'triangle', size: 0.5, height: 0.2, points: 200, pulse: 0 })
+        const up = lookPointsAt(tri, { t: 0, clock: clock(), cube: { ...CUBE_DEFAULTS } })
+        const down = lookPointsAt(tri, { t: 0, clock: clock(), cube: { ...CUBE_DEFAULTS, flipY: true } })
+        down.forEach((p, i) => { expect(p[0]).toBeCloseTo(up[i][0], 9); expect(p[1]).toBeCloseTo(-up[i][1], 9) })
+    })
+    it('a cube keeps its corners and upside down in desk.json, in range', () => {
+        const dir = tmp()
+        const engine = fakeEngine(['cube-1'])
+        const { desk } = deskWith(engine, { dir })
+        expect(desk.setCube('cube-1', { corners: [[-2, -1], [1, -1], [0.5, 0.9], [-0.5, 0.9]], flipY: true })).toMatchObject({ ok: true })
+        expect(desk.state().cubes[0]).toMatchObject({ flipY: true, corners: [[-1, -1], [1, -1], [0.5, 0.9], [-0.5, 0.9]] })
+        desk.setCube('cube-1', { size: 0.5 })
+        expect(desk.state().cubes[0].corners).toEqual([[-1, -1], [1, -1], [0.5, 0.9], [-0.5, 0.9]])
+        desk.close()
+        const again = deskWith(fakeEngine(['cube-1']), { dir }).desk
+        expect(again.state().cubes[0]).toMatchObject({ flipY: true, size: 0.5, corners: [[-1, -1], [1, -1], [0.5, 0.9], [-0.5, 0.9]] })
+        again.close()
+    })
+    it('Test picture: the cube shows the alignment picture through its map, then goes back to the look or dark', () => {
+        const engine = fakeEngine(['cube-1', 'cube-2'])
+        const { desk } = deskWith(engine)
+        desk.setCube('cube-1', { corners: QUAD, size: 0.3, x: 0.5 })
+        expect(desk.setMapTest('nope', true)).toMatchObject({ ok: false, status: 404 })
+        expect(desk.setMapTest('cube-1', true)).toMatchObject({ ok: true, mapTest: ['cube-1'] })
+        const frames = engine.calls.splice(0).filter((c) => c.kind === 'frame')
+        expect(frames.map((c) => c.cube)).toEqual(['cube-1'])
+        // The whole field through the map: the cube's own size and offset are left out while mapping.
+        const [x0, x1, y0, y1] = extent(frames[0].points)
+        expect(x0).toBeCloseTo(-0.8, 2); expect(x1).toBeCloseTo(0.9, 2); expect(y0).toBeCloseTo(-0.9, 2); expect(y1).toBeCloseTo(0.8, 2)
+        expect(desk.state()).toMatchObject({ mapTest: ['cube-1'], live: null })
+        expect(desk.state().cubes[0].driving).toBe(true)
+        // Off with no look live: dark, and the desk lets go of it.
+        desk.setMapTest('cube-1', false)
+        const off = engine.calls.splice(0).filter((c) => c.kind === 'frame')
+        expect(off.map((c) => [c.cube, c.points.some(isLit)])).toEqual([['cube-1', false]])
+        // Off with a look live: the look comes back.
+        desk.go('grid')
+        desk.setMapTest('cube-2', true)
+        desk.setMapTest('cube-2', false)
+        engine.calls.splice(0)
+        desk.tick()
+        expect(desk.state().mapTest).toEqual([])
+        // Release ends the test too.
+        desk.setMapTest('cube-1', true)
+        desk.release()
+        expect(desk.state().mapTest).toEqual([])
+        desk.close()
+    })
+    it('Blackout holds a cube on its test picture dark', () => {
+        const engine = fakeEngine(['cube-1'])
+        const { desk } = deskWith(engine)
+        desk.setBlackout(true)
+        desk.setMapTest('cube-1', true)
+        expect(engine.calls.filter((c) => c.kind === 'frame').every((c) => !c.points.some(isLit))).toBe(true)
+        desk.close()
+    })
+})
+
+describe('the music (2026-10-31, the owner: "add audio analyze fully bpm sync as well")', () => {
+    const widest = (points) => Math.max(...points.filter(isLit).map((p) => Math.abs(p[0])))
+    it('Auto: the clock takes the heard tempo and lands the heard beat on a whole beat, the count running on', () => {
+        const engine = fakeEngine(['cube-1'])
+        const { desk, t } = deskWith(engine)
+        t.now += 5000 // 10 beats in at 120
+        expect(desk.followBeat({ bpm: 128, beatAt: t.now - 100 })).toMatchObject({ ok: true, bpm: 128 })
+        const beat = desk.state().beat
+        // 100 ms after a beat at 128 BPM is 0.213 of a beat; the count stays near the 10 it was at.
+        expect(beat - Math.floor(beat)).toBeCloseTo(100 / (60000 / 128), 6)
+        expect(Math.round(beat)).toBe(10)
+        expect(desk.state().bpm).toBe(128)
+        expect(desk.followBeat({ bpm: 500, beatAt: t.now })).toMatchObject({ ok: false, status: 400 })
+        expect(desk.followBeat({ bpm: 120, beatAt: t.now - 60000 })).toMatchObject({ ok: false, status: 400 })
+        expect(desk.followBeat({ bpm: 120 })).toMatchObject({ ok: false, status: 400 })
+        desk.close()
+    })
+    it('Resync: beat one is now', () => {
+        const { desk, t } = deskWith(fakeEngine(['cube-1']))
+        t.now += 3333
+        expect(desk.resync()).toMatchObject({ ok: true })
+        expect(desk.state().beat).toBe(0)
+        desk.close()
+    })
+    it('Audio: quiet draws a look smaller, the bass and a kick full size, and a desk that stops hearing draws it as it is', () => {
+        const engine = fakeEngine(['cube-1'])
+        const { desk, t } = deskWith(engine)
+        desk.editLook('ring', { react: 1, pulse: 0, size: 0.8, height: 0, x: 0, shape: 'circle' })
+        desk.go('ring')
+        const drawn = () => { const frames = engine.calls.filter((c) => c.kind === 'frame'); return widest(frames[frames.length - 1].points) }
+        expect(drawn()).toBeCloseTo(0.8, 3)
+        expect(desk.state().hearing).toBe(false)
+        desk.hearAudio({ low: 0, level: 0.1 }); t.now += 10; desk.tick()
+        expect(drawn()).toBeCloseTo(0.32, 2)
+        expect(desk.state().hearing).toBe(true)
+        desk.hearAudio({ low: 1 }); t.now += 10; desk.tick()
+        expect(drawn()).toBeCloseTo(0.8, 3)
+        desk.hearAudio({ low: 0, kick: true }); t.now += 1; desk.tick()
+        expect(drawn()).toBeGreaterThan(0.79)
+        t.now += 400; desk.hearAudio({ low: 0 }); desk.tick()
+        expect(drawn()).toBeLessThan(0.35)
+        t.now += 1000; desk.tick()
+        expect(drawn()).toBeCloseTo(0.8, 3)
+        expect(desk.state().hearing).toBe(false)
+        desk.close()
+    })
+    it('a look without Audio never moves with the music', () => {
+        const engine = fakeEngine(['cube-1'])
+        const { desk, t } = deskWith(engine)
+        desk.editLook('ring', { react: 0, pulse: 0, size: 0.8, height: 0, x: 0, shape: 'circle' })
+        desk.go('ring')
+        desk.hearAudio({ low: 0, kick: false }); t.now += 10; desk.tick()
+        const frames = engine.calls.filter((c) => c.kind === 'frame')
+        expect(widest(frames[frames.length - 1].points)).toBeCloseTo(0.8, 3)
+        expect(normaliseLook({ react: 7 }).react).toBe(1)
+        expect(normaliseLook({}).react).toBe(0)
+        desk.close()
+    })
+})
+
+describe('the desk page on a phone (docs/ai/known-fixes.md: "Setup squeezed its panes on a phone")', () => {
+    it('keeps every Setup pane as tall as it needs, so the cube table and the mapping square are not squeezed under Safety', () => {
+        const css = fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), 'ui', 'desk.css'), 'utf8')
+        const start = css.indexOf('@media (max-width: 760px) {')
+        expect(start).toBeGreaterThan(-1)
+        let depth = 0
+        let end = start
+        for (let i = css.indexOf('{', start); i < css.length; i += 1) {
+            if (css[i] === '{') depth += 1
+            if (css[i] === '}') { depth -= 1; if (depth === 0) { end = i; break } }
+        }
+        const phone = css.slice(start, end)
+        expect(phone).toMatch(/#page-setup\s*\{\s*display:\s*flex;\s*flex-direction:\s*column;\s*\}/)
+        expect(phone).toMatch(/#page-setup\s*>\s*\.pane\s*\{\s*flex:\s*none;\s*\}/)
     })
 })

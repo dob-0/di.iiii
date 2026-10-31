@@ -292,6 +292,9 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   router.post('/desk/api/master', requireSameMachine, (req, res) => answer(res, getDesk().setMaster(req.body?.level)))
   router.post('/desk/api/bpm', requireSameMachine, (req, res) => answer(res, req.body?.tap ? getDesk().tap() : getDesk().setBpm(req.body?.bpm)))
   router.post('/desk/api/cube', requireSameMachine, (req, res) => answer(res, getDesk().setCube(req.body?.id, req.body || {})))
+  router.post('/desk/api/maptest', requireSameMachine, (req, res) => answer(res, getDesk().setMapTest(req.body?.id, req.body?.on === true)))
+  router.post('/desk/api/audio', requireSameMachine, (req, res) => answer(res, getDesk().hearAudio(req.body || {})))
+  router.post('/desk/api/sync', requireSameMachine, (req, res) => answer(res, req.body?.resync === true ? getDesk().resync() : getDesk().followBeat(req.body || {})))
   router.post('/desk/api/release', stopGate, (req, res) => answer(res, getDesk().release()))
   router.post('/desk/api/blackout', stopGate, (req, res) => answer(res, getDesk().setBlackout(req.body?.on)))
   // The page: /laser → /laser/ (its addresses are relative), then the files of laser/ui/.

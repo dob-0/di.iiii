@@ -22,6 +22,9 @@ const LASER_SHAPES = [
     // Scenes of a few lines, circles and dots that move on the beat (2026-10-30, the owner: "more scenes like complex ones
     // but minimalistic lines circle dots").
     'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse',
+    // One line that changes what it is on the beat (2026-10-31, the owner: "circle is pulsing and then becoming spiral and
+    // then the spiral is going out of it and becomg line around all sqaure").
+    'unfold',
 ]
 // The shapes made of small marks. Below MARK_MIN_SIZE their smallest mark is inside the engine's still-beam window
 // (0.6°, about 0.032 of the field: laserEngine.js), and when every lit mark is, the frame is dots only: the engine blanks
@@ -581,6 +584,40 @@ const STROKES = {
             paths.push(hash01(k + j, 0, 41) < 0.5 ? arcPath(x, 0, SPOT_R, Math.PI) : [[x - DASH / 2, 0], [x + DASH / 2, 0]])
         }
         return byLength(paths, n)
+    },
+    // One line on a 16-beat loop: a circle (0.5) that swells on every beat (beats 0–4), winds into a spiral of three turns
+    // (4–8), runs out from its eye as it unwinds into the line round the whole square (8–11), holds the square (11–14) and
+    // draws back into the circle (14–16). Each moment is the same line with its points evenly along it, so it is equally
+    // bright everywhere and the spiral's eye (0.12 across) never heaps them; the spiral turns a quarter a beat as it goes.
+    unfold: (n, { beat = 0 } = {}) => {
+        const b = ((beat % 16) + 16) % 16
+        const ease = (f) => { const c = clamp(f, 0, 1); return c * c * (3 - 2 * c) }
+        const f = b - Math.floor(b)
+        // The swell: up in the first eighth of the beat, back down over the rest.
+        const kick = f < 0.125 ? f / 0.125 : (1 - (f - 0.125) / 0.875) ** 2
+        const r0 = b < 4 ? 0.5 * (1 + 0.14 * kick) : 0.5
+        const wind = b < 4 ? 0 : b < 8 ? ease((b - 4) / 3) : b < 14 ? 1 : 0
+        const open = b < 8 ? 0 : b < 11 ? ease((b - 8) / 3) : b < 14 ? 1 : 1 - ease((b - 14) / 2)
+        const phase = Math.PI / 2 - (TAU * clamp(b - 4, 0, 7)) / 4
+        if (open >= 1) {
+            // The square itself, from the corner the line's start has come round to.
+            const k = Math.round(((((phase - Math.PI / 4) % TAU) + TAU) % TAU) / (Math.PI / 2))
+            const corners = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
+            return [along(polygon(Array.from({ length: 4 }, (_, i) => corners[(k + i) % 4])), n)]
+        }
+        const turns = 1 + 2 * wind * (1 - open)
+        const steps = Math.ceil(240 * turns)
+        const path = Array.from({ length: steps + 1 }, (_, i) => {
+            const t = i / steps
+            const a = phase + TAU * turns * t
+            const spiral = 0.06 + 0.56 * t
+            const r = (r0 + (spiral - r0) * wind) * (1 - open) + open
+            const c = Math.cos(a)
+            const s = Math.sin(a)
+            const square = 1 + (1 / Math.max(Math.abs(c), Math.abs(s)) - 1) * open
+            return [c * r * square, s * r * square]
+        })
+        return [along(path, n)]
     },
 }
 

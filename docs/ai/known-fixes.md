@@ -1627,6 +1627,13 @@ Fix: `server-env.mjs --nginx <host:port>` points every `http://client:8080` valu
 
 | **Twenty spaces could not each have a project called "my scene": the second one got `409 that name is taken on this di.iiii — try another` in small grey words, the form already closed, and an empty name ("Untitled") clashed the same way** (2026-10-29, ux-fix S21, F061) | The create route turned the typed name into the project's id, and ids are global on one di.iiii; both create forms sent `slug: name`, so a person's name was always treated as an exact id. The forms closed before the answer came | A name typed by a person (`title`, no `slug`) is unique only inside its space: a same-space clash is a 409 `code: name-taken-in-space` naming it; a clash with another space gets a free id (`my-scene-2`) and the name as short name, so `/{space}/my-scene` still opens; an empty name becomes "Untitled", "Untitled 2"… Callers that name the id (`slug`, `carried`) keep the old door. StudioHub and the Studio projects panel send only the name and keep the form open with a red `role="alert"` message. No id is renamed. Decision: `docs/ai/decisions/2026-10-29-project-names-per-space.md`. Guards: `serverXR/src/routes/projectRoutes.namesPerSpace.test.js`, `projectContracts.test.js` "names per space", `StudioHub.test.jsx` / `StudioProjectsPanel.test.jsx` "…taken in this space" (all fail on origin/dev) |
 
+## Setup squeezed its panes on a phone (2026-10-31, laser desk)
+
+Symptom: on a phone (under 760 px) the laser desk's Setup page drew the Safety notes over the Mapping square, and the Cubes pane showed its buttons but no cube table.
+Cause: the phone rule makes `#page-setup` a flex column, and `.pane` is `min-height: 0` with the default `flex: 0 1 auto`, so each pane shrank below its content and the content spilled over the next pane.
+Fix: `serverXR/src/laser/ui/desk.css`, in the phone rule: `#page-setup > .pane { flex: none; }`. Each pane is as tall as it needs and the page scrolls.
+Guard: `serverXR/src/laser/laserDesk.test.js` "the desk page on a phone" checks the rule in the 760 px media block. Headless shots (desktop and phone) of Setup showed the overlap before and none after.
+
 ## The laser frame twin check failed on every Windows checkout (2026-10-29, laser desk)
 
 Symptom: `src/shared/laserFrame.test.js` "the browser twin is generated from the .cjs, byte for byte" failed on a Windows checkout (`core.autocrlf=true`) with both files untouched, and `node scripts/laser/laser-frame-twin.mjs --check` said DIFFERS.

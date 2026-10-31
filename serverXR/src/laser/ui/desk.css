@@ -76,6 +76,14 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .master input { width: 110px; }
 .master b { font: 500 11px var(--mono); color: var(--text); width: 30px; text-align: right; }
 .topbo.is-on { background: #fff; color: #000; border-color: #fff; }
+/* The music: a level bar and a dot that lights on each kick, flat like the rest (no glow). */
+.tempo { display: flex; align-items: center; gap: 6px; padding: 6px 10px; flex-wrap: wrap; }
+.meter { display: inline-block; width: 46px; height: 6px; background: var(--field); border: 1px solid var(--line); overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--accent); }
+.beatdot { width: 8px; height: 8px; border: 1px solid var(--line); background: var(--field); }
+.beatdot.hit { background: #fff; border-color: #fff; }
+.heard { font-size: 11px; color: var(--muted); min-width: 0; white-space: nowrap; }
+.heard.is-locked { color: var(--accent); }
 
 .notice { margin: 0; padding: 8px 12px; background: #2a2210; border-bottom: 1px solid #5a4a24; color: #ffe7b8; }
 
@@ -204,6 +212,20 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
 .cubetable .warn { color: var(--warn); }
 #page-setup .pane > .actions, #found { padding: 0 10px 10px; }
 .foundlist { margin: 0; padding: 0 0 0 18px; font-family: var(--mono); font-size: 11px; }
+/* Mapping and Audio sit under the cubes; Safety keeps the right column beside them. */
+.mappane, .audiopane { grid-column: 1; }
+#page-setup > .notes { grid-column: 2; grid-row: 1 / span 3; }
+.audiogrid { padding: 8px 10px 10px; max-width: 560px; }
+.audiogrid .field span { color: var(--muted); font-size: 12px; }
+.audiogrid .field b { font: 500 11px var(--mono); text-align: right; }
+.audiogrid select { grid-column: 2 / span 2; background: var(--field); border: 1px solid var(--line); padding: 5px 6px; min-width: 0; }
+.bands { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: center; gap: 6px 8px; margin: 8px 0; color: var(--muted); font-size: 12px; }
+.bands .meter { width: 100%; height: 8px; }
+.mapwrap { padding: 10px; }
+.mapwrap canvas { display: block; width: min(100%, 520px); aspect-ratio: 1; margin: 0 auto; background: var(--stagebg); border: 1px solid var(--line); touch-action: none; cursor: crosshair; }
+.mapwrap canvas:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+.mapcheck { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+#mapReadout { font-size: 11px; }
 .notes ul { margin: 0; padding: 10px 10px 10px 28px; color: var(--muted); }
 .notes li { margin-bottom: 6px; }
 .notes h2 { padding: 8px 10px 0; }
@@ -218,6 +240,7 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
 @media (max-width: 760px) {
   body { font-size: 14px; }
   .topright { width: 100%; padding: 6px 8px; margin-left: 0; }
+  .tempo { width: 100%; padding: 6px 8px; }
   .topright .pill { order: -1; width: 100%; text-align: center; }
   .master { flex: 1; }
   .master input { flex: 1; width: auto; }
@@ -238,4 +261,6 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
   .mine .del { width: 22px; height: 22px; line-height: 20px; }
   .chooser-grid .swatch { height: 30px; min-height: 0; }
   #page-setup { display: flex; flex-direction: column; }
+  /* Each pane as tall as it needs: the map's square canvas must not be squeezed under Safety. */
+  #page-setup > .pane { flex: none; }
 }
