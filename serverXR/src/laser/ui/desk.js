@@ -10,7 +10,14 @@
     const POLL_DESK_MS = 500
     const POLL_ENGINE_MS = 1000
     const VIEW_MS = 80
-    const SWATCHES = ['#ff2030', '#ffb020', '#ffffff', '#20d8ff', '#3050ff', '#8040ff', '#ff30c0', '#20ff60']
+    // The desk's colours (2026-10-31, the owner: "on colos add color paleete and have new colors there as well"): the hue
+    // wheel a laser draws well, full colours, then two whites. Green is here to pick; it is no seed look's colour.
+    const SWATCHES = [
+        ['#ff2030', 'Red'], ['#ff6a00', 'Orange'], ['#ffb020', 'Amber'], ['#ffe600', 'Yellow'], ['#a8ff00', 'Lime'],
+        ['#20ff60', 'Green'], ['#00ffb0', 'Mint'], ['#20d8ff', 'Cyan'], ['#0090ff', 'Sky'], ['#3050ff', 'Blue'],
+        ['#5a2dff', 'Indigo'], ['#8040ff', 'Violet'], ['#c000ff', 'Purple'], ['#ff30c0', 'Magenta'], ['#ff5080', 'Pink'],
+        ['#ffffff', 'White'], ['#ffd8a8', 'Warm white']
+    ]
     const OUT = 'desk'
     // look|cube pairs a Go was pressed for while stopped; cleared when the cube runs again. Stopped still after that Go = the look's own.
 const stillGone = new Set()
@@ -488,20 +495,90 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         const picked = editing() ? editing().shape.split(',') : []
         for (const chip of box.children) chip.classList.toggle('is-on', picked.includes(chip.dataset.shape))
     }
+    const pickColour = (c) => { edit({ colour: c, rainbow: false }); $('rainbow').checked = false; renderSwatches() }
     const renderSwatches = () => {
         const box = $('swatches')
         if (!box.children.length) {
-            const picker = el('input', { type: 'color', id: 'colourPicker', title: 'Any colour', 'aria-label': 'Any colour' })
-            picker.addEventListener('input', () => { edit({ colour: picker.value, rainbow: false }); $('rainbow').checked = false; renderSwatches() })
-            box.append(...SWATCHES.map((c) => el('button', {
-                class: 'swatch', 'data-colour': c, style: `background:${c}`, title: c, 'aria-label': `Colour ${c}`,
-                onclick: () => { edit({ colour: c, rainbow: false }); $('rainbow').checked = false; renderSwatches() }
+            const picker = el('input', { type: 'color', id: 'colourPicker', title: 'Any colour (+ under it keeps it in My colours)', 'aria-label': 'Any colour' })
+            picker.addEventListener('input', () => pickColour(picker.value))
+            box.append(...SWATCHES.map(([c, name]) => el('button', {
+                class: 'swatch', 'data-colour': c, style: `background:${c}`, title: name, 'aria-label': name,
+                onclick: () => pickColour(c)
             })), picker)
         }
         const live = editing()
         for (const b of box.querySelectorAll('.swatch')) b.classList.toggle('is-on', Boolean(live && !live.rainbow && live.colour === b.dataset.colour))
         const picker = $('colourPicker')
         if (live && document.activeElement !== picker) picker.value = live.colour
+        renderMyColours()
+    }
+    // The palette + opens (2026-10-31, the owner: "no i eed paleet choose from colors paleet show me color pallet when +"):
+    // twelve hues round the wheel, each from pale to deep, then whites and greys. A colour chosen is kept in My colours.
+    const hsv = (h, s, v) => {
+        const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)) }
+        return '#' + [f(5), f(3), f(1)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('')
+    }
+    const CHOOSER = [
+        ...[[0.3, 1], [0.6, 1], [1, 1], [1, 0.7], [1, 0.45]].flatMap(([s, v]) => Array.from({ length: 12 }, (_, i) => hsv(i * 30, s, v))),
+        '#ffffff', '#fff2e0', '#ffd8a8', '#ffc080', '#e8f2ff', '#c8dcff', '#e0e0e0', '#c0c0c0', '#a0a0a0', '#808080', '#606060', '#404040'
+    ]
+    const hexOf = (text) => {
+        const t = String(text || '').trim().replace(/^#/, '')
+        const full = /^[0-9a-f]{3}$/i.test(t) ? t.split('').map((c) => c + c).join('') : t
+        return /^[0-9a-f]{6}$/i.test(full) ? '#' + full.toLowerCase() : null
+    }
+    const keepColour = (c) => {
+        const list = desk?.palette || []
+        if (c && !list.includes(c)) savePalette([...list, c])
+        showChooser(false)
+    }
+    const renderChooser = () => {
+        const grid = $('chooserGrid')
+        if (!grid.children.length) {
+            grid.append(...CHOOSER.map((c) => el('button', { class: 'swatch', 'data-colour': c, style: `background:${c}`, title: c, 'aria-label': `Keep ${c}`, onclick: () => keepColour(c) })))
+        }
+        const kept = desk?.palette || []
+        for (const b of grid.children) b.classList.toggle('is-on', kept.includes(b.dataset.colour))
+    }
+    const showChooser = (on) => {
+        $('colourChooser').hidden = !on
+        $('myColours').querySelector('.addcolour')?.classList.toggle('is-on', on)
+        if (on) {
+            renderChooser()
+            const c = editing()?.colour
+            if (c) { $('chooserPicker').value = c; $('chooserHex').value = c }
+        }
+    }
+    $('chooserClose').addEventListener('click', () => showChooser(false))
+    $('chooserPicker').addEventListener('input', (e) => { $('chooserHex').value = e.target.value })
+    $('chooserHex').addEventListener('input', (e) => { const c = hexOf(e.target.value); if (c) $('chooserPicker').value = c })
+    $('chooserHex').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('chooserAdd').click() } })
+    $('chooserAdd').addEventListener('click', () => keepColour(hexOf($('chooserHex').value) || $('chooserPicker').value))
+
+    // My colours: kept by the desk (desk.json), so every page and the next show have them.
+    const savePalette = (colours) => {
+        desk.palette = colours
+        renderMyColours()
+        post('desk/api/palette', { colours })
+    }
+    const renderMyColours = () => {
+        const box = $('myColours')
+        const list = desk?.palette || []
+        if (box.dataset.key !== list.join(',')) {
+            box.dataset.key = list.join(',')
+            box.replaceChildren(
+                ...list.map((c) => el('span', { class: 'mine' },
+                    el('button', { class: 'swatch', 'data-colour': c, style: `background:${c}`, title: c, 'aria-label': `Colour ${c}`, onclick: () => pickColour(c) }),
+                    el('button', { class: 'del', text: '×', title: `Take ${c} out of My colours`, 'aria-label': `Take ${c} out of My colours`, onclick: () => savePalette(list.filter((x) => x !== c)) }))),
+                el('button', {
+                    class: 'addcolour', text: '+', title: 'Choose a colour from the palette to keep in My colours', 'aria-label': 'Choose a colour to keep',
+                    onclick: () => showChooser($('colourChooser').hidden)
+                }))
+            $('myColours').querySelector('.addcolour').classList.toggle('is-on', !$('colourChooser').hidden)
+            $('myColoursHint').hidden = list.length > 0
+        }
+        const live = editing()
+        for (const b of box.querySelectorAll('.swatch')) b.classList.toggle('is-on', Boolean(live && !live.rainbow && live.colour === b.dataset.colour))
     }
     const renderLookCubes = () => {
         const box = $('lookCubes')
@@ -1379,6 +1456,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         const mod = e.ctrlKey || e.metaKey
         const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
         if (!$('keysHelp').hidden) { if (key === 'Escape' || key === '?') { e.preventDefault(); showKeys(false) } return }
+        if (key === 'Escape' && !$('colourChooser').hidden) { e.preventDefault(); showChooser(false); return }
         if (mod && key === 's') { e.preventDefault(); saveAll(); return }
         // Esc leaves a text field (a second Esc closes Edit); every other key there is the field's own.
         if (typing(e.target)) { if (key === 'Escape') e.target.blur(); return }

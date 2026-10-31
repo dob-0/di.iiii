@@ -94,6 +94,12 @@ const idOf = (v) => String(v ?? '').trim().replace(/[^a-z0-9_-]/gi, '').slice(0,
 const followsOf = (v) => (v === null || v === undefined ? null : sceneIdOf(v))
 /** Fields from a page's edit without the link: a link is set by setFollows only (one scene, one look). */
 const withoutFollows = (fields) => { const { follows: _link, ...rest } = fields && typeof fields === 'object' ? fields : {}; return rest }
+// "My colours" (2026-10-31, the owner: "on colos add color paleete and have new colors there as well"): the colours the
+// person keeps beside the desk's own swatches, as '#rrggbb', each once, at most PALETTE_MAX.
+const PALETTE_MAX = 24
+const paletteOf = (list) => [...new Set((Array.isArray(list) ? list : [])
+    .filter((c) => /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(c ?? '').trim()))
+    .map((c) => colourOf(c)))].slice(0, PALETTE_MAX)
 const clone = (v) => JSON.parse(JSON.stringify(v))
 /** Two looks draw the same picture: every field but the name (both normalised, so the fields come in one order). */
 const samePicture = (a, b) => {
@@ -252,7 +258,7 @@ const hashPoints = (points) => {
  */
 const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: every = setInterval, clearInterval: stopEvery = clearInterval, log = null, lightScenes: scenesOfLight = null }) => {
     const file = path.join(dataDir, FILE)
-    const show = { bpm: 120, master: 1, looks: SEED_LOOKS.map((l) => ({ ...l })), cubes: {}, blackoutKeepsArm: false, seeded: SEED_LOOKS.map((l) => l.id), followLight: false }
+    const show = { bpm: 120, master: 1, looks: SEED_LOOKS.map((l) => ({ ...l })), cubes: {}, blackoutKeepsArm: false, seeded: SEED_LOOKS.map((l) => l.id), followLight: false, palette: [] }
     let seedsAdded = false
     const clock = { bpm: 120, zero: now(), taps: [] }
     let live = null // the look on the cubes (a copy: editing it never touches the bank until Store)
@@ -284,6 +290,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         show.master = clamp(num(raw.master, 1), 0, 1)
         show.blackoutKeepsArm = raw.blackoutKeepsArm === true
         show.followLight = raw.followLight === true
+        show.palette = paletteOf(raw.palette)
         show.bpm = clamp(num(raw.bpm, 120), BPM_MIN, BPM_MAX)
         clock.bpm = show.bpm
         // A seed look added since this bank was saved joins it at the end, once: `seeded` lists the seeds it has been
@@ -310,7 +317,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         try {
             fs.mkdirSync(dataDir, { recursive: true })
             const tmp = file + '.tmp'
-            fs.writeFileSync(tmp, JSON.stringify({ v: 1, bpm: show.bpm, master: show.master, blackoutKeepsArm: show.blackoutKeepsArm, followLight: show.followLight, looks: savedLooks, cubes: show.cubes, seeded: show.seeded }, null, 1))
+            fs.writeFileSync(tmp, JSON.stringify({ v: 1, bpm: show.bpm, master: show.master, blackoutKeepsArm: show.blackoutKeepsArm, followLight: show.followLight, looks: savedLooks, cubes: show.cubes, seeded: show.seeded, palette: show.palette }, null, 1))
             fs.renameSync(tmp, file)
             return true
         } catch (error) {
@@ -683,6 +690,13 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         return { ok: true }
     }
 
+    /** My colours, as the page sends the whole list (add, remove, order); kept at once, not an undo step. */
+    const setPalette = (colours) => {
+        if (!Array.isArray(colours)) return { ok: false, status: 400, error: 'colours: the list of colours' }
+        show.palette = paletteOf(colours)
+        save()
+        return { ok: true, palette: show.palette }
+    }
     const setMaster = (level) => { show.master = clamp(num(level, show.master), 0, 1); save(); return { ok: true, master: show.master } }
     // `on` must be a boolean: a missing or unreadable one is refused, never a toggle that could light the cubes (review 1218 M1).
     const setBlackout = (on) => {
@@ -786,6 +800,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             blackout,
             master: show.master,
             blackoutKeepsArm: show.blackoutKeepsArm,
+            palette: show.palette,
             bpm: show.bpm,
             beat: beatsAt(clock, now()),
             looks: show.looks,
@@ -893,7 +908,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         else if (saveTimer) { clearTimeout(saveTimer); saveNow() }
     }
 
-    return { keepHold, state, go, editLook, copyLook, pasteLook, undo, redo, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBlackoutKeepsArm, setBpm, tap, setCube, thumbs, view, tick, close, setFollowLight, setFollows, followScene, followMap }
+    return { keepHold, state, go, setPalette, editLook, copyLook, pasteLook, undo, redo, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBlackoutKeepsArm, setBpm, tap, setCube, thumbs, view, tick, close, setFollowLight, setFollows, followScene, followMap }
 }
 
 module.exports = { createLaserDesk, normaliseLook, normaliseCube, lookPointsAt, capOf, hashPoints, beatsAt, SEED_LOOKS, LOOK_DEFAULTS, CUBE_DEFAULTS, TICK_MS, OUT }

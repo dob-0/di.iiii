@@ -76,6 +76,13 @@ The owner's ask: "lets create laser soft like how is lighting one" — inside di
   `canUndo`/`canRedo` in state light ↶ ↷. Simulated in headless Chrome (scratch `keys-sim.cjs`, 30 checks): the first
   runs found Enter re-clicking the focused name button, F2 dead while a slider had focus, Esc dead in the name field,
   undo not moving a focused slider back, and Edit reopening after Esc (the poll re-selected the live look); all fixed.
+- **Colours** (2026-10-31, the owner: "on colos add color paleete and have new colors there as well"): 17 named swatches
+  (the hue wheel + white + warm white; green pickable, still no seed's colour) beside the picker, and **My colours**: + keeps
+  the colour of the look in Edit, × takes one out; `POST /laser/desk/api/palette { colours }` (whole list, each once,
+  `#rrggbb`, ≤ 24), kept in desk.json `palette`, not an undo step. Simulated in headless Chrome (17 checks, desktop + phone).
+  Then ("no i eed paleet choose from colors paleet show me color pallet when +"): + opens a palette (12 hues × 5 shades
+  pale→deep from HSV, + 12 whites/greys; a picker and a #hex field below); a choice is kept in My colours and the palette
+  closes; the look is not changed (clicking the kept swatch colours it). Esc / Close shut it. 16 headless checks.
 - Wiki `laser-desk`; eslint gives `serverXR/src/laser/ui` browser globals like the light desk's ui.
 
 ## Tested

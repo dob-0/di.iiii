@@ -89,6 +89,7 @@ const FIND_GAP_MS = 5000
 //   POST /laser/desk/api/looks/edit { id, …fields } — change a look of the bank (the cubes follow when it is on them)
 //   POST /laser/desk/api/looks/copy { id } — a copy as a new tile after it · POST …/save {} — write desk.json now
 //   POST /laser/desk/api/looks/paste { look, after? } — a copied look as a new tile · POST …/undo {} · …/redo {}
+//   POST /laser/desk/api/palette { colours } — My colours, the whole list
 //   POST /laser/desk/api/master { level } · …/bpm { bpm } | { tap: true } · …/cube { id, on?, flipX?, size?, x?, y?, order? }
 //   POST /laser/desk/api/release {} · …/blackout { on } — stops: the STOPS_FROM_REMOTE gate, as /blackout
 //   GET  /laser/lib/laser.js    the desk's drawing code for the page (window.DiLaser): its tiles play the looks
@@ -366,6 +367,7 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   router.post('/desk/api/save', requireSameMachine, (req, res) => answer(res, getDesk().saveBank()))
   router.post('/desk/api/looks/delete', requireSameMachine, (req, res) => answer(res, getDesk().remove(req.body?.id)))
   router.post('/desk/api/looks/order', requireSameMachine, (req, res) => answer(res, getDesk().reorder(req.body?.ids)))
+  router.post('/desk/api/palette', requireSameMachine, (req, res) => answer(res, getDesk().setPalette(req.body?.colours)))
   router.post('/desk/api/master', requireSameMachine, (req, res) => answer(res, getDesk().setMaster(req.body?.level)))
   router.post('/desk/api/bpm', requireSameMachine, (req, res) => answer(res, req.body?.tap ? getDesk().tap() : getDesk().setBpm(req.body?.bpm)))
   router.post('/desk/api/cube', requireSameMachine, (req, res) => answer(res, getDesk().setCube(req.body?.id, req.body || {})))

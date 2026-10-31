@@ -247,6 +247,14 @@ module.exports = [
     note: `${SAME_MACHINE} ${OWN_PAGE}`
   },
   {
+    route: "POST /laser/desk/api/palette",
+    summary: "My colours beside the laser desk's swatches: { colours: ['#rrggbb', …] } — the whole list, each colour once, at most 24; kept in <data>/laser/desk.json",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
     route: "POST /laser/desk/api/save",
     summary: "Save: each look whose picture changed since the last Save becomes a new scene at the end of the bank and the look goes back as it was saved (a new name alone renames in place); then the bank, clock and setup go into <data>/laser/desk.json → { created: [{ from, id }] }",
     reach: "private",

@@ -201,6 +201,25 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .swatch { height: 28px; padding: 0; border: 1px solid var(--line); }
 .swatch.is-on { outline: 2px solid #fff; outline-offset: 1px; }
 .swatches input[type=color] { width: 100%; height: 28px; padding: 0; border: 1px solid var(--line); background: none; }
+/* My colours: a kept colour has a small × to take it out (shown on hover, always on a touch screen); + keeps one more. */
+.mine-head { margin-top: 10px; }
+.mine { position: relative; display: block; }
+.mine .swatch { width: 100%; }
+.mine .del { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; min-height: 0; padding: 0; border-radius: 50%;
+  font-size: 12px; line-height: 16px; text-align: center; background: var(--pane2); border: 1px solid var(--muted); opacity: 0; }
+.mine:hover .del, .mine:focus-within .del { opacity: 1; }
+@media (hover: none) { .mine .del { opacity: 1; } }
+.addcolour { height: 28px; min-height: 0; padding: 0; font-size: 16px; }
+.addcolour.is-on { border-color: var(--accent); color: var(--accent); }
+/* The palette + opens: twelve hues from pale to deep, then whites and greys; any other colour below. */
+.chooser { margin-top: 8px; padding: 8px; border: 1px solid var(--line); background: var(--pane2); }
+.chooser-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
+.chooser-grid .swatch { height: 24px; min-height: 0; }
+.chooser-grid .swatch.is-on { outline: 2px solid #fff; outline-offset: -2px; }
+.chooser-any { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+.chooser-any input[type=color] { width: 44px; height: 30px; padding: 0; border: 1px solid var(--line); background: none; flex: none; }
+.hexfield { width: 92px; background: var(--field); border: 1px solid var(--line); padding: 5px 7px; font: 500 12px var(--mono); }
+button.small { min-height: 24px; padding: 2px 8px; }
 .field { display: grid; grid-template-columns: 84px minmax(0, 1fr) 46px; align-items: center; gap: 8px; padding: 3px 0; }
 .field label { color: var(--muted); font-size: 12px; }
 .field input[type=range] { width: 100%; }
@@ -276,8 +295,10 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
   .editor { overflow: visible; }
   .field { grid-template-columns: 76px minmax(0, 1fr) 46px; padding: 6px 0; }
   .chip, .swatch, button { min-height: 40px; }
-  .swatches { grid-template-columns: repeat(5, 1fr); }
-  .swatch, .swatches input[type=color] { height: 40px; }
+  .swatches { grid-template-columns: repeat(6, 1fr); }
+  .swatch, .swatches input[type=color], .addcolour { height: 40px; }
+  .mine .del { width: 22px; height: 22px; line-height: 20px; }
+  .chooser-grid .swatch { height: 30px; min-height: 0; }
   #page-setup { display: flex; flex-direction: column; }
 }
 
