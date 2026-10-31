@@ -650,6 +650,7 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         }
         expect(window.DiShowDesk.midiMap().filter((m) => m.kind === 'note' && m.ch === 14 && m.num === 27).map((m) => m.target)).toEqual(['blackout'])
         expect(posts.filter((p) => p.url === '../light/api/scenes/recall')).toEqual([])
+        await press($('midiLearn')) // leave Learn mode, so the next test starts clean
     })
     it('Learn maps one control to a fader; On, Off, a lift, Undo and Save cannot be picked', async () => {
         await press($('midiLearn'))
