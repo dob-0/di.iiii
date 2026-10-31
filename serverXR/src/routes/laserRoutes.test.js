@@ -91,6 +91,21 @@ describe('the lasers at /laser', () => {
     expect(await (await post(url, { on: false })).json()).toMatchObject({ ok: true, blackout: false })
   })
 
+  it('a cube On with nothing to draw stays On by default (darkOff never), and /state says so', async () => {
+    delete process.env.NODE_ENV
+    delete process.env.DI_LASER_DARK_OFF
+    const { base } = await boot()
+    expect((await (await fetch(`${base}/laser/api/state`)).json()).darkOff).toBe('never')
+  })
+
+  it('DI_LASER_DARK_OFF=auto keeps the older 5 s dark rule, and /state says darkOff auto', async () => {
+    delete process.env.NODE_ENV
+    process.env.DI_LASER_DARK_OFF = 'auto'
+    const { base } = await boot()
+    delete process.env.DI_LASER_DARK_OFF
+    expect((await (await fetch(`${base}/laser/api/state`)).json()).darkOff).toBe('auto')
+  })
+
   it('arms on a plain On in click mode (the default), and /state says signOff click', async () => {
     delete process.env.NODE_ENV
     delete process.env.DI_LASER_SIGN_OFF

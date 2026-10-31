@@ -103,7 +103,8 @@ const SHUTDOWN_WAIT_MS = 250
 // A Laser Out holds its cube while it says so (frame, keep-alive, its 3-second check): 10 s of silence
 // (the editor closed, the tab gone) frees the cube for another Out.
 const CLAIM_TTL_MS = 10000
-// A dark frame (or no frame at all since On) nobody refreshes for this long: the cube is switched Off (review E2, R2).
+// A dark frame (or no frame at all since On) nobody refreshes for this long: the cube is switched Off (review E2, R2),
+// in darkOff 'auto' only. In 'never' (the product's default since 2026-10-31, N1591) it stays On and dark until a person's Off.
 const DARK_IDLE_MS = 5000
 // A Go counts at most once per this long per Out (review E4).
 const GO_GAP_MS = 500
@@ -343,9 +344,16 @@ const createLaserEngine = ({
     //   'click'  (the product's default since 2026-10-31) On is the person's yes; no phrase is typed.
     //   'phrase' the older mode, kept (rule: nothing we have is ever lost): the first On of a run takes
     //            ARM_PHRASE typed exactly. The server picks it with DI_LASER_SIGN_OFF=phrase.
-    signOff = 'phrase'
+    signOff = 'phrase',
+    // What a cube On with nothing to draw does (owner 2026-10-31 16:1x, N1591: "delete all that safety things"):
+    //   'auto'  the older rule, kept (rule: nothing we have is ever lost) and the library default: nothing lit and nobody
+    //           refreshing for DARK_IDLE_MS switches the cube Off (review E2, R2). The server picks it with DI_LASER_DARK_OFF=auto.
+    //   'never' (the product's default since 2026-10-31) On stays On, armed and drawing nothing (blank points only), until
+    //           a person presses Off, Disarm all or Blackout, or another guard stops it. An Out that lets go still switches Off.
+    darkOff = 'auto'
 } = {}) => {
     if (signOff !== 'click' && signOff !== 'phrase') throw new Error(`laser engine: signOff must be 'click' or 'phrase', not ${JSON.stringify(signOff)}`)
+    if (darkOff !== 'auto' && darkOff !== 'never') throw new Error(`laser engine: darkOff must be 'auto' or 'never', not ${JSON.stringify(darkOff)}`)
     const phraseNeeded = () => signOff === 'phrase'
     const config = readConfig(dataDir)
     for (const c of config.cubes) if (c.addressRefused) log?.warn?.(`[laser] ${c.id}: laser.json address not used: ${c.addressRefused}`)
@@ -613,8 +621,9 @@ const createLaserEngine = ({
                 c.armed = false
                 continue
             }
-            // A cube whose Out let go (its claim lapsed) or whose frame has gone dark and unrefreshed is switched OFF,
-            // not left armed with output on for the next sender (review E2): a later Out must be switched On by a person.
+            // A cube whose Out let go (its claim lapsed) or (darkOff 'auto') whose frame has gone dark and unrefreshed is switched
+            // OFF, not left armed with output on for the next sender (review E2): a later Out must be switched On by a person.
+            // In darkOff 'never' a dark cube stays armed and draws blank until a person's Off (N1591); an Out letting go still switches it Off.
             if (claims.has(c.id) && !claimOf(c.id, t)) {
                 claims.delete(c.id)
                 log?.warn?.(`[laser] ${c.id} its Out let go: switching it OFF`)
@@ -629,8 +638,8 @@ const createLaserEngine = ({
                 if (frame === c.tripFrame) continue
                 c.tripFrame = null
             }
-            // No frame at all counts as dark, from the moment of On (review R2).
-            if (!darkLatch && (!frame || !frame.lit) && !c.stop && t - Math.max(frame?.at ?? 0, c.armedAt ?? 0) > DARK_IDLE_MS) {
+            // No frame at all counts as dark, from the moment of On (review R2). Only in darkOff 'auto'.
+            if (darkOff === 'auto' && !darkLatch && (!frame || !frame.lit) && !c.stop && t - Math.max(frame?.at ?? 0, c.armedAt ?? 0) > DARK_IDLE_MS) {
                 log?.warn?.(`[laser] ${c.id} dark and unrefreshed for ${DARK_IDLE_MS} ms: switching it OFF`)
                 armOne({ armed: false, cube: c.id })
                 c.offBy = { reason: OFF.DARK_IDLE, at: t }
@@ -712,14 +721,19 @@ const createLaserEngine = ({
             cubeOverTemperature: Boolean(c.info?.overTemperature)
         }
     }
-    // How long before the dark rule (R2, in tick) switches this cube Off, for the desk to count down: only while it
-    // counts — armed, not stopped, no dark latch, nothing lit, and nobody refreshing (no frame, none since On, or one
-    // older than FRAME_TIMEOUT_MS). null otherwise. Reporting only: the rule and its time are tick()'s (N1585).
-    const darkOffIn = (c, t) => {
-        if (!armed || !c.armed || c.stop || darkLatch) return null
+    // A cube On with nothing to draw: armed, not stopped, no dark latch, nothing lit, and nobody refreshing (no frame,
+    // none since On, or one older than FRAME_TIMEOUT_MS). The dark rule's own condition (R2); reported in both modes.
+    const nothingToDraw = (c, t) => {
+        if (!armed || !c.armed || c.stop || darkLatch) return false
         const frame = framesFor(c.id)
-        if (frame?.lit) return null
-        if (frame && frame.at > (c.armedAt ?? 0) && t - frame.at <= GUARD.FRAME_TIMEOUT_MS) return null
+        if (frame?.lit) return false
+        return !(frame && frame.at > (c.armedAt ?? 0) && t - frame.at <= GUARD.FRAME_TIMEOUT_MS)
+    }
+    // How long before the dark rule (R2, in tick) switches this cube Off, for the desk to count down: only in darkOff
+    // 'auto' and only while it counts (nothingToDraw). null otherwise. Reporting only: the rule and its time are tick()'s (N1585).
+    const darkOffIn = (c, t) => {
+        if (darkOff !== 'auto' || !nothingToDraw(c, t)) return null
+        const frame = framesFor(c.id)
         return Math.max(0, DARK_IDLE_MS - (t - Math.max(frame?.at ?? 0, c.armedAt ?? 0)))
     }
     const state = () => {
@@ -729,6 +743,7 @@ const createLaserEngine = ({
             dark: darkLatch,
             signedOff,
             signOff,
+            darkOff,
             sim: sim(),
             zone: { ...config.zone },
             stopResume: config.stopResume,
@@ -762,6 +777,7 @@ const createLaserEngine = ({
                 lastFrameAt: c.lastFrameAt,
                 offBy: c.offBy ? { reason: c.offBy.reason, text: OFF_TEXT[c.offBy.reason], at: c.offBy.at } : null,
                 darkOffInMs: darkOffIn(c, t),
+                nothingToDraw: nothingToDraw(c, t),
                 guards: c.guards,
                 path: pathView(c),
                 temperature: temperatureView(c)

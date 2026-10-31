@@ -264,3 +264,33 @@ describe('the dark rule is said where the operator looks (N1585)', () => {
         expect(note().textContent).toBe('Off: it had nothing to draw for 5 s. Press On to use it again.')
     })
 })
+
+describe("darkOff 'never' (the default, N1591): On stays On; its card says so plainly, nothing counts down", () => {
+    const note = () => document.querySelector('#cubeNote')
+    const card = () => document.querySelector('#stage .state')
+    it('On with nothing to draw: the card says "On, nothing to draw. Pick a look."; the countdown shows only in auto', async () => {
+        Object.assign(engine, { sim: false, darkOff: 'never', guard: { darkIdleMs: 5000 } })
+        Object.assign(engine.cubes[0], { armed: true, darkOffInMs: 3200, nothingToDraw: true, offBy: null })
+        Object.assign(desk.cubes[0], { driving: false, dark: false, lit: 0, points: 0 })
+        await sleep(1100)
+        expect(card().textContent).toBe('On, nothing to draw. Pick a look.')
+        expect(note().hidden).toBe(true)
+        // the same cube numbers in 'auto': the countdown, as before
+        Object.assign(engine, { darkOff: 'auto' })
+        await sleep(1100)
+        expect(card().textContent).toBe('on · nothing to draw · off in 4 s')
+        expect(note().textContent).toBe('On with nothing to draw: it switches itself off in 4 s. Pick a look.')
+    })
+    it("an Off by the dark rule is said only in 'auto'; an Out that let go is said in both", async () => {
+        Object.assign(engine, { sim: false, darkOff: 'never', guard: { darkIdleMs: 5000 } })
+        Object.assign(engine.cubes[0], { armed: false, darkOffInMs: null, nothingToDraw: false, offBy: { reason: 'dark-idle', text: 'Off: it had nothing to draw for 5 s', at: 1 } })
+        Object.assign(desk.cubes[0], { driving: false, dark: false, lit: 0, points: 0 })
+        await sleep(1100)
+        expect(note().hidden).toBe(true)
+        expect(card().textContent).not.toMatch(/had nothing to draw/)
+        Object.assign(engine.cubes[0], { offBy: { reason: 'out-let-go', text: 'Off: its Out let go', at: 1 } })
+        await sleep(1100)
+        expect(note().textContent).toBe('Off: its Out let go. Press On to use it again.')
+        expect(card().textContent).toBe('off · its Out stopped')
+    })
+})

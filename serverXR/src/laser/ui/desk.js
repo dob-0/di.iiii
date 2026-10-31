@@ -605,12 +605,17 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
     const nameOf = (id) => engine?.cubes.find((c) => c.id === id)?.name || id
     // The engine's dark rule (R2), said where the operator looks (N1585): a cube On with nothing to draw counts down to
     // its own Off; a cube the engine switched off says why until its next On. The engine's numbers and words, not the page's.
+    // Only in the engine's darkOff 'auto' (DI_LASER_DARK_OFF=auto); an engine that does not say its mode is the older 'auto'.
+    // In 'never' (the default, N1591) nothing counts down: the cube stays On and dark, and its card says so (idleHint).
+    const darkAuto = () => engine?.darkOff !== 'never'
     const darkNote = (e) => {
         if (!e || !engine || engine.sim) return null
-        if (e.armed && e.darkOffInMs != null) return `On with nothing to draw: it switches itself off in ${Math.ceil(e.darkOffInMs / 1000)} s.${desk?.live ? '' : ' Pick a look.'}`
-        if (!e.armed && e.offBy) return `${e.offBy.text}. ${e.offBy.reason === 'dark-idle' && !desk?.live ? 'Pick a look, then On.' : 'Press On to use it again.'}`
+        if (darkAuto() && e.armed && e.darkOffInMs != null) return `On with nothing to draw: it switches itself off in ${Math.ceil(e.darkOffInMs / 1000)} s.${desk?.live ? '' : ' Pick a look.'}`
+        if (!e.armed && e.offBy && (darkAuto() || e.offBy.reason !== 'dark-idle')) return `${e.offBy.text}. ${e.offBy.reason === 'dark-idle' && !desk?.live ? 'Pick a look, then On.' : 'Press On to use it again.'}`
         return null
     }
+    // darkOff 'never': a plain hint on the cube's card while it is On with nothing to draw (no countdown, no Off).
+    const idleHint = (e) => (e && engine && !engine.sim && !darkAuto() && e.armed && e.nothingToDraw ? `On, nothing to draw.${desk?.live ? '' : ' Pick a look.'}` : null)
     const renderCubeNote = () => {
         const notes = (engine?.cubes || []).map((e) => [e, darkNote(e)]).filter(([, text]) => text)
         $('cubeNote').hidden = notes.length === 0
@@ -658,6 +663,11 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
                 view.state.textContent = e.armed ? `on · nothing to draw · off in ${Math.ceil(e.darkOffInMs / 1000)} s` : e.offBy.reason === 'dark-idle' ? 'off · had nothing to draw' : 'off · its Out stopped'
                 view.state.className = 'state is-held'
                 view.state.title = note
+            }
+            const hint = c.on && !c.held && !note ? idleHint(e) : null
+            if (hint) {
+                view.state.textContent = hint
+                view.state.title = hint
             }
             view.cut.hidden = !(c.offPercent > 0)
             view.cut.textContent = c.offPercent > 0 ? `${c.offPercent} % of this look is off the field` : ''

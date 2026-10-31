@@ -130,10 +130,14 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   // Sign-off, read once when the lane starts: 'click' (On is the yes; the owner's word 2026-10-31) unless the server
   // was started with DI_LASER_SIGN_OFF=phrase, which keeps the typed phrase (the older mode).
   const signOff = process.env.DI_LASER_SIGN_OFF === 'phrase' ? 'phrase' : 'click'
+  // A cube On with nothing to draw, read once when the lane starts: 'never' (it stays On and dark until a person's Off;
+  // the owner's word 2026-10-31 16:1x, N1591) unless the server was started with DI_LASER_DARK_OFF=auto, which keeps the
+  // older rule (switched Off after 5 s with nothing to draw, review R2).
+  const darkOff = process.env.DI_LASER_DARK_OFF === 'auto' ? 'auto' : 'never'
   const getEngine = () => {
     if (engine) return engine
     const { createLaserEngine } = require('../laser/laserEngine')
-    engine = createLaserEngine({ dataDir: laserDir, log, signOff, ...engineOptions })
+    engine = createLaserEngine({ dataDir: laserDir, log, signOff, darkOff, ...engineOptions })
     return engine
   }
   // The show player (laser/laserShow.js): a project's laser lines on the cubes. It asks for the engine of the

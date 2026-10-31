@@ -83,8 +83,8 @@ const litIn = (msgs) => msgs.reduce((n, s) => {
 const circle = generateShape({ shape: 'circle', size: 0.5, height: 0.5, points: 120 })
 const dot = (x = 0.2, y = 0.5, n = 60) => Array.from({ length: n }, () => [x, y, 0, 1, 0])
 // Armed and streaming: both cubes answered, then armed.
-const armedWith = (config = CUBES) => {
-    const rig = engineWith(config)
+const armedWith = (config = CUBES, extra = {}) => {
+    const rig = engineWith(config, extra)
     for (const c of config.cubes) rig.answer(c.ip)
     expect(rig.engine.arm({ armed: true, confirm: ARM_PHRASE }).ok).toBe(true)
     for (const c of config.cubes) rig.hear(c.ip, [0x8a, 0, 0x70, 0x17]) // the clear is confirmed: 6000 free
@@ -883,5 +883,31 @@ describe('stage audit review fixes: a stopped cube is never relit by the frame t
         rig.engine.setFrame('all', line)
         step(rig)
         expect(litIn(dataTo(rig.socket))).toBe(0)
+    })
+})
+
+// darkOff (owner 2026-10-31 16:1x, N1591): 'auto' keeps the 5 s dark rule (R2, the library default); 'never' (the product's
+// default, picked by the lane) keeps a cube On with nothing to draw armed until a person's Off. Every other guard stays.
+describe('darkOff: what a cube On with nothing to draw does (N1591)', () => {
+    it("the library default stays 'auto'; state says the mode; an unknown mode is refused at creation", () => {
+        expect(engineWith(ONE).engine.state().darkOff).toBe('auto')
+        expect(engineWith(ONE, { darkOff: 'never' }).engine.state().darkOff).toBe('never')
+        expect(() => engineWith(ONE, { darkOff: 'off' })).toThrow(/darkOff/)
+    })
+    it("'never': the signal-loss stop still blanks a lit frame not refreshed for 200 ms", () => {
+        const { engine, socket, at } = armedWith(ONE, { darkOff: 'never' })
+        engine.setFrame('all', circle)
+        at(GUARD.FRAME_TIMEOUT_MS); engine.tick()
+        expect(litIn(dataTo(socket))).toBeGreaterThan(0)
+        socket.sent.length = 0
+        at(1); engine.tick()
+        expect(litIn(dataTo(socket))).toBe(0)
+        expect(engine.state().cubes[0]).toMatchObject({ armed: true, stop: { reason: 'no-frame' } })
+    })
+    it("'never': the still-beam guard still stops a still beam held 200 ms", () => {
+        const rig = armedWith(ONE, { darkOff: 'never' })
+        rig.engine.setFrame('all', dot(), null, { go: false })
+        for (let t = 0; t <= GUARD.STILL_HOLD_MS; t += 20) { rig.at(20); rig.hear('10.0.0.51', [0x80]); rig.engine.alive('all'); rig.engine.tick() }
+        expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
     })
 })
