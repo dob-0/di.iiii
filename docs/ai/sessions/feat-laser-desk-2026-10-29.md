@@ -80,6 +80,9 @@ The owner's ask: "lets create laser soft like how is lighting one" — inside di
   (the hue wheel + white + warm white; green pickable, still no seed's colour) beside the picker, and **My colours**: + keeps
   the colour of the look in Edit, × takes one out; `POST /laser/desk/api/palette { colours }` (whole list, each once,
   `#rrggbb`, ≤ 24), kept in desk.json `palette`, not an undo step. Simulated in headless Chrome (17 checks, desktop + phone).
+  Then ("no i eed paleet choose from colors paleet show me color pallet when +"): + opens a palette (12 hues × 5 shades
+  pale→deep from HSV, + 12 whites/greys; a picker and a #hex field below); a choice is kept in My colours and the palette
+  closes; the look is not changed (clicking the kept swatch colours it). Esc / Close shut it. 16 headless checks.
 - Wiki `laser-desk`; eslint gives `serverXR/src/laser/ui` browser globals like the light desk's ui.
 
 ## Tested

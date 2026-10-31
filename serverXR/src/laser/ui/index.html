@@ -81,8 +81,18 @@
           <label class="check"><input type="checkbox" id="rainbow"> Rainbow</label>
         </div>
         <div class="swatches" id="swatches"></div>
-        <div class="grouphead mine-head"><span>My colours</span><span class="muted" id="myColoursHint">+ keeps the look’s colour here</span></div>
+        <div class="grouphead mine-head"><span>My colours</span><span class="muted" id="myColoursHint">+ opens a palette to choose from</span></div>
         <div class="swatches" id="myColours"></div>
+        <!-- The palette + opens (2026-10-31, the owner: "show me color pallet when +"): choose a colour, it is kept in My colours. -->
+        <div class="chooser" id="colourChooser" hidden>
+          <div class="grouphead"><span>Choose a colour to keep</span><button id="chooserClose" class="quiet small">Close</button></div>
+          <div class="chooser-grid" id="chooserGrid" role="group" aria-label="Palette"></div>
+          <div class="chooser-any">
+            <input type="color" id="chooserPicker" value="#ff2030" aria-label="Any colour">
+            <input id="chooserHex" class="hexfield" maxlength="7" placeholder="#rrggbb" aria-label="A colour as #rrggbb" spellcheck="false">
+            <button id="chooserAdd" title="Keep this colour in My colours">Keep</button>
+          </div>
+        </div>
       </div>
       <div class="group" id="pictureFields"><div class="grouphead"><span>Picture</span></div></div>
       <div class="group" id="moveFields"><div class="grouphead"><span>Movement</span>

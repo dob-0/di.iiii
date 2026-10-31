@@ -402,6 +402,49 @@
         if (live && document.activeElement !== picker) picker.value = live.colour
         renderMyColours()
     }
+    // The palette + opens (2026-10-31, the owner: "no i eed paleet choose from colors paleet show me color pallet when +"):
+    // twelve hues round the wheel, each from pale to deep, then whites and greys. A colour chosen is kept in My colours.
+    const hsv = (h, s, v) => {
+        const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)) }
+        return '#' + [f(5), f(3), f(1)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('')
+    }
+    const CHOOSER = [
+        ...[[0.3, 1], [0.6, 1], [1, 1], [1, 0.7], [1, 0.45]].flatMap(([s, v]) => Array.from({ length: 12 }, (_, i) => hsv(i * 30, s, v))),
+        '#ffffff', '#fff2e0', '#ffd8a8', '#ffc080', '#e8f2ff', '#c8dcff', '#e0e0e0', '#c0c0c0', '#a0a0a0', '#808080', '#606060', '#404040'
+    ]
+    const hexOf = (text) => {
+        const t = String(text || '').trim().replace(/^#/, '')
+        const full = /^[0-9a-f]{3}$/i.test(t) ? t.split('').map((c) => c + c).join('') : t
+        return /^[0-9a-f]{6}$/i.test(full) ? '#' + full.toLowerCase() : null
+    }
+    const keepColour = (c) => {
+        const list = desk?.palette || []
+        if (c && !list.includes(c)) savePalette([...list, c])
+        showChooser(false)
+    }
+    const renderChooser = () => {
+        const grid = $('chooserGrid')
+        if (!grid.children.length) {
+            grid.append(...CHOOSER.map((c) => el('button', { class: 'swatch', 'data-colour': c, style: `background:${c}`, title: c, 'aria-label': `Keep ${c}`, onclick: () => keepColour(c) })))
+        }
+        const kept = desk?.palette || []
+        for (const b of grid.children) b.classList.toggle('is-on', kept.includes(b.dataset.colour))
+    }
+    const showChooser = (on) => {
+        $('colourChooser').hidden = !on
+        $('myColours').querySelector('.addcolour')?.classList.toggle('is-on', on)
+        if (on) {
+            renderChooser()
+            const c = editing()?.colour
+            if (c) { $('chooserPicker').value = c; $('chooserHex').value = c }
+        }
+    }
+    $('chooserClose').addEventListener('click', () => showChooser(false))
+    $('chooserPicker').addEventListener('input', (e) => { $('chooserHex').value = e.target.value })
+    $('chooserHex').addEventListener('input', (e) => { const c = hexOf(e.target.value); if (c) $('chooserPicker').value = c })
+    $('chooserHex').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('chooserAdd').click() } })
+    $('chooserAdd').addEventListener('click', () => keepColour(hexOf($('chooserHex').value) || $('chooserPicker').value))
+
     // My colours: kept by the desk (desk.json), so every page and the next show have them.
     const savePalette = (colours) => {
         desk.palette = colours
@@ -418,12 +461,10 @@
                     el('button', { class: 'swatch', 'data-colour': c, style: `background:${c}`, title: c, 'aria-label': `Colour ${c}`, onclick: () => pickColour(c) }),
                     el('button', { class: 'del', text: '×', title: `Take ${c} out of My colours`, 'aria-label': `Take ${c} out of My colours`, onclick: () => savePalette(list.filter((x) => x !== c)) }))),
                 el('button', {
-                    class: 'addcolour', text: '+', title: 'Keep the colour of the look in Edit in My colours', 'aria-label': 'Keep this colour in My colours',
-                    onclick: () => {
-                        const c = editing()?.colour || $('colourPicker').value
-                        if (c && !list.includes(c)) savePalette([...list, c])
-                    }
+                    class: 'addcolour', text: '+', title: 'Choose a colour from the palette to keep in My colours', 'aria-label': 'Choose a colour to keep',
+                    onclick: () => showChooser($('colourChooser').hidden)
                 }))
+            $('myColours').querySelector('.addcolour').classList.toggle('is-on', !$('colourChooser').hidden)
             $('myColoursHint').hidden = list.length > 0
         }
         const live = editing()
@@ -766,6 +807,7 @@
         const mod = e.ctrlKey || e.metaKey
         const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
         if (!$('keysHelp').hidden) { if (key === 'Escape' || key === '?') { e.preventDefault(); showKeys(false) } return }
+        if (key === 'Escape' && !$('colourChooser').hidden) { e.preventDefault(); showChooser(false); return }
         if (mod && key === 's') { e.preventDefault(); saveAll(); return }
         // Esc leaves a text field (a second Esc closes Edit); every other key there is the field's own.
         if (typing(e.target)) { if (key === 'Escape') e.target.blur(); return }
