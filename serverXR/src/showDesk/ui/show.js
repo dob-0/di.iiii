@@ -833,12 +833,13 @@
     const SCENE_NOTES = [36, 37, 38, 39, 32, 33, 34, 35, 28, 29] // the K2's matrix A to J
     const MIDI_DEFAULT = [
         ...[16, 17, 18].map((num, i) => ({ kind: 'cc', ch: K2, num, target: `lamp:${i}` })),
-        { kind: 'cc', ch: K2, num: 19, target: 'light-master' },
+        { kind: 'cc', ch: K2, num: 19, target: 'spare' }, // fader 4 is dead on the owner's K2 (2026-10-31): never mapped
         ...['level', 'size', 'height', 'copies'].map((k, i) => ({ kind: 'cc', ch: K2, num: 4 + i, target: `live:${k}` })),
         ...['spin', 'pulse', 'sweep'].map((k, i) => ({ kind: 'cc', ch: K2, num: 8 + i, target: `live:${k}` })),
         { kind: 'cc', ch: K2, num: 11, target: 'laser-master' },
         { kind: 'cc', ch: K2, num: 12, target: 'size:0' },
-        ...[13, 14, 15].map((num) => ({ kind: 'cc', ch: K2, num, target: 'spare' })),
+        { kind: 'cc', ch: K2, num: 15, target: 'light-master' }, // pot 12, right above the dead fader 4
+        ...[13, 14].map((num) => ({ kind: 'cc', ch: K2, num, target: 'spare' })),
         ...['rotation', 'x', 'cycle', 'phase'].map((k, i) => ({ kind: 'cc', ch: K2, num: i, target: `live:${k}`, relative: true })),
         ...SCENE_NOTES.map((num, i) => ({ kind: 'note', ch: K2, num, target: `scene:${i}` })),
         { kind: 'note', ch: K2, num: 27, target: 'blackout' } // matrix P: the far corner, away from the scene keys
