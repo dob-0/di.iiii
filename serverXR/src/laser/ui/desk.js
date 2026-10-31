@@ -1050,6 +1050,297 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         removeAsk.ids = link.ids
         removeAsk.phase = 'wait'
     }
+
+    // ---- A link can propose a look set (2026-10-31): the page opens with ?set=<name> and a person is asked. A set is a file
+    // shipped with the page, ui/sets/<name>.json = { set, about, looks: [whole looks] }, its looks carrying the ids of the
+    // bank's looks. The link is a proposal, never a command: nothing is sent until Apply is tapped. Then each look of the set
+    // that is in the bank gets the Edit pane's own edit (desk/api/looks/edit with every field but id and follows, so a look
+    // keeps its scene link; the look on the laser redraws at once), a look the bank lacks is made by the page's own paste
+    // (desk/api/looks/paste: the desk names it and gives its id), and ONE Store of the last of them writes the bank in place.
+    // Not Save: Save keeps every saved look whose picture changed and adds the change as a NEW look ("... 2", a new id, no
+    // scene link), so a set would double the bank and the scenes would still recall the old looks (laserDesk.js saveBank).
+    // Store writes the bank as it is, so the set waits while the bank has other changes that are not saved (Store would write
+    // those in place too). Undo steps the edits and pastes back through the desk's undo and Stores again. The block:
+    // parseSetLink, loadSet, planSet, setRow, drawSetPics, paintSetAsk, showSetAsk, confirmSet, undoSet, keepSetAsk,
+    // startSetAsk (called once at the end), and one line in refreshDesk.
+    const SET_NAME = /^[a-z0-9-]{1,60}$/ // the file sets/<name>.json
+    const SET_SKIP = new Set(['id', 'follows']) // the desk's edit takes every look field but these (laserDesk.js editLook)
+    const SET_TAGS = { live: 'on the laser: changes at once', new: 'new: will be created' }
+    // phase: none | load (the set's file is on its way) | wait (the desk has not answered yet) | ask | busy | done | undone | refused
+    const setAsk = { phase: 'none', name: '', set: null, plan: null, held: false, title: '', note: '', rows: [], applied: [], undoSteps: 0, after: null }
+    const setFields = (look) => Object.fromEntries(Object.entries(look).filter(([k]) => !SET_SKIP.has(k)))
+
+    // The set a link names, or why it cannot be read: { name } or { error }; null when the link has no ?set.
+    const parseSetLink = (search) => {
+        const params = new URLSearchParams(search)
+        if (!params.has('set')) return null
+        const names = params.getAll('set')
+        if (names.length > 1) return { error: 'The link names more than one set. One link, one set.' }
+        if (!names[0]) return { error: 'The link names no set.' }
+        if (!SET_NAME.test(names[0])) return { error: `"${names[0].slice(0, 60)}" cannot be a set name. A set name is a-z, 0-9 and - only, at most 60.` }
+        return { name: names[0] }
+    }
+
+    // The set's file as data: { set } or { error } in plain words. Every id must be one a look can have, each once.
+    const loadSet = async (name) => {
+        let r
+        try {
+            r = await fetch(`sets/${name}.json`, { cache: 'no-store' })
+        } catch (error) {
+            return { error: `The set "${name}" could not be read (${error.message}).` }
+        }
+        const set = r.ok ? await r.json().catch(() => null) : null
+        if (r.status === 404 || (r.ok && (!set || typeof set !== 'object'))) return { error: `No set named "${name}".` }
+        if (!r.ok) return { error: `The set "${name}" could not be read (${r.status}).` }
+        const looks = Array.isArray(set.looks) ? set.looks.filter((l) => l && typeof l === 'object' && !Array.isArray(l)) : []
+        if (!looks.length || looks.length !== set.looks.length) return { error: `The set "${name}" has no looks the desk can read.` }
+        if (looks.length > REMOVE_MAX) return { error: `The set "${name}" has ${looks.length} looks. A set may have at most ${REMOVE_MAX}.` }
+        const ids = looks.map((l) => String(l.id ?? ''))
+        const bad = ids.filter((id) => !REMOVE_ID.test(id))
+        if (bad.length) return { error: `The set "${name}" has ${bad.length === 1 ? 'a look' : `${bad.length} looks`} without a good id. A look id is letters, digits, - and _ only.` }
+        const twice = ids.find((id, i) => ids.indexOf(id) !== i)
+        if (twice) return { error: `The set "${name}" names the look "${twice}" twice.` }
+        const about = (Array.isArray(set.about) ? set.about : String(set.about ?? '').split('\n'))
+            .map((line) => String(line).replace(/^#+\s*/, '').trim()).filter(Boolean).slice(0, 6)
+        return { set: { name, about, looks } }
+    }
+
+    // What a tap would do with the bank as it is now: each look of the set that is in the bank changes (now → new; the one on
+    // the laser at once), a look the bank lacks is made new. `key` is what a person confirmed: the fields the set changes as
+    // the bank holds them now, and which look is live.
+    const planSet = (looks) => {
+        const byId = new Map(desk.looks.map((l) => [l.id, l]))
+        const rows = looks.map((look) => {
+            const now = byId.get(look.id)
+            const keys = Object.keys(setFields(look))
+            if (!now) return { id: look.id, name: String(look.name || look.id), state: 'new', look, keys, changes: keys }
+            const changes = keys.filter((k) => JSON.stringify(look[k]) !== JSON.stringify(now[k]))
+            return { id: look.id, name: String(now.name || look.id), state: look.id === desk.liveId ? 'live' : 'go', now, look, keys, changes }
+        })
+        const key = JSON.stringify(rows.map((r) => [r.id, r.state, r.now ? r.keys.map((k) => r.now[k] ?? null) : null]))
+        return { rows, go: rows.map((r) => r.id), key }
+    }
+
+    // A look in words: its shape and its colour, with a square of the colour.
+    const lookSide = (look) => {
+        const span = document.createElement('span')
+        const swatch = document.createElement('i')
+        swatch.className = 'swatch'
+        if (!look.rainbow && /^#[0-9a-f]{6}$/i.test(String(look.colour))) swatch.style.background = look.colour
+        span.append(swatch, `${look.shape} ${look.rainbow ? 'rainbow' : look.colour}`) // text: never read as markup
+        return span
+    }
+    const setRow = (r) => {
+        const li = document.createElement('li')
+        li.className = `is-${r.state}`
+        li.dataset.id = r.id
+        const pic = document.createElement('canvas')
+        pic.className = 'setpic'
+        pic.title = `${r.name}: the new look`
+        const head = document.createElement('div')
+        head.className = 'sethead'
+        const name = document.createElement('b')
+        name.textContent = r.name
+        const id = document.createElement('span')
+        id.className = 'setid'
+        id.textContent = r.id
+        head.append(name, id)
+        if (SET_TAGS[r.state]) {
+            const tag = document.createElement('span')
+            tag.className = 'tag'
+            tag.textContent = SET_TAGS[r.state]
+            head.append(tag)
+        }
+        const change = document.createElement('div')
+        change.className = 'setchange'
+        if (r.now) change.append(lookSide(r.now), ' → ', lookSide(r.look))
+        else change.append(lookSide(r.look))
+        const more = r.now ? r.changes.filter((k) => k !== 'shape' && k !== 'colour') : []
+        if (r.now && !r.changes.length) change.append(' · no change')
+        else if (more.length) change.append(` · also ${more.join(', ')}`)
+        li.append(pic, head, change)
+        return li
+    }
+
+    // The new look's picture, drawn by the desk's own tile drawing (DiLaser, loaded beside the page) from the set's look alone.
+    const drawSetPics = (tries = 0) => {
+        if (setAsk.phase !== 'ask' && setAsk.phase !== 'busy') return
+        if (!window.DiLaser) { if (tries < 40) requestAnimationFrame(() => drawSetPics(tries + 1)); return }
+        for (const li of $('setList').children) {
+            const row = setAsk.rows.find((r) => r.id === li.dataset.id)
+            const canvas = li.querySelector('canvas')
+            if (!row || !canvas) continue
+            try {
+                const look = { ...row.look, points: Math.min(Number(row.look.points) || 240, 240) }
+                drawFrame(canvas, window.DiLaser.lookPointsAt(look, { t: tileClock.zero, clock: tileClock }), { box: window.DiLaser.lookBox(look) })
+            } catch { /* a look the drawing cannot read keeps a dark picture; the words still say what changes */ }
+        }
+    }
+
+    const paintSetAsk = () => {
+        const a = setAsk
+        const box = $('setAsk')
+        box.hidden = a.phase === 'none' || a.phase === 'load' || a.phase === 'wait'
+        box.dataset.phase = a.phase
+        $('setTitle').textContent = a.title
+        const about = $('setAbout')
+        about.textContent = ''
+        const lines = (a.phase === 'ask' || a.phase === 'busy') && a.set ? a.set.about : []
+        for (const line of lines) {
+            const p = document.createElement('p')
+            p.textContent = line
+            about.append(p)
+        }
+        about.hidden = !lines.length
+        $('setNote').textContent = a.note
+        const list = $('setList')
+        list.textContent = ''
+        for (const r of a.rows) list.append(setRow(r))
+        list.hidden = !a.rows.length
+        const going = a.plan ? a.plan.go.length : 0
+        const asking = a.phase === 'ask' && going > 0 && !a.held
+        const busy = a.phase === 'busy'
+        $('setGo').hidden = !(asking || (busy && a.rows.length > 0))
+        $('setGo').textContent = `Apply ${going}`
+        $('setGo').disabled = busy
+        $('setUndo').hidden = !(a.phase === 'done' && a.undoSteps > 0)
+        $('setKeep').textContent = a.phase === 'ask' || (busy && a.rows.length > 0) ? 'Keep as is' : 'Close'
+        $('setKeep').disabled = busy
+        drawSetPics()
+    }
+    const saySetAsk = (phase, title, note = '', rows = []) => {
+        Object.assign(setAsk, { phase, title, note, rows })
+        paintSetAsk()
+    }
+    const dropSetQuery = () => {
+        try {
+            const url = new URL(location.href)
+            if (!url.searchParams.has('set')) return
+            url.searchParams.delete('set')
+            history.replaceState(history.state, '', url.pathname + url.search + url.hash)
+        } catch { /* a page that cannot rewrite its address keeps the link; the panel is closed either way */ }
+    }
+
+    // The question, asked once the set's file and the bank are both known, again if the bank moved, and again when other
+    // unsaved changes come or go (Apply waits for them).
+    const showSetAsk = (changed = false) => {
+        const plan = planSet(setAsk.set.looks)
+        setAsk.plan = plan
+        setAsk.held = Boolean(desk.unsaved)
+        const live = plan.rows.find((r) => r.state === 'live')
+        const made = plan.rows.filter((r) => r.state === 'new').length
+        const note = [
+            changed ? 'The bank changed while this was open. Check the list, then tap again.' : '',
+            setAsk.held ? 'The bank has other changes that are not saved yet. Save or undo them first: Apply writes the bank in place, so it would write them too.' : '',
+            live ? `The live look changes at once: ${live.name} is on the laser.` : '',
+            made ? `${made === 1 ? '1 look is' : `${made} looks are`} not in the bank yet: Apply makes ${made === 1 ? 'it' : 'them'}.` : ''
+        ].filter(Boolean).join(' ')
+        saySetAsk('ask', `Apply the look set ${setAsk.name}?`, note, plan.rows)
+        $('setKeep').focus() // the safe answer has the focus: Enter alone applies nothing
+    }
+
+    const confirmSet = async () => {
+        if (setAsk.phase !== 'ask' || setAsk.held || !setAsk.plan.go.length) return // one tap, one set
+        const asked = setAsk.plan
+        saySetAsk('busy', `Applying ${asked.go.length === 1 ? '1 look' : `${asked.go.length} looks`}...`, '', asked.rows)
+        await flush()
+        await refreshDesk()
+        // What was confirmed is what is sent: if the bank moved since the question (a look edited, made, deleted or put on the
+        // laser, or other changes not saved), nothing is sent and the question is asked again.
+        const now = planSet(setAsk.set.looks)
+        if (now.key !== asked.key || desk.unsaved) { showSetAsk(true); return }
+        // The look open in Edit goes last, so its edit never joins a slider drag that the desk's undo holds as one step.
+        const order = [...now.rows].sort((x, y) => (x.id === selected) - (y.id === selected))
+        const madeAs = new Map() // a set's id → the id the desk gave the look it made
+        const applied = []
+        let last = null // the last look written: its Store writes the bank in place
+        let stopped = ''
+        let unsaved = ''
+        try {
+            for (const r of order) {
+                const fields = setFields(r.look)
+                let out
+                if (r.state === 'new') {
+                    // Made after the look before it in the set, so the bank keeps the set's order.
+                    const prev = now.rows.slice(0, now.rows.indexOf(r)).reverse().find((p) => p.state !== 'new' || madeAs.has(p.id))
+                    out = await post('desk/api/looks/paste', { look: fields, after: prev ? madeAs.get(prev.id) || prev.id : null })
+                    if (!refusedAnswer(out)) madeAs.set(r.id, out.id)
+                } else out = await post('desk/api/looks/edit', { id: r.id, ...fields })
+                if (refusedAnswer(out)) { stopped = out.error || `refused (${out.status})`; break }
+                applied.push(r.id)
+                last = { id: madeAs.get(r.id) || r.id, look: fields }
+            }
+            if (last && !stopped) {
+                const out = await post('desk/api/store', last) // in place: not Save (see above)
+                if (refusedAnswer(out)) unsaved = out.error || `refused (${out.status})`
+            }
+        } catch (error) {
+            stopped = stopped || error.message
+        }
+        await refreshDesk()
+        setAsk.applied = applied.map((id) => madeAs.get(id) || id)
+        setAsk.undoSteps = applied.length // one desk undo step per edit and per paste; Store adds none
+        setAsk.after = { ids: desk.looks.map((l) => l.id).join(), key: planSet(setAsk.set.looks).key, unsaved: Boolean(desk.unsaved) }
+        const extra = []
+        if (now.rows.some((r) => r.state === 'live' && applied.includes(r.id))) extra.push('the live look changed at once')
+        if (madeAs.size) extra.push(`${madeAs.size} made new`)
+        for (const [id, as] of madeAs) if (as !== id) extra.push(`${id} was made as ${as}`)
+        const head = stopped ? [`Stopped: ${stopped}`, 'not saved'] : unsaved ? [`Not saved: ${unsaved}`] : ['Saved in place']
+        dropSetQuery()
+        saySetAsk('done', stopped ? `Applied ${applied.length} of ${asked.go.length}` : `Applied ${applied.length}`, [...head, ...extra].join(' · '))
+    }
+
+    const undoSet = async () => {
+        if (setAsk.phase !== 'done' || !setAsk.undoSteps) return
+        const { applied, undoSteps, after, title } = setAsk
+        saySetAsk('busy', 'Putting the looks back...')
+        await flush()
+        await refreshDesk()
+        // Undo here steps back exactly this set: if the bank moved after it, a step back would take that change instead.
+        if (desk.looks.map((l) => l.id).join() !== after.ids || planSet(setAsk.set.looks).key !== after.key || Boolean(desk.unsaved) !== after.unsaved) {
+            setAsk.undoSteps = 0
+            saySetAsk('done', title, 'The bank changed after this, so Undo here would take that change back too. Use Undo in the top bar, one step at a time.')
+            return
+        }
+        let back = 0
+        for (let i = 0; i < undoSteps; i += 1) {
+            const out = await post('desk/api/undo')
+            if (refusedAnswer(out) || out.undone === false) break
+            back += 1
+        }
+        await refreshDesk()
+        let note = ''
+        const keep = back ? desk.looks.find((l) => applied.includes(l.id)) || desk.looks[0] : null
+        if (keep) {
+            const out = await post('desk/api/store', { id: keep.id, look: setFields(keep) }) // the set was written in place, so its undo is too
+            note = refusedAnswer(out) ? `Not saved: ${out.error || `refused (${out.status})`}` : 'Saved in place'
+            await refreshDesk()
+        }
+        saySetAsk('undone', back === undoSteps ? `Put back ${undoSteps}` : `Put back ${back} of ${undoSteps}`, note)
+    }
+
+    const keepSetAsk = () => {
+        if (setAsk.phase === 'busy') return
+        saySetAsk('none', '', '')
+        dropSetQuery()
+    }
+
+    const startSetAsk = () => {
+        $('setGo').addEventListener('click', confirmSet)
+        $('setUndo').addEventListener('click', undoSet)
+        $('setKeep').addEventListener('click', keepSetAsk)
+        const link = parseSetLink(location.search)
+        if (!link) return
+        if (link.error) { saySetAsk('refused', 'No look set was applied.', link.error); return }
+        setAsk.name = link.name
+        setAsk.phase = 'load'
+        loadSet(link.name).then((out) => {
+            if (out.error) { saySetAsk('refused', 'No look set was applied.', out.error); return }
+            setAsk.set = out.set
+            if (desk) showSetAsk() // the desk has answered: ask now; else its first answer asks (refreshDesk)
+            else setAsk.phase = 'wait'
+        })
+    }
     // Arrows walk the bank as it is laid out: left/right one look, up/down one row.
     const moveSelection = (key) => {
         const tiles = [...$('tiles').children]
@@ -1212,6 +1503,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         renderFollow()
         renderStage()
         if (removeAsk.phase === 'wait') showRemoveAsk() // a link proposed removals: ask once the looks' names are known
+        if (setAsk.phase === 'wait' || (setAsk.phase === 'ask' && setAsk.held !== Boolean(desk.unsaved))) showSetAsk() // a link proposed a set: ask once the bank is known, again when other unsaved changes come or go
         if (page === 'setup' && !setupHeld()) renderSetup()
     }
     const refreshEngine = async () => {
@@ -1365,6 +1657,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
     }
 
     startRemoveAsk()
+    startSetAsk()
     refreshThumbs()
     loop(refreshEngine, POLL_ENGINE_MS)
     loop(refreshDesk, POLL_DESK_MS)

@@ -106,6 +106,18 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .removenote:empty { display: none; }
 .removebtns { display: flex; gap: 8px; flex-wrap: wrap; }
 .removebtns button { min-height: 36px; padding: 6px 14px; }
+/* A link can propose a look set (?set=..., 2026-10-31): the same square question; one row per look: the new look's picture, name and id, now → new. */
+.setabout { margin: 0 0 8px; }
+.setabout p { margin: 0 0 2px; color: var(--muted); font-size: 13px; }
+.setlist { list-style: none; margin: 0 0 8px; padding: 0; max-height: 42vh; overflow: auto; }
+.setlist li { display: grid; grid-template-columns: 72px 1fr; column-gap: 10px; align-items: center; padding: 4px 0; border-top: 1px solid var(--line); }
+.setlist .setpic { grid-row: 1 / span 2; width: 72px; height: 44px; background: var(--stagebg); }
+.setlist .sethead, .setlist .setchange { min-width: 0; overflow-wrap: anywhere; }
+.setlist .setid { margin-left: 6px; font-size: 12px; font-family: var(--mono); color: var(--muted); }
+.setlist .tag { margin-left: 6px; font-size: 12px; color: var(--muted); }
+.setlist .is-live .tag, .setlist .is-new .tag { color: var(--warn); }
+.setlist .setchange { font-size: 13px; color: var(--muted); }
+.setlist .swatch { display: inline-block; width: 10px; height: 10px; margin: 0 4px 0 2px; border: 1px solid var(--line); vertical-align: -1px; }
 
 #page-control {
   display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr);
