@@ -293,4 +293,11 @@ describe("darkOff 'never' (the default, N1591): On stays On; its card says so pl
         expect(note().textContent).toBe('Off: its Out let go. Press On to use it again.')
         expect(card().textContent).toBe('off · its Out stopped')
     })
+    it('a cube the desk holds with nothing live says nothing to draw, though the desk keeps a blank frame fresh', async () => {
+        Object.assign(engine, { sim: false, darkOff: 'never', guard: { darkIdleMs: 5000 } })
+        Object.assign(engine.cubes[0], { armed: true, darkOffInMs: null, nothingToDraw: false, claimedBy: 'desk', offBy: null })
+        Object.assign(desk.cubes[0], { driving: false, dark: false, lit: 0, points: 0 })
+        await sleep(1100)
+        expect(card().textContent).toBe('On, nothing to draw. Pick a look.')
+    })
 })

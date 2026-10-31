@@ -237,6 +237,8 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   // Arming is the strict gate; disarming is a stop and takes the stops' rule.
   router.post('/api/arm', (req, res, next) => (req.body?.armed === true ? (a, b, n) => requireSameMachine(a, b, (e) => (e ? n(e) : needToken(a, b, n))) : stopGate)(req, res, next), (req, res) => {
     const out = getEngine().arm(req.body || {})
+    // A cube's own On on the desk (out 'desk'): the desk keeps its hold while nothing is live (N1591; darkOff 'never' only).
+    if (out.ok && req.body?.armed === true && req.body?.cube && req.body?.out === require('../laser/laserDesk').OUT) getDesk().keepHold()
     res.status(out.ok ? 200 : 403).json(out)
   })
   router.post('/api/find', requireSameMachine, async (req, res) => {

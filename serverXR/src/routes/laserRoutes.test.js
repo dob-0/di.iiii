@@ -106,6 +106,23 @@ describe('the lasers at /laser', () => {
     expect((await (await fetch(`${base}/laser/api/state`)).json()).darkOff).toBe('auto')
   })
 
+  it("a cube's own On on the desk (out 'desk') asks the desk to keep its hold; All on, another Out and a refused On do not", async () => {
+    delete process.env.NODE_ENV
+    const { base, lane } = await boot()
+    const engine = lane.getEngine()
+    engine.arm = (body) => ({ ok: true, armed: body.armed })
+    let held = 0
+    lane.getDesk().keepHold = () => { held += 1; return { ok: true } }
+    await post(`${base}/laser/api/arm`, { armed: true })
+    await post(`${base}/laser/api/arm`, { armed: true, cube: 'cube-1', out: 'out-a' })
+    expect(held).toBe(0)
+    await post(`${base}/laser/api/arm`, { armed: true, cube: 'cube-1', out: 'desk' })
+    expect(held).toBe(1)
+    engine.arm = () => ({ ok: false, error: 'refused' })
+    await post(`${base}/laser/api/arm`, { armed: true, cube: 'cube-1', out: 'desk' })
+    expect(held).toBe(1)
+  })
+
   it('arms on a plain On in click mode (the default), and /state says signOff click', async () => {
     delete process.env.NODE_ENV
     delete process.env.DI_LASER_SIGN_OFF

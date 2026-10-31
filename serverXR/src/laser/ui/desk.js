@@ -614,8 +614,9 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         if (!e.armed && e.offBy && (darkAuto() || e.offBy.reason !== 'dark-idle')) return `${e.offBy.text}. ${e.offBy.reason === 'dark-idle' && !desk?.live ? 'Pick a look, then On.' : 'Press On to use it again.'}`
         return null
     }
-    // darkOff 'never': a plain hint on the cube's card while it is On with nothing to draw (no countdown, no Off).
-    const idleHint = (e) => (e && engine && !engine.sim && !darkAuto() && e.armed && e.nothingToDraw ? `On, nothing to draw.${desk?.live ? '' : ' Pick a look.'}` : null)
+    // darkOff 'never': a plain hint on the cube's card while it is On with nothing to draw (no countdown, no Off). A cube
+    // the desk holds with nothing live has nothing to draw too, though the desk keeps a Release's blank frame fresh.
+    const idleHint = (e) => (e && engine && !engine.sim && !darkAuto() && e.armed && !e.stop && (e.nothingToDraw || (e.claimedBy === OUT && !desk?.live)) ? `On, nothing to draw.${desk?.live ? '' : ' Pick a look.'}` : null)
     const renderCubeNote = () => {
         const notes = (engine?.cubes || []).map((e) => [e, darkNote(e)]).filter(([, text]) => text)
         $('cubeNote').hidden = notes.length === 0

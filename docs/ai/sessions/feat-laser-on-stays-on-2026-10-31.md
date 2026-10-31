@@ -12,9 +12,12 @@
   "On, nothing to draw. Pick a look." The page's Safety list and the wiki say both modes.
 - Unchanged: FRAME_TIMEOUT_MS, the still-beam guard, disarmed at every start, over-temperature and link-lost stops, the
   token guard, requireSameMachine, the sign-off mode, zones, the Out-let-go rule (review E2).
-- OPEN, measured: a cube's own On on the desk is held by the desk's Out (`'desk'`); with nothing live the desk does not
-  tick, its claim lapses after CLAIM_TTL_MS (10 s) and "its Out let go" switches the cube off. All on (no Out holds the
-  cubes) stays on. Recorded by the test "a cube's own On from the desk with nothing live" in `laserOnDark.test.js`.
-- Tests: laser + routes + shutdown contracts + wiki 372 passed (22 files); 9 of the 11 new tests fail on the code
+- Found by the 5-min test, then built on the lead's word: a cube's own On on the desk is held by the desk's Out
+  (`'desk'`); with nothing live the desk did not tick, its hold lapsed after CLAIM_TTL_MS (10 s) and "its Out let go"
+  switched the cube off. Now the lane calls `desk.keepHold()` after a desk On; with nothing live the desk's tick calls
+  `engine.alive(id, 'desk')` for the cubes it holds, in `'never'` only, and stops when none is left (Release stops it).
+  A desk that stops (crash, restart) stops holding and the Out-let-go rule switches the cube off as before. In `'auto'`
+  nothing is held (alive() would keep a Release's blank frame fresh and the 5 s rule would never fire).
+- Tests: laser + routes + shutdown contracts + wiki 377 passed (22 files); 9 of the first 11 new tests fail on the code
   before (the other 2 check that the signal-loss and still-beam stops still fire in `'never'`). Not tested: the real
   cube, the Mac's page, the page on the agent screen.
