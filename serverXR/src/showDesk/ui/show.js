@@ -858,11 +858,20 @@
         if (midiNames && midiNames.length) return `In: ${midiNames.join(', ')} · nothing heard yet`
         return midiNames ? 'In: no MIDI port' : `In: no MIDI port (${midiWhy})`
     }
+    // The In line has a row of its own; its tooltip holds the whole message (first line), then what the line is for (index.html's sentence).
+    const midiInHelp = $('midiIn') ? $('midiIn').title : ''
+    const midiInSet = (node) => {
+        if (!node) return
+        const text = midiInText()
+        setText(node, text)
+        const title = midiInHelp ? `${text}\n${midiInHelp}` : text
+        if (node.title !== title) node.title = title
+    }
     const midiLine = (note = '') => {
         const base = midiNames && midiNames.length ? `MIDI: ${midiNames.join(', ')}` : `MIDI: ${midiNames ? 'none seen' : midiWhy}`
         const learn = !learning ? '' : learning.target ? ` · Learn: move one control for ${learning.target}` : ' · Learn: tap a fader, a scene key or Blackout all'
         setText($('midiLine'), `${base}${learn}${note ? ` · ${note}` : ''}`)
-        setText($('midiIn'), midiInText())
+        midiInSet($('midiIn'))
         $('midiLearn').classList.toggle('is-on', Boolean(learning))
         $('midiLearn').setAttribute('aria-pressed', learning ? 'true' : 'false')
     }
@@ -871,7 +880,7 @@
         midiPaint = null
         const node = $('midiIn')
         if (!node) return
-        setText(node, midiInText())
+        midiInSet(node)
         node.classList.add('is-lit')
         clearTimeout(midiOff)
         midiOff = setTimeout(() => node.classList.remove('is-lit'), 300)

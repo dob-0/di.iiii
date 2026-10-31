@@ -16,7 +16,7 @@ const noteOn = (ch, num, val = 127) => ({ type: 'note-on', kind: 'note', ch, num
 const cc = (ch, num, val = 64) => ({ type: 'cc', kind: 'cc', ch, num, val })
 
 // What the crew knew before 2026-11-01 (MIDI_DEFAULT of 63d9dc1dd): kept exactly. The three spare rows (CC 13, 14, 19) were
-// "no action" and now have one.
+// "no action": CC 13 and 14 now have one; CC 19 (fader 4) stays spare, it is dead on the owner's K2 (ledger N1653).
 const TODAY = [
     ['cc', 16, 'lamp:0'], ['cc', 17, 'lamp:1'], ['cc', 18, 'lamp:2'],
     ['cc', 4, 'live:level'], ['cc', 5, 'live:size'], ['cc', 6, 'live:height'], ['cc', 7, 'live:copies'],
@@ -43,13 +43,17 @@ describe('the K2 table against the maker\'s chart (Xone:K2 user guide AP8509)', 
         expect(chart.every((c) => c.channel === 15 && c.channel0 === 14)).toBe(true)
         expect(M.defaultMap().every((r) => r.ch === 14)).toBe(true)
     })
-    it('gives every control an action: none spare, none twice, every row one the page may take', () => {
+    it('gives every control an action but fader 4 (CC 19: dead on the owner\'s K2, never mapped, spare); none twice, every row one the page may take', () => {
         const rows = M.defaultMap()
         expect(rows.length).toBe(58)
         expect(rows.every(M.validRow)).toBe(true)
-        expect(rows.filter((r) => r.target === 'spare')).toEqual([])
+        expect(rows.filter((r) => r.target === 'spare')).toEqual([{ kind: 'cc', ch: 14, num: 19, target: 'spare' }])
         expect(new Set(rows.map((r) => `${r.kind}:${r.num}`)).size).toBe(58)
-        expect(new Set(rows.map((r) => r.target)).size).toBe(58)
+        const acting = rows.filter((r) => r.target !== 'spare')
+        expect(acting.length).toBe(57)
+        expect(new Set(acting.map((r) => r.target)).size).toBe(57) // no target twice
+        expect(rows.some((r) => r.target === 'lamp:3')).toBe(false) // no lamp 4 on the dead fader (the first build of 2026-11-01 had one)
+        expect(M.sheet().find((r) => r.control === 'fader 4')).toMatchObject({ midi: 'CC 19', target: 'spare', does: 'Spare, no action' }) // still listed
     })
     it('keeps every assignment the crew knew, exactly', () => {
         const rows = M.defaultMap()
@@ -59,7 +63,7 @@ describe('the K2 table against the maker\'s chart (Xone:K2 user guide AP8509)', 
     })
     it('puts the new actions where the face of the unit suggests', () => {
         const at = (control) => M.K2.find((r) => r.control === control).target
-        expect(at('fader 4')).toBe('lamp:3')
+        expect(at('fader 4')).toBe('spare') // dead on the owner's K2 (N1653): listed, never mapped
         expect(['pot 10', 'pot 11'].map(at)).toEqual(['size:1', 'size:2'])
         expect(['matrix K', 'matrix L', 'matrix M', 'matrix N', 'matrix O'].map(at)).toEqual(['scene:10', 'scene:11', 'scene:12', 'scene:13', 'scene:14'])
         expect(['encoder 5', 'encoder 6'].map(at)).toEqual(['live:pulseBeats', 'live:sweepBeats'])
@@ -145,10 +149,11 @@ describe('a stored map and the defaults', () => {
         expect(merged.length).toBe(58)
         expect(merged.every(M.validRow)).toBe(true)
     })
-    it('lets a stored spare row (an old default, not a choice) go, so its control gets its action', () => {
+    it('lets a stored spare row (an old default, not a choice) go, so its control gets its action; fader 4 (dead) stays spare', () => {
         const merged = M.mergeMaps([{ kind: 'cc', ch: 14, num: 19, target: 'spare' }, { kind: 'cc', ch: 14, num: 13, target: 'spare' }], defaults)
-        expect(merged.filter((r) => r.target === 'spare')).toEqual([])
-        expect(merged.find((r) => r.kind === 'cc' && r.num === 19).target).toBe('lamp:3')
+        expect(merged.filter((r) => r.target === 'spare')).toEqual([{ kind: 'cc', ch: 14, num: 19, target: 'spare' }]) // the default row of fader 4 only
+        expect(merged.find((r) => r.kind === 'cc' && r.num === 13).target).toBe('size:1')
+        expect(merged.some((r) => r.target === 'lamp:3')).toBe(false)
     })
     it('keeps what Learn chose: a default row stays out when its target or its control is taken', () => {
         const stored = [{ kind: 'cc', ch: 0, num: 7, target: 'lamp:0' }, { kind: 'note', ch: 14, num: 52, target: 'scene:3' }]
@@ -194,11 +199,13 @@ describe('the channel setting and the In line', () => {
         expect(line([0x9e, 37, 0])).toBeNull()
         expect(line([0x8e, 37, 64])).toBeNull()
     })
-    it('names every K2 control by something the desk does: none comes out unmapped', () => {
+    it('names every K2 control: none comes out unmapped, and fader 4 says it is spare', () => {
         for (const c of M.K2) {
             const bytes = c.kind === 'cc' ? [0xb0 | 14, c.num, 64] : [0x90 | 14, c.num, 127]
-            expect(line(bytes), c.control).toBe(`ch 15 · ${c.kind === 'cc' ? 'CC' : 'note'} ${c.num} · ${bytes[2]} → ${c.target}`)
+            const goes = c.target === 'spare' ? 'spare, no action' : c.target
+            expect(line(bytes), c.control).toBe(`ch 15 · ${c.kind === 'cc' ? 'CC' : 'note'} ${c.num} · ${bytes[2]} → ${goes}`)
         }
+        expect(M.K2.filter((c) => c.target === 'spare').map((c) => c.control)).toEqual(['fader 4'])
     })
 })
 

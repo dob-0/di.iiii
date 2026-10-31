@@ -8,7 +8,9 @@
 // 2026-11-01. midi/xone-k2.json holds the maker's chart row by row; midiMap.test.js keeps this table equal to it.
 //
 // The owner, 2026-11-01 (ledger N1718): "make all mapped, that maybe they not trigger the right one". So: every one of the
-// K2's 58 controls does something here, and the desk hears the controller on any MIDI channel unless one is picked.
+// K2's 58 controls does something here, except fader 4 (CC 19): it is dead on the owner's unit and he ruled it never to be
+// mapped (ledger N1653, 2026-10-31), so its row stays in the table as `spare`. The desk hears the controller on any MIDI channel
+// unless one is picked.
 //
 // Safety, unchanged since 2026-10-31: MIDI never reaches On, Off, a lift, Undo, Save or Release. isTarget() names every
 // target there is (and a stored map is read through it); the new ones can only step a scene, set a knob back to its
@@ -56,7 +58,8 @@
         note('pot switch 5', 44, 'park:live:spin'), note('pot switch 6', 45, 'park:live:pulse'), note('pot switch 7', 46, 'park:live:sweep'), note('pot switch 8', 47, 'park:laser-master'),
         cc('pot 9', 12, 'size:0'), cc('pot 10', 13, 'size:1'), cc('pot 11', 14, 'size:2'), cc('pot 12', 15, 'light-master'),
         note('pot switch 9', 40, 'park:size:0'), note('pot switch 10', 41, 'park:size:1'), note('pot switch 11', 42, 'park:size:2'), note('pot switch 12', 43, 'park:light-master'),
-        cc('fader 1', 16, 'lamp:0'), cc('fader 2', 17, 'lamp:1'), cc('fader 3', 18, 'lamp:2'), cc('fader 4', 19, 'lamp:3'),
+        // fader 4 is DEAD on the owner's K2 and is never mapped (N1653, 2026-10-31): its row stays listed, as `spare`, the way the first default map kept it
+        cc('fader 1', 16, 'lamp:0'), cc('fader 2', 17, 'lamp:1'), cc('fader 3', 18, 'lamp:2'), cc('fader 4', 19, 'spare'),
         note('matrix A', 36, 'scene:0'), note('matrix B', 37, 'scene:1'), note('matrix C', 38, 'scene:2'), note('matrix D', 39, 'scene:3'),
         note('matrix E', 32, 'scene:4'), note('matrix F', 33, 'scene:5'), note('matrix G', 34, 'scene:6'), note('matrix H', 35, 'scene:7'),
         note('matrix I', 28, 'scene:8'), note('matrix J', 29, 'scene:9'), note('matrix K', 30, 'scene:10'), note('matrix L', 31, 'scene:11'),

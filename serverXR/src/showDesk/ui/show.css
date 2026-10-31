@@ -20,7 +20,8 @@
   --live-h: 238px;     /* the live strip: colours (40), shapes in two rows (2 x 36 + 3), the effects and knobs grid (3 x 34); the XY pad */
   --bank-min: 268px;   /* the least the fader bank is given */
   --bank-max: 1fr;     /* the bank takes the rest of the screen, in both densities; Rows needs --bank-min of it */
-  --links-h: 46px;
+  --links-h: 60px;     /* the bottom line: 46 px of links and MIDI controls, and under them the In line's row (--in-h) */
+  --in-h: 14px;        /* the In line, the last MIDI message: a row of its own, as wide as the bar */
   --target: 44px;      /* a button the hand finds in the dark: at least 44 px in one direction */
   --pad: 40px;         /* a colour pad */
   --row: 34px;         /* one row of the effects and knobs grid */
@@ -212,7 +213,7 @@ body.showdesk .liftbtn { width: var(--lift-w); height: var(--lift-h); min-height
 .cubecard .preview .cap { position: absolute; left: 6px; top: 4px; font-size: 11px; color: var(--muted); }
 
 /* ---- the links to the full desks, and the MIDI line */
-.links { display: flex; align-items: center; gap: 10px; padding: 0 8px; border-top: 1px solid var(--line); background: var(--bar); font-size: 13px; overflow: hidden; white-space: nowrap; }
+.links { position: relative; display: flex; align-items: center; gap: 10px; padding: 0 8px var(--in-h); border-top: 1px solid var(--line); background: var(--bar); font-size: 13px; overflow: hidden; white-space: nowrap; }
 .links a { color: var(--text); text-decoration: none; border: 1px solid var(--line); padding: 0 12px; min-height: var(--target); display: inline-flex; align-items: center; }
 .links a:hover { border-color: var(--accent); color: var(--accent); }
 .midiline { font: 500 12px var(--mono); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -226,7 +227,9 @@ body.showdesk .liftbtn { width: var(--lift-w); height: var(--lift-h); min-height
 /* the In line (the last MIDI message, lit 300 ms on each), the channel picker and the K2 sheet (2026-11-01, N1718); square, like the rest */
 .midistack { display: flex; flex-direction: column; justify-content: center; flex: 1 1 0; min-width: 0; line-height: 1.2; }
 .midistack > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.midiin { font: 500 11px var(--mono); padding: 0 4px; }
+/* The In line has a row of its own under the controls, as wide as the bar (verifier, 2026-11-01: beside the buttons it was cut to 298 px at
+   1278 and 98 px at 1078, losing "(map: ch 15)" or the target); the whole message is also its tooltip. */
+.midiin { position: absolute; left: 8px; right: 8px; bottom: 0; height: var(--in-h); font: 500 11px/var(--in-h) var(--mono); padding: 0 4px; }
 .midiin.is-lit { box-shadow: inset 0 0 0 2px var(--accent); }
 .midichan { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 12px; }
 .midichan select { font: inherit; min-height: 32px; color: var(--text); background: var(--pane); border: 1px solid var(--line); border-radius: 0; padding: 0 4px; }
@@ -242,7 +245,7 @@ body.showdesk .liftbtn { width: var(--lift-w); height: var(--lift-h); min-height
    with a mouse: "fix the UI, it is huge … it's not the touch screen"). Only tokens change here; every size above stays
    as the Touch density. show.js sets body[data-density] from the Touch · Compact switch in the bottom line (kept per
    browser, diShowDesk.density.v1), or, until one is chosen, from the pointer: a fine one and no coarse one means Compact.
-   The rows add up to 636 px (44 + 62 + 182 + 316 + 32), so the page fits the stage Mac's ~1280 x 700 browser window, and
+   The rows add up to 650 px (44 + 62 + 182 + 316 + 46), so the page fits the stage Mac's ~1280 x 700 browser window, and
    the bank takes whatever more the window has (no air below); the lifts stay 24 px clear of Blackout all; nothing is
    under 22 px in both directions. */
 body.showdesk[data-density="compact"] {
@@ -251,7 +254,7 @@ body.showdesk[data-density="compact"] {
   --scene-dir: row; --scene-wrap: nowrap; --scene-cut: ellipsis; --scene-text-h: 15px; --scene-text-flex: 0 1 auto;
   --look-font: 10px; --dots-top: auto; --dots-bottom: 6px;
   --live-h: 182px; --pad: 26px; --row: 26px; --shape-h: 26px; --shape-font: 12px; --shapes-h: 55px; --fx-font: 12px; --knob-font: 12px;
-  --bank-min: 316px; --bank-max: 1fr; --links-h: 32px;
+  --bank-min: 316px; --bank-max: 1fr; --links-h: 46px;
   --target: 26px; --fader-h: 20px; --track: 3px; --thumb-lw: 16px; --thumb-lh: 10px; --thumb-uw: 10px; --thumb-uh: 16px; --vfader-w: 22px;
   --lamp-pad: 22px; --cube-wrap: wrap; --cube-name-flex: none; --preview-w: 132px; --preview-grow: 0; --preview-ar: 132 / 100;
   --bo-w: 140px; --bo-h: 40px; --bo-ls: .02em; --lift-w: 90px; --lift-h: 34px; --desk-h: 34px;

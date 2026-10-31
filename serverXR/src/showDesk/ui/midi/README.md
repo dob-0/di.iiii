@@ -1,8 +1,9 @@
 # MIDI of the show desk
 
 The show desk listens to a MIDI controller through the browser (Web MIDI; `../show.js`, `../midiMap.js`). The default map is the
-Allen & Heath Xone:K2's, and **every one of its 58 controls does something** (the owner, 2026-11-01, ledger N1718: "make all
-mapped, that maybe they not trigger the right one"). The same table is the **K2 map** button in the desk's bottom line.
+Allen & Heath Xone:K2's. **57 of its 58 controls do something** (the owner, 2026-11-01, ledger N1718: "make all mapped, that maybe
+they not trigger the right one"); the 58th, **fader 4 (CC 19), is dead on the owner's unit and is never mapped** (ledger N1653,
+2026-10-31), so it stays in the table as `spare`. The same table is the **K2 map** button in the desk's bottom line.
 
 ## Files
 
@@ -23,8 +24,9 @@ mapped, that maybe they not trigger the right one"). The same table is the **K2 
   a row on the message's own channel wins over the same number on another. **Channel 1 to 16** (picker in the bottom line, kept in
   this browser, `diShowDesk.midiChannel.v1`) hears that channel only. **Channel 15** is how the page listened before 2026-11-01
   (the K2's own channel); with it picked, a message on another channel does nothing and the In line says so.
-- **In line** (bottom line, "In: ..."). The last message: channel, kind, number, value, then where it went (the target, `unmapped`,
-  `not used`, or `ignored` on a picked channel). It is lit for 300 ms after each message. With no port it says
+- **In line** (bottom line, in a row of its own under the controls so the whole message shows; "In: ..."). The last message:
+  channel, kind, number, value, then where it went (the target, `unmapped`, `spare, no action`, `not used`, or `ignored` on a
+  picked channel). It is lit for 300 ms after each message; its tooltip holds the whole message. With no port it says
   `In: no MIDI port`; with one and nothing heard it names the port. A key release (note off) says nothing new and is not shown.
   So a K2 on the wrong channel or a wrong number is seen at once.
 - **Pick-up.** Faders and pots move nothing until they pass the value on the screen; encoders step from the screen's value.
@@ -78,7 +80,7 @@ are as printed on the unit.
 | fader 1 | CC 16 | Lamp 1 level |
 | fader 2 | CC 17 | Lamp 2 level |
 | fader 3 | CC 18 | Lamp 3 level |
-| fader 4 | CC 19 | Lamp 4 level |
+| fader 4 | CC 19 | Spare, no action |
 | matrix A | note 36 | Scene 00 |
 | matrix B | note 37 | Scene 01 |
 | matrix C | note 38 | Scene 02 |
@@ -105,6 +107,7 @@ are as printed on the unit.
 
 - **Live look: x** is the live look on the laser desk; **Cube n size** is the n-th cube's Size fader; **Lamp n level** the n-th lamp
   of the lighting desk; **Scene nn** the n-th scene in the lighting desk's order (a scene the rig does not have does nothing).
+- **Spare, no action** (fader 4): the control is listed and heard (the In line shows it) and does nothing; it is dead on the owner's K2.
 - **Park** the knob: it moves nothing until it passes the value on the screen again (pick-up starts over). It can only make the
   controller quieter.
 - **Reset** the field: it goes back to the laser desk's own default (`LOOK_DEFAULTS`; its state serves them, this page keeps a copy).
@@ -115,10 +118,11 @@ are as printed on the unit.
 ## Decisions, and what is not done
 
 - Kept exactly as the crew knew them (2026-10-31): lamps on faders 1-3, the live pots, Laser master on pot 8, Lights master on pot
-  12, cube 1 size on pot 9, the top encoders, scenes 00-09 on matrix A-J, Blackout all on matrix P. Only the three `spare` rows
-  (CC 13, 14, 19) and the unmapped controls got actions.
-- Fader 4 now drives lamp 4. The owner's unit has a dead fader 4 (2026-10-31); it sends nothing, so this costs nothing there, and it
-  works on a unit whose fader 4 is alive. If one ever jitters, one Learn row (or a `spare` row) takes it out.
+  12, cube 1 size on pot 9, the top encoders, scenes 00-09 on matrix A-J, Blackout all on matrix P. Of the three `spare` rows
+  (CC 13, 14, 19) two (CC 13, 14) and the unmapped controls got actions.
+- **Fader 4 (CC 19) stays `spare`: it is dead on the owner's K2 and is never mapped** (the owner, 2026-10-31, ledger N1653). The
+  first build of 2026-11-01 (7a9ed3696) gave it lamp 4; that was taken back (N1718.5). The row stays listed in the table as
+  "Spare, no action", and the In line says so when it is moved.
 - Lifts are not mapped on purpose (rule since 2026-10-31); the matrix row 4 carries scenes 12-14 and Blackout all.
 - Not read: the K2's amber and green layers (Latching Layers on), which send the same controls on other numbers (CC +22 / +44,
   notes +36 / +72); the In line shows them as `unmapped`. Keep Latching Layers off (the K2's default).

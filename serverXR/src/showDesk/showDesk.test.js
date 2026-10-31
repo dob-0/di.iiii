@@ -430,6 +430,13 @@ describe('one screen, 1278 x 758, no page scroll', () => {
         expect(rule('body.showdesk')).toMatch(/overflow:\s*hidden/)
         expect(rule('html, body.showdesk')).toMatch(/overflow:\s*hidden/)
     })
+    it('the In line has a row of its own under the bottom line\'s controls, as wide as the bar: the bar token holds the row, the line sits on the bar\'s floor', () => {
+        expect(token('in-h')).toBeGreaterThan(0)
+        expect(token('links-h')).toBe(46 + token('in-h')) // the controls keep their 46 px (Touch); the In line is the row under them
+        expect(rule('.links')).toMatch(/position:\s*relative;/)
+        expect(rule('.links')).toMatch(/padding:\s*0 8px var\(--in-h\);/)
+        expect(rule('.midiin')).toMatch(/position:\s*absolute;\s*left:\s*8px;\s*right:\s*8px;\s*bottom:\s*0;\s*height:\s*var\(--in-h\);/)
+    })
     it('the five rows are the body\'s five areas, in order: the top line, the scene keys, the live strip, the bank, the links', () => {
         const areas = [...document.body.children].filter((n) => n.tagName !== 'SCRIPT').map((n) => n.id || n.className.split(' ').pop())
         expect(areas).toEqual(['showbar', 'showscenes', 'live', 'bank', 'links'])
@@ -543,6 +550,7 @@ describe('two densities: Touch and Compact', () => {
         const rows = ['top-h', 'scenes-h', 'live-h', 'bank-min', 'links-h'].map(compact)
         expect(rows.every((n) => n > 0)).toBe(true)
         expect(rows.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(660)
+        expect(compact('links-h')).toBe(32 + token('in-h')) // the controls keep their 32 px; the In line is the row under them
         expect(block).toMatch(/--bank-max:\s*1fr;/) // Compact too: the bank takes the rest of the screen
         expect(compact('scene-btn-h') + 10).toBeLessThanOrEqual(compact('scenes-h'))
         expect(compact('shapes-h')).toBeGreaterThanOrEqual(2 * compact('shape-h') + 3)
@@ -786,7 +794,8 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         const num = (control) => k2.find((c) => c.control === control).number
         const map = window.DiShowDesk.midiMap()
         expect(map.find((m) => m.target === 'light-master')).toMatchObject({ kind: 'cc', ch: 14, num: num('pot 12') }) // fader 4 is dead on the owner's K2
-        expect(map.find((m) => m.kind === 'cc' && m.num === num('fader 4'))).toMatchObject({ target: 'lamp:3' }) // 2026-11-01 (N1718): every control does something; a dead fader sends nothing, so this costs nothing
+        expect(map.find((m) => m.kind === 'cc' && m.num === num('fader 4'))).toMatchObject({ target: 'spare' }) // dead on the owner's K2: listed, never mapped (N1653; 7a9ed3696 had it on lamp 4, N1718.5)
+        expect(map.some((m) => m.target === 'lamp:3')).toBe(false)
         expect(map.find((m) => m.target === 'lamp:0')).toMatchObject({ kind: 'cc', ch: 14, num: num('fader 1') })
         expect(map.find((m) => m.target === 'live:rotation')).toMatchObject({ kind: 'cc', ch: 14, num: num('encoder 1'), relative: true })
     })
@@ -881,6 +890,8 @@ describe('MIDI: any channel, the channel picker, the In line, and the rest of th
         await settle()
         expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
         expect(heardLine()).toBe('In: ch 1 · note 37 · 127 → scene:1 (map: ch 15)')
+        expect($('midiIn').title.split('\n')[0]).toBe(heardLine()) // the whole message is also the tooltip, so a cut line can still be read
+        expect($('midiIn').title).toContain('The last MIDI message the page heard') // and the tooltip still says what the line is
     })
     it('a pot on another channel follows with pick-up as ever; a number the map does not hold says unmapped', async () => {
         midi(0xb3, 4, 0) // level is 1 on the screen: a pot at 0 waits
