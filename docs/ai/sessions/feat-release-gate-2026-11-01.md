@@ -1,0 +1,11 @@
+## Release record, install gate, show-live freeze, true version label, rollback drill (audit S10, G05 + G27)
+- New `scripts/release/` and `scripts/show/install.mjs` + `scripts/show/hot-swap.mjs` replace di-atlas `install-look.sh` and `ui-hot-swap.sh`.
+  - `record.mjs` keeps test runs and writes `<pack>.release.json` (an in-toto Statement, self-attested).
+  - `show-live.mjs` is the freeze flag.
+  - `target.py` is the target-side half.
+  - `restore.mjs` and `drill.mjs` restore a release and time the rollback.
+- `di version` prints the label `<base>+ui.<sha8>` per overlay (`scripts/di/overlays.mjs`); `--json` lists the overlays.
+- Tests: `npx vitest run scripts/di/ scripts/release/` gives 669 passed (48 files), 14 of them new in `scripts/release/release.test.js`.
+- Drill on aylmo with real packs, on tmpfs, without npm ci or a service: N-1 install 749 ms, hot swap 203 ms, rollback 56 ms, forward 116 ms, restore 971 ms.
+- Not tested: the ssh route to a real show machine (the stage Mac is live), the Hyprland reload, a laser state across a swap.
+- Owed: the owner's install window after the show; S13 wires `di show go` and `di show checkpoint` into `--go-cmd` and `--checkpoint-cmd`.

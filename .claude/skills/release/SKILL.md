@@ -1,6 +1,6 @@
 ---
 name: release
-description: Get a change live on di.iiii — dev tier deploy, dev to main promotion, hotfix straight to main, the Mac prod path, the land-job check after every landing, and rollback. Use when a PR is merged and must be live, when promoting dev to main, or when a deploy is red or silent.
+description: Get a change live on di.iiii — dev tier deploy, dev to main promotion, hotfix straight to main, the Mac prod path, the land-job check after every landing, rollback, and a show machine's install, hot swap and restore through the release gate (record, show-live freeze, drill). Use when a PR is merged and must be live, when promoting dev to main, or when a deploy is red or silent.
 ---
 
 # release
@@ -40,7 +40,28 @@ Measured trap (2026-09-30, three red deploys): the docs gate fails on a note in 
 - Prod: `standby-deploy.sh upgrade prod SHA=<previous full sha>` (V header; the previous sha = the last tag, `git tag --sort=-creatordate | head -3`).
 - Dev tier: revert PR on dev, same path as 1.
 - Data: the backup copy and its one-command undo (`copy_project.mjs`, see `show-checkpoint`).
+- A show machine:
+  - the last hot swap: `node scripts/show/hot-swap.mjs --undo --production <name> --host <user@host>`;
+  - a whole release: `node scripts/release/restore.mjs --manifest <release-manifest.json> …` (section 8).
 - Say the rollback command BEFORE promoting, in the PR.
+
+## 8. A show machine (stage): record, gate, freeze, hot swap, restore, drill
+Method, schema and limits: `scripts/release/README.md` (V: written 2026-11-01, tests `scripts/release/release.test.js`). It replaces di-atlas `install-look.sh` and `ui-hot-swap.sh`. A stage install stays the owner's window.
+1. **Tests on the exact commit:** `node scripts/release/record.mjs tests -- npx vitest run <paths>`. It needs a clean tree and keeps "Tests N passed".
+2. **The record:** `node scripts/release/record.mjs pack <di-runtime-…tar.gz> [--commit <sha>] --review <review.md>`.
+   It writes `<pack>.release.json`, an in-toto Statement bound to the pack's sha256 and marked self-attested.
+3. **Install or hot swap:**
+   - `node scripts/show/install.mjs <pack> --production <name> --host <user@host>`;
+   - or `node scripts/show/hot-swap.mjs <pack> …` for the desk ui only, with no restart.
+   - The record's 3 lines come first. BLOCK, untested or not on a remote is refused unless `--accept '<reason>'`, which is logged in `~/di-health/show/<name>/installs.log`.
+   - `--when-up` re-checks the gate when it fires.
+4. **Show live** (`node scripts/release/show-live.mjs on --production <name> --why …` at doors, `off` at get-out):
+   - no full install;
+   - an overlay needs green tests on the exact commit, no BLOCK, `--checkpoint-cmd` first and a GO soak after (`--go-cmd`, default 60 s, unvalidated);
+   - `--accept` does not lift the freeze.
+5. **The label:** `di version` prints `<base>+ui.<sha8>` per overlay, derived from PATCHES.
+6. **Restore:** `node scripts/release/restore.mjs --manifest <the checkpoint's release-manifest.json> …`.
+7. **Before each show:** `node scripts/release/drill.mjs --home <replica> --production <name> --base <pack N-1> --overlay <pack N>`. It times N → N-1 → N and the restore on a replica, never the installed di.
 
 ## 7. End
 Seen on the real surface: open the live URL, phone and desktop (`npm run verify:surfaces`, V in package.json), then `job-end-gate`.
