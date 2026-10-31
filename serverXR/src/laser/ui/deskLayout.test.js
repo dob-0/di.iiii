@@ -15,7 +15,7 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const css = fs.readFileSync(path.join(here, 'desk.css'), 'utf8')
 const doc = new DOMParser().parseFromString(fs.readFileSync(path.join(here, 'index.html'), 'utf8'), 'text/html')
 
-const GRID_QUERY = '@media (min-width: 1240px) and (min-height: 640px)'
+const GRID_QUERY = '@media (min-width: 1000px) and (min-height: 600px)'
 const SCOPE = 'html[data-layout="grid"]'
 const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '')
 const blockAt = (text, openAt) => {
@@ -42,7 +42,7 @@ const classic = (selector) => {
 }
 
 describe('Classic is untouched: the Grid rules are one block, at the end, scoped', () => {
-  it('there is exactly one Grid size query (1240 x 640 and up), and below it the page is Classic', () => {
+  it('there is exactly one Grid size query (1000 x 600 and up), and below it the page is Classic', () => {
     expect(css.split(GRID_QUERY).length - 1).toBe(1)
     expect(gridBlock, 'the Grid block is not in desk.css').not.toBeNull()
     expect(gridRules.length).toBeGreaterThan(80)

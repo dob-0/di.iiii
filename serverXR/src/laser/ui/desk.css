@@ -340,11 +340,11 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
 /* ---- The Grid layout (2026-10-31, the owner: "fix the laser desk: the place is not used right, the windows inside are managed not right, it is ugly and not logical").
    The Looks grid is the biggest thing on the page (9 fixed columns), the masters and the cubes sit in a rail at the right, every edit group is in a strip along the bottom, and the
    stops stand alone at the right end of the bar. CLASSIC IS KEPT WHOLE AS A MODE: every rule above this line is untouched, and every rule below is under html[data-layout="grid"]
-   inside ONE size query (1240 x 640 and up), so below that size, with ?layout=classic, or when layoutMode.js did not run, the page is Classic. No element is moved in the HTML
+   inside ONE size query (1000 x 600 and up; 1240 x 640 until 2026-10-31 23:5x, when the owner's portrait tab of 1078 px fell back to Classic), so below that size, with ?layout=classic, or when layoutMode.js did not run, the page is Classic. No element is moved in the HTML
    (display: contents on the bar's wrappers puts the masters in the rail), no control is removed, desk.js is not touched. Tokens are the page's own (var(--pane) ...); the only new
    ones are the --g-* sizes below. Square corners: no border-radius here but 0. Measured on the real page (desk.js running) at 1280x670, 1280x700, 1278x758 and 1240x640:
    docs/ai/sessions/feat-laser-desk-layout-2026-10-31.md; why: docs/ai/decisions/2026-10-31-laser-desk-layout.md. */
-@media (min-width: 1240px) and (min-height: 640px) {
+@media (min-width: 1000px) and (min-height: 600px) {
 
 html[data-layout="grid"] {
   --g-gap: 6px; --g-side: 8px;

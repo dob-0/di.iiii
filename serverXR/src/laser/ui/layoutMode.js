@@ -3,7 +3,7 @@
 // Why (2026-10-31, Projector Room, the owner: "fix the laser desk: the place is not used right, the windows inside are managed not right, it is ugly
 // and not logical"): Classic showed 7 of 79 looks and put Edit on a second screen. Grid shows 27 at 1280x700 and every Edit group at rest. Classic is
 // kept whole as a mode (nothing we have is ever lost); this file only decides which one the page wears. Everything else is CSS: html[data-layout="grid"]
-// rules at the end of desk.css, in one size query; below 1240x640, or when this script did not load, the page is Classic.
+// rules at the end of desk.css, in one size query; below 1000x600, or when this script did not load, the page is Classic.
 //
 // Which one: ?layout=grid|classic (a valid one wins and is kept) > the choice kept in this browser (localStorage "diLaserDeskLayout") > DEFAULT.
 // DEFAULT is the lead's call under "a new default only by the owner's word": Grid; set it to 'classic' to ship the old look first.
