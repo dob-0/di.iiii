@@ -18,7 +18,7 @@ let engine
 const reset = () => {
     desk = {
         live: null, liveId: null, blackout: false, master: 1, bpm: 120, beat: 0, shapes: ['circle'], unsaved: false, changed: [], added: [],
-        canUndo: false, canRedo: false,
+        canUndo: false, canRedo: false, defaults: { size: 0.45, height: 0.5, points: 300 },
         looks: ['a', 'b', 'c'].map((id) => normaliseLook({ id, name: id.toUpperCase() })),
         cubes: [{ id: 'cube-1', on: true, flipX: false, size: 1, x: 0, y: -0.5, order: 0, driving: true, dark: false, held: null, points: 10, lit: 10, blanked: 0, offField: 0, offPercent: 0 }]
     }
@@ -331,5 +331,23 @@ describe('the follow status is short and its full sentence is the title; Setup >
         expect(document.querySelector('#safetySignOff').textContent).toBe('off (On is one click)')
         expect(document.querySelector('#safetyDark').textContent).toBe('off (On stays on until Off)')
         expect(document.querySelector('#page-setup .notes').textContent).not.toMatch(/DI_LASER/)
+    })
+})
+
+describe('Edit at rest is drawn, dimmed and not clickable, every control keeps its tab stop, and a look frees it (2026-11-01: the Grid layout shows Edit instead of hiding it)', () => {
+    it('nothing open: the aside is is-empty and #editor is NOT inert; the shape chips and 17 swatches are drawn, none marked; the sliders show a new look\'s own values (the server\'s defaults); a click on a look name opens it; Esc shuts it again', async () => {
+        key('Escape'); key('Escape'); await settle()
+        const editor = document.querySelector('.editor')
+        expect(editor.classList.contains('is-empty')).toBe(true)
+        expect(document.querySelector('#editor').hasAttribute('inert'), 'inert would drop 16 controls out of the tab order').toBe(false)
+        expect(document.querySelectorAll('#shapes .chip').length).toBeGreaterThan(0)
+        expect(document.querySelectorAll('#swatches .swatch')).toHaveLength(17)
+        expect(document.querySelectorAll('#swatches .swatch.is-on')).toHaveLength(0)
+        expect(document.querySelector('#f-size').value).toBe('0.45')
+        expect(document.querySelector('#pictureFields .field output').textContent).toBe('0.45')
+        document.querySelector('#tiles .tile .name').click(); await settle()
+        expect(editor.classList.contains('is-empty')).toBe(false)
+        key('Escape'); await settle()
+        expect(editor.classList.contains('is-empty')).toBe(true)
     })
 })
