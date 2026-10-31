@@ -91,9 +91,21 @@ describe('the lasers at /laser', () => {
     expect(await (await post(url, { on: false })).json()).toMatchObject({ ok: true, blackout: false })
   })
 
-  it('refuses to arm without the sign-off phrase (403), and arms with it', async () => {
+  it('arms on a plain On in click mode (the default), and /state says signOff click', async () => {
     delete process.env.NODE_ENV
+    delete process.env.DI_LASER_SIGN_OFF
     const { base } = await boot()
+    expect((await (await fetch(`${base}/laser/api/state`)).json()).signOff).toBe('click')
+    expect((await post(`${base}/laser/api/arm`, { armed: true })).status).toBe(200)
+    expect((await (await fetch(`${base}/laser/api/state`)).json()).armed).toBe(true)
+  })
+
+  it('refuses to arm without the sign-off phrase (403), and arms with it — phrase mode (DI_LASER_SIGN_OFF=phrase)', async () => {
+    delete process.env.NODE_ENV
+    process.env.DI_LASER_SIGN_OFF = 'phrase'
+    const { base } = await boot()
+    delete process.env.DI_LASER_SIGN_OFF
+    expect((await (await fetch(`${base}/laser/api/state`)).json()).signOff).toBe('phrase')
     expect((await post(`${base}/laser/api/arm`, { armed: true })).status).toBe(403)
     expect((await (await fetch(`${base}/laser/api/state`)).json()).armed).toBe(false)
     const ok = await post(`${base}/laser/api/arm`, { armed: true, confirm: ARM_PHRASE })

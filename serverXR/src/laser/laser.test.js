@@ -52,11 +52,12 @@ const infoAnswer = ({ major = 1, minor = 7, out = 0, dac = 30000, max = 35000, f
     return b
 }
 
-const engineWith = (config) => {
+const engineWith = (config, extra = {}) => {
     const socket = fakeSocket()
     const timers = []
     const clock = { t: 1000000 }
     const engine = createLaserEngine({
+        ...extra,
         dataDir: withConfig(config),
         createSocket: () => socket,
         log: null,
@@ -236,6 +237,21 @@ describe('the laser engine', () => {
         expect(engine.arm({ armed: true }).ok).toBe(false)
         expect(engine.arm({ armed: true, confirm: 'yes' }).armed).toBe(false)
         expect(engine.arm({ armed: true, confirm: ARM_PHRASE })).toMatchObject({ ok: true, armed: true })
+    })
+    it("in click mode (signOff 'click') On is the yes: arms all and one cube with no phrase, and says the mode in state", () => {
+        const { engine, answer } = engineWith(CUBES, { signOff: 'click' })
+        answer('10.0.0.51')
+        expect(engine.state()).toMatchObject({ armed: false, signOff: 'click' })
+        expect(engine.arm({ armed: true })).toMatchObject({ ok: true, armed: true })
+        engine.arm({ armed: false })
+        expect(engine.state().armed).toBe(false)
+        expect(engine.arm({ armed: true, cube: 'cube-1', out: 'out-a' })).toMatchObject({ ok: true, cubeArmed: true })
+        expect(engine.arm({ armed: true, cube: 'cube-1', out: 'out-a' }).needsPhrase).toBeUndefined()
+    })
+    it("the library default stays phrase mode, and an unknown mode is refused at creation", () => {
+        const { engine } = engineWith(CUBES)
+        expect(engine.state().signOff).toBe('phrase')
+        expect(() => engineWith(CUBES, { signOff: 'nod' })).toThrow(/signOff/)
     })
     it('refuses to arm a cube whose info never arrived — and refuses to arm at all when none did', () => {
         const none = engineWith(CUBES)

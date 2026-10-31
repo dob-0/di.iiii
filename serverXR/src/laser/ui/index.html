@@ -12,7 +12,7 @@
 <body>
 
 <!-- The laser desk (serverXR/src/laser/laserDesk.js): the light desk's twin for the LaserCubes. The server draws the
-     frames and keeps the cubes going; this page only edits. Nothing here can arm a cube without the sign-off phrase,
+     frames and keeps the cubes going; this page only edits. Nothing here can arm a cube without a person's On (the sign-off phrase too, in phrase mode),
      and Disarm all is always one click, on every page. -->
 <header class="topbar">
   <a class="homelink" href="/spaces" title="Back to di.iiii — your spaces">di.iiii</a>
@@ -116,7 +116,7 @@
       </table>
     </div>
     <div class="actions">
-      <button id="allOnBtn" title="Arm every cube that has answered (asks for the sign-off phrase)">All on</button>
+      <button id="allOnBtn" title="Arm every cube that has answered (in phrase mode: asks for the sign-off phrase)">All on</button>
       <button id="findBtn" title="Ask this computer's networks which LaserCubes are there. Read-only: nothing lights">Find cubes</button>
     </div>
     <div id="found" hidden>
@@ -130,7 +130,7 @@
   <section class="pane notes">
     <h2>Safety</h2>
     <ul>
-      <li>Every cube starts disarmed. The first On of a run asks for the laser safety officer's sign-off phrase.</li>
+      <li>Every cube starts disarmed. On is a person's yes. In phrase mode (DI_LASER_SIGN_OFF=phrase) the first On of a run asks for the laser safety officer's sign-off phrase.</li>
       <li>Disarm all, in the top bar, switches every output off in one click. The key switch on each cube always works.</li>
       <li>The keep-in zone, the galvo guards, the still-beam guard and the signal-loss stop apply to the desk as to any other sender.</li>
       <li>One sender per cube: a cube a Laser Out or the show holds refuses the desk until it lets go.</li>

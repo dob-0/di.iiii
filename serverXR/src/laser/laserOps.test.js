@@ -77,7 +77,7 @@ const startServer = async ({ config, findCubes } = {}) => {
     }
     const app = express()
     app.set('trust proxy', 'loopback')
-    const lasers = registerLaserRoutes(app, { dataDir, log: null, engineOptions: { createSocket: fakeSocket }, findCubes })
+    const lasers = registerLaserRoutes(app, { dataDir, log: null, engineOptions: { createSocket: fakeSocket, signOff: 'phrase' }, findCubes })
     const server = await new Promise((resolve) => { const s = app.listen(0, '127.0.0.1', () => resolve(s)) })
     servers.push(server)
     const base = `http://127.0.0.1:${server.address().port}/laser/api`
