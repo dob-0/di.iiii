@@ -14,6 +14,10 @@
 // laser desk's own looks/edit (pads and faders), the lamps take colours by the lighting desk's own fixture route, Save scene
 // and Undo are the two desks' own save/undo/recall, and MIDI (a controller in this page) moves the same faders and presses the
 // same scene keys and Blackout all. MIDI never reaches On, Off, a lift, Undo, Save or Release: they are not targets at all.
+// Presence (2026-10-31, the owner: "make colours like if someone is active, that is coloured around"): a control a browser
+// touched gets a ring in that browser's colour, the frame takes the colour of whoever drives, and the top line says who is on.
+// The page names itself on requests it already sends (headers) and reads the server's touch board once a second; it posts no
+// claim of its own. presence.js has the rules; ?presence=0 turns it all off (the page as it was).
 'use strict'
 ;(() => {
     const LIGHT = '../light/api/'
@@ -78,25 +82,142 @@
     const pct = (v, max) => `${Math.round((Number(v) || 0) / max * 100)}%`
 
     // ---- talking to the desks: every answer comes back as { ok, … }; a desk that does not answer is { ok: false, down: true }
-    const call = async (url, body) => {
+    // `control` (a write only) is the key of the control a person touched: the request then names the browser and the control
+    // (presence headers) and the ring starts at once, right after fetch has the request. A write the desk refused un-rings.
+    const call = async (url, body, control) => {
         const ctl = new AbortController()
         const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS)
+        const named = presenceHeaders(url, body !== undefined, control)
         const init = body === undefined
-            ? { cache: 'no-store', signal: ctl.signal }
-            : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal }
+            ? { cache: 'no-store', signal: ctl.signal, ...(named ? { headers: named } : {}) }
+            : { method: 'POST', headers: { 'Content-Type': 'application/json', ...(named || {}) }, body: JSON.stringify(body), signal: ctl.signal }
         try {
-            const r = await fetch(url, init)
+            const sent = fetch(url, init)
+            if (control) presenceTouch(control)
+            const r = await sent
             const out = await r.json().catch(() => ({}))
             const data = out && typeof out === 'object' && !Array.isArray(out) ? out : {}
-            if (!r.ok || data.ok === false || data.error) return { ...data, ok: false, status: r.status, error: String(data.error || `refused (${r.status})`) }
+            if (!r.ok || data.ok === false || data.error) {
+                if (control) presenceRefused(control)
+                return { ...data, ok: false, status: r.status, error: String(data.error || `refused (${r.status})`) }
+            }
+            if (control) presenceAccepted(control)
             return { ...data, ok: true, status: r.status }
         } catch (error) {
+            if (control) presenceRefused(control)
             const timeout = Boolean(error && error.name === 'AbortError')
             return { ok: false, down: true, timeout, error: timeout ? 'no answer in time' : 'no answer' }
         } finally { clearTimeout(timer) }
     }
     const get = (url) => call(url)
-    const post = (url, body = {}) => call(url, body)
+    const post = (url, body = {}, control = null) => call(url, body, control)
+
+    // ---- presence (presence.js): who is on, who touched what. The page names itself on requests it already sends and reads the
+    // server's touch board in its own 1 s tick (GET api/who). It posts no claim of its own and no press, stop or poll waits on
+    // it; a throw anywhere here is caught and shown in the legend's title. ?presence=0 turns all of it off.
+    const P = window.DiPresence && window.DiPresence.enabled(window.location.search) ? window.DiPresence : null
+    const WHO = 'api/who' // the board's one read route (GET /show/api/who), relative to /show/
+    const WHO_RETRY_MS = 30000 // a server without a board answers 404: ask again this often, so a restart lights it up with no reload
+    const RING_MS = 200 // the rings step this often, and only while one is showing
+    let store = null
+    try { store = window.localStorage } catch { /* this browser keeps nothing: the id lasts for this page load */ }
+    const me = P ? P.loadSelf({ storage: store, userAgent: window.navigator.userAgent, touchPoints: window.navigator.maxTouchPoints }) : null
+    if (P) document.body.dataset.presence = 'on' // show.css: the list of who is on takes its room from the status line first
+    const ctlKey = (kind, id) => (P ? P.controlKey(kind, id) : null)
+    const mine = new Map() // control → when this browser last touched it (its own clock): rings at once, before any answer
+    const lit = new Map() // element → how it was last painted
+    let who = null // the board's last answer as start times, or null: this server has no board
+    let blind = false // an accepted write of this browser did not come back from the board
+    let whyNot = '' // why other browsers are not shown, for the legend's title
+    let whoNextAt = 0
+    let check = null // this browser's last accepted write, waiting to come back in the next two answers
+    let warned = false
+    let ringTimer = null
+    let legendSig = ''
+    const presenceHeaders = (url, isPost, control) => {
+        if (!P || (!isPost && url !== WHO)) return null
+        try { return P.headersFor({ id: me.id, label: me.name, control, post: isPost }) } catch { return null }
+    }
+    const paint = (view) => {
+        const now = new Set()
+        for (const [control, ring] of view.rings) {
+            const look = `${ring.slot}:${ring.alpha.toFixed(2)}`
+            for (const n of document.querySelectorAll(`[data-ctl="${control}"]`)) {
+                now.add(n)
+                if (lit.get(n) === look) continue
+                lit.set(n, look)
+                n.setAttribute('data-by', String(ring.slot))
+                n.style.setProperty('--ring', ring.alpha.toFixed(2))
+            }
+        }
+        for (const n of [...lit.keys()]) {
+            if (now.has(n)) continue
+            lit.delete(n)
+            n.removeAttribute('data-by')
+            n.style.removeProperty('--ring')
+        }
+        const body = document.body
+        if (view.driver) {
+            if (body.dataset.driver !== String(view.driver.slot)) body.dataset.driver = String(view.driver.slot)
+            const f = view.driver.alpha.toFixed(2)
+            if (body.style.getPropertyValue('--frame') !== f) body.style.setProperty('--frame', f)
+        } else if (body.hasAttribute('data-driver')) {
+            body.removeAttribute('data-driver')
+            body.style.removeProperty('--frame')
+        }
+        const box = $('whoIsOn')
+        const sig = JSON.stringify([view.legend.map((c) => [c.slot, c.name, c.mine, c.driving]), whyNot])
+        if (sig !== legendSig) {
+            legendSig = sig
+            box.replaceChildren(el('span', { class: 'whoon', text: 'on' }), ...view.legend.map((c) => el('span', {
+                class: `whochip${c.mine ? ' is-mine' : ''}${c.driving ? ' is-driving' : ''}`, 'data-by': String(c.slot),
+                title: `${c.name}${c.mine ? ` (this browser${whyNot ? `; others are not shown: ${whyNot}` : ''})` : ''}`
+            }, el('i', { 'aria-hidden': 'true' }), el('span', { class: 'whotext', text: c.name }))))
+            box.title = whyNot ? `Who is on: ${whyNot}` : 'Who is on: the browsers with this desk open. A ring is the colour of the browser that touched the control last.'
+        }
+        if (box.hidden) box.hidden = false
+    }
+    const renderPresence = () => {
+        if (!P) return
+        clearTimeout(ringTimer)
+        ringTimer = null
+        try {
+            const t = Date.now()
+            for (const [control, at] of mine) if (t - at >= P.GONE_MS) mine.delete(control)
+            const view = P.compose({ who, mine, self: me, now: t })
+            paint(view)
+            if (view.rings.size && !document.hidden) ringTimer = setTimeout(renderPresence, RING_MS)
+        } catch (error) {
+            try { $('whoIsOn').title = `Who is on: ${String((error && error.message) || error)}` } catch { /* nothing left to say it with */ }
+        }
+    }
+    const presenceTouch = (control) => { try { mine.set(control, Date.now()); renderPresence() } catch { /* presence never stops a press */ } }
+    const presenceRefused = (control) => { try { mine.delete(control); renderPresence() } catch { /* presence never stops a press */ } }
+    const presenceAccepted = (control) => { check = { control, doneAt: Date.now(), misses: 0 } }
+    // One answer of the board (or none): the other browsers' touches and the legend. An accepted write of this browser must come
+    // back within the next two answers, else the status line says once that others do not see it (a proxy that drops headers, a
+    // server whose board is not in front of the desks).
+    const presenceAnswer = (r, startedAt) => {
+        if (!P || !r) return
+        try {
+            if (r.ok) {
+                who = P.mergeWho(r, Date.now())
+                if (check && startedAt >= check.doneAt) {
+                    if (who.touches.some((t) => t.id === me.id && t.control === check.control)) { check = null; blind = false }
+                    else if (++check.misses >= 2) {
+                        check = null
+                        blind = true
+                        if (!warned) { warned = true; say('Others do not see your touches: the desk board did not list them.', 'error') }
+                    }
+                }
+                whyNot = blind ? 'the board did not list your last touches' : ''
+            } else if (r.status === 404) {
+                who = null
+                whyNot = 'this server has no board yet, so only your own touches show'
+                whoNextAt = Date.now() + WHO_RETRY_MS
+            } else whyNot = 'the board did not answer'
+        } catch (error) { whyNot = String((error && error.message) || error) }
+    }
 
     // ---- what the two desks say now
     const S = { light: null, lightErr: '', desk: null, deskErr: '', engine: null, engineErr: '', table: {}, view: null, polls: 0 }
@@ -170,6 +291,7 @@
     const say = (text, kind = 'ok') => {
         const n = $('status')
         setText(n, text || '')
+        if (n.title !== (text || '')) n.title = text || '' // the whole message, when the line is short
         setClass(n, `status${text ? ` is-${kind}` : ''}`)
         clearTimeout(sayTimer)
         if (text && kind === 'ok') sayTimer = setTimeout(() => say(''), NOTE_MS)
@@ -284,7 +406,7 @@
     const pressBlackout = async () => {
         const before = [...lifting]
         // Both routes, always, at once: a stop is never skipped because a poll was late or a desk looked absent.
-        const dark = () => Promise.all([post(LIGHT + 'master', { blackout: true }), post(DESK + 'blackout', { on: true })])
+        const dark = () => Promise.all([post(LIGHT + 'master', { blackout: true }, ctlKey('blackout')), post(DESK + 'blackout', { on: true }, ctlKey('blackout'))])
         let [lights, laser] = await dark()
         if (before.length) {
             await Promise.allSettled(before)
@@ -299,8 +421,8 @@
     // state read AND reports its blackout on; a half that did not answer is never lifted. A second lift of the same half
     // inside BLACKOUT_GAP_MS is ignored, so a double-click lifts once.
     const LIFT = {
-        lights: { button: 'liftLights', desk: 'the lighting desk', Desk: 'The lighting desk', send: () => post(LIGHT + 'master', { blackout: false }) },
-        laser: { button: 'liftLaser', desk: 'the laser desk', Desk: 'The laser desk', send: () => post(DESK + 'blackout', { on: false }) }
+        lights: { button: 'liftLights', desk: 'the lighting desk', Desk: 'The lighting desk', send: () => post(LIGHT + 'master', { blackout: false }, ctlKey('lift', 'lights')) },
+        laser: { button: 'liftLaser', desk: 'the laser desk', Desk: 'The laser desk', send: () => post(DESK + 'blackout', { on: false }, ctlKey('lift', 'laser')) }
     }
     const liftAt = { lights: 0, laser: 0 }
     const liftBusy = { lights: false, laser: false }
@@ -372,7 +494,7 @@
                     dots: el('span', { class: 'scenedots', 'aria-hidden': 'true' }),
                     dotSig: null
                 }
-                parts.btn = el('button', { type: 'button', class: 'scenebtn', 'data-id': i.id, 'data-midi': `scene:${index}`, 'aria-pressed': 'false', onclick: () => { if (!learning) pressScene(i.id) } },
+                parts.btn = el('button', { type: 'button', class: 'scenebtn', 'data-id': i.id, 'data-ctl': ctlKey('scene', i.id), 'data-midi': `scene:${index}`, 'aria-pressed': 'false', onclick: () => { if (!learning) pressScene(i.id) } },
                     el('span', { class: 'scenename' }, parts.num, parts.nameText), el('span', { class: 'scenelook' }, parts.lookText, parts.liveTag), parts.dots)
                 sceneBtns.set(i.id, parts)
                 return parts.btn
@@ -420,8 +542,8 @@
         const link = linkOf(id)
         sceneBusy = id
         renderScenes()
-        const lightPost = (path, body) => post(LIGHT + path, body)
-        const goLook = (look) => post(DESK + 'go', { look })
+        const lightPost = (path, body) => post(LIGHT + path, body, ctlKey('scene', id))
+        const goLook = (look) => post(DESK + 'go', { look }, ctlKey('scene', id))
         let light
         let laser = null
         if (window.DiSceneRow) ({ light, laser } = await window.DiSceneRow.pressScene({ scene: { id, name }, link, lightPost, goLook }))
@@ -468,7 +590,7 @@
                     val: el('b', { class: 'val' }),
                     colours: el('div', { class: 'lampcolours', role: 'group', 'aria-label': `Colour of ${f.name || f.id}` })
                 }
-                bindFader(parts.input, key, (v) => { lampsEdited = true; return post(LIGHT + 'fixture', { id: f.id, values: { dimmer: v }, on: true }) }, (v) => setText(parts.val, pct(v, 255)))
+                bindFader(parts.input, key, (v) => { lampsEdited = true; return post(LIGHT + 'fixture', { id: f.id, values: { dimmer: v }, on: true }, ctlKey('lamp', f.id)) }, (v) => setText(parts.val, pct(v, 255)))
                 // The same colours as the live strip, as this lamp's own colour channels (its profile on the lighting desk)
                 if (Object.keys(lampColour(f, '#ffffff')).length) {
                     parts.colours.append(...SWATCHES.map((c) => el('button', {
@@ -476,7 +598,7 @@
                     })))
                 }
                 lampRows.set(f.id, parts)
-                return el('div', { class: 'lamp strip', 'data-id': f.id },
+                return el('div', { class: 'lamp strip', 'data-id': f.id, 'data-ctl': ctlKey('lamp', f.id) },
                     el('div', { class: 'striphead' }, parts.swatch, el('span', { class: 'who' }, parts.name, parts.where)), parts.input, parts.val, parts.colours)
             }))
         }
@@ -512,7 +634,7 @@
         const values = f ? lampColour(f, hex) : {}
         if (!Object.keys(values).length) return
         lampsEdited = true
-        const r = await post(LIGHT + 'fixture', { id: f.id, values, on: true })
+        const r = await post(LIGHT + 'fixture', { id: f.id, values, on: true }, ctlKey('lamp', f.id))
         if (!r.ok) say(`${f.name || f.id} did not change colour: ${r.error}.`, 'error')
         await tick()
     }
@@ -520,7 +642,7 @@
         const h = holdsOf()
         const unis = all ? h.allUnis : h.mineUnis
         if (!unis.length) return
-        const replies = await Promise.all(unis.map((u) => post(LIGHT + 'raw', all ? { clear: true, all: true, universe: u } : { clear: true, universe: u })))
+        const replies = await Promise.all(unis.map((u) => post(LIGHT + 'raw', all ? { clear: true, all: true, universe: u } : { clear: true, universe: u }, ctlKey('release'))))
         const bad = replies.find((r) => !r.ok)
         const kept = {}
         for (const r of replies) for (const [who, n] of Object.entries((r && r.kept) || {})) kept[who] = (kept[who] || 0) + (Number(n) || 0)
@@ -572,15 +694,15 @@
                     sizeVal: el('b'),
                     canvas: el('canvas', { 'aria-label': `What ${id} draws now` })
                 }
-                bindFader(parts.size, key, (v) => post(DESK + 'cube', { id, size: v }), (v) => setText(parts.sizeVal, `×${v.toFixed(2)}`))
+                bindFader(parts.size, key, (v) => post(DESK + 'cube', { id, size: v }, ctlKey('size', id)), (v) => setText(parts.sizeVal, `×${v.toFixed(2)}`))
                 cubeCards.set(id, parts)
                 return el('div', { class: 'cubecard', 'data-id': id },
-                    el('div', { class: 'strip sizestrip' }, el('span', { class: 'striphead' }, el('b', { text: 'Size' })), parts.size, parts.sizeVal),
+                    el('div', { class: 'strip sizestrip', 'data-ctl': ctlKey('size', id) }, el('span', { class: 'striphead' }, el('b', { text: 'Size' })), parts.size, parts.sizeVal),
                     el('div', { class: 'controls' },
                         el('div', { class: 'cubename' }, parts.name, parts.state),
                         el('div', { class: 'preview' }, parts.canvas, el('span', { class: 'cap', text: 'What it draws now' })),
                         parts.stop,
-                        el('div', { class: 'onoff' }, parts.on, parts.off)))
+                        el('div', { class: 'onoff', 'data-ctl': ctlKey('on', id) }, parts.on, parts.off)))
             }))
         }
         for (const id of ids) {
@@ -608,7 +730,7 @@
         }
     }
     const pressArm = async (id, on) => {
-        const r = await post(LASER + 'arm', { armed: on, cube: id, out: OUT })
+        const r = await post(LASER + 'arm', { armed: on, cube: id, out: OUT }, ctlKey('on', id))
         const name = cubeName(id)
         if (on && r.needsPhrase) say(`${name}: the first On of this run asks for the laser safety officer's phrase. Press On on the Laser desk.`, 'error')
         else if (!r.ok) say(`${name} did not turn ${on ? 'On' : 'Off'}: ${r.error}.`, 'error')
@@ -651,16 +773,16 @@
             s.timer = null
             s.last = Date.now()
             if (!S.desk || S.desk.liveId !== s.id) return // that look is no longer live: nothing goes to it
-            const r = await post(DESK + 'looks/edit', { id: s.id, [field]: s.value })
+            const r = await post(DESK + 'looks/edit', { id: s.id, [field]: s.value }, ctlKey('live', field === 'x' || field === 'height' ? 'xy' : field))
             if (!r.ok) say(`The live look did not change: ${r.error}.`, 'error')
         }, Math.max(0, s.last + LIVE_SEND_MS - Date.now()))
     }
-    const editLive = async (fields) => {
+    const editLive = async (fields, control = null) => {
         const look = liveLook()
         if (!look) { noLook(); return }
         keepLocal(fields)
         renderLive()
-        const r = await post(DESK + 'looks/edit', { id: look.id, ...fields })
+        const r = await post(DESK + 'looks/edit', { id: look.id, ...fields }, control)
         if (!r.ok) say(`The live look did not change: ${r.error}.`, 'error')
         await tick()
     }
@@ -671,10 +793,10 @@
         const mem = `${look.id}:${k}`
         if (cur !== 0) {
             lastDepth.set(mem, cur)
-            editLive({ [k]: 0 })
-        } else editLive({ [k]: lastDepth.get(mem) || LIVE[k].on })
+            editLive({ [k]: 0 }, ctlKey('live', k))
+        } else editLive({ [k]: lastDepth.get(mem) || LIVE[k].on }, ctlKey('live', k))
     }
-    const toggleLive = (k) => { const l = liveLookFull(); if (l) editLive({ [k]: !l[k] }); else noLook() }
+    const toggleLive = (k) => { const l = liveLookFull(); if (l) editLive({ [k]: !l[k] }, ctlKey('live', k === 'rainbow' ? 'colour' : k)); else noLook() }
     const liveFader = (k, box) => {
         const key = `live:${k}`
         const input = el('input', { type: 'range', min: String(LIVE[k].min), max: String(LIVE[k].max), step: String(LIVE[k].step), 'data-midi': key, 'aria-label': `${LIVE[k].label} of the live look`, disabled: true })
@@ -690,7 +812,7 @@
         for (const ev of ['pointerup', 'pointercancel', 'blur', 'change']) input.addEventListener(ev, () => { dragging.delete(key); touch(key) })
         liveInputs.set(k, input)
         liveVals.set(k, val)
-        if (box) box.append(el('label', { class: 'hfader' }, el('span', { text: LIVE[k].label }), input, val))
+        if (box) box.append(el('label', { class: 'hfader', 'data-ctl': ctlKey('live', k) }, el('span', { text: LIVE[k].label }), input, val))
         return input
     }
     // The XY pad: x across, height up, the finger is the beam's place; both through the same throttled looks/edit.
@@ -730,15 +852,15 @@
         for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(ev, up)
     }
     const buildLive = () => {
-        $('liveColours').append(...SWATCHES.map((c) => el('button', { type: 'button', class: 'pad colourpad', 'data-colour': c, style: `background:${c}`, title: `Colour ${c}`, 'aria-label': `Colour ${c}`, disabled: true, onclick: () => editLive({ colour: c, rainbow: false }) })),
+        $('liveColours').append(...SWATCHES.map((c) => el('button', { type: 'button', class: 'pad colourpad', 'data-colour': c, style: `background:${c}`, title: `Colour ${c}`, 'aria-label': `Colour ${c}`, disabled: true, onclick: () => editLive({ colour: c, rainbow: false }, ctlKey('live', 'colour')) })),
             el('button', { type: 'button', class: 'pad togglepad', id: 'liveRainbow', 'aria-pressed': 'false', disabled: true, onclick: () => toggleLive('rainbow') }, 'Rainbow'))
         for (const k of EFFECTS) {
             const input = liveFader(k, null)
-            $('liveEffects').append(el('div', { class: 'effect' },
+            $('liveEffects').append(el('div', { class: 'effect', 'data-ctl': ctlKey('live', k) },
                 el('button', { type: 'button', class: 'pad effectpad', 'data-effect': k, 'aria-pressed': 'false', disabled: true, title: `${LIVE[k].label}: a tap turns it off, a tap again on at its last depth`, onclick: () => pressEffect(k) },
                     el('span', { text: LIVE[k].label }), liveVals.get(k)), input))
         }
-        $('liveEffects').append(el('button', { type: 'button', class: 'pad effectpad', id: 'liveMirror', 'aria-pressed': 'false', disabled: true, onclick: () => toggleLive('mirror') }, 'Mirror'))
+        $('liveEffects').append(el('button', { type: 'button', class: 'pad effectpad', id: 'liveMirror', 'data-ctl': ctlKey('live', 'mirror'), 'aria-pressed': 'false', disabled: true, onclick: () => toggleLive('mirror') }, 'Mirror'))
         for (const k of ROW_A) liveFader(k, $('liveRowA'))
         for (const k of ROW_B) liveFader(k, $('liveRowB'))
         for (const k of ['x', 'height']) { const input = liveFader(k, null); input.hidden = true; input.classList.add('xyval'); $('xyPad').append(input) }
@@ -762,7 +884,7 @@
         const order = shapes.includes('spots') ? ['spots', ...shapes.filter((s) => s !== 'spots')] : shapes
         if (order.join() !== shapeSig) {
             shapeSig = order.join()
-            $('liveShapes').replaceChildren(...order.map((s) => el('button', { type: 'button', class: 'pad shapepad', 'data-shape': s, 'aria-pressed': 'false', onclick: () => editLive({ shape: s }) }, s === 'spots' ? 'spots · dots' : s)))
+            $('liveShapes').replaceChildren(...order.map((s) => el('button', { type: 'button', class: 'pad shapepad', 'data-shape': s, 'aria-pressed': 'false', onclick: () => editLive({ shape: s }, ctlKey('live', 'shape')) }, s === 'spots' ? 'spots · dots' : s)))
         }
         const mark = (b, p) => {
             b.disabled = !on
@@ -795,8 +917,8 @@
         const liveId = st.ok && typeof st.liveId === 'string' && st.liveId ? st.liveId : null
         const look = liveId ? (Array.isArray(st.looks) ? st.looks : []).find((l) => l && l.id === liveId) || (st.live && typeof st.live === 'object' ? st.live : null) : null
         const [lights, laser] = await Promise.all([
-            scene ? post(LIGHT + 'scenes/update', { id: scene.id, restage: true }) : Promise.resolve(null),
-            liveId && look ? post(DESK + 'store', { id: liveId, look }) : Promise.resolve(null)
+            scene ? post(LIGHT + 'scenes/update', { id: scene.id, restage: true }, ctlKey('save')) : Promise.resolve(null),
+            liveId && look ? post(DESK + 'store', { id: liveId, look }, ctlKey('save')) : Promise.resolve(null)
         ])
         if (lights && lights.ok) lampsEdited = false
         const words = [
@@ -808,9 +930,9 @@
     }
     // Undo: the laser desk's own Undo (one step of its history), then the lit light scene recalled as it was written.
     const pressUndo = async () => {
-        const laser = S.desk ? await post(DESK + 'undo', {}) : null
+        const laser = S.desk ? await post(DESK + 'undo', {}, ctlKey('undo')) : null
         const scene = litSceneOf()
-        const lights = scene ? await post(LIGHT + 'scenes/recall', { id: scene.id }) : null
+        const lights = scene ? await post(LIGHT + 'scenes/recall', { id: scene.id }, ctlKey('undo')) : null
         if (lights && lights.ok) lampsEdited = false
         const words = [
             !laser ? '' : laser.ok ? 'Laser: the last change is undone.' : `Laser: nothing undone (${laser.error}).`,
@@ -960,13 +1082,16 @@
         renderLaser()
         renderLive()
         renderSave()
+        renderPresence()
     }
     const tick = () => {
         if (ticking) return ticking
         ticking = (async () => {
             const wantFollows = S.polls % FOLLOWS_EVERY === 0
-            const [light, desk, engine, follows] = await Promise.all([
-                get(LIGHT + 'state'), get(DESK + 'state'), get(LASER + 'state'), wantFollows ? get(DESK + 'follows') : Promise.resolve(null)
+            const asked = Date.now()
+            const [light, desk, engine, follows, board] = await Promise.all([
+                get(LIGHT + 'state'), get(DESK + 'state'), get(LASER + 'state'), wantFollows ? get(DESK + 'follows') : Promise.resolve(null),
+                P && asked >= whoNextAt ? get(WHO) : Promise.resolve(null)
             ])
             S.light = light.ok ? light : null
             if (S.light && typeof S.light.activeScene === 'string' && S.light.activeScene) litScene = S.light.activeScene
@@ -977,6 +1102,7 @@
             S.engineErr = engine.ok ? '' : engine.error
             if (follows && follows.ok) S.table = follows.table && typeof follows.table === 'object' ? follows.table : {}
             else if (follows && !S.desk) S.table = {}
+            presenceAnswer(board, asked)
             S.polls += 1
             render()
         })().finally(() => { ticking = null })
@@ -1014,17 +1140,46 @@
     })
     $('releaseHolds').addEventListener('click', () => pressRelease(false))
     $('releaseAllHolds').addEventListener('click', () => pressRelease(true))
-    bindFader($('lightMaster'), 'light-master', (v) => post(LIGHT + 'master', { master: v }), (v) => setText($('lightMasterVal'), pct(v, 255)))
-    bindFader($('laserMaster'), 'laser-master', (v) => post(DESK + 'master', { level: v }), (v) => setText($('laserMasterVal'), pct(v, 1)))
+    bindFader($('lightMaster'), 'light-master', (v) => post(LIGHT + 'master', { master: v }, ctlKey('light-master')), (v) => setText($('lightMasterVal'), pct(v, 255)))
+    bindFader($('laserMaster'), 'laser-master', (v) => post(DESK + 'master', { level: v }, ctlKey('laser-master')), (v) => setText($('laserMasterVal'), pct(v, 1)))
 
-    bindFader($('bpm'), 'bpm', (v) => post(DESK + 'bpm', { bpm: v }), (v) => setText($('bpmVal'), String(Math.round(v))))
+    bindFader($('bpm'), 'bpm', (v) => post(DESK + 'bpm', { bpm: v }, ctlKey('bpm')), (v) => setText($('bpmVal'), String(Math.round(v))))
     $('tapBtn').addEventListener('click', async () => {
-        const r = await post(DESK + 'bpm', { tap: true })
+        const r = await post(DESK + 'bpm', { tap: true }, ctlKey('tap'))
         if (!r.ok) say(`Tap did not reach the laser desk: ${r.error}.`, 'error')
         await tick()
     })
     $('saveScene').addEventListener('click', pressSave)
     $('undoBtn').addEventListener('click', pressUndo)
+    // The name this browser shows in the top line: the Name button in the bottom line opens a field of 12 characters (Enter keeps
+    // it, Escape leaves it), kept in this browser (diShowDesk.who.v1). The B key stays out of the field (typing() above).
+    if (P) {
+        const nameBtn = $('whoName')
+        const field = $('whoField')
+        nameBtn.hidden = false
+        const showName = () => setText(nameBtn, `Name: ${me.name}`)
+        const closeField = () => { field.hidden = true; nameBtn.setAttribute('aria-expanded', 'false') }
+        showName()
+        nameBtn.addEventListener('click', () => {
+            if (!field.hidden) { closeField(); return }
+            field.hidden = false
+            nameBtn.setAttribute('aria-expanded', 'true')
+            field.value = me.label || me.name
+            field.focus()
+            field.select()
+        })
+        field.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { closeField(); nameBtn.focus() } else if (e.key === 'Enter') {
+                me.label = P.cleanLabel(field.value)
+                me.name = me.label || P.defaultLabel(window.navigator.userAgent, window.navigator.maxTouchPoints)
+                P.saveSelf(store, me)
+                showName()
+                closeField()
+                nameBtn.focus()
+                renderPresence()
+            }
+        })
+    }
     $('midiLearn').addEventListener('click', () => { learning = learning ? null : { target: null }; midiLine() })
     $('midiExport').addEventListener('click', () => {
         const box = $('midiMapText')
@@ -1071,8 +1226,12 @@
     noteToTitle()
     new MutationObserver(noteToTitle).observe(scenesNote, { childList: true, characterData: true, subtree: true })
 
-    // For the page's tests and a person at the console: read-only views and one refresh. Nothing here sends a press.
-    window.DiShowDesk = { refresh: tick, holdsOf, blackoutState, state: S, midiMap: () => midiMap.map((m) => ({ ...m })), pickDensity }
+    // For the page's tests and a person at the console: read-only views and one refresh. Nothing here sends a press
+    // (presence.reset only clears this browser's own presence state: its rings, the pending check, the once-flag).
+    window.DiShowDesk = {
+        refresh: tick, holdsOf, blackoutState, state: S, midiMap: () => midiMap.map((m) => ({ ...m })), pickDensity,
+        presence: P ? { self: () => ({ id: me.id, name: me.name, label: me.label }), reset: () => { mine.clear(); check = null; warned = false; blind = false; whoNextAt = 0; renderPresence() } } : null
+    }
     buildLive()
     midiLine()
     startMidi()

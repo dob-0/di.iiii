@@ -16,7 +16,7 @@ const UI = path.join(here, 'ui')
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const clone = (v) => JSON.parse(JSON.stringify(v))
 
-let light, desk, engine, table, posts, gets, mode, gate
+let light, desk, engine, table, posts, gets, mode, gate, heads, board, boardMode, holdWrites
 const fresh = () => {
     light = {
         master: 255, blackout: false, activeScene: 'warm',
@@ -42,11 +42,15 @@ const fresh = () => {
     gets = []
     mode = { light: 'ok', laser: 'ok' } // 'down': nothing answers; 'reads-down': its state reads fail, its routes still take a POST
     gate = null // when set, a lift POST waits for it before the fake desk applies it (a lift still in flight)
+    heads = [] // the headers of every request the page sent, in order
+    board = board || { clients: new Map(), touches: [] } // the server's touch board, as a fake (fakeFetch below); it outlives a test, as the server's does
+    boardMode = 'ok' // 'ok' | '404' (an older server: no board) | 'blind' (a board in front of nothing: it never hears of a touch)
+    holdWrites = null // when set, every POST waits for it before the fake desks see it (a write still on its way)
 }
 fresh()
 
 const reply = (v, status = 200) => ({ ok: status < 400, status, json: async () => clone(v) })
-const fakeFetch = async (url, opts = {}) => {
+const desksFetch = async (url, opts = {}) => {
     const isPost = opts.method === 'POST'
     const body = isPost ? JSON.parse(opts.body || '{}') : null
     if (isPost) posts.push({ url, body })
@@ -102,6 +106,43 @@ const fakeFetch = async (url, opts = {}) => {
     if (url === '../light/api/scenes/update') return reply({ ok: true, scene: { id: body.id } })
     return reply({ error: 'not in the fake' }, 404)
 }
+// The server's touch board (touchBoard.js) as a fake, in front of the desks' fakes: a browser that asks GET api/who is on it, and a
+// write the desk took that carries X-Di-Control is a touch. presence.test.js and touchBoard.test.js have the real rules.
+const fakeFetch = async (url, opts = {}) => {
+    const h = opts.headers || {}
+    heads.push({ url, method: opts.method || 'GET', headers: { ...h } })
+    const t = Date.now()
+    const join = () => {
+        const id = h['X-Di-Client']
+        if (!id) return null
+        const c = board.clients.get(id) || { id, label: '', slot: board.clients.size % 6, seenAt: t, touchAt: null }
+        c.seenAt = t
+        if (h['X-Di-Label']) c.label = decodeURIComponent(h['X-Di-Label'])
+        board.clients.set(id, c)
+        return c
+    }
+    if (url === 'api/who') {
+        gets.push(url)
+        if (boardMode === '404') return reply({}, 404)
+        join()
+        return reply({
+            ok: true,
+            clients: [...board.clients.values()].map((c) => ({ id: c.id, label: c.label, slot: c.slot, seenMs: t - c.seenAt, touchMs: c.touchAt === null ? null : t - c.touchAt })),
+            touches: board.touches.filter((x) => t - x.at < 6000).map((x) => ({ control: x.control, id: x.id, slot: board.clients.get(x.id).slot, ageMs: t - x.at }))
+        })
+    }
+    if (holdWrites && opts.method === 'POST') await holdWrites
+    const res = await desksFetch(url, opts)
+    if (opts.method === 'POST' && res.ok && h['X-Di-Control'] && boardMode === 'ok') {
+        const c = join()
+        if (c) {
+            c.touchAt = t
+            board.touches = board.touches.filter((x) => x.control !== h['X-Di-Control'])
+            board.touches.push({ control: h['X-Di-Control'], id: c.id, at: t })
+        }
+    }
+    return res
+}
 let midiIn = null
 const midi = (...bytes) => midiIn.onmidimessage({ data: Uint8Array.from(bytes) })
 
@@ -140,6 +181,8 @@ beforeAll(async () => {
     try { window.localStorage.removeItem('diShowDesk.midiMap.v1') } catch { /* no storage: the default map */ }
     midiIn = { name: 'XONE:K2', onmidimessage: null }
     Object.defineProperty(window.navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map([['k2', midiIn]]), onstatechange: null }) })
+    try { window.localStorage.removeItem('diShowDesk.who.v1') } catch { /* no storage: a fresh id */ }
+    new Function(fs.readFileSync(path.join(UI, 'presence.js'), 'utf8'))() // the page loads presence.js before show.js
     new Function(fs.readFileSync(path.join(UI, 'show.js'), 'utf8'))()
     await refresh()
     await refresh()
@@ -787,4 +830,214 @@ describe('two pages on two machines meet through the poll', () => {
             if (wasHidden) { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')) }
         }
     }, 10000)
+})
+
+// Presence (the owner, 23:0x: "make colours like if someone is active, that is coloured around"): a ring on the control a browser
+// touched, in that browser's colour; the frame in the colour of whoever drives; a list of who is on. The fake board above stands in
+// for the server's; presence.js has the rules and presence.test.js tests them on their own. The 404 test is last: it makes the
+// page stop asking for 30 s.
+describe('presence: who is on, who touched what', () => {
+    const OTHER = 'a1b2c3d4e5f6'
+    const THIRD = '0f0f0f0f0f0f'
+    const mineId = () => window.DiShowDesk.presence.self().id
+    const join = (id, label, slot, seenAgo = 0) => board.clients.set(id, { id, label, slot, seenAt: Date.now() - seenAgo, touchAt: null })
+    const touchAs = (id, control, ago) => {
+        board.touches = board.touches.filter((x) => x.control !== control)
+        board.touches.push({ control, id, at: Date.now() - ago })
+        board.clients.get(id).touchAt = Date.now() - ago
+    }
+    const seatMe = async (slot) => { board.clients.set(mineId(), { id: mineId(), label: '', slot, seenAt: Date.now(), touchAt: null }); await refresh() }
+    const by = (node) => node.getAttribute('data-by')
+    const ringOf = (node) => node.style.getPropertyValue('--ring')
+    const chips = () => [...$('whoIsOn').querySelectorAll('.whochip')]
+    beforeEach(() => { board.clients.clear(); board.touches = []; window.DiShowDesk.presence.reset() })
+
+    it('a ring appears on the control another browser touched, in its colour: full to 1.5 s, fading, gone by 4 s; the frame follows', async () => {
+        join(OTHER, 'phone', 2)
+        touchAs(OTHER, 'lamp:f1', 500)
+        await refresh()
+        expect([by(lampRow('f1')), ringOf(lampRow('f1'))]).toEqual(['2', '1.00'])
+        expect(document.body.dataset.driver).toBe('2')
+        expect(lampRow('f2').hasAttribute('data-by')).toBe(false) // a control nobody touched has no ring
+        touchAs(OTHER, 'lamp:f1', 3200)
+        await refresh()
+        expect(Number(ringOf(lampRow('f1')))).toBeCloseTo(0.32, 1)
+        expect(document.body.dataset.driver).toBe('2')
+        touchAs(OTHER, 'lamp:f1', 4100)
+        await refresh()
+        expect(lampRow('f1').hasAttribute('data-by')).toBe(false)
+        expect(document.body.hasAttribute('data-driver')).toBe(false)
+    })
+    it('one colour per browser: each keeps its own on every control it touches, and a ring never moves a press (pointer-events none, tokens only)', async () => {
+        join(OTHER, 'phone', 2)
+        join(THIRD, 'Mac', 4)
+        touchAs(OTHER, 'lamp:f1', 200)
+        touchAs(THIRD, 'scene:blue', 300)
+        touchAs(OTHER, 'laser-master', 400)
+        await refresh()
+        expect([by(lampRow('f1')), by(sceneBtn('blue')), by(document.querySelector('[data-ctl="laser-master"]'))]).toEqual(['2', '4', '2'])
+        expect(document.body.dataset.driver).toBe('2') // the latest touch was OTHER's on lamp:f1
+        const css = fs.readFileSync(path.join(UI, 'show.css'), 'utf8')
+        expect([0, 1, 2, 3, 4, 5].map((n) => (css.match(new RegExp(`--c${n}:\\s*(#[0-9a-f]{6})`)) || [])[1])).toEqual(['#e0001a', '#7a20ff', '#ffb020', '#f0eaff', '#00ffb0', '#ff30c0'])
+        for (const n of [0, 1, 2, 3, 4, 5]) expect(css).toContain(`[data-by="${n}"], [data-driver="${n}"] { --by: var(--c${n}); }`)
+        expect(css).toMatch(/\[data-ctl\]\[data-by\]::before \{[^}]*pointer-events: none/)
+        expect(css).toMatch(/body\.showdesk\[data-driver\]::after \{[^}]*position: fixed[^}]*pointer-events: none/)
+    })
+    it('my own press rings at once, in my colour, before any answer; a write the desk refused leaves no ring', async () => {
+        await seatMe(3)
+        let release
+        holdWrites = new Promise((r) => { release = r })
+        sceneBtn('dark').click()
+        await sleep(20) // the request is out and waiting: no answer yet
+        expect([by(sceneBtn('dark')), ringOf(sceneBtn('dark')), document.body.dataset.driver]).toEqual(['3', '1.00', '3'])
+        holdWrites = null
+        release()
+        await settle()
+        expect(by(sceneBtn('dark'))).toBe('3') // taken by the desk, so it stays
+        window.DiShowDesk.presence.reset()
+        await refresh()
+        expect(by(sceneBtn('dark'))).toBe('3') // the board lists the same touch under my id: the same ring, the same colour
+        mode.light = 'down'
+        await slide(lampRow('f2').querySelector('input'), 50)
+        expect(lampRow('f2').hasAttribute('data-by')).toBe(false)
+    })
+    it('the list in the top line: browsers seen under 5 s or touched under 4 s ago, in slot order, a repeated name numbered, the long gone dropped', async () => {
+        await seatMe(5)
+        join('c1c1c1c1c1c1', 'phone', 4)
+        join('d2d2d2d2d2d2', 'phone', 1)
+        join('e3e3e3e3e3e3', 'Mac', 0)
+        join('f4f4f4f4f4f4', 'old', 3, 6000) // asked 6 s ago, never touched: not on
+        await refresh()
+        expect($('whoIsOn').firstElementChild.textContent).toBe('on')
+        expect(chips().map((c) => c.textContent)).toEqual(['Mac', 'phone', 'phone 2', 'tab'])
+        expect(chips().map((c) => c.getAttribute('data-by'))).toEqual(['0', '1', '4', '5'])
+        expect(chips().map((c) => c.classList.contains('is-mine'))).toEqual([false, false, false, true])
+        expect(chips().some((c) => c.classList.contains('is-driving'))).toBe(false)
+        touchAs('c1c1c1c1c1c1', 'lamp:f1', 100)
+        await refresh()
+        expect(chips().filter((c) => c.classList.contains('is-driving')).map((c) => c.textContent)).toEqual(['phone 2'])
+        expect($('whoIsOn').hidden).toBe(false)
+    })
+    it('the Name button opens a field of 12 characters; Enter keeps the name in this browser; Escape leaves it; B typed in it sends no blackout', async () => {
+        const btn = $('whoName')
+        const field = $('whoField')
+        const type = (k) => field.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }))
+        expect(btn.textContent).toBe('Name: tab')
+        expect(btn.closest('.links')).not.toBeNull()
+        expect(field.hidden).toBe(true)
+        btn.click()
+        expect(field.hidden).toBe(false)
+        expect(field.getAttribute('maxlength')).toBe('12')
+        field.value = 'b'
+        key('b', {}, field)
+        await settle()
+        expect(posts).toEqual([]) // the B key stayed in the field
+        field.value = 'Stage left plus more'
+        type('Escape')
+        expect([field.hidden, btn.textContent]).toEqual([true, 'Name: tab'])
+        btn.click()
+        field.value = 'Արամ'
+        type('Enter')
+        expect([field.hidden, btn.textContent]).toEqual([true, 'Name: Արամ'])
+        expect(JSON.parse(window.localStorage.getItem('diShowDesk.who.v1'))).toEqual({ id: mineId(), label: 'Արամ' })
+        heads = []
+        await refresh()
+        const ask = heads.find((h) => h.url === 'api/who')
+        expect(ask.headers['X-Di-Label']).toBe(encodeURIComponent('Արամ'))
+        expect(ask.headers['X-Di-Label']).toMatch(/^[\x20-\x7e]+$/)
+        expect(chips().find((c) => c.classList.contains('is-mine')).textContent).toBe('Արամ')
+        btn.click()
+        field.value = '   '
+        type('Enter')
+        expect(btn.textContent).toBe('Name: tab') // an empty name is the default again
+        expect(JSON.parse(window.localStorage.getItem('diShowDesk.who.v1'))).toEqual({ id: mineId(), label: '' })
+    })
+    it('every control a touch can ring carries a key of the board\'s shape, and every key a press sends has an element; ?presence=0 is read from the address', () => {
+        const keys = [...document.querySelectorAll('[data-ctl]')].map((n) => n.getAttribute('data-ctl'))
+        for (const k of keys) expect(k, k).toMatch(window.DiPresence.CONTROL)
+        const want = ['blackout', 'lift:lights', 'lift:laser', 'release', 'save', 'undo', 'tap', 'bpm', 'light-master', 'laser-master', 'live:xy', 'live:colour', 'live:shape', 'live:mirror',
+            ...['level', 'size', 'copies', 'rotation', 'phase', 'pulseBeats', 'sweepBeats', 'points', 'pulse', 'sweep', 'spin', 'cycle'].map((k) => `live:${k}`),
+            'lamp:f1', 'lamp:f2', 'lamp:f3', 'scene:warm', 'scene:blue', 'scene:dark', 'size:cube-a', 'size:cube-b', 'on:cube-a', 'on:cube-b']
+        expect([...new Set(keys)].sort()).toEqual([...want].sort())
+        expect(fs.readFileSync(path.join(UI, 'show.js'), 'utf8')).toMatch(/DiPresence\.enabled\(window\.location\.search\)/)
+    })
+    it('every press and move names this browser and the control it touched; the reads name nothing but the board\'s own', async () => {
+        const id = mineId()
+        light.raw = { '0:1': 255 }
+        await refresh()
+        const cases = [
+            ['Blackout all', () => press($('blackoutAll')), ['blackout', 'blackout']],
+            ['Lift lights', () => press($('liftLights')), ['lift:lights']],
+            ['Lift laser', () => press($('liftLaser')), ['lift:laser']],
+            ['a scene', () => press(sceneBtn('blue')), ['scene:blue', 'scene:blue']],
+            ['a lamp fader', () => slide(lampRow('f1').querySelector('input'), 90), ['lamp:f1']],
+            ['a lamp colour', () => press(lampRow('f1').querySelector('.swatch[data-colour]')), ['lamp:f1']],
+            ['Release holds', () => press($('releaseHolds')), ['release']],
+            ['the light master', () => slide($('lightMaster'), 100), ['light-master']],
+            ['the laser master', () => slide($('laserMaster'), 0.4), ['laser-master']],
+            ['BPM', () => slide($('bpm'), 130), ['bpm']],
+            ['Tap', () => press($('tapBtn')), ['tap']],
+            ['On', () => press(cubeCard('cube-a').querySelector('.cubeon')), ['on:cube-a']],
+            ['Off', () => press(cubeCard('cube-a').querySelector('.cubeoff')), ['on:cube-a']],
+            ['Size', () => slide(cubeCard('cube-a').querySelector('input[type=range]'), 1.5), ['size:cube-a']],
+            ['Save scene', () => press($('saveScene')), ['save', 'save']],
+            ['Undo', () => press($('undoBtn')), ['undo', 'undo']],
+            ['a live colour', () => press(document.querySelector('#liveColours .colourpad')), ['live:colour']],
+            ['a shape', () => press(document.querySelector('#liveShapes .shapepad')), ['live:shape']],
+            ['an effect', () => press(document.querySelector('#liveEffects [data-effect="pulse"]')), ['live:pulse']],
+            ['a live fader', () => slide(document.querySelector('#liveRowA input[data-midi="live:level"]'), 0.5), ['live:level']],
+            ['the XY pad', () => slide(document.querySelector('#xyPad input[data-midi="live:x"]'), 0.5), ['live:xy']],
+            ['a MIDI scene key', async () => { midi(0x9e, 37, 127); await settle() }, ['scene:blue', 'scene:blue']],
+            ['the B key', async () => { key('b'); await settle() }, ['blackout', 'blackout']]
+        ]
+        for (const [name, act, controls] of cases) {
+            heads = []
+            await act()
+            const writes = heads.filter((h) => h.method === 'POST')
+            expect(writes.map((h) => h.headers['X-Di-Control']), name).toEqual(controls)
+            for (const w of writes) {
+                expect(w.headers['X-Di-Client'], name).toBe(id)
+                expect(w.headers['X-Di-Label'], name).toMatch(/^[\x20-\x7e]+$/)
+            }
+            for (const c of controls) expect(document.querySelector(`[data-ctl="${c}"]`), c).not.toBeNull()
+        }
+        heads = []
+        posts = []
+        await refresh()
+        await sleep(650)
+        expect(posts).toEqual([]) // a poll still posts nothing
+        const reads = heads.filter((h) => h.method === 'GET')
+        expect(reads.some((h) => h.url === 'api/who')).toBe(true)
+        for (const h of reads) {
+            if (h.url === 'api/who') expect([h.headers['X-Di-Client'], h.headers['X-Di-Control']]).toEqual([id, undefined])
+            else expect(Object.keys(h.headers).filter((k) => /^x-di-/i.test(k)), h.url).toEqual([])
+        }
+    }, 20000)
+    it('if the board does not list my accepted touch in the next two answers, the status line says so once', async () => {
+        boardMode = 'blind'
+        await press(sceneBtn('dark')) // its own tick is an answer without the touch
+        await refresh() // and two more: a poll already in flight when the write landed does not count
+        await refresh()
+        expect($('status').textContent).toBe('Others do not see your touches: the desk board did not list them.')
+        expect($('whoIsOn').title).toContain('the board did not list your last touches')
+        await press(sceneBtn('blue'))
+        await refresh()
+        await refresh()
+        expect($('status').textContent).toContain('Blue hour') // once: the words of the press are back, not the warning again
+    }, 20000)
+    it('an older server without the board (404): no error, no rings from others, my own chip with the reason, and the page stops asking for a while', async () => {
+        boardMode = '404'
+        gets = []
+        await refresh()
+        await refresh()
+        await refresh()
+        expect(gets.filter((u) => u === 'api/who')).toHaveLength(1) // it asked once, was told 404, and holds off for 30 s
+        expect(fs.readFileSync(path.join(UI, 'show.js'), 'utf8')).toMatch(/WHO_RETRY_MS = 30000/)
+        expect(chips().map((c) => c.textContent)).toEqual(['tab'])
+        expect($('whoIsOn').title).toContain('this server has no board yet')
+        expect(document.body.hasAttribute('data-driver')).toBe(false)
+        await press(sceneBtn('dark'))
+        expect(by(sceneBtn('dark'))).not.toBeNull() // my own ring still works
+        expect($('status').textContent).toContain('Dark: lights recalled.')
+    }, 20000)
 })

@@ -44,6 +44,13 @@
   --desk-h: 44px;      /* the Show · Light · Laser links in the top line */
   --cube-wrap: nowrap; --cube-name-flex: 0 1 auto; /* a cube's name line; Compact wraps its state under a whole name */
   --preview-w: 166px; --preview-grow: 1; --preview-ar: 4 / 3; /* what a cube draws */
+  /* who is on (the owner, 2026-10-31 23:0x): six fixed colours, one per browser, the same all night. The owner's four in his
+     order (deep red, purple, white; amber is the laser desk's own Amber), then two of the laser desk's swatches (Mint, Magenta).
+     Tokens only: nothing in JS names a colour. */
+  --c0: #e0001a; --c1: #7a20ff; --c2: #ffb020; --c3: #f0eaff; --c4: #00ffb0; --c5: #ff30c0;
+  --ring-w: 2px; --frame-w: 3px; /* a touched control's ring, the frame round the desk */
+  --chip: 10px; --chip-h: 24px; --chip-font: 13px; /* the legend: a square in the browser's colour, then its name */
+  --who-max: 124px; /* the legend's widest: two rows of chips in the top line, the rest clipped (every name is in a chip's title) */
 }
 html, body.showdesk { height: 100%; overflow: hidden; }
 body.showdesk {
@@ -240,4 +247,44 @@ body.showdesk[data-density="compact"] {
   --target: 26px; --fader-h: 20px; --track: 3px; --thumb-lw: 16px; --thumb-lh: 10px; --thumb-uw: 10px; --thumb-uh: 16px; --vfader-w: 22px;
   --lamp-pad: 22px; --cube-wrap: wrap; --cube-name-flex: none; --preview-w: 132px; --preview-grow: 0; --preview-ar: 132 / 100;
   --bo-w: 140px; --bo-h: 36px; --bo-ls: .02em; --lift-w: 90px; --lift-h: 28px; --desk-h: 28px;
+  --chip-h: 20px; --chip-font: 12px; --who-max: 120px;
 }
+
+/* ---- who is on (presence.js, show.js renderPresence; the owner, 2026-10-31 23:0x: "make colours like if someone is active, that
+   is coloured around"). show.js sets data-by="0".."5" and --ring (1 to 0) on the control a browser touched, data-driver and --frame
+   on the body for whoever drives now, and fills the legend. The ring is a 2 px square border drawn by ::before (the shapes row
+   already uses ::after as its spacer), just inside the control's edge: not outline or box-shadow, which the marks of the scene
+   keys, the pads and the density switch already use. Nothing here moves or hides a control: pointer-events none, and
+   position: relative on a control moves nothing (every absolute child already sits in a positioned parent). The fade is stepped by
+   show.js every 200 ms while a ring shows (this file may not use a CSS timing feature); without color-mix the ring stays solid
+   until show.js removes it. ?presence=0 sets none of these attributes. */
+[data-ctl] { position: relative; }
+[data-by="0"], [data-driver="0"] { --by: var(--c0); }
+[data-by="1"], [data-driver="1"] { --by: var(--c1); }
+[data-by="2"], [data-driver="2"] { --by: var(--c2); }
+[data-by="3"], [data-driver="3"] { --by: var(--c3); }
+[data-by="4"], [data-driver="4"] { --by: var(--c4); }
+[data-by="5"], [data-driver="5"] { --by: var(--c5); }
+[data-ctl][data-by]::before { content: ''; position: absolute; inset: 0; border: var(--ring-w) solid var(--by); pointer-events: none; z-index: 3; }
+body.showdesk[data-driver]::after { content: ''; position: fixed; inset: 0; border: var(--frame-w) solid var(--by); pointer-events: none; z-index: 40; }
+@supports (color: color-mix(in srgb, red 50%, transparent)) {
+  [data-ctl][data-by]::before { border-color: color-mix(in srgb, var(--by) calc(var(--ring, 1) * 100%), transparent); }
+  body.showdesk[data-driver]::after { border-color: color-mix(in srgb, var(--by) calc(var(--frame, 1) * 100%), transparent); }
+}
+/* the list in the top line: ON, then one chip per browser in slot order, a 10 px square in its colour and its name; the one that
+   touched in the last 4 s has a 2 px outline in its colour. Not touch targets (nothing in it takes a press). It is at most
+   --who-max wide and wraps into two rows (a third row is cut whole, never half a chip); it never pushes the stops, and it takes its room from the
+   status line first (down to 100 px while presence is on, 120 px before), so "what is on" keeps its words. Measured at 1280 x 700 and 1278 x 758. */
+.whoison { flex: 0 0 auto; max-width: var(--who-max); max-height: calc(2 * var(--chip-h) + 2px); display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; column-gap: 4px; row-gap: 2px; min-width: 0; overflow: hidden; white-space: nowrap; font-size: var(--chip-font); }
+body[data-presence] .statusline { flex-shrink: 100; min-width: 100px; }
+body[data-presence] .status { min-width: 88px; }
+.whoison[hidden] { display: none; }
+.whoison .whoon { flex: none; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.whochip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 3px; height: var(--chip-h); padding: 0 3px; color: var(--text); }
+.whochip .whotext { max-width: 7ch; overflow: hidden; text-overflow: ellipsis; }
+.whochip i { width: var(--chip); height: var(--chip); flex: none; background: var(--by); }
+.whochip.is-mine .whotext { text-decoration: underline; text-underline-offset: 3px; }
+.whochip.is-driving { outline: 2px solid var(--by); outline-offset: -2px; }
+/* the Name button and its field in the bottom line (a normal 44 px button; the field takes 12 characters) */
+.links #whoField { width: 11ch; min-height: var(--target); padding: 0 8px; border: 1px solid var(--line); border-radius: 0; background: var(--field); color: var(--text); font-size: 13px; }
+.links #whoField[hidden], .links #whoName[hidden] { display: none; }
