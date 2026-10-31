@@ -7,6 +7,8 @@
 // Safety, by construction: a poll only reads. Every POST below sits behind a person's press, or a fader under their hand.
 // On is one cube at a time, only from that cube's On button. A guard's stop is shown and left to the Laser desk. The engine's
 // guards (the still-beam stop, the 200 ms signal-loss blank, start disarmed) belong to the engine; nothing here touches them.
+// Blackout all and the B key only ever go dark; a blackout is lifted per desk (Lift blackout under Lights or Laser, or
+// Shift+B), and only for a desk that answered its last read and says it is dark (review 2026-10-31, must-fix 1, 2 and 4).
 // The laser desk's hardest lesson, kept: a poll never moves a fader the person touched in the last HOLD_MS.
 'use strict'
 ;(() => {
@@ -20,7 +22,7 @@
     const VIEW_ARMED_MS = 80 // the preview while a cube is On
     const HOLD_MS = 1500
     const SEND_MS = 50 // a fader sends at most this often; the last value always goes
-    const BLACKOUT_GAP_MS = 600 // a second press inside this is ignored: a double-click never lifts the blackout it just set
+    const BLACKOUT_GAP_MS = 600 // a second lift of the same half inside this is ignored; going dark is never gapped (a panic retry always goes)
     const TIMEOUT_MS = 4000 // a desk that does not answer is said so; nothing waits on it for good
     const NOTE_MS = 12000 // how long the words about a press stay
     const MAX_DOTS = 12
@@ -111,10 +113,11 @@
         out.allUnis = [...allU].sort((a, b) => a - b)
         return out
     }
-    // The blackout of the halves that answer: "all" when every answering desk is dark.
+    // The blackout of each half from its last state read. A half that did not answer reads "not on", so it is never offered a
+    // lift. "all" only paints the top button: every answering desk is dark. A lift is decided per half, never from "all".
     const blackoutState = () => {
-        const lights = Boolean(S.light && S.light.blackout)
-        const laser = Boolean(S.desk && S.desk.blackout)
+        const lights = Boolean(S.light && S.light.blackout === true)
+        const laser = Boolean(S.desk && S.desk.blackout === true)
         const all = Boolean((S.light || S.desk) && (!S.light || lights) && (!S.desk || laser))
         return { lights, laser, all, any: lights || laser }
     }
@@ -222,33 +225,78 @@
         setClass($('nowLaser'), `pill nowlaser${armed ? (sim ? ' is-sim' : ' is-armed') : ''}`)
         const bo = blackoutState()
         const btn = $('blackoutAll')
-        const sub = bo.all ? '' : bo.lights ? 'The lights blackout is on' : bo.laser ? 'The laser blackout is on' : ''
-        const label = bo.all ? 'Lift blackout' : 'Blackout all'
-        if (btn.dataset.label !== label + sub) {
-            btn.dataset.label = label + sub
-            btn.replaceChildren(document.createTextNode(label), ...(sub ? [el('span', { class: 'sub', text: sub })] : []))
+        // The button only ever says "Blackout all": it has no lift. Its sub-line says what is dark and where the lifts are.
+        const sub = bo.lights && bo.laser ? 'On · lift it under Lights or Laser' : bo.lights ? 'The lights blackout is on' : bo.laser ? 'The laser blackout is on' : ''
+        if (btn.dataset.label !== sub) {
+            btn.dataset.label = sub
+            btn.replaceChildren(document.createTextNode('Blackout all'), ...(sub ? [el('span', { class: 'sub', text: sub })] : []))
         }
         btn.classList.toggle('is-on', bo.all)
         btn.setAttribute('aria-pressed', bo.all ? 'true' : 'false')
+        for (const half of ['lights', 'laser']) {
+            const b = $(LIFT[half].button)
+            const on = half === 'lights' ? bo.lights : bo.laser
+            const answered = Boolean(half === 'lights' ? S.light : S.desk)
+            b.disabled = !on || liftBusy[half]
+            b.classList.toggle('is-on', on)
+            const title = !answered ? `${LIFT[half].Desk} did not answer, so its blackout is not lifted from here.`
+                : on ? `Lift the ${half} blackout (${LIFT[half].desk}'s own Blackout off). Shift+B lifts each one that is on.` : `The ${half} blackout is off.`
+            if (b.title !== title) b.title = title
+        }
     }
-    let boBusy = false
-    let boAt = 0
+    // Blackout all only ever goes dark: both desks' own Blackout on, at once, on every press. No number of presses sends a
+    // lift (the laser desk's own rule, desk.js: its Blackout only turns on, review 1218 M1), and a panic retry is never
+    // dropped. A lift sent just before may land after this press, so once it has landed the dark goes again: B always wins.
+    const lifting = new Set()
     const pressBlackout = async () => {
-        const t = Date.now()
-        if (boBusy || t - boAt < BLACKOUT_GAP_MS) return
-        boBusy = true
-        boAt = t
-        const want = !blackoutState().all
+        const before = [...lifting]
         // Both routes, always, at once: a stop is never skipped because a poll was late or a desk looked absent.
-        const [lights, laser] = await Promise.all([post(LIGHT + 'master', { blackout: want }), post(DESK + 'blackout', { on: want })])
-        boBusy = false
+        const dark = () => Promise.all([post(LIGHT + 'master', { blackout: true }), post(DESK + 'blackout', { on: true })])
+        let [lights, laser] = await dark()
+        if (before.length) {
+            await Promise.allSettled(before)
+            ;[lights, laser] = await dark()
+        }
         const bad = [lights.ok ? '' : `the lighting desk: ${lights.error}`, laser.ok ? '' : `the laser desk: ${laser.error}`].filter(Boolean)
         await tick()
-        if (want) say(bad.length ? `Blackout did not reach ${bad.join('; ')}.` : 'Blackout: lights and laser are dark.', bad.length ? 'error' : 'ok')
-        else {
-            const off = cubeIds().length && !cubesArmed().length ? ' The cubes stay Off until you press On.' : ''
-            say(bad.length ? `Blackout was not lifted on ${bad.join('; ')}.` : `Blackout lifted on lights and laser.${off}`, bad.length ? 'error' : 'ok')
+        say(bad.length ? `Blackout did not reach ${bad.join('; ')}.` : 'Blackout: lights and laser are dark. Lift each under Lights or Laser.', bad.length ? 'error' : 'ok')
+    }
+    // Lifting is per half, each with its desk's own route and body: the lighting desk's master {blackout:false} (its own
+    // Blackout button), the laser desk's blackout {on:false} (its Shift+B). A half is lifted only when it answered its last
+    // state read AND reports its blackout on; a half that did not answer is never lifted. A second lift of the same half
+    // inside BLACKOUT_GAP_MS is ignored, so a double-click lifts once.
+    const LIFT = {
+        lights: { button: 'liftLights', desk: 'the lighting desk', Desk: 'The lighting desk', send: () => post(LIGHT + 'master', { blackout: false }) },
+        laser: { button: 'liftLaser', desk: 'the laser desk', Desk: 'The laser desk', send: () => post(DESK + 'blackout', { on: false }) }
+    }
+    const liftAt = { lights: 0, laser: 0 }
+    const liftBusy = { lights: false, laser: false }
+    const liftable = (half) => (half === 'lights' ? blackoutState().lights : blackoutState().laser)
+    const pressLift = async (halves) => {
+        const on = halves.filter(liftable)
+        if (!on.length) {
+            say(halves.length > 1 ? 'Nothing to lift: no desk that answered has its blackout on.' : `Nothing lifted: the ${halves[0]} blackout is not on, or its desk did not answer.`, 'ok')
+            return
         }
+        const t = Date.now()
+        const go = on.filter((half) => !liftBusy[half] && t - liftAt[half] >= BLACKOUT_GAP_MS)
+        if (!go.length) return
+        const sent = go.map((half) => {
+            liftBusy[half] = true
+            liftAt[half] = t
+            const p = LIFT[half].send()
+            lifting.add(p)
+            return p.finally(() => { lifting.delete(p); liftBusy[half] = false })
+        })
+        renderTop()
+        const replies = await Promise.all(sent)
+        await tick()
+        const bad = go.map((half, i) => (replies[i].ok ? '' : `${LIFT[half].desk}: ${replies[i].error}`)).filter(Boolean)
+        const done = go.filter((half, i) => replies[i].ok)
+        const armed = cubesArmed().length
+        const laserWords = !done.includes('laser') ? '' : armed ? ` The laser draws again: ${armed} cube${armed > 1 ? 's are' : ' is'} On.` : cubeIds().length ? ' The cubes stay Off until you press On.' : ''
+        const words = done.length ? `Blackout lifted on the ${done.join(' and the ')}.${laserWords}` : ''
+        say(bad.length ? `${words}${words ? ' ' : ''}Blackout was not lifted on ${bad.join('; ')}.` : words, bad.length ? 'error' : 'ok')
     }
 
     // ---- scenes: the lighting desk's scenes in its order; a press is the laser desk's Scenes row press (../laser/sceneRow.js)
@@ -546,6 +594,20 @@
 
     // ---- the fixed controls
     $('blackoutAll').addEventListener('click', pressBlackout)
+    $('liftLights').addEventListener('click', () => pressLift(['lights']))
+    $('liftLaser').addEventListener('click', () => pressLift(['laser']))
+    // The panic key, as on the laser desk (desk.js): B is Blackout all, dark only, both desks; Shift+B lifts each desk that
+    // answered and is dark (the same rules as the Lift buttons). A text field keeps its keys (a slider or a checkbox does
+    // not); a held key does not repeat; the gap guards the lift only, so a B retry always goes dark.
+    const typing = (n) => Boolean(n && typeof n.closest === 'function' && n.closest('textarea, select, input:not([type=range]):not([type=checkbox]):not([type=color])'))
+    document.addEventListener('keydown', (e) => {
+        const key = typeof e.key === 'string' && e.key.length === 1 ? e.key.toLowerCase() : e.key
+        if (key !== 'b' || e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return
+        e.preventDefault()
+        if (e.repeat) return
+        if (e.shiftKey) pressLift(['lights', 'laser'])
+        else pressBlackout()
+    })
     $('releaseHolds').addEventListener('click', () => pressRelease(false))
     $('releaseAllHolds').addEventListener('click', () => pressRelease(true))
     bindFader($('lightMaster'), 'light-master', (v) => post(LIGHT + 'master', { master: v }), (v) => setText($('lightMasterVal'), pct(v, 255)))

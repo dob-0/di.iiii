@@ -16,7 +16,7 @@ const UI = path.join(here, 'ui')
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const clone = (v) => JSON.parse(JSON.stringify(v))
 
-let light, desk, engine, table, posts, gets, mode
+let light, desk, engine, table, posts, gets, mode, gate
 const fresh = () => {
     light = {
         master: 255, blackout: false, activeScene: 'warm',
@@ -40,7 +40,8 @@ const fresh = () => {
     table = { warm: { look: 'ring', name: 'Ring' }, blue: { look: 'wave', name: 'Wave' } }
     posts = []
     gets = []
-    mode = { light: 'ok', laser: 'ok' }
+    mode = { light: 'ok', laser: 'ok' } // 'down': nothing answers; 'reads-down': its state reads fail, its routes still take a POST
+    gate = null // when set, a lift POST waits for it before the fake desk applies it (a lift still in flight)
 }
 fresh()
 
@@ -51,7 +52,8 @@ const fakeFetch = async (url, opts = {}) => {
     if (isPost) posts.push({ url, body })
     else gets.push(url)
     const side = url.startsWith('../light/') ? 'light' : 'laser'
-    if (mode[side] === 'down') throw new TypeError('fetch failed')
+    if (mode[side] === 'down' || (mode[side] === 'reads-down' && !isPost)) throw new TypeError('fetch failed')
+    if (gate && isPost && (body.blackout === false || body.on === false)) await gate
     if (mode[side] === '404') return reply({}, 404)
     if (!isPost) {
         if (url === '../light/api/state') return reply(light)
@@ -93,6 +95,11 @@ const $ = (id) => document.getElementById(id)
 const refresh = () => window.DiShowDesk.refresh()
 const settle = () => sleep(120) // a press's posts, its tick and a fader's 50 ms send
 const press = async (node) => { node.click(); await settle() }
+const key = (k, init = {}, target = document) => target.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...init }))
+const DARK = [{ url: '../light/api/master', body: { blackout: true } }, { url: '../laser/desk/api/blackout', body: { on: true } }]
+const LIFT_LIGHTS = { url: '../light/api/master', body: { blackout: false } }
+const LIFT_LASER = { url: '../laser/desk/api/blackout', body: { on: false } }
+const lifts = () => posts.filter((p) => p.body.blackout === false || p.body.on === false)
 const slide = async (input, value) => {
     input.value = String(value)
     input.dispatchEvent(new Event('input'))
@@ -180,24 +187,120 @@ describe('the presses post exactly the desks\' own routes', () => {
         await press(sceneBtn('dark'))
         expect(posts).toEqual([{ url: '../light/api/scenes/recall', body: { id: 'dark' } }])
     })
-    it('Blackout all: both blackouts on in one press; the second press lifts both; a double-click sets and never lifts', async () => {
-        $('blackoutAll').click()
-        $('blackoutAll').click() // inside the gap: ignored
+    it('Blackout all only ever goes dark: any number of presses, fast or slow, before and after the desks say dark, by button or B', async () => {
+        for (let i = 0; i < 6; i += 1) {
+            $('blackoutAll').click()
+            await (i % 2 ? sleep(650) : settle()) // inside and past the old 600 ms gap, with the polls saying both are dark
+        }
+        for (let i = 0; i < 4; i += 1) key('b')
         await settle()
-        expect(posts).toEqual([
-            { url: '../light/api/master', body: { blackout: true } },
-            { url: '../laser/desk/api/blackout', body: { on: true } }
-        ])
-        expect($('blackoutAll').textContent).toContain('Lift blackout')
+        expect(posts).toHaveLength(20) // every press sends both: a panic retry is never dropped
+        for (let i = 0; i < posts.length; i += 2) expect(posts.slice(i, i + 2)).toEqual(DARK)
+        expect(JSON.stringify(posts)).not.toMatch(/"blackout":false|"on":false/)
+        expect(posts.some((p) => p.url.endsWith('/arm'))).toBe(false)
+        expect($('blackoutAll').textContent).toMatch(/^Blackout all/)
+        expect($('blackoutAll').textContent).toContain('lift it under Lights or Laser')
+        expect(light.blackout && desk.blackout).toBe(true)
+    })
+    it('each desk is lifted on its own, only when it answered and its blackout is on, with that desk\'s own route', async () => {
+        expect([$('liftLights').disabled, $('liftLaser').disabled]).toEqual([true, true]) // at rest nothing is dark
+        light.blackout = true
+        await refresh()
+        expect([$('liftLights').disabled, $('liftLaser').disabled]).toEqual([false, true])
+        await press($('liftLaser')) // disabled: the laser blackout is off
+        await press($('liftLights'))
+        expect(posts).toEqual([LIFT_LIGHTS])
+        expect($('status').textContent).toBe('Blackout lifted on the lights.')
         posts = []
-        await sleep(650)
-        await press($('blackoutAll'))
-        expect(posts).toEqual([
-            { url: '../light/api/master', body: { blackout: false } },
-            { url: '../laser/desk/api/blackout', body: { on: false } }
-        ])
+        desk.blackout = true
+        await refresh()
+        expect([$('liftLights').disabled, $('liftLaser').disabled]).toEqual([true, false])
+        await press($('liftLaser'))
+        expect(posts).toEqual([LIFT_LASER])
         expect(posts.some((p) => p.url.endsWith('/arm'))).toBe(false) // lifting never turns a cube On
         expect($('status').textContent).toContain('The cubes stay Off until you press On.')
+    })
+    it('a lift of the same desk inside 600 ms is ignored: a double-click lifts once', async () => {
+        light.blackout = true
+        await refresh()
+        $('liftLights').click()
+        $('liftLights').click()
+        await settle()
+        light.blackout = true // dark again from outside, then a third press still inside the gap
+        await refresh()
+        await press($('liftLights'))
+        expect(posts).toEqual([LIFT_LIGHTS])
+        await sleep(650)
+        await press($('liftLights'))
+        expect(posts).toEqual([LIFT_LIGHTS, LIFT_LIGHTS])
+    })
+    it('a desk whose state read failed is never lifted, by its button or by Shift+B, even if it is dark', async () => {
+        light.blackout = true
+        desk.blackout = true
+        mode.laser = 'reads-down' // the laser desk's state read fails; its routes would still take a POST
+        await refresh()
+        expect([$('liftLights').disabled, $('liftLaser').disabled]).toEqual([false, true])
+        $('liftLaser').disabled = false // even if the button were enabled, the press reads the last state again
+        await press($('liftLaser'))
+        key('B', { shiftKey: true })
+        await settle()
+        expect(posts).toEqual([LIFT_LIGHTS])
+        posts = []
+        mode.laser = 'ok'
+        mode.light = 'reads-down'
+        light.blackout = true
+        await refresh()
+        expect([$('liftLights').disabled, $('liftLaser').disabled]).toEqual([true, false])
+        $('liftLights').disabled = false
+        await press($('liftLights'))
+        key('B', { shiftKey: true })
+        await settle()
+        expect(posts).toEqual([LIFT_LASER])
+        expect(light.blackout).toBe(true) // the desk that did not answer stays dark
+    })
+    it('the panic key: B is Blackout all, dark only; Shift+B lifts each dark desk once; a text field keeps B; a held key does not repeat', async () => {
+        key('b')
+        await settle()
+        expect(posts).toEqual(DARK)
+        posts = []
+        key('b', { repeat: true })
+        key('B', { shiftKey: true, repeat: true })
+        const field = document.createElement('input')
+        field.type = 'text'
+        document.body.append(field)
+        try {
+            key('b', {}, field)
+            key('B', { shiftKey: true }, field)
+            await settle()
+        } finally { field.remove() }
+        expect(posts).toEqual([])
+        key('B', { shiftKey: true })
+        key('B', { shiftKey: true }) // inside the gap: ignored
+        await settle()
+        expect(posts).toEqual([LIFT_LIGHTS, LIFT_LASER])
+        expect($('status').textContent).toContain('Blackout lifted on the lights and the laser.')
+        posts = []
+        key('B', { shiftKey: true })
+        await settle()
+        expect(posts).toEqual([]) // nothing is dark: nothing to lift
+        expect($('status').textContent).toContain('Nothing to lift')
+    })
+    it('B while a lift is still in flight: once the lift has landed the dark goes again, so the panic press wins', async () => {
+        light.blackout = true
+        desk.blackout = true
+        await refresh()
+        let open
+        gate = new Promise((resolve) => { open = resolve })
+        key('B', { shiftKey: true }) // both lifts wait at the gate
+        await sleep(10)
+        key('b')
+        await sleep(10)
+        open()
+        gate = null
+        await settle()
+        expect(lifts()).toEqual([LIFT_LIGHTS, LIFT_LASER])
+        expect(posts.slice(-2)).toEqual(DARK)
+        expect(light.blackout && desk.blackout).toBe(true)
     })
     it('Blackout all still sends both when the laser desk does not answer, and says which one it did not reach', async () => {
         mode.laser = 'down'
@@ -321,6 +424,24 @@ describe('one screen, 1278 x 758, no page scroll', () => {
         expect(rule('.blackoutall')).toMatch(/flex:\s*none;\s*width:\s*\d+px/)
         const bar = $('blackoutAll').parentElement
         expect(bar.lastElementChild).toBe($('blackoutAll'))
+    })
+    it('the faders are square, like the lighting desk\'s: no native look, both thumbs and tracks radius 0, tokens only', () => {
+        const flat = css.replace(/\/\*[\s\S]*?\*\//g, '')
+        const block = (pseudo) => (flat.match(new RegExp(`body\\.showdesk input\\[type=range\\]${pseudo}\\s*\\{([^}]*)\\}`)) || [])[1] || ''
+        expect(block('')).toMatch(/-webkit-appearance:\s*none;\s*appearance:\s*none/)
+        for (const thumb of ['::-webkit-slider-thumb', '::-moz-range-thumb']) {
+            expect(block(thumb)).toMatch(/border-radius:\s*0;/)
+            expect(block(thumb)).toMatch(/width:\s*22px;\s*height:\s*var\(--target\)/)
+            expect(block(thumb)).toMatch(/background:\s*var\(--text\)/)
+        }
+        for (const track of ['::-webkit-slider-runnable-track', '::-moz-range-track']) expect(block(track)).toMatch(/height:\s*6px;\s*background:\s*var\(--field\);\s*border:\s*1px solid var\(--line\);\s*border-radius:\s*0;/)
+        expect(block('::-webkit-slider-thumb')).toMatch(/margin-top:\s*calc\(\(6px - var\(--target\)\) \/ 2\)/) // centred on the track
+        expect(flat).not.toMatch(/accent-color/)
+    })
+    it('the lifts sit at the head of their own half, never in the top line beside Blackout all', () => {
+        expect($('liftLights').closest('#lightsHalf')).not.toBeNull()
+        expect($('liftLaser').closest('#laserHalf')).not.toBeNull()
+        expect($('blackoutAll').parentElement.querySelector('.liftbtn')).toBeNull()
     })
     it('brings no colour of its own: every colour it names is one the laser desk already uses', () => {
         const deskCss = fs.readFileSync(path.join(here, '../laser/ui/desk.css'), 'utf8')

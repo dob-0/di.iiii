@@ -15,14 +15,16 @@
 <!-- The show desk (serverXR/src/showDesk, 2026-10-31): the lighting desk and the laser desk on one page, for the person who
      runs the show. It has no route of its own: every press is one of the two desks' own routes (../light/api/…,
      ../laser/…), sent from this same origin, so their guards apply exactly as on their own pages. Nothing here posts
-     without a press; On is always a person's press on one cube; a guard's stop is shown, never lifted. -->
+     without a press; On is always a person's press on one cube; a guard's stop is shown, never lifted. Blackout all (and B)
+     only ever goes dark; each desk's blackout is lifted on its own, under Lights or Laser (or Shift+B), and only when that
+     desk answered and says it is dark. -->
 <header class="topbar showbar">
   <a class="homelink" href="/spaces" title="Back to di.iiii — your spaces">di.iiii</a>
   <h1 class="title">Show desk</h1>
   <p class="onnow" id="onNow" aria-live="polite">
     <span class="nowlabel">lights</span><span class="nowpart" id="nowScene" title="The scene on the lights">…</span><span class="sep">·</span><span class="nowlabel">laser</span><span class="nowpart" id="nowLook" title="The look on the laser">…</span><span class="sep">·</span><b class="pill nowlaser" id="nowLaser" title="Whether any cube is On">Laser Off</b>
   </p>
-  <button id="blackoutAll" class="danger topbo blackoutall" type="button" title="Lights and laser dark in one press (each desk's own Blackout). Press again to lift both. A second press within a moment is ignored.">Blackout all</button>
+  <button id="blackoutAll" class="danger topbo blackoutall" type="button" title="Lights and laser dark in one press (each desk's own Blackout). It only ever goes dark: pressing again keeps them dark. Lift each under Lights or Laser. Key: B.">Blackout all</button>
 </header>
 
 <p class="status" id="status" role="status"></p>
@@ -36,6 +38,7 @@
   <section class="pane half" id="lightsHalf" aria-label="Lights">
     <div class="panehead halfhead">
       <h2>Lights</h2>
+      <button id="liftLights" class="liftbtn" type="button" aria-label="Lift the lights blackout" title="The lights blackout is off." disabled>Lift blackout</button>
       <label class="fader master" title="The lighting desk's master: every lamp">
         <span>Master</span><input id="lightMaster" type="range" min="0" max="255" step="1" value="255"><b id="lightMasterVal"></b>
       </label>
@@ -49,6 +52,7 @@
   <section class="pane half" id="laserHalf" aria-label="Laser">
     <div class="panehead halfhead">
       <h2>Laser</h2>
+      <button id="liftLaser" class="liftbtn" type="button" aria-label="Lift the laser blackout" title="The laser blackout is off." disabled>Lift blackout</button>
       <label class="fader master" title="The laser desk's master: every cube">
         <span>Master</span><input id="laserMaster" type="range" min="0" max="1" step="0.01" value="1"><b id="laserMasterVal"></b>
       </label>
