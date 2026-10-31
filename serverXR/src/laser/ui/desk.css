@@ -95,6 +95,17 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .pane { background: var(--pane); border: 1px solid var(--line); min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .panehead { display: flex; align-items: baseline; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .panehead .muted { font-size: 12px; }
+/* A link can propose removals (?remove=..., 2026-10-31): a flat, square question at the top of Looks, amber-edged because it asks before it acts. */
+.removeask { flex: none; margin: 8px 10px 6px; padding: 10px 12px; background: var(--pane2); border: 1px solid var(--warn); border-left-width: 4px; }
+.removeask h2 { margin: 0 0 6px; font-size: 15px; font-weight: 600; }
+.removelist { list-style: none; margin: 0 0 8px; padding: 0; columns: 2 200px; column-gap: 16px; max-height: 30vh; overflow: auto; }
+.removelist li { break-inside: avoid; padding: 2px 0; overflow-wrap: anywhere; }
+.removelist .tag { margin-left: 6px; font-size: 12px; color: var(--muted); }
+.removelist .is-live .tag { color: var(--warn); }
+.removenote { margin: 0 0 8px; color: var(--muted); }
+.removenote:empty { display: none; }
+.removebtns { display: flex; gap: 8px; flex-wrap: wrap; }
+.removebtns button { min-height: 36px; padding: 6px 14px; }
 
 #page-control {
   display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr);
