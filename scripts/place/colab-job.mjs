@@ -38,7 +38,9 @@ import { PLACE_DIR, parseArgs, num, say, warn, die, ensureDir, writeJson, run, f
 
 const args = parseArgs()
 
-const COLAB = process.env.PLACE_COLAB || 'colab'
+// The CLI at a pinned version (colab-pinned.sh says why: 0.6.0 drops every
+// session at one hour). PLACE_COLAB still overrides it.
+const COLAB = process.env.PLACE_COLAB || path.join(PLACE_DIR, 'colab-pinned.sh')
 const SIGN_IN_LINE = 'colab sessions        # then follow the link it prints and paste the code'
 
 // `colab sessions` is read-only. Signed out, it prints an accounts.google.com
