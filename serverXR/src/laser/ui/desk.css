@@ -71,6 +71,8 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .pill.is-armed { border-color: var(--danger); color: #ffd9d5; background: #2a1210; }
 .pill.is-sim { color: var(--muted); }
 .pill.is-warn { border-color: var(--warn); color: var(--warn); }
+/* The dark-rule note in the Looks head (N1585): a sentence, so it wraps on a phone instead of widening the page. */
+#cubeNote { white-space: normal; max-width: 100%; }
 .bpm, .master { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
 .bpm input { width: 64px; background: var(--field); border: 1px solid var(--line); padding: 5px 6px; font-family: var(--mono); }
 .master input { width: 110px; }

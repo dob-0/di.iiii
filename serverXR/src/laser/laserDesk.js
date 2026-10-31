@@ -359,7 +359,11 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
                 if (flat.points.length) { points = flat.points; end = flat.end }
             }
             const key = hashPoints(points)
-            const res = key === was.key && !was.held ? engine.alive(cube.id, OUT) : engine.setFrame(cube.id, points, OUT, { go: was.seq !== goSeq })
+            // A keep-alive only while the engine still holds the desk's picture. One it no longer has (a Blackout from
+            // another page cleared it while the desk's picture was dark, so the key did not change) is posted again,
+            // never counted as sent: else the cube had no frame and the dark rule switched it off (N1585).
+            const alive = key === was.key && !was.held ? engine.alive(cube.id, OUT) : null
+            const res = alive && !(alive.ok && alive.kept === false) ? alive : engine.setFrame(cube.id, points, OUT, { go: was.seq !== goSeq })
             const count = { lit: points.filter(isLit).length, blanked: zoneCut, offField: stats.off, source: stats.lit }
             sent.set(cube.id, res.ok
                 ? { key, end, held: null, points: points.length, at: t, seq: goSeq, ...count }
