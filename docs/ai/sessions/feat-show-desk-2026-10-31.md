@@ -12,8 +12,13 @@ says so in plain words. No production name in code, defaults or test expectation
 ## Routes (only the two desks' own; same origin, so their guards apply)
 
 - Scene: `POST ../light/api/scenes/recall {id}` then `POST ../laser/desk/api/go {look}` (laser/ui/sceneRow.js pressScene)
-- Blackout all: `POST ../light/api/master {blackout}` + `POST ../laser/desk/api/blackout {on}` at once, always both;
-  the second press lifts both; a press inside 600 ms is ignored; lifting never arms
+- Blackout all and the B key: `POST ../light/api/master {blackout:true}` + `POST ../laser/desk/api/blackout {on:true}` at
+  once, always both, on every press; never a lift (fix 1 below). A press while a lift is in flight goes dark again once
+  that lift has landed, so B always wins.
+- Lift blackout, one per desk at the head of its half (fix 2): lights `POST ../light/api/master {blackout:false}` (the
+  lighting desk's own Blackout off), laser `POST ../laser/desk/api/blackout {on:false}` (the laser desk's Shift+B,
+  desk.js:922). Shift+B lifts each one. Only a desk that answered its last state read AND reports its blackout on;
+  600 ms gap per desk; lifting never arms.
 - Lamp fader: `POST ../light/api/fixture {id, values:{dimmer}, on:true}` (the lighting desk's setRole), 50 ms throttle
 - Light master: `POST ../light/api/master {master}` · Release holds: `POST ../light/api/raw {clear, universe}`;
   Release all holds (shown only when a script holds channels): `{clear, all:true, universe}`
@@ -47,3 +52,46 @@ A bash heredoc overwrote the tracked `serverXR/src/routes/showRoutes.js` (the sp
 HEAD in the next call, no loss. Lesson: new files through the Write tool (it refuses an unread file) or
 `git ls-files --error-unmatch <path>` first. A scratch serverXR's lighting desk broadcasts Art-Net once built unless its
 show.json says output.enabled false: owed, a scratch default (ARTNET_OFFLINE=1 in di-dev --api scratch).
+
+## Fixes after the 3-lens review (same day, 18:2x-18:5x; branch head was 3fcf3d3df)
+
+The review (safety-routes, design-words, operator-look) said "not to install" until four things were fixed. Built exactly:
+
+1. **Blackout all is one-way** (show.js pressBlackout). It only ever sends the two dark POSTs, on every press, so a panic
+   re-press after 0.6 s can no longer lift both. Why: the old toggle relit the lamps on a re-press, and with the laser
+   desk's "Blackout keeps the arm" ticked the review measured 19406 lit points in the next second from the lift alone.
+   The laser desk's own Blackout is one-way for the same reason (desk.js:171-173, review 1218 M1). Dark is never gapped:
+   a panic retry is never dropped (the laser desk's review D4).
+2. **Lifting is separate and per desk** (index.html #liftLights / #liftLaser, show.js pressLift). Each sits at the head
+   of its own half, far from Blackout all (measured: lifts at x 81 and x 711, y 283; Blackout all at x 1048, y 8). A lift
+   is enabled and sent only for a desk that answered its last state read and reports its blackout on, so a desk whose
+   read failed is never lifted (the old press lifted both even when one had not answered). Each uses its desk's own
+   route and body; 600 ms gap per desk.
+3. **The panic key** (show.js keydown): B = Blackout all, dark only; Shift+B = lift each desk that answered and is dark.
+   A text field keeps B (the laser desk's `typing` rule, desk.js:885); `e.repeat` is ignored; the gap guards the lift only.
+4. **Square faders** (show.css): the lighting desk's slider rule in tokens: no native look, track 6 px `--field` with a
+   1 px `--line` border, thumb 22 px x `--target`, radius 0, `--text`, the WebKit thumb centred on the track.
+
+Also: the wiki's Show desk paragraph described the old toggle; it now says the above (src/wiki/wikiContent.js).
+
+Tests: `showDesk.test.js` replaces the "second press lifts both" test with: any number of Blackout all / B presses
+never send `{blackout:false}` or `{on:false}` (20 POSTs, all dark); each desk lifts alone, only when it answered and is
+dark; a desk whose state read failed is never lifted (button or Shift+B, even with the button forced enabled); B, Shift+B,
+a text field, auto-repeat and the 600 ms lift gap; B during a lift in flight ends dark; both thumb rules say radius 0.
+`npx vitest run serverXR/src/showDesk serverXR/src/laser serverXR/src/httpContracts.test.js serverXR/src/catalogue`:
+24 files, 513 passed. `npx vitest run src/wiki`: 3 files, 27 passed. eslint on the changed files: 0 problems.
+
+Seen (agent screen lane 2, 1278x758 @2x, scratch serverXR at its own address, light output off, one cube with no
+address): at rest both lifts are disabled; after Blackout all both desks read dark by GET and both lifts are enabled;
+Lift on the lights lifted the lights only; B made both dark; Blackout all pressed again after 800 ms kept both dark;
+Shift+B lifted both. No page scroll, no target under 40 px, 0 console errors. Shots and numbers:
+~/work/agent-reports-2026-10-31/projector-room/show-fix/.
+
+Owed (should-fix from the review, not done here): stale status words for up to 12 s after an outside blackout change;
+On stays enabled on a Stopped cube; no busy flag on On, Off, the Release buttons and a scene re-press; one integration
+test with the real routers; the bare /show mount when no base path is set; the vocabulary row for "Show desk"; Light
+desk vs "the lighting desk" naming; no link into the Show desk; small 10-11 px text in the states that matter; Blackout
+all should be the loudest thing while a cube is On; the white "on" fill is harsh in the dark; the three links under 40 px;
+more cubes, lamps and scenes than fit; a known-fixes entry for the toggle. Seen on this run: the laser Master fader gets
+shorter while " · blackout on" shows beside the look name (the look name is not fixed width; it was so before too).
+

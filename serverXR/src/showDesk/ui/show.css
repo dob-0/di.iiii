@@ -19,7 +19,12 @@ body.showdesk {
   grid-template-rows: var(--top-h) var(--status-h) var(--scenes-h) minmax(var(--halves-min), 1fr) var(--links-h);
 }
 body.showdesk button { min-height: var(--target); font-size: 14px; }
-body.showdesk input[type=range] { height: var(--target); accent-color: var(--accent); margin: 0; cursor: pointer; }
+/* Faders: the lighting desk's square ones (lighting/ui/style.css, sliders), tokens only: no native round thumb or pill track */
+body.showdesk input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; height: var(--target); margin: 0; cursor: pointer; }
+body.showdesk input[type=range]::-webkit-slider-runnable-track { height: 6px; background: var(--field); border: 1px solid var(--line); border-radius: 0; }
+body.showdesk input[type=range]::-moz-range-track { height: 6px; background: var(--field); border: 1px solid var(--line); border-radius: 0; }
+body.showdesk input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: var(--target); margin-top: calc((6px - var(--target)) / 2); border: 0; border-radius: 0; background: var(--text); }
+body.showdesk input[type=range]::-moz-range-thumb { width: 22px; height: var(--target); border: 0; border-radius: 0; background: var(--text); }
 
 /* ---- the top line: the mark, the title, what is on, and Blackout all at the far right in a fixed place */
 .showbar { position: static; flex-wrap: nowrap; align-items: center; gap: 14px; min-height: 0; height: var(--top-h); padding-right: 10px; }
@@ -63,6 +68,10 @@ body.showdesk input[type=range] { height: var(--target); accent-color: var(--acc
 .halfhead .fader input { flex: 1 1 auto; min-width: 80px; width: auto; }
 .fader b { font: 500 13px var(--mono); color: var(--text); width: 40px; text-align: right; flex: none; }
 .holdbtn { flex: none; }
+/* Each desk's own Lift blackout, at the head of its half: far from Blackout all (top right), a fixed width so nothing
+   under the hand moves when a blackout comes and goes. The lights head may wrap when Release all holds shows too. */
+.liftbtn { flex: none; width: 128px; }
+#lightsHalf .halfhead { flex-wrap: wrap; }
 .lookname { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .halfnote { margin: 0; padding: 8px 10px; font-size: 13px; border-bottom: 1px solid var(--line); }
 
