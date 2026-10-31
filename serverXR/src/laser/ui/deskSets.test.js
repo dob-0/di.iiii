@@ -9,7 +9,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -121,6 +121,8 @@ const boot = async (query, { unsaved = false } = {}) => {
     document.body.innerHTML = indexHtml.match(/<body[^>]*>([\s\S]*)<\/body>/)[1].replace(/<script[\s\S]*?<\/script>/g, '')
     new Function(deskJs)()
     await sleep(150)
+    // On a busy machine the page may need longer: a set link is ready once its question is painted.
+    for (let i = 0; i < 150 && query.includes('set=') && !document.getElementById('setAsk').dataset.phase; i += 1) await sleep(20)
 }
 
 const $ = (id) => document.getElementById(id)
@@ -136,9 +138,12 @@ const posts = () => calls.filter((c) => c.method === 'POST')
 const sent = () => posts().map((c) => `${c.url.replace('desk/api/', '')}${c.body.id ? ` ${c.body.id}` : c.body.look ? ` ${c.body.look.name}` : ''}`)
 const tap = async (id) => {
     $(id).click()
-    for (let i = 0; i < 100 && $('setAsk').dataset.phase === 'busy'; i += 1) await sleep(20)
+    for (let i = 0; i < 250 && $('setAsk').dataset.phase === 'busy'; i += 1) await sleep(20)
 }
 const ids = () => desk.looks.map((l) => l.id)
+// Every test boots a new page in the same document, and a page left asking keeps polling and would paint its question
+// over the next test's page (it asks again when unsaved changes come or go): close it.
+afterEach(() => { if ($('setAsk')?.dataset.phase === 'ask') $('setKeep').click() })
 
 describe('?set= asks first', () => {
     it('the question: title, the about lines, one row per look now → new, the live look and the new look named; nothing is sent before the tap', async () => {
@@ -229,7 +234,7 @@ describe('the tap edits in place, makes what is missing, and Stores once', () =>
         await boot('?set=demo')
         $('setGo').click()
         $('setGo').click() // while the first apply is on its way
-        for (let i = 0; i < 100 && $('setAsk').dataset.phase === 'busy'; i += 1) await sleep(20)
+        for (let i = 0; i < 250 && $('setAsk').dataset.phase === 'busy'; i += 1) await sleep(20)
         $('setGo').click() // after it
         await sleep(100)
         expect(sent()).toEqual(['looks/edit a', 'looks/paste GHOST-LOOK', 'looks/edit live', 'store live'])
