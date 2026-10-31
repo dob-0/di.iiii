@@ -10,7 +10,14 @@
     const POLL_DESK_MS = 500
     const POLL_ENGINE_MS = 1000
     const VIEW_MS = 80
-    const SWATCHES = ['#ff2030', '#ffb020', '#ffffff', '#20d8ff', '#3050ff', '#8040ff', '#ff30c0', '#20ff60']
+    // The desk's colours (2026-10-31, the owner: "on colos add color paleete and have new colors there as well"): the hue
+    // wheel a laser draws well, full colours, then two whites. Green is here to pick; it is no seed look's colour.
+    const SWATCHES = [
+        ['#ff2030', 'Red'], ['#ff6a00', 'Orange'], ['#ffb020', 'Amber'], ['#ffe600', 'Yellow'], ['#a8ff00', 'Lime'],
+        ['#20ff60', 'Green'], ['#00ffb0', 'Mint'], ['#20d8ff', 'Cyan'], ['#0090ff', 'Sky'], ['#3050ff', 'Blue'],
+        ['#5a2dff', 'Indigo'], ['#8040ff', 'Violet'], ['#c000ff', 'Purple'], ['#ff30c0', 'Magenta'], ['#ff5080', 'Pink'],
+        ['#ffffff', 'White'], ['#ffd8a8', 'Warm white']
+    ]
     const OUT = 'desk'
 
     const $ = (id) => document.getElementById(id)
@@ -378,20 +385,49 @@
         const picked = editing() ? editing().shape.split(',') : []
         for (const chip of box.children) chip.classList.toggle('is-on', picked.includes(chip.dataset.shape))
     }
+    const pickColour = (c) => { edit({ colour: c, rainbow: false }); $('rainbow').checked = false; renderSwatches() }
     const renderSwatches = () => {
         const box = $('swatches')
         if (!box.children.length) {
-            const picker = el('input', { type: 'color', id: 'colourPicker', title: 'Any colour', 'aria-label': 'Any colour' })
-            picker.addEventListener('input', () => { edit({ colour: picker.value, rainbow: false }); $('rainbow').checked = false; renderSwatches() })
-            box.append(...SWATCHES.map((c) => el('button', {
-                class: 'swatch', 'data-colour': c, style: `background:${c}`, title: c, 'aria-label': `Colour ${c}`,
-                onclick: () => { edit({ colour: c, rainbow: false }); $('rainbow').checked = false; renderSwatches() }
+            const picker = el('input', { type: 'color', id: 'colourPicker', title: 'Any colour (+ under it keeps it in My colours)', 'aria-label': 'Any colour' })
+            picker.addEventListener('input', () => pickColour(picker.value))
+            box.append(...SWATCHES.map(([c, name]) => el('button', {
+                class: 'swatch', 'data-colour': c, style: `background:${c}`, title: name, 'aria-label': name,
+                onclick: () => pickColour(c)
             })), picker)
         }
         const live = editing()
         for (const b of box.querySelectorAll('.swatch')) b.classList.toggle('is-on', Boolean(live && !live.rainbow && live.colour === b.dataset.colour))
         const picker = $('colourPicker')
         if (live && document.activeElement !== picker) picker.value = live.colour
+        renderMyColours()
+    }
+    // My colours: kept by the desk (desk.json), so every page and the next show have them.
+    const savePalette = (colours) => {
+        desk.palette = colours
+        renderMyColours()
+        post('desk/api/palette', { colours })
+    }
+    const renderMyColours = () => {
+        const box = $('myColours')
+        const list = desk?.palette || []
+        if (box.dataset.key !== list.join(',')) {
+            box.dataset.key = list.join(',')
+            box.replaceChildren(
+                ...list.map((c) => el('span', { class: 'mine' },
+                    el('button', { class: 'swatch', 'data-colour': c, style: `background:${c}`, title: c, 'aria-label': `Colour ${c}`, onclick: () => pickColour(c) }),
+                    el('button', { class: 'del', text: '×', title: `Take ${c} out of My colours`, 'aria-label': `Take ${c} out of My colours`, onclick: () => savePalette(list.filter((x) => x !== c)) }))),
+                el('button', {
+                    class: 'addcolour', text: '+', title: 'Keep the colour of the look in Edit in My colours', 'aria-label': 'Keep this colour in My colours',
+                    onclick: () => {
+                        const c = editing()?.colour || $('colourPicker').value
+                        if (c && !list.includes(c)) savePalette([...list, c])
+                    }
+                }))
+            $('myColoursHint').hidden = list.length > 0
+        }
+        const live = editing()
+        for (const b of box.querySelectorAll('.swatch')) b.classList.toggle('is-on', Boolean(live && !live.rainbow && live.colour === b.dataset.colour))
     }
     const renderLookCubes = () => {
         const box = $('lookCubes')

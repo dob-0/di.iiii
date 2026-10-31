@@ -402,6 +402,20 @@ describe('undo, redo and paste (2026-10-30, the owner: "add delete ctl z ctrl v 
     })
 })
 
+describe('My colours (2026-10-31, the owner: "on colos add color paleete and have new colors there as well")', () => {
+    it('keeps the colours the page sends, each once, as #rrggbb, at most 24, and finds them after a restart', async () => {
+        const dir = tmp()
+        const { desk } = deskWith(fakeEngine(), { dir })
+        expect(desk.state().palette).toEqual([])
+        expect(desk.setPalette(['#FF8800', 'f80', '#123456', 'red', null, '#12345'])).toMatchObject({ ok: true, palette: ['#ff8800', '#123456'] })
+        expect(desk.setPalette('nope')).toMatchObject({ ok: false, status: 400 })
+        expect(desk.setPalette(Array.from({ length: 40 }, (_, i) => '#0000' + i.toString(16).padStart(2, '0'))).palette).toHaveLength(24)
+        desk.setPalette(['#ff8800', '#00ffb0'])
+        desk.close()
+        expect(deskWith(fakeEngine(), { dir }).desk.state().palette).toEqual(['#ff8800', '#00ffb0'])
+    })
+})
+
 describe('the bank on disk', () => {
     it('Store keeps the live look as a tile, and a restart finds the bank — released', () => {
         const dir = tmp()
