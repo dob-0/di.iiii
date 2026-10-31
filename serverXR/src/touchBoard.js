@@ -57,7 +57,8 @@ function createTouchBoard({ now = Date.now } = {}) {
     for (const [control, x] of touches) if (t - x.at > TOUCH_KEEP_MS || !clients.has(x.id)) touches.delete(control)
   }
   // The first slot, from the browser's own hash upward, that no other browser of the roster holds. With all six held the
-  // newcomer shares the slot of the browser unseen the longest (names still tell them apart).
+  // newcomer shares the slot whose most recently seen holder was seen the longest ago, so newcomers spread over browsers that
+  // have gone quiet instead of piling onto one (names still tell them apart).
   const slotFor = (id) => {
     const held = new Set([...clients.values()].map((c) => c.slot))
     const start = fnv1a(id) % SLOTS
@@ -65,9 +66,11 @@ function createTouchBoard({ now = Date.now } = {}) {
       const s = (start + k) % SLOTS
       if (!held.has(s)) return s
     }
-    let stalest = null
-    for (const c of clients.values()) if (!stalest || c.seenAt < stalest.seenAt) stalest = c
-    return stalest ? stalest.slot : start
+    const latest = new Map()
+    for (const c of clients.values()) latest.set(c.slot, Math.max(latest.get(c.slot) || 0, c.seenAt))
+    let best = start
+    for (let s = 0; s < SLOTS; s++) if (!latest.has(best) || (latest.has(s) && latest.get(s) < latest.get(best))) best = s
+    return best
   }
   const seen = (headers) => {
     const id = header(headers, 'x-di-client')

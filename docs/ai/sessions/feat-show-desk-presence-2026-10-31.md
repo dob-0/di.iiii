@@ -10,7 +10,7 @@ Design and evidence: `~/work/agent-reports-2026-10-31/projector-room/show-presen
   takes the colour of whoever touched last, and the ring fades from 1.5 s to 4 s after the last touch (`ringAlpha`, presence.js).
 - One colour per browser for the night: six tokens `--c0..--c5` in show.css (deep red, purple, amber, white, mint, magenta; the
   owner's four, then two of the laser desk's own swatches). The board gives each browser the first colour from its hash upward that
-  no other browser holds.
+  no other browser holds; with all six held, a newcomer shares the colour whose latest holder has been quiet the longest.
 - "ON" and one chip per browser in the top line (a 10 px square and the name; the one touched in the last 4 s has a 2 px outline). The
   name is set once per browser with the Name button in the bottom line (12 characters, Enter keeps it, Escape leaves it, kept in
   localStorage `diShowDesk.who.v1`); the default is Mac, phone or tab by the device. A repeated name is numbered (phone, phone 2).
@@ -35,7 +35,7 @@ U: `showDesk/ui/presence.js` (new, the rules), `show.js` (wiring), `index.html`,
 ## Tests
 
 - `npx vitest run serverXR/src/showDesk serverXR/src/laser serverXR/src/lighting serverXR/src/httpContracts.test.js`, exit 0 both times. Before (c19a83534, the same command, run in a detached worktree): `Test Files  36 passed (36)`, `Tests  664 passed (664)`. After: `Test Files  37 passed (37)`, `Tests  689 passed (689)` (+25: presence.test.js 16, showDesk.test.js 9; every existing test unchanged).
-- `npx vitest run serverXR/src/catalogue serverXR/src/routes/showDeskRoutes.test.js serverXR/src/touchBoard.test.js`: `Test Files  3 passed (3)`, `Tests  23 passed (23)` (the route's 10 with the observer and the index.js order test, the board's 10, and the catalogue's).
+- `npx vitest run serverXR/src/catalogue serverXR/src/routes/showDeskRoutes.test.js serverXR/src/touchBoard.test.js`: `Test Files  3 passed (3)`, `Tests  24 passed (24)` after the last fix (23 before it) (the route's 10 with the observer and the index.js order test, the board's 11, and the catalogue's).
 - `npx eslint` on every changed file: 0 errors; the 4 warnings in index.js are on lines this change did not touch (162, 276, 1093, 1979).
 - The words check `tools/lint-words.sh` is a di-atlas tool and this repo has no copy at c19a83534: not run on these files; the page says "who is on", "Name", "browser" (never client, room, user), by hand.
 

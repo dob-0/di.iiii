@@ -47,6 +47,17 @@ describe('who is on', () => {
         b.seen(hdr('a3'))
         expect(b.snapshot().clients.find((c) => c.id === 'a3').slot).toBe(slots[2])
     })
+    it('with all six held by browsers gone quiet, two newcomers get two different colours, not the same one', () => {
+        const now = clock()
+        const b = createTouchBoard({ now })
+        for (const id of ['q1', 'q2', 'q3', 'q4', 'q5', 'q6']) { b.seen(hdr(id)); now.tick(10) }
+        now.tick(60_000)
+        b.seen(hdr('new1'))
+        b.seen(hdr('new2'))
+        const slots = Object.fromEntries(b.snapshot().clients.map((c) => [c.id, c.slot]))
+        expect(slots.new1).not.toBe(slots.new2)
+        expect(slots.new1).toBe(slots.q1) // the one gone quiet the longest
+    })
     it('a browser starts at its own hash and walks up to the first free colour', () => {
         const b = createTouchBoard({ now: clock() })
         b.seen(hdr('first'))
