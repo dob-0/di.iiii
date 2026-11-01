@@ -50,3 +50,13 @@ A window-only control run of `mast3r` with a geometric check on each pair; HF to
 sizes measured from the frames, textures = rectified frame crops with no person in them. Method and limits:
 `scripts/place/model-hall/METHOD.md`. First use: Cinema House gallery A (plan, DIMENSIONS.md and renders in
 the place's `modelled/` folder). Look at `renders/compare_all.png` before showing anyone.
+
+## A whole floor of rooms by hand (2026-11-01) - the recipe when reconstruction fails
+Workflow: **survey -> rooms in parallel -> assemble -> judge.** One command for the last two steps:
+`scripts/place/model-hall/model_floor.sh <modelled_dir> [samples]` (REBUILD=1 to rebuild modules first). `<modelled_dir>` holds `floor.json`
+(rooms + openings in one frame), `floor_assembly.json` (modules, drops, clips, offsets, why), `floor_corrections.json` (decisions),
+`place_meta.json`, and `rooms/<id>/<id>.glb`. Output: `floor.glb/.blend`, `check_floor.log` (must end FLOOR_OK), `place.json`,
+`renders/floor_top.png` + `eye_<opening>.png`. Then on a test copy:
+`node scripts/place/import.mjs --work <folder with place.json + place.glb> --name <space> --project <space>-floor --no-sources --keep-front-door --api <scratch api>/serverXR`.
+Method, lessons (boolean + face winding, shared walls, stubs) and limits: `scripts/place/model-hall/METHOD.md`, section "The whole floor by hand".
+Never use the reconstruction meshes for this place. No person in any texture; nothing leaves the machine.

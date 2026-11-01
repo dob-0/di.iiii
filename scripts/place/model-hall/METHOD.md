@@ -48,3 +48,31 @@ and a clean, believable copy is still needed. Written before the first build (20
 - Equipment is proxies (boxes, reels, tripods) placed where the frames show them, not scanned objects.
 - Light in the renders is for checking only; the GLB carries no lights.
 - Requires Blender 4.2+ (tested 5.2.3 LTS), python3 with numpy and Pillow, ImageMagick 7. No OpenCV.
+
+## The whole floor by hand (2026-11-01, Cinema House; ledger N1756)
+Several rooms are one place: the same method, run once per room in a shared frame, then assembled and checked as one.
+Workflow shape (what worked, ~1 h wall clock):
+1. **Survey.** Cut the walk into rooms by time and write `floor.json`: each room's footprint, ceiling, every opening (centre, axis, width,
+   height) in ONE frame, each number marked MEASURED / ESTIMATED / ASSUMED. It is the contract the modellers build to.
+2. **Rooms in parallel.** One agent per room, same METHOD as above, output `rooms/<id>/<id>.glb` in the floor frame + DIMENSIONS.md +
+   `floor_corrections.json` (a proposal never edits `floor.json`). A room builds the walls it shares with its neighbours, with the opening.
+3. **Assemble.** `model_floor.sh <modelled_dir> [samples]` (REBUILD=1 runs each module's own `build` command first):
+   `assemble_floor.py` imports every module named in `floor_assembly.json`, moves/drops/clips (the manifest says why, per module: a shared
+   wall built twice is dropped from one side, a floor that runs into a neighbour's is clipped), writes `floor.glb/.blend`;
+   `check_floor.py` is the gate (below); `write_place.py` writes `place.json` (spawn and look from `place_meta.json`); `render_floor.py` writes
+   `renders/floor_top.png` and `eye_<opening>.png` through every connection (lights for checking only). Decide each proposed correction in
+   `floor_corrections.json` with its reason (ADOPTED / KEPT (OPEN)); an adopted one moves the module in the manifest.
+4. **Judge.** Look at `floor_top.png` and every `eye_*.png`; then the viewer on the test copy (agent screen). A check that cannot fail is not a check.
+`check_floor.py` (headless Blender, ray casts on the re-imported GLB): modules present; nothing below the floor (a stair going down is
+exempted by name in the manifest); no two floors of different modules overlap in plan; no wall/wall overlap between modules; per opening
+9 horizontal rays (3 lateral x 3 heights) through the plane must be free and 25 downward rays along the walk line must hit a floor at
+z -0.02..0.12 (no hole, no step); from 5 points per room, 36 rays + up must hit something (sealed). First run found the real defects below.
+Lessons (each was a real failure on the Cinema House floor):
+- **`bmesh` boxes with mixed face winding make Blender's EXACT boolean leave the cut closed** in the exported GLB, while the Cycles
+  render looked fine: the main hall's 3.6 m opening to gallery A and the sills of two arches were filled. Call
+  `bmesh.ops.recalc_face_normals` before `to_mesh` in every box/primitive helper that is later used in a boolean; test openings by ray, not by eye.
+- Two modules that both build the shared wall double the slab (z-fighting) and overlap their floors: one side drops it, the other is clipped.
+- A module's own closed "stub" behind an arch (a pocket to look into) must be dropped once the real neighbour exists.
+- A prop 2 m in front of an arch hides the connection from the straight-on eye view: `floor_corrections.json` may give an `eye` position.
+Limits (stated): rooms beyond the main hall sit in a walking-time layout, +-30 %; only gallery A's width and glass height are MEASURED (ratio to a
+door); `place.json` has no walkable-floor / collision data, so the viewer lets you walk through walls (owed: write the floor plan from the floor slabs).

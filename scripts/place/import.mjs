@@ -238,7 +238,7 @@ export const arrivalShot = (place) => {
     return {
         projection: 'perspective',
         position: [spawn.x, eye, spawn.z],
-        target: [0, eye, 0],
+        target: spawn.look ? [spawn.look.x, eye, spawn.look.z] : [0, eye, 0],   // spawn.look: where to face (a floor entered at one end)
         fov: 60,
         zoom: 1,
         near: 0.05,
