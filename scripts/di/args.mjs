@@ -24,7 +24,9 @@ export const parseArgs = (argv) => {
         if (name === 'to') { args.flags.to = argv[++i]; continue }
         // `di post draft --text … --link … --media a.png,b.png --to telegram,bluesky`
         if (name === 'text' || name === 'link' || name === 'media') { args.flags[name] = argv[++i]; continue }
-        if (name === 'token') { args.flags.token = argv[++i]; continue }
+        // The secret must never sit in argv: `--token=VALUE` and a trailing `--token`
+        // both become a non-'-' value, which `di open` refuses. Only `--token -` passes.
+        if (name === 'token' || name.startsWith('token=')) { args.flags.token = name === 'token' ? (argv[++i] ?? '') : '(inline)'; continue }
         if (name === 'at') { args.flags.at = argv[++i]; continue }
         if (name === 'build') { args.flags.build = argv[++i]; continue }
         // `di stage join` — which mapping, which Chromium, what this machine

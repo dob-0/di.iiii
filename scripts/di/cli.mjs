@@ -394,6 +394,10 @@ const cmdStatus = async () => {
 const cmdOpen = async (args) => {
     // Another di.iiii needs no install on this machine, only a file and a login.
     if (args.flags.token !== undefined && args.flags.token !== '-') { fail(ui.openToBareToken()); process.exitCode = 1; return }
+    const rawTimeout = process.env.DI_OPEN_TO_TIMEOUT_MS
+    if (rawTimeout !== undefined && rawTimeout !== '' && !(Number.isInteger(Number(rawTimeout)) && Number(rawTimeout) > 0)) {
+        fail(ui.openToBadTimeout(rawTimeout)); process.exitCode = 1; return
+    }
     const toOther = args.flags.to !== undefined || args.flags.token === '-'
     if (toOther && !args._[1]) { fail(ui.openToNeedsFile()); process.exitCode = 1; return }
     if (args._[1] && toOther) { await cmdOpenFile(args, args._[1]); return }

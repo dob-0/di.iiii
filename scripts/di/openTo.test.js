@@ -201,4 +201,37 @@ describe('di open FILE --to URL', () => {
         try { await run() } finally { delete process.env.DI_HOME }
         expect(fetchMock).not.toHaveBeenCalled()
     })
+
+    it('N1: a bad DI_OPEN_TO_TIMEOUT_MS (abc, 0, negative) is named, and sends nothing', async () => {
+        const fetchMock = answer(200, {})
+        vi.stubGlobal('fetch', fetchMock)
+        stored()
+        for (const bad of ['abc', '0', '-5']) {
+            err.length = 0; process.exitCode = 0
+            process.env.DI_OPEN_TO_TIMEOUT_MS = bad
+            try { await run('--to', SITE) } finally { delete process.env.DI_OPEN_TO_TIMEOUT_MS }
+            expect(err.join('')).toContain('DI_OPEN_TO_TIMEOUT_MS must be a whole number')
+            expect(process.exitCode).toBe(1)
+        }
+        expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('N2: a trailing --token and --token=VALUE are refused like a bare --token VALUE', async () => {
+        const fetchMock = answer(200, {})
+        vi.stubGlobal('fetch', fetchMock)
+        await run('--to', SITE, '--token')
+        await run('--to', SITE, '--token=dii_cli_SECRET')
+        expect(fetchMock).not.toHaveBeenCalled()
+        expect(err.join('').match(/visible to every process/g)).toHaveLength(2)
+        expect(err.join('')).not.toContain('dii_cli_SECRET')
+        expect(process.exitCode).toBe(1)
+    })
+
+    it('N3: the timeout message says the cap is flat and names the env var', async () => {
+        stored()
+        vi.stubGlobal('fetch', vi.fn(async () => { throw Object.assign(new Error('t'), { name: 'TimeoutError' }) }))
+        await run('--to', SITE)
+        expect(err.join('')).toContain('flat 30-minute cap')
+        expect(err.join('')).toContain('DI_OPEN_TO_TIMEOUT_MS')
+    })
 })
