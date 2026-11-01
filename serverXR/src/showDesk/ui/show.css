@@ -344,3 +344,14 @@ body.showdesk[data-bank="rows"] .cubecard .sizestrip > b { font: 500 12px var(--
 .livestrip .colourpad { flex: 1 1 var(--pad); width: auto; min-width: var(--pad); }
 .liverow:first-child .togglepad { flex: 0 0 auto; }
 .links > .muted { margin-left: auto; }
+
+/* ---- The stage line (2026-11-01, plan S11): one line of text in the status corner, read from ../show-status every 5 s
+   (stageLine.js): the stage watch, heat, the link, the laser's stop reason, the controller heard. Its colour is its state,
+   from the desk's own tokens; hidden on a server without the route. The whole story is in its title (hover). */
+/* Measured 2026-11-01 on the agent screen at 1278 px: inside the 220 px status corner the line got 104 px (14 characters).
+   While the line shows, the corner may take up to 420 px (then 264 px at 380); it shrinks like the rest of the top line. */
+.statusline:has(> .stageline:not([hidden])) { flex: 0 1 420px; }
+.statusline .stageline { flex: 1 1 auto; min-width: 0; margin: 0; font: 600 12px/1.2 var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.statusline .stageline[data-state="warn"] { color: var(--warn); }
+.statusline .stageline[data-state="alert"] { color: var(--danger); font-weight: 700; }
+.statusline .stageline[data-state="off"] { font-style: italic; font-weight: 400; }

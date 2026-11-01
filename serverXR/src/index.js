@@ -137,6 +137,8 @@ const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { registerLaserRoutes } = require('./routes/laserRoutes')
 const { registerShowDeskRoutes } = require('./routes/showDeskRoutes')
+const { registerShowStatusRoutes } = require('./routes/showStatusRoutes')
+const { createShowStatus } = require('./stage/showStatus')
 const { registerOscRoutes } = require('./routes/oscRoutes')
 const { registerNdiRoutes, scanAtBootFrom } = require('./routes/ndiRoutes')
 const { hasLocalRuntime } = require('./localRuntimeGuard')
@@ -540,6 +542,14 @@ require('./laser/sceneLink').linkLightToLaser({ lighting, lasers, log: logger })
 // page sends the two desks' own routes from this same origin, so their guards apply as on their own pages. Mounted under the
 // base path only (a bare /show could shadow a space of that name). routes/showDeskRoutes.js.
 registerShowDeskRoutes(app, { mountPaths: [`${config.mountPath || ''}/show`.replace(/\/+/g, '/')] })
+
+// The show status (serverXR/src/stage/showStatus.js, 2026-11-01, plan S11) at /show-status: one JSON of the running show
+// (light scene, laser armed or stopped and why, controller heard, link, heat, the stage watch's latest.json), read by the
+// Show desk's status line. Pushed to the di.bo door only when DI_SHOW_STATUS_PUSH_URL is set (off by default). Read only.
+const showStatus = createShowStatus({ lighting, lasers, log: (line) => logger.info(line) })
+registerShowStatusRoutes(app, { mountPaths: [`${config.mountPath || ''}/show-status`.replace(/\/+/g, '/')], status: showStatus })
+showStatus.startPush()
+process.once('exit', () => showStatus.stopPush())
 
 // OSC (serverXR/src/osc) at /osc — the OSC In and OSC Out nodes' UDP, which a page cannot
 // open: the lasers' twin in shape (built on first use, local-only, 404 hosted).

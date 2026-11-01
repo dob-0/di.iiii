@@ -1736,3 +1736,10 @@ give it a min-content floor), lets `.cap` wrap, and in the holds state sets the 
 (Compact `--hold-h: 30px`). Re-measured in this build by `holds-probe.cjs`: label 70.3 x 29.9 (Touch 73 x 29.9), buttons 77.5 x 30
 (Touch 80.1 x 32), no overlap, nothing cut, 0 page errors; without the holds state the buttons stay 120.3 x 28.
 Guard: `showDesk.test.js` "nothing is lost: every Upright rule is still in show.css …" (the track, the wrap and the holds-state rule are asserted).
+
+## Stage watch: cut mode ran on a protected list that named nothing (2026-11-01, S11 verify C2)
+
+Symptom: `watch.usb.protected: ["1a86:7523"]` (a plain string), a mistyped key (`vidPid`), an empty object or a device not plugged in all passed the cut-mode check; a flood then cut the DMX dongle the list meant to protect (made-up sysfs tree, PR #1239 review; never shipped).
+Cause: the fail-closed check counted the list (`protected.length`), and `protectionOf` read only `p.port` / `p.vidpid`, so an entry of any other shape matched nothing, silently.
+Fix: `scripts/stage/watch/usb.mjs` `checkProtected` reads every entry (a string of a known shape reads as that key, anything else is named and refused) and resolves each on the bus at start; any problem refuses cut mode (warn, a held `usb-mode` alert in events.log, latest.json and `/show-status`; `install.sh` exits 2 through `watch.mjs check`). The device found is pinned by port, VID:PID and interface names; a protected device that leaves the bus turns cut mode to warn until a restart; warn mode never escalates a cut. Guard: `scripts/stage/watch/watch.test.mjs` tests named "(verify C2)".
+Lesson: a fail-closed check checks the entries, not their count. Every "empty allowlist" test needs a "malformed entry" and an "absent device" test beside it.
