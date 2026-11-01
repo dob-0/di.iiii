@@ -146,7 +146,7 @@
         "r3f-perf": "^7.2.1",
         "react": "18.3",
         "react-dom": "18.3",
-        "react-router-dom": "^7.18.3",
+        "react-router-dom": "^7.18.4",
         "socket.io-client": "^4.8.4",
         "three": "^0.186.1",
         "three-mesh-bvh": "^0.9.16",
