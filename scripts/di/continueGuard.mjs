@@ -3,8 +3,19 @@
 // "space_exists_similar": say which space to continue, exit 2, and only a written
 // reason (--new-anyway "<reason>") makes the second space.
 import { createRequire } from 'node:module'
-const require = createRequire(import.meta.url)
-const { findSimilar, newAnywayReason, sameStem } = require('../../shared/continueStem.cjs')
+
+// ONE stem rule, shared with the server: shared/continueStem.cjs (CJS). The CLI sits at scripts/di
+// in a checkout (shared/ two levels up) and at <version>/cli in a pack (shared/ beside it), so the
+// path is tried in each layout, the way nameResolve.mjs finds the beacon: no single relative
+// require resolves in both, and a CLI that only ran from a checkout would not run once installed.
+const requireHere = createRequire(import.meta.url)
+const stem = (() => {
+    for (const rel of ['../../shared/continueStem.cjs', '../shared/continueStem.cjs']) {
+        try { return requireHere(rel) } catch (error) { if (error?.code !== 'MODULE_NOT_FOUND') throw error }
+    }
+    throw new Error('shared/continueStem.cjs not found beside the CLI (checkout or pack)')
+})()
+const { findSimilar, newAnywayReason, sameStem } = stem
 
 export { findSimilar, newAnywayReason, sameStem }
 export const EXIT_CONTINUE = 2

@@ -1,10 +1,16 @@
 // @vitest-environment node
 // Continue, never recreate (N1880): the stem rule and what `di new` does with the server's answer.
 import { describe, expect, it } from 'vitest'
+import { spawnSync } from 'node:child_process'
+import fs from 'node:fs'
 import { createRequire } from 'node:module'
+import os from 'node:os'
+import path from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createSpace, reasonFromFlags, EXIT_CONTINUE } from './continueGuard.mjs'
 
 const { stemOf, sameStem } = createRequire(import.meta.url)('../../shared/continueStem.cjs')
+const HERE = path.dirname(fileURLToPath(import.meta.url))
 
 describe('stemOf / sameStem', () => {
     it('strips -3d, -test, -vN, -N, -copy and dates from the end', () => {
@@ -58,5 +64,43 @@ describe('createSpace (di new)', () => {
     it('passes other errors through', async () => {
         const out = await createSpace({ base: 'http://x', label: 'x', fetchImpl: reply(409, { error: 'Space already exists.' }) })
         expect(out).toEqual({ status: 'error', error: 'Space already exists.' })
+    })
+})
+
+// The install matrix caught this (PR #1243, run 41361051812): the module found shared/ two levels up,
+// which is true in a checkout (scripts/di) and false in a pack (<version>/cli beside <version>/shared),
+// so every installed `di` died on start. Plain node, as an installed `di` runs it, not the test runner.
+describe('the packed layout (<version>/cli beside <version>/shared)', () => {
+    const lay = (withShared) => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'di-guard-'))
+        fs.mkdirSync(path.join(root, 'cli'))
+        fs.copyFileSync(path.join(HERE, 'continueGuard.mjs'), path.join(root, 'cli', 'continueGuard.mjs'))
+        if (withShared) {
+            fs.mkdirSync(path.join(root, 'shared'))
+            fs.copyFileSync(path.join(HERE, '..', '..', 'shared', 'continueStem.cjs'), path.join(root, 'shared', 'continueStem.cjs'))
+        }
+        return root
+    }
+    const load = (root) => spawnSync(process.execPath, ['--input-type=module', '-e',
+        `import(${JSON.stringify(pathToFileURL(path.join(root, 'cli', 'continueGuard.mjs')).href)})`
+        + '.then((m) => console.log(JSON.stringify([m.sameStem("cinema-house", "cinema-house-3d"), m.sameStem("moxir", "dilijan")])))'],
+    { encoding: 'utf8' })
+
+    it('finds shared/continueStem.cjs one level up, and applies the same rule', () => {
+        const root = lay(true)
+        try {
+            const out = load(root)
+            expect(out.stderr).toBe('')
+            expect(out.status).toBe(0)
+            expect(JSON.parse(out.stdout)).toEqual([true, false])
+        } finally { fs.rmSync(root, { recursive: true, force: true }) }
+    })
+    it('says what is missing when no shared/ is beside it, instead of a bare MODULE_NOT_FOUND', () => {
+        const root = lay(false)
+        try {
+            const out = load(root)
+            expect(out.status).not.toBe(0)
+            expect(out.stderr).toContain('shared/continueStem.cjs not found beside the CLI')
+        } finally { fs.rmSync(root, { recursive: true, force: true }) }
     })
 })
