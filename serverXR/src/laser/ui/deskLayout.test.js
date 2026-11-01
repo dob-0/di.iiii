@@ -282,7 +282,8 @@ describe('the help is never over a control; Edit at rest is drawn, dimmed and no
     expect(grid('.editor.is-empty > .editbody')).toMatch(/pointer-events: none/)
     expect(grid('.editor.is-empty .swatches')).toMatch(/filter: grayscale\(1\)/)
     expect(grid('.editor.is-empty > .editbody')).not.toMatch(/filter|display/)
-    expect(wide('.editor.is-empty'), 'an empty Edit is not scrolled: a scrollbar would change the width the chips wrap in').toMatch(/overflow-y: hidden/)
+    expect(wide('.editor.is-empty'), 'an empty Edit scrolls too when its content is taller than the pane (6 cubes: Level and Copy / Delete were 20.8 px below the edge, clipped, measured 2026-11-01 at 1280x770); with 1 cube it fits and has no scrollbar').toMatch(/overflow-y: auto/)
+    expect(wide('.editor.is-empty'), 'never hidden (clips the last rows) and never always-on (scroll, scrollbar-gutter: the 1-cube layout would change)').not.toMatch(/overflow-y: (hidden|scroll)|scrollbar-gutter/)
   })
   it('Classic is unchanged: it still hides the body and the preview of an empty Edit, and shows the help only while Edit is empty', () => {
     expect(stripComments(beforeCss)).toMatch(/\.editor\.is-empty \.editbody, \.editor\.is-empty \.preview \{ display: none; \}/)
@@ -319,6 +320,17 @@ describe('Scenes: one line when the light desk has none', () => {
     expect(grid('.bank.no-scenes > .scenerow .scenehead .muted')).toMatch(/text-overflow: ellipsis/)
     expect(grid('.bank > .removeask')).toMatch(/top: calc\(var\(--g-scenes\)/)
     expect(fs.readFileSync(path.join(here, 'layoutMode.js'), 'utf8')).toMatch(/CLIPPED = \[[^\]]*'sceneNote'/)
+  })
+})
+
+describe('Scenes: the cards stay readable in the narrower Looks pane of the wide layout (follow-up, measured 2026-11-01: the real MOCT bank, 11 light scenes, at 1280x770)', () => {
+  it('from 1240 px the head is 96 px and a card is never narrower than 166 px (a card of the 1024 px pane was about 164 px and cut 2 of 22 texts; the third longest text needs 164.2 px), as many to a line as fit; the row keeps its height and each card keeps its full words in its title', () => {
+    expect(grid('.scenerow'), 'below 1240 px the base Grid rule is as it was: 150 px head, fixed row height').toMatch(/grid-template-columns: 150px minmax\(0, 1fr\)/)
+    expect(grid('.scenerow')).toMatch(/height: var\(--g-scenes\)/)
+    expect(grid('.scenegrid')).toMatch(/grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/)
+    expect(wide('.scenerow')).toBe('grid-template-columns: 96px minmax(0, 1fr);')
+    expect(wide('.scenegrid')).toBe('grid-template-columns: repeat(auto-fill, minmax(166px, 1fr));')
+    expect(fs.readFileSync(path.join(here, 'desk.js'), 'utf8')).toMatch(/p\.btn\.title = title/)
   })
 })
 

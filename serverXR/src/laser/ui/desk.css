@@ -491,9 +491,15 @@ html[data-layout="grid"] .tools .master { flex: 1 1 240px; }
 html[data-layout="grid"] .options { flex-direction: row; flex-wrap: wrap; align-items: center; align-content: center; column-gap: 14px; row-gap: 2px; padding: 3px 8px; }
 html[data-layout="grid"] .options .followstatus { flex: 1 1 100%; }
 html[data-layout="grid"] .cube { width: 132px; }
-/* the head (preview and name) and the body in the third row, the one that takes the height; an empty Edit is not scrolled (nothing in it can be used, and a scrollbar would change the width the chips wrap in) */
+/* the Scenes row in the narrower Looks pane (follow-up, measured 2026-11-01 with the real MOCT bank, 11 light scenes = 22 card texts, at 1280x770: the pane is 816 px wide, 1024 before, so five cards of 122 px cut 17 texts; at 1024 px a card was about 164 px and 2 texts were cut).
+   The head is 96 px (its note wraps to two lines) and a card is never narrower than 166 px (all but the 2 longest of those texts fit it: the third longest needs 164.2 px), as many to a line as fit. The row keeps its height; a third line of cards is reached by the row's own scroll, as before. The full words of a card stay in its title (desk.js). */
+html[data-layout="grid"] .scenerow { grid-template-columns: 96px minmax(0, 1fr); }
+html[data-layout="grid"] .scenegrid { grid-template-columns: repeat(auto-fill, minmax(166px, 1fr)); }
+/* the head (preview and name) and the body in the third row, the one that takes the height; the empty Edit has the same cells (its scroll is under .editor.is-empty, below) */
 html[data-layout="grid"] .editor { grid-area: 5 / 6 / 6 / 7; grid-template-columns: 72px minmax(0, 1fr); grid-template-rows: auto auto minmax(auto, 1fr); column-gap: 8px; row-gap: 0; padding: 3px 2px; }
-html[data-layout="grid"] .editor.is-empty { overflow-y: hidden; }
+/* Edit scrolls at rest too, only when its content is taller than the pane (follow-up, measured 2026-11-01 with 6 cubes and nothing open: the Level row and Copy / Delete ended 20.8 px (1280x770) and 19.8 px (1598x771) below the pane edge and were clipped by overflow-y: hidden).
+   With 1 cube the content fits, there is no scrollbar and nothing changes. */
+html[data-layout="grid"] .editor.is-empty { overflow-y: auto; }
 html[data-layout="grid"] .editor > .panehead { grid-area: 1 / 2 / 2 / 3; }
 html[data-layout="grid"] .editor.is-empty > .panehead { grid-area: 1 / 1 / 2 / 3; }
 html[data-layout="grid"] .editor .namefield { padding: 0 6px; min-height: 29px; align-self: stretch; }
