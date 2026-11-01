@@ -439,10 +439,11 @@ function registerProjectRoutes(router, {
         // with the same title stem (-vN, -N, -copy, a date stripped) is the same job again.
         // A new state of it is a VERSION of it (scripts/production/versions.mjs,
         // scripts/rigbuild/copy-version.mjs; in-product Versions is plan V3, not built yet).
-        // Named creation only: follows, imports and copy scripts name their ids and are untouched.
+        // Only projects this caller may see are compared (visibleTo, as the GET routes): a private
+        // project of someone else is never named. Named creation only: follows, imports and copy scripts name their ids and are untouched.
         if (title && typeof listProjectsInSpace === 'function') {
           const reason = newAnywayReason(req.body?.newAnyway)
-          const similar = reason ? null : findSimilar([title], (await listProjectsInSpace(spacesDir, spaceId)) || [])
+          const similar = reason ? null : findSimilar([title], visibleTo(req, spaceId, (await listProjectsInSpace(spacesDir, spaceId)) || []))
           if (similar) {
             return res.status(409).json({
               error: 'project_exists_similar',

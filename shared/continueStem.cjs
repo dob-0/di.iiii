@@ -35,12 +35,21 @@ const stemOf = (value) => {
   return s
 }
 
+// A plain number tail names a DIFFERENT thing when both carry one (room-6 / room-7).
+const numberTail = (value) => {
+  const s = String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    .replace(/(?:^|-)\d{4}-\d{2}-\d{2}(?=-|$)/g, '').replace(/-(?:3d|test|copy)$/, '')
+  const m = s.match(/-(\d{1,3})$/)
+  return m ? m[1] : ''
+}
+
+// One typo apart = a letter missing or extra (plural, dropped letter), never a swapped one.
 const distanceAtMostOne = (a, b) => {
   if (a === b) return true
   if (Math.abs(a.length - b.length) > 1) return false
   let i = 0
   while (i < a.length && i < b.length && a[i] === b[i]) i += 1
-  if (a.length === b.length) return a.slice(i + 1) === b.slice(i + 1)
+  if (a.length === b.length) return false
   return a.length > b.length ? a.slice(i + 1) === b.slice(i) : b.slice(i + 1) === a.slice(i)
 }
 
@@ -49,6 +58,9 @@ const sameStem = (a, b) => {
   const x = stemOf(a)
   const y = stemOf(b)
   if (x.length < MIN_STEM || y.length < MIN_STEM) return false
+  const na = numberTail(a)
+  const nb = numberTail(b)
+  if (na && nb && na !== nb) return false
   if (x === y) return true
   return x.length >= FUZZY_MIN && y.length >= FUZZY_MIN && distanceAtMostOne(x, y)
 }

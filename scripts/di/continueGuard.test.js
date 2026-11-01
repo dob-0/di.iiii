@@ -24,6 +24,14 @@ describe('stemOf / sameStem', () => {
         expect(sameStem('philharmonia-hall', 'philharmonia-hal')).toBe(true)
         expect(sameStem('abcd', 'abce')).toBe(false)
     })
+    it('numbered rooms and halls are different things; a swapped letter is not a typo (verifier #1243 finding 2)', () => {
+        expect(sameStem('room-6', 'room-7')).toBe(false)
+        expect(sameStem('hall-1', 'hall-2')).toBe(false)
+        expect(sameStem('apollo-11', 'apollo-13')).toBe(false)
+        expect(sameStem('studio-north', 'studio-nortk')).toBe(false)
+        expect(sameStem('moxir', 'moxir-2')).toBe(true)
+        expect(sameStem('room', 'room-6')).toBe(true)
+    })
 })
 
 describe('createSpace (di new)', () => {

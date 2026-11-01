@@ -63,10 +63,9 @@ describe('continue, never recreate — server doors', () => {
         expect(exact.status).toBe(409)
         expect(exact.body.error).toBe('Space already exists.')
 
-        // an explicit id is compared by id too
+        // an explicit id is compared by exact id only (verifier #1243 finding 3)
         const byId = await post('/api/spaces', { slug: 'cinema-house-v2', label: 'Something Else' })
-        expect(byId.status).toBe(409)
-        expect(byId.body.existing).toBe('cinema-house')
+        expect(byId.status).toBe(201)
 
         const anyway = await post('/api/spaces', { label: 'cinema-house-3d', permanent: true, newAnyway: 'a different building' })
         expect(anyway.status).toBe(201)

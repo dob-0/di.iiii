@@ -318,7 +318,8 @@ function registerSpaceRoutes(router, {
   // shares a stem with the new one (-3d, -test, -vN, -N, a date stripped) is the
   // same place again. The caller is told which one and may only go on with
   // `newAnyway: "<reason>"`. Only spaces the caller can see are named. A caller that
-  // names the id itself (`slug`: scripts, follows, tests) is compared by id only; a
+  // names the id itself (`slug`, `as`: scripts, follows, tests) is not stem-compared at all
+  // (the exact-id rule still refuses a taken id); a
   // person who typed just a label is compared by id and label.
   const similarSpaceFor = async (req, names) => {
     const state = req.authState || {}
@@ -362,7 +363,7 @@ function registerSpaceRoutes(router, {
         return res.status(409).json({ error: `"${spaceId}" is in the trash. Restore it from the Trash, or purge it, to use the name again.`, code: 'space_in_trash' })
       }
 
-      if (await refuseSimilarSpace(req, res, slug ? [spaceId] : [spaceId, label])) return
+      if (!slug && await refuseSimilarSpace(req, res, [spaceId, label])) return
 
       const state = req.authState || {}
       // Returning guests carry session cookies with a guest: subject — they
@@ -719,7 +720,7 @@ function registerSpaceRoutes(router, {
       const as = normalizeSpaceId(String(req.body?.as || '').trim())
       // The id inside the file is only known after the tool has run, so the guard
       // sees what the caller names: `as` and `label`.
-      if (!(as && await spaceExists(as)) && await refuseSimilarSpace(req, res, [as, String(req.body?.label || '')])) return
+      if (!as && await refuseSimilarSpace(req, res, [String(req.body?.label || '')])) return
       if (as) args.push('--as', as)
       // This route never passes --force, so the tool refuses an id that is
       // already here and nothing is replaced. Should that ever change, the
