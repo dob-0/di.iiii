@@ -1,0 +1,3 @@
+# The stage watch (scripts/stage/watch/README.md): a USB device was plugged, so ask systemd for its 30 s re-check.
+# udev starts nothing long itself (udev(7): RUN is for short tasks); systemd.device(5): SYSTEMD_WANTS on a "systemd" tag.
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", TAG+="systemd", ENV{SYSTEMD_WANTS}+="di-stage-watch-recheck@%k.timer"

@@ -11,5 +11,13 @@ module.exports = [
     role: "guest",
     agent: false,
     note: "behind requireLocalRuntime (loopback, or LAN when DI_ALLOW_LAN_DEVICES=1); 404 on a hosted tier. Only files: the page sends the two desks' own routes (../light/api/…, ../laser/…) from the same origin, so their guards apply as on their own pages."
+  },
+  {
+    route: "GET /show-status",
+    summary: "the show status (stage/showStatus.js, schema di.show-status/1): the light scene, the laser armed or stopped and why, the controller heard, the link, the heat and the stage watch, as one JSON; the show desk's status line reads it",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "behind requireLocalRuntime (loopback, or LAN when DI_ALLOW_LAN_DEVICES=1); 404 on a hosted tier. Builds no desk and no engine. Pushed to the di.bo door only when DI_SHOW_STATUS_PUSH_URL is set."
   }
 ]
