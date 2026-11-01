@@ -1737,6 +1737,37 @@ give it a min-content floor), lets `.cap` wrap, and in the holds state sets the 
 (Touch 80.1 x 32), no overlap, nothing cut, 0 page errors; without the holds state the buttons stay 120.3 x 28.
 Guard: `showDesk.test.js` "nothing is lost: every Upright rule is still in show.css …" (the track, the wrap and the holds-state rule are asserted).
 
+## `di version` named the build before after a hot swap; no gate stood before a live install (2026-11-01, S10)
+Symptom: on the stage machine two ui hot swaps (`ui-hot-swap.sh`, 01:12 and 01:27) wrote the 63d9dc1d and 7080f534 ui files into
+`versions/0.4.4-look.e3ca4567`, and `di version`, `show-go.sh` and new checkpoints all still said 16a. The 01:12 swap put a build live
+whose review said BLOCK on M1 and M2, and nothing printed it. No test ran on that merge.
+Cause: the swap edited the live release folder in place and left no marker, so the label came from `state.json` alone. Neither the
+install nor the swap read a record of the build: a review, a test run, or whether the commit was on a remote.
+Fix: `scripts/release` + `scripts/show/{install,hot-swap}.mjs`.
+- A release record (an in-toto Statement bound to the pack's sha256, self-attested) is printed as the first 3 lines.
+- The gate refuses BLOCK, untested or not-on-a-remote unless `--accept '<reason>'`, and logs it. While the show is live the freeze is hard.
+- A hot swap is a new release folder plus an append-only PATCHES line, exchanged with the live one in one renameat2, so N-1 stays whole.
+- `di version` prints `<base>+ui.<sha8>` per PATCHES line (`scripts/di/overlays.mjs`); `installedVersion()` stays the base.
+Guard: `scripts/release/release.test.js`:
+- "two hot swaps: `di version` shows both overlays, PATCHES only grows, …";
+- "refuses a BLOCKed build (exit 4, logged) …";
+- "refuses an untested build and a commit that is on no remote".
+
+## The release gate passed every review verdict it could not read (2026-11-01, S10 round 2)
+Symptom: the verify of PR #1240 fed the gate one green, pushed record per review form. "Verdict: **FIX**. 10 must-fix", "NOT READY",
+"REQUEST CHANGES (small) … (M1)" and "## Verdict: BLOCK" (the verdict on the heading line) all gave GATE PASS, also while the show was
+live. The parser read 45 of the 47 review files then on aylmo as UNKNOWN. A record made without `--review` passed too.
+Cause: `parseReview` knew 6 BLOCK and 7 PASS single words and read only the line under the heading; `evaluateGate` stopped only on
+BLOCK, so UNKNOWN and "no review" added no reason. A PASS dropped its must-fix ids.
+Fix: `scripts/release/lib.mjs`.
+- Verdict phrases (NOT READY, REQUEST CHANGES, CHANGES REQUESTED, FIX, DO NOT MERGE, NO GO …), and the heading line is read.
+- UNKNOWN, no review, and a PASS with an open must-fix are refused unless `--accept`; while live, nothing lets them in.
+- Also from the same verify: `uim.<manifest8>` for an overlay with no commit (F3), `--on-no-go undo|warn` (F7), and the drill reads the
+  laser before and after each step (brief point 5).
+Guard: `scripts/release/release.test.js` "reads every verdict form our reviews use …" (15 forms plus the gate), "a swap with no record is
+labelled uim.…", "--on-no-go warn keeps the overlay …" and "reads the laser state before and after each step …". On the round-1 code,
+7 of the 18 tests fail.
+
 ## Stage watch: cut mode ran on a protected list that named nothing (2026-11-01, S11 verify C2)
 
 Symptom: `watch.usb.protected: ["1a86:7523"]` (a plain string), a mistyped key (`vidPid`), an empty object or a device not plugged in all passed the cut-mode check; a flood then cut the DMX dongle the list meant to protect (made-up sysfs tree, PR #1239 review; never shipped).

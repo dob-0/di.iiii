@@ -72,6 +72,7 @@ import {
 import { parseArgs } from './args.mjs'
 import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './channels.mjs'
 import * as autoupdate from './autoupdate.mjs'
+import { versionLabel } from './overlays.mjs'
 import { mcpArgs, moveToken, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 import { withUserAgent } from './userAgent.mjs'
@@ -1058,7 +1059,13 @@ const promptSecret = (question) => new Promise((resolve) => {
     })
 })
 
-const cmdVersion = () => { say(installedVersion(HOME()) || 'not installed') }
+// `di version` prints the label: the base version plus +<id> per overlay in the live release's PATCHES (hot swaps,
+// scripts/show/hot-swap.mjs). `--json` adds the overlays, for GO and checkpoints. installedVersion() stays the base.
+const cmdVersion = (args) => {
+    const v = versionLabel(HOME())
+    if (args?.flags?.json) { say(JSON.stringify(v ? { label: v.label, base: v.base, overlays: v.overlays, dir: v.dir } : { installed: false }, null, 2)); return }
+    say(v?.label || 'not installed')
+}
 
 // `di mcp` — hand this di.iiii to an agent.
 //

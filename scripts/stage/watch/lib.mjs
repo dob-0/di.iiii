@@ -31,7 +31,7 @@ export function loadVenueWatch(file) {
     const empty = { thresholds: { ...DEFAULT_THRESHOLDS }, usb: { mode: 'warn', protected: [], portPlan: [] }, link: {}, source: 'built-in defaults (unvalidated)' }
     if (!file) return empty
     let doc
-    try { doc = JSON.parse(fs.readFileSync(file, 'utf8')) } catch (e) { throw new Error(`venue profile ${file} unreadable: ${e.message}`) }
+    try { doc = JSON.parse(fs.readFileSync(file, 'utf8')) } catch (e) { throw new Error(`venue profile ${file} unreadable: ${e.message}`, { cause: e }) }
     const w = doc && typeof doc === 'object' ? (doc.watch || {}) : {}
     const thresholds = { ...DEFAULT_THRESHOLDS }
     for (const [k, v] of Object.entries(w.thresholds || {})) if (k in DEFAULT_THRESHOLDS && k !== 'validated' && Number.isFinite(v)) thresholds[k] = v
