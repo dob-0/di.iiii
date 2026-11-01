@@ -1688,6 +1688,10 @@ const COMMANDS = {
     invite: cmdInvite,
     follow: cmdFollow,
     stage: cmdStage,
+    show: () => import('../show/cli.mjs').then(
+        (m) => m.runFromDi(process.argv.slice(2)),
+        (error) => { fail(`this copy of di has no show tools (${error.code || error.message}): update di`); process.exitCode = 1 }
+    ),
     follows: cmdFollows,
     wifi: cmdWifi,
     post: cmdPost,

@@ -18,6 +18,8 @@ One index of every skill under `.claude/skills/`. A skill is a recipe: when to u
 | `venue-safety-packet` | the rigging safety packet and site checklist are drafted for the humans who sign |
 | `show-scenes-job` | a show's light scenes are designed or rebuilt (safe `epic-build` flags by default) |
 | `show-checkpoint` | before ANY change to a live or approved show: snapshot, RESTORE.md, the owner's yes, change, measure |
+| `show-night` | a production's show night: load-in, `di show go` at load-in / doors-60 / after every change, the freeze, the drills, get-out |
+| `crew-channel` | a show night with a crew group: the crew desk role, intents as approvals, the card and its cadence, PACE and its drill, onboarding |
 | `hall-compare` | before any lamp check: compare the project and the desk with the place's hall reference (`--ref`) |
 | `release` | a change must be live: dev deploy, dev to main, hotfix, the Mac prod path, the land check, rollback |
 | `job-end-gate` | the last step of every job: physics, sterile, cost, what was built and where it lives |
