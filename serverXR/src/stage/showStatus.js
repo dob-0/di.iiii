@@ -102,9 +102,11 @@ function controllerOf(c) {
 const stateKey = (d) => JSON.stringify([d.light.scene, d.light.blackout, d.laser.armed, d.laser.stop_reason, d.controller.seen, d.link.state, d.heat.state, d.watch.state, d.watch.alerts.map((a) => a.key + a.level)])
 const KEY_NAMES = ['light.scene', 'light.blackout', 'laser.armed', 'laser.stop_reason', 'controller.seen', 'link.state', 'heat.state', 'watch.state', 'watch.alerts']
 
-// The di.bo door's status push, schema v1 (S06: di-bo docs/crew-feed.md "The status push, schema v1"; its reader is
-// lib/card.mjs validateStatus). A safety fact is never filled in: no laser block, or an armed state nobody read, is
-// "unknown", never "disarmed". A controller or a link nobody knows is null (the door reads {seen:null} as "not seen").
+// The di.bo door's status push, schema v1 (S06: the crew-feed doc in the di-bo repo, section "The status push, schema v1";
+// its reader is lib/card.mjs validateStatus there). No docs path is written for that file: it is not in this repo, and
+// src/docPaths.test.js resolves every docs path in source against this one. A safety fact is never filled in: no laser
+// block, or an armed state nobody read, is "unknown", never "disarmed". A controller or a link nobody knows is null (the
+// door reads {seen:null} as "not seen").
 const DOOR_LASER_STATES = ['armed', 'disarmed', 'stopped', 'unknown']
 function toDoorV1(d, { production = null } = {}) {
     const z = d.laser || {}

@@ -6,6 +6,7 @@ import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { loadProfile } from './lib/profile.mjs'
 import { makeTransport } from './lib/transport.mjs'
@@ -59,7 +60,7 @@ const listTar = (file) => spawnSync('tar', ['tzf', file], { encoding: 'utf8' }).
 
 describe('di show checkpoint (real bash, here)', () => {
     it('both bash halves pass bash -n', () => {
-        for (const f of ['lib/checkpoint.sh', 'lib/probe.sh']) expect(spawnSync('bash', ['-n', new URL(`./${f}`, import.meta.url).pathname]).status).toBe(0)
+        for (const f of ['lib/checkpoint.sh', 'lib/probe.sh']) expect(spawnSync('bash', ['-n', fileURLToPath(new URL(`./${f}`, import.meta.url))]).status).toBe(0)
     })
 
     it('takes a whole checkpoint: data without lock files, version, states, RESTORE.md and a hashed manifest', async () => {

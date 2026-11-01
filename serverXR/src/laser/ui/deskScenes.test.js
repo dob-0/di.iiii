@@ -7,6 +7,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { capturePageTimers } from '../../testSupport/pageTimers.mjs'
 
 const require = createRequire(import.meta.url)
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -86,7 +87,9 @@ beforeAll(async () => {
     new Function(fs.readFileSync(path.join(here, 'desk.js'), 'utf8'))()
     await sleep(1300)
 })
-afterAll(() => { window.fetch = undefined })
+// The page polls forever: capture its timers at load (before beforeAll boots it), stop them first in afterAll.
+const pageTimers = capturePageTimers()
+afterAll(async () => { await pageTimers.stop(); window.fetch = undefined })
 
 describe('the row', () => {
     it('sits above the tiles in the Looks pane, one button per light scene in the light desk\'s order, with the switch OFF', () => {

@@ -9,6 +9,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { capturePageTimers } from '../testSupport/pageTimers.mjs'
 
 const require = createRequire(import.meta.url)
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -123,6 +124,9 @@ const sceneBtn = (id) => document.querySelector(`#scenes .scenebtn[data-id="${id
 const cubeCard = (id) => document.querySelector(`.cubecard[data-id="${id}"]`)
 const lampRow = (id) => document.querySelector(`.lamp[data-id="${id}"]`)
 
+// The page re-arms its poll and preview timers forever: capture them at load (before beforeAll boots it), stop them first in afterAll.
+const pageTimers = capturePageTimers()
+
 beforeAll(async () => {
     const html = fs.readFileSync(path.join(UI, 'index.html'), 'utf8')
     document.body.innerHTML = html.match(/<body[^>]*>([\s\S]*)<\/body>/)[1].replace(/<script[\s\S]*?<\/script>/g, '')
@@ -144,7 +148,7 @@ beforeAll(async () => {
     await refresh()
     await refresh()
 })
-afterAll(() => { window.fetch = undefined })
+afterAll(async () => { await pageTimers.stop(); window.fetch = undefined })
 beforeEach(async () => {
     fresh()
     await sleep(700) // past the Blackout gap of the test before
