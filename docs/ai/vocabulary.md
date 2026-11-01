@@ -20,7 +20,7 @@ Each word does exactly one job. If you need a second job done, use a different w
 
 | Word | Means, and only this |
 | --- | --- |
-| **space** | A place that is yours: an address, a guest list, and everything in it. |
+| **space** | A place that is yours: an address, a guest list, and everything in it. A real place is ONE space; coming back to a job continues its project, it never makes a sibling ("continue, never recreate", 2026-11-02, `docs/ai/decisions/2026-11-02-continue-never-recreate.md`). |
 | **project** | One thing you make inside a space. |
 | **canvas** | The surface your nodes sit on. |
 | **node** | One card on the canvas. |

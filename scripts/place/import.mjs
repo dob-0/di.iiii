@@ -25,6 +25,8 @@
  *                       entity keeps its id, so lamps hung beside it stay)
  *   --max-sources <n>   how many source files to carry (default 60)
  *   --dry-run           say what would happen, change nothing
+ *   --new-anyway <why>  a real second space although one with the same stem exists
+ *                       (continue, never recreate, N1880); the reason is logged
  *
  * The token is read, never printed: DI_API_TOKEN, or --token-file <path>, or
  * the usual env files (~/.di/di.env for the installed di.iiii on this
@@ -40,6 +42,7 @@ import {
 import { DEFAULT_API, makeClient, mimeFor, readToken as readApiToken } from './api.mjs'
 import { readPlaceRecord } from './fit-lib.mjs'
 import { sourceRoomOps, sourceWall } from '../../src/scan/sourceWall.js'
+import { findSimilar, newAnywayReason } from '../di/continueGuard.mjs'
 
 const args = parseArgs()
 
@@ -83,10 +86,10 @@ export const uploadAsset = async (client, projectId, file, options = {}) => {
     }
 }
 
-const ensureSpace = async (client, spaceId, label) => {
+const ensureSpace = async (client, spaceId, label, newAnyway = '') => {
     const head = await client.get(`/api/spaces/${spaceId}`)
     if (head.status === 200) return { created: false }
-    const made = must(await client.post('/api/spaces', { label, permanent: true }), 'creating the space')
+    const made = must(await client.post('/api/spaces', { label, permanent: true, ...(newAnyway ? { newAnyway } : {}) }), 'creating the space')
     if (made.space?.id !== spaceId) {
         die(
             `Asked for a space called "${spaceId}" and the server named it "${made.space?.id}".`,
@@ -95,6 +98,22 @@ const ensureSpace = async (client, spaceId, label) => {
     }
     return { created: true }
 }
+
+/**
+ * Continue, never recreate (N1880): a place is ONE space. When `name` is not a space
+ * yet but another space shares its stem (cinema-house-3d beside cinema-house), the
+ * import goes INTO that space as a project instead of making a sibling. Returns the
+ * existing space or null. Pure over the list so the test needs no server.
+ */
+export const continueTarget = (spaces, name, label) => {
+    const list = Array.isArray(spaces) ? spaces : []
+    if (list.some((space) => space.id === name)) return null
+    return findSimilar([name, label], list.filter((space) => space.kind !== 'sandbox'))
+}
+
+export const continueAdvice = (existing, { work, hallProject }) =>
+    `continue: ${existing.id} (${existing.label || existing.id}) — use it; to add this work as a project: ` +
+    `node scripts/place/import.mjs --work ${work} --name ${existing.id} --project ${hallProject} [--replace if that project already holds a room]`
 
 const ensureProject = async (client, spaceId, projectId, title) => {
     const listed = must(await client.get(`/api/spaces/${spaceId}/projects`), 'listing projects')
@@ -305,7 +324,18 @@ const main = async () => {
         die(`${api} did not answer. Is the di.iiii you mean actually running?`)
     }
 
-    const space = await ensureSpace(client, name, label)
+    const listedSpaces = await client.get('/api/spaces')
+    const similar = continueTarget(listedSpaces.body?.spaces, name, label)
+    if (similar) {
+        const reason = newAnywayReason(args['new-anyway'])
+        if (!reason) {
+            warn(continueAdvice(similar, { work, hallProject: String(args.project || `${similar.id}-hall`) }))
+            process.exit(2)
+        }
+        warn(`continue-guard: a second space "${name}" beside "${similar.id}" is made anyway — reason: ${reason}`)
+    }
+
+    const space = await ensureSpace(client, name, label, newAnywayReason(args['new-anyway']))
     say(space.created ? `  created space ${name}` : `  space ${name} was already there`)
 
     // ── hall ──
