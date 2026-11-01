@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { createShowStatus, validateShowStatus, SCHEMA } = require('./showStatus.js')
+const { createShowStatus, validateShowStatus, toDoorV1, validateDoorV1, SCHEMA } = require('./showStatus.js')
 const { registerShowStatusRoutes } = require('../routes/showStatusRoutes.js')
 const stageLine = require('../showDesk/ui/stageLine.js')
 const express = require('express')
@@ -95,7 +95,7 @@ describe('the show-status document', () => {
         expect(s.build().controller.wired).toBe(false)
     })
 
-    it('the example S06 builds its card from stays valid', () => {
+    it('the show-status example (the route and the Show-desk line) stays valid', () => {
         const ex = JSON.parse(fs.readFileSync(path.join(HERE, 'fixtures/show-status.example.json'), 'utf8'))
         expect(validateShowStatus(ex)).toEqual([])
     })
@@ -109,11 +109,12 @@ describe('the push to the door', () => {
         const logs = []; const calls = []; let fail = false
         const fetchImpl = async (url, init) => { calls.push({ url, init }); return fail ? { ok: false, status: 503 } : { ok: true, status: 200 } }
         const s = createShowStatus({ lighting, lasers, watchFile: watchFile('push', { atMs: Date.now() - 1000, state: 'ok', linkAtMs: Date.now() }), log: (l) => logs.push(l) })
-        s.startPush({ url: 'http://door.invalid/crew/status', token: 'secret-token-value', everyMs: 10, fetchImpl })
+        s.startPush({ url: 'http://door.invalid/show/status', token: 'secret-token-value', production: 'Example production', everyMs: 10, fetchImpl })
         await sleep(80)
         expect(calls).toHaveLength(1)
         const body = JSON.parse(calls[0].init.body)
-        expect(validateShowStatus(body)).toEqual([])
+        expect(validateDoorV1(body)).toEqual([]) // the door's schema v1, never the document (verify E)
+        expect(body).toMatchObject({ v: 1, production: 'Example production', light: { scene: 'Warm' } })
         expect(calls[0].init.headers).toMatchObject({ 'content-type': 'application/json', authorization: 'Bearer secret-token-value' })
         expect(calls[0].init.headers['idempotency-key']).toMatch(/:\d+$/)
         scene = 'Cold'
@@ -126,6 +127,39 @@ describe('the push to the door', () => {
         expect(s._push.last_error).toBe('HTTP 503')
         expect(logs.filter((l) => l.includes('did not take'))).toHaveLength(1)
         expect(logs.join('\n')).not.toContain('secret-token-value')
+    })
+
+    it('no production title, nothing sent, and the reason said once (verify E: the door refuses a status without one)', async () => {
+        const calls = []; const logs = []
+        const s = createShowStatus({ lighting: lightingWith('Warm'), lasers, watchFile: watchFile('noprod'), log: (l) => logs.push(l) })
+        s.startPush({ url: 'http://door.invalid/show/status', production: '', everyMs: 10, fetchImpl: async (u, i) => { calls.push(i); return { ok: true, status: 200 } } })
+        await sleep(50); s.stopPush()
+        expect(calls).toEqual([])
+        expect(s._push.last_error).toBe('no production (DI_SHOW_PRODUCTION)')
+        expect(logs.filter((l) => l.includes('DI_SHOW_PRODUCTION'))).toHaveLength(1)
+    })
+
+    it('one shared fixture: the example maps to the door v1 example, which the door rules take (verify E)', () => {
+        const ex = JSON.parse(fs.readFileSync(path.join(HERE, 'fixtures/show-status.example.json'), 'utf8'))
+        const door = JSON.parse(fs.readFileSync(path.join(HERE, 'fixtures/door-status-v1.example.json'), 'utf8'))
+        expect(toDoorV1(ex, { production: 'Example production' })).toEqual(door)
+        expect(validateDoorV1(door, { now: Date.parse(door.t) })).toEqual([])
+        expect(validateDoorV1({ ...door, t: new Date(Date.parse(door.t) - 11 * 60000).toISOString() }, { now: Date.parse(door.t) })).toContain('t: an ISO time within 10 min of the door clock')
+    })
+
+    it('a safety fact is never filled in: unseen or unread is unknown, an unknown controller or link is null (verify E)', () => {
+        const base = JSON.parse(fs.readFileSync(path.join(HERE, 'fixtures/show-status.example.json'), 'utf8'))
+        const v = (p) => toDoorV1({ ...base, ...p }, { production: 'P' })
+        expect(v({ laser: { seen: false, armed: null } }).laser).toEqual({ state: 'unknown', stop_reason: null })
+        expect(v({ laser: { seen: true, armed: null, stop_reason: null } }).laser.state).toBe('unknown')
+        expect(v({ laser: { seen: true, armed: false, stop_reason: null } }).laser.state).toBe('disarmed')
+        expect(v({ laser: { seen: true, armed: true, stop_reason: null } }).laser.state).toBe('armed')
+        expect(v({ controller: { wired: true, seen: null } }).controller).toBeNull()
+        expect(v({ controller: { wired: true, seen: true } }).controller).toEqual({ seen: true })
+        expect(v({ link: { state: 'unknown' } }).link).toBeNull()
+        expect(v({ link: { state: 'lost', tailscale: 'derp' } }).link).toEqual({ up: false, kind: null })
+        expect(v({ link: { state: 'ok', tailscale: 'direct' } }).link).toEqual({ up: true, kind: 'direct' })
+        expect(v({ heat: { state: 'unknown', max_c: null } }).heat).toBeNull()
     })
 })
 
@@ -147,7 +181,8 @@ describe('GET /show-status', () => {
 describe('the Show desk stage line', () => {
     const ok = { watch: { state: 'ok', alerts: [] }, heat: { max_c: 70.4, crit_c: 105, state: 'ok' }, link: { state: 'ok', tailscale: 'direct', gateway_ms: 2, dns_ok: true }, laser: { seen: true, armed: true, cubes: 2, connected: 2 }, controller: { wired: false }, push: { enabled: false } }
     it('one short line, coloured by its state; the whole story in its title', () => {
-        expect(stageLine.render(ok, T0)).toMatchObject({ state: 'ok', text: 'stage ok · 70° · link ok · laser armed' })
+        expect(stageLine.render(ok, T0)).toMatchObject({ state: 'ok', text: 'stage ok · 70° · link ok · laser on' }) // the desk pill's word (verify K)
+        expect(stageLine.render(ok, T0).title).toContain('laser: On (cubes armed)')
         const alert = stageLine.render({ ...ok, watch: { state: 'alert', alerts: [{ level: 'alert', text: 'usb flood 1-2.1: 2655 error lines/s' }, { level: 'warn', text: '88 °C' }] } }, T0)
         expect(alert.state).toBe('alert')
         expect(alert.text.startsWith('ALERT usb flood 1-2.1: 2655 error lines/s (+1)')).toBe(true)
@@ -172,7 +207,7 @@ describe('the Show desk stage line', () => {
         let up = true
         const live = stageLine.start(doc, { fetchImpl: async () => (up ? { status: 200, ok: true, json: async () => ok } : Promise.reject(new Error('down'))), schedule: () => {} })
         await sleep(5)
-        expect(el).toMatchObject({ hidden: false, textContent: 'stage ok · 70° · link ok · laser armed', dataset: { state: 'ok' } })
+        expect(el).toMatchObject({ hidden: false, textContent: 'stage ok · 70° · link ok · laser on', dataset: { state: 'ok' } })
         up = false
         await live.tick()
         expect(el.textContent).toMatch(/^stage status: no answer since \d\d:\d\d:\d\d$/)

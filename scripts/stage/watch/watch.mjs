@@ -14,7 +14,7 @@ import { UsbPolicy, recheck, opText } from './usb.mjs'
 const HELP = `stage watch — a recorder for the show machine (scripts/stage/watch/README.md)
 
   watch.mjs run      [--venue FILE] [--usb-mode warn|cut] [--dry-run] [--source /dev/kmsg|-|FILE]
-                     [--record DIR] [--state DIR] [--latest FILE] [--show-status FILE] [--tick 5] [--no-link] [--for SECONDS]
+                     [--record DIR] [--state DIR] [--latest FILE] [--show-status URL|FILE] [--tick 5] [--no-link] [--for SECONDS]
   watch.mjs once     one sample of the machine, printed as JSON (no kernel log)
   watch.mjs link     one link line (gateway, DNS, tailscale, the laser NIC, the cubes), printed as JSON
   watch.mjs status   the state in latest.json, one line
@@ -23,7 +23,9 @@ const HELP = `stage watch — a recorder for the show machine (scripts/stage/wat
   watch.mjs recheck PORT           the 30 s re-check after a hot-plug (the udev rule's timer runs it)
 
   Defaults: --source /dev/kmsg, --record /var/log/di-stage-watch, --state /var/lib/di-stage-watch,
-  --latest /run/di-stage-watch/latest.json, --usb-mode from the venue profile, else warn. --sys-root / (tests: a made-up tree).`
+  --latest /run/di-stage-watch/latest.json, --usb-mode from the venue profile, else warn. --sys-root / (tests: a made-up tree).
+  Cut mode needs the venue profile's watch.usb.protected list; without it the watch refuses the cut and runs warn (an alert says so).
+  A --record the watch cannot write falls back to --record-fallback (default /var/log/di-stage-watch), with an alert.`
 
 const DEF = { source: '/dev/kmsg', record: '/var/log/di-stage-watch', state: '/var/lib/di-stage-watch', latest: '/run/di-stage-watch/latest.json' }
 
@@ -71,9 +73,25 @@ async function run(o) {
     const venue = L.loadVenueWatch(o.venue)
     const th = venue.thresholds
     const tickS = Number(o.tick) > 0 ? Number(o.tick) : L.TICK_S
-    const mode = o['usb-mode'] === 'cut' || o['usb-mode'] === 'warn' ? o['usb-mode'] : venue.usb.mode
+    const asked = o['usb-mode'] === 'cut' || o['usb-mode'] === 'warn' ? o['usb-mode'] : venue.usb.mode
+    // Cut mode fails closed: with no protected device named in the venue profile nothing guards the DMX dongle or the show's
+    // own controllers, so the watch refuses the cut, runs warn, and says so on every tick until the profile names them.
+    const held = [] // alerts that hold for the whole run
+    const mode = asked === 'cut' && !venue.usb.protected.length ? 'warn' : asked
+    if (mode !== asked) held.push({ key: 'usb-mode', level: 'warn', text: 'USB cut refused: the venue profile names no protected device (watch.usb.protected); warn only' })
     const root = o['sys-root'] || '/'
-    const recordBase = o.record || venue.record || DEF.record
+    // The record must be writable before the show: the unit lets the watch write only /var/log/di-stage-watch (ProtectSystem=strict).
+    const writable = (dir) => { try { fs.mkdirSync(dir, { recursive: true }); fs.accessSync(dir, fs.constants.W_OK); return null } catch (e) { return e.code || e.message } }
+    const fallback = o['record-fallback'] || DEF.record
+    let recordBase = o.record || venue.record || DEF.record
+    const recordErr = writable(recordBase)
+    if (recordErr) {
+        const fbErr = recordBase === fallback ? recordErr : writable(fallback)
+        held.push(fbErr
+            ? { key: 'record', level: 'alert', text: `the show is not recorded: ${recordBase} ${recordErr}${recordBase === fallback ? '' : `, ${fallback} ${fbErr}`}` }
+            : { key: 'record', level: 'warn', text: `record ${recordBase} not writable (${recordErr}): recording to ${fallback}` })
+        if (!fbErr) recordBase = fallback
+    }
     const stateDir = o.state || DEF.state
     const latestFile = o.latest || DEF.latest
     const kmsgMode = (o.source || DEF.source) === '/dev/kmsg'
@@ -88,14 +106,17 @@ async function run(o) {
         if (!o.quiet) process.stdout.write(line)
     }
     const policy = new UsbPolicy({ root, mode, protectedList: venue.usb.protected, ledgerFile: path.join(stateDir, 'cuts.json'), dryRun: Boolean(o['dry-run']) })
-    event(`START watch: tick ${tickS} s, usb ${mode}${o['dry-run'] ? ' (dry run)' : ''}, thresholds ${venue.source}, source ${o.source || DEF.source}, record ${recordBase}`)
+    event(`START watch: tick ${tickS} s, usb ${mode}${o['dry-run'] ? ' (dry run)' : ''}, thresholds ${venue.source}, source ${o.source || DEF.source}, record ${recordBase}, laser stops ${o['show-status'] || 'not wired (no --show-status)'}`)
 
-    let lastDoc = null; let lastLink = null; let tick = 0; let dropped = 0; let lastSeq = -1
+    let lastDoc = null; let lastLink = null; let tick = 0; let dropped = 0; let lastSeq = -1; let recordFail = null
     let tickStart = Date.now()
     const open = new Map() // alert key -> level, for ALERT/CLEAR transitions
     const recent = new Map() // port -> the last RECENT_TICKS counts
     const writeLatest = (doc) => { lastDoc = doc; try { L.writeAtomic(latestFile, JSON.stringify(doc)) } catch (e) { process.stderr.write(`latest.json: ${e.message}\n`) } }
     const report = (a) => { if (a) event(`USB ${a.action} ${a.port}: ${a.text}`) }
+    // The policy never stops the recorder: a locked or unreadable ledger is a WARN line in events.log, and nothing is cut.
+    let policyErr = null
+    const safely = (fn, fallbackValue) => { try { const v = fn(); policyErr = null; return v } catch (e) { if (policyErr !== e.message) event(`WARN usb policy: ${e.message}`); policyErr = e.message; return fallbackValue } }
 
     const counter = new L.FloodCounter({
         thresholds: th, tickS,
@@ -107,7 +128,7 @@ async function run(o) {
                 const alert = { key, level: 'alert', text: `usb flood ${port}: ${count} error lines in ${Math.max(1, atMs - tickStart)} ms` }
                 if (lastDoc) writeLatest({ ...lastDoc, at: new Date(atMs).toISOString(), state: 'alert', alerts: [...(lastDoc.alerts || []).filter((x) => x.key !== key), alert] })
             }
-            report(policy.onFlood(port))
+            report(safely(() => policy.onFlood(port), null))
         }
     })
     const startUs = kmsgMode ? Math.floor(Number(fs.readFileSync(path.join(root, 'proc/uptime'), 'utf8').split(' ')[0]) * 1e6) : null
@@ -135,10 +156,29 @@ async function run(o) {
 
     let prevProc = L.readProcTicks(root); let prevAt = Date.now(); let prevCpu = process.cpuUsage()
     let prevThrottle = L.readThrottle(root); let prevMidi = L.readMidiRx(root)
-    const readLaserStops = () => {
-        if (!o['show-status']) return null
-        try { const s = JSON.parse(fs.readFileSync(o['show-status'], 'utf8')); return Number.isFinite(s?.laser?.stops_total) ? s.laser.stops_total : null } catch { return null }
+    // Laser stops: serverXR's GET /show-status (install.sh wires the local URL) or a file serverXR writes (DI_SHOW_STATUS_FILE).
+    // Read beside the tick; a source that does not answer is said once in events.log, and again when it answers.
+    let laserStops = null; let stopsErr = null
+    const stopsOf = (d) => (Number.isFinite(d?.laser?.stops_total) ? d.laser.stops_total : null)
+    const pollLaserStops = async () => {
+        const src = o['show-status']
+        if (!src) return
+        try {
+            if (/^https?:\/\//.test(src)) {
+                const r = await fetch(src, { signal: AbortSignal.timeout(2000) })
+                if (!r.ok) throw Object.assign(new Error(`HTTP ${r.status}`), { code: `HTTP ${r.status}` })
+                laserStops = stopsOf(await r.json())
+            } else laserStops = stopsOf(JSON.parse(fs.readFileSync(src, 'utf8')))
+            if (stopsErr) event(`laser stops: ${src} answers again`)
+            stopsErr = null
+        } catch (e) {
+            laserStops = null
+            const why = e.code || e.cause?.code || e.name || 'error'
+            if (stopsErr !== why) event(`WARN laser stops: ${src} ${why}; the laser_stops column stays empty until it answers`)
+            stopsErr = why
+        }
     }
+    pollLaserStops()
     const doTick = () => {
         const now = Date.now(); const el = (now - prevAt) / 1000
         const c = counter.take()
@@ -149,23 +189,25 @@ async function run(o) {
         const midiDelta = m.midiRx !== null && prevMidi !== null ? m.midiRx - prevMidi : null; prevMidi = m.midiRx
         const cpu = process.cpuUsage(prevCpu); prevCpu = process.cpuUsage(); prevAt = now
         const selfCpuPct = el > 0 ? Math.round(((cpu.user + cpu.system) / 1000 / (el * 1000)) * 1000) / 10 : null
-        const s = { at: new Date(now).toISOString(), tick: ++tick, usb: c.usb, kmsgLines: c.lines, kmsgDropped: dropped, journaldPct: shares.journaldPct, top3: shares.top3, ...m, throttleDelta, midiRxDelta: midiDelta, laserStops: readLaserStops(), usbMode: mode, selfCpuPct }
+        const s = { at: new Date(now).toISOString(), tick: ++tick, usb: c.usb, kmsgLines: c.lines, kmsgDropped: dropped, journaldPct: shares.journaldPct, top3: shares.top3, ...m, throttleDelta, midiRxDelta: midiDelta, laserStops, usbMode: mode, selfCpuPct }
         dropped = 0
         const ev = L.evaluate(s, th, tickS)
         const flooding = new Set([...c.flagged, ...ev.alerts.filter((a) => a.key.startsWith('usb:')).map((a) => a.key.slice(4))])
-        for (const port of flooding) if (!c.flagged.includes(port)) report(policy.onFlood(port))
-        const actions = policy.onTick(flooding)
+        for (const port of flooding) if (!c.flagged.includes(port)) report(safely(() => policy.onFlood(port), null))
+        const actions = safely(() => policy.onTick(flooding, tickStart, c.usb), [])
         actions.forEach(report)
-        const keys = new Set(ev.alerts.map((a) => a.key))
-        for (const a of ev.alerts) if (open.get(a.key) !== a.level) event(`${a.level.toUpperCase()} ${a.text}`)
+        const alerts = [...ev.alerts, ...held, ...(recordFail ? [{ key: 'record-write', level: 'alert', text: `the record stopped: ${recordFail}` }] : [])]
+        const state = alerts.some((a) => a.level === 'alert') ? 'alert' : alerts.length ? 'warn' : ev.state
+        const keys = new Set(alerts.map((a) => a.key))
+        for (const a of alerts) if (open.get(a.key) !== a.level) event(`${a.level.toUpperCase()} ${a.text}`)
         for (const k of open.keys()) if (!keys.has(k)) event(`CLEAR ${k}`)
-        open.clear(); for (const a of ev.alerts) open.set(a.key, a.level)
+        open.clear(); for (const a of alerts) open.set(a.key, a.level)
         for (const port of new Set([...recent.keys(), ...Object.keys(c.usb)])) {
             const arr = [...(recent.get(port) || []), c.usb[port] || 0].slice(-L.RECENT_TICKS)
             if (arr.some((n) => n > 0)) recent.set(port, arr); else recent.delete(port)
         }
-        Object.assign(s, { state: ev.state, alerts: ev.alerts, usbActions: actions.map((a) => a.text) })
-        try { append(path.join(dayDir(), 'watch.csv'), L.WATCH_COLUMNS, L.watchRow(s)) } catch (e) { process.stderr.write(`watch.csv: ${e.message}\n`) }
+        Object.assign(s, { state, alerts, usbActions: actions.map((a) => a.text) })
+        try { append(path.join(dayDir(), 'watch.csv'), L.WATCH_COLUMNS, L.watchRow(s)); recordFail = null } catch (e) { if (!recordFail) process.stderr.write(`watch.csv: ${e.message}\n`); recordFail = `${path.join(dayDir(), 'watch.csv')} ${e.code || e.message}` }
         writeLatest({
             schema: 'di.stage-watch.latest/1', machine: os.hostname(), at: s.at, tick: s.tick, tickS, state: s.state, alerts: s.alerts,
             heat: { maxC: s.heat.maxC, sensor: s.heat.sensor, critC: s.heat.critC, throttleDelta },
@@ -173,6 +215,7 @@ async function run(o) {
             midi: { rxBytes: s.midiRx, rxDelta: midiDelta }, link: lastLink, journaldPct: s.journaldPct, top3: s.top3, selfCpuPct,
             thresholds: { validated: th.validated, source: venue.source }
         })
+        pollLaserStops()
         tickStart = now
     }
     const tickTimer = setInterval(doTick, tickS * 1000)

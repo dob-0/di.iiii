@@ -1,10 +1,12 @@
 # The 30 s re-check of one hot-plugged USB device: its error lines since the plug and its planned port (venue profile).
-# Exit 1 = a flood, 2 = not on its planned port; both are results written to events.log, not failures of the unit.
+# Exit 1 = a flood, 2 = not on its planned port, 3 = not on the bus 30 s after its own plug: results, written to events.log
+# as WARN lines, not failures of the unit. Exit 4 = a wrong device name: a failure of the unit (systemctl --failed shows it).
+# %i, never %I: systemd.unit(5) says %I undoes the escaping, which turns the kernel name 1-2.1 into 1/2.1.
 [Unit]
-Description=di stage watch: re-check USB device %I
+Description=di stage watch: re-check USB device %i
 
 [Service]
 Type=oneshot
 EnvironmentFile=-/etc/default/di-stage-watch
-ExecStart=@NODE@ @WATCH_DIR@/watch.mjs recheck %I $DI_STAGE_WATCH_ARGS
-SuccessExitStatus=1 2
+ExecStart=@NODE@ @WATCH_DIR@/watch.mjs recheck %i $DI_STAGE_WATCH_ARGS
+SuccessExitStatus=1 2 3

@@ -42,8 +42,10 @@
         }
         const z = d.laser || {}
         if (z.seen) {
-            if (z.stop_reason) { parts.push(`laser stop: ${z.stop_reason}`); state = worse(state === 'off' ? 'ok' : state, 'warn') } else if (z.armed) parts.push('laser armed')
-            detail.push(`laser: ${z.armed ? 'armed' : 'not armed'}${z.sim ? ' (simulation)' : ''}, ${z.connected}/${z.cubes} cubes answer${z.stop_reason ? ', stopped: ' + z.stop_reason : ''}${Number.isFinite(z.stops_total) ? ', stops ' + z.stops_total : ''}`)
+            // The desk's own words for the same state (its pill, show.js: "Laser On" / "Laser Off"), so one screen never says
+            // "armed" beside "Off". S12's safety words may rename both together.
+            if (z.stop_reason) { parts.push(`laser stop: ${z.stop_reason}`); state = worse(state === 'off' ? 'ok' : state, 'warn') } else if (z.armed) parts.push('laser on')
+            detail.push(`laser: ${z.armed ? 'On (cubes armed)' : 'Off'}${z.sim ? ' (simulation)' : ''}, ${z.connected}/${z.cubes} cubes answer${z.stop_reason ? ', stopped: ' + z.stop_reason : ''}${Number.isFinite(z.stops_total) ? ', stops ' + z.stops_total : ''}`)
         }
         const c = d.controller || {}
         if (c.wired) {

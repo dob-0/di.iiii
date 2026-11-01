@@ -3,9 +3,10 @@
 // any names): the watch names no production and no device of one show. The flood rate is the night's own measured
 // number: 79 649 "urb status -32" lines in 30 s (2026-11-01 00:30, ledger N1712.1).
 import fs from 'node:fs'
+import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
-import { spawn, execFileSync } from 'node:child_process'
+import { spawn, execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import * as L from './lib.mjs'
@@ -27,6 +28,10 @@ const TREE = {
     '1-2.1:1.2': { bInterfaceClass: '01', bInterfaceSubClass: '03', authorized: '1' },
     '1-2.3': { idVendor: 'cccc', idProduct: '0003', bDeviceClass: '00', product: 'Test serial', authorized: '1' },
     '1-2.3:1.0': { bInterfaceClass: 'ff', bInterfaceSubClass: '01', authorized: '1' },
+    '1-2.2': { idVendor: 'eeee', idProduct: '0005', bDeviceClass: '00', product: 'Test second controller', authorized: '1' },
+    '1-2.2:1.0': { bInterfaceClass: 'ff', bInterfaceSubClass: '00', authorized: '1' },
+    '1-4': { idVendor: 'ffff', idProduct: '0006', bDeviceClass: 'e0', product: 'Test bluetooth', authorized: '1' },
+    '1-4:1.0': { bInterfaceClass: 'e0', bInterfaceSubClass: '01', authorized: '1' },
     '1-2.4': { idVendor: 'bbbb', idProduct: '0002', bDeviceClass: '00', product: 'Test ethernet', authorized: '1' },
     '1-2.4:1.0': { bInterfaceClass: 'ff', bInterfaceSubClass: 'ff', authorized: '1', net: true },
     '1-1': { idVendor: 'dddd', idProduct: '0004', bDeviceClass: '00', product: 'Test plain', authorized: '1' },
@@ -48,6 +53,30 @@ function fakeSys() {
 }
 const auth = (root, name) => fs.readFileSync(path.join(root, 'sys/bus/usb/devices', name, 'authorized'), 'utf8').trim()
 const rec = (seq, msg, prio = 3) => `${prio},${seq},${seq * 377},-;${msg}`
+
+// One `watch.mjs run` on a made-up tree (never the real /sys): ticks of 1 s, fed through stdin, stopped by --for.
+function runWatch({ name, venue = null, feed = () => [], usbMode = 'warn', seconds = 3, args = [], readFrom = null }) {
+    const root = fakeSys()
+    const dir = fs.mkdtempSync(path.join(tmpRoot, `run-${name}-`))
+    const latest = path.join(dir, 'latest.json'); const record = path.join(dir, 'record')
+    const all = [WATCH, 'run', '--source', '-', '--sys-root', root, '--state', path.join(dir, 'state'), '--latest', latest, '--no-link', '--usb-mode', usbMode,
+        '--tick', '1', '--for', String(seconds), '--quiet', ...(venue ? ['--venue', venue] : []), ...(args.includes('--record') ? [] : ['--record', record]), ...args]
+    return new Promise((resolve, reject) => {
+        const child = spawn(process.execPath, all, { stdio: ['pipe', 'ignore', 'pipe'] })
+        let err = ''
+        child.stderr.on('data', (d) => { err += d })
+        child.stdin.on('error', () => {})
+        const timers = feed(child.stdin)
+        child.on('exit', (code) => {
+            timers.forEach(clearInterval)
+            if (code !== 0) return reject(new Error(`watch ${name} exited ${code}: ${err}`))
+            const base = readFrom || record
+            const day = fs.existsSync(base) ? fs.readdirSync(base).find((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)) : null
+            const read = (f) => { try { return fs.readFileSync(path.join(base, day, f), 'utf8') } catch { return '' } }
+            resolve({ root, latest: JSON.parse(fs.readFileSync(latest, 'utf8')), events: read('events.log'), csv: read('watch.csv'), err })
+        })
+    })
+}
 
 // A CSV reader good enough for RFC 4180 rows (quotes, doubled quotes, commas inside quotes).
 function parseCsv(text) {
@@ -176,13 +205,19 @@ describe('the USB policy', () => {
         expect(auth(root, '1-2.1:1.1')).toBe('1')
     })
 
-    it('cut: interface first, then the device, re-authorized once after 30 s, stays cut after the third flood; one undo', () => {
-        let t = 1000000
+    it('cut: interface first; the device only when a tick that began after the cut still floods (verify A); re-authorized once after 30 s; stays cut after the third flood; one undo', () => {
+        const tick0 = 1000000
+        let t = tick0 + 300 // the flood crosses its limit 300 ms into a tick
         const p = new UsbPolicy({ root, mode: 'cut', protectedList: PROTECTED, ledgerFile: path.join(root, 'state/cuts.json'), now: () => t })
         expect(p.onFlood('1-2.1').action).toBe('cut-interface')
         expect([auth(root, '1-2.1:1.0'), auth(root, '1-2.1:1.1'), auth(root, '1-2.1:1.2'), auth(root, '1-2.1')]).toEqual(['1', '0', '1', '1'])
-        t += 5000
-        expect(p.onTick(new Set(['1-2.1']))[0].action).toBe('cut-device')
+        t = tick0 + 5000 // the end of that tick: its lines were counted before the cut, so they never escalate it
+        expect(p.onTick(new Set(['1-2.1']), tick0, { '1-2.1': 100 })).toEqual([])
+        expect(auth(root, '1-2.1')).toBe('1')
+        t = tick0 + 10000 // the next tick began after the cut and still floods: now the device goes
+        const [dev] = p.onTick(new Set(['1-2.1']), tick0 + 5000, { '1-2.1': 400 })
+        expect(dev.action).toBe('cut-device')
+        expect(dev.text).toMatch(/400 error lines in a tick that began after the cut/)
         expect(auth(root, '1-2.1')).toBe('0')
         t += 29000
         expect(p.onTick(new Set())).toEqual([])
@@ -210,6 +245,37 @@ describe('the USB policy', () => {
         expect(planCut(readDevice(root, '1-1'), 'interface', root)).toBeNull()
     })
 
+    it('one ledger for the service and a person: a cut or an undo made by one is never lost by the other (verify B)', () => {
+        let t = 2000000
+        const ledgerFile = path.join(root, 'state/cuts.json')
+        const service = new UsbPolicy({ root, mode: 'cut', ledgerFile, now: () => t })
+        const person = () => new UsbPolicy({ root, mode: 'cut', ledgerFile, now: () => t }) // each CLI run is a process of its own
+        expect(service.onFlood('1-2.1').action).toBe('cut-interface')
+        expect(person().cutNow('1-2.2').action).toBe('cut-device')
+        t += 1000
+        expect(service.onFlood('1-2.3').action).toBe('cut-device') // the service's next save keeps the person's cut
+        expect(Object.keys(JSON.parse(fs.readFileSync(ledgerFile, 'utf8')).ports).sort()).toEqual(['1-2.1', '1-2.2', '1-2.3'])
+        expect(service.summary().map((x) => x.port).sort()).toEqual(['1-2.1', '1-2.2', '1-2.3'])
+        expect(person().undoAll().map((u) => u.port).sort()).toEqual(['1-2.1', '1-2.2', '1-2.3'])
+        for (const n of ['1-2.1:1.1', '1-2.2', '1-2.3']) expect(auth(root, n)).toBe('1')
+        service.onTick(new Set(), t) // the reverse: the service sees the person's undo at its next tick
+        expect(service.summary()).toEqual([])
+        fs.writeFileSync(`${ledgerFile}.lock`, '999999999\n') // a holder that died: its lock is broken
+        expect(person().cutNow('1-2.3').action).toBe('cut-device')
+        fs.writeFileSync(`${ledgerFile}.lock`, `${process.pid}\n`) // a live holder: waited for, then refused with its pid
+        expect(() => new UsbPolicy({ root, mode: 'cut', ledgerFile, lockWaitMs: 60 }).undoAll()).toThrow(/locked by pid \d+/)
+        fs.unlinkSync(`${ledgerFile}.lock`)
+        expect(new UsbPolicy({ root, mode: 'cut', ledgerFile }).undoAll().map((u) => u.port)).toEqual(['1-2.3'])
+    })
+
+    it('the machine\'s own keyboard, trackpad and Bluetooth are never cut, with no venue list at all (verify H)', () => {
+        expect(protectionOf(readDevice(root, '1-1'), [])).toMatch(/input device \(HID\)/)
+        expect(protectionOf(readDevice(root, '1-4'), [])).toMatch(/Bluetooth/)
+        const p = new UsbPolicy({ root, mode: 'cut', writer: () => { throw new Error('nothing may be written') } })
+        expect(p.onFlood('1-4').action).toBe('protected')
+        expect(p.cutNow('1-1').action).toBe('refused')
+    })
+
     it('the cut dry run prints its sysfs writes and the undo, and writes nothing', () => {
         const out = execFileSync(process.execPath, [WATCH, 'cut', '1-2.1', '--dry-run', '--sys-root', root, '--state', path.join(root, 'state')], { encoding: 'utf8' })
         const dev = path.join(root, 'sys/bus/usb/devices')
@@ -229,6 +295,21 @@ describe('the USB policy', () => {
         const off = recheck('1-2.1', { root, portPlan: [{ name: 'controller', vidpid: 'aaaa:0001', port: '1-1' }] })
         expect(off.code).toBe(2)
         expect(off.text).toContain('NOT on its planned port 1-1')
+        expect(recheck('1-2.9', { root }).code).toBe(3) // not on the bus just after its own plug: a WARN, never a pass
+        expect(recheck('1/2.1', { root }).code).toBe(4) // what systemd's %I made of 1-2.1
+    })
+
+    it('the re-check unit, rendered and run for the instance udev gives it, checks the real device (verify D)', () => {
+        const unit = fs.readFileSync(path.join(HERE, 'systemd/di-stage-watch-recheck@.service'), 'utf8')
+        expect(fs.readFileSync(path.join(HERE, 'systemd/90-di-stage-watch.rules'), 'utf8')).toContain('di-stage-watch-recheck@%k.timer') // udev(7): %k = 1-2.1
+        expect(fs.readFileSync(path.join(HERE, 'systemd/di-stage-watch-recheck@.timer'), 'utf8')).toContain('Unit=di-stage-watch-recheck@%i.service')
+        // systemd.unit(5): %i is the instance as given; %I is the same with the escaping undone (systemd-escape --unescape).
+        const unescape = (s) => { try { return execFileSync('systemd-escape', ['--unescape', '--', s], { encoding: 'utf8' }).trim() } catch { return s.replace(/-/g, '/').replace(/\\x([0-9a-f]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16))) } }
+        const exec = unit.split('\n').find((l) => l.startsWith('ExecStart=')).slice('ExecStart='.length)
+        const [bin, ...args] = exec.replace(/%i/g, '1-2.1').replace(/%I/g, unescape('1-2.1')).replace('@NODE@', process.execPath).replace('@WATCH_DIR@', HERE).replace('$DI_STAGE_WATCH_ARGS', '').trim().split(/\s+/)
+        const out = execFileSync(bin, [...args, '--sys-root', root, '--latest', path.join(root, 'none.json'), '--record', path.join(root, 'rec')], { encoding: 'utf8' })
+        expect(out).toMatch(/^recheck 1-2\.1 aaaa:0001 Test controller: 0 error lines/)
+        expect(unescape('1-2.1')).toBe('1/2.1') // why %I was wrong
     })
 })
 
@@ -280,6 +361,9 @@ describe('the watch as it runs', () => {
         const mean = (a) => Math.round((a.reduce((x, y) => x + y, 0) / a.length) * 100) / 100
         console.log(`stage watch, measured on ${os.hostname()}: ALERT ${latencyMs} ms after the first flood line; own CPU (steady ticks) idle mean ${mean(idleCpu)} % (max ${Math.max(...idleCpu)}), at the night rate mean ${mean(floodCpu)} % (max ${Math.max(...floodCpu)}); ${flood.seq} lines replayed`)
         expect(mean(idleCpu)).toBeLessThan(2)
+        // At the night's rate (verify F): a REGRESSION bound, not the plan's 2 % bar. Measured on aylmo 2026-11-01, the mean
+        // was 1.57-2.35 % over 13 runs (old and new code alike), so 2 % is not met reliably there: an open row (README).
+        expect(mean(floodCpu)).toBeLessThan(3)
     }, 40000)
 
     it('install.sh --dry-run renders the unit, the timer, the udev rule and needs no root', () => {
@@ -288,7 +372,56 @@ describe('the watch as it runs', () => {
         expect(out).toContain('would write /etc/udev/rules.d/90-di-stage-watch.rules')
         expect(out).toContain('ENV{SYSTEMD_WANTS}+="di-stage-watch-recheck@%k.timer"')
         expect(out).toContain('OnActiveSec=30s')
-        expect(out).toContain('DI_STAGE_WATCH_ARGS="--usb-mode warn"')
+        expect(out).toContain('DI_STAGE_WATCH_ARGS="--usb-mode warn --show-status http://127.0.0.1:4000/show-status"') // verify I
+        expect(out).toContain('recheck %i $DI_STAGE_WATCH_ARGS')
+        const refused = spawnSync('bash', [path.join(HERE, 'install.sh'), '--dry-run', '--usb-mode', 'cut'], { encoding: 'utf8' }) // verify C
+        expect(refused.status).toBe(2)
+        expect(refused.stderr).toContain('cut mode needs --venue FILE whose watch.usb.protected')
+        const venue = path.join(tmpRoot, 'venue-install.json')
+        fs.writeFileSync(venue, JSON.stringify({ watch: { usb: { protected: [{ name: 'dmx dongle', vidpid: 'cccc:0003' }] } } }))
+        expect(execFileSync('bash', [path.join(HERE, 'install.sh'), '--dry-run', '--usb-mode', 'cut', '--venue', venue], { encoding: 'utf8' })).toContain(`--usb-mode cut --venue ${venue}`)
         expect(out).toContain('would run: systemctl enable --now di-stage-watch.service')
     })
+
+    it('cut mode as it runs: a burst cuts the interface only, a flood that goes on cuts the device, no protected list refuses the cut (verify A, C)', async () => {
+        const venue = path.join(tmpRoot, 'venue-protected.json')
+        fs.writeFileSync(venue, JSON.stringify({ watch: { usb: { protected: [{ name: 'dmx dongle', vidpid: 'cccc:0003' }] } } }))
+        let seq = 0
+        const lines = (n) => Array.from({ length: n }, () => rec(++seq, 'usb 1-2.1: urb status -32')).join('\n') + '\n'
+        const burst = (w) => [setTimeout(() => w.write(lines(100)), 400)] // 100 lines, then silence: the verifier's repro
+        const steady = (w) => { let n = 0; return [setInterval(() => { if (n++ < 28) w.write(lines(100)) }, 100)] } // 1000 lines/s for 2.8 s
+        const [b, s, n] = await Promise.all([
+            runWatch({ name: 'burst', venue, feed: burst, usbMode: 'cut', seconds: 4 }),
+            runWatch({ name: 'steady', venue, feed: steady, usbMode: 'cut', seconds: 4 }),
+            runWatch({ name: 'no-list', feed: burst, usbMode: 'cut', seconds: 4, args: ['--show-status', path.join(tmpRoot, 'no-such-status.json')] })
+        ])
+        expect(b.events).toMatch(/ USB cut-interface 1-2\.1: /)
+        expect(b.events).not.toMatch(/cut-device/)
+        expect([auth(b.root, '1-2.1:1.1'), auth(b.root, '1-2.1')]).toEqual(['0', '1'])
+        expect(s.events).toMatch(/ USB cut-interface 1-2\.1: /)
+        expect(s.events).toMatch(/ USB cut-device 1-2\.1: .*still floods after the interface cut \(\d+ error lines in a tick that began after the cut/)
+        expect(auth(s.root, '1-2.1')).toBe('0')
+        expect(n.events).toMatch(/ USB warn 1-2\.1: /)
+        expect(n.events).toMatch(/WARN USB cut refused: the venue profile names no protected device/)
+        expect(n.events).toMatch(/WARN laser stops: .*no-such-status\.json ENOENT/) // verify I: a source that does not answer is said
+        expect(n.latest.usb.mode).toBe('warn')
+        expect(n.latest.alerts.map((a) => a.key)).toContain('usb-mode')
+        expect([auth(n.root, '1-2.1:1.1'), auth(n.root, '1-2.1')]).toEqual(['1', '1'])
+    }, 20000)
+
+    it('a record it cannot write falls back and says so; laser stops come from the show-status route (verify G, I)', async () => {
+        const ro = fs.mkdtempSync(path.join(tmpRoot, 'ro-')); fs.chmodSync(ro, 0o555)
+        const fb = path.join(tmpRoot, 'fallback')
+        const asRoot = process.getuid?.() === 0 // root writes anywhere: the read-only case cannot be made for it
+        const server = http.createServer((req, res) => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ laser: { stops_total: 7 } })) })
+        await new Promise((r) => server.listen(0, '127.0.0.1', r))
+        try {
+            const url = `http://127.0.0.1:${server.address().port}/show-status`
+            const r = await runWatch({ name: 'fallback', seconds: 3, args: ['--record', path.join(ro, 'record'), '--record-fallback', fb, '--show-status', url], readFrom: asRoot ? path.join(ro, 'record') : fb })
+            if (!asRoot) expect(r.latest.alerts).toContainEqual(expect.objectContaining({ key: 'record', level: 'warn', text: expect.stringContaining(`recording to ${fb}`) }))
+            const rows = parseCsv(r.csv)
+            expect(rows.slice(1).map((row) => row[L.WATCH_COLUMNS.indexOf('laser_stops_total')])).toContain('7')
+            expect(r.events).toContain(`laser stops ${url}`)
+        } finally { server.close(); fs.chmodSync(ro, 0o755) }
+    }, 15000)
 })

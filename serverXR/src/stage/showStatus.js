@@ -3,7 +3,9 @@
 // The show status (2026-11-01; gaps G04, G11, G25 of the show-day audit, plan slice S11): what the stage machine says about
 // the running show, as one JSON document. GET /show-status serves it (routes/showStatusRoutes.js), the Show desk's status
 // line reads it, and a pusher sends it to the di.bo door every 30 s and on every change — off unless
-// DI_SHOW_STATUS_PUSH_URL is set (the door's route is di.bo's; this file owns only the document's shape).
+// DI_SHOW_STATUS_PUSH_URL is set (the door's POST /show/status, with a show:push token in DI_SHOW_STATUS_PUSH_TOKEN).
+// The door takes only its own schema v1 (S06), so the push sends toDoorV1(document), never the document itself; the
+// door also needs the production's title (DI_SHOW_PRODUCTION) and refuses a status without one.
 //
 // Two clocks (RESEARCH-speed-assistant, gap 7; the healthchecks.io model of period + grace): `changed_at` moves only when
 // a state field changes, so a card built from it is edited only on a change; `sent_at` moves on every send, and the
@@ -100,6 +102,52 @@ function controllerOf(c) {
 const stateKey = (d) => JSON.stringify([d.light.scene, d.light.blackout, d.laser.armed, d.laser.stop_reason, d.controller.seen, d.link.state, d.heat.state, d.watch.state, d.watch.alerts.map((a) => a.key + a.level)])
 const KEY_NAMES = ['light.scene', 'light.blackout', 'laser.armed', 'laser.stop_reason', 'controller.seen', 'link.state', 'heat.state', 'watch.state', 'watch.alerts']
 
+// The di.bo door's status push, schema v1 (S06: di-bo docs/crew-feed.md "The status push, schema v1"; its reader is
+// lib/card.mjs validateStatus). A safety fact is never filled in: no laser block, or an armed state nobody read, is
+// "unknown", never "disarmed". A controller or a link nobody knows is null (the door reads {seen:null} as "not seen").
+const DOOR_LASER_STATES = ['armed', 'disarmed', 'stopped', 'unknown']
+function toDoorV1(d, { production = null } = {}) {
+    const z = d.laser || {}
+    const state = !z.seen ? 'unknown' : z.stop_reason ? 'stopped' : z.armed === true ? 'armed' : z.armed === false ? 'disarmed' : 'unknown'
+    const k = d.link || {}
+    const linkKnown = ['ok', 'degraded', 'lost'].includes(k.state)
+    return {
+        v: 1,
+        production,
+        t: d.sent_at,
+        light: d.light && d.light.seen ? { scene: d.light.scene ?? null } : null,
+        laser: { state, stop_reason: state === 'stopped' ? String(z.stop_reason) : null },
+        controller: d.controller && d.controller.wired && typeof d.controller.seen === 'boolean' ? { seen: d.controller.seen } : null,
+        link: linkKnown ? { up: k.state !== 'lost', kind: k.state === 'lost' ? null : k.tailscale === 'direct' ? 'direct' : k.tailscale === 'derp' ? 'relay' : null } : null,
+        heat: d.heat && Number.isFinite(d.heat.max_c) ? { c: d.heat.max_c } : null,
+        changed_at: d.changed_at || null,
+        human: null
+    }
+}
+
+// The door's v1 rules as S06's validateStatus states them, a little stricter (an object never carries a null it would
+// misread), so this side cannot drift from the door. Returns the problems; [] means the door takes it.
+function validateDoorV1(b, { now = Date.now(), maxSkewMs = 10 * 60000 } = {}) {
+    if (!b || typeof b !== 'object' || Array.isArray(b)) return ['not an object']
+    const p = []
+    const need = (cond, msg) => { if (!cond) p.push(msg) }
+    const isoMs = (v) => (typeof v === 'string' && Number.isFinite(Date.parse(v)) ? Date.parse(v) : null)
+    const obj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
+    need(b.v === 1, 'v is 1')
+    const t = isoMs(b.t)
+    need(t !== null && Math.abs(now - t) <= maxSkewMs, 't: an ISO time within 10 min of the door clock')
+    const pr = b.production
+    need((typeof pr === 'string' && pr.trim() !== '') || (obj(pr) && String(pr.title || pr.id || '').trim() !== ''), 'production (a title)')
+    need(b.light === null || (obj(b.light) && (b.light.scene === null || typeof b.light.scene === 'string')), 'light: {scene} or null')
+    need(obj(b.laser) && DOOR_LASER_STATES.includes(b.laser.state) && (b.laser.stop_reason === null || typeof b.laser.stop_reason === 'string'), 'laser: {state, stop_reason}')
+    need(b.controller === null || (obj(b.controller) && typeof b.controller.seen === 'boolean'), 'controller: {seen} or null')
+    need(b.link === null || (obj(b.link) && typeof b.link.up === 'boolean' && [null, 'direct', 'relay'].includes(b.link.kind)), 'link: {up, kind} or null')
+    need(b.heat === null || (obj(b.heat) && Number.isFinite(b.heat.c)), 'heat: {c} or null')
+    need(b.changed_at === null || isoMs(b.changed_at) !== null, 'changed_at')
+    need(b.human === null || obj(b.human), 'human')
+    return p
+}
+
 function createShowStatus({ lighting = null, lasers = null, watchFile = process.env.DI_STAGE_WATCH_LATEST || DEFAULT_WATCH_LATEST, now = () => Date.now(), hostname = os.hostname(), log = () => {} } = {}) {
     const providers = {}
     let prev = null; let changedAt = null; let lastChange = null; let seq = 0
@@ -134,7 +182,7 @@ function createShowStatus({ lighting = null, lasers = null, watchFile = process.
     }
 
     let timer = null; let lastPushedChange = null; let lastPushAt = 0; let inFlight = false
-    function startPush({ url = process.env.DI_SHOW_STATUS_PUSH_URL, token = process.env.DI_SHOW_STATUS_PUSH_TOKEN, file = process.env.DI_SHOW_STATUS_FILE, everyMs = 5000, fetchImpl = globalThis.fetch } = {}) {
+    function startPush({ url = process.env.DI_SHOW_STATUS_PUSH_URL, token = process.env.DI_SHOW_STATUS_PUSH_TOKEN, file = process.env.DI_SHOW_STATUS_FILE, production = process.env.DI_SHOW_PRODUCTION || null, everyMs = 5000, fetchImpl = globalThis.fetch } = {}) {
         if (timer || (!url && !file)) return { enabled: Boolean(timer) }
         push.enabled = Boolean(url)
         const once = async () => {
@@ -148,10 +196,15 @@ function createShowStatus({ lighting = null, lasers = null, watchFile = process.
                 if (!url) return
                 const due = doc.changed_at !== lastPushedChange || now() - lastPushAt >= PERIOD_S * 1000
                 if (!due) return
+                if (!production) {
+                    push.failures += 1; push.last_error = 'no production (DI_SHOW_PRODUCTION)'
+                    if (push.failures === 1) log('show-status: the door needs the production\'s title (DI_SHOW_PRODUCTION); nothing is sent until it is set')
+                    return
+                }
                 const headers = { 'content-type': 'application/json', 'idempotency-key': `${doc.machine}:${doc.seq}` }
                 if (token) headers.authorization = `Bearer ${token}`
                 try {
-                    const r = await fetchImpl(url, { method: 'POST', headers, body: JSON.stringify(doc), signal: AbortSignal.timeout(5000) })
+                    const r = await fetchImpl(url, { method: 'POST', headers, body: JSON.stringify(toDoorV1(doc, { production })), signal: AbortSignal.timeout(5000) })
                     if (!r.ok) throw Object.assign(new Error(`refused (${r.status})`), { code: `HTTP ${r.status}` })
                     if (push.failures) log(`show-status: the door answers again after ${push.failures} failed sends`)
                     lastPushedChange = doc.changed_at; lastPushAt = now(); push.last_ok_at = iso(lastPushAt); push.failures = 0; push.last_error = null
@@ -204,4 +257,4 @@ function validateShowStatus(d) {
     return p
 }
 
-module.exports = { createShowStatus, validateShowStatus, SCHEMA, PERIOD_S, GRACE_S, WATCH_STALE_S, DEFAULT_WATCH_LATEST }
+module.exports = { createShowStatus, validateShowStatus, toDoorV1, validateDoorV1, SCHEMA, PERIOD_S, GRACE_S, WATCH_STALE_S, DEFAULT_WATCH_LATEST }

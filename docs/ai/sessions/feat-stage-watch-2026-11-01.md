@@ -28,3 +28,8 @@ real controller, the install. The line's warn and alert colours were not picture
 
 The usbmon and interface-cut bench (hub and controller at aylmo); the tailscaled CPUWeight bench (his word: heat);
 the read-only journal read of both link drops; the owner's warn-or-cut word; the install window after the show; the Wiki line.
+
+## Round 2 (2026-11-01 04:xx, after the independent verify refused 64acbb3d1)
+Fixed verify A-K (agent-reports-2026-11-01/fix-wave-1/S11/VERIFY.md); each fix and its test: fix-wave-1/S11/REPORT-r2.md.
+Still open: the 2 % CPU bar at the night's rate (met at idle only on aylmo, 1.57-2.35 % over 13 runs); /dev/kmsg's own cost
+(root); S06's side of the shared door fixture; the alert line hides heat and link behind its ellipsis (the title has them).
