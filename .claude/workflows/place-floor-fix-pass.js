@@ -5,8 +5,10 @@ export const meta = {
     { title: 'Walls', detail: 'wall plan from the footage, per-wall same-pose compare' },
     { title: 'Dense', detail: 'dense frames, estimated walls to measured' },
     { title: 'Audit', detail: 'every defect per room vs its frames' },
-    { title: 'Fix', detail: 'one fixer per room' },
+    { title: 'Baseline', detail: 'archive the previous round, score it at the fixed pose set' },
+    { title: 'Fix', detail: 'one fixer per room + the stills crop' },
     { title: 'Assemble', detail: 'one floor, checks, load speed, live shots' },
+    { title: 'Gate', detail: 'archive this round, score, roll back rooms that got worse' },
     { title: 'Judge', detail: 'adversarial, before/after per room' },
   ],
 }
@@ -54,7 +56,24 @@ Your job: AUDIT, adversarially. For each room ${ROOMS.join(', ')}: look at the l
   { label: 'audit', phase: 'Audit', schema: AUD })
 if (!audit) return { error: 'audit failed' }
 
+// Round numbers and the gate (owner's lead 2026-11-02, after rounds 5-6 shipped changes that made rooms worse):
+// a fixer's change is kept only if the room's same-pose score does not fall below the previous round's.
+const ROUND = (args && args.round) || 7
+const PREV = ROUND - 1
+const GATE = `python3 scripts/place/model-hall/round_gate.py` // archive | restore | score | check, docs in its header
+const STILLS = 'scripts/place/model-hall/stills_crop.py'
+
+phase('Baseline')
+await agent(`${BASE}
+
+Your job: the BASELINE for the gate, no modelling. In D/modelled: (1) if D/modelled/gate_poses.json is missing, write it: per room 2-4 frames that face that room's walls and objects, each with a pose json from pose_from_frame.py (rms_px < 5; reuse the rooms' stored poses), COPIED into D/modelled/gate_poses/ so the set never moves; the same set is used for every round from now on, never edited during a round. (2) If D/modelled/rounds/r${PREV}/ is missing, run \`${GATE} archive D/modelled ${PREV}\` (the current floor IS round ${PREV}). (3) Run \`${GATE} score D/modelled ${PREV}\` (blender -t 6, nice 10). A room whose score is < 0.01 has no baseline: fix its poses first. Write the table to ${R}/GATE-baseline.md. Return the table.`,
+  { label: 'baseline', phase: 'Baseline' })
+
 phase('Fix')
+const stillsJob = agent(`${BASE}
+
+Your job: the STILLS, nothing else. Every film-strip still, print and poster the rooms show: list it in D/modelled/stills_spec.json with its 3D corners (from the room builds) and 3-8 candidate frames that face it from the dense set (D/modelled/dense/frames, 4K source), each with its solved pose; run \`${STILLS} D/modelled/stills_spec.json <frames dir> D/modelled/stills\` (frcnn detector, the same model as ingest). It writes the sharpest people-free rectified crop per still and refuses blurred, off-frame or people crops; a refused still stays blank paper in its frame, never blurred and used. Report written/refused per room to ${R}/STILLS.md; the room fixers take their stills from D/modelled/stills/.`,
+  { label: 'stills', phase: 'Fix' })
 const fixes = await parallel(audit.rooms.filter(r => ROOMS.includes(r.id)).map(r => () => agent(`${BASE}
 
 Your job: FIX ONE room, "${r.id}", until every defect is gone. Defects from the audit (${R}/AUDIT.md):
@@ -69,6 +88,13 @@ const asm = await agent(`${BASE}
 Your job: ASSEMBLE round 5. Read ${R}/LEAD_NOTES.md (4 ?at= rooms black 35-40 s: read console+network) and ${R}/AUDIT.md (shared problems), ${R}/rooms/*.md and every D/modelled/rooms/*/SHARED_NEEDS.md. Rebuild the whole floor with the existing one command (scripts/place/model-hall/) into D/modelled/floor.glb; extend check_glb.py so it FAILS on: object/object and object/wall intersections, unsupported (floating) objects, semi-transparent materials not tagged as glass, untextured large faces (> 1 m2 with a flat colour); run it to 0 problems. Fix the shared problems: time to first frame on ?at= pages (measure before/after; texture sizes/compression, GLB size), plan view framed to fill the screen, fly bounded to the floor. Physics-first check (scripts/place/physics_check.py if lights exist: 0 leaks). Re-import on the test copy (--no-sources), screenshot every room live on the agent screen at ?at=<room>. Commit in ~/work/di.iiii-ch3d (exact files, never git add -A). Report ${R}/ASSEMBLE.md with numbers.`,
   { label: 'assemble', phase: 'Assemble' })
 
+phase('Gate')
+await stillsJob
+const gate = await agent(`${BASE}
+
+Your job: the GATE for round ${ROUND}, no modelling. In D/modelled: (1) \`${GATE} archive D/modelled ${ROUND}\` (the assembled floor). (2) \`${GATE} score D/modelled ${ROUND}\`. (3) \`${GATE} check D/modelled ${ROUND} --prev ${PREV} --apply\`. (4) If any room rolled back: rebuild the floor with model_floor.sh, then \`${GATE} finalize D/modelled ${ROUND}\` (keeps the pre-gate archive, archives and scores the rebuilt floor), and re-import on the test copy (--no-sources). Write ${R}/GATE.md: per room the previous score, this round's score, keep/rollback. Return that table.`,
+  { label: 'gate', phase: 'Gate' })
+
 phase('Judge')
 const J = { type: 'object', properties: { pass: { type: 'boolean' }, per_room: { type: 'array', items: { type: 'object', properties: {
   id: { type: 'string' }, no_mistakes: { type: 'boolean' }, left: { type: 'string' } }, required: ['id', 'no_mistakes', 'left'] } },
@@ -76,6 +102,6 @@ const J = { type: 'object', properties: { pass: { type: 'boolean' }, per_room: {
   required: ['pass', 'per_room', 'first_frame_seconds', 'faces_in_textures', 'proof', 'summary'] }
 const verdict = await agent(`${BASE}
 
-Your job: JUDGE round 5 adversarially, against the owner's "no mistakes" bar. Trust only what you see: open ${URL}?at=<room> for each of ${ROOMS.join(', ')} on the agent screen, wait for first frame (time it), screenshot, look around 4 directions; compare with ${R}/audit/ and the frames. Run the OWNER'S METHOD compare yourself on key frames per room (render from the solved pose, per-object table: position, orientation, size, texture) — not only 'looks similar'. Check every defect in ${R}/AUDIT.md is gone; look for new ones (clipping, floating, clones, flat slabs, transparency, streaks, wrong colours). Open every texture: no person or face. Make ${R}/judge/before_after_<room>.png (frame | round-4 render same pose | round-5 render same pose | diff; plus the live ?at= shot) and ${R}/judge/all_rooms.png. Write ${R}/VERDICT-5.md. pass=true only if every room has no_mistakes. Close your test browser.`,
+Your job: JUDGE round 5 adversarially, against the owner's "no mistakes" bar. Trust only what you see: open ${URL}?at=<room> for each of ${ROOMS.join(', ')} on the agent screen, wait for first frame (time it), screenshot, look around 4 directions; compare with ${R}/audit/ and the frames. Run the OWNER'S METHOD compare yourself on key frames per room (render from the solved pose, per-object table: position, orientation, size, texture) — not only 'looks similar'. Read ${R}/GATE.md (the measured keep/rollback per room) and say where your eye disagrees with it. Check every defect in ${R}/AUDIT.md is gone; look for new ones (clipping, floating, clones, flat slabs, transparency, streaks, wrong colours). Open every texture: no person or face. Make ${R}/judge/before_after_<room>.png (frame | round-4 render same pose | round-5 render same pose | diff; plus the live ?at= shot) and ${R}/judge/all_rooms.png. Write ${R}/VERDICT-5.md. pass=true only if every room has no_mistakes. Close your test browser.`,
   { label: 'judge', phase: 'Judge', schema: J })
 return { verdict, fixed: fixes.filter(Boolean).length, asm: asm ? asm.slice(0, 600) : null }
