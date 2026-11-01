@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // scripts/show/install.mjs — install a di runtime pack on a show machine through the release gate.
-// From di-atlas tools/projector-room/install-look.sh (2026-10-31), now with the record and the gate in front.
+// From di-atlas install-look.sh (2026-10-31), now with the record and the gate in front.
 //
 //   node scripts/show/install.mjs <di-runtime-…tar.gz> --production <name> (--host <user@host> | --home <DI home>)
 //        [--record <file>] [--accept '<reason>'] [--checkpoint-cmd '<cmd>'] [--server <url>] [--dry-run]

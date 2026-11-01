@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // scripts/show/hot-swap.mjs — put the desk ui folders of a pack live WITHOUT restarting the server (the laser stays
-// armed or disarmed as it is). From di-atlas tools/projector-room/ui-hot-swap.sh (2026-11-01), with the gate in front.
+// armed or disarmed as it is). From di-atlas ui-hot-swap.sh (2026-11-01), with the gate in front.
 //
 //   node scripts/show/hot-swap.mjs <pack.tar.gz> --production <name> (--host <user@host> | --home <DI home>)
 //        [--record <file>] [--accept '<reason>'] [--when-up] [--checkpoint-cmd '<cmd>'] [--go-cmd '<cmd>']

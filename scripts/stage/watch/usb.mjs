@@ -209,7 +209,7 @@ export class UsbPolicy {
         if (!this.ledgerFile) return
         let text
         try { text = fs.readFileSync(this.ledgerFile, 'utf8') } catch (e) { if (e.code === 'ENOENT') { this.ports = {}; return } throw e }
-        try { this.ports = JSON.parse(text).ports || {} } catch (e) { throw new Error(`the cut ledger ${this.ledgerFile} is unreadable (${e.message}); nothing was changed: read it, then mend or move it`) }
+        try { this.ports = JSON.parse(text).ports || {} } catch (e) { throw new Error(`the cut ledger ${this.ledgerFile} is unreadable (${e.message}); nothing was changed: read it, then mend or move it`, { cause: e }) }
     }
 
     lock() {
