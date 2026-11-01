@@ -80,6 +80,7 @@ import { rendererWithFallback } from '../project/viewport/rendererFallback.js'
 import { isSteelEntity } from '../objectComponents/steelOccluder.js'
 import { isArchitectureEntity } from '../project/viewport/smartView/smartViewGeometry.js'
 import LoadingScreen from './LoadingScreen.jsx'
+import { parseWalkAt, walkAtSpawn } from './walkAt.js'
 
 // The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
 const RigBodies = lazy(() => import('../rigbuild/RigBodies.jsx'))
@@ -1755,8 +1756,11 @@ export default function LiveProjectScene({
     const spawnAppliedRef = useRef(null)
     useEffect(() => {
         const s = doc?.worldState?.spawn
-        if (!s || spawnAppliedRef.current === projectId) return
+        // ?at=<room> / ?pose=x,y,z,yaw (walkAt.js): the link's pose wins over the authored arrival, taken as given (no door fit).
+        const at = doc ? walkAtSpawn(doc, parseWalkAt(typeof window !== 'undefined' ? window.location.search : '')) : null
+        if ((!s && !at) || spawnAppliedRef.current === projectId) return
         spawnAppliedRef.current = projectId
+        if (at) { Object.assign(playerRef.current, at); return }
         // Mutate in place, don't replace the object: Walker's mouse/touch-look
         // listeners are wired up once on mount and close over this exact
         // playerRef.current reference. Reassigning it here orphaned that
@@ -1774,7 +1778,8 @@ export default function LiveProjectScene({
     useEffect(() => {
         if (!onArrivalPose || !doc) return
         const spawn = doc.worldState?.spawn
-        const pose = spawn ? arrivalFor({
+        const at = walkAtSpawn(doc, parseWalkAt(typeof window !== 'undefined' ? window.location.search : ''))
+        const pose = at || (spawn ? arrivalFor({
             x: spawn.x ?? 0,
             z: spawn.z ?? 0,
             yaw: spawn.yaw ?? 0,
@@ -1786,7 +1791,7 @@ export default function LiveProjectScene({
             yaw: playerRef.current.yaw,
             pitch: 0,
             altY: EYE_HEIGHT
-        }
+        })
         const look = 20
         onArrivalPose({
             position: [pose.x, pose.altY, pose.z],

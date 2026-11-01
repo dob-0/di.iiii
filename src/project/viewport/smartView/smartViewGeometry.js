@@ -849,6 +849,15 @@ export const layersParam = (layers) => {
  * all four wall cuts (`wallInset` inside their lines, as cutawayPlan), wherever the camera is; Cut off drops the camera's
  * own cutaway (the whole building from outside).
  */
+// The plan views (Top, and Floor, which is the whole plan for a building with no rig) are cut-away plans by what they are:
+// with the building whole (Cut off, the room page's default since 2026-10-15 N730) they drew every ceiling and roof slab,
+// so Top and Floor were flat grey blocks on black (Cinema House, 2026-11-01, measured: drawPlan.roof null, cut false).
+// While the camera sits at one of them the cut is on; it goes back to the visitor's choice the moment they take the camera.
+export const PLAN_VIEW_IDS = Object.freeze(['top', 'floor'])
+export const layersForPreset = (layers, presetId) => (layers && layers.cut === false && PLAN_VIEW_IDS.includes(presetId)
+    ? { ...layers, cut: true }
+    : layers)
+
 export const planWithLayers = (plan, frame, layers, { wallInset = 1.2 } = {}) => {
     if (!frame || !layers) return plan
     // Cut off: the camera's own cutaway is dropped, the building stands whole; Roof/Walls off still cut (authored).

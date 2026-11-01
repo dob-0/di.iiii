@@ -22,6 +22,7 @@ import {
     meshLayer,
     isOutsideEntityId,
     planWithLayers,
+    layersForPreset,
     keptByPlan,
     farthestCornerDistance,
     enclosingModelIds,
@@ -613,6 +614,20 @@ export default function SmartView({
             rigBox
         })
         state.frame = frame
+        // DEV ONLY, for the harness (a test reads what the cut was measured from; nothing in the app reads it).
+        if (import.meta.env.DEV && typeof window !== 'undefined') {
+            window.__diSmartView = {
+                state,
+                planes,
+                gl,
+                roofMinY: Number.isFinite(roofMinY) ? roofMinY : null,
+                archIds: [...archIds],
+                walls: walls.length,
+                roofs: walls.filter((m) => m.userData.svRole === 'roof').map((m) => m.name),
+                camera,
+                get layers() { return layersRef.current }
+            }
+        }
         // The roof's own underside, not roofCut (that is raised above a rig hung higher than the roof's lowest member).
         uniforms.uSvCeiling.value = Number.isFinite(roofMinY) ? roofMinY : (Number.isFinite(frame?.roofCut) ? frame.roofCut : PARK)
         state.rigBox = rigBox
@@ -688,6 +703,7 @@ export default function SmartView({
         // A preset is composed on purpose (on Crane the bridge IS the subject): no occlusion fade while the
         // camera sits at it; the fade is back once the visitor takes the camera (controlstart).
         state.atPreset = true
+        state.presetId = preset.id
         // The lock: a preset whose camera stands outside the building (Top, Side …) pauses it while that view
         // is on; nothing is clamped mid-flight either.
         const box = insideBox(state.frame)
@@ -844,7 +860,7 @@ export default function SmartView({
         const plan = cutawayPlan(cam.toArray(), frame)
         setCameraOutside(gl, plan.roof !== null)
         // what is drawn: the camera's cutaway plus the authored layers (Roof off, Walls off)
-        const drawn = planWithLayers(plan, frame, layersRef.current)
+        const drawn = planWithLayers(plan, frame, layersForPreset(layersRef.current, state.atPreset ? state.presetId : null))
         state.drawPlan = drawn
         const goals = [drawn.roof, drawn.xMax, drawn.xMin, drawn.zMax, drawn.zMin]
         const edges = [frame.roofTop + 0.5, frame.bounds.max[0] + 0.5, frame.bounds.min[0] - 0.5, frame.bounds.max[2] + 0.5, frame.bounds.min[2] - 0.5]

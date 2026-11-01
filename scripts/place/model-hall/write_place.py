@@ -76,6 +76,15 @@ if floorp and room_slab:
     rect = lambda rid: (room_slab[rid][0][0], room_slab[rid][1][0], -room_slab[rid][1][1], -room_slab[rid][0][1])  # x0 x1 z0 z1 (glTF)
     clampv = lambda v, a, b: max(a, min(b, v))
     views = rec.get('views', [])
+    try:   # the whole model as one BVH, for the sight-line check below
+        from mathutils.bvhtree import BVHTree
+        dg = bpy.context.evaluated_depsgraph_get(); vs, fs = [], []
+        for o in bpy.context.scene.objects:
+            if o.type != 'MESH' or o.name.lower().endswith('floor'): continue
+            base_ = len(vs); vs += [o.matrix_world @ v.co for v in o.data.vertices]; fs += [[base_ + i for i in pg.vertices] for pg in o.data.polygons]
+        bvh = BVHTree.FromPolygons(vs, fs)
+    except Exception as e:
+        print('VIEWPOINT no sight check:', e); bvh = None
     prev = None
     for rid in order:
         if rid not in room_slab: print('VIEWPOINT none (no floor slab):', rid); continue
@@ -87,6 +96,19 @@ if floorp and room_slab:
             px0, px1, pz0, pz1 = rect(src_) if src_ else (cx, cx, z1 + 1, z1 + 1)
             pcx, pcz = clampv(cx, px0, px1), clampv(cz, pz0, pz1)        # the came-from room's point nearest this one
             ex, ez = clampv(pcx, x0 + 0.8, x1 - 0.8), clampv(pcz, z0 + 0.8, z1 - 0.8)
+        # A clear first look: the eye steps on toward the centre (0.5 m at a time) until the sight line is free of the model
+        # for 3 m (or as far as the centre) and the eye has 0.4 m round it (a partition or a pillar in the lens failed the
+        # judge, Cinema House cafe 2026-11-01). Blender frame: (x, -z, y).
+        if bvh is not None:
+            from mathutils import Vector
+            for _ in range(40):
+                ddx, ddz = cx - ex, cz - ez; dd = math.hypot(ddx, ddz)
+                if dd < 0.5: break
+                o_ = Vector((ex, -ez, 1.6)); f_ = Vector((ddx / dd, -ddz / dd, -0.07)).normalized()
+                hit = bvh.ray_cast(o_, f_, min(3.0, dd))[0]
+                near_ = bvh.find_nearest(o_, 0.4)[0]
+                if hit is None and near_ is None: break
+                ex, ez = ex + ddx / dd * 0.5, ez + ddz / dd * 0.5
         dx, dz = cx - ex, cz - ez; d = math.hypot(dx, dz) or 1.0
         # the far side: from the entry through the centre to the slab's edge
         t = min([((x1 - 0.3) - ex) / dx if dx > 1e-6 else 1e9, ((x0 + 0.3) - ex) / dx if dx < -1e-6 else 1e9,

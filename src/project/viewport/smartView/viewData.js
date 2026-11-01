@@ -5,6 +5,7 @@
 //   { id, label?, position?, target?, fov?, live, hidden? }
 //   live     true: visitors see it (a live view) · false: only the Studio does (a work view)
 //   hidden   a built-in view taken off the bar everywhere (only a built-in; an extra is removed instead)
+//   link     true: a work view a link opens (?at=<id>, src/components/walkAt.js), still off the visitor's bar
 //   camera   position + target (+ fov). Optional for a built-in id: without one it is computed from the
 //            room (smartViewGeometry.computeViewPresets). Required for any other id.
 // The list counts as data once one entry carries a boolean `live`. A project without that (new, or
@@ -54,7 +55,9 @@ export const normalizeViewData = (raw) => {
             target: camera ? target : null,
             fov: camera && Number.isFinite(fov) && fov > 1 && fov < 170 ? fov : null,
             live: item.live === true,
-            hidden: isBuiltIn(id) && item.hidden === true
+            hidden: isBuiltIn(id) && item.hidden === true,
+            // link: a work view a link may open (?at=, src/components/walkAt.js) though it is not on the visitor's bar
+            ...(item.link === true ? { link: true } : {})
         })
     }
     return out
@@ -98,7 +101,8 @@ export const toStoredViews = (views) => views.map((v) => ({
     ...(v.label ? { label: v.label } : {}),
     ...(v.position && v.target ? { position: v.position, target: v.target, ...(v.fov ? { fov: v.fov } : {}) } : {}),
     live: v.live === true,
-    ...(v.hidden ? { hidden: true } : {})
+    ...(v.hidden ? { hidden: true } : {}),
+    ...(v.link ? { link: true } : {})
 }))
 
 /**

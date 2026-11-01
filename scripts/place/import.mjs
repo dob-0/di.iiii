@@ -226,7 +226,7 @@ export const hallOps = ({ asset, place, title }) => {
                         viewPresets: [
                             { id: 'floor', live: true },
                             { id: 'top', live: true },
-                            ...place.views.map((v) => ({ id: v.id, label: v.label, position: v.position, target: v.target, fov: v.fov, live: true }))
+                            ...place.views.map((v) => ({ id: v.id, label: v.label, position: v.position, target: v.target, fov: v.fov, live: v.live !== false, ...(v.link === true ? { link: true } : {}) }))
                         ]
                     } : {})
                 }

@@ -32,6 +32,7 @@ import {
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 import { overlayButtonStyle, overlayCardStyle, quietPreviewFallbackStyle } from './publicViewerStyles.js'
 import { consumeArriveWalking } from '../../components/arriveWalking.js'
+import { parseWalkAt } from '../../components/walkAt.js'
 import { buildAppSpacePath, buildSpaceContentsPath } from '../../utils/spaceRouting.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
 import { hasRig } from '../../rigbuild/hasRigLamps.js'
@@ -433,7 +434,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // stomped straight back to orbit before it ever painted.
     useEffect(() => {
         if (state.status !== 'ready') return
-        if (consumeArriveWalking() && walkGateOpen) setNavMode('walk')
+        // ?at=<room> / ?pose= (components/walkAt.js) opens the room walking at that pose, through the same gate.
+        const linked = typeof window !== 'undefined' && parseWalkAt(window.location.search) !== null
+        if ((consumeArriveWalking() || linked) && walkGateOpen) setNavMode('walk')
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state.status, projectId])
 
