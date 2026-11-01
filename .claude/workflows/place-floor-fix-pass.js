@@ -12,6 +12,8 @@ export const meta = {
     { title: 'Judge', detail: 'adversarial, before/after per room' },
   ],
 }
+// PASS: per room, same-pose F1 (round_gate.py score) >= the previous round - 0.01, and the judge finds 0 defects in >= 1 more room than last round
+// PILOT: run the Baseline + Fix + Gate for ONE room first (args.rooms = [id]); fan out to all rooms only if that room gains >= 0.02 F1
 const D = '/mnt/data/footage/place-cinema-house-2026-10-30'
 const R = '/home/dob/work/agent-reports-2026-11-01/floor-by-hand/fix5'
 const URL = 'http://cinema-house-test.diiii.localhost/cinema-house/p/cinema-house-floor'
@@ -74,7 +76,7 @@ const stillsJob = agent(`${BASE}
 
 Your job: the STILLS, nothing else. Every film-strip still, print and poster the rooms show: list it in D/modelled/stills_spec.json with its 3D corners (from the room builds) and 3-8 candidate frames that face it from the dense set (D/modelled/dense/frames, 4K source), each with its solved pose; run \`${STILLS} D/modelled/stills_spec.json <frames dir> D/modelled/stills\` (frcnn detector, the same model as ingest). It writes the sharpest people-free rectified crop per still and refuses blurred, off-frame or people crops; a refused still stays blank paper in its frame, never blurred and used. Report written/refused per room to ${R}/STILLS.md; the room fixers take their stills from D/modelled/stills/.`,
   { label: 'stills', phase: 'Fix' })
-const fixes = await parallel(audit.rooms.filter(r => ROOMS.includes(r.id)).map(r => () => agent(`${BASE}
+const fixes = await parallel(audit.rooms.filter(r => ROOMS.includes(r.id) && (!(args && args.rooms) || args.rooms.includes(r.id))).map(r => () => agent(`${BASE}
 
 Your job: FIX ONE room, "${r.id}", until every defect is gone. Defects from the audit (${R}/AUDIT.md):
 ${r.defects}
