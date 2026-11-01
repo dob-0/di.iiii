@@ -16,6 +16,7 @@ const { SENSITIVE_SPACE_PATCH_FIELDS } = require('../approvalGate')
 const { actorFromAuthState } = require('../opActor')
 const { isSpaceMember } = require('../projectVisibility')
 const { SPACE_BLURB_MAX, normalizeSpaceBlurb } = require('../../../shared/spaceBlurb.cjs')
+const { findSimilar, newAnywayReason, spaceHint } = require('../../../shared/continueStem.cjs')
 
 const defaultWithSpaceOpsLock = createKeyedLock()
 
@@ -313,6 +314,32 @@ function registerSpaceRoutes(router, {
     }
   })
 
+  // Continue, never recreate (owner 2026-11-02, N1880): a space whose id or label
+  // shares a stem with the new one (-3d, -test, -vN, -N, a date stripped) is the
+  // same place again. The caller is told which one and may only go on with
+  // `newAnyway: "<reason>"`. Only spaces the caller can see are named. A caller that
+  // names the id itself (`slug`: scripts, follows, tests) is compared by id only; a
+  // person who typed just a label is compared by id and label.
+  const similarSpaceFor = async (req, names) => {
+    const state = req.authState || {}
+    const sees = !config.requireAuth || state.isUnrestricted || state.role === 'admin'
+    const all = (await listSpaces()) || []
+    const visible = all.filter((space) =>
+      space.kind !== 'sandbox' &&
+      (sees || space.isPublic || (state.authenticated && canAccessSpace(state, space.id))))
+    return findSimilar(names, visible)
+  }
+  const refuseSimilarSpace = async (req, res, names) => {
+    if (newAnywayReason(req.body?.newAnyway)) {
+      logger.warn(`[continue-guard] new space allowed anyway for ${names.join(' / ')}: ${newAnywayReason(req.body.newAnyway)}`)
+      return false
+    }
+    const similar = await similarSpaceFor(req, names)
+    if (!similar) return false
+    res.status(409).json({ error: 'space_exists_similar', existing: similar.id, label: similar.label || similar.id, hint: spaceHint(similar.id) })
+    return true
+  }
+
   router.post('/api/spaces', async (req, res, next) => {
     try {
       const { label = '', slug, permanent = false, allowEdits } = req.body || {}
@@ -334,6 +361,8 @@ function registerSpaceRoutes(router, {
       if (loadTrashedSpaceMeta && await loadTrashedSpaceMeta(spaceId)) {
         return res.status(409).json({ error: `"${spaceId}" is in the trash. Restore it from the Trash, or purge it, to use the name again.`, code: 'space_in_trash' })
       }
+
+      if (await refuseSimilarSpace(req, res, slug ? [spaceId] : [spaceId, label])) return
 
       const state = req.authState || {}
       // Returning guests carry session cookies with a guest: subject — they
@@ -688,6 +717,9 @@ function registerSpaceRoutes(router, {
 
       const args = ['import', uploaded]
       const as = normalizeSpaceId(String(req.body?.as || '').trim())
+      // The id inside the file is only known after the tool has run, so the guard
+      // sees what the caller names: `as` and `label`.
+      if (!(as && await spaceExists(as)) && await refuseSimilarSpace(req, res, [as, String(req.body?.label || '')])) return
       if (as) args.push('--as', as)
       // This route never passes --force, so the tool refuses an id that is
       // already here and nothing is replaced. Should that ever change, the

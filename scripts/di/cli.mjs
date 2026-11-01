@@ -17,6 +17,7 @@
  * and every artist-facing word in ui.mjs.
  */
 
+import { createSpace, reasonFromFlags, EXIT_CONTINUE } from './continueGuard.mjs'
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
@@ -651,14 +652,22 @@ const cmdNew = async (args) => {
     const port = resolvePort(home)
     if (!(await alive(home, port))) await cmdUp({ _: [], flags: { 'no-open': true } })
     try {
-        const response = await fetch(`${apiBase(home, port)}/api/spaces`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ label: name, permanent: true })
+        // Continue, never recreate (N1880): the server answers space_exists_similar
+        // when a space with the same stem is already here; only --new-anyway "<why>" goes on.
+        if (args.flags['new-anyway'] !== undefined && !reasonFromFlags(args.flags)) {
+            fail('--new-anyway needs a reason — di new "my show" --new-anyway "why a second space"')
+            process.exitCode = 1
+            return
+        }
+        const made = await createSpace({
+            base: apiBase(home, port),
+            label: name,
+            newAnyway: reasonFromFlags(args.flags),
+            how: `${CMD} move PROJECT --to <space>`
         })
-        const body = await response.json().catch(() => ({}))
-        if (!response.ok) { fail(body?.error || `could not make a space called "${name}"`); process.exitCode = 1; return }
-        const id = body?.space?.id || name
+        if (made.status === 'continue') { fail(made.message); process.exitCode = EXIT_CONTINUE; return }
+        if (made.status === 'error') { fail(made.error); process.exitCode = 1; return }
+        const id = made.space?.id || name
         say(ui.made(id, `${await ownBase(home, port)}/${id}`))
     } catch (error) {
         fail(String(error?.message || error))
