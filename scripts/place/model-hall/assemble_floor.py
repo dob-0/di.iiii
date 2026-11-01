@@ -11,7 +11,7 @@ trimmed, so the result is reproducible and every decision is on file. Axis-align
 vertices to the given bound; a trimmed object is never moved.
 Objects are renamed <module id>:<name>, so check_floor.py and the viewer can tell the modules apart.
 Undo: delete <out_dir>/floor.*"""
-import bpy, json, os, re, sys, fnmatch
+import bpy, json, os, re, sys, fnmatch, tempfile
 argv = sys.argv[sys.argv.index('--') + 1:]
 man = json.load(open(argv[0])); OUT = argv[1]
 base = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(argv[0])), man.get('root', '.')))
@@ -64,9 +64,78 @@ for m in man['modules']:
         col.objects.link(o); rep['objects'] += 1
     report[mid] = rep
     print('MODULE', mid, rep['objects'], 'objects', len(rep['dropped']), 'dropped', len(rep['clipped']), 'clipped')
+
+def grain_flat_faces(min_area=1.0):
+    """Round 5: a painted wall, ceiling or slab larger than 1 m2 with ONE flat colour reads as a grey slab on screen.
+    Give its material a fine plaster grain (a tileable 256 px noise, +-4 % brightness, 1 tile = 1 m, box-projected UVs).
+    The colour stays the modeller's; the grain is a stand-in for real paint/plaster texture (ESTIMATED, not photographed)."""
+    import numpy as np, bmesh
+    rng = np.random.default_rng(7); N = 256
+    g = rng.normal(0, 1, (N, N))
+    for _ in range(2):                                   # light blur, wrap-around so it tiles
+        g = (g + np.roll(g, 1, 0) + np.roll(g, -1, 0) + np.roll(g, 1, 1) + np.roll(g, -1, 1)) / 5
+    g = g / g.std()
+    cache = {}; done = 0
+    for o in [o for o in bpy.data.objects if o.type == 'MESH']:
+        need = set()
+        for p in o.data.polygons:
+            if p.area > min_area and p.material_index < len(o.material_slots):
+                mt = o.material_slots[p.material_index].material
+                if mt and 'glass' not in mt.name.lower() and not (mt.use_nodes and any(n.type == 'TEX_IMAGE' and n.image for n in mt.node_tree.nodes)):
+                    need.add(p.material_index)
+        if not need: continue
+        bm = bmesh.new(); bm.from_mesh(o.data)
+        uvl = bm.loops.layers.uv.active or bm.loops.layers.uv.new('UVMap')
+        for f in bm.faces:
+            if f.material_index in need:
+                ax = max(range(3), key=lambda k: abs(f.normal[k])); a, b_ = [k for k in range(3) if k != ax]
+                for lp in f.loops:
+                    w = o.matrix_world @ lp.vert.co
+                    lp[uvl].uv = (w[a], w[b_])
+        bm.to_mesh(o.data); bm.free()
+        for i in need:
+            mt = o.material_slots[i].material
+            if mt.name not in cache:
+                nm = mt.copy(); nm.name = mt.name + '+grain'
+                bsdf = next(n for n in nm.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
+                col = list(bsdf.inputs['Base Color'].default_value)[:3]
+                srgb = np.clip(np.array(col), 0, 1) ** (1 / 2.2)
+                px = np.ones((N, N, 4), dtype=np.float32)
+                for c in range(3): px[:, :, c] = np.clip(srgb[c] * (1 + 0.04 * g), 0, 1)
+                img = bpy.data.images.new(mt.name + '_grain', N, N); img.pixels.foreach_set(px.ravel())
+                img.pack(); img.file_format = 'JPEG'
+                tx = nm.node_tree.nodes.new('ShaderNodeTexImage'); tx.image = img
+                nm.node_tree.links.new(tx.outputs['Color'], bsdf.inputs['Base Color'])
+                cache[mt.name] = nm
+            o.material_slots[i].material = cache[mt.name]; done += 1
+    print('GRAIN', done, 'object slots,', len(cache), 'materials')
+
+
+def compress_images(max_side=2048):
+    """Cap texture size and store opaque textures as JPEG (the exporter keeps each image's own format)."""
+    import numpy as np
+    n = 0
+    for im in bpy.data.images:
+        if im.size[0] == 0 or im.type != 'IMAGE': continue
+        if max(im.size) > max_side:
+            k = max_side / max(im.size); im.scale(int(im.size[0] * k), int(im.size[1] * k))
+        a = np.empty(im.size[0] * im.size[1] * 4, dtype=np.float32); im.pixels.foreach_get(a)
+        if a[3::4].min() > 0.999 and not im.name.endswith('_grain') and im.users:
+            # re-encode as a real JPEG file and swap it in (the exporter keeps a file's own format under 'AUTO')
+            tmp = os.path.join(tempfile.mkdtemp(), re.sub(r'\W', '_', im.name) + '.jpg')
+            st = scene.render.image_settings; st.file_format = 'JPEG'; st.quality = 85; st.color_mode = 'RGB'
+            im.save_render(tmp, scene=scene)
+            new = bpy.data.images.load(tmp); new.pack(); new.colorspace_settings.name = im.colorspace_settings.name
+            old = im.name; im.user_remap(new); im.name = old + '.old'; new.name = old; n += 1
+    print('IMAGES', n, 'stored as JPEG, max side', max_side)
+
+
+grain_flat_faces()
+compress_images()
+
 bpy.ops.file.pack_all()
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'floor.blend'))
 bpy.ops.export_scene.gltf(filepath=os.path.join(OUT, 'floor.glb'), export_format='GLB', export_lights=False,
-                          export_cameras=False, export_apply=True)
+                          export_cameras=False, export_apply=True, export_image_format='AUTO', export_jpeg_quality=85)
 json.dump(report, open(os.path.join(OUT, 'assembly_report.json'), 'w'), indent=1)
 print('ASSEMBLED', sum(r['objects'] for r in report.values()), 'meshes in', len(report), 'modules')
