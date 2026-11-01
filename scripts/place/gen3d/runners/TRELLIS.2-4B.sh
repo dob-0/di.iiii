@@ -5,8 +5,8 @@
 # RMBG-2.0 licence read as non-commercial - owner decides first). Pins from microsoft/TRELLIS.2 setup.sh.
 set -euo pipefail
 : "${HF_TOKEN:?set HF_TOKEN (gated DINOv3 + RMBG-2.0)}"
-IN=/mnt/data/footage/place-cinema-house-2026-10-30/modelled/gen3d/inputs
-OUT=/mnt/data/footage/place-cinema-house-2026-10-30/modelled/gen3d/out/TRELLIS.2-4B
+IN="${GEN3D_IN:-/mnt/data/footage/place-cinema-house-2026-10-30/modelled/gen3d/inputs}"
+OUT="${GEN3D_OUT:-/mnt/data/footage/place-cinema-house-2026-10-30/modelled/gen3d/out/TRELLIS.2-4B}"
 C="env HOME=$HOME/.local/state/colab/gevorg $(dirname "$0")/../../colab-pinned.sh"
 S=trellis2-$$; mkdir -p "$OUT"
 trap '$C terminate -s $S || true' EXIT       # always end the session

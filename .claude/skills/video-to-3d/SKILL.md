@@ -60,3 +60,6 @@ Workflow: **survey -> rooms in parallel -> assemble -> judge.** One command for 
 `node scripts/place/import.mjs --work <folder with place.json + place.glb> --name <space> --project <space>-floor --no-sources --keep-front-door --api <scratch api>/serverXR`.
 Method, lessons (boolean + face winding, shared walls, stubs) and limits: `scripts/place/model-hall/METHOD.md`, section "The whole floor by hand".
 Never use the reconstruction meshes for this place. No person in any texture; nothing leaves the machine.
+
+## Objects (hero props): gen3d
+For one object at a time (old film camera, projector, reel, chair) from a crop, use `scripts/place/gen3d/gen3d.sh <crop|dir> --no-people-confirmed --height <metres>` (README next to it). It picks the model by the kit's ranking, refuses research-only models for product (Hunyuan: territory excludes EU/UK/KR), scales to the measured size and writes provenance. Pilot evidence is n=1; texture on dark crops is unsolved. Never use reconstruction meshes for the place itself (above).
