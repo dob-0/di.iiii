@@ -135,6 +135,8 @@ const main = async () => {
     await copy(path.join(ROOT, 'serverXR', 'package.json'), path.join(stage, 'serverXR', 'package.json'))
     await copy(path.join(ROOT, 'serverXR', 'package-lock.json'), path.join(stage, 'serverXR', 'package-lock.json'))
     await copy(path.join(ROOT, 'scripts', 'di'), path.join(stage, 'cli'))
+    // `di show` (scripts/show) sits beside cli/ so `../show/` resolves the same here and in the repo.
+    await copy(path.join(ROOT, 'scripts', 'show'), path.join(stage, 'show'), (src) => !/\.(test|spec)\.(js|mjs)$/.test(src))
     // serverXR/src/aiPublic.js reads <root>/docs/ai/public; without it /llms.txt
     // and /ai/… were a 404 on the dev tier, which runs the pack natively. Only
     // that folder, in every profile: the dev tier packs the local profile.

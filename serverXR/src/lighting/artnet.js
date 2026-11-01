@@ -70,21 +70,45 @@ function parsePollReply(msg, rinfo) {
   };
 }
 
-// All IPv4 broadcast addresses on this machine, plus the Art-Net limited broadcast.
-function broadcastAddresses() {
-  const out = [];
-  const ifs = os.networkInterfaces();
-  for (const name of Object.keys(ifs)) {
-    for (const a of ifs[name] || []) {
+const ipNum = (s) => s.split('.').reduce((n, o) => (n * 256 + (+o & 255)), 0);
+
+// Where Art-Net broadcast goes: every IPv4 interface's broadcast address, MINUS the
+// networks that carry a LaserCube. The cube lives on its own link (a USB Ethernet adapter on
+// the show Mac, 10.42.1.0/24); DMX frames and polls broadcast onto it are traffic the cube
+// never asked for. `cubeIps` are the cubes' addresses from laser.json; `all: true` is the way
+// back — every network, as before. The result lists what is used and what was left out, and why.
+// `interfaces` is os.networkInterfaces() (a fake in tests).
+function broadcastPlan({ interfaces = os.networkInterfaces(), cubeIps = [], all = false } = {}) {
+  const use = [];
+  const excluded = [];
+  const cubes = all ? [] : cubeIps.filter((c) => typeof c === 'string' && /^\d+\.\d+\.\d+\.\d+$/.test(c));
+  for (const name of Object.keys(interfaces)) {
+    for (const a of interfaces[name] || []) {
       if (a.family !== 'IPv4' || a.internal) continue;
       const ip = a.address.split('.').map(Number);
       const mask = (a.netmask || '255.255.255.0').split('.').map(Number);
       const bc = ip.map((o, i) => (o & mask[i]) | (~mask[i] & 0xff)).join('.');
-      if (!out.includes(bc)) out.push(bc);
+      const net = ip.map((o, i) => o & mask[i]).join('.');
+      const maskN = ipNum(a.netmask || '255.255.255.0');
+      if (cubes.some((c) => (ipNum(c) & maskN) >>> 0 === (ipNum(net) & maskN) >>> 0)) {
+        if (!excluded.some((e) => e.broadcast === bc)) excluded.push({ broadcast: bc, iface: name, network: net, reason: 'laser network' });
+        continue;
+      }
+      if (!use.includes(bc)) use.push(bc);
     }
   }
-  if (!out.includes('255.255.255.255')) out.push('255.255.255.255');
-  return out;
+  // 255.255.255.255 is the limited broadcast: the OS sends it out of whichever interface it
+  // picks, the laser link included. Where we excluded a network and still have another, it
+  // is dropped; it stays when nothing was excluded (as before) and when no interface is
+  // left, because a desk with no address at all must still be able to say something.
+  if (!use.includes('255.255.255.255') && (!excluded.length || !use.length)) use.push('255.255.255.255');
+  return { use, excluded };
+}
+
+// All IPv4 broadcast addresses on this machine, plus the Art-Net limited broadcast.
+function broadcastAddresses(opts) {
+  const plan = broadcastPlan({ all: true, ...(opts || {}) });
+  return plan.use;
 }
 
 function localAddresses() {
@@ -99,7 +123,10 @@ function localAddresses() {
 }
 
 class ArtNet {
-  constructor({ port = 6454, bind = '0.0.0.0', bindPort = null, offline = false } = {}) {
+  constructor({ port = 6454, bind = '0.0.0.0', bindPort = null, offline = false, plan = null } = {}) {
+    // plan() -> { use, excluded } (the desk hands in broadcastPlan with the cubes' addresses);
+    // none given: every network, as it always was.
+    this.plan = typeof plan === 'function' ? plan : () => broadcastPlan({ all: true });
     // Offline builds the packets but never puts them on the wire, so a test run cannot
     // flicker a real rig that is listening on the same broadcast address.
     this.offline = offline;
@@ -146,7 +173,7 @@ class ArtNet {
   // Some nodes never answer a broadcast poll and only reply when asked directly, and a
   // node on a foreign subnet cannot hear our broadcast at all — both need the unicast.
   pollTargets(extra = []) {
-    const out = broadcastAddresses();
+    const out = [...this.plan().use];
     for (const ip of this.nodes.keys()) if (!out.includes(ip)) out.push(ip);
     for (const a of extra) {
       if (typeof a === 'string' && /^\d+\.\d+\.\d+\.\d+$/.test(a) && !out.includes(a)) out.push(a);
@@ -162,6 +189,7 @@ class ArtNet {
     if (this.offline || !this.ready) return;
     const pkt = buildPoll();
     const targets = this.pollTargets(extra);
+    const bcCount = this.plan().use.length;
     this.lastPoll = Date.now();
     POLL_BURST_MS.forEach((delay) => {
       const fire = () => {
@@ -169,7 +197,7 @@ class ArtNet {
           this.socket.send(pkt, 0, pkt.length, this.port, t, (err) => {
             // A refused unicast to an address nothing answers on is expected, not a fault
             // worth showing in the UI; only surface broadcast failures.
-            if (err && targets.indexOf(t) < broadcastAddresses().length) {
+            if (err && targets.indexOf(t) < bcCount) {
               this.lastError = `poll ${t}: ${err.message}`; this.lastErrorAt = Date.now();
             }
           });
@@ -199,4 +227,4 @@ class ArtNet {
   close() { try { if (this.socket) this.socket.close(); } catch (e) {} }
 }
 
-module.exports = { ArtNet, broadcastAddresses, localAddresses, buildDmx, buildPoll };
+module.exports = { ArtNet, broadcastAddresses, broadcastPlan, localAddresses, buildDmx, buildPoll };

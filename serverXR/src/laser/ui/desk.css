@@ -1,0 +1,469 @@
+:root {
+  /* The light desk's skin (serverXR/src/lighting/ui/style.css): near-black, hard squares, one cyan accent. An
+     instrument read at arm's length in a dark booth. Flat colour only: the laser pictures are drawn as lines, never
+     glowing. */
+  --bg: #0c0c0d;
+  --bar: #060607;
+  --pane: #121213;
+  --pane2: #1a1a1c;
+  --field: #060607;
+  --cell: #161617;
+  --cell2: #232326;
+  --line: #26262a;
+  --text: #d8dadb;
+  --muted: #878d92;
+  --accent: #35d2dd;
+  --danger: #e0524a;
+  --warn: #e0a84a;
+  --stagebg: #050506;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; }
+/* The top bar stays pinned (the stops are always one tap away); what is scrolled to lands below it, not under it. */
+html { scroll-padding-top: calc(var(--bar-h, 47px) + 8px); }
+body {
+  background: var(--bg); color: var(--text);
+  font: 13px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+  display: flex; flex-direction: column; min-height: 100vh;
+}
+button, input, select { font: inherit; color: inherit; }
+button {
+  cursor: pointer; background: var(--pane2); border: 1px solid var(--line); border-radius: 0;
+  padding: 6px 10px; min-height: 30px;
+}
+button:hover { border-color: var(--muted); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button.danger { background: #2a1210; border-color: #6a2a24; color: #ffd9d5; }
+button.danger:hover { border-color: var(--danger); }
+button.quiet { background: none; color: var(--muted); }
+button.is-on { border-color: var(--accent); color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+h2 { font-size: 12px; font-weight: 600; margin: 0; letter-spacing: .02em; }
+h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
+.muted { color: var(--muted); }
+.error { color: #ff9b93; margin: 6px 0 0; }
+
+/* ---- top bar */
+.topbar {
+  min-height: 46px; display: flex; align-items: stretch; flex-wrap: wrap;
+  background: var(--bar); border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 50; flex: none;
+}
+.homelink {
+  align-self: center; color: var(--text); text-decoration: none; font: 600 11px/1 var(--mono);
+  letter-spacing: .08em; padding: 6px 8px; margin: 0 2px 0 8px; border: 1px solid var(--line); white-space: nowrap;
+}
+.homelink:hover { border-color: var(--accent); color: var(--accent); }
+/* The desk switch (Show · Light · Laser), right after the di.iiii mark: three plain links, square, 44 px tall; the desk you are on is marked by a filled square, the
+   brighter word and the accent bar under it (not by colour alone). The same markup and rules sit on the Show, Light and Laser desks (owner, 2026-10-31). */
+.deskswitch { display: flex; gap: 3px; align-self: center; flex: 0 0 auto; margin: 0 8px 0 4px; }
+.deskswitch a {
+  display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 64px; min-height: 44px; padding: 0 14px;
+  color: var(--muted); text-decoration: none; font: 600 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif; white-space: nowrap;
+  border: 1px solid var(--line); border-radius: 0;
+}
+.deskswitch a:hover { color: var(--accent); border-color: var(--accent); }
+.deskswitch a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.deskswitch a[aria-current="page"] { color: var(--text); background: var(--pane2); border-color: var(--muted); border-bottom: 3px solid var(--accent); }
+.pages { display: flex; }
+.page-tab {
+  background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted);
+  padding: 0 18px; font-size: 13px; min-height: 46px;
+}
+.page-tab.is-active { color: #fff; border-bottom-color: #fff; }
+/* The top bar is two rows on a desk and the stops never move (2026-10-31, Projector Room: a followed scene's status pushed Disarm all to a second row).
+   Row 1: the page tabs, with the desk's options at the right end (Blackout keeps the arm, Follow light scenes and what it followed last).
+   Row 2: the show controls. The stops (the pill, Blackout, Release, Disarm all) are ONE group at the right end that cannot shrink or wrap, so no
+   text, however long, can move them. The follow status lives in row 1 with a fixed basis and an ellipsis (its full text is its title). */
+.options { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 0 10px; }
+.options > * { flex: none; }
+.options .followstatus { flex: 0 1 200px; min-width: 0; }
+.topright { flex: 1 0 100%; display: flex; align-items: flex-start; gap: 6px 14px; padding: 6px 10px; flex-wrap: nowrap; }
+.tools { flex: 1 1 0; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.stops { flex: none; margin-left: auto; display: flex; align-items: center; gap: 6px; min-height: 30px; }
+.pill {
+  font: 600 11px/1 var(--mono); padding: 6px 8px; border: 1px solid var(--line); white-space: nowrap; color: var(--muted);
+}
+.pill.is-armed { border-color: var(--danger); color: #ffd9d5; background: #2a1210; }
+.pill.is-sim { color: var(--muted); }
+.pill.is-warn { border-color: var(--warn); color: var(--warn); }
+/* The dark-rule note in the Looks head (N1585): a sentence, so it wraps on a phone instead of widening the page. */
+#cubeNote { white-space: normal; max-width: 100%; }
+.bpm, .master { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+.bpm input { width: 64px; background: var(--field); border: 1px solid var(--line); padding: 5px 6px; font-family: var(--mono); }
+.master input { width: 110px; }
+.master b { font: 500 11px var(--mono); color: var(--text); width: 30px; text-align: right; }
+.topbo.is-on { background: #fff; color: #000; border-color: #fff; }
+
+.notice { margin: 0; padding: 8px 12px; background: #2a2210; border-bottom: 1px solid #5a4a24; color: #ffe7b8; }
+
+/* ---- pages */
+.page { flex: 1; min-height: 0; padding: 8px; gap: 8px; }
+.pane { background: var(--pane); border: 1px solid var(--line); min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.panehead { display: flex; align-items: baseline; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.panehead .muted { font-size: 12px; }
+/* A link can propose removals (?remove=..., 2026-10-31): a flat, square question at the top of Looks, amber-edged because it asks before it acts. */
+.removeask { flex: none; margin: 8px 10px 6px; padding: 10px 12px; background: var(--pane2); border: 1px solid var(--warn); border-left-width: 4px; }
+.removeask h2 { margin: 0 0 6px; font-size: 15px; font-weight: 600; }
+.removelist { list-style: none; margin: 0 0 8px; padding: 0; columns: 2 200px; column-gap: 16px; max-height: 30vh; overflow: auto; }
+.removelist li { break-inside: avoid; padding: 2px 0; overflow-wrap: anywhere; }
+.removelist .tag { margin-left: 6px; font-size: 12px; color: var(--muted); }
+.removelist .is-live .tag { color: var(--warn); }
+.removenote { margin: 0 0 8px; color: var(--muted); }
+.removenote:empty { display: none; }
+.removebtns { display: flex; gap: 8px; flex-wrap: wrap; }
+.removebtns button { min-height: 36px; padding: 6px 14px; }
+/* A link can propose a look set (?set=..., 2026-10-31): the same square question; one row per look: the new look's picture, name and id, now → new. */
+/* The question fits its pane: it shrinks (the list and the about lines scroll), so its title, note and buttons stay in view
+   on a short Looks pane (seen 2026-10-31 at 1278x758: the buttons fell under the Stage pane). */
+.setask { display: flex; flex-direction: column; flex: none; max-height: calc(100% - 52px); min-height: 0; overflow: hidden; } /* never taller than the pane under its head: the tiles give way, the about lines and the list scroll */
+.setask > h2, .setask > .removenote, .setask > .removebtns { flex: none; }
+.setabout { flex: 0 1 auto; min-height: 1.6em; overflow: auto; }
+.setabout { margin: 0 0 8px; }
+.setabout p { margin: 0 0 2px; color: var(--muted); font-size: 13px; }
+.setlist { flex: 1 1 auto; min-height: 52px; list-style: none; margin: 0 0 8px; padding: 0; max-height: 42vh; overflow: auto; }
+.setlist li { display: grid; grid-template-columns: 72px 1fr; column-gap: 10px; align-items: center; padding: 4px 0; border-top: 1px solid var(--line); }
+.setlist .setpic { grid-row: 1 / span 2; width: 72px; height: 44px; background: var(--stagebg); }
+.setlist .sethead, .setlist .setchange { min-width: 0; overflow-wrap: anywhere; }
+.setlist .setid { margin-left: 6px; font-size: 12px; font-family: var(--mono); color: var(--muted); }
+.setlist .tag { margin-left: 6px; font-size: 12px; color: var(--muted); }
+.setlist .is-live .tag, .setlist .is-new .tag { color: var(--warn); }
+.setlist .setchange { font-size: 13px; color: var(--muted); }
+.setlist .swatch { display: inline-block; width: 10px; height: 10px; margin: 0 4px 0 2px; border: 1px solid var(--line); vertical-align: -1px; }
+
+#page-control {
+  display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-areas: "bank editor" "stage editor"; height: calc(100vh - var(--bar-h, 47px));
+}
+.bank { grid-area: bank; }
+.stage { grid-area: stage; }
+.editor { grid-area: editor; overflow: auto; }
+
+/* ---- the bank */
+.tiles {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; padding: 8px;
+  overflow: auto; align-content: start;
+  grid-auto-rows: max-content; /* rows keep picture + name and the bank scrolls; .tile has min-height 0, so auto rows would shrink to share the pane's height */
+}
+.tile {
+  display: flex; flex-direction: column; padding: 0; background: var(--cell); border: 1px solid var(--line);
+  text-align: left; min-height: 0;
+}
+/* A tile is two buttons, as a clip in Resolume: its picture sends the look to the laser, its name opens it in Edit. */
+.tile button { border: 0; padding: 0; min-height: 0; text-align: left; background: none; width: 100%; display: block; }
+.tile .pic canvas { width: 100%; height: 64px; display: block; background: var(--stagebg); }
+.tile .pic:hover canvas { box-shadow: inset 0 0 0 1px var(--accent); }
+.tile .name {
+  /* The whole name, wrapped (2026-10-31, Projector Room: 10 of 72 names were cut with an ellipsis, and a touch screen has no hover to read them). A look name is at most 40
+     characters, so nothing is ever clipped: the row grows to its tallest name (grid-auto-rows: max-content on .tiles) and the tile keeps its width. */
+  padding: 5px 6px; font-size: 12px; flex: none; white-space: normal; overflow-wrap: anywhere; border-top: 1px solid var(--line);
+}
+.tile .name:hover { background: var(--pane2); }
+.tile.is-live { border-color: var(--accent); }
+.tile.is-live .name { color: var(--accent); }
+.tile.is-selected .name { background: var(--pane2); box-shadow: inset 0 -2px 0 var(--muted); }
+/* Changed or new since the last Save: Save makes a changed one a new scene. */
+.tile.is-changed .name::after { content: ' \2022'; color: var(--accent); }
+.tile.is-drag { opacity: .4; }
+.tile.is-over { border-color: #fff; }
+
+/* ---- the stage */
+/* One row of cubes that fills the stage's height: each canvas takes what is left above its caption, and the field is
+   drawn square inside it (drawFrame), so six cubes fit a laptop without a scrollbar. */
+.cubes { display: flex; gap: 8px; padding: 8px; overflow-x: auto; flex: 1; min-height: 0; }
+.cube { background: var(--cell); border: 1px solid var(--line); display: flex; flex-direction: column; flex: 1 1 0; min-width: 120px; max-width: 280px; }
+.cube canvas { width: 100%; flex: 1; min-height: 0; display: block; background: var(--stagebg); }
+.cube .cap { flex: none; }
+.cube .cap { display: flex; justify-content: space-between; gap: 6px; padding: 5px 6px; font-size: 12px; }
+.cube .cap b { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cube .state { font: 500 11px var(--mono); color: var(--muted); white-space: nowrap; }
+.cube .state.is-armed { color: var(--danger); }
+.cube .state.is-held { color: var(--warn); }
+.cube.is-off { opacity: .5; }
+/* One cube: its stage is one big picture, and what needs two cubes or more is not shown. */
+.one-cube .multi { display: none !important; }
+.one-cube .cube { max-width: 560px; }
+
+/* ---- the live look */
+.namefield { flex: 1; min-width: 120px; background: var(--field); border: 1px solid var(--line); padding: 5px 7px; }
+.editbody { padding: 4px 10px 10px; }
+.group { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.grouphead { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+.check { display: inline-flex; align-items: center; gap: 5px; color: var(--text); cursor: pointer; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { padding: 4px 8px; min-height: 28px; font-size: 12px; background: var(--cell); }
+.chip.is-on { border-color: var(--accent); color: var(--accent); }
+.swatches { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; }
+.swatch { height: 28px; padding: 0; border: 1px solid var(--line); }
+.swatch.is-on { outline: 2px solid #fff; outline-offset: 1px; }
+.swatches input[type=color] { width: 100%; height: 28px; padding: 0; border: 1px solid var(--line); background: none; }
+/* My colours: a kept colour has a small × to take it out (shown on hover, always on a touch screen); + keeps one more. */
+.mine-head { margin-top: 10px; }
+.mine { position: relative; display: block; }
+.mine .swatch { width: 100%; }
+.mine .del { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; min-height: 0; padding: 0; border-radius: 50%;
+  font-size: 12px; line-height: 16px; text-align: center; background: var(--pane2); border: 1px solid var(--muted); opacity: 0; }
+.mine:hover .del, .mine:focus-within .del { opacity: 1; }
+@media (hover: none) { .mine .del { opacity: 1; } }
+.addcolour { height: 28px; min-height: 0; padding: 0; font-size: 16px; }
+.addcolour.is-on { border-color: var(--accent); color: var(--accent); }
+/* The palette + opens: twelve hues from pale to deep, then whites and greys; any other colour below. */
+.chooser { margin-top: 8px; padding: 8px; border: 1px solid var(--line); background: var(--pane2); }
+.chooser-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
+.chooser-grid .swatch { height: 24px; min-height: 0; }
+.chooser-grid .swatch.is-on { outline: 2px solid #fff; outline-offset: -2px; }
+.chooser-any { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+.chooser-any input[type=color] { width: 44px; height: 30px; padding: 0; border: 1px solid var(--line); background: none; flex: none; }
+.hexfield { width: 92px; background: var(--field); border: 1px solid var(--line); padding: 5px 7px; font: 500 12px var(--mono); }
+button.small { min-height: 24px; padding: 2px 8px; }
+.field { display: grid; grid-template-columns: 84px minmax(0, 1fr) 46px; align-items: center; gap: 8px; padding: 3px 0; }
+.field label { color: var(--muted); font-size: 12px; }
+.field input[type=range] { width: 100%; }
+.field output { font: 500 11px var(--mono); text-align: right; cursor: text; }
+.field input.num { width: 46px; background: var(--field); border: 1px solid var(--accent); font: 500 11px var(--mono); padding: 2px 3px; text-align: right; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; }
+.empty { padding: 12px 10px; margin: 0; }
+.editor.is-empty .editbody, .editor.is-empty .preview { display: none; }
+/* The Preview: the look open in Edit, drawn here on the desk's beat. */
+.preview { padding: 8px 10px 0; }
+.preview canvas { width: 100%; aspect-ratio: 3 / 2; display: block; background: var(--stagebg); border: 1px solid var(--line); }
+.previewnote { display: block; padding-top: 6px; font-size: 12px; }
+.previewnote.is-live { color: var(--accent); }
+button.icon { min-width: 30px; padding: 6px 8px; font-size: 15px; line-height: 1; }
+/* The keys list: over the page, Esc or Close shuts it. */
+.keyshelp { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, .62); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.keysbox { background: var(--pane); border: 1px solid var(--line); width: min(520px, 100%); max-height: 100%; overflow: auto; }
+.keys { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; padding: 10px 12px 14px; font-size: 13px; }
+.keys dt { font: 500 12px var(--mono); color: var(--accent); white-space: nowrap; }
+.keys dd { margin: 0; color: var(--text); }
+@media (max-width: 520px) { .keys { grid-template-columns: 1fr; gap: 2px; } .keys dd { margin-bottom: 8px; } .keys dt { white-space: normal; } }
+/* Save lights while the bank has changes desk.json does not have yet. */
+button.save.is-unsaved { background: var(--accent); border-color: var(--accent); color: #031416; font-weight: 600; }
+.editor:not(.is-empty) .empty { display: none; }
+
+/* ---- setup */
+#page-setup { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-content: start; }
+.tablewrap { overflow: auto; }
+.cubetable { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cubetable th { text-align: left; font-weight: 500; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.cubetable td { padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
+.cubetable td.mono { font-family: var(--mono); font-size: 11px; }
+.cubetable input[type=range] { width: 80px; vertical-align: middle; }
+.cubetable .order button { min-height: 24px; padding: 0 6px; }
+.cubetable .ok { color: var(--accent); }
+.cubetable .bad { color: #ff9b93; }
+.cubetable .warn { color: var(--warn); }
+.cubetable .slide { display: flex; align-items: center; gap: 6px; }
+.cubetable output.num { font: 11px var(--mono); min-width: 3.2em; text-align: right; }
+.cube .cap { flex-wrap: wrap; }
+.cube .cut { flex-basis: 100%; font: 500 11px var(--mono); color: var(--warn); }
+#page-setup .pane > .actions, #found { padding: 0 10px 10px; }
+.foundlist { margin: 0; padding: 0 0 0 18px; font-family: var(--mono); font-size: 11px; }
+.notes ul { margin: 0; padding: 10px 10px 10px 28px; color: var(--muted); }
+.notes li { margin-bottom: 6px; }
+.notes h2 { padding: 8px 10px 0; }
+
+/* ---- the phrase */
+.modal { position: fixed; inset: 0; background: rgba(0, 0, 0, .7); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+.modal[hidden] { display: none; }
+.modalbox { background: var(--pane); border: 1px solid var(--line); padding: 16px; width: min(440px, 100%); }
+.modalbox input { width: 100%; margin-top: 10px; background: var(--field); border: 1px solid var(--line); padding: 8px; }
+
+/* ---- a phone: one column, the stops first and big */
+@media (max-width: 760px) {
+  body { font-size: 14px; }
+  .topright { order: 2; width: 100%; padding: 6px 8px; margin-left: 0; flex-wrap: wrap; align-items: center; }
+  .tools, .stops { display: contents; }
+  .topright .pill { order: -1; width: 100%; text-align: center; }
+  .options { order: 3; flex: 1 0 100%; flex-wrap: wrap; justify-content: flex-start; padding: 6px 8px; gap: 6px 14px; }
+  .options .followstatus { flex: 1 1 100%; }
+  .master { flex: 1; }
+  .master input { flex: 1; width: auto; }
+  #blackoutBtn, #disarmBtn, #releaseBtn { flex: 1; min-height: 44px; }
+  .page-tab { min-height: 44px; padding: 0 14px; }
+  #page-control { display: flex; flex-direction: column; height: auto; }
+  #page-control > .pane { flex: none; }
+  .cubes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+  .cube { max-width: none; min-width: 0; }
+  .cube canvas { flex: none; aspect-ratio: 1; }
+  .one-cube .cubes { grid-template-columns: minmax(0, 1fr); }
+  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
+  .editor { overflow: visible; }
+  .field { grid-template-columns: 76px minmax(0, 1fr) 46px; padding: 6px 0; }
+  .chip, .swatch, button { min-height: 40px; }
+  .swatches { grid-template-columns: repeat(6, 1fr); }
+  .swatch, .swatches input[type=color], .addcolour { height: 40px; }
+  .mine .del { width: 22px; height: 22px; line-height: 20px; }
+  .chooser-grid .swatch { height: 30px; min-height: 0; }
+  #page-setup { display: flex; flex-direction: column; }
+}
+
+/* ---- Follow light scenes (2026-10-31, the scene link): what the switch followed last, and the Edit select */
+.followstatus { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Edit > Follows light scene: full width right under the preview (above Shape), dark like the other controls (it was the native light-grey select, the brightest block of the pane at night). */
+#followsScene { width: 100%; min-width: 0; min-height: 30px; padding: 5px 7px; border-radius: 0; background: var(--field); color: var(--text); border: 1px solid var(--line); }
+#followsScene:hover:not(:disabled) { border-color: var(--muted); }
+#followsScene:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+#followsScene:disabled { opacity: .45; }
+#followsScene option { background: var(--pane2); color: var(--text); }
+
+/* ---- Scenes row (2026-10-31, N1612): one press recalls a light scene and puts the laser look that follows it on the cubes.
+   Buttons only: no animation, no transition. Two lines of buttons at most; a longer list scrolls inside the row and never
+   pushes the page. Square corners, the page's own tokens. */
+.scenerow { flex: none; padding: 6px 8px; border-bottom: 1px solid var(--line); background: var(--pane); }
+.scenehead { display: flex; align-items: baseline; gap: 10px; min-height: 18px; margin-bottom: 4px; }
+.scenehead .muted { font-size: 11px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scenehead .is-error { color: #ff9b93; }
+.scenegrid {
+  --scene-h: 38px; /* a button the hand finds in the dark: at least 36 px tall */
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); grid-auto-rows: var(--scene-h); gap: 4px;
+  max-height: calc(var(--scene-h) * 2 + 4px); overflow-y: auto;
+}
+.scenebtn {
+  display: flex; flex-direction: column; justify-content: center; gap: 1px; height: var(--scene-h); min-height: 36px;
+  padding: 3px 6px; text-align: left; background: var(--cell); overflow: hidden;
+}
+.scenebtn:active { border-color: var(--accent); }
+.scenebtn > span { display: flex; align-items: baseline; gap: 6px; min-width: 0; line-height: 1.2; }
+.scenebtn .scenename { font-size: 11.5px; }
+.scenebtn .scenelook { font-size: 10px; color: var(--muted); }
+.scenebtn .scenetext { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scenebtn .tag { flex: none; font: 600 9px/1 var(--mono); letter-spacing: .06em; color: var(--accent); }
+.scenebtn.is-lights { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.scenebtn.is-lights .scenename .scenetext { color: #fff; font-weight: 600; }
+.scenebtn.is-laser .scenelook { color: var(--accent); }
+
+/* ---- The Grid layout (2026-10-31, the owner: "fix the laser desk: the place is not used right, the windows inside are managed not right, it is ugly and not logical").
+   The Looks grid is the biggest thing on the page (9 fixed columns), the masters and the cubes sit in a rail at the right, every edit group is in a strip along the bottom, and the
+   stops stand alone at the right end of the bar. CLASSIC IS KEPT WHOLE AS A MODE: every rule above this line is untouched, and every rule below is under html[data-layout="grid"]
+   inside ONE size query (1000 x 600 and up; 1240 x 640 until 2026-10-31 23:5x, when the owner's portrait tab of 1078 px fell back to Classic), so below that size, with ?layout=classic, or when layoutMode.js did not run, the page is Classic. No element is moved in the HTML
+   (display: contents on the bar's wrappers puts the masters in the rail), no control is removed, desk.js is not touched. Tokens are the page's own (var(--pane) ...); the only new
+   ones are the --g-* sizes below. Square corners: no border-radius here but 0. Measured on the real page (desk.js running) at 1280x670, 1280x700, 1278x758 and 1240x640:
+   docs/ai/sessions/feat-laser-desk-layout-2026-10-31.md; why: docs/ai/decisions/2026-10-31-laser-desk-layout.md. */
+@media (min-width: 1000px) and (min-height: 600px) {
+
+html[data-layout="grid"] {
+  --g-gap: 6px; --g-side: 8px;
+  --g-bar: 50px; --g-tools: 118px; --g-opts: 80px; --g-edit: 196px; --g-rail: 232px;
+  --g-scenes: 88px; --g-head: 24px; --g-cols: 9; --g-pic: 56px; --g-stage: 96px;
+}
+
+/* ---- the page: ONE grid, nothing scrolls. Row 1 = the bar (its items sit in the four auto tracks); the last column = the rail. */
+html[data-layout="grid"] body {
+  display: grid; height: 100vh; min-height: 0; overflow: hidden; gap: var(--g-gap); padding: 0 var(--g-side) var(--g-gap);
+  grid-template-columns: auto auto auto auto minmax(0, 1fr) var(--g-rail);
+  grid-template-rows: var(--g-bar) var(--g-tools) var(--g-opts) var(--g-stage) minmax(0, 1fr) var(--g-edit);
+}
+html[data-layout="grid"] body::before { content: ''; grid-area: 1 / 1 / 2 / -1; margin: 0 calc(var(--g-side) * -1); background: var(--bar); border-bottom: 1px solid var(--line); }
+html[data-layout="grid"] .topbar, html[data-layout="grid"] .topright, html[data-layout="grid"] #page-control { display: contents; }
+
+/* ---- row 1: the bar. di.iiii, Show/Light/Laser, Control/Setup, the layout switch; the stops at the right end, in their own tracks. */
+html[data-layout="grid"] .homelink { grid-area: 1 / 1; margin: 0; }
+html[data-layout="grid"] .deskswitch { grid-area: 1 / 2; margin: 0; }
+html[data-layout="grid"] .pages { grid-area: 1 / 3; align-self: center; }
+html[data-layout="grid"] .layoutswitch { grid-area: 1 / 4; align-self: center; }
+html[data-layout="grid"] .stops { grid-area: 1 / 5 / 2 / 7; justify-self: end; margin: 0; position: relative; z-index: 60; }
+html[data-layout="grid"] .notice { grid-area: 5 / 6; align-self: start; margin: 0; z-index: 6; border: 1px solid var(--warn); padding: 6px 8px; max-height: 100%; overflow: auto; font-size: 12px; }
+
+/* ---- the rail (last column): masters, then the follow switches, then the cubes */
+html[data-layout="grid"] .tools { grid-area: 2 / 6; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; padding: 6px 8px; background: var(--pane); border: 1px solid var(--line); min-height: 0; overflow: hidden; }
+html[data-layout="grid"] .tools .bpm { flex: 1 1 auto; }
+html[data-layout="grid"] .tools .bpm input { flex: 1 1 auto; width: 0; min-width: 48px; }
+html[data-layout="grid"] #tapBtn { flex: 0 0 64px; }
+html[data-layout="grid"] .tools .master { flex: 1 1 100%; }
+html[data-layout="grid"] .tools .master input { flex: 1 1 auto; width: 0; min-width: 40px; height: 24px; }
+html[data-layout="grid"] #undoBtn, html[data-layout="grid"] #redoBtn, html[data-layout="grid"] #keysBtn { flex: 0 0 34px; }
+html[data-layout="grid"] #saveBtn { flex: 1 1 auto; }
+html[data-layout="grid"] .options { grid-area: 3 / 6; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; padding: 4px 8px; background: var(--pane); border: 1px solid var(--line); min-width: 0; overflow: hidden; }
+html[data-layout="grid"] .options > label { display: flex; align-items: center; gap: 6px; min-height: 24px; }
+html[data-layout="grid"] .options .followstatus { flex: none; width: 100%; }
+html[data-layout="grid"] .stage { grid-area: 4 / 6; overflow: hidden; }
+html[data-layout="grid"] .stage > .panehead { flex: none; padding: 3px 8px; }
+html[data-layout="grid"] .stage > .panehead .muted { display: none; }
+/* the Stage is ONE LINE of small cube pictures (owner, 2026-10-31 23:0x, pink ring: "this is so big and it can be small"): 96 px high, each cube a square picture with its words beside it;
+   more cubes than the rail holds scroll sideways (a taller zone for 3+ cubes is owed) */
+html[data-layout="grid"] .cubes { display: flex; flex-wrap: nowrap; align-items: stretch; gap: 6px; padding: 4px 6px; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: var(--cell2) var(--pane); }
+html[data-layout="grid"] .cube { flex: 0 0 auto; width: 212px; max-width: none; min-width: 0; flex-direction: row; }
+html[data-layout="grid"] .one-cube .cube { flex: 1 1 auto; width: auto; }
+html[data-layout="grid"] .cube canvas { flex: none; width: 62px; height: 100%; }
+html[data-layout="grid"] .cube .cap { flex: 1 1 auto; flex-direction: column; flex-wrap: nowrap; justify-content: center; min-width: 0; gap: 1px; padding: 3px 6px; overflow: hidden; }
+html[data-layout="grid"] .cube .cap b { min-width: 0; }
+html[data-layout="grid"] .cube .cut { flex-basis: auto; font-size: 10px; line-height: 1.15; }
+
+/* ---- the Looks pane (columns 1-5, rows 2-4): Scenes first, then the head, then the grid */
+html[data-layout="grid"] .bank { grid-area: 2 / 1 / 6 / 6; position: relative; min-height: 0; }
+html[data-layout="grid"] .bank > #sceneRow { order: -2; }
+html[data-layout="grid"] .bank > .panehead { order: -1; flex: none; min-height: var(--g-head); padding: 2px 10px; align-items: center; flex-wrap: nowrap; gap: 10px; }
+html[data-layout="grid"] #cubeNote { flex: 0 1 auto; min-width: 0; max-width: 60%; padding: 1px 8px; line-height: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-layout="grid"] #liveName { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-layout="grid"] .scenerow { flex: none; height: var(--g-scenes); display: grid; grid-template-columns: 150px minmax(0, 1fr); column-gap: 8px; align-items: start; padding: 3px 8px; }
+html[data-layout="grid"] .scenehead { flex-direction: column; align-items: flex-start; gap: 3px; margin: 0; }
+html[data-layout="grid"] .scenehead .muted { white-space: normal; overflow-x: hidden; overflow-y: auto; max-height: 56px; font-size: 11px; line-height: 1.25; scrollbar-width: thin; scrollbar-color: var(--cell2) var(--pane); }
+html[data-layout="grid"] .scenegrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+html[data-layout="grid"] .tiles { flex: 1 1 0; grid-template-columns: repeat(var(--g-cols), minmax(0, 1fr)); padding: 4px 6px; counter-reset: tile; scrollbar-width: thin; scrollbar-color: var(--cell2) var(--pane); }
+html[data-layout="grid"] .tile { counter-increment: tile; }
+html[data-layout="grid"] .tile .pic canvas { height: var(--g-pic); }
+html[data-layout="grid"] .tile:nth-child(-n+9) .pic, html[data-layout="grid"] .tile.is-live .pic { position: relative; }
+html[data-layout="grid"] .tile:nth-child(-n+9) .pic::after { content: counter(tile); position: absolute; top: 2px; left: 4px; font: 600 10px/1 var(--mono); color: var(--muted); }
+html[data-layout="grid"] .tile.is-live .pic::before { content: 'LIVE'; position: absolute; top: 2px; right: 4px; font: 600 9px/1 var(--mono); letter-spacing: .06em; color: var(--accent); }
+/* a question from a link covers the grid only: scenes, rail, strip and stops stay put and stay operable */
+html[data-layout="grid"] .bank > .removeask { position: absolute; z-index: 5; left: 6px; right: 6px; top: calc(var(--g-scenes) + var(--g-head) + 6px); bottom: 6px; margin: 0; display: flex; flex-direction: column; max-height: none; overflow: hidden; }
+html[data-layout="grid"] .bank > .removeask .setabout { flex: none; overflow: visible; min-height: 0; }
+html[data-layout="grid"] .bank > .removeask .removelist, html[data-layout="grid"] .bank > .removeask .setlist { flex: 1 1 auto; min-height: 0; max-height: none; overflow: auto; }
+
+/* ---- the edit strip (row 5, full width): identity | Colour, Picture, Movement, Follows/Copy/Delete over the Shape chips */
+html[data-layout="grid"] .editor { grid-area: 6 / 1 / 7 / 7; position: relative; overflow: visible; display: grid; grid-template-columns: 150px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); column-gap: 10px; padding: 4px 8px; }
+html[data-layout="grid"] .editor > .panehead { grid-area: 1 / 1; padding: 0; border: 0; flex-wrap: nowrap; gap: 6px; align-items: center; }
+html[data-layout="grid"] .editor .namefield { min-width: 0; width: 0; padding: 4px 6px; }
+html[data-layout="grid"] .editor > .preview { grid-area: 2 / 1; padding: 6px 0 0; min-height: 0; overflow: hidden; }
+html[data-layout="grid"] .editor .previewnote { font-size: 11px; line-height: 13px; padding-top: 3px; }
+html[data-layout="grid"] .editor > .editbody { grid-area: 1 / 2 / 3 / 3; padding: 0; min-width: 0; display: grid; grid-template-columns: 232px minmax(0, 1fr) minmax(0, 1fr) 132px; grid-template-rows: auto auto; column-gap: 12px; row-gap: 2px; align-content: start; }
+html[data-layout="grid"] .editor > .empty { grid-area: 1 / 2 / 3 / 3; padding: 0; }
+html[data-layout="grid"] .editbody .group { padding: 0; border: 0; min-width: 0; }
+html[data-layout="grid"] .editbody .grouphead { margin-bottom: 2px; font-size: 11px; line-height: 1.2; }
+html[data-layout="grid"] .editbody > #followGroup { grid-area: 1 / 4; align-self: start; }
+html[data-layout="grid"] .editbody > .group:nth-child(3) { grid-area: 1 / 1; }
+html[data-layout="grid"] .editbody > #pictureFields { grid-area: 1 / 2; }
+html[data-layout="grid"] .editbody > #moveFields { grid-area: 1 / 3; }
+html[data-layout="grid"] .editbody > .actions { grid-area: 1 / 4; align-self: end; padding-top: 0; flex-wrap: nowrap; }
+html[data-layout="grid"] .editbody > .actions button { flex: 1 1 0; min-height: 28px; padding: 3px 4px; }
+html[data-layout="grid"] .editbody > .group:nth-child(2) { grid-area: 2 / 1 / 3 / 5; display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 3px; max-height: 54px; overflow-y: auto; scrollbar-width: thin; }
+html[data-layout="grid"] body:not(.one-cube) .editbody > .group:nth-child(2) { grid-area: 2 / 1 / 3 / 4; }
+html[data-layout="grid"] body:not(.one-cube) .editbody > .group.multi { grid-area: 1 / 4; align-self: end; }
+html[data-layout="grid"] body:not(.one-cube) .editbody > .actions { grid-area: 2 / 4; }
+html[data-layout="grid"] .editbody > .group:nth-child(2) > .grouphead { flex: none; margin: 0 8px 0 0; gap: 10px; }
+html[data-layout="grid"] .editbody > .group:nth-child(2) > .chips { display: contents; }
+html[data-layout="grid"] .editbody > .group:nth-child(2) > #cycleField { flex: 0 0 200px; order: -1; }
+html[data-layout="grid"] .editbody .chip { min-height: 24px; padding: 1px 7px; font-size: 11.5px; }
+html[data-layout="grid"] .editbody .check { min-height: 22px; }
+html[data-layout="grid"] .editbody .swatches { grid-template-columns: repeat(9, 24px); gap: 2px; }
+html[data-layout="grid"] .editbody .swatch, html[data-layout="grid"] .editbody .swatches input[type=color], html[data-layout="grid"] .editbody .addcolour { height: 24px; min-height: 0; }
+html[data-layout="grid"] .editbody .mine .del { border-radius: 0; }
+html[data-layout="grid"] .editbody .mine-head { margin-top: 5px; }
+html[data-layout="grid"] #myColoursHint { flex: 1 1 0; min-width: 0; margin-left: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-layout="grid"] #pictureFields, html[data-layout="grid"] #moveFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 10px; align-content: start; }
+html[data-layout="grid"] #pictureFields > .grouphead, html[data-layout="grid"] #moveFields > .grouphead { grid-column: 1 / -1; }
+html[data-layout="grid"] .editbody .field { grid-template-columns: 62px minmax(0, 1fr) 36px; gap: 5px; padding: 0; min-height: 24px; }
+html[data-layout="grid"] .editbody .field input[type=range] { height: 24px; }
+html[data-layout="grid"] .editbody .field label { font-size: 10.5px; white-space: nowrap; }
+html[data-layout="grid"] .editbody .field output { font-size: 10.5px; }
+html[data-layout="grid"] #followsScene { min-height: 28px; padding: 3px 6px; }
+/* the colour palette (+) is docked INSIDE the strip, over the Picture and Movement columns (Colour, the preview, the Looks and the stops stay in view); two columns so it fits the strip: the palette | the title, Close and any colour. User-opened; Esc or Close shuts it. */
+html[data-layout="grid"] .chooser { position: absolute; z-index: 5; top: 3px; bottom: 3px; left: 413px; width: 560px; margin: 0; padding: 8px; display: grid; grid-template-columns: 322px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); column-gap: 12px; align-content: start; overflow: auto; }
+html[data-layout="grid"] .chooser > .grouphead { grid-area: 1 / 2; align-self: start; margin: 0; }
+html[data-layout="grid"] .chooser > .chooser-grid { grid-area: 1 / 1 / 3 / 2; align-content: start; }
+html[data-layout="grid"] .chooser > .chooser-any { grid-area: 2 / 2; align-self: start; flex-wrap: wrap; margin-top: 10px; }
+
+/* ---- Setup keeps its two panes, in the area under the bar */
+html[data-layout="grid"] #page-setup { grid-area: 2 / 1 / 7 / 6; }
+
+}
+
+/* the layout switch (Classic and Grid both show it): two plain square buttons */
+.layoutswitch { display: flex; gap: 3px; align-self: center; margin: 0 8px; }
+.layoutswitch button { min-height: 28px; padding: 3px 10px; font-size: 12px; }
+@media (max-width: 1239px), (max-height: 639px) { .layoutswitch { display: none; } }

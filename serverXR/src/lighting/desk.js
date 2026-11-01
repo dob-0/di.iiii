@@ -12,7 +12,8 @@ const WORLD = 1000;
 const zlib = require('zlib');
 const fs = require('fs');
 const path = require('path');
-const { ArtNet, broadcastAddresses, localAddresses } = require('./artnet');
+const { ArtNet, broadcastPlan, localAddresses } = require('./artnet');
+const { decideIdentify } = require('./identify');
 const { Enttec, listPorts, describePort, PORT_NAME, DEFAULT_PORT } = require('./enttec');
 const {
   Engine, PROFILES, makeFixture, DEFAULT_LIMITS, roleKinds, ROLE_DEFAULTS,
@@ -70,6 +71,14 @@ function createDesk(opts = {}) {
   // The host's own account of its bind ({ lan, addresses }), asked per status read.
   // Null when nobody told the desk — the interface then trusts the interface list.
   const listen = typeof opts.listen === 'function' ? opts.listen : null;
+  // WHOSE HAND A SCENE RECALL IS (2026-10-31, the scene link). The host may give `sceneOrigin(req)`: it says whether the
+  // request is one the lasers would also obey ('page' = di's own page, 'token' = a request with the local token) or null.
+  // The answer rides with the scene event (engine.onScene) so a listener that moves something guarded — the laser's live
+  // look — can refuse a recall that only the light desk would have accepted. Without it every recall is nobody's (null).
+  const sceneOrigin = typeof opts.sceneOrigin === 'function' ? opts.sceneOrigin : null;
+  const originOf = (req) => {
+    try { const o = sceneOrigin ? sceneOrigin(req) : null; return typeof o === 'string' && o ? o : null; } catch (e) { return null; }
+  };
   const log = opts.log || console.log;
   // True when this desk found no show to load. It stays true only until the first write,
   // and it is what stops an empty desk from silently replacing a real one. Set again by
@@ -108,6 +117,9 @@ function createDesk(opts = {}) {
     // waiting to be typed because it is the one address that is always the same — a show
     // with no defaults asks you to remember an IP in the dark. Remove it and it stays gone.
     output: { driver: 'artnet', serialPort: DEFAULT_PORT, mode: 'broadcast', targets: [], enabled: true,
+      // false: broadcast skips every network that carries a LaserCube (broadcastPlan, artnet.js).
+      // true: every network, as before the laser link was kept clean.
+      broadcastAll: false,
       // sACN's priority, 0..200. Two senders on one universe stop being a coin toss:
       // the higher number wins and the receiver ignores the other, which is the thing
       // Art-Net cannot express at all.
@@ -339,6 +351,7 @@ function createDesk(opts = {}) {
   const engine = new Engine(state);
   const artnet = new ArtNet({
     port: state.output.port,
+    plan: () => bcPlan(),
     // Tests bind an ephemeral local port so they never contend for 6454 with a running desk.
     bindPort,
     // ARTNET_OFFLINE=1 keeps a test run off the wire entirely.
@@ -709,9 +722,35 @@ function createDesk(opts = {}) {
     return [...manual, ...byIp.values()];
   }
 
+  // The cubes' addresses, read from the file the laser side keeps (<dataDir>/laser/laser.json,
+  // laserEngine.js header). Read here and never imported: the desk does not run the engine.
+  // Re-read at most every 5 s; a missing or broken file is no cubes.
+  let cubeCache = { at: 0, ips: [] };
+  function cubeIps() {
+    const now = Date.now();
+    if (now - cubeCache.at < 5000) return cubeCache.ips;
+    let ips = [];
+    try {
+      const cfg = JSON.parse(fs.readFileSync(path.join(DATA, 'laser', 'laser.json'), 'utf8'));
+      ips = (Array.isArray(cfg && cfg.cubes) ? cfg.cubes : []).map((c) => c && c.ip).filter((x) => typeof x === 'string');
+    } catch (e) { /* no file, no cubes */ }
+    cubeCache = { at: now, ips };
+    return ips;
+  }
+  let loggedPlan = '';
+  function bcPlan() {
+    const plan = broadcastPlan({ cubeIps: cubeIps(), all: !!(state && state.output && state.output.broadcastAll) });
+    const sig = plan.excluded.map((e) => e.broadcast).join();
+    if (sig !== loggedPlan) {
+      loggedPlan = sig;
+      if (plan.excluded.length) log(`[light] Art-Net broadcast skips ${plan.excluded.map((e) => `${e.broadcast} (${e.iface}, laser network)`).join(', ')}; sending to ${plan.use.join(', ')}`);
+    }
+    return plan;
+  }
+
   function targetsFor() {
     if (state.output.mode === 'unicast' && state.output.targets.length) return state.output.targets;
-    return broadcastAddresses();
+    return bcPlan().use;
   }
 
   // Which universes carry anything: the patched fixtures and the manual holds. Every one
@@ -1054,7 +1093,7 @@ function createDesk(opts = {}) {
     const o = state.output;
     const main = o.driver === 'enttec' ? { serial: enttec ? enttec.status() : null, serialPort: o.serialPort }
       : o.driver === 'sacn' ? { ready: offline || !!(sacn && sacn.ready), lastError: sacn && sacn.lastError, lastErrorAt: sacn && sacn.lastErrorAt, targets: o.targets }
-      : { ready: offline || !!artnet.ready, lastError: artnet.lastError, lastErrorAt: artnet.lastErrorAt, targets: o.mode === 'unicast' ? o.targets : [] };
+      : { ready: offline || !!artnet.ready, lastError: artnet.lastError, lastErrorAt: artnet.lastErrorAt, targets: o.mode === 'unicast' ? o.targets : [], networks: o.mode === 'unicast' ? [] : bcPlan().use, excluded: o.mode === 'unicast' ? [] : bcPlan().excluded };
     const routes = [{ id: 'main', name: 'Output', driver: o.driver, enabled: !!o.enabled, ...main }];
     for (const s of allExtras()) {
       const held = extraDrivers.get(s.id);
@@ -1205,7 +1244,8 @@ function createDesk(opts = {}) {
         identifying: Object.entries(state.identify || {}).filter(([, t]) => t > Date.now()).map(([id]) => id),
         nodes: nodeList(),
         interfaces: localAddresses(),
-        broadcast: broadcastAddresses(),
+        broadcast: bcPlan().use,
+        broadcastExcluded: bcPlan().excluded,
         // Whichever driver is live owns the counters the interface shows, so a frozen rig
         // reads as a frozen count on the page rather than an Art-Net count ticking happily
         // up while nothing leaves the serial port.
@@ -2150,11 +2190,13 @@ function createDesk(opts = {}) {
       // The hand recalling it: the scene's holds replace that hand's own (holds.js).
       const recallOwner = holds.holdOwner(body.owner);
       if (!recallOwner) return json(res, { error: 'owner must be 1-40 letters, digits or . _ : @ -' }, 400);
+      // Whose hand this is, read NOW from the request: a recall that waits for its beat keeps the answer it had when it was asked.
+      const origin = originOf(req);
       if (wait > 0) {
         const at = Date.now() + wait;
         pending.push(setTimeout(() => {
           if (state.chase.enabled) { state.chase.enabled = false; engine.chase.running = false; }
-          engine.recallScene(scene, body.fadeMs, recallOwner);
+          engine.recallScene(scene, body.fadeMs, recallOwner, { origin });
           save(); pushFrame();
         }, wait));
         return json(res, { ok: true, quantized: body.quantize, at, inMs: wait });
@@ -2174,7 +2216,7 @@ function createDesk(opts = {}) {
       // otherwise invisible until something looks wrong.
       const fxWasOn = fxActive(state.fx);
       const rawBefore = Object.keys(state.raw);
-      const ok = engine.recallScene(scene, body.fadeMs, recallOwner);
+      const ok = engine.recallScene(scene, body.fadeMs, recallOwner, { origin });
       const out = { ok };
       if (chasePaused) out.chasePaused = true;
       if (ok) {
@@ -2189,6 +2231,7 @@ function createDesk(opts = {}) {
 
     'POST /api/chase': (req, res, body) => {
       const wasEmpty = state.chase.sceneIds.length === 0;
+      const wasOn = !!state.chase.enabled;
       Object.assign(state.chase, {
         enabled: body.enabled != null ? !!body.enabled : state.chase.enabled,
         sceneIds: Array.isArray(body.sceneIds)
@@ -2207,6 +2250,11 @@ function createDesk(opts = {}) {
       if (state.chase.sceneIds.length === 0) state.chase.enabled = false;
       else if (wasEmpty && state.chase.enabled && body.enabled !== true) state.chase.enabled = false;
       if (!state.chase.enabled) engine.chase.running = false;
+      // Whose hand the chase's steps are (the scene link reads it): the request that turned the chase on. Any other
+      // request that touches a chase already running and is not a hand the lasers obey takes the answer away.
+      if (!state.chase.enabled) engine.chaseOrigin = null;
+      else if (!wasOn || body.enabled === true) engine.chaseOrigin = originOf(req);
+      else if (!originOf(req)) engine.chaseOrigin = null;
       save(); json(res, { ok: true, chase: state.chase });
     },
 
@@ -2259,13 +2307,17 @@ function createDesk(opts = {}) {
     },
 
     // Which widget is on the port, and does it open — answerable without moving a light.
-    'POST /api/serial/identify': (req, res, body) => {
+    'POST /api/serial/identify': async (req, res, body) => {
       const port = body && body.port && PORT_NAME.test(String(body.port).trim()) ? portName(body.port) : state.output.serialPort;
-      const probe = state.output.driver === 'enttec' && enttec && enttec.port === port
-        ? enttec
-        : new Enttec({ port, offline: offline });
-      const result = probe.identify();
-      if (probe !== enttec) probe.close();
+      // A port the live output holds is never opened for a probe: say so instead.
+      if (state.output.driver === 'enttec' && enttec && enttec.port === port) {
+        const d = describePort(port);
+        const held = decideIdentify({ port, device: d, held: true });
+        return json(res, { ok: true, port, held: true, protocol: null, label: held.label, looksLikeEnttec: false, ports: listPorts(), device: d });
+      }
+      const probe = new Enttec({ port, offline: offline });
+      let result;
+      try { result = await probe.identify(); } finally { probe.close(); }
       json(res, { ok: !!result.ok, port, ...result, ports: listPorts(), device: describePort(port) });
     },
 
@@ -2292,18 +2344,26 @@ function createDesk(opts = {}) {
     'POST /api/input/release': (req, res) => { input.merger.release(); pushFrame(); json(res, { ok: true }); },
 
     'POST /api/output': (req, res, body) => {
+      const before = JSON.stringify(state.output);
+      const was = state.output.driver;
       if (body.mode) state.output.mode = body.mode === 'unicast' ? 'unicast' : 'broadcast';
       if (Array.isArray(body.targets)) state.output.targets = body.targets.map(validIp).filter(Boolean);
       if (body.refreshHz != null) state.output.refreshHz = Math.max(1, Math.min(44, body.refreshHz | 0));
       if (body.driver) state.output.driver = ['enttec', 'sacn', 'artnet'].includes(body.driver) ? body.driver : 'artnet';
       if (body.priority != null) state.output.priority = Math.max(0, Math.min(200, body.priority | 0));
       if (body.enabled != null) state.output.enabled = !!body.enabled;
+      if (body.broadcastAll != null) state.output.broadcastAll = !!body.broadcastAll;
       if (body.serialPort && PORT_NAME.test(String(body.serialPort).trim())) state.output.serialPort = portName(body.serialPort);
       // Rebuild the driver before answering, so the reply carries the real outcome of the
       // switch. Selecting a port that will not open has to say so here — finding out by
       // noticing the rig is dark is how this project loses an evening.
       const wire = enttecDriver();
-      startLoop(); save();
+      // Values equal to the current ones change nothing: no save, no restart of the send loop.
+      if (JSON.stringify(state.output) !== before) {
+        // One line per real driver change, so a flip nobody meant is in the journal.
+        if (state.output.driver !== was) log('output driver ' + was + ' -> ' + state.output.driver);
+        startLoop(); save();
+      }
       json(res, {
         ok: true,
         output: state.output,
@@ -2476,6 +2536,7 @@ function createDesk(opts = {}) {
     input.configure(state.output.input, { lanAllowed });
     engine.cancelFade();
     engine.chase = { running: false, index: 0, nextAt: 0 };
+    engine.chaseOrigin = null;
     stateVersion++;
     rememberLoaded();
     log('  loaded ' + who() + ' — ' + showFile());
@@ -2586,6 +2647,10 @@ function createDesk(opts = {}) {
     // /api/cues routes call, so there is still ONE clock.
     cueRunner,
     hasLook: (id) => state.looks.some((l) => l.id === id),
+    // SCENE EVENT (2026-10-31): `fn({ id, name })` when a scene becomes active, however it was recalled (engine.onScene).
+    // `scenes()` is the library as { id, name }, read through to the show that is loaded now.
+    onScene: (fn) => engine.onScene(fn),
+    scenes: () => state.scenes.map((s) => ({ id: s.id, name: s.name })),
     get state() { return state; },
     get showFile() { return showFile(); },
     get show() { return showInfo(); },

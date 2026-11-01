@@ -3,6 +3,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import vm from 'node:vm'
 import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -22,15 +23,21 @@ afterEach(async () => {
   for (const [k, v] of Object.entries(envBefore)) { if (v == null) delete process.env[k]; else process.env[k] = v }
 })
 
+let tokenOfBoot = ''
+let dirOfBoot = ''
 const boot = async (extra = {}) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dii-laser-'))
   const app = express()
   const lane = registerLaserRoutes(app, { dataDir: dir, log: null, ...extra })
+  dirOfBoot = dir
+  tokenOfBoot = fs.readFileSync(path.join(dir, 'laser', '.token'), 'utf8').trim()
   const { server, base } = await listen(app)
   cleanups.push(() => new Promise((r) => { lane.close(); server.close(r); fs.rmSync(dir, { recursive: true, force: true }) }))
   return { base, lane }
 }
-const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+// A script's request (no Origin): it carries the local token, as a tool on this machine must (stage audit row 9).
+const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-laser-token': tokenOfBoot }, body: JSON.stringify(body) })
+const postBare = (url, body, headers = {}) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) })
 
 describe('the lasers at /laser', () => {
   it('is dormant until asked, then answers DISARMED with six sim cubes', async () => {
@@ -66,9 +73,71 @@ describe('the lasers at /laser', () => {
     expect((await (await fetch(`${base}/laser/api/frames`)).json()).all).toBe(null)
   })
 
-  it('refuses to arm without the sign-off phrase (403), and arms with it', async () => {
+  it('the desk Blackout takes a true or false only, and lifting it is same-machine only (review 1218 M1)', async () => {
     delete process.env.NODE_ENV
     const { base } = await boot()
+    const url = `${base}/laser/desk/api/blackout`
+    expect((await post(url, {})).status).toBe(400)
+    expect((await post(url, { on: 'false' })).status).toBe(400)
+    expect(await (await post(url, { on: true })).json()).toMatchObject({ ok: true, blackout: true })
+    // a second dark press stays dark; an empty post does not lift it
+    expect(await (await post(url, { on: true })).json()).toMatchObject({ blackout: true })
+    await post(url, {})
+    expect((await (await fetch(`${base}/laser/desk/api/state`)).json()).blackout).toBe(true)
+    // a peer that is not this machine (it came through a proxy): refused to lift
+    const viaProxy = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.9' }, body: JSON.stringify({ on: false }) })
+    expect(viaProxy.status).toBe(403)
+    expect((await (await fetch(`${base}/laser/desk/api/state`)).json()).blackout).toBe(true)
+    expect(await (await post(url, { on: false })).json()).toMatchObject({ ok: true, blackout: false })
+  })
+
+  it('a cube On with nothing to draw stays On by default (darkOff never), and /state says so', async () => {
+    delete process.env.NODE_ENV
+    delete process.env.DI_LASER_DARK_OFF
+    const { base } = await boot()
+    expect((await (await fetch(`${base}/laser/api/state`)).json()).darkOff).toBe('never')
+  })
+
+  it('DI_LASER_DARK_OFF=auto keeps the older 5 s dark rule, and /state says darkOff auto', async () => {
+    delete process.env.NODE_ENV
+    process.env.DI_LASER_DARK_OFF = 'auto'
+    const { base } = await boot()
+    delete process.env.DI_LASER_DARK_OFF
+    expect((await (await fetch(`${base}/laser/api/state`)).json()).darkOff).toBe('auto')
+  })
+
+  it("a cube's own On on the desk (out 'desk') asks the desk to keep its hold; All on, another Out and a refused On do not", async () => {
+    delete process.env.NODE_ENV
+    const { base, lane } = await boot()
+    const engine = lane.getEngine()
+    engine.arm = (body) => ({ ok: true, armed: body.armed })
+    let held = 0
+    lane.getDesk().keepHold = () => { held += 1; return { ok: true } }
+    await post(`${base}/laser/api/arm`, { armed: true })
+    await post(`${base}/laser/api/arm`, { armed: true, cube: 'cube-1', out: 'out-a' })
+    expect(held).toBe(0)
+    await post(`${base}/laser/api/arm`, { armed: true, cube: 'cube-1', out: 'desk' })
+    expect(held).toBe(1)
+    engine.arm = () => ({ ok: false, error: 'refused' })
+    await post(`${base}/laser/api/arm`, { armed: true, cube: 'cube-1', out: 'desk' })
+    expect(held).toBe(1)
+  })
+
+  it('arms on a plain On in click mode (the default), and /state says signOff click', async () => {
+    delete process.env.NODE_ENV
+    delete process.env.DI_LASER_SIGN_OFF
+    const { base } = await boot()
+    expect((await (await fetch(`${base}/laser/api/state`)).json()).signOff).toBe('click')
+    expect((await post(`${base}/laser/api/arm`, { armed: true })).status).toBe(200)
+    expect((await (await fetch(`${base}/laser/api/state`)).json()).armed).toBe(true)
+  })
+
+  it('refuses to arm without the sign-off phrase (403), and arms with it — phrase mode (DI_LASER_SIGN_OFF=phrase)', async () => {
+    delete process.env.NODE_ENV
+    process.env.DI_LASER_SIGN_OFF = 'phrase'
+    const { base } = await boot()
+    delete process.env.DI_LASER_SIGN_OFF
+    expect((await (await fetch(`${base}/laser/api/state`)).json()).signOff).toBe('phrase')
     expect((await post(`${base}/laser/api/arm`, { armed: true })).status).toBe(403)
     expect((await (await fetch(`${base}/laser/api/state`)).json()).armed).toBe(false)
     const ok = await post(`${base}/laser/api/arm`, { armed: true, confirm: ARM_PHRASE })
@@ -132,5 +201,77 @@ describe('the lasers at /laser', () => {
     delete process.env.NODE_ENV
     const { base } = await boot()
     expect((await post(`${base}/laser/api/show`, { project: 'x' })).status).toBe(501)
+  })
+
+  // The desk page's tiles play the looks with lib/laser.js (2026-10-29): it must draw what the desk sends the cubes.
+  it('serves the desk\'s drawing code to the page as one script, drawing every seed look as the server does', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    const res = await fetch(`${base}/laser/lib/laser.js`)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toMatch(/javascript/)
+    const window = {}
+    vm.runInNewContext(await res.text(), { window })
+    const { lookPointsAt, SEED_LOOKS } = require('../laser/laserDesk.js')
+    const clock = { bpm: 128, zero: 0 }
+    for (const look of SEED_LOOKS) {
+      for (const t of [0, 777, 5432]) expect(window.DiLaser.lookPointsAt(look, { t, clock }), `${look.id} at ${t}`).toEqual(lookPointsAt(look, { t, clock }))
+    }
+    expect(window.DiLaser.LASER_SHAPES).toEqual(require('../../../shared/laserShapes.cjs').LASER_SHAPES)
+    expect(window.DiLaser.lookBox(SEED_LOOKS[0])).toHaveLength(4)
+  })
+
+  // Stage audit row 9: a loopback POST with no Origin needs the local token to make light.
+  it('row 9: a no-Origin request that makes light needs the local token; stops and a same-origin page do not', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    const file = path.join(dirOfBoot, 'laser', '.token')
+    expect((fs.statSync(file).mode & 0o777).toString(8)).toBe('600')
+    const frame = { cube: 'cube-1', points: [[0, 0.5, 0, 1, 0]] }
+    for (const [route, body] of [['frame', frame], ['alive', { cube: 'cube-1' }], ['arm', { armed: true, confirm: ARM_PHRASE }], ['show', { project: 'x' }]]) {
+      const bare = await postBare(`${base}/laser/api/${route}`, body)
+      expect(bare.status, route).toBe(403)
+      expect((await bare.json()).error).toBe('no token')
+      expect((await postBare(`${base}/laser/api/${route}`, body, { 'x-laser-token': 'wrong' })).status, route).toBe(403)
+    }
+    expect((await postBare(`${base}/laser/api/frame`, frame, { 'x-laser-token': tokenOfBoot })).status).toBe(200)
+    // The page's own request (same Origin) works as before, no token.
+    expect((await postBare(`${base}/laser/api/frame`, frame, { origin: base })).status).toBe(200)
+    // Stops are never gated.
+    expect((await postBare(`${base}/laser/api/blackout`, {})).status).toBe(200)
+    expect((await postBare(`${base}/laser/api/arm`, { armed: false })).status).toBe(200)
+  })
+})
+
+describe('review fixes E3, E5, E6 (2026-10-30)', () => {
+  it('E3: the desk routes that light (go, live, a blackout lift) need the token at the router entry; a blackout ON does not', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    for (const [route, body] of [['go', { look: 'a' }], ['live', {}], ['blackout', { on: false }]]) {
+      const bare = await postBare(`${base}/laser/desk/api/${route}`, body)
+      expect(bare.status, route).toBe(403)
+      expect((await bare.json()).error).toBe('no token')
+      expect((await postBare(`${base}/laser/desk/api/${route}`, body, { 'x-laser-token': tokenOfBoot })).status, route).not.toBe(403)
+    }
+    expect((await postBare(`${base}/laser/desk/api/blackout`, { on: true })).status).not.toBe(403)
+  })
+  it('R3: every other desk POST (master, cube, setting) needs the token too; release and blackout ON do not', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    for (const route of ['master', 'cube', 'setting', 'bpm', 'store']) {
+      expect((await postBare(`${base}/laser/desk/api/${route}`, {})).status, route).toBe(403)
+    }
+    expect((await postBare(`${base}/laser/desk/api/release`, {})).status).not.toBe(403)
+  })
+  it('E6: the engine is built at server start when laser.json names an addressed cube, and not otherwise', async () => {
+    delete process.env.NODE_ENV
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dii-laser-boot-'))
+    fs.mkdirSync(path.join(dir, 'laser'), { recursive: true })
+    fs.writeFileSync(path.join(dir, 'laser', 'laser.json'), JSON.stringify({ cubes: [{ id: 'cube-1', ip: '10.0.0.9' }] }))
+    const sock = { sent: [], on: () => {}, bind: () => {}, close: () => {}, send: (b, port, ip, done) => { sock.sent.push({ port, ip, buf: Buffer.from(b) }); done?.() } }
+    const lane = registerLaserRoutes(express(), { dataDir: dir, log: null, engineOptions: { createSocket: () => sock } })
+    cleanups.push(async () => { await lane.close(); fs.rmSync(dir, { recursive: true, force: true }) })
+    expect(lane.hasEngine()).toBe(true)
+    expect(sock.sent.filter((s) => s.ip === '10.0.0.9' && s.buf[0] === 0x80 && s.buf[1] === 0)).toHaveLength(2)
   })
 })

@@ -136,6 +136,9 @@ const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { registerLaserRoutes } = require('./routes/laserRoutes')
+const { registerShowDeskRoutes } = require('./routes/showDeskRoutes')
+const { registerShowStatusRoutes } = require('./routes/showStatusRoutes')
+const { createShowStatus } = require('./stage/showStatus')
 const { registerOscRoutes } = require('./routes/oscRoutes')
 const { registerNdiRoutes, scanAtBootFrom } = require('./routes/ndiRoutes')
 const { hasLocalRuntime } = require('./localRuntimeGuard')
@@ -512,7 +515,10 @@ const lighting = registerLightingRoutes(app, {
   },
   mountPaths: [...new Set(['/light', `${config.mountPath || ''}/light`.replace(/\/+/g, '/')])],
   offline: process.env.ARTNET_OFFLINE === '1',
-  listen: describeListenNow
+  listen: describeListenNow,
+  // Whose hand a scene recall is (the scene link, laser/sceneLink.js): judged by the lasers' own guards. `lasers` is
+  // defined below; this runs at request time, and the desk turns any throw into null (nobody's hand).
+  sceneOrigin: (req) => lasers.originOf(req)
 })
 
 // The lasers (serverXR/src/laser) at /laser — MOXIR's LaserCubes driven from the Nodes editor: the
@@ -524,8 +530,26 @@ const lasers = registerLaserRoutes(app, {
   loadDocument: async (projectId) => {
     const project = await resolveProjectContext(projectId)
     return project ? readProjectDocument(SPACES_DIR, project.spaceId, project.projectId) : null
-  }
+  },
+  // The light desk's scenes, for the laser desk's "Follows light scene" (never builds the light desk).
+  lightScenes: () => lighting.scenes()
 })
+// One scene drives both (2026-10-31, ledger N1587): a light scene recall puts the look that follows it live on the laser
+// desk when its switch is on (desk.json followLight) and the request passed the lasers' own guards. laser/sceneLink.js.
+require('./laser/sceneLink').linkLightToLaser({ lighting, lasers, log: logger })
+
+// The show desk (serverXR/src/showDesk, 2026-10-31) at /show/ — the lighting desk and the laser desk on one page. Only files: the
+// page sends the two desks' own routes from this same origin, so their guards apply as on their own pages. Mounted under the
+// base path only (a bare /show could shadow a space of that name). routes/showDeskRoutes.js.
+registerShowDeskRoutes(app, { mountPaths: [`${config.mountPath || ''}/show`.replace(/\/+/g, '/')] })
+
+// The show status (serverXR/src/stage/showStatus.js, 2026-11-01, plan S11) at /show-status: one JSON of the running show
+// (light scene, laser armed or stopped and why, controller heard, link, heat, the stage watch's latest.json), read by the
+// Show desk's status line. Pushed to the di.bo door only when DI_SHOW_STATUS_PUSH_URL is set (off by default). Read only.
+const showStatus = createShowStatus({ lighting, lasers, log: (line) => logger.info(line) })
+registerShowStatusRoutes(app, { mountPaths: [`${config.mountPath || ''}/show-status`.replace(/\/+/g, '/')], status: showStatus })
+showStatus.startPush()
+process.once('exit', () => showStatus.stopPush())
 
 // OSC (serverXR/src/osc) at /osc — the OSC In and OSC Out nodes' UDP, which a page cannot
 // open: the lasers' twin in shape (built on first use, local-only, 404 hosted).

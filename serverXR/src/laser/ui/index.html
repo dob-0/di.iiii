@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060607">
+<meta name="color-scheme" content="dark">
+<title>Laser desk</title>
+<!-- The layout (Grid | Classic) is chosen here, before the first paint: layoutMode.js sets html[data-layout]; without it the page is Classic. -->
+<script src="layoutMode.js"></script>
+<link rel="stylesheet" href="desk.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M4 28 L28 4' stroke='%23ff2030' stroke-width='4'/></svg>">
+</head>
+<body>
+
+<!-- The laser desk (serverXR/src/laser/laserDesk.js): the light desk's twin for the LaserCubes. The server draws the
+     frames and keeps the cubes going; this page only edits. Nothing here can arm a cube without a person's On (the sign-off phrase too, in phrase mode),
+     and Disarm all is always one click, on every page. -->
+<header class="topbar">
+  <a class="homelink" href="/spaces" title="Back to di.iiii — your spaces">di.iiii</a>
+  <!-- The way between the desks (owner, 2026-10-31, Projector Room: from the Show desk to the Light or Laser desk there was no way back, and the desks run in a
+       window with no address bar). The same three links sit in the top line of the Show, Light and Laser desks; this page is the current one. Plain links, same window. -->
+  <nav class="deskswitch" aria-label="Desks">
+    <a href="../show/">Show</a>
+    <a href="../light/">Light</a>
+    <a href="./" aria-current="page">Laser</a>
+  </nav>
+  <nav class="pages" aria-label="Desk pages">
+    <button class="page-tab is-active" data-page="control">Control</button>
+    <button class="page-tab" data-page="setup">Setup</button>
+  </nav>
+  <!-- Layout (2026-10-31, the owner: "the place is not used right, the windows inside are managed not right"): Grid is the new default, Classic is the layout before it, kept whole. Kept per browser (layoutMode.js); ?layout=classic|grid too. Shown from 1240x640 up; below that the page is Classic. -->
+  <div class="layoutswitch" role="group" aria-label="Layout">
+    <button type="button" data-layout="grid" aria-pressed="false" title="Grid: the Looks fill the page, the cubes and masters sit at the right, every edit group is in a strip at the bottom">Grid</button>
+    <button type="button" data-layout="classic" aria-pressed="false" title="Classic: the layout before 2026-10-31, with Edit as a column at the right">Classic</button>
+  </div>
+  <!-- Row 1, right of the page tabs: what the desk does. The follow status sits here (fixed width, ellipsis), never among the stops. -->
+  <div class="options">
+    <label class="muted" title="Off: Blackout switches every cube off (On and the phrase bring it back). On: the older blackout, dark with the arm kept; Shift+B brings it back."><input type="checkbox" id="blackoutKeepsArm"> Blackout keeps the arm</label>
+    <label class="muted" id="followLabel" title="On: picking a scene on the light desk puts the look that follows it live here (from di's own page, or with the local token). It never arms, never lifts a Blackout and never changes Master or BPM."><input type="checkbox" id="followLight"> Follow light scenes</label>
+    <span class="muted followstatus" id="followStatus"></span>
+  </div>
+  <!-- Row 2: the show controls. The stops are one group at the right end that cannot shrink or wrap: nothing can push Disarm all. -->
+  <div class="topright">
+    <div class="tools">
+      <label class="bpm" title="Beats per minute: every move runs on this clock">
+        <span>BPM</span><input id="bpm" type="number" min="20" max="300" step="0.1" inputmode="decimal">
+      </label>
+      <button id="tapBtn" title="Tap the beat (T)">Tap</button>
+      <label class="master" title="Master level for every cube">
+        <span>Master</span><input id="master" type="range" min="0" max="1" step="0.01"><b id="masterVal"></b>
+      </label>
+      <button id="undoBtn" class="icon" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button>
+      <button id="redoBtn" class="icon" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>↷</button>
+      <button id="saveBtn" class="save" title="Write every look's changes to disk (Ctrl+S)">Saved</button>
+      <button id="keysBtn" class="icon" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+    </div>
+    <div class="stops">
+      <span class="pill" id="safetyPill" title="What the cubes can do right now">…</span>
+      <button id="blackoutBtn" class="topbo" title="Every cube dark, the desk keeps its look (B). Pressing it again does nothing: lift it with Release or Shift+B">Blackout</button>
+      <button id="releaseBtn" title="The desk lets go of the cubes: dark, and free for a Laser Out or the show">Release</button>
+      <button id="disarmBtn" class="danger" title="Every cube's output off. One click, always">Disarm all</button>
+    </div>
+  </div>
+</header>
+
+<p class="notice" id="notice" hidden></p>
+
+<!-- ===================== Control ===================== -->
+<main class="page" id="page-control">
+  <section class="bank pane" aria-label="Looks">
+    <div class="panehead">
+      <h2>Looks</h2>
+      <span class="muted" id="liveName">Nothing on the cubes. Press a look.</span>
+      <span class="pill is-warn" id="cubeNote" role="status" hidden></span>
+    </div>
+    <!-- A link can propose removals (?remove=id,id,..., 2026-10-31, N1586): this asks a person first; nothing is removed until Remove is tapped. desk.js fills it. -->
+    <div class="removeask" id="removeAsk" role="alertdialog" aria-labelledby="removeTitle" aria-describedby="removeNote" hidden>
+      <h2 id="removeTitle"></h2>
+      <ul class="removelist" id="removeList" hidden></ul>
+      <p class="removenote" id="removeNote" role="status"></p>
+      <div class="removebtns">
+        <button id="removeGo" class="danger" hidden>Remove</button>
+        <button id="removeUndo" hidden>Undo</button>
+        <button id="removeKeep">Keep them</button>
+      </div>
+    </div>
+    <!-- A link can propose a look set (?set=<name>, 2026-10-31): sets/<name>.json shown look by look, now → new; nothing changes until Apply is tapped. desk.js fills it. -->
+    <div class="removeask setask" id="setAsk" role="alertdialog" aria-labelledby="setTitle" aria-describedby="setNote" hidden>
+      <h2 id="setTitle"></h2>
+      <div class="setabout" id="setAbout" hidden></div>
+      <ul class="setlist" id="setList" hidden></ul>
+      <p class="removenote" id="setNote" role="status"></p>
+      <div class="removebtns">
+        <button id="setGo" hidden>Apply</button>
+        <button id="setUndo" hidden>Undo</button>
+        <button id="setKeep">Keep as is</button>
+      </div>
+    </div>
+    <!-- Scenes (2026-10-31, N1612): one press recalls a light scene and puts the laser look that follows it on the cubes. desk.js fills it; sceneRow.js holds the rules. -->
+    <div class="scenerow" id="sceneRow" role="group" aria-label="Scenes" hidden>
+      <div class="scenehead"><h2>Scenes</h2><span class="muted" id="sceneNote" role="status"></span></div>
+      <div class="scenegrid" id="sceneGrid"></div>
+    </div>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section class="stage pane" aria-label="Stage" title="What each cube holds now, after its keep-in zone (the shaded part is never drawn)">
+    <div class="panehead">
+      <h2>Stage</h2>
+      <span class="muted">What each cube holds now, after its keep-in zone (the shaded part is never drawn)</span>
+    </div>
+    <div class="cubes" id="stage"></div>
+  </section>
+
+  <aside class="editor pane" aria-label="Edit a look">
+    <div class="panehead">
+      <h2>Edit</h2>
+      <input id="lookName" class="namefield" maxlength="40" placeholder="Name" aria-label="Look name">
+    </div>
+    <div class="preview">
+      <canvas id="preview" aria-label="Preview of the look open in Edit"></canvas>
+      <span class="muted previewnote" id="previewNote"></span>
+    </div>
+    <div class="editbody" id="editor">
+      <div class="group" id="followGroup">
+        <div class="grouphead"><span>Follows light scene</span></div>
+        <select id="followsScene" title="The light scene that puts this look live while Follow light scenes is on. One scene, one look."></select>
+      </div>
+      <div class="group">
+        <div class="grouphead"><span>Shape</span>
+          <label class="check" title="Pick several shapes: they play in turn"><input type="checkbox" id="cycleMode"> Cycle</label>
+        </div>
+        <div class="chips" id="shapes"></div>
+        <div class="field" id="cycleField" hidden></div>
+      </div>
+      <div class="group">
+        <div class="grouphead"><span>Colour</span>
+          <label class="check"><input type="checkbox" id="rainbow"> Rainbow</label>
+        </div>
+        <div class="swatches" id="swatches"></div>
+        <div class="grouphead mine-head"><span>My colours</span><span class="muted" id="myColoursHint" title="+ opens a palette to choose from">+ opens a palette to choose from</span></div>
+        <div class="swatches" id="myColours"></div>
+        <!-- The palette + opens (2026-10-31, the owner: "show me color pallet when +"): choose a colour, it is kept in My colours. -->
+        <div class="chooser" id="colourChooser" hidden>
+          <div class="grouphead"><span>Choose a colour to keep</span><button id="chooserClose" class="quiet small">Close</button></div>
+          <div class="chooser-grid" id="chooserGrid" role="group" aria-label="Palette"></div>
+          <div class="chooser-any">
+            <input type="color" id="chooserPicker" value="#ff2030" aria-label="Any colour">
+            <input id="chooserHex" class="hexfield" maxlength="7" placeholder="#rrggbb" aria-label="A colour as #rrggbb" spellcheck="false">
+            <button id="chooserAdd" title="Keep this colour in My colours">Keep</button>
+          </div>
+        </div>
+      </div>
+      <div class="group" id="pictureFields"><div class="grouphead"><span>Picture</span></div></div>
+      <div class="group" id="moveFields"><div class="grouphead"><span>Movement</span>
+          <label class="check multi" title="Every second cube mirrored"><input type="checkbox" id="mirror"> Mirror</label>
+        </div></div>
+      <div class="group multi">
+        <div class="grouphead"><span>Cubes</span></div>
+        <div class="chips" id="lookCubes"></div>
+      </div>
+      <div class="actions">
+        <button id="copyBtn" title="A copy of this look as a new tile after it (Ctrl+D)">Copy</button>
+        <button id="deleteBtn" class="quiet" title="Delete this look (Delete key); Ctrl+Z brings it back">Delete</button>
+      </div>
+    </div>
+    <p class="empty muted" id="editorEmpty">Click a look’s NAME to open it here: change it and watch the preview. Click its PICTURE to send it to the laser (keys 1–9 too). Every look keeps its own changes; Save keeps each changed look as a new scene, and the saved one stays as it was.</p>
+  </aside>
+</main>
+
+<!-- ===================== Setup ===================== -->
+<main class="page" id="page-setup" hidden>
+  <section class="pane">
+    <div class="panehead">
+      <h2>Cubes</h2>
+      <span class="muted" id="simNote"></span>
+    </div>
+    <div class="tablewrap">
+      <table class="cubetable">
+        <thead><tr>
+          <th class="multi">Place</th><th>Cube</th><th>Address</th><th>Link</th><th>Output</th><th>Desk</th><th>Mirror</th><th>Size</th><th>Across</th><th>Up</th><th>Now</th>
+        </tr></thead>
+        <tbody id="cubeRows"></tbody>
+      </table>
+    </div>
+    <div class="actions">
+      <button id="allOnBtn" title="Arm every cube that has answered (in phrase mode: asks for the sign-off phrase)">All on</button>
+      <button id="findBtn" title="Ask this computer's networks which LaserCubes are there. Read-only: nothing lights">Find cubes</button>
+    </div>
+    <div id="found" hidden>
+      <h3>Found</h3>
+      <ul class="foundlist" id="foundList"></ul>
+      <div class="actions">
+        <button id="useFoundBtn" title="Write these cubes into laser.json. The engine reloads disarmed">Use these</button>
+      </div>
+    </div>
+  </section>
+  <section class="pane notes">
+    <h2>Safety</h2>
+    <ul>
+      <li>Every cube starts disarmed. On is a person's yes.</li>
+      <li>Sign-off phrase before the first On of a run: <b id="safetySignOff">…</b></li>
+      <li>Off after 5 s with nothing to draw: <b id="safetyDark">…</b></li>
+      <li>Disarm all, in the top bar, switches every output off in one click. The key switch on each cube always works.</li>
+      <li>The keep-in zone, the galvo guards, the still-beam guard and the signal-loss stop apply to the desk as to any other sender.</li>
+      <li>One sender per cube: a cube a Laser Out or the show holds refuses the desk until it lets go.</li>
+    </ul>
+  </section>
+</main>
+
+<!-- The sign-off phrase: asked here, never stored, never shown back. -->
+<div class="modal" id="phraseModal" hidden role="dialog" aria-modal="true" aria-labelledby="phraseTitle">
+  <form class="modalbox" id="phraseForm">
+    <h2 id="phraseTitle">Sign-off phrase</h2>
+    <p class="muted" id="phraseWhy">The first On of a run takes the phrase the laser safety officer agreed.</p>
+    <input id="phraseInput" autocomplete="off" spellcheck="false" aria-label="Sign-off phrase">
+    <p class="error" id="phraseError" hidden></p>
+    <div class="actions">
+      <button type="submit" class="danger">Arm</button>
+      <button type="button" id="phraseCancel" class="quiet">Cancel</button>
+    </div>
+  </form>
+</div>
+
+<!-- The keys, as Resolume and most editors have them (2026-10-30, the owner: "add delete ctl z ctrl v ctrl c and other shortkeys"). -->
+<div class="keyshelp" id="keysHelp" hidden>
+  <div class="keysbox" role="dialog" aria-modal="true" aria-labelledby="keysTitle">
+    <div class="panehead"><h2 id="keysTitle">Keys</h2><button id="keysClose" class="quiet">Close</button></div>
+    <dl class="keys">
+      <dt>Click a picture · 1–9 · Enter</dt><dd>Send the look to the laser (Enter: the look open in Edit)</dd>
+      <dt>Click a name · ← → ↑ ↓</dt><dd>Open a look in Edit</dd>
+      <dt>Ctrl+C · Ctrl+V</dt><dd>Copy the look in Edit · paste it as a new look after the one in Edit (also into another tab)</dd>
+      <dt>Ctrl+D</dt><dd>Duplicate the look in Edit</dd>
+      <dt>Delete</dt><dd>Delete the look in Edit</dd>
+      <dt>Ctrl+Z · Ctrl+Y</dt><dd>Undo · redo (Ctrl+Shift+Z redoes too)</dd>
+      <dt>Ctrl+S</dt><dd>Save: every changed look becomes a new scene</dd>
+      <dt>F2</dt><dd>Rename the look in Edit</dd>
+      <dt>Esc</dt><dd>Close Edit (or this list)</dd>
+      <dt>B · Shift+B · T · ?</dt><dd>Blackout · lift the blackout · tap the beat · this list</dd>
+    </dl>
+  </div>
+</div>
+
+<script src="lib/laser.js"></script>
+<script src="drawRuns.js"></script>
+<script src="drawCalm.js"></script>
+<script src="sceneRow.js"></script>
+<script src="desk.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+{
+  "schema": "di.show-status/1",
+  "machine": "stage",
+  "seq": 1,
+  "sent_at": "2026-11-01T00:30:05.000Z",
+  "changed_at": "2026-11-01T00:30:05.000Z",
+  "period_s": 30,
+  "grace_s": 60,
+  "light": {
+    "seen": true,
+    "scene": "Scene three",
+    "scene_id": "scene-3",
+    "blackout": false
+  },
+  "laser": {
+    "seen": true,
+    "armed": true,
+    "sim": false,
+    "cubes": 2,
+    "connected": 1,
+    "stop_reason": "the cube stopped answering",
+    "stops_total": 3
+  },
+  "controller": {
+    "seen": null,
+    "heard_at": null,
+    "name": null,
+    "wired": false
+  },
+  "link": {
+    "state": "degraded",
+    "at": "2026-11-01T00:30:00Z",
+    "gateway_ms": 180,
+    "dns_ok": true,
+    "tailscale": "derp",
+    "handshake_age_s": 95
+  },
+  "heat": {
+    "state": "hot",
+    "max_c": 104,
+    "crit_c": 105
+  },
+  "watch": {
+    "state": "alert",
+    "at": "2026-11-01T00:30:03Z",
+    "age_s": 2,
+    "alerts": [
+      {
+        "key": "usb:1-2.1",
+        "level": "alert",
+        "text": "usb flood 1-2.1: 2655 error lines/s"
+      },
+      {
+        "key": "heat",
+        "level": "alert",
+        "text": "104 °C (crit 105)"
+      }
+    ],
+    "usb_mode": "warn"
+  },
+  "last_change": {
+    "at": "2026-11-01T00:30:05.000Z",
+    "what": [
+      "start"
+    ]
+  },
+  "push": {
+    "enabled": false,
+    "last_ok_at": null,
+    "failures": 0,
+    "last_error": null
+  }
+}

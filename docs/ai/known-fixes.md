@@ -1693,3 +1693,92 @@ Cause (read on the Mac, read-only): the dev tier's generated `server.env` held `
 Fix: `server-env.mjs --nginx <host:port>` points every `http://client:8080` value at the tier's own nginx and refuses (exit 1, naming the keys) to write a value still naming `client:8080`; di-atlas `tools/standby/release.sh` genenv passes `--nginx 127.0.0.1:$NGINX_PORT` (an older server-env ignores the flag, so di-atlas lands first). `nginx-conf.sh` rewrites `alias /usr/share/nginx/html/` to the release's `dist/` and stops on any non-comment line still naming `/usr/share/nginx/html`; its three shape checks stay. Guard: `scripts/standby/server-env.test.js` (3 new) and `scripts/standby/nginx-conf.test.js` (3); 5 of 6 new cases red on the old scripts. Rule: a standby host replaces EVERY Docker-only fact of the compose and nginx files (service names, image paths), and the script refuses what it does not replace.
 
 | **Twenty spaces could not each have a project called "my scene": the second one got `409 that name is taken on this di.iiii — try another` in small grey words, the form already closed, and an empty name ("Untitled") clashed the same way** (2026-10-29, ux-fix S21, F061) | The create route turned the typed name into the project's id, and ids are global on one di.iiii; both create forms sent `slug: name`, so a person's name was always treated as an exact id. The forms closed before the answer came | A name typed by a person (`title`, no `slug`) is unique only inside its space: a same-space clash is a 409 `code: name-taken-in-space` naming it; a clash with another space gets a free id (`my-scene-2`) and the name as short name, so `/{space}/my-scene` still opens; an empty name becomes "Untitled", "Untitled 2"… Callers that name the id (`slug`, `carried`) keep the old door. StudioHub and the Studio projects panel send only the name and keep the form open with a red `role="alert"` message. No id is renamed. Decision: `docs/ai/decisions/2026-10-29-project-names-per-space.md`. Guards: `serverXR/src/routes/projectRoutes.namesPerSpace.test.js`, `projectContracts.test.js` "names per space", `StudioHub.test.jsx` / `StudioProjectsPanel.test.jsx` "…taken in this space" (all fail on origin/dev) |
+
+## The laser frame twin check failed on every Windows checkout (2026-10-29, laser desk)
+
+Symptom: `src/shared/laserFrame.test.js` "the browser twin is generated from the .cjs, byte for byte" failed on a Windows checkout (`core.autocrlf=true`) with both files untouched, and `node scripts/laser/laser-frame-twin.mjs --check` said DIFFERS.
+Cause: the files on disk are CRLF; `buildTwin` stripped `'use strict'\n` and matched `module.exports = {…}\n` with LF-only patterns, and the test compared the CRLF file on disk with that output.
+Fix: `scripts/laser/laser-frame-twin.mjs` builds from the LF text (`lf()`) and compares LF to LF; the test reads the twin LF-normalised. The same script now also writes `src/shared/laserShapes.js` from `shared/laserShapes.cjs` (a `require('./x.cjs')` becomes `import … from './x.js'`).
+Guard: `src/shared/laserFrame.test.js` and `src/shared/laserShapes.test.js` (byte-for-byte twin cases) pass on a Windows checkout; the laserFrame case failed there before.
+
+## The laser desk: Blackout missed, hidden-page keys fired, placement sliders jumped, cuts were silent (2026-10-30, stage audit S-desk)
+Problem: from the venue audit (rows 2, 3, 6, 7, 10, 19, 22, 23, 24, 25, 29, 30, 31): B did nothing with a slider in focus; the top-bar Blackout toggled and a double-click relit the cubes; the desk's Blackout never reached the engine when the desk was released; digits, Enter and Delete fired from the Setup page and repeated while held; the wheel moved Edit and Setup sliders (one release jumped a cube's placement, with no number shown); the Setup table was rebuilt under the hand; an out-of-range placement was clamped to the extreme; a picture cut off the field was silent and `driving` hid the dark cube; the 50 ms tick had no catch.
+Fix: `ui/desk.js` (B before the field check, 400 ms guard, button only turns on, page and `e.repeat` guards, readout and commit-on-release for Setup sliders, wheel ignored, Alt+wheel keeps the nudge, table held while a slider has focus or a pointer is down, Stage card "N % of this look is off the field"); `laserDesk.js` (setBlackout calls `engine.blackout()`, Release lifts the blackout, `normaliseCube` strict refuses, per-cube `lit`/`blanked`/`offField`/`offPercent`/`dark`, `driving` only while lit, a catching tick logging once per distinct error); `shared/laserLook.cjs` (optional `stats`).
+Guard: `serverXR/src/laser/laserDeskStageAudit.test.js` (13) and `serverXR/src/laser/ui/desk.test.js` (16, the real page in jsdom); 26 of the 29 fail on the code before.
+
+## The laser desk: the Looks bank squeezed 72 tiles into 17 px rows (2026-10-31, Projector Room)
+Problem: on the stage Mac (window about 1280 x 670 css px, 72 looks) the bank's rows were about 17 px instead of 93 px: names cut in half, pictures over the next row, and every one of the 72 tiles counted as on screen, so all 72 redrew every 50 ms (1440 draws a second measured). Cause: `.tiles` is a grid inside a fixed-height pane and `.tile` has `min-height: 0`, so the implicit `auto` rows start at base size 0 and share the pane's free height instead of keeping their content height. It shows whenever the rows no longer fit: the 32 factory looks gave 57 px rows in the same window.
+Fix: `ui/desk.css`, `.tiles { grid-auto-rows: max-content }` (rows keep picture + name, the bank scrolls). Measured on the agent screen with the same 72 looks: row 16.9 px to 93.2 px (window 1280 x 670) and 21.3 px to 93.2 px (1280 x 760); tiles on screen 72 to 21 and 72 to 28; tile draws a second 1440 to 409 and 1404 to 546; the element geometry of the Setup tab and of the Stage and Edit panes is identical before and after.
+Guard: `serverXR/src/laser/ui/deskCss.test.js` (1, a text contract on the stylesheet: jsdom has no layout engine); it fails on the stylesheet before. Owed: a real-browser row-height check in `verify:surfaces`.
+
+## The laser desk: a cube went off 5 s after On with no reason shown; a dark picture was lost after a Blackout from another page (2026-10-31, Projector Room, N1585)
+
+Symptom: on the stage Mac, `[laser] cube-1 ON` at 15:08:56, then `dark and unrefreshed for 5000 ms: switching it OFF` at 15:09:01. The desk page said only "Nothing on the laser. Click a picture to send it", and the cube's row went back to On with no reason.
+Cause: (1) by design (review R2): nothing was live on the desk (the live look is not kept over a restart; the 14:52 install restarted the server), so the engine held no frame and switched the cube off 5 s after On. The engine kept no record of why, so the page could not say it. Read on the Mac at 15:25: blackouts 0, every stop counter 0, 23 °C, power scale 1. (2) a desk bug found by replaying the sequences on a fake cube: when the desk's picture for a cube was dark (all off the field, a look not drawn on that cube, or the desk in blackout) and a Blackout from another page cleared the engine's frames, the desk's key did not change. It sent keep-alives (`alive()` answered `kept: false`) and counted them as sent, so the engine had no frame and switched the cube off 5 s after the next On. The same dark picture without that Blackout keeps the cube on.
+Fix: `serverXR/src/laser/laserDesk.js` tickOnce posts the picture again when `alive()` answers `kept: false`. `laserEngine.js` keeps `offBy` (dark-idle, out-let-go) on a cube the engine switched off, until its next On, and reports `darkOffInMs` (the countdown, only while nobody refreshes) and `guard.darkIdleMs` in state(). `ui/desk.js` + `ui/index.html` say it in the Looks head, on the cube's card and in its Setup row; one `desk.css` rule lets the note wrap on a phone. No guard value changed (DARK_IDLE_MS 5000 and FRAME_TIMEOUT_MS 200, as before).
+Guard: `serverXR/src/laser/laserOnDark.test.js` (16: 13 replayed sequences, 3 for the countdown and `offBy`; 4 fail on the code before) and `serverXR/src/laser/ui/desk.test.js` (2 new, both fail before).
+
+
+## Show desk: the two lifts sat 4 px under Blackout all (2026-10-31)
+Symptom: on the show desk (`serverXR/src/showDesk/ui`) Lift lights and Lift laser sat 4-6 px under Blackout all, so a
+panic re-press that landed a little low lifted a desk (found by the 20:xx audit, before the show).
+Fix: `show.css` puts the lifts beside Blackout all, `--gap-stop: 24px` clear of it (`.stops` row-reverse); Blackout all
+is the full height of the top line (220x91). Measured in a browser: 24 px from each lift at 1278x758 and 1920x1080.
+Guard: `serverXR/src/showDesk/showDesk.test.js` "the lifts stand 24 px clear of Blackout all".
+
+## Show desk: a label next to an overflow: hidden item was cut to 35 px, and white-space: normal did not help (2026-10-31, Rows)
+Symptom: on the show desk in Rows (`body[data-bank="rows"]`), with "Release all holds" shown (`show.js`: `all.hidden = h.others === 0`),
+the Lights master label read "Lig…" (34.7 px; Touch 37.3) and both hold buttons overflowed their card by their second text line.
+Cause: the label (`.strip .cap`) is `overflow: hidden`, so the grid track that holds it starts at 0 and shrinks to nothing; a bare
+`white-space: normal` on the label does not change the track (still 34.7 px). Found by probing a state the audit never shows.
+Fix: `show.css` makes column 1 of `.masterstrip` `minmax(min-content, auto)` (a track that holds an `overflow: hidden` item starts at 0;
+give it a min-content floor), lets `.cap` wrap, and in the holds state sets the hold buttons to 12 px / 13 px with 4 px padding
+(Compact `--hold-h: 30px`). Re-measured in this build by `holds-probe.cjs`: label 70.3 x 29.9 (Touch 73 x 29.9), buttons 77.5 x 30
+(Touch 80.1 x 32), no overlap, nothing cut, 0 page errors; without the holds state the buttons stay 120.3 x 28.
+Guard: `showDesk.test.js` "nothing is lost: every Upright rule is still in show.css …" (the track, the wrap and the holds-state rule are asserted).
+
+## `di version` named the build before after a hot swap; no gate stood before a live install (2026-11-01, S10)
+Symptom: on the stage machine two ui hot swaps (`ui-hot-swap.sh`, 01:12 and 01:27) wrote the 63d9dc1d and 7080f534 ui files into
+`versions/0.4.4-look.e3ca4567`, and `di version`, `show-go.sh` and new checkpoints all still said 16a. The 01:12 swap put a build live
+whose review said BLOCK on M1 and M2, and nothing printed it. No test ran on that merge.
+Cause: the swap edited the live release folder in place and left no marker, so the label came from `state.json` alone. Neither the
+install nor the swap read a record of the build: a review, a test run, or whether the commit was on a remote.
+Fix: `scripts/release` + `scripts/show/{install,hot-swap}.mjs`.
+- A release record (an in-toto Statement bound to the pack's sha256, self-attested) is printed as the first 3 lines.
+- The gate refuses BLOCK, untested or not-on-a-remote unless `--accept '<reason>'`, and logs it. While the show is live the freeze is hard.
+- A hot swap is a new release folder plus an append-only PATCHES line, exchanged with the live one in one renameat2, so N-1 stays whole.
+- `di version` prints `<base>+ui.<sha8>` per PATCHES line (`scripts/di/overlays.mjs`); `installedVersion()` stays the base.
+Guard: `scripts/release/release.test.js`:
+- "two hot swaps: `di version` shows both overlays, PATCHES only grows, …";
+- "refuses a BLOCKed build (exit 4, logged) …";
+- "refuses an untested build and a commit that is on no remote".
+
+## The release gate passed every review verdict it could not read (2026-11-01, S10 round 2)
+Symptom: the verify of PR #1240 fed the gate one green, pushed record per review form. "Verdict: **FIX**. 10 must-fix", "NOT READY",
+"REQUEST CHANGES (small) … (M1)" and "## Verdict: BLOCK" (the verdict on the heading line) all gave GATE PASS, also while the show was
+live. The parser read 45 of the 47 review files then on aylmo as UNKNOWN. A record made without `--review` passed too.
+Cause: `parseReview` knew 6 BLOCK and 7 PASS single words and read only the line under the heading; `evaluateGate` stopped only on
+BLOCK, so UNKNOWN and "no review" added no reason. A PASS dropped its must-fix ids.
+Fix: `scripts/release/lib.mjs`.
+- Verdict phrases (NOT READY, REQUEST CHANGES, CHANGES REQUESTED, FIX, DO NOT MERGE, NO GO …), and the heading line is read.
+- UNKNOWN, no review, and a PASS with an open must-fix are refused unless `--accept`; while live, nothing lets them in.
+- Also from the same verify: `uim.<manifest8>` for an overlay with no commit (F3), `--on-no-go undo|warn` (F7), and the drill reads the
+  laser before and after each step (brief point 5).
+Guard: `scripts/release/release.test.js` "reads every verdict form our reviews use …" (15 forms plus the gate), "a swap with no record is
+labelled uim.…", "--on-no-go warn keeps the overlay …" and "reads the laser state before and after each step …". On the round-1 code,
+7 of the 18 tests fail.
+
+## Stage watch: cut mode ran on a protected list that named nothing (2026-11-01, S11 verify C2)
+
+Symptom: `watch.usb.protected: ["1a86:7523"]` (a plain string), a mistyped key (`vidPid`), an empty object or a device not plugged in all passed the cut-mode check; a flood then cut the DMX dongle the list meant to protect (made-up sysfs tree, PR #1239 review; never shipped).
+Cause: the fail-closed check counted the list (`protected.length`), and `protectionOf` read only `p.port` / `p.vidpid`, so an entry of any other shape matched nothing, silently.
+Fix: `scripts/stage/watch/usb.mjs` `checkProtected` reads every entry (a string of a known shape reads as that key, anything else is named and refused) and resolves each on the bus at start; any problem refuses cut mode (warn, a held `usb-mode` alert in events.log, latest.json and `/show-status`; `install.sh` exits 2 through `watch.mjs check`). The device found is pinned by port, VID:PID and interface names; a protected device that leaves the bus turns cut mode to warn until a restart; warn mode never escalates a cut. Guard: `scripts/stage/watch/watch.test.mjs` tests named "(verify C2)".
+Lesson: a fail-closed check checks the entries, not their count. Every "empty allowlist" test needs a "malformed entry" and an "absent device" test beside it.
+
+## The stage branch was red in CI: a pathname in a test, a cross-repo doc path in source, and desk page timers firing after teardown (2026-11-01, PR #1237)
+
+Symptom: CI run 41305326654 (`stage/copy9-2026-10-31` into dev, head 2c85219ee). Test shard 3/3 had 2 failed tests; shard 1/3 had "Vitest caught 13 unhandled errors" and no failed test (`Tests 4910 passed`); node-22-compat had both (`Tests 2 failed | 14517 passed`, 8 unhandled errors); build-and-test failed because it requires them. Exit 1.
+Cause: three, not one. (1) `scripts/show/checkpoint.test.mjs` built a path from `new URL(...).pathname` (`/C:/...` on Windows), which `scripts/noPathnameMainGuard.test.js` refuses. (2) `serverXR/src/stage/showStatus.js` named the di-bo repo's crew-feed doc by a docs path, and `src/docPaths.test.js` resolves every docs path in source against this repo. (3) Six laser desk page tests boot `desk.js` with `new Function(...)` and the page polls for ever; only `deskCalmStored.test.js` stopped its timers. The rest left them running past the end of the file, so the first tick after vitest took `document` or `requestAnimationFrame` out of the global scope threw a ReferenceError with no test running (on node-22-compat "document is not defined" 7 times and "requestAnimationFrame is not defined" once), and vitest counts that as an unhandled error. Which file is hit follows the timing: `deskSets` on shard 1/3; `deskRemove`, `deskSets` and `deskCalm` on node-22-compat. Six isolated runs of `serverXR/src/laser/ui` showed none, so only the full suite shows it.
+Fix: (1) `fileURLToPath(new URL(...))`. (2) The comment names the doc and its repo and writes no docs path. (3) `serverXR/src/testSupport/pageTimers.mjs` `capturePageTimers()` wraps `setTimeout`, `setInterval` and `requestAnimationFrame`; `stop()` cancels what the page armed, lets one event-loop turn re-arm whatever was awaiting into the wrappers, cancels again and puts the real functions back. The six laser desk page tests and the Show desk page test (`show.js` re-arms its poll and preview timers the same way) call it at module level and `await pageTimers.stop()` in `afterAll`. The page code is unchanged: a page lives as long as its tab, and the leak exists only because a test outlives its document.
+Guard: `serverXR/src/testSupport/pageTimers.test.js` tests the helper (the frame case reads a stub frame queue, not a clock) and fails any test in `serverXR/src/laser/ui/` or `serverXR/src/showDesk/` that boots a page with `new Function(` without a module-level `capturePageTimers()` and a `.stop()` on it. The check's own rule is tested on made-up sources. Six mutations of the helper (no drain turn, frame wrapper removed, frames not remembered, frames never cancelled, real functions not put back, timers never cancelled) each turned at least one test red.
+Lesson: fix a timing leak for the class, not the file: the first fix of it (commit "test(laser desk): stop the page's timers after the calm-stored test") covered one of six files, and CI found the next. A cleanup every author must remember is a guard's job. A local baseline needs CI's installs: `serverXR` has its own `npm ci`, and without it 83 test files fail on a missing module and the baseline lies.

@@ -92,7 +92,16 @@
     });
   }
 
-  const api = { colourOfValues, frameValues, lookColours, stripCss, stageDots, rgbCss, DARK, MAX_SEGMENTS, PAD };
+  // The extra emitters' mix for colourOfValues (white, amber, yellow, UV, lime): the same table as app.js's EMITTER_MIX,
+  // kept equal by serverXR/src/showDesk/showDesk.test.js, so a lamp is the same colour on the show desk as on this desk. r, g, b, warm
+  // and cool never reach it (colourOfValues mixes those itself); an emitter it does not name is a dim white, as in app.js.
+  const EMITTER_MIX = {
+    w: [0.92, 0.92, 0.92], a: [0.95, 0.62, 0.10], y: [0.85, 0.85, 0.00],
+    uv: [0.42, 0.00, 0.86], lime: [0.72, 1.00, 0.24],
+  };
+  const mixOf = (role) => EMITTER_MIX[role] || [0.8, 0.8, 0.8];
+
+  const api = { colourOfValues, frameValues, lookColours, stripCss, stageDots, rgbCss, DARK, MAX_SEGMENTS, PAD, EMITTER_MIX, mixOf };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.deskColour = api;
 })(typeof window !== 'undefined' ? window : this);

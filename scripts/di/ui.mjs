@@ -1008,7 +1008,7 @@ export const ui = {
         '90 days unused (a year at most). DI_TOKEN, when set, still wins — for CI.'
     ].join('\n'),
 
-    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage(), service: () => ui.serviceUsage(), login: () => ui.loginUsage(), logout: () => ui.loginUsage(), whoami: () => ui.loginUsage() })[name]?.() || null,
+    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage(), show: () => 'di show <command>: the show tools, read from a venue profile. Full help: di show help', service: () => ui.serviceUsage(), login: () => ui.loginUsage(), logout: () => ui.loginUsage(), whoami: () => ui.loginUsage() })[name]?.() || null,
 
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),

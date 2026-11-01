@@ -210,6 +210,9 @@ const COPY_FILES = [
     'src/utils/presentationTemplates.js',
     // Added 2026-10-21 with the brand-words pass, which fixed copy in each of them.
     'serverXR/src/lighting/ui/index.html',
+    // The show desk (2026-10-31): one page for both desks, read by a person in a dark room.
+    'serverXR/src/showDesk/ui/index.html',
+    'serverXR/src/showDesk/ui/show.js',
     'src/AssetPanel.jsx',
     'src/WorldPanel.jsx',
     'src/hooks/useSceneArchiveIO.js',
