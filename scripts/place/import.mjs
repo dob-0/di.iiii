@@ -220,7 +220,15 @@ export const hallOps = ({ asset, place, title }) => {
                     // (PublicProjectViewer.jsx:224).
                     mode: 'fixed-camera',
                     entryView: 'fixed-camera',
-                    fixedCamera: arrivalShot(place)
+                    fixedCamera: arrivalShot(place),
+                    // Views as data (viewData.js): Floor and Top (computed from the model) live, plus the place's own named views.
+                    ...(Array.isArray(place.views) && place.views.length ? {
+                        viewPresets: [
+                            { id: 'floor', live: true },
+                            { id: 'top', live: true },
+                            ...place.views.map((v) => ({ id: v.id, label: v.label, position: v.position, target: v.target, fov: v.fov, live: true }))
+                        ]
+                    } : {})
                 }
             }
         }

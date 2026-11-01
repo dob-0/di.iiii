@@ -436,3 +436,59 @@ describe('robustFloorY', () => {
         expect(robustFloorY([box(0, 0.2, 0, 4, 1, 4), box(0, -0.1, 0, 4, 1, 4)])).toBe(-0.1)
     })
 })
+
+// Cinema House (2026-11-01): a hand-modelled floor of six rooms, no lamps and no rig. Its Floor view stood at eye height
+// outside the L-shaped box and showed a slab; Floor is the whole floor plan from above instead, ceilings cut away.
+describe('a building with no rig: Floor is the floor plan from above', () => {
+    const CH_BOX = { min: [-8.5, -0.3, -72.3], max: [32.2, 7.6, 0.2] }
+    const chFrame = computeRoomFrame({ archBox: CH_BOX, roofMinY: 2.4 })
+    const OPEN = [2.8, 1.6, -1.5]
+    const get = (aspect = 16 / 9) => computeViewPresets(chFrame, { opening: OPEN, aspect }).find((p) => p.id === 'floor')
+    it('stands above the roof cut, outside the room, so the ceilings are cut away', () => {
+        const floor = get()
+        expect(floor.interior).toBe(false)
+        expect(floor.position[1]).toBeGreaterThan(chFrame.roofCut)
+        const plan = cutawayPlan(floor.position, chFrame)
+        expect(plan.roof).toBe(chFrame.roofCut)
+        expect(keptByPlan([10, 3.1, -40], plan)).toBe(false) // a ceiling
+        expect(keptByPlan([10, 1.0, -40], plan)).toBe(true) // a wall low down
+    })
+    it('looks down and sees every corner of the footprint, from the opening side', () => {
+        for (const aspect of [16 / 9, 1.2]) {
+            const f = get(aspect)
+            expect(f.position[2]).toBeGreaterThan(chFrame.center[2]) // opening side is +z here
+            const fwd = f.target.map((v, i) => v - f.position[i]); const n = Math.hypot(...fwd); fwd.forEach((_, i) => { fwd[i] /= n })
+            const right = [-fwd[2], 0, fwd[0]]; const rl = Math.hypot(...right); const r = right.map((v) => v / rl)
+            const up = [r[1] * fwd[2] - r[2] * fwd[1], r[2] * fwd[0] - r[0] * fwd[2], r[0] * fwd[1] - r[1] * fwd[0]]
+            const th = Math.tan((f.fov * Math.PI) / 360)
+            for (const x of [CH_BOX.min[0], CH_BOX.max[0]]) for (const z of [CH_BOX.min[2], CH_BOX.max[2]]) {
+                const v = [x - f.position[0], 0 - f.position[1], z - f.position[2]]
+                const dz = v[0] * fwd[0] + v[1] * fwd[1] + v[2] * fwd[2]
+                const sx = (v[0] * r[0] + v[1] * r[1] + v[2] * r[2]) / (dz * th * aspect)
+                const sy = (v[0] * up[0] + v[1] * up[1] + v[2] * up[2]) / (dz * th)
+                expect(dz).toBeGreaterThan(0)
+                expect(Math.abs(sx)).toBeLessThanOrEqual(1)
+                expect(Math.abs(sy)).toBeLessThanOrEqual(1)
+            }
+        }
+    })
+    it('leaves a building with a rig exactly as it was (the dance-floor eye view)', () => {
+        const rigged = computeViewPresets(frame, { rigBox: RIG_BOX, lampBox: LAMP_BOX, stageBox: STAGE_BOX, opening: OPENING }).find((p) => p.id === 'floor')
+        expect(rigged.interior).toBe(true)
+        expect(rigged.position[1]).toBeCloseTo(1.7, 1)
+    })
+})
+
+describe('meshRole: a prop with a roof word in its name is not a roof', () => {
+    it('keeps a low deck or canopy a wall, a real ceiling a roof (Cinema House dolly_deck)', () => {
+        const low = { min: [0, 0.15, 0], max: [1, 0.9, 2] }
+        expect(meshRole('main_halldolly_deck pine', low, 0)).toBe('wall')
+        expect(meshRole('cafe canopy', { min: [0, 1, 0], max: [2, 1.9, 2] }, 0)).toBe('wall')
+        expect(meshRole('main_hallceiling ceiling_paint', { min: [0, 3.1, 0], max: [18, 3.3, 17] }, 0)).toBe('roof')
+        expect(meshRole('hall-deck', { min: [0, 11, 0], max: [90, 11.4, 90] }, 0)).toBe('roof')
+    })
+    it('so the roof cut sits under the ceilings, not 80 % up the building', () => {
+        const f = computeRoomFrame({ archBox: { min: [-8.5, -0.3, -72.3], max: [32.2, 7.6, 0.2] }, roofMinY: 2.4 })
+        expect(f.roofCut).toBeCloseTo(2.35, 2)
+    })
+})

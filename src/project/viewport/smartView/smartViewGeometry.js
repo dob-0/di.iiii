@@ -129,7 +129,14 @@ export const meshRole = (name = '', box = null, floorY = 0) => {
     const label = String(name || '')
     if (FLOOR_MESH.test(label)) return 'floor'
     if (box && (box.max[1] - box.min[1]) < 0.12 && box.min[1] <= floorY + 0.15) return 'floor'
-    if (ROOF_MESH.test(label)) return 'roof'
+    if (ROOF_MESH.test(label)) {
+        // A prop that merely carries a roof word (a dolly "deck", a ship's "deck", a market "canopy" at table height) is no roof:
+        // a roof reaches above head height. Cinema House (2026-11-01): 'dolly_deck' at 0.15 m made the lowest "roof" 0.15 m, the
+        // roof-cut sanity check failed, the cut fell back to 80 % of the height (6 m) above every ceiling, and Top/Floor drew
+        // the ceilings as flat grey blocks.
+        if (box && box.max[1] <= floorY + 2) return 'wall'
+        return 'roof'
+    }
     return 'wall'
 }
 
@@ -505,6 +512,44 @@ export const computeViewPresets = (frame, {
         const d = Math.min(want, Math.max(3, reachInside(lc[0], lc[2], ax, az, bounds) - 1))
         const [x, z] = inside(lc[0] + ax * d, lc[2] + az * d)
         out.floor = { position: [x, floorY + EYE_HEIGHT, z], target: look((floorY + EYE_HEIGHT + lamps.max[1]) / 2 + 0.5), fov: 55, interior: true }
+        // A building with no rig (a hand-modelled or scanned floor of rooms): there is no dance floor to stand on, and the
+        // eye-height camera landed outside the L-shaped box, looking at a slab (Cinema House, 2026-11-01). Floor is then
+        // the whole floor plan from above: an oblique over the opening side, roof and ceilings cut away (outside the cut,
+        // so cutawayPlan takes them off), the far rooms at the top of the screen.
+        if (!rigBox || isBoxEmpty(rigBox)) {
+            const fov = 40
+            const el = (58 * Math.PI) / 180
+            const halfX = (bounds.max[0] - bounds.min[0]) / 2
+            const halfZ = (bounds.max[2] - bounds.min[2]) / 2
+            const c = frame.center
+            const [hx, hz] = [ax, az]
+            const tgt = [c[0], floorY, c[2]]
+            // Pull back until every corner of the footprint (floor and roof cut) is inside the lens, 3 % in from the edge.
+            const fwd = [-hx * Math.cos(el), -Math.sin(el), -hz * Math.cos(el)]
+            const rgt = [-fwd[2], 0, fwd[0]]
+            const rl = Math.hypot(rgt[0], rgt[2]) || 1
+            const r = [rgt[0] / rl, 0, rgt[2] / rl]
+            const up = [r[1] * fwd[2] - r[2] * fwd[1], r[2] * fwd[0] - r[0] * fwd[2], r[0] * fwd[1] - r[1] * fwd[0]]
+            const th = tanHalf(fov)
+            const corners = []
+            for (const x of [bounds.min[0], bounds.max[0]]) for (const z of [bounds.min[2], bounds.max[2]]) for (const y of [floorY, roofCut]) corners.push([x, y, z])
+            const fits = (dist) => corners.every((q) => {
+                const v = [q[0] - (tgt[0] - fwd[0] * dist), q[1] - (tgt[1] - fwd[1] * dist), q[2] - (tgt[2] - fwd[2] * dist)]
+                const dz = v[0] * fwd[0] + v[1] * fwd[1] + v[2] * fwd[2]
+                if (!(dz > 0.1)) return false
+                const sx = (v[0] * r[0] + v[2] * r[2]) / (dz * th * safeAspect)
+                const sy = (v[0] * up[0] + v[1] * up[1] + v[2] * up[2]) / (dz * th)
+                return Math.abs(sx) <= 0.97 && Math.abs(sy) <= 0.97
+            })
+            let d = Math.max(halfX, halfZ)
+            for (let i = 0; i < 200 && !fits(d); i += 1) d *= 1.04
+            out.floor = {
+                position: [tgt[0] + hx * Math.cos(el) * d, floorY + Math.sin(el) * d, tgt[2] + hz * Math.cos(el) * d],
+                target: tgt,
+                fov,
+                interior: false
+            }
+        }
     }
     // 2 · The DJ: standing at the riser's front edge, eye 1.7 m over the deck, up at the rig.
     {

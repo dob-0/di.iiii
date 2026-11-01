@@ -41,5 +41,16 @@ if plan.get('spawn_xy'):      # plan frame (x across, y along) -> glTF frame (z 
     if rec['spawn'].get('look'):   # worldState.spawn has no look: the viewer faces (sin yaw, cos yaw), yaw 0 = +Z
         import math
         rec['spawn']['yaw'] = round(math.atan2(rec['spawn']['look']['x'] - rec['spawn']['x'], rec['spawn']['look']['z'] - rec['spawn']['z']), 3)
+# Named views (views-as-data, src/project/viewport/smartView/viewData.js): 'high' = a high view INSIDE the biggest room, from its
+# corner nearest the spawn (0.8 m in), 2.9 m up (over the ceiling cut, so the ceilings are hidden), at the far floor corner.
+# Floor (whole plan from above) and Top (straight down) are computed by the viewer from the model's own box.
+if areas:
+    big = max(areas, key=lambda a: (a['maxX'] - a['minX']) * (a['maxZ'] - a['minZ']))
+    sp = rec.get('spawn') or {'x': (big['minX'] + big['maxX']) / 2, 'z': big['maxZ']}
+    cx = big['maxX'] - 0.8 if abs(big['maxX'] - sp['x']) < abs(big['minX'] - sp['x']) else big['minX'] + 0.8
+    cz = big['maxZ'] - 0.8 if abs(big['maxZ'] - sp['z']) < abs(big['minZ'] - sp['z']) else big['minZ'] + 0.8
+    fx = big['minX'] + 0.8 if cx > (big['minX'] + big['maxX']) / 2 else big['maxX'] - 0.8
+    fz = big['minZ'] + 0.8 if cz > (big['minZ'] + big['maxZ']) / 2 else big['maxZ'] - 0.8
+    rec['views'] = [{'id': 'high', 'label': 'High in', 'position': [r(cx), 2.9, r(cz)], 'target': [r(fx), 0.0, r(fz)], 'fov': 70}]
 json.dump(rec, open(outp, 'w'), indent=1)
 print('PLACE', rec['size'], src)
