@@ -81,14 +81,24 @@ describe('di open FILE --to URL', () => {
         expect(process.exitCode).toBe(1)
     })
 
-    it('401 auth_required and 403 not_through_cli both say to sign in', async () => {
-        for (const [status, code] of [[401, 'auth_required'], [403, 'not_through_cli']]) {
+    it('401/403 auth_required says to sign in', async () => {
+        for (const status of [401, 403]) {
             err.length = 0; stored()
-            vi.stubGlobal('fetch', answer(status, { code, error: 'x' }))
+            vi.stubGlobal('fetch', answer(status, { error: 'auth_required' }))
             await run('--to', SITE)
             expect(err.join('')).toContain(`di login --to ${SITE}`)
             expect(process.exitCode).toBe(1)
         }
+    })
+
+    it('F1: the real not_through_cli body prints the server\'s reason and rule, not "sign in"', async () => {
+        stored()
+        vi.stubGlobal('fetch', answer(403, { error: 'not_through_cli', rule: 'RULE-X', reason: 'REASON-Y' }))
+        await run('--to', SITE)
+        expect(err.join('')).toContain('REASON-Y')
+        expect(err.join('')).toContain('RULE-X')
+        expect(err.join('')).not.toContain('sign in first')
+        expect(process.exitCode).toBe(1)
     })
 
     it('413 says the file is too big for that di.iiii and does not fall back to this machine', async () => {
@@ -103,11 +113,73 @@ describe('di open FILE --to URL', () => {
         expect(process.exitCode).toBe(1)
     })
 
-    it('"already exists" and other errors show the server\'s own words', async () => {
+    it('F2: the real 409 space_exists body gets the --as hint', async () => {
         stored()
-        vi.stubGlobal('fetch', answer(409, { error: 'space "show" already exists' }))
+        vi.stubGlobal('fetch', answer(409, { error: 'A space called "show" is already here.', code: 'space_exists', spaceId: 'show' }))
         await run('--to', SITE)
-        expect(err.join('')).toContain('space "show" already exists')
+        expect(err.join('')).toContain('A space called "show" is already here.')
+        expect(err.join('')).toContain(`--to ${SITE} --as NEW-ID`)
+        expect(process.exitCode).toBe(1)
+    })
+
+    it('F3: a bare --token VALUE is refused, with or without --to, and sends nothing', async () => {
+        const fetchMock = answer(200, {})
+        vi.stubGlobal('fetch', fetchMock)
+        await run('--to', SITE, '--token', 'dii_cli_SECRET')
+        await run('--token', 'dii_cli_SECRET')
+        expect(fetchMock).not.toHaveBeenCalled()
+        expect(err.join('')).toContain('visible to every process')
+        expect(err.join('')).toContain('--token -')
+        expect(err.join('')).not.toContain('dii_cli_SECRET')
+        expect(process.exitCode).toBe(1)
+    })
+
+    it('F4: plain http to another host is refused before any token is sent; localhost http is allowed', async () => {
+        process.env.DI_TOKEN = 'env-secret'
+        const fetchMock = answer(200, { spaceId: 'show' })
+        vi.stubGlobal('fetch', fetchMock)
+        await run('--to', 'http://dev.example.org')
+        expect(fetchMock).not.toHaveBeenCalled()
+        expect(err.join('')).toContain('not https')
+        expect(process.exitCode).toBe(1)
+        process.exitCode = 0
+        await run('--to', 'http://diiii.localhost')
+        expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('F4: a DI_TOKEN send names the host that receives it', async () => {
+        process.env.DI_TOKEN = 'env-secret'
+        vi.stubGlobal('fetch', answer(200, { spaceId: 'show' }))
+        await run('--to', SITE)
+        expect(out.join('')).toContain('token from DI_TOKEN, sent to dev.example.org')
+    })
+
+    it('F5: a dropped connection mentions the upload cap, not just "fetch failed"', async () => {
+        stored()
+        vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('fetch failed') }))
+        await run('--to', SITE)
+        expect(err.join('')).toContain('fetch failed')
+        expect(err.join('')).toContain('upload cap may be the cause')
+        expect(process.exitCode).toBe(1)
+    })
+
+    it('F6: --to or --token - without a FILE asks which file and opens nothing', async () => {
+        const fetchMock = answer(200, {})
+        vi.stubGlobal('fetch', fetchMock)
+        await COMMANDS.open(parseArgs(['open', '--to', SITE]))
+        expect(err.join('')).toContain('which file?')
+        expect(fetchMock).not.toHaveBeenCalled()
+        expect(process.exitCode).toBe(1)
+    })
+
+    it('F7: says what is being sent and where, passes a timeout signal, and names the host on a timeout', async () => {
+        stored()
+        const fetchMock = vi.fn(async () => { const e = new Error('timed out'); e.name = 'TimeoutError'; throw e })
+        vi.stubGlobal('fetch', fetchMock)
+        await run('--to', SITE)
+        expect(out.join('')).toContain('MB to dev.example.org')
+        expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
+        expect(err.join('')).toContain('dev.example.org did not finish')
         expect(process.exitCode).toBe(1)
     })
 
