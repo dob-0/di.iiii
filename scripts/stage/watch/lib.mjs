@@ -41,7 +41,8 @@ export function loadVenueWatch(file) {
         thresholds,
         usb: {
             mode: usb.mode === 'cut' ? 'cut' : 'warn',
-            protected: Array.isArray(usb.protected) ? usb.protected : [],
+            // Kept as written, whatever its shape: usb.mjs checkProtected reads every entry and names what it cannot read (C2).
+            protected: usb.protected === undefined ? [] : usb.protected,
             portPlan: Array.isArray(usb.portPlan) ? usb.portPlan : []
         },
         link: w.link && typeof w.link === 'object' ? w.link : {},

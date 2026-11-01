@@ -10,7 +10,10 @@ import { spawn, execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import * as L from './lib.mjs'
-import { UsbPolicy, planCut, protectionOf, readDevice, recheck } from './usb.mjs'
+import { createRequire } from 'node:module'
+import { UsbPolicy, planCut, protectionOf, readDevice, recheck, checkProtected } from './usb.mjs'
+
+const { createShowStatus } = createRequire(import.meta.url)('../../../serverXR/src/stage/showStatus.js')
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const WATCH = path.join(HERE, 'watch.mjs')
@@ -66,7 +69,7 @@ function runWatch({ name, venue = null, feed = () => [], usbMode = 'warn', secon
         let err = ''
         child.stderr.on('data', (d) => { err += d })
         child.stdin.on('error', () => {})
-        const timers = feed(child.stdin)
+        const timers = feed(child.stdin, root)
         child.on('exit', (code) => {
             timers.forEach(clearInterval)
             if (code !== 0) return reject(new Error(`watch ${name} exited ${code}: ${err}`))
@@ -248,8 +251,9 @@ describe('the USB policy', () => {
     it('one ledger for the service and a person: a cut or an undo made by one is never lost by the other (verify B)', () => {
         let t = 2000000
         const ledgerFile = path.join(root, 'state/cuts.json')
-        const service = new UsbPolicy({ root, mode: 'cut', ledgerFile, now: () => t })
-        const person = () => new UsbPolicy({ root, mode: 'cut', ledgerFile, now: () => t }) // each CLI run is a process of its own
+        const guarded = [PROTECTED[1]] // cut mode needs a protected list that names a device on the bus (verify C2); 1-1 is never cut here
+        const service = new UsbPolicy({ root, mode: 'cut', protectedList: guarded, ledgerFile, now: () => t })
+        const person = () => new UsbPolicy({ root, mode: 'cut', protectedList: guarded, ledgerFile, now: () => t }) // each CLI run is a process of its own
         expect(service.onFlood('1-2.1').action).toBe('cut-interface')
         expect(person().cutNow('1-2.2').action).toBe('cut-device')
         t += 1000
@@ -274,6 +278,60 @@ describe('the USB policy', () => {
         const p = new UsbPolicy({ root, mode: 'cut', writer: () => { throw new Error('nothing may be written') } })
         expect(p.onFlood('1-4').action).toBe('protected')
         expect(p.cutNow('1-1').action).toBe('refused')
+    })
+
+    it('cut mode fails closed on a list that names nothing: every entry is read and must name a device on the bus (verify C2)', () => {
+        const start = (protectedList) => new UsbPolicy({ root, mode: 'cut', protectedList, writer: () => { throw new Error('nothing may be written') } })
+        // The shapes that passed the round-2 check (it counted the list): a string that is no identifier, a mistyped key, an
+        // empty object, a value of the wrong shape, no list; then well-formed entries that name no device on the bus.
+        for (const [list, why] of [
+            [[], /names no protected device/],
+            [['dmx dongle'], /entry 1 "dmx dongle": not a port/],
+            [[{ name: 'dmx dongle', vidPid: 'cccc:0003' }], /entry 1 .*unknown key vidPid/],
+            [[{}], /entry 1 \{\}: .*it names no device/],
+            [[{ vidpid: 'cccc-0003' }], /vidpid "cccc-0003" is not like 1a86:7523/],
+            [{ vidpid: 'cccc:0003' }, /watch\.usb\.protected is not a list/],
+            [[{ name: 'dmx dongle', vidpid: '1a86:7523' }], /entry 1 \(dmx dongle\): 1a86:7523: no such device on the bus/],
+            [['1-9'], /entry 1: port 1-9: no device on it/],
+            [[{ iface: 'enxgone0001' }], /interface enxgone0001: not on this machine/],
+            [[{ port: '1-2.1', vidpid: 'cccc:0003' }], /its keys name different devices \(port 1-2\.1 is 1-2\.1; cccc:0003 is 1-2\.3\)/],
+            [[PROTECTED[0], { vidPid: 'aaaa:0001' }], /entry 2 /]
+        ]) {
+            const p = start(list)
+            expect([p.mode, p.refused]).toEqual(['warn', expect.stringMatching(why)])
+            expect(p.onFlood('1-2.2').action).toBe('warn') // refused: the flood is said, nothing is cut
+        }
+        // The string form PLAN S11 writes ("1a86:7523") is read as that key, never skipped; every identifier protects.
+        fs.mkdirSync(path.join(root, 'sys/bus/usb/devices/1-2.4:1.0/net/enxtest0001'), { recursive: true })
+        const s = start(['CCCC:0003', '1-1', { name: 'second controller', iface: '1-2.2:1.0' }, { name: 'laser NIC', iface: 'enxtest0001' }])
+        expect([s.mode, s.refused]).toEqual(['cut', null])
+        expect(checkProtected(root, ['CCCC:0003']).resolved).toEqual([expect.objectContaining({ port: '1-2.3', vidpid: 'cccc:0003', ifaces: ['1-2.3:1.0'] })])
+        expect(s.onFlood('1-2.3').text).toMatch(/a protected device cccc:0003/)
+        expect(s.onFlood('1-1').text).toMatch(/protected port 1-1/)
+        expect(s.onFlood('1-2.2').text).toMatch(/the protected interface 1-2\.2:1\.0 \(second controller\)/)
+        expect(s.cutNow('1-2.2').action).toBe('refused')
+        // Pinned at start: the laser NIC stays protected when its netdev goes with its driver (the network-adapter rule is blind then).
+        fs.rmSync(path.join(root, 'sys/bus/usb/devices/1-2.4:1.0/net'), { recursive: true })
+        expect(protectionOf(readDevice(root, '1-2.4'), [])).toBe(null)
+        expect(protectionOf(readDevice(root, '1-2.4'), s.protectedList)).toMatch(/the protected interface 1-2\.4:1\.0 \(laser NIC\)/)
+    })
+
+    it('a protected device that leaves the bus turns cut mode to warn and says so once; warn mode never escalates a cut (verify C2)', () => {
+        const said = []; let t = 1000
+        const svc = new UsbPolicy({ root, mode: 'cut', protectedList: PROTECTED, ledgerFile: path.join(root, 'state/cuts.json'), now: () => t, say: (x) => said.push(x) })
+        expect(svc.onFlood('1-2.1').action).toBe('cut-interface') // armed: every protected device is on the bus
+        for (const n of ['1-2.3', '1-2.3:1.0']) fs.rmSync(path.join(root, 'sys/bus/usb/devices', n), { recursive: true }) // the serial adapter is pulled
+        t = 7000
+        expect(svc.onTick(new Set(['1-2.1']), 6000, { '1-2.1': 500 })).toEqual([]) // the flood goes on: no device cut in warn
+        expect(svc.mode).toBe('warn')
+        expect(said).toEqual([expect.stringMatching(/^USB cut mode turned to warn: entry 1 \(serial adapter\): cccc:0003: no such device on the bus; cut mode comes back only when the watch restarts/)])
+        expect([auth(root, '1-2.1'), auth(root, '1-2.1:1.1')]).toEqual(['1', '0'])
+        expect(svc.onFlood('1-2.2').action).toBe('warn') // a new flood is said, not cut
+        expect(auth(root, '1-2.2')).toBe('1')
+        expect(said).toHaveLength(1)
+        t = 40000 // the interface cut made before the downgrade is still re-authorized on time
+        expect(svc.onTick(new Set(), 39000, {}).map((a) => a.action)).toEqual(['reauthorized'])
+        expect(auth(root, '1-2.1:1.1')).toBe('1')
     })
 
     it('the cut dry run prints its sysfs writes and the undo, and writes nothing', () => {
@@ -379,9 +437,63 @@ describe('the watch as it runs', () => {
         expect(refused.stderr).toContain('cut mode needs --venue FILE whose watch.usb.protected')
         const venue = path.join(tmpRoot, 'venue-install.json')
         fs.writeFileSync(venue, JSON.stringify({ watch: { usb: { protected: [{ name: 'dmx dongle', vidpid: 'cccc:0003' }] } } }))
-        expect(execFileSync('bash', [path.join(HERE, 'install.sh'), '--dry-run', '--usb-mode', 'cut', '--venue', venue], { encoding: 'utf8' })).toContain(`--usb-mode cut --venue ${venue}`)
+        const bus = fakeSys() // the presence check reads this made-up bus, never the test machine's own
+        expect(execFileSync('bash', [path.join(HERE, 'install.sh'), '--dry-run', '--usb-mode', 'cut', '--venue', venue, '--sys-root', bus], { encoding: 'utf8' })).toContain(`--usb-mode cut --venue ${venue}`)
         expect(out).toContain('would run: systemctl enable --now di-stage-watch.service')
+        // verify C2: a list that names nothing on the bus is refused by entry, and nothing is written
+        const bad = path.join(tmpRoot, 'venue-install-c2.json')
+        for (const [list, why] of [[['1a86:7523'], /entry 1: 1a86:7523: no such device on the bus/], [[{ vidPid: 'cccc:0003' }], /unknown key vidPid/], [[{}], /it names no device/], [[], /names no protected device/]]) {
+            fs.writeFileSync(bad, JSON.stringify({ watch: { usb: { protected: list } } }))
+            const r = spawnSync('bash', [path.join(HERE, 'install.sh'), '--dry-run', '--usb-mode', 'cut', '--venue', bad, '--sys-root', bus], { encoding: 'utf8' })
+            expect([r.status, r.stdout]).toEqual([2, ''])
+            expect(r.stderr).toMatch(why)
+        }
+        // a person's cut is refused too while the list has an entry it cannot read
+        fs.writeFileSync(bad, JSON.stringify({ watch: { usb: { protected: [{ name: 'dmx dongle', vidPid: 'cccc:0003' }] } } }))
+        const cli = spawnSync(process.execPath, [WATCH, 'cut', '1-2.3', '--dry-run', '--sys-root', bus, '--venue', bad], { encoding: 'utf8' })
+        expect([cli.status, cli.stdout]).toEqual([1, expect.stringMatching(/^cut refused: watch\.usb\.protected cannot be read, so it guards nothing: entry 1 /)])
+        if (process.getuid?.() !== 0) { // a made-up bus never stands in for the real one outside a dry run
+            const real = spawnSync('bash', [path.join(HERE, 'install.sh'), '--usb-mode', 'warn', '--sys-root', bus], { encoding: 'utf8' })
+            expect([real.status, real.stderr]).toEqual([2, expect.stringContaining('--sys-root (a made-up tree, for tests) needs --dry-run')])
+        }
     })
+
+    it('cut mode fails closed as it runs: a list that names nothing refuses the cut, a pulled protected device turns it to warn, /show-status says why (verify C2)', async () => {
+        const venueOf = (name, list) => { const f = path.join(tmpRoot, `venue-c2-${name}.json`); fs.writeFileSync(f, JSON.stringify({ watch: { usb: { protected: list } } })); return f }
+        let seq = 100000
+        const lines = (port, n) => Array.from({ length: n }, () => rec(++seq, `usb ${port}: urb status -32`)).join('\n') + '\n'
+        const at = (ms, port) => (w) => setTimeout(() => w.write(lines(port, 100)), ms)
+        const pull = (root) => setTimeout(() => { for (const n of ['1-2.3', '1-2.3:1.0']) fs.rmSync(path.join(root, 'sys/bus/usb/devices', n), { recursive: true }) }, 1300)
+        const [typo, absent, str, pulled] = await Promise.all([
+            // the verifier's C2 shapes: the dongle (cccc:0003 here) under a mistyped key, and a dongle that is not plugged in
+            runWatch({ name: 'c2-typo', venue: venueOf('typo', [{ name: 'dmx dongle', vidPid: 'cccc:0003' }]), feed: (w) => [at(400, '1-2.3')(w)], usbMode: 'cut', seconds: 3 }),
+            runWatch({ name: 'c2-absent', venue: venueOf('absent', [{ name: 'dmx dongle', vidpid: '1a86:7523' }]), feed: (w) => [at(400, '1-2.1')(w)], usbMode: 'cut', seconds: 3 }),
+            // the plain string PLAN S11 writes is read: cut mode runs, and the dongle is still never cut
+            runWatch({ name: 'c2-string', venue: venueOf('string', ['cccc:0003']), feed: (w) => [at(400, '1-2.3')(w), at(600, '1-2.1')(w)], usbMode: 'cut', seconds: 3 }),
+            // armed at start, then the protected device is pulled: the next flood is said, not cut
+            runWatch({ name: 'c2-pulled', venue: venueOf('pulled', [{ name: 'dmx dongle', port: '1-2.3' }]), feed: (w, root) => [pull(root), at(2300, '1-2.1')(w)], usbMode: 'cut', seconds: 4 })
+        ])
+        expect(typo.events).toMatch(/ START watch: tick 1 s, usb warn \(cut asked, refused\)/)
+        expect(typo.events).toMatch(/WARN USB cut refused: watch\.usb\.protected must name every device it protects, on the bus now: entry 1 .*unknown key vidPid/)
+        expect(typo.events).not.toMatch(/ USB cut-/)
+        expect([auth(typo.root, '1-2.3'), auth(typo.root, '1-2.3:1.0')]).toEqual(['1', '1'])
+        expect(absent.events).toMatch(/WARN USB cut refused: .*entry 1 \(dmx dongle\): 1a86:7523: no such device on the bus/)
+        expect(absent.events).toMatch(/ USB warn 1-2\.1: /)
+        expect(auth(absent.root, '1-2.1:1.1')).toBe('1')
+        expect(absent.latest.usb).toMatchObject({ mode: 'warn', asked: 'cut' })
+        expect(str.events).toMatch(/ USB protected 1-2\.3: .*a protected device cccc:0003: never cut/)
+        expect(str.events).toMatch(/ USB cut-interface 1-2\.1: /)
+        expect([auth(str.root, '1-2.3'), str.latest.usb.mode]).toEqual(['1', 'cut'])
+        expect(pulled.events).toMatch(/ START watch: tick 1 s, usb cut,/)
+        expect(pulled.events).toMatch(/WARN USB cut mode turned to warn: entry 1 \(dmx dongle\): port 1-2\.3: no device on it/)
+        expect(pulled.events).not.toMatch(/ USB cut-/)
+        expect([auth(pulled.root, '1-2.1:1.1'), pulled.latest.usb.mode]).toEqual(['1', 'warn'])
+        // the status route says why, from the same latest.json the desk line reads
+        const latestFile = path.join(tmpRoot, 'c2-pulled-latest.json'); fs.writeFileSync(latestFile, JSON.stringify(pulled.latest))
+        const route = createShowStatus({ watchFile: latestFile }).build()
+        expect(route.watch.usb_mode).toBe('warn')
+        expect(route.watch.alerts).toContainEqual({ key: 'usb-mode', level: 'warn', text: expect.stringContaining('USB cut mode turned to warn: entry 1 (dmx dongle): port 1-2.3: no device on it') })
+    }, 20000)
 
     it('cut mode as it runs: a burst cuts the interface only, a flood that goes on cuts the device, no protected list refuses the cut (verify A, C)', async () => {
         const venue = path.join(tmpRoot, 'venue-protected.json')

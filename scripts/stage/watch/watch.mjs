@@ -9,7 +9,7 @@ import path from 'node:path'
 import dns from 'node:dns'
 import { execFile } from 'node:child_process'
 import * as L from './lib.mjs'
-import { UsbPolicy, recheck, opText } from './usb.mjs'
+import { UsbPolicy, recheck, opText, checkProtected, cutRefusal } from './usb.mjs'
 
 const HELP = `stage watch — a recorder for the show machine (scripts/stage/watch/README.md)
 
@@ -21,10 +21,13 @@ const HELP = `stage watch — a recorder for the show machine (scripts/stage/wat
   watch.mjs cut PORT [--level interface|device] [--dry-run]   a person's cut (protected devices are refused)
   watch.mjs undo     [--dry-run]   re-authorize everything this watch cut (one command)
   watch.mjs recheck PORT           the 30 s re-check after a hot-plug (the udev rule's timer runs it)
+  watch.mjs check    --venue FILE  may cut mode start? exit 0 only when every protected entry names a device on the bus now
 
   Defaults: --source /dev/kmsg, --record /var/log/di-stage-watch, --state /var/lib/di-stage-watch,
   --latest /run/di-stage-watch/latest.json, --usb-mode from the venue profile, else warn. --sys-root / (tests: a made-up tree).
-  Cut mode needs the venue profile's watch.usb.protected list; without it the watch refuses the cut and runs warn (an alert says so).
+  Cut mode fails closed: every entry of the venue profile's watch.usb.protected (port 1-2.1, vidpid 1a86:7523, iface 1-2.1:1.0
+  or a netdev name) must name a device on the bus at start, else the watch refuses the cut and runs warn; a protected device
+  that leaves the bus turns cut mode to warn until a restart. An alert says why (events.log, latest.json, /show-status).
   A --record the watch cannot write falls back to --record-fallback (default /var/log/di-stage-watch), with an alert.`
 
 const DEF = { source: '/dev/kmsg', record: '/var/log/di-stage-watch', state: '/var/lib/di-stage-watch', latest: '/run/di-stage-watch/latest.json' }
@@ -74,11 +77,7 @@ async function run(o) {
     const th = venue.thresholds
     const tickS = Number(o.tick) > 0 ? Number(o.tick) : L.TICK_S
     const asked = o['usb-mode'] === 'cut' || o['usb-mode'] === 'warn' ? o['usb-mode'] : venue.usb.mode
-    // Cut mode fails closed: with no protected device named in the venue profile nothing guards the DMX dongle or the show's
-    // own controllers, so the watch refuses the cut, runs warn, and says so on every tick until the profile names them.
     const held = [] // alerts that hold for the whole run
-    const mode = asked === 'cut' && !venue.usb.protected.length ? 'warn' : asked
-    if (mode !== asked) held.push({ key: 'usb-mode', level: 'warn', text: 'USB cut refused: the venue profile names no protected device (watch.usb.protected); warn only' })
     const root = o['sys-root'] || '/'
     // The record must be writable before the show: the unit lets the watch write only /var/log/di-stage-watch (ProtectSystem=strict).
     const writable = (dir) => { try { fs.mkdirSync(dir, { recursive: true }); fs.accessSync(dir, fs.constants.W_OK); return null } catch (e) { return e.code || e.message } }
@@ -105,12 +104,18 @@ async function run(o) {
         try { fs.mkdirSync(dayDir(), { recursive: true }); fs.appendFileSync(path.join(dayDir(), 'events.log'), line) } catch (e) { process.stderr.write(`events.log: ${e.message}\n`) }
         if (!o.quiet) process.stdout.write(line)
     }
-    const policy = new UsbPolicy({ root, mode, protectedList: venue.usb.protected, ledgerFile: path.join(stateDir, 'cuts.json'), dryRun: Boolean(o['dry-run']) })
-    event(`START watch: tick ${tickS} s, usb ${mode}${o['dry-run'] ? ' (dry run)' : ''}, thresholds ${venue.source}, source ${o.source || DEF.source}, record ${recordBase}, laser stops ${o['show-status'] || 'not wired (no --show-status)'}`)
+    const open = new Map() // alert key -> level, for ALERT/CLEAR transitions
+    // Cut mode fails closed (verify C, C2): the policy starts it only when every protected entry names a device on the bus,
+    // and turns it to warn when a protected device leaves the bus. The reason is said at once, then held as an alert on every
+    // tick (events.log, latest.json, /show-status) until a restart with every protected device present.
+    const sayMode = (text) => { event(`WARN ${text}`); open.set('usb-mode', 'warn') }
+    const policy = new UsbPolicy({ root, mode: asked, protectedList: venue.usb.protected, ledgerFile: path.join(stateDir, 'cuts.json'), dryRun: Boolean(o['dry-run']), say: sayMode })
+    const usbHeld = () => (policy.refused ? [{ key: 'usb-mode', level: 'warn', text: policy.refused }] : [])
+    event(`START watch: tick ${tickS} s, usb ${policy.mode}${policy.mode !== asked ? ` (${asked} asked, refused)` : ''}${o['dry-run'] ? ' (dry run)' : ''}, thresholds ${venue.source}, source ${o.source || DEF.source}, record ${recordBase}, laser stops ${o['show-status'] || 'not wired (no --show-status)'}`)
+    if (policy.refused) sayMode(policy.refused)
 
     let lastDoc = null; let lastLink = null; let tick = 0; let dropped = 0; let lastSeq = -1; let recordFail = null
     let tickStart = Date.now()
-    const open = new Map() // alert key -> level, for ALERT/CLEAR transitions
     const recent = new Map() // port -> the last RECENT_TICKS counts
     const writeLatest = (doc) => { lastDoc = doc; try { L.writeAtomic(latestFile, JSON.stringify(doc)) } catch (e) { process.stderr.write(`latest.json: ${e.message}\n`) } }
     const report = (a) => { if (a) event(`USB ${a.action} ${a.port}: ${a.text}`) }
@@ -189,14 +194,16 @@ async function run(o) {
         const midiDelta = m.midiRx !== null && prevMidi !== null ? m.midiRx - prevMidi : null; prevMidi = m.midiRx
         const cpu = process.cpuUsage(prevCpu); prevCpu = process.cpuUsage(); prevAt = now
         const selfCpuPct = el > 0 ? Math.round(((cpu.user + cpu.system) / 1000 / (el * 1000)) * 1000) / 10 : null
-        const s = { at: new Date(now).toISOString(), tick: ++tick, usb: c.usb, kmsgLines: c.lines, kmsgDropped: dropped, journaldPct: shares.journaldPct, top3: shares.top3, ...m, throttleDelta, midiRxDelta: midiDelta, laserStops, usbMode: mode, selfCpuPct }
+        const s = { at: new Date(now).toISOString(), tick: ++tick, usb: c.usb, kmsgLines: c.lines, kmsgDropped: dropped, journaldPct: shares.journaldPct, top3: shares.top3, ...m, throttleDelta, midiRxDelta: midiDelta, laserStops, usbMode: policy.mode, selfCpuPct }
         dropped = 0
         const ev = L.evaluate(s, th, tickS)
         const flooding = new Set([...c.flagged, ...ev.alerts.filter((a) => a.key.startsWith('usb:')).map((a) => a.key.slice(4))])
         for (const port of flooding) if (!c.flagged.includes(port)) report(safely(() => policy.onFlood(port), null))
         const actions = safely(() => policy.onTick(flooding, tickStart, c.usb), [])
         actions.forEach(report)
-        const alerts = [...ev.alerts, ...held, ...(recordFail ? [{ key: 'record-write', level: 'alert', text: `the record stopped: ${recordFail}` }] : [])]
+        // Loudest first, the held reasons first of their level: /show-status carries the first five, the desk line the first one.
+        const alerts = [...usbHeld(), ...held, ...ev.alerts, ...(recordFail ? [{ key: 'record-write', level: 'alert', text: `the record stopped: ${recordFail}` }] : [])]
+            .sort((a, b) => (b.level === 'alert') - (a.level === 'alert'))
         const state = alerts.some((a) => a.level === 'alert') ? 'alert' : alerts.length ? 'warn' : ev.state
         const keys = new Set(alerts.map((a) => a.key))
         for (const a of alerts) if (open.get(a.key) !== a.level) event(`${a.level.toUpperCase()} ${a.text}`)
@@ -211,7 +218,7 @@ async function run(o) {
         writeLatest({
             schema: 'di.stage-watch.latest/1', machine: os.hostname(), at: s.at, tick: s.tick, tickS, state: s.state, alerts: s.alerts,
             heat: { maxC: s.heat.maxC, sensor: s.heat.sensor, critC: s.heat.critC, throttleDelta },
-            usb: { mode, dryRun: Boolean(o['dry-run']), flooding: [...flooding], recent: Object.fromEntries(recent), cuts: policy.summary() },
+            usb: { mode: policy.mode, asked, dryRun: Boolean(o['dry-run']), flooding: [...flooding], recent: Object.fromEntries(recent), cuts: policy.summary() },
             midi: { rxBytes: s.midiRx, rxDelta: midiDelta }, link: lastLink, journaldPct: s.journaldPct, top3: s.top3, selfCpuPct,
             thresholds: { validated: th.validated, source: venue.source }
         })
@@ -257,10 +264,23 @@ async function main() {
         console.log(`watch: ${age > venue.thresholds.staleAfterS ? 'STALE ' + age + ' s' : d.state}${d.alerts?.length ? ' — ' + d.alerts.map((a) => a.text).join('; ') : ''}`)
         return d.state === 'alert' ? 1 : 0
     }
+    if (cmd === 'check') {
+        // The cut-mode start check, the same one `run` makes (install.sh runs it before it installs cut mode; verify C2).
+        const c = checkProtected(root, venue.usb.protected)
+        const why = cutRefusal(c)
+        if (why) { console.log(why.replace(/; warn only$/, '')); return 2 }
+        for (const r of c.resolved) console.log(`protected: ${r.offUsb ? `${r.ifaces[0]} (a network interface not on USB: nothing to cut)` : `${r.port} ${r.vidpid ?? ''} ${r.ifaces.join(' ')}`.trim()}${r.name ? ` (${r.name})` : ''}`)
+        console.log(`cut mode may start: all ${c.entries.length} protected entries name a device on the bus now`)
+        return 0
+    }
     const policy = new UsbPolicy({ root, mode: 'cut', protectedList: venue.usb.protected, ledgerFile: path.join(o.state || DEF.state, 'cuts.json'), dryRun: Boolean(o['dry-run']) })
     if (cmd === 'cut') {
         const port = o._[1]
         if (!port) { console.error('cut: which port? (e.g. 1-2.1, from the ALERT line)'); return 2 }
+        // A person's cut fails closed too: a protected list it cannot read guards nothing, so no cut is made at all.
+        const unread = policy.problems.filter((p) => p.kind === 'malformed')
+        if (unread.length) { console.log(`cut refused: watch.usb.protected cannot be read, so it guards nothing: ${unread.map((p) => p.text).join('; ')}`); return 1 }
+        for (const p of policy.problems) console.error(`note: ${p.text}`)
         const a = policy.cutNow(port, o.level === 'device' ? 'device' : 'interface')
         if (a.action === 'refused') { console.log(a.text); return 1 }
         console.log(`${a.text}${o['dry-run'] ? ' — dry run, nothing written' : ''}:`)

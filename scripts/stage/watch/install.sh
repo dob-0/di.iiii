@@ -3,11 +3,12 @@
 #   install.sh [--dry-run] [--venue FILE] [--usb-mode warn|cut] [--show-status URL|FILE]   write the units, the udev rule, the defaults; start it
 #   install.sh --uninstall [--dry-run]                             stop it and remove them (the record and the cut ledger stay)
 # Cut mode fails closed: it needs --venue FILE whose watch.usb.protected names what must never be cut (the DMX dongle, the
-# show's controllers). --show-status is where the watch reads the laser stops: serverXR's local route at its default port
-# (serverXR/src/config.js: PORT, else 4000) unless given; a source that does not answer is a WARN line in events.log.
+# show's controllers), every entry a device on the bus now (`watch.mjs check`, the check the watch makes at its start).
+# --show-status is where the watch reads the laser stops: serverXR's local route at its default port (serverXR/src/config.js:
+# PORT, else 4000) unless given; a source that does not answer is a WARN line in events.log. --sys-root DIR: tests only.
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-dry=0; uninstall=0; venue=""; mode="warn"; show_status="http://127.0.0.1:4000/show-status"
+dry=0; uninstall=0; venue=""; mode="warn"; show_status="http://127.0.0.1:4000/show-status"; sys_root="/"
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) dry=1 ;;
@@ -15,21 +16,25 @@ while [ $# -gt 0 ]; do
     --venue) venue="$2"; shift ;;
     --usb-mode) mode="$2"; shift ;;
     --show-status) show_status="$2"; shift ;;
-    -h|--help) sed -n '2,7p' "$0"; exit 0 ;;
+    --sys-root) sys_root="$2"; shift ;;
+    -h|--help) sed -n '2,8p' "$0"; exit 0 ;;
     *) echo "install.sh: unknown argument $1" >&2; exit 2 ;;
   esac
   shift
 done
 case "$mode" in warn|cut) ;; *) echo "install.sh: --usb-mode is warn or cut" >&2; exit 2 ;; esac
+# A made-up tree checks a made-up bus: never let it stand in for the real one in a real install.
+[ "$sys_root" = / ] || [ "$dry" = 1 ] || { echo "install.sh: --sys-root (a made-up tree, for tests) needs --dry-run" >&2; exit 2; }
 node="$(command -v node || true)"
 [ -n "$node" ] || { echo "install.sh: node is not on PATH" >&2; exit 1; }
 if [ "$uninstall" = 0 ] && [ "$mode" = cut ]; then
-  n=0
-  if [ -n "$venue" ]; then
-    n="$("$node" --input-type=module -e "import { loadVenueWatch } from 'file://$here/lib.mjs'; console.log(loadVenueWatch(process.argv[1]).usb.protected.length)" "$venue")" || n=0
-  fi
-  if [ "$n" = 0 ]; then
+  if [ -z "$venue" ]; then
     echo "install.sh: cut mode needs --venue FILE whose watch.usb.protected names what must never be cut (the DMX dongle, the show's controllers); nothing was installed" >&2
+    exit 2
+  fi
+  # Every entry read and found on the bus (verify C2): a list that names nothing is refused by entry, never counted.
+  if ! why="$("$node" "$here/watch.mjs" check --venue "$venue" --sys-root "$sys_root" 2>&1)"; then
+    printf 'install.sh: %s; nothing was installed\n' "$why" >&2
     exit 2
   fi
 fi

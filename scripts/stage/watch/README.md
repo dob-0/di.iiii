@@ -38,10 +38,18 @@ crit (ALERT within 10 °C, WARN within 20 °C), the way sysstat's %temp is relat
   re-authorized once after 30 s; after the third flood it stays cut and says so. The ledger survives a restart.
 - **never cut**: root hubs, hubs (they would drop the devices behind them), network adapters, storage, input devices
   (HID, class 03) and Bluetooth controllers (class e0: the machine's own keyboard and trackpad may be on them), the venue
-  profile's protected list (`{name, port, vidpid}`), and any device with a protected device behind it. A protected
-  device that floods is warned about, never cut.
-- **cut mode fails closed**: with no `watch.usb.protected` in the venue profile, `run` refuses the cut, runs warn and holds a
-  warn alert (`USB cut refused`) on every tick; `install.sh --usb-mode cut` refuses to install.
+  profile's protected list, and any device with a protected device behind it. A protected device that floods is warned
+  about, never cut. An entry is `{name, port, vidpid, iface}` with at least one of `port` (`1-2.1`), `vidpid`
+  (`1a86:7523`) or `iface` (a USB interface `1-2.1:1.0`, or a network interface on it, `enx00e04c680001`); a plain
+  string of one of those shapes reads as that key. At start each entry is resolved on the bus, and the device it found is
+  protected by every one of its identifiers (port, VID:PID, interface names), so it stays protected when one changes.
+- **cut mode fails closed** (verify C, C2): `run` starts cut mode only when every protected entry is readable and names a
+  device on the bus now (one device, when an entry gives several keys). Otherwise it refuses the cut, runs warn, prints
+  `WARN USB cut refused: …` naming each entry, and holds that warn alert on every tick (events.log, latest.json,
+  `/show-status`). A protected device that leaves the bus later turns cut mode to warn (`WARN USB cut mode turned to
+  warn: …`) until a restart. An empty list, a mistyped key (`vidPid`), an empty object or an absent device all refuse.
+  `watch.mjs check --venue FILE` is the same check by hand; `install.sh --usb-mode cut` runs it and refuses to install.
+  A person's `cut` is refused while the list has an entry it cannot read.
 - **the device only on new lines**: the device is cut only when a tick that began after the interface cut still floods;
   the lines that crossed the limit before the cut never escalate it.
 - **undo, one command**: `sudo node scripts/stage/watch/watch.mjs undo`. A dry run prints every write: `cut <port> --dry-run`.

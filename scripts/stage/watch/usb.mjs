@@ -9,8 +9,11 @@
 //         subclass 03, and the audio control interface are kept), then the whole device if the flood goes on;
 //         re-authorized once after 30 s; after the third flood it stays cut and says so (a person decides, `undo`).
 //   never: a root hub, a hub (it would drop every device behind it), a network adapter, storage, anything on the venue
-//         profile's protected list (port path or VID:PID), a device with a protected device behind it, an input device
-//         (HID) or a Bluetooth controller (the machine's own keyboard and trackpad may be on them).
+//         profile's protected list (port path, VID:PID or interface name, and what each resolved to at start), a device
+//         with a protected device behind it, an input device (HID) or a Bluetooth controller (the machine's own keyboard
+//         and trackpad may be on them).
+//   fails closed: cut mode starts only when every protected entry names a device on the bus (verify C2); else it runs
+//         warn and says why. A protected device that leaves the bus later turns cut mode to warn for the rest of the run.
 //   undo:  one command re-authorizes everything this watch cut (the ledger survives a restart of the watch).
 //   one ledger: the service and a person's `cut` / `undo` share cuts.json; every change re-reads it and writes it back
 //         under a lock file, so a cut made by one process is never lost by the other.
@@ -43,7 +46,7 @@ export function readDevice(root, port) {
         const ri = readIn(idir)
         let driver = null
         try { driver = path.basename(fs.readlinkSync(path.join(idir, 'driver'))) } catch { /* unbound */ }
-        return { name, cls: ri('bInterfaceClass'), sub: ri('bInterfaceSubClass'), authorized: ri('authorized'), driver, net: fs.existsSync(path.join(idir, 'net')) }
+        return { name, cls: ri('bInterfaceClass'), sub: ri('bInterfaceSubClass'), authorized: ri('authorized'), driver, net: fs.existsSync(path.join(idir, 'net')), netNames: list(path.join(idir, 'net')) }
     })
     const vid = r('idVendor'); const pid = r('idProduct')
     return {
@@ -56,7 +59,87 @@ export function readDevice(root, port) {
 
 export const describe = (d) => `${d.port}${d.vidpid ? ' ' + d.vidpid : ''}${d.product ? ' ' + d.product : ''}`
 
-// Why a device must never be cut, or null when it may be.
+// ---- the venue profile's protected list (verify C2: a fail-closed check reads every entry, never the list's length) ----
+// An entry names a device by any of: `port` (its kernel name, 1-2.1), `vidpid` (idVendor:idProduct, 1a86:7523) and `iface`
+// (one of its USB interfaces, 1-2.1:1.0, or a network interface it carries, enx00e04c680001), with an optional `name`.
+// A plain string of one of these shapes reads as that key ("1a86:7523", the way PLAN S11 writes it). Anything else (a
+// mistyped key, an empty object, a value of the wrong shape) is a problem named by its entry, never skipped.
+export const VIDPID_RE = /^[0-9a-f]{4}:[0-9a-f]{4}$/i
+export const USB_IFACE_RE = /^(\d+-\d+(?:\.\d+)*):\d+\.\d+$/
+// A network interface name as the kernel takes one (net/core/dev.c, dev_valid_name()): 1 to 15 bytes (IFNAMSIZ 16 with its
+// NUL), not "." or "..", no "/", ":" or white space.
+export const isNetdevName = (s) => typeof s === 'string' && s.length > 0 && Buffer.byteLength(s) < 16 && s !== '.' && s !== '..' && !/[/:\s]/.test(s)
+const ENTRY_KEYS = ['name', 'port', 'vidpid', 'iface']
+const shown = (v) => { const s = JSON.stringify(v) ?? String(v); return s.length > 60 ? `${s.slice(0, 57)}...` : s }
+
+export function normaliseProtected(protectedList) {
+    const entries = []; const problems = []
+    if (protectedList === undefined || protectedList === null) return { entries, problems }
+    if (!Array.isArray(protectedList)) return { entries, problems: [{ kind: 'malformed', entry: null, text: `watch.usb.protected is not a list: ${shown(protectedList)}` }] }
+    protectedList.forEach((raw, i) => {
+        const at = `entry ${i + 1} ${shown(raw)}`
+        let e = raw
+        if (typeof raw === 'string') {
+            const s = raw.trim()
+            e = VIDPID_RE.test(s) ? { vidpid: s } : PORT_RE.test(s) ? { port: s } : (USB_IFACE_RE.test(s) || isNetdevName(s)) ? { iface: s } : null
+            if (!e) { problems.push({ kind: 'malformed', entry: i, text: `${at}: not a port (1-2.1), a VID:PID (1a86:7523) or an interface name (1-2.1:1.0, enx...)` }); return }
+        }
+        if (!e || typeof e !== 'object' || Array.isArray(e)) { problems.push({ kind: 'malformed', entry: i, text: `${at}: an entry is an object with port, vidpid or iface (and a name), or one of their strings` }); return }
+        const bad = Object.keys(e).filter((k) => !ENTRY_KEYS.includes(k)).map((k) => `unknown key ${k} (the keys: ${ENTRY_KEYS.join(', ')})`)
+        if (e.port !== undefined && !PORT_RE.test(String(e.port))) bad.push(`port ${shown(e.port)} is not a USB device name like 1-2.1`)
+        if (e.vidpid !== undefined && !VIDPID_RE.test(String(e.vidpid))) bad.push(`vidpid ${shown(e.vidpid)} is not like 1a86:7523`)
+        if (e.iface !== undefined && !USB_IFACE_RE.test(String(e.iface)) && !isNetdevName(e.iface)) bad.push(`iface ${shown(e.iface)} is not an interface name like 1-2.1:1.0 or enx00e04c680001`)
+        if (e.port === undefined && e.vidpid === undefined && e.iface === undefined) bad.push('it names no device (port, vidpid or iface)')
+        if (bad.length) { problems.push({ kind: 'malformed', entry: i, text: `${at}: ${bad.join('; ')}` }); return }
+        entries.push({ entry: i, name: e.name === undefined ? null : String(e.name), port: e.port === undefined ? null : String(e.port), vidpid: e.vidpid === undefined ? null : String(e.vidpid).toLowerCase(), iface: e.iface === undefined ? null : String(e.iface) })
+    })
+    return { entries, problems }
+}
+
+// Each entry resolved on the bus as it is now. Cut mode needs every entry to name a present device, and one device when it
+// gives several keys. `resolved` pins what was found (port, VID:PID, interface names), so a protected device stays protected
+// by all of them, also when one of them changes (a netdev that goes with its driver, a re-plug on another port).
+export function checkProtected(root, protectedList) {
+    const { entries, problems } = normaliseProtected(protectedList)
+    const base = path.join(root, DEV_DIR)
+    const names = list(base)
+    const devices = names.filter((n) => PORT_RE.test(n)).map((port) => { const r = readIn(path.join(base, port)); const v = r('idVendor'); const p = r('idProduct'); return { port, vidpid: v && p ? `${v}:${p}`.toLowerCase() : null } })
+    const ifaces = names.filter((n) => USB_IFACE_RE.test(n)).map((name) => ({ name, port: name.split(':')[0], net: list(path.join(base, name, 'net')) }))
+    const resolved = []
+    for (const e of entries) {
+        const label = `entry ${e.entry + 1}${e.name ? ` (${e.name})` : ''}`
+        const found = []; const missing = []; let offUsb = null
+        if (e.port) { if (devices.some((d) => d.port === e.port)) found.push([`port ${e.port}`, [e.port]]); else missing.push(`port ${e.port}: no device on it`) }
+        if (e.vidpid) { const ps = devices.filter((d) => d.vidpid === e.vidpid).map((d) => d.port); if (ps.length) found.push([e.vidpid, ps]); else missing.push(`${e.vidpid}: no such device on the bus`) }
+        if (e.iface) {
+            const ps = [...new Set(ifaces.filter((i) => i.name === e.iface || i.net.includes(e.iface)).map((i) => i.port))].filter((p) => devices.some((d) => d.port === p))
+            if (ps.length) found.push([`interface ${e.iface}`, ps])
+            else if (!USB_IFACE_RE.test(e.iface) && fs.existsSync(path.join(root, 'sys/class/net', e.iface))) offUsb = e.iface // on this machine, not on USB: nothing to cut
+            else missing.push(`interface ${e.iface}: not on this machine`)
+        }
+        if (missing.length) { problems.push({ kind: 'absent', entry: e.entry, text: `${label}: ${missing.join('; ')}` }); continue }
+        const ports = found.length ? found.reduce((acc, [, ps]) => acc.filter((p) => ps.includes(p)), found[0][1]) : []
+        if ((offUsb && found.length) || (found.length && !ports.length)) {
+            problems.push({ kind: 'mismatch', entry: e.entry, text: `${label}: its keys name different devices (${[...found.map(([k, ps]) => `${k} is ${ps.join(', ')}`), ...(offUsb ? [`interface ${offUsb} is not on USB`] : [])].join('; ')})` })
+            continue
+        }
+        for (const port of ports) {
+            const own = ifaces.filter((i) => i.port === port)
+            resolved.push({ entry: e.entry, name: e.name, port, vidpid: devices.find((d) => d.port === port).vidpid, ifaces: [...own.map((i) => i.name), ...own.flatMap((i) => i.net)] })
+        }
+        if (offUsb) resolved.push({ entry: e.entry, name: e.name, port: null, vidpid: null, ifaces: [offUsb], offUsb: true })
+    }
+    return { entries, resolved, problems }
+}
+
+// Why cut mode may not start on this list, or null when it may (the policy at start, `watch.mjs check`, install.sh).
+export function cutRefusal(check) {
+    if (check.problems.length) return `USB cut refused: watch.usb.protected must name every device it protects, on the bus now: ${check.problems.map((p) => p.text).join('; ')}; warn only`
+    if (!check.entries.length) return 'USB cut refused: the venue profile names no protected device (watch.usb.protected); warn only'
+    return null
+}
+
+// Why a device must never be cut, or null when it may be. `protectedList`: entries as written and as resolved at start.
 export function protectionOf(dev, protectedList = []) {
     if (!dev.exists) return 'gone from the bus'
     if (dev.isRoot) return 'a root hub'
@@ -65,9 +148,14 @@ export function protectionOf(dev, protectedList = []) {
     if (dev.interfaces.some((i) => i.cls === '08')) return 'storage'
     for (const p of protectedList) {
         const name = p.name ? ` (${p.name})` : ''
-        if (p.port && String(p.port) === dev.port) return `on a protected port ${p.port}${name}`
+        const ifaceNames = [p.iface, ...(p.ifaces || [])].filter(Boolean).map(String)
+        const ports = [p.port, ...ifaceNames.map((n) => USB_IFACE_RE.exec(n)?.[1])].filter(Boolean).map(String)
+        const hit = ifaceNames.find((n) => dev.interfaces.some((i) => i.name === n || (i.netNames || []).includes(n)))
+        if (hit) return `the protected interface ${hit}${name}`
+        if (ports.includes(dev.port)) return `on a protected port ${dev.port}${name}`
         if (p.vidpid && String(p.vidpid).toLowerCase() === dev.vidpid) return `a protected device ${dev.vidpid}${name}`
-        if (p.port && String(p.port).startsWith(dev.port + '.')) return `the protected port ${p.port}${name} is behind it`
+        const behind = ports.find((pp) => pp.startsWith(dev.port + '.'))
+        if (behind) return `the protected port ${behind}${name} is behind it`
     }
     // The machine's own input and radio (the uhubctl caution, RESEARCH-show-safety 4): a keyboard or a trackpad (HID, class
     // 03) and the Bluetooth controller they may run on (class e0) are never cut, whatever floods; they are warned about only.
@@ -98,8 +186,15 @@ export const opText = (o) => `write ${o.value} > ${o.path}`
 const defaultWriter = (p, v) => fs.writeFileSync(p, v)
 
 export class UsbPolicy {
-    constructor({ root = '/', mode = 'warn', protectedList = [], ledgerFile = null, dryRun = false, reauthAfterMs = REAUTH_AFTER_MS, maxFloods = MAX_FLOODS, now = () => Date.now(), writer = defaultWriter, warnEveryMs = 60000, lockWaitMs = LOCK_WAIT_MS } = {}) {
-        Object.assign(this, { root, mode: mode === 'cut' ? 'cut' : 'warn', protectedList, ledgerFile, dryRun, reauthAfterMs, maxFloods, now, writer, warnEveryMs, lockWaitMs })
+    constructor({ root = '/', mode = 'warn', protectedList = [], ledgerFile = null, dryRun = false, reauthAfterMs = REAUTH_AFTER_MS, maxFloods = MAX_FLOODS, now = () => Date.now(), writer = defaultWriter, warnEveryMs = 60000, lockWaitMs = LOCK_WAIT_MS, say = () => {} } = {}) {
+        Object.assign(this, { root, asked: mode === 'cut' ? 'cut' : 'warn', protectedRaw: protectedList, ledgerFile, dryRun, reauthAfterMs, maxFloods, now, writer, warnEveryMs, lockWaitMs, say })
+        // Cut mode fails closed (verify C, C2): it starts only when every protected entry names a device on the bus; else the
+        // policy runs warn and `refused` says why (the watch holds it as an alert: events.log, latest.json, /show-status).
+        const check = checkProtected(root, protectedList)
+        this.protectedList = [...check.entries, ...check.resolved]
+        this.problems = check.problems
+        this.refused = this.asked === 'cut' ? cutRefusal(check) : null
+        this.mode = this.refused ? 'warn' : this.asked
         this.ports = {}
         this.lastWarn = new Map()
         this.written = [] // every write made (or, in a dry run, printed), for the record and the tests
@@ -164,8 +259,21 @@ export class UsbPolicy {
 
     entry(port) { return (this.ports[port] ||= { floods: 0, cut: null, stopped: false }) }
 
+    // Before every cut and once a tick, in cut mode: an entry that no longer names a present device (pulled, or back as
+    // another device) turns cut mode to warn for the rest of the run, said once through `say`. Only a restart, which runs the
+    // start check again, brings cut mode back.
+    guard() {
+        if (this.mode !== 'cut') return
+        const c = checkProtected(this.root, this.protectedRaw)
+        if (!c.problems.length) return
+        this.mode = 'warn'
+        this.refused = `USB cut mode turned to warn: ${c.problems.map((p) => p.text).join('; ')}; cut mode comes back only when the watch restarts with every protected device present`
+        this.say(this.refused)
+    }
+
     // A device crossed its flood limit. Returns what was done, or null when it is already handled.
     onFlood(port) {
+        this.guard()
         const dev = readDevice(this.root, port)
         const why = protectionOf(dev, this.protectedList)
         const plan = dev.exists ? (planCut(dev, 'interface', this.root) || planCut(dev, 'device', this.root)) : null
@@ -192,13 +300,15 @@ export class UsbPolicy {
     // Once a tick: escalate an interface cut whose device still floods; re-authorize a cut whose 30 s are over.
     // `tickStartMs` is when this tick's lines began: only a tick that began after the interface cut can say the device
     // still floods, so the lines that crossed the limit before the cut never escalate it. `counts`: this tick's lines per port.
+    // Warn mode never escalates (a person's interface cut sits in the same ledger); it still re-authorizes on time.
     onTick(floodingPorts = new Set(), tickStartMs = -Infinity, counts = {}) {
+        this.guard()
         return this.transact(() => {
             const out = []
             const t = this.now()
             for (const [port, e] of Object.entries(this.ports)) {
                 if (!e.cut) continue
-                if (e.cut.level === 'interface' && floodingPorts.has(port) && tickStartMs >= e.cut.at) {
+                if (this.mode === 'cut' && e.cut.level === 'interface' && floodingPorts.has(port) && tickStartMs >= e.cut.at) {
                     const dev = readDevice(this.root, port)
                     if (protectionOf(dev, this.protectedList)) continue
                     const plan = planCut(dev, 'device', this.root)
