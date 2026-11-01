@@ -73,7 +73,7 @@ import { parseArgs } from './args.mjs'
 import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './channels.mjs'
 import * as autoupdate from './autoupdate.mjs'
 import { versionLabel } from './overlays.mjs'
-import { mcpArgs, moveToken, runLogin, runLogout, runWhoami } from './login.mjs'
+import { mcpArgs, moveToken, resolveTarget, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 import { withUserAgent } from './userAgent.mjs'
 
@@ -392,6 +392,15 @@ const cmdStatus = async () => {
 }
 
 const cmdOpen = async (args) => {
+    // Another di.iiii needs no install on this machine, only a file and a login.
+    if (args.flags.token !== undefined && args.flags.token !== '-') { fail(ui.openToBareToken()); process.exitCode = 1; return }
+    const rawTimeout = process.env.DI_OPEN_TO_TIMEOUT_MS
+    if (rawTimeout !== undefined && rawTimeout !== '' && !(Number.isInteger(Number(rawTimeout)) && Number(rawTimeout) > 0)) {
+        fail(ui.openToBadTimeout(rawTimeout)); process.exitCode = 1; return
+    }
+    const toOther = args.flags.to !== undefined || args.flags.token === '-'
+    if (toOther && !args._[1]) { fail(ui.openToNeedsFile()); process.exitCode = 1; return }
+    if (args._[1] && toOther) { await cmdOpenFile(args, args._[1]); return }
     const home = HOME()
     if (!requireInstalled(home)) return
     // `di open` opens di.iiii; `di open my-show.diiii` opens that work inside
@@ -496,7 +505,78 @@ const openThroughServer = async ({ home, port, file, as }) => {
     }
 }
 
+/**
+ * `di open FILE --to URL` — the same file, into ANOTHER di.iiii. Same rules as
+ * `di move --from`: the address's own /serverXR, the token from stdin
+ * (`--token -`), else DI_TOKEN, else the login `di login --to URL` stored for
+ * that very address. There is no local fallback here: a file too big for that
+ * di.iiii's wire is said so, never opened on this machine instead.
+ */
+const openOnAnother = async (args, resolved) => {
+    const target = resolveTarget({ to: args.flags.to })
+    if (target.error) { fail(target.error); process.exitCode = 1; return }
+    const { site, base, host } = target
+    // A token in clear text over http is a leak; only this machine may use it.
+    const hostname = new URL(site).hostname
+    if (new URL(site).protocol !== 'https:' && hostname !== 'localhost' && !hostname.endsWith('.localhost')) {
+        fail(ui.openToNeedsHttps(site)); process.exitCode = 1; return
+    }
+    let token
+    let how
+    if (args.flags.token === '-') { token = (await readStdin()).trim(); how = ui.openToTokenFrom('stdin', host) }
+    else {
+        token = moveToken({ from: site, env: process.env })
+        how = String(process.env.DI_TOKEN || '').trim() ? ui.openToTokenFrom('DI_TOKEN', host) : ui.openToLoginFor(host)
+    }
+    if (!token) { fail(ui.openToSignIn(site)); process.exitCode = 1; return }
+    const name = path.basename(resolved)
+    try {
+        const form = new FormData()
+        form.append('bundle', await fs.openAsBlob(resolved), name)
+        if (args.flags.as) form.append('as', String(args.flags.as))
+        say(style.dim(ui.openToSending(fs.statSync(resolved).size, host)))
+        const response = await fetch(`${base}/api/spaces/bundle`, {
+            method: 'POST',
+            headers: withUserAgent({ Authorization: `Bearer ${token}` }),
+            body: form,
+            signal: AbortSignal.timeout(Number(process.env.DI_OPEN_TO_TIMEOUT_MS) || 30 * 60 * 1000)
+        })
+        const body = await response.json().catch(() => ({}))
+        if (response.ok) {
+            const id = body?.spaceId || args.flags.as || name.replace(/\.diiii$|\.space-bundle\.tar\.gz$/, '')
+            say(ui.opened(id, `${site}/${id}`))
+            say(`  ${how}`)
+            return
+        }
+        if (body?.error === 'not_through_cli') {
+            // A policy refusal, not a missing login: signing in again does not fix it.
+            fail([body.reason, body.rule].filter(Boolean).join(' — ') || 'this di.iiii does not take this from the command line')
+        } else if ((response.status === 401 || response.status === 403) && (body?.code === 'auth_required' || body?.error === 'auth_required')) {
+            fail(ui.openToSignIn(site))
+        } else if (body?.code === 'space_exists') {
+            fail(`${body.error || 'a space of that name is already there'}`)
+            fail(ui.openToTryAs(args._[1], site))
+        } else if (response.status === 413) {
+            fail(ui.openToTooLarge(name, host))
+        } else {
+            fail(body?.error || `${host} answered ${response.status}`)
+        }
+    } catch (error) {
+        if (error?.name === 'TimeoutError' || error?.name === 'AbortError') fail(ui.openToTimedOut(host))
+        else fail(`${String(error?.message || error)} — ${ui.openToDropped(host)}`)
+    }
+    fail(ui.openToNothing(name, host))
+    process.exitCode = 1
+}
+
 const cmdOpenFile = async (args, file) => {
+    if (args.flags.to !== undefined || args.flags.token === '-') {
+        if (args.flags.to === undefined) { fail(ui.openToNeedsAddress()); process.exitCode = 1; return }
+        const resolvedTo = path.resolve(file)
+        if (!fs.existsSync(resolvedTo)) { fail(`no such file: ${resolvedTo}`); process.exitCode = 1; return }
+        await openOnAnother(args, resolvedTo)
+        return
+    }
     const home = HOME()
     if (!requireInstalled(home)) return
     const resolved = path.resolve(file)

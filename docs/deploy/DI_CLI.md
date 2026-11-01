@@ -27,6 +27,7 @@ di status      what is running, where, whether the room can reach it, how big,
 di new NAME    start a new space
 di save SPACE  save it as one file you can carry anywhere
 di open FILE   open a file someone saved
+di open FILE --to URL   open it on another di.iiii with your login there (--as ID names it; --token - reads a token from stdin)
 di spaces      what is in this di.iiii
 
 di backup      write your whole di.iiii to one file
