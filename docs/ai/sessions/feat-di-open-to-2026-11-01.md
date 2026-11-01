@@ -1,0 +1,6 @@
+## 2026-11-01 — `di open FILE --to URL` opens a saved file on another di.iiii (ledger N1852)
+
+- What: `di open FILE --to https://dev.diiii.xyz [--as ID] [--token -]` posts the saved file to that di.iiii's `/serverXR/api/spaces/bundle` as multipart (field `bundle`, streamed), with the rules of `di move --from`: token from stdin, else DI_TOKEN, else the login `di login --to URL` stored for that address; it says who it is (user-agent). The address is validated like `di login --to` (origin only).
+- Why: the owner's words, "fix that gap" — `di open FILE` reached only this install's own server, so a file saved here could not be opened on dev from the terminal's own login.
+- Answers (ui.mjs, beside the other open texts): the space's address plus a sign-in line; 401/403 `auth_required`/`not_through_cli` → `di login --to <site>`; 413 → bigger than that di.iiii takes (MAX_UPLOAD_MB), and NO local fallback; anything else → the server's own words. No `--to` = exactly the old path, including the local too-large fallback.
+- Tested: scripts/di/openTo.test.js (fake fetch, fake HOME, stored login): URL, Authorization, user-agent, multipart field, `--as`, DI_TOKEN first, no login → sign-in message and no request, 401/403, 413 without fallback, 409 words, bad address. Not tested: a real carry to a real server.

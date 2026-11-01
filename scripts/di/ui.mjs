@@ -383,6 +383,13 @@ export const ui = {
     // The two reasons `open FILE` still stops a running di.iiii, said before
     // it happens: every tab on this machine is about to lose its connection.
     tooLargeForWire: (name) => style.dim(`${name} is more than the running di.iiii takes over the wire — stopping it to open the file directly.`),
+    // `open FILE --to URL`: the same file, into another di.iiii.
+    openToSignIn: (site) => `not signed in to ${site} — sign in first: ${CMD} login --to ${site}`,
+    openToTokenFrom: (what) => `sign-in: token from ${what}`,
+    openToLoginFor: (host) => `sign-in: the login stored for ${host}`,
+    openToTooLarge: (name, host) => `${name} is bigger than ${host} takes over the wire (its MAX_UPLOAD_MB). there is no other way to open it on another di.iiii from here, and it was not opened on this machine instead.`,
+    openToNothing: (name, host) => `${name} was not opened on ${host} — see above. Nothing was opened on this machine either.`,
+    openToNeedsAddress: () => `--token - is for another di.iiii — add its address: ${CMD} open FILE --to https://dev.diiii.xyz`,
     forceStops: () => style.dim('--force replaces a space that may be open in a browser — stopping di.iiii for it.'),
     spacesHere: (ids) => ['in this di.iiii:', ...ids.map((id) => `  ${id}`)].join('\n'),
     noSpacesYet: () => `nothing here yet. make one with: ${CMD} new "my show"`,
@@ -1021,6 +1028,7 @@ export const ui = {
         `  ${CMD} new NAME      start a new space`,
         `  ${CMD} save SPACE    save it as one file you can carry anywhere`,
         `  ${CMD} open FILE     open a file someone saved (or ${CMD} open, for di.iiii itself)`,
+        `  ${CMD} open FILE --to URL   open it on another di.iiii, with your login there (--as ID names it)`,
         `  ${CMD} spaces        what is in this di.iiii`,
         `  ${CMD} move PROJECT --to SPACE   move a project into another space (--dry-run to look first)`,
         `  ${CMD} backup        every space and the light show, in one file`,

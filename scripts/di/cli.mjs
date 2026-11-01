@@ -73,7 +73,7 @@ import { parseArgs } from './args.mjs'
 import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './channels.mjs'
 import * as autoupdate from './autoupdate.mjs'
 import { versionLabel } from './overlays.mjs'
-import { mcpArgs, moveToken, runLogin, runLogout, runWhoami } from './login.mjs'
+import { mcpArgs, moveToken, resolveTarget, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 import { withUserAgent } from './userAgent.mjs'
 
@@ -392,6 +392,8 @@ const cmdStatus = async () => {
 }
 
 const cmdOpen = async (args) => {
+    // Another di.iiii needs no install on this machine, only a file and a login.
+    if (args._[1] && (args.flags.to !== undefined || args.flags.token === '-')) { await cmdOpenFile(args, args._[1]); return }
     const home = HOME()
     if (!requireInstalled(home)) return
     // `di open` opens di.iiii; `di open my-show.diiii` opens that work inside
@@ -496,7 +498,64 @@ const openThroughServer = async ({ home, port, file, as }) => {
     }
 }
 
+/**
+ * `di open FILE --to URL` — the same file, into ANOTHER di.iiii. Same rules as
+ * `di move --from`: the address's own /serverXR, the token from stdin
+ * (`--token -`), else DI_TOKEN, else the login `di login --to URL` stored for
+ * that very address. There is no local fallback here: a file too big for that
+ * di.iiii's wire is said so, never opened on this machine instead.
+ */
+const openOnAnother = async (args, resolved) => {
+    const target = resolveTarget({ to: args.flags.to })
+    if (target.error) { fail(target.error); process.exitCode = 1; return }
+    const { site, base, host } = target
+    let token
+    let how
+    if (args.flags.token === '-') { token = (await readStdin()).trim(); how = ui.openToTokenFrom('stdin') }
+    else {
+        token = moveToken({ from: site, env: process.env })
+        how = String(process.env.DI_TOKEN || '').trim() ? ui.openToTokenFrom('DI_TOKEN') : ui.openToLoginFor(host)
+    }
+    if (!token) { fail(ui.openToSignIn(site)); process.exitCode = 1; return }
+    const name = path.basename(resolved)
+    try {
+        const form = new FormData()
+        form.append('bundle', await fs.openAsBlob(resolved), name)
+        if (args.flags.as) form.append('as', String(args.flags.as))
+        const response = await fetch(`${base}/api/spaces/bundle`, {
+            method: 'POST',
+            headers: withUserAgent({ Authorization: `Bearer ${token}` }),
+            body: form
+        })
+        const body = await response.json().catch(() => ({}))
+        if (response.ok) {
+            const id = body?.spaceId || args.flags.as || name.replace(/\.diiii$|\.space-bundle\.tar\.gz$/, '')
+            say(ui.opened(id, `${site}/${id}`))
+            say(`  ${how}`)
+            return
+        }
+        if ((response.status === 401 || response.status === 403) && (body?.code === 'auth_required' || body?.code === 'not_through_cli')) {
+            fail(ui.openToSignIn(site))
+        } else if (response.status === 413) {
+            fail(ui.openToTooLarge(name, host))
+        } else {
+            fail(body?.error || `${host} answered ${response.status}`)
+        }
+    } catch (error) {
+        fail(String(error?.message || error))
+    }
+    fail(ui.openToNothing(name, host))
+    process.exitCode = 1
+}
+
 const cmdOpenFile = async (args, file) => {
+    if (args.flags.to !== undefined || args.flags.token === '-') {
+        if (args.flags.to === undefined) { fail(ui.openToNeedsAddress()); process.exitCode = 1; return }
+        const resolvedTo = path.resolve(file)
+        if (!fs.existsSync(resolvedTo)) { fail(`no such file: ${resolvedTo}`); process.exitCode = 1; return }
+        await openOnAnother(args, resolvedTo)
+        return
+    }
     const home = HOME()
     if (!requireInstalled(home)) return
     const resolved = path.resolve(file)
