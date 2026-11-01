@@ -9,3 +9,8 @@
 - Drill on aylmo with real packs, on tmpfs, without npm ci or a service: N-1 install 749 ms, hot swap 203 ms, rollback 56 ms, forward 116 ms, restore 971 ms.
 - Not tested: the ssh route to a real show machine (the stage Mac is live), the Hyprland reload, a laser state across a swap.
 - Owed: the owner's install window after the show; S13 wires `di show go` and `di show checkpoint` into `--go-cmd` and `--checkpoint-cmd`.
+- Round 2, the verify of #1240 (F1-F7 and brief point 5):
+  - verdict phrases and the heading line are read; UNKNOWN, no review and a PASS with an open must-fix are refused (hard while live);
+  - `uim.<manifest8>` labels an overlay with no commit; `--on-no-go undo|warn`; the drill reads the laser before and after each step.
+  - Tests: `npx vitest run scripts/di/ scripts/release/` gives 673 passed (48 files); 7 of the 18 release tests fail on the round-1 code.
+  - Owed rows: F5 (the freeze flag is turned by hand), F6 (the test scope is not judged), the drill's laser on a served replica, and the owner's pick of `--on-no-go`.

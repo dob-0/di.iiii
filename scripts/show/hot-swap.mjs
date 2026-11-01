@@ -4,15 +4,18 @@
 //
 //   node scripts/show/hot-swap.mjs <pack.tar.gz> --production <name> (--host <user@host> | --home <DI home>)
 //        [--record <file>] [--accept '<reason>'] [--when-up] [--checkpoint-cmd '<cmd>'] [--go-cmd '<cmd>']
-//        [--server <url>] [--soak <seconds>] [--no-reload] [--dry-run]
+//        [--server <url>] [--soak <seconds>] [--on-no-go undo|warn] [--no-reload] [--dry-run]
 //   node scripts/show/hot-swap.mjs --undo --production <name> (--host … | --home …)
 //
 // A hot swap is a new release folder: target.py clones the live release, lays the ui bundle over the clone, checks
 // every ui file against the manifest, appends one line to PATCHES (append-only) and exchanges the two folders' paths
-// in one rename. The release before stays whole beside it; `di version` shows <version>+ui.<sha8> per overlay.
+// in one rename. The release before stays whole beside it; `di version` shows <version>+ui.<commit sha8> per overlay,
+// or +uim.<manifest sha8> when no record names a commit (two kinds, two prefixes: audit S10 verify F3).
 // The gate runs first and, with --when-up, AGAIN at the moment the target answers. While the show is live: green
-// tests on the exact commit, no BLOCK, a checkpoint first and a GO soak after (default 60 s; S13 marks 60 s
-// unvalidated); a NO-GO in the soak undoes the overlay at once.
+// tests on the exact commit, a readable PASS review with no open must-fix, a checkpoint first and a GO soak after
+// (default 60 s; S13 marks 60 s unvalidated). A NO-GO in the soak undoes the overlay at once (--on-no-go undo, the
+// default) or keeps it and says so with exit 10 (--on-no-go warn, or DI_SHOW_ON_NO_GO=warn). Which one is the show's
+// rule is the owner's decision; both modes exist so that either answer is a setting (audit S10 verify F7).
 import fs from 'node:fs'
 import path from 'node:path'
 import {
@@ -46,6 +49,8 @@ main(async () => {
     const checkpoint = flags['checkpoint-cmd'] || process.env.DI_SHOW_CHECKPOINT_CMD || null
     const soakSeconds = flags.soak === undefined ? 60 : Number(flags.soak)
     if (!(soakSeconds >= 0)) throw new UsageError('--soak <seconds> must be a number >= 0')
+    const onNoGo = flags['on-no-go'] || process.env.DI_SHOW_ON_NO_GO || 'undo'
+    if (!['undo', 'warn'].includes(onNoGo)) throw new UsageError(`--on-no-go undo|warn: what a NO-GO in the soak does (got "${onNoGo}")`)
 
     const evaluate = async (phase) => {
         const live = readLive(production)
@@ -87,7 +92,7 @@ main(async () => {
     const have = target.kind === 'ssh' ? parseShalist((await runTarget(target, ['shalist', ...UI_DIRS], { quiet: true })).stdout) : null
     const b = buildBundle(pack, { have })
     const commit = g.record?.predicate?.commit || null
-    const id = `ui.${(commit || b.sha8).slice(0, 8)}`
+    const id = commit ? `ui.${commit.slice(0, 8)}` : `uim.${b.sha8}`
     const patch = {
         id, at: isoNow(), who: who(), pack: path.basename(pack), packSha256: g.digest,
         recordSha256: g.recordFile && g.record ? sha256File(g.recordFile) : null, commit, manifest: b.sha8, dirs: b.dirs,
@@ -104,11 +109,19 @@ main(async () => {
     }
     if (live) {
         const s = await soak(target, { seconds: soakSeconds, goCmd, server })
+        if (!s.ok && onNoGo === 'warn') {
+            const kept = (await runTarget(target, ['label'], { quiet: true })).stdout.trim()
+            say(`NO-GO in the soak (check ${s.runs}): ${id} STAYS live (--on-no-go warn) · ${kept}`)
+            say(`undo: ${undoLine}`)
+            logAction(production, entry(g, live, { outcome: 'soak-failed-kept', id, label: kept, onNoGo }))
+            process.exitCode = EXIT.soakKept
+            return
+        }
         if (!s.ok) {
-            say(`NO-GO in the soak (check ${s.runs}): undoing ${id} now`)
+            say(`NO-GO in the soak (check ${s.runs}): undoing ${id} now (--on-no-go undo)`)
             const u = await runTarget(target, ['undo', stamp(), ...reload, ...server])
             const back = (await runTarget(target, ['label'], { quiet: true })).stdout.trim()
-            logAction(production, entry(g, live, { outcome: 'soak-failed-undone', id, undoExit: u.code, label: back }))
+            logAction(production, entry(g, live, { outcome: 'soak-failed-undone', id, undoExit: u.code, label: back, onNoGo }))
             process.exitCode = EXIT.soak
             return
         }

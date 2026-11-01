@@ -1,10 +1,13 @@
 // @vitest-environment node
 // The release gate, the hot swap and the rollback drill (audit 2026-11-01, slice S10: gaps G05 and G27).
 // Every step runs the real commands (record.mjs, show/install.mjs, show/hot-swap.mjs, restore.mjs, drill.mjs and
-// target.py) against a fixture git repo with a local bare remote and a replica DI home in a temp folder: no network,
-// no server, no show machine.
-import { spawnSync } from 'node:child_process'
+// target.py) against a fixture git repo with a local bare remote and a replica DI home in a temp folder: no network
+// (one loopback stub of the laser state route in the drill test), no di server, no show machine.
+// Round 2 (verify of PR #1240): F1 verdict forms, F2 no review, F3 uim. label, F4 PASS with a must-fix, F7 --on-no-go,
+// and the drill's laser state (brief point 5) each have a test below that fails on the round-1 code.
+import { spawn, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
+import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -34,12 +37,21 @@ const env = (extra = {}) => ({
     DI_SHOW_SERVER: '',
     DI_SHOW_PRODUCTION: '',
     DI_SHOW_UP_CMD: '',
+    DI_SHOW_ON_NO_GO: '',
     ...extra
 })
 const run = (script, args, extra = {}) => {
     const r = spawnSync(NODE, [path.join(REPO, script), ...args], { encoding: 'utf8', env: env(extra), timeout: SLOW })
     return { code: r.status, out: `${r.stdout}${r.stderr}` }
 }
+// the same, without blocking this process (a loopback stub server here must be able to answer the child)
+const runAsync = (script, args, extra = {}) => new Promise((resolve) => {
+    const child = spawn(NODE, [path.join(REPO, script), ...args], { env: env(extra) })
+    let out = ''
+    child.stdout.on('data', (d) => { out += d })
+    child.stderr.on('data', (d) => { out += d })
+    child.on('close', (code) => resolve({ code, out }))
+})
 const sh = (cmd, cwd = T) => {
     const r = spawnSync('bash', ['-c', cmd], { cwd, encoding: 'utf8' })
     if (r.status !== 0) throw new Error(`${cmd}\n${r.stderr}`)
@@ -181,6 +193,68 @@ describe('release record and gate', () => {
         const { tests, ...noTests } = rec.predicate
         expect(validateRecord({ ...rec, predicate: noTests }, sha256File(packs.one))[0]).toMatch(/missing predicate field\(s\): tests/)
     })
+
+    it('reads every verdict form our reviews use; UNKNOWN, no review and a PASS with an open must-fix need --accept and never go in live (verify F1, F2, F4)', () => {
+        const forms = [
+            ['Verdict: **FIX**. 10 must-fix, 8 should-fix.', 'BLOCK', []],
+            ['## Verdict\nNOT READY: one fix is needed (finding 1).', 'BLOCK', []],
+            ['## Verdict\nREQUEST CHANGES (small). Two holes break the promises (M1).', 'BLOCK', ['M1']],
+            ['## Verdict: BLOCK\n\nTwo must-fix items: M1 and M2.', 'BLOCK', ['M1', 'M2']],
+            ['## Verdict\n\nChanges requested: M1, M2.', 'BLOCK', ['M1', 'M2']],
+            ['## Verdict\n\nDO NOT MERGE before the show.', 'BLOCK', []],
+            ['**Verdict:** BLOCK (M1, M2)', 'BLOCK', ['M1', 'M2']],
+            ['## Verdict\n\n- NO GO: the soak failed.', 'BLOCK', []],
+            ['## Verdict\n\nBlocked until M1 is fixed.', 'BLOCK', ['M1']],
+            ['## Verdict\n\n**NOT READY for the first live use: one must-fix (F1).** Every point holds.', 'BLOCK', ['F1']],
+            ['## Verdict and evidence\n\nPASS: nothing left to fix.', 'PASS', []],
+            ['## Verdict\n\nPASS with one must-fix: M1 (a label).', 'PASS', ['M1']],
+            ['## Verdict\n\nPASS: M1 and M2 are fixed.', 'PASS', []],
+            ['## Verdict\n\nGOOD enough, I think.', 'UNKNOWN', []],
+            ['## Verdict\n\nFIXED mostly.', 'UNKNOWN', []]
+        ]
+        for (const [text, verdict, ids] of forms) expect(parseReview(`# Review\n\n${text}\n`), text).toMatchObject({ verdict, mustFixOpen: ids })
+
+        // the gate on one green, pushed commit (c.one): one record per review
+        const pack = makePack('1.0.0-look.forms', ui('css forms'))
+        let n = 0
+        const gateWith = (reviewText, opts = {}) => {
+            const args = ['--commit', c.one]
+            if (reviewText !== null) {
+                const file = path.join(T, `review-form-${n++}.md`)
+                fs.writeFileSync(file, `# Review\n\n${reviewText}\n`)
+                args.push('--review', file)
+            }
+            const r = record(pack, args)
+            expect(r.code, r.out).toBe(0)
+            return evaluateGate({ pack, action: 'hot-swap', ...opts })
+        }
+        const liveOpts = { live: { since: 'test' }, freeze: { checkpoint: true, go: true } }
+        // F1: a verdict the parser cannot read is refused; --accept lets it through outside a show, nothing does live
+        let g = gateWith('## Verdict\n\nLooks fine to me overall.')
+        expect(g.decision).toBe('refused')
+        expect(g.soft.join(' | ')).toMatch(/review verdict not readable \("Looks fine to me overall\."\)/)
+        expect(evaluateGate({ pack, action: 'hot-swap', accept: 'read it myself: a pass' }).decision).toBe('accepted')
+        g = evaluateGate({ pack, action: 'hot-swap', accept: 'read it myself: a pass', ...liveOpts })
+        expect(g.decision).toBe('refused')
+        expect(g.hard).toContain('the show is live: a review the gate cannot read never goes in')
+        const r = swap(pack)
+        expect(r.code, r.out).toBe(4)
+        expect(r.out).toMatch(/review {3}UNKNOWN \("Looks fine to me overall\."\)/)
+        // F1: the real form that passed in round 1 is a BLOCK now
+        expect(gateWith('Verdict: **FIX**. 10 must-fix, 8 should-fix.').soft).toContain('review BLOCK')
+        // F2: no review recorded
+        g = gateWith(null)
+        expect(g.decision).toBe('refused')
+        expect(g.soft.join(' | ')).toMatch(/no review recorded/)
+        expect(evaluateGate({ pack, action: 'hot-swap', ...liveOpts }).hard).toContain('the show is live: an overlay needs a review on its record')
+        // F4: a PASS that names an open must-fix
+        g = gateWith('## Verdict\n\nPASS with one must-fix: M1 (a label).')
+        expect(g.soft).toContain('review PASS with open must-fix M1')
+        expect(g.lines[2]).toMatch(/^review {3}PASS · open must-fix M1/)
+        expect(evaluateGate({ pack, action: 'hot-swap', ...liveOpts }).hard).toContain('the show is live: a build with open must-fix M1 never goes in')
+        // control: a clean PASS goes in, live too
+        expect(gateWith('## Verdict\n\nPASS: M1 and M2 are fixed.', liveOpts).decision).toBe('pass')
+    }, SLOW)
 })
 
 describe('hot swap, undo, restore', () => {
@@ -237,6 +311,19 @@ describe('hot swap, undo, restore', () => {
         expect(versionLabel(home).label).toBe(m.label)
         expect(css()).toBe('css 2')
     }, SLOW)
+
+    it('a swap with no record is labelled uim.<manifest sha8>; ui.<sha8> always names a commit (verify F3)', () => {
+        const pack = makePack('1.0.0-look.norecord', ui('css no record'))
+        const before = versionLabel(home).label
+        const r = swap(pack, ['--accept', 'no record: the label test'])
+        expect(r.code, r.out).toBe(0)
+        const after = versionLabel(home)
+        expect(after.label.slice(0, before.length)).toBe(before)
+        expect(after.label.slice(before.length)).toMatch(/^\+uim\.[0-9a-f]{8}$/)
+        expect(after.overlays.at(-1)).toMatchObject({ commit: null })
+        expect(undo().code).toBe(0)
+        expect(versionLabel(home).label).toBe(before)
+    }, SLOW)
 })
 
 describe('show live: the freeze', () => {
@@ -266,8 +353,27 @@ describe('show live: the freeze', () => {
         const r = swap(packs.two, ['--checkpoint-cmd', 'true', '--go-cmd', 'false', '--soak', '0'])
         expect(r.code, r.out).toBe(8)
         expect(versionLabel(home).label).toBe(before)
-        expect(installs().at(-1)).toMatchObject({ outcome: 'soak-failed-undone', label: before })
+        expect(installs().at(-1)).toMatchObject({ outcome: 'soak-failed-undone', label: before, onNoGo: 'undo' })
         expect(run('scripts/release/show-live.mjs', ['off', '--production', 'test-show', '--why', 'get-out (test)']).code).toBe(0)
+    }, SLOW)
+
+    it('--on-no-go warn keeps the overlay after a NO-GO in the soak and says so (exit 10, logged); a wrong mode is a usage error (verify F7)', () => {
+        expect(run('scripts/release/show-live.mjs', ['on', '--production', 'test-show', '--why', 'warn mode (test)']).code).toBe(0)
+        const before = versionLabel(home).label
+        try {
+            expect(swap(packs.two, ['--on-no-go', 'maybe']).code).toBe(2)
+            const r = swap(packs.two, ['--checkpoint-cmd', 'true', '--go-cmd', 'false', '--soak', '0', '--on-no-go', 'warn'])
+            expect(r.code, r.out).toBe(10)
+            expect(r.out).toMatch(new RegExp(`NO-GO in the soak \\(check 1\\): ui\\.${short(c.two)} STAYS live \\(--on-no-go warn\\)`))
+            expect(r.out).toMatch(/undo: node scripts\/show\/hot-swap\.mjs --undo --production test-show/)
+            expect(versionLabel(home).label).toBe(`${before}+ui.${short(c.two)}`)
+            expect(installs().at(-1)).toMatchObject({ outcome: 'soak-failed-kept', onNoGo: 'warn', live: true })
+        } finally {
+            // never leave the next test a live show or this overlay, even when an expect above fails
+            if (versionLabel(home).label !== before) expect(undo().code).toBe(0)
+            expect(run('scripts/release/show-live.mjs', ['off', '--production', 'test-show', '--why', 'warn test over']).code).toBe(0)
+        }
+        expect(versionLabel(home).label).toBe(before)
     }, SLOW)
 
     it('--when-up runs the gate again at the moment the target answers', () => {
@@ -306,6 +412,40 @@ describe('rollback drill', () => {
         expect(d.steps.map((s) => s.name)).toEqual(['install base (N-1)', 'hot swap overlay (N)', 'rollback N -> N-1', 'forward N-1 -> N', 'restore from the manifest'])
         expect(d.steps.every((s) => s.ok && Number.isInteger(s.ms) && s.ms >= 0)).toBe(true)
         expect(d.steps[2].label).toBe('1.0.0-t.base')
-        expect(d.steps[3].label).toMatch(/^1\.0\.0-t\.base\+ui\.[0-9a-f]{8}$/)
+        expect(d.steps[3].label).toMatch(/^1\.0\.0-t\.base\+uim\.[0-9a-f]{8}$/) // no commit in a drill overlay: uim. (verify F3)
+        expect(d.laser).toMatch(/^not read: no server on the replica/)
+        expect(d.steps.every((s) => s.laserHeld === null)).toBe(true)
+    }, SLOW)
+
+    it('reads the laser state before and after each step from --laser-url; a change in a step that must hold fails the drill (verify, brief point 5)', async () => {
+        let asked = 0
+        let armed = true
+        let flipAt = 0
+        const stub = http.createServer((req, res) => {
+            if (req.url !== '/serverXR/laser/api/state') { res.statusCode = 404; res.end(); return }
+            asked++
+            if (asked === flipAt) armed = !armed
+            res.setHeader('content-type', 'application/json')
+            res.end(JSON.stringify({ cubes: [{ armed, stop: null }] }))
+        })
+        await new Promise((resolve) => stub.listen(0, '127.0.0.1', resolve))
+        const url = `http://127.0.0.1:${stub.address().port}`
+        const drill = (dir) => runAsync('scripts/release/drill.mjs', ['--home', path.join(T, dir), '--production', 'test-show', '--base', packs.base, '--overlay', packs.one, '--laser-url', url])
+        const last = () => readJsonl(path.join(T, 'show', 'test-show', 'drills.log')).at(-1)
+        try {
+            let r = await drill('drill-laser-held')
+            expect(r.code, r.out).toBe(0)
+            expect(last().laser).toBe('held on every step')
+            expect(last().steps.map((s) => [s.laserBefore, s.laserAfter, s.laserHeld])).toEqual(Array(5).fill(['armed true, stop null', 'armed true, stop null', true]))
+            asked = 0
+            flipAt = 4 // the 4th read is the one after the hot swap step: install (before 1, after 2), hot swap (before 3, after 4)
+            r = await drill('drill-laser-moved')
+            expect(r.code, r.out).toBe(1)
+            expect(r.out).toMatch(/laser CHANGED armed true, stop null -> armed false, stop null/)
+            expect(last()).toMatchObject({ ok: false, laser: 'CHANGED during a step' })
+            expect(last().steps.at(-1)).toMatchObject({ name: 'hot swap overlay (N)', ok: false, laserHeld: false, laserMustHold: true })
+        } finally {
+            await new Promise((resolve) => stub.close(resolve))
+        }
     }, SLOW)
 })

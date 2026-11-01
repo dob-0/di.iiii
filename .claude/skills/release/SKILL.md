@@ -53,15 +53,16 @@ Method, schema and limits: `scripts/release/README.md` (V: written 2026-11-01, t
 3. **Install or hot swap:**
    - `node scripts/show/install.mjs <pack> --production <name> --host <user@host>`;
    - or `node scripts/show/hot-swap.mjs <pack> …` for the desk ui only, with no restart.
-   - The record's 3 lines come first. BLOCK, untested or not on a remote is refused unless `--accept '<reason>'`, which is logged in `~/di-health/show/<name>/installs.log`.
+   - The record's 3 lines come first. BLOCK, untested, not on a remote, no review, a verdict the gate cannot read (UNKNOWN) or a PASS with an open must-fix is refused unless `--accept '<reason>'`, which is logged in `~/di-health/show/<name>/installs.log`.
    - `--when-up` re-checks the gate when it fires.
 4. **Show live** (`node scripts/release/show-live.mjs on --production <name> --why …` at doors, `off` at get-out):
    - no full install;
-   - an overlay needs green tests on the exact commit, no BLOCK, `--checkpoint-cmd` first and a GO soak after (`--go-cmd`, default 60 s, unvalidated);
+   - an overlay needs green tests on the exact commit, a readable PASS review with no open must-fix, `--checkpoint-cmd` first and a GO soak after (`--go-cmd`, default 60 s, unvalidated);
+   - a NO-GO in the soak undoes it (`--on-no-go undo`, the default) or keeps it with exit 10 (`--on-no-go warn`);
    - `--accept` does not lift the freeze.
-5. **The label:** `di version` prints `<base>+ui.<sha8>` per overlay, derived from PATCHES.
+5. **The label:** `di version` prints `<base>+ui.<commit sha8>` per overlay, or `+uim.<manifest sha8>` when no record named a commit; derived from PATCHES.
 6. **Restore:** `node scripts/release/restore.mjs --manifest <the checkpoint's release-manifest.json> …`.
-7. **Before each show:** `node scripts/release/drill.mjs --home <replica> --production <name> --base <pack N-1> --overlay <pack N>`. It times N → N-1 → N and the restore on a replica, never the installed di.
+7. **Before each show:** `node scripts/release/drill.mjs --home <replica> --production <name> --base <pack N-1> --overlay <pack N>`. It times N → N-1 → N and the restore on a replica, never the installed di. With `--laser-url` (a server that serves the replica) it reads the laser before and after each step; a step that moves it fails the drill.
 
 ## 7. End
 Seen on the real surface: open the live URL, phone and desktop (`npm run verify:surfaces`, V in package.json), then `job-end-gate`.

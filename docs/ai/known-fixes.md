@@ -1752,3 +1752,18 @@ Guard: `scripts/release/release.test.js`:
 - "two hot swaps: `di version` shows both overlays, PATCHES only grows, …";
 - "refuses a BLOCKed build (exit 4, logged) …";
 - "refuses an untested build and a commit that is on no remote".
+
+## The release gate passed every review verdict it could not read (2026-11-01, S10 round 2)
+Symptom: the verify of PR #1240 fed the gate one green, pushed record per review form. "Verdict: **FIX**. 10 must-fix", "NOT READY",
+"REQUEST CHANGES (small) … (M1)" and "## Verdict: BLOCK" (the verdict on the heading line) all gave GATE PASS, also while the show was
+live. The parser read 45 of the 47 review files then on aylmo as UNKNOWN. A record made without `--review` passed too.
+Cause: `parseReview` knew 6 BLOCK and 7 PASS single words and read only the line under the heading; `evaluateGate` stopped only on
+BLOCK, so UNKNOWN and "no review" added no reason. A PASS dropped its must-fix ids.
+Fix: `scripts/release/lib.mjs`.
+- Verdict phrases (NOT READY, REQUEST CHANGES, CHANGES REQUESTED, FIX, DO NOT MERGE, NO GO …), and the heading line is read.
+- UNKNOWN, no review, and a PASS with an open must-fix are refused unless `--accept`; while live, nothing lets them in.
+- Also from the same verify: `uim.<manifest8>` for an overlay with no commit (F3), `--on-no-go undo|warn` (F7), and the drill reads the
+  laser before and after each step (brief point 5).
+Guard: `scripts/release/release.test.js` "reads every verdict form our reviews use …" (15 forms plus the gate), "a swap with no record is
+labelled uim.…", "--on-no-go warn keeps the overlay …" and "reads the laser state before and after each step …". On the round-1 code,
+7 of the 18 tests fail.

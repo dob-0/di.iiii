@@ -51,15 +51,18 @@ Self-attested means the same lead builds the pack and writes the record. That is
 The gate recomputes the digest and refuses a record for another pack. A missing or unknown field also refuses. SLSA verification says unrecognised parameters SHOULD fail.
 
 ## The gate
-- **Outside a live show** it refuses a build that is BLOCKed, untested, or on no remote branch, unless `--accept '<reason>'` is given.
+- **Outside a live show** it refuses a build that is BLOCKed, untested, on no remote branch, or whose review is missing, unreadable or a PASS with an open must-fix, unless `--accept '<reason>'` is given.
   - Untested means no green "Tests N passed" with N > 0 on the exact commit, from a clean tree.
+  - The verdict is read from `## Verdict: X`, else the first line under `## Verdict`, else a `Verdict:` line. It is BLOCK or PASS only when it starts with a known phrase; the BLOCK phrases include NOT READY, REQUEST CHANGES, CHANGES REQUESTED, FIX, DO NOT MERGE, NO-GO and FAIL. Anything else is UNKNOWN and refused, as SLSA verification fails an unrecognised field (verify F1, 2026-11-01).
+  - A PASS that names a must-fix id (M1, or F1 in a "must-fix" sentence) is read as open unless that sentence says fixed, closed, resolved or addressed (verify F4).
+  - At gate time the review file is read again. The worse of the recorded and the fresh verdict wins (BLOCK > UNKNOWN > PASS).
   - Every attempt is a line in `~/di-health/show/<production>/installs.log` (`DI_SHOW_DIR`), with the reason of every override.
   - This is stronger than Binary Authorization's boolean break-glass label, which logs every break-glass deploy but carries no reason.
 - **While the show is live** (the `LIVE` flag), the freeze is hard and `--accept` cannot lift it:
   - no full install;
-  - a ui overlay needs a matching record, green tests on the exact commit and no BLOCK;
+  - a ui overlay needs a matching record, green tests on the exact commit, and a review on the record that reads PASS with no open must-fix;
   - a checkpoint first (`--checkpoint-cmd`), and a GO soak after (`--go-cmd` or the built-in page + laser check, default 60 s);
-  - a NO-GO in the soak undoes the overlay at once.
+  - a NO-GO in the soak undoes the overlay at once (`--on-no-go undo`, the default). With `--on-no-go warn` (or `DI_SHOW_ON_NO_GO=warn`) the overlay stays, the undo command is printed and the exit is 10. Which one is the show's rule is the owner's decision (verify F7, an owed row).
   - This maps onto ITIL 4's emergency-change minimum: the same testing, assessment and authorization, while documentation may follow (RESEARCH-show-safety §7, secondary source).
   - The "ui-only overlay" class itself has no source: **unvalidated**.
 - `--when-up` runs the whole gate again at the moment the target answers. Tonight's take 4 would have fired mid-show on a 90-minute-old check.
@@ -83,7 +86,7 @@ After the swap:
 
 On a filesystem without `renameat2` it falls back to three renames and says "NOT atomic".
 
-The label is `<base version>+<id>` for each PATCHES line, for example `0.4.4-look.e3ca4567+ui.63d9dc1d+ui.7080f534`. It is derived, never typed. The id is `ui.` plus the commit's first 8 hex from the record; with no record, the manifest's sha8.
+The label is `<base version>+<id>` for each PATCHES line, for example `0.4.4-look.e3ca4567+ui.63d9dc1d+ui.7080f534`. It is derived, never typed. The id is `ui.` plus the commit's first 8 hex from the record. With no record (a swap through `--accept`, or the drill) it is `uim.` plus the manifest's sha8, so the prefix says which kind it is (verify F3); `di version --json` shows `commit: null` for it.
 
 `installedVersion()` stays the base version, because update and rollback compare base versions.
 
@@ -97,6 +100,9 @@ Every sha256 is checked before anything is touched.
 - **Not run against a real show machine.** The stage Mac is live. The ssh route (`--host`), the rsync copy, the Hyprland F5 reload and the served-file check are carried from the scripts that ran on it on 2026-10-31/11-01, but this code has run only on aylmo. The first real install through the gate is the owner's window, after the show.
 - **The drill covers less than a real update.** It uses `replica-update.mjs`: the same unpack, `activate()` and `pruneVersions()` as `di update`, but no `npm ci`, no smoke test and no service restart.
 - **The drill's times were measured on aylmo, on tmpfs.** They are not the Mac's disk.
-- **The drill does not read the laser yet.** The laser state is read only when `--laser-url` points at a server that serves the replica.
+- **The drill reads the laser only from a server.** With `--laser-url` it records the state before and after every step, and a hot swap, rollback or forward step that moves it fails the drill (tested against a loopback stub of the state route). On aylmo no server serves the replica, so the drill evidence says "not read". Owed: run the replica's own server on a scratch port (it needs `npm ci` in the replica), or read the laser in the stage rehearsal after the show.
+- **The freeze flag is local and turned by hand** (verify F5). `show-live.mjs on` writes `LIVE` under `~/di-health/show/<production>/` on the machine that runs the swap. A swap run from another machine, or a show where nobody turned it on, gets no freeze. Owed: S13's `di show go` turns it with the show.
+- **"Green tests" is any test command with N > 0 on the exact commit** (verify F6). The header shows the command, so a person can judge the scope; the gate does not. Owed: a production names its required test command, and the gate compares it while live.
+- **The verdict reader is a phrase list over free text, not a schema.** Measured 2026-11-01 04:05 on the 57 review, judge and verify files under `~/work/agent-reports-*`: 42 UNKNOWN (no verdict it can read: refused now, passed in round 1), 12 BLOCK, 3 PASS. A form it does not know errs on the side of refusing.
 - **The 60 s soak is unvalidated.** S13 owns `di show go`. Until then the built-in check is "the three desk pages answer 200 and the laser state reads".
 - **Clone cost.** A clone is a full copy where the filesystem has no reflink: 136 MB per swap for the 0.4.4 release measured here. `di update` prunes the `.before-` and `.undone-` folders; the bundles in `overlays/` stay.

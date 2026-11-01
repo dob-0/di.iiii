@@ -6,8 +6,10 @@
 //
 // Steps, each timed and checked by its label: install the base pack (N-1), hot-swap the overlay (N), keep the
 // manifest (what a checkpoint keeps), roll back N -> N-1 (undo), forward N-1 -> N (the kept overlay bundle), and a
-// full restore from the manifest. The laser state is read before every step from --laser-url when a server serves the
-// replica; without one the line says "not read". Results: <DI_SHOW_DIR>/<production>/drills.log (one JSON line per
+// full restore from the manifest. The laser state is read before AND after every step from --laser-url when a server
+// serves the replica, and each step records laserHeld (true, false, or null = not read). The hot swap, the rollback and
+// the forward step must not move the laser (no restart): a change there fails the step and the drill (audit S10 verify,
+// brief point 5). Without --laser-url every line says "not read". Results: <DI_SHOW_DIR>/<production>/drills.log (one JSON line per
 // drill) and a table here. The replica uses scripts/release/replica-update.mjs, so `npm ci`, the smoke test and the
 // service restart of a real `di update` are NOT in these times (stated in every result line).
 import fs from 'node:fs'
@@ -42,15 +44,19 @@ main(async () => {
     fs.mkdirSync(path.join(home, 'scratch'), { recursive: true })
     const label = async () => (await runTarget(target, ['label'], { quiet: true })).stdout.trim()
     const steps = []
-    const step = async (name, fn, want) => {
-        const laser = await laserState(flags['laser-url'])
+    const step = async (name, fn, want, { holds = false } = {}) => {
+        const laserBefore = await laserState(flags['laser-url'])
         const t0 = performance.now()
         const r = await fn()
         const ms = Math.round(performance.now() - t0)
         const got = await label()
-        const ok = r.code === 0 && (!want || got === want())
-        steps.push({ name, ms, ok, label: got, laserBefore: laser, exit: r.code })
-        say(`${ok ? 'ok  ' : 'FAIL'} ${String(ms).padStart(7)} ms  ${name.padEnd(28)} ${got}`)
+        const laserAfter = await laserState(flags['laser-url'])
+        const read = !laserBefore.startsWith('not read') && !laserAfter.startsWith('not read')
+        const laserHeld = read ? laserBefore === laserAfter : null
+        const ok = r.code === 0 && (!want || got === want()) && !(holds && laserHeld === false)
+        steps.push({ name, ms, ok, label: got, laserBefore, laserAfter, laserHeld, laserMustHold: holds, exit: r.code })
+        const laser = laserHeld === null ? 'laser not read' : laserHeld ? `laser held (${laserAfter})` : `laser CHANGED ${laserBefore} -> ${laserAfter}`
+        say(`${ok ? 'ok  ' : 'FAIL'} ${String(ms).padStart(7)} ms  ${name.padEnd(28)} ${got}  ${laser}`)
         return ok
     }
 
@@ -68,11 +74,11 @@ main(async () => {
         async () => { n1 = await label(); return true },
         () => step('hot swap overlay (N)', async () => {
             const b = buildBundle(overlay)
-            patch = { id: `ui.${b.sha8}`, at: isoNow(), who: who(), pack: path.basename(overlay), packSha256: sha256File(overlay), commit: null, manifest: b.sha8, dirs: b.dirs, files: b.files, decision: 'drill', accept: 'rollback drill on a replica', live: false }
+            patch = { id: `uim.${b.sha8}`, at: isoNow(), who: who(), pack: path.basename(overlay), packSha256: sha256File(overlay), commit: null, manifest: b.sha8, dirs: b.dirs, files: b.files, decision: 'drill', accept: 'rollback drill on a replica', live: false }
             const r = await runTarget(target, ['apply', stamp(), b64(patch)], { input: b.bundle, quiet: true })
             fs.rmSync(b.tmp, { recursive: true, force: true })
             return r
-        }, () => `${n1}+${patch.id}`),
+        }, () => `${n1}+${patch.id}`, { holds: true }),
         async () => {
             n = await label()
             const m = await runTarget(target, ['manifest'], { quiet: true })
@@ -80,11 +86,11 @@ main(async () => {
             fs.writeFileSync(path.join(home, 'scratch', 'drill-manifest.json'), m.stdout)
             return m.code === 0
         },
-        () => step('rollback N -> N-1', () => runTarget(target, ['undo', stamp()], { quiet: true }), () => n1),
+        () => step('rollback N -> N-1', () => runTarget(target, ['undo', stamp()], { quiet: true }), () => n1, { holds: true }),
         () => step('forward N-1 -> N', () => {
             const { bundle, bundleSha256, before, ...line } = manifest.overlays[0]
             return runTarget(target, ['apply', stamp(), b64(line), '--bundle', bundle], { quiet: true })
-        }, () => n),
+        }, () => n, { holds: true }),
         () => step('restore from the manifest', async () => {
             const r = await restoreFromManifest(target, manifest, { quiet: true })
             return { code: r.code }
@@ -96,6 +102,8 @@ main(async () => {
     const result = {
         at: isoNow(), who: who(), host: os.hostname(), replica: home, base: path.basename(base), overlay: path.basename(overlay),
         n1, n, ok, steps, totalMs: steps.reduce((s, x) => s + x.ms, 0),
+        laser: !flags['laser-url'] ? 'not read: no server on the replica (give --laser-url)'
+            : steps.some((s) => s.laserHeld === false) ? 'CHANGED during a step' : steps.every((s) => s.laserHeld === true) ? 'held on every step' : 'partly read',
         limits: 'replica: no npm ci, no smoke test, no service restart in these times; laser read only with --laser-url'
     }
     appendJsonl(path.join(dir, 'drills.log'), result)

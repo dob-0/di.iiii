@@ -21,7 +21,7 @@ export const REPLICA_UPDATE = path.join(HERE, 'replica-update.mjs')
 export const STATEMENT_TYPE = 'https://in-toto.io/Statement/v1'
 export const PREDICATE_TYPE = 'https://diiii.xyz/attestations/release-record/v1'
 export const UI_DIRS = ['serverXR/src/showDesk/ui', 'serverXR/src/laser/ui', 'serverXR/src/lighting/ui']
-export const EXIT = { ok: 0, usage: 2, sha: 3, refused: 4, down: 5, target: 6, checkpoint: 7, soak: 8, label: 9 }
+export const EXIT = { ok: 0, usage: 2, sha: 3, refused: 4, down: 5, target: 6, checkpoint: 7, soak: 8, label: 9, soakKept: 10 }
 const PREDICATE_KEYS = ['attestation', 'recordedAt', 'recordedBy', 'builtAt', 'pack', 'commit', 'commitFrom', 'remote', 'tests', 'review']
 const REQUIRED_KEYS = ['attestation', 'pack', 'commit', 'remote', 'tests', 'review']
 
@@ -103,28 +103,59 @@ export const parseTestSummary = (text) => {
     return { line, passed: count('passed'), failed: count('failed'), skipped: count('skipped'), todo: count('todo') }
 }
 
-// ---- a review file: the verdict under "## Verdict" (or a "Verdict:" line) and the must-fix ids it names
-const BLOCK_WORDS = ['BLOCK', 'BLOCKED', 'REJECT', 'REJECTED', 'NO-GO', 'FAIL']
-const PASS_WORDS = ['PASS', 'PASSED', 'APPROVE', 'APPROVED', 'SHIP', 'GO', 'LGTM']
+// ---- a review file: the verdict and the must-fix ids it names (audit S10 verify F1 + F4, 2026-11-01).
+// The verdict is the text after "## Verdict:" on the heading line, else the first line of the paragraph under a
+// "## Verdict" heading, else a "Verdict:" line. It is BLOCK or PASS only when it starts with a known phrase (whole
+// words, markdown stripped, the longest phrase first). Anything else is UNKNOWN, and the gate refuses UNKNOWN: the
+// first parser knew 6 + 7 single words and read 45 of our 47 reviews as UNKNOWN, which the gate then passed.
+// Must-fix ids, for every verdict: each M<n> in the verdict paragraph, plus a short id (F1, P2) in a sentence that says
+// "must-fix". A sentence that says fixed/closed/resolved/addressed, and not "not", "until", "still"…, names none.
+const byLength = (phrases) => [...phrases].sort((a, b) => b.length - a.length)
+export const BLOCK_PHRASES = byLength(['BLOCK', 'BLOCKED', 'BLOCKING', 'REJECT', 'REJECTED', 'REFUSED', 'NO-GO', 'NO GO', 'FAIL',
+    'FAILED', 'FIX', 'NOT READY', 'REQUEST CHANGES', 'REQUESTED CHANGES', 'CHANGES REQUESTED', 'CHANGES NEEDED', 'NEEDS CHANGES',
+    'DO NOT MERGE', 'DO NOT SHIP'])
+export const PASS_PHRASES = byLength(['PASS', 'PASSED', 'APPROVE', 'APPROVED', 'SHIP', 'GO', 'LGTM'])
+const startsWithPhrase = (words, phrases) => phrases.some((p) => words.startsWith(p) && !/[A-Z0-9-]/.test(words.charAt(p.length)))
+const verdictWords = (line) => String(line || '').replace(/[*_`>]/g, ' ').replace(/^[\s\-–—•]+/, '').replace(/\s+/g, ' ').trim().toUpperCase()
+const VERDICT_HEADING = /^#{1,6}\s*verdict\b/i
+const VERDICT_LINE = /^[*_\s]*verdict[*_\s]*[:—–-]\s*/i
+const FIXED = /\b(fixed|closed|resolved|addressed)\b/i
+const STILL_OPEN = /\b(not|until|unless|before|still|open|needs?|once)\b/i
+const mustFixIds = (para) => {
+    const ids = []
+    for (const sentence of para.join(' ').split(/(?<=[.;!?])\s+/)) {
+        if (FIXED.test(sentence) && !STILL_OPEN.test(sentence)) continue
+        const named = [...(sentence.match(/\bM\d+\b/g) || []), ...(/must[- ]fix/i.test(sentence) ? sentence.match(/\b[A-Z]{1,2}\d{1,3}\b/g) || [] : [])]
+        for (const id of named) if (!ids.includes(id)) ids.push(id)
+    }
+    return ids
+}
 export const parseReview = (text) => {
     const lines = String(text).split(/\r?\n/)
-    const start = lines.findIndex((l) => /^#{1,6}\s*verdict\b/i.test(l.trim()))
-    let para = []
-    if (start >= 0) {
-        for (const l of lines.slice(start + 1)) {
+    // the lines after line i in its paragraph; skipBlank: the paragraph may begin after blank lines (under a heading)
+    const follow = (i, skipBlank) => {
+        const out = []
+        for (const l of lines.slice(i + 1)) {
             if (/^#{1,6}\s/.test(l.trim())) break
-            if (!l.trim()) { if (para.length) break; continue }
-            para.push(l.trim())
+            if (!l.trim()) { if (out.length || !skipBlank) break; continue }
+            out.push(l.trim())
         }
+        return out
+    }
+    let para = []
+    const start = lines.findIndex((l) => VERDICT_HEADING.test(l.trim()))
+    if (start >= 0) {
+        const rest = lines[start].trim().replace(VERDICT_HEADING, '')
+        const inline = /^[*_\s]*[:—–-]/.test(rest) ? rest.replace(/^[*_\s]*[:—–-]\s*/, '').trim() : ''
+        para = inline ? [inline, ...follow(start, true)] : follow(start, true)
     } else {
-        const hit = lines.find((l) => /^[*_\s]*verdict[*_\s]*[:—-]/i.test(l))
-        if (hit) para = [hit.replace(/^[*_\s]*verdict[*_\s]*[:—-]\s*/i, '').trim()]
+        const at = lines.findIndex((l) => VERDICT_LINE.test(l))
+        if (at >= 0) para = [lines[at].replace(VERDICT_LINE, '').trim(), ...follow(at, false)]
     }
     const first = (para[0] || '').replace(/^[*_`\s]+/, '')
-    const word = (/^([A-Za-z-]+)/.exec(first)?.[1] || '').toUpperCase()
-    const verdict = BLOCK_WORDS.includes(word) ? 'BLOCK' : PASS_WORDS.includes(word) ? 'PASS' : 'UNKNOWN'
-    const mustFixOpen = verdict === 'BLOCK' ? [...new Set(para.join(' ').match(/\bM\d+\b/g) || [])] : []
-    return { verdict, verdictLine: first.slice(0, 200), mustFixOpen }
+    const words = verdictWords(first)
+    const verdict = startsWithPhrase(words, BLOCK_PHRASES) ? 'BLOCK' : startsWithPhrase(words, PASS_PHRASES) ? 'PASS' : 'UNKNOWN'
+    return { verdict, verdictLine: first.slice(0, 200), mustFixOpen: mustFixIds(para) }
 }
 export const reviewOf = (file) => {
     const text = fs.readFileSync(file, 'utf8')
@@ -258,14 +289,19 @@ export const writeRecord = (record, pack, out = null) => {
     return { beside, stored }
 }
 
-// A review re-read at gate time: a file that turned BLOCK after the record was written counts (the worse verdict wins).
+// A review re-read at gate time with today's parser: the worse of the recorded and the fresh verdict wins (a file that
+// turned BLOCK or unreadable after the record counts; BLOCK > UNKNOWN > PASS), and the open must-fix ids of both stay.
+const VERDICT_RANK = { PASS: 0, UNKNOWN: 1, BLOCK: 2 }
+const rankOf = (verdict) => VERDICT_RANK[verdict] ?? 1
 const reviewNow = (review) => {
     if (!review) return null
     try {
         const text = fs.readFileSync(review.file, 'utf8')
-        if (sha256Text(text) === review.sha256) return { ...review, changed: false }
         const fresh = parseReview(text)
-        return fresh.verdict === 'BLOCK' ? { ...review, ...fresh, changed: true } : { ...review, changed: true }
+        const was = rankOf(review.verdict)
+        const now = rankOf(fresh.verdict)
+        const ids = [...new Set([...(review.mustFixOpen || []), ...(now >= was ? fresh.mustFixOpen : [])])]
+        return { ...review, ...(now > was ? fresh : {}), mustFixOpen: ids, changed: sha256Text(text) !== review.sha256 }
     } catch {
         return { ...review, missingNow: true }
     }
@@ -294,7 +330,7 @@ const headerLines = ({ pack, digest, p, review }) => {
     const tests = !t ? 'NONE: no test run on this commit'
         : `${t.failed > 0 || t.exitCode !== 0 ? 'RED ' : ''}${t.result || 'no "Tests N passed" line'} · ${t.command} @ ${String(t.commit).slice(0, 8)}${t.commit !== p.commit ? ' (ANOTHER commit)' : ''}${t.clean ? '' : ' (dirty tree)'}`
     const rev = !review ? 'none recorded'
-        : `${review.verdict}${review.mustFixOpen?.length ? ` · open must-fix ${review.mustFixOpen.join(', ')}` : ''}${review.changed ? ' (file changed since the record)' : ''} · ${review.file}`
+        : `${review.verdict}${review.verdict === 'UNKNOWN' ? ` ("${review.verdictLine || 'no verdict line'}")` : ''}${review.mustFixOpen?.length ? ` · open must-fix ${review.mustFixOpen.join(', ')}` : ''}${review.changed ? ' (file changed since the record)' : ''} · ${review.file}`
     return [
         `release  ${name}  sha256 ${digest.slice(0, 12)}  commit ${p.commit.slice(0, 8)} ${where}  · self-attested ${String(p.recordedAt || '').slice(0, 16)}`,
         `tests    ${tests}`,
@@ -305,8 +341,11 @@ const headerLines = ({ pack, digest, p, review }) => {
 /**
  * The gate. `action` is 'install' (a full pack: engine, config, ui) or 'hot-swap' (the ui folders only).
  * Outside a live show every failed check is soft: --accept '<reason>' lets it through, logged.
+ * A review must be on the record and read as PASS with no open must-fix: no review, an UNKNOWN verdict (the parser
+ * cannot read it) and a PASS that names an open must-fix are refused like a BLOCK (audit S10 verify F1, F2, F4).
  * While the show is live (scripts/release/show-live.mjs) the freeze is hard: no full install; an overlay needs
- * a matching record, green tests on the exact commit, no BLOCK, a checkpoint first and a GO soak after.
+ * a matching record, green tests on the exact commit, a readable PASS review with no open must-fix, a checkpoint first
+ * and a GO soak after.
  * `sharedChanged` is the list of shared/ files the pack changes against the live release (null: not known yet).
  */
 export const evaluateGate = ({ pack, recordFile = null, action, live = null, accept = null, sharedChanged = [], freeze = {} }) => {
@@ -326,12 +365,17 @@ export const evaluateGate = ({ pack, recordFile = null, action, live = null, acc
     const testsGreen = Boolean(t && t.commit === p.commit && t.clean === true && t.exitCode === 0 && t.passed > 0 && t.failed === 0)
     const review = p ? reviewNow(p.review) : null
     const blocked = review?.verdict === 'BLOCK'
+    const unread = Boolean(review) && !blocked && review.verdict !== 'PASS'
+    const openFix = review && !blocked && !unread ? review.mustFixOpen || [] : []
     const soft = []
     const hard = []
     if (!p) soft.push(`${problems.join('; ')}: untested, remote and review unknown`)
     else {
         if (!testsGreen) soft.push(untestedWhy(t, p.commit))
+        if (!review) soft.push('no review recorded (node scripts/release/record.mjs pack <pack> … --review <review.md>)')
         if (blocked) soft.push(`review BLOCK${review.mustFixOpen?.length ? ` (open must-fix ${review.mustFixOpen.join(', ')})` : ''}`)
+        if (unread) soft.push(`review verdict not readable ("${review.verdictLine || 'no verdict line'}"): the gate reads PASS or BLOCK words only`)
+        if (openFix.length) soft.push(`review PASS with open must-fix ${openFix.join(', ')}`)
         if (!p.remote?.onRemote) soft.push(`commit ${p.commit.slice(0, 8)} is on no ${p.remote?.remote || 'remote'} branch`)
     }
     if (live) {
@@ -339,7 +383,10 @@ export const evaluateGate = ({ pack, recordFile = null, action, live = null, acc
         if (action === 'hot-swap') {
             if (!p) hard.push('the show is live: an overlay needs a release record that matches the pack')
             if (p && !testsGreen) hard.push('the show is live: an overlay needs green tests on the exact commit')
+            if (p && !review) hard.push('the show is live: an overlay needs a review on its record')
             if (blocked) hard.push('the show is live: a BLOCKed build never goes in')
+            if (unread) hard.push('the show is live: a review the gate cannot read never goes in')
+            if (openFix.length) hard.push(`the show is live: a build with open must-fix ${openFix.join(', ')} never goes in`)
             if (!freeze.checkpoint) hard.push('the show is live: a checkpoint first (give --checkpoint-cmd or DI_SHOW_CHECKPOINT_CMD)')
             if (!freeze.go) hard.push('the show is live: a GO soak after (give --go-cmd, DI_SHOW_GO_CMD or --server)')
         }
@@ -349,7 +396,7 @@ export const evaluateGate = ({ pack, recordFile = null, action, live = null, acc
     }
     const decision = hard.length ? 'refused' : soft.length ? (accept ? 'accepted' : 'refused') : 'pass'
     return {
-        decision, hard, soft, digest, record: p ? record : null, recordFile: where, testsGreen, blocked,
+        decision, hard, soft, digest, record: p ? record : null, recordFile: where, testsGreen, blocked, unread, openFix,
         lines: headerLines({ pack, digest, p, review })
     }
 }
