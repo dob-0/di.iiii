@@ -120,7 +120,7 @@ def compress_images(max_side=2048):
         if max(im.size) > max_side:
             k = max_side / max(im.size); im.scale(int(im.size[0] * k), int(im.size[1] * k))
         a = np.empty(im.size[0] * im.size[1] * 4, dtype=np.float32); im.pixels.foreach_get(a)
-        if a[3::4].min() > 0.999 and not im.name.endswith('_grain') and im.users:
+        if a[3::4].min() > 0.999 and im.users:
             # re-encode as a real JPEG file and swap it in (the exporter keeps a file's own format under 'AUTO')
             tmp = os.path.join(tempfile.mkdtemp(), re.sub(r'\W', '_', im.name) + '.jpg')
             st = scene.render.image_settings; st.file_format = 'JPEG'; st.quality = 85; st.color_mode = 'RGB'

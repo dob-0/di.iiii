@@ -39,7 +39,11 @@ for o in bpy.context.scene.objects:
     rid_ = o.name.split(':')[0]; old_ = room_slab.get(rid_)
     if not old_ or (hi[0] - lo[0]) * (hi[1] - lo[1]) > (old_[1][0] - old_[0][0]) * (old_[1][1] - old_[0][1]): room_slab[rid_] = (lo, hi)   # the room's biggest slab
     areas.append({'minX': r(lo[0] - 0.15), 'maxX': r(hi[0] + 0.15), 'minZ': r(-hi[1] - 0.15), 'maxZ': r(-lo[1] + 0.15)})
-if areas: rec['walkableAreas'] = areas
+if areas:
+    # round 6: the model's highest point (glTF y = Blender z) is the fly ceiling, so Fly cannot rise out of the building (viewer: ceilingOfAreas)
+    top = max((o.matrix_world @ v.co)[2] for o in bpy.context.scene.objects if o.type == 'MESH' for v in o.data.vertices)
+    for a_ in areas: a_['maxY'] = r(top)
+    rec['walkableAreas'] = areas
 if plan.get('spawn_xy'):      # plan frame (x across, y along) -> glTF frame (z = -y)
     rec['spawn'] = {'x': plan['spawn_xy'][0], 'z': -plan['spawn_xy'][1], 'altY': 1.6}
     if plan.get('look_xy'): rec['spawn']['look'] = {'x': plan['look_xy'][0], 'z': -plan['look_xy'][1]}
@@ -123,7 +127,9 @@ if floorp and room_slab:
 # Room views (fix4, ledger N1756): plan 'room_views' [{id,label,pos:[x,y,z],look:[x,y,z]}] in the plan frame become named views, so a tester or the owner
 # reaches a room by a button, at a pose that was checked against the room's frames (compare_*.png). Plan frame (x, y, z up) -> glTF (x, z, -y).
 for rv in plan.get('room_views', []):
+    # a room_view whose id equals an automatic view's id (room-<room>) REPLACES it (round 6: spawn points that do not face a wall)
+    rec['views'] = [v for v in rec.get('views', []) if v.get('id') != rv['id']]
     rec.setdefault('views', []).append({'id': rv['id'], 'label': rv['label'], 'position': [r(rv['pos'][0]), r(rv['pos'][2]), r(-rv['pos'][1])],
-                                        'target': [r(rv['look'][0]), r(rv['look'][2]), r(-rv['look'][1])], 'fov': rv.get('fov', 65)})
+                                        'target': [r(rv['look'][0]), r(rv['look'][2]), r(-rv['look'][1])], 'fov': rv.get('fov', 65), **({'link': True, 'live': False} if rv['id'].startswith('room-') else {})})
 json.dump(rec, open(outp, 'w'), indent=1)
 print('PLACE', rec['size'], src)

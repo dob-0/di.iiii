@@ -10,7 +10,7 @@ import { useXrAr } from '../hooks/useXrAr.js'
 import MadeWithBadge from './MadeWithBadge.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
-import { boundsCoveringAreas } from './walkableAreas.js'
+import { boundsCoveringAreas, ceilingOfAreas } from './walkableAreas.js'
 import { createSolidWallsKeeper, walkStep, SOLID_WALLS_MAX_TRIANGLES, SOLID_WALLS_MAX_TRIANGLES_PHONE } from './solidWalls.js'
 import HeadLight from './HeadLight.jsx'
 import { resolveHeadLight, headLightCastsShadow } from './headLight.js'
@@ -1007,7 +1007,8 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             player.z = dollied.z
         }
         if (fly && vert !== 0) {
-            player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, FLY_MIN_ALTITUDE, 60)
+            const flyTop = ceilingOfAreas(walkableAreas)
+            player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, FLY_MIN_ALTITUDE, flyTop === null ? 60 : Math.max(FLY_MIN_ALTITUDE, flyTop - 0.3))
         }
         if (!fly) {
             player.altY = THREE.MathUtils.lerp(player.altY, EYE_HEIGHT, Math.min(1, delta * 3))

@@ -76,3 +76,15 @@ export function boundsCoveringAreas(bounds, areas) {
     }
     return out
 }
+
+/**
+ * Fly ceiling (round 6): an authored area may carry `maxY`, the highest point of the model it frames. Fly stops there
+ * (the eye 0.3 m under it) instead of at the engine's 60 m, so a visitor cannot rise out of the roof of a floor plan.
+ * No area with a finite maxY: null, nothing changes.
+ */
+export function ceilingOfAreas(areas) {
+    if (!Array.isArray(areas)) return null
+    let top = null
+    for (const a of areas) if (Number.isFinite(a?.maxY)) top = top === null ? a.maxY : Math.max(top, a.maxY)
+    return top
+}

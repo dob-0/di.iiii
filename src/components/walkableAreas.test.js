@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { boundsCoveringAreas, confineToAreas, isInsideAreas, nearestPointInAreas } from './walkableAreas.js'
+import { boundsCoveringAreas, ceilingOfAreas, confineToAreas, isInsideAreas, nearestPointInAreas } from './walkableAreas.js'
 
 // A corridor running along -Z with one room opening off its left side, i.e.
 // the WCC floor plan in miniature.
@@ -63,5 +63,14 @@ describe('boundsCoveringAreas', () => {
         expect(boundsCoveringAreas(base, null)).toBe(base)
         expect(boundsCoveringAreas(base, [])).toBe(base)
         expect(boundsCoveringAreas(base, [{ minX: 'a' }])).toEqual(base)
+    })
+})
+
+describe('ceilingOfAreas', () => {
+    it('is the highest maxY of the areas, null when none declares one', () => {
+        expect(ceilingOfAreas([{ minX: 0, maxX: 1, minZ: 0, maxZ: 1, maxY: 8.15 }, { minX: 0, maxX: 1, minZ: 0, maxZ: 1, maxY: 4 }])).toBe(8.15)
+        expect(ceilingOfAreas([{ minX: 0, maxX: 1, minZ: 0, maxZ: 1 }])).toBeNull()
+        expect(ceilingOfAreas(null)).toBeNull()
+        expect(ceilingOfAreas([{ maxY: 'x' }])).toBeNull()
     })
 })

@@ -258,6 +258,14 @@ describe('the six views', () => {
         expect(byId.dj.position[1]).toBeCloseTo(2.9)
         expect(byId.dj.target[1]).toBeGreaterThan(byId.dj.position[1])
     })
+    it('top: a footprint far taller than the screen is turned a quarter so it fills the width (round 6)', () => {
+        const tall = { ...frame, bounds: { min: [0, 0, -72], max: [41, 8, 0] }, center: [20.5, 4, -36] }
+        const make = (aspect) => Object.fromEntries(computeViewPresets(tall, { rigBox: RIG_BOX, lampBox: LAMP_BOX, stageBox: STAGE_BOX, opening: OPENING, aspect }).map((p) => [p.id, p]))
+        const wide = make(16 / 9).top, square = make(1).top
+        expect(Math.abs(wide.position[0] - 20.5)).toBeGreaterThan(Math.abs(wide.position[2] - -36)) // the hair is on x: up is -x
+        expect(Math.abs(square.position[2] - -36)).toBeGreaterThan(Math.abs(square.position[0] - 20.5)) // a square window keeps far-end-up
+        expect(wide.position[1]).toBeLessThan(square.position[1] * 0.85 + 1) // nearer than the unturned plan would be
+    })
     it('top: straight down over the whole footprint, from outside the roof', () => {
         expect(byId.top.position[0]).toBeCloseTo(frame.center[0])
         expect(byId.top.position[1]).toBeGreaterThan(frame.roofTop)

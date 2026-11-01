@@ -562,10 +562,17 @@ export const computeViewPresets = (frame, {
         const fov = 18
         const halfX = (bounds.max[0] - bounds.min[0]) / 2
         const halfZ = (bounds.max[2] - bounds.min[2]) / 2
-        const d = Math.max(halfZ / tanHalf(fov), halfX / (tanHalf(fov) * safeAspect)) * 1.06
+        const dPortrait = Math.max(halfZ / tanHalf(fov), halfX / (tanHalf(fov) * safeAspect)) * 1.06
+        // Round 6: a footprint much longer in z than the screen allows (the 72 x 41 m Cinema House floor in a 16:9
+        // window filled 88 % of the height and 40 % of the width) is turned a quarter so its long side runs across
+        // the screen: far end at the right, entrance at the left. Only when that saves at least 20 % of the distance;
+        // every room that fits its screen keeps the old orientation (far end at the top).
+        const dLandscape = Math.max(halfX / tanHalf(fov), halfZ / (tanHalf(fov) * safeAspect)) * 1.2   // 1.2: the walls' tops are nearer the lens and the bottom edge was cut at 1.06 (measured)
+        const turned = dLandscape < dPortrait * 0.85
+        const d = turned ? dLandscape : dPortrait
         const c = frame.center
-        // A hair of +z so the screen's up is the room's -z (the far end at the top).
-        out.top = { position: [c[0], floorY + d, c[2] + d * 1e-4], target: [c[0], floorY, c[2]], fov, interior: false }
+        // A hair of +z so the screen's up is the room's -z (the far end at the top); turned: a hair of +x, up is -x, right is -z.
+        out.top = { position: [c[0] + (turned ? d * 1e-4 : 0), floorY + d, c[2] + (turned ? 0 : d * 1e-4)], target: [c[0], floorY, c[2]], fov, interior: false }
     }
     // 4 · Side section: from beyond the nearer long wall, square to the audience axis, a
     //     section plane just past the rig so everything between is cut away.

@@ -1291,7 +1291,9 @@ const normalizeWalkableAreas = (areas) => {
         const minZ = Math.min(ensureNumber(area.minZ, 0), ensureNumber(area.maxZ, 0))
         const maxZ = Math.max(ensureNumber(area.minZ, 0), ensureNumber(area.maxZ, 0))
         if (maxX - minX < 0.01 || maxZ - minZ < 0.01) continue
-        rects.push({ minX, maxX, minZ, maxZ })
+        // optional maxY: the highest point of the model the plan frames; Fly stops under it (src/components/walkableAreas.js ceilingOfAreas)
+        const maxY = Number(area.maxY)
+        rects.push(Number.isFinite(maxY) && maxY > 0 ? { minX, maxX, minZ, maxZ, maxY } : { minX, maxX, minZ, maxZ })
     }
     return rects.length ? rects : null
 }

@@ -25,4 +25,9 @@ describe('worldState.solidWalls', () => {
         const doc = normalizeProjectDocument({ worldState: { solidWalls: { enabled: true }, walkableAreas: [{ minX: -1, maxX: 1, minZ: -1, maxZ: 1 }] } })
         expect(doc.worldState.walkableAreas).toEqual([{ minX: -1, maxX: 1, minZ: -1, maxZ: 1 }])
     })
+
+    it('keeps an optional finite maxY on an area (the fly ceiling) and drops a bad one', () => {
+        const doc = normalizeProjectDocument({ worldState: { walkableAreas: [{ minX: -1, maxX: 1, minZ: -1, maxZ: 1, maxY: 8.15 }, { minX: 2, maxX: 3, minZ: 2, maxZ: 3, maxY: 'x' }] } })
+        expect(doc.worldState.walkableAreas).toEqual([{ minX: -1, maxX: 1, minZ: -1, maxZ: 1, maxY: 8.15 }, { minX: 2, maxX: 3, minZ: 2, maxZ: 3 }])
+    })
 })
