@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { confineToAreas, isInsideAreas, nearestPointInAreas } from './walkableAreas.js'
+import { boundsCoveringAreas, confineToAreas, isInsideAreas, nearestPointInAreas } from './walkableAreas.js'
 
 // A corridor running along -Z with one room opening off its left side, i.e.
 // the WCC floor plan in miniature.
@@ -49,5 +49,19 @@ describe('walkable areas', () => {
     it('nearestPointInAreas clamps onto the closest rectangle', () => {
         expect(nearestPointInAreas(AREAS, 0, 40)).toEqual({ x: 0, z: 10 })
         expect(nearestPointInAreas(AREAS, -30, -8)).toEqual({ x: -12, z: -8 })
+    })
+})
+
+describe('boundsCoveringAreas', () => {
+    const base = { minX: -22, maxX: 22, minZ: -22, maxZ: 22 }
+    it('grows the bounds to a declared plan, never shrinks them', () => {
+        const out = boundsCoveringAreas(base, [{ minX: -8, maxX: 38, minZ: -72, maxZ: 0 }])
+        expect(out).toEqual({ minX: -22, maxX: 38, minZ: -72, maxZ: 22 })
+        expect(boundsCoveringAreas(base, [{ minX: -1, maxX: 1, minZ: -1, maxZ: 1 }])).toEqual(base)
+    })
+    it('is the same bounds with no plan or a broken one', () => {
+        expect(boundsCoveringAreas(base, null)).toBe(base)
+        expect(boundsCoveringAreas(base, [])).toBe(base)
+        expect(boundsCoveringAreas(base, [{ minX: 'a' }])).toEqual(base)
     })
 })

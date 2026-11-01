@@ -17,6 +17,7 @@ import {
     keptByPlan,
     meshRole,
     orbitMaxDistance,
+    robustFloorY,
     outsideDistance,
     parseViewHash,
     presetForKey,
@@ -419,5 +420,19 @@ describe('reachInBox', () => {
     })
     it('leaves a camera already inside where it is', () => {
         expect(reachInBox([0, 5, 0], [0, 1.7, 50], box)).toBe(1)
+    })
+})
+
+describe('robustFloorY', () => {
+    const box = (x0, y0, z0, x1, y1, z1) => ({ min: [x0, y0, z0], max: [x1, y1, z1] })
+    it('ignores a small stair stub that goes down below the real floor', () => {
+        const slab = box(0, -0.3, 0, 10, 0, 30)
+        const stub = box(2, -2.6, 10, 3.2, 2.5, 12)   // the Cinema House basement stair stub
+        expect(robustFloorY([slab, stub])).toBe(-0.3)
+    })
+    it('is the plain minimum for one part, no parts, or all-equal parts', () => {
+        expect(robustFloorY([box(0, -1, 0, 5, 3, 5)])).toBe(-1)
+        expect(robustFloorY([])).toBeNull()
+        expect(robustFloorY([box(0, 0.2, 0, 4, 1, 4), box(0, -0.1, 0, 4, 1, 4)])).toBe(-0.1)
     })
 })

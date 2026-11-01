@@ -44,7 +44,8 @@ import {
     sanitizeViewPresets,
     sphereCastOffsets,
     targetBoundary,
-    unionBox
+    unionBox,
+    robustFloorY
 } from './smartViewGeometry.js'
 
 // THE SMART VIEW, renderer side (inside the <Canvas>). The decisions are the pure
@@ -533,11 +534,14 @@ export default function SmartView({
                 meshes.push(object)
             })
         }
+        const meshBoxes = []
         for (const mesh of meshes) {
             const box = worldBox(mesh)
-            if (box) archBox = unionBox(archBox, box)
+            if (box) { archBox = unionBox(archBox, box); meshBoxes.push(box) }
         }
-        const floorY = isBoxEmpty(archBox) ? 0 : archBox.min[1]
+        // The floor is the level of the big parts: a small stair stub below must not drag it down (robustFloorY).
+        const floorY = isBoxEmpty(archBox) ? 0 : (robustFloorY(meshBoxes) ?? archBox.min[1])
+        if (!isBoxEmpty(archBox)) archBox.min[1] = floorY
         for (const mesh of meshes) {
             const box = worldBox(mesh)
             const name = `${mesh.name || ''} ${materialsOf(mesh).map((m) => m.name || '').join(' ')}`

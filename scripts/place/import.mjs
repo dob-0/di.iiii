@@ -39,7 +39,7 @@ import {
     IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, walkFiles, fmtBytes
 } from './common.mjs'
 import { DEFAULT_API, makeClient, mimeFor, readToken as readApiToken } from './api.mjs'
-import { readPlaceRecord } from './fit-lib.mjs'
+import { readPlaceRecord, spawnWithYaw } from './fit-lib.mjs'
 import { sourceRoomOps, sourceWall } from '../../src/scan/sourceWall.js'
 
 const args = parseArgs()
@@ -181,7 +181,7 @@ export const hallOps = ({ asset, place, title }) => {
                 patch: {
                     backgroundColor: '#07090c',
                     gridVisible: false,
-                    spawn: place.spawn,
+                    spawn: spawnWithYaw(place.spawn),
                     // Far enough to see across the hall, near enough that the
                     // far wall is not a flat cut-out.
                     fog: {
@@ -191,6 +191,8 @@ export const hallOps = ({ asset, place, title }) => {
                         enabled: true
                     },
                     walkableAreas: place.walkableAreas,
+                    // A hand-modelled or scanned room has real walls: the walker stops at them (solidWalls.js, opt-in).
+                    solidWalls: { enabled: true },
                     // The orbit camera starts on the same shot the walker gets.
                     savedView: {
                         mode: 'perspective',

@@ -57,3 +57,22 @@ export function confineToAreas(areas, fromX, fromZ, toX, toZ) {
     if (isInsideAreas(areas, fromX, toZ)) return { x: fromX, z: toZ }
     return { x: fromX, z: fromZ }
 }
+
+/**
+ * The entity-position bounds (LiveProjectScene) know nothing of how big a model is: ONE hall model at the origin
+ * got a +-22 m box, so the 72 m Cinema House floor stopped the walker at 22 m (2026-11-01). Where the author
+ * declared a floor plan, the plan is the author's decision of where a visitor may stand: the bounds grow to cover
+ * it. They never shrink, and with no plan nothing changes.
+ */
+export function boundsCoveringAreas(bounds, areas) {
+    if (!bounds || !Array.isArray(areas) || !areas.length) return bounds
+    const out = { ...bounds }
+    for (const a of areas) {
+        if (![a?.minX, a?.maxX, a?.minZ, a?.maxZ].every(Number.isFinite)) continue
+        out.minX = Math.min(out.minX, a.minX)
+        out.maxX = Math.max(out.maxX, a.maxX)
+        out.minZ = Math.min(out.minZ, a.minZ)
+        out.maxZ = Math.max(out.maxZ, a.maxZ)
+    }
+    return out
+}

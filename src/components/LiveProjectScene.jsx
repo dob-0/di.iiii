@@ -10,6 +10,7 @@ import { useXrAr } from '../hooks/useXrAr.js'
 import MadeWithBadge from './MadeWithBadge.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
+import { boundsCoveringAreas } from './walkableAreas.js'
 import { createSolidWallsKeeper, walkStep, SOLID_WALLS_MAX_TRIANGLES, SOLID_WALLS_MAX_TRIANGLES_PHONE } from './solidWalls.js'
 import HeadLight from './HeadLight.jsx'
 import { resolveHeadLight, headLightCastsShadow } from './headLight.js'
@@ -1889,7 +1890,7 @@ export default function LiveProjectScene({
         return new THREE.Vector3(sum.x / entities.length, 0, sum.z / entities.length)
     }, [entities])
 
-    const bounds = useMemo(() => {
+    const entityBounds = useMemo(() => {
         if (!entities.length) {
             return { minX: -BOUNDS_MIN_HALF, maxX: BOUNDS_MIN_HALF, minZ: -BOUNDS_MIN_HALF, maxZ: BOUNDS_MIN_HALF }
         }
@@ -1911,6 +1912,8 @@ export default function LiveProjectScene({
             maxZ: Math.max(maxZ + BOUNDS_MARGIN, cz + BOUNDS_MIN_HALF)
         }
     }, [entities])
+    const authoredAreas = doc?.worldState?.walkableAreas || null
+    const bounds = useMemo(() => boundsCoveringAreas(entityBounds, authoredAreas), [entityBounds, authoredAreas])
 
     // Start a little south of the entrance gate (if any), facing into the space.
     // Once per entry and per gate position: `entities` is a new array on every

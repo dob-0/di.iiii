@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
     quatFromTo, applyQuat, eulerFromQuaternion, fitTransform,
-    walkableFromBounds, spawnFrom, buildPlaceRecord, readPlaceRecord
+    walkableFromBounds, spawnFrom, buildPlaceRecord, readPlaceRecord, spawnWithYaw
 } from './fit-lib.mjs'
 import { chooseScale, DOOR_HEIGHT_METRES } from './fit.mjs'
 
@@ -196,5 +196,22 @@ describe('a number said from memory', () => {
 
     it('and the same number with a tape behind it is measured', () => {
         expect(chooseScale({ bounds, scaleEdge: 24, edge: 'width' }).source).toBe('measured')
+    })
+})
+
+describe('spawnWithYaw', () => {
+    it('turns a look point into the yaw that faces it (yaw 0 faces +Z)', () => {
+        // Cinema House: stands at z -1.5 and looks down the hall to z -30, i.e. towards -Z = yaw PI
+        const spawn = spawnWithYaw({ x: 2.8, z: -1.5, altY: 1.6, look: { x: 2.8, z: -30 } })
+        close(Math.abs(spawn.yaw), Math.PI, 1e-3)
+        expect(spawn.look).toBeUndefined()
+        expect(spawn.altY).toBe(1.6)
+        const east = spawnWithYaw({ x: 0, z: 0, look: { x: 5, z: 0 } })
+        close(east.yaw, Math.PI / 2, 1e-3)
+    })
+    it('keeps an authored yaw, and a spawn with no look', () => {
+        expect(spawnWithYaw({ x: 1, z: 2, yaw: 1.2, look: { x: 9, z: 9 } }).yaw).toBe(1.2)
+        expect(spawnWithYaw({ x: 1, z: 2, yaw: 0 }).yaw).toBe(0)
+        expect(spawnWithYaw(null)).toBeNull()
     })
 })

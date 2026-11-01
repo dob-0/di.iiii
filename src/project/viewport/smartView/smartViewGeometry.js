@@ -154,6 +154,24 @@ export const boxCenter = (box) => box.min.map((v, i) => (v + box.max[i]) / 2)
 export const boxSize = (box) => box.max.map((v, i) => v - box.min[i])
 
 /**
+ * The building's floor level: the lowest bottom among the parts that are big in plan, never a small thing that
+ * reaches lower (a stair going down to a basement, a lift pit, a plinth footing). With the plain model minimum, a
+ * hall with a 2.6 m stair stub got its "floor" 2.6 m under the real one, so the opening view stood under the
+ * slab (Cinema House, 2026-11-01). Parts count when their footprint is at least `share` of the biggest part's;
+ * with no big part, or no boxes, the plain minimum stands (what every earlier building got).
+ */
+export const robustFloorY = (boxes = [], share = 0.04) => {
+    const list = (boxes || []).filter((b) => b && !isBoxEmpty(b))
+    if (!list.length) return null
+    const area = (b) => (b.max[0] - b.min[0]) * (b.max[2] - b.min[2])
+    const biggest = Math.max(...list.map(area))
+    const plain = Math.min(...list.map((b) => b.min[1]))
+    if (!(biggest > 0)) return plain
+    const big = list.filter((b) => area(b) >= biggest * share)
+    return big.length ? Math.min(...big.map((b) => b.min[1])) : plain
+}
+
+/**
  * The room the smart view works in, from the building's measured box.
  *   archBox      the architecture meshes' world box
  *   roofMinY     the lowest point of any 'roof' mesh (null when none is named)

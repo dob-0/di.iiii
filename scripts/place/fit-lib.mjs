@@ -193,6 +193,21 @@ export const spawnFrom = ({ placedBounds, door = null, forwardDegrees = null, ey
 const round = (value) => Math.round(value * 1000) / 1000
 
 /**
+ * The spawn the walker needs: a record that says where to FACE (`look`, a point) also needs the yaw that
+ * faces it, because worldState.spawn has no `look` (projectSchema keeps x, z, yaw, pitch, altY). Without
+ * it the Cinema House floor opened facing +Z, out of the glass front (2026-11-01). An authored yaw wins.
+ */
+export const spawnWithYaw = (spawn) => {
+    if (!spawn || typeof spawn !== 'object') return spawn
+    const { look, ...rest } = spawn
+    if (Number.isFinite(rest.yaw) && rest.yaw !== 0) return rest
+    if (look && Number.isFinite(look.x) && Number.isFinite(look.z) && (look.x !== rest.x || look.z !== rest.z)) {
+        return { ...rest, yaw: round(Math.atan2(look.x - rest.x, look.z - rest.z)), pitch: rest.pitch || 0 }
+    }
+    return rest
+}
+
+/**
  * place.json, written and read back the same. Everything a later step needs,
  * and nothing it has to recompute.
  */
