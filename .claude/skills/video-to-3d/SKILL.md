@@ -44,3 +44,9 @@ Dense mesh after a good `colmap` model: `scripts/place/colmap/dense_mesh.py` (ne
 
 ## Owed
 A window-only control run of `mast3r` with a geometric check on each pair; HF token and approved access for `vggt`; a reshoot per "Filming"; a scripted gate that tests the camera path looks like a walk; `colmap` loop detection needs a vocab tree that COLMAP 4.x can read (the 2023 one crashes).
+
+## When no tool gives a place: model it (2026-11-01)
+`scripts/place/model-hall/model_hall.sh <work_dir>` builds a clean, closed room from a hand-made plan JSON,
+sizes measured from the frames, textures = rectified frame crops with no person in them. Method and limits:
+`scripts/place/model-hall/METHOD.md`. First use: Cinema House gallery A (plan, DIMENSIONS.md and renders in
+the place's `modelled/` folder). Look at `renders/compare_all.png` before showing anyone.
