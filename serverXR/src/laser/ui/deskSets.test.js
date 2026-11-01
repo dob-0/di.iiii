@@ -10,6 +10,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { capturePageTimers } from '../../testSupport/pageTimers.mjs'
 
 const require = createRequire(import.meta.url)
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -111,7 +112,9 @@ beforeAll(() => {
     globalThis.fetch = fakeFetch
     window.DiLaserDraw = require('./drawRuns.js')
 })
-afterAll(() => { window.fetch = undefined })
+// The page polls forever: capture its timers at load (before beforeAll boots it), stop them first in afterAll.
+const pageTimers = capturePageTimers()
+afterAll(async () => { await pageTimers.stop(); window.fetch = undefined })
 
 // A fresh page on `query`, over the bank a, b, live with `live` on the laser (and open in Edit, as a page opened mid-show does).
 const boot = async (query, { unsaved = false } = {}) => {
