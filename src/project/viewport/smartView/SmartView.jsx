@@ -121,7 +121,7 @@ const INSIDE_MIN_DISTANCE = 2
 // stands in the way of the stage, yet it is nearer than the target over the whole circle, so the cut used to
 // open a black disc of night sky above the rig (2026-10-02, /moxir Free view). From outside, the cutaway's
 // roof plane already clips it.
-const SV_VERTEX_HEAD = 'varying float vSvDepth;\nvarying float vSvWorldY;\nvarying float vSvDist;\n'
+const SV_VERTEX_HEAD = 'varying float vSvDepth;\nvarying float vSvWorldY;\nvarying vec3 vSvView;\n'
 export const SV_VERTEX_BODY = `
 vec4 svWorld = vec4(transformed, 1.0);
 #ifdef USE_INSTANCING
@@ -132,7 +132,7 @@ vSvWorldY = (modelMatrix * svWorld).y;
 const SV_FRAGMENT_HEAD = `
 varying float vSvDepth;
 varying float vSvWorldY;
-varying float vSvDist;
+varying vec3 vSvView;
 uniform float uSvNear;
 uniform float uSvStrength;
 uniform vec2 uSvCenter;
@@ -147,7 +147,7 @@ float svBayer4(vec2 p) {
 }
 `
 export const SV_FRAGMENT_BODY = `
-if (uSvNear > 0.0 && vSvDist < uSvNear) discard;
+if (uSvNear > 0.0 && length(vSvView) < uSvNear) discard;
 if (uSvStrength > 0.001 && vSvWorldY < uSvCeiling) {
     float svD = length(gl_FragCoord.xy - uSvCenter);
     float svInside = 1.0 - smoothstep(uSvRadius * 0.7, uSvRadius, svD);
@@ -158,18 +158,28 @@ if (uSvStrength > 0.001 && vSvWorldY < uSvCeiling) {
 }
 `
 
+// The distance to the lens is taken per FRAGMENT from the interpolated view-space position (length of a vector that
+// interpolates linearly), never as a per-vertex scalar: a wall or roof that is one quad of four vertices 30 m apart
+// interpolated its far-corner distances over the whole face, so the 2.5 m cut and its ghost showed as large lighter
+// rectangles with sharp triangle edges (2026-11-01, cinema-house hall; found by the viewer-bug hunt).
 // The ghost twin draws only what the opaque pass cut for being near the lens, at the near fade's opacity
 // (smartViewGeometry.nearFadeOpacity: the same curve).
 export const SV_GHOST_BODY = `
-if (uSvNear <= 0.0 || vSvDist >= uSvNear) discard;
-float svGhostA = ${NEAR_FADE_FLOOR.toFixed(3)} + ${(1 - NEAR_FADE_FLOOR).toFixed(3)} * smoothstep(uSvNear - min(${NEAR_FADE_RAMP_M.toFixed(3)}, uSvNear), uSvNear, vSvDist);
+float svDist = length(vSvView);
+if (uSvNear <= 0.0 || svDist >= uSvNear) discard;
+float svGhostA = ${NEAR_FADE_FLOOR.toFixed(3)} + ${(1 - NEAR_FADE_FLOOR).toFixed(3)} * smoothstep(uSvNear - min(${NEAR_FADE_RAMP_M.toFixed(3)}, uSvNear), uSvNear, svDist);
 `
-const PROJECT_VERTEX = `#include <project_vertex>\nvSvDepth = -mvPosition.z;\nvSvDist = length(mvPosition.xyz);\n${SV_VERTEX_BODY}`
+const PROJECT_VERTEX = `#include <project_vertex>\nvSvDepth = -mvPosition.z;\nvSvView = mvPosition.xyz;\n${SV_VERTEX_BODY}`
 
 // A transparent twin of a building material for the near fade: cloned before the material is patched, so it carries
 // the material as authored (colour, maps, lighting) and none of the opaque pass's cut.
-function makeGhostMaterial(material, uniforms, planes) {
+export function makeGhostMaterial(material, uniforms, planes) {
     const ghost = material.clone()
+    // Front faces only. The shell is solid boxes with double-sided materials; a ghost that also drew their back faces
+    // (the far side of a 0.2 m wall slab, the underside of the roof slab) laid a second veil over the first, which showed
+    // as large lighter rectangles with sharp edges (2026-11-01, cinema-house hall; falsified: z-fight, lights, shadows).
+    // Known limit: a one-plane double-sided surface seen from behind is cut but not ghosted.
+    ghost.side = THREE.FrontSide
     ghost.name = `${material.name || ''}:sv-ghost`
     ghost.transparent = true
     ghost.depthWrite = false
