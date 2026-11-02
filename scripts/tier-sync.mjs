@@ -94,7 +94,8 @@ export const localBase = (env = {}) => {
 
 export const TIERS = {
     local: { base: localBase(), tokenKey: 'API_TOKEN' },
-    dev: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
+    // DI_DEV_BASE: reach the dev server another way (an ssh forward to the Mac's :8081) while its public tunnel is held (owner 2026-11-02).
+    dev: { base: (process.env.DI_DEV_BASE || 'https://dev.diiii.xyz/serverXR').replace(/\/+$/, ''), tokenKey: 'LIVE_API_TOKEN' },
     prod: { base: 'https://diiii.xyz/serverXR', tokenKey: 'PROD_API_TOKEN' }
 }
 
@@ -424,6 +425,13 @@ export const applySkip = (plan, skip = []) => {
     if (!skip.length) return plan
     const whole = new Set(skip.filter((s) => !s.includes('/')))
     const one = new Set(skip.filter((s) => s.includes('/')))
+    // A bare word is a SPACE. One that names no space in the plan but is a project id there was meant as a
+    // project: it would hold nothing back and the project would be copied (2026-11-02, cinema-house floor/hall).
+    const spaceIds = new Set(plan.map((item) => item.spaceId))
+    for (const word of whole) {
+        const owner = plan.find((item) => !spaceIds.has(word) && item.projects.includes(word))
+        if (owner) throw new Error(`--skip "${word}" is a project id, not a space: write "${owner.spaceId}/${word}"`)
+    }
     return plan
         .filter((item) => !whole.has(item.spaceId))
         .map((item) => ({ ...item, projects: item.projects.filter((id) => !one.has(`${item.spaceId}/${id}`)) }))

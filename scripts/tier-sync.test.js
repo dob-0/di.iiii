@@ -478,6 +478,17 @@ describe('an overwrite that removes media is counted, and refused without the ex
     })
 })
 
+describe('applySkip: a bare project id is refused', () => {
+    const plan = [{ spaceId: 'cinema-house', createSpace: false, projects: ['cinema-house-floor', 'manifesto'] }]
+    it('throws and names the right form', () => {
+        expect(() => applySkip(plan, ['cinema-house-floor'])).toThrow(/cinema-house\/cinema-house-floor/)
+    })
+    it('still accepts a whole space and space/project', () => {
+        expect(applySkip(plan, ['cinema-house'])).toEqual([])
+        expect(applySkip(plan, ['cinema-house/cinema-house-floor'])[0].projects).toEqual(['manifesto'])
+    })
+})
+
 describe('applySkip', () => {
     const plan = [
         { spaceId: 'br-id-ge', createSpace: false, projects: ['n2-seed', 'ops-board'] },
