@@ -9,6 +9,7 @@
 # Usage: scripts/place/video-to-3d.sh [options] INPUT...      INPUT = video file(s) or ONE folder of .jpg frames
 #   --tool NAME       colmap (default) | colmap-global | mast3r | vggt | winner
 #                       colmap         COLMAP incremental, sequential + exhaustive matching (BSD, no weights)
+#                       colmap-track   every frame in order, sequential matching only (the matchmove step; use --fps 30)
 #                       colmap-global  COLMAP global mapper, ex-GLOMAP (BSD, no weights); --match exh|seq
 #                       mast3r         MASt3R-SfM (code CC BY-NC-SA, weights non-commercial: research only)
 #                       vggt           VGGT windowed (VGGT-1B CC BY-NC; needs HF_TOKEN in the environment)
@@ -52,7 +53,7 @@ done
 [ "$MATCH" = exh ] || [ "$MATCH" = seq ] || die "--match must be exh or seq"
 case "$TOOL" in
   winner) RC=3 die "no tool beat the baseline in the 2026-11-01 trial, so 'winner' is empty. Pick one: colmap | colmap-global | mast3r | vggt (docs/ai/decisions/2026-11-01-video-to-3d-recipe.md)";;
-  colmap|colmap-global|mast3r|vggt) ;;
+  colmap|colmap-track|colmap-global|mast3r|vggt) ;;
   *) die "unknown --tool $TOOL";;
 esac
 
@@ -62,6 +63,9 @@ case "$TOOL" in
   colmap)        DEF=cpu;  LIC="BSD-3-Clause (COLMAP/pycolmap), no weights"
                  FILES="$SC/colmap/sfm_exh_seq.py"; SETUP="pip install -q pycolmap==4.2.1 && mkdir -p /content/place && ln -sfn /content/frames /content/place/images"
                  RCMD="cd /content/v2d && python sfm_exh_seq.py"; RESULT="/content/place/sfm_results.json";;
+  colmap-track)  DEF=cpu;  LIC="BSD-3-Clause (COLMAP/pycolmap), no weights"
+                 FILES="$SC/colmap/sfm_seq_track.py"; SETUP="pip install -q pycolmap==4.2.1 && mkdir -p /content/place && ln -sfn /content/frames /content/place/images"
+                 RCMD="cd /content/v2d && python sfm_seq_track.py"; RESULT="/content/place/sfm_results.json";;
   colmap-global) DEF=cpu;  LIC="BSD-3-Clause (COLMAP global mapper, ex-GLOMAP), no weights"
                  FILES="$SC/recon-glomap/sfm_global.py"; SETUP="pip install -q pycolmap==4.2.1"
                  RCMD="mkdir -p /content/place && cd /content/v2d && python sfm_global.py /content/frames run $MATCH $OVERLAP"
@@ -110,6 +114,8 @@ PLAN
 fi
 
 command -v ffmpeg >/dev/null || [ "$KIND" = frames ] || die "ffmpeg not installed"
+# a re-run into the same --out must not mix old frames with new ones (seen 2026-11-02: run 3 silently used run 2's 390 frames): move old ones aside
+if [ -d "$OUT/frames" ] && [ -n "$(ls -A "$OUT/frames" 2>/dev/null)" ]; then mv "$OUT/frames" "$OUT/frames.prev-$(date +%H%M%S)"; echo "old frames moved aside"; fi
 mkdir -p "$OUT/frames" "$OUT/result" "$OUT/work"
 OUT="$(cd "$OUT" && pwd)"; T0=$(date +%s)
 
@@ -194,24 +200,46 @@ PY
 }
 trap finish EXIT
 
+T() {  # T SECONDS colab ARGS… : `colab` is a shell function, so timeout runs the pinned wrapper it stands for
+  local s=$1; shift; [ "$1" = colab ] && shift
+  if [ -n "$COLAB_HOME" ]; then HOME="$COLAB_HOME" timeout --kill-after=30 "$s" "$COLAB" "$@"; else timeout --kill-after=30 "$s" "$COLAB" "$@"; fi; }
 # 3-5 colab
 colab new -s "$SESSION" "${NEWFLAGS[@]}"; CREATED=1; STATE=session-up
-for f in $FILES; do colab upload -s "$SESSION" "$f" "/content/v2d/$(basename "$f")"; done
+# the Jupyter upload door answers 500 when the target folder does not exist (seen 2026-11-02, twice): make the folders first
+printf 'import os\nfor d in ("/content/v2d", "/content/parts"): os.makedirs(d, exist_ok=True)\nprint("dirs ok")\n' > "$OUT/work/mkdirs.py"
+T 300 colab exec -s "$SESSION" -f "$OUT/work/mkdirs.py" --timeout 120 | tail -1
+for f in $FILES; do T 300 colab upload -s "$SESSION" "$f" "/content/v2d/$(basename "$f")" || die "script upload failed: $f"; done
 # five uploads at a time (one big upload times out); a failed part is retried once, serially
+# Every remote call has a hard ceiling (seen 2026-11-02: a lost connection hung `colab exec unpack` for 10 h 24 min, silently).
+
+up() { T 600 colab upload -s "$SESSION" "$OUT/work/parts/$1" "/content/parts/$1" >/dev/null 2>&1; }
+NPARTS=$(ls "$OUT/work/parts" | wc -l)
 n=0; for p in $(ls "$OUT/work/parts"); do
-  colab upload -s "$SESSION" "$OUT/work/parts/$p" "/content/parts/$p" >/dev/null 2>&1 || colab upload -s "$SESSION" "$OUT/work/parts/$p" "/content/parts/$p" >/dev/null &
-  n=$((n+1)); [ $((n % 5)) -ne 0 ] || wait
+  { up "$p" || up "$p"; } &
+  n=$((n+1)); [ $((n % 5)) -ne 0 ] || { wait; echo "uploaded $n/$NPARTS parts"; }
 done; wait
-colab exec -s "$SESSION" -f "$OUT/work/unpack.py"; STATE=uploaded
-colab exec -s "$SESSION" -f "$OUT/work/setup.py" --timeout 1800 | tail -3
+# check every part arrived with its size before unpacking; re-send what is missing (up to 3 passes)
+( cd "$OUT/work/parts" && for p in *; do echo "$p $(stat -c %s "$p")"; done ) > "$OUT/work/parts.lst"
+printf 'import os\nmiss=[]\nfor l in open("/content/v2d/parts.lst"):\n    n,s=l.split()\n    f="/content/parts/"+n\n    if not os.path.exists(f) or os.path.getsize(f)!=int(s): miss.append(n)\nprint("MISSING", " ".join(miss) if miss else "none")\n' > "$OUT/work/check_parts.py"
+for pass in 1 2 3; do
+  T 300 colab upload -s "$SESSION" "$OUT/work/parts.lst" /content/v2d/parts.lst >/dev/null 2>&1
+  M="$(T 300 colab exec -s "$SESSION" -f "$OUT/work/check_parts.py" --timeout 240 2>&1 | grep '^MISSING' || echo 'MISSING ?')"
+  echo "parts check $pass: $M"
+  [ "$M" = "MISSING none" ] && break
+  [ "$M" = "MISSING ?" ] && continue
+  for p in ${M#MISSING }; do up "$p" || up "$p"; done
+done
+[ "$M" = "MISSING none" ] || die "parts still missing after 3 passes: $M"
+T 1200 colab exec -s "$SESSION" -f "$OUT/work/unpack.py" --timeout 1100 || die "unpack failed or timed out"; STATE=uploaded
+T 2100 colab exec -s "$SESSION" -f "$OUT/work/setup.py" --timeout 1800 | tail -3
 
 # 6 run, detached; poll rarely (each poll is a tool round for an agent)
 ENVARGS=(--env "V2D_CMD=$RCMD"); [ "$TOOL" != vggt ] || ENVARGS+=(--env "HF_TOKEN=$HF_TOKEN")
-colab exec -s "$SESSION" -f "$OUT/work/launch.py" "${ENVARGS[@]}"; STATE=running
+T 300 colab exec -s "$SESSION" -f "$OUT/work/launch.py" "${ENVARGS[@]}" || die "launch failed or timed out"; STATE=running
 DEADLINE=$(( $(date +%s) + TIMEOUT_MIN * 60 ))
 while :; do
   sleep "${V2D_POLL:-120}"
-  S="$(colab exec -s "$SESSION" -f "$OUT/work/status.py" 2>&1 || true)"; echo "$S" | tail -2
+  S="$(T 300 colab exec -s "$SESSION" -f "$OUT/work/status.py" 2>&1 || true)"; echo "$(date +%H:%M) $(echo "$S" | tail -1)"
   case "$S" in *"STATE DONE"*) STATE=done; break;; *"STATE FAILED"*) STATE=failed; echo "$S" >&2; exit 1;; esac
   [ "$(date +%s)" -lt "$DEADLINE" ] || { STATE=timeout; echo "timed out after $TIMEOUT_MIN min" >&2; exit 1; }
 done

@@ -3,17 +3,24 @@ ffmpeg NVDEC decode (hevc, autorotate -> portrait) -> scale 1080x1920 -> rawvide
 ResNet50-FPN v2, COCO 'person', Ren et al. 2015 / Li et al. 2021) -> every person box (+20 %) gaussian-blurred BEFORE anything is written
 (no unblurred frame touches the disk) -> JPEG q90 + 720x1280 copy for depth -> sharpness (Laplacian variance at 540x960, same as survey
 index.json) -> LSD (von Gioi et al. 2010) line statistics for the pre-filter. Index line per frame in index_<v>.jsonl.
-usage: ingest.py <v1|v2>   (selection = SEG below: step 1 = every frame 30 fps, step 3 = 10 fps)"""
+usage: ingest.py <v1|v2> [--seg A:B:STEP ...] [--out DIR]   (selection = SEG below: step 1 = every frame 30 fps, step 3 = 10 fps;
+       --seg replaces it, seconds; --out writes frames/, small/, index there instead of modelled/dense — a pilot never overwrites the dense set)"""
 import sys, os, json, subprocess, numpy as np, cv2, torch, torchvision, math
 D = '/mnt/data/footage/place-cinema-house-2026-10-30'; O = D + '/modelled/dense'
 VID = {'v1': ('20261030_154922.mp4', 2618, [(0, 3, 1), (3, 56, 3), (56, 88, 1)]),
        'v2': ('20261030_155205.mp4', 8749, [(0, 27, 1), (27, 31, 3), (31, 36, 1), (36, 68, 3), (68, 293, 1)])}
 v = sys.argv[1]; fn, NF, SEG = VID[v]; FPS = 30.0
+_a = sys.argv[2:]
+if '--seg' in _a:
+    SEG = [tuple(float(x) if i < 2 else int(x) for i, x in enumerate(s_.split(':'))) for s_ in _a[_a.index('--seg') + 1].split(',')]
+if '--out' in _a:
+    O = _a[_a.index('--out') + 1]
+for _d in ('frames', 'small', '_work'): os.makedirs(f'{O}/{_d}', exist_ok=True)
 sel = []
 for a, b, st in SEG:
     sel += [n for n in range(int(a * FPS), min(NF, int(b * FPS))) if n % st == 0]
 sel = sorted(set(sel)); S = set(sel)
-expr = '+'.join(f"(between(n,{a*30},{min(NF,b*30)-1})*eq(mod(n,{st}),0))" for a, b, st in SEG)
+expr = '+'.join(f"(between(n,{int(a*30)},{int(min(NF,b*30))-1})*eq(mod(n,{st}),0))" for a, b, st in SEG)
 open(f'{O}/_work/sel_{v}.txt', 'w').write(f"select='gt({expr},0)',scale=1080:1920")
 W0, H0 = 1080, 1920
 cmd = ['ffmpeg', '-v', 'error', '-hwaccel', 'cuda', '-i', f'{D}/../cinema-house-2026-10-30/{fn}', '-vf', open(f'{O}/_work/sel_{v}.txt').read(),
