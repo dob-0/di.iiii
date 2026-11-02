@@ -4,7 +4,7 @@
 # <modelled_dir>: floor.json (rooms + openings), floor_assembly.json (modules, drops, clips, offsets),
 # floor_corrections.json (decisions on proposed corrections; optional), place_meta.json (spawn, scale note; optional).
 # REBUILD=1 first runs each module's own "build" command from the manifest (modules without one are used as they are).
-# Undo: delete <modelled_dir>/{floor.glb,floor.blend,assembly_report.json,place.json,check_floor.log,renders/floor_top.png,renders/eye_*.png}
+# Undo: delete <modelled_dir>/{floor.glb,floor.blend,assembly_report.json,place.json,place.glb,check_floor.log,renders/floor_top.png,renders/eye_*.png}
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd); w=$(cd "$1" && pwd); n=${2:-32}
 man=$w/floor_assembly.json; corr=$w/floor_corrections.json; [ -f "$corr" ] || corr=
@@ -21,5 +21,6 @@ blender -b -t 6 --factory-startup --python "$here/check_floor.py" -- "$w/floor.g
 grep -q FLOOR_OK "$w/check_floor.log"
 meta=$w/place_meta.json; [ -f "$meta" ] || meta=$w/floor.json
 blender -b -t 6 --factory-startup --python "$here/write_place.py" -- "$w/floor.glb" "$meta" "$w/place.json" "$w/floor.json" 2>&1 | grep -E 'PLACE|VIEWPOINT|Error|Traceback'
+ln -sf floor.glb "$w/place.glb"     # r7: import.mjs reads <work>/place.glb for a modelled place (bakedIn false); the floor IS the place
 mkdir -p "$w/renders"
 blender -b -t 6 "$w/floor.blend" --python "$here/render_floor.py" -- "$w/floor.json" "$man" "${corr:--}" "$w/renders" "$n" 2>&1 | grep -E 'RENDERED|Error|Traceback'

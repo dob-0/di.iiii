@@ -3,7 +3,8 @@
 Run: blender -b --factory-startup --python assemble_floor.py -- <floor_assembly.json> <out_dir>
 Reads (all from the place's data folder, nothing place-specific lives here):
   floor_assembly.json   {"root": ".", "modules": [{"id", "glb", "offset":[x,y,z], "drop":[glob..],
-                         "clip":{glob:{"xmin","xmax","ymin","ymax","zmin","zmax"}}, "exempt_below_floor":[glob..]}]}
+                         "clip":{glob:{"xmin","xmax","ymin","ymax","zmin","zmax"}}, "exempt_below_floor":[glob..],
+                         "rot_z_deg": 180, "pivot": [x, y]}]}   (r7: turn the module about the pivot BEFORE the offset; unset = as before)
 Writes <out_dir>/floor.glb, floor.blend and assembly_report.json (what was dropped / clipped / moved, per module).
 Why drop/clip: two neighbouring modules each build the wall they share (a wall with its opening). Both would draw
 the same slab (z-fighting) and the modules' floors would overlap. The manifest names which duplicate is dropped or
@@ -11,7 +12,8 @@ trimmed, so the result is reproducible and every decision is on file. Axis-align
 vertices to the given bound; a trimmed object is never moved.
 Objects are renamed <module id>:<name>, so check_floor.py and the viewer can tell the modules apart.
 Undo: delete <out_dir>/floor.*"""
-import bpy, json, os, re, sys, fnmatch, tempfile
+import bpy, json, math, os, re, sys, fnmatch, tempfile
+from mathutils import Matrix
 argv = sys.argv[sys.argv.index('--') + 1:]
 man = json.load(open(argv[0])); OUT = argv[1]
 base = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(argv[0])), man.get('root', '.')))
@@ -36,6 +38,8 @@ for m in man['modules']:
     new = [bpy.data.objects[k] for k in bpy.data.objects.keys() if k not in before]
     col = bpy.data.collections.new(mid); scene.collection.children.link(col)
     off = m.get('offset', [0, 0, 0]); rep = {'dropped': [], 'clipped': [], 'offset': off, 'objects': 0}
+    rot = m.get('rot_z_deg', 0); piv = m.get('pivot', [0, 0]); rep['rot_z_deg'] = rot; rep['pivot'] = piv
+    R = Matrix.Translation((piv[0], piv[1], 0)) @ Matrix.Rotation(math.radians(rot), 4, 'Z') @ Matrix.Translation((-piv[0], -piv[1], 0))
     # glTF import adds empty parents (a root node); bake the world matrix into the meshes and remove the empties
     meshes = [o for o in new if o.type == 'MESH']
     for o in meshes:
@@ -58,6 +62,7 @@ for m in man['modules']:
                         if hi is not None and p[ax] > hi: p[ax] = hi
                     v.co = o.matrix_world.inverted() @ p
                 o.data.update(); rep['clipped'].append(bare(o.name))
+        if rot: o.matrix_world = R @ o.matrix_world
         o.location = (o.location[0] + off[0], o.location[1] + off[1], o.location[2] + off[2])
         o.name = f'{mid}:{bare(o.name)}' if f'{mid}:{bare(o.name)}' not in bpy.data.objects else f'{mid}:{o.name}'
         for c in list(o.users_collection): c.objects.unlink(o)

@@ -77,11 +77,20 @@ for i, a in enumerate(sh):
             ov += 1
             if ov <= 12: warns.append(f'shell overlap {a.name} / {b.name}: {d[0]:.2f} x {d[1]:.2f} x {d[2]:.2f} m')
 print('FLOORS', len(fl), 'floor slabs;', ov, 'shell overlaps between modules')
+def module_xy(m, p):
+    """a module's own plan point -> floor frame: turn about the pivot (rot_z_deg, unset = none), then the offset."""
+    x, y = p; o = m.get('offset', [0, 0, 0]); rot = m.get('rot_z_deg', 0)
+    if rot:
+        px, py = m.get('pivot', [0, 0]); a = math.radians(rot); dx, dy = x - px, y - py
+        x, y = px + dx * math.cos(a) - dy * math.sin(a), py + dx * math.sin(a) + dy * math.cos(a)
+    return [x + o[0], y + o[1]]
+
+
 room_of = {r['id']: r for r in floor['rooms']}
 for m_ in man['modules']:      # a module moved by the assembly moves its room too
     o_ = m_.get('offset', [0, 0, 0])
-    if m_['id'] in room_of and (o_[0] or o_[1]):
-        room_of[m_['id']] = dict(room_of[m_['id']], footprint=[[p[0] + o_[0], p[1] + o_[1]] for p in room_of[m_['id']]['footprint']])
+    if m_['id'] in room_of and (o_[0] or o_[1] or m_.get('rot_z_deg')):
+        room_of[m_['id']] = dict(room_of[m_['id']], footprint=[module_xy(m_, p) for p in room_of[m_['id']]['footprint']])
 floor['rooms'] = [room_of[r['id']] for r in floor['rooms']]
 
 
@@ -137,6 +146,14 @@ for r in floor['rooms']:
         loc, ob = cast((px, py, 1.5), (0, 0, 1), 300)
         if not ob: leaks += 1; fails.append(f'{r["id"]} open to the sky above ({px:.1f},{py:.1f})') if leaks < 6 else None
 print('SEALED', leaks, 'leaking rays of', len(floor['rooms']) * 5 * 37)
+fp_ov = 0
+for i, a in enumerate(floor['rooms']):
+    for b in floor['rooms'][i + 1:]:
+        ax = [p[0] for p in a['footprint']]; ay = [p[1] for p in a['footprint']]; bx = [p[0] for p in b['footprint']]; by = [p[1] for p in b['footprint']]
+        dx = min(max(ax), max(bx)) - max(min(ax), min(bx)); dy = min(max(ay), max(by)) - max(min(ay), min(by))
+        if dx > 0.01 and dy > 0.01:
+            fp_ov += 1; fails.append(f'footprints overlap {a["id"]} / {b["id"]}: {dx:.2f} x {dy:.2f} m')
+print('FOOTPRINTS', len(floor['rooms']), 'rooms,', fp_ov, 'overlaps')
 for w_ in warns: print('WARN', w_)
 if fails:
     for f_ in fails: print('FAIL', f_)

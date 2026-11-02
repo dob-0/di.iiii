@@ -4,6 +4,15 @@ plane, looking through it). Lights are for checking only (area lights under each
 Run: blender -b <out>/floor.blend --python render_floor.py -- <floor.json> <floor_assembly.json> <floor_corrections.json|-> <renders_dir> [samples]
 Env FLOOR_GPU=1 renders on the GPU (default CPU: the GPU is often busy with other jobs)."""
 import bpy, json, math, os, sys
+
+
+def module_xy(m, p):
+    """a module's own plan point -> floor frame: turn about the pivot (rot_z_deg, unset = none), then the offset."""
+    x, y = p; o = m.get('offset', [0, 0, 0]); rot = m.get('rot_z_deg', 0)
+    if rot:
+        px, py = m.get('pivot', [0, 0]); a = math.radians(rot); dx, dy = x - px, y - py
+        x, y = px + dx * math.cos(a) - dy * math.sin(a), py + dx * math.sin(a) + dy * math.cos(a)
+    return [x + o[0], y + o[1]]
 argv = sys.argv[sys.argv.index('--') + 1:]
 floor = json.load(open(argv[0])); man = json.load(open(argv[1]))
 corr = json.load(open(argv[2])) if argv[2] != '-' else {'corrections': []}
@@ -12,8 +21,8 @@ os.makedirs(OUT, exist_ok=True)
 rooms = {r['id']: dict(r) for r in floor['rooms']}
 for m in man['modules']:
     o = m.get('offset', [0, 0, 0])
-    if m['id'] in rooms and (o[0] or o[1]):
-        rooms[m['id']]['footprint'] = [[p[0] + o[0], p[1] + o[1]] for p in rooms[m['id']]['footprint']]
+    if m['id'] in rooms and (o[0] or o[1] or m.get('rot_z_deg')):
+        rooms[m['id']]['footprint'] = [module_xy(m, p) for p in rooms[m['id']]['footprint']]
 ops = {o['id']: dict(o) for o in floor['openings'] if o.get('to_room') in rooms}
 eyes = {}
 for c in corr['corrections']:
@@ -54,7 +63,7 @@ def centre(r):
 
 
 cd.type = 'PERSP'; cd.sensor_fit = 'HORIZONTAL'; cd.sensor_width = 36.0; cd.lens = 22.0; cd.clip_start = 0.05
-for oid, op in ops.items():
+for oid, op in ([] if os.environ.get('TOP_ONLY') else ops.items()):
     cx, cy = op['centre']; a, b = centre(rooms[op['from_room']]), centre(rooms[op['to_room']])
     if op['axis'] == 'x': d = (0, 1 if b[1] > a[1] else -1)
     else: d = (1 if b[0] > a[0] else -1, 0)
@@ -68,7 +77,9 @@ for o in bpy.data.objects:
     if o.type == 'MESH' and any(k in o.name for k in (':ceiling', ':beam', ':tray', ':hanger', ':spot', ':ac_', ':soffit', ':cable', ':track')):
         o.hide_render = True
 for o in lights.objects: o.location.z = 2.6
-cd.type = 'ORTHO'; cd.ortho_scale = 78; cd.sensor_fit = 'VERTICAL'
-cam.location = (15, 36, 30); cam.rotation_euler = (0, 0, 0)
+cd.type = 'ORTHO'; cd.sensor_fit = 'VERTICAL'
+_xs = [p[0] for r in rooms.values() for p in r['footprint']]; _ys = [p[1] for r in rooms.values() for p in r['footprint']]
+cd.ortho_scale = max(max(_ys) - min(_ys), (max(_xs) - min(_xs)) * 1.333) * 1.08         # r7: frame the whole floor, whatever the layout
+cam.location = ((min(_xs) + max(_xs)) / 2, (min(_ys) + max(_ys)) / 2, 30); cam.rotation_euler = (0, 0, 0)
 shoot('floor_top', 900, 1200)
 print('RENDERED', OUT)
