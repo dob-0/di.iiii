@@ -13,6 +13,7 @@ export const meta = {
   ],
 }
 // PASS: per room, same-pose F1 (round_gate.py score) >= the previous round - 0.01, and the judge finds 0 defects in >= 1 more room than last round
+// OWNER ORDER (N2027): many photos -> WALL PLAN only -> owner approves -> only then build and polish; no build before his yes
 // OWNER FACT (N1989): from the central entrance looking straight, the banner is ahead and the buffet (cafe) is on the LEFT; round 6 had it merged on the right = wrong; every round checks it
 // PILOT: run the Baseline + Fix + Gate for ONE room first (args.rooms = [id]); fan out to all rooms only if that room gains >= 0.02 F1
 const D = '/mnt/data/footage/place-cinema-house-2026-10-30'
