@@ -70,6 +70,7 @@ import { fileURLToPath } from 'node:url'
 import { remapAssetIds, remapFromUpload } from './asset-remap-lib.mjs'
 import { ensureDestinationVisibility, visibilityCreateFields } from './project-visibility-lib.mjs'
 import { isMainModule } from './lib/isMainModule.mjs'
+import { storedLogin } from './stored-login.mjs'
 
 const { diffDocumentLoss, combineLoss, describeLoss, parseAcceptLoss, lossGate } = createRequire(import.meta.url)('../shared/documentLoss.cjs')
 
@@ -435,7 +436,16 @@ export const applySkip = (plan, skip = []) => {
 const ENV_KEYS = ['API_TOKEN', 'LIVE_API_TOKEN', 'PROD_API_TOKEN', 'LOCAL_API_URL']
 const fromProcess = () => Object.fromEntries(ENV_KEYS.filter((k) => process.env[k]).map((k) => [k, process.env[k]]))
 
-const readEnv = () => {
+// Dev only: with no LIVE_API_TOKEN anywhere, the session `di login` keeps (scripts/stored-login.mjs).
+const withStoredDevLogin = (env) => {
+    if (env.LIVE_API_TOKEN) return env
+    const stored = storedLogin('dev')
+    return stored.token ? { ...env, LIVE_API_TOKEN: stored.token } : env
+}
+
+const readEnv = () => withStoredDevLogin(readEnvFile())
+
+const readEnvFile = () => {
     const file = path.join(ROOT_DIR, 'serverXR', '.env.local')
     if (!fs.existsSync(file)) return fromProcess()
     return Object.fromEntries(
