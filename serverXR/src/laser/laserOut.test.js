@@ -67,7 +67,7 @@ const start = async (config) => {
     const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'laser-out-'))
     if (config) { fs.mkdirSync(path.join(dataDir, 'laser')); fs.writeFileSync(path.join(dataDir, 'laser', 'laser.json'), JSON.stringify(config)) }
     const app = express()
-    const lasers = registerLaserRoutes(app, { dataDir, log: null, probeCube, engineOptions: { createSocket: fakeSocket, now: () => clock, setInterval: () => null, clearInterval: () => {} } })
+    const lasers = registerLaserRoutes(app, { dataDir, log: null, probeCube, engineOptions: { signOff: 'phrase', createSocket: fakeSocket, now: () => clock, setInterval: () => null, clearInterval: () => {} } })
     const server = await new Promise((resolve) => { const s = app.listen(0, '127.0.0.1', () => resolve(s)) })
     servers.push(server)
     const base = `http://127.0.0.1:${server.address().port}/laser/api`

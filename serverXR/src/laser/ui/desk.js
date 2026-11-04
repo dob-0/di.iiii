@@ -565,10 +565,11 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
     }
 
     // ---- setup
-    // One cube: the phrase only on the first On of a run (the engine says needsPhrase). All cubes: always the phrase.
+    // Click mode (engine.signOff 'click', the default): On is the yes, nothing to type. Phrase mode: one cube asks the
+    // phrase only on the first On of a run (the engine says needsPhrase); all cubes: always the phrase.
     const arm = async (cube) => {
         const body = cube ? { armed: true, cube, out: OUT } : { armed: true }
-        let out = cube ? await post('api/arm', body) : { needsPhrase: true }
+        let out = (cube || engine?.signOff === 'click') ? await post('api/arm', body) : { needsPhrase: true }
         if (out.needsPhrase) {
             const phrase = await askPhrase()
             if (phrase === null) return
@@ -647,7 +648,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
                 ? el('button', { class: 'danger', text: holdsStill ? 'This look holds a still beam: pick another look' : 'Stopped · press Go', title: 'Press a look (Go): the cube lights again on its next new picture that passes the guards', onclick: () => { if (desk.liveId) { stillGone.add(stillKey); post('desk/api/go', { look: desk.liveId }).then(refreshDesk) } } })
                 : e.armed
                 ? el('button', { class: 'danger', text: 'On · turn off', onclick: () => post('api/arm', { armed: false, cube: c.id, out: OUT }).then(refreshEngine) })
-                : el('button', { text: 'On', disabled: !e.ip, title: e.ip ? 'Arm this cube (the first On of a run asks for the phrase)' : 'No address: Find cubes, then Use these', onclick: () => arm(c.id) })
+                : el('button', { text: 'On', disabled: !e.ip, title: e.ip ? 'Arm this cube (in phrase mode the first On of a run asks for the phrase)' : 'No address: Find cubes, then Use these', onclick: () => arm(c.id) })
             const now = c.held ? el('span', { class: 'warn', text: 'held by another Out', title: c.held })
                 : e.stop && !engine.sim ? el('span', { class: 'warn', text: `${e.stop.text || e.stop.reason}${e.armed && desk.live ? ' — press Go' : ''}` })
                     : c.driving ? el('span', { text: `${c.lit} lit points` })

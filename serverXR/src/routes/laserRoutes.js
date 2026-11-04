@@ -127,10 +127,20 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   const laserDir = path.join(dataDir, 'laser')
   const needToken = tokenGate(ensureToken(laserDir).token)
   let engine = null
+  // Sign-off, read once when the lane starts: 'click' (On is the yes; the owner's word 2026-10-31) unless the server
+  // was started with DI_LASER_SIGN_OFF=phrase, which keeps the typed phrase (the older mode).
+  // Fail closed: only the exact strings 'click' or 'phrase' are accepted; unset keeps the default (click);
+  // anything else ('Phrase', ' click ', '') falls back to the stricter 'phrase'. The active mode is logged once.
+  const rawSignOff = process.env.DI_LASER_SIGN_OFF
+  const signOff = rawSignOff === undefined || rawSignOff === 'click' ? 'click' : 'phrase'
+  if (rawSignOff !== undefined && rawSignOff !== 'click' && rawSignOff !== 'phrase') {
+    log?.warn?.(`[laser] DI_LASER_SIGN_OFF=${JSON.stringify(rawSignOff)} is not 'click' or 'phrase'; failing closed to 'phrase'`)
+  }
+  log?.info?.(`[laser] sign-off mode: ${signOff}`)
   const getEngine = () => {
     if (engine) return engine
     const { createLaserEngine } = require('../laser/laserEngine')
-    engine = createLaserEngine({ dataDir: laserDir, log, ...engineOptions })
+    engine = createLaserEngine({ dataDir: laserDir, log, signOff, ...engineOptions })
     return engine
   }
   // The show player (laser/laserShow.js): a project's laser lines on the cubes. It asks for the engine of the
