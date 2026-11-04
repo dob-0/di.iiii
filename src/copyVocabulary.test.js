@@ -63,10 +63,10 @@ const BANNED = [
     // `room` as a name for a thing inside di.iiii (the 3D place is a Scene; the place
     // that is yours is a space) was retired on 2026-08-19. Until 2026-11-04 this
     // matched capital "Room" only, so lowercase "the room", "rooms" and "a room page"
-    // slipped through (measured that day: 205 live strings). It is now case-insensitive.
+    // slipped through (measured that day: 205 live strings; 249 distinct once every match was counted). It is now case-insensitive.
     // "place it in your own room" is ordinary English about the room a visitor stands
     // in -- such a string gets an ALLOWLIST row with its reason, like any exception.
-    // The 205 strings that existed when the guard was widened are NOT silently
+    // The 249 distinct strings that existed when the guard was widened are NOT silently
     // accepted: they are listed in src/copyVocabulary.room-baseline.json and the
     // guard fails on any string NOT in it (new copy) and on any baseline row whose
     // string is gone (the list only shrinks). Fix copy, then regenerate with

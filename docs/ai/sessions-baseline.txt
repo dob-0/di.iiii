@@ -83,13 +83,13 @@ feat-continue-guard-2026-11-02.md
 feat-desk-switch-2026-10-31.md
 feat-di-games-followups.md
 feat-di-games-plugin.md
+feat-di-name-2026-10-28.md
+feat-di-open-to-2026-11-01.md
+feat-di-share-2026-10-28.md
 feat-dilijan-aren-one-view.md
 feat-dilijan-building.md
 feat-dilijan-camp-name.md
 feat-dilijan-front.md
-feat-di-name-2026-10-28.md
-feat-di-open-to-2026-11-01.md
-feat-di-share-2026-10-28.md
 feat-event-agents-2026-10-07.md
 feat-fixture-library-part1-2026-10-20.md
 feat-fixture-library-part3-2026-10-20.md
@@ -122,10 +122,10 @@ feat-name-broker-2026-10-28.md
 feat-place-add-sources-2026-10-04.md
 feat-play-stop.md
 feat-release-gate-2026-11-01.md
-feat-resources-2026-11-01.md
 feat-resources-2-2026-11-01.md
-feat-rigbuild-test-tools.md
+feat-resources-2026-11-01.md
 feat-rig-checks-n224-2026-10-20.md
+feat-rigbuild-test-tools.md
 feat-ring-tabs-2026-10-15.md
 feat-scan-360-input.md
 feat-scan-ar-guidance.md
@@ -151,9 +151,9 @@ fix-1113.md
 fix-1114.md
 fix-bar-one-name.md
 fix-contents-links-use-address.md
+fix-di-wifi-owner-auth-2026-10-29.md
 fix-dilijan-camp-address.md
 fix-dilijan-cinema-to-dev.md
-fix-di-wifi-owner-auth-2026-10-29.md
 fix-doc-paths-session-notes-2026-10-20.md
 fix-follow-batch-by-size.md
 fix-follow-carries-space-address.md
@@ -230,6 +230,7 @@ fix-ux-s21-names-per-space.md
 fix-ux-s33-objects-list.md
 fix-ux-s58-studio-keys.md
 fix-ux-s59-desk-names.md
+hotfix-space-scope-anchor-main-2026-10-09.md
 land-batch-2026-10-28-a.md
 land-batch-2026-10-28-b.md
 land-batch-2026-10-28-c.md
@@ -240,3 +241,4 @@ land-batch-2026-10-28-g.md
 land-batch-2026-10-28-h.md
 land-ux-wave3-2026-10-29.md
 perf-lamp-types-lazy-2026-10-28.md
+release-dev-to-main-2026-10-29.md
