@@ -124,10 +124,12 @@ const statusFlagsOf = (flags, major, minor) => {
         : { interlockEnabled: (flags & 0x08) !== 0, temperatureWarning: (flags & 0x10) !== 0, overTemperature: (flags & 0x20) !== 0, packetErrors: 0 }
 }
 
-// Firmware whose byte 5 was measured NOT to carry the output state (2026-10-30, see parseFullInfo).
-const OUTPUT_NOT_REPORTED = new Set(['1.17'])
+// Firmware strings whose byte-5 bit 0 was MEASURED to carry the output state. Empty: 1.17 was measured NOT to
+// (2026-10-30, see parseFullInfo) and no other firmware has been read against a lit/dark beam, so every firmware
+// reports outputEnabled null (unknown) until its string is added here with a measurement. Tests may pass their own set.
+const OUTPUT_VALIDATED_FIRMWARE = new Set()
 
-const parseFullInfo = (msg) => {
+const parseFullInfo = (msg, { validatedFirmware = OUTPUT_VALIDATED_FIRMWARE } = {}) => {
     if (!Buffer.isBuffer(msg) || msg.length < FULL_INFO_MIN_BYTES || msg[0] !== CMD.GET_FULL_INFO) return null
     const end = Math.min(msg.length, FULL_INFO_BYTES)
     let nameEnd = 38
@@ -135,9 +137,9 @@ const parseFullInfo = (msg) => {
     const modelName = msg.subarray(38, nameEnd).toString('latin1').replace(/[^\x20-\x7e]/g, '').trim()
     return {
         firmware: `${msg[3]}.${msg[4]}`,
-        ...(OUTPUT_NOT_REPORTED.has(`${msg[3]}.${msg[4]}`)
-            ? { outputEnabled: null, outputState: 'not reported by this firmware' }
-            : { outputEnabled: (msg[5] & 0x01) !== 0 }),
+        ...(validatedFirmware.has(`${msg[3]}.${msg[4]}`)
+            ? { outputEnabled: (msg[5] & 0x01) !== 0 }
+            : { outputEnabled: null, outputState: 'not reported by this firmware' }),
         statusFlags: msg[5],
         ...statusFlagsOf(msg[5], msg[3], msg[4]),
         dacRate: msg.readUInt32LE(10),
@@ -157,5 +159,5 @@ const parseFullInfo = (msg) => {
 module.exports = {
     PORT, CMD, MAX_POINTS_PER_MESSAGE, POINT_BYTES, MAX_VALUE, FULL_INFO_BYTES,
     toDeviceCoord, toDeviceColour, setOutput, setRate, clearRingBuffer, enableBufferSizeResponse, getBufferFree, getFullInfo,
-    encodeSampleData, parseBufferFree, parseFullInfo, statusFlagsOf
+    encodeSampleData, parseBufferFree, parseFullInfo, statusFlagsOf, OUTPUT_VALIDATED_FIRMWARE
 }

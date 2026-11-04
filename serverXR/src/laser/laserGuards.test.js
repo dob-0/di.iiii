@@ -222,6 +222,7 @@ describe('every stop: buffer cleared, beam parked blank at the centre, THEN outp
     })
 })
 
+const VAL = { validatedFirmware: new Set(['1.7', '0.12']) }
 describe('the status byte (GET_FULL_INFO byte 5) is flags, read as Wicked Lasers\' driver reads it', () => {
     it('2 on firmware 1.17 (the real cubes): output state UNKNOWN, flags kept (read 2 dark AND lit, 2026-10-30)', () => {
         const fw117 = infoAnswer({ flagsByte: 2 }); fw117[4] = 17
@@ -232,12 +233,17 @@ describe('the status byte (GET_FULL_INFO byte 5) is flags, read as Wicked Lasers
         expect(real.length).toBe(64)
         expect(proto.parseFullInfo(real)).toMatchObject({ firmware: '1.17', outputEnabled: null, statusFlags: 2, modelName: 'LaserCube 7.5W Ultra Mk2' })
     })
+    it('another firmware string (1.7) is also unknown until validated; once validated, bit 0 is read', () => {
+        expect(proto.parseFullInfo(infoAnswer({ flagsByte: 1 }))).toMatchObject({ firmware: '1.7', outputEnabled: null, outputState: 'not reported by this firmware' })
+        expect(proto.parseFullInfo(infoAnswer({ flagsByte: 0 }))).toMatchObject({ outputEnabled: null })
+        expect(proto.parseFullInfo(infoAnswer({ flagsByte: 0 }), { validatedFirmware: new Set(['1.7']) })).toMatchObject({ outputEnabled: false })
+    })
     it('bit 0 is output enabled; ≥ 0.13: bit 2 warning, bit 3 over-temperature, bits 4-7 packet errors', () => {
-        expect(proto.parseFullInfo(infoAnswer({ flagsByte: 0x3f }))).toMatchObject({ outputEnabled: true, interlockEnabled: true, temperatureWarning: true, overTemperature: true, packetErrors: 3 })
-        expect(proto.parseFullInfo(infoAnswer({ flagsByte: 1 }))).toMatchObject({ outputEnabled: true, interlockEnabled: false })
+        expect(proto.parseFullInfo(infoAnswer({ flagsByte: 0x3f }), VAL)).toMatchObject({ outputEnabled: true, interlockEnabled: true, temperatureWarning: true, overTemperature: true, packetErrors: 3 })
+        expect(proto.parseFullInfo(infoAnswer({ flagsByte: 1 }), VAL)).toMatchObject({ outputEnabled: true, interlockEnabled: false })
     })
     it('firmware ≤ 0.12: bit 3 interlock, bit 4 warning, bit 5 over-temperature', () => {
-        const old = (f) => { const b = infoAnswer({ flagsByte: f }); b[3] = 0; b[4] = 12; return proto.parseFullInfo(b) }
+        const old = (f) => { const b = infoAnswer({ flagsByte: f }); b[3] = 0; b[4] = 12; return proto.parseFullInfo(b, VAL) }
         expect(old(0x20)).toMatchObject({ outputEnabled: false, interlockEnabled: false, overTemperature: true })
         expect(old(0x08)).toMatchObject({ interlockEnabled: true, overTemperature: false })
     })

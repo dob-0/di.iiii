@@ -215,6 +215,9 @@ const sweep = ({
     })
 })
 
+// Most /24 networks swept in one Find (a machine with many interfaces would otherwise send thousands of packets).
+const MAX_SWEEP_NETWORKS = 8
+
 const skippedOf = (networks) => (networks.skipped || []).map((s) => `${s.address} (${s.name}): ${s.kind}, not searched`)
 
 /**
@@ -241,14 +244,20 @@ const findCubes = async ({ interfaces, targets, ...rest } = {}) => {
         if (!groups.has(prefix)) groups.set(prefix, [])
         groups.get(prefix).push(ip)
     }
-    const parts = await Promise.all([...groups.values()].map((group) => sweep({ targets: group, ...rest })))
+    const all = [...groups.values()]
+    const capped = all.slice(0, MAX_SWEEP_NETWORKS)
+    const settled = await Promise.allSettled(capped.map((group) => sweep({ targets: group, ...rest })))
+    const parts = settled.map((r) => (r.status === 'fulfilled' ? r.value : { ok: false, asked: 0, cubes: [], error: explain(r.reason), code: r.reason?.code ?? null }))
     const byKey = new Map()
     for (const part of parts) for (const cube of part.cubes) byKey.set(cube.serial || cube.ip, cube)
     const cubes = [...byKey.values()].sort((a, b) => a.ip.localeCompare(b.ip, 'en', { numeric: true }))
     const failed = parts.find((part) => !part.ok)
     const asked = parts.reduce((n, part) => n + part.asked, 0)
     const out = failed && cubes.length === 0 ? { ok: false, asked, cubes, error: failed.error, code: failed.code ?? null } : { ok: true, asked, cubes }
+    // A failed network is reported even when other networks found cubes.
+    if (failed && cubes.length > 0) out.warning = `${parts.filter((p) => !p.ok).length} of ${parts.length} networks could not be searched: ${failed.error}`
+    if (all.length > capped.length) out.warning = [out.warning, `only the first ${MAX_SWEEP_NETWORKS} of ${all.length} networks were searched`].filter(Boolean).join('; ')
     return { ...out, networks: networks.map((n) => `${n.prefix}.0/24 (${n.name})`), skipped: skippedOf(networks) }
 }
 
-module.exports = { findCubes, sweep, outAddressProblem, localNetworks, sweepTargets, isIPv4, isPrivateIPv4, networkKind, cubeAddressProblem, explain, SWEEP_WAIT_MS }
+module.exports = { findCubes, sweep, outAddressProblem, localNetworks, sweepTargets, isIPv4, isPrivateIPv4, networkKind, cubeAddressProblem, explain, SWEEP_WAIT_MS, MAX_SWEEP_NETWORKS }

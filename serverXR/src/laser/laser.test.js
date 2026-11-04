@@ -111,7 +111,7 @@ describe('the LaserCube protocol', () => {
         expect(proto.parseBufferFree(Buffer.from([0x77, 1, 2, 3]))).toBe(null)
     })
     it('reads every field of the GET_FULL_INFO answer at the spec\'s offsets', () => {
-        expect(proto.parseFullInfo(infoAnswer({ out: 1, dac: 30000, max: 40000, free: 5800, size: 6000, battery: 77, temp: 31, conn: 2 }))).toEqual({
+        expect(proto.parseFullInfo(infoAnswer({ out: 1, dac: 30000, max: 40000, free: 5800, size: 6000, battery: 77, temp: 31, conn: 2 }), { validatedFirmware: new Set(['1.7']) })).toEqual({
             firmware: '1.7',
             outputEnabled: true,
             statusFlags: 1,

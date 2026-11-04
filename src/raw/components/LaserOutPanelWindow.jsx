@@ -155,7 +155,7 @@ const cubeLine = (cube) => {
         info.connectionType,
         info.ip,
         `serial ${info.serial}`,
-        `output ${info.outputEnabled ? 'on' : 'off'}`,
+        info.outputEnabled == null ? `output ${info.outputState || 'unknown'}` : `output ${info.outputEnabled ? 'on' : 'off'}`,
     ].join(' · ')
     return { name, doing, about, cold }
 }

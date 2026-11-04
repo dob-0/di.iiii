@@ -12,7 +12,7 @@ const require = createRequire(import.meta.url)
 const express = require('express')
 const { registerLaserRoutes } = require('../routes/laserRoutes')
 const { ARM_PHRASE } = require('./laserEngine')
-const { sweep, findCubes, localNetworks, sweepTargets, explain } = require('./laserFind')
+const { sweep, findCubes, localNetworks, sweepTargets, explain, MAX_SWEEP_NETWORKS } = require('./laserFind')
 const { mergeConfig, validatePicked } = require('./laserConfig')
 const { isSameMachineRequest } = require('../localRuntimeGuard')
 
@@ -288,6 +288,37 @@ describe('Find cubes', () => {
         // each network keeps its own 2 ms gap between packets
         const times = asked.filter(([ip]) => ip.startsWith('10.158.133.')).map(([, t]) => t)
         expect(times[1] - times[0]).toBe(2)
+    })
+
+    it('one failing /24 does not reject the Find: cubes found are kept and the failure is reported', async () => {
+        const real = Buffer.from('7700000111020000ff0fb8880000b88800000370177017ff20028cbfea06ab3c0a2a01c4020a4c617365724375626520372e355720556c747261204d6b320000', 'hex')
+        const createSocket = () => {
+            const s = { handlers: {}, on: (ev, fn) => { s.handlers[ev] = fn }, close: () => {} }
+            s.bind = (_, cb) => queueMicrotask(cb)
+            s.send = (buf, port, ip, cb) => {
+                if (ip.startsWith('192.0.2.')) { const e = new Error('send EACCES'); e.code = 'EACCES'; throw e }
+                if (ip === '10.42.1.5') setImmediate(() => s.handlers.message(real, { address: ip }))
+                cb?.()
+            }
+            return s
+        }
+        const out = await findCubes({ targets: ['192.0.2.7', '10.42.1.5'], createSocket, waitMs: 10, gapMs: 0 })
+        expect(out.ok).toBe(true)
+        expect(out.cubes.map((c) => c.ip)).toEqual(['10.42.1.5'])
+        expect(out.warning).toMatch(/1 of 2 networks could not be searched/)
+        // a sweep that throws outright is also contained
+        const boom = await findCubes({ targets: ['10.42.1.5'], createSocket: () => { throw Object.assign(new Error('x'), { code: 'EPERM' }) }, waitMs: 10, gapMs: 0 })
+        expect(boom.ok).toBe(false)
+    })
+
+    it('sweeps at most MAX_SWEEP_NETWORKS /24s and says so', async () => {
+        const targets = Array.from({ length: MAX_SWEEP_NETWORKS + 3 }, (_, n) => `10.${n}.0.9`)
+        const sockets = new Set()
+        const createSocket = () => { const s = { on() {}, close() {}, bind: (_, cb) => queueMicrotask(cb), send: (b, p, ip, cb) => { sockets.add(ip.split('.')[1]); cb?.() } }; return s }
+        const out = await findCubes({ targets, createSocket, waitMs: 5, gapMs: 0 })
+        expect(MAX_SWEEP_NETWORKS).toBe(8)
+        expect(sockets.size).toBe(MAX_SWEEP_NETWORKS)
+        expect(out.warning).toMatch(/first 8 of 11 networks/)
     })
 
     it('a firewall refusal is said as one, not as "no cubes"', async () => {

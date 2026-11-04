@@ -105,6 +105,17 @@ describe('LaserOutPanelWindow', () => {
         expect(alives(posts)).toHaveLength(0)
     })
 
+    it('says output unknown, never "off", when the cube does not report it (fw 1.17)', async () => {
+        const info = { modelName: 'LaserCube', modelNumber: 3, firmware: '1.17', dacRate: 30000, maxDacRate: 35000, rxBufferFree: 5800, rxBufferSize: 6000, temperature: 31, connectionType: 'Ethernet', ip: '10.0.0.51', serial: 'aa', outputEnabled: null, outputState: 'not reported by this firmware' }
+        const state = { armed: false, sim: false, guard: { frameTimeoutMs: 200, stillHoldMs: 200, validated: false }, cubes: [{ id: 'cube-1', name: 'Cube 1', ip: '10.0.0.51', connected: true, armed: false, info, stop: null }] }
+        const { fetchImpl } = fakeServer({ state })
+        const view = render(panel({ fetchImpl, values: {} }))
+        await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+        const text = view.container.querySelector('.raw-laser-panel-cubes li').textContent
+        expect(text).toContain('output not reported by this firmware')
+        expect(text).not.toContain('output off')
+    })
+
     it('shows each cube: what it is doing, its info, a stop and a cold cube in plain words', async () => {
         const info = { modelName: 'LaserCube 2W', modelNumber: 3, firmware: '1.7', dacRate: 30000, maxDacRate: 35000, rxBufferFree: 5800, rxBufferSize: 6000, temperature: 31, connectionType: 'Ethernet', ip: '10.0.0.51', serial: 'deadbeef0042', outputEnabled: true }
         const state = {
