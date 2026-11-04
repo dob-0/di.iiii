@@ -70,6 +70,7 @@ import { fileURLToPath } from 'node:url'
 import { remapAssetIds, remapFromUpload } from './asset-remap-lib.mjs'
 import { ensureDestinationVisibility, visibilityCreateFields } from './project-visibility-lib.mjs'
 import { isMainModule } from './lib/isMainModule.mjs'
+import { storedLogin, devHostAllowed } from './stored-login.mjs'
 
 const { diffDocumentLoss, combineLoss, describeLoss, parseAcceptLoss, lossGate } = createRequire(import.meta.url)('../shared/documentLoss.cjs')
 
@@ -93,7 +94,8 @@ export const localBase = (env = {}) => {
 
 export const TIERS = {
     local: { base: localBase(), tokenKey: 'API_TOKEN' },
-    dev: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
+    // DI_DEV_BASE: reach the dev server another way (an ssh forward to the Mac's :8081) while its public tunnel is held (owner 2026-11-02).
+    dev: { base: (process.env.DI_DEV_BASE || 'https://dev.diiii.xyz/serverXR').replace(/\/+$/, ''), tokenKey: 'LIVE_API_TOKEN' },
     prod: { base: 'https://diiii.xyz/serverXR', tokenKey: 'PROD_API_TOKEN' }
 }
 
@@ -423,6 +425,13 @@ export const applySkip = (plan, skip = []) => {
     if (!skip.length) return plan
     const whole = new Set(skip.filter((s) => !s.includes('/')))
     const one = new Set(skip.filter((s) => s.includes('/')))
+    // A bare word is a SPACE. One that names no space in the plan but is a project id there was meant as a
+    // project: it would hold nothing back and the project would be copied (2026-11-02, cinema-house floor/hall).
+    const spaceIds = new Set(plan.map((item) => item.spaceId))
+    for (const word of whole) {
+        const owner = plan.find((item) => !spaceIds.has(word) && item.projects.includes(word))
+        if (owner) throw new Error(`--skip "${word}" is a project id, not a space: write "${owner.spaceId}/${word}"`)
+    }
     return plan
         .filter((item) => !whole.has(item.spaceId))
         .map((item) => ({ ...item, projects: item.projects.filter((id) => !one.has(`${item.spaceId}/${id}`)) }))
@@ -435,7 +444,28 @@ export const applySkip = (plan, skip = []) => {
 const ENV_KEYS = ['API_TOKEN', 'LIVE_API_TOKEN', 'PROD_API_TOKEN', 'LOCAL_API_URL']
 const fromProcess = () => Object.fromEntries(ENV_KEYS.filter((k) => process.env[k]).map((k) => [k, process.env[k]]))
 
-const readEnv = () => {
+// Dev only: with no LIVE_API_TOKEN anywhere, the session `di login` keeps (scripts/stored-login.mjs).
+export const withStoredDevLogin = (env, devBase = TIERS.dev.base) => {
+    if (env.LIVE_API_TOKEN) return env
+    if (!devHostAllowed(devBase)) {
+        process.stderr.write(`stored dev login not used: dev base ${devBase.replace(/\/\/[^/@]*@/, '//')} is not dev.diiii.xyz, loopback or diiii.localhost\n`)
+        return env
+    }
+    const stored = storedLogin('dev')
+    if (!stored.token) {
+        process.stderr.write(`stored dev login not used: ${stored.why}\n`)
+        return env
+    }
+    if (stored.base && !devHostAllowed(stored.base)) {
+        process.stderr.write('stored dev login not used: its recorded base is not dev.diiii.xyz, loopback or diiii.localhost\n')
+        return env
+    }
+    return { ...env, LIVE_API_TOKEN: stored.token }
+}
+
+const readEnv = () => withStoredDevLogin(readEnvFile())
+
+const readEnvFile = () => {
     const file = path.join(ROOT_DIR, 'serverXR', '.env.local')
     if (!fs.existsSync(file)) return fromProcess()
     return Object.fromEntries(

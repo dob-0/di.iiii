@@ -34,6 +34,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { TIERS, localBase, resolveTier, isProductionTarget } from './tier-sync.mjs'
+import { storedLogin } from './stored-login.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const TIMEOUT_MS = 180000
@@ -72,6 +73,12 @@ const readTokens = () => {
     }
     for (const key of ['API_TOKEN', 'LIVE_API_TOKEN', 'PROD_API_TOKEN', 'LOCAL_API_URL']) {
         if (process.env[key]) env[key] = process.env[key]
+    }
+    // No dev token anywhere: the session `di login` keeps (owner 2026-11-02, scripts/stored-login.mjs). Dev only.
+    if (!env.LIVE_API_TOKEN) {
+        const stored = storedLogin('dev')
+        if (stored.token) env.LIVE_API_TOKEN = stored.token
+        else readTokens.whyNoStored = stored.why
     }
     return env
 }
@@ -112,7 +119,7 @@ export async function proposeBundle(argv) {
         fail('this is production. Propose on the dev tier first; add --allow-production only when the owner asked for it.')
     }
     const token = env[tier.tokenKey]
-    if (!token) fail(`no ${tier.tokenKey} in serverXR/.env.local or the environment`)
+    if (!token) fail(`no ${tier.tokenKey} in serverXR/.env.local or the environment${readTokens.whyNoStored ? `; stored login: ${readTokens.whyNoStored}` : ''}`)
     const spaceId = args.space || await spaceIdInFile(args.file)
     if (!spaceId) fail('could not read the space id from the file; pass --space <id>')
 

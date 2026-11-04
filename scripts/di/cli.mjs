@@ -60,6 +60,7 @@ import {
 import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
 import { buildSyncAudit } from './sync-plan.mjs'
+import { DEFAULT_REMOTE, assertDevHost, devBase, findTierSync, runSyncPush } from './syncPush.mjs'
 import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
 import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from './share.mjs'
 import { readFollows, removeFollow } from './follows.mjs'
@@ -1111,6 +1112,35 @@ const cmdLink = async (args) => {
 }
 
 /**
+ * `di sync <space> --push [--apply] [--remote <url>] [--skip space/project,..]` — local → dev, the owner's flow (2026-11-02).
+ * Dry-run by default: it lists the projects it would write and writes nothing. With a link, the audit runs first and
+ * --apply is refused when it marks anything unprovable. Dev → main is the release path, not this.
+ */
+const cmdSyncPush = async ({ args, home, spaceId, link }) => {
+    const port = resolvePort(home, args.flags.port)
+    const apply = !!args.flags.apply
+    const remote = args.flags.remote || link?.remote || DEFAULT_REMOTE
+    try { devBase(remote); if (process.env.DI_DEV_BASE) assertDevHost(process.env.DI_DEV_BASE) } catch (err) { fail(err.message); process.exitCode = 1; return }
+    if (!(await alive(home, port))) { fail('this di.iiii is not running — start it with `di up`, then push'); process.exitCode = 1; return }
+    if (link) {
+        const local = await gatherLocalSide({ port, spaceId, token: link.key })
+        const remoteSide = await gatherSide({ base: link.remote, spaceId, token: link.key })
+        const audit = buildSyncAudit({ local, remote: remoteSide, ledger: readLedger(home, link.remote, spaceId) })
+        if (apply && audit.refusals.length) {
+            say(ui.syncReport({ spaceId, remote: link.remote, local, remote_: remoteSide, audit }))
+            fail('--apply refused: the audit above marks something unprovable. Nothing was written.')
+            process.exitCode = 1
+            return
+        }
+    }
+    const here = path.dirname(fileURLToPath(import.meta.url))
+    const entry = findTierSync({ here, installedDir: currentVersionDir(home) })
+    if (!entry) { fail('this di.iiii was packed without the sync tool — `di update`, then push again'); process.exitCode = 1; return }
+    say(`${apply ? 'pushing' : 'dry-run (nothing is written; add --apply)'}: ${spaceId} → ${remote}`)
+    process.exitCode = await runSyncPush({ entry, spaceId, apply, skip: args.flags.skip || '', home, localBase: apiBase(home, port), remote })
+}
+
+/**
  * The audit `di sync <space>` — reads both sides, prints what it can prove,
  * and writes NOTHING. There is no default direction because there is no
  * correct one; --push/--pull are later PRs and each will refuse every case
@@ -1123,6 +1153,7 @@ const cmdSync = async (args) => {
     if (!spaceId) { fail(`which space? — ${CMD} sync my-space`); process.exitCode = 1; return }
 
     const link = readLink(home, spaceId)
+    if (args.flags.push) { await cmdSyncPush({ args, home, spaceId, link }); return }
     if (!link) { say(ui.notLinked(spaceId)); process.exitCode = 1; return }
 
     const port = resolvePort(home, args.flags.port)

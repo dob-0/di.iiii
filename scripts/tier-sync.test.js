@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, readBackShape, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite, applySkip, readSignatures, listProjectMetas, listProjects, retryPolicy, PARTIAL_VIEW, readsPartially } from './tier-sync.mjs'
+import { TIERS, main, withStoredDevLogin, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, readBackShape, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite, applySkip, readSignatures, listProjectMetas, listProjects, retryPolicy, PARTIAL_VIEW, readsPartially } from './tier-sync.mjs'
 
 describe('localBase', () => {
     // The documented convention is LOCAL_API_URL with no /serverXR suffix
@@ -478,6 +478,17 @@ describe('an overwrite that removes media is counted, and refused without the ex
     })
 })
 
+describe('applySkip: a bare project id is refused', () => {
+    const plan = [{ spaceId: 'cinema-house', createSpace: false, projects: ['cinema-house-floor', 'manifesto'] }]
+    it('throws and names the right form', () => {
+        expect(() => applySkip(plan, ['cinema-house-floor'])).toThrow(/cinema-house\/cinema-house-floor/)
+    })
+    it('still accepts a whole space and space/project', () => {
+        expect(applySkip(plan, ['cinema-house'])).toEqual([])
+        expect(applySkip(plan, ['cinema-house/cinema-house-floor'])[0].projects).toEqual(['manifesto'])
+    })
+})
+
 describe('applySkip', () => {
     const plan = [
         { spaceId: 'br-id-ge', createSpace: false, projects: ['n2-seed', 'ops-board'] },
@@ -694,5 +705,52 @@ describe('an anonymous read of a remote tier', () => {
         expect(planAudit({ source: { s: { p: secret } }, destination: { s: {} } }).missing).toHaveLength(1)
         // And the other direction.
         expect(planAudit({ source: partial({ s: {} }), destination: { s: { p: secret } } }).unreadable[0].side).toBe('source')
+    })
+})
+
+describe('withStoredDevLogin host allowlist and reasons', () => {
+    const file = (body, mode = 0o600) => {
+        const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tsl-')), 'c.json')
+        fs.writeFileSync(f, JSON.stringify(body), { mode })
+        fs.chmodSync(f, mode)
+        return f
+    }
+    const future = Date.now() + 3600e3
+    const saved = process.env.DI_CREDENTIALS_FILE
+    afterEach(() => { process.env.DI_CREDENTIALS_FILE = saved; if (saved === undefined) delete process.env.DI_CREDENTIALS_FILE; vi.restoreAllMocks() })
+    const run = (env, base) => {
+        const err = vi.spyOn(process.stderr, 'write').mockReturnValue(true)
+        const out = withStoredDevLogin(env, base)
+        return { out, said: err.mock.calls.map((c) => String(c[0])).join('') }
+    }
+    it('sends the stored token to dev and to loopback', () => {
+        process.env.DI_CREDENTIALS_FILE = file({ dev: { token: 'T', expiresAt: future } })
+        expect(run({}, 'https://dev.diiii.xyz/serverXR').out.LIVE_API_TOKEN).toBe('T')
+        expect(run({}, 'http://127.0.0.1:18081/serverXR').out.LIVE_API_TOKEN).toBe('T')
+    })
+    it('never sends it to prod or a foreign host, and says why without the token', () => {
+        process.env.DI_CREDENTIALS_FILE = file({ dev: { token: 'SECRET', expiresAt: future } })
+        for (const base of ['https://diiii.xyz/serverXR', 'https://evil.example.com/serverXR']) {
+            const r = run({}, base)
+            expect(r.out.LIVE_API_TOKEN).toBeUndefined()
+            expect(r.said).toMatch(/not dev\.diiii\.xyz/)
+            expect(r.said).not.toContain('SECRET')
+        }
+    })
+    it('refuses when the recorded entry.base is foreign', () => {
+        process.env.DI_CREDENTIALS_FILE = file({ dev: { token: 'SECRET', base: 'https://evil.example.com', expiresAt: future } })
+        const r = run({}, 'https://dev.diiii.xyz/serverXR')
+        expect(r.out.LIVE_API_TOKEN).toBeUndefined()
+        expect(r.said).toMatch(/recorded base/)
+    })
+    it('prints the reason for missing, expired and world-readable logins', () => {
+        process.env.DI_CREDENTIALS_FILE = path.join(os.tmpdir(), 'nope-credentials.json')
+        expect(run({}, 'https://dev.diiii.xyz/serverXR').said).toMatch(/missing/)
+        process.env.DI_CREDENTIALS_FILE = file({ dev: { token: 'SECRET', expiresAt: 1000 } })
+        expect(run({}, 'https://dev.diiii.xyz/serverXR').said).toMatch(/expired/)
+        process.env.DI_CREDENTIALS_FILE = file({ dev: { token: 'SECRET', expiresAt: future } }, 0o644)
+        const r = run({}, 'https://dev.diiii.xyz/serverXR')
+        expect(r.said).toMatch(/readable by others/)
+        expect(r.said).not.toContain('SECRET')
     })
 })
