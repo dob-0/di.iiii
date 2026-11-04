@@ -6,3 +6,8 @@
 - Cuts are counted: per cube `lit`, `blanked`, `offField`, `offPercent`, `dark`; the Stage card says "N % of this look is off the field"; `driving` is true only while something is lit.
 - The 50 ms tick catches and logs its own errors, once per distinct message.
 - 29 new tests (`laserDeskStageAudit.test.js`, `ui/desk.test.js`), 26 fail on the code before. Not done here: audit rows 1, 4, 11, 18 (the saved placement), 5/20/26/41 (draw load, partly #1224), 8, 9, 12-17 (engine and light desk).
+## 2026-11-04 — laser desk stage audit: review follow-up (slider bounds, dark latch, Blackout wording)
+
+- Added `laserDeskFix3.test.js`: the desk UI's size/x/y slider bounds are read from `ui/desk.js` and compared with `CUBE_RANGE` (now exported from `laserDesk.js`); order has no slider, only arrow buttons.
+- Added an engine-level test of `dark(true|false)`: two cubes and two senders, 0 lit points while latched, arms kept, lit again after `dark(false)`.
+- PR body now states that default Blackout disarms every cube unless "Blackout keeps the arm" is ticked, and that only Shift+B is gap-limited.
