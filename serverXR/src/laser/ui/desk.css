@@ -183,6 +183,10 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
 .cubetable .ok { color: var(--accent); }
 .cubetable .bad { color: #ff9b93; }
 .cubetable .warn { color: var(--warn); }
+.cubetable .slide { display: flex; align-items: center; gap: 6px; }
+.cubetable output.num { font: 11px var(--mono); min-width: 3.2em; text-align: right; }
+.cube .cap { flex-wrap: wrap; }
+.cube .cut { flex-basis: 100%; font: 500 11px var(--mono); color: var(--warn); }
 #page-setup .pane > .actions, #found { padding: 0 10px 10px; }
 .foundlist { margin: 0; padding: 0 0 0 18px; font-family: var(--mono); font-size: 11px; }
 .notes ul { margin: 0; padding: 10px 10px 10px 28px; color: var(--muted); }

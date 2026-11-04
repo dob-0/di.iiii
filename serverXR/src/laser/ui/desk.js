@@ -12,6 +12,10 @@
     const VIEW_MS = 80
     const SWATCHES = ['#ff2030', '#ffb020', '#ffffff', '#20d8ff', '#3050ff', '#8040ff', '#ff30c0', '#20ff60']
     const OUT = 'desk'
+    // look|cube pairs a Go was pressed for while stopped; cleared when the cube runs again. Stopped still after that Go = the look's own.
+const stillGone = new Set()
+const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30, 31)
+    const WHEEL_MS = 400 // a slider value that moves within this of a wheel tick is the wheel's, and is undone (rows 2, 7)
 
     const $ = (id) => document.getElementById(id)
     const el = (tag, props = {}, ...kids) => {
@@ -130,7 +134,8 @@
         if (!held('master')) master.value = desk.master
         $('masterVal').textContent = Math.round(Number(master.value) * 100) + '%'
         $('blackoutBtn').classList.toggle('is-on', desk.blackout)
-        $('releaseBtn').disabled = !desk.live
+        if ($('blackoutKeepsArm') && !held('keepArm')) $('blackoutKeepsArm').checked = Boolean(desk.blackoutKeepsArm)
+        $('releaseBtn').disabled = !desk.live && !desk.blackout
         const pill = $('safetyPill')
         pill.className = 'pill'
         if (!engine) { pill.textContent = 'Laser engine: no answer'; pill.classList.add('is-warn'); return }
@@ -158,8 +163,13 @@
         clearTimeout(masterTimer)
         masterTimer = setTimeout(() => post('desk/api/master', { level: Number(e.target.value) }), SEND_MS)
     })
-    $('blackoutBtn').addEventListener('click', () => post('desk/api/blackout', { on: !desk?.blackout }).then(refreshDesk))
+    // The button only ever turns blackout ON, so a second click (a panic double-click) never relights the cubes; lifting it
+    // is Release or Shift+B (audit row 30).
+    $('blackoutBtn').addEventListener('click', () => post('desk/api/blackout', { on: true }).then(refreshDesk))
     $('releaseBtn').addEventListener('click', () => post('desk/api/release').then(refreshDesk))
+    // "Blackout keeps the arm": the older desk blackout (dark, armed kept, Shift+B brings it back). Off = Blackout disarms.
+    const keepBox = $('blackoutKeepsArm')
+    if (keepBox) keepBox.addEventListener('change', () => post('desk/api/setting', { blackoutKeepsArm: keepBox.checked }).then(refreshDesk))
     $('disarmBtn').addEventListener('click', () => post('api/arm', { armed: false }).then(refreshEngine))
 
     // ---- pages
@@ -312,8 +322,10 @@
         const row = el('div', { class: 'field' + (spec.multi ? ' multi' : ''), title: spec.title || '' }, el('label', { for: 'f-' + spec.key, text: spec.label }), range, out)
         const show = () => { out.textContent = spec.fmt(Number(range.value)) }
         range.addEventListener('input', () => { show(); edit({ [spec.key]: Number(range.value) }) })
-        // The wheel nudges a slider one step (the light desk's scrub), only while the pointer is on it.
+        // The wheel over a slider scrolls the pane and changes nothing (audit row 7). Alt+wheel nudges one step (Shift+Alt
+        // ten), the light desk's scrub kept as a deliberate gesture.
         range.addEventListener('wheel', (e) => {
+            if (!e.altKey) return
             e.preventDefault()
             const step = Number(spec.step) * (e.shiftKey ? 10 : 1)
             range.value = String(Math.min(spec.max, Math.max(spec.min, Number(range.value) + (e.deltaY < 0 ? step : -step))))
@@ -508,9 +520,10 @@
             box.replaceChildren(...desk.cubes.map((c) => {
                 const canvas = el('canvas')
                 const state = el('span', { class: 'state' })
+                const cut = el('span', { class: 'warn cut', hidden: true })
                 const name = el('b')
-                stageCanvases.set(c.id, { canvas, state, name, card: null })
-                const card = el('div', { class: 'cube' }, canvas, el('div', { class: 'cap' }, name, state))
+                stageCanvases.set(c.id, { canvas, state, name, cut, card: null })
+                const card = el('div', { class: 'cube' }, canvas, el('div', { class: 'cap' }, name, state, cut))
                 stageCanvases.get(c.id).card = card
                 return card
             }))
@@ -531,6 +544,11 @@
             view.state.textContent = text
             view.state.className = 'state ' + cls
             view.state.title = c.held || e?.stop?.text || ''
+            // A picture cut by the field's edge or the keep-in zone says so; a dark cube is not shown as "on" (rows 19, 23, 24).
+            if (c.dark && c.on && !c.held && !desk.blackout && text === 'on') view.state.textContent = 'on · dark'
+            view.cut.hidden = !(c.offPercent > 0)
+            view.cut.textContent = c.offPercent > 0 ? `${c.offPercent} % of this look is off the field` : ''
+            view.cut.title = `${c.offField || 0} lit points pushed off the field, ${c.blanked || 0} outside the keep-in zone; the cube does not draw them`
         }
     }
     let viewBusy = false
@@ -592,10 +610,25 @@
                 ;[ids[i], ids[j]] = [ids[j], ids[i]]
                 Promise.all(ids.map((id, k) => post('desk/api/cube', { id, order: k }))).then(refreshDesk)
             }
+            // A placement slider shows its number and sends ONE change when the hand lets go (pointer up, or a key up on the
+            // arrows). A wheel or trackpad scroll over it changes nothing: that value is put back (audit rows 2, 7, 55).
             const slider = (key, min, max, step) => {
                 const r = el('input', { type: 'range', min, max, step, value: c[key], 'aria-label': key })
-                r.addEventListener('change', () => setCube(c.id, { [key]: Number(r.value) }))
-                return r
+                const out = el('output', { class: 'num', text: Number(c[key]).toFixed(2) })
+                let moved = false
+                let wheelAt = 0
+                r.addEventListener('wheel', () => { wheelAt = Date.now() }, { passive: true })
+                const undoWheel = () => { r.value = String(c[key]); out.textContent = Number(c[key]).toFixed(2); moved = false }
+                r.addEventListener('input', () => {
+                    if (Date.now() - wheelAt < WHEEL_MS) return undoWheel()
+                    out.textContent = Number(r.value).toFixed(2)
+                    moved = true
+                })
+                const commit = () => { if (!moved) return; moved = false; setCube(c.id, { [key]: Number(r.value) }) }
+                r.addEventListener('pointerup', commit)
+                r.addEventListener('keyup', commit)
+                r.addEventListener('change', () => { if (Date.now() - wheelAt < WHEEL_MS) undoWheel(); else commit() })
+                return el('div', { class: 'slide' }, r, out)
             }
             const check = (key) => {
                 const box = el('input', { type: 'checkbox' })
@@ -606,12 +639,20 @@
             const link = engine.sim ? el('span', { class: 'muted', text: 'sim' })
                 : e.connected ? el('span', { class: 'ok', text: 'answering' })
                     : el('span', { class: 'bad', text: e.ip ? 'no answer' : 'no address' })
-            const output = e.armed
+            // A look that is itself a still beam trips again on every Go: say so, rather than a button that does nothing (R7).
+            const stillKey = `${desk.liveId}|${c.id}`
+            if (!e.stop) stillGone.delete(stillKey)
+            const holdsStill = e.stop?.reason === 'still-beam' && stillGone.has(stillKey)
+            const output = e.armed && e.stop && !engine.sim && desk.live
+                ? el('button', { class: 'danger', text: holdsStill ? 'This look holds a still beam: pick another look' : 'Stopped · press Go', title: 'Press a look (Go): the cube lights again on its next new picture that passes the guards', onclick: () => { if (desk.liveId) { stillGone.add(stillKey); post('desk/api/go', { look: desk.liveId }).then(refreshDesk) } } })
+                : e.armed
                 ? el('button', { class: 'danger', text: 'On · turn off', onclick: () => post('api/arm', { armed: false, cube: c.id, out: OUT }).then(refreshEngine) })
                 : el('button', { text: 'On', disabled: !e.ip, title: e.ip ? 'Arm this cube (the first On of a run asks for the phrase)' : 'No address: Find cubes, then Use these', onclick: () => arm(c.id) })
             const now = c.held ? el('span', { class: 'warn', text: 'held by another Out', title: c.held })
-                : e.stop && !engine.sim ? el('span', { class: 'warn', text: e.stop.text || e.stop.reason })
-                    : c.driving ? el('span', { text: `${c.points} points` }) : el('span', { class: 'muted', text: '—' })
+                : e.stop && !engine.sim ? el('span', { class: 'warn', text: `${e.stop.text || e.stop.reason}${e.armed && desk.live ? ' — press Go' : ''}` })
+                    : c.driving ? el('span', { text: `${c.lit} lit points` })
+                        : c.dark ? el('span', { class: 'warn', text: desk.blackout ? 'dark · blackout' : c.offPercent > 0 ? `dark · ${c.offPercent} % off the field` : 'dark' })
+                            : el('span', { class: 'muted', text: '—' })
             return el('tr', {},
                 el('td', { class: 'order multi' }, el('button', { text: '◀', title: 'Earlier', onclick: () => move(-1) }), ' ', el('button', { text: '▶', title: 'Later', onclick: () => move(1) })),
                 el('td', {}, el('b', { text: nameOf(c.id) }), el('div', { class: 'muted', text: c.id })),
@@ -725,6 +766,7 @@
         e.preventDefault()
         pasteLook(look)
     })
+    let blackoutKeyAt = 0
     document.addEventListener('keydown', (e) => {
         if (!desk) return
         const mod = e.ctrlKey || e.metaKey
@@ -733,14 +775,31 @@
         if (mod && key === 's') { e.preventDefault(); saveAll(); return }
         // Esc leaves a text field (a second Esc closes Edit); every other key there is the field's own.
         if (typing(e.target)) { if (key === 'Escape') e.target.blur(); return }
+        // B is the panic key: it works on every page and with focus on a slider or a checkbox, only a text field keeps it.
+        // Held down it does not repeat, and a second B within BLACKOUT_GAP_MS is ignored (audit rows 6, 14, 30, 31).
+        if (key === 'b' && !mod && !e.altKey) {
+            e.preventDefault()
+            const t = Date.now()
+            if (e.repeat) return
+            // The gap guards the lift only: a panic retry of B (dark) is never dropped (review D4).
+            if (e.shiftKey && t - blackoutKeyAt < BLACKOUT_GAP_MS) return
+            if (e.shiftKey) blackoutKeyAt = t
+            // B only ever goes dark; Shift+B lifts it, so a second press never lights the cubes (review 1218 M1).
+            post('desk/api/blackout', { on: !e.shiftKey }).then(refreshDesk)
+            return
+        }
+        // A held key does not repeat a look-changing action (Backspace deleting looks, T climbing to 300 BPM); the arrows walk.
+        if (e.repeat && !/^Arrow/.test(key)) return
+        // The keys below act on the Control page only: on Setup they would change looks nobody can see (audit row 3).
+        const control = page === 'control'
         if (key === 'F2' && !mod) {
-            if (selected) { e.preventDefault(); $('lookName').focus(); $('lookName').select() }
+            if (selected && control) { e.preventDefault(); $('lookName').focus(); $('lookName').select() }
             return
         }
         if (mod && !e.altKey) {
             if (key === 'z' && !e.shiftKey) { e.preventDefault(); undo() }
             else if (key === 'y' || (key === 'z' && e.shiftKey)) { e.preventDefault(); redo() }
-            else if (key === 'd') { e.preventDefault(); duplicateSelected() }
+            else if (key === 'd' && control) { e.preventDefault(); duplicateSelected() }
             return // Ctrl+C and Ctrl+V arrive as copy and paste (above)
         }
         if (e.altKey) return
@@ -750,6 +809,8 @@
             return
         }
         if (inField(e.target)) return // a slider's arrows move the slider
+        if (key === 't') { $('tapBtn').click(); return }
+        if (!control) return
         if (/^[1-9]$/.test(key)) {
             const look = desk.looks[Number(key) - 1]
             if (look) sendLook(look.id)
@@ -762,11 +823,7 @@
             if (selected) { e.preventDefault(); sendLook(selected) }
         } else if (key === 'Delete' || key === 'Backspace') {
             if (selected) { e.preventDefault(); deleteSelected() }
-        } else if (key === 'b') {
-            // B only ever goes dark; Shift+B (or the button) lifts it, so a second press never lights the cubes (review 1218 M1).
-            if (e.shiftKey) { if (desk.blackout) $('blackoutBtn').click() } else post('desk/api/blackout', { on: true }).then(refreshDesk)
         }
-        else if (key === 't') $('tapBtn').click()
     })
 
     // ---- polling
@@ -799,9 +856,15 @@
         if (page === 'setup' && !setupHeld()) renderSetup()
     }
     // The setup table is rebuilt by the polls, except while a hand is on it (a slider mid-drag, a box just ticked).
+    // Held also while a pointer is down anywhere, and while a slider or a typed box in the table has focus: the table is
+    // never rebuilt under the hand (audit rows 22, 2).
     let setupTouchedAt = 0
+    let pointerDown = false
     for (const type of ['pointerdown', 'input', 'keydown']) $('page-setup').addEventListener(type, () => { setupTouchedAt = Date.now() })
-    const setupHeld = () => Date.now() - setupTouchedAt < HOLD_MS || Boolean(document.querySelector('#page-setup input[type=range]:active'))
+    document.addEventListener('pointerdown', () => { pointerDown = true }, true)
+    for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, () => { pointerDown = false }, true)
+    const setupHeld = () => pointerDown || Date.now() - setupTouchedAt < HOLD_MS
+        || Boolean(document.activeElement?.closest?.('#cubeRows') && document.activeElement.matches('input[type=range], input[type=number], input[type=text], select'))
     const loop = (fn, ms) => { const run = async () => { if (!document.hidden) await fn(); setTimeout(run, ms) }; run() }
 
     // The pinned bar's height, for scroll-padding-top (it wraps to three rows on a phone).
