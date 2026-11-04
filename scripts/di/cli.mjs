@@ -60,7 +60,7 @@ import {
 import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
 import { buildSyncAudit } from './sync-plan.mjs'
-import { DEFAULT_REMOTE, findTierSync, runSyncPush } from './syncPush.mjs'
+import { DEFAULT_REMOTE, assertDevHost, devBase, findTierSync, runSyncPush } from './syncPush.mjs'
 import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
 import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from './share.mjs'
 import { readFollows, removeFollow } from './follows.mjs'
@@ -1120,6 +1120,7 @@ const cmdSyncPush = async ({ args, home, spaceId, link }) => {
     const port = resolvePort(home, args.flags.port)
     const apply = !!args.flags.apply
     const remote = args.flags.remote || link?.remote || DEFAULT_REMOTE
+    try { devBase(remote); if (process.env.DI_DEV_BASE) assertDevHost(process.env.DI_DEV_BASE) } catch (err) { fail(err.message); process.exitCode = 1; return }
     if (!(await alive(home, port))) { fail('this di.iiii is not running — start it with `di up`, then push'); process.exitCode = 1; return }
     if (link) {
         const local = await gatherLocalSide({ port, spaceId, token: link.key })

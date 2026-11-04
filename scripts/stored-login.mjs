@@ -16,6 +16,23 @@ import path from 'node:path'
 
 export const credentialsFile = () => process.env.DI_CREDENTIALS_FILE || path.join(os.homedir(), '.config', 'di', 'credentials.json')
 
+/** Hosts the stored dev token may be sent to: dev.diiii.xyz over https, or loopback / diiii.localhost (an ssh forward, a local stack). */
+// Same rule as scripts/di/syncPush.mjs (the CLI is packed apart from scripts/, so it keeps its own copy; a test pins them equal).
+export const devHostAllowed = (url) => {
+    let u
+    try { u = new URL(String(url)) } catch { return false }
+    if (u.username || u.password) return false
+    const host = u.hostname.replace(/^\[|\]$/g, '').toLowerCase()
+    if (host === 'dev.diiii.xyz') return u.protocol === 'https:'
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === 'diiii.localhost' || host.endsWith('.diiii.localhost')
+}
+
+export const assertDevHost = (url) => {
+    if (!devHostAllowed(url)) throw new Error(`refusing dev base ${String(url).replace(/\/\/[^/@]*@/, '//')}: the dev login is only sent to dev.diiii.xyz, loopback or diiii.localhost`)
+    return url
+}
+
 export const storedLogin = (tier, now = Date.now()) => {
     if (tier !== 'dev') return { token: null, why: 'only the dev tier reads the stored login' }
     const file = credentialsFile()
@@ -34,5 +51,5 @@ export const storedLogin = (tier, now = Date.now()) => {
     }
     if (!entry?.token) return { token: null, why: `no ${tier} session in the stored login — run \`di login\` once` }
     if (Number(entry.expiresAt) && Number(entry.expiresAt) <= now) return { token: null, why: `the stored ${tier} login expired — run \`di login\` once` }
-    return { token: String(entry.token), why: null, user: entry.user?.name || null }
+    return { token: String(entry.token), base: entry.base ? String(entry.base) : null, why: null, user: entry.user?.name || null }
 }

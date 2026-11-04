@@ -70,7 +70,7 @@ import { fileURLToPath } from 'node:url'
 import { remapAssetIds, remapFromUpload } from './asset-remap-lib.mjs'
 import { ensureDestinationVisibility, visibilityCreateFields } from './project-visibility-lib.mjs'
 import { isMainModule } from './lib/isMainModule.mjs'
-import { storedLogin } from './stored-login.mjs'
+import { storedLogin, devHostAllowed } from './stored-login.mjs'
 
 const { diffDocumentLoss, combineLoss, describeLoss, parseAcceptLoss, lossGate } = createRequire(import.meta.url)('../shared/documentLoss.cjs')
 
@@ -445,10 +445,22 @@ const ENV_KEYS = ['API_TOKEN', 'LIVE_API_TOKEN', 'PROD_API_TOKEN', 'LOCAL_API_UR
 const fromProcess = () => Object.fromEntries(ENV_KEYS.filter((k) => process.env[k]).map((k) => [k, process.env[k]]))
 
 // Dev only: with no LIVE_API_TOKEN anywhere, the session `di login` keeps (scripts/stored-login.mjs).
-const withStoredDevLogin = (env) => {
+export const withStoredDevLogin = (env, devBase = TIERS.dev.base) => {
     if (env.LIVE_API_TOKEN) return env
+    if (!devHostAllowed(devBase)) {
+        process.stderr.write(`stored dev login not used: dev base ${devBase.replace(/\/\/[^/@]*@/, '//')} is not dev.diiii.xyz, loopback or diiii.localhost\n`)
+        return env
+    }
     const stored = storedLogin('dev')
-    return stored.token ? { ...env, LIVE_API_TOKEN: stored.token } : env
+    if (!stored.token) {
+        process.stderr.write(`stored dev login not used: ${stored.why}\n`)
+        return env
+    }
+    if (stored.base && !devHostAllowed(stored.base)) {
+        process.stderr.write('stored dev login not used: its recorded base is not dev.diiii.xyz, loopback or diiii.localhost\n')
+        return env
+    }
+    return { ...env, LIVE_API_TOKEN: stored.token }
 }
 
 const readEnv = () => withStoredDevLogin(readEnvFile())
