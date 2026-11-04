@@ -84,6 +84,23 @@ function normalizePort(port) {
   return WINDOWS ? p.toUpperCase() : p;
 }
 
+// The same device by another name: a /dev/serial/by-id link, a udev alias or a symlink
+// resolves to one real path. Falls back to the plain string when the path cannot be
+// resolved (Windows COM names, a port that is not there).
+function realPort(port) {
+  const p = devicePath(port);
+  try { return fs.realpathSync(p); } catch (e) { return p; }
+}
+function samePort(a, b) {
+  if (!a || !b) return false;
+  return normalizePort(a) === normalizePort(b) || realPort(a) === realPort(b);
+}
+// True when this live driver object holds an open handle on that port, whatever it is
+// called. Independent of state.output.driver: if the fd is open, the port is taken.
+function holdsPort(driver, port) {
+  return !!(driver && driver.fd != null && samePort(driver.port, port));
+}
+
 function devicePath(port) {
   // \\.\COMn is required for COM10 and above and is harmless below it.
   return WINDOWS ? '\\\\.\\' + normalizePort(port) : normalizePort(port);
@@ -360,7 +377,12 @@ class Enttec {
   // beginning EN. Combined with a port that opens and a write that is accepted, that is
   // as much as can be established without a reply, and it is enough to tell a real widget
   // apart from a wrong port name, which is the mistake actually worth catching.
-  async identify() {
+  // Opening a CH340 port can reset the node behind it (DTR toggles on open), so this must
+  // never run while output is on for the port: `opts.outputOn` is the caller saying so.
+  async identify(opts = {}) {
+    if (opts.outputOn) {
+      return { ok: false, held: true, error: `${this.port}: output is on for this port. Opening it can reset the node (CH340), so Identify is refused. Turn output off, then identify.` };
+    }
     if (this.offline) return { ok: true, offline: true };
     if (!this.fd && !this.open()) return { ok: false, error: this.lastError };
     const info = describePort(this.port);
@@ -567,4 +589,4 @@ function describePortPosix(port) {
   return { device: m ? 'USB serial' : null, serial: m ? m[1] : null };
 }
 
-module.exports = { Enttec, fdDataSource, listPorts, describePort, frame, PORT_NAME, DEFAULT_PORT };
+module.exports = { Enttec, samePort, holdsPort, fdDataSource, listPorts, describePort, frame, PORT_NAME, DEFAULT_PORT };

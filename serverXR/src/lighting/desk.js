@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const { ArtNet, broadcastAddresses, localAddresses } = require('./artnet');
 const { decideIdentify } = require('./identify');
-const { Enttec, listPorts, describePort, PORT_NAME, DEFAULT_PORT } = require('./enttec');
+const { Enttec, holdsPort, listPorts, describePort, PORT_NAME, DEFAULT_PORT } = require('./enttec');
 const {
   Engine, PROFILES, makeFixture, DEFAULT_LIMITS, roleKinds, ROLE_DEFAULTS,
   addProfile, removeProfile, customProfiles, findProfile,
@@ -2262,15 +2262,16 @@ function createDesk(opts = {}) {
     // Which widget is on the port, and does it open — answerable without moving a light.
     'POST /api/serial/identify': async (req, res, body) => {
       const port = body && body.port && PORT_NAME.test(String(body.port).trim()) ? portName(body.port) : state.output.serialPort;
-      // A port the live output holds is never opened for a probe: say so instead.
-      if (state.output.driver === 'enttec' && enttec && enttec.port === port) {
+      // A port the live output holds is never opened for a probe: say so instead. Held means
+      // the live driver has the fd, under any name for the device (symlink, by-id alias).
+      if (holdsPort(enttec, port)) {
         const d = describePort(port);
         const held = decideIdentify({ port, device: d, held: true });
         return json(res, { ok: true, port, held: true, protocol: null, label: held.label, looksLikeEnttec: false, ports: listPorts(), device: d });
       }
       const probe = new Enttec({ port, offline: offline });
       let result;
-      try { result = await probe.identify(); } finally { probe.close(); }
+      try { result = await probe.identify({ outputOn: holdsPort(enttec, port) }); } finally { probe.close(); }
       json(res, { ok: !!result.ok, port, ...result, ports: listPorts(), device: describePort(port) });
     },
 

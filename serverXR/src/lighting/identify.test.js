@@ -91,3 +91,35 @@ describe('Enttec.readReply is asynchronous', () => {
     expect(p.listenerCount('data')).toBe(0)
   })
 })
+
+describe('Identify never opens a port the output holds', () => {
+  const os = require('node:os')
+  const { samePort, holdsPort, Enttec } = require('./enttec.js')
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'idheld-'))
+  const real = path.join(dir, 'ttyUSB9')
+  const alias = path.join(dir, 'by-id-alias')
+  fs.writeFileSync(real, '')
+  fs.symlinkSync(real, alias)
+  it('a symlink alias is the same port', () => {
+    expect(samePort(alias, real)).toBe(true)
+    expect(samePort(alias, path.join(dir, 'other'))).toBe(false)
+  })
+  it('held when the driver has the fd, by any name, whatever state.output.driver says', () => {
+    expect(holdsPort({ fd: 5, port: real }, alias)).toBe(true)
+    expect(holdsPort({ fd: 5, port: alias }, real)).toBe(true)
+    expect(holdsPort({ fd: null, port: real }, alias)).toBe(false)
+    expect(holdsPort(null, real)).toBe(false)
+  })
+  it('falls back to the string when the path cannot be resolved', () => {
+    expect(samePort('/dev/nope-1', '/dev/nope-1')).toBe(true)
+    expect(samePort('/dev/nope-1', '/dev/nope-2')).toBe(false)
+  })
+  it('identify() refuses with a message and no write when output is on', async () => {
+    const e = new Enttec({ port: real, offline: true })
+    const r = await e.identify({ outputOn: true })
+    expect(r.ok).toBe(false)
+    expect(r.held).toBe(true)
+    expect(r.error).toMatch(/output is on/)
+    expect(e.fd).toBe(null)
+  })
+})
