@@ -29,7 +29,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TOOL=colmap; GPU=colab; ACCEL=""; OUT=./video-to-3d-out; FPS=3; WIDTH=1080; MATCH=exh; OVERLAP=20; MAXF=0
+TOOL=colmap; GPU=colab; ACCEL=""; OUT=./video-to-3d-out; FPS=3; WIDTH=1080; MATCH=exh; OVERLAP=20; OVERLAP_SET=0; MAXF=0
 SESSION=""; COLAB_HOME=""; TIMEOUT_MIN=240; CONSENT=""; KEEP=0; DRY=0; INPUTS=()
 
 die() { echo "video-to-3d: $*" >&2; exit "${RC:-2}"; }
@@ -38,7 +38,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --tool) TOOL="${2:?}"; shift 2;;      --gpu) GPU="${2:?}"; shift 2;;       --accel) ACCEL="${2:?}"; shift 2;;
     --out) OUT="${2:?}"; shift 2;;        --fps) FPS="${2:?}"; shift 2;;       --width) WIDTH="${2:?}"; shift 2;;
-    --match) MATCH="${2:?}"; shift 2;;    --overlap) OVERLAP="${2:?}"; shift 2;; --max-frames) MAXF="${2:?}"; shift 2;;
+    --match) MATCH="${2:?}"; shift 2;;    --overlap) OVERLAP="${2:?}"; OVERLAP_SET=1; shift 2;; --max-frames) MAXF="${2:?}"; shift 2;;
     --session) SESSION="${2:?}"; shift 2;; --colab-home) COLAB_HOME="${2:?}"; shift 2;;
     --timeout-min) TIMEOUT_MIN="${2:?}"; shift 2;; --consent) CONSENT="${2:?}"; shift 2;;
     --keep) KEEP=1; shift;;               --dry-run) DRY=1; shift;;            -h|--help) usage; exit 0;;
@@ -65,7 +65,8 @@ case "$TOOL" in
                  RCMD="cd /content/v2d && python sfm_exh_seq.py"; RESULT="/content/place/sfm_results.json";;
   colmap-track)  DEF=cpu;  LIC="BSD-3-Clause (COLMAP/pycolmap), no weights"
                  FILES="$SC/colmap/sfm_seq_track.py"; SETUP="pip install -q pycolmap==4.2.1 && mkdir -p /content/place && ln -sfn /content/frames /content/place/images"
-                 RCMD="cd /content/v2d && python sfm_seq_track.py"; RESULT="/content/place/sfm_results.json";;
+                 RCMD="cd /content/v2d && python sfm_seq_track.py"
+                 [ "$OVERLAP_SET" = 1 ] && RCMD="$RCMD --overlap $OVERLAP"; RESULT="/content/place/sfm_results.json";;
   colmap-global) DEF=cpu;  LIC="BSD-3-Clause (COLMAP global mapper, ex-GLOMAP), no weights"
                  FILES="$SC/recon-glomap/sfm_global.py"; SETUP="pip install -q pycolmap==4.2.1"
                  RCMD="mkdir -p /content/place && cd /content/v2d && python sfm_global.py /content/frames run $MATCH $OVERLAP"

@@ -44,7 +44,7 @@ def sha(p):
 
 def room_files(room):
     for dp, dns, fns in os.walk(room):
-        dns[:] = [d for d in dns if not d.startswith(SKIP_DIRS)]
+        dns[:] = [d for d in dns if d not in SKIP_DIRS]
         for fn in fns:
             if not fn.endswith(SKIP_EXT): yield Path(dp) / fn
 
@@ -102,9 +102,21 @@ def score_pair(cv2, np, frame, render_rgba, tol_px=4):
     return {'precision': round(p, 3), 'recall': round(r, 3), 'f1': round(f1, 3), 'cover': round(float((a > 0.5).mean()), 3)}
 
 
+def pose_set(m):
+    """(valid pose count, sha256 of gate_poses.json). Valid = the pose file loads and the frame file exists."""
+    gp = json.load(open(m / 'gate_poses.json')); n = 0
+    for items in gp.values():
+        for it in items:
+            try:
+                (m / it['pose']).read_text() and json.loads((m / it['pose']).read_text())
+                n += (m / 'survey' / 'frames' / it['frame']).exists()
+            except (OSError, ValueError, KeyError): pass
+    return n, sha(m / 'gate_poses.json')
+
+
 def score(m, rnd, glb, blender):
     import cv2, numpy as np
-    gp = json.load(open(m / 'gate_poses.json'))
+    gp = json.load(open(m / 'gate_poses.json')); n_valid, gp_sha = pose_set(m)
     out = m / 'rounds' / f'r{rnd}' / 'gate'; out.mkdir(parents=True, exist_ok=True)
     glb = Path(glb) if glb else m / 'rounds' / f'r{rnd}' / 'floor.glb'
     batch = []
@@ -126,13 +138,21 @@ def score(m, rnd, glb, blender):
             per.append(dict(frame=it['frame'], **score_pair(cv2, np, fr, rd)))
         ok = [p for p in per if 'f1' in p]
         res[room] = {'score': round(sum(p['f1'] for p in ok) / len(ok), 3) if ok else None, 'poses': per}
-    json.dump({'round': rnd, 'glb': str(glb), 'glb_sha256': sha(glb), 'rooms': res}, open(out.parent / 'overlap.json', 'w'), indent=1)
+    json.dump({'round': rnd, 'glb': str(glb), 'glb_sha256': sha(glb),
+               'valid_poses': n_valid, 'gate_poses_sha256': gp_sha, 'rooms': res}, open(out.parent / 'overlap.json', 'w'), indent=1)
     for room, v in res.items(): print(f'{room:15s} {v["score"]}')
 
 
 def check(m, rnd, prev, tol, apply):
-    a = json.load(open(m / 'rounds' / f'r{prev}' / 'overlap.json'))['rooms']
-    b = json.load(open(m / 'rounds' / f'r{rnd}' / 'overlap.json'))['rooms']
+    A = json.load(open(m / 'rounds' / f'r{prev}' / 'overlap.json'))
+    B = json.load(open(m / 'rounds' / f'r{rnd}' / 'overlap.json'))
+    for key, what in (('valid_poses', 'count of valid poses'), ('gate_poses_sha256', 'sha256 of gate_poses.json')):
+        if key not in A or key not in B:
+            print(f'warning: {what} not recorded in r{prev if key not in A else rnd}/overlap.json (older score); cannot compare', file=sys.stderr)
+        elif A[key] != B[key]:
+            sys.exit(f'REFUSED: {what} differs between r{prev} ({A[key]}) and r{rnd} ({B[key]}); scores are not comparable. '
+                     f'Re-score r{prev} with the same pose set, or keep the pose set fixed.')
+    a, b = A['rooms'], B['rooms']
     rows, back = [], []
     for room in b:
         s0, s1 = (a.get(room) or {}).get('score'), b[room]['score']
@@ -153,8 +173,16 @@ def finalize(m, rnd, blender):
     r = m / 'rounds' / f'r{rnd}'; pre = m / 'rounds' / f'r{rnd}-pre-gate'
     if pre.exists(): sys.exit(f'{pre} exists - finalize runs once per round')
     if not (m / 'gate_poses.json').exists() or not (m / 'floor.glb').exists(): sys.exit('finalize needs floor.glb and gate_poses.json')
-    shutil.move(r, pre); archive(m, rnd); shutil.copy2(pre / 'gate.json', r / 'gate.json') if (pre / 'gate.json').exists() else None
-    score(m, rnd, None, blender)
+    shutil.move(r, pre)
+    try:
+        archive(m, rnd)
+        if (pre / 'gate.json').exists(): shutil.copy2(pre / 'gate.json', r / 'gate.json')
+        score(m, rnd, None, blender)
+    except BaseException:
+        # roll the move back so a re-run works
+        if r.exists(): shutil.rmtree(r)
+        shutil.move(pre, r); print(f'finalize failed - r{rnd} restored to its pre-gate state, re-run is possible', file=sys.stderr)
+        raise
 
 
 def main():
