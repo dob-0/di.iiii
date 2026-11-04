@@ -242,3 +242,34 @@ export const collectFinishedHints = (state) => {
 // only CURRENT.md made the gate unsatisfiable from every branch whenever dev's
 // last fold was older than the grace (10-19: 107 notes waiting, every push refused).
 export const CURRENT_MD_RECAP_PATHSPECS = ['CURRENT.md', 'docs/ai/sessions/*.md', ':(exclude)docs/ai/sessions/README.md']
+
+// The branch the session-note guard must judge. Locally that is the checked-out branch.
+// CI checks out a DETACHED merge commit on pull_request, so 
+// is empty there and the guard used to return nothing -- it never fired (measured
+// 2026-11-04: 243 notes on dev, 205 on main). On a pull request the branch is the PR head
+// (GITHUB_HEAD_REF, the branch whose notes are being proposed); on a push it is the pushed
+// ref (GITHUB_REF_NAME). A merge-queue run (gh-readonly-queue/...) repeats a PR already
+// checked, so it is skipped. Null = nothing to attribute (a truly local detached HEAD).
+export const resolveGuardBranch = (gitBranch, env = {}) => {
+  if (gitBranch) return gitBranch
+  if (env.GITHUB_EVENT_NAME === 'merge_group') return null
+  if (env.GITHUB_HEAD_REF) return env.GITHUB_HEAD_REF
+  if (env.GITHUB_REF && env.GITHUB_REF.startsWith('refs/heads/')) {
+    const name = env.GITHUB_REF.slice('refs/heads/'.length)
+    return name.startsWith('gh-readonly-queue/') ? null : name
+  }
+  return null
+}
+
+// On dev/main the sessions directory must be empty (`npm run land` empties it). 242 notes
+// were already there on 2026-11-04 (docs/ai/sessions-baseline.txt, never deleted by this
+// guard -- the owner decides), so only a note NOT in that baseline is an error: the guard
+// stops new ones without failing every build for the old ones.
+export const unlandedNoteErrors = (branch, sessionFiles, baseline = []) => {
+  if (branch !== 'dev' && branch !== 'main') return []
+  const known = new Set(baseline)
+  const fresh = sessionFiles.filter((name) => !known.has(name))
+  return fresh.length
+    ? [`docs/ai/sessions/ is not empty on "${branch}" (new, not in docs/ai/sessions-baseline.txt: ${fresh.join(', ')}) — run \`npm run land\` before pushing.`]
+    : []
+}
