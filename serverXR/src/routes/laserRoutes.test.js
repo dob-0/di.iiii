@@ -162,6 +162,21 @@ describe('the lasers at /laser', () => {
   })
 })
 
+describe('own page only (review E1-E6)', () => {
+  it('spoofed foreign Origin without token is refused', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    const frame = { cube: 'cube-1', points: [[0, 0.5, 0, 1, 0]] }
+    for (const origin of ['http://evil.example', 'null', 'http://127.0.0.1:1']) {
+      const r = await postBare(`${base}/laser/api/frame`, frame, { origin })
+      expect(r.status, origin).toBe(403)
+      expect((await r.json()).error, origin).toBe('cross-site request')
+    }
+    // a foreign Referer with no Origin is refused too (a foreign Host: laserOps.test.js)
+    expect((await postBare(`${base}/laser/api/frame`, frame, { referer: 'http://evil.example/x' })).status).toBe(403)
+  })
+})
+
 describe('review fixes E3, E5, E6 (2026-10-30)', () => {
   it('E3: the desk routes that light (go, live, a blackout lift) need the token at the router entry; a blackout ON does not', async () => {
     delete process.env.NODE_ENV
