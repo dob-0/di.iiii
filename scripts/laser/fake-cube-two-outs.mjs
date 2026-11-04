@@ -72,8 +72,9 @@ const app = express()
 const lasers = registerLaserRoutes(app, { dataDir, log: { warn: () => {} } })
 const server = await new Promise((r) => { const s = app.listen(0, '127.0.0.1', () => r(s)) })
 const base = `http://127.0.0.1:${server.address().port}/laser/api`
+const laserTokenValue = fs.readFileSync(path.join(dataDir, 'laser', '.token'), 'utf8').trim() // stage audit row 9
 const call = async (route, body) => {
-    const res = await fetch(`${base}${route}`, { method: body === undefined ? 'GET' : 'POST', headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
+    const res = await fetch(`${base}${route}`, { method: body === undefined ? 'GET' : 'POST', headers: { 'content-type': 'application/json', 'x-laser-token': laserTokenValue }, body: body === undefined ? undefined : JSON.stringify(body) })
     return { status: res.status, body: await res.json() }
 }
 
