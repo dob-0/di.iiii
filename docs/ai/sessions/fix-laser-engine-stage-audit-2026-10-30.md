@@ -6,3 +6,8 @@
 - A no-Origin, no-Referer POST that makes light (arm on, frame, alive, show) needs the local token (`<data>/laser/.token`, 0600, header `x-laser-token`). Stops stay open. The sign-off phrase is unchanged.
 - Blanked/dropped counts are kept per cube (`pointLoss` in the engine state).
 - Not done: the desk does not yet send `go: true` on its Go (desk code is not on this base), the engine is still built on the first request and not at server start, nothing was tried on a real cube.
+
+## 2026-11-04 — laser stage-audit review fixes: tests for idle auto-off, claim lapse, tripFrame, Go gap, over-temp relight, foreign Origin
+
+- Added tests for the 5 s dark idle limit (boundary), claim keep and lapse, tripFrame non-reuse after Off then On, the 500 ms Go gap, and On refused while the cube still reports over-temperature.
+- Added a laserRoutes test that a foreign Origin or Referer without the token is refused (requireOwnPage already matched Origin to the own Host; no code change).
