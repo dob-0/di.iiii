@@ -9,7 +9,7 @@ import {
   repoRoot,
   toLf
 } from './sync-agent-docs.mjs'
-import { CURRENT_MD_RECAP_PATHSPECS, isFoldBranch, isFoldNotesBranch, isNoiseBranch } from './repo-state-lib.mjs'
+import { CURRENT_MD_RECAP_PATHSPECS, isFoldBranch, isFoldNotesBranch, isNoiseBranch, resolveGuardBranch, unlandedNoteErrors } from './repo-state-lib.mjs'
 
 const normalizePath = (value) => value.split(path.sep).join('/')
 
@@ -221,8 +221,9 @@ const gitOrNull = (args) => {
 }
 
 const collectSessionNoteErrors = async () => {
-  const branch = gitOrNull(['branch', '--show-current'])
-  if (!branch) return [] // detached HEAD -- nothing to attribute a note to
+  // CI is a detached HEAD: resolveGuardBranch reads the PR head / pushed ref there.
+  const branch = resolveGuardBranch(gitOrNull(['branch', '--show-current']), process.env)
+  if (!branch) return [] // local detached HEAD -- nothing to attribute a note to
 
   const sessionsDir = 'docs/ai/sessions'
   let sessionFiles = []
@@ -234,12 +235,13 @@ const collectSessionNoteErrors = async () => {
   }
 
   if (branch === 'dev' || branch === 'main') {
-    // Landing (npm run land) is what empties this directory -- a non-empty one here
-    // means a merge happened without it, which is exactly the un-enforced "courtesy
-    // cleanup" this protocol exists to replace.
-    return sessionFiles.length
-      ? [`${sessionsDir}/ is not empty on "${branch}" (${sessionFiles.join(', ')}) — run \`npm run land\` before pushing.`]
-      : []
+    let baseline = []
+    try {
+      baseline = (await readFile('docs/ai/sessions-baseline.txt')).split('\n').map((l) => l.trim()).filter(Boolean)
+    } catch {
+      baseline = []
+    }
+    return unlandedNoteErrors(branch, sessionFiles, baseline)
   }
 
   if (isNoiseBranch(branch)) return []

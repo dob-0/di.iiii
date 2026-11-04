@@ -16,6 +16,7 @@
         "dev:server": "npm --prefix serverXR run dev",
         "build": "vite build",
         "docs:ai:sync": "node scripts/sync-agent-docs.mjs",
+        "lint:words": "bash tools/lint-words.sh",
         "docs:ai:check": "node scripts/check-agent-docs.mjs && node scripts/check-doc-paths.mjs",
         "docs:paths": "node scripts/check-doc-paths.mjs",
         "prepare": "node scripts/install-git-hooks.mjs",

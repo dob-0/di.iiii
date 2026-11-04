@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { env } from 'node:process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -59,24 +60,18 @@ const BANNED = [
     // product, so `di.i` inside src/ is a slip. `di.iiii` is not a hit — the
     // lookahead stops it.
     { word: 'di.i', pattern: /\bdi\.i(?!i)/, use: 'di.iiii' },
-    // Capital R only, for the same reason as Raw. "place it in your own room"
-    // is ordinary English about the room a visitor is standing in, and it is
-    // correct AR copy. `Room` as the name of a thing INSIDE di.iiii is the
-    // retired one: the palette has no Room, it has a Scene (asserted below).
-    //
-    // Room was retired on 2026-08-19 and this rule was missing from the guard
-    // until 2026-08-21, so seven live strings kept saying it for two days —
-    // including Studio's empty state, which told people to "add a Room", naming
-    // a card the palette does not contain. That one dead-ends someone mid-task
-    // rather than merely reading oddly, which is the difference between drift
-    // and a bug.
-    //
-    // Known hole, stated so nobody reads this rule as exhaustive: a LOWERCASE
-    // "rooms" meaning places in di.iiii slips through, and the landing page
-    // carried one ("Build rooms, place objects") until it was fixed alongside
-    // this. The hole is deliberate — the alternative flags "in your own room",
-    // which is right. Read new copy for the sense; the guard catches the noun.
-    { word: 'Room', pattern: /\bRooms?\b/, use: 'Scene (the 3D place) · space (the place that is yours)' },
+    // `room` as a name for a thing inside di.iiii (the 3D place is a Scene; the place
+    // that is yours is a space) was retired on 2026-08-19. Until 2026-11-04 this
+    // matched capital "Room" only, so lowercase "the room", "rooms" and "a room page"
+    // slipped through (measured that day: 205 live strings). It is now case-insensitive.
+    // "place it in your own room" is ordinary English about the room a visitor stands
+    // in -- such a string gets an ALLOWLIST row with its reason, like any exception.
+    // The 205 strings that existed when the guard was widened are NOT silently
+    // accepted: they are listed in src/copyVocabulary.room-baseline.json and the
+    // guard fails on any string NOT in it (new copy) and on any baseline row whose
+    // string is gone (the list only shrinks). Fix copy, then regenerate with
+    // `UPDATE_VOCAB_BASELINE=1 npx vitest run src/copyVocabulary.test.js`.
+    { word: 'Room', pattern: /\brooms?\b/i, baselined: true, use: 'Scene (the 3D place) · space (the place that is yours)' },
     // Retired 2026-09-16: "we have not staging anymore." The second tier is the
     // dev tier, at dev.diiii.xyz; its identifiers were renamed `dev` too.
     // Word-bounded, so `restaging` is not a hit, and a separator-joined token
@@ -297,13 +292,25 @@ const readableStrings = (path, source) => (
 
 const isAllowed = (path, value) => ALLOWLIST.some((row) => row.file === path && row.string === value.trim())
 
+// Strings that already said a baselined word when its guard was widened. A key is
+// `<file>\t<trimmed string>`; see the Room rule above.
+const BASELINE_PATH = join(srcDir, 'copyVocabulary.room-baseline.json')
+const UPDATING_BASELINE = env.UPDATE_VOCAB_BASELINE === '1'
+const baselineKeys = new Set(JSON.parse(readFileSync(BASELINE_PATH, 'utf8')))
+const seenBaselined = new Set()
+const baselineKey = (path, value) => `${path}\t${value.trim()}`
+
 const offencesIn = (path, entries) => {
     const offences = []
     for (const { line, value } of entries) {
         if (looksLikeCode(value)) continue
         if (isAllowed(path, value)) continue
-        for (const { word, pattern, use } of BANNED) {
+        for (const { word, pattern, use, baselined } of BANNED) {
             if (!pattern.test(value)) continue
+            if (baselined) {
+                seenBaselined.add(baselineKey(path, value))
+                if (baselineKeys.has(baselineKey(path, value))) continue
+            }
             offences.push(`${path}:${line}  banned word "${word}" — say ${use}\n    in: ${value.trim().slice(0, 140)}`)
         }
     }
@@ -347,8 +354,12 @@ describe('the wiki says only the words the contract sanctions', () => {
     it('uses none of the banned words', () => {
         const offences = []
         for (const { where, value } of wikiStrings) {
-            for (const { word, pattern, use } of BANNED) {
+            for (const { word, pattern, use, baselined } of BANNED) {
                 if (!pattern.test(value)) continue
+                if (baselined) {
+                    seenBaselined.add(baselineKey('src/wiki/wikiContent.js', value))
+                    if (baselineKeys.has(baselineKey('src/wiki/wikiContent.js', value))) continue
+                }
                 offences.push(`src/wiki/wikiContent.js  ${where}  banned word "${word}" — say ${use}\n    in: ${value.slice(0, 140)}`)
             }
         }
@@ -536,5 +547,36 @@ describe('node labels match the contract', () => {
             }
         }
         expect(offences, report(offences)).toEqual([])
+    })
+})
+
+// --- the baseline only shrinks ------------------------------------------------
+// Runs last (file order): every guarded string has been scanned by now.
+describe('the Room baseline', () => {
+    it('lists only strings that still say it (fix copy, then regenerate)', () => {
+        if (UPDATING_BASELINE) {
+            writeFileSync(BASELINE_PATH, JSON.stringify([...seenBaselined].sort(), null, 1) + '\n')
+            return
+        }
+        const stale = [...baselineKeys].filter((k) => !seenBaselined.has(k))
+        expect(
+            stale,
+            `${stale.length} baseline row(s) no longer match any string -- the copy was fixed or changed. `
+            + 'Regenerate: UPDATE_VOCAB_BASELINE=1 npx vitest run src/copyVocabulary.test.js\n' + stale.join('\n'),
+        ).toEqual([])
+    })
+})
+
+describe('the Room rule is case-insensitive (2026-11-04)', () => {
+    const room = BANNED.find((b) => b.word === 'Room')
+    it.each(['Add a Room', 'open the room', 'Build rooms, place objects', 'ROOM page'])('catches "%s"', (s) => {
+        expect(room.pattern.test(s)).toBe(true)
+    })
+    it.each(['broom', 'bedroom', 'roomy'])('does not catch the substring in "%s"', (s) => {
+        expect(room.pattern.test(s)).toBe(false)
+    })
+    it('flags a NEW lowercase string that is not in the baseline', () => {
+        const fresh = offencesIn('src/wiki/wikiContent.js', [{ line: 1, value: 'Walk through the room 2026-11-04 brand new sentence.' }])
+        expect(fresh).toHaveLength(1)
     })
 })
