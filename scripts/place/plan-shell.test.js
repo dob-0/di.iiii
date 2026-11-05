@@ -244,7 +244,7 @@ describe.skipIf(!hasPython)('plan_shell.py layer 4: rooms', () => {
         expect(n).toContain('room_annex_stair_0')
         const c = run(['--glb', path.join(out, 'place.glb'), '--plan', path.join(dir, 'p4.json')])
         expect(c.status, c.stdout + c.stderr).toBe(0)
-        expect(c.stdout).toMatch(/walls \d+  max end error 0\.0000/)
+        expect(c.stdout).toMatch(/walls \d+ {2}max end error 0\.0000/)
     })
 
     it('--reach: every room is reachable from the spawn through the openings (REACH_OK), a room behind a wall is not (REACH_FAIL)', () => {
