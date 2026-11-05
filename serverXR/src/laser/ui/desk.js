@@ -10,6 +10,7 @@
     const POLL_DESK_MS = 500
     const POLL_ENGINE_MS = 1000
     const VIEW_MS = 80
+    const BRIGHT_SEND_MS = 60 // a brightness slider being dragged reaches the cube this often
     // The desk's colours (2026-10-31, the owner: "on colos add color paleete and have new colors there as well"): the hue
     // wheel a laser draws well, full colours, then two whites. Green is here to pick; it is no seed look's colour.
     const SWATCHES = [
@@ -391,6 +392,10 @@
         { key: 'pulseBeats', label: 'Pulse every', min: 0.25, max: 16, step: 0.25, fmt: (v) => `${v} b` },
         { key: 'sweep', label: 'Sweep', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? v.toFixed(2) : 'off'), title: 'The picture swings across the field' },
         { key: 'sweepBeats', label: 'Sweep every', min: 0.25, max: 16, step: 0.25, fmt: (v) => `${v} b` },
+        { key: 'displace', label: 'Displace', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + '%' : 'off'), title: 'The lines bend through a smooth field that drifts once round every 8 beats' },
+        { key: 'wobble', label: 'Wobble', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + '%' : 'off'), title: 'A ripple runs along every line' },
+        { key: 'wobbleBeats', label: 'Wobble every', min: 0.25, max: 16, step: 0.25, fmt: (v) => `${v} b`, title: 'Beats for the ripple to go once round' },
+        { key: 'strobe', label: 'Strobe', min: 0, max: 2, step: 0.25, fmt: (v) => (v ? `${v}/b` : 'off'), title: 'Flashes per beat, on the desk’s beat: the picture is on for the first half of each' },
         { key: 'react', label: 'Audio', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + '%' : 'off'), title: 'The size rides on the music: the bass swells it, each kick punches it to full (Audio on, in the top bar)' },
         { key: 'phase', label: 'Chase', min: 0, max: 4, step: 0.125, fmt: (v) => (v ? `${v} b` : 'off'), title: 'Beats each cube runs behind the one before it', multi: true }
     ]
@@ -608,13 +613,15 @@
         const live = editing()
         const box = $('page-control').querySelector('.editor')
         box.classList.toggle('is-empty', !live)
+        $('previewPane').classList.toggle('is-empty', !live)
         const onLaser = Boolean(live && desk.live && desk.liveId === live.id)
         const note = $('previewNote')
         note.classList.toggle('is-live', onLaser)
         const changed = Boolean(live && (desk.changed || []).includes(live.id))
-        note.textContent = (onLaser
-            ? 'On the laser: your changes show there at once'
-            : 'Preview only. Click the look’s picture to send it to the laser')
+        note.textContent = !live ? 'Click a look’s NAME to see it here before it goes to the laser'
+            : (onLaser
+                ? 'On the laser: your changes show there at once'
+                : 'Preview only. Click the look’s picture to send it to the laser')
             + (changed ? `. Save keeps your changes as a new scene; the saved ${live.name} stays as it was` : '')
         if (!live) return
         if (!held('name') && document.activeElement !== $('lookName')) $('lookName').value = live.name
@@ -636,11 +643,16 @@
         renderTiles()
         renderEditor()
     }
-    // A tile's PICTURE: the look, with its kept changes, onto the laser.
+    // A tile's PICTURE (or keys 1–9): the look, with its kept changes, onto the laser, and into Edit too (2026-11-01, the
+    // owner: "i want also that be when im clicking on pattern for output"), as a clip played in Resolume is the one
+    // selected. Its NAME still opens it in Edit alone, the laser keeping what it has.
     const sendLook = async (id) => {
         await flush()
         await post('desk/api/go', { look: id })
+        if (selected !== id) { selected = id; touched.clear() }
         await refreshDesk()
+        renderTiles()
+        renderEditor(true)
     }
     // Save: each changed look becomes a new scene and the look goes back as it was saved; Edit follows the new scene.
     const saveAll = async () => {
@@ -780,6 +792,21 @@
                 box.addEventListener('change', () => setCube(c.id, { [key]: box.checked }))
                 return box
             }
+            // Brightness (2026-11-01, the owner: "i want laser brighntess controll in setup"): the cube follows the slider
+            // while it moves, at most every BRIGHT_SEND_MS, and the last value always lands.
+            const brightness = () => {
+                const value = Number.isFinite(c.brightness) ? c.brightness : 1
+                const r = el('input', { type: 'range', min: 0, max: 1, step: 0.01, value, 'aria-label': `${nameOf(c.id)} brightness` })
+                const out = el('b', { class: 'mono brightval', text: Math.round(value * 100) + '%' })
+                let timer = null
+                const send = () => { timer = null; post('desk/api/cube', { id: c.id, brightness: Number(r.value) }) }
+                r.addEventListener('input', () => {
+                    out.textContent = Math.round(Number(r.value) * 100) + '%'
+                    if (!timer) timer = setTimeout(send, BRIGHT_SEND_MS)
+                })
+                r.addEventListener('change', () => { if (timer) clearTimeout(timer); timer = null; setCube(c.id, { brightness: Number(r.value) }) })
+                return el('span', { class: 'bright' }, r, out)
+            }
             const link = engine.sim ? el('span', { class: 'muted', text: 'sim' })
                 : e.connected ? el('span', { class: 'ok', text: 'answering' })
                     : el('span', { class: 'bad', text: e.ip ? 'no answer' : 'no address' })
@@ -795,6 +822,7 @@
                 el('td', { class: 'mono' }, e.ip || '—', el('div', { class: 'muted', text: e.serial || '' })),
                 el('td', {}, link),
                 el('td', {}, output),
+                el('td', {}, brightness()),
                 el('td', {}, check('on')),
                 el('td', {}, check('flipX')),
                 el('td', {}, slider('size', 0, 2, 0.05)),
@@ -1121,6 +1149,7 @@
     const refreshDesk = async () => {
         try {
             desk = await get('desk/api/state')
+            watchVersion(desk.version)
             if (desk.loadMessage) notice(desk.loadMessage)
             syncTileClock()
             // A page opened while a look plays opens that look in Edit; a look deleted elsewhere closes.
@@ -1157,6 +1186,50 @@
     const barHeight = () => document.documentElement.style.setProperty('--bar-h', bar.offsetHeight + 'px')
     new ResizeObserver(barHeight).observe(bar)
     barHeight()
+
+    // ---- updates (2026-11-01, the owner: "how can we do not after any changes refresh window i want work also in thime
+    // of show"). The desk says its version with every state (the server's start and its page files). A new one reloads
+    // this page by itself, once it has held for two polls and no hand is on a control, the look being edited sent first.
+    // The page comes back where it was: the same page, the same look in Edit, Audio listening again if it was. The laser
+    // does not notice: the server draws it, not this page.
+    const RESUME_KEY = 'laserDesk.resume'
+    let loadedVersion = null
+    let newVersion = null
+    let reloading = false
+    const handOnControl = () => [...touched.values()].some((at) => Date.now() - at < HOLD_MS)
+        || Boolean(document.querySelector('input[type=range]:active'))
+        || Boolean(document.activeElement && document.activeElement.matches('input:not([type=range]):not([type=checkbox]), textarea, select'))
+    function watchVersion (version) {
+        if (!version || reloading) return
+        if (loadedVersion === null) { loadedVersion = version; return }
+        if (version === loadedVersion) { newVersion = null; return }
+        if (newVersion !== version) { newVersion = version; return }
+        if (handOnControl()) return
+        reloading = true
+        flush().catch(() => {}).finally(() => {
+            try { sessionStorage.setItem(RESUME_KEY, JSON.stringify({ page, selected, audio: window.DeskListen.on, at: Date.now() })) } catch { /* it reloads where the desk opens */ }
+            location.reload()
+        })
+    }
+    const resume = (() => {
+        try {
+            const r = JSON.parse(sessionStorage.getItem(RESUME_KEY) || 'null')
+            sessionStorage.removeItem(RESUME_KEY)
+            return r && Date.now() - r.at < 60000 ? r : null
+        } catch { return null }
+    })()
+    if (resume) {
+        if (resume.selected) { selected = resume.selected; firstState = false }
+        if (resume.page === 'setup') document.querySelector('.page-tab[data-page="setup"]')?.click()
+        if (resume.audio) {
+            startAudio().then(() => {
+                if (!window.DeskListen.on || window.DeskListen.running) return
+                // The browser holds audio started without a click: the next click anywhere lets it hear again.
+                notice('The desk was updated. Click anywhere to let Audio listen again.')
+                document.addEventListener('pointerdown', () => { window.DeskListen.resume(); notice('') }, { once: true, capture: true })
+            })
+        }
+    }
 
     refreshThumbs()
     loop(refreshEngine, POLL_ENGINE_MS)

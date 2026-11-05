@@ -393,6 +393,172 @@ describe('the scenes: lines, circles and dots (2026-10-30)', () => {
     })
 })
 
+describe('the patterns: lines and circles that move on the beat (2026-10-31)', () => {
+    const PATTERNS = ['lissajous', 'helix', 'tunnel', 'echo', 'sides', 'count', 'rain', 'cube']
+    const isLit = (p) => p[2] + p[3] + p[4] > 0
+    const strokes = (points) => {
+        const out = [[]]
+        for (const p of points) { if (!isLit(p)) out.push([]); else out[out.length - 1].push(p) }
+        return out.filter((s) => s.length)
+    }
+    const at = (shape, beat, more = {}) => generateShape({ shape, size: 1, points: 400, beat, ...more })
+    // A stroke's half width: a square's half side, a ring's radius (all of them are centred).
+    const reach = (stroke) => Math.max(...stroke.map((p) => Math.abs(p[0])))
+    const span = (points, k) => Math.max(...points.filter(isLit).map((p) => p[k])) - Math.min(...points.filter(isLit).map((p) => p[k]))
+
+    it('are the eight shapes after unfold; rain is a mark shape', () => {
+        expect(LASER_SHAPES.slice(33, 41)).toEqual(PATTERNS)
+        expect(twin.MARK_SHAPES).toContain('rain')
+    })
+
+    it('every pattern at every count and every eighth of a beat is a lit frame inside the field and the point cap', () => {
+        for (const shape of PATTERNS) {
+            for (let copies = 0; copies <= 12; copies += 1) {
+                for (let beat = 0; beat < 32; beat += 0.125) {
+                    const points = generateShape({ shape, size: 1, points: 300, copies, beat })
+                    expect(normaliseFramePoints(points).dropped, `${shape} ×${copies} beat ${beat}`).toBe(0)
+                    expect(points.some(isLit), `${shape} ×${copies} beat ${beat}`).toBe(true)
+                }
+            }
+            expect(generateShape({ shape, size: 1, points: FRAME_MAX_POINTS, copies: 10, beat: 2.5 }).length).toBeLessThanOrEqual(FRAME_MAX_POINTS)
+        }
+    })
+
+    it('lissajous and helix are one closed line; the cube is four strokes; the tunnel and echo one stroke a square or ring', () => {
+        for (const shape of ['lissajous', 'helix']) {
+            for (const beat of [0, 0.3, 5.5, 11.25]) {
+                const [line, ...rest] = strokes(at(shape, beat))
+                expect(rest).toHaveLength(0)
+                expect(Math.hypot(line[0][0] - line[line.length - 1][0], line[0][1] - line[line.length - 1][1])).toBeLessThan(1e-9)
+            }
+        }
+        expect(strokes(at('cube', 3.3))).toHaveLength(4)
+        for (const copies of [2, 4, 8]) {
+            expect(strokes(at('tunnel', 1.7, { copies }))).toHaveLength(copies)
+            expect(strokes(at('echo', 1.7, { copies }))).toHaveLength(copies)
+        }
+    })
+
+    it('lissajous, tunnel and cube step on the beat and hold in its second half; helix and echo never stop', () => {
+        for (const shape of ['lissajous', 'tunnel', 'cube']) {
+            expect(at(shape, 5.6)).toEqual(at(shape, 5.95))
+            expect(at(shape, 6.25)).not.toEqual(at(shape, 6))
+        }
+        for (const shape of ['helix', 'echo']) expect(at(shape, 5.6)).not.toEqual(at(shape, 5.95))
+        // The helix's crossings run half a wave a beat: two beats on, it is the same rope.
+        const later = at('helix', 2.3)
+        const now = at('helix', 0.3)
+        expect(later).toHaveLength(now.length)
+        later.forEach((p, i) => p.forEach((v, k) => expect(v).toBeCloseTo(now[i][k], 9)))
+    })
+
+    it('tunnel and echo: as each beat starts the outermost goes from the edge and a new one comes at the centre; the rest do not jump', () => {
+        for (const shape of ['tunnel', 'echo']) {
+            for (const beat of [1, 2, 7]) {
+                const before = strokes(at(shape, beat - 1e-9)).map(reach)
+                const after = strokes(at(shape, beat)).map(reach)
+                expect(before[0], shape).toBeCloseTo(1, 2)
+                expect(after[after.length - 1], shape).toBeCloseTo(0.15, 2)
+                before.slice(1).forEach((r, i) => expect(r, `${shape} beat ${beat}`).toBeCloseTo(after[i], 2))
+            }
+        }
+    })
+
+    it('sides: a triangle on the first beat of the bar, then a square, a pentagon, a hexagon; centred top to bottom', () => {
+        const heights = [1.5, Math.SQRT2, 1 + Math.cos(Math.PI / 5), Math.sqrt(3)]
+        for (let beat = 0; beat < 8; beat += 1) {
+            const points = at('sides', beat + 0.5)
+            expect(strokes(points)).toHaveLength(1)
+            expect(span(points, 1), `beat ${beat}`).toBeCloseTo(heights[beat % 4], 1)
+            const ys = points.map((p) => p[1])
+            expect(Math.max(...ys) + Math.min(...ys)).toBeCloseTo(0, 1)
+        }
+        expect(at('sides', 0.2)).toEqual(at('sides', 0.9))
+    })
+
+    it('count: one bar on the first beat of the bar, two on the second, all four on the last, then one again', () => {
+        for (let beat = 0; beat < 12; beat += 1) {
+            expect(strokes(at('count', beat + 0.5)), `beat ${beat}`).toHaveLength((beat % 4) + 1)
+            expect(strokes(at('count', beat + 0.5, { copies: 6 })), `×6 beat ${beat}`).toHaveLength((beat % 6) + 1)
+        }
+    })
+
+    it('rain: never empty, and every dash an upright piece no shorter than half a dash, at every count over 64 beats', () => {
+        for (let copies = 2; copies <= 10; copies += 1) {
+            for (let beat = 0; beat < 64; beat += 0.125) {
+                const dashes = strokes(at('rain', beat, { copies }))
+                expect(dashes.length, `×${copies} beat ${beat}`).toBeGreaterThan(0)
+                expect(dashes.length).toBeLessThanOrEqual(copies)
+                for (const d of dashes) {
+                    expect(Math.max(...d.map((p) => Math.abs(p[0] - d[0][0])))).toBeLessThan(1e-9)
+                    expect(span(d, 1), `×${copies} beat ${beat}`).toBeGreaterThanOrEqual(0.25 - 1e-9)
+                }
+            }
+        }
+    })
+
+    it('without a beat the patterns run on time at 120 BPM', () => {
+        for (const shape of PATTERNS) expect(generateShape({ shape, time: 3.3 })).toEqual(generateShape({ shape, beat: 6.6 }))
+    })
+})
+
+describe('dust: many dots, as small as the laser may draw one (2026-11-01)', () => {
+    const isLit = (p) => p[2] + p[3] + p[4] > 0
+    const strokes = (points) => {
+        const out = [[]]
+        for (const p of points) { if (!isLit(p)) out.push([]); else out[out.length - 1].push(p) }
+        return out.filter((s) => s.length)
+    }
+    // Each dot's centre and radius, read off its ring.
+    const dots = (points) => strokes(points).map((s) => {
+        const x = (Math.max(...s.map((p) => p[0])) + Math.min(...s.map((p) => p[0]))) / 2
+        const y = (Math.max(...s.map((p) => p[1])) + Math.min(...s.map((p) => p[1]))) / 2
+        return { x, y, r: Math.max(...s.map((p) => Math.hypot(p[0] - x, p[1] - y))) }
+    })
+    const at = (beat, more = {}) => dots(generateShape({ shape: 'dust', size: 1, points: 400, beat, ...more }))
+
+    it('comes after the patterns, a mark shape; `copies` dots (20, 2 to 28), each a ring of its own', () => {
+        expect(LASER_SHAPES[41]).toBe('dust')
+        expect(twin.MARK_SHAPES).toContain('dust')
+        expect(at(3.3)).toHaveLength(20)
+        expect(at(3.3, { copies: 7 })).toHaveLength(7)
+        expect(at(3.3, { copies: 99 })).toHaveLength(28)
+    })
+
+    it('a dot is the same size on the wall at any size of the picture: 0.046 of the field across, until it is a spot', () => {
+        for (const size of [1, 0.6, 0.3]) {
+            for (const d of dots(generateShape({ shape: 'dust', size, points: 400, beat: 2 }))) expect(d.r).toBeCloseTo(0.023, 3)
+        }
+    })
+
+    it('half the dots jump to new places on every beat and the rest hold; nothing moves between beats', () => {
+        // A ring starts where the hop from the dot before it arrives, so the centre read off its points moves by a hair
+        // when the drawing order changes: dots are matched within 0.01 (the places are 0.08 or more apart).
+        const held = (from, to) => to.filter((d) => from.some((e) => Math.hypot(d.x - e.x, d.y - e.y) < 0.01)).length
+        for (const beat of [1, 2, 5, 10]) {
+            const before = at(beat - 0.5)
+            const after = at(beat + 0.4)
+            expect(held(before, after), `beat ${beat}`).toBe(10)
+            expect(held(after, at(beat + 0.1)), `beat ${beat}`).toBe(20)
+        }
+    })
+
+    it('no two dots ever touch from size 0.3 up, at every count, every half beat over 64 beats', () => {
+        for (const size of [1, 0.5, 0.3]) {
+            for (const copies of [0, 2, 13, 28]) {
+                for (let beat = 0; beat < 64; beat += 0.5) {
+                    const d = dots(generateShape({ shape: 'dust', size, points: 400, copies, beat }))
+                    for (let i = 0; i < d.length; i += 1) {
+                        for (let j = i + 1; j < d.length; j += 1) {
+                            expect(Math.hypot(d[i].x - d[j].x, d[i].y - d[j].y), `${size} ×${copies} beat ${beat}`).toBeGreaterThan(d[i].r + d[j].r)
+                        }
+                    }
+                }
+            }
+        }
+    })
+})
+
 describe('height', () => {
     it('lifts a shape up the field; at 0.5 a size-0.5 circle sits wholly in the upper half (the keep-in zone)', async () => {
         const { generateShape } = await import('./laserShapes.js')
@@ -401,5 +567,112 @@ describe('height', () => {
         const lifted = generateShape({ shape: 'circle', size: 0.5, height: 0.5 })
         expect(Math.min(...lifted.map((p) => p[1]))).toBeGreaterThanOrEqual(-1e-9)
         expect(Math.max(...lifted.map((p) => p[1]))).toBeLessThanOrEqual(1)
+    })
+})
+
+describe('heartbeat: a heart monitor\'s trace (2026-11-01)', () => {
+    const isLit = (p) => p[2] + p[3] + p[4] > 0
+    const strokes = (points) => {
+        const out = [[]]
+        for (const p of points) { if (!isLit(p)) out.push([]); else out[out.length - 1].push(p) }
+        return out.filter((s) => s.length)
+    }
+    const at = (beat, more = {}) => strokes(generateShape({ shape: 'heartbeat', size: 1, points: 600, beat, ...more }))
+
+    it('comes after dust; one or two strokes, never empty, at every count and eighth of a beat', () => {
+        expect(LASER_SHAPES[42]).toBe('heartbeat')
+        for (let copies = 0; copies <= 9; copies += 1) {
+            for (let beat = 0; beat < 18; beat += 0.125) {
+                const s = at(beat, { copies })
+                expect(s.length, `×${copies} beat ${beat}`).toBeGreaterThanOrEqual(1)
+                expect(s.length).toBeLessThanOrEqual(2)
+            }
+        }
+    })
+
+    it('the pen is at the top of a spike on every beat, and the spike stands in the middle of its beat\'s width', () => {
+        for (const beat of [0, 1, 2, 4, 7]) {
+            const written = at(beat)[0]
+            const pen = written[written.length - 1]
+            expect(pen[1], `beat ${beat}`).toBeGreaterThan(0.7)
+            expect(pen[0], `beat ${beat}`).toBeCloseTo(-1 + (2 * ((beat % 3) + 0.5)) / 3, 2)
+        }
+    })
+
+    it('just ahead of the pen the old trace is wiped; the trace itself holds still', () => {
+        for (const beat of [0.3, 1.6, 2.2]) {
+            const s = at(beat)
+            const pen = s[0][s[0].length - 1][0]
+            for (const p of s.flat()) expect(p[0] > pen + 1e-9 && p[0] < pen + 0.25 - 1e-9, `beat ${beat} x ${p[0]}`).toBe(false)
+        }
+        // Between the beats the written part only grows: a point drawn at beat 1.2 is still where it was at beat 1.7.
+        const early = at(1.2)[0]
+        const late = at(1.7)[0]
+        const yAt = (stroke, x) => stroke.reduce((best, p) => (Math.abs(p[0] - x) < Math.abs(best[0] - x) ? p : best))[1]
+        for (const x of [-0.9, -0.5, 0.05]) expect(yAt(late, x)).toBeCloseTo(yAt(early, x), 1)
+    })
+})
+
+describe('point: one dot in the middle (2026-11-01)', () => {
+    it('comes after heartbeat: one ring round the middle, 0.05 of the field in radius at any size from 0.05, at most 300 points', () => {
+        expect(LASER_SHAPES[43]).toBe('point')
+        for (const size of [1, 0.5, 0.05]) {
+            const points = generateShape({ shape: 'point', size, points: 1992 })
+            expect(points.length).toBeLessThanOrEqual(300)
+            expect(points.every((p) => p[2] + p[3] + p[4] > 0)).toBe(true)
+            for (const p of points) expect(Math.hypot(p[0], p[1])).toBeCloseTo(0.05, 6)
+        }
+        // Below 0.05 it shrinks with the picture, and held still at 0 it is what the engine stops, as every shape is.
+        expect(Math.hypot(...generateShape({ shape: 'point', size: 0.02, points: 60 })[0].slice(0, 2))).toBeCloseTo(0.02, 6)
+    })
+})
+
+describe('weave and venn: lines into a grid, circles that split and mix (2026-11-01)', () => {
+    const isLit = (p) => p[2] + p[3] + p[4] > 0
+    const strokes = (points) => {
+        const out = [[]]
+        for (const p of points) { if (!isLit(p)) out.push([]); else out[out.length - 1].push(p) }
+        return out.filter((s) => s.length)
+    }
+    const at = (shape, beat) => strokes(generateShape({ shape, size: 1, points: 600, beat }))
+
+    it('come after point', () => {
+        expect(LASER_SHAPES.slice(44, 46)).toEqual(['weave', 'venn'])
+    })
+
+    it('weave: 1, 2, 4 level lines, then 1, 2, 4 upright ones into a four-by-four grid, and back, resting in each beat\'s second half', () => {
+        const lines = [1, 2, 4, 5, 6, 8, 8, 8, 8, 6, 5, 4, 2, 1, 1, 1]
+        for (let k = 0; k < 32; k += 1) expect(at('weave', k + 0.75), `beat ${k}`).toHaveLength(lines[k % 16])
+        // Every line runs the whole picture.
+        for (const s of at('weave', 7.5)) expect(Math.max(...s.map((p) => Math.abs(p[0])), ...s.map((p) => Math.abs(p[1])))).toBeCloseTo(1, 6)
+    })
+
+    it('weave: a split or a fold glides, so nothing jumps at a beat but the first upright line coming (3) and the last going (11)', () => {
+        const places = (beat) => [...new Set(at('weave', beat).map((s) => {
+            const level = Math.abs(s[0][1] - s[s.length - 1][1]) < 1e-9
+            return `${level ? 'y' : 'x'}${(level ? s[0][1] : s[0][0]).toFixed(4)}`
+        }))].sort()
+        for (let beat = 1; beat < 16; beat += 1) {
+            if (beat === 3 || beat === 11) continue
+            expect(places(beat), `beat ${beat}`).toEqual(places(beat - 1e-9))
+        }
+    })
+
+    it('venn: one circle, two (beat 2), three (beat 4) that mix, two again (12), one (14); every circle 0.5 round, inside the picture', () => {
+        const circles = [1, 1, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1, 1]
+        for (let k = 0; k < 32; k += 1) {
+            const s = at('venn', k + 0.75)
+            expect(s, `beat ${k}`).toHaveLength(circles[k % 16])
+            for (const c of s) {
+                const x = (Math.max(...c.map((p) => p[0])) + Math.min(...c.map((p) => p[0]))) / 2
+                const y = (Math.max(...c.map((p) => p[1])) + Math.min(...c.map((p) => p[1]))) / 2
+                for (const p of c) expect(Math.hypot(p[0] - x, p[1] - y)).toBeCloseTo(0.5, 2)
+                for (const p of c) expect(Math.max(Math.abs(p[0]), Math.abs(p[1]))).toBeLessThanOrEqual(0.96)
+            }
+        }
+    })
+
+    it('without a beat they run on time at 120 BPM', () => {
+        for (const shape of ['weave', 'venn']) expect(generateShape({ shape, time: 3.3 })).toEqual(generateShape({ shape, beat: 6.6 }))
     })
 })

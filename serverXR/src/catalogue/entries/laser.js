@@ -120,7 +120,7 @@ module.exports = [
   },
   {
     route: "GET /laser/desk/api/state",
-    summary: "the laser desk: the bank of looks, the live look, master, BPM and beat, blackout, and each cube's desk setup (on, mirror, size, offset, order) and whether another Out holds it",
+    summary: "the laser desk: the bank of looks, the live look, master, BPM and beat, blackout, and each cube's desk setup (on, mirror, size, offset, order, map, brightness) and whether another Out holds it; `version` (server start and page files) changes when the desk is updated, and the desk's page reloads itself on it",
     reach: "read",
     role: "guest",
     agent: false,
@@ -272,7 +272,7 @@ module.exports = [
   },
   {
     route: "POST /laser/desk/api/cube",
-    summary: "one cube's place on the laser desk: { id, on?, flipX?, flipY?, size? 0…2, x? y? −1…1, order?, corners? [[x,y]×4] −1…1 (its map: bottom-left, bottom-right, top-right, top-left) } — off lets the desk's hold on it run out",
+    summary: "one cube's place on the laser desk: { id, on?, flipX?, flipY?, size? 0…2, x? y? −1…1, order?, corners? [[x,y]×4] −1…1 (its map: bottom-left, bottom-right, top-right, top-left), brightness? 0…1 (the most that cube gives, under every look and the master) } — off lets the desk's hold on it run out",
     reach: "private",
     role: "guest",
     agent: false,

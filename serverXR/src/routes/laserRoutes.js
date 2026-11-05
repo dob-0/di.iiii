@@ -79,6 +79,29 @@ const PROBE_WAIT_MS = 800
 // function as a CommonJS module; require('./x.cjs') between them resolves inside the script. Installs ship shared/
 // (scripts/pack-runtime.mjs), so this works on an installed di as in a checkout.
 const DESK_LIB_FILES = ['laserFrame.cjs', 'laserShapes.cjs', 'laserLook.cjs']
+
+// The desk page's version (2026-11-01, the owner: "how can we do not after any changes refresh window i want work also in
+// thime of show"): when this server started, and when the page's own files last changed. A desk page that sees it change
+// reloads itself where it was (ui/desk.js), so an update reaches the desk with no hand on the browser. Read at most once
+// a second.
+const DESK_UI_DIR = path.join(__dirname, '../laser/ui')
+const DESK_STARTED_AT = Date.now()
+const deskVersion = (() => {
+  let at = 0
+  let text = ''
+  return () => {
+    const t = Date.now()
+    if (t - at < 1000 && text) return text
+    at = t
+    let newest = 0
+    try {
+      for (const name of fs.readdirSync(DESK_UI_DIR)) newest = Math.max(newest, fs.statSync(path.join(DESK_UI_DIR, name)).mtimeMs)
+    } catch { /* read again on the next ask */ }
+    text = `${DESK_STARTED_AT}-${Math.round(newest)}`
+    return text
+  }
+})()
+
 const buildDeskLib = () => {
   const dir = path.join(__dirname, '../../../shared')
   const defs = DESK_LIB_FILES.map((name) => `defs[${JSON.stringify(name)}] = function (module, exports, require) {\n${fs.readFileSync(path.join(dir, name), 'utf8')}\n}`)
@@ -273,7 +296,7 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
 
   // ---- the desk
   const answer = (res, out) => res.status(out.ok ? 200 : out.status || 400).json(out)
-  router.get('/desk/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getDesk().state()) })
+  router.get('/desk/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ ...getDesk().state(), version: deskVersion() }) })
   router.get('/desk/api/view', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getDesk().view()) })
   router.get('/desk/api/thumbs', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getDesk().thumbs()) })
   router.post('/desk/api/go', requireSameMachine, (req, res) => answer(res, getDesk().go(req.body?.look)))

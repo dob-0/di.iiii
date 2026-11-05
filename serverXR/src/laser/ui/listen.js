@@ -222,5 +222,9 @@ window.DeskListen = (() => {
         try { return (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput') } catch { return [] }
     }
 
-    return { start, stop, inputs, get on () { return Boolean(ctx) } }
+    // Started without a click (the page reloaded itself after an update), a browser may hold the audio suspended until
+    // the next one: `running` says whether it hears, and resume() is for that click.
+    const resume = () => ctx?.resume().catch(() => {})
+
+    return { start, stop, inputs, resume, get on () { return Boolean(ctx) }, get running () { return ctx?.state === 'running' } }
 })()

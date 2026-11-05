@@ -648,3 +648,67 @@ describe('the desk page on a phone (docs/ai/known-fixes.md: "Setup squeezed its 
         expect(phone).toMatch(/#page-setup\s*>\s*\.pane\s*\{\s*flex:\s*none;\s*\}/)
     })
 })
+
+describe('a cube\'s brightness (2026-11-01, the owner: "i want laser brighntess controll in setup")', () => {
+    const brightest = (points) => Math.max(...points.map((p) => Math.max(p[2], p[3], p[4])))
+    it('is the most the cube gives: every look and the master scale under it, the test picture too; kept in desk.json', () => {
+        const dir = tmp()
+        const engine = fakeEngine(['cube-1'])
+        const { desk, t } = deskWith(engine, { dir })
+        expect(desk.state().cubes[0].brightness).toBe(1)
+        desk.editLook('ring', { level: 1, colour: '#ffffff', pulse: 0, react: 0 })
+        desk.go('ring')
+        const last = () => { const frames = engine.calls.filter((c) => c.kind === 'frame'); return frames[frames.length - 1].points }
+        expect(brightest(last())).toBeCloseTo(1, 3)
+        expect(desk.setCube('cube-1', { brightness: 0.25 })).toMatchObject({ ok: true, cube: { brightness: 0.25 } })
+        expect(brightest(last())).toBeCloseTo(0.25, 3)
+        desk.setMaster(0.5); t.now += 10; desk.tick()
+        expect(brightest(last())).toBeCloseTo(0.125, 3)
+        desk.setMaster(1)
+        desk.setMapTest('cube-1', true)
+        expect(brightest(last())).toBeCloseTo(0.25, 3)
+        desk.setMapTest('cube-1', false)
+        expect(desk.setCube('cube-1', { brightness: 7 }).cube.brightness).toBe(1)
+        expect(desk.setCube('cube-1', { brightness: -1 }).cube.brightness).toBe(0)
+        expect(desk.setCube('cube-1', { brightness: 'x' }).cube.brightness).toBe(0)
+        desk.setCube('cube-1', { brightness: 0.6 })
+        desk.close()
+        expect(deskWith(fakeEngine(['cube-1']), { dir }).desk.state().cubes[0].brightness).toBe(0.6)
+    })
+})
+
+describe('Displace, Wobble and Strobe (2026-11-01, the owner: "add more parametres for changing shape like dis[place wobbines strobe")', () => {
+    const g = require('./laserGuards')
+    const { applyZone, normaliseZone, stillBeams } = require('./laserEngine')
+    const { flattenLaserPaths } = require('../../../shared/laserFrame.cjs')
+    const full = { xMin: -1, xMax: 1, yMin: -1, yMax: 1 }
+    it('at full Displace and Wobble every seed look still fits the real cube (2333 points at 35 kpps) and is never still', () => {
+        const plan = g.pathPlan(g.DEFAULT_GUARDS, 35000)
+        const budget = g.frameBudget(35000, 6000)
+        for (const seed of SEED_LOOKS) {
+            const look = normaliseLook({ ...seed, size: 0.99, height: 0, x: 0, displace: 1, wobble: 1, wobbleBeats: 1 })
+            for (let beat = 0; beat < 16; beat += 0.5) {
+                const raw = lookPointsAt(look, { t: beat * 500, clock: clock(120, 0) })
+                if (!raw.some(isLit)) continue
+                const frame = g.optimisePath(applyZone(flattenLaserPaths(raw, { budget: null }).points, normaliseZone(full)).points, plan).points
+                expect(frame.length, `${seed.id} beat ${beat}`).toBeLessThanOrEqual(budget)
+                expect(stillBeams(frame), `${seed.id} beat ${beat}`).toEqual([])
+            }
+        }
+    })
+    it('Strobe lights the first half of each flash on the desk\'s beat; off is the look as it was', () => {
+        const look = normaliseLook({ shape: 'circle', size: 0.5, height: 0, pulse: 0 })
+        const lit = (l, beat) => lookPointsAt(l, { t: beat * 500, clock: clock(120, 0) }).some(isLit)
+        expect([0, 0.25, 0.5, 0.75, 1].map((b) => lit({ ...look, strobe: 1 }, b))).toEqual([true, true, false, false, true])
+        expect([0, 0.3, 0.6, 0.9].map((b) => lit({ ...look, strobe: 2 }, b))).toEqual([true, false, true, false])
+        expect([0, 0.5, 0.75].map((b) => lit(look, b))).toEqual([true, true, true])
+    })
+    it('Wobble keeps a line one stroke, its blank moves arriving where the strokes now start', () => {
+        const look = normaliseLook({ shape: 'fan', size: 0.8, height: 0, pulse: 0, wobble: 1 })
+        const pts = lookPointsAt(look, { t: 300, clock: clock(120, 0) })
+        for (let k = 0; k < pts.length - 1; k += 1) {
+            if (!isLit(pts[k]) && isLit(pts[k + 1])) expect([pts[k][0], pts[k][1]]).toEqual([pts[k + 1][0], pts[k + 1][1]])
+        }
+        expect(normaliseLook({ displace: 5, wobble: -1, wobbleBeats: 0, strobe: 9 })).toMatchObject({ displace: 1, wobble: 0, wobbleBeats: 0.25, strobe: 2 })
+    })
+})

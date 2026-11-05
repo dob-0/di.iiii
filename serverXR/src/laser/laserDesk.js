@@ -78,6 +78,10 @@ const LOOK_DEFAULTS = Object.freeze({
     mirror: false, // every second cube mirrored (x → −x)
     phase: 0, // beats each cube runs behind the one before it (a chase across the cubes)
     react: 0, // 0…1: the size rides on the music's bass and kicks while the desk hears it (Audio, in the top bar)
+    displace: 0, // 0…1: the lines bend through a smooth field that drifts once round every 8 beats
+    wobble: 0, // 0…1: a ripple runs along every line, once round every wobbleBeats
+    wobbleBeats: 1,
+    strobe: 0, // flashes per beat, 0 (off) to 2: the picture is on for the first half of each
     cubes: 'all' // 'all' or the cube ids this look draws on; the others are held dark
 })
 
@@ -148,6 +152,10 @@ const normaliseLook = (raw = {}, base = LOOK_DEFAULTS) => {
         mirror: bool(pick('mirror')),
         phase: clamp(num(pick('phase'), 0), 0, 16),
         react: clamp(num(pick('react'), 0), 0, 1),
+        displace: clamp(num(pick('displace'), 0), 0, 1),
+        wobble: clamp(num(pick('wobble'), 0), 0, 1),
+        wobbleBeats: clamp(num(pick('wobbleBeats'), 1), 0.25, 64),
+        strobe: clamp(num(pick('strobe'), 0), 0, 2),
         cubes: Array.isArray(cubes) ? [...new Set(cubes.map(idOf).filter(Boolean))].slice(0, 64) : 'all'
     }
 }
@@ -164,6 +172,8 @@ const normaliseCube = (raw = {}, base = CUBE_DEFAULTS) => {
         x: clamp(num(pick('x'), 0), -1, 1),
         y: clamp(num(pick('y'), 0), -1, 1),
         order: Math.round(clamp(num(pick('order'), 0), -999, 999)),
+        // Anything but a number keeps the brightness it had: a bad value never turns a cube up to full.
+        brightness: clamp(num(pick('brightness'), Number.isFinite(base.brightness) ? base.brightness : 1), 0, 1),
         corners: normaliseCorners(pick('corners'), normaliseCorners(base.corners))
     }
 }
@@ -212,7 +222,28 @@ const SEED_LOOKS = [
     { id: 'morse', name: 'Morse', shape: 'morse', colour: '#20d8ff', size: 0.5, points: 400 },
     { id: 'scenes', name: 'Scenes', shape: 'planets,pendulum,radar,constellation,horizon', cycle: 16, colour: '#ff30c0', size: 0.5, points: 400 },
     // 2026-10-31: a circle pulsing, winding into a spiral that runs out into the line round the whole square, and back.
-    { id: 'unfold', name: 'Unfold', shape: 'unfold', colour: '#20d8ff', size: 0.5, points: 900 }
+    { id: 'unfold', name: 'Unfold', shape: 'unfold', colour: '#20d8ff', size: 0.5, points: 900 },
+    // 2026-10-31, the owner: "more patterns for laser". Patterns plays five of them in turn, four bars each.
+    { id: 'lissajous', name: 'Lissajous', shape: 'lissajous', colour: '#ff30c0', size: 0.5, points: 600 },
+    { id: 'helix', name: 'Helix', shape: 'helix', colour: '#20d8ff', size: 0.5, points: 500 },
+    { id: 'tunnel', name: 'Tunnel', shape: 'tunnel', colour: '#ffffff', size: 0.5, points: 500 },
+    { id: 'echo', name: 'Echo', shape: 'echo', colour: '#ff2030', size: 0.5, points: 500 },
+    { id: 'sides', name: 'Sides', shape: 'sides', colour: '#ffb020', size: 0.5, points: 400 },
+    { id: 'count', name: 'Count', shape: 'count', colour: '#ff30c0', size: 0.5, points: 400 },
+    { id: 'rain', name: 'Rain', shape: 'rain', colour: '#20d8ff', size: 0.5, points: 400 },
+    { id: 'cube', name: 'Cube', shape: 'cube', colour: '#ffffff', size: 0.5, points: 500 },
+    { id: 'patterns', name: 'Patterns', shape: 'lissajous,tunnel,sides,cube,echo', cycle: 16, colour: '#ffb020', size: 0.5, points: 500 },
+    // The same night: "how laser dot can be small that much, too many dots".
+    { id: 'dust', name: 'Dust', shape: 'dust', colour: '#ffffff', size: 0.5, points: 400 },
+    // The same night: "pattern like heart cardiograma lines".
+    { id: 'heartbeat', name: 'Heartbeat', shape: 'heartbeat', colour: '#ff2030', size: 0.5, points: 600 },
+    // The same night: "one pattern smallest one point in middle".
+    { id: 'point', name: 'Point', shape: 'point', colour: '#ffffff', size: 0.5, points: 300 },
+    // The same night: "line line and grid becoming, also circle one then two three and mixing". Build plays the two in
+    // turn, each its own 16-beat loop.
+    { id: 'weave', name: 'Weave', shape: 'weave', colour: '#20d8ff', size: 0.5, points: 600 },
+    { id: 'venn', name: 'Venn', shape: 'venn', colour: '#ff30c0', size: 0.5, points: 500 },
+    { id: 'build', name: 'Build', shape: 'weave,venn', cycle: 16, colour: '#ffb020', size: 0.5, points: 600 }
 ].map((look) => normaliseLook(look))
 // The seed looks a bank saved before `seeded` was kept (2026-10-29 evening) had been offered: the first fourteen.
 const FIRST_SEEDS = ['ring', 'star', 'fan', 'wave', 'triangle', 'square', 'spiral', 'scan', 'galaxy', 'sunflower', 'noisy', 'grid', 'td-cycle', 'pairs']

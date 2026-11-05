@@ -25,11 +25,23 @@ const LASER_SHAPES = [
     // One line that changes what it is on the beat (2026-10-31, the owner: "circle is pulsing and then becoming spiral and
     // then the spiral is going out of it and becomg line around all sqaure").
     'unfold',
+    // Patterns of lines and circles that move on the beat (2026-10-31, the owner: "more patterns for laser"): two one-line
+    // figures, two that go out from the centre, two that count the beats, falling dashes and a turning cube.
+    'lissajous', 'helix', 'tunnel', 'echo', 'sides', 'count', 'rain', 'cube',
+    // The same night: "how laser dot can be small that much, too many dots" — many dots, as small as the laser may draw one.
+    'dust',
+    // 2026-11-01: "pattern like heart cardiograma lines" — a heart monitor's trace, its spike written on the beat.
+    'heartbeat',
+    // "one pattern smallest one point in middle": one dot alone, as small as the engine lets a lone dot stay lit.
+    'point',
+    // "more lasers animation patterns like line line and grid becoming, also circle one then two three and mixing":
+    // one line that splits into a grid and folds back, one circle that splits into three that mix and merge again.
+    'weave', 'venn',
 ]
 // The shapes made of small marks. Below MARK_MIN_SIZE their smallest mark is inside the engine's still-beam window
 // (0.6°, about 0.032 of the field: laserEngine.js), and when every lit mark is, the frame is dots only: the engine blanks
 // the cube until the picture grows again (laser.test.js). Every other shape stays a stroke down to size 0.05.
-const MARK_SHAPES = ['sparkle', 'twinkle', 'spots', 'morse']
+const MARK_SHAPES = ['sparkle', 'twinkle', 'spots', 'morse', 'rain', 'dust']
 const MARK_MIN_SIZE = 0.15
 // A shape name may be a comma list ('galaxy,sunflower,noisy,grid'): with `cycle` seconds each shape plays in turn,
 // the way TD's switch1 steps through its four scenes on a slow oscillator.
@@ -178,6 +190,84 @@ const glideOf = (beat) => {
     const f = clamp((beat - Math.floor(beat)) * 2, 0, 1)
     return f * f * (3 - 2 * f)
 }
+// The beats so far with the glide: a pattern that moves by a step on every beat moves it in the first half and holds.
+const stepOf = (beat) => Math.floor(beat) + glideOf(beat)
+// A count of things from `copies`: its own number when copies is 0, else copies held between lo and hi.
+const countOf = (copies, own, lo, hi) => Math.round(clamp(copies > 0 ? copies : own, lo, hi))
+// The patterns' parts. The tunnel's smallest square: 0.15 of the picture, so at size 0.05 it is still a stroke's
+// worth of the frame and never a dot on its own (the rest of the tunnel is around it).
+const TUNNEL_MIN = 0.15
+// A falling dash of rain, and the least of one that is drawn as it comes in at the top or goes out at the bottom: at
+// MARK_MIN_SIZE the piece is 0.25 × 0.15 = 0.0375 of the field, over the still-beam window.
+const RAIN_DASH = 0.5
+const RAIN_LEAST = 0.25
+// The cube: its corners, and its twelve edges as four strokes with three short blank moves between them (a cube's
+// eight corners each have three edges, so no fewer than four strokes draw it without lighting an edge twice): the bottom
+// square, up one corner and round the top, then the other three uprights, each hop one edge long.
+const CUBE_CORNERS = [[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1], [-1, 1, -1], [1, 1, -1], [1, 1, 1], [-1, 1, 1]]
+const CUBE_STROKES = [[0, 1, 2, 3, 0, 4, 5, 6, 7, 4], [5, 1], [2, 6], [7, 3]]
+// It leans 0.42 rad (24°) towards you so its top shows, seen from 5 half-edges away (a little perspective).
+const CUBE_TILT = 0.42
+const CUBE_EYE = 5
+const cubeView = (turn) => {
+    const c = Math.cos(turn)
+    const s = Math.sin(turn)
+    return CUBE_CORNERS.map(([x0, y0, z0]) => {
+        const x = x0 * c + z0 * s
+        const z1 = z0 * c - x0 * s
+        const y = y0 * Math.cos(CUBE_TILT) - z1 * Math.sin(CUBE_TILT)
+        const z = y0 * Math.sin(CUBE_TILT) + z1 * Math.cos(CUBE_TILT)
+        const k = CUBE_EYE / (CUBE_EYE - z)
+        return [x * k, y * k]
+    })
+}
+// Dust's dot: a ring 0.046 of the field across once the look is sized (its radius in the shape is DUST_R / size, up to
+// SPOT_R), whatever the size. The still-beam window is 0.032 (0.6°): a frame of dots that small only is a still beam and
+// the engine blanks the cube, so this is as small as a dot may be, with room for a corner pin that keeps a side at 75 % or
+// more (the owner's mapping, 79 % wide, draws it 0.65° across: 2026-11-01, "must be point the smallest point laser can show").
+const DUST_R = 0.023
+// The places dust rests on: a 9 × 9 grid 0.22 apart over the whole picture, split as a checkerboard's two colours, one
+// for each half of the dots, so a dot that jumps never lands on one that stays.
+const DUST_PLACES = [0, 1].map((colour) => {
+    const out = []
+    for (let row = -4; row <= 4; row += 1) for (let col = -4; col <= 4; col += 1) if (((row + col) & 1) === colour) out.push([col * 0.22, row * 0.22])
+    return out
+})
+// One heartbeat of a cardiogram, u beats from its R spike (−0.5…0.5): the P wave, the Q dip, the R spike, the S dip and
+// the T wave, each a bump [where, how wide, how high]. The spike is 1; the trace sits on 0 between beats.
+const ECG_WAVES = [[-0.2, 0.035, 0.12], [-0.025, 0.008, -0.12], [0, 0.01, 1], [0.025, 0.01, -0.3], [0.25, 0.05, 0.25]]
+const ecgAt = (u) => ECG_WAVES.reduce((sum, [at, w, a]) => sum + a * Math.exp(-(((u - at) / w) ** 2) / 2), 0)
+// The heartbeat trace in the picture: the spike 1.2 tall, the whole trace centred top to bottom (it spans −0.78…0.78),
+// and the gap a monitor wipes ahead of what it writes.
+const ECG_HEIGHT = 1.2
+const ECG_BASE = -0.42
+const ECG_GAP = 0.25
+// Point's dot: a ring 0.1 of the field across at any size from 0.05 up. Alone, all the beam's time is in it, so it must
+// be wider than a dust dot (0.046): through a corner pin like the owner's (79 % wide, 33 % tall) a ring 0.06 across puts
+// 44 % of the frame in one 0.6° window, near the engine's 50 % stop; 0.046 is stopped; 0.1 puts 34 % (1.5° × 0.6° on her wall).
+const POINT_R = 0.05
+// Weave's 16 beats, [lines before, lines after] on each beat, for the level lines and the upright ones. A count that
+// doubles splits each line in two, gliding apart in the first half of the beat; one that halves glides pairs together.
+// The first upright line appears whole on beat 3 and the last goes on beat 11 (0 → 1, 1 → 0 are on the beat).
+const WEAVE_LEVEL = [[1, 1], [1, 2], [2, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 2], [2, 1], [1, 1], [1, 1]]
+const WEAVE_UPRIGHT = [[0, 0], [0, 0], [0, 0], [1, 1], [1, 2], [2, 4], [4, 4], [4, 4], [4, 4], [4, 2], [2, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]
+// Where line i of c sits across the picture: the middles of c equal bands, so a line splits into the two of its band.
+const bandOf = (i, c) => -1 + (2 * (i + 0.5)) / c
+const weaveLines = ([from, to], f) => {
+    if (to === from || from === 0 || to === 0) return Array.from({ length: to }, (_, i) => bandOf(i, to))
+    if (to > from) return Array.from({ length: to }, (_, j) => bandOf(Math.floor(j / 2), from) + (bandOf(j, to) - bandOf(Math.floor(j / 2), from)) * f)
+    if (f >= 1) return Array.from({ length: to }, (_, i) => bandOf(i, to))
+    return Array.from({ length: from }, (_, j) => bandOf(j, from) + (bandOf(Math.floor(j / 2), to) - bandOf(j, from)) * f)
+}
+// Venn's circles: all the same size (0.5), two 0.8 apart, three on a ring of 0.45 (each overlaps the others), and while
+// they mix the ring closes to 0.12 on every other beat. Places on the three-ring, from the top, a third of a turn apart.
+const VENN_R = 0.5
+const VENN_TWO = 0.4
+const VENN_THREE = 0.45
+const VENN_TIGHT = 0.12
+const vennRing = (d, turn) => [0, 1, 2].map((i) => [Math.cos(Math.PI / 2 + turn + (i * TAU) / 3) * d, Math.sin(Math.PI / 2 + turn + (i * TAU) / 3) * d])
+// The scale that keeps the cube inside the picture at every turn (it looks the same each quarter turn).
+const CUBE_FIT = 1 / Math.max(...Array.from({ length: 91 }, (_, i) => Math.max(...cubeView((i / 90) * (Math.PI / 2)).flat().map(Math.abs))))
 
 // Each builder returns strokes: arrays of [x, y] drawn lit, in a unit circle.
 // A stroke after the first is reached by a blank move.
@@ -619,6 +709,200 @@ const STROKES = {
         })
         return [along(path, n)]
     },
+    // The patterns (2026-10-31). Each moves by itself on the beat; the desk's Spin, Pulse and Sweep still add to it.
+    // One line, the Lissajous figure x = sin(a·t + φ), y = sin(b·t), a = `copies` (3, 2 to 6) and b = a − 1, its phase φ
+    // stepping a sixteenth of a turn on every beat (eased in the first half): the figure turns like a ribbon in space.
+    lissajous: (n, { copies = 0, beat = 0 } = {}) => {
+        const a = countOf(copies, 3, 2, 6)
+        const phase = Math.PI / 4 + (TAU * stepOf(beat)) / 16
+        const steps = 120 * a
+        return [along(Array.from({ length: steps + 1 }, (_, i) => {
+            const t = (i / steps) * TAU
+            return [Math.sin(a * t + phase), Math.sin((a - 1) * t)]
+        }), n)]
+    },
+    // Two strands held together at both ends, crossing between them (`copies` half waves, 3, 1 to 8), the crossings
+    // running on half a wave every beat: a rope twisting. One closed line, out along one strand and back along the other.
+    helix: (n, { copies = 0, beat = 0 } = {}) => {
+        const halves = countOf(copies, 3, 1, 8)
+        const steps = 80 * halves
+        const strand = (sign) => Array.from({ length: steps + 1 }, (_, i) => {
+            const s = i / steps
+            return [s * 2 - 1, sign * 0.6 * Math.sqrt(Math.sin(Math.PI * s)) * Math.sin(Math.PI * (halves * s - beat))]
+        })
+        return [along([...strand(1), ...strand(-1).reverse().slice(1)], n)]
+    },
+    // `copies` squares (4, 2 to 8) one inside another, each the next one's size × the same step, so they read as depth.
+    // On every beat they all move out one place, eased in the first half: as the beat starts the outermost goes from the
+    // edge and a new one is there at the centre. Every square is as bright as its length.
+    tunnel: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 4, 2, 8)
+        const f = glideOf(beat)
+        return byLength(Array.from({ length: count }, (_, i) => {
+            const s = TUNNEL_MIN ** (1 - (count - i - 1 + f) / count)
+            return polygon([[-s, s], [s, s], [s, -s], [-s, -s]])
+        }), n)
+    },
+    // `copies` circles (4, 2 to 8) sent out from the centre, one on every beat, at an even pace: each grows from 0.15 to
+    // the edge in `copies` beats and is gone as it gets there. They stay 0.85 / copies apart, so they never touch.
+    echo: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 4, 2, 8)
+        const f = beat - Math.floor(beat)
+        return byLength(Array.from({ length: count }, (_, i) => arcPath(0, 0, 0.15 + (0.85 * (count - i - 1 + f)) / count, Math.PI / 2)), n)
+    },
+    // One figure that gains a side on every beat: a triangle on the first beat, then a square, a pentagon, a hexagon, and
+    // a triangle again (`copies` is the most sides, 6, 4 to 12). It jumps from one to the next; it never morphs. Each sits
+    // on a flat side and is centred top to bottom.
+    sides: (n, { copies = 0, beat = 0 } = {}) => {
+        const most = countOf(copies, 6, 4, 12)
+        const loop = most - 2
+        const sides = 3 + (((Math.floor(beat) % loop) + loop) % loop)
+        const corners = Array.from({ length: sides }, (_, i) => corner(i, sides, Math.PI / sides - Math.PI / 2))
+        const ys = corners.map((p) => p[1])
+        const mid = (Math.max(...ys) + Math.min(...ys)) / 2
+        return [along(polygon(corners.map(([x, y]) => [x, y - mid])), n)]
+    },
+    // `copies` upright bars (4, 2 to 8) that count the bar: one on the first beat, two on the second, all of them on the
+    // last, then one again. Each lights whole in its own lane; drawn down and up in turn, so each hop is short.
+    count: (n, { copies = 0, beat = 0 } = {}) => {
+        const most = countOf(copies, 4, 2, 8)
+        const lit = 1 + (((Math.floor(beat) % most) + most) % most)
+        const lane = 2 / most
+        const each = Math.max(2, Math.floor(n / lit))
+        return Array.from({ length: lit }, (_, i) => {
+            const x = -1 + lane * (i + 0.5)
+            return along(i % 2 === 0 ? [[x, 0.9], [x, -0.9]] : [[x, -0.9], [x, 0.9]], each)
+        })
+    },
+    // `copies` dashes of rain (6, 2 to 10), one in each lane, each falling from above the picture to below it in two beats,
+    // the lanes a golden share of a fall apart, so they never fall in a row and the picture is never empty. Each time a dash comes
+    // round again it falls somewhere new in the middle of its lane. Cut at the picture's edge; a piece under RAIN_LEAST is not drawn.
+    rain: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 6, 2, 10)
+        const lane = 2 / count
+        const paths = []
+        for (let i = 0; i < count; i += 1) {
+            const fall = beat / 2 + ((i * (Math.sqrt(5) - 1)) / 2) % 1
+            const k = Math.floor(fall)
+            const top = 1 + RAIN_DASH - (2 + RAIN_DASH) * (fall - k)
+            const hi = Math.min(1, top)
+            const lo = Math.max(-1, top - RAIN_DASH)
+            if (hi - lo < RAIN_LEAST) continue
+            const x = -1 + lane * (i + 0.2 + 0.6 * hash01(i, k, 51))
+            // Drawn from whichever end is nearer the last dash's end, so the hop between them is short.
+            const end = paths.length ? paths[paths.length - 1][1] : [x, 1]
+            paths.push(Math.abs(end[1] - hi) <= Math.abs(end[1] - lo) ? [[x, hi], [x, lo]] : [[x, lo], [x, hi]])
+        }
+        return byLength(paths, n)
+    },
+    // A wire cube, every edge drawn, turning an eighth of a turn on every beat (eased in the first half) round its upright,
+    // leaning towards you so its top shows. Sized to stay inside the picture at every turn.
+    cube: (n, { beat = 0 } = {}) => {
+        const at = cubeView((Math.PI / 4) * stepOf(beat)).map(([x, y]) => [x * CUBE_FIT, y * CUBE_FIT])
+        return byLength(CUBE_STROKES.map((stroke) => stroke.map((i) => at[i])), n)
+    },
+    // `copies` tiny dots (20, 2 to 28: each costs the cube a blank move, ~77 points; 28 is the most inside its budget) over the whole picture, each DUST_R in the field
+    // whatever the look's size. Half of them jump to new places on every beat, the other half on the next, so each dot
+    // lives two beats; a dot appears whole and goes whole. Each half rests on its own colour of DUST_PLACES, a little off
+    // the grid point (less as the dots grow, so from size 0.3 up no two ever touch). Drawn nearest first: short hops.
+    dust: (n, { copies = 0, beat = 0, size = 1 } = {}) => {
+        const count = countOf(copies, 20, 2, 28)
+        const r = size > 0 ? Math.min(SPOT_R, DUST_R / size) : SPOT_R
+        const nudge = clamp((0.22 - 2 * r) / (2 * Math.SQRT2) - 0.005, 0, 0.05)
+        const dots = []
+        for (const half of [0, 1]) {
+            const k = Math.floor((beat + half) / 2)
+            const order = DUST_PLACES[half].map((p, s) => ({ p, s, draw: hash01(s, k, 61 + half) })).sort((a, b) => a.draw - b.draw)
+            for (const { p, s } of order.slice(0, half ? Math.floor(count / 2) : Math.ceil(count / 2))) {
+                dots.push([p[0] + nudge * (2 * hash01(s, k, 63 + half) - 1), p[1] + nudge * (2 * hash01(s, k, 65 + half) - 1)])
+            }
+        }
+        const each = clamp(Math.floor(n / count), 8, 16)
+        const out = []
+        let last = dots.shift()
+        out.push(along(arcPath(last[0], last[1], r, Math.PI / 2), each))
+        while (dots.length) {
+            let best = 0
+            for (let i = 1; i < dots.length; i += 1) if (Math.hypot(dots[i][0] - last[0], dots[i][1] - last[1]) < Math.hypot(dots[best][0] - last[0], dots[best][1] - last[1])) best = i
+            const next = dots.splice(best, 1)[0]
+            out.push(along(arcPath(next[0], next[1], r, Math.atan2(last[1] - next[1], last[0] - next[0])), each))
+            last = next
+        }
+        return out
+    },
+    // A heart monitor: the cardiogram written left to right across the picture, `copies` beats across (3, 1 to 8), one
+    // heartbeat in the middle of each beat's width. The pen is at the spike exactly on the beat, so the spike is drawn on
+    // the beat; just ahead of the pen ECG_GAP of the old trace is wiped, the rest of it stays. Two strokes: the trace up to
+    // the pen, and the old trace from the gap to the right edge (a piece under 0.02 is left out; one of them is always long).
+    heartbeat: (n, { copies = 0, beat = 0 } = {}) => {
+        const across = countOf(copies, 3, 1, 8)
+        const pen = -1 + (2 * ((((beat + 0.5) % across) + across) % across)) / across
+        const trace = (x0, x1) => {
+            const steps = Math.max(2, Math.ceil(((x1 - x0) / 2) * across * 600))
+            return Array.from({ length: steps + 1 }, (_, i) => {
+                const x = x0 + ((x1 - x0) * i) / steps
+                const p = ((x + 1) / 2) * across - 0.5
+                return [x, ECG_BASE + ECG_HEIGHT * ecgAt(p - Math.round(p))]
+            })
+        }
+        const paths = []
+        if (pen + 1 >= 0.02) paths.push(trace(-1, pen))
+        if (1 - pen - ECG_GAP >= 0.02) paths.push(trace(pen + ECG_GAP, 1))
+        return byLength(paths, n)
+    },
+    // One dot in the middle, held still: a ring POINT_R round, the same on the wall at any size (below 0.05 it shrinks with
+    // the picture, and at 0 it is a still beam the engine stops, as every shape is).
+    point: (n, { size = 1 } = {}) => {
+        const r = size > 0 ? Math.min(1, POINT_R / size) : 1
+        // At most 300 points: more only slow the loop, and at 1992 through the owner's pin one window held 40 %.
+        const m = Math.min(n, 300)
+        return [Array.from({ length: m }, (_, i) => {
+            const a = Math.PI / 2 + (i / (m - 1)) * TAU
+            return [Math.cos(a) * r, Math.sin(a) * r]
+        })]
+    },
+    // One level line that splits into two, then four (beats 1, 2); an upright line appears (3) and splits the same way (4, 5)
+    // into a grid of four by four, held three beats; then the upright lines fold back together and go (9–11), the level
+    // ones fold back into one (12, 13), held to beat 16. Every line runs the whole picture; drawn back and forth.
+    weave: (n, { beat = 0 } = {}) => {
+        const b = ((beat % 16) + 16) % 16
+        const k = Math.floor(b)
+        const f = glideOf(b)
+        const level = weaveLines(WEAVE_LEVEL[k], f)
+        const upright = weaveLines(WEAVE_UPRIGHT[k], f)
+        const paths = [
+            ...level.map((y, i) => (i % 2 === 0 ? [[-1, y], [1, y]] : [[1, y], [-1, y]])),
+            ...upright.map((x, i) => (i % 2 === 0 ? [[x, 1], [x, -1]] : [[x, -1], [x, 1]])),
+        ]
+        return byLength(paths, n)
+    },
+    // One circle that splits into two (beat 2), then into three, overlapping like a Venn picture (beat 4); the three mix
+    // (beats 6–12): a sixth of a turn round the middle on every beat, closing in tight on the odd beats and opening on the
+    // even ones, so they pass through each other; then they merge back into two (12) and one (14). They only move: every
+    // circle stays the same size. Each is a stroke of its own.
+    venn: (n, { beat = 0 } = {}) => {
+        const b = ((beat % 16) + 16) % 16
+        const k = Math.floor(b)
+        const f = glideOf(b)
+        const lerp = (p, q) => [p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f]
+        const two = [[-VENN_TWO, 0], [VENN_TWO, 0]]
+        const three = vennRing(VENN_THREE, 0)
+        let centres
+        if (k < 2 || k === 15) centres = [[0, 0]]
+        else if (k === 2) centres = two.map((q) => lerp([0, 0], q))
+        else if (k === 3 || k === 13) centres = two
+        // The left circle goes to the lower left place; the right one splits to the lower right and the top.
+        else if (k === 4) centres = [lerp(two[0], three[1]), lerp(two[1], three[2]), lerp(two[1], three[0])]
+        else if (k === 5) centres = three
+        else if (k < 12) {
+            const s = b - 6
+            const step = Math.floor(s) + f
+            const d = (i) => (i % 2 === 0 ? VENN_THREE : VENN_TIGHT)
+            centres = vennRing(d(Math.floor(s)) + (d(Math.floor(s) + 1) - d(Math.floor(s))) * f, (TAU / 6) * step)
+        } else if (k === 12) centres = f >= 1 ? two : [lerp(three[1], two[0]), lerp(three[2], two[1]), lerp(three[0], two[1])]
+        else centres = f >= 1 ? [[0, 0]] : two.map((p) => lerp(p, [0, 0]))
+        return byLength(centres.map(([x, y]) => arcPath(x, y, VENN_R, Math.PI / 2)), n)
+    },
 }
 
 /** Hue 0..1 (saturated, full value) to [r, g, b] in 0..1. */
@@ -672,7 +956,8 @@ const generateShape = ({
         clamp((x * cos - y * sin) * scale, -1, 1),
         clamp((x * sin + y * cos) * scale + lift, -1, 1),
     ]
-    const strokes = build(n, { copies: finite(copies, 0), time: t, beat: finite(beat, t * 2) })
+    // `size` too, for a shape whose marks keep one size on the wall however big the picture is (dust).
+    const strokes = build(n, { copies: finite(copies, 0), time: t, beat: finite(beat, t * 2), size: scale })
     const total = strokes.reduce((sum, s) => sum + s.length, 0)
     const out = []
     let k = 0

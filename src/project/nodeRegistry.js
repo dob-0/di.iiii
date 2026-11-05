@@ -2346,7 +2346,7 @@ export const NODE_TYPES = {
         category: 'geometry',
         runtime: 'any',
         singleton: false,
-        keywords: ['laser', 'shape', 'circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid', 'arc', 'cross', 'bars', 'rings', 'corners', 'chevron', 'glint', 'sparkle', 'twinkle', 'lines', 'spots', 'wobble', 'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse', 'animation', 'rainbow', 'scenes', 'beam', 'draw', 'frame', 'lasercube'],
+        keywords: ['laser', 'shape', 'circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid', 'arc', 'cross', 'bars', 'rings', 'corners', 'chevron', 'glint', 'sparkle', 'twinkle', 'lines', 'spots', 'wobble', 'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse', 'lissajous', 'helix', 'tunnel', 'echo', 'sides', 'count', 'rain', 'cube', 'dust', 'heartbeat', 'cardiogram', 'point', 'weave', 'venn', 'animation', 'rainbow', 'scenes', 'beam', 'draw', 'frame', 'lasercube'],
         inputs: [
             // One of: circle, line, square, triangle, star, wave, fan, spiral, galaxy, sunflower, noisy, grid, arc, cross,
             // bars, rings, corners, chevron, glint, sparkle, twinkle, lines, spots, wobble, and the scenes planets, pendulum, bounce,

@@ -330,6 +330,112 @@ describe('the Laser node\'s shapes, as the guards draw them, still pass the stil
             }
         }
     })
+    // 2026-10-31: the patterns (lissajous … cube), lines and circles that move on the beat. Rain is a mark shape: its
+    // dashes are dots below MARK_MIN_SIZE. At 0.05 the most in one window is count's single bar on the first beat, its
+    // end dwells (36.3 %, the line's own 38.8 % above). Held at every quarter beat over 16 as sent, with 120 and 900 points.
+    const PATTERNS = LASER_SHAPES.slice(33, 41)
+    it('the patterns keep the headroom: 7.2 % / 18.7 % / 36.3 %, rain 5.6 % and 9.2 % at its smallest', () => {
+        expect(PATTERNS).toEqual(['lissajous', 'helix', 'tunnel', 'echo', 'sides', 'count', 'rain', 'cube'])
+        const figures = PATTERNS.filter((s) => !MARK_SHAPES.includes(s))
+        expect(worstOf(figures, 0.5)).toBeCloseTo(0.072, 2)
+        expect(worstOf(figures, 0.1)).toBeCloseTo(0.187, 2)
+        expect(worstOf(figures, 0.05)).toBeCloseTo(0.363, 2)
+        expect(worstOf(['rain'], 0.5)).toBeCloseTo(0.056, 2)
+        expect(worstOf(['rain'], MARK_MIN_SIZE)).toBeCloseTo(0.092, 2)
+    })
+    it('the patterns as sent are never still at any quarter beat over 16, and never put 40 % in one window', () => {
+        const plan = at(30000)
+        for (const shape of PATTERNS) {
+            for (const size of MARK_SHAPES.includes(shape) ? [0.5, MARK_MIN_SIZE] : [0.5, 0.1, 0.05]) {
+                for (const points of [120, 900]) {
+                    for (let beat = 0; beat < 16; beat += 0.25) {
+                        const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape, size, height: 0.5, points, beat }), { budget: null }).points, normaliseZone()).points, plan).points
+                        expect(stillBeams(frame), `${shape} ${size} × ${points} beat ${beat}`).toEqual([])
+                        expect(dwellSpots(frame, { minShare: 0 })[0].share, `${shape} ${size} × ${points} beat ${beat}`).toBeLessThan(0.4)
+                    }
+                }
+            }
+        }
+    })
+    // 2026-11-01: weave (lines splitting into a grid) and venn (circles splitting and mixing), every eighth of a beat of
+    // their 16-beat loops.
+    it('weave and venn as sent are never still at any eighth of a beat, and never put 40 % in one window', () => {
+        expect(LASER_SHAPES.slice(44, 46)).toEqual(['weave', 'venn'])
+        const plan = at(30000)
+        for (const shape of ['weave', 'venn']) {
+            for (const size of [0.5, 0.1, 0.05]) {
+                for (const points of [120, 900]) {
+                    for (let beat = 0; beat < 16; beat += 0.125) {
+                        const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape, size, height: 0.5, points, beat }), { budget: null }).points, normaliseZone()).points, plan).points
+                        expect(stillBeams(frame), `${shape} ${size} × ${points} beat ${beat}`).toEqual([])
+                        expect(dwellSpots(frame, { minShare: 0 })[0].share, `${shape} ${size} × ${points} beat ${beat}`).toBeLessThan(0.4)
+                    }
+                }
+            }
+        }
+    })
+    // 2026-11-01: point, one dot alone in the middle. All the frame is in it, so it is the shape nearest the 50 % stop: held
+    // under 40 % at every point count, at 30 and 35 kpps, plain and through a corner pin like the owner's.
+    it('point is never still and never puts 40 % in one window, at any size from 0.05, any points, plain or pinned', () => {
+        expect(LASER_SHAPES[43]).toBe('point')
+        const { lookPointsAt } = require('../../../shared/laserLook.cjs')
+        const zone = normaliseZone({ xMin: -1, xMax: 1, yMin: -1, yMax: 1 })
+        const pinned = { on: true, flipX: false, flipY: false, size: 1.05, x: 0, y: 0, order: 0, corners: [[-0.805, -1], [0.784, -1], [0.784, -0.34], [-0.788, -0.332]] }
+        const plain = { ...pinned, size: 1, corners: [[-1, -1], [1, -1], [1, 1], [-1, 1]] }
+        for (const rate of [30000, 35000]) {
+            for (const points of [16, 120, 300, 900, 1992]) {
+                for (const size of [1, 0.5, 0.1, 0.05]) {
+                    for (const cube of [plain, pinned]) {
+                        const look = { shape: 'point', size, height: 0, x: 0, rotation: 0, spin: 0, level: 1, colour: '#ffffff', points, copies: 0, rainbow: false, cycle: 0, pulse: 0, pulseBeats: 1, sweep: 0, sweepBeats: 4, mirror: false, phase: 0, react: 0 }
+                        const frame = g.optimisePath(applyZone(flattenLaserPaths(lookPointsAt(look, { t: 0, clock: { bpm: 120, zero: 0 }, cube, master: 1 }), { budget: null }).points, zone).points, at(rate)).points
+                        const label = `point ${size} × ${points} at ${rate}${cube === pinned ? ', pinned' : ''}`
+                        expect(stillBeams(frame), label).toEqual([])
+                        expect(dwellSpots(frame, { minShare: 0 })[0].share, label).toBeLessThan(0.4)
+                    }
+                }
+            }
+        }
+    })
+    // 2026-11-01: heartbeat, a cardiogram's trace with sharp spikes (the guards hold the beam at each tip). Held at every
+    // eighth of a beat over a sweep and more, at 1 to 8 beats across.
+    it('heartbeat as sent is never still at any eighth of a beat, and never puts 40 % in one window', () => {
+        expect(LASER_SHAPES[42]).toBe('heartbeat')
+        const plan = at(30000)
+        for (const size of [0.5, 0.1, 0.05]) {
+            for (const copies of [0, 1, 8]) {
+                for (let beat = 0; beat < 9; beat += 0.125) {
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape: 'heartbeat', size, height: 0.5, points: 600, copies, beat }), { budget: null }).points, normaliseZone()).points, plan).points
+                    expect(stillBeams(frame), `heartbeat ${size} ×${copies} beat ${beat}`).toEqual([])
+                    expect(dwellSpots(frame, { minShare: 0 })[0].share, `heartbeat ${size} ×${copies} beat ${beat}`).toBeLessThan(0.4)
+                }
+            }
+        }
+    })
+    // 2026-11-01: dust, up to 28 dots each 0.046 of the field across at any size (just over the 0.032 window). Only dots, so every one must stay a stroke:
+    // checked as sent, and as the desk draws it through a corner pin like the owner's (80 % wide, 33 % tall).
+    it('dust as sent is never still at any quarter beat over 16 from MARK_MIN_SIZE up, nor through a narrowing corner pin; 28 dots fit the real cube', () => {
+        expect(LASER_SHAPES[41]).toBe('dust')
+        const plan = at(30000)
+        for (const size of [1, 0.5, MARK_MIN_SIZE]) {
+            for (const copies of [0, 28]) {
+                for (let beat = 0; beat < 16; beat += 0.25) {
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape: 'dust', size, height: 0, points: 400, copies, beat }), { budget: null }).points, normaliseZone({ xMin: -1, xMax: 1, yMin: -1, yMax: 1 })).points, plan).points
+                    expect(stillBeams(frame), `dust ${size} ×${copies} beat ${beat}`).toEqual([])
+                    expect(dwellSpots(frame, { minShare: 0 })[0].share, `dust ${size} ×${copies} beat ${beat}`).toBeLessThan(0.1)
+                }
+            }
+        }
+        const { lookPointsAt } = require('../../../shared/laserLook.cjs')
+        const cube = { on: true, flipX: false, flipY: false, size: 1.05, x: 0, y: 0, order: 0, corners: [[-0.805, -1], [0.784, -1], [0.784, -0.34], [-0.788, -0.332]] }
+        const look = { shape: 'dust', size: 0.952, height: 0, x: 0, rotation: 0, spin: 0, level: 1, colour: '#ffffff', points: 400, copies: 28, rainbow: false, cycle: 0, pulse: 0, pulseBeats: 1, sweep: 0, sweepBeats: 4, mirror: false, phase: 0, react: 0 }
+        const budget = g.frameBudget(35000, 6000)
+        for (let beat = 0; beat < 16; beat += 0.25) {
+            const drawn = lookPointsAt(look, { t: beat * 500, clock: { bpm: 120, zero: 0 }, cube, master: 1 })
+            const r = g.optimisePath(applyZone(flattenLaserPaths(drawn, { budget: null }).points, normaliseZone({ xMin: -1, xMax: 1, yMin: -1, yMax: 1 })).points, at(35000), budget)
+            expect(r.overBudget, `pinned dust beat ${beat}`).toBe(false)
+            expect(stillBeams(r.points), `pinned dust beat ${beat}`).toEqual([])
+        }
+    })
     // As the desk and Laser Out send them: flattened, a blank point before every mark, so the frame's last mark never
     // joins its first into one stroke when the frame loops.
     it('the sparkles as sent are never still from MARK_MIN_SIZE up, at any half beat or turn; at 0.05 they are dots, which the engine stops', () => {
@@ -496,7 +602,7 @@ describe('round 2: the review\'s findings (reproduced first with the reviewer\'s
         const parsed = proto.parseFullInfo(infoAnswer(info))
         expect(parsed).toMatchObject({ dacRate: 35000, maxDacRate: 35000, rxBufferSize: 6000, rxBufferFree: 6000 })
         expect(g.frameBudget(parsed.dacRate, parsed.rxBufferSize)).toBe(2333)
-        expect(LASER_SHAPES.length).toBe(33)
+        expect(LASER_SHAPES.length).toBe(46)
         for (const shape of LASER_SHAPES) {
             const rig = armed(ONE, info)
             rig.engine.setFrame('all', generateShape({ shape, size: 0.5, height: 0.5, points: 1992 }))
