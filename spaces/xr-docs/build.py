@@ -67,17 +67,17 @@ def git(*args):
     return subprocess.run(['git', '-C', ROOT, *args], check=True, capture_output=True, text=True).stdout
 
 
-def last_change(path):
-    out = git('log', '-1', '--format=%h %cs', '--', path).strip()
-    return out or 'uncommitted'
+def content_id(path):
+    """A fingerprint of the source text, not of git history: a commit, a
+    squash-merge or a shallow clone must not make --check call a page stale."""
+    import hashlib
+    with open(os.path.join(ROOT, path), 'rb') as f:
+        return hashlib.sha256(f.read()).hexdigest()[:10]
 
 
 def strip_frontmatter(text):
-    if text.startswith('---\n'):
-        end = text.find('\n---\n', 4)
-        if end != -1:
-            return text[end + 5:]
-    return text
+    m = re.match(r'---\n(?:.*?\n)?---\n', text, re.S)
+    return text[m.end():] if m else text
 
 
 def page_href(slug):
@@ -95,20 +95,32 @@ def fix_links(body_html, source):
     otherwise — see spaces/main/pages/landing)."""
     base = os.path.dirname(source)
 
-    def repl(m):
-        href = html.unescape(m.group(1))
-        if href.startswith('#'):
-            return f'href="{html.escape(href)}"'
-        if not re.match(r'^[a-z]+:', href):
-            path, _, frag = href.partition('#')
-            target = os.path.normpath(os.path.join(base, path)).replace(os.sep, '/')
-            if target in SRC_TO_SLUG:
-                href = page_href(SRC_TO_SLUG[target]) + (f'#{frag}' if frag else '')
-            else:
-                href = REPO + target + (f'#{frag}' if frag else '')
-        return f'href="{html.escape(href)}" target="_top" rel="noopener"'
+    def resolve(url):
+        if url.startswith('#') or url.startswith('//') or re.match(r'^[a-z][a-z0-9+.-]*:', url, re.I):
+            return url
+        path, _, frag = url.partition('#')
+        target = path.lstrip('/') if path.startswith('/') else os.path.join(base, path)
+        target = os.path.normpath(target).replace(os.sep, '/')
+        if target.startswith('..'):
+            return url  # outside the repo: leave it as written
+        if target in SRC_TO_SLUG:
+            return page_href(SRC_TO_SLUG[target]) + (f'#{frag}' if frag else '')
+        return REPO + target + (f'#{frag}' if frag else '')
 
-    return re.sub(r'href="([^"]*)"', repl, body_html)
+    def href(m):
+        url = html.unescape(m.group(2))
+        if url.startswith('#'):
+            return f'href="{html.escape(url)}"'
+        return f'href="{html.escape(resolve(url))}" target="_top" rel="noopener"'
+
+    def src(m):
+        url = resolve(html.unescape(m.group(2)))
+        if url.startswith(REPO):  # an image in the repo: the raw file, not the GitHub page
+            url = url.replace('https://github.com/', 'https://raw.githubusercontent.com/').replace('/blob/', '/', 1)
+        return f'src="{html.escape(url)}"'
+
+    body_html = re.sub(r'href=(["\'])(.*?)\1', href, body_html)
+    return re.sub(r'src=(["\'])(.*?)\1', src, body_html)
 
 
 CSS = """
@@ -190,7 +202,7 @@ def render_page(slug, src, title, dek):
                            extension_configs={'toc': {'permalink': False}})
     body = md.convert(text)
     # The document's own first heading is the page's h1.
-    body = re.sub(r'^<h1[^>]*>.*?</h1>\s*', '', body, count=1, flags=re.S)
+    body = re.sub(r'<h1[^>]*>.*?</h1>\s*', '', body, count=1, flags=re.S)
     body = body.replace('<table>', '<div class="tablewrap"><table>').replace('</table>', '</table></div>')
     body = fix_links(body, src)
     # space-sync retargets every bare "diiii.xyz" in a page to the tier it
@@ -201,7 +213,7 @@ def render_page(slug, src, title, dek):
     head = (f'<p class="eyebrow">XR handbook · {PAGES.index(next(p for p in PAGES if p[0] == slug)) + 1:02d}</p>'
             f'<h1>{html.escape(title)}<span class="dot">.</span></h1><p class="dek">{html.escape(dek)}</p>'
             f'<p class="source">source <a href="{REPO}{src}" target="_top" rel="noopener">{html.escape(src)}</a>'
-            f' · last changed {html.escape(last_change(src))}</p>')
+            f' · text {html.escape(content_id(src))}</p>')
     return shell(title, slug, head + body)
 
 
