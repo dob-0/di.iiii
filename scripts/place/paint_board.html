@@ -1,0 +1,71 @@
+<!doctype html>
+<!-- paint_board.html — a minimal board to mark a top plan and leave notes the agent reads in metres.
+  Open: file:///…/paint_board.html?bg=<plan.png>&map=<px_x0>,<m_x0>,<px_x1>,<m_x1>,<px_y0>,<m_y0>,<px_y1>,<m_y1>&name=<file stem>
+  (map = two known pixel/metre pairs per axis of the background picture; omit it and notes carry pixels only).
+  Tools: pen, line (straight), text, eraser; 8 colours; size slider; undo; everything kept in this browser (localStorage) until cleared.
+  SAVE = ONE file <name>-marks.json {bg, map, paint (PNG data URL of the marks only), notes [{n, text, colour, x_m, y_m, px, py}]}.
+  The agent can also read window.__marks() over DevTools. No server, no network. -->
+<meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Paint board</title>
+<style>
+:root{--bg:#000;--fg:#eee;--dim:#777;--acc:#ff4fa8}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.3 system-ui,sans-serif}
+#bar{position:fixed;left:12px;top:12px;width:186px;z-index:5;display:flex;flex-direction:column;gap:10px;padding:10px;background:rgba(10,10,10,.92);border:1px solid #333}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;max-width:176px}
+.sw{width:30px;height:30px;border:2px solid #333;cursor:pointer}.sw.on{border-color:#fff;outline:2px solid var(--acc)}
+.t{width:40px;height:34px;background:#111;color:var(--fg);border:1px solid #333;cursor:pointer;font-size:16px}.t.on{border-color:var(--acc);color:var(--acc)}
+#size{width:120px;accent-color:var(--acc)}#dot{display:inline-block;border-radius:50%;background:#fff}
+#save{background:var(--acc);color:#000;border:0;font-weight:700;height:38px;cursor:pointer;width:100%}
+#msg{color:var(--dim);font-size:12px;max-width:176px}
+#w{position:absolute;left:210px;top:12px}canvas{position:absolute;left:0;top:0;touch-action:none}#bgimg{display:block}
+#note{position:absolute;display:none;z-index:6;font:bold 18px system-ui;padding:4px 6px;border:2px solid var(--acc);background:#fff;color:#000;min-width:220px}
+.k{color:var(--dim);font-size:11px}
+</style>
+<div id=bar>
+ <div class=row id=cols></div>
+ <div class=row><button class="t on" data-t=pen title="pen (P)">✎</button><button class=t data-t=line title="straight line (L)">╱</button>
+  <button class=t data-t=text title="text note (T)">T</button><button class=t data-t=erase title="eraser (E)">⌫</button></div>
+ <div class=row><input id=size type=range min=2 max=40 value=6><span id=dot></span></div>
+ <div class=row><button class=t id=undo title="undo (Ctrl+Z)">↶</button><button class=t id=clear title="clear all">✕</button></div>
+ <button id=save>SAVE</button><div id=msg>ready</div>
+ <div class=k>P pen · L line · T text · E eraser · Ctrl+Z undo · Enter = place text, Esc = cancel</div>
+</div>
+<div id=w><img id=bgimg alt=""><canvas id=c></canvas><input id=note placeholder="type, Enter"></div>
+<script>
+const Q=new URLSearchParams(location.search),BG=Q.get('bg')||'plan.png',NAME=Q.get('name')||'board',KEY='paint-board:'+BG;
+const map=(Q.get('map')||'').split(',').map(Number);const HAS=map.length==8&&map.every(v=>!isNaN(v));
+const toM=(px,py)=>HAS?[+(map[1]+(px-map[0])*(map[3]-map[1])/(map[2]-map[0])).toFixed(2),+(map[5]+(py-map[4])*(map[7]-map[5])/(map[6]-map[4])).toFixed(2)]:[null,null];
+const COLS=[['#ff1f8f','room'],['#1f6bff','door'],['#00b35a','stair'],['#ff8a00','wall'],['#ff2a2a','wrong'],['#ffe600','light'],['#000000','text'],['#ffffff','white']];
+const img=document.getElementById('bgimg'),c=document.getElementById('c'),x=c.getContext('2d'),note=document.getElementById('note');
+let col=COLS[0][0],tool='pen',size=6,down=false,start=null,snap=null,hist=[],notes=[];
+const msg=t=>document.getElementById('msg').textContent=t;
+cols.innerHTML=COLS.map(([h,n],i)=>`<div class="sw${i?'':' on'}" style="background:${h}" data-c="${h}" title="${n}"></div>`).join('');
+cols.onclick=e=>{const s=e.target.closest('.sw');if(!s)return;document.querySelectorAll('.sw').forEach(o=>o.classList.remove('on'));s.classList.add('on');col=s.dataset.c;if(tool=='erase')setTool('pen');dot()};
+function setTool(t){tool=t;document.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t==t));c.style.cursor=t=='text'?'text':'crosshair'}
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>setTool(b.dataset.t));
+function dot(){const d=document.getElementById('dot'),s=Math.min(size,30);d.style.width=d.style.height=s+'px';d.style.background=col}
+const sizeEl=document.getElementById('size');sizeEl.oninput=()=>{size=+sizeEl.value;dot()};dot();
+function fit(){c.width=img.naturalWidth;c.height=img.naturalHeight;load()}
+img.onload=fit;img.onerror=()=>msg('background not found: '+BG);img.src=BG;
+const P=e=>{const r=c.getBoundingClientRect();return[(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height]};
+function push(kind){hist.push({img:x.getImageData(0,0,c.width,c.height),kind});if(hist.length>60)hist.shift()}
+function stroke(){x.globalCompositeOperation=tool=='erase'?'destination-out':'source-over';x.strokeStyle=col;x.lineWidth=tool=='erase'?size*3:size;x.lineCap=x.lineJoin='round'}
+function drawNote(n){x.globalCompositeOperation='source-over';const fs=Math.max(14,n.size*2.2);x.font=`bold ${fs}px system-ui`;
+ x.fillStyle=n.colour;x.beginPath();x.arc(n.px,n.py,Math.max(4,fs/3),0,7);x.fill();const w=x.measureText(n.text).width;
+ x.fillStyle=n.colour=='#ffffff'?'rgba(0,0,0,.8)':'rgba(255,255,255,.88)';x.fillRect(n.px+fs/2,n.py-fs*.8,w+10,fs*1.2);x.fillStyle=n.colour;x.fillText(n.text,n.px+fs/2+5,n.py+fs*.15)}
+c.onpointerdown=e=>{const p=P(e);if(tool=='text'){openNote(p,e);return}c.setPointerCapture(e.pointerId);down=true;push('paint');start=p;
+ if(tool=='line'){snap=x.getImageData(0,0,c.width,c.height)}else{stroke();x.beginPath();x.moveTo(...p);x.lineTo(p[0]+.01,p[1]);x.stroke()}};
+c.onpointermove=e=>{if(!down)return;const p=P(e);stroke();if(tool=='line'){x.putImageData(snap,0,0);x.beginPath();x.moveTo(...start);x.lineTo(...p);x.stroke()}else{x.lineTo(...p);x.stroke()}};
+c.onpointerup=()=>{if(down){down=false;keep()}};
+function openNote(p,e){const r=c.getBoundingClientRect();note.style.left=(e.clientX-r.left+8)+'px';note.style.top=(e.clientY-r.top-14)+'px';note.style.display='block';note.style.color=col=='#ffffff'?'#000':col;note.value='';note.dataset.px=p[0];note.dataset.py=p[1];setTimeout(()=>note.focus(),0)}
+note.onkeydown=e=>{if(e.key=='Escape'){note.style.display='none';return}if(e.key!='Enter')return;const t=note.value.trim();note.style.display='none';if(!t)return;
+ push('note');const px=Math.round(+note.dataset.px),py=Math.round(+note.dataset.py),[xm,ym]=toM(px,py);const n={n:notes.length+1,text:t,colour:col,size,x_m:xm,y_m:ym,px,py};notes.push(n);drawNote(n);keep();msg(`note ${n.n}`+(HAS?` at x ${xm} y ${ym} m`:''))};
+undo.onclick=()=>{const h=hist.pop();if(!h)return msg('nothing to undo');x.putImageData(h.img,0,0);if(h.kind=='note')notes.pop();keep();msg('undone')};
+clear.onclick=()=>{if(!confirm('Clear all marks and notes?'))return;push('clear');x.clearRect(0,0,c.width,c.height);hist.at(-1).notes=notes;notes=[];keep();msg('cleared (undo brings it back)')};
+const _undo=undo.onclick;undo.onclick=()=>{const h=hist.at(-1);if(h&&h.kind=='clear'){hist.pop();x.putImageData(h.img,0,0);notes=h.notes;keep();return msg('undone')}_undo()};
+onkeydown=e=>{if(document.activeElement==note)return;if((e.ctrlKey||e.metaKey)&&e.key=='z'){e.preventDefault();undo.onclick()}else if(!e.ctrlKey){const t={p:'pen',l:'line',t:'text',e:'erase'}[e.key.toLowerCase()];if(t)setTool(t)}};
+function marks(){return{bg:BG,map:HAS?map:null,size:[c.width,c.height],paint:c.toDataURL('image/png'),notes}}
+window.__marks=marks;
+function keep(){try{localStorage.setItem(KEY,JSON.stringify({paint:c.toDataURL('image/png'),notes}))}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(!s)return;notes=s.notes||[];const i=new Image();i.onload=()=>x.drawImage(i,0,0);i.src=s.paint;msg(`kept marks loaded (${notes.length} notes)`)}catch(e){}}
+save.onclick=()=>{const a=document.createElement('a');a.download=NAME+'-marks.json';a.href=URL.createObjectURL(new Blob([JSON.stringify(marks())],{type:'application/json'}));a.click();msg(`saved ${NAME}-marks.json (${notes.length} notes)`)};
+</script>
