@@ -122,3 +122,18 @@ The owner's ask: "lets create laser soft like how is lighting one" — inside di
 
 - Nothing on a real cube; nothing armed (sim included). The desk on the wall is owed, with the officer.
 - Phone over the LAN (needs DI_ALLOW_LAN_DEVICES=1, as for Laser Out).
+
+## 2026-11-01 (pushed 2026-11-05) — more patterns, brightness, preview, Displace/Wobble/Strobe
+
+- Shapes appended after unfold: lissajous, helix, tunnel, echo, sides, count, rain, cube, dust, heartbeat, point,
+  weave, venn (46 in all), each with a seed tile, plus the Patterns and Build cycles. Dust's dots are the smallest the
+  still-beam guard lets through (0.046 of the field); a lone Point needs about twice that, because the whole frame's
+  time sits in one dot. Don't route around that guard.
+- Per-cube Brightness in Setup (0…1, under master and the look's level, the Test picture too).
+- Control is "bank bank editor" over "preview stage editor": the look in Edit shows in its own preview pane.
+- Look fields displace, wobble (+ wobbleBeats) and strobe. Bent busy pictures blew the cube's 2333-point pass, so
+  `bendWithin` eases the bends until the cost fits; a test holds every seed look at full bends inside it.
+- The page reloads itself when the desk's files or the server change, and comes back to the same page, look in Edit
+  and Audio. Playing a picture also selects it.
+- Tested: the laser suites green except the two Windows-only SIGTERM/SIGINT shutdown tests (baseline). Ran live on
+  her one-cube desk on 2026-11-01. Still owed: the branch is behind dev and needs a rebase before it lands.
