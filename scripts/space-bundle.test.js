@@ -637,3 +637,53 @@ describe('space-bundle import refuses links', () => {
         expect(stderr).toMatch(/refusing bundle: .*hard link/)
     })
 })
+
+// --only-project: one project of a space travels alone (export), and propose
+// refuses a file that holds anything else. Red first: before the flag, export
+// carried every project and propose had no such check.
+describe('space-bundle --only-project', () => {
+    const seedTwoProjects = (dbPath) => {
+        seedSpace(dbPath, { id: 'myspace', updatedAt: 1_000 })
+        const { initDb, closeDb } = require('../serverXR/src/db.js')
+        const db = initDb(dbPath)
+        const ins = db.prepare('INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at, slug, position, state, deleted_at, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        ins.run('p-floor', 'myspace', 'floor', 1, 'project', 1, 1, 1, 'the-floor', 0, 'active', null, 'public')
+        ins.run('p-hall', 'myspace', 'hall', 1, 'project', 2, 2, 2, 'the-hall', 1, 'active', null, 'public')
+        closeDb()
+    }
+    const listBundle = (file) => execFileAsync('tar', ['-tzf', file]).then((r) => r.stdout)
+
+    it('export --only-project carries exactly that one project (by slug)', async () => {
+        const root = mkTemp('space-bundle-only-')
+        const out = path.join(mkTemp('space-bundle-out-'), 'one.diiii')
+        seedTwoProjects(path.join(root, 'di.db'))
+        const { stdout } = await run(['export', 'myspace', '--data-root', root, '--out', out, '--only-project', 'the-floor'])
+        expect(stdout).toContain('1 projects')
+        const names = await listBundle(out)
+        expect(names).toContain('projects/p-floor/meta.json')
+        expect(names).not.toContain('p-hall')
+    })
+
+    it('export --only-project with an unknown project fails loudly', async () => {
+        const root = mkTemp('space-bundle-only-')
+        seedTwoProjects(path.join(root, 'di.db'))
+        const err = await run(['export', 'myspace', '--data-root', root, '--only-project', 'nope']).catch((e) => e)
+        expect(err.code).toBe(1)
+        expect(err.stderr).toContain('no project "nope"')
+    })
+
+    it('propose --only-project refuses a whole-space file, and --dry-run on a one-project file passes the check', async () => {
+        const root = mkTemp('space-bundle-only-')
+        const dir = mkTemp('space-bundle-out-')
+        seedTwoProjects(path.join(root, 'di.db'))
+        const whole = path.join(dir, 'whole.diiii')
+        const one = path.join(dir, 'one.diiii')
+        await run(['export', 'myspace', '--data-root', root, '--out', whole])
+        await run(['export', 'myspace', '--data-root', root, '--out', one, '--only-project', 'the-floor'])
+        const bad = await run(['propose', whole, '--tier', 'local', '--only-project', 'the-floor', '--check-only']).catch((e) => e)
+        expect(bad.code).toBe(1)
+        expect(bad.stderr).toContain('holds 2 projects')
+        const ok = await run(['propose', one, '--tier', 'local', '--only-project', 'the-floor', '--check-only'])
+        expect(ok.stdout).toContain('only-project ok: 1 project (the-floor)')
+    })
+})

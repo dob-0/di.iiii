@@ -128,7 +128,7 @@ const die = (msg) => { console.error(`[space-bundle] ERROR: ${msg}`); process.ex
 const log = (msg) => console.log(`[space-bundle] ${msg}`)
 
 const parseArgs = (argv) => {
-    const args = { command: null, target: null, dataRoot: null, out: null, as: null, owner: null, force: false, forceStale: false, prune: false, noBackup: false, tier: null, dryRun: false, acceptLoss: null, publicOnly: false }
+    const args = { command: null, target: null, dataRoot: null, out: null, as: null, owner: null, force: false, forceStale: false, prune: false, noBackup: false, tier: null, dryRun: false, acceptLoss: null, publicOnly: false, onlyProject: null }
     const positional = []
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i]
@@ -146,6 +146,7 @@ const parseArgs = (argv) => {
         else if (a === '--force-stale') args.forceStale = true
         else if (a === '--dry-run') args.dryRun = true
         else if (a === '--public-only') args.publicOnly = true
+        else if (a === '--only-project') args.onlyProject = argv[++i]
         else if (a === '--accept-loss' || a.startsWith('--accept-loss=')) {
             args.acceptLoss = loadDocumentLoss().parseAcceptLoss(a === '--accept-loss' ? [a, argv[i + 1]] : [a])
             if (a === '--accept-loss') i++
@@ -305,7 +306,13 @@ async function exportSpace(args) {
     const allProjects = db.prepare('SELECT * FROM projects WHERE space_id = ? ORDER BY created_at ASC').all(spaceId)
     // A private project is for the space's members only; --public-only is the
     // file a visitor gets, so it is not in it at all.
-    const projects = args.publicOnly ? allProjects.filter((p) => p.visibility !== 'private') : allProjects
+    let projects = args.publicOnly ? allProjects.filter((p) => p.visibility !== 'private') : allProjects
+    // --only-project <slug|id>: one project travels alone; the others stay out
+    // of the file (so a later propose cannot touch them). Unknown name: stop.
+    if (args.onlyProject) {
+        projects = projects.filter((p) => p.id === args.onlyProject || p.slug === args.onlyProject)
+        if (projects.length !== 1) die(`export --only-project: no project "${args.onlyProject}" in space "${spaceId}" (${allProjects.map((p) => p.slug || p.id).join(', ')})`)
+    }
     const leftOut = allProjects.length - projects.length
     const selectProjectOps = db.prepare('SELECT version, data, created_at FROM project_ops WHERE project_id = ? ORDER BY version ASC')
     const projectOpsById = new Map(projects.map((p) => [p.id, selectProjectOps.all(p.id)]))
@@ -328,6 +335,8 @@ async function exportSpace(args) {
             // project in it — copying the whole store would carry a private
             // project's photographs out inside a public file. Only blobs a
             // kept project or the scene names travel.
+            await copyReferencedBlobs(spaceDir, projects.map((p) => p.id), path.join(staging, 'blobs'))
+        } else if (args.onlyProject) {
             await copyReferencedBlobs(spaceDir, projects.map((p) => p.id), path.join(staging, 'blobs'))
         } else {
             await copyDirIfExists(path.join(spaceDir, 'blobs'), path.join(staging, 'blobs'))
@@ -376,6 +385,8 @@ async function exportSpace(args) {
             lightShow: lightShow
                 ? { fixtures: countOf(lightShow, 'fixtures'), scenes: countOf(lightShow, 'scenes'), looks: countOf(lightShow, 'looks') }
                 : null,
+            // Which projects the file holds (id + slug), so propose --only-project can check it.
+            projectList: projects.map((p) => ({ id: p.id, slug: p.slug ?? null })),
             stripped: STRIPPED_TABLES
         }
         await fsp.writeFile(path.join(staging, 'bundle.json'), JSON.stringify(manifest, null, 2))
@@ -819,7 +830,7 @@ if (invokedDirectly && process.argv[2] === 'propose') {
     // HTTP route spawns, and the route stamps the person who opened the file.
     else if (args.command === 'import') await importSpace({ ...args, checkStale: true, lossGate: true, stampActor: args.force })
     else {
-        console.log('Usage: node scripts/space-bundle.mjs export <spaceId> [--data-root <dir>] [--out <file>]')
+        console.log('Usage: node scripts/space-bundle.mjs export <spaceId> [--data-root <dir>] [--out <file>] [--only-project <slug|id>]')
         console.log('       node scripts/space-bundle.mjs import <bundle.tar.gz> [--data-root <dir>] [--as <id>] [--owner <userId>] [--force] [--force-stale] [--tier dev|prod] [--prune] [--no-backup] [--accept-loss <N>] [--dry-run]')
         console.log('       node scripts/space-bundle.mjs propose <file.diiii> --tier <local|dev|prod> [--space <id>] [--from <name>] [--dry-run] [--direct] [--overwrite-newer]')
         process.exit(args.command ? 1 : 0)

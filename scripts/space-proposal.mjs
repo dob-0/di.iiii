@@ -18,6 +18,9 @@
  *   --space <id>             Target space (default: the id inside the file)
  *   --from "<name>"          Whose work this is, when you send it for someone
  *                            ("Emilya"). Shown to the approver.
+ *   --only-project <slug>     Refuse the file unless it holds exactly this one project
+ *                            (make it with: export <space> --only-project <slug>).
+ *   --check-only             With --only-project: check the file, send nothing.
  *   --dry-run                Show the summary; create nothing.
  *   --direct                 Apply now if the server says you are trusted
  *                            (owner/admin/trusted list) instead of proposing.
@@ -41,7 +44,7 @@ const TIMEOUT_MS = 180000
 const fail = (message) => { const e = new Error(message); e.userFacing = true; throw e }
 
 export const parseProposeArgs = (argv) => {
-    const args = { file: null, tier: 'dev', space: null, from: null, dryRun: false, direct: false, overwriteNewer: false, allowProduction: false, acceptLoss: null }
+    const args = { file: null, tier: 'dev', space: null, from: null, dryRun: false, direct: false, overwriteNewer: false, allowProduction: false, acceptLoss: null, onlyProject: null, checkOnly: false }
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i]
         if (a === '--tier') args.tier = resolveTier(argv[++i])
@@ -51,6 +54,8 @@ export const parseProposeArgs = (argv) => {
         else if (a === '--direct') args.direct = true
         else if (a === '--overwrite-newer') args.overwriteNewer = true
         else if (a === '--allow-production') args.allowProduction = true
+        else if (a === '--only-project') args.onlyProject = argv[++i]
+        else if (a === '--check-only') args.checkOnly = true
         else if (a === '--accept-loss') args.acceptLoss = String(argv[++i] ?? '')
         else if (a.startsWith('--')) fail(`unknown option ${a}`)
         else if (!args.file) args.file = a
@@ -90,6 +95,26 @@ const spaceIdInFile = async (file) => {
     }
 }
 
+// The manifest inside the file (bundle.json), or null.
+const manifestInFile = async (file) => {
+    const { execFileSync } = await import('node:child_process')
+    for (const member of ['./bundle.json', 'bundle.json']) {
+        try { return JSON.parse(execFileSync('tar', ['-xzOf', file, member], { stdio: ['ignore', 'pipe', 'ignore'] }).toString('utf8')) } catch { /* next */ }
+    }
+    return null
+}
+
+// --only-project <slug|id>: the file must hold exactly that one project, or nothing is sent.
+const checkOnlyProject = async (file, name) => {
+    const m = await manifestInFile(file)
+    const list = m?.projectList
+    if (!list) fail(`--only-project ${name}: this file has no project list; export it again with --only-project ${name}`)
+    if (list.length !== 1 || (list[0].slug !== name && list[0].id !== name)) {
+        fail(`--only-project ${name}: the file holds ${list.length} projects (${list.map((p) => p.slug || p.id).join(', ')}); nothing was sent`)
+    }
+    return list[0]
+}
+
 export const formatOutcome = (status, body) => {
     const lines = []
     if (body?.text) lines.push(body.text, '')
@@ -104,6 +129,11 @@ export const formatOutcome = (status, body) => {
 export async function proposeBundle(argv) {
     const args = parseProposeArgs(argv)
     if (!args.file || !fs.existsSync(args.file)) fail(`file not found: ${args.file || '(none given)'}`)
+    if (args.onlyProject) {
+        const one = await checkOnlyProject(args.file, args.onlyProject)
+        console.log(`only-project ok: 1 project (${one.slug || one.id})`)
+        if (args.checkOnly) return 0
+    }
     const tier = TIERS[args.tier]
     if (!tier) fail(`unknown tier "${args.tier}" (local, dev, prod)`)
     const env = readTokens()
