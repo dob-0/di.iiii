@@ -19,6 +19,15 @@ INPUT (JSON, all lengths in metres, plan frame: x across, y along, the plan's or
                                            (measured from the first end point), from sill to head; a lintel closes it up to the wall height.
                                            fill "glass" puts a thin translucent leaf node opening_<wall>_<i> in the gap. A bad opening
                                            (off the wall, head above the wall, no such wall) stops the build with an error.
+  props         [{"id","kind","x","y","z":0,"size":[w,d,h],"rotation":deg,"colour":[r,g,b],"alpha":1}, ...]
+                                           (layer 3) simple fixed furniture as boxes: centre (x,y) on the plan, base height z, w along the
+                                           prop's own x, d along its y, h up; rotation counter-clockwise on the plan in degrees. Node
+                                           prop_<id> (extras kind, centre, size, rotation), material prop_<kind> (colour = linear base
+                                           colour, default pale wood). Checked at build: a prop overlapping a wall, column, stair block or
+                                           another prop (footprints cross AND heights overlap) or the corridor of a walk line, a duplicate id,
+                                           a bad size or a prop above the wall height stops the build with an error.
+  walk_lines    [{"from":[x,y],"to":[x,y],"width":w}, ...]   (layer 3) a line people must be able to walk: no prop below 1.8 m may touch
+                                           the strip of that width around it.
 Every wall is a box on its centre line: its two end faces sit exactly on the plan's end points (no extension, no mitre).
 
 OUTPUT: <out>/place.glb and <out>/place.json (the record scripts/place/import.mjs reads: size, bounds, walkableAreas, spawn).
@@ -27,7 +36,7 @@ Nodes (name, extras): floor_i, wall_solid_i / wall_light_i / wall_new_i (extras.
 (extras.hideable true; --no-ceiling leaves it out). Materials are plain (white paint 0.82, ceiling 0.80, concrete 0.38 reflectance).
 
     python3 scripts/place/plan_shell.py --plan PLAN.json --out DIR --height 3.07 [--new-walls FILE] [--no-ceiling]
-        [--solid-t 0.30] [--light-t 0.12] [--stair-h 1.96] [--glass-h 2.6] [--glass-t 0.04] [--ceiling-t 0.15] [--spawn x,y --look x,y]
+        [--prop-clear 1.8] [--solid-t 0.30] [--light-t 0.12] [--stair-h 1.96] [--glass-h 2.6] [--glass-t 0.04] [--ceiling-t 0.15] [--spawn x,y --look x,y]
     python3 scripts/place/plan_shell.py --glb DIR/place.glb --plan PLAN.json [--new-walls FILE]   # wall-end error, metres
 """
 import argparse, json, math, os, struct, sys
@@ -41,6 +50,7 @@ MATERIALS = {
 }
 MATERIALS['glass'] = (0.80, 0.88, 0.92)          # frosted glazing seen in the walk frames: pale, translucent
 MATERIALS['glass_leaf'] = (0.72, 0.84, 0.90)
+PROP_DEFAULT = (0.62, 0.50, 0.34)               # pale pine, used when a prop gives no colour
 TRANSLUCENT = {'glass': 0.35, 'glass_leaf': 0.45}   # alpha of the translucent materials
 # faces of a box by corner index (bit 0 = x, bit 1 = y, bit 2 = z), counter-clockwise seen from outside
 FACES = [((0, 2, 6, 4), (-1, 0, 0)), ((1, 5, 7, 3), (1, 0, 0)), ((0, 4, 5, 1), (0, -1, 0)),
@@ -62,6 +72,8 @@ def load_plan(plan_path, new_walls_path=None):
             'stairs': [{'x': [float(v) for v in s['x']], 'y': [float(v) for v in s['y']]} for s in d.get('stairs', [])],
             'floor_rects': [[float(v) for v in r] for r in d.get('floor_rects_m', [])],
             'glass': read_walls(d, 'walls_glass'),
+            'props': d.get('props', []),
+            'walk_lines': d.get('walk_lines', []),
             'openings': [{'wall': [[float(q) for q in pt] for pt in o['wall']], 'x': [float(v) for v in o['x']], 'head': float(o['head']),
                           'sill': float(o.get('sill', 0.0)), 'fill': o.get('fill', 'open')} for o in d.get('openings', [])]}
 
@@ -235,6 +247,92 @@ def wall_boxes(p0, p1, t, z_top, openings):
     return [oriented_box(at(p0, p1, s0), at(p0, p1, s1), t, z0, z1) for s0, s1, z0, z1 in wall_parts(math.dist(p0, p1), openings, z_top)]
 
 
+def prop_footprint(p):
+    """the 4 plan corners of a prop's footprint (counter-clockwise), rotation about its centre."""
+    w, d = p['size'][0], p['size'][1]
+    c, s = math.cos(math.radians(p.get('rotation', 0.0))), math.sin(math.radians(p.get('rotation', 0.0)))
+    return [(p['x'] + lx * c - ly * s, p['y'] + lx * s + ly * c) for lx, ly in ((-w / 2, -d / 2), (w / 2, -d / 2), (w / 2, d / 2), (-w / 2, d / 2))]
+
+
+def seg_rect(p0, p1, t):
+    dx, dy = p1[0] - p0[0], p1[1] - p0[1]
+    ln = math.hypot(dx, dy)
+    nx, ny = -dy / ln * t / 2, dx / ln * t / 2
+    return [(p0[0] - nx, p0[1] - ny), (p1[0] - nx, p1[1] - ny), (p1[0] + nx, p1[1] + ny), (p0[0] + nx, p0[1] + ny)]
+
+
+def polys_overlap(a, b, eps=1e-6):
+    """separating-axis test for two convex polygons; touching (gap <= eps) does not count as overlap."""
+    for poly in (a, b):
+        for i in range(len(poly)):
+            ex, ey = poly[(i + 1) % len(poly)][0] - poly[i][0], poly[(i + 1) % len(poly)][1] - poly[i][1]
+            ax, ay = -ey, ex
+            n = math.hypot(ax, ay)
+            if n == 0:
+                continue
+            ax, ay = ax / n, ay / n
+            pa = [ax * x + ay * y for x, y in a]
+            pb = [ax * x + ay * y for x, y in b]
+            if max(pa) <= min(pb) + eps or max(pb) <= min(pa) + eps:
+                return False
+    return True
+
+
+def check_props(plan, a):
+    """validate props, return the number of overlaps found (0 or the build is stopped). Prints the check line."""
+    props = plan['props']
+    ids = set()
+    for p in props:
+        for k in ('id', 'kind', 'x', 'y', 'size'):
+            if k not in p:
+                raise SystemExit(f'plan_shell: prop {p.get("id", "?")}: missing "{k}"')
+        if p['id'] in ids:
+            raise SystemExit(f'plan_shell: prop {p["id"]}: duplicate id')
+        ids.add(p['id'])
+        if len(p['size']) != 3 or min(p['size']) <= 0:
+            raise SystemExit(f'plan_shell: prop {p["id"]}: size must be [w, d, h] with all three > 0, got {p["size"]}')
+        if p.get('z', 0.0) < 0 or p.get('z', 0.0) + p['size'][2] > a.height + 1e-9:
+            raise SystemExit(f'plan_shell: prop {p["id"]}: z {p.get("z", 0.0)} + height {p["size"][2]} is outside 0..{a.height} (wall height)')
+    solids = []   # (name, polygon)
+    for kind, walls, t in (('wall_solid', plan['solid'], a.solid_t), ('wall_light', plan['light'], a.light_t),
+                           ('wall_new', plan['new'], a.light_t if a.new_kind == 'light' else a.solid_t), ('wall_glass', plan['glass'], a.glass_t)):
+        for i, (p0, p1) in enumerate(walls):
+            solids.append((f'{kind}_{i}', seg_rect(p0, p1, t)))
+    for i, (cx, cy, w, d) in enumerate(plan['columns']):
+        solids.append((f'column_{i}', [(cx - w / 2, cy - d / 2), (cx + w / 2, cy - d / 2), (cx + w / 2, cy + d / 2), (cx - w / 2, cy + d / 2)]))
+    for i, s in enumerate(plan['stairs']):
+        solids.append((f'stair_{i}', [(s['x'][0], s['y'][0]), (s['x'][1], s['y'][0]), (s['x'][1], s['y'][1]), (s['x'][0], s['y'][1])]))
+    found = []
+    for n, p in enumerate(props):
+        fp = prop_footprint(p)
+        for name, poly in solids:
+            if polys_overlap(fp, poly):
+                found.append(f'prop {p["id"]} overlaps {name}')
+        for q in props[n + 1:]:
+            z0, z1, w0, w1 = p.get('z', 0.0), p.get('z', 0.0) + p['size'][2], q.get('z', 0.0), q.get('z', 0.0) + q['size'][2]
+            if z0 < w1 - 1e-9 and w0 < z1 - 1e-9 and polys_overlap(fp, prop_footprint(q)):
+                found.append(f'prop {p["id"]} overlaps prop {q["id"]}')
+        if p.get('z', 0.0) < a.prop_clear:
+            for k, wl in enumerate(plan['walk_lines']):
+                if polys_overlap(fp, seg_rect(wl['from'], wl['to'], float(wl['width']))):
+                    found.append(f'prop {p["id"]} blocks walk line {k} ({wl["from"]} -> {wl["to"]}, width {wl["width"]})')
+    if found:
+        raise SystemExit('plan_shell: ' + '; '.join(found) + ' (overlap)')
+    print(f'props check: {len(props)} props, 0 overlaps with {len(solids)} walls/columns/stairs, 0 blocking {len(plan["walk_lines"])} walk line(s)')
+    return 0
+
+
+def prop_corners(p):
+    """8 corners in bit order (bit0 along the prop's x, bit1 its y, bit2 up) -> room frame."""
+    fp = prop_footprint(p)           # (-,-), (+,-), (+,+), (-,+)
+    z0, z1 = p.get('z', 0.0), p.get('z', 0.0) + p['size'][2]
+    pts = []
+    for z in (z0, z1):
+        for i in (0, 1, 3, 2):       # bit0 x, bit1 y
+            pts.append(to_room(fp[i][0], fp[i][1], z))
+    return pts
+
+
 def build(plan, a):
     g = Glb()
     rects = plan['floor_rects'] or [list(extent(plan))]
@@ -273,6 +371,15 @@ def build(plan, a):
         g.add(f'column_{i}', box_corners(cx - w / 2, cy - d / 2, cx + w / 2, cy + d / 2, 0.0, a.height), 'column', {'centre_m': [cx, cy], 'size_m': [w, d]})
     for i, s in enumerate(plan['stairs']):
         g.add(f'stair_{i}', box_corners(s['x'][0], s['y'][0], s['x'][1], s['y'][1], 0.0, a.stair_h), 'stair', {'x': s['x'], 'y': s['y'], 'height_m': a.stair_h})
+    for p in plan['props']:
+        col = tuple(float(v) for v in p.get('colour', PROP_DEFAULT))
+        mat = f'prop_{p["kind"]}'
+        while MATERIALS.get(mat, col) != col:          # same kind, another colour: its own material
+            mat += '_'
+        MATERIALS[mat] = col
+        if p.get('alpha', 1.0) < 1.0:
+            TRANSLUCENT[mat] = float(p['alpha'])
+        g.add(f'prop_{p["id"]}', prop_corners(p), mat, {'kind': p['kind'], 'centre_m': [p['x'], p['y']], 'size_m': p['size'], 'z_m': p.get('z', 0.0), 'rotation_deg': p.get('rotation', 0.0)})
     if not a.no_ceiling:
         for i, r in enumerate(rects):
             g.add('ceiling' if len(rects) == 1 else f'ceiling_{i}', box_corners(r[0], r[1], r[2], r[3], a.height, a.height + a.ceiling_t), 'ceiling', {'hideable': True, 'rect_m': r})
@@ -355,6 +462,7 @@ def main():
     ap.add_argument('--stair-h', type=float, default=1.96)
     ap.add_argument('--floor-t', type=float, default=0.10)
     ap.add_argument('--ceiling-t', type=float, default=0.15)
+    ap.add_argument('--prop-clear', type=float, default=1.8, help='props whose base is below this height must stay off a walk line')
     ap.add_argument('--no-ceiling', action='store_true')
     ap.add_argument('--spawn'); ap.add_argument('--look')
     a = ap.parse_args()
@@ -367,13 +475,14 @@ def main():
     if not a.out:
         ap.error('--out is required to build')
     os.makedirs(a.out, exist_ok=True)
+    check_props(plan, a)
     g, rects = build(plan, a)
     g.write(os.path.join(a.out, 'place.glb'))
     rec = place_record(plan, rects, a)
     json.dump(rec, open(os.path.join(a.out, 'place.json'), 'w'), indent=1)
     n_walls = len(plan['solid']) + len(plan['light']) + len(plan['new']) + len(plan['glass'])
     print(f'plan_shell: {n_walls} walls, {len(plan["columns"])} columns, {len(plan["stairs"])} stair blocks, {len(rects)} floor slabs, '
-          f'height {a.height} m -> {os.path.join(a.out, "place.glb")}')
+          f'{len(plan["props"])} props, height {a.height} m -> {os.path.join(a.out, "place.glb")}')
     return 0
 
 

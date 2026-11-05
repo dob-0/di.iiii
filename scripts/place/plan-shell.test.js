@@ -137,3 +137,79 @@ describe.skipIf(!hasPython)('plan_shell.py layer 2: glass walls and openings', (
         }
     })
 })
+
+// layer 3: `props`, simple fixed furniture as boxes (id, kind, x, y, z, size, rotation, colour), checked for overlaps and a clear walk line
+const PLAN3 = {
+    walls_solid: [[[0, 0], [0, 10]], [[6, 0], [6, 10]]],
+    walls_light: [[[0, 10], [6, 10]]],
+    columns: [[3, 5, 0.5, 0.5]],
+    floor_rects_m: [[0, 0, 6, 10]],
+    walk_lines: [{ from: [3, 0.5], to: [3, 9.5], width: 1.0 }],
+    props: [
+        { id: 'a', kind: 'platform', x: 0.9, y: 2, size: [0.6, 3, 0.15], colour: [0.7, 0.55, 0.35] },
+        { id: 'b', kind: 'crate', x: 0.9, y: 2, z: 0.15, size: [0.4, 0.4, 0.5] },               // stacked on a: no overlap in 3D
+        { id: 'c', kind: 'desk', x: 5, y: 7, size: [1.2, 0.6, 0.75], rotation: 90, alpha: 0.4 }            // 90 deg: 0.6 along x, 1.2 along y
+    ]
+}
+describe.skipIf(!hasPython)('plan_shell.py layer 3: props', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'plan-shell3-'))
+    const out = path.join(dir, 'out')
+    const w = (name, obj) => { const p = path.join(dir, name); fs.writeFileSync(p, JSON.stringify(obj)); return p }
+    const readGlb = (p) => {
+        const buf = fs.readFileSync(p); const jl = buf.readUInt32LE(12)
+        const j = JSON.parse(buf.toString('utf8', 20, 20 + jl)); const bin = buf.subarray(20 + jl + 8)
+        const verts = (node) => {
+            const acc = j.accessors[j.meshes[node.mesh].primitives[0].attributes.POSITION], bv = j.bufferViews[acc.bufferView]
+            const f = new Float32Array(bin.buffer.slice(bin.byteOffset + bv.byteOffset, bin.byteOffset + bv.byteOffset + acc.count * 12))
+            const o = []; for (let i = 0; i < f.length; i += 3) o.push([f[i], f[i + 1], f[i + 2]]); return o
+        }
+        return { j, verts }
+    }
+
+    it('builds one node per prop at the stated place, size and rotation, with its colour and kind', () => {
+        const b = run(['--plan', w('p3.json', PLAN3), '--out', out, '--height', '3'])
+        expect(b.stderr).toBe('')
+        expect(b.status).toBe(0)
+        expect(b.stdout).toContain('3 props')
+        expect(b.stdout).toMatch(/props check: 3 props, 0 overlaps/)
+        const { j, verts } = readGlb(path.join(out, 'place.glb'))
+        expect(j.nodes.filter(n => n.name.startsWith('prop_')).length).toBe(3)
+        const nd = j.nodes.find(n => n.name === 'prop_c')
+        expect(nd.extras.kind).toBe('desk')
+        const v = verts(nd)
+        const xs = v.map(p => p[0]), ys = v.map(p => p[1]), zs = v.map(p => p[2])
+        expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(0.6, 4)     // rotated 90 deg
+        expect(Math.max(...zs) - Math.min(...zs)).toBeCloseTo(1.2, 4)
+        expect(Math.min(...ys)).toBeCloseTo(0, 5); expect(Math.max(...ys)).toBeCloseTo(0.75, 5)
+        expect((Math.max(...xs) + Math.min(...xs)) / 2).toBeCloseTo(5, 4); expect((Math.max(...zs) + Math.min(...zs)) / 2).toBeCloseTo(-7, 4)
+        const mat = j.materials[j.meshes[nd.mesh].primitives[0].material]
+        expect(mat.name).toBe('prop_desk')
+        expect(mat.alphaMode).toBe('BLEND')                                 // alpha < 1 = a translucent prop (glass)
+        expect(mat.pbrMetallicRoughness.baseColorFactor[3]).toBeCloseTo(0.4, 4)
+        const ma = j.materials[j.meshes[j.nodes.find(n => n.name === 'prop_a').mesh].primitives[0].material]
+        expect(ma.pbrMetallicRoughness.baseColorFactor.slice(0, 3)).toEqual([expect.closeTo(0.7, 4), expect.closeTo(0.55, 4), expect.closeTo(0.35, 4)])
+    })
+
+    it('a prop inside a wall, a column, another prop (same height) or the walk line stops the build loudly', () => {
+        const base = { ...PLAN3, props: [PLAN3.props[0]] }
+        const bad = {
+            wall: { id: 'x', kind: 't', x: 0.1, y: 5, size: [0.6, 1, 1] },
+            column: { id: 'x', kind: 't', x: 3.1, y: 5.1, size: [0.4, 0.4, 1] },
+            prop: { id: 'x', kind: 't', x: 1.0, y: 3, size: [0.4, 0.4, 1] },
+            walk: { id: 'x', kind: 't', x: 3.2, y: 2, size: [0.5, 0.5, 1] }
+        }
+        for (const [what, p] of Object.entries(bad)) {
+            const r = run(['--plan', w('bad.json', { ...base, props: [...base.props, p] }), '--out', path.join(dir, 'ob'), '--height', '3'])
+            expect(r.status, what).not.toBe(0)
+            expect(r.stderr, what).toMatch(/overlap|walk line/)
+        }
+    })
+
+    it('a prop taller than the room, a duplicate id, a bad size are refused', () => {
+        for (const p of [{ id: 'a', kind: 't', x: 3, y: 1, size: [0.4, 0.4, 5] }, { id: 'a', kind: 't', x: 4.5, y: 1, size: [0.4, 0.4, 1] }, { id: 'z', kind: 't', x: 4.5, y: 1, size: [0.4, -1, 1] }]) {
+            const r = run(['--plan', w('bad2.json', { ...PLAN3, props: [PLAN3.props[0], p] }), '--out', path.join(dir, 'ob2'), '--height', '3'])
+            expect(r.status).not.toBe(0)
+            expect(r.stderr).toMatch(/prop/)
+        }
+    })
+})
