@@ -307,13 +307,13 @@ async function exportSpace(args) {
     // A private project is for the space's members only; --public-only is the
     // file a visitor gets, so it is not in it at all.
     let projects = args.publicOnly ? allProjects.filter((p) => p.visibility !== 'private') : allProjects
+    const leftOut = allProjects.length - projects.length
     // --only-project <slug|id>: one project travels alone; the others stay out
     // of the file (so a later propose cannot touch them). Unknown name: stop.
     if (args.onlyProject) {
         projects = projects.filter((p) => p.id === args.onlyProject || p.slug === args.onlyProject)
         if (projects.length !== 1) die(`export --only-project: no project "${args.onlyProject}" in space "${spaceId}" (${allProjects.map((p) => p.slug || p.id).join(', ')})`)
     }
-    const leftOut = allProjects.length - projects.length
     const selectProjectOps = db.prepare('SELECT version, data, created_at FROM project_ops WHERE project_id = ? ORDER BY version ASC')
     const projectOpsById = new Map(projects.map((p) => [p.id, selectProjectOps.all(p.id)]))
     const commons = db.prepare('SELECT * FROM public_assets WHERE space_id = ?').all(spaceId)

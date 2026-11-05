@@ -213,3 +213,63 @@ describe.skipIf(!hasPython)('plan_shell.py layer 3: props', () => {
         }
     })
 })
+
+// layer 4: `rooms`, extra rooms next to the main floor (convex outline, height, own walls, openings, optional stair blocks) and --reach,
+// a walk check from the spawn through every opening into every room.
+const PLAN4 = {
+    walls_solid: [[[0, 0], [0, 10]], [[6, 0], [6, 10]]],
+    walls_light: [[[0, 10], [6, 10]], [[0, 0], [6, 0]]],
+    floor_rects_m: [[0, 0, 6, 10]],
+    openings: [{ wall: [[0, 10], [6, 10]], x: [2, 3.4], head: 2.4, sill: 0, fill: 'open' }],
+    rooms: [{
+        id: 'annex', outline: [[2, 10], [3.4, 10], [3.4, 16], [2, 16]], height: 2.7, wall: 'light', shared_edges: [0],
+        openings: [], stairs: [{ x: [2.1, 2.6], y: [14.5, 15.9], h: 1.5 }]
+    }, {
+        id: 'side', outline: [[6, 3], [10, 3], [10, 6], [6, 6]], height: 3.0, wall: 'solid', shared_edges: [3],
+        openings: []
+    }]
+}
+describe.skipIf(!hasPython)('plan_shell.py layer 4: rooms', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'plan-shell4-'))
+    const w = (name, obj) => { const p = path.join(dir, name); fs.writeFileSync(p, JSON.stringify(obj)); return p }
+    const names = (out) => { const buf = fs.readFileSync(path.join(out, 'place.glb')); const jl = buf.readUInt32LE(12); return JSON.parse(buf.toString('utf8', 20, 20 + jl)).nodes.map((n) => n.name) }
+    const build = (plan, out, extra = []) => run(['--plan', w('p4.json', plan), '--out', out, '--height', '3', '--spawn', '3,2', '--look', '3,9', ...extra])
+
+    it('builds a room: floor, ceiling at its own height, a wall per unshared edge, its stair block; the wall-end check reads them', () => {
+        const out = path.join(dir, 'o1'); const r = build(PLAN4, out)
+        expect(r.status, r.stderr).toBe(0)
+        const n = names(out)
+        expect(n).toContain('room_annex_floor'); expect(n).toContain('room_annex_ceiling')
+        expect(n.filter((x) => /^room_annex_wall_/.test(x)).length).toBe(3)     // 4 edges, edge 0 is shared with the main wall
+        expect(n).toContain('room_annex_stair_0')
+        const c = run(['--glb', path.join(out, 'place.glb'), '--plan', path.join(dir, 'p4.json')])
+        expect(c.status, c.stdout + c.stderr).toBe(0)
+        expect(c.stdout).toMatch(/walls \d+  max end error 0\.0000/)
+    })
+
+    it('--reach: every room is reachable from the spawn through the openings (REACH_OK), a room behind a wall is not (REACH_FAIL)', () => {
+        const out = path.join(dir, 'o2')
+        let r = build(PLAN4, out, ['--reach'])
+        expect(r.stdout + r.stderr).toMatch(/REACH_FAIL.*side/)               // 'side' has no opening: unreachable
+        expect(r.status).not.toBe(0)
+        const ok = { ...PLAN4, rooms: [PLAN4.rooms[0]] }
+        r = build(ok, out, ['--reach'])
+        expect(r.status, r.stdout + r.stderr).toBe(0)
+        expect(r.stdout).toMatch(/REACH_OK 1 room/)
+    })
+
+    it('a room overlapping the main floor or another room, a non-convex outline, a bad opening are refused loudly', () => {
+        const bad = {
+            floor: { id: 'x', outline: [[1, 8], [3, 8], [3, 12], [1, 12]], height: 3 },
+            room: { id: 'x', outline: [[2.5, 12], [3.2, 12], [3.2, 15], [2.5, 15]], height: 3 },
+            concave: { id: 'x', outline: [[7, 0], [9, 0], [8, 1], [9, 3], [7, 3]], height: 3 },
+            opening: { id: 'x', outline: [[7, 7], [9, 7], [9, 9], [7, 9]], height: 3, openings: [{ edge: 0, x: [0, 5], head: 2.4 }] },
+            dup: { id: 'annex', outline: [[7, 7], [9, 7], [9, 9], [7, 9]], height: 3 }
+        }
+        for (const [what, room] of Object.entries(bad)) {
+            const r = build({ ...PLAN4, rooms: [PLAN4.rooms[0], room] }, path.join(dir, 'ob'))
+            expect(r.status, what).not.toBe(0)
+            expect(r.stderr, what).toMatch(/room/)
+        }
+    })
+})

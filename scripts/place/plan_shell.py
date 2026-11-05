@@ -28,6 +28,13 @@ INPUT (JSON, all lengths in metres, plan frame: x across, y along, the plan's or
                                            a bad size or a prop above the wall height stops the build with an error.
   walk_lines    [{"from":[x,y],"to":[x,y],"width":w}, ...]   (layer 3) a line people must be able to walk: no prop below 1.8 m may touch
                                            the strip of that width around it.
+  rooms         [{"id","outline":[[x,y],...],"height":h,"wall":"solid"|"light","shared_edges":[i,...],
+                  "openings":[{"edge":i,"x":[a,b],"head":h,"sill":0,"fill":"open"|"glass"}],"stairs":[{"x":[a,b],"y":[a,b],"h":h}]}, ...]
+                                           (layer 4) extra rooms beside the main floor: a CONVEX outline (counter-clockwise or not), its own height,
+                                           floor + ceiling (node room_<id>_floor / room_<id>_ceiling, hideable) and a wall per edge
+                                           (room_<id>_wall_<i>; edge i runs outline[i] -> outline[i+1]) except the shared_edges, where the main plan's
+                                           (or a neighbour's) wall already stands. An opening cuts edge i from a to b metres along it. A room that
+                                           overlaps the main floor or another room, a concave outline, a bad opening or a duplicate id stops the build.
 Every wall is a box on its centre line: its two end faces sit exactly on the plan's end points (no extension, no mitre).
 
 OUTPUT: <out>/place.glb and <out>/place.json (the record scripts/place/import.mjs reads: size, bounds, walkableAreas, spawn).
@@ -37,6 +44,7 @@ Nodes (name, extras): floor_i, wall_solid_i / wall_light_i / wall_new_i (extras.
 
     python3 scripts/place/plan_shell.py --plan PLAN.json --out DIR --height 3.07 [--new-walls FILE] [--no-ceiling]
         [--prop-clear 1.8] [--solid-t 0.30] [--light-t 0.12] [--stair-h 1.96] [--glass-h 2.6] [--glass-t 0.04] [--ceiling-t 0.15] [--spawn x,y --look x,y]
+    ... --reach     # after the build: a walk check from --spawn through every opening into every room; prints REACH_OK / REACH_FAIL (exit 1)
     python3 scripts/place/plan_shell.py --glb DIR/place.glb --plan PLAN.json [--new-walls FILE]   # wall-end error, metres
 """
 import argparse, json, math, os, struct, sys
@@ -74,6 +82,7 @@ def load_plan(plan_path, new_walls_path=None):
             'glass': read_walls(d, 'walls_glass'),
             'props': d.get('props', []),
             'walk_lines': d.get('walk_lines', []),
+            'rooms': d.get('rooms', []),
             'openings': [{'wall': [[float(q) for q in pt] for pt in o['wall']], 'x': [float(v) for v in o['x']], 'head': float(o['head']),
                           'sill': float(o.get('sill', 0.0)), 'fill': o.get('fill', 'open')} for o in d.get('openings', [])]}
 
@@ -298,6 +307,13 @@ def check_props(plan, a):
                            ('wall_new', plan['new'], a.light_t if a.new_kind == 'light' else a.solid_t), ('wall_glass', plan['glass'], a.glass_t)):
         for i, (p0, p1) in enumerate(walls):
             solids.append((f'{kind}_{i}', seg_rect(p0, p1, t)))
+    for r in plan['rooms']:                      # layer 4: a prop may not stand in a room's own wall either
+        t = a.solid_t if r.get('wall', 'light') == 'solid' else a.light_t
+        for e, (p0, p1) in enumerate(room_edges({'outline': [tuple(float(v) for v in q) for q in r['outline']]})):
+            if e not in r.get('shared_edges', []):
+                solids.append((f'room_{r["id"]}_wall_{e}', seg_rect(p0, p1, t)))
+        for k, st in enumerate(r.get('stairs', [])):
+            solids.append((f'room_{r["id"]}_stair_{k}', [(st['x'][0], st['y'][0]), (st['x'][1], st['y'][0]), (st['x'][1], st['y'][1]), (st['x'][0], st['y'][1])]))
     for i, (cx, cy, w, d) in enumerate(plan['columns']):
         solids.append((f'column_{i}', [(cx - w / 2, cy - d / 2), (cx + w / 2, cy - d / 2), (cx + w / 2, cy + d / 2), (cx - w / 2, cy + d / 2)]))
     for i, s in enumerate(plan['stairs']):
@@ -331,6 +347,218 @@ def prop_corners(p):
         for i in (0, 1, 3, 2):       # bit0 x, bit1 y
             pts.append(to_room(fp[i][0], fp[i][1], z))
     return pts
+
+
+# ---------------------------------------------------------------- layer 4: rooms
+def room_edges(room):
+    o = room['outline']
+    return [(o[i], o[(i + 1) % len(o)]) for i in range(len(o))]
+
+
+def is_convex(poly):
+    sign = 0
+    for i in range(len(poly)):
+        a, b, c = poly[i], poly[(i + 1) % len(poly)], poly[(i + 2) % len(poly)]
+        cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])
+        if abs(cr) < 1e-9:
+            continue
+        if sign and (cr > 0) != (sign > 0):
+            return False
+        sign = 1 if cr > 0 else -1
+    return sign != 0
+
+
+def point_in_convex(poly, x, y):
+    sign = 0
+    for i in range(len(poly)):
+        a, b = poly[i], poly[(i + 1) % len(poly)]
+        cr = (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0])
+        if abs(cr) < 1e-12:
+            continue
+        if sign and (cr > 0) != (sign > 0):
+            return False
+        sign = 1 if cr > 0 else -1
+    return True
+
+
+def check_rooms(plan, a):
+    """validate rooms; returns {room id: {edge: [openings]}}. Stops loudly on any fault."""
+    seen, polys, by_room = set(), [], {}
+    for r in plan['rooms']:
+        for k in ('id', 'outline', 'height'):
+            if k not in r:
+                raise SystemExit(f'plan_shell: room {r.get("id", "?")}: missing "{k}"')
+        if r['id'] in seen:
+            raise SystemExit(f'plan_shell: room {r["id"]}: duplicate room id')
+        seen.add(r['id'])
+        poly = [tuple(float(v) for v in p) for p in r['outline']]
+        if len(poly) < 3 or not is_convex(poly):
+            raise SystemExit(f'plan_shell: room {r["id"]}: the outline must be a convex polygon of 3 or more points')
+        if float(r['height']) <= 0:
+            raise SystemExit(f'plan_shell: room {r["id"]}: height must be > 0')
+        edges = room_edges({'outline': poly})
+        ops = {}
+        for k, o in enumerate(r.get('openings', [])):
+            e = o.get('edge')
+            if not isinstance(e, int) or not (0 <= e < len(edges)):
+                raise SystemExit(f'plan_shell: room {r["id"]} opening {k}: edge {e} is not one of the {len(edges)} edges')
+            ln = math.dist(*edges[e])
+            x0, x1 = o['x']
+            if not (0 <= x0 < x1 <= ln + 1e-9):
+                raise SystemExit(f'plan_shell: room {r["id"]} opening {k}: x {o["x"]} is not inside the edge (0..{ln:.3f} m)')
+            sill, head = float(o.get('sill', 0.0)), float(o['head'])
+            if not (0 <= sill < head <= float(r['height'])):
+                raise SystemExit(f'plan_shell: room {r["id"]} opening {k}: sill/head must satisfy 0 <= sill < head <= room height {r["height"]}')
+            ops.setdefault(e, []).append({'x': [float(x0), float(x1)], 'sill': sill, 'head': head, 'fill': o.get('fill', 'open')})
+        for lst in ops.values():
+            lst.sort(key=lambda o: o['x'][0])
+            for u, v in zip(lst, lst[1:]):
+                if v['x'][0] < u['x'][1]:
+                    raise SystemExit(f'plan_shell: room {r["id"]}: openings overlap')
+        for e in r.get('shared_edges', []):
+            if not (0 <= e < len(edges)):
+                raise SystemExit(f'plan_shell: room {r["id"]}: shared edge {e} does not exist')
+        by_room[r['id']] = ops
+        polys.append((r['id'], poly))
+    rects = plan['floor_rects'] or [list(extent(plan))]
+    for rid, poly in polys:
+        for rc in rects:
+            if polys_overlap(poly, [(rc[0], rc[1]), (rc[2], rc[1]), (rc[2], rc[3]), (rc[0], rc[3])]):
+                raise SystemExit(f'plan_shell: room {rid} overlaps the main floor slab {rc}')
+    for i, (ida, pa) in enumerate(polys):
+        for idb, pb in polys[i + 1:]:
+            if polys_overlap(pa, pb):
+                raise SystemExit(f'plan_shell: room {ida} overlaps room {idb}')
+    return by_room
+
+
+def fan_mesh(poly, y_up, up):
+    """a flat convex polygon at height y_up facing up (+1) or down (-1), in the room frame."""
+    pos = [list(to_room(x, y, y_up)) for x, y in poly]
+    idx = []
+    for i in range(1, len(poly) - 1):
+        idx += [0, i, i + 1]
+    pos = np.array(pos, np.float32)
+    tri = np.array(idx, np.uint16).reshape(-1, 3)
+    n = np.cross(pos[tri[0][1]] - pos[tri[0][0]], pos[tri[0][2]] - pos[tri[0][0]])
+    if (n[1] > 0) != (up > 0):
+        tri = tri[:, ::-1]
+    nor = np.tile(np.array([0.0, float(up), 0.0], np.float32), (len(pos), 1))
+    return pos, nor, tri.reshape(-1).astype(np.uint16)
+
+
+def build_rooms(g, plan, a, by_room):
+    for r in plan['rooms']:
+        rid, h = r['id'], float(r['height'])
+        poly = [tuple(float(v) for v in p) for p in r['outline']]
+        t = a.solid_t if r.get('wall', 'light') == 'solid' else a.light_t
+        pos, nor, idx = fan_mesh(poly, 0.0, +1)
+        g._mesh(f'room_{rid}_floor', pos, nor, idx, 'floor', {'room': rid, 'outline_m': r['outline']})
+        for e, (p0, p1) in enumerate(room_edges({'outline': poly})):
+            if e in r.get('shared_edges', []):
+                continue
+            ops = by_room[rid].get(e, [])
+            extras = {'room': rid, 'p0': list(p0), 'p1': list(p1), 'thickness_m': t, 'height_m': h}
+            if ops:
+                extras['openings'] = [{'x': o['x'], 'sill': o['sill'], 'head': o['head'], 'fill': o['fill']} for o in ops]
+            g.add_multi(f'room_{rid}_wall_{e}', wall_boxes(list(p0), list(p1), t, h, ops), 'wall_solid' if t == a.solid_t else 'wall_light', extras)
+            for k, o in enumerate(ops):
+                if o['fill'] == 'glass':
+                    g.add(f'room_{rid}_glass_{e}_{k}', oriented_box(at(list(p0), list(p1), o['x'][0]), at(list(p0), list(p1), o['x'][1]), a.glass_t, o['sill'], o['head']), 'glass_leaf', {'room': rid})
+        for k, s in enumerate(r.get('stairs', [])):
+            sh = float(s.get('h', a.stair_h))
+            g.add(f'room_{rid}_stair_{k}', box_corners(s['x'][0], s['y'][0], s['x'][1], s['y'][1], 0.0, sh), 'stair', {'room': rid, 'x': s['x'], 'y': s['y'], 'height_m': sh})
+        if not a.no_ceiling:
+            pos, nor, idx = fan_mesh(poly, h, -1)
+            g._mesh(f'room_{rid}_ceiling', pos, nor, idx, 'ceiling', {'room': rid, 'hideable': True})
+
+
+def reach_check(plan, a, by_room, step=0.1, radius=0.25):
+    """walk check: grid of the walkable floor (main slabs + rooms), blocked by walls (the parts that reach below 1.0 m), columns, stair blocks,
+    low props; the agent has a radius. Flood from the spawn. Prints REACH_OK / REACH_FAIL naming rooms not reached. -> exit code."""
+    if not a.spawn:
+        raise SystemExit('plan_shell: --reach needs --spawn x,y')
+    sx, sy = [float(v) for v in a.spawn.split(',')]
+    rects = plan['floor_rects'] or [list(extent(plan))]
+    polys = {r['id']: [tuple(float(v) for v in p) for p in r['outline']] for r in plan['rooms']}
+    allx = [r[0] for r in rects] + [r[2] for r in rects] + [p[0] for pl in polys.values() for p in pl]
+    ally = [r[1] for r in rects] + [r[3] for r in rects] + [p[1] for pl in polys.values() for p in pl]
+    x0, y0, x1, y1 = min(allx), min(ally), max(allx), max(ally)
+    nx, ny = int((x1 - x0) / step) + 1, int((y1 - y0) / step) + 1
+    gx = x0 + (np.arange(nx) + 0.5) * step
+    gy = y0 + (np.arange(ny) + 0.5) * step
+    X, Y = np.meshgrid(gx, gy, indexing='ij')
+    inside = np.zeros((nx, ny), bool)
+    for r in rects:
+        inside |= (X >= r[0]) & (X <= r[2]) & (Y >= r[1]) & (Y <= r[3])
+    room_mask = {}
+    for rid, pl in polys.items():
+        m = np.zeros((nx, ny), bool)
+        for i in range(nx):
+            for j in range(ny):
+                m[i, j] = point_in_convex(pl, gx[i], gy[j])
+        room_mask[rid] = m
+        inside |= m
+    blocked = np.zeros((nx, ny), bool)
+
+    def block_poly(poly):
+        xs, ys = [p[0] for p in poly], [p[1] for p in poly]
+        for i in range(max(0, int((min(xs) - x0) / step) - 1), min(nx, int((max(xs) - x0) / step) + 2)):
+            for j in range(max(0, int((min(ys) - y0) / step) - 1), min(ny, int((max(ys) - y0) / step) + 2)):
+                if point_in_convex(poly, gx[i], gy[j]):
+                    blocked[i, j] = True
+
+    def block_wall(p0, p1, t, height, ops):
+        for s0, s1, z0, z1 in wall_parts(math.dist(p0, p1), ops, height):
+            if z0 < 1.0 and z1 > 0.4:
+                block_poly(seg_rect(at(p0, p1, s0), at(p0, p1, s1), max(t, step)))
+    by_main = check_openings(plan, a.height)
+    for kind, walls, t in (('solid', plan['solid'], a.solid_t), ('light', plan['light'], a.light_t), ('new', plan['new'], a.light_t if a.new_kind == 'light' else a.solid_t)):
+        for p0, p1 in walls:
+            block_wall(p0, p1, t, a.height, by_main.get((tuple(p0), tuple(p1)), []))
+    for p0, p1 in plan['glass']:
+        block_wall(p0, p1, a.glass_t, min(a.glass_h, a.height), by_main.get((tuple(p0), tuple(p1)), []))
+    for cx, cy, w, d in plan['columns']:
+        block_poly([(cx - w / 2, cy - d / 2), (cx + w / 2, cy - d / 2), (cx + w / 2, cy + d / 2), (cx - w / 2, cy + d / 2)])
+    for s in plan['stairs']:
+        block_poly([(s['x'][0], s['y'][0]), (s['x'][1], s['y'][0]), (s['x'][1], s['y'][1]), (s['x'][0], s['y'][1])])
+    for p in plan['props']:
+        if p.get('z', 0.0) < a.prop_clear and p.get('z', 0.0) + p['size'][2] > 0.4:
+            block_poly(prop_footprint(p))
+    for r in plan['rooms']:
+        t = a.solid_t if r.get('wall', 'light') == 'solid' else a.light_t
+        for e, (p0, p1) in enumerate(room_edges({'outline': polys[r['id']]})):
+            if e not in r.get('shared_edges', []):
+                block_wall(list(p0), list(p1), t, float(r['height']), by_room[r['id']].get(e, []))
+        for s in r.get('stairs', []):
+            block_poly([(s['x'][0], s['y'][0]), (s['x'][1], s['y'][0]), (s['x'][1], s['y'][1]), (s['x'][0], s['y'][1])])
+    k = int(math.ceil(radius / step))
+    dil = blocked.copy()
+    for di in range(-k, k + 1):
+        for dj in range(-k, k + 1):
+            if di * di + dj * dj <= k * k:
+                dil |= np.roll(np.roll(blocked, di, 0), dj, 1)
+    free = inside & ~dil
+    si, sj = int((sx - x0) / step), int((sy - y0) / step)
+    if not free[si, sj]:
+        raise SystemExit(f'plan_shell: --reach: the spawn {a.spawn} is not on free floor')
+    seen = np.zeros((nx, ny), bool)
+    stack = [(si, sj)]
+    seen[si, sj] = True
+    while stack:
+        i, j = stack.pop()
+        for di, dj in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            ii, jj = i + di, j + dj
+            if 0 <= ii < nx and 0 <= jj < ny and free[ii, jj] and not seen[ii, jj]:
+                seen[ii, jj] = True
+                stack.append((ii, jj))
+    missed = [rid for rid, m in room_mask.items() if not (seen & m).any()]
+    detail = ', '.join(f'{rid}: {int((seen & m).sum() * step * step)} m2 of {int(m.sum() * step * step)} m2 walkable' for rid, m in room_mask.items())
+    if missed:
+        print(f'REACH_FAIL room(s) not reachable from the spawn {a.spawn}: {", ".join(missed)} ({detail})')
+        return 1
+    print(f'REACH_OK {len(room_mask)} room(s) reachable from the spawn {a.spawn} ({detail}); agent radius {radius} m, grid {step} m')
+    return 0
 
 
 def build(plan, a):
@@ -380,6 +608,7 @@ def build(plan, a):
         if p.get('alpha', 1.0) < 1.0:
             TRANSLUCENT[mat] = float(p['alpha'])
         g.add(f'prop_{p["id"]}', prop_corners(p), mat, {'kind': p['kind'], 'centre_m': [p['x'], p['y']], 'size_m': p['size'], 'z_m': p.get('z', 0.0), 'rotation_deg': p.get('rotation', 0.0)})
+    build_rooms(g, plan, a, a.by_room)
     if not a.no_ceiling:
         for i, r in enumerate(rects):
             g.add('ceiling' if len(rects) == 1 else f'ceiling_{i}', box_corners(r[0], r[1], r[2], r[3], a.height, a.height + a.ceiling_t), 'ceiling', {'hideable': True, 'rect_m': r})
@@ -390,12 +619,18 @@ def place_record(plan, rects, a):
     x0, y0, x1, y1 = extent(plan)
     fx0, fy0 = min([x0] + [r[0] for r in rects]), min([y0] + [r[1] for r in rects])
     fx1, fy1 = max([x1] + [r[2] for r in rects]), max([y1] + [r[3] for r in rects])
-    top = a.height + (0 if a.no_ceiling else a.ceiling_t)
+    for r in plan['rooms']:
+        for px, py in r['outline']:
+            fx0, fy0, fx1, fy1 = min(fx0, px), min(fy0, py), max(fx1, px), max(fy1, py)
+    top = max([a.height] + [float(r['height']) for r in plan['rooms']]) + (0 if a.no_ceiling else a.ceiling_t)
     rec = {'version': 1, 'size': [round(fx1 - fx0, 2), round(top + a.floor_t, 2), round(fy1 - fy0, 2)], 'scaleSource': 'plan',
            'scaleNote': 'standing-up of a traced wall plan (plan_shell.py): plan lengths P, heights and thicknesses as the build command states',
            'bakedIn': False, 'transform': {'position': [0, 0, 0], 'rotation': [0, 0, 0], 'scale': [1, 1, 1]},
            'bounds': {'min': [fx0, -a.floor_t, -fy1], 'max': [fx1, top, -fy0]},
            'walkableAreas': [{'minX': r[0], 'maxX': r[2], 'minZ': -r[3], 'maxZ': -r[1], 'maxY': a.height} for r in rects]}
+    for r in plan['rooms']:
+        xs, ys = [p[0] for p in r['outline']], [p[1] for p in r['outline']]
+        rec['walkableAreas'].append({'minX': min(xs), 'maxX': max(xs), 'minZ': -max(ys), 'maxZ': -min(ys), 'maxY': float(r['height']), 'room': r['id']})
     if a.spawn:
         sx, sy = [float(v) for v in a.spawn.split(',')]
         lx, ly = [float(v) for v in (a.look or f'{sx},{sy + 10}').split(',')]
@@ -429,6 +664,10 @@ def wall_end_errors(glb_path, plan):
     walls.update({f'wall_light_{i}': w for i, w in enumerate(plan['light'])})
     walls.update({f'wall_new_{i}': w for i, w in enumerate(plan['new'])})
     walls.update({f'wall_glass_{i}': w for i, w in enumerate(plan['glass'])})
+    for r in plan['rooms']:
+        for e, (p0, p1) in enumerate(room_edges({'outline': [tuple(float(v) for v in p) for p in r['outline']]})):
+            if e not in r.get('shared_edges', []):
+                walls[f'room_{r["id"]}_wall_{e}'] = [list(p0), list(p1)]
     out = {n['name']: n for n in j['nodes']}
     res = []
     for name, (p0, p1) in walls.items():
@@ -464,6 +703,7 @@ def main():
     ap.add_argument('--ceiling-t', type=float, default=0.15)
     ap.add_argument('--prop-clear', type=float, default=1.8, help='props whose base is below this height must stay off a walk line')
     ap.add_argument('--no-ceiling', action='store_true')
+    ap.add_argument('--reach', action='store_true', help='walk check from --spawn into every room (REACH_OK / REACH_FAIL)')
     ap.add_argument('--spawn'); ap.add_argument('--look')
     a = ap.parse_args()
     plan = load_plan(a.plan, a.new_walls)
@@ -476,13 +716,16 @@ def main():
         ap.error('--out is required to build')
     os.makedirs(a.out, exist_ok=True)
     check_props(plan, a)
+    a.by_room = check_rooms(plan, a)
     g, rects = build(plan, a)
     g.write(os.path.join(a.out, 'place.glb'))
     rec = place_record(plan, rects, a)
     json.dump(rec, open(os.path.join(a.out, 'place.json'), 'w'), indent=1)
+    if a.reach and reach_check(plan, a, a.by_room):
+        return 1
     n_walls = len(plan['solid']) + len(plan['light']) + len(plan['new']) + len(plan['glass'])
     print(f'plan_shell: {n_walls} walls, {len(plan["columns"])} columns, {len(plan["stairs"])} stair blocks, {len(rects)} floor slabs, '
-          f'{len(plan["props"])} props, height {a.height} m -> {os.path.join(a.out, "place.glb")}')
+          f'{len(plan["props"])} props, {len(plan["rooms"])} rooms, height {a.height} m -> {os.path.join(a.out, "place.glb")}')
     return 0
 
 
