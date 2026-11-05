@@ -1,0 +1,13 @@
+{
+  "$schema": "https://diiii.xyz/schemas/di-space.schema.json",
+  "spaceId": "xr-docs",
+  "projectId": "xr-docs-production-cycle",
+  "slug": "production-cycle",
+  "label": "The XR production cycle",
+  "mode": "code",
+  "entry": "spaces/xr-docs/pages/production-cycle.html",
+  "include": [],
+  "assets": [],
+  "publish": false,
+  "note": "Generated from docs/architecture/XR_PRODUCTION_CYCLE.md by build.py."
+}

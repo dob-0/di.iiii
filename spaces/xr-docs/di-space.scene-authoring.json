@@ -1,0 +1,13 @@
+{
+  "$schema": "https://diiii.xyz/schemas/di-space.schema.json",
+  "spaceId": "xr-docs",
+  "projectId": "xr-docs-scene-authoring",
+  "slug": "scene-authoring",
+  "label": "Authoring an XR scene",
+  "mode": "code",
+  "entry": "spaces/xr-docs/pages/scene-authoring.html",
+  "include": [],
+  "assets": [],
+  "publish": false,
+  "note": "Generated from .github/skills/dii-xr-scene-authoring/SKILL.md by build.py."
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://diiii.xyz/schemas/di-space.schema.json",
+  "spaceId": "xr-docs",
+  "projectId": "xr-docs-ar-scan",
+  "slug": "ar-scan",
+  "label": "The AR scan on Android",
+  "mode": "code",
+  "entry": "spaces/xr-docs/pages/ar-scan.html",
+  "include": [],
+  "assets": [],
+  "publish": false,
+  "note": "Generated from docs/ai/decisions/2026-10-23-scan-ar-guidance.md by build.py."
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://diiii.xyz/schemas/di-space.schema.json",
+  "spaceId": "xr-docs",
+  "projectId": "xr-docs-network-name",
+  "slug": "network-name",
+  "label": "Every install gets a name",
+  "mode": "code",
+  "entry": "spaces/xr-docs/pages/network-name.html",
+  "include": [],
+  "assets": [],
+  "publish": false,
+  "note": "Generated from docs/ai/team-sync-by-network-name.md by build.py."
+}

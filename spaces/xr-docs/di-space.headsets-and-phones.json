@@ -1,0 +1,13 @@
+{
+  "$schema": "https://diiii.xyz/schemas/di-space.schema.json",
+  "spaceId": "xr-docs",
+  "projectId": "xr-docs-headsets-and-phones",
+  "slug": "headsets-and-phones",
+  "label": "Headsets and phones join",
+  "mode": "code",
+  "entry": "spaces/xr-docs/pages/headsets-and-phones.html",
+  "include": [],
+  "assets": [],
+  "publish": false,
+  "note": "Generated from docs/ai/one-local-address.md by build.py."
+}

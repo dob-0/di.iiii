@@ -1,0 +1,13 @@
+{
+  "$schema": "https://diiii.xyz/schemas/di-space.schema.json",
+  "spaceId": "xr-docs",
+  "projectId": "xr-docs-xr-creator",
+  "slug": "xr-creator",
+  "label": "The XR creator role",
+  "mode": "code",
+  "entry": "spaces/xr-docs/pages/xr-creator.html",
+  "include": [],
+  "assets": [],
+  "publish": false,
+  "note": "Generated from docs/ai/roles/xr-creator.md by build.py."
+}
