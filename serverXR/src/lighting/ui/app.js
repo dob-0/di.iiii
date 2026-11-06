@@ -58,6 +58,24 @@ const view = { x: 0, y: 0 };
 // regardless of what this page sends, so this is a UX courtesy, not the actual limit.
 const WORLD = 1000;
 let spaceHeld = false;   // Space + drag pans, like every canvas tool she uses
+// The stage modules from the studio desk (objects.js, markers.js, video.js) ask for the view
+// of the stage they draw on: viewOf(el) → {x, y, zoom}. This desk has ONE view for every
+// stage (`view` and `zoom` above), so every stage answers with the same live object.
+const deskView = {
+  get x() { return view.x; }, set x(v) { view.x = v; },
+  get y() { return view.y; }, set y(v) { view.y = v; },
+  get zoom() { return zoom; }, set zoom(v) { zoom = v; },
+};
+// eslint-disable-next-line no-unused-vars -- read by objects.js, markers.js and video.js
+const viewOf = (el) => deskView;
+// The grid objects and labels snap to: the 1/40 fixtures snap to across.
+// eslint-disable-next-line no-unused-vars -- read by objects.js and markers.js
+const snapv = (v) => Math.round(v * 40) / 40;
+// When this page last posted the stage objects / the stage labels (set by objects.js and
+// markers.js): a poll asked for before that cannot know about it and must not put the old
+// list back — a drag posts the whole list many times a second.
+let objectsPostedAt = 0;
+let markersPostedAt = 0;
 let autoWhite = false;
 let attrTab = 'Color';
 let touchedAt = 0;
@@ -228,6 +246,7 @@ function renderNote(text) {
 }
 async function pullState() {
   try {
+    const askedAt = Date.now();
     const reply = await fetch('api/state');
     const next = await reply.json();
     // A reply is not yet proof the desk is fine: the counter resets only once it has drawn.
@@ -237,6 +256,8 @@ async function pullState() {
     if (reply.status === 409 && next && next.show) { paintShow(next.show); return; }
     // stageDragging has no timeout on purpose: a careful placement takes longer than
     // the 700ms window, and the guard must last exactly as long as the finger is down.
+    if (S && askedAt < objectsPostedAt) next.objects = S.objects;
+    if (S && askedAt < markersPostedAt) next.markers = S.markers;
     const busy = !!S && (stageDragging || Date.now() - touchedAt < 700);
     const first = !S;
     if (busy) {
@@ -250,9 +271,14 @@ async function pullState() {
       // throttled POST lands. Without this a poll arriving mid-gesture hands back the
       // desk's pre-drag level and the fader jumps out from under the finger.
       if (S.layers) next.layers = S.layers;
+      if (S.objects) next.objects = S.objects;   // stage objects and labels are edited the same way
+      if (S.markers) next.markers = S.markers;
     }
     const lastGood = S;
     S = next;
+    // The desk's clock, so stage objects and the video box are drawn where the engine has them
+    // (objects.js objClockSample; the server stamps serverNow on every state).
+    if (Number.isFinite(next.serverNow) && typeof window.objClockSample === 'function') window.objClockSample(next.serverNow, askedAt, Date.now());
     try {
       // Selection is pruned against what actually exists. With the desk open on two clients
       // (laptop + phone), an unpatch on one left ghost ids selected on the other — actions
@@ -1177,6 +1203,7 @@ function placeStages() {
       label.style.display = hide ? 'none' : '';
     }
   });
+  if (window.VideoMap) window.VideoMap.place();   // the video picture under the lights (video.js)
 }
 
 function paintStage() {
@@ -5289,7 +5316,8 @@ const stageFor = (el) => el.closest('.stagepane').querySelector('.stage');
 function fitStage(stage) {
   const r = stage.getBoundingClientRect();
   if (!S || !S.fixtures.length) { zoom = 1; view.x = 0; view.y = 0; placeStages(); return; }
-  const xs = S.fixtures.map((f) => f.x), ys = S.fixtures.map((f) => f.y);
+  const pts = [...S.fixtures, ...(S.markers || [])];   // the stage labels are framed too
+  const xs = pts.map((f) => f.x), ys = pts.map((f) => f.y);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
   const { sc, ox, oy } = stageMap(r.width, r.height);
   const bw = Math.max(0.08, x1 - x0) * sc, bh = Math.max(0.08, y1 - y0) * sc;

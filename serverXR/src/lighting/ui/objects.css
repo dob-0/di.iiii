@@ -1,0 +1,132 @@
+/* From the studio desk's style.css (2026-09-24), ported with objects.js 2026-11-06: the
+ icons on the stage tools, and the objects drawn on the stage. */
+.tool svg { width: 15px; height: 15px; display: block; margin: 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* =============== stage objects (2026-09-24) ===============
+   Lines, radars, rings and spots on the stage view (objects.js). Flat accent colour and
+   no glow: the shape says where the object is, the fixture squares say what the rig is
+   actually sending. Strokes keep one width at any zoom — except the ring's band, whose
+   thickness IS the object's width in the world and has to zoom with it. */
+.toolnote { font-size: 11px; color: var(--muted); padding: 0 2px 0 4px; }
+.objlayer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.objlayer * { vector-effect: non-scaling-stroke; }
+.objlayer .ob-band { vector-effect: none; fill: none; stroke: var(--accent); }
+.obj .ob-fill { fill: var(--accent); fill-opacity: .16; }
+.obj .ob-beam { fill-opacity: .32; }
+.obj .ob-tail { fill: var(--accent); stroke: none; }
+.obj .ob-core { stroke: var(--accent); stroke-width: 1.5; }
+.obj .ob-nofill, .obj line { fill: none; }
+.obj .ob-guide { fill: none; stroke: var(--accent); stroke-opacity: .55; stroke-width: 1; stroke-dasharray: 4 4; }
+.obj .ob-arm { stroke: #ffffff; stroke-opacity: .55; stroke-width: 1; }
+.obj .ob-hit { stroke: transparent; stroke-width: 14; fill: none; pointer-events: stroke; cursor: move; }
+.obj .ob-hit.ob-hitfill { fill: transparent; pointer-events: all; }
+.obj .ob-handle { fill: var(--stagebg); stroke: var(--accent); stroke-width: 1.5; pointer-events: all; }
+.obj .ob-hmove { cursor: move; }
+.obj .ob-hrot { cursor: grab; }
+.obj .ob-hsize { cursor: nwse-resize; }
+.objtop .obj:not(.sel) { display: none; }   /* handles: the selected object's only */
+.obj .ob-dot { fill: var(--accent); }
+.obj.sel .ob-dot { fill: #ffffff; }
+.obj.sel .ob-core, .obj.sel .ob-handle { stroke: #ffffff; }
+.obj.sel .ob-hmove { fill: #ffffff; }
+.obj.off { opacity: .35; }
+.obj.off .ob-core { stroke-dasharray: 5 4; }
+.stage.objdragging { cursor: grabbing; }
+.objstrip {
+  position: absolute; left: 8px; bottom: 8px; z-index: 5; max-width: calc(100% - 16px);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 5px 8px;
+  background: var(--pane); border: 1px solid var(--line); border-left: 3px solid var(--accent); font-size: 12px;
+}
+.objstrip label { display: flex; align-items: center; gap: 4px; color: var(--muted); }
+.objstrip input[type=number] { width: 54px; }
+.objstrip .os-kind { font-weight: 600; color: var(--text); }
+.objstrip .os-unit { color: var(--muted); font-size: 11px; }
+.objstrip .sq { padding: 3px 10px; }
+
+/* [anim] Stage objects: the list, the shared editor, the handles for move A → B, and
+   the always-grabbable hub (objects.js). Loaded after style.css, so it wins where the
+   older "stage objects" block there says otherwise. di.iiii: near-black, squared, one
+   cyan accent, flat colour, no glow. */
+
+/* Every object's hub stays on the top layer, selected or not — the rest of an unselected
+   object's handles stay hidden. */
+.objtop .obj:not(.sel) { display: inline; }
+.objtop .obj:not(.sel) > :not(.ob-hubtop) { display: none; }
+.obj .ob-hubtop { cursor: move; }
+
+/* A hovered list row lights its object up on the stage — thicker, not glowing. */
+.obj.hl .ob-core { stroke-width: 3; stroke: #ffffff; }
+.obj.hl .ob-fill { fill-opacity: .3; }
+.obj.hl .ob-dot { fill: #ffffff; }
+
+/* Move A → B: the way it travels, and the two ends. */
+.obj .ob-path { stroke: var(--accent); stroke-opacity: .7; stroke-width: 1.5; stroke-dasharray: 6 5; fill: none; }
+.obj .ob-hb { fill: var(--stagebg); stroke: var(--accent); stroke-width: 1.5; pointer-events: all; cursor: move; }
+.obj.sel .ob-hb { stroke: #ffffff; }
+.obj .ob-btext { fill: var(--accent); font-family: var(--mono); pointer-events: none; }
+
+/* ---- the list ---- */
+.objlist { font-size: 12px; }
+.stage > .objlist {
+  position: absolute; right: 8px; top: 8px; z-index: 5; width: 212px; max-height: 58%;
+  display: flex; flex-direction: column; min-height: 0;
+  background: var(--pane); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+}
+.stage > .objlist.empty { display: none; }
+.stagepage:not(.insp-closed) .stage > .objlist { display: none; }   /* the inspector has the list */
+.objlist .ol-head { display: flex; align-items: center; gap: 6px; padding: 4px 6px; flex: none; }
+.objlist .ol-title { color: var(--muted); font-weight: 600; }
+.objlist .ol-title i { font-style: normal; color: var(--text); margin-left: 3px; }
+.objlist .ol-head .sq { padding: 2px 8px; font-size: 11px; }
+.objlist .ol-rows { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; }
+.objlist.folded .ol-rows { display: none; }
+.objlist .ol-row {
+  display: flex; align-items: center; gap: 4px; padding: 2px 4px 2px 6px; cursor: pointer;
+  border-top: 1px solid var(--line); min-height: 26px;
+}
+.objlist .ol-row:hover { background: var(--pane2); }
+.objlist .ol-row.sel { background: var(--pane2); box-shadow: inset 2px 0 0 var(--accent); }
+.objlist .ol-row.off .ol-name { color: var(--muted); text-decoration: line-through; }
+.objlist .ol-kind { width: 16px; height: 16px; flex: none; color: var(--accent); }
+.objlist .ol-kind svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.objlist .ol-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.objlist .ol-row.paused .ol-name::after { content: ' · paused'; color: var(--muted); }
+.objlist .ol-b {
+  flex: none; width: 24px; height: 22px; padding: 0; font-size: 11px; line-height: 20px;
+  background: var(--field); border: 1px solid var(--line); border-radius: 0; color: var(--muted);
+}
+.objlist .ol-b:hover { color: var(--text); border-color: var(--muted); }
+.objlist .ol-b.on { color: var(--accent); border-color: var(--accent); }
+.objlist .ol-del:hover { color: var(--danger); border-color: var(--danger); }
+.objlist .ol-empty { padding: 4px 6px 6px; font-size: 11px; }
+.sp-insp .objlist-insp { gap: 4px; padding: 6px 0 8px; }
+.sp-insp .objlist-insp .ol-head { padding: 0 12px; }
+.sp-insp .objlist-insp .ol-rows { max-height: 196px; }
+.sp-insp .objlist-insp .ol-row { padding-left: 12px; padding-right: 10px; }
+.sp-insp .objlist-insp .ol-empty { padding: 0 12px; }
+
+/* ---- the editor (the strip on the small stages; the Stage page's inspector) ---- */
+.objed { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.objed .oe-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.objed label { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; }
+.objed input[type=number] { width: 54px; }
+.objed select { padding: 2px 4px; }
+.objed .oe-name { width: 110px; font-weight: 600; }
+.objed .oe-kind { width: 16px; height: 16px; flex: none; color: var(--accent); }
+.objed .oe-kind svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.objed .oe-unit { color: var(--muted); font-size: 11px; }
+.objed .oe-btns { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.objed .sq { padding: 3px 10px; }
+.objed .sq:disabled { opacity: .45; }
+.objed .oe-hint { flex-basis: 100%; font-size: 11px; color: var(--muted); }
+.objed .oe-hint:empty { display: none; }
+.objstrip:not(.anim-open) .oe-anim { display: none; }
+.objstrip { flex-direction: column; align-items: stretch; }
+/* In the inspector: one field per line, like the rest of it. */
+.objed.full { padding: 8px 12px; }
+.objed.full .oe-row { flex-direction: column; align-items: stretch; gap: 6px; }
+.objed.full .oe-name { width: 100%; }
+.objed.full label { display: grid; grid-template-columns: 70px 1fr auto; }
+.objed.full label select, .objed.full label input { width: 100%; }
+.objed.full .oe-kind { display: none; }
+.objed.full .oe-anim { border-top: 1px solid var(--line); padding-top: 8px; }
