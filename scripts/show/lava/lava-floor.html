@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#12080c">
+<title>THE FLOOR IS LAVA</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    min-height: -webkit-fill-available;
+    background: #12080c;
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-user-drag: none;
+    overscroll-behavior: none;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    -webkit-user-select: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------ */
+/*  THE FLOOR IS LAVA                                                  */
+/*  Two fingers are two feet. One step to any neighbor, no jumps.     */
+/*  Lava floods every tile, faster the closer it is to the finish.    */
+/* ------------------------------------------------------------------ */
+
+const FONT = {
+  A: [0b01110,0b10001,0b10001,0b11111,0b10001,0b10001,0b10001],
+  B: [0b11110,0b10001,0b10001,0b11110,0b10001,0b10001,0b11110],
+  C: [0b01111,0b10000,0b10000,0b10000,0b10000,0b10000,0b01111],
+  D: [0b11110,0b10001,0b10001,0b10001,0b10001,0b10001,0b11110],
+  E: [0b11111,0b10000,0b10000,0b11110,0b10000,0b10000,0b11111],
+  F: [0b11111,0b10000,0b10000,0b11110,0b10000,0b10000,0b10000],
+  G: [0b01111,0b10000,0b10000,0b10011,0b10001,0b10001,0b01111],
+  H: [0b10001,0b10001,0b10001,0b11111,0b10001,0b10001,0b10001],
+  I: [0b11111,0b00100,0b00100,0b00100,0b00100,0b00100,0b11111],
+  J: [0b00111,0b00010,0b00010,0b00010,0b00010,0b10010,0b01100],
+  K: [0b10001,0b10010,0b10100,0b11000,0b10100,0b10010,0b10001],
+  L: [0b10000,0b10000,0b10000,0b10000,0b10000,0b10000,0b11111],
+  M: [0b10001,0b11011,0b10101,0b10101,0b10001,0b10001,0b10001],
+  N: [0b10001,0b11001,0b10101,0b10011,0b10001,0b10001,0b10001],
+  O: [0b01110,0b10001,0b10001,0b10001,0b10001,0b10001,0b01110],
+  P: [0b11110,0b10001,0b10001,0b11110,0b10000,0b10000,0b10000],
+  Q: [0b01110,0b10001,0b10001,0b10001,0b10101,0b10010,0b01101],
+  R: [0b11110,0b10001,0b10001,0b11110,0b10100,0b10010,0b10001],
+  S: [0b01111,0b10000,0b10000,0b01110,0b00001,0b00001,0b11110],
+  T: [0b11111,0b00100,0b00100,0b00100,0b00100,0b00100,0b00100],
+  U: [0b10001,0b10001,0b10001,0b10001,0b10001,0b10001,0b01110],
+  V: [0b10001,0b10001,0b10001,0b10001,0b10001,0b01010,0b00100],
+  W: [0b10001,0b10001,0b10001,0b10101,0b10101,0b10101,0b01010],
+  X: [0b10001,0b10001,0b01010,0b00100,0b01010,0b10001,0b10001],
+  Y: [0b10001,0b10001,0b01010,0b00100,0b00100,0b00100,0b00100],
+  Z: [0b11111,0b00001,0b00010,0b00100,0b01000,0b10000,0b11111],
+  "0": [0b01110,0b10001,0b10011,0b10101,0b11001,0b10001,0b01110],
+  "1": [0b00100,0b01100,0b00100,0b00100,0b00100,0b00100,0b01110],
+  "2": [0b01110,0b10001,0b00001,0b00010,0b00100,0b01000,0b11111],
+  "3": [0b11110,0b00001,0b00001,0b01110,0b00001,0b00001,0b11110],
+  "4": [0b10010,0b10010,0b10010,0b11111,0b00010,0b00010,0b00010],
+  "5": [0b11111,0b10000,0b10000,0b11110,0b00001,0b00001,0b11110],
+  "6": [0b01110,0b10000,0b10000,0b11110,0b10001,0b10001,0b01110],
+  "7": [0b11111,0b00001,0b00010,0b00100,0b01000,0b01000,0b01000],
+  "8": [0b01110,0b10001,0b10001,0b01110,0b10001,0b10001,0b01110],
+  "9": [0b01110,0b10001,0b10001,0b01111,0b00001,0b00001,0b01110],
+  "!": [0b00100,0b00100,0b00100,0b00100,0b00100,0b00000,0b00100],
+  ".": [0b00000,0b00000,0b00000,0b00000,0b00000,0b01100,0b01100],
+  "'": [0b00100,0b00100,0b01000,0b00000,0b00000,0b00000,0b00000],
+  " ": [0,0,0,0,0,0,0]
+};
+
+const HEART = [
+  "01100110",
+  "11111111",
+  "11111111",
+  "11111111",
+  "01111110",
+  "00111100",
+  "00011000",
+  "00001000"
+];
+
+const LAVA_PAL = [
+  [48, 4, 0],
+  [92, 10, 0],
+  [168, 22, 0],
+  [214, 48, 0],
+  [255, 92, 8],
+  [255, 148, 16],
+  [255, 206, 48],
+  [255, 244, 168]
+];
+
+const DIRS = [
+  [1, 0], [-1, 0], [0, 1], [0, -1],
+  [1, 1], [1, -1], [-1, 1], [-1, -1]
+];
+// Hearts left after a perfect crossing. The fifth heart is the mistake.
+const LAVA_BUDGET = 4;
+const PAT = 96;
+const LAVA_FRAMES = 12;
+
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d", { alpha: false }) || canvas.getContext("2d");
+
+const view = document.createElement("canvas");
+const vctx = view.getContext("2d", { alpha: false }) || view.getContext("2d");
+
+let dpr = 1;
+let pixel = 2;
+let artW = 320;
+let artH = 240;
+let cols = 10;
+let rows = 18;
+let tile = 32;
+let gridX = 0;
+let gridW = 0;
+let gridTop = 32;
+let viewH = 200;
+let maxCamera = 0;
+let startRows = 2;
+let finishRows = 2;
+let builtKey = "";
+
+let grid = [];
+let atlas = null;
+let lavaFrames = [];
+let mode = "ready"; // ready | play | dead | won
+let hearts = 5;
+let heartBreak = [0, 0, 0, 0, 0];
+let cameraY = 0;
+let cameraAnim = null;
+let bothUpAt = 0;
+let hadFeet = false;
+let time = 0;
+let tickIn = 1.6;
+let flash = 0;
+let goTimer = 0;
+let winBurst = 0;
+let particles = [];
+let feet = new Map();
+let suppress = new Set();
+let lastMarks = [];
+let pendingDead = false;
+
+const ui = {
+  retry: null,
+  full: null
+};
+
+function hash(a, b, c) {
+  let n = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul((c || 0) | 0, 1442695041);
+  n = Math.imul(n ^ (n >>> 13), 1274126177);
+  return (n ^ (n >>> 16)) >>> 0;
+}
+
+function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+function textWidth(text, scale) {
+  return text.length * 6 * scale - scale;
+}
+
+function drawText(g, text, x, y, scale, color, align) {
+  const w = textWidth(text, scale);
+  let cx = x | 0;
+  if (align === "center") cx = (x - w / 2) | 0;
+  else if (align === "right") cx = (x - w) | 0;
+  g.fillStyle = color;
+  for (let i = 0; i < text.length; i++) {
+    const glyph = FONT[text[i]] || FONT[" "];
+    for (let row = 0; row < 7; row++) {
+      const bits = glyph[row];
+      for (let col = 0; col < 5; col++) {
+        if ((bits >> (4 - col)) & 1) {
+          g.fillRect(cx + col * scale, y + row * scale, scale, scale);
+        }
+      }
+    }
+    cx += 6 * scale;
+  }
+  return w;
+}
+
+function panel(g, x, y, w, h, border) {
+  g.fillStyle = "#160c12";
+  g.fillRect(x, y, w, h);
+  g.fillStyle = border || "#f0d080";
+  g.fillRect(x, y, w, 2);
+  g.fillRect(x, y + h - 2, w, 2);
+  g.fillRect(x, y, 2, h);
+  g.fillRect(x + w - 2, y, 2, h);
+  g.fillStyle = "#5c4030";
+  g.fillRect(x + 2, y + 2, w - 4, 1);
+  g.fillRect(x + 2, y + 2, 1, h - 4);
+}
+
+function buttonRect(label, cx, cy, scale) {
+  const tw = textWidth(label, scale);
+  const w = tw + 28;
+  const h = 7 * scale + 22;
+  return { x: (cx - w / 2) | 0, y: (cy - h / 2) | 0, w, h, label, scale };
+}
+
+function drawButton(g, b, hot) {
+  if (!b) return;
+  g.fillStyle = hot ? "#ffb030" : "#e87820";
+  g.fillRect(b.x, b.y, b.w, b.h);
+  g.fillStyle = "#fff0b0";
+  g.fillRect(b.x, b.y, b.w, 2);
+  g.fillRect(b.x, b.y, 2, b.h);
+  g.fillStyle = "#6a2808";
+  g.fillRect(b.x, b.y + b.h - 2, b.w, 2);
+  g.fillRect(b.x + b.w - 2, b.y, 2, b.h);
+  g.fillStyle = "#3a1204";
+  g.fillRect(b.x + 2, b.y + b.h - 4, b.w - 4, 2);
+  drawText(g, b.label, b.x + b.w / 2, b.y + ((b.h - 7 * b.scale) / 2) | 0, b.scale, "#1a0804", "center");
+}
+
+function hitRect(p, r) {
+  return !!r && p.x >= r.x && p.y >= r.y && p.x < r.x + r.w && p.y < r.y + r.h;
+}
+
+function canFullscreen() {
+  const el = document.documentElement;
+  return !!(el.requestFullscreen || el.webkitRequestFullscreen);
+}
+
+function isFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function toggleFullscreen() {
+  const el = document.documentElement;
+  if (isFullscreen()) {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) exit.call(document);
+    return;
+  }
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (req) req.call(el);
+}
+
+/* ------------------------------ lava look -------------------------- */
+
+function buildLavaFrames() {
+  lavaFrames = [];
+  for (let f = 0; f < LAVA_FRAMES; f++) {
+    const c = document.createElement("canvas");
+    c.width = PAT;
+    c.height = PAT;
+    const g = c.getContext("2d");
+    const img = g.createImageData(PAT, PAT);
+    const data = img.data;
+    const ph = f / LAVA_FRAMES * Math.PI * 2;
+    for (let y = 0; y < PAT; y++) {
+      for (let x = 0; x < PAT; x++) {
+        const a = x / PAT * Math.PI * 2;
+        const b = y / PAT * Math.PI * 2;
+        let v = 0;
+        v += Math.sin(a * 2 + ph) * 0.30;
+        v += Math.sin(b * 3 - ph * 1.15) * 0.24;
+        v += Math.sin((a + b) * 2 + ph * 0.65) * 0.20;
+        v += Math.sin(a * 4 - b * 2 + ph * 1.4) * 0.12;
+        v += Math.sin(b * 5 + a + ph * 0.4) * 0.10;
+        v = v * 0.5 + 0.5;
+        const spark = hash(x, y, f) % 220 === 0;
+        if (spark) v = 1;
+        const bubble = Math.sin(b * 2 - ph * 2 + (hash(x >> 3, y >> 3, 3) % 7)) > 0.92
+          && hash(x, y, 9) % 5 === 0;
+        if (bubble) v = Math.min(1, v + 0.45);
+        const idx = clamp(Math.floor(v * (LAVA_PAL.length - 0.01)), 0, LAVA_PAL.length - 1);
+        const col = LAVA_PAL[idx];
+        const o = (y * PAT + x) * 4;
+        data[o] = col[0];
+        data[o + 1] = col[1];
+        data[o + 2] = col[2];
+        data[o + 3] = 255;
+      }
+    }
+    g.putImageData(img, 0, 0);
+    lavaFrames.push(c);
+  }
+}
+
+function blitWrap(g, img, sx, sy, w, h, dx, dy) {
+  const P = img.width;
+  sx = ((sx % P) + P) % P;
+  sy = ((sy % P) + P) % P;
+  const w1 = Math.min(w, P - sx);
+  const h1 = Math.min(h, P - sy);
+  g.drawImage(img, sx, sy, w1, h1, dx, dy, w1, h1);
+  if (w1 < w) g.drawImage(img, 0, sy, w - w1, h1, dx + w1, dy, w - w1, h1);
+  if (h1 < h) g.drawImage(img, sx, 0, w1, h - h1, dx, dy + h1, w1, h - h1);
+  if (w1 < w && h1 < h) {
+    g.drawImage(img, 0, 0, w - w1, h - h1, dx + w1, dy + h1, w - w1, h - h1);
+  }
+}
+
+/* ------------------------------ level ------------------------------ */
+
+function emptyCell(c, r, zone) {
+  return {
+    lava: false,
+    warn: 0,
+    heat: 0,
+    source: false,
+    spine: 0,
+    suppress: 0,
+    fade: 0,
+    pop: 0,
+    zone,
+    stone: hash(c, r, 1) % 4
+  };
+}
+
+function inBounds(c, r) {
+  return c >= 0 && r >= 0 && c < cols && r < rows;
+}
+
+function zoneOf(r) {
+  if (r < finishRows) return "finish";
+  if (r >= rows - startRows) return "start";
+  return "play";
+}
+
+function buildLevel() {
+  grid = [];
+  for (let r = 0; r < rows; r++) {
+    const row = [];
+    for (let c = 0; c < cols; c++) row.push(emptyCell(c, r, zoneOf(r)));
+    grid.push(row);
+  }
+
+  function paintBlob(cc, rr, rad) {
+    for (let r = rr - rad; r <= rr + rad; r++) {
+      for (let c = cc - rad; c <= cc + rad; c++) {
+        if (!inBounds(c, r) || grid[r][c].zone !== "play") continue;
+        if (Math.max(Math.abs(c - cc), Math.abs(r - rr)) > rad) continue;
+        const cell = grid[r][c];
+        cell.lava = true;
+        cell.heat = 1;
+        cell.source = true;
+      }
+    }
+  }
+
+  const playTop = finishRows;
+  const playBot = rows - startRows - 1;
+  const span = Math.max(1, playBot - playTop);
+  for (let r = playTop; r <= playBot; r++) {
+    const danger = rowDanger(r);
+    const chance = 0.06 + danger * danger * 0.82;
+    for (let c = 0; c < cols; c++) {
+      if (Math.random() < chance) {
+        const cell = grid[r][c];
+        cell.lava = true;
+        cell.heat = 1;
+        cell.source = true;
+      }
+    }
+  }
+  const pools = clamp(Math.round(cols * 0.85), 4, 16);
+  for (let i = 0; i < pools; i++) {
+    const u = Math.pow(Math.random(), 0.42);
+    const rr = clamp(playBot - ((u * span) | 0), playTop, playBot);
+    const cc = (Math.random() * cols) | 0;
+    paintBlob(cc, rr, u > 0.55 ? 2 : 1);
+  }
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = grid[r][c];
+      if (cell.zone !== "play") cell.heat = 0;
+      else if (cell.lava) cell.heat = 1;
+      else cell.heat = 0.05 + rowDanger(r) * 0.55;
+      cell.fade = 0;
+      cell.warn = 0;
+    }
+  }
+  bakeAtlas();
+
+  cameraAnim = null;
+  cameraY = maxCamera;
+  tickIn = 0.45 + Math.random() * 0.25;
+  lastMarks = [];
+  mode = "ready";
+  ensureRoute();
+  bothUpAt = 0;
+  hadFeet = false;
+  particles = [];
+  flash = 0;
+  goTimer = 0;
+  winBurst = 0;
+  pendingDead = false;
+  hearts = 5;
+  heartBreak = [0, 0, 0, 0, 0];
+}
+
+function stoneRGB(cell, x, y, c, r) {
+  const h = hash(c, r, x * 13 + y * 29);
+  let rgb;
+  if (cell.zone === "start") {
+    rgb = [[24, 42, 34], [32, 58, 44], [18, 36, 28], [42, 72, 52]][cell.stone];
+  } else if (cell.zone === "finish") {
+    rgb = [[48, 36, 18], [72, 54, 22], [36, 28, 14], [92, 70, 28]][cell.stone];
+  } else {
+    rgb = [[32, 26, 30], [46, 38, 42], [24, 20, 26], [58, 48, 52]][cell.stone];
+  }
+  let R = rgb[0], G = rgb[1], B = rgb[2];
+  if (h % 19 === 0) { R += 16; G += 14; B += 12; }
+  else if (h % 23 === 0) { R -= 10; G -= 8; B -= 8; }
+  if (x === 0 || y === 0) { R += 18; G += 14; B += 12; }
+  if (x === tile - 1 || y === tile - 1) { R = 10; G = 6; B = 8; }
+  // cracks
+  const crack = hash(c, r, 7);
+  if ((crack % 5 === 0 && y === 4 + (crack % 6) && x > 2 && x < tile - 3) ||
+      (crack % 7 === 0 && x === 5 + (crack % 5) && y > 3 && y < tile - 4)) {
+    R = 14; G = 10; B = 12;
+  }
+  return [clamp(R, 0, 255), clamp(G, 0, 255), clamp(B, 0, 255)];
+}
+
+function fillStep() {
+  const prog = frontProgress();
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = grid[r][c];
+      if (cell.zone !== "play" || cell.suppress > 0) continue;
+      if (cell.lava) {
+        cell.heat = 1;
+        continue;
+      }
+      const danger = rowDanger(r);
+      let nLava = 0;
+      for (let rr = r - 1; rr <= r + 1; rr++) {
+        for (let cc = c - 1; cc <= c + 1; cc++) {
+          if ((rr === r && cc === c) || !inBounds(cc, rr)) continue;
+          if (grid[rr][cc].lava) nLava++;
+        }
+      }
+      let gain = 0.04 + danger * danger * 0.55;
+      gain += nLava * (0.016 + danger * 0.06);
+      gain *= 1 + prog * 0.28;
+      const jitter = ((hash(c, r, (time * 8) | 0) % 100) / 100 - 0.5) * 0.03;
+      cell.heat = clamp(cell.heat + gain + jitter, 0, 1);
+      const thresh = 0.8 - danger * 0.22;
+      if (cell.warn <= 0 && cell.heat >= thresh) cell.warn = 0.92 - danger * 0.38;
+    }
+  }
+}
+
+function bakeAtlas() {
+  atlas = document.createElement("canvas");
+  atlas.width = cols * tile;
+  atlas.height = rows * tile;
+  const g = atlas.getContext("2d");
+  const img = g.createImageData(atlas.width, atlas.height);
+  const data = img.data;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = grid[r][c];
+      for (let y = 0; y < tile; y++) {
+        for (let x = 0; x < tile; x++) {
+          const rgb = stoneRGB(cell, x, y, c, r);
+          const o = ((r * tile + y) * atlas.width + (c * tile + x)) * 4;
+          data[o] = rgb[0];
+          data[o + 1] = rgb[1];
+          data[o + 2] = rgb[2];
+          data[o + 3] = 255;
+        }
+      }
+    }
+  }
+  g.putImageData(img, 0, 0);
+}
+
+function rowDanger(r) {
+  const play0 = finishRows;
+  const play1 = rows - startRows - 1;
+  const span = Math.max(1, play1 - play0);
+  return clamp((play1 - r) / span, 0, 1); // 0 at the start, 1 at the finish
+}
+
+function ignite(c, r, silent) {
+  const cell = grid[r][c];
+  if (!cell || cell.zone !== "play" || cell.lava) return;
+  cell.lava = true;
+  cell.warn = 0;
+  cell.pop = silent ? 0 : 0.18;
+  cell.fade = 0;
+  if (!silent && mode === "play") {
+    for (const f of feet.values()) {
+      if (f.col === c && f.row === r && !f.charged) {
+        hurt();
+        f.charged = true;
+      }
+    }
+  }
+}
+
+function pathStarts() {
+  const starts = [];
+  if (feet.size) {
+    for (const f of feet.values()) {
+      if (f.col >= 0) starts.push({ c: f.col, r: f.row });
+    }
+  }
+  if (!starts.length && mode === "play" && lastMarks.length) {
+    for (const m of lastMarks) starts.push({ c: m.c, r: m.r });
+  }
+  if (!starts.length) {
+    const mid = (cols / 2) | 0;
+    starts.push({ c: mid, r: rows - 1 });
+  }
+  return starts;
+}
+
+function footOn(c, r) {
+  for (const f of feet.values()) if (f.col === c && f.row === r) return true;
+  return false;
+}
+
+function routeFrom(sc, sr) {
+  const N = cols * rows;
+  const INF = 1e9;
+  const cost = new Float32Array(N);
+  const prev = new Int32Array(N);
+  const used = new Uint8Array(N);
+  for (let i = 0; i < N; i++) {
+    cost[i] = INF;
+    prev[i] = -1;
+  }
+  if (!inBounds(sc, sr)) return null;
+  const start = sr * cols + sc;
+  cost[start] = 0;
+  let goal = -1;
+  for (let iter = 0; iter < N; iter++) {
+    let bi = -1;
+    let bc = INF;
+    for (let i = 0; i < N; i++) {
+      if (!used[i] && cost[i] < bc) {
+        bc = cost[i];
+        bi = i;
+      }
+    }
+    if (bi < 0 || bc >= INF) break;
+    used[bi] = 1;
+    const r = (bi / cols) | 0;
+    const c = bi - r * cols;
+    if (r < finishRows) {
+      goal = bi;
+      break;
+    }
+    for (const d of DIRS) {
+      const nc = c + d[0], nr = r + d[1];
+      if (!inBounds(nc, nr)) continue;
+      const cell = grid[nr][nc];
+      const lavaStep = cell.zone === "play" && cell.lava ? 1 : 0;
+      const ni = nr * cols + nc;
+      const ncst = bc + lavaStep * 1000 + 1;
+      if (ncst < cost[ni]) {
+        cost[ni] = ncst;
+        prev[ni] = bi;
+      }
+    }
+  }
+  if (goal < 0) return null;
+  const path = [];
+  let cur = goal;
+  while (cur >= 0) {
+    const rr = (cur / cols) | 0;
+    path.push({ c: cur - rr * cols, r: rr });
+    cur = prev[cur];
+  }
+  path.reverse();
+  const lavaCells = [];
+  for (let i = 1; i < path.length; i++) {
+    const n = path[i];
+    const cell = grid[n.r][n.c];
+    if (cell.zone === "play" && cell.lava) lavaCells.push(n);
+  }
+  return { path, lava: lavaCells.length, lavaCells };
+}
+
+function openCell(c, r) {
+  const cell = grid[r][c];
+  if (!cell || cell.zone !== "play") return;
+  const danger = rowDanger(r);
+  cell.lava = false;
+  cell.warn = 0;
+  cell.source = false;
+  cell.fade = Math.max(cell.fade, 0.28);
+  cell.heat = 0.18 + danger * 0.48;
+  cell.suppress = 0.5 + (1 - danger) * 1.65;
+  for (const f of feet.values()) {
+    if (f.col === c && f.row === r) f.charged = false;
+  }
+}
+
+function lavaToOpen(lavaCells) {
+  const n = lavaCells.length;
+  const keep = new Uint8Array(n);
+  let kept = 0;
+  for (let k = 1; k <= LAVA_BUDGET && k <= n; k++) {
+    let idx = Math.floor((k / (LAVA_BUDGET + 1)) * n);
+    idx = Math.min(n - 1, idx + Math.floor((n - 1) * 0.22));
+    while (idx > 0 && keep[idx]) idx--;
+    if (!keep[idx]) {
+      keep[idx] = 1;
+      kept++;
+    }
+  }
+  for (let i = n - 1; i >= 0 && kept < Math.min(LAVA_BUDGET, n); i--) {
+    if (!keep[i]) {
+      keep[i] = 1;
+      kept++;
+    }
+  }
+  const open = [];
+  for (let i = 0; i < n; i++) if (!keep[i]) open.push(lavaCells[i]);
+  return open;
+}
+
+function ensureRoute() {
+  const starts = pathStarts();
+  for (const s of starts) {
+    for (let pass = 0; pass < 3; pass++) {
+      const res = routeFrom(s.c, s.r);
+      if (!res || res.lava <= LAVA_BUDGET) break;
+      const need = res.lava - LAVA_BUDGET;
+      let opened = 0;
+      const queue = lavaToOpen(res.lavaCells).concat(res.lavaCells);
+      const seen = new Set();
+      for (const n of queue) {
+        if (opened >= need) break;
+        const key = n.c + "," + n.r;
+        if (seen.has(key) || footOn(n.c, n.r)) continue;
+        seen.add(key);
+        if (!grid[n.r][n.c].lava) continue;
+        openCell(n.c, n.r);
+        opened++;
+      }
+      if (!opened) break;
+    }
+  }
+}
+
+function frontProgress() {
+  let front = rows - 1;
+  if (feet.size) {
+    for (const f of feet.values()) if (f.row >= 0) front = Math.min(front, f.row);
+  } else if (lastMarks.length) {
+    for (const m of lastMarks) front = Math.min(front, m.r);
+  }
+  return 1 - front / Math.max(1, rows - 1);
+}
+
+/* ------------------------------ input ------------------------------ */
+
+function toArt(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * (artW / rect.width),
+    y: (e.clientY - rect.top) * (artH / rect.height)
+  };
+}
+
+function rawTileAt(x, y) {
+  if (x < gridX || x >= gridX + gridW || y < gridTop || y >= gridTop + viewH) return null;
+  const wx = x - gridX;
+  const wy = y - gridTop + cameraY;
+  const c = Math.floor(wx / tile);
+  const r = Math.floor(wy / tile);
+  if (!inBounds(c, r)) return null;
+  return { c, r };
+}
+
+function tileAt(x, y, prev) {
+  const t = rawTileAt(x, y);
+  if (!t || !prev || prev.col < 0) return t;
+  if (t.c === prev.col && t.r === prev.row) return t;
+  const wx = x - gridX;
+  const wy = y - gridTop + cameraY;
+  const margin = 3;
+  const nx0 = t.c * tile + margin;
+  const ny0 = t.r * tile + margin;
+  const nx1 = (t.c + 1) * tile - margin;
+  const ny1 = (t.r + 1) * tile - margin;
+  if (wx < nx0 || wx > nx1 || wy < ny0 || wy > ny1) {
+    return { c: prev.col, r: prev.row };
+  }
+  return t;
+}
+
+function commitTile(foot, t) {
+  if (!t) {
+    if (foot.col !== -1) {
+      foot.col = -1;
+      foot.row = -1;
+      foot.charged = false;
+    }
+    return;
+  }
+  if (t.c === foot.col && t.r === foot.row) return;
+  foot.col = t.c;
+  foot.row = t.r;
+  foot.step = 1;
+  foot.charged = false;
+  const cell = grid[t.r][t.c];
+  if (mode === "play" && cell.lava) {
+    hurt();
+    foot.charged = true;
+    spawnSparks(foot.x, foot.y, "#ff3010", 10);
+  } else {
+    spawnSparks(foot.x, foot.y, "#ffe0a0", 4);
+  }
+  if (mode === "play" && t.r < finishRows && hearts > 0 && !pendingDead) {
+    win();
+  }
+  upsertMark(foot);
+}
+
+function cheb(c0, r0, c1, r1) {
+  return Math.max(Math.abs(c0 - c1), Math.abs(r0 - r1));
+}
+
+function lineTiles(c0, r0, c1, r1) {
+  const out = [];
+  let c = c0;
+  let r = r0;
+  const dc = Math.abs(c1 - c0);
+  const dr = Math.abs(r1 - r0);
+  const sc = c0 < c1 ? 1 : -1;
+  const sr = r0 < r1 ? 1 : -1;
+  let err = dc - dr;
+  const guard = dc + dr + 2;
+  for (let n = 0; n < guard && (c !== c1 || r !== r1); n++) {
+    const e2 = err * 2;
+    if (e2 > -dr) {
+      err -= dr;
+      c += sc;
+    }
+    if (e2 < dc) {
+      err += dc;
+      r += sr;
+    }
+    if (!inBounds(c, r)) break;
+    out.push({ c, r });
+  }
+  return out;
+}
+
+function advanceFoot(foot, x, y) {
+  if (hearts <= 0 || mode === "dead" || mode === "won") return;
+  if (foot.col < 0) {
+    if (mode !== "play") commitTile(foot, rawTileAt(x, y));
+    return;
+  }
+  const raw = rawTileAt(x, y);
+  if (!raw) return;
+  const d = cheb(foot.col, foot.row, raw.c, raw.r);
+  if (d === 0) return;
+  if (d === 1) {
+    const stable = tileAt(x, y, foot);
+    if (!stable || (stable.c === foot.col && stable.r === foot.row)) return;
+    commitTile(foot, stable);
+    return;
+  }
+  const path = lineTiles(foot.col, foot.row, raw.c, raw.r);
+  for (const t of path) {
+    if (cheb(foot.col, foot.row, t.c, t.r) !== 1) break;
+    commitTile(foot, t);
+    if (hearts <= 0 || mode === "dead" || mode === "won") return;
+  }
+}
+
+function walkTo(foot, x, y) {
+  const x0 = foot.x;
+  const y0 = foot.y;
+  const dist = Math.hypot(x - x0, y - y0);
+  const steps = Math.max(1, Math.ceil(dist / 4));
+  for (let i = 1; i <= steps; i++) {
+    const u = i / steps;
+    foot.x = x0 + (x - x0) * u;
+    foot.y = y0 + (y - y0) * u;
+    advanceFoot(foot, foot.x, foot.y);
+  }
+  foot.x = x;
+  foot.y = y;
+}
+
+function freeMarks() {
+  const live = new Set();
+  for (const id of feet.keys()) live.add(id);
+  return lastMarks.filter(m => !live.has(m.id));
+}
+
+function addFoot(id, p) {
+  const tile = rawTileAt(p.x, p.y);
+  if (mode === "play") {
+    if (!tile) return;
+    const marks = freeMarks();
+    let claimed = null;
+    let best = 99;
+    for (const m of marks) {
+      const d = cheb(m.c, m.r, tile.c, tile.r);
+      if (d < best) {
+        best = d;
+        claimed = m;
+      }
+    }
+    if (claimed && best <= 1) claimed.id = id;
+    else if (!marks.length) {
+      let near = false;
+      for (const f of feet.values()) {
+        if (f.col >= 0 && cheb(f.col, f.row, tile.c, tile.r) <= 1) near = true;
+      }
+      if (!near) {
+        spawnSparks(p.x, p.y, "#ff4040", 5);
+        return;
+      }
+    } else {
+      spawnSparks(p.x, p.y, "#ff4040", 5);
+      return;
+    }
+  }
+  const foot = {
+    id,
+    x: p.x,
+    y: p.y,
+    col: -1,
+    row: -1,
+    charged: false,
+    step: 1,
+    born: time
+  };
+  feet.set(id, foot);
+  commitTile(foot, tile);
+  hadFeet = true;
+  bothUpAt = 0;
+  if (cameraAnim) snapCamera();
+}
+
+function upsertMark(foot) {
+  if (!foot || foot.col < 0) return;
+  const mark = {
+    id: foot.id,
+    c: foot.col,
+    r: foot.row,
+    side: foot.x < gridX + gridW / 2 ? -1 : 1
+  };
+  const idx = lastMarks.findIndex(m => m.id === foot.id);
+  if (idx >= 0) lastMarks[idx] = mark;
+  else lastMarks.push(mark);
+  if (lastMarks.length > 2) lastMarks.shift();
+}
+
+function pruneMarks() {
+  if (lastMarks.length < 2) return;
+  const front = Math.min(...lastMarks.map(m => m.r));
+  const limit = Math.max(3, Math.floor(viewH / tile) - 2);
+  const kept = lastMarks.filter(m => m.r - front <= limit);
+  if (kept.length) lastMarks = kept;
+}
+
+function onPointerDown(e) {
+  if (e.cancelable) e.preventDefault();
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* synthetic or lost pointers */ }
+  if (suppress.has(e.pointerId)) return;
+  const p = toArt(e);
+  if (hitRect(p, ui.full)) {
+    toggleFullscreen();
+    suppress.add(e.pointerId);
+    return;
+  }
+  if ((mode === "dead" || mode === "won") && hitRect(p, ui.retry)) {
+    restart();
+    suppress.add(e.pointerId);
+    return;
+  }
+  if (mode === "dead" || mode === "won") return;
+  if (feet.size >= 2) return;
+  if (cameraAnim) snapCamera();
+  addFoot(e.pointerId, p);
+}
+
+function onPointerMove(e) {
+  if (e.cancelable && feet.has(e.pointerId)) e.preventDefault();
+  const foot = feet.get(e.pointerId);
+  if (!foot || suppress.has(e.pointerId)) return;
+  const p = toArt(e);
+  if (mode === "dead" || mode === "won") {
+    foot.x = p.x;
+    foot.y = p.y;
+    return;
+  }
+  walkTo(foot, p.x, p.y);
+}
+
+function onPointerUp(e) {
+  suppress.delete(e.pointerId);
+  const foot = feet.get(e.pointerId);
+  upsertMark(foot);
+  feet.delete(e.pointerId);
+  if (feet.size === 0 && hadFeet && mode === "play") bothUpAt = time;
+}
+
+function startGame() {
+  if (mode !== "ready") return;
+  mode = "play";
+  goTimer = 1.05;
+  bothUpAt = 0;
+}
+
+function hurt() {
+  if (mode !== "play" || hearts <= 0) return;
+  hearts -= 1;
+  flash = 1;
+  const idx = hearts;
+  heartBreak[idx] = 1;
+  emitHeart(idx);
+  if (hearts <= 0) pendingDead = true;
+}
+
+function emitHeart(index) {
+  const hs = heartScale();
+  const hw = 5 * (8 * hs + 4) - 4;
+  const x0 = ((artW - hw) / 2) | 0;
+  const x = x0 + index * (8 * hs + 4) + 4 * hs;
+  const y = 6 + 4 * hs;
+  for (let row = 0; row < HEART.length; row++) {
+    for (let col = 0; col < 8; col++) {
+      if (HEART[row][col] !== "1") continue;
+      if (hash(index, row, col) % 3 === 0) continue;
+      particles.push({
+        x: x + col * hs,
+        y: y + row * hs,
+        vx: (hash(col, row, index) % 21 - 10) * 0.35,
+        vy: -((hash(row, col, 4) % 12) + 4) * 0.2,
+        life: 0.45 + (hash(col, row, 2) % 20) / 80,
+        age: 0,
+        color: hash(col, row, 1) % 2 ? "#ff4058" : "#ffd0d8",
+        s: hs > 2 ? 2 : 1,
+        world: false,
+        g: 18
+      });
+    }
+  }
+}
+
+function win() {
+  if (mode !== "play") return;
+  mode = "won";
+  winBurst = 1.4;
+  for (let i = 0; i < 70; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const sp = 20 + Math.random() * 70;
+    particles.push({
+      x: artW / 2 + (Math.random() - 0.5) * gridW * 0.4,
+      y: gridTop + 30 + Math.random() * 20,
+      vx: Math.cos(ang) * sp,
+      vy: Math.sin(ang) * sp - 20,
+      life: 0.8 + Math.random() * 0.7,
+      age: 0,
+      color: ["#fff0a0", "#ffb000", "#ff5020", "#ffffff", "#7dffb0"][i % 5],
+      s: i % 3 === 0 ? 3 : 2,
+      world: false,
+      g: 30
+    });
+  }
+}
+
+function restart() {
+  for (const id of feet.keys()) suppress.add(id);
+  feet.clear();
+  buildLevel();
+}
+
+function desiredCamera() {
+  pruneMarks();
+  let front = rows - 1;
+  let back = 0;
+  const marks = lastMarks.length ? lastMarks : [{ c: (cols / 2) | 0, r: rows - 1 }];
+  for (const m of marks) {
+    front = Math.min(front, m.r);
+    back = Math.max(back, m.r);
+  }
+  let cam = front * tile - Math.floor(viewH * 0.60);
+  const camKeepBack = back * tile + tile - viewH + 6;
+  if (cam < camKeepBack) cam = camKeepBack;
+  return clamp(cam | 0, 0, maxCamera);
+}
+
+function beginCameraAnim() {
+  const to = desiredCamera();
+  const from = cameraY | 0;
+  if (Math.abs(to - from) < 2) {
+    cameraY = to;
+    cameraAnim = null;
+    return;
+  }
+  const dist = Math.abs(to - from);
+  cameraAnim = { from, to, t: 0, dur: clamp(0.32 + dist / 700, 0.32, 0.65) };
+}
+
+function snapCamera() {
+  if (!cameraAnim) return;
+  cameraY = cameraAnim.to;
+  cameraAnim = null;
+}
+
+function crowded() {
+  if (mode !== "play" || feet.size < 2 || cameraY <= tile) return false;
+  let frontY = Infinity;
+  for (const f of feet.values()) frontY = Math.min(frontY, f.y);
+  return (frontY - gridTop) < viewH * 0.34;
+}
+
+/* ------------------------------ sim -------------------------------- */
+
+function update(dt) {
+  time += dt;
+  if (flash > 0) flash = Math.max(0, flash - dt * 2.4);
+  if (goTimer > 0) goTimer = Math.max(0, goTimer - dt);
+  if (winBurst > 0) winBurst = Math.max(0, winBurst - dt);
+  for (let i = 0; i < 5; i++) if (heartBreak[i] > 0) heartBreak[i] = Math.max(0, heartBreak[i] - dt * 1.7);
+
+  if (cameraAnim) {
+    cameraAnim.t += dt;
+    const u = clamp(cameraAnim.t / cameraAnim.dur, 0, 1);
+    const e = 1 - (1 - u) * (1 - u);
+    cameraY = Math.round(cameraAnim.from + (cameraAnim.to - cameraAnim.from) * e);
+    if (u >= 1) {
+      cameraY = cameraAnim.to;
+      cameraAnim = null;
+    }
+  } else if (mode === "play" && feet.size === 0 && hadFeet && bothUpAt && time - bothUpAt > 0.18) {
+    beginCameraAnim();
+    bothUpAt = 0;
+  }
+
+  // Warnings resolve continuously so the telegraph is readable.
+  let ignited = false;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = grid[r][c];
+      if (cell.suppress > 0) cell.suppress = Math.max(0, cell.suppress - dt);
+      if (cell.fade > 0) cell.fade = Math.max(0, cell.fade - dt);
+      if (cell.pop > 0) cell.pop = Math.max(0, cell.pop - dt);
+      if (cell.warn > 0) {
+        cell.warn -= dt;
+        if (cell.warn <= 0) {
+          cell.warn = 0;
+          if (cell.heat >= 0.48 && cell.suppress <= 0) {
+            ignite(c, r, false);
+            ignited = true;
+          }
+        }
+      }
+    }
+  }
+  if (ignited) ensureRoute();
+
+  if (mode === "ready" || mode === "play") {
+    tickIn -= dt;
+    if (tickIn <= 0) {
+      fillStep();
+      ensureRoute();
+      const prog = frontProgress();
+      tickIn = (0.42 + Math.random() * 0.2) * (1 - prog * 0.22);
+    }
+  }
+
+  if (mode === "ready" && feet.size === 2) {
+    let ok = true;
+    for (const f of feet.values()) {
+      if (f.col < 0 || f.row < rows - startRows) ok = false;
+    }
+    if (ok) startGame();
+  }
+
+  if (pendingDead) {
+    pendingDead = false;
+    if (hearts <= 0 && mode === "play") mode = "dead";
+  }
+
+  // Embers on visible lava.
+  if (particles.length < 70 && (mode === "play" || mode === "ready")) {
+    const r0 = Math.max(0, Math.floor(cameraY / tile) - 1);
+    const r1 = Math.min(rows - 1, Math.floor((cameraY + viewH) / tile) + 1);
+    if (Math.random() < 0.85) {
+      const r = r0 + (Math.random() * (r1 - r0 + 1)) | 0;
+      const c = (Math.random() * cols) | 0;
+      if (grid[r] && grid[r][c] && grid[r][c].lava) {
+        particles.push({
+          x: c * tile + 2 + Math.random() * (tile - 4),
+          y: r * tile + Math.random() * tile,
+          vx: (Math.random() - 0.5) * 6,
+          vy: -10 - Math.random() * 16,
+          life: 0.4 + Math.random() * 0.5,
+          age: 0,
+          color: Math.random() < 0.5 ? "#ffd060" : "#ff6820",
+          s: 1,
+          world: true,
+          g: 0
+        });
+      }
+    }
+  }
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.age += dt;
+    if (p.age >= p.life) {
+      particles.splice(i, 1);
+      continue;
+    }
+    p.vy += (p.g || 0) * dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+  }
+
+  for (const f of feet.values()) {
+    if (f.step > 0) f.step = Math.max(0, f.step - dt * 4.5);
+  }
+
+  if (mode === "won" && particles.length < 110) {
+    const n = Math.random() < 0.5 ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      particles.push({
+        x: gridX + 8 + Math.random() * (gridW - 16),
+        y: gridTop + 4 + Math.random() * 36,
+        vx: (Math.random() - 0.5) * 50,
+        vy: 12 + Math.random() * 48,
+        life: 0.9 + Math.random() * 0.6,
+        age: 0,
+        color: ["#fff0a0", "#ffb000", "#ffffff", "#ff5020", "#7dffb0"][(Math.random() * 5) | 0],
+        s: Math.random() < 0.4 ? 3 : 2,
+        world: false,
+        g: 16
+      });
+    }
+  }
+}
+
+function spawnSparks(x, y, color, n) {
+  for (let i = 0; i < n; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 40,
+      vy: (Math.random() - 0.5) * 40,
+      life: 0.18 + Math.random() * 0.2,
+      age: 0,
+      color,
+      s: 1,
+      world: false,
+      g: 0
+    });
+  }
+}
+
+/* ------------------------------ render ----------------------------- */
+
+function heartScale() {
+  if (artW < 280 || artH < 220) return 2;
+  if (artW >= 640 && artH >= 300) return 4;
+  return 3;
+}
+
+function drawHeartIcon(g, x, y, scale, filled, brk) {
+  const wob = brk > 0 ? ((hash((brk * 20) | 0, x, y) % 3) - 1) : 0;
+  for (let row = 0; row < HEART.length; row++) {
+    for (let col = 0; col < 8; col++) {
+      if (HEART[row][col] !== "1") continue;
+      if (brk > 0.65 && ((col + row) % 2 === 0)) continue;
+      let color = filled ? "#e02040" : "#3a2430";
+      if (filled && row < 2 && col > 0 && col < 3) color = "#ff8090";
+      if (!filled && (row === 0 || col === 0 || col === 7 || HEART[Math.min(7, row + 1)][col] !== "1")) {
+        color = "#6a4450";
+      }
+      if (brk > 0 && filled) color = brk > 0.5 ? "#fff0a0" : "#ff4060";
+      g.fillStyle = color;
+      g.fillRect(x + wob + col * scale, y + row * scale, scale, scale);
+    }
+  }
+}
+
+function drawHearts(g) {
+  const hs = heartScale();
+  const gap = 4;
+  const hw = 5 * (8 * hs + gap) - gap;
+  let x = ((artW - hw) / 2) | 0;
+  const y = 4;
+  if (ui.full && x + hw > ui.full.x - 4) x = 8;
+  for (let i = 0; i < 5; i++) {
+    const filled = i < hearts;
+    drawHeartIcon(g, x, y, hs, filled || heartBreak[i] > 0, heartBreak[i]);
+    x += 8 * hs + gap;
+  }
+}
+
+function drawFoot(g, x, y, side, step, scale) {
+  const sc = scale || 1;
+  const squash = step > 0 ? step : 0;
+  const w = (7 + (squash > 0.4 ? 2 : 0)) * sc;
+  const h = (9 - (squash > 0.4 ? 2 : 0)) * sc;
+  const left = (x - w / 2) | 0;
+  const top = (y - h + 2 * sc) | 0;
+  g.fillStyle = side < 0 ? "#17304a" : "#4a3010";
+  g.fillRect(left - sc, top - sc, w + sc * 2, h + sc * 2);
+  g.fillStyle = side < 0 ? "#9ad7ff" : "#ffd36a";
+  g.fillRect(left, top, w, h);
+  g.fillStyle = "#fff8e0";
+  g.fillRect(left + sc, top + sc, w - sc * 2, sc * 2);
+  g.fillStyle = "#1a1014";
+  const notch = side < 0 ? left + sc : left + w - sc * 3;
+  g.fillRect(notch, top + 3 * sc, sc * 2, sc * 2);
+  g.fillRect(left + 2 * sc, top + h - 3 * sc, Math.max(sc, w - 4 * sc), sc * 2);
+}
+
+function drawWarning(g, dx, dy, cell) {
+  const t = cell.warn;
+  const urgent = t < 0.4;
+  const blink = urgent ? (Math.floor(time * 18) % 2 === 0) : (Math.floor(time * 8) % 2 === 0);
+  g.fillStyle = blink ? "#ffb000" : "#ff4a00";
+  const m = urgent ? 0 : 1;
+  // outline
+  for (let i = m; i < tile - m; i += 2) {
+    g.fillRect(dx + i, dy + m, 1, 1);
+    g.fillRect(dx + i, dy + tile - 1 - m, 1, 1);
+    g.fillRect(dx + m, dy + i, 1, 1);
+    g.fillRect(dx + tile - 1 - m, dy + i, 1, 1);
+  }
+  // cracks
+  g.fillStyle = blink ? "#ffe080" : "#c03000";
+  const seed = hash(dx, dy, 5);
+  const y1 = 3 + (seed % (tile - 6));
+  for (let x = 2; x < tile - 2; x++) {
+    const yy = y1 + ((hash(x, seed, 2) % 3) - 1);
+    if (x % 2 === 0) g.fillRect(dx + x, dy + yy, 1, 1);
+  }
+  const x1 = 3 + ((seed >> 3) % (tile - 6));
+  for (let y = 2; y < tile - 2; y++) {
+    if (y % 2 === 0) g.fillRect(dx + x1 + (y % 4 === 0 ? 1 : 0), dy + y, 1, 1);
+  }
+}
+
+function drawBubbles(g, c, r, dx, dy) {
+  for (let i = 0; i < 3; i++) {
+    const seed = hash(c, r, i + 11);
+    const period = 0.9 + (seed % 80) / 100;
+    const phase = (seed % 997) / 997;
+    const u = (time / period + phase) % 1;
+    if (u > 0.82) continue;
+    const bx = 3 + (seed % Math.max(1, tile - 7));
+    const by = (tile - 4) - u * (tile - 6);
+    g.fillStyle = u > 0.62 ? "#fff4c0" : "#ffb020";
+    const s = u > 0.7 ? 2 : 1;
+    g.fillRect(dx + bx, dy + (by | 0), s, s);
+  }
+}
+
+function drawFadeLava(g, c, r, dx, dy, fade) {
+  const frame = lavaFrames[Math.floor(time * 9) % LAVA_FRAMES];
+  if (!frame) return;
+  const inset = ((1 - fade) * tile * 0.48) | 0;
+  const s = tile - inset * 2;
+  if (s <= 2) return;
+  const flow = Math.floor(time * 18);
+  blitWrap(g, frame, c * tile + inset + flow, r * tile + inset + Math.floor(flow * 0.65), s, s, dx + inset, dy + inset);
+}
+
+function drawZoneMarkers(g) {
+  // START / FINISH labels in world space, plus a pulsing pad outline.
+  const labels = [
+    { text: "START", row: rows - 1, color: "#b8ffc8", zone: "start" },
+    { text: "FINISH", row: 0, color: "#ffe080", zone: "finish" }
+  ];
+  for (const lab of labels) {
+    const sy = gridTop + lab.row * tile - cameraY;
+    if (sy < gridTop - tile || sy > gridTop + viewH) continue;
+    const scale = tile >= 34 ? 2 : 1;
+    const y = (sy + (tile * (lab.zone === "start" ? 0.15 : 0.2)) ) | 0;
+    if (y > gridTop && y < gridTop + viewH - 8) {
+      drawText(g, lab.text, gridX + gridW / 2, y, scale, lab.color, "center");
+    }
+  }
+
+  if (mode === "ready") {
+    const pulse = (Math.floor(time * 6) % 2) === 0;
+    g.fillStyle = pulse ? "#d8ffe4" : "#3ecf78";
+    for (let r = rows - startRows; r < rows; r++) {
+      const dy = (gridTop + r * tile - cameraY) | 0;
+      if (dy > gridTop + viewH || dy + tile < gridTop) continue;
+      for (let c = 0; c < cols; c++) {
+        const dx = gridX + c * tile;
+        for (let i = 0; i < tile; i += 2) {
+          g.fillRect(dx + i, dy, 1, 1);
+          g.fillRect(dx + i, dy + tile - 1, 1, 1);
+          g.fillRect(dx, dy + i, 1, 1);
+          g.fillRect(dx + tile - 1, dy + i, 1, 1);
+        }
+      }
+    }
+  }
+
+  // Checker ribbons
+  for (const spec of [
+    { row: rows - startRows, colorA: "#143828", colorB: "#3ecf78" },
+    { row: finishRows, colorA: "#3a2808", colorB: "#ffe080" }
+  ]) {
+    const dy = (gridTop + spec.row * tile - cameraY) | 0;
+    if (dy < gridTop - 4 || dy > gridTop + viewH) continue;
+    const y = clamp(dy, gridTop, gridTop + viewH - 3);
+    for (let x = 0; x < gridW; x += 4) {
+      const on = ((x >> 2) + Math.floor(time * 6)) % 2 === 0;
+      g.fillStyle = on ? spec.colorB : spec.colorA;
+      g.fillRect(gridX + x, y, 4, 3);
+    }
+  }
+}
+
+function drawMarks(g) {
+  if (mode !== "play" || feet.size > 0) return;
+  const pulse = (Math.floor(time * 5) % 2) === 0;
+  for (const m of lastMarks) {
+    const cell = grid[m.r][m.c];
+    if (!cell || cell.lava) continue;
+    const dx = gridX + m.c * tile;
+    const dy = (gridTop + m.r * tile - cameraY) | 0;
+    if (dy < gridTop - tile || dy > gridTop + viewH) continue;
+    const cx = dx + (tile / 2) | 0;
+    const cy = dy + (tile / 2) | 0;
+    drawFoot(g, cx, cy + 2, m.side, pulse ? 0.5 : 0);
+  }
+}
+
+function drawFeet(g) {
+  const arr = [...feet.values()].sort((a, b) => a.x - b.x);
+  arr.forEach((f, i) => {
+    const side = arr.length === 1 ? (f.x < gridX + gridW / 2 ? -1 : 1) : (i === 0 ? -1 : 1);
+    // tile cursor
+    if (f.col >= 0) {
+      const dx = gridX + f.col * tile;
+      const dy = (gridTop + f.row * tile - cameraY) | 0;
+      const cell = grid[f.row][f.col];
+      g.fillStyle = cell && cell.lava ? "#ff3a20" : (side < 0 ? "#9ad7ff" : "#ffd36a");
+      for (let k = 1; k < tile - 1; k += 2) {
+        g.fillRect(dx + k, dy + 1, 1, 1);
+        g.fillRect(dx + k, dy + tile - 2, 1, 1);
+        g.fillRect(dx + 1, dy + k, 1, 1);
+        g.fillRect(dx + tile - 2, dy + k, 1, 1);
+      }
+    }
+    if (f.y >= gridTop - 8 && f.y < gridTop + viewH + 12 && f.x >= gridX - 10 && f.x < gridX + gridW + 10) {
+      drawFoot(g, f.x, f.y, side, f.step, tile >= 32 ? 2 : 1);
+    }
+  });
+}
+
+function drawParticles(g) {
+  for (const p of particles) {
+    const a = 1 - p.age / p.life;
+    if (a <= 0) continue;
+    let x = p.x;
+    let y = p.y;
+    if (p.world) {
+      x = gridX + p.x;
+      y = gridTop + p.y - cameraY;
+      if (y < gridTop || y > gridTop + viewH) continue;
+    }
+    if ((((p.age * 12) | 0) % 2 === 1) && a < 0.35) continue;
+    g.fillStyle = p.color;
+    g.fillRect(x | 0, y | 0, p.s, p.s);
+  }
+}
+
+function drawDemoWalk(g, x, y) {
+  const phase = (time * 1.6) % 2;
+  const leftStep = phase < 1;
+  const bobL = leftStep ? -5 : 0;
+  const bobR = leftStep ? 0 : -5;
+  drawFoot(g, x - 40, y + bobL, -1, leftStep ? 0.8 : 0, 3);
+  drawFoot(g, x + 34, y + bobR, 1, leftStep ? 0 : 0.8, 3);
+  g.fillStyle = "#4a4044";
+  g.fillRect(x - 48, y + 16, 10, 3);
+  g.fillRect(x - 16, y + 16, 10, 3);
+  g.fillRect(x + 8, y + 16, 10, 3);
+  g.fillRect(x + 34, y + 16, 10, 3);
+}
+
+function drawReady(g) {
+  const scaleTitle = textWidth("THE FLOOR IS LAVA", 3) < artW - 24 ? 3 : 2;
+  const line1 = "WALK WITH TWO FINGERS.";
+  const line2 = "ONLY STEP TO A NEIGHBOR.";
+  const s1 = textWidth(line1, 2) < artW - 36 ? 2 : 1;
+  const demoH = 48;
+  const blockH = 14 + 7 * scaleTitle + 12 + demoH + 10 + 7 * s1 + 6 + 7 * s1 + 12;
+  let bw = Math.min(artW - 20, Math.max(textWidth("THE FLOOR IS LAVA", scaleTitle), textWidth(line1, s1)) + 36);
+  let bx = ((artW - bw) / 2) | 0;
+  let by = (gridTop + 8) | 0;
+  // Keep the start pad uncovered.
+  const startScreen = gridTop + (rows - startRows) * tile - cameraY;
+  if (by + blockH > startScreen - 8) by = Math.max(gridTop + 2, startScreen - blockH - 8);
+  panel(g, bx, by, bw, blockH, "#ffb040");
+  let ty = by + 10;
+  drawText(g, "THE FLOOR IS LAVA", artW / 2, ty, scaleTitle, "#ffe080", "center");
+  ty += 7 * scaleTitle + 12;
+  drawDemoWalk(g, (artW / 2) | 0, ty + 6);
+  ty += demoH;
+  drawText(g, line1, artW / 2, ty, s1, "#fff4d2", "center");
+  ty += 7 * s1 + 6;
+  drawText(g, line2, artW / 2, ty, s1, "#ff8040", "center");
+
+  if (feet.size > 0 && feet.size < 2) {
+    const msg = "PLACE BOTH FEET ON START";
+    const sc = textWidth(msg, 2) < artW - 16 ? 2 : 1;
+    drawText(g, msg, artW / 2, (gridTop + viewH - 7 * sc - 8) | 0, sc, "#d8ffe4", "center");
+  } else if (feet.size === 2) {
+    let onStart = true;
+    for (const f of feet.values()) if (f.row < rows - startRows || f.col < 0) onStart = false;
+    if (!onStart) {
+      const msg = "BOTH FEET ON START";
+      const sc = textWidth(msg, 2) < artW - 16 ? 2 : 1;
+      drawText(g, msg, artW / 2, (gridTop + viewH - 7 * sc - 8) | 0, sc, "#ffe080", "center");
+    }
+  }
+}
+
+function drawLiftHint(g) {
+  if (!crowded()) return;
+  const line1 = "LIFT BOTH FEET";
+  const line2 = "TO MOVE ON";
+  const sc = textWidth(line1, 3) < artW - 24 ? 3 : 2;
+  const w = textWidth(line1, sc) + 28;
+  const h = 7 * sc * 2 + 28;
+  const x = ((artW - w) / 2) | 0;
+  const y = (gridTop + viewH * 0.34) | 0;
+  panel(g, x, y, w, h, "#7dffb0");
+  drawText(g, line1, artW / 2, y + 8, sc, "#e8ffe8", "center");
+  drawText(g, line2, artW / 2, y + 14 + 7 * sc, sc, "#ffe080", "center");
+  // chevrons
+  const bob = (Math.floor(time * 6) % 2) ? 3 : 0;
+  g.fillStyle = "#d8ffe4";
+  for (const cx of [x - 16, x + w + 8]) {
+    g.fillRect(cx + 2, y + h / 2 - 8 + bob, 2, 2);
+    g.fillRect(cx, y + h / 2 - 4 + bob, 6, 2);
+    g.fillRect(cx + 2, y + h / 2 + bob, 2, 2);
+    g.fillRect(cx, y + h / 2 + 4 + bob, 6, 2);
+  }
+}
+
+function drawBanner(g, title, sub, accent) {
+  // dither veil
+  g.fillStyle = "#12080c";
+  for (let y = 0; y < artH; y += 2) {
+    for (let x = (y >> 1) & 1; x < artW; x += 2) g.fillRect(x, y, 1, 1);
+  }
+  const sc = textWidth(title, 4) < artW - 20 ? 4 : (textWidth(title, 3) < artW - 16 ? 3 : 2);
+  const h = 7 * sc + 70;
+  const w = Math.min(artW - 16, Math.max(textWidth(title, sc) + 32, 180));
+  const x = ((artW - w) / 2) | 0;
+  const y = ((artH - h) / 2 - 10) | 0;
+  panel(g, x, y, w, h, accent);
+  drawText(g, title, artW / 2, y + 14, sc, accent, "center");
+  if (sub) drawText(g, sub, artW / 2, y + 22 + 7 * sc, 2, "#fff4d2", "center");
+  const label = mode === "won" ? "PLAY AGAIN" : "TRY AGAIN";
+  const bsc = textWidth(label, 3) + 28 < w ? 3 : 2;
+  ui.retry = buttonRect(label, artW / 2, y + h - 28, bsc);
+  // keep inside panel
+  if (ui.retry.y + ui.retry.h > y + h - 6) {
+    ui.retry = buttonRect(label, artW / 2, y + h - 8 - ui.retry.h / 2, bsc);
+  }
+  drawButton(g, ui.retry, false);
+}
+
+function drawGo(g) {
+  if (goTimer <= 0 || mode !== "play") return;
+  const sc = 4;
+  const blink = goTimer > 0.25 || (Math.floor(time * 16) % 2 === 0);
+  if (!blink) return;
+  drawText(g, "GO!", artW / 2, (gridTop + viewH * 0.42) | 0, sc, "#fff4d0", "center");
+}
+
+function drawFullscreen(g) {
+  if (!canFullscreen()) {
+    ui.full = null;
+    return;
+  }
+  const label = isFullscreen() ? "EXIT" : "FULL";
+  const sc = 1;
+  const w = textWidth(label, sc) + 12;
+  const h = 7 * sc + 8;
+  ui.full = { x: artW - w - 4, y: 3, w, h, label, scale: sc };
+  g.fillStyle = "#2a1c22";
+  g.fillRect(ui.full.x, ui.full.y, w, h);
+  g.fillStyle = "#f0d080";
+  g.fillRect(ui.full.x, ui.full.y, w, 1);
+  g.fillRect(ui.full.x, ui.full.y, 1, h);
+  drawText(g, label, ui.full.x + 6, ui.full.y + 4, sc, "#ffe8b0", "left");
+}
+
+let flashPat = null;
+function drawFlash(g) {
+  if (flash <= 0) return;
+  if (!flashPat) {
+    const c = document.createElement("canvas");
+    c.width = 4;
+    c.height = 4;
+    const pg = c.getContext("2d");
+    pg.fillStyle = "#ff2418";
+    pg.fillRect(0, 0, 2, 2);
+    pg.fillRect(2, 2, 2, 2);
+    flashPat = pg.createPattern(c, "repeat");
+  }
+  g.save();
+  g.globalAlpha = flash > 0.62 ? 0.9 : flash > 0.28 ? 0.55 : 0.28;
+  g.fillStyle = flashPat;
+  g.fillRect(0, 0, artW, artH);
+  g.restore();
+}
+
+function render() {
+  vctx.imageSmoothingEnabled = false;
+  vctx.fillStyle = "#12080c";
+  vctx.fillRect(0, 0, artW, artH);
+
+  // Ground
+  if (atlas) {
+    const srcH = Math.min(viewH, atlas.height - cameraY);
+    if (srcH > 0) {
+      vctx.drawImage(atlas, 0, cameraY | 0, gridW, srcH, gridX, gridTop, gridW, srcH);
+    }
+  }
+
+  const frame = lavaFrames[Math.floor(time * 9) % LAVA_FRAMES];
+  const r0 = Math.max(0, Math.floor(cameraY / tile) - 1);
+  const r1 = Math.min(rows - 1, Math.ceil((cameraY + viewH) / tile));
+  if (frame) {
+    for (let r = r0; r <= r1; r++) {
+      for (let c = 0; c < cols; c++) {
+        const cell = grid[r][c];
+        const dx = gridX + c * tile;
+        const dy = (gridTop + r * tile - cameraY) | 0;
+        if (dy >= gridTop + viewH || dy + tile <= gridTop) continue;
+        if (cell.lava) {
+          const flow = Math.floor(time * 22);
+          blitWrap(vctx, frame, c * tile + flow, r * tile + Math.floor(flow * 0.65), tile, tile, dx, dy);
+          if (cell.pop > 0) {
+            vctx.fillStyle = "#fff6c8";
+            vctx.fillRect(dx + 2, dy + 2, tile - 4, tile - 4);
+          }
+          drawBubbles(vctx, c, r, dx, dy);
+        } else if (cell.fade > 0) {
+          drawFadeLava(vctx, c, r, dx, dy, cell.fade);
+        }
+      }
+    }
+  }
+
+  // Grid lines keep tiles readable over the flow.
+  vctx.fillStyle = "#14080c";
+  for (let c = 0; c <= cols; c++) {
+    vctx.fillRect(gridX + c * tile, gridTop, 1, viewH);
+  }
+  for (let y = 0; y <= viewH; y += 1) {
+    const wy = cameraY + y;
+    if (wy % tile === 0) vctx.fillRect(gridX, gridTop + y, gridW, 1);
+  }
+
+  for (let r = r0; r <= r1; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = grid[r][c];
+      if (cell.warn > 0 && !cell.lava) {
+        const dx = gridX + c * tile;
+        const dy = (gridTop + r * tile - cameraY) | 0;
+        if (dy < gridTop + viewH && dy + tile > gridTop) drawWarning(vctx, dx, dy, cell);
+      }
+    }
+  }
+
+  // Frame
+  vctx.fillStyle = "#6a5848";
+  vctx.fillRect(gridX - 2, gridTop - 2, gridW + 4, 2);
+  vctx.fillRect(gridX - 2, gridTop + viewH, gridW + 4, 2);
+  vctx.fillRect(gridX - 2, gridTop - 2, 2, viewH + 4);
+  vctx.fillRect(gridX + gridW, gridTop - 2, 2, viewH + 4);
+
+  drawZoneMarkers(vctx);
+  drawMarks(vctx);
+  drawFeet(vctx);
+  drawParticles(vctx);
+  drawFullscreen(vctx);
+  drawHearts(vctx);
+
+  if (mode === "ready") drawReady(vctx);
+  if (mode === "play") {
+    drawLiftHint(vctx);
+    drawGo(vctx);
+  }
+  if (mode === "dead") drawBanner(vctx, "GAME OVER", hearts <= 0 ? "THE LAVA WINS" : "", "#ff4040");
+  else if (mode === "won") drawBanner(vctx, "YOU SURVIVED!", "NICE FEET", "#ffe080");
+  else ui.retry = null;
+
+  drawFlash(vctx);
+  blit();
+}
+
+function blit() {
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "#12080c";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(view, 0, 0, artW, artH, 0, 0, artW * pixel, artH * pixel);
+}
+
+function screenCssSize() {
+  const vv = window.visualViewport;
+  const w = vv && vv.width ? vv.width : window.innerWidth;
+  const h = vv && vv.height ? vv.height : window.innerHeight;
+  return {
+    w: Math.max(1, Math.round(w || screen.width || 768)),
+    h: Math.max(1, Math.round(h || screen.height || 1024))
+  };
+}
+
+/* ------------------------------ layout ----------------------------- */
+
+function layout(forceNew) {
+  const css = screenCssSize();
+  // Cap at 2 so a retina iPad does not allocate a canvas Safari will refuse to draw.
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const cssPerArt = css.w < 520 ? 3 : 2;
+  pixel = Math.max(1, Math.round(cssPerArt * dpr));
+  artW = Math.max(140, Math.floor((css.w * dpr) / pixel));
+  artH = Math.max(180, Math.floor((css.h * dpr) / pixel));
+  const maxEdge = 4096;
+  if (artW * pixel > maxEdge) pixel = Math.max(1, Math.floor(maxEdge / artW));
+  if (artH * pixel > maxEdge) pixel = Math.max(1, Math.floor(maxEdge / artH));
+  canvas.width = artW * pixel;
+  canvas.height = artH * pixel;
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+  view.width = artW;
+  view.height = artH;
+
+  const upright = css.h >= css.w;
+  const key = upright ? "portrait" : "landscape";
+  const needLevel = forceNew || !grid.length || builtKey !== key || (gridW > 0 && artW < gridW - 2);
+  if (!needLevel) {
+    gridTop = 6 + 8 * heartScale() + 8;
+    const bottomGap = 6;
+    viewH = Math.max(tile * 4, artH - gridTop - bottomGap);
+    gridX = Math.floor((artW - gridW) / 2);
+    maxCamera = Math.max(0, rows * tile - viewH);
+    cameraY = clamp(cameraY, 0, maxCamera);
+    if (cameraAnim) cameraAnim.to = clamp(cameraAnim.to, 0, maxCamera);
+    return;
+  }
+
+  builtKey = key;
+  gridTop = 6 + 8 * heartScale() + 8;
+  const bottomGap = 6;
+  const availW = Math.max(80, artW - 8);
+  // Upright iPad: fewer, larger tiles so two fingers fit across the width.
+  const target = upright ? 42 : 38;
+  const maxCols = upright ? 11 : 16;
+  cols = clamp(Math.round(availW / target), 7, maxCols);
+  tile = Math.floor(availW / cols);
+  if (tile > 48) {
+    cols = clamp(Math.ceil(availW / 44), 7, maxCols);
+    tile = Math.floor(availW / cols);
+  }
+  tile = Math.max(26, tile);
+  gridW = cols * tile;
+  gridX = Math.floor((artW - gridW) / 2);
+  viewH = Math.max(tile * 5, artH - gridTop - bottomGap);
+  const visible = Math.max(6, Math.floor(viewH / tile));
+  // Taller than the glass, short enough for one installation visit.
+  const extra = upright ? 0.7 : 0.9;
+  rows = visible + Math.round(visible * extra) + 2;
+  startRows = 2;
+  finishRows = 2;
+  maxCamera = Math.max(0, rows * tile - viewH);
+  buildLevel();
+}
+
+let lastTs = 0;
+function frame(ts) {
+  if (!lastTs) lastTs = ts;
+  const dt = Math.min(0.05, (ts - lastTs) / 1000);
+  lastTs = ts;
+  update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+
+let resizeTimer = 0;
+function onResize() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => layout(false), 120);
+}
+
+function prevent(e) {
+  if (e.cancelable) e.preventDefault();
+}
+
+canvas.addEventListener("pointerdown", onPointerDown, { passive: false });
+canvas.addEventListener("pointermove", onPointerMove, { passive: false });
+canvas.addEventListener("pointerup", onPointerUp, { passive: false });
+canvas.addEventListener("pointercancel", onPointerUp, { passive: false });
+canvas.addEventListener("contextmenu", prevent);
+document.addEventListener("touchstart", prevent, { passive: false });
+document.addEventListener("touchmove", prevent, { passive: false });
+document.addEventListener("touchend", prevent, { passive: false });
+document.addEventListener("gesturestart", prevent, { passive: false });
+document.addEventListener("gesturechange", prevent, { passive: false });
+document.addEventListener("gestureend", prevent, { passive: false });
+document.addEventListener("selectstart", prevent);
+window.addEventListener("resize", onResize);
+window.addEventListener("orientationchange", onResize);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", onResize);
+}
+
+buildLavaFrames();
+layout(true);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
