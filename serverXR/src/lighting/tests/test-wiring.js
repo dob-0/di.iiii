@@ -50,9 +50,11 @@ check('every control in the markup is read by the interface', () => {
   // rather than absent. Ids used only as CSS or scroll targets are the exception.
   // phoneBox is the labelled wrapper around #phoneList/#phoneQr, which are both read.
   const DECORATIVE = new Set(['statusStrip', 'phoneBox']);
+  // The stage modules from the studio desk read their own controls (objects.js: #objPill).
+  const pageJs = js + ['objects.js', 'markers.js', 'video.js'].map((f) => fs.readFileSync(path.join(ROOT, '../ui', f), 'utf8')).join('\n');
   const orphans = [...htmlIds].filter((id) =>
-    !DECORATIVE.has(id) && !js.includes(`'#${id}'`) && !js.includes(`"#${id}"`)
-    && !js.includes(`'${id}'`) && !js.includes(`getElementById('${id}')`));
+    !DECORATIVE.has(id) && !pageJs.includes(`'#${id}'`) && !pageJs.includes(`"#${id}"`)
+    && !pageJs.includes(`'${id}'`) && !pageJs.includes(`getElementById('${id}')`));
   if (orphans.length) throw new Error('rendered but never read: ' + orphans.join(', '));
 });
 
@@ -325,6 +327,44 @@ check('cueui.js + colorfxui.js: every api call has a route, and the page loads t
   for (const f of ['cueui.js', 'colorfxui.js']) if (!html.includes(`src="${f}"`)) throw new Error('index.html does not load ' + f);
   if (!html.includes('href="cuefx.css"')) throw new Error('index.html does not load cuefx.css');
   if (/'\/api\//.test(ui)) throw new Error('an absolute /api/ URL — the desk is mounted under /light');
+});
+
+// Stage objects, stage labels and the video layer (from the studio desk, 2026-11-06): their
+// own scripts, loaded after app.js in order, every api call routed, every address relative.
+check('objects.js + markers.js + video.js: loaded in order, every api call has a route, NDI named with its mark', () => {
+  const files = ['objcore.js', 'objects.js', 'markers.js', 'video.js'];
+  const ui = files.slice(1).map((f) => fs.readFileSync(path.join(ROOT, '../ui', f), 'utf8')).join('\n');
+  const routes = new Set([...server.matchAll(/'(?:GET|POST) (\/api\/[^']+)'/g)].map((m) => m[1]));
+  // video.js and objects.js name their routes as constants or literals; pixelmap.js defines two.
+  for (const r of ['/api/video', '/api/pixels']) routes.add(r);
+  const called = new Set([...ui.matchAll(/['"`](api\/[A-Za-z/_-]+)['"`]/g)].map((m) => '/' + m[1]));
+  for (const r of ['/api/objects', '/api/markers', '/api/video', '/api/pixels']) {
+    if (!called.has(r)) throw new Error('the page never calls ' + r + ' — the pattern is stale');
+  }
+  const missing = [...called].filter((r) => !routes.has(r));
+  if (missing.length) throw new Error('no such route: ' + missing.join(', '));
+  const pixelmap = fs.readFileSync(path.join(ROOT, '../pixelmap.js'), 'utf8');
+  for (const r of ["'POST /api/video'", "'POST /api/pixels'"]) if (!pixelmap.includes(r)) throw new Error('pixelmap.js has no ' + r);
+  if (!server.includes('...videoRoutes({ getState: () => state')) throw new Error('desk.js does not mount the video routes on the current state');
+  let at = html.indexOf('src="app.js"');
+  for (const f of files) {
+    const i = html.indexOf(`src="${f}"`);
+    if (i < 0) throw new Error('index.html does not load ' + f);
+    if (i < at) throw new Error(f + ' is loaded before the script it needs');
+    at = i;
+  }
+  if (html.indexOf('src="objects.js"') > html.indexOf('src="cueui.js"')) throw new Error('cueui.js needs deskNow from objects.js: load objects.js first');
+  for (const css of ['objects.css', 'markers.css', 'video.css']) if (!html.includes(`href="${css}"`)) throw new Error('index.html does not load ' + css);
+  if (/['"`]\/api\//.test(ui)) throw new Error('an absolute /api/ URL — the desk is mounted under /light');
+  if ((html.match(/class="tool objBtn"/g) || []).length !== 8) throw new Error('the Line/Radar/Ring/Spot tools are not on both stages');
+  // The NDI lane is the desk's sibling (…/light → …/ndi), and the product names NDI with its mark.
+  const video = fs.readFileSync(path.join(ROOT, '../ui/video.js'), 'utf8');
+  if (!/ndiBase\(\)\}api\/sources/.test(video) || !/'in\.mjpg\?name='/.test(video)) throw new Error('video.js no longer reads di.iiii\'s own NDI receiver');
+  if (!video.includes('NDI® is a registered trademark of Vizrt NDI AB') || !video.includes('https://ndi.video')) throw new Error('where NDI is picked, its trademark line and ndi.video must show (docs/architecture/NDI.md)');
+  for (const g of ['viewOf', 'snapv', 'objectsPostedAt', 'markersPostedAt']) {
+    if (!new RegExp(`\\n(const|let) ${g}\\b`).test(js)) throw new Error('app.js no longer declares ' + g + ', which the stage modules read');
+  }
+  if (!js.includes('window.VideoMap.place()')) throw new Error('placeStages no longer places the video under the lights');
 });
 
 // Review fixes (2026-09-24). A light may carry an effect of its own; a rig-wide FX pad,

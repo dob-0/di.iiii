@@ -77,7 +77,9 @@
         "objects",
         "objectKinds",
         "markers",
-        "serverNow"
+        "serverNow",
+        "video",
+        "videoLive"
       ],
       "status": [
         "identifying",
@@ -1032,6 +1034,69 @@
       "reply": {
         "ok": "boolean",
         "cue": "object|null"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/video",
+      "class": "c",
+      "reply": {
+        "ok": "boolean",
+        "video": "object"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/pixels",
+      "class": "c",
+      "reply": {
+        "ok": "boolean"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/objects",
+      "class": "c",
+      "reply": {
+        "ok": "boolean",
+        "objects": "array"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/markers",
+      "class": "c",
+      "reply": {
+        "ok": "boolean",
+        "markers": "array"
       },
       "node": {
         "status": 404,
