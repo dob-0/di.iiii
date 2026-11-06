@@ -18,7 +18,7 @@
   let skewOf = null, skew = 0;
   const nowDesk = () => {
     if (typeof deskNow === 'function') return deskNow();
-    if (S && S !== skewOf && Number.isFinite(S.now)) { skewOf = S; skew = S.now - Date.now(); }
+    if (S && S !== skewOf && Number.isFinite(S.serverNow)) { skewOf = S; skew = S.serverNow - Date.now(); }
     return Date.now() + skew;
   };
   const secs = (ms) => {
