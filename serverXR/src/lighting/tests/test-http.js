@@ -2084,6 +2084,64 @@ check('stage objects, labels, follow times and the colour effect: set, published
   await POST('/api/scenes/remove', { ids: [a.id, b.id] });
 });
 
+// Video pixel-mapping (from the studio desk, ported 2026-11-06): the page that owns the
+// picture posts colours ~30 a second; the desk blends them over the look and lets go of them
+// a second after they stop. The setting persists; the colours never do.
+check('the video layer: a mapped light takes the posted colour, lets go when the page stops, and the colours never reach the show', async () => {
+  await POST('/api/master', { master: 255, blackout: false });
+  const f = await patch('rgb', { universe: 40, address: 1 });
+  await POST('/api/fixture', { id: f.id, values: { r: 0, g: 0, b: 255 } });
+  let r = await POST('/api/video', { x: -10, y: -10, w: 20, h: 20, mix: 255, on: true });
+  assert.strictEqual(r.status, 200, r.text);
+  assert.strictEqual(r.body.video.on, true);
+  r = await POST('/api/pixels', { colors: { [f.id]: [255, 0, 0], ghost: [1, 2, 3] }, source: 'Test patterns' });
+  assert.strictEqual(r.status, 200, r.text);
+  assert.strictEqual(r.body.count, 1, 'a colour for a fixture that does not exist is dropped');
+  await settle();
+  assert.deepStrictEqual([await wire(40, 1), await wire(40, 2), await wire(40, 3)], [255, 0, 0], 'the video colour is on the wire');
+  const st = (await GET('/api/state')).body;
+  assert.strictEqual(st.videoLive.fresh, true);
+  assert.strictEqual(st.videoLive.count, 1);
+  assert.strictEqual(st.videoLive.source, 'Test patterns');
+  assert.strictEqual(st.video.on, true, 'the setting is in the state');
+  assert.ok(!('pixels' in st), 'the live colours are not');
+  assert.strictEqual(typeof st.serverNow, 'number', 'the desk clock the stage animates on');
+  await sleep(1300);
+  assert.deepStrictEqual([await wire(40, 1), await wire(40, 3)], [0, 255], 'a second after the last colours the look is back by itself');
+  assert.strictEqual((await GET('/api/state')).body.videoLive.fresh, false);
+  // Blackout still takes a pixel-mapped light to black.
+  await POST('/api/pixels', { colors: { [f.id]: [255, 0, 0] } });
+  await POST('/api/master', { blackout: true });
+  await settle();
+  assert.strictEqual(await wire(40, 1), 0, 'blackout wins over the video');
+  await POST('/api/master', { blackout: false });
+  // tidy
+  await POST('/api/video', { on: false });
+  await POST('/api/fixtures/remove', { ids: [f.id] });
+});
+
+check('the video routes follow a show switch: a space keeps its own video setting and gets its own live colours', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/video', { x: 0.1, y: 0.1, w: 0.5, h: 0.5, mix: 200, on: true });
+    await d.post('/api/show/open', { space: 'lab' });
+    let st = (await d.get('/api/state')).body;
+    assert.strictEqual(st.video.on, false, 'a space starts with a video setting of its own');
+    const r = await d.post('/api/video', { mix: 77, on: true, w: 1, h: 1 });
+    assert.strictEqual(r.body.video.mix, 77);
+    const added = (await d.post('/api/fixtures/add', { profile: 'rgb', count: 1 })).body.added[0];
+    const px = await d.post('/api/pixels', { colors: { [added.id]: [9, 9, 9] } });
+    assert.strictEqual(px.body.count, 1, 'the colours land on the show that is loaded');
+    st = (await d.get('/api/state')).body;
+    assert.strictEqual(st.video.mix, 77, 'the route edited the show that is loaded, not the one it started with');
+    assert.strictEqual(st.videoLive.count, 1);
+    await d.post('/api/show/open', { space: null });
+    st = (await d.get('/api/state')).body;
+    assert.strictEqual(st.video.mix, 200, 'the machine show kept its own setting');
+    assert.strictEqual(st.videoLive.count, 0, 'and the space\'s live colours did not come along');
+  } finally { await d.stop(); }
+});
+
 // ---- review fixes (2026-09-24): a failed save never loses the guard, the rig or the show
 
 check('a save that failed after an empty boot still keeps aside a show that turned up before the retry', async () => {

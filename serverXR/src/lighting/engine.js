@@ -14,7 +14,9 @@ const { planStrip, claimedRanges, renderStrip } = require('./pixelstrip');
 // the very same geometry the engine lights them with.
 const { CueRunner } = require('./cues');
 const { colorFxFrame, colorFxVal, sanitizeColorFx } = require('./colorfx');
-const { objectsFrame, objectsLevelAt, sanitizeObjects } = require('./ui/objcore');
+const { objectsFrame, objectsLevelAt, sanitizeObjects, restartOnce } = require('./ui/objcore');
+// Video pixel-mapping (from the studio desk): a light under the picture takes its colour.
+const { pixelVal } = require('./pixelmap');
 
 // Roles that step, never fade (snapMask).
 const STEP_ROLES = new Set(['color', 'gobo', 'prism', 'rotation', 'frost', 'strobe', 'control', 'aux1', 'aux2']);
@@ -421,9 +423,12 @@ class Engine {
         if (lv && lv[role] != null) return lv[role];
         return f.values[role];
       };
-      // A colour effect recolours whatever the stack, the LFOs or the stored look left
-      // there. Order: look → colour FX → brightness FX / objects / audio → master, blackout.
-      const val = colorFxVal(cfxFrame, f, baseVal);
+      // A light under the video takes its pixel colour, blended over the look by the video's
+      // mix (pixelmap.js), BEFORE master/blackout/limits/FX below — so those still reach it.
+      // Then a colour effect recolours whatever the stack, the LFOs, the stored look or the
+      // video left there. Order: look → video → colour FX → brightness FX / objects / audio →
+      // master, blackout.
+      const val = colorFxVal(cfxFrame, f, pixelVal(state, f, profile, excluded, now, baseVal));
       const headPT = heads && heads.has(f.id) ? headsPose(heads.get(f.id), profile.channels, val) : null;
       const flash = ident(f.id);
       const level = flash != null ? flash * 255 : (f.on === false ? 0 : (val('dimmer') ?? 255));
@@ -779,7 +784,8 @@ class Engine {
     // without one leaves the current setting alone.
     if (scene.audioCfg) this.state.audioCfg = sanitizeAudioCfg(scene.audioCfg);
     // Objects: a scene that carries them replaces the list; one without leaves them running.
-    if (Array.isArray(scene.objects)) this.state.objects = sanitizeObjects(scene.objects) || [];
+    // A run-once object in the scene starts from the top on the recall (objcore.js restartOnce).
+    if (Array.isArray(scene.objects)) this.state.objects = restartOnce(sanitizeObjects(scene.objects) || [], Date.now());
     if (scene.colorFx) this.state.colorFx = sanitizeColorFx(this.state.colorFx, scene.colorFx);
     this.state.activeScene = scene.id;
     this.announceScene(scene, meta);
