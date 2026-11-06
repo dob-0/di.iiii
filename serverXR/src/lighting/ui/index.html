@@ -7,6 +7,10 @@
 <meta name="color-scheme" content="dark">
 <title>Light</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="cuefx.css"><!-- follow times + colour effects (from the studio desk) -->
+<link rel="stylesheet" href="objects.css"><!-- stage objects (from the studio desk) -->
+<link rel="stylesheet" href="markers.css"><!-- stage labels (from the studio desk) -->
+<link rel="stylesheet" href="video.css"><!-- video pixel-mapping (from the studio desk) -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='9' fill='%2335d2dd'/></svg>">
 </head>
 <body>
@@ -57,8 +61,10 @@
   <!-- The pills and the panic button live outside .title because .title is hidden on a
        narrow screen. These are the things you most need on a phone at the desk. -->
   <div class="pills">
+    <button id="savePill" class="wirepill stale" hidden title="The show file could not be saved"></button>
     <button id="fxPill" class="fxpill" hidden title="An effect is running on every fixture — go to the Control page to change or stop it"></button>
     <button id="lfoPill" class="fxpill" hidden title="An LFO is riding channels on top of the look — go to the Control page to change or stop it"></button>
+    <button id="objPill" class="fxpill" hidden title="Objects on the stage are shaping the lights — go to the Control page to change them"></button>
     <button id="heldPill" class="heldpill" hidden title="Manual faders are overriding the fixtures — go to the Fader page to release them"></button>
     <button id="wirePill" class="wirepill" hidden title="Output"></button>
     <!-- DMX input: is a console driving this desk right now? Said on every page, like
@@ -298,6 +304,12 @@
         <button class="tool colBtn" title="Arrange selection in a column">⇵</button>
         <button class="tool gridBtn" title="Arrange selection in a grid">⊞</button>
         <button class="tool circleBtn" title="Arrange selection in a circle">◎</button>
+        <span class="sep"></span>
+        <span class="toolnote">Objects</span>
+        <button class="tool objBtn" data-obj="line" title="Line — a bar that sweeps across the lights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M7 8l-3 4 3 4M17 8l3 4-3 4"/></svg></button>
+        <button class="tool objBtn" data-obj="radar" title="Radar — a beam turning round its centre"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12l6.4-6.4"/><path d="M12 12V3"/></svg></button>
+        <button class="tool objBtn" data-obj="ring" title="Ring — a circle growing out of a point"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg></button>
+        <button class="tool objBtn" data-obj="spot" title="Spot — lights what is under it"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="currentColor" fill-opacity=".35"/></svg></button>
         <span class="sep"></span>
         <button class="tool zoomOut" aria-label="Zoom out">⊖</button>
         <input type="range" class="zoom" aria-label="Zoom" min="25" max="400" value="100">
@@ -650,6 +662,12 @@
         <button class="tool colBtn" title="Arrange selection in a column">⇵</button>
         <button class="tool gridBtn" title="Arrange selection in a grid">⊞</button>
         <button class="tool circleBtn" title="Arrange selection in a circle">◎</button>
+        <span class="sep"></span>
+        <span class="toolnote">Objects</span>
+        <button class="tool objBtn" data-obj="line" title="Line — a bar that sweeps across the lights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M7 8l-3 4 3 4M17 8l3 4-3 4"/></svg></button>
+        <button class="tool objBtn" data-obj="radar" title="Radar — a beam turning round its centre"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12l6.4-6.4"/><path d="M12 12V3"/></svg></button>
+        <button class="tool objBtn" data-obj="ring" title="Ring — a circle growing out of a point"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg></button>
+        <button class="tool objBtn" data-obj="spot" title="Spot — lights what is under it"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="currentColor" fill-opacity=".35"/></svg></button>
         <span class="sep"></span>
         <button class="tool zoomOut" aria-label="Zoom out">⊖</button>
         <input type="range" class="zoom" aria-label="Zoom" min="25" max="400" value="100">
@@ -1050,5 +1068,12 @@
 <script src="dmxfeed.js"></script>
 <script src="ask.js"></script>
 <script src="app.js"></script>
+<script src="objcore.js"></script><!-- the stage objects' geometry: shared with the engine -->
+<script src="objects.js"></script><!-- stage objects: Line, Radar, Ring, Spot -->
+<script src="markers.js"></script><!-- stage labels: names on the stage, no DMX -->
+<script src="video.js"></script><!-- video pixel-mapping on the stage -->
+<script src="cuecore.js"></script><!-- where a follow goes on to: shared with the server's cues.js -->
+<script src="cueui.js"></script><!-- follow times: the Follow… editor, badges, the running step -->
+<script src="colorfxui.js"></script><!-- colour effect pads -->
 </body>
 </html>
