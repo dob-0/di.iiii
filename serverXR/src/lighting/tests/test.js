@@ -2087,7 +2087,7 @@ check('colorfx: hue rotate travels the wheel along Follow and never lands in gre
 });
 
 check('colorfx: swap flips to the complement on the beat — her pairs, never green', () => {
-  assert.strictEqual(Math.round(complementHue(0)), 180, 'red ↔ cyan');
+  assert.strictEqual(Math.round(complementHue(0)), 185, 'red ↔ cyan (180 is in the skipped band since 2026-09-26, so its cyan edge)');
   assert.strictEqual(complementHue(275), 45, 'purple ↔ gold (purple\'s complement is green, so gold)');
   assert.strictEqual(complementHue(334), 185, 'pink ↔ ice/cyan (not mint)');
   assert.ok(!inGreen(complementHue(233)), 'blue ↔ amber/yellow');
@@ -2209,6 +2209,268 @@ check('objects and labels may stand anywhere a fixture may (±1000), not only in
   assert.deepStrictEqual(sanitizeObjects([{ kind: 'spot', x: 5000, y: -5000 }]).map((o) => [o.x, o.y]), [[1000, -1000]]);
   const [mk] = sanitizeMarkers([{ text: 'Bar', x: 40, y: -12 }]);
   assert.deepStrictEqual([mk.x, mk.y], [40, -12]);
+});
+
+// ---- video pixel-mapping (from the studio desk, ported 2026-11-06) -----------------------
+const { attachPixels, sanitizeVideo, sanitizePixels, pixelStatus } = require('../pixelmap');
+// A studio-shaped rig: the Dimmer marker (excluded from effects), two RGB lights inside the
+// picture, one outside it. The picture covers world 0..1 × 0..1.
+function videoRig(over = {}) {
+  const marker = makeFixture({ profile: 'dimmer', address: 1, x: 0.5, y: 0.1, values: { dimmer: 255 } });
+  const a = makeFixture({ profile: 'rgb', address: 2, x: 0.2, y: 0.5, values: { r: 0, g: 0, b: 255, dimmer: 255 } });
+  const b = makeFixture({ profile: 'rgb', address: 5, x: 0.8, y: 0.5, values: { r: 0, g: 0, b: 255, dimmer: 255 } });
+  const out = makeFixture({ profile: 'rgb', address: 8, x: 1.5, y: 0.5, values: { r: 0, g: 0, b: 255, dimmer: 255 } });
+  const st = attachPixels({
+    ...baseState([marker, a, b, out]),
+    fx: { mode: 'none', bpm: 120, depth: 255, enabled: false, spatial: 'patch', exclude: ['dimmer'] },
+    video: sanitizeVideo(null, { x: 0, y: 0, w: 1, h: 1, mix: 255, on: true, ...over }),
+  });
+  st.pixels.at = 1000000;
+  st.pixels.colors = { [a.id]: [255, 0, 0], [b.id]: [255, 0, 0], [out.id]: [255, 0, 0], [marker.id]: [255, 0, 0] };
+  return { st, marker, a, b, out, e: new Engine(st) };
+}
+const rgbAt = (buf, addr) => [buf[addr - 1], buf[addr], buf[addr + 1]].map(Math.round);
+const T = 1000000 + 100;   // 100ms after the last pixels: fresh
+
+check('video: at 100% a light under the picture shows the video colour', () => {
+  const { e, st } = videoRig();
+  assert.deepStrictEqual(rgbAt(e.render(st, T).get(0), 2), [255, 0, 0]);
+  assert.deepStrictEqual(rgbAt(e.render(st, T).get(0), 5), [255, 0, 0]);
+});
+
+check('video: mix 0 is the look exactly', () => {
+  const { e, st } = videoRig({ mix: 0 });
+  const withVideo = [...e.render(st, T).get(0)];
+  st.video.on = false;
+  assert.deepStrictEqual(withVideo, [...e.render(st, T).get(0)]);
+  assert.deepStrictEqual(rgbAt(e.render(st, T).get(0), 2), [0, 0, 255]);
+});
+
+check('video: half mix sits halfway between the look and the video', () => {
+  const { e, st } = videoRig({ mix: 128 });
+  const [r, g, b] = rgbAt(e.render(st, T).get(0), 2);
+  assert.ok(Math.abs(r - 128) <= 1 && g === 0 && Math.abs(b - 127) <= 1, `got ${r},${g},${b}`);
+});
+
+check('video: pixels older than a second are ignored — the look comes back by itself', () => {
+  const { e, st } = videoRig();
+  assert.deepStrictEqual(rgbAt(e.render(st, 1000000 + 1500).get(0), 2), [0, 0, 255]);
+});
+
+check('video: switched off, the layer is ignored even with fresh pixels', () => {
+  const { e, st } = videoRig({ on: false });
+  assert.deepStrictEqual(rgbAt(e.render(st, T).get(0), 2), [0, 0, 255]);
+});
+
+check('video: blackout still takes a pixel-mapped light to black, and master dims it', () => {
+  const { e, st } = videoRig();
+  st.blackout = true;
+  assert.deepStrictEqual(rgbAt(e.render(st, T).get(0), 2), [0, 0, 0]);
+  st.blackout = false; st.master = 128;
+  const [r] = rgbAt(e.render(st, T).get(0), 2);
+  assert.ok(Math.abs(r - 128) <= 1, 'master 50% halves the video red, got ' + r);
+});
+
+check('video: at 100% the video lights a light the look had dark', () => {
+  const { e, st, a } = videoRig();
+  a.values.dimmer = 0;
+  assert.deepStrictEqual(rgbAt(e.render(st, T).get(0), 2), [255, 0, 0]);
+});
+
+check('video: a light outside the picture keeps its look', () => {
+  const { e, st } = videoRig();
+  assert.deepStrictEqual(rgbAt(e.render(st, T).get(0), 8), [0, 0, 255]);
+});
+
+check('video: an excluded profile keeps its look — the Dimmer marker and an excluded rgb', () => {
+  const { e, st } = videoRig();
+  assert.strictEqual(Math.round(e.render(st, T).get(0)[0]), 255, 'the marker at ch1 untouched');
+  st.fx.exclude = ['dimmer', 'rgb'];
+  assert.deepStrictEqual(rgbAt(e.render(st, T).get(0), 2), [0, 0, 255]);
+});
+
+check('video: a light the page sent no colour for keeps its look', () => {
+  const { e, st, a } = videoRig();
+  delete st.pixels.colors[a.id];
+  assert.deepStrictEqual(rgbAt(e.render(st, T).get(0), 2), [0, 0, 255]);
+});
+
+check('video: settings and pixels are sanitised, and pixels never reach the show file', () => {
+  const v = sanitizeVideo({ x: 0.1, y: 0.1, w: 1, h: 0.5, mix: 200, sample: 6, on: true }, { x: 5000, mix: -4, sample: 99 });
+  const { x, y, w, h, mix, sample, on } = v;   // [anim] the animation fields are checked below
+  assert.deepStrictEqual({ x, y, w, h, mix, sample, on }, { x: 1000, y: 0.1, w: 1, h: 0.5, mix: 0, sample: 30, on: true }, 'clamped, and absent fields kept');
+  const px = sanitizePixels({ colors: { real: [300, -5, '7'], ghost: [1, 2, 3], bad: 'red' } }, [{ id: 'real' }, { id: 'bad' }]);
+  assert.deepStrictEqual(px, { real: [255, 0, 7] });
+  const { st } = videoRig();
+  assert.ok(!('pixels' in JSON.parse(JSON.stringify(st))), 'pixels are non-enumerable');
+  assert.strictEqual(pixelStatus(st, T).fresh, true);
+  assert.strictEqual(pixelStatus(st, 1000000 + 1500).fresh, false);
+});
+
+check('colorfx: the video blend comes first, the colour effect recolours it', () => {
+  const { attachPixels, sanitizeVideo } = require('../pixelmap');
+  const { st, at, rgb } = studioRig([0, 0, 0]);
+  attachPixels(st);
+  st.video = sanitizeVideo(null, { x: 0, y: 0, w: 1, h: 1, mix: 255, on: true });
+  st.pixels.at = 1000;
+  for (const f of rgb) st.pixels.colors[f.id] = [255, 0, 0];
+  st.colorFx = sanitizeColorFx(null, { mode: 'swap', beats: 1 });
+  const e = new Engine(st);
+  const b = e.render(st, 1000 + 250).get(0);
+  const cyanish = [1, 2, 3, 4, 5, 6, 7, 8].filter((n) => at(b, n)[2] > 200 && at(b, n)[0] < 40);
+  assert.strictEqual(cyanish.length, 4, 'half the video-red lights swapped to cyan');
+});
+
+
+// ---- object and video animation (from the studio desk, ported 2026-11-06) ---------------
+const OC = require('../ui/objcore');
+const pm = require('../pixelmap');
+
+check('anim: an object saved before animation moves exactly as it did', () => {
+  // The old maths, written out: 60 bpm, 4 beats = a 4 s cycle, phase = (now % cycle) / cycle.
+  const [line, radar, ring] = OC.sanitizeObjects([
+    { kind: 'line', x: 0.5, y: 0.5, angle: 90, size: 0.3, width: 0.1, beats: 4 },
+    { kind: 'radar', x: 0.5, y: 0.5, angle: 30, size: 0.5, width: 20, beats: 4 },
+    { kind: 'ring', x: 0.5, y: 0.5, size: 0.5, width: 0.1, beats: 4 },
+  ]);
+  for (const t of [0, 250, 999, 1000, 1700, 2000, 2600, 3999, 12345, 1790245636748]) {
+    const ph = (((t % 4000) + 4000) % 4000) / 4000;
+    const u = ph < 0.5 ? ph * 2 : 2 - ph * 2;
+    const lp = OC.objectPose(line, 60, t);
+    assert.ok(Math.abs(lp.offset - 0.3 * (1 - 2 * u)) < 1e-9, 'line offset at ' + t);
+    assert.ok(Math.abs(OC.objectPose(radar, 60, t).theta - ((30 + ph * 360) % 360)) < 1e-6, 'radar angle at ' + t);
+    const rp = OC.objectPose(ring, 60, t);
+    assert.ok(Math.abs(rp.r - 0.5 * ph) < 1e-9 && Math.abs(rp.fade - Math.min(1, (1 - ph) * 4)) < 1e-9, 'ring at ' + t);
+  }
+  assert.deepStrictEqual([line.motion, line.dir, line.ease, line.loop, line.phase, radar.dir, ring.dir], ['auto', 'pingpong', 'linear', true, 0, 'forward', 'forward'],
+    'an old object gets the defaults that reproduce its movement');
+});
+
+check('anim: easing — linear, smooth and bounce shape the progress', () => {
+  assert.strictEqual(OC.shape(0.25, 'forward', 'linear'), 0.25);
+  assert.strictEqual(OC.shape(0.25, 'forward', 'smooth'), 0.15625);
+  assert.strictEqual(OC.shape(0.5, 'forward', 'smooth'), 0.5);
+  for (const e of ['linear', 'smooth', 'bounce']) {
+    assert.ok(Math.abs(OC.shape(0, 'forward', e)) < 1e-9 && Math.abs(OC.shape(1, 'forward', e) - 1) < 1e-9, e + ' runs 0 → 1');
+  }
+  assert.ok(OC.shape(0.9, 'forward', 'bounce') > OC.shape(0.8, 'forward', 'bounce') || OC.shape(0.95, 'forward', 'bounce') > 0.9, 'bounce lands at the end');
+});
+
+check('anim: directions — forward, reverse, ping-pong', () => {
+  assert.strictEqual(OC.shape(0.25, 'forward', 'linear'), 0.25);
+  assert.strictEqual(OC.shape(0.25, 'reverse', 'linear'), 0.75);
+  assert.strictEqual(OC.shape(0.25, 'pingpong', 'linear'), 0.5);
+  assert.strictEqual(OC.shape(0.5, 'pingpong', 'linear'), 1);
+  assert.strictEqual(OC.shape(0.75, 'pingpong', 'linear'), 0.5);
+  // a radar turned to reverse runs counter-clockwise
+  const [r] = OC.sanitizeObjects([{ kind: 'radar', angle: 0, beats: 4, dir: 'reverse' }]);
+  assert.ok(Math.abs(OC.objectPose(r, 60, 1000).theta - 270) < 1e-6, 'a quarter turn backwards');
+});
+
+check('anim: phase staggers objects', () => {
+  const [a, b] = OC.sanitizeObjects([
+    { kind: 'radar', angle: 0, beats: 4 }, { kind: 'radar', angle: 0, beats: 4, phase: 0.25 },
+  ]);
+  for (const t of [0, 1300, 2900]) {
+    const d = (OC.objectPose(b, 60, t).theta - OC.objectPose(a, 60, t).theta + 360) % 360;
+    assert.ok(Math.abs(d - 90) < 1e-6, 'a quarter cycle apart at ' + t + ': ' + d);
+  }
+});
+
+check('anim: move A → B lights the lights along its path', () => {
+  // A spot 0.05 across travels from x 0.2 to 0.8 over 4 s (60 bpm, 4 beats, forward, linear).
+  const rig = objRig([0.2, 0.35, 0.5, 0.65, 0.8]);
+  const spot = OC.sanitizeObjects([{ kind: 'spot', x: 0.2, y: 0.5, bx: 0.8, by: 0.5, size: 0.04, width: 0, beats: 4, motion: 'move', dir: 'forward' }]);
+  const e = new Engine(objState(rig, spot));
+  const lit = (t) => reds(e, t, 5).map((v, i) => (v > 200 ? i : -1)).filter((i) => i >= 0);
+  assert.deepStrictEqual(lit(0), [0], 'starts at A');
+  assert.deepStrictEqual(lit(1000), [1], 'a quarter of the way');
+  assert.deepStrictEqual(lit(2000), [2], 'half way');
+  assert.deepStrictEqual(lit(3000), [3], 'three quarters');
+  assert.deepStrictEqual(lit(3999), [4], 'at B');
+  // move ignores the kind's own movement: a line on move A → B does not sweep as well
+  const [ln] = OC.sanitizeObjects([{ kind: 'line', x: 0.2, y: 0.5, bx: 0.8, by: 0.5, beats: 4, motion: 'move', dir: 'forward' }]);
+  assert.strictEqual(OC.objectPose(ln, 60, 2000).offset, 0);
+  assert.ok(Math.abs(OC.objectPose(ln, 60, 2000).cx - 0.5) < 1e-9);
+});
+
+check('anim: once runs from t0 and holds at the end; a scene recall starts it again', () => {
+  const [o] = OC.sanitizeObjects([{ kind: 'radar', angle: 0, beats: 4, loop: false, t0: 1000 }]);
+  assert.strictEqual(OC.animRaw(o, 60, 1000), 0);
+  assert.strictEqual(OC.animRaw(o, 60, 3000), 0.5);
+  assert.strictEqual(OC.animRaw(o, 60, 5000), 1);
+  assert.strictEqual(OC.animRaw(o, 60, 90000), 1, 'holds at the end, never wraps');
+  // a phase on a once-object is a start delay
+  const [d] = OC.sanitizeObjects([{ kind: 'radar', beats: 4, loop: false, t0: 0, phase: 0.5 }]);
+  assert.strictEqual(OC.animRaw(d, 60, 1000), 0, 'still waiting');
+  assert.strictEqual(OC.animRaw(d, 60, 4000), 0.5);
+  // recall
+  const rig = objRig([0.2]);
+  const eng = new Engine(objState(rig, []));
+  const scene = { id: 's1', name: 'once', fixtures: [], objects: [o] };
+  const before = Date.now();
+  eng.recallScene(scene, 0);
+  assert.ok(eng.state.objects[0].t0 >= before, 'the recall restarted the run-once object');
+  const loopy = OC.restartOnce(OC.sanitizeObjects([{ kind: 'line', t0: 5 }]), 99);
+  assert.strictEqual(loopy[0].t0, 5, 'a looping object keeps its clock');
+});
+
+check('anim: pause holds; play carries on from the hold; restart goes to the top', () => {
+  const [o] = OC.sanitizeObjects([{ kind: 'radar', beats: 4 }]);
+  const p = OC.pauseFields(o, 60, 1000);
+  assert.deepStrictEqual(p, { paused: true, hold: 0.25 });
+  const held = { ...o, ...p };
+  assert.strictEqual(OC.animRaw(held, 60, 50000), 0.25, 'paused holds whatever the time');
+  const played = { ...held, ...OC.playFields(held, 60, 70000) };
+  assert.ok(Math.abs(OC.animRaw(played, 60, 70000) - 0.25) < 1e-9, 'plays on from where it was held');
+  assert.ok(Math.abs(OC.animRaw(played, 60, 71000) - 0.5) < 1e-9, 'and moves on from there');
+  const again = { ...played, ...OC.restartFields(played, 80000) };
+  assert.strictEqual(OC.animRaw(again, 60, 80000), 0, 'restart: from the top');
+  // once: play after the end starts over
+  const [once] = OC.sanitizeObjects([{ kind: 'radar', beats: 4, loop: false, t0: 0 }]);
+  assert.deepStrictEqual(OC.playFields(once, 60, 9000), { paused: false, t0: 9000 });
+});
+
+check('anim: spin, pulse and the validator', () => {
+  const [r] = OC.sanitizeObjects([{ kind: 'radar', angle: 0, beats: 4, spin: 90, size: 0.5, pulse: 0.5 }]);
+  const p = OC.objectPose(r, 60, 1000);   // raw 0.25: a quarter turn + a quarter of the spin; pulse at its top
+  assert.ok(Math.abs(p.theta - (90 + 22.5)) < 1e-6, 'spin adds its degrees per cycle: ' + p.theta);
+  assert.ok(Math.abs(p.size - 0.75) < 1e-9, 'pulse breathes the size: ' + p.size);
+  const [bad] = OC.sanitizeObjects([{ kind: 'line', motion: 'fly', dir: 'up', ease: 'wobble', phase: 3, timing: 'minutes', secs: -2, spin: 1e9, pulse: 9, name: '  My   line  ' }]);
+  assert.deepStrictEqual([bad.motion, bad.dir, bad.ease, bad.phase, bad.timing, bad.secs, bad.spin, bad.pulse, bad.name],
+    ['auto', 'pingpong', 'linear', 1, 'beats', 0, 1440, 1, 'My line']);
+  const [secs] = OC.sanitizeObjects([{ kind: 'radar', timing: 'secs', secs: 2 }]);
+  assert.strictEqual(OC.cycleMs(secs, 60), 2000, 'seconds ignore the BPM');
+  assert.strictEqual(OC.cycleMs(secs, 180), 2000);
+  assert.strictEqual(OC.objectName(bad, [bad]), 'My line');
+  assert.strictEqual(OC.objectName(r, [OC.sanitizeObjects([{ kind: 'radar' }])[0], r]), 'Radar 2', 'unnamed: the kind and its number');
+});
+
+check('video anim: a moving box — the page decides which lights are under it', () => {
+  // The saved rectangle is 0..1 × 0..1; `out` (x 1.5) is outside it. With the box travelling,
+  // the page is the authority: a colour it sent for `out` is used, a light it sent nothing
+  // for keeps its look.
+  const { e, st, a, out } = videoRig({ anim: { on: true } });
+  assert.deepStrictEqual(rgbAt(e.render(st, T).get(0), 8), [255, 0, 0], 'the box moved over `out`: mapped');
+  delete st.pixels.colors[a.id];
+  assert.deepStrictEqual(rgbAt(e.render(st, T).get(0), 2), [0, 0, 255], 'no colour sent: the look');
+  st.video.anim.on = false;
+  st.pixels.colors[a.id] = [255, 0, 0];
+  assert.deepStrictEqual(rgbAt(e.render(st, T).get(0), 8), [0, 0, 255], 'a still box keeps the saved-rectangle check');
+});
+
+check('video: the mix breathes with its LFO; settings merge field by field', () => {
+  const { e, st } = videoRig({ lfo: { on: true, depth: 0.5, beats: 4 } });
+  st.fx.bpm = 60;
+  const at = (now) => { st.pixels.at = now - 100; return rgbAt(e.render(st, now).get(0), 2); };
+  assert.deepStrictEqual(at(1000000), [255, 0, 0], 'top of the breath: the full mix');
+  const [r, , b] = at(1002000);
+  assert.ok(Math.abs(r - 128) <= 1 && Math.abs(b - 127) <= 1, 'half way: down by the depth, got ' + r + ',' + b);
+  assert.strictEqual(pm.mixNow(st, 1002000), 128);
+  const v1 = pm.sanitizeVideo(pm.sanitizeVideo(null, { anim: { on: true, bx: 0.7, beats: 16 } }), { anim: { dir: 'forward' }, contrast: 999, speed: 0 });
+  assert.deepStrictEqual([v1.anim.on, v1.anim.bx, v1.anim.beats, v1.anim.dir, v1.anim.ease, v1.contrast, v1.speed], [true, 0.7, 16, 'forward', 'smooth', 300, 0.1],
+    'a partial patch keeps the rest; values are clamped');
+  assert.deepStrictEqual(pm.sanitizeVideo(null, {}).lfo, pm.DEFAULT_LFO);
 });
 
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');

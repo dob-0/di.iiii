@@ -12,7 +12,7 @@
 //          beat, neighbours in turn
 //
 // NO GREEN — her rule. The wheel here skips the green band: hue rotation travels the other
-// 256° of it (cyan → blue → purple → pink → red → orange → yellow), and a complement that
+// 225° of it (cyan → blue → purple → pink → red → orange → gold), and a complement that
 // would land in green is moved to the nearest edge — which is how blue ↔ amber, purple ↔
 // gold, red ↔ cyan and pink ↔ ice come out of it: her complementary pairs.
 //
@@ -29,9 +29,13 @@ const { fxPhase, fxBounds, fxOrder } = require('./fx');
 const COLORFX_MODES = ['none', 'hue', 'chase', 'swap'];
 const DEFAULT_COLORFX = { mode: 'none', beats: 4, spread: 0.5, amount: 255, a: '#ff0000', b: '#00d2ff' };
 
-// The green band the wheel skips, in degrees: [GREEN_LO, GREEN_HI).
-const GREEN_LO = 68, GREEN_HI = 172;
-const ARC_LEN = 360 - (GREEN_HI - GREEN_LO);   // 256°: GREEN_HI round to GREEN_LO
+// The green band the wheel skips, in degrees: [GREEN_LO, GREEN_HI). Was 68–172 until
+// 2026-09-26 (studio desk): the wheel then turned through its edges, and both read green on
+// her lights — 221,255,0 lime and 0,255,221 aquamarine. Now the edges are her own palette's
+// ends: golden yellow below (her gold is 38°), cyan above (hers is 190°), and the complement
+// edges (45 and 185) sit outside the band.
+const GREEN_LO = 50, GREEN_HI = 185;
+const ARC_LEN = 360 - (GREEN_HI - GREEN_LO);   // 225°: GREEN_HI round to GREEN_LO
 
 const num = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.max(lo, Math.min(hi, +v)) : d);
 function hex(v, d) {

@@ -25,6 +25,8 @@ const { sanitizeFollow } = require('./cues');
 const { sanitizeColorFx, COLORFX_MODES } = require('./colorfx');
 const { sanitizeObjects, OBJECT_KINDS, MAX_OBJECTS } = require('./ui/objcore');
 const { sanitizeMarkers, MAX_MARKERS } = require('./markers');
+// Video pixel-mapping (from the studio desk): where the picture sits, and its live colours.
+const { sanitizeVideo, attachPixels, pixelStatus, videoRoutes } = require('./pixelmap');
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
 const { STYLES: FAN_STYLES, fanValues } = require('./fan');
 const { rigPatch, rigList } = require('./rigpatch');
@@ -156,6 +158,9 @@ function createDesk(opts = {}) {
     objects: [],
     markers: [],
     colorFx: sanitizeColorFx(null, null),
+    // The video layer's setting (pixelmap.js): off, and placed over the rig the first time a
+    // source starts. Its live colours are never part of a show.
+    video: sanitizeVideo(null, null),
     // Live sets: named, ordered scene playlists for running a planned show from the Touch
     // page. They reference scenes by id and tolerate dead references — the player shows a
     // missing step rather than silently renumbering the operator's set list mid-show.
@@ -192,7 +197,9 @@ function createDesk(opts = {}) {
     Object.defineProperty(s, 'identify', {
       value: {}, enumerable: false, writable: true, configurable: true,
     });
-    return s;
+    // The video's live colours ride the same way (pixelmap.js): never in show.json, never in a
+    // scene, gone the moment the page stops sending them.
+    return attachPixels(s);
   }
 
   // Address validation lives in one place because a rejected address has to be rejected the
@@ -326,6 +333,7 @@ function createDesk(opts = {}) {
       s.objects = sanitizeObjects(disk.objects) || [];
       s.markers = sanitizeMarkers(disk.markers) || [];
       s.colorFx = sanitizeColorFx(null, disk.colorFx);
+      s.video = sanitizeVideo(null, disk.video);   // where the picture sits; the pixels never persist
 
       // Custom profiles MUST be registered before the fixtures are built. makeFixture falls
       // back to `rgb` for a profile it does not know, so loading them in the other order
@@ -1329,6 +1337,7 @@ function createDesk(opts = {}) {
         bpm: state.audio.bpm,
       },
       cue: engine.cues.status(),          // the running follow sequence: step, total, time left
+      videoLive: pixelStatus(state),      // is a page sending video pixels right now, how many lights, how fast
       colorFxModes: COLORFX_MODES,
       objectKinds: OBJECT_KINDS,
       // The desk's clock, for the stage view's object/video animation and the follow countdown
@@ -1793,6 +1802,9 @@ function createDesk(opts = {}) {
       state.markers = markers;
       save(); json(res, { ok: true, markers: state.markers });
     },
+    // The video layer (pixelmap.js): POST /api/video (where the picture sits, persists) and
+    // POST /api/pixels (the live colours, ~30 a second, never saved).
+    ...videoRoutes({ getState: () => state, save, pushFrame, json }),
 
     'POST /api/master': (req, res, body) => {
       if (body.master != null && Number.isFinite(+body.master)) state.master = Math.max(0, Math.min(255, Math.round(+body.master)));
