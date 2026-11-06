@@ -676,3 +676,139 @@ describe('weave and venn: lines into a grid, circles that split and mix (2026-11
         for (const shape of ['weave', 'venn']) expect(generateShape({ shape, time: 3.3 })).toEqual(generateShape({ shape, beat: 6.6 }))
     })
 })
+
+describe('the lava shapes: lava, magma, eruption, bubble, crack, drip (2026-11-06)', () => {
+    const LAVA = ['lava', 'magma', 'eruption', 'bubble', 'crack', 'drip']
+    const isLit = (p) => p[2] + p[3] + p[4] > 0
+    const strokes = (points) => {
+        const out = [[]]
+        for (const p of points) { if (!isLit(p)) out.push([]); else out[out.length - 1].push(p) }
+        return out.filter((s) => s.length)
+    }
+    const at = (shape, beat, more = {}) => strokes(generateShape({ shape, size: 1, points: 900, beat, colour: '#ff4000', ...more }))
+    // A blob, a bomb or a drop: a closed stroke; its middle and radius from its box.
+    const isRing = (s) => s.length > 4 && Math.hypot(s[0][0] - s[s.length - 1][0], s[0][1] - s[s.length - 1][1]) < 1e-6
+    const ringOf = (s) => {
+        const xs = s.map((p) => p[0])
+        const ys = s.map((p) => p[1])
+        return { x: (Math.max(...xs) + Math.min(...xs)) / 2, y: (Math.max(...ys) + Math.min(...ys)) / 2, r: (Math.max(...xs) - Math.min(...xs)) / 2 }
+    }
+    const closest = (rings) => {
+        let gap = Infinity
+        for (let i = 0; i < rings.length; i += 1) {
+            for (let j = i + 1; j < rings.length; j += 1) gap = Math.min(gap, Math.hypot(rings[i].x - rings[j].x, rings[i].y - rings[j].y) - rings[i].r - rings[j].r)
+        }
+        return gap
+    }
+
+    it('come after weave and venn, and stay inside 0.95 of the picture at every sixteenth of a beat', () => {
+        expect(LASER_SHAPES.slice(46, 52)).toEqual(LAVA)
+        for (const shape of LAVA) {
+            for (const copies of [0, 1, 4, 6]) {
+                for (let beat = 0; beat < 32; beat += 1 / 16) {
+                    const most = Math.max(...at(shape, beat, { copies }).flat().map((p) => Math.max(Math.abs(p[0]), Math.abs(p[1]))))
+                    expect(most, `${shape} ×${copies} beat ${beat}`).toBeLessThanOrEqual(0.95 + 1e-9)
+                }
+            }
+        }
+    })
+
+    it('lava: `copies` blobs (3, 2 to 5), each keeping its size through its loop, that never touch, none smaller than a spot', () => {
+        for (const [copies, count] of [[0, 3], [2, 2], [4, 4], [5, 5], [99, 5]]) {
+            const sizes = at('lava', 0, { copies }).map((s) => ringOf(s).r)
+            for (let beat = 0; beat < 64; beat += 1 / 8) {
+                const blobs = at('lava', beat, { copies })
+                expect(blobs, `×${copies} beat ${beat}`).toHaveLength(count)
+                expect(blobs.every(isRing)).toBe(true)
+                blobs.forEach((s, i) => expect(ringOf(s).r).toBeCloseTo(sizes[i], 2))
+                for (const r of sizes) expect(r).toBeGreaterThan(0.119)
+                expect(closest(blobs.map(ringOf)), `×${copies} beat ${beat}`).toBeGreaterThan(0.02)
+            }
+        }
+        // A blob goes from the floor to the ceiling and back.
+        const heights = Array.from({ length: 256 }, (_, k) => ringOf(at('lava', k / 8)[0]).y)
+        expect(Math.min(...heights)).toBeLessThan(-0.6)
+        expect(Math.max(...heights)).toBeGreaterThan(0.6)
+    })
+
+    it('magma: `copies` level lines (3, 1 to 6) across the picture that flow and never cross', () => {
+        const yAt = (line, x) => line.reduce((best, p) => (Math.abs(p[0] - x) < Math.abs(best[0] - x) ? p : best))[1]
+        for (const [copies, count] of [[0, 3], [1, 1], [6, 6]]) {
+            for (let beat = 0; beat < 32; beat += 0.25) {
+                const lines = at('magma', beat, { copies })
+                expect(lines, `×${copies} beat ${beat}`).toHaveLength(count)
+                for (let i = 1; i < lines.length; i += 1) {
+                    for (let k = 0; k < 20; k += 1) {
+                        const x = -0.9 + (1.8 * k) / 19
+                        expect(yAt(lines[i - 1], x) - yAt(lines[i], x), `×${copies} beat ${beat} x ${x}`).toBeGreaterThan(0.05)
+                    }
+                }
+            }
+        }
+        expect(at('magma', 1)).not.toEqual(at('magma', 0))
+    })
+
+    it('eruption: the volcano always, and bombs that are whole dots 0.12 round, gone inside the beat, never touching', () => {
+        for (const copies of [0, 1, 2, 3, 4]) {
+            let most = 0
+            for (let beat = 0; beat < 32; beat += 1 / 32) {
+                const [volcano, ...bombs] = at('eruption', beat, { copies })
+                expect(volcano.length).toBeGreaterThan(8)
+                expect(bombs.every(isRing)).toBe(true)
+                const dots = bombs.map(ringOf)
+                for (const d of dots) expect(d.r).toBeCloseTo(0.12, 2)
+                expect(closest(dots), `×${copies} beat ${beat}`).toBeGreaterThan(0.02)
+                most = Math.max(most, dots.length)
+            }
+            expect(most, `×${copies}`).toBe(copies === 0 ? 2 : copies)
+        }
+    })
+
+    it('bubble: the pool is one line right across, with at most one drop above it', () => {
+        for (let beat = 0; beat < 32; beat += 1 / 16) {
+            const [pool, ...drops] = at('bubble', beat)
+            expect(Math.min(...pool.map((p) => p[0]))).toBeCloseTo(-0.95, 6)
+            expect(Math.max(...pool.map((p) => p[0]))).toBeCloseTo(0.95, 6)
+            expect(drops.length).toBeLessThanOrEqual(1)
+            // A drop clears the pool and any bubble under it.
+            for (const d of drops.map(ringOf)) {
+                const under = pool.filter((p) => Math.abs(p[0] - d.x) <= d.r).map((p) => p[1])
+                expect(d.y - d.r, `beat ${beat}`).toBeGreaterThan(Math.max(...under))
+            }
+        }
+        // A bubble swells between the beats.
+        expect(at('bubble', 1.5)).not.toEqual(at('bubble', 1.6))
+    })
+
+    it('crack: opens from the middle, right across half a beat later, then four branches; still between half beats', () => {
+        const width = (beat) => {
+            const s = at('crack', beat)[0]
+            return Math.max(...s.map((p) => p[0])) - Math.min(...s.map((p) => p[0]))
+        }
+        expect(width(0.1)).toBeCloseTo(1.52, 6)
+        expect(width(0.6)).toBeCloseTo(1.9, 6)
+        expect(width(7.9)).toBeCloseTo(1.9, 6)
+        const branches = [0.6, 1.1, 1.6, 2.1, 2.6, 3.1, 3.6, 4.1, 4.6, 7.9].map((b) => at('crack', b).length - 1)
+        expect(branches).toEqual([0, 1, 1, 2, 2, 3, 3, 4, 4, 4])
+        for (let half = 0; half < 32; half += 1) expect(at('crack', half / 2 + 0.05), `half beat ${half}`).toEqual(at('crack', half / 2 + 0.45))
+        // A new crack on the next loop.
+        expect(at('crack', 8.1)).not.toEqual(at('crack', 0.1))
+    })
+
+    it('drip: ceiling and pool lines, `copies` drops (2, 1 to 3) hanging and as many falling in the first half of the beat', () => {
+        for (const [copies, count] of [[0, 2], [1, 1], [3, 3], [9, 3]]) {
+            for (let beat = 0; beat < 16; beat += 1 / 16) {
+                const s = at('drip', beat, { copies })
+                const dots = s.filter(isRing).map(ringOf)
+                const falling = beat - Math.floor(beat) < 0.5
+                expect(dots, `×${copies} beat ${beat}`).toHaveLength(falling ? 2 * count : count)
+                expect(s.length - dots.length).toBe(2)
+                expect(closest(dots), `×${copies} beat ${beat}`).toBeGreaterThan(0.02)
+            }
+        }
+    })
+
+    it('without a beat they run on time at 120 BPM', () => {
+        for (const shape of LAVA) expect(generateShape({ shape, time: 3.3 }), shape).toEqual(generateShape({ shape, beat: 6.6 }))
+    })
+})

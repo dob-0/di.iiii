@@ -37,11 +37,16 @@ const LASER_SHAPES = [
     // "more lasers animation patterns like line line and grid becoming, also circle one then two three and mixing":
     // one line that splits into a grid and folds back, one circle that splits into three that mix and merge again.
     'weave', 'venn',
+    // 2026-11-06, for the REA festival (four cubes, "lava concepts laser show"): lava (a lava lamp's blobs rising and
+    // sinking), magma (level lines flowing like a slow river), eruption (a volcano throwing bombs on the beat), bubble (a
+    // pool whose bubbles swell and pop), crack (a crust splitting open from the middle) and drip (drops falling from a
+    // ceiling into a pool).
+    'lava', 'magma', 'eruption', 'bubble', 'crack', 'drip',
 ]
 // The shapes made of small marks. Below MARK_MIN_SIZE their smallest mark is inside the engine's still-beam window
 // (0.6°, about 0.032 of the field: laserEngine.js), and when every lit mark is, the frame is dots only: the engine blanks
 // the cube until the picture grows again (laser.test.js). Every other shape stays a stroke down to size 0.05.
-const MARK_SHAPES = ['sparkle', 'twinkle', 'spots', 'morse', 'rain', 'dust']
+const MARK_SHAPES = ['sparkle', 'twinkle', 'spots', 'morse', 'rain', 'dust', 'lava']
 const MARK_MIN_SIZE = 0.15
 // A shape name may be a comma list ('galaxy,sunflower,noisy,grid'): with `cycle` seconds each shape plays in turn,
 // the way TD's switch1 steps through its four scenes on a slow oscillator.
@@ -266,6 +271,31 @@ const VENN_TWO = 0.4
 const VENN_THREE = 0.45
 const VENN_TIGHT = 0.12
 const vennRing = (d, turn) => [0, 1, 2].map((i) => [Math.cos(Math.PI / 2 + turn + (i * TAU) / 3) * d, Math.sin(Math.PI / 2 + turn + (i * TAU) / 3) * d])
+// The lava shapes (2026-11-06). Lava's blobs each rise and sink on a loop of their own, so they rarely meet the top
+// together: these many beats a round trip, by lane.
+const LAVA_LOOPS = [16, 24, 20, 28, 12, 32]
+// Eruption's volcano: its foot at the picture's corners, the crater's rims and the floor of the crater, as one line.
+const VOLCANO = [[-0.95, -0.95], [-0.3, -0.3], [-0.12, -0.4], [0.12, -0.4], [0.3, -0.3], [0.95, -0.95]]
+const volcanoAt = (x) => {
+    const ax = Math.abs(x)
+    if (ax <= 0.12) return -0.4
+    if (ax <= 0.3) return -0.4 + ((ax - 0.12) / 0.18) * 0.1
+    return -0.3 - ((ax - 0.3) / 0.65) * 0.65
+}
+// A bomb leaves the crater's floor from ERUPT_X either side of the middle (the two of a beat start more than a dot
+// apart), climbs for ERUPT_RISE beats and falls until it lands on the cone, where it is gone.
+const ERUPT_X = 0.14
+const ERUPT_RISE = 0.4
+// Bubble's pool surface, and the biggest a bubble gets before it pops (one in each half of the pool, so they never meet).
+const POOL_Y = -0.35
+const BUBBLE_R = 0.28
+// Crack's line across the picture: CRACK_STEPS pieces, opening from the middle.
+const CRACK_STEPS = 10
+// Drip's ceiling and pool, and its six lanes 0.3 apart (more than a drop across), taken in this order so the drops of
+// one beat and the next never share a lane.
+const DRIP_TOP = 0.8
+const DRIP_FLOOR = -0.8
+const DRIP_LANES = [0, 3, 5, 1, 4, 2]
 // The scale that keeps the cube inside the picture at every turn (it looks the same each quarter turn).
 const CUBE_FIT = 1 / Math.max(...Array.from({ length: 91 }, (_, i) => Math.max(...cubeView((i / 90) * (Math.PI / 2)).flat().map(Math.abs))))
 
@@ -902,6 +932,176 @@ const STROKES = {
         } else if (k === 12) centres = f >= 1 ? two : [lerp(three[1], two[0]), lerp(three[2], two[1]), lerp(three[0], two[1])]
         else centres = f >= 1 ? [[0, 0]] : two.map((p) => lerp(p, [0, 0]))
         return byLength(centres.map(([x, y]) => arcPath(x, y, VENN_R, Math.PI / 2)), n)
+    },
+    // The lava shapes (2026-11-06, for the REA festival). They only move their parts: a blob, a bomb or a drop keeps its
+    // round shape and its size, and appears and goes whole.
+    // Lava: `copies` blobs (3, 2 to 5), one in each lane across the picture, each rising from the floor to the ceiling and
+    // sinking back on its own loop (LAVA_LOOPS), slowest at both ends where a lava lamp's wax rests, and drifting a little
+    // side to side. A lane is wider than its blob and its drift together, so two blobs never touch. A blob is never smaller
+    // than a spot (SPOT_R): lava is all blobs, so it is a mark shape, and a spot is the least that stays a stroke.
+    lava: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 3, 2, 5)
+        const lane = 1.8 / count
+        return byLength(Array.from({ length: count }, (_, i) => {
+            const r = SPOT_R + (Math.min(0.26, lane * 0.4) - SPOT_R) * hash01(i, 101)
+            const loop = LAVA_LOOPS[i % LAVA_LOOPS.length]
+            const u = (((beat / loop + hash01(i, 102)) % 1) + 1) % 1
+            const tri = u < 0.5 ? u * 2 : 2 - u * 2
+            const rise = tri * tri * (3 - 2 * tri)
+            const drift = 0.8 * (lane / 2 - r) * Math.sin(TAU * ((2 * beat) / loop + hash01(i, 103)))
+            return arcPath(-0.9 + lane * (i + 0.5) + drift, -(0.95 - r) + 2 * (0.95 - r) * rise, r, Math.PI / 2)
+        }), n)
+    },
+    // Magma: `copies` level lines (3, 1 to 6) down the picture, each a slow swell of two waves flowing sideways, the lower
+    // lines faster as if nearer: the top line's swell moves a wavelength every 16 beats. A swell is under a third of the
+    // gap to the next line, so the lines never touch. Drawn back and forth, so each hop is short.
+    magma: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 3, 1, 6)
+        const gap = count > 1 ? 1.4 / (count - 1) : 1.4
+        const swell = Math.min(0.25, 0.3 * gap)
+        const steps = 96
+        return byLength(Array.from({ length: count }, (_, i) => {
+            const y0 = count > 1 ? 0.7 - gap * i : 0
+            const line = Array.from({ length: steps + 1 }, (_, s) => {
+                const x = -0.95 + (1.9 * s) / steps
+                const a = 1.5 * Math.PI * x - (TAU * beat * (1 + 0.5 * i)) / 16 + i * 1.7
+                const b = 2.7 * Math.PI * x + (TAU * beat) / 24 + i * 0.9
+                return [x, y0 + swell * (0.67 * Math.sin(a) + 0.33 * Math.sin(b))]
+            })
+            return i % 2 ? line.reverse() : line
+        }), n)
+    },
+    // Eruption: a volcano (VOLCANO, one line) throwing bombs on the beat. On every beat a bomb leaves the crater to the
+    // left and, a quarter beat later, one to the right, going high and far on one beat and lower on the next, each its own
+    // height; with `copies` 3 or 4 (2, 1 to 4), one or two more go up on the half beat and the quarter after it, small
+    // hops that fall back near the crater (with 1, the one bomb goes to the left and the right in turn). A bomb is a dot that climbs, slowing as it goes, then falls faster and faster until
+    // it lands on the cone, where it is gone, inside the beat. Their flights never cross (measured every 1/128 of a beat).
+    eruption: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 2, 1, 4)
+        const now = Math.floor(beat)
+        const bombs = []
+        for (let k = now - 2; k <= now; k += 1) {
+            const high = ((k % 2) + 2) % 2 === 0
+            for (let j = 0; j < count; j += 1) {
+                const side = ((j + (count === 1 ? k : 0)) % 2 + 2) % 2 ? 1 : -1
+                const far = j < 2
+                const age = beat - k - 0.25 * j
+                if (age < 0) continue
+                const h = (far ? (high ? 0.95 : 0.7) : 0.35) * (0.8 + 0.3 * hash01(k, 200 + j))
+                const rise = ERUPT_RISE * (far ? 1 : 0.6)
+                const vx = side * (far ? 0.55 : 0.12) * (0.8 + 0.4 * hash01(k, 210 + j))
+                const x = side * ERUPT_X + vx * age
+                const y = -0.4 + SPOT_R + h * (1 - (1 - age / rise) ** 2)
+                if (age > rise && y - SPOT_R <= volcanoAt(x)) continue
+                if (Math.abs(x) > 1 - SPOT_R || y < -1 + SPOT_R) continue
+                bombs.push([x, y])
+            }
+        }
+        bombs.sort((a, b) => b[0] - a[0])
+        const paths = [VOLCANO]
+        let from = VOLCANO[VOLCANO.length - 1]
+        for (const bomb of bombs) {
+            const dot = dotFrom(bomb, from)
+            paths.push(dot)
+            from = dot[dot.length - 1]
+        }
+        return byLength(paths, n)
+    },
+    // Bubble: a lava pool's surface, one line, with bubbles swelling out of it: one born on each beat, in the left and the
+    // right half of the pool in turn. A bubble swells for two beats and pops as the next is born in its half, throwing up a
+    // drop that rises and falls back within the beat. One bubble to a half, so two never meet, and the drop flies clear of
+    // the new bubble beneath it.
+    bubble: (n, { beat = 0 } = {}) => {
+        const now = Math.floor(beat)
+        const domes = []
+        const drops = []
+        for (let k = now - 2; k <= now; k += 1) {
+            const side = ((k % 2) + 2) % 2 ? 1 : -1
+            const x = side * (0.3 + 0.35 * hash01(k, 301))
+            const big = BUBBLE_R * (0.75 + 0.25 * hash01(k, 302))
+            const age = beat - k
+            if (age < 2) {
+                const f = age / 2
+                domes.push([x, big * (0.25 + 0.75 * f * f * (3 - 2 * f))])
+            } else if (age < 2.7) {
+                const t = (age - 2) / 0.7
+                drops.push([x, POOL_Y + big + SPOT_R + 0.45 * 4 * t * (1 - t)])
+            }
+        }
+        domes.sort((a, b) => a[0] - b[0])
+        const surface = [[-0.95, POOL_Y]]
+        for (const [x, r] of domes) {
+            surface.push([x - r, POOL_Y])
+            for (let s = 1; s <= 24; s += 1) {
+                const a = Math.PI - (s / 24) * Math.PI
+                surface.push([x + Math.cos(a) * r, POOL_Y + Math.sin(a) * r])
+            }
+        }
+        surface.push([0.95, POOL_Y])
+        const paths = [surface]
+        let from = surface[surface.length - 1]
+        for (const drop of drops.sort((a, b) => b[0] - a[0])) {
+            const dot = dotFrom(drop, from)
+            paths.push(dot)
+            from = dot[dot.length - 1]
+        }
+        return byLength(paths, n)
+    },
+    // Crack: a crust splitting open from the middle, on an 8-beat loop. On the loop's first beat the middle eight pieces of
+    // the crack open at once, and half a beat later the last piece at both ends, so it runs right across (CRACK_STEPS
+    // pieces; it opens that wide because a picture much narrower holds the beam in too few places when it is small);
+    // four branches fork off it after that, a piece every half beat, and the whole crack holds until a new one opens, a
+    // different one, on the next loop. Each piece appears whole: nothing slides or bends.
+    crack: (n, { beat = 0 } = {}) => {
+        const loop = Math.floor(beat / 8)
+        const half = Math.floor((beat - loop * 8) * 2)
+        const vertex = (k) => [-0.95 + (1.9 * k) / CRACK_STEPS, (k % 2 ? 0.1 : -0.1) + 0.5 * (hash01(loop, k, 401) - 0.5)]
+        const mid = CRACK_STEPS / 2
+        const reach = Math.min(mid, 4 + half)
+        const main = []
+        for (let k = mid - reach; k <= mid + reach; k += 1) main.push(vertex(k))
+        const paths = [main]
+        const flip = hash01(loop, 402) < 0.5 ? 1 : -1
+        const roots = [3 + (hash01(loop, 403) < 0.5 ? 0 : 1), 6 + (hash01(loop, 404) < 0.5 ? 0 : 1), 1 + (hash01(loop, 405) < 0.5 ? 0 : 1), 8 + (hash01(loop, 406) < 0.5 ? 0 : 1)]
+        roots.forEach((root, b) => {
+            const pieces = clamp(half - 1 - 2 * b, 0, 2)
+            if (pieces === 0) return
+            const up = (b === 0 || b === 3 ? 1 : -1) * flip
+            const [x0, y0] = vertex(root)
+            const lean = (hash01(loop, b, 407) - 0.5) * 0.24
+            const p1 = [x0 + lean, y0 + up * (0.22 + 0.08 * hash01(loop, b, 408))]
+            const p2 = [p1[0] + lean * 0.6 + (hash01(loop, b, 409) - 0.5) * 0.16, p1[1] + up * (0.18 + 0.08 * hash01(loop, b, 410))]
+            paths.push(pieces === 1 ? [[x0, y0], p1] : [[x0, y0], p1, p2])
+        })
+        return byLength(paths, n)
+    },
+    // Drip: drops falling from a ceiling into a pool, two level lines across the picture. Each beat `copies` drops (2, 1
+    // to 3) fall: each hangs under the ceiling for the beat before, then falls, faster and faster, and lands in the pool
+    // half a beat later, where it is gone. The lanes are taken in turn (DRIP_LANES), so a falling drop never passes one
+    // hanging in its lane.
+    drip: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 2, 1, 3)
+        const now = Math.floor(beat)
+        const f = beat - now
+        const xOf = (k, j) => -0.75 + 0.3 * DRIP_LANES[(((k * count + j) % 6) + 6) % 6]
+        const top = DRIP_TOP - SPOT_R
+        const bottom = DRIP_FLOOR + SPOT_R
+        const drops = []
+        for (let j = 0; j < count; j += 1) {
+            drops.push([xOf(now + 1, j), top])
+            if (f < 0.5) drops.push([xOf(now, j), top + (bottom - top) * (f / 0.5) ** 2])
+        }
+        drops.sort((a, b) => b[0] - a[0])
+        const ceiling = [[-0.95, DRIP_TOP], [0.95, DRIP_TOP]]
+        const paths = [ceiling]
+        let from = ceiling[1]
+        for (const drop of drops) {
+            const dot = dotFrom(drop, from)
+            paths.push(dot)
+            from = dot[dot.length - 1]
+        }
+        paths.push([[-0.95, DRIP_FLOOR], [0.95, DRIP_FLOOR]])
+        return byLength(paths, n)
     },
 }
 

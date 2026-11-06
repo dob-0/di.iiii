@@ -374,6 +374,30 @@ describe('the Laser node\'s shapes, as the guards draw them, still pass the stil
             }
         }
     })
+    // 2026-11-06: the lava shapes (lava … drip), for the REA festival. Lines, blobs and dots that move all through the beat,
+    // held at every eighth of a beat over 16 as sent, with 120 and 900 points and with their most copies, at 0.5 and 0.1
+    // (lava, all blobs, is a mark shape: 0.5 and MARK_MIN_SIZE). Measured worst in one window: 7.2 % at 0.5, 25.9 % at 0.1.
+    // At 0.05 (a picture about 3° across) crack, bubble and eruption fit in under three windows: crack 37.6 % at 120
+    // points, 48.0 % at 500 and 54.8 % at 900 with a still frame now and then, bubble 48.0 % at 900, eruption with four
+    // bombs 44.5 % at 900. There the engine's own 50 % stop blanks the cube, as it is there to; the first test in this
+    // block still holds them never still at 0.05 with 120 and 500 points.
+    it('the lava shapes as sent are never still at any eighth of a beat, and never put 40 % in one window', () => {
+        const LAVA = ['lava', 'magma', 'eruption', 'bubble', 'crack', 'drip']
+        expect(LASER_SHAPES.slice(46, 52)).toEqual(LAVA)
+        const plan = at(30000)
+        for (const shape of LAVA) {
+            for (const size of MARK_SHAPES.includes(shape) ? [0.5, MARK_MIN_SIZE] : [0.5, 0.1]) {
+                for (const [points, copies] of [[120, 0], [900, 0], [900, 6]]) {
+                    for (let beat = 0; beat < 16; beat += 0.125) {
+                        const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape, size, height: 0.5, points, copies, beat }), { budget: null }).points, normaliseZone()).points, plan).points
+                        const label = `${shape} ${size} × ${points} ×${copies} beat ${beat}`
+                        expect(stillBeams(frame), label).toEqual([])
+                        expect(dwellSpots(frame, { minShare: 0 })[0].share, label).toBeLessThan(0.4)
+                    }
+                }
+            }
+        }
+    })
     // 2026-11-01: point, one dot alone in the middle. All the frame is in it, so it is the shape nearest the 50 % stop: held
     // under 40 % at every point count, at 30 and 35 kpps, plain and through a corner pin like the owner's.
     it('point is never still and never puts 40 % in one window, at any size from 0.05, any points, plain or pinned', () => {
@@ -602,7 +626,7 @@ describe('round 2: the review\'s findings (reproduced first with the reviewer\'s
         const parsed = proto.parseFullInfo(infoAnswer(info))
         expect(parsed).toMatchObject({ dacRate: 35000, maxDacRate: 35000, rxBufferSize: 6000, rxBufferFree: 6000 })
         expect(g.frameBudget(parsed.dacRate, parsed.rxBufferSize)).toBe(2333)
-        expect(LASER_SHAPES.length).toBe(46)
+        expect(LASER_SHAPES.length).toBe(52)
         for (const shape of LASER_SHAPES) {
             const rig = armed(ONE, info)
             rig.engine.setFrame('all', generateShape({ shape, size: 0.5, height: 0.5, points: 1992 }))

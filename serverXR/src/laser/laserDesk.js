@@ -243,7 +243,17 @@ const SEED_LOOKS = [
     // turn, each its own 16-beat loop.
     { id: 'weave', name: 'Weave', shape: 'weave', colour: '#20d8ff', size: 0.5, points: 600 },
     { id: 'venn', name: 'Venn', shape: 'venn', colour: '#ff30c0', size: 0.5, points: 500 },
-    { id: 'build', name: 'Build', shape: 'weave,venn', cycle: 16, colour: '#ffb020', size: 0.5, points: 600 }
+    { id: 'build', name: 'Build', shape: 'weave,venn', cycle: 16, colour: '#ffb020', size: 0.5, points: 600 },
+    // 2026-11-06, for the REA festival, four cubes: "it should be like lava concepts laser show". Lava's own colours, red
+    // to amber (the no-green rule holds: the green in an orange is part of the orange). Magma flows across the cubes (each
+    // half a beat behind the one before); Lava plays all six in turn, four bars each.
+    { id: 'lava', name: 'Lava lamp', shape: 'lava', colour: '#ff4000', size: 0.5, points: 600 },
+    { id: 'magma', name: 'Magma', shape: 'magma', colour: '#ff2010', size: 0.5, points: 600, phase: 0.5 },
+    { id: 'eruption', name: 'Eruption', shape: 'eruption', colour: '#ff7000', size: 0.5, points: 600 },
+    { id: 'bubble', name: 'Bubble', shape: 'bubble', colour: '#ff4000', size: 0.5, points: 500 },
+    { id: 'crack', name: 'Crack', shape: 'crack', colour: '#ffa000', size: 0.5, points: 500 },
+    { id: 'drip', name: 'Drip', shape: 'drip', colour: '#ff2010', size: 0.5, points: 600 },
+    { id: 'lava-show', name: 'Lava', shape: 'magma,lava,bubble,drip,crack,eruption', cycle: 16, colour: '#ff4000', size: 0.5, points: 600 }
 ].map((look) => normaliseLook(look))
 // The seed looks a bank saved before `seeded` was kept (2026-10-29 evening) had been offered: the first fourteen.
 const FIRST_SEEDS = ['ring', 'star', 'fan', 'wave', 'triangle', 'square', 'spiral', 'scan', 'galaxy', 'sunflower', 'noisy', 'grid', 'td-cycle', 'pairs']
