@@ -62,10 +62,10 @@ export const dmxChannels = (view, tSec) => {
 export const toBytes = (ch) => Uint8Array.from(ch.map((v) => Math.round(clamp(v) * 255)))
 
 /** Quantised look key: a new laser frame is posted only when this changes. */
-export const laserKey = (view) => `${view.mode}|${Math.round(clamp(view.lava) * 10)}|${view.burn > 0.3 ? 'b' : '-'}`
+export const laserKey = (view, gain = 1) => `${Math.round(clamp(gain) * 10)}|${view.mode}|${Math.round(clamp(view.lava) * 10)}|${view.burn > 0.3 ? 'b' : '-'}`
 
 /** Warm wavy lines. Points [x,y,r,g,b], x,y -1..1, colours 0..1. Static: one POST per look. */
-export const laserPoints = (view) => {
+export const laserPoints = (view, gain = 1) => {
     const lava = Math.round(clamp(view.lava) * 10) / 10
     const lines = 2 + Math.round(lava * 2)
     const amp = 0.08 + lava * 0.28
@@ -74,6 +74,8 @@ export const laserPoints = (view) => {
     if (view.mode === 'dead') [r, g, b] = [0.9, 0, 0]
     if (view.mode === 'won') [r, g, b] = [0.4, 0.8, 1]
     if (view.burn > 0.3) [r, g, b] = [1, 0, 0]
+    const k = Math.round(clamp(gain) * 10) / 10
+    r *= k; g *= k; b *= k
     const bloom = view.burn > 0.3 ? 1.5 : 1
     const N = 40
     const xs = (i) => -0.9 + (1.8 * i) / N

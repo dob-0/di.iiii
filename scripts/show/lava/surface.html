@@ -20,7 +20,7 @@
     ws.onopen = function () { wait = 500; };
     ws.onmessage = function (m) {
       try {
-        var d = JSON.parse(m.data); if (!d || d.type === 'hello') return;
+        var d = JSON.parse(m.data); if (!d || d.type) return;
         seen = Date.now();
         if (typeof d.lava === 'number') st.lava = Math.max(0, Math.min(1, d.lava));
         if (d.event === 'burn' && Date.now() - lastBurnAccepted > 400) { lastBurnAccepted = burnAt = Date.now(); }

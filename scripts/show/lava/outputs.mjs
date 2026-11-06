@@ -95,15 +95,15 @@ export class LaserOut {
         } catch (e) { this.fail(e) }
     }
     /** POST /frame once per look change (quantised key), rate-capped to 4/s. */
-    async look(view, nowMs = Date.now()) {
+    async look(view, nowMs = Date.now(), gain = 1) {
         if (!this.enabled || this.stopped) return false
-        const key = laserKey(view)
+        const key = laserKey(view, gain)
         if (key === this.lastKey || nowMs - this.lastFrameAt < 250) return false
         this.lastFrameAt = nowMs
         if (this.sim) { this.lastKey = key; this.frames++; this.log(`[sim laser] frame ${key}`); return true }
         if (this.reachable === false) return false
         try {
-            const r = await this.post('frame', { cube: this.cube, points: laserPoints(view) })
+            const r = await this.post('frame', { cube: this.cube, points: laserPoints(view, gain) })
             if (!r.ok) throw new Error(`frame ${r.status} ${r.body?.error || ''}`)
             this.armed = !!r.body.armed; this.reachable = true; this.lastKey = key; this.frames++
             return true
