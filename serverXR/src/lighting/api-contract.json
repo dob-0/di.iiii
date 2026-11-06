@@ -70,7 +70,14 @@
         "fanStyles",
         "lfoWaves",
         "audioModes",
-        "blackoutBlind"
+        "blackoutBlind",
+        "cue",
+        "colorFx",
+        "colorFxModes",
+        "objects",
+        "objectKinds",
+        "markers",
+        "serverNow"
       ],
       "status": [
         "identifying",
@@ -977,6 +984,54 @@
       "class": "c",
       "reply": {
         "ok": "boolean"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/colorfx",
+      "class": "c",
+      "reply": {
+        "ok": "boolean",
+        "colorFx": "object"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/scenes/follow",
+      "class": "c",
+      "reply": {
+        "ok": "boolean",
+        "scene": "object"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/cue",
+      "class": "c",
+      "reply": {
+        "ok": "boolean",
+        "cue": "object|null"
       },
       "node": {
         "status": 404,

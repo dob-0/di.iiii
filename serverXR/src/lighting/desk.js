@@ -1331,7 +1331,9 @@ function createDesk(opts = {}) {
       cue: engine.cues.status(),          // the running follow sequence: step, total, time left
       colorFxModes: COLORFX_MODES,
       objectKinds: OBJECT_KINDS,
-      now: Date.now(),
+      // The desk's clock, for the stage view's object/video animation and the follow countdown
+      // (a phone's clock can be seconds out). Not `now`: that is what is on the desk (nowOnDesk).
+      serverNow: Date.now(),
       status: {
         // Whether the show is safely on disk (see saveSoon): the page says "not saved —
         // retrying" while ok is false.
@@ -1721,7 +1723,7 @@ function createDesk(opts = {}) {
       })),
       cues: cueRunner.brief(),
       // The desk's clock: the stage view animates objects on it (ui/objcore.js).
-      now: Date.now(),
+      serverNow: Date.now(),
     }),
 
     // THE CUE LIST the desk plays (cuerun.js). Any page may drive it; the desk alone
