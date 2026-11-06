@@ -126,7 +126,7 @@ export async function createHub(opts = {}) {
         if (show.mode !== 'kill') show.prevMode = show.mode
         show.mode = 'kill'
         log(`KILL (${why}): lasers blackout + DMX 0`)
-        dmx.blackout()
+        if (show.outputs.dmx.claim === 'hub') dmx.blackout() // a desk that holds DMX keeps its own output
         osc.send('/show/mode', ['kill'], Date.now(), true)
         await laser.blackout()
         broadcast(true)
@@ -255,6 +255,9 @@ export async function createHub(opts = {}) {
     // ---- ticks: DMX 30 Hz, laser look 10 Hz, laser alive 20 Hz, broadcast 10 Hz, health probe ----
     const timers = []
     timers.push(setInterval(() => {
+        // Kill keeps STREAMING zeros while the hub holds DMX: one zero packet and silence would let the receiver's
+        // sACN source timeout (2.5 s, E1.31 6.7.1) apply its loss policy ("release" brings the desk's looks back on).
+        if (show.mode === 'kill' && show.outputs.dmx.claim === 'hub' && dmx.enabled) { dmx.blackout(); return }
         if (!holds('dmx')) return
         const now = Date.now()
         const out = dmxLimiter.limit(dmxChannels(view(now), now / 1000), now)

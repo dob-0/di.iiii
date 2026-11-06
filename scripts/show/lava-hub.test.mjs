@@ -177,7 +177,8 @@ describe('hub (loopback only, never the real network)', () => {
         const last = got.at(-1)
         expect(last).toBeDefined(); expect(Array.from(last.subarray(126, 138)).every((v) => v === 0)).toBe(true)
         got.length = 0; await sleep(200)
-        expect(got.length).toBe(0) // killed: nothing more sent
+        expect(got.length).toBeGreaterThan(0) // killed: DMX keeps streaming zeros (no sACN source timeout)
+        expect(got.every((pk) => pk.subarray(126, 138).every((b) => b === 0))).toBe(true)
         expect(posts).not.toContain('arm')
         gm.close(); surf.close(); await hub.close(); rx.close()
     })

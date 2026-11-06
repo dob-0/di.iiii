@@ -91,6 +91,18 @@ describe('show hub: claims, control, devices, OSC (loopback only)', () => {
         for (const p of ['/', '/control', '/status']) expect(await (await fetch(base + p)).text()).toContain('Show')
         await hub.close()
     })
+    it('kill keeps streaming DMX zeros while the hub holds DMX (no sACN source timeout), and sends nothing while a desk holds it', async () => {
+        const rx = dgram.createSocket('udp4'); const got = []; rx.on('message', (m) => got.push(m))
+        await new Promise((r) => rx.bind(0, '127.0.0.1', r))
+        const { hub, base } = await mkHub({ dmx: `sacn:127.0.0.1:${rx.address().port}` })
+        await post(`${base}/api/control`, { claim: { output: 'dmx', holder: 'hub' } }); await sleep(200)
+        await post(`${base}/kill`, {}); await sleep(100); got.length = 0; await sleep(400)
+        expect(got.length).toBeGreaterThan(5)
+        expect(got.every((p) => p.subarray(126, 138).every((b) => b === 0))).toBe(true)
+        await post(`${base}/api/control`, { claim: { output: 'dmx', holder: 'PONYO desk' } }); await sleep(100); got.length = 0; await sleep(300)
+        expect(got.length).toBe(0)
+        await hub.close(); rx.close()
+    })
     it('devices join with roles, show in the registry, operator controls over WS, others cannot', async () => {
         const { hub, base } = await mkHub()
         const open = (q) => new Promise((res) => { const w = new WebSocket(`ws://127.0.0.1:${hub.port}/ws?${q}`); w.on('open', () => res(w)) })
