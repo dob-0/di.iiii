@@ -12,7 +12,8 @@ export const SCENES = {
     calm: 'calm lava',
     rising: 'rising',
     eruption: 'eruption',
-    safe: 'blackout-safe (dim embers, never dark)'
+    safe: 'blackout-safe (dim embers, never dark)',
+    red: 'steady full red (owner 2026-11-07)'
 }
 
 /** A scene's view at `tSec` since it was chosen, or null for "follow the game". */
@@ -22,6 +23,7 @@ export const sceneView = (scene, tSec) => {
         case 'rising': return { lava: 0.15 + 0.8 * clamp(tSec / 60), burn: 0, mode: 'play' }
         case 'eruption': return { lava: 0.95, burn: clamp(1 - (tSec % 2.5) / 0.6), mode: 'play' } // one pulse per 2.5 s (0.4 Hz)
         case 'safe': return { lava: 0.06, burn: 0, mode: 'play' }
+        case 'red': return { lava: 0.9, burn: 1, mode: 'play' } // steady: burn 1 = every fixture R full, G/B 0 (mapping.mjs dmxChannels)
         default: return null
     }
 }
