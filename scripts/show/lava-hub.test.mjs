@@ -153,8 +153,10 @@ describe('hub (loopback only, never the real network)', () => {
         const fetchFn = async (url, init) => { posts.push(url.split('/laser/api/')[1]); return { ok: true, status: 200, json: async () => ({ ok: true, armed: false }) } }
         const hub = await createHub({ port: 0, host: '127.0.0.1', quiet: true, dmx: `sacn:127.0.0.1:${rx.address().port}`, lasers: 'on', fetchFn, token: 't', master: 0.8, claim: 'laser,dmx', oscIn: 'off' })
         const base = `http://127.0.0.1:${hub.port}`
-        const game = await (await fetch(`${base}/game`)).text()
+        const game = await (await fetch(`${base}/game?mode=classic`)).text()
         expect(game).toContain('window.__lh'); expect(stripEmitter(game)).toBe(GAME)
+        const friends = await (await fetch(`${base}/game`)).text()
+        expect(friends).toContain('window.__lh'); expect(friends).toContain('FRIENDS MODE'); expect(friends).not.toBe(game)
         expect((await (await fetch(`${base}/surface`)).text())).toContain('<canvas')
         const surf = new WebSocket(`ws://127.0.0.1:${hub.port}/ws?role=surface`)
         const gm = new WebSocket(`ws://127.0.0.1:${hub.port}/ws?role=game`)

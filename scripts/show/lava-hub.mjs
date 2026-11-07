@@ -10,7 +10,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { WebSocketServer, WebSocket } from 'ws'
-import { inject } from './lava/inject.mjs'
+import { inject, injectHead } from './lava/inject.mjs'
 import { LavaState, dmxChannels, toBytes } from './lava/mapping.mjs'
 import { Meter, OutputLimiter, SilenceFader, clamp } from './lava/safety.mjs'
 import { DmxOut, LaserOut, parseDmx, readLaserToken } from './lava/outputs.mjs'
@@ -34,7 +34,7 @@ Options
   --osc-out LIST    OSC UDP out targets host:port,host:port (same addresses)
   --sim             log outputs, send nothing real
   --help
-Pages: /  /game  /surface  /control  /status  /health  /api/state   POST /api/control  /kill  /resume   WS /ws
+Pages: /  /game (friends mode; /game?mode=classic = the two-feet game)  /surface  /control  /status  /health  /api/state   POST /api/control  /kill  /resume   WS /ws
 `
 
 export const parseArgs = (argv) => {
@@ -176,6 +176,7 @@ export async function createHub(opts = {}) {
     const seenGame = (now) => { gameSeenAt.t = now }
 
     const gameHtml = inject(fs.readFileSync(path.join(HERE, 'lava/lava-floor.html'), 'utf8'))
+    const friendsHtml = injectHead(fs.readFileSync(path.join(HERE, 'lava/lava-friends.html'), 'utf8'))
     const surfaceHtml = fs.readFileSync(path.join(HERE, 'lava/surface.html'), 'utf8')
 
     const readBody = (req) => new Promise((resolve) => {
@@ -191,7 +192,7 @@ export async function createHub(opts = {}) {
         meter.hit('http')
         const get = req.method === 'GET'
         if (get && url.pathname === '/') return send(200, 'text/html; charset=utf-8', homePage())
-        if (get && url.pathname === '/game') return send(200, 'text/html; charset=utf-8', gameHtml)
+        if (get && url.pathname === '/game') return send(200, 'text/html; charset=utf-8', url.searchParams.get('mode') === 'classic' ? gameHtml : friendsHtml)
         if (get && url.pathname === '/surface') return send(200, 'text/html; charset=utf-8', surfaceHtml)
         if (get && url.pathname === '/control') return send(200, 'text/html; charset=utf-8', controlPage())
         if (get && url.pathname === '/status') return send(200, 'text/html; charset=utf-8', statusPage())

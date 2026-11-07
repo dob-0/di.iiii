@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#12080c">
+<title>THE FLOOR IS LAVA - FRIENDS</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; height: 100dvh; background: #12080c; overflow: hidden;
+    position: fixed; inset: 0; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    overscroll-behavior: none; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; image-rendering: pixelated; image-rendering: crisp-edges; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script id="logic">
+"use strict";
+/* THE FLOOR IS LAVA - FRIENDS MODE. Every finger on the floor is a player. Last finger on the floor wins.
+   Pure logic (no DOM): tested by scripts/show/lava/friends.test.mjs. Tune the numbers here. */
+const FR = {
+  COUNTDOWN_SEC: 3,        // first finger down starts this countdown so friends can join
+  GRACE_SEC: 0.5,          // a lifted finger may be put back this fast ...
+  GRACE_RADIUS: 2.2,       // ... within this many tiles of where it left
+  PLAY_DELAY_SEC: 1.5,     // calm seconds after GO before the first warning
+  START_INTERVAL: 1.5,     // seconds between new warnings at the start ...
+  MIN_INTERVAL: 0.45,      // ... ramping down to this
+  RAMP_SEC: 75,            // seconds to reach full pace
+  WARN_START_SEC: 2.0,     // a tile glows this long before it turns to lava at the start ...
+  WARN_MIN_SEC: 0.8,       // ... ramping down to this
+  LAVA_HOLD_SEC: 3.0,      // lava cools back to stone after this
+  MAX_BATCH: 3,            // tiles warned per step at full pace
+  FOCUS: 0.6,              // chance a warning lands at/next to a finger (keeps everyone moving)
+  FLOOD_SEC: 90,           // safety end: the whole floor warns and floods
+  OVER_SEC: 5,             // result shown this long, then restarts by itself
+  OVER_TOUCH_SEC: 1.0,     // a touch restarts the round only after this
+  HEARTS_MAX: 5            // the hub's heart range is 0..5
+};
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+class Round {
+  constructor(opts) {
+    this.cols = opts.cols; this.rows = opts.rows; this.rng = opts.rng || Math.random;
+    this.C = Object.assign({}, FR, opts.consts || {});
+    this.events = [];
+    this.reset(false);
+  }
+  reset(announce) {
+    this.phase = "ready"; this.time = 0; this.cd = 0; this.overT = 0; this.nextWarn = 0; this.winner = null; this.result = "";
+    this.players = new Map(); this.nextNum = 1; this.total = 0; this.survived = 0; this.outOrder = [];
+    this.tiles = new Array(this.cols * this.rows).fill(null).map(() => ({ s: 0, t: 0 })); // s 0 stone, 1 warn, 2 lava
+    if (announce) this.emit("restart", null);
+  }
+  emit(event, tile) { this.events.push({ event, tile: tile || null }); }
+  drain() { const e = this.events; this.events = []; return e; }
+  tileOf(x, y) { return [Math.max(0, Math.min(this.cols - 1, Math.floor(x))), Math.max(0, Math.min(this.rows - 1, Math.floor(y)))]; }
+  cell(c, r) { return this.tiles[r * this.cols + c]; }
+  alive() { let n = 0; for (const p of this.players.values()) if (p.alive) n++; return n; }
+  hearts() {
+    if (this.phase === "ready" || this.phase === "count") return this.C.HEARTS_MAX;
+    const a = this.alive(); if (a <= 0) return 0;
+    return Math.max(1, Math.min(this.C.HEARTS_MAX, Math.ceil(this.C.HEARTS_MAX * a / Math.max(1, this.total))));
+  }
+  pace() { return Math.max(0, Math.min(1, (this.time - this.C.PLAY_DELAY_SEC) / this.C.RAMP_SEC)); }
+  level() {
+    if (this.phase === "ready") return 0.05;
+    if (this.phase === "count") return 0.1;
+    return Math.min(1, 0.12 + 0.88 * Math.max(0, Math.min(1, this.time / this.C.RAMP_SEC)));
+  }
+  addPlayer(ptr, x, y) {
+    const [c, r] = this.tileOf(x, y);
+    this.players.set(ptr, { num: this.nextNum++, ptr, x, y, c, r, alive: true, lifted: null, lx: x, ly: y });
+  }
+  down(ptr, x, y) {
+    if (this.phase === "over") { if (this.overT < this.C.OVER_TOUCH_SEC) return; this.reset(true); }
+    if (this.phase === "ready") { this.phase = "count"; this.cd = this.C.COUNTDOWN_SEC; this.addPlayer(ptr, x, y); return; }
+    if (this.phase === "count") { if (!this.players.has(ptr)) this.addPlayer(ptr, x, y); return; }
+    if (this.phase === "play") { // put-back inside the grace window: nearest lifted finger takes this pointer
+      let best = null, bd = Infinity;
+      for (const p of this.players.values()) {
+        if (!p.alive || p.lifted === null) continue;
+        const d = Math.hypot(p.lx - x, p.ly - y);
+        if (d <= this.C.GRACE_RADIUS && d < bd) { best = p; bd = d; }
+      }
+      if (best) { this.players.delete(best.ptr); best.ptr = ptr; best.lifted = null; best.x = x; best.y = y; this.players.set(ptr, best); this.place(best); }
+    }
+  }
+  move(ptr, x, y) {
+    const p = this.players.get(ptr); if (!p || !p.alive || p.lifted !== null) return;
+    p.x = x; p.y = y; if (this.phase === "play") this.place(p);
+  }
+  place(p) { // a finger on a tile: stepping on lava burns, a new tile is a step
+    const [c, r] = this.tileOf(p.x, p.y);
+    if (c === p.c && r === p.r) return;
+    p.c = c; p.r = r;
+    if (this.cell(c, r).s === 2) this.out(p, "lava"); else this.emit("step", [c, r]);
+  }
+  up(ptr) {
+    const p = this.players.get(ptr); if (!p) return;
+    if (this.phase === "count") { this.players.delete(ptr); if (!this.players.size) { this.phase = "ready"; this.cd = 0; } return; }
+    if (this.phase === "play" && p.alive && p.lifted === null) { p.lifted = 0; p.lx = p.x; p.ly = p.y; }
+  }
+  out(p, why) {
+    if (!p.alive) return;
+    p.alive = false; p.why = why; p.outAt = this.time; p.burst = 0; this.outOrder.push(p.num);
+    this.emit("burn", [p.c, p.r]);
+  }
+  update(dt) {
+    if (this.phase === "ready") return;
+    if (this.phase === "count") {
+      this.cd -= dt;
+      if (this.cd <= 0) {
+        if (!this.players.size) { this.phase = "ready"; return; }
+        this.phase = "play"; this.time = 0; this.total = this.players.size; this.nextWarn = this.C.PLAY_DELAY_SEC;
+        this.emit("start", null);
+      }
+      return;
+    }
+    if (this.phase === "over") { this.overT += dt; if (this.overT >= this.C.OVER_SEC) this.reset(true); return; }
+    this.time += dt;
+    for (const p of this.players.values()) {
+      if (p.alive && p.lifted !== null) { p.lifted += dt; if (p.lifted > this.C.GRACE_SEC) this.out(p, "lifted"); }
+    }
+    // tiles: warn -> lava -> stone
+    for (const t of this.tiles) {
+      if (t.s === 0) continue;
+      t.t -= dt;
+      if (t.t <= 0) { if (t.s === 1) { t.s = 2; t.t = this.C.LAVA_HOLD_SEC; } else { t.s = 0; t.t = 0; } }
+    }
+    for (const p of this.players.values()) if (p.alive && p.lifted === null && this.cell(p.c, p.r).s === 2) this.out(p, "lava");
+    // new warnings, faster as the round goes on
+    if (this.time >= this.nextWarn) {
+      const k = this.pace();
+      const warnSec = this.C.WARN_START_SEC + (this.C.WARN_MIN_SEC - this.C.WARN_START_SEC) * k;
+      const batch = 1 + Math.floor(k * (this.C.MAX_BATCH - 1) + 0.5);
+      for (let i = 0; i < batch; i++) this.warnOne(warnSec);
+      this.nextWarn = this.time + this.C.START_INTERVAL + (this.C.MIN_INTERVAL - this.C.START_INTERVAL) * k;
+    }
+    if (this.time >= this.C.FLOOD_SEC) for (const t of this.tiles) if (t.s === 0) { t.s = 1; t.t = this.C.WARN_MIN_SEC; }
+    this.checkEnd();
+  }
+  warnOne(sec) {
+    const live = [...this.players.values()].filter((p) => p.alive);
+    let c, r;
+    if (live.length && this.rng() < this.C.FOCUS) {
+      const p = live[Math.floor(this.rng() * live.length)];
+      c = Math.max(0, Math.min(this.cols - 1, p.c + Math.floor(this.rng() * 3) - 1));
+      r = Math.max(0, Math.min(this.rows - 1, p.r + Math.floor(this.rng() * 3) - 1));
+    } else { c = Math.floor(this.rng() * this.cols); r = Math.floor(this.rng() * this.rows); }
+    const t = this.cell(c, r);
+    if (t.s === 0) { t.s = 1; t.t = sec; this.emit("ignite", [c, r]); }
+  }
+  checkEnd() {
+    const a = this.alive();
+    const solo = this.total === 1;
+    if (solo ? a > 0 : a > 1) return;
+    this.phase = "over"; this.overT = 0; this.survived = this.time;
+    if (solo || a === 0) { this.winner = null; this.result = solo ? "solo" : "draw"; this.emit("dead", null); }
+    else { this.winner = [...this.players.values()].find((p) => p.alive); this.result = "win"; this.emit("win", null); }
+  }
+}
+if (typeof module !== "undefined") module.exports = { Round, FR, mulberry32 };
+</script>
+<script>
+"use strict";
+const FONT = {
+  A: [0b01110,0b10001,0b10001,0b11111,0b10001,0b10001,0b10001],
+  B: [0b11110,0b10001,0b10001,0b11110,0b10001,0b10001,0b11110],
+  C: [0b01111,0b10000,0b10000,0b10000,0b10000,0b10000,0b01111],
+  D: [0b11110,0b10001,0b10001,0b10001,0b10001,0b10001,0b11110],
+  E: [0b11111,0b10000,0b10000,0b11110,0b10000,0b10000,0b11111],
+  F: [0b11111,0b10000,0b10000,0b11110,0b10000,0b10000,0b10000],
+  G: [0b01111,0b10000,0b10000,0b10011,0b10001,0b10001,0b01111],
+  H: [0b10001,0b10001,0b10001,0b11111,0b10001,0b10001,0b10001],
+  I: [0b11111,0b00100,0b00100,0b00100,0b00100,0b00100,0b11111],
+  J: [0b00111,0b00010,0b00010,0b00010,0b00010,0b10010,0b01100],
+  K: [0b10001,0b10010,0b10100,0b11000,0b10100,0b10010,0b10001],
+  L: [0b10000,0b10000,0b10000,0b10000,0b10000,0b10000,0b11111],
+  M: [0b10001,0b11011,0b10101,0b10101,0b10001,0b10001,0b10001],
+  N: [0b10001,0b11001,0b10101,0b10011,0b10001,0b10001,0b10001],
+  O: [0b01110,0b10001,0b10001,0b10001,0b10001,0b10001,0b01110],
+  P: [0b11110,0b10001,0b10001,0b11110,0b10000,0b10000,0b10000],
+  Q: [0b01110,0b10001,0b10001,0b10001,0b10101,0b10010,0b01101],
+  R: [0b11110,0b10001,0b10001,0b11110,0b10100,0b10010,0b10001],
+  S: [0b01111,0b10000,0b10000,0b01110,0b00001,0b00001,0b11110],
+  T: [0b11111,0b00100,0b00100,0b00100,0b00100,0b00100,0b00100],
+  U: [0b10001,0b10001,0b10001,0b10001,0b10001,0b10001,0b01110],
+  V: [0b10001,0b10001,0b10001,0b10001,0b10001,0b01010,0b00100],
+  W: [0b10001,0b10001,0b10001,0b10101,0b10101,0b10101,0b01010],
+  X: [0b10001,0b10001,0b01010,0b00100,0b01010,0b10001,0b10001],
+  Y: [0b10001,0b10001,0b01010,0b00100,0b00100,0b00100,0b00100],
+  Z: [0b11111,0b00001,0b00010,0b00100,0b01000,0b10000,0b11111],
+  "0": [0b01110,0b10001,0b10011,0b10101,0b11001,0b10001,0b01110],
+  "1": [0b00100,0b01100,0b00100,0b00100,0b00100,0b00100,0b01110],
+  "2": [0b01110,0b10001,0b00001,0b00010,0b00100,0b01000,0b11111],
+  "3": [0b11110,0b00001,0b00001,0b01110,0b00001,0b00001,0b11110],
+  "4": [0b10010,0b10010,0b10010,0b11111,0b00010,0b00010,0b00010],
+  "5": [0b11111,0b10000,0b10000,0b11110,0b00001,0b00001,0b11110],
+  "6": [0b01110,0b10000,0b10000,0b11110,0b10001,0b10001,0b01110],
+  "7": [0b11111,0b00001,0b00010,0b00100,0b01000,0b01000,0b01000],
+  "8": [0b01110,0b10001,0b10001,0b01110,0b10001,0b10001,0b01110],
+  "9": [0b01110,0b10001,0b10001,0b01111,0b00001,0b00001,0b01110],
+  "!": [0b00100,0b00100,0b00100,0b00100,0b00100,0b00000,0b00100],
+  ".": [0b00000,0b00000,0b00000,0b00000,0b00000,0b01100,0b01100],
+  "'": [0b00100,0b00100,0b01000,0b00000,0b00000,0b00000,0b00000],
+  " ": [0,0,0,0,0,0,0]
+};
+
+const LAVA_PAL = [
+  [48, 4, 0],
+  [92, 10, 0],
+  [168, 22, 0],
+  [214, 48, 0],
+  [255, 92, 8],
+  [255, 148, 16],
+  [255, 206, 48],
+  [255, 244, 168]
+];
+
+/* ------------------------------ page ------------------------------- */
+const PCOL = ["#ff5c5c", "#4cc9ff", "#7dff6b", "#ffd23f", "#e86bff", "#ff9a3c", "#6bffd8", "#ffffff"];
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d", { alpha: false }) || canvas.getContext("2d");
+let pixel = 2, artW = 320, artH = 240, tile = 32, gridX = 0, gridY = 0, game = null, builtKey = "", fpsFrames = 0, fpsT = 0;
+let particles = [], flash = 0;
+const params = new URLSearchParams(location.search);
+const rngSeed = params.get("seed") ? Number(params.get("seed")) : null;
+
+function lh(event, tileXY) { try { if (window.__lh && game) window.__lh(event, game.level(), game.hearts(), tileXY || null); } catch (e) {} }
+function pump() {
+  for (const ev of game.drain()) {
+    if (ev.event === "burn") { const p = tileCenter(ev.tile); spark(p.x, p.y, "#ffcf40", 26); flash = 0.35; }
+    lh(ev.event, ev.tile);
+  }
+}
+function tileCenter(t) { return { x: gridX + (t[0] + 0.5) * tile, y: gridY + (t[1] + 0.5) * tile }; }
+function spark(x, y, color, n) {
+  for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, s = 20 + Math.random() * 90; particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 20, life: 0.5 + Math.random() * 0.5, color }); }
+}
+function screenCss() {
+  const vv = window.visualViewport;
+  return { w: Math.max(1, Math.round((vv && vv.width) || window.innerWidth || 1024)), h: Math.max(1, Math.round((vv && vv.height) || window.innerHeight || 768)) };
+}
+function layout() {
+  const css = screenCss();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  pixel = Math.max(1, Math.round((css.w < 520 ? 3 : 2) * dpr));
+  artW = Math.max(140, Math.floor(css.w * dpr / pixel)); artH = Math.max(180, Math.floor(css.h * dpr / pixel));
+  canvas.width = artW * pixel; canvas.height = artH * pixel;
+  const key = (css.h >= css.w ? "p" : "l") + artW + "x" + artH;
+  const head = 30; // art px reserved for the top line
+  const avail = artW - 8, availH = artH - head - 6;
+  const cols = Math.max(6, Math.min(16, Math.round(avail / 34)));
+  tile = Math.floor(avail / cols);
+  const rows = Math.max(6, Math.floor(availH / tile));
+  gridX = Math.floor((artW - cols * tile) / 2); gridY = head + Math.floor((availH - rows * tile) / 2);
+  const rebuilt = !game || game.cols !== cols || game.rows !== rows || builtKey.charAt(0) !== key.charAt(0);
+  builtKey = key;
+  if (rebuilt) {
+    const first = !game;
+    game = new Round({ cols, rows, rng: rngSeed !== null ? mulberry32(rngSeed) : Math.random });
+    pointers.clear(); particles = [];
+    if (!first) lh("restart");
+  }
+}
+const pointers = new Set();
+function toTiles(e) {
+  const r = canvas.getBoundingClientRect();
+  const ax = (e.clientX - r.left) / r.width * artW, ay = (e.clientY - r.top) / r.height * artH;
+  return [(ax - gridX) / tile, (ay - gridY) / tile];
+}
+function onDown(e) { if (e.cancelable) e.preventDefault(); const [x, y] = toTiles(e); pointers.add(e.pointerId); try { canvas.setPointerCapture(e.pointerId); } catch (_) {} game.down(e.pointerId, x, y); pump(); }
+function onMove(e) { if (e.cancelable) e.preventDefault(); if (!pointers.has(e.pointerId)) return; const [x, y] = toTiles(e); game.move(e.pointerId, x, y); pump(); }
+function onUp(e) { if (e.cancelable) e.preventDefault(); pointers.delete(e.pointerId); game.up(e.pointerId); pump(); }
+
+/* ------------------------------ drawing ---------------------------- */
+function rect(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
+function textW(t, s) { return t.length * 6 * s - s; }
+function text(t, x, y, s, color, align) {
+  t = String(t).toUpperCase(); const w = textW(t, s); let cx = x | 0; if (align === "center") cx = (x - w / 2) | 0; else if (align === "right") cx = (x - w) | 0;
+  ctx.fillStyle = color;
+  for (let i = 0; i < t.length; i++) { const g = FONT[t[i]] || FONT[" "]; for (let r = 0; r < 7; r++) for (let c = 0; c < 5; c++) if ((g[r] >> (4 - c)) & 1) ctx.fillRect(cx + c * s, y + r * s, s, s); cx += 6 * s; }
+}
+function bigText(t, y, color, maxScale) {
+  let s = maxScale; while (s > 1 && textW(String(t), s) > artW - 12) s--;
+  text(t, artW / 2 + s, y + s, s, "#000", "center"); text(t, artW / 2, y, s, color, "center");
+  return 7 * s + 6;
+}
+function lavaColor(c, r, time) { const i = (c * 7 + r * 13 + Math.floor(time * 5 + c * 3 + r)) % 5; const p = LAVA_PAL[2 + (i + LAVA_PAL.length) % 5 % 6]; return "rgb(" + p[0] + "," + p[1] + "," + p[2] + ")"; }
+function draw(now) {
+  const g = game, t = now / 1000;
+  rect(0, 0, artW, artH, "#12080c");
+  for (let r = 0; r < g.rows; r++) for (let c = 0; c < g.cols; c++) {
+    const cell = g.cell(c, r), x = gridX + c * tile, y = gridY + r * tile;
+    const base = ((c + r) & 1) ? "#2a1c26" : "#32222e";
+    if (cell.s === 2) { rect(x, y, tile, tile, lavaColor(c, r, t)); rect(x + 3, y + 3, tile - 6, tile - 6, "rgb(255,148,16)"); rect(x + 6, y + 6, tile - 12, tile - 12, ((c + r + Math.floor(t * 4)) & 1) ? "rgb(255,206,48)" : "rgb(255,92,8)"); }
+    else if (cell.s === 1) {
+      const left = Math.max(0, cell.t), rate = 4 + (1 - Math.min(1, left / 2)) * 10, on = Math.sin(t * rate * 3.1416) > 0;
+      rect(x, y, tile, tile, base); rect(x + 1, y + 1, tile - 2, tile - 2, on ? "rgb(214,48,0)" : "rgb(120,20,0)");
+      rect(x + 4, y + 4, tile - 8, tile - 8, on ? "rgb(255,148,16)" : "rgb(168,22,0)");
+      text("!", x + tile / 2, y + tile / 2 - 6, 2, "#000", "center");
+    } else { rect(x, y, tile, tile, base); rect(x, y, tile, 1, "#3d2a38"); rect(x, y, 1, tile, "#3d2a38"); }
+  }
+  for (const p of g.players.values()) {
+    const col = PCOL[(p.num - 1) % PCOL.length], cx = gridX + p.x * tile, cy = gridY + p.y * tile;
+    if (p.alive && p.lifted === null) { rect(cx - 11, cy - 11, 22, 22, "#000"); rect(cx - 9, cy - 9, 18, 18, col); text(String(p.num), cx, cy - 6, 2, "#000", "center"); }
+    else if (p.alive) { const k = 1 - p.lifted / g.C.GRACE_SEC; const px = gridX + p.lx * tile, py = gridY + p.ly * tile, rr = 8 + 18 * (1 - k); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(px - rr, py - rr, rr * 2, rr * 2); }
+  }
+  for (const q of particles) { rect(q.x | 0, q.y | 0, 3, 3, q.color); }
+  // top line + overlays
+  const n = g.alive();
+  if (g.phase === "ready") { bigText("TOUCH TO PLAY", gridY + g.rows * tile / 2 - 20, "#ffcf40", 6); text("LAST FINGER WINS", artW / 2, gridY + g.rows * tile / 2 + 24, 3, "#fff", "center"); text("FRIENDS JOIN IN", artW / 2, 8, 2, "#ff9a3c", "center"); }
+  else if (g.phase === "count") { const k = Math.ceil(g.cd); bigText(String(k), gridY + g.rows * tile / 2 - 40, "#ffcf40", 14); text(g.players.size + (g.players.size === 1 ? " PLAYER" : " PLAYERS"), artW / 2, 8, 3, "#fff", "center"); text("MORE FINGERS JOIN NOW", artW / 2, gridY + g.rows * tile / 2 + 68, 2, "#fff", "center"); }
+  else if (g.phase === "play") {
+    const secs = Math.floor(g.time);
+    if (g.total > 1) text(n + " LEFT", 6, 8, 3, "#fff", "left"); else text("SURVIVE", 6, 8, 3, "#fff", "left");
+    text(secs + " S", artW - 6, 8, 3, "#ffcf40", "right");
+    if (g.time < 1.0) bigText("GO", gridY + g.rows * tile / 2 - 20, "#7dff6b", 12);
+  } else {
+    const mid = gridY + g.rows * tile / 2, top = mid - 70;
+    rect(0, top - 8, artW, 160, "rgba(0,0,0,0.8)");
+    let y = top;
+    if (g.result === "win") { y += bigText("PLAYER " + g.winner.num, y, PCOL[(g.winner.num - 1) % PCOL.length], 6); y += bigText("WINS", y, "#ffcf40", 8); }
+    else if (g.result === "solo") { y += bigText("YOU SURVIVED", y, "#ffcf40", 5); y += bigText(Math.floor(g.survived) + " SECONDS", y, "#fff", 6); }
+    else { y += bigText("NOBODY WINS", y, "#ff5c5c", 6); y += bigText("THE LAVA WINS", y, "#fff", 5); }
+    text("TOUCH TO PLAY AGAIN", artW / 2, y + 6, 2, "#ff9a3c", "center");
+  }
+  if (flash > 0) { ctx.globalAlpha = Math.min(0.4, flash); rect(0, 0, artW, artH, "#ff5c20"); ctx.globalAlpha = 1; }
+}
+let lastTs = 0;
+function frame(ts) {
+  if (!lastTs) lastTs = ts;
+  const dt = Math.min(0.05, (ts - lastTs) / 1000); lastTs = ts;
+  game.update(dt); pump();
+  for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 160 * dt; q.life -= dt; }
+  particles = particles.filter((q) => q.life > 0); flash = Math.max(0, flash - dt);
+  ctx.setTransform(pixel, 0, 0, pixel, 0, 0); draw(ts);
+  fpsFrames++; if (ts - fpsT >= 1000) { window.__fps = fpsFrames * 1000 / (ts - fpsT); fpsFrames = 0; fpsT = ts; }
+  requestAnimationFrame(frame);
+}
+let rt = 0;
+function onResize() { clearTimeout(rt); rt = setTimeout(layout, 120); }
+function prevent(e) { if (e.cancelable) e.preventDefault(); }
+canvas.addEventListener("pointerdown", onDown, { passive: false });
+canvas.addEventListener("pointermove", onMove, { passive: false });
+canvas.addEventListener("pointerup", onUp, { passive: false });
+canvas.addEventListener("pointercancel", onUp, { passive: false });
+canvas.addEventListener("contextmenu", prevent);
+for (const ev of ["touchstart", "touchmove", "touchend", "gesturestart", "gesturechange", "gestureend", "selectstart"]) document.addEventListener(ev, prevent, { passive: false });
+window.addEventListener("resize", onResize); window.addEventListener("orientationchange", onResize);
+if (window.visualViewport) window.visualViewport.addEventListener("resize", onResize);
+window.__game = () => game;
+layout();
+setInterval(function () { if (window.__lh && game) window.__lh("beat", game.level(), game.hearts()); }, 250);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

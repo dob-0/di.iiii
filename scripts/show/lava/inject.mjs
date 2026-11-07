@@ -23,7 +23,7 @@ export const headBlock = () => `${HEAD_BEGIN}<script>
 (function(){
   var P=new URLSearchParams(location.search),H=P.get("hub");
   var url=H?(H.indexOf("ws")===0?H:"ws://"+H):(location.protocol==="https:"?"wss://":"ws://")+location.host+"/ws?role=game";
-  var ws=null,wait=500,steps=0,lastAt=0,ALWAYS={start:1,win:1,dead:1,restart:1};
+  var ws=null,wait=500,steps=0,lastAt=0,ALWAYS={start:1,win:1,dead:1,restart:1,burn:1};
   function open(){try{ws=new WebSocket(url);ws.onopen=function(){wait=500};
     ws.onclose=function(){ws=null;setTimeout(open,wait);wait=Math.min(wait*2,8000)};ws.onerror=function(){try{ws.close()}catch(e){}}}catch(e){setTimeout(open,wait);wait=Math.min(wait*2,8000)}}
   open();
@@ -55,4 +55,10 @@ export const stripEmitter = (html) => {
     const e = html.indexOf(HEAD_END)
     let out = b >= 0 && e > b ? html.slice(0, b) + html.slice(e + HEAD_END.length + 1) : html
     return out.split('\n').filter((l) => !l.startsWith('/*LH*/')).join('\n')
+}
+
+/** The friends game (lava-friends.html) sends its own hub messages; it only needs the connection block in <head>. */
+export const injectHead = (html) => {
+    if (!html.includes('</head>')) throw new Error('lava friends: no </head>')
+    return html.replace('</head>', () => headBlock() + '</head>')
 }
