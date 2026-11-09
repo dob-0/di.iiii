@@ -17,6 +17,19 @@ export const WIKI_CATEGORIES = [
 
 export const WIKI_ARTICLES = [
     {
+        id: 'ask-di',
+        category: 'Getting started',
+        title: 'Ask di: a question box, no terminal',
+        summary: 'Type a question at the top of the Wiki and get the pages that answer it, with a link to each. It runs in your browser and sends nothing anywhere.',
+        body: [
+            'Ask di is the box above the Wiki. Type a question the way you would say it, such as "how do I join a space?", and press Ask. It shows the three pages that fit best, the sentence in each that matches, and a link to the page.',
+            'It reads only what is already public: the Wiki, the public pages about what di.iiii is, and the Support page. It does not read spaces, accounts or anything behind sign-in, and it does not write new answers: what you see is our own text.',
+            'The search runs on your device. The question is not sent to a server and no model is called, so there is no cost and no account. If nothing fits, it says so; then write to info@thedi.studio.',
+        ],
+        tags: ['ask', 'question', 'search', 'help', 'no terminal', 'getting started'],
+        updated: '2026-11-09'
+    },
+    {
         id: 'studio-frame',
         category: 'Editing',
         title: 'The Editor\'s frame and your scene',
@@ -713,8 +726,8 @@ export const WIKI_ARTICLES = [
             'Your own work is separate from all of this and always there: every visitor gets a private sandbox, and a signed-in account can create its own spaces. Being a collaborator in someone else’s space does not spend any of that.',
             'If the link says it is invalid or has expired, it is not you — invites last 7 days. Ask for a fresh one.'
         ],
-        tags: ['invite', 'collaboration', 'onboarding', 'getting started', 'no install', 'editor', 'access'],
-        updated: '2026-08-21'
+        tags: ['invite', 'collaboration', 'onboarding', 'getting started', 'no install', 'editor', 'access', 'join', 'how to join', 'join a space', 'phone'],
+        updated: '2026-11-09'
     },
     {
         id: 'accounts-of-our-own',
