@@ -5,7 +5,7 @@ const { ShareError, redact } = require('./errors')
 
 const apiMessage = (body) => {
   if (!body || typeof body !== 'object') return ''
-  return body.description || body.message || body.error_description || body.error || ''
+  return body.description || body.message || body.error_description || (body.error && typeof body.error === 'object' ? body.error.message : body.error) || ''
 }
 
 async function requestJson(fetchImpl, url, options, { channel, secrets = [] }) {

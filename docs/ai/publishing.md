@@ -7,7 +7,7 @@ Words: **post**, **share channel**, **share door** ([vocabulary.md](vocabulary.m
 ## What it is
 
 A **post** about a space or project is drafted, shown as a page, and sent to share channels through one contract.
-This phase: Telegram channel, Bluesky, Mastodon. Instagram, Threads and YouTube are phase 2 (decision record).
+This phase: Telegram channel, Bluesky, Mastodon. Instagram (added 2026-11-09, one image or reel), Threads and YouTube are phase 2 (decision record).
 Admin only on every route; the tokens never leave the server's environment.
 
 ## The chat flow
@@ -51,6 +51,7 @@ Status: `draft → approved → sent | failed`; `results[channel] = { ok, url | 
 | Telegram | `SHARE_TELEGRAM_BOT_TOKEN`, `SHARE_TELEGRAM_CHAT` (`@channel` or numeric id; the bot must be an admin of it) |
 | Bluesky | `SHARE_BLUESKY_HANDLE`, `SHARE_BLUESKY_APP_PASSWORD` (an app password), `SHARE_BLUESKY_PDS` (default `https://bsky.social`) |
 | Mastodon | `SHARE_MASTODON_URL`, `SHARE_MASTODON_TOKEN` (scopes `write:media write:statuses`) |
+| Instagram | `SHARE_INSTAGRAM_TOKEN` (system-user token), `SHARE_INSTAGRAM_ACCOUNT` (Instagram account id); media must be a public https URL |
 
 ## Limits each API sets (checked 2026-10-21)
 
@@ -59,6 +60,7 @@ Status: `draft → approved → sent | failed`; `results[channel] = { ok, url | 
 | Telegram | text 4096; caption 1024 (longer text goes as a second message); photo ≤ 10 MB, file ≤ 50 MB; album 2–10 | https://core.telegram.org/bots/api#sending-files |
 | Bluesky | 300 graphemes; ≤ 4 images, each ≤ 1,000,000 bytes; links need facets (UTF-8 byte offsets); no video in this phase | https://docs.bsky.app/docs/advanced-guides/post-richtext |
 | Mastodon | 500 characters (instance-set; a link counts 23); ≤ 4 attachments; image ≤ 16 MB, video ≤ 99 MB (mastodon.social defaults) | https://docs.joinmastodon.org/methods/statuses/ |
+| Instagram | 2200 characters caption; ONE image (JPEG) or ONE reel per post (carousels owed); media fetched by Instagram from a public https URL | https://developers.facebook.com/docs/instagram-platform/content-publishing |
 
 The door checks these before it calls anything, so a refusal costs no half-sent post.
 
