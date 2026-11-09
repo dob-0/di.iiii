@@ -128,13 +128,17 @@ function publicOrigin(req, siteOrigin) {
 
 // The studio behind the platform, and the platform itself, as structured data
 // (Google: Organization, WebSite). Facts only: the Instagram handle and an X
-// account are the owner's to name, so `sameAs` carries the one public profile
-// the repo itself proves — its own source.
+// account are the owner's to name, so `sameAs` carries only profiles the repo
+// itself proves: its own source and the Instagram link on the landing footer
+// (src/landing/LandingPage.jsx). diiii.xyz is the one public address (N1135).
 const STUDIO = {
   '@type': 'Organization',
-  name: 'di.i',
-  url: 'https://thedi.studio',
-  sameAs: ['https://github.com/dob-0/di.iiii'],
+  name: 'di.iiii',
+  url: 'https://diiii.xyz',
+  sameAs: [
+    'https://github.com/dob-0/di.iiii',
+    'https://www.instagram.com/di.iiiiiiiiiiiiiiiiiiiii/',
+  ],
 }
 
 // Top-level words the client answers without a space behind them. A reserved
