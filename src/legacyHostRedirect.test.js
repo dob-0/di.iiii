@@ -31,5 +31,11 @@ describe('legacy host redirect (nginx.conf)', () => {
     expect(target('diiii.xyz/')).toBe('')
     expect(target('dev.diiii.xyz/')).toBe('')
     expect(target('evil-di-studio.xyz/')).toBe('')
+    expect(target('di-studio.xyz/serverXR')).toBe('')
+    expect(target('di-studio.xyz/serverXR?probe=1')).toBe('')
+  })
+  it('never redirects the install script paths (curl | sh does not follow a 301)', () => {
+    for (const p of ['/get', '/get.sh', '/get.ps1', '/get?v=1', '/GET.SH']) expect(target('di-studio.xyz' + p)).toBe('')
+    expect(target('di-studio.xyz/getting-started')).toBe('https://diiii.xyz/getting-started')
   })
 })
