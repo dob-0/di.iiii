@@ -1,0 +1,13 @@
+{
+  "$schema": "https://diiii.xyz/schemas/di-space.space.schema.json",
+  "spaceId": "platina",
+  "label": "Platina — Live in Yerevan",
+  "isPublic": false,
+  "minEngine": 7,
+  "note": "Working space for the Platina concert, Eventhub.Yerevan, 14 Nov 2026. Private until the owner publishes it. Phase 1: public facts + the brief from the forwarded chat.",
+  "tiers": {
+    "dev": { "url": "https://dev.diiii.xyz/serverXR", "tokenEnv": "LIVE_API_TOKEN" },
+    "local": { "url": "http://diiii.localhost/serverXR", "tokenEnv": "API_TOKEN", "governed": false }
+  },
+  "projects": ["spaces/platina/di-space.facts.json"]
+}
