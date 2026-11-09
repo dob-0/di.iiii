@@ -14,6 +14,7 @@ const { composeText, checkPost } = require('./channels')
 function createInstagramChannel({ config, fetchImpl = (...a) => globalThis.fetch(...a), wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   const secrets = [config.token]
   const base = (config.apiBase || 'https://graph.facebook.com/v23.0').replace(/\/+$/, '')
+  if (config.token && !/^(https:\/\/|http:\/\/(127\.0\.0\.1|localhost)[:/])/i.test(base)) throw new ShareError('bad-config', 'SHARE_INSTAGRAM_API must be an https URL (http only for localhost); the token is never sent in clear text.', { channel: 'instagram' })
   const auth = { authorization: `Bearer ${config.token}` }
   const json = (path, options) => requestJson(fetchImpl, `${base}${path}`, options, { channel: 'instagram', secrets })
   const post = (path, body) => json(path, { method: 'POST', headers: { ...auth, 'content-type': 'application/json' }, body: JSON.stringify(body) })
@@ -28,6 +29,7 @@ function createInstagramChannel({ config, fetchImpl = (...a) => globalThis.fetch
     async send(post_, { loadMedia } = {}) {
       if (channel.status().state !== 'connected') throw new ShareError('missing-token', channel.status().detail, { channel: 'instagram' })
       checkPost(channel, post_)
+      if ((post_.media || []).length > 1) throw new ShareError('too-many-media', 'Instagram takes ONE image or ONE video per post in this version.', { channel: 'instagram' })
       const item = (post_.media || [])[0]
       if (!item) throw new ShareError('needs-media', 'Instagram needs one image or one video; a text-only post is not possible.', { channel: 'instagram' })
       if (!/^https:\/\//i.test(String(item.url || ''))) {
@@ -42,7 +44,7 @@ function createInstagramChannel({ config, fetchImpl = (...a) => globalThis.fetch
       if (!creationId) throw new ShareError('api-error', 'instagram did not return a media container.', { channel: 'instagram' })
       if (isVideo) {
         let state = ''
-        for (let i = 0; i < 30 && state !== 'FINISHED'; i += 1) {
+        for (let i = 0; i < 60 && state !== 'FINISHED'; i += 1) {
           if (i) await wait(2000)
           const got = await json(`/${creationId}?fields=status_code`, { headers: auth })
           state = String(got.body.status_code || '')
@@ -52,6 +54,7 @@ function createInstagramChannel({ config, fetchImpl = (...a) => globalThis.fetch
       }
       const published = await post(`/${config.accountId}/media_publish`, { creation_id: creationId })
       const id = String(published.body.id || '')
+      if (!id) throw new ShareError('api-error', 'instagram did not confirm the publish; check the account before retrying.', { channel: 'instagram' })
       const meta = await json(`/${id}?fields=permalink`, { headers: auth }).catch(() => null)
       return { id, url: (meta && meta.body.permalink) || '' }
     }

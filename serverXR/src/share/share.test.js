@@ -239,7 +239,7 @@ describe('instagram', () => {
   it('FAIL text-only post and a non-public media URL', async () => {
     await expect(make().send({ text: 'x', media: [] }, { loadMedia })).rejects.toMatchObject({ code: 'needs-media' })
     await expect(make().send({ text: 'x', media: [{ kind: 'image', ref: 'space/asset' }] }, { loadMedia })).rejects.toMatchObject({ code: 'bad-media' })
-    expect(hit('/1784')).toHaveLength(0)
+    expect(hit('/1784/media')).toHaveLength(0)
   })
 
   it('FAIL caption over 2200 characters', async () => {
@@ -251,6 +251,20 @@ describe('instagram', () => {
     const error = await make().send({ text: 'x', media: [{ kind: 'image', url: IMG }] }, { loadMedia }).catch((e) => e)
     expect(error).toMatchObject({ code: 'api-error', status: 400 })
     expect(error.message).not.toContain('EAA-secret-9999')
+    expect(error.message).toContain('Invalid token')
+    expect(error.message).not.toContain('[object Object]')
+  })
+
+  it('FAIL two media in one post is refused, nothing is sent', async () => {
+    await expect(make().send({ text: 'x', media: [{ kind: 'video', url: IMG }, { kind: 'image', url: IMG }] }, { loadMedia })).rejects.toMatchObject({ code: 'too-many-media' })
+    expect(hit('/1784/media')).toHaveLength(0)
+  })
+
+  it('FAIL publish with no id is not reported as sent; an http API base is refused', async () => {
+    handlers['/1784/media_publish'] = () => ({ body: {} })
+    handlers['/1784/media'] = () => ({ body: { id: 'C3' } })
+    await expect(make().send({ text: 'x', media: [{ kind: 'image', url: IMG }] }, { loadMedia })).rejects.toMatchObject({ code: 'api-error' })
+    expect(() => createInstagramChannel({ config: { token: 't', accountId: '1', apiBase: 'http://example.com/v1' }, fetchImpl: fetch })).toThrow(/https/)
   })
 })
 
