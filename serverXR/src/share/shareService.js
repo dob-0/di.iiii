@@ -7,6 +7,7 @@ const { ShareError, redact } = require('./errors')
 const { createTelegramChannel } = require('./telegram')
 const { createBlueskyChannel } = require('./bluesky')
 const { createMastodonChannel } = require('./mastodon')
+const { createInstagramChannel } = require('./instagram')
 
 const MAX_TEXT = 5000
 const MAX_MEDIA = 10
@@ -39,10 +40,11 @@ function createShareService({ config, fetchImpl = (...a) => globalThis.fetch(...
   const registry = channels || [
     createTelegramChannel({ config: config.telegram, fetchImpl }),
     createBlueskyChannel({ config: config.bluesky, fetchImpl }),
-    createMastodonChannel({ config: config.mastodon, fetchImpl })
+    createMastodonChannel({ config: config.mastodon, fetchImpl }),
+    createInstagramChannel({ config: config.instagram || {}, fetchImpl })
   ]
   const byName = new Map(registry.map((c) => [c.name, c]))
-  const secrets = [config.telegram?.botToken, config.bluesky?.appPassword, config.mastodon?.token]
+  const secrets = [config.telegram?.botToken, config.bluesky?.appPassword, config.mastodon?.token, config.instagram?.token]
   const sending = new Set()
 
   async function loadMedia(item) {

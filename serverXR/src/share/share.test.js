@@ -12,6 +12,7 @@ const store = require('./postStore.js')
 const { createTelegramChannel } = require('./telegram.js')
 const { createBlueskyChannel, linkFacets } = require('./bluesky.js')
 const { createMastodonChannel } = require('./mastodon.js')
+const { createInstagramChannel } = require('./instagram.js')
 const { createShareService, normalizeMedia } = require('./shareService.js')
 
 let server, base
@@ -198,6 +199,72 @@ describe('mastodon', () => {
     handlers['/v.mp4'] = () => ({ type: 'video/mp4', body: Buffer.alloc(99 * 1024 * 1024 + 1) })
     await expect(make().send({ text: 'x', media: [{ kind: 'video', url: `${base}/v.mp4` }] }, { loadMedia })).rejects.toMatchObject({ code: 'media-too-big' })
     expect(hit('/api/')).toHaveLength(0)
+  })
+})
+
+describe('instagram', () => {
+  const make = (over = {}) => createInstagramChannel({ config: { token: 'EAA-secret-9999', accountId: '1784', apiBase: base, ...over }, wait: async () => {} })
+  const IMG = 'https://cdn.example/pic.jpg'
+
+  it('creates a container then publishes it and returns the permalink', async () => {
+    handlers['/1784/media_publish'] = () => ({ body: { id: 'M1' } })
+    handlers['/1784/media'] = () => ({ body: { id: 'C1' } })
+    handlers['/M1'] = () => ({ body: { permalink: 'https://www.instagram.com/p/abc/' } })
+    const done = await make().send({ text: 'hello', link: 'https://diiii.xyz', media: [{ kind: 'image', url: IMG, alt: 'x' }] }, { loadMedia })
+    expect(done).toEqual({ id: 'M1', url: 'https://www.instagram.com/p/abc/' })
+    const container = hit('/1784/media')[0]
+    expect(container.headers.authorization).toBe('Bearer EAA-secret-9999')
+    expect(JSON.parse(container.body.toString())).toMatchObject({ image_url: IMG, caption: 'hello\nhttps://diiii.xyz', alt_text: 'x' })
+    expect(JSON.parse(hit('/1784/media_publish')[0].body.toString())).toEqual({ creation_id: 'C1' })
+  })
+
+  it('waits for a reel to finish processing before publishing', async () => {
+    let polls = 0
+    handlers['/1784/media_publish'] = () => ({ body: { id: 'M2' } })
+    handlers['/1784/media'] = () => ({ body: { id: 'C2' } })
+    handlers['/C2'] = () => { polls += 1; return { body: { status_code: polls < 3 ? 'IN_PROGRESS' : 'FINISHED' } } }
+    handlers['/M2'] = () => ({ body: { permalink: 'https://www.instagram.com/reel/r/' } })
+    const done = await make().send({ text: 'reel', media: [{ kind: 'video', url: 'https://cdn.example/v.mp4' }] }, { loadMedia })
+    expect(done.id).toBe('M2')
+    expect(polls).toBe(3)
+    expect(JSON.parse(hit('/1784/media')[0].body.toString())).toMatchObject({ media_type: 'REELS', video_url: 'https://cdn.example/v.mp4' })
+  })
+
+  it('FAIL missing token or account', async () => {
+    const channel = make({ token: '', accountId: '' })
+    expect(channel.status()).toMatchObject({ state: 'missing', detail: 'set SHARE_INSTAGRAM_TOKEN and SHARE_INSTAGRAM_ACCOUNT' })
+    await expect(channel.send({ text: 'x', media: [] }, { loadMedia })).rejects.toMatchObject({ code: 'missing-token' })
+  })
+
+  it('FAIL text-only post and a non-public media URL', async () => {
+    await expect(make().send({ text: 'x', media: [] }, { loadMedia })).rejects.toMatchObject({ code: 'needs-media' })
+    await expect(make().send({ text: 'x', media: [{ kind: 'image', ref: 'space/asset' }] }, { loadMedia })).rejects.toMatchObject({ code: 'bad-media' })
+    expect(hit('/1784/media')).toHaveLength(0)
+  })
+
+  it('FAIL caption over 2200 characters', async () => {
+    await expect(make().send({ text: 'a'.repeat(2201), media: [{ kind: 'image', url: IMG }] }, { loadMedia })).rejects.toMatchObject({ code: 'text-too-long' })
+  })
+
+  it('FAIL API 4xx says Meta\'s words and never the token', async () => {
+    handlers['/1784/media'] = () => ({ status: 400, body: { error: { message: 'Invalid token EAA-secret-9999' } } })
+    const error = await make().send({ text: 'x', media: [{ kind: 'image', url: IMG }] }, { loadMedia }).catch((e) => e)
+    expect(error).toMatchObject({ code: 'api-error', status: 400 })
+    expect(error.message).not.toContain('EAA-secret-9999')
+    expect(error.message).toContain('Invalid token')
+    expect(error.message).not.toContain('[object Object]')
+  })
+
+  it('FAIL two media in one post is refused, nothing is sent', async () => {
+    await expect(make().send({ text: 'x', media: [{ kind: 'video', url: IMG }, { kind: 'image', url: IMG }] }, { loadMedia })).rejects.toMatchObject({ code: 'too-many-media' })
+    expect(hit('/1784/media')).toHaveLength(0)
+  })
+
+  it('FAIL publish with no id is not reported as sent; an http API base is refused', async () => {
+    handlers['/1784/media_publish'] = () => ({ body: {} })
+    handlers['/1784/media'] = () => ({ body: { id: 'C3' } })
+    await expect(make().send({ text: 'x', media: [{ kind: 'image', url: IMG }] }, { loadMedia })).rejects.toMatchObject({ code: 'api-error' })
+    expect(() => createInstagramChannel({ config: { token: 't', accountId: '1', apiBase: 'http://example.com/v1' }, fetchImpl: fetch })).toThrow(/https/)
   })
 })
 
