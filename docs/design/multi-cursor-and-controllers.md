@@ -28,6 +28,8 @@ controllers, managed inputs).
 | One gamepad's X (Cross) button sent no kernel event while Circle, Square, Triangle did | raw `EV_KEY` read of `/dev/input/event25` **[measured]** |
 | `python-evdev` is installed; `/dev/uinput` is `root:input`, user is in `input` | `pacman -Q`, `ls -l`, `id` **[measured]** |
 | X11 `xinput create-master` exited 0 but made **no** second pointer, in Xvfb and in Xephyr | `xinput list` before and after **[measured]**, cause **[open]** |
+| On a **real Xorg session on VT5** (`scripts/mpx-vt-test.sh`), `create-master Second` made "Second pointer"; the touchpad was reattached to it; mouse and touchpad drove separate cursors. Run 2 (120 s): 11079 events on the Second pointer (touchpad source) and 37429 on the mouse side; the owner saw two cursors | `/tmp/mpx-vt-test.log*` 2026-11-10 01:32–01:34 **[measured]** |
+| In that run the xterm window did not show (`cannot load font`, still after installing `xorg-fonts-misc`); cause **[open]** | same log **[measured]** |
 
 ## 3. Model
 
@@ -51,7 +53,7 @@ controllers, managed inputs).
 
 | Route | How | State |
 | --- | --- | --- |
-| A. X11 MPX | `xinput create-master`, `reattach` a device to it (X.Org MPX, `xinput` man page) | docs **[source]**; nested servers failed **[measured]**; real Xorg on a VT **[open]** |
+| A. X11 MPX | `xinput create-master`, `reattach` a device to it (X.Org MPX, `xinput` man page) | docs **[source]**; nested servers failed **[measured]**; **real Xorg on a VT works: two cursors, mouse and touchpad separate [measured]**; inside Hyprland **[open]**, it has one pointer |
 | B. Wayland multi-seat (e.g. sway) | one seat per device group | sway supports it per the Hyprland discussion **[source]**; not read or tested **[open]** |
 | C. Overlay on Hyprland | extra cursor drawn by us, clicks sent through uinput | not a true second pointer; fits the agent seat **[open]** |
 
