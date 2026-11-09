@@ -29,6 +29,7 @@ controllers, managed inputs).
 | `python-evdev` is installed; `/dev/uinput` is `root:input`, user is in `input` | `pacman -Q`, `ls -l`, `id` **[measured]** |
 | X11 `xinput create-master` exited 0 but made **no** second pointer, in Xvfb and in Xephyr | `xinput list` before and after **[measured]**, cause **[open]** |
 | On a **real Xorg session on VT5** (`scripts/mpx-vt-test.sh`), `create-master Second` made "Second pointer"; the touchpad was reattached to it; mouse and touchpad drove separate cursors. Run 2 (120 s): 11079 events on the Second pointer (touchpad source) and 37429 on the mouse side; the owner saw two cursors | `/tmp/mpx-vt-test.log*` 2026-11-10 01:32–01:34 **[measured]** |
+| **Form 4 prototype on Hyprland** (`scripts/cursor2/`): the touchpad is grabbed, a second cursor (blue dot, pink while pressed) is drawn by a click-through quickshell overlay, taps and presses click where it points by moving the real pointer there and back. Run 3 (60 s): `press at 3183 5253 btn 272`, three `tap click at …` lines, pointer returned to `(3360.0, 4937.0)` each time, 3241 moves; the owner saw the dot and said it worked | `/run/user/1000/cursor2/log` 2026-11-10 02:22 **[measured]**, owner's words N3115 |
 | In that run the xterm window did not show (`cannot load font`, still after installing `xorg-fonts-misc`); cause **[open]** | same log **[measured]** |
 
 ## 3. Model
