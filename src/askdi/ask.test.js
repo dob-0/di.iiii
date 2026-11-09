@@ -1,3 +1,4 @@
+/* global process */
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import { WIKI_ARTICLES } from '../wiki/wikiContent.js'
