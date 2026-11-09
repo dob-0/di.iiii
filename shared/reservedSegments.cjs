@@ -29,7 +29,7 @@ const { LANGUAGE_CODES } = require('./i18n/languages.cjs')
 // Top-level app routes. Mirrors src/utils/spaceRouting.js RESERVED_APP_SEGMENTS.
 const APP_SEGMENTS = [
     'admin', 'preferences', 'prefrenaces', 'preferances',
-    'wiki', 'privacy', 'terms', 'tools', 'for-apps',
+    'wiki', 'privacy', 'terms', 'tools', 'for-apps', 'support',
     // `/shoot/{key}` — a crew's shared shoot sheet. Checked on diiii.xyz and
     // dev.diiii.xyz before reserving (2026-10-07): nothing answers to the word.
     'shoot',
