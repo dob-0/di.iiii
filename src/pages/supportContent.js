@@ -1,4 +1,5 @@
-// /support — the words, in one place, so the page and "Ask di" say the same thing.
+// How to support the work — the words "Ask di" answers with. /support itself is the live `support`
+// space (serverXR/src/siteLinkedSpaces.js), so there is no app page at that address; a result links there.
 //
 // GitHub Sponsors is the chosen way to give money (owner's pick, 2026-11). The
 // account is not open yet: SPONSORS_URL stays null until the owner names it, and
