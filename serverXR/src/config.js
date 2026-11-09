@@ -431,6 +431,11 @@ const config = {
     mastodon: {
       url: (process.env.SHARE_MASTODON_URL || '').trim().replace(/\/+$/, ''),
       token: (process.env.SHARE_MASTODON_TOKEN || '').trim()
+    },
+    instagram: {
+      token: (process.env.SHARE_INSTAGRAM_TOKEN || '').trim(),
+      accountId: (process.env.SHARE_INSTAGRAM_ACCOUNT || '').trim(),
+      apiBase: (process.env.SHARE_INSTAGRAM_API || 'https://graph.facebook.com/v23.0').replace(/\/+$/, '')
     }
   },
   // Human-approval gate for admin-level writes (see approvalGate.js). Unset
