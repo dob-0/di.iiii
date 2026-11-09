@@ -18,6 +18,7 @@ Identified apps and crawlers get 300 API reads a minute per address; anonymous p
 - [Wiki](https://diiii.xyz/wiki): what di.iiii is and how it works, in plain words
 - [Privacy](https://diiii.xyz/privacy): what di.iiii stores, including about programs
 - [Terms](https://diiii.xyz/terms): licence, content ownership, limits
+- [Support](https://diiii.xyz/support): how to help the work go on
 
 ## Public API
 

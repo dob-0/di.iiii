@@ -4,6 +4,7 @@ import useAuthSession from '../hooks/useAuthSession.js'
 import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { WIKI_ARTICLES, WIKI_CATEGORIES } from './wikiContent.js'
 import './wiki.css'
+import AskDi from '../askdi/AskDi.jsx'
 import SurfaceBar from '../components/SurfaceBar.jsx'
 import { isEmbedRequest } from '../utils/previewMode.js'
 import useLocalInstall from '../hooks/useLocalInstall.js'
@@ -151,6 +152,7 @@ export default function WikiPage({ articleId = null }) {
                     onChange={(e) => setQuery(e.target.value)}
                     aria-label="Search the wiki"
                 />
+                <AskDi />
             </header>
 
             <div className="wiki-layout">

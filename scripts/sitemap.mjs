@@ -31,7 +31,7 @@ export const SITEMAP_ORIGIN = 'https://diiii.xyz'
 
 // Platform pages that are public and worth a search engine's time. /suite is
 // the name-and-mark page; /for-apps is the door sign for programs.
-export const CORE_PATHS = ['/', '/spaces', '/wiki', '/suite', '/for-apps', '/terms', '/privacy']
+export const CORE_PATHS = ['/', '/spaces', '/wiki', '/suite', '/for-apps', '/support', '/terms', '/privacy']
 
 const XML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }
 const xml = (s) => String(s).replace(/[&<>"']/g, (c) => XML_ESCAPES[c])
