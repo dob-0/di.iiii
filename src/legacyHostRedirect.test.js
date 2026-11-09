@@ -1,4 +1,4 @@
-// di-studio.xyz answered 200 with a duplicate of every page (N1135). nginx.conf
+// di-studio.xyz answered 200 with a duplicate of every page. nginx.conf
 // now 301s page requests to diiii.xyz, but never the /serverXR/ API (OAuth
 // callbacks, asset URLs saved in old data). The map's regex is read from the
 // file and run here (PCRE and JS agree on this lookahead + named group).

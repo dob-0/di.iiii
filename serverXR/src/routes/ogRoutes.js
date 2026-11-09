@@ -130,7 +130,7 @@ function publicOrigin(req, siteOrigin) {
 // (Google: Organization, WebSite). Facts only: the Instagram handle and an X
 // account are the owner's to name, so `sameAs` carries only profiles the repo
 // itself proves: its own source and the Instagram link on the landing footer
-// (src/landing/LandingPage.jsx). diiii.xyz is the one public address (N1135).
+// (src/landing/LandingPage.jsx). diiii.xyz is the one public address.
 const STUDIO = {
   '@type': 'Organization',
   name: 'di.iiii',
