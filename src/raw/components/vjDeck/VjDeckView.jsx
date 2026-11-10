@@ -107,8 +107,15 @@ function useCameras() {
         try {
             const stream = await media.getUserMedia({ video: true })
             stream.getTracks().forEach((track) => track.stop())
-        } catch {
-            setState((current) => ({ ...current, error: 'The camera was not allowed.' }))
+        } catch (failure) {
+            // 2026-11-10 (owner row N3529): the default camera can be held by another
+            // program. The person's Allow still counts, so read the list again; say
+            // no only when the browser really refused or the list is still unnamed.
+            await read()
+            const refused = failure?.name === 'NotAllowedError'
+            setState((current) => (current.cameras.length
+                ? current
+                : { ...current, error: refused ? 'Cameras are blocked for this page: allow them in the address bar.' : 'The camera is busy in another program.' }))
             return
         }
         await read()
@@ -257,8 +264,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
             const asset = await onUploadFile(file)
             if (asset?.id) place({ kind: 'asset', asset: asset.id, label: asset.name || file.name })
             else setNotice(`Could not bring in ${file.name}.`)
-        } catch {
-            setNotice(`Could not bring in ${file.name}.`)
+        } catch (failure) {
+            // 2026-11-10 (owner row N3529): the server refuses a file over its limit
+            // with 413; say that, with the file's size, instead of a bare "could not".
+            const mb = Math.round(file.size / (1024 * 1024))
+            setNotice(failure?.status === 413
+                ? `${file.name} is ${mb} MB: too large to upload here (the limit is 100 MB unless this di was set higher).`
+                : `Could not bring in ${file.name}.`)
         } finally {
             setUploading('')
         }

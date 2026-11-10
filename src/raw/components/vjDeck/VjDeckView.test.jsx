@@ -222,6 +222,17 @@ describe('VjDeckView', () => {
         await vi.waitFor(() => expect(lastDeck(onValues).layers[1].clips[2]).toMatchObject({ asset: 'asset-new', label: 'fresh.mp4' }))
     })
 
+    // 2026-11-10 (owner row N3529): a video over the server's limit said only "could not".
+    it('a file the server refuses as too large says so, with its size', async () => {
+        const onUploadFile = vi.fn(async () => { throw Object.assign(new Error('too large'), { status: 413 }) })
+        render(<Host onUploadFile={onUploadFile} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Layer 2, slot 3: add a clip' }))
+        const file = new File(['x'], 'big.mp4', { type: 'video/mp4' })
+        Object.defineProperty(file, 'size', { value: 250 * 1024 * 1024 })
+        fireEvent.change(screen.getByLabelText('Upload video'), { target: { files: [file] } })
+        await vi.waitFor(() => expect(screen.getByText(/big\.mp4 is 250 MB: too large to upload/)).toBeTruthy())
+    })
+
     it('every placement behaves the same; only the density class differs', () => {
         for (const placement of ['window', 'inside', 'perform']) {
             const onValues = vi.fn()
