@@ -19,8 +19,11 @@ import {
     normalizeDeck,
     setBlend,
     setBpm,
+    effectNumericParams,
     setBypass,
     setCrossfade,
+    setEffectMix,
+    setEffectParam,
     setMaster,
     setOpacity,
     setSide,
@@ -59,7 +62,10 @@ export const ACTIONS = {
     crossfade: { args: [], button: false, relativeOk: true },
     master: { args: [], button: false, relativeOk: true },
     bpm: { args: [], button: false, relativeOk: true },
-    tap: { args: [], button: true }
+    tap: { args: [], button: true },
+    // An effect's mix or one of its numeric main params. args { param: 'mix' | 0..2, layer?, effect? }:
+    // no layer = the selected stack (ctx.fx.layer, -1 = master), no effect = its first.
+    fx: { args: [], button: false, relativeOk: true }
 }
 
 // --- reading a message ------------------------------------------------------
@@ -79,6 +85,7 @@ const matches = (entry, control) => entry?.match && entry.match.kind === control
 
 /** A stable key for "what this binding does", so a learned one can replace it. */
 export const actionKey = (action, args = {}) => [action, args.layer ?? '', args.column ?? ''].join(':')
+    + (args.param !== undefined ? `:${args.param}:${args.effect ?? ''}` : '')
 
 // --- the actions ------------------------------------------------------------
 
@@ -177,6 +184,21 @@ const run = (deck, control, entry, ctx) => {
             return nextOr(continuous(base.master, control, entry, { step: DEFAULT_STEP.master, from: (x) => x, to: (x) => x }, ctx), (v) => setMaster(base, v))
         case 'bpm':
             return nextOr(continuous(base.bpm, control, entry, { step: DEFAULT_STEP.bpm, from: (x) => MIN_BPM + x * (MAX_BPM - MIN_BPM), to: (x) => (x - MIN_BPM) / (MAX_BPM - MIN_BPM) }, ctx), (v) => setBpm(base, v))
+        case 'fx': {
+            const where = args.layer === undefined ? ctx.fx?.layer : args.layer
+            if (!Number.isInteger(where)) return deck
+            const master = where < 0
+            const effect = (master ? base.effects : base.layers[where]?.effects)?.[args.effect ?? 0]
+            if (!effect) return deck
+            const stack = master ? 'master' : where
+            if (args.param === 'mix') {
+                return nextOr(continuous(effect.mix, control, entry, { step: 0.02, from: (x) => x, to: (x) => x }, ctx), (v) => setEffectMix(base, stack, effect.id, v))
+            }
+            const p = effectNumericParams(effect.type)[args.param]
+            if (!p) return deck
+            const span = p.max - p.min
+            return nextOr(continuous(effect.params[p.name], control, entry, { step: span / 50, from: (x) => p.min + x * span, to: (x) => (x - p.min) / span }, ctx), (v) => setEffectParam(base, stack, effect.id, p.name, v))
+        }
         case 'tap': {
             // The view owns the clock (the show clock, or the deck's own taps).
             if (typeof ctx.onTap === 'function') { ctx.onTap(); return deck }
@@ -195,7 +217,7 @@ export const entryFor = (message, map) => {
 }
 
 /** Continuous actions (faders, pots, encoders): the ones a caller may coalesce. */
-export const CONTINUOUS_ACTIONS = new Set(['opacity', 'blend', 'clipSpeed', 'crossfade', 'master', 'bpm'])
+export const CONTINUOUS_ACTIONS = new Set(['opacity', 'blend', 'clipSpeed', 'crossfade', 'master', 'bpm', 'fx'])
 export const isContinuousEntry = (entry) => Boolean(entry) && CONTINUOUS_ACTIONS.has(entry.action)
 
 /**
@@ -240,10 +262,11 @@ export const withOverride = (stored, entry) => {
 
 /**
  * A screen control's key → what it would bind. Keys: opacity:L blend:L speed:L bypass:L solo:L
- * side:L clip:L:C column:C clear:L crossfade master bpm tap  (L, C 0-based).
+ * side:L clip:L:C column:C clear:L crossfade master bpm tap  (L, C 0-based),
+ * fxmix:L:E fxp:L:E:P (L = layer or m for the master, E effect, P numeric param, 0-based).
  */
 export const targetFromKey = (key) => {
-    const [name, a, b] = String(key || '').split(':')
+    const [name, a, b, c] = String(key || '').split(':')
     const n = (value) => (value === undefined || value === '' ? NaN : Number(value))
     const layer = (action) => (isInt(n(a)) ? { action, args: { layer: n(a) } } : null)
     switch (name) {
@@ -256,6 +279,13 @@ export const targetFromKey = (key) => {
         case 'clear': return layer('clearLayer')
         case 'clip': return isInt(n(a)) && isInt(n(b)) ? { action: 'clip', args: { layer: n(a), column: n(b) } } : null
         case 'column': return isInt(n(a)) ? { action: 'column', args: { column: n(a) } } : null
+        case 'fxmix': case 'fxp': {
+            // fxmix:<layer|m>:<effect>   fxp:<layer|m>:<effect>:<param>
+            const where = a === 'm' ? -1 : n(a)
+            const param = name === 'fxmix' ? 'mix' : n(c)
+            if (!(where === -1 || isInt(where)) || !isInt(n(b)) || !(param === 'mix' || isInt(param))) return null
+            return { action: 'fx', args: { layer: where, effect: n(b), param } }
+        }
         case 'crossfade': case 'master': case 'bpm': case 'tap': return { action: name, args: {} }
         default: return null
     }

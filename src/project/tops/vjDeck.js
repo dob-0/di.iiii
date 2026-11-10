@@ -13,7 +13,7 @@
 // Nothing here touches React or the DOM.
 
 import { generateId } from '../../shared/projectSchema.js'
-import { isTopType } from './topOperators.js'
+import { TOP_OPERATORS, isTopType, resolveTopParams } from './topOperators.js'
 import { DEFAULT_BPM, TAP_RESET_MS as CLOCK_TAP_RESET_MS, sanitizeEpoch, tapTempo as clockTapTempo } from '../../timeline/showClock.js'
 
 export const VJ_DECK_TYPE = 'vj.deck'
@@ -70,6 +70,46 @@ export const normalizeClip = (clip) => {
     return out
 }
 
+// --- effects ---------------------------------------------------------------
+// An effect is one of the existing picture operators on a stack (a layer's, or
+// the master's). `main` is what the panel and MIDI show first: numeric params
+// become sliders, a colour param a colour input. See docs/ai/sessions/feat-deck-effects.md.
+
+export const MAX_EFFECTS = 8
+export const EFFECT_TYPES = {
+    'top.level': { main: ['gain', 'brightness', 'gamma'] },
+    'top.tint': { main: ['amount', 'bright'] },
+    'top.blur': { main: ['size'] },
+    'top.edge': { main: ['strength'] },
+    'top.feedback': { main: ['trail'] },
+    'top.transform': { main: ['scale', 'rotate', 'moveX'] }
+}
+export const EFFECT_TYPE_IDS = Object.keys(EFFECT_TYPES)
+export const effectLabel = (type) => TOP_OPERATORS[type]?.label || type
+
+/** The main params of an effect type, as the operator defines them (label, range, step, colour?). */
+export const effectMainParams = (type) => (EFFECT_TYPES[type]?.main || [])
+    .map((name) => TOP_OPERATORS[type]?.params.find((p) => p.name === name))
+    .filter(Boolean)
+/** Only the numeric ones: what a slider or a MIDI pot can drive. */
+export const effectNumericParams = (type) => effectMainParams(type).filter((p) => !p.colour && !p.text)
+
+/** One effect, defaults filled and in range. null when its type is not offered. */
+export const normalizeEffect = (raw, taken = new Set()) => {
+    if (!isObject(raw) || !Object.prototype.hasOwnProperty.call(EFFECT_TYPES, raw.type) || !isTopType(raw.type)) return null
+    let id = typeof raw.id === 'string' && raw.id ? raw.id : ''
+    if (!id || taken.has(id)) { do { id = generateId('fx') } while (taken.has(id)) }
+    taken.add(id)
+    return { id, type: raw.type, on: raw.on !== false, mix: clamp(raw.mix, 0, 1, 1), params: resolveTopParams(raw.type, isObject(raw.params) ? raw.params : {}) }
+}
+
+/** Any stored value -> a safe stack: unknown types dropped, at most MAX_EFFECTS. */
+export const normalizeEffects = (raw) => {
+    if (!Array.isArray(raw)) return []
+    const taken = new Set()
+    return raw.map((item) => normalizeEffect(item, taken)).filter(Boolean).slice(0, MAX_EFFECTS)
+}
+
 const layerIdFor = (index) => `layer-${index + 1}`
 
 export const createLayer = (index = 0, columns = DEFAULT_COLUMNS) => ({
@@ -83,6 +123,7 @@ export const createLayer = (index = 0, columns = DEFAULT_COLUMNS) => ({
     bypass: false,
     solo: false,
     side: '',
+    effects: [],
     clips: Array.from({ length: columns }, () => null)
 })
 
@@ -95,6 +136,8 @@ export const createDeck = ({ layers = 3, columns = DEFAULT_COLUMNS, bpm = DEFAUL
         // phase anchor of src/timeline/showClock.js. 0 = never tapped.
         epoch: 0,
         master: 1,
+        // The master's effect stack: after the last layer, before the master level.
+        effects: [],
         // The crossfader, 0 = all A, 1 = all B; layers with side '' ignore it.
         crossfade: 0.5,
         columns: cols,
@@ -128,6 +171,7 @@ export const normalizeDeck = (raw) => {
             bypass: layer.bypass === true,
             solo: layer.solo === true,
             side: sideOf(layer.side),
+            effects: normalizeEffects(layer.effects),
             clips
         }
     })
@@ -135,6 +179,7 @@ export const normalizeDeck = (raw) => {
         bpm: clamp(raw.bpm, MIN_BPM, MAX_BPM, DEFAULT_BPM),
         epoch: sanitizeEpoch(raw.epoch),
         master: clamp(raw.master, 0, 1, 1),
+        effects: normalizeEffects(raw.effects),
         crossfade: clamp(raw.crossfade, 0, 1, 0.5),
         columns,
         layers: layers.length ? layers : createDeck({ columns }).layers
@@ -150,6 +195,41 @@ const withLayer = (deck, layerIndex, change) => {
     next.layers = next.layers.map((item, index) => (index === layerIndex ? change({ ...item, clips: [...item.clips] }) : item))
     return next
 }
+
+// --- effect edits: `where` is a layer index, or 'master' ----------------------
+
+export const MASTER_STACK = 'master'
+export const stackOf = (deck, where) => (where === MASTER_STACK ? deck.effects : deck.layers[where]?.effects || null)
+const withStack = (deck, where, change) => {
+    const next = normalizeDeck(deck)
+    const stack = stackOf(next, where)
+    if (!stack) return next
+    const changed = normalizeEffects(change([...stack]))
+    if (where === MASTER_STACK) next.effects = changed
+    else next.layers = next.layers.map((layer, index) => (index === where ? { ...layer, effects: changed } : layer))
+    return next
+}
+const withEffect = (deck, where, effectId, change) => withStack(deck, where, (stack) => stack.map((effect) => (effect.id === effectId ? change(effect) : effect)))
+
+/** Put an effect of `type` on the end of a stack (nothing past MAX_EFFECTS, nothing for an unknown type). */
+export const addEffect = (deck, where, type) => withStack(deck, where, (stack) => {
+    const taken = new Set(stack.map((effect) => effect.id))
+    const made = stack.length < MAX_EFFECTS ? normalizeEffect({ type }, taken) : null
+    return made ? [...stack, made] : stack
+})
+export const removeEffect = (deck, where, effectId) => withStack(deck, where, (stack) => stack.filter((effect) => effect.id !== effectId))
+/** Move an effect one place: direction -1 = earlier (runs sooner), +1 = later. */
+export const moveEffect = (deck, where, effectId, direction) => withStack(deck, where, (stack) => {
+    const from = stack.findIndex((effect) => effect.id === effectId)
+    const to = from + (direction < 0 ? -1 : 1)
+    if (from < 0 || to < 0 || to >= stack.length) return stack
+    ;[stack[from], stack[to]] = [stack[to], stack[from]]
+    return stack
+})
+export const setEffectOn = (deck, where, effectId, on) => withEffect(deck, where, effectId, (effect) => ({ ...effect, on: Boolean(on) }))
+export const setEffectMix = (deck, where, effectId, mix) => withEffect(deck, where, effectId, (effect) => ({ ...effect, mix: clamp(mix, 0, 1, effect.mix) }))
+/** One param by name; clamped to the operator's range by normalisation. */
+export const setEffectParam = (deck, where, effectId, name, value) => withEffect(deck, where, effectId, (effect) => ({ ...effect, params: { ...effect.params, [name]: value } }))
 
 /** A new layer on TOP of the stack (the end of the array). */
 export const addLayer = (deck) => {
@@ -294,6 +374,12 @@ export const tapTempo = (taps = [], now = 0) => clockTapTempo(taps, now)
 export const clipNodeId = (deckId, layerIndex) => `${deckId}::L${layerIndex}::clip`
 export const blendNodeId = (deckId, layerIndex) => `${deckId}::L${layerIndex}::blend`
 export const masterNodeId = (deckId) => `${deckId}::master`
+// Effect ids come from the effect's own id, not its place in the stack: a param
+// change or a reorder never changes the id set, so the engine never rebuilds.
+export const layerEffectNodeId = (deckId, layerIndex, effectId) => `${deckId}::L${layerIndex}::fx::${effectId}`
+export const layerEffectMixNodeId = (deckId, layerIndex, effectId) => `${deckId}::L${layerIndex}::fxmix::${effectId}`
+export const masterEffectNodeId = (deckId, effectId) => `${deckId}::fx::${effectId}`
+export const masterEffectMixNodeId = (deckId, effectId) => `${deckId}::fxmix::${effectId}`
 // One camera operator per camera label in a deck: two clips of the same camera
 // share it (one getUserMedia). The key is a short hash so any label is a safe id.
 // The device id (when a clip carries one) is part of the key, so two cameras with the
@@ -340,6 +426,24 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
 
     const nodes = []
     const wires = []
+    // A stack after `input`: each ON effect is the operator plus a Blend (Mix mode:
+    // a = what came in, b = the effect, Amount = the effect's mix = dry/wet).
+    // Off or empty adds nothing. Returns the id the next stage reads.
+    const runStack = (stack, input, effectIdOf, mixIdOf) => {
+        let current = input
+        for (const effect of stack) {
+            if (!effect.on) continue
+            const fx = effectIdOf(effect.id)
+            const wet = mixIdOf(effect.id)
+            nodes.push({ id: fx, type: effect.type, values: { machine, ...effect.params } })
+            wires.push({ from: current, to: fx, port: 'a' })
+            nodes.push({ id: wet, type: 'top.blend', values: { machine, mode: '0', mix: effect.mix } })
+            wires.push({ from: current, to: wet, port: 'a' })
+            wires.push({ from: fx, to: wet, port: 'b' })
+            current = wet
+        }
+        return current
+    }
     let below = null
     const anySolo = deck.layers.some((layer) => layer.solo)
     deck.layers.forEach((layer, index) => {
@@ -381,10 +485,11 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
         const blend = blendNodeId(deckId, index)
         nodes.push({ id: blend, type: 'top.blend', values: { machine, mode: layer.blend, mix: opacity } })
         if (below) wires.push({ from: below, to: blend, port: 'a' })
-        wires.push({ from: source, to: blend, port: 'b' })
+        wires.push({ from: runStack(layer.effects, source, (id) => layerEffectNodeId(deckId, index, id), (id) => layerEffectMixNodeId(deckId, index, id)), to: blend, port: 'b' })
         below = blend
     })
 
+    if (below) below = runStack(deck.effects, below, (id) => masterEffectNodeId(deckId, id), (id) => masterEffectMixNodeId(deckId, id))
     nodes.push({
         id: master,
         type: 'top.level',

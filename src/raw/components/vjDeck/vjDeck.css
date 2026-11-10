@@ -439,8 +439,66 @@
 .vj-deck-bottom {
     display: grid;
     flex: none;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--di-space-3);
+}
+
+/* --- effects: the stack of one layer or of the master ----------------------- */
+
+.vj-deck-fx-top,
+.vj-deck-fx-head {
+    min-height: 24px;
+}
+
+.vj-deck-fx-scope {
+    display: flex;
+    gap: var(--di-space-1);
+}
+
+.vj-deck-fx-button {
+    min-width: 28px;
+    min-height: 28px;
+}
+
+.vj-deck-fx-layer,
+.vj-deck-fx-add {
+    min-height: 28px;
+    max-width: 100%;
+}
+
+.vj-deck-fx-effect {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+    padding: var(--di-space-2);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.vj-deck-fx-effect[data-on='false'] {
+    opacity: 0.55;
+}
+
+.vj-deck-fx-head {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-1);
+}
+
+.vj-deck-fx-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.vj-deck-fx-colour {
+    width: 100%;
+    min-height: 28px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    background: none;
 }
 
 /* --- add a clip, clip settings -------------------------------------------- */
