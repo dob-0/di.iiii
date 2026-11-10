@@ -221,3 +221,37 @@ describe('VjDeckView cameras', () => {
         })
     })
 })
+
+describe('VjDeckView a playing camera that cannot open', () => {
+    const playingPhone = () => {
+        let deck = setClip(createDeck(), 0, 0, { kind: 'camera', camera: 'Phone', device: 'd1', label: 'Phone' })
+        deck = trigger(deck, 0, 0)
+        return deck
+    }
+    it('says why on the playing tile and on PREVIEW when the camera is busy (NotReadableError)', async () => {
+        const { cameraNodeId } = await import('../../../project/tops/vjDeck.js')
+        const { reportTop } = await import('../../../project/tops/topReports.js')
+        setMedia({ enumerateDevices: async () => [], addEventListener: () => {}, removeEventListener: () => {} })
+        reportTop(cameraNodeId('deck-1', 'Phone', 'd1'), { camera: { error: 'The camera is busy in another program.', errorName: 'NotReadableError', blocked: true } })
+        render(<Host initialDeck={playingPhone()} />)
+        await act(async () => {})
+        const tile = screen.getByRole('button', { name: /Layer 1, slot 1: Phone/ })
+        expect(within(tile).getByText('The camera is busy in another program.')).toBeTruthy()
+        fireEvent.click(tile)
+        const preview = document.querySelector('.vj-deck-monitor--preview')
+        expect(within(preview).getByText('The camera is busy in another program.')).toBeTruthy()
+        // when the engine's report clears, the words go
+        await act(async () => { reportTop(cameraNodeId('deck-1', 'Phone', 'd1'), { camera: { error: null, errorName: null, blocked: false } }) })
+        expect(screen.queryByText('The camera is busy in another program.')).toBeNull()
+    })
+
+    it('names the camera when it is not found', async () => {
+        const { cameraNodeId } = await import('../../../project/tops/vjDeck.js')
+        const { reportTop } = await import('../../../project/tops/topReports.js')
+        setMedia({ enumerateDevices: async () => [], addEventListener: () => {}, removeEventListener: () => {} })
+        reportTop(cameraNodeId('deck-1', 'Phone', 'd1'), { camera: { error: 'Camera "Phone" not found.', errorName: 'CameraNotFound', blocked: true } })
+        render(<Host initialDeck={playingPhone()} />)
+        await act(async () => {})
+        expect(screen.getByRole('button', { name: /Layer 1, slot 1: Phone/ }).textContent).toContain('Camera "Phone" not found.')
+    })
+})
