@@ -175,9 +175,9 @@ describe('VjDeckView', () => {
     it('the side select puts a layer on A or B, and the crossfader writes the crossfade', () => {
         const onValues = vi.fn()
         render(<Host onValues={onValues} />)
-        fireEvent.change(screen.getByLabelText('Layer 1 side'), { target: { value: 'b' } })
+        fireEvent.change(screen.getByLabelText('Crossfader side for Layer 1'), { target: { value: 'b' } })
         expect(lastDeck(onValues).layers.map((layer) => layer.side)).toEqual(['b', '', ''])
-        fireEvent.change(screen.getByLabelText('Layer 1 side'), { target: { value: '' } })
+        fireEvent.change(screen.getByLabelText('Crossfader side for Layer 1'), { target: { value: '' } })
         expect(lastDeck(onValues).layers[0].side).toBe('')
         fireEvent.change(screen.getByLabelText('Crossfader'), { target: { value: '0.8' } })
         expect(lastDeck(onValues).crossfade).toBe(0.8)

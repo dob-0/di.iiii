@@ -7,6 +7,8 @@
     --vj-tile: 64px;
     --vj-tile-height: 48px;
     --vj-control: 26px;
+    --vj-row-min: 96px;
+    --vj-layers: 3;
     container-type: inline-size;
     container-name: vjdeck;
     display: flex;
@@ -302,7 +304,10 @@
 
 .vj-deck-side {
     flex: none;
-    width: 4.2ch;
+    /* "A/B –" must read whole inside the 28px chip: the old 4.2ch box, with
+       its padding and the native arrow, left no room for any text. */
+    width: auto;
+    min-width: 8ch;
 }
 
 /* The blend has its line to itself: the longest name, Difference, must read
@@ -401,6 +406,20 @@
 }
 
 /* --- bottom: sources and the selected clip ------------------------------- */
+
+.vj-deck-monitor-idle {
+    position: relative;
+    padding: var(--di-space-2);
+    text-align: center;
+}
+
+.vj-deck-camera {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-transform: none;
+}
 
 .vj-deck-bottom {
     display: grid;
@@ -508,6 +527,23 @@
     margin: 0;
     color: var(--di-dim);
     font-size: var(--di-text-2);
+}
+
+/* The perform and inside placements have the room: the layer rows share the
+   free height between the top bar and the bottom panels (each at least today's
+   row, at most 200px), tiles fill their row and keep the picture cover-cropped. */
+.vj-deck--perform .vj-deck-grid,
+.vj-deck--inside .vj-deck-grid {
+    display: grid;
+    grid-template-rows: auto repeat(var(--vj-layers), minmax(var(--vj-row-min), 1fr));
+    align-content: start;
+    min-height: 100%;
+    box-sizing: border-box;
+}
+
+.vj-deck--perform .vj-deck-row,
+.vj-deck--inside .vj-deck-row {
+    max-height: 200px;
 }
 
 /* --- a narrow deck: a phone, or a small window ---------------------------- */

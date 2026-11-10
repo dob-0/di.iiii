@@ -6,6 +6,7 @@ import {
     DECK_INPUTS,
     addColumn,
     addLayer,
+    cameraNodeId,
     clearLayer,
     clipNodeId,
     masterNodeId,
@@ -76,6 +77,90 @@ function ClipStill({ url, inPoint, outPoint, label, className = 'vj-deck-tile-pi
 }
 
 const inputLabel = (input) => `In ${DECK_INPUTS.indexOf(input) + 1}`
+const mediaDevicesOf = () => (typeof navigator !== 'undefined' && navigator.mediaDevices && typeof navigator.mediaDevices.enumerateDevices === 'function' ? navigator.mediaDevices : null)
+
+// The cameras this page can see, by label. Labels are empty until the person
+// has allowed a camera once; then `needsPermission` offers the one button.
+function useCameras() {
+    const [state, setState] = useState({ supported: true, cameras: [], needsPermission: false, error: '' })
+    const read = async () => {
+        const media = mediaDevicesOf()
+        if (!media) { setState({ supported: false, cameras: [], needsPermission: false, error: '' }); return }
+        try {
+            const inputs = (await media.enumerateDevices()).filter((device) => device.kind === 'videoinput')
+            const cameras = inputs.filter((device) => device.label).map((device) => ({ id: device.deviceId || '', label: device.label }))
+            setState({ supported: true, cameras, needsPermission: inputs.length > 0 && cameras.length === 0, error: '' })
+        } catch {
+            setState({ supported: true, cameras: [], needsPermission: false, error: 'Could not list the cameras.' })
+        }
+    }
+    useEffect(() => {
+        read()
+        const media = mediaDevicesOf()
+        media?.addEventListener?.('devicechange', read)
+        return () => media?.removeEventListener?.('devicechange', read)
+    }, [])
+    const allow = async () => {
+        const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
+        try {
+            const stream = await media.getUserMedia({ video: true })
+            stream.getTracks().forEach((track) => track.stop())
+        } catch {
+            setState((current) => ({ ...current, error: 'The camera was not allowed.' }))
+            return
+        }
+        await read()
+    }
+    return { ...state, allow }
+}
+
+function CameraPicker({ onPick }) {
+    const { supported, cameras, needsPermission, error, allow } = useCameras()
+    return (
+        <div className="vj-deck-pick vj-deck-cameras" role="group" aria-label="Cameras">
+            <span className="vj-deck-label">Cameras</span>
+            <div className="vj-deck-pick-list">
+                {cameras.map((camera) => (
+                    <button key={`${camera.id}:${camera.label}`} type="button" className="vj-deck-button vj-deck-camera" aria-label={`Camera ${camera.label}`} onClick={() => onPick(camera)}>
+                        {camera.label}
+                    </button>
+                ))}
+                {needsPermission ? <button type="button" className="vj-deck-button vj-deck-allow-cameras" onClick={allow}>Allow cameras</button> : null}
+                {!supported ? <span className="vj-deck-dim vj-deck-camera-none">No camera on this machine</span> : null}
+                {supported && !cameras.length && !needsPermission && !error ? <span className="vj-deck-dim vj-deck-camera-none">No camera on this machine</span> : null}
+                {error ? <span className="vj-deck-dim" role="status">{error}</span> : null}
+            </div>
+        </div>
+    )
+}
+
+// PREVIEW of a camera clip that is not playing: a private look at the device
+// (a second reader; OUTPUT is untouched). If the device cannot be opened twice
+// or at all, the caller's fallback text stays.
+function CameraPreview({ camera, device, className }) {
+    const videoRef = useRef(null)
+    useEffect(() => {
+        const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
+        if (!media?.getUserMedia || !media.enumerateDevices) return undefined
+        let cancelled = false
+        let stream = null
+        ;(async () => {
+            try {
+                const list = (await media.enumerateDevices()).filter((item) => item.kind === 'videoinput')
+                const found = list.find((item) => item.label && item.label === camera) || list.find((item) => device && item.deviceId === device)
+                if (!found) return
+                stream = await media.getUserMedia({ video: { deviceId: { exact: found.deviceId } } })
+                if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return }
+                if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play?.()?.catch?.(() => {}) }
+            } catch { /* the fallback text stays */ }
+        })()
+        return () => {
+            cancelled = true
+            stream?.getTracks?.().forEach((track) => track.stop())
+        }
+    }, [camera, device])
+    return <video ref={videoRef} className={className} muted playsInline aria-label={`Preview of ${camera}`} data-camera-preview="true" />
+}
 const percent = (value) => `${Math.round(value * 100)}`
 
 export default function VjDeckView({ node, onPatchValues = null, assets = [], inputSources = {}, placement = 'window', onUploadFile = null, now = () => Date.now(), spaceId = '', projectId = null }) {
@@ -95,6 +180,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         () => (assets || []).filter((asset) => asset?.id && detectAssetMediaKind(asset) === 'video'),
         [assets]
     )
+    const clipName = (clip) => (clip.label || (clip.kind === 'input' ? inputLabel(clip.input) : clip.kind === 'camera' ? clip.camera : assetName(clip.asset)))
     const assetName = (id) => (assets || []).find((asset) => asset?.id === id)?.name || id
 
     const write = (nextDeck) => {
@@ -172,17 +258,17 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     // Top layer first on screen; index 0 is the bottom of the stack.
     const rows = deck.layers.map((layer, index) => ({ layer, index })).reverse()
     const columns = Array.from({ length: deck.columns }, (_, column) => column)
-    const gridStyle = { '--vj-columns': deck.columns }
+    const gridStyle = { '--vj-columns': deck.columns, '--vj-layers': deck.layers.length }
 
-    const selectedName = selectedClip
-        ? (selectedClip.label || (selectedClip.kind === 'input' ? inputLabel(selectedClip.input) : assetName(selectedClip.asset)))
-        : ''
+    const selectedName = selectedClip ? clipName(selectedClip) : ''
     const selectedPlaying = Boolean(selectedClip) && deck.layers[selected.layer].active === selected.column
     const selectedPictureId = !selectedClip
         ? ''
         : selectedClip.kind === 'input'
             ? inputSources?.[selectedClip.input] || ''
-            : selectedPlaying ? clipNodeId(deckId, selected.layer) : ''
+            : selectedClip.kind === 'camera'
+                ? (selectedPlaying ? cameraNodeId(deckId, selectedClip.camera) : '')
+                : selectedPlaying ? clipNodeId(deckId, selected.layer) : ''
 
     return (
         <div className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'}>
@@ -305,11 +391,11 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             className="vj-deck-chip vj-deck-side"
                                             value={layer.side}
                                             disabled={!editable}
-                                            aria-label={`${layer.name} side`}
+                                            aria-label={`Crossfader side for ${layer.name}`}
                                             title="Crossfader side"
                                             onChange={(event) => write(setSide(deck, layer.id, event.target.value))}
                                         >
-                                            <option value="">–</option>
+                                            <option value="">A/B –</option>
                                             <option value="a">A</option>
                                             <option value="b">B</option>
                                         </select>
@@ -342,7 +428,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                     const clip = layer.clips[column]
                                     const playing = layer.active === column && Boolean(clip)
                                     const isSelected = selected?.layer === index && selected?.column === column
-                                    const name = clip ? (clip.label || (clip.kind === 'input' ? inputLabel(clip.input) : assetName(clip.asset))) : ''
+                                    const name = clip ? clipName(clip) : ''
                                     return (
                                         <button
                                             key={column}
@@ -358,6 +444,9 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                                 : null}
                                             {playing && clip.kind === 'asset'
                                                 ? <DeckPicture nodeId={clipNodeId(deckId, index)} className="vj-deck-tile-picture" label={name} />
+                                                : null}
+                                            {playing && clip.kind === 'camera'
+                                                ? <DeckPicture nodeId={cameraNodeId(deckId, clip.camera)} className="vj-deck-tile-picture" label={name} />
                                                 : null}
                                             {clip?.kind === 'input' && inputSources?.[clip.input]
                                                 ? <DeckPicture nodeId={inputSources[clip.input]} className="vj-deck-tile-picture" label={name} />
@@ -375,6 +464,12 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     <figure className="vj-deck-monitor vj-deck-monitor--preview">
                         <figcaption className="vj-deck-label vj-deck-monitor-caption">Preview</figcaption>
                         <div className="vj-deck-monitor-screen">
+                            {selectedClip && !selectedPlaying && !(selectedClip.kind === 'asset')
+                                ? <span className="vj-deck-dim vj-deck-monitor-empty vj-deck-monitor-idle">{selectedName}<br />not playing</span>
+                                : null}
+                            {selectedClip && selectedClip.kind === 'camera' && !selectedPlaying
+                                ? <CameraPreview camera={selectedClip.camera} device={selectedClip.device} className="vj-deck-monitor-picture" />
+                                : null}
                             {selectedClip && selectedClip.kind === 'asset' && !selectedPlaying
                                 ? <ClipStill url={clipUrl(selectedClip)} inPoint={selectedClip.in} outPoint={selectedClip.out} label={selectedName} className="vj-deck-monitor-picture" />
                                 : null}
@@ -412,6 +507,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                 ))}
                             </div>
                         </div>
+                        <CameraPicker onPick={(camera) => place({ kind: 'camera', camera: camera.label, device: camera.id, label: camera.label })} />
                         <div className="vj-deck-pick">
                             <span className="vj-deck-label">Footage</span>
                             <div className="vj-deck-pick-list">
@@ -434,7 +530,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                 ) : (
                     <section className="vj-deck-panel vj-deck-sources" aria-label="Sources">
                         <div className="vj-deck-panel-head"><span className="vj-deck-label">Sources</span></div>
-                        <p className="vj-deck-hint">Tap an empty slot to choose a clip for it: a wired input or footage. Tap a clip to play it on its layer.</p>
+                        <p className="vj-deck-hint">Tap an empty slot to choose a clip for it: a wired input, a camera or footage. Tap a clip to play it on its layer.</p>
                     </section>
                 )}
                 {selectedClip ? (
@@ -460,6 +556,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
 
 function ClipSettings({ clip, title, name, editable, onChange, onRemove }) {
     const isInput = clip.kind === 'input'
+    const isCamera = clip.kind === 'camera'
     return (
         <section className="vj-deck-panel vj-deck-clip" aria-label="Clip settings">
             <div className="vj-deck-panel-head">
@@ -468,6 +565,8 @@ function ClipSettings({ clip, title, name, editable, onChange, onRemove }) {
             </div>
             {isInput ? (
                 <p className="vj-deck-dim">This slot plays whatever is wired into {inputLabel(clip.input)}.</p>
+            ) : isCamera ? (
+                <p className="vj-deck-dim vj-deck-clip-camera">Camera: {clip.camera}</p>
             ) : (
                 <div className="vj-deck-settings">
                     <label className="vj-deck-setting">

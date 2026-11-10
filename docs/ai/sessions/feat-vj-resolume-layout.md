@@ -68,3 +68,19 @@ breakpoints (900 / 560) and the 44px targets are by CSS only, never measured; th
 three toggle-size buttons is untested at 390px (grid may scroll sideways there); the Wiki entry
 (`src/wiki/wikiContent.js`) is not updated; the effect rack is owed (effects do not exist); the PREVIEW still for
 a non-playing wired input clip shows the node picture (live), not a still.
+
+### Round 2 (2026-11-10): the owner saw "now its black" and "there are bugs"
+
+- Camera clip: `{ kind: 'camera', camera: '<device label>', device: '<id hint>', label }`. `expandDeck` emits the existing
+  `top.camera` (values `device`, `deviceLabel`, `mirror:false`); the runner (useTopNetwork `resolveCamera`) matches the id
+  first, then the label, so the label carries it to another machine. One operator per camera label per deck
+  (`cameraNodeId`), shared by every layer using it: one getUserMedia. Speed/in/out/mode do not apply; CLIP shows the name and Remove.
+- SOURCES gets "Cameras" (`.vj-deck-cameras`, buttons `.vj-deck-camera` aria "Camera <label>", `.vj-deck-allow-cameras`
+  "Allow cameras", `.vj-deck-camera-none`): `enumerateDevices()` videoinputs, re-read on `devicechange`.
+- Image footage NOT added: `top.clip` plays a `<video>` (clipVideos.js) and its picker is `pickAsset: 'video'`; it cannot draw an image.
+- Side picker: options `A/B –`, `A`, `B`, wider chip, aria "Crossfader side for Layer N".
+- perform/inside: layer rows share the free height (`minmax(96px, 1fr)`, row max 200px); window placement unchanged.
+- PREVIEW, selected clip not playing: input shows its wired node's canvas; camera shows a private `<video>` (a second
+  reader of the device, OUTPUT untouched), else name + "not playing".
+- "follows Light" after reload: not a layout loss. It is `clock.leader === 'light'`, which needs the first poll of the Light
+  desk (useShowClock, 0.5 to 15 s by state; none while the tab is hidden); same code as before the new layout.

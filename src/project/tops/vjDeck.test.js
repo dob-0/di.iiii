@@ -12,6 +12,7 @@ import {
     aliasWires,
     buildVjDeckNodeTypes,
     clearLayer,
+    cameraNodeId,
     clipNodeId,
     createDeck,
     crossfadeGain,
@@ -442,5 +443,48 @@ describe('the vj.deck node type', () => {
         expect(type.inputs.every((port) => port.type === 'texture')).toBe(true)
         expect(type.outputs).toEqual([{ id: 'out', type: 'texture', label: 'Picture' }])
         expect(normalizeDeck(type.defaultValues.deck)).toEqual(type.defaultValues.deck)
+    })
+})
+
+describe('camera clips', () => {
+    const cam = (camera, extra = {}) => ({ id: `c-${camera}`, kind: 'camera', camera, label: camera, ...extra })
+    const withCams = () => {
+        let deck = createDeck({ layers: 2 })
+        deck = trigger(setClip(deck, 0, 0, cam('Phone', { device: 'dev-1' })), 0, 0)
+        deck = trigger(setClip(deck, 1, 0, cam('Phone', { device: 'dev-1' })), 1, 0)
+        return deck
+    }
+
+    it('normalises: needs a label, keeps the device as a hint, drops speed-style fields nowhere else', () => {
+        expect(normalizeClip({ kind: 'camera', camera: '  Phone ', device: 'd1', label: 'Phone' })).toMatchObject({ kind: 'camera', camera: 'Phone', device: 'd1' })
+        expect(normalizeClip({ kind: 'camera', camera: '' })).toBeNull()
+        expect(normalizeClip({ kind: 'camera' })).toBeNull()
+        expect(normalizeClip({ kind: 'camera', camera: 'Phone', device: 5 }).device).toBe('')
+        const deck = setClip(createDeck(), 0, 0, cam('Phone'))
+        expect(updateClip(deck, 0, 0, { label: 'Cam' }).layers[0].clips[0]).toMatchObject({ kind: 'camera', camera: 'Phone', label: 'Cam' })
+    })
+
+    it('expands to one top.camera shared by two clips, with label and device', () => {
+        const out = expandDeck(deckNode(withCams()))
+        const cams = out.nodes.filter((node) => node.type === 'top.camera')
+        expect(cams).toHaveLength(1)
+        expect(cams[0].id).toBe(cameraNodeId('deck', 'Phone'))
+        expect(cams[0].values).toMatchObject({ device: 'dev-1', deviceLabel: 'Phone', mirror: false })
+        expect(out.nodes.some((node) => node.type === 'top.clip')).toBe(false)
+        expect(out.wires.filter((wire) => wire.port === 'b').map((wire) => wire.from)).toEqual([cams[0].id, cams[0].id])
+        expect(cameraNodeId('deck', 'Phone')).not.toBe(cameraNodeId('deck', 'Other'))
+    })
+
+    it('bypass, solo and the crossfader still apply to a camera layer', () => {
+        const blends = (deck) => expandDeck(deckNode(deck)).nodes.filter((node) => node.type === 'top.blend')
+        expect(blends(setBypass(withCams(), 'layer-1', true)).map((node) => node.id)).toEqual(['deck::L1::blend'])
+        expect(blends(setSolo(withCams(), 'layer-1', true)).map((node) => node.id)).toEqual(['deck::L0::blend'])
+        const faded = setCrossfade(setSide(withCams(), 'layer-1', 'a'), 1)
+        expect(blends(faded).map((node) => node.id)).toEqual(['deck::L1::blend'])
+        expect(expandDeck(deckNode(setBypass(setBypass(withCams(), 'layer-1', true), 'layer-2', true))).nodes.some((node) => node.type === 'top.camera')).toBe(false)
+    })
+
+    it('the camera operator takes device and deviceLabel', () => {
+        expect(TOP_OPERATORS['top.camera'].pickDevice).toBe('camera')
     })
 })

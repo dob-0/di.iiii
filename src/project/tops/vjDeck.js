@@ -44,8 +44,11 @@ const sideOf = (value, fallback = '') => (value === 'a' || value === 'b' || valu
 /** A clip, defaults filled and every number in range. null for anything that is not one. */
 export const normalizeClip = (clip) => {
     if (!isObject(clip)) return null
-    const kind = clip.kind === 'input' ? 'input' : 'asset'
+    const kind = clip.kind === 'input' ? 'input' : clip.kind === 'camera' ? 'camera' : 'asset'
     if (kind === 'input' && !DECK_INPUTS.includes(clip.input)) return null
+    // A camera clip is a device by its label (what a person and another machine
+    // can read); `device` is the id this page last saw for it, only a hint.
+    if (kind === 'camera' && !(typeof clip.camera === 'string' && clip.camera.trim())) return null
     if (kind === 'asset' && !(typeof clip.asset === 'string' && clip.asset)) return null
     let start = clamp(clip.in, 0, 1, 0)
     let end = clamp(clip.out, 0, 1, 1)
@@ -60,7 +63,10 @@ export const normalizeClip = (clip) => {
         label: typeof clip.label === 'string' ? clip.label : ''
     }
     if (kind === 'asset') out.asset = clip.asset
-    else out.input = clip.input
+    else if (kind === 'camera') {
+        out.camera = clip.camera.trim()
+        out.device = typeof clip.device === 'string' ? clip.device : ''
+    } else out.input = clip.input
     return out
 }
 
@@ -186,7 +192,7 @@ export const setClip = (deck, layerIndex, column, clip) => withLayer(deck, layer
 export const updateClip = (deck, layerIndex, column, patch) => withLayer(deck, layerIndex, (layer) => {
     const clip = layer.clips[column]
     if (!clip || !isObject(patch)) return layer
-    const merged = normalizeClip({ ...clip, ...patch, id: clip.id, kind: clip.kind, asset: clip.asset, input: clip.input })
+    const merged = normalizeClip({ ...clip, ...patch, id: clip.id, kind: clip.kind, asset: clip.asset, input: clip.input, camera: clip.camera })
     // An in point dragged past the out point keeps the clip it had.
     if (merged && (patch.in !== undefined || patch.out !== undefined)) {
         const start = clamp(patch.in ?? clip.in, 0, 1, clip.in)
@@ -288,6 +294,13 @@ export const tapTempo = (taps = [], now = 0) => clockTapTempo(taps, now)
 export const clipNodeId = (deckId, layerIndex) => `${deckId}::L${layerIndex}::clip`
 export const blendNodeId = (deckId, layerIndex) => `${deckId}::L${layerIndex}::blend`
 export const masterNodeId = (deckId) => `${deckId}::master`
+// One camera operator per camera label in a deck: two clips of the same camera
+// share it (one getUserMedia). The key is a short hash so any label is a safe id.
+export const cameraNodeId = (deckId, label) => {
+    let h = 5381
+    for (const ch of String(label)) h = ((h * 33) ^ ch.codePointAt(0)) >>> 0
+    return `${deckId}::cam-${h.toString(36)}`
+}
 
 /**
  * A deck node → the picture operators that make its picture.
@@ -335,6 +348,12 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
         if (clip.kind === 'input') {
             source = fedBy.get(clip.input)
             if (!source) return
+        } else if (clip.kind === 'camera') {
+            source = cameraNodeId(deckId, clip.camera)
+            // top.camera resolves device id first, then label (useTopNetwork.js).
+            if (!nodes.some((node) => node.id === source)) {
+                nodes.push({ id: source, type: 'top.camera', values: { machine, device: clip.device, deviceLabel: clip.camera, mirror: false } })
+            }
         } else {
             source = clipNodeId(deckId, index)
             nodes.push({
