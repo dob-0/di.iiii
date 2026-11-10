@@ -241,7 +241,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         }
         const state = tapTempo(tapsRef.current, now())
         tapsRef.current = state.taps
-        if (state.bpm !== null) write(setBpm(deck, state.bpm, state.epoch))
+        if (state.bpm !== null) write(setBpm(latestDeck.current, state.bpm, state.epoch))
     }
     const onResetTempo = () => {
         if (clock) {
@@ -249,7 +249,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
             return
         }
         tapsRef.current = []
-        write(setBpm(deck, DEFAULT_BPM, now()))
+        write(setBpm(latestDeck.current, DEFAULT_BPM, now()))
     }
     // MIDI (src/perform/midi): live while the deck is on screen; Learn binds the
     // control clicked on the deck (data-midi-target) to the next controller message.
@@ -283,7 +283,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
             return
         }
         setSelected({ layer: layerIndex, column })
-        write(trigger(deck, layerIndex, column))
+        write(trigger(latestDeck.current, layerIndex, column))
     }
 
     // `slot` is the slot that was picked when the clip was chosen (an upload can finish
@@ -310,10 +310,11 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         } catch (failure) {
             // 2026-11-10 (owner row N3529): the server refuses a file over its limit
             // with 413; say that, with the file's size, instead of a bare "could not".
-            const mb = Math.round(file.size / (1024 * 1024))
             setNotice(failure?.status === 413
-                ? `${file.name} is ${mb} MB: too large to upload here (the limit is 100 MB unless this di was set higher).`
-                : `Could not bring in ${file.name}.`)
+                ? (Number.isFinite(failure.maxBytes)
+                    ? `${file.name} is too large: this di takes ${Math.round(failure.maxBytes / (1024 * 1024))} MB.`
+                    : `${file.name}: the server refused it for size.`)
+                : `Could not bring in ${file.name}${failure?.message ? `: ${failure.message}` : ''}.`)
         } finally {
             setUploading('')
         }
@@ -365,7 +366,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                         aria-label="Crossfader"
                         data-midi-target="crossfade"
                         title="Crossfader: A on the left, B on the right"
-                        onChange={(event) => write(setCrossfade(deck, event.target.value))}
+                        onChange={(event) => write(setCrossfade(latestDeck.current, event.target.value))}
                     />
                     <span className="vj-deck-label">B</span>
                 </div>
@@ -380,14 +381,14 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                         disabled={!editable}
                         aria-label="Master"
                         data-midi-target="master"
-                        onChange={(event) => write(setMaster(deck, event.target.value))}
+                        onChange={(event) => write(setMaster(latestDeck.current, event.target.value))}
                     />
                     <span className="vj-deck-number">{percent(deck.master)}</span>
                 </label>
                 <div className="vj-deck-actions">
-                    <button type="button" className="vj-deck-button" onClick={() => write(addLayer(deck))} disabled={!editable}>+ Layer</button>
-                    <button type="button" className="vj-deck-button" onClick={() => write(removeLayer(deck, deck.layers.length - 1))} disabled={!editable || deck.layers.length <= 1} aria-label="Remove the top layer">- Layer</button>
-                    <button type="button" className="vj-deck-button" onClick={() => write(addColumn(deck))} disabled={!editable}>+ Column</button>
+                    <button type="button" className="vj-deck-button" onClick={() => write(addLayer(latestDeck.current))} disabled={!editable}>+ Layer</button>
+                    <button type="button" className="vj-deck-button" onClick={() => write(removeLayer(latestDeck.current, latestDeck.current.layers.length - 1))} disabled={!editable || deck.layers.length <= 1} aria-label="Remove the top layer">- Layer</button>
+                    <button type="button" className="vj-deck-button" onClick={() => write(addColumn(latestDeck.current))} disabled={!editable}>+ Column</button>
                 </div>
             </header>
 
@@ -401,7 +402,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                     key={column}
                                     type="button"
                                     className="vj-deck-button vj-deck-column"
-                                    onClick={() => write(triggerColumn(deck, column))}
+                                    onClick={() => write(triggerColumn(latestDeck.current, column))}
                                     disabled={!editable}
                                     aria-label={`Play column ${column + 1}`}
                                     data-midi-target={`column:${column}`}
@@ -433,7 +434,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             data-midi-target={`bypass:${index}`}
                                             title="Bypass layer"
                                             disabled={!editable}
-                                            onClick={() => write(setBypass(deck, layer.id, !layer.bypass))}
+                                            onClick={() => write(setBypass(latestDeck.current, layer.id, !layer.bypass))}
                                         >B</button>
                                         <button
                                             type="button"
@@ -443,13 +444,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             data-midi-target={`solo:${index}`}
                                             title="Solo layer"
                                             disabled={!editable}
-                                            onClick={() => write(setSolo(deck, layer.id, !layer.solo))}
+                                            onClick={() => write(setSolo(latestDeck.current, layer.id, !layer.solo))}
                                         >S</button>
                                         <span className="vj-deck-layer-name" title={layer.name}>{layer.name}</span>
                                         <button
                                             type="button"
                                             className="vj-deck-button vj-deck-layer-clear"
-                                            onClick={() => write(clearLayer(deck, index))}
+                                            onClick={() => write(clearLayer(latestDeck.current, index))}
                                             disabled={!editable || layer.active < 0}
                                             aria-label={`Clear ${layer.name}`}
                                             title="Clear layer"
@@ -465,7 +466,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             aria-label={`Crossfader side for ${layer.name}`}
                                             data-midi-target={`side:${index}`}
                                             title="Crossfader side"
-                                            onChange={(event) => write(setSide(deck, layer.id, event.target.value))}
+                                            onChange={(event) => write(setSide(latestDeck.current, layer.id, event.target.value))}
                                         >
                                             <option value="">A/B –</option>
                                             <option value="a">A</option>
@@ -478,7 +479,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             aria-label={`${layer.name} blend`}
                                             data-midi-target={`blend:${index}`}
                                             title={BLEND_MODES[Number(layer.blend)] || ''}
-                                            onChange={(event) => write(setBlend(deck, index, event.target.value))}
+                                            onChange={(event) => write(setBlend(latestDeck.current, index, event.target.value))}
                                         >
                                             {BLEND_MODES.map((label, value) => <option key={label} value={String(value)}>{label}</option>)}
                                         </select>
@@ -493,7 +494,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             disabled={!editable}
                                             aria-label={`${layer.name} opacity`}
                                             data-midi-target={`opacity:${index}`}
-                                            onChange={(event) => write(setOpacity(deck, index, event.target.value))}
+                                            onChange={(event) => write(setOpacity(latestDeck.current, index, event.target.value))}
                                         />
                                         <span className="vj-deck-number">{percent(layer.opacity)}</span>
                                     </div>
@@ -624,8 +625,8 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                         title={`${deck.layers[selected.layer].name}, slot ${selected.column + 1}`}
                         name={selectedName}
                         editable={editable}
-                        onChange={(patch) => write(updateClip(deck, selected.layer, selected.column, patch))}
-                        onRemove={() => write(setClip(deck, selected.layer, selected.column, null))}
+                        onChange={(patch) => write(updateClip(latestDeck.current, selected.layer, selected.column, patch))}
+                        onRemove={() => write(setClip(latestDeck.current, selected.layer, selected.column, null))}
                     />
                 ) : (
                     <section className="vj-deck-panel vj-deck-clip" aria-label="Clip">

@@ -171,6 +171,9 @@ const createHttpError = async (response) => {
     error.status = response.status
     if (data) {
         error.data = data
+        if (Number.isFinite(data.maxBytes)) {
+            error.maxBytes = data.maxBytes
+        }
     }
     return error
 }
