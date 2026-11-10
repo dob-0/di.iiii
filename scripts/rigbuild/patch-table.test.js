@@ -80,3 +80,50 @@ describe('the crew table of the MOXIR v2 patch', () => {
         }
     })
 })
+
+describe('a plan that brings its own types (Platina, 2026-11-10)', () => {
+    const file = 'scripts/place/rigs/platina-2026-11-10.patch.json'
+    const own = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, file), 'utf8'))
+    const m = () => tableModel({ plan: own, library, planFile: file })
+
+    it('gives all 50 units of the plot an address, none overlapping, none past 512', () => {
+        const rows = m().rows
+        expect(rows).toHaveLength(50)
+        expect(rows.filter((r) => r.type === 'cp-aleda-beye-k10')).toHaveLength(11)
+        expect(rows.filter((r) => r.type === 'cp-sharpy')).toHaveLength(7)
+        expect(rows.filter((r) => r.type === 'cp-hy-beye-k15')).toHaveLength(8)
+        expect(rows.filter((r) => r.type === 'acme-pixel-line-ip')).toHaveLength(24)
+        const taken = new Set()
+        for (const r of rows) {
+            expect(r.address + r.footprint - 1).toBeLessThanOrEqual(512)
+            for (let c = r.address; c < r.address + r.footprint; c++) {
+                const key = `${r.universe}.${c}`
+                expect(taken.has(key), key).toBe(false)
+                taken.add(key)
+            }
+        }
+        expect(new Set(rows.map((r) => r.index)).size).toBe(50)
+    })
+
+    it('keeps each unit one LARGER mode apart, so a mode change on the night moves no address', () => {
+        const blocks = m().universes.flatMap((u) => u.blocks)
+        expect(blocks.map((b) => `${b.code} ${b.footprint}/${b.pitch}`)).toEqual([
+            'A.leda B-EYE K10 21/35', 'A.leda B-EYE K10 21/35', 'Sharpy 16/20', 'HY B-EYE K15 22/36', 'HY B-EYE K15 22/36', 'Pixel Line IP 7/21'
+        ])
+        const md = renderMarkdown(m())
+        expect(md).toContain('| U1 | 001 | B-EYE K10, over-stage truss (A.leda B-EYE K10) | Standard, 21 ch | 8 | 001, 036 … 246 (last ch 266) |')
+        expect(md).toContain('PROPOSED, not yet confirmed by the Platina side')
+        expect(md).not.toContain('the cubes on the LAN')
+        expect(md.split('A.leda B-EYE K10: the units stand')).toHaveLength(2)
+    })
+
+    it('says the channel list is owed, and refuses a plan type that hides where its count comes from', () => {
+        expect(m().notes.filter((n) => /channel LIST is owed/.test(n))).toHaveLength(4)
+        const bad = structuredClone(own)
+        delete bad.types[0].modes[0].src
+        expect(() => tableModel({ plan: bad, library })).toThrow(/does not say where its channel count comes from/)
+        const twice = structuredClone(own)
+        twice.types[0].id = library.types[0].id
+        expect(() => tableModel({ plan: twice, library })).toThrow(/already in the library/)
+    })
+})

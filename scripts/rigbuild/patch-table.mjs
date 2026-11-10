@@ -22,7 +22,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { parseArgs, die, say, REPO_ROOT } from '../place/common.mjs'
 import { isMainModule } from '../lib/isMainModule.mjs'
-import { artnetOf, expectedRoom, planPatch } from '../../src/rigbuild/patchPlan.js'
+import { artnetOf, expectedRoom, libraryWithPlan, planPatch } from '../../src/rigbuild/patchPlan.js'
 import { toCsv } from '../../src/rigbuild/sheet.js'
 import { loadLibrary } from './library.mjs'
 
@@ -30,6 +30,9 @@ const pad3 = (n) => String(n).padStart(3, '0')
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 const cell = (v) => String(v ?? '').replace(/\|/g, '\\|')
 const DMX_LINE_MAX = 32 // ANSI E1.11 (DMX512-A): devices on one line
+
+/** One block per fixture code (a note about a type is said once, not once per block). */
+const byCode = (blocks) => [...new Map(blocks.map((b) => [b.code, b])).values()]
 
 /** "001, 017 … 273" — the first addresses and the last, with the step between them. */
 const addressList = (list) => {
@@ -42,7 +45,8 @@ const addressList = (list) => {
  * @returns {{ title, writtenAt, decided, universes: object[], lan: object[], rows: object[], notes: string[], source: string }}
  */
 export const tableModel = ({ plan, library, planFile = '' }) => {
-    const planned = planPatch({ entities: expectedRoom(plan), library, plan })
+    // A crew table needs addresses, and an address needs only the footprint: a mode whose channel list is owed still gets one.
+    const planned = planPatch({ entities: expectedRoom(plan), library: libraryWithPlan(library, plan), plan, footprintOnly: true })
     if (planned.errors.length) throw new Error(`the plan does not fit:\n  ${planned.errors.join('\n  ')}`)
     const universes = plan.universes.map((u) => {
         const mine = planned.assignments.filter((a) => a.universe === u.universe)
@@ -52,6 +56,7 @@ export const tableModel = ({ plan, library, planFile = '' }) => {
             const nextStart = u.blocks[i + 1]?.start ?? 513
             const last = Math.max(...list.map((a) => a.address + a.footprint - 1))
             const footprint = list[0].footprint
+            const pitch = list.length > 1 ? list[1].address - list[0].address : (Number(plan.modes?.[list[0].type]?.pitch) || footprint)
             return {
                 name: b.name || list[0].code,
                 code: list[0].code,
@@ -62,10 +67,12 @@ export const tableModel = ({ plan, library, planFile = '' }) => {
                 footprint,
                 mode: list[0].crewMode,
                 assumed: list[0].assumed,
+                listOwed: list[0].listOwed,
+                pitch,
                 fixtureFirst: list[0].index,
                 fixtureLast: list[list.length - 1].index,
                 addresses: addressList(list),
-                room: { from: last + 1, to: nextStart - 1, units: Math.floor((nextStart - 1 - last) / footprint) },
+                room: { from: last + 1, to: nextStart - 1, units: Math.floor((nextStart - 1 - last) / Math.max(pitch, footprint)) },
                 what: b.what || ''
             }
         })
@@ -92,15 +99,21 @@ export const tableModel = ({ plan, library, planFile = '' }) => {
         `Fixture number: the hundred is the universe; the unit number counts along the block (the plot's numbering).`,
         `At most ${DMX_LINE_MAX} devices on one DMX line (ANSI E1.11): ${universes.map((u) => `U${u.universe} has ${u.devices} devices, so ${u.lines === 1 ? 'one line' : `at least ${u.lines} lines`}`).join('; ')}. The addresses do not depend on which line a unit sits on.`,
         ...universes.flatMap((u) => u.blocks.filter((b) => b.assumed).map((b) => `${b.code}: the channel count (${b.footprint}) is ASSUMED. If the unit says more, read it before the night: ${pad3(b.room.from)}–${pad3(b.room.to)} are free.`)),
+        ...byCode(universes.flatMap((u) => u.blocks.filter((b) => b.pitch > b.footprint))).map((b) => `${b.code}: the units stand ${b.pitch} addresses apart and use ${b.footprint}, so a mode of up to ${b.pitch} channels can be set on the night without moving an address.`),
+        ...byCode(universes.flatMap((u) => u.blocks.filter((b) => b.listOwed))).map((b) => `${b.code}: the channel count (${b.footprint}) is sourced in the plan; the channel LIST is owed, so a desk needs its own fixture profile for this mode.`),
         `Every block is followed by free addresses (the "free" column), so a unit added on the night takes the next address of its own block and nothing else moves.`,
         ...(plan.crewNotes || [])
     ]
     // The crew sheet says WHEN the owner decided, not the ledger row or his words (those stay in the plan).
     const decided = /^\d{4}-\d{2}-\d{2}/.exec(String(plan.owner || ''))?.[0] || ''
-    return { title: plan.title || plan.patch || 'Patch', writtenAt: plan.writtenAt || '', decided, universes, lan, rows, notes, source: planFile }
+    return { title: plan.title || plan.patch || 'Patch', writtenAt: plan.writtenAt || '', decided, crewLine: plan.crewLine || '', universes, lan, rows, notes, source: planFile }
 }
 
-const modeText = (b) => `${b.footprint} ch${b.assumed ? ' (ASSUMED)' : ''}`
+// The line under the title: the plan's own words (`crewLine`) when it has them; else the MOXIR v2 sentence this sheet began with.
+const headLine = (model) => model.crewLine ? ` ${model.crewLine}` : (model.decided ? ` The owner's split of ${model.decided}: two universes, the cubes on the LAN, no DMX for them.` : '')
+
+// A mode the maker NAMES ("Standard") is printed by its name, since that is what the unit's menu shows; "16ch" is already the count.
+const modeText = (b) => `${/^\d+ch\b/.test(String(b.mode || '')) || !b.mode ? '' : `${b.mode}, `}${b.footprint} ch${b.assumed ? ' (ASSUMED)' : ''}`
 /** The block's name, with the type code added only when the name does not already carry it. */
 const fixtureLabel = (b) => (b.name.includes(b.code) ? b.name : `${b.name} (${b.code})`)
 
@@ -108,7 +121,7 @@ const fixtureLabel = (b) => (b.name.includes(b.code) ? b.name : `${b.name} (${b.
 export const renderMarkdown = (model) => {
     const out = []
     out.push(`# ${model.title}`, '')
-    out.push(`Written ${model.writtenAt} from \`${model.source || 'the plan'}\`.${model.decided ? ` The owner's split of ${model.decided}: two universes, the cubes on the LAN, no DMX for them.` : ''}`, '')
+    out.push(`Written ${model.writtenAt} from \`${model.source || 'the plan'}\`.${headLine(model)}`, '')
     out.push('## The patch', '')
     out.push('| Universe | Start | Fixture | Mode | Units | Addresses | Free after |', '|---|---|---|---|---|---|---|')
     for (const u of model.universes) {
@@ -147,7 +160,7 @@ export const renderHtml = (model) => {
 <style>body{font-family:Liberation Sans,Arial,sans-serif;font-size:10pt}h1{font-size:15pt}h2{font-size:12pt;margin-top:14pt}table{border-collapse:collapse;width:100%}td,th{font-size:7.5pt}</style></head>
 <body>
 <h1>${esc(model.title)}</h1>
-<p>Written ${esc(model.writtenAt)} from ${esc(model.source || 'the plan')}.${model.decided ? ` The owner's split of ${esc(model.decided)}: two universes, the cubes on the LAN, no DMX for them.` : ''}</p>
+<p>Written ${esc(model.writtenAt)} from ${esc(model.source || 'the plan')}.${esc(headLine(model))}</p>
 <h2>The patch</h2>
 ${table(['Universe', 'Start', 'Fixture', 'Mode', 'Units', 'Addresses', 'Free after'], short)}
 <p>${model.universes.map((u) => `<b>U${u.universe}</b> ${u.used} of 512 channels used, ${u.free} free (${u.devices} devices)`).join(' · ')}</p>
@@ -169,7 +182,7 @@ const CSV_COLUMNS = [
     { label: 'unit', value: (a) => a.unit },
     { label: 'mode', value: (a) => a.crewMode },
     { label: 'channels', value: (a) => a.footprint },
-    { label: 'channel list', value: (a) => (a.assumed ? 'ASSUMED' : "maker's / tested") }
+    { label: 'channel list', value: (a) => (a.assumed ? 'ASSUMED' : a.listOwed ? 'owed' : "maker's / tested") }
 ]
 
 /** Print an HTML file to PDF with LibreOffice, in a throwaway profile. Returns the pdf path or throws. */

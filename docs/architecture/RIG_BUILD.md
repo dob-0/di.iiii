@@ -2173,6 +2173,20 @@ Checked by `src/rigbuild/moxirV2Patch.test.js` (overlap, whole in one universe, 
 
 Owed: the cabling plan (nodes, which unit on which line); the smoke machine's channel count (1 assumed, maybe 2); how the Poligraf laser and the smoke machine are addressed on the unit; the B380F's channels 11–16 on a real unit; the LaserCube stream on a real cube (#847); the 40 W lasers' safety numbers (NOHD, aerial clearance, the crossing zone with the cubes), which the patch does not touch.
 
+#### 19.5.1 A plan with its own types, and a crew table from the footprint alone (Platina, 2026-11-10)
+
+A show whose fixtures are not in the shared library yet carries them in its plan: `types` (id, code,
+modes with `footprint` and `src`, where the count was read), joined by `libraryWithPlan`
+(`src/rigbuild/patchPlan.js`); a type may not reuse a library id, and a mode without `src` is refused.
+The crew table (`patch-table.mjs`) plans with `footprintOnly`: a mode whose channel COUNT is sourced
+but whose channel LIST is owed still gets addresses (an address needs only the footprint, §2.1), and
+the sheet says "channel list owed". A desk patch (`patch-plan.mjs`) does not take this path: it still
+needs a channel list. `modes.<type>.pitch` stands the units one larger mode apart, so a mode change on
+the night moves no address; `crewLine` is the sentence under the title. First plan:
+`scripts/place/rigs/platina-2026-11-10.patch.json` (50 units of the light plot's legend, 3 universes,
+PROPOSED: no mode is confirmed by the Platina side). Tests: `scripts/rigbuild/patch-table.test.js`,
+`src/rigbuild/patchPlan.test.js`.
+
 ### 19.6 One chosen version on its desk — planned offline, applied with the desk stopped (2026-10-05)
 
 The owed rule of §19.4, as a script: `scripts/rigbuild/desk-plan.mjs`. Why (the MOXIR audit of
