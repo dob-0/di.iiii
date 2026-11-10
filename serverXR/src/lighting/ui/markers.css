@@ -1,0 +1,23 @@
+/* [labels] Stage labels (markers.js): a name on the stage, never a light. Flat and quiet —
+   a thin outline and muted text, no fill colour, no glow, never the colour a light is
+   sending — and one size on screen at any zoom (the stage inner scales by --zoom). They sit
+   under the lights: a light dragged onto a label covers it. */
+.mklayer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+.mk-tag {
+  position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
+  transform-origin: 50% 50%;
+  padding: 2px 7px; border: 1px solid #ffffff38; border-radius: 0;
+  background: #0b0b0ccc; color: var(--muted); font-size: 11px; line-height: 15px;
+  white-space: nowrap; pointer-events: none; user-select: none;
+}
+.mk-tag .mk-text { display: block; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.mk-tag.editable { pointer-events: auto; cursor: move; }
+.mk-tag.editable:hover { color: var(--text); border-color: #ffffff66; }
+.mk-tag.sel { color: var(--text); border-color: var(--accent); }
+.mk-tag.renaming { visibility: hidden; }
+.stage.hand .mk-tag.editable { cursor: grab; }
+.stage.mkdragging, .stage.mkdragging .mk-tag { cursor: grabbing; }
+.mk-rename {
+  position: absolute; z-index: 8; height: 26px; padding: 0 8px; font-size: 12px;
+  background: var(--field); color: var(--text); border: 1px solid var(--accent); border-radius: 0;
+}

@@ -1,0 +1,51 @@
+/* [cues][colorfx] Follow badges, the running step, the follow editor, colour effect pads.
+   Loaded after style.css. di.iiii: near-black, squared, cyan accent, flat colour, no glow. */
+
+/* ---- follow: the "→ 3s" badge on a tile, the running step ---- */
+.bankrow, .tbtn { position: relative; }
+.cuebadge {
+  position: absolute; right: 16px; bottom: 4px; font-style: normal; font-family: var(--mono);
+  font-size: 9px; line-height: 1; padding: 2px 4px; color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); background: var(--pane);
+  pointer-events: auto; cursor: help;
+}
+.cuebadge.dead { color: var(--muted); border-color: var(--line); }
+.tbtn .cuebadge { right: 6px; bottom: 6px; font-size: 11px; padding: 3px 5px; }
+.bankrow.cuerun.cuerun, .tbtn.cuerun { outline: 2px solid var(--accent); outline-offset: -2px; }
+.bankrow.cuenext.cuenext, .tbtn.cuenext { outline: 1px dashed var(--accent); outline-offset: -2px; }
+
+/* the running sequence, beside the transport */
+.cuestatus { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); min-width: 0; white-space: nowrap; }
+.cuestatus[hidden] { display: none; }
+.cuestatus.live { color: var(--accent); }
+.cuestatus .cs-text { overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); font-size: 11px; }
+.cuestatus .sq.small { padding: 2px 8px; }
+
+/* the follow editor (a sibling of the scene menu, same frame) */
+.followpop { width: 300px; }
+.followpop .fp-body { display: grid; gap: 8px; padding: 10px 12px 8px; }
+.followpop .fp-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.followpop .fp-row input[type=number] { width: 64px; }
+.followpop .fp-row select { flex: 1; min-width: 0; }
+.followpop .fp-hint { margin: 0; font-size: 11px; line-height: 1.4; color: var(--muted); }
+.followpop .fp-hint.bad { color: var(--danger); }
+.followpop .fp-btns { display: flex; gap: 6px; }
+.followpop .fp-btns .sq { padding: 5px 12px; }
+.followpop .fp-btns #fpCancel { margin-left: auto; }
+
+/* ---- colour effects: Control rail ---- */
+.cfxbox { display: grid; gap: 4px; padding: 4px 0 2px; border-top: 1px solid var(--line); margin-top: 4px; }
+.cfx-head { display: flex; align-items: baseline; gap: 8px; padding: 2px 8px 0; font-size: 12px; }
+.cfxpads { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cfx-opts { flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--muted); }
+.cfx-opts label { display: inline-flex; align-items: center; gap: 4px; }
+.cfx-opts select { padding: 2px 4px; }
+.cfx-opts .dim { opacity: .5; }
+.cfx-custom { display: inline-flex; gap: 4px; }
+.cfx-custom[hidden] { display: none; }
+.cfx-custom input[type=color] { width: 28px; height: 22px; padding: 0; border: 1px solid var(--line); border-radius: 0; background: var(--field); }
+
+/* ---- colour effects: Touch strip ---- */
+.cfx-tpads { align-items: center; margin-top: 6px; }
+.cfx-tlabel { flex: none; font-size: 12px; color: var(--muted); padding: 0 4px; }
+.cfx-tpair { flex: none; min-height: 40px; padding: 0 8px; }

@@ -58,6 +58,24 @@ const view = { x: 0, y: 0 };
 // regardless of what this page sends, so this is a UX courtesy, not the actual limit.
 const WORLD = 1000;
 let spaceHeld = false;   // Space + drag pans, like every canvas tool she uses
+// The stage modules from the studio desk (objects.js, markers.js, video.js) ask for the view
+// of the stage they draw on: viewOf(el) → {x, y, zoom}. This desk has ONE view for every
+// stage (`view` and `zoom` above), so every stage answers with the same live object.
+const deskView = {
+  get x() { return view.x; }, set x(v) { view.x = v; },
+  get y() { return view.y; }, set y(v) { view.y = v; },
+  get zoom() { return zoom; }, set zoom(v) { zoom = v; },
+};
+// eslint-disable-next-line no-unused-vars -- read by objects.js, markers.js and video.js
+const viewOf = (el) => deskView;
+// The grid objects and labels snap to: the 1/40 fixtures snap to across.
+// eslint-disable-next-line no-unused-vars -- read by objects.js and markers.js
+const snapv = (v) => Math.round(v * 40) / 40;
+// When this page last posted the stage objects / the stage labels (set by objects.js and
+// markers.js): a poll asked for before that cannot know about it and must not put the old
+// list back — a drag posts the whole list many times a second.
+let objectsPostedAt = 0;
+let markersPostedAt = 0;
 let autoWhite = false;
 let attrTab = 'Color';
 let touchedAt = 0;
@@ -228,6 +246,7 @@ function renderNote(text) {
 }
 async function pullState() {
   try {
+    const askedAt = Date.now();
     const reply = await fetch('api/state');
     const next = await reply.json();
     // A reply is not yet proof the desk is fine: the counter resets only once it has drawn.
@@ -237,6 +256,8 @@ async function pullState() {
     if (reply.status === 409 && next && next.show) { paintShow(next.show); return; }
     // stageDragging has no timeout on purpose: a careful placement takes longer than
     // the 700ms window, and the guard must last exactly as long as the finger is down.
+    if (S && askedAt < objectsPostedAt) next.objects = S.objects;
+    if (S && askedAt < markersPostedAt) next.markers = S.markers;
     const busy = !!S && (stageDragging || Date.now() - touchedAt < 700);
     const first = !S;
     if (busy) {
@@ -250,9 +271,14 @@ async function pullState() {
       // throttled POST lands. Without this a poll arriving mid-gesture hands back the
       // desk's pre-drag level and the fader jumps out from under the finger.
       if (S.layers) next.layers = S.layers;
+      if (S.objects) next.objects = S.objects;   // stage objects and labels are edited the same way
+      if (S.markers) next.markers = S.markers;
     }
     const lastGood = S;
     S = next;
+    // The desk's clock, so stage objects and the video box are drawn where the engine has them
+    // (objects.js objClockSample; the server stamps serverNow on every state).
+    if (Number.isFinite(next.serverNow) && typeof window.objClockSample === 'function') window.objClockSample(next.serverNow, askedAt, Date.now());
     try {
       // Selection is pruned against what actually exists. With the desk open on two clients
       // (laptop + phone), an unpatch on one left ghost ids selected on the other — actions
@@ -1177,6 +1203,7 @@ function placeStages() {
       label.style.display = hide ? 'none' : '';
     }
   });
+  if (window.VideoMap) window.VideoMap.place();   // the video picture under the lights (video.js)
 }
 
 function paintStage() {
@@ -2918,12 +2945,27 @@ $('#touchGrid').addEventListener('scroll', cancelTouchPress);
 // this page exists. "none" is the off pad; the rest are named after themselves.
 const fxLabel = (m) => (m === 'none' ? 'Off' : m[0].toUpperCase() + m.slice(1));
 const fxRunning = () => !!(S && S.fx && S.fx.enabled && S.fx.mode && S.fx.mode !== 'none');
+// Per-fixture effects: a light can carry its own fx.mode (POST api/fx {ids}, or a scene
+// that saved one), and it runs whatever the rig-wide mode is. So "is anything moving?" has
+// to count those lights too, or the pill hides a rig that is still strobing.
+const fxOwners = () => (S ? S.fixtures.filter((f) => f.fx) : []);
+const fxAnyRunning = () => fxRunning() || fxOwners().some((f) => f.fx.mode !== 'none');
 
 // One line of plain English for what the engine is doing, used in the FX panel and, in
 // short form, in the pill at the top of every page.
 function fxSummary() {
-  if (!fxRunning()) return 'Off';
-  return `${fxLabel(S.fx.mode)} · ${S.fx.bpm} BPM · ${Math.round(S.fx.depth / 255 * 100)}% depth`;
+  const own = fxOwners().length;
+  const ownNote = own ? ` · ${own} light${own === 1 ? '' : 's'} on their own` : '';
+  if (!fxRunning()) return own ? `Rig off${ownNote}` : 'Off';
+  return `${fxLabel(S.fx.mode)} · ${S.fx.bpm} BPM · ${Math.round(S.fx.depth / 255 * 100)}% depth${ownNote}`;
+}
+
+// A pad is for the whole rig: {all: true} hands every light with its own effect back to
+// the rig, so the Off pad stops those lights too. The lit pad is only "the same" — and so
+// its own off switch — when no light is running something else.
+function postRigFx(mode) {
+  const same = fxRunning() && S.fx.mode === mode && !fxOwners().length;
+  return post('api/fx', { mode: same ? 'none' : mode, all: true }).then(pullState);
 }
 
 function buildFx() {
@@ -2937,8 +2979,7 @@ function buildFx() {
     $$('.fxpad', pads).forEach((b) => b.addEventListener('click', () => {
       // Pressing the pad that is already lit turns the engine off, so a mode pad is its
       // own escape hatch — you never have to find the Off pad to stop what you started.
-      const same = fxRunning() && S.fx.mode === b.dataset.fx;
-      post('api/fx', same ? { mode: 'none' } : { mode: b.dataset.fx }).then(pullState);
+      postRigFx(b.dataset.fx);
     }));
   }
   // Follow: what drives the effect across the rig — the patch order, or the stage
@@ -2977,7 +3018,7 @@ function buildFx() {
   const live = fxRunning() ? S.fx.mode : 'none';
   $$('.fxpad', pads).forEach((b) => b.classList.toggle('is-active', b.dataset.fx === live));
   $('#fxState').textContent = fxSummary();
-  $('#fxState').classList.toggle('running', fxRunning());
+  $('#fxState').classList.toggle('running', fxAnyRunning());
   if (document.activeElement !== $('#fxDepth')) $('#fxDepth').value = S.fx.depth;
   $('#fxDepthOut').textContent = Math.round(S.fx.depth / 255 * 100) + '%';
   // Depth 0 is a working effect that cannot be seen. Say so rather than letting the pads
@@ -4360,7 +4401,7 @@ function renderAll(busy) {
   // the Control page, so from the Setup or Fader page a rig that is strobing or chasing
   // has no visible cause at all — the faders read steady and the stage view moves anyway.
   const fxPill = $('#fxPill');
-  fxPill.hidden = !fxRunning();
+  fxPill.hidden = !fxAnyRunning();
   if (!fxPill.hidden) fxPill.textContent = `FX: ${fxSummary()}`;
 
   // Same again for LFOs: a wave riding a channel is set up on the Control rail and then
@@ -4427,6 +4468,20 @@ function renderAll(busy) {
     wp.textContent = sent ? `${S.output.driver === 'sacn' ? 'sACN' : 'Art-Net'} · ${sent.toLocaleString()} frames`
       : `${S.output.driver === 'sacn' ? 'sACN' : 'Art-Net'} · nothing sent yet`;
     wp.title = st.lastError || (sent ? 'frames are leaving this machine' : 'patch a fixture — an empty rig has no universe to send');
+  }
+
+  // Show-file health (status.save): a save that failed is a show that will not survive a
+  // restart, so the pill stays until a save succeeds. The desk retries by itself.
+  const svp = $('#savePill');
+  const sv = st.save;
+  if (svp) {
+    const bad = !!(sv && sv.ok === false);
+    svp.hidden = !bad;
+    if (bad) {
+      svp.textContent = 'Show not saved — retrying';
+      svp.title = [sv.lastError, sv.lastOkAt ? 'last saved ' + new Date(sv.lastOkAt).toLocaleTimeString() : 'not saved since the desk started']
+        .filter(Boolean).join(' · ');
+    }
   }
 
   const nextSig = S.fixtures.map((f) => `${f.id}${f.profile}${f.name}${f.universe}${f.address}${f.index}`).join('|')
@@ -4611,7 +4666,8 @@ function buildMidiTargets() {
   });
   pad('fxon', 'FX on / off', () => {
     midiLive.fxOn = !midiLive.fxOn;
-    midiSend('api/fx', { enabled: midiLive.fxOn });
+    // Off stops the lights with an effect of their own as well (see postRigFx).
+    midiSend('api/fx', midiLive.fxOn ? { enabled: true } : { enabled: false, all: true });
   });
   pad('fxnext', 'FX mode  next', () => midiStepFx(1));
   pad('fxprev', 'FX mode  prev', () => midiStepFx(-1));
@@ -4629,7 +4685,7 @@ function midiStepFx(dir) {
   let i = modes.indexOf(midiLive.fxMode);
   if (i < 0) i = 0;
   midiLive.fxMode = modes[(i + dir + modes.length) % modes.length];
-  midiSend('api/fx', { mode: midiLive.fxMode });
+  midiSend('api/fx', { mode: midiLive.fxMode, all: true });   // for the whole rig, like the pads
   midiFlash('FX mode → ' + midiLive.fxMode);
 }
 
@@ -5260,7 +5316,8 @@ const stageFor = (el) => el.closest('.stagepane').querySelector('.stage');
 function fitStage(stage) {
   const r = stage.getBoundingClientRect();
   if (!S || !S.fixtures.length) { zoom = 1; view.x = 0; view.y = 0; placeStages(); return; }
-  const xs = S.fixtures.map((f) => f.x), ys = S.fixtures.map((f) => f.y);
+  const pts = [...S.fixtures, ...(S.markers || [])];   // the stage labels are framed too
+  const xs = pts.map((f) => f.x), ys = pts.map((f) => f.y);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
   const { sc, ox, oy } = stageMap(r.width, r.height);
   const bw = Math.max(0.08, x1 - x0) * sc, bh = Math.max(0.08, y1 - y0) * sc;
@@ -6153,11 +6210,11 @@ $('#tFxDepth').addEventListener('change', () => post('api/fx', { depth: +$('#tFx
 $('#tFxPads').addEventListener('click', (e) => {
   const b = e.target.closest('.fxpad');
   if (!b || !S) return;
-  const same = fxRunning() && S.fx.mode === b.dataset.fx;
-  post('api/fx', same ? { mode: 'none' } : { mode: b.dataset.fx }).then(pullState);
+  postRigFx(b.dataset.fx);
 });
 $('#tTap').addEventListener('click', () => $('#tapBtn').click());   // one tap-tempo brain
-$('#tFxOff').addEventListener('click', () => post('api/fx', { mode: 'none' }).then(pullState));
+// Off means off: every light's own effect goes too (see postRigFx).
+$('#tFxOff').addEventListener('click', () => post('api/fx', { mode: 'none', all: true }).then(pullState));
 
 $('#tMicBtn').addEventListener('click', async () => {
   if (mic.timer) stopMic(); else await startMic();
