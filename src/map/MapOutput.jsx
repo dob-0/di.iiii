@@ -6,6 +6,7 @@ import { toTopNetwork, useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import RigBlackout from '../rig/RigBlackout.jsx'
 import useScreenWakeLock from '../hooks/useScreenWakeLock.js'
+import { useOutputPresence } from './outputPresence.js'
 import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { isPreviewRequest, signalPreviewReady } from '../utils/previewMode.js'
 import './mapSurface.css'
@@ -59,6 +60,9 @@ export default function MapOutput({ projectId, spaceId }) {
     // src/hooks/useScreenWakeLock.js) — a two-display rig going black 15
     // minutes in because the OS blanked the screen is the bug this fixes.
     useScreenWakeLock()
+    // Answers the Perform desk's "is it open" ping, and asks for full screen when the
+    // mapping says so (src/map/outputPresence.js).
+    useOutputPresence(projectId, { fullscreen: mapping?.output?.window?.fullscreen === true, enabled: !isPreview })
 
     // Mirrored into the tab title, not the picture: a black wall is
     // ambiguous from a screenshot alone (nothing mapped? everything

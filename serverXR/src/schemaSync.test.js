@@ -1133,3 +1133,24 @@ describe('solidWalls mirror', () => {
     }
   })
 })
+
+describe('output.window on the CJS twin — how the output window opens (Perform output control)', () => {
+  const win = { screen: { label: 'Projector', index: 1, size: [1920, 1080] }, fullscreen: true }
+
+  it('survives a setMappingState op and a re-normalize, and an old document has none', () => {
+    const written = applyProjectOps(normalizeProjectDocument({}), [
+      { type: 'setMappingState', payload: { patch: { output: { width: 1920, height: 1080, window: win } } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.mappingState.output).toEqual({ width: 1920, height: 1080, window: win })
+    expect(normalizeProjectDocument({ mappingState: { output: { width: 1280, height: 800 } } }).mappingState.output)
+      .toEqual({ width: 1280, height: 800 })
+  })
+
+  it('agrees with the ESM twin on every shape', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    for (const input of [win, { fullscreen: true }, { fullscreen: false }, { screen: { index: 0 } }, { screen: { size: [0, 1] } }, 'x', null, {}]) {
+      expect(schema.normalizeOutputWindow(input)).toEqual(esm.normalizeOutputWindow(input))
+    }
+  })
+})
