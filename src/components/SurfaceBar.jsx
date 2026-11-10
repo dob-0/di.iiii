@@ -8,6 +8,7 @@ import { buildMapPath } from '../map/mapRouting.js'
 import { useAllTools } from '../studio/utils/jamMode.js'
 import SyncLight from '../sync/SyncLight.jsx'
 import { spaceWordFor } from '../utils/oneNamePerSpace.js'
+import { rememberProject } from './lastProject.js'
 
 /**
  * The one strip that is on every surface.
@@ -151,6 +152,7 @@ export default function SurfaceBar({
 }) {
     // "⚒ All tools", kept in this browser, brings every name back.
     const allTools = useAllTools()
+    useEffect(() => { rememberProject(space, project) }, [space, project])
     const destinations = surfaceDestinations({ isLocalInstall, space, project, projectLabel, layers: allTools ? null : layers, here })
 
     // Priority+ (2026-09-27): a phone at 390px could not hold the bar — WIKI
