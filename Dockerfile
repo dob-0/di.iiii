@@ -3,7 +3,7 @@
 # Pinned by digest (audit #26): a floating tag can silently change under us on
 # rebuild; re-pin deliberately (see docs/deploy/VPS_DOCKER_DEPLOY.md) rather than
 # letting the base image drift. Tag kept alongside the digest for readability.
-FROM node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS builder
+FROM node:24-alpine@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8 AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -30,7 +30,7 @@ RUN npm run build
 # (an unprivileged port a non-root process can actually bind), instead of
 # hand-patching the regular nginx:alpine image's root-owned cache/pid dirs
 # and permissions ourselves with no way to test the result before deploy.
-FROM nginxinc/nginx-unprivileged:alpine@sha256:59ccf0943b0b8e8d9e6ea9039a39555730f544701a655c596f7df7d096c593f5
+FROM nginxinc/nginx-unprivileged:alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 8080
