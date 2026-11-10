@@ -2790,8 +2790,11 @@ export default function RawEditor({
             zIndex: topZIndex + 1 + index,
             x: centred.x,
             y: centred.y,
-            width: centred.width,
-            height: centred.height
+            // A window that never had a stored size keeps its own default one:
+            // writing the fallback minimum here brought the deck back tiny.
+            ...(Number(frame.width) > 0 && Number(frame.height) > 0
+                ? { width: centred.width, height: centred.height }
+                : {})
         })
     }
     const showAllWindows = () => {
