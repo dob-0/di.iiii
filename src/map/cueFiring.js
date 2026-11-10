@@ -27,6 +27,19 @@ export const cueForKey = (cues, key) => {
     return (Array.isArray(cues) ? cues : []).find((cue) => cue?.key === key) || null
 }
 
+// The setlist step. Keys 1-9 reach nine cues; a show of one cue per track needs
+// more. GO takes the cue after the live one (the first when none is live),
+// BACK the one before. It stops at the ends: a stray key at the last track must
+// not wrap back to track one in front of an audience.
+export const stepCue = (cues, liveCueId, direction) => {
+    const list = Array.isArray(cues) ? cues : []
+    if (!list.length) return null
+    const index = list.findIndex((cue) => cue?.id === liveCueId)
+    if (index === -1) return direction > 0 ? list[0] : null
+    const target = index + (direction > 0 ? 1 : -1)
+    return target >= 0 && target < list.length ? list[target] : null
+}
+
 // What a cue IS, as document ops: the fade it asks for, and the state it holds
 // for each surface it names. One batch, so the wall never shows a cue half
 // applied and the browser reads the new fade off the same style change that

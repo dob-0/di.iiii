@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapInspector from './MapInspector.jsx'
 import { MapMachinesList, MapSurfaceList, MapWallView, nextCorners } from './MapDeskParts.jsx'
 import MapCueList from './MapCueList.jsx'
-import { cueForKey, isCueKey } from './cueFiring.js'
+import { cueForKey, isCueKey, stepCue } from './cueFiring.js'
 import { useMapDocument } from './useMapDocument.js'
 import { useProjectLayers } from '../project/useProjectLayers.js'
 import { toTopNetwork } from '../project/tops/useTopNetwork.js'
@@ -82,6 +82,8 @@ export default function MapSurface({ projectId, spaceId }) {
     const [live, setLive] = useState(false)
     const [snap, setSnap] = useState(true)
     const [liveCueId, setLiveCueId] = useState(null)
+    const liveCueIdRef = useRef(null)
+    liveCueIdRef.current = liveCueId
     const [clipboard, setClipboard] = useState(null)
     const [projectOptions, setProjectOptions] = useState([])
     // The project's picture operators: what a Pictures surface runs, and the
@@ -235,6 +237,14 @@ export default function MapSurface({ projectId, spaceId }) {
             if (isCueKey(event.key)) {
                 const cue = cueForKey(cues, event.key)
                 if (cue) { onFireCue(cue); event.preventDefault() }
+                return
+            }
+
+            // Space = GO to the next cue in the list, Shift+Space = back one.
+            if (event.key === ' ') {
+                const cue = stepCue(cues, liveCueIdRef.current, event.shiftKey ? -1 : 1)
+                if (cue) onFireCue(cue)
+                event.preventDefault()
                 return
             }
 
