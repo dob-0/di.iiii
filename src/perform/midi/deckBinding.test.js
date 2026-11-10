@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { createDeck, setClip, trigger } from '../../project/tops/vjDeck.js'
 import {
-    applyMidi, effectiveMap, ledBytes, ledChanges, ledsFor, learnEntry, normalizeOverrides, relativeDelta, targetFromKey, withOverride
+    PICKUP_WINDOW, applyMidi, effectiveMap, entryFor, isContinuousEntry, softTakeover, ledBytes, ledChanges, ledsFor, learnEntry, normalizeOverrides, relativeDelta, targetFromKey, withOverride
 } from './deckBinding.js'
 import { XONE_K2_CONTROLS, XONE_K2_FREE, XONE_K2_LEDS, XONE_K2_MAP, defaultMap, pickInputId } from './xoneK2.js'
 
@@ -214,5 +214,70 @@ describe('learn', () => {
         expect(hinted.relative).toBe(true)
         expect(learnEntry(targetFromKey('crossfade'), cc(20, 1))).not.toHaveProperty('relative')
         expect(learnEntry(targetFromKey('bypass:0'), noteOff(36))).toBeNull()
+    })
+})
+
+describe('soft takeover', () => {
+    it('ignores a far incoming value, engages when it comes within the window', () => {
+        let r = softTakeover(undefined, 1, 0)
+        expect(r.pass).toBe(false)
+        r = softTakeover(r.state, 1, 0.5)
+        expect(r.pass).toBe(false)
+        r = softTakeover(r.state, 1, 1 - PICKUP_WINDOW / 2)
+        expect(r.pass).toBe(true)
+        expect(softTakeover(r.state, 1 - PICKUP_WINDOW / 2, 0.2).pass).toBe(true) // engaged: it now follows
+    })
+    it('engages by crossing the current value, even when it jumps over the window', () => {
+        let r = softTakeover(undefined, 0.5, 0)
+        expect(r.pass).toBe(false)
+        r = softTakeover(r.state, 0.5, 0.8) // 0 -> 0.8 crossed 0.5
+        expect(r.pass).toBe(true)
+    })
+    it('starts over when the target was changed from elsewhere', () => {
+        let r = softTakeover(undefined, 0.5, 0.5)
+        expect(r.pass).toBe(true)
+        r = softTakeover(r.state, 0.5, 0.6)
+        expect(r.pass).toBe(true)
+        const moved = softTakeover(r.state, 0.1, 0.65) // the deck says 0.1, we last set 0.6
+        expect(moved.pass).toBe(false)
+        expect(softTakeover(moved.state, 0.1, 0.12).pass).toBe(true)
+    })
+    it('applyMidi with a pickup Map: a fader at the other end does not jump the layer, then follows', () => {
+        const deck = createDeck({ layers: 2 }) // opacity 1
+        const map = [entry('cc', 16, 'opacity', { layer: 0 })]
+        const pickup = new Map()
+        expect(applyMidi(deck, cc(16, 0), map, { pickup })).toBe(deck)
+        expect(applyMidi(deck, cc(16, 60), map, { pickup })).toBe(deck)
+        const arrived = applyMidi(deck, cc(16, 126), map, { pickup })
+        expect(arrived.layers[0].opacity).toBeCloseTo(126 / 127)
+        const follows = applyMidi(arrived, cc(16, 30), map, { pickup })
+        expect(follows.layers[0].opacity).toBeCloseTo(30 / 127)
+        // the layer was changed from elsewhere (a click): the fader must be picked up again
+        const clicked = { ...follows, layers: follows.layers.map((layer, i) => (i === 0 ? { ...layer, opacity: 1 } : layer)) }
+        expect(applyMidi(clicked, cc(16, 20), map, { pickup })).toBe(clicked)
+    })
+    it('each control keeps its own pickup; relative encoders never need it', () => {
+        const deck = createDeck({ layers: 2 })
+        const map = [entry('cc', 16, 'opacity', { layer: 0 }), entry('cc', 17, 'opacity', { layer: 1 }), entry('cc', 20, 'crossfade', {}, { relative: true })]
+        const pickup = new Map()
+        applyMidi(deck, cc(16, 127), map, { pickup })
+        expect(applyMidi(deck, cc(17, 10), map, { pickup })).toBe(deck) // the other fader is not engaged
+        expect(applyMidi(deck, cc(20, 1), map, { pickup }).crossfade).toBeCloseTo(0.52)
+    })
+    it('without a pickup Map an absolute control behaves as before (jumps)', () => {
+        expect(applyMidi(createDeck({ layers: 1 }), cc(16, 0), [entry('cc', 16, 'opacity', { layer: 0 })]).layers[0].opacity).toBe(0)
+    })
+    it('entryFor and isContinuousEntry tell faders from buttons', () => {
+        const map = [entry('cc', 16, 'opacity', { layer: 0 }), entry('note', 5, 'clip', { layer: 0, column: 0 }), entry('cc', 20, 'master', {}, { relative: true })]
+        expect(isContinuousEntry(entryFor(cc(16, 5), map))).toBe(true)
+        expect(isContinuousEntry(entryFor(noteOn(5), map))).toBe(false)
+        expect(isContinuousEntry(entryFor(cc(20, 1), map))).toBe(true)
+        expect(isContinuousEntry(entryFor(cc(99, 1), map))).toBe(false)
+    })
+    it('the K2 sheet marks encoders 5 and 6 with a check note; the default keeps the sheet mode', () => {
+        const checked = XONE_K2_CONTROLS.filter((item) => item.check).map((item) => item.control)
+        expect(checked).toEqual(['encoder 5', 'encoder 6'])
+        for (const name of checked) expect(XONE_K2_CONTROLS.find((item) => item.control === name).mode).toBe('relative')
+        expect(XONE_K2_MAP.filter((item) => checked.includes(item.control)).every((item) => item.relative)).toBe(true)
     })
 })

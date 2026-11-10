@@ -21,3 +21,20 @@ Owner: "we need to all ui and like it lego and minimal not like now" (after "ui 
 **Not changed:** deck model/ops, server, arming (no arm control), the Nodes desk, existing preset ids. The laser block stays optional; no production is named in the platform.
 
 **Not tested:** no browser, so nothing is claimed about how it looks; phone; AccountButton overlap; any real look fired. Tests: presets, PerformLaser, PerformLight, spine (CSS ladder, no literals).
+
+## Review round 1: deck and K2
+
+Findings fixed (verified by reading first; all were real):
+
+1. **Upload into a stale deck** (`VjDeckView.jsx` `place`/`onFile`): the clip is now placed into `latestDeck` (a ref set from the prop and from every `write`), into the slot picked when the file was chosen. Test: "a slow upload places its clip into the LATEST deck".
+2. **Coalescing** (`useDeckMidi.js`): continuous actions (opacity, blend, speed, crossfade, master, bpm, relative nudges) write at most once per `WRITE_GAP_MS` (30 ms) with a leading write when idle and a guaranteed trailing write; discrete actions flush the pending value first, then write at once; unmount flushes. The local deck (`ahead`) updates on every message.
+3. **Ahead of the document**: the `deck` prop is adopted only when it is not an echo of one of our writes (we keep the JSON of up to 64 in-flight writes). An older echo is dropped from the list and does not roll the local deck back. A foreign deck (another window, a click) is adopted, drops a not-yet-written fader value computed from the old deck (at most ~30 ms of motion), and resets pickup. Known limit: a UI click while a fader value is pending is a "foreign" change, so that pending value is dropped.
+4. **One owner per deck id**: module registry in `useDeckMidi.js`; the first mounted editable instance owns the controller, the next takes over on unmount; a read-only view never owns. MIDI access is now `midiPorts.js` (one `requestMIDIAccess`, only while `active`), because `useMidiInput/useMidiOutput` in `raw/utils` cannot be switched off. A read-only view does not call `requestMIDIAccess` (test).
+5. **Learn blocks the control**: pointerdown/mousedown/keydown in capture on `[data-midi-target]` are prevented while Learn is on (Tab and Escape pass); Enter/Space select the target. Off = untouched (test, both directions).
+6. **Soft takeover**: pure `softTakeover` + `PICKUP_WINDOW` (3/127) in `deckBinding.js`; state per control is the `pickup` Map the hook keeps (`applyMidi` ctx). Arrival = within the window or crossed; pickup restarts when the target is no longer where the control last put it. Blend uses its bin as the window.
+7. **expandDeck**: a layer with an active clip keeps its source (`top.clip` / `top.camera`) and its blend with stable ids; opacity 0, bypass, solo and the crossfader set `mix` to 0. Test pins ids and wires across opacity 1 to 0 to 1, bypass, solo and crossfade. Not checked here: that the runner skips a mix-0 blend cheaply (it does not need to; the node just stays alive).
+8. **Cameras**: `cameraFailureText`: busy only for NotReadableError / TrackStartError / AbortError; NotFoundError says "No camera on this machine"; NotAllowedError keeps the "blocked" text; the rest "Could not open the camera.". `cameraNodeId(deckId, label, device)` hashes label + device when a device hint exists; with none it is the old id. Clips saved WITH a device hint get a new id once (one camera reopen on upgrade).
+
+**To confirm on the real K2 (not guessed):** `encoder 5` (crossfade nudge) and `encoder 6` (master nudge) carry the sheet's `check` note ("confirm relative by MIDI-learn"). The default keeps the sheet's `mode: relative` for both; a test pins that both are the only `check` rows. Turn each and see whether the value steps by a small amount (relative) or jumps (absolute); if absolute, relearn it in Learn.
+
+**Not tested:** no browser, no real K2, no real camera; the pointer/mouse behaviour of a native `<select>` is checked by `defaultPrevented` in jsdom, not by seeing it stay closed.

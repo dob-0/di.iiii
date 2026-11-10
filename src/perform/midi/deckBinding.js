@@ -84,15 +84,53 @@ export const actionKey = (action, args = {}) => [action, args.layer ?? '', args.
 
 const layerAt = (deck, index) => (isInt(index) ? deck.layers[index] : undefined)
 
+/** Soft takeover: how close (0..1 of the control's travel) counts as "arrived". */
+export const PICKUP_WINDOW = 3 / 127
+
+/**
+ * Soft takeover (pickup), pure. An absolute control only takes over its target
+ * once its incoming value has come within `window` of the target's current
+ * value, or crossed it since the last message; until then it is ignored, so a
+ * fader sitting elsewhere does not make the target jump on first touch.
+ *
+ *   state     { engaged, last, expected } | undefined — the control's own memory
+ *   current   the target's current value, 0..1 of the control's travel
+ *   incoming  the control's new value, 0..1
+ * Returns { pass, state }. When the target was changed from elsewhere (it is no
+ * longer where this control last put it, `expected`) pickup starts over.
+ */
+export const softTakeover = (state, current, incoming, window = PICKUP_WINDOW) => {
+    let engaged = Boolean(state?.engaged)
+    let last = state?.last
+    if (engaged && Math.abs(current - state.expected) > Math.max(window / 2, 1e-6)) { engaged = false; last = undefined }
+    if (!engaged) {
+        const near = Math.abs(incoming - current) <= window
+        const crossed = last !== undefined && (last - current) * (incoming - current) <= 0
+        if (!near && !crossed) return { pass: false, state: { engaged: false, last: incoming, expected: undefined } }
+    }
+    return { pass: true, state: { engaged: true, last: incoming, expected: incoming } }
+}
+
 // A continuous value: absolute from a pot or fader, or nudged by an encoder.
-const continuous = (current, control, entry, scale) => {
+// scale.to maps the current value back to 0..1 for pickup (ctx.pickup, a Map the
+// caller keeps per control; without it an absolute control jumps as before).
+const continuous = (current, control, entry, scale, ctx = {}) => {
     if (entry.relative) {
         const delta = relativeDelta(control.value)
         if (!delta) return null
         const step = Number.isFinite(entry.args?.step) ? entry.args.step : scale.step
         return current + delta * step
     }
-    return scale.from(unit(control.value))
+    const incoming = unit(control.value)
+    if (ctx.pickup && scale.to) {
+        const key = `${control.kind}:${control.number}:${control.channel}:${actionKey(entry.action, entry.args)}`
+        const result = softTakeover(ctx.pickup.get(key), scale.to(current), incoming, scale.window)
+        ctx.pickup.set(key, result.state)
+        if (!result.pass) return null
+        // remember where we put the target, in its own (rounded) terms
+        ctx.pickup.set(key, { ...result.state, expected: scale.to(scale.from(incoming)) })
+    }
+    return scale.from(incoming)
 }
 
 const run = (deck, control, entry, ctx) => {
@@ -106,15 +144,23 @@ const run = (deck, control, entry, ctx) => {
     const nextOr = (value, make) => (value === null ? deck : make(value))
     switch (entry.action) {
         case 'opacity':
-            return nextOr(continuous(layer.opacity, control, entry, { step: DEFAULT_STEP.opacity, from: (x) => x }), (v) => setOpacity(base, args.layer, v))
+            return nextOr(continuous(layer.opacity, control, entry, { step: DEFAULT_STEP.opacity, from: (x) => x, to: (x) => x }, ctx), (v) => setOpacity(base, args.layer, v))
         case 'blend': {
-            const index = Math.min(BLEND_MODES.length - 1, Math.floor(unit(control.value) * BLEND_MODES.length))
+            const count = BLEND_MODES.length
+            const index = Math.min(count - 1, Math.floor(unit(control.value) * count))
+            if (ctx.pickup) {
+                // the current mode is the middle of its bin; "arrived" is landing in that bin
+                const key = `${control.kind}:${control.number}:${control.channel}:${actionKey(entry.action, entry.args)}`
+                const result = softTakeover(ctx.pickup.get(key), (Number(layer.blend) + 0.5) / count, unit(control.value), Math.max(PICKUP_WINDOW, 0.5 / count))
+                ctx.pickup.set(key, { ...result.state, expected: result.pass ? (index + 0.5) / count : undefined })
+                if (!result.pass) return deck
+            }
             return layer.blend === String(index) ? deck : setBlend(base, args.layer, String(index))
         }
         case 'clipSpeed': {
             if (layer.active < 0) return deck
             const clip = layer.clips[layer.active]
-            return nextOr(continuous(clip.speed, control, entry, { step: DEFAULT_STEP.clipSpeed, from: (x) => x * 4 }), (v) => updateClip(base, args.layer, layer.active, { speed: v }))
+            return nextOr(continuous(clip.speed, control, entry, { step: DEFAULT_STEP.clipSpeed, from: (x) => x * 4, to: (x) => x / 4 }, ctx), (v) => updateClip(base, args.layer, layer.active, { speed: v }))
         }
         case 'bypass': return setBypass(base, layer.id, !layer.bypass)
         case 'solo': return setSolo(base, layer.id, !layer.solo)
@@ -126,11 +172,11 @@ const run = (deck, control, entry, ctx) => {
             return isInt(args.column) && args.column < base.columns ? triggerColumn(base, args.column) : deck
         case 'clearLayer': return layer.active < 0 ? deck : clearLayer(base, args.layer)
         case 'crossfade':
-            return nextOr(continuous(base.crossfade, control, entry, { step: DEFAULT_STEP.crossfade, from: (x) => x }), (v) => setCrossfade(base, v))
+            return nextOr(continuous(base.crossfade, control, entry, { step: DEFAULT_STEP.crossfade, from: (x) => x, to: (x) => x }, ctx), (v) => setCrossfade(base, v))
         case 'master':
-            return nextOr(continuous(base.master, control, entry, { step: DEFAULT_STEP.master, from: (x) => x }), (v) => setMaster(base, v))
+            return nextOr(continuous(base.master, control, entry, { step: DEFAULT_STEP.master, from: (x) => x, to: (x) => x }, ctx), (v) => setMaster(base, v))
         case 'bpm':
-            return nextOr(continuous(base.bpm, control, entry, { step: DEFAULT_STEP.bpm, from: (x) => MIN_BPM + x * (MAX_BPM - MIN_BPM) }), (v) => setBpm(base, v))
+            return nextOr(continuous(base.bpm, control, entry, { step: DEFAULT_STEP.bpm, from: (x) => MIN_BPM + x * (MAX_BPM - MIN_BPM), to: (x) => (x - MIN_BPM) / (MAX_BPM - MIN_BPM) }, ctx), (v) => setBpm(base, v))
         case 'tap': {
             // The view owns the clock (the show clock, or the deck's own taps).
             if (typeof ctx.onTap === 'function') { ctx.onTap(); return deck }
@@ -142,10 +188,21 @@ const run = (deck, control, entry, ctx) => {
     }
 }
 
+/** The map entry that takes a message, or undefined. */
+export const entryFor = (message, map) => {
+    const control = controlOf(message)
+    return control && Array.isArray(map) ? map.find((item) => matches(item, control)) : undefined
+}
+
+/** Continuous actions (faders, pots, encoders): the ones a caller may coalesce. */
+export const CONTINUOUS_ACTIONS = new Set(['opacity', 'blend', 'clipSpeed', 'crossfade', 'master', 'bpm'])
+export const isContinuousEntry = (entry) => Boolean(entry) && CONTINUOUS_ACTIONS.has(entry.action)
+
 /**
  * The next deck for one MIDI message, or the same object when no entry in the
  * map takes it (or the entry changes nothing).
- * ctx: { onTap?, tapState?: { taps }, now? } — only the tap action reads it.
+ * ctx: { onTap?, tapState?: { taps }, now?, pickup?: Map } — tap reads the first three,
+ * absolute controls read `pickup` (soft takeover; the caller keeps the Map per deck).
  */
 export const applyMidi = (deck, message, map, ctx = {}) => {
     const control = controlOf(message)

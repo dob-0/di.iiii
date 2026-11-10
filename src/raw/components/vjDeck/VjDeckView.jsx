@@ -83,6 +83,17 @@ const mediaDevicesOf = () => (typeof navigator !== 'undefined' && navigator.medi
 
 // The cameras this page can see, by label. Labels are empty until the person
 // has allowed a camera once; then `needsPermission` offers the one button.
+// Only these three mean the device is held by another program; a missing camera
+// and a refusal each say their own thing; anything else is neutral.
+const BUSY_CAMERA_ERRORS = new Set(['NotReadableError', 'TrackStartError', 'AbortError'])
+export const cameraFailureText = (failure) => {
+    const name = failure?.name
+    if (name === 'NotAllowedError' || name === 'SecurityError') return 'Cameras are blocked for this page: allow them in the address bar.'
+    if (BUSY_CAMERA_ERRORS.has(name)) return 'The camera is busy in another program.'
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'No camera on this machine'
+    return 'Could not open the camera.'
+}
+
 function useCameras() {
     const [state, setState] = useState({ supported: true, cameras: [], needsPermission: false, error: '' })
     const read = async () => {
@@ -112,10 +123,7 @@ function useCameras() {
             // program. The person's Allow still counts, so read the list again; say
             // no only when the browser really refused or the list is still unnamed.
             await read()
-            const refused = failure?.name === 'NotAllowedError'
-            setState((current) => (current.cameras.length
-                ? current
-                : { ...current, error: refused ? 'Cameras are blocked for this page: allow them in the address bar.' : 'The camera is busy in another program.' }))
+            setState((current) => (current.cameras.length ? current : { ...current, error: cameraFailureText(failure) }))
             return
         }
         await read()
@@ -192,8 +200,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const clipName = (clip) => (clip.label || (clip.kind === 'input' ? inputLabel(clip.input) : clip.kind === 'camera' ? clip.camera : assetName(clip.asset)))
     const assetName = (id) => (assets || []).find((asset) => asset?.id === id)?.name || id
 
+    // The newest deck this view has seen or written: an upload that finishes after a
+    // long wait places its clip into THIS, never into the deck captured when the file
+    // was chosen (that would undo every change made meanwhile).
+    const latestDeck = useRef(deck)
+    useEffect(() => { latestDeck.current = deck }, [deck])
     const write = (nextDeck) => {
-        if (editable) onPatchValues({ deck: nextDeck })
+        if (editable) { latestDeck.current = nextDeck; onPatchValues({ deck: nextDeck }) }
     }
 
     // A selection whose slot was emptied (here or by another window) lets go.
@@ -227,11 +240,25 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     }
     // MIDI (src/perform/midi): live while the deck is on screen; Learn binds the
     // control clicked on the deck (data-midi-target) to the next controller message.
-    const midi = useDeckMidi({ deck, write, stored: node?.values?.midiMap, onPatch: editable ? onPatchValues : null, onTap, enabled: editable })
+    const midi = useDeckMidi({ deckId, deck, write, stored: node?.values?.midiMap, onPatch: editable ? onPatchValues : null, onTap, enabled: editable })
+    const learnKeyOf = (event) => event.target?.closest?.('[data-midi-target]')?.getAttribute('data-midi-target') || ''
     const onLearnClick = (event) => {
         if (!midi.learning) return
-        const key = event.target.closest?.('[data-midi-target]')?.getAttribute('data-midi-target')
+        const key = learnKeyOf(event)
         if (key && midi.pickTarget(key)) { event.preventDefault(); event.stopPropagation() }
+    }
+    // While Learn is on a click on a control SELECTS it; the control itself must not
+    // move or open (a range would drag, a select would open). Pointer, mouse and key
+    // starts are stopped in the capture phase; with Learn off none of this runs.
+    const onLearnPress = (event) => {
+        if (midi.learning && learnKeyOf(event)) event.preventDefault()
+    }
+    const onLearnKey = (event) => {
+        if (!midi.learning || event.key === 'Tab' || event.key === 'Escape') return
+        const key = learnKeyOf(event)
+        if (!key) return
+        event.preventDefault()
+        if (event.key === 'Enter' || event.key === ' ') midi.pickTarget(key)
     }
     const clipUrl = (clip) => (clip?.kind === 'asset' ? resolveClipUrl(clip.asset, spaceId, { assets, projectId }) : '')
 
@@ -246,11 +273,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         write(trigger(deck, layerIndex, column))
     }
 
-    const place = (clip) => {
-        if (!picking) return
-        const next = setClip(deck, picking.layer, picking.column, { speed: 1, mode: '0', in: 0, out: 1, ...clip })
+    // `slot` is the slot that was picked when the clip was chosen (an upload can finish
+    // long after); the deck it goes into is always the latest one.
+    const place = (clip, slot = picking) => {
+        if (!slot) return
+        const next = setClip(latestDeck.current, slot.layer, slot.column, { speed: 1, mode: '0', in: 0, out: 1, ...clip })
         write(next)
-        setSelected({ layer: picking.layer, column: picking.column })
+        setSelected({ layer: slot.layer, column: slot.column })
         setPicking(null)
     }
 
@@ -258,11 +287,12 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         const file = event.target.files?.[0]
         event.target.value = ''
         if (!file || !onUploadFile) return
+        const slot = picking
         setUploading(file.name)
         setNotice('')
         try {
             const asset = await onUploadFile(file)
-            if (asset?.id) place({ kind: 'asset', asset: asset.id, label: asset.name || file.name })
+            if (asset?.id) place({ kind: 'asset', asset: asset.id, label: asset.name || file.name }, slot)
             else setNotice(`Could not bring in ${file.name}.`)
         } catch (failure) {
             // 2026-11-10 (owner row N3529): the server refuses a file over its limit
@@ -289,11 +319,11 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         : selectedClip.kind === 'input'
             ? inputSources?.[selectedClip.input] || ''
             : selectedClip.kind === 'camera'
-                ? (selectedPlaying ? cameraNodeId(deckId, selectedClip.camera) : '')
+                ? (selectedPlaying ? cameraNodeId(deckId, selectedClip.camera, selectedClip.device) : '')
                 : selectedPlaying ? clipNodeId(deckId, selected.layer) : ''
 
     return (
-        <div className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick}>
+        <div className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick} onPointerDownCapture={onLearnPress} onMouseDownCapture={onLearnPress} onKeyDownCapture={onLearnKey}>
             <header className="vj-deck-top">
                 <div className="vj-deck-tempo">
                     <span className="vj-deck-label">BPM</span>
@@ -478,7 +508,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                                 ? <DeckPicture nodeId={clipNodeId(deckId, index)} className="vj-deck-tile-picture" label={name} />
                                                 : null}
                                             {playing && clip.kind === 'camera'
-                                                ? <DeckPicture nodeId={cameraNodeId(deckId, clip.camera)} className="vj-deck-tile-picture" label={name} />
+                                                ? <DeckPicture nodeId={cameraNodeId(deckId, clip.camera, clip.device)} className="vj-deck-tile-picture" label={name} />
                                                 : null}
                                             {clip?.kind === 'input' && inputSources?.[clip.input]
                                                 ? <DeckPicture nodeId={inputSources[clip.input]} className="vj-deck-tile-picture" label={name} />

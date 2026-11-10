@@ -33,7 +33,11 @@ describe('VjDeckView with a K2', () => {
         await waitFor(() => expect(screen.getByLabelText(/Layer 1, slot 1/).getAttribute('aria-pressed')).toBe('true'))
         await waitFor(() => expect(fake.sent).toContainEqual([0x9e, 108, 127])) // matrix A green note, from the sheet
 
-        act(() => fake.input.onmidimessage({ data: [0xbe, 17, 0] })) // fader 2: layer 2 opacity 0
+        // soft takeover: a fader far from the deck's value does nothing until it arrives
+        act(() => fake.input.onmidimessage({ data: [0xbe, 17, 0] }))
+        expect(screen.getByLabelText('Layer 2 opacity').value).toBe('1')
+        act(() => fake.input.onmidimessage({ data: [0xbe, 17, 127] })) // reaches the deck's 1
+        act(() => fake.input.onmidimessage({ data: [0xbe, 17, 0] })) // now it drives: layer 2 opacity 0
         await waitFor(() => expect(screen.getByLabelText('Layer 2 opacity').value).toBe('0'))
 
         // Learn: MIDI on, click the Master slider, move a pot.
@@ -41,6 +45,7 @@ describe('VjDeckView with a K2', () => {
         fireEvent.click(screen.getByLabelText('Master'))
         act(() => fake.input.onmidimessage({ data: [0xbe, 12, 0] }))
         fireEvent.click(screen.getByRole('button', { name: 'MIDI' }))
+        act(() => fake.input.onmidimessage({ data: [0xbe, 12, 127] }))
         act(() => fake.input.onmidimessage({ data: [0xbe, 12, 64] }))
         await waitFor(() => expect(Number(screen.getByLabelText('Master').value)).toBeCloseTo(64 / 127, 2))
     })

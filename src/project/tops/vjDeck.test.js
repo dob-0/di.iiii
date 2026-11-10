@@ -390,22 +390,23 @@ describe('bypass, solo and the crossfader', () => {
         ])
     })
 
-    it('bypass silences a layer but keeps its clip', () => {
+    it('bypass silences a layer by mix 0 and keeps its nodes', () => {
         let deck = setBypass(played(), 'layer-2', true)
-        expect(blends(deck).map((node) => node.id)).toEqual(['deck::L0::blend', 'deck::L2::blend'])
+        expect(blends(deck).map((node) => [node.id, node.values.mix])).toEqual([['deck::L0::blend', 1], ['deck::L1::blend', 0], ['deck::L2::blend', 1]])
         expect(deck.layers[1].active).toBe(0)
         deck = setBypass(deck, 'layer-2', false)
-        expect(blends(deck)).toHaveLength(3)
+        expect(blends(deck).map((node) => node.values.mix)).toEqual([1, 1, 1])
         expect(setBypass(deck, 'nope', true)).toEqual(deck)
     })
 
-    it('solo lets only solo layers through, and solo does not beat bypass', () => {
+    it('solo lets only solo layers through (the others at mix 0), and solo does not beat bypass', () => {
+        const mixes = (deck) => blends(deck).map((node) => node.values.mix)
         let deck = setSolo(played(), 'layer-3', true)
-        expect(blends(deck).map((node) => node.id)).toEqual(['deck::L2::blend'])
+        expect(mixes(deck)).toEqual([0, 0, 1])
         deck = setSolo(deck, 'layer-1', true)
-        expect(blends(deck).map((node) => node.id)).toEqual(['deck::L0::blend', 'deck::L2::blend'])
+        expect(mixes(deck)).toEqual([1, 0, 1])
         deck = setBypass(deck, 'layer-3', true)
-        expect(blends(deck).map((node) => node.id)).toEqual(['deck::L0::blend'])
+        expect(mixes(deck)).toEqual([1, 0, 0])
         expect(setSolo(deck, 'layer-1', false).layers[0].solo).toBe(false)
     })
 
@@ -415,12 +416,31 @@ describe('bypass, solo and the crossfader', () => {
         expect([0, 0.5, 1].map((x) => crossfadeGain('', x))).toEqual([1, 1, 1])
     })
 
-    it('the crossfader scales opacity and drops a silent layer', () => {
+    it('the crossfader scales opacity and mutes a silent layer at mix 0', () => {
         let deck = setSide(setSide(played(), 'layer-1', 'a'), 'layer-3', 'b')
         deck = setOpacity(setCrossfade(deck, 0.75), 2, 0.8)
         expect(blends(deck).map((node) => node.values.mix)).toEqual([0.5, 1, 0.8])
         deck = setCrossfade(deck, 1)
-        expect(blends(deck).map((node) => node.id)).toEqual(['deck::L1::blend', 'deck::L2::blend'])
+        expect(blends(deck).map((node) => [node.id, node.values.mix])).toEqual([['deck::L0::blend', 0], ['deck::L1::blend', 1], ['deck::L2::blend', 0.8]])
+    })
+
+    it('node ids stay identical across opacity 1 -> 0 -> 1, bypass, solo and the crossfader', () => {
+        const idsOf = (deck) => expandDeck(deckNode(deck)).nodes.map((node) => node.id)
+        const wiresOf = (deck) => JSON.stringify(expandDeck(deckNode(deck)).wires)
+        const base = played()
+        const states = [
+            setOpacity(base, 1, 0),
+            setBypass(base, 'layer-2', true),
+            setSolo(base, 'layer-3', true),
+            setCrossfade(setSide(base, 'layer-1', 'a'), 1),
+            setOpacity(setOpacity(base, 1, 0), 1, 1)
+        ]
+        for (const state of states) {
+            expect(idsOf(state)).toEqual(idsOf(base))
+            expect(wiresOf(state)).toBe(wiresOf(base))
+        }
+        expect(idsOf(base)).toContain('deck::L1::clip')
+        expect(expandDeck(deckNode(setOpacity(base, 1, 0))).nodes.find((node) => node.id === 'deck::L1::blend').values.mix).toBe(0)
     })
 
     it('invalid values clamp or fall back', () => {
@@ -468,20 +488,29 @@ describe('camera clips', () => {
         const out = expandDeck(deckNode(withCams()))
         const cams = out.nodes.filter((node) => node.type === 'top.camera')
         expect(cams).toHaveLength(1)
-        expect(cams[0].id).toBe(cameraNodeId('deck', 'Phone'))
+        expect(cams[0].id).toBe(cameraNodeId('deck', 'Phone', 'dev-1'))
         expect(cams[0].values).toMatchObject({ device: 'dev-1', deviceLabel: 'Phone', mirror: false })
         expect(out.nodes.some((node) => node.type === 'top.clip')).toBe(false)
         expect(out.wires.filter((wire) => wire.port === 'b').map((wire) => wire.from)).toEqual([cams[0].id, cams[0].id])
-        expect(cameraNodeId('deck', 'Phone')).not.toBe(cameraNodeId('deck', 'Other'))
+        expect(cameraNodeId('deck', 'Phone', 'dev-1')).not.toBe(cameraNodeId('deck', 'Other', 'dev-1'))
     })
 
     it('bypass, solo and the crossfader still apply to a camera layer', () => {
         const blends = (deck) => expandDeck(deckNode(deck)).nodes.filter((node) => node.type === 'top.blend')
-        expect(blends(setBypass(withCams(), 'layer-1', true)).map((node) => node.id)).toEqual(['deck::L1::blend'])
-        expect(blends(setSolo(withCams(), 'layer-1', true)).map((node) => node.id)).toEqual(['deck::L0::blend'])
+        const mixes = (deck) => blends(deck).map((node) => node.values.mix)
+        expect(mixes(setBypass(withCams(), 'layer-1', true))).toEqual([0, 1])
+        expect(mixes(setSolo(withCams(), 'layer-1', true))).toEqual([1, 0])
         const faded = setCrossfade(setSide(withCams(), 'layer-1', 'a'), 1)
-        expect(blends(faded).map((node) => node.id)).toEqual(['deck::L1::blend'])
-        expect(expandDeck(deckNode(setBypass(setBypass(withCams(), 'layer-1', true), 'layer-2', true))).nodes.some((node) => node.type === 'top.camera')).toBe(false)
+        expect(mixes(faded)).toEqual([0, 1])
+        // the camera stays open (same node) even with every layer silenced
+        const silent = expandDeck(deckNode(setBypass(setBypass(withCams(), 'layer-1', true), 'layer-2', true)))
+        expect(silent.nodes.filter((node) => node.type === 'top.camera').map((node) => node.id)).toEqual([cameraNodeId('deck', 'Phone', 'dev-1')])
+    })
+
+    it('two cameras with one label but different devices are two nodes; no device hint keeps the old id', () => {
+        expect(cameraNodeId('deck', 'Cam', 'a')).not.toBe(cameraNodeId('deck', 'Cam', 'b'))
+        expect(cameraNodeId('deck', 'Cam', '')).toBe(cameraNodeId('deck', 'Cam'))
+        expect(cameraNodeId('deck', 'Phone')).toBe('deck::cam-' + (() => { let h = 5381; for (const ch of 'Phone') h = ((h * 33) ^ ch.codePointAt(0)) >>> 0; return h.toString(36) })())
     })
 
     it('the camera operator takes device and deviceLabel', () => {

@@ -92,8 +92,24 @@ describe('VjDeckView cameras', () => {
         const picker = await openPicker()
         fireEvent.click(within(picker).getByRole('button', { name: 'Allow cameras' }))
         await act(async () => {})
-        expect(within(picker).getByRole('status').textContent).toMatch(/busy in another program/)
+        expect(within(picker).getByRole('status').textContent).toBe('Could not open the camera.')
         expect(within(picker).getByRole('button', { name: 'Allow cameras' })).toBeTruthy()
+    })
+
+    it.each([
+        ['NotReadableError', /busy in another program/],
+        ['TrackStartError', /busy in another program/],
+        ['AbortError', /busy in another program/],
+        ['NotFoundError', /No camera on this machine/],
+        ['NotAllowedError', /blocked for this page/],
+        ['OverconstrainedError', /Could not open the camera\./]
+    ])('%s says the right thing', async (name, text) => {
+        setMedia({ enumerateDevices: async () => [{ kind: 'videoinput', deviceId: 'd1', label: '' }], getUserMedia: async () => { throw Object.assign(new Error(name), { name }) } })
+        render(<Host />)
+        const picker = await openPicker()
+        fireEvent.click(within(picker).getByRole('button', { name: 'Allow cameras' }))
+        await act(async () => {})
+        expect(within(picker).getByRole('status').textContent).toMatch(text)
     })
 
     // 2026-11-10 (owner row N3529): the laptop camera was held by another program, so
@@ -164,5 +180,44 @@ describe('VjDeckView cameras', () => {
         render(<Host />)
         const side = screen.getByLabelText('Crossfader side for Layer 2')
         expect([...side.options].map((o) => o.textContent)).toEqual(['A/B –', 'A', 'B'])
+    })
+
+    describe('the private PREVIEW of a camera clip that is not playing', () => {
+        const twoCams = () => {
+            const streams = []
+            setMedia({
+                enumerateDevices: async () => [{ kind: 'videoinput', deviceId: 'd1', label: 'Phone' }, { kind: 'videoinput', deviceId: 'd2', label: 'Webcam' }],
+                getUserMedia: vi.fn(async () => {
+                    const track = { stop: vi.fn() }
+                    const stream = { track, getTracks: () => [track] }
+                    streams.push(stream)
+                    return stream
+                }),
+                addEventListener: () => {},
+                removeEventListener: () => {}
+            })
+            let deck = setClip(createDeck(), 0, 0, { id: 'c1', kind: 'camera', camera: 'Phone', device: 'd1', label: 'Phone' })
+            deck = setClip(deck, 0, 1, { id: 'c2', kind: 'camera', camera: 'Webcam', device: 'd2', label: 'Webcam' })
+            return { streams, deck }
+        }
+        const selectNotPlaying = async (name) => {
+            fireEvent.click(screen.getByRole('button', { name: `Layer 1, slot ${name === 'Phone' ? 1 : 2}: ${name}` }))
+            fireEvent.click(screen.getByRole('button', { name: 'Clear Layer 1' }))
+            await act(async () => {})
+        }
+
+        it('stops its stream when the clip changes and when the deck goes away', async () => {
+            const { streams, deck } = twoCams()
+            const { unmount } = render(<Host initialDeck={deck} />)
+            await selectNotPlaying('Phone')
+            expect(streams).toHaveLength(1)
+            expect(streams[0].track.stop).not.toHaveBeenCalled()
+            await selectNotPlaying('Webcam')
+            expect(streams[0].track.stop).toHaveBeenCalledTimes(1) // the first clip's stream is stopped
+            expect(streams).toHaveLength(2)
+            expect(streams[1].track.stop).not.toHaveBeenCalled()
+            unmount()
+            expect(streams[1].track.stop).toHaveBeenCalledTimes(1)
+        })
     })
 })

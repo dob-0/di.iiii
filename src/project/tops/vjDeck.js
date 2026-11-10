@@ -296,9 +296,13 @@ export const blendNodeId = (deckId, layerIndex) => `${deckId}::L${layerIndex}::b
 export const masterNodeId = (deckId) => `${deckId}::master`
 // One camera operator per camera label in a deck: two clips of the same camera
 // share it (one getUserMedia). The key is a short hash so any label is a safe id.
-export const cameraNodeId = (deckId, label) => {
+// The device id (when a clip carries one) is part of the key, so two cameras with the
+// same label are two operators; a clip with no device hint hashes the label alone,
+// exactly as before, so old saved clips keep their id.
+export const cameraNodeId = (deckId, label, device = '') => {
     let h = 5381
-    for (const ch of String(label)) h = ((h * 33) ^ ch.codePointAt(0)) >>> 0
+    const key = device ? `${label}\u0000${device}` : String(label)
+    for (const ch of key) h = ((h * 33) ^ ch.codePointAt(0)) >>> 0
     return `${deckId}::cam-${h.toString(36)}`
 }
 
@@ -310,7 +314,8 @@ export const cameraNodeId = (deckId, label) => {
  *                  whose port is in1..in4; anything else is ignored
  *
  * Returns { nodes, wires, alias }:
- *   nodes  top.clip for each playing asset clip, top.blend per playing layer,
+ *   nodes  top.clip / top.camera for each layer with an active clip, top.blend per
+ *          such layer (mix 0 when silenced, never dropped),
  *          and one top.level master — always there, so an empty deck is black
  *   wires  bottom layer's blend reads nothing on `a` (black), each layer above
  *          reads the one below; `b` is the layer's source
@@ -338,10 +343,12 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
     let below = null
     const anySolo = deck.layers.some((layer) => layer.solo)
     deck.layers.forEach((layer, index) => {
-        // Bypass and solo silence a layer without touching its playing clip.
-        if (layer.bypass || (anySolo && !layer.solo)) return
-        const opacity = layer.opacity * crossfadeGain(layer.side, deck.crossfade)
-        if (opacity <= 0) return
+        // Bypass, solo, the crossfader and opacity 0 silence a layer by its blend's
+        // mix, NEVER by dropping its nodes: a dropped source is destroyed and made
+        // again (a camera closes and reopens, a video restarts). The source and the
+        // blend keep their ids; only `mix` goes to 0.
+        const silenced = layer.bypass || (anySolo && !layer.solo)
+        const opacity = silenced ? 0 : layer.opacity * crossfadeGain(layer.side, deck.crossfade)
         const clip = layer.active >= 0 ? layer.clips[layer.active] : null
         if (!clip) return
         let source
@@ -349,7 +356,7 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
             source = fedBy.get(clip.input)
             if (!source) return
         } else if (clip.kind === 'camera') {
-            source = cameraNodeId(deckId, clip.camera)
+            source = cameraNodeId(deckId, clip.camera, clip.device)
             // top.camera resolves device id first, then label (useTopNetwork.js).
             if (!nodes.some((node) => node.id === source)) {
                 nodes.push({ id: source, type: 'top.camera', values: { machine, device: clip.device, deviceLabel: clip.camera, mirror: false } })

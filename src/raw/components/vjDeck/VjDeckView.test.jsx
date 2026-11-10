@@ -222,6 +222,28 @@ describe('VjDeckView', () => {
         await vi.waitFor(() => expect(lastDeck(onValues).layers[1].clips[2]).toMatchObject({ asset: 'asset-new', label: 'fresh.mp4' }))
     })
 
+    it('a slow upload places its clip into the LATEST deck, keeping what changed meanwhile', async () => {
+        const onValues = vi.fn()
+        let finish
+        const onUploadFile = vi.fn(() => new Promise((resolve) => { finish = resolve }))
+        render(<Host onValues={onValues} onUploadFile={onUploadFile} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Layer 2, slot 3: add a clip' }))
+        const file = new File(['x'], 'slow.mp4', { type: 'video/mp4' })
+        fireEvent.change(screen.getByLabelText('Upload video'), { target: { files: [file] } })
+        await vi.waitFor(() => expect(onUploadFile).toHaveBeenCalled())
+        // while the file travels: the master moves and another layer is bypassed
+        fireEvent.change(screen.getByLabelText('Master'), { target: { value: '0.3' } })
+        fireEvent.click(screen.getByRole('button', { name: /Bypass Layer 1|Layer 1 bypass/i }))
+        const before = lastDeck(onValues)
+        expect(before.master).toBeCloseTo(0.3)
+        expect(before.layers[0].bypass).toBe(true)
+        finish({ id: 'asset-slow', name: 'slow.mp4' })
+        await vi.waitFor(() => expect(lastDeck(onValues).layers[1].clips[2]).toMatchObject({ asset: 'asset-slow' }))
+        const after = lastDeck(onValues)
+        expect(after.master).toBeCloseTo(0.3)
+        expect(after.layers[0].bypass).toBe(true)
+    })
+
     // 2026-11-10 (owner row N3529): a video over the server's limit said only "could not".
     it('a file the server refuses as too large says so, with its size', async () => {
         const onUploadFile = vi.fn(async () => { throw Object.assign(new Error('too large'), { status: 413 }) })
