@@ -150,7 +150,7 @@ export default function PerformDesk({
             minimized: {},
             changed: false
         })
-    }, [preset, widthClass]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [preset, widthClass, arrangement === null]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // The address says which preset is open, so "copy link" and a reload agree.
     useEffect(() => {
@@ -277,9 +277,10 @@ export default function PerformDesk({
     // or a press anywhere outside it.
     const presetsAnchor = useRef(null)
     const addAnchor = useRef(null)
+    const windowsAnchor = useRef(null)
     useEffect(() => {
         if (!menu) return undefined
-        const anchor = (menu === 'presets' ? presetsAnchor : addAnchor).current
+        const anchor = (menu === 'presets' ? presetsAnchor : menu === 'windows' ? windowsAnchor : addAnchor).current
         const close = (refocus) => {
             setMenu(null)
             setSaving(null)
@@ -386,6 +387,19 @@ export default function PerformDesk({
     }), [document, spaceId, projectId, applyLocalOps, mapApi, renderNode, machines, wall, onAddDeck, isLocalInstall])
 
     const groups = presetGroups({ mine, show })
+    // The way back to the deck: the project has a VJ deck but the windows on screen show none.
+    const hasDeckNode = Boolean(document?.nodes?.some?.((node) => node?.typeId === 'vj.deck'))
+    const deckOnScreen = Boolean(arrangement?.windows.some((item) => item.kind === 'deck'))
+    const missingDeck = Boolean(arrangement) && hasDeckNode && !deckOnScreen
+    const toggleKind = (kind) => {
+        const open = arrangement?.windows.some((item) => item.kind === kind)
+        if (open) change((current) => ({
+            ...current,
+            windows: current.windows.filter((item) => item.kind !== kind),
+            order: current.order.filter((id) => current.windows.find((item) => item.id === id)?.kind !== kind)
+        }))
+        else addWindow(kind)
+    }
     const nodesHref = buildRawProjectPath(projectId, spaceId)
 
     return (
@@ -500,6 +514,39 @@ export default function PerformDesk({
                         </div>
                     ) : null}
                 </div>
+                <div className="perform-menu-anchor" ref={windowsAnchor}>
+                    <button
+                        type="button"
+                        className="perform-strip-button"
+                        aria-haspopup="true"
+                        aria-expanded={menu === 'windows'}
+                        onClick={() => setMenu(menu === 'windows' ? null : 'windows')}
+                    >Windows</button>
+                    {menu === 'windows' ? (
+                        <div className="perform-menu" role="menu" aria-label="Windows">
+                            <div className="perform-menu-group">
+                                {WINDOW_ORDER.map((kind) => {
+                                    const open = Boolean(arrangement?.windows.some((item) => item.kind === kind))
+                                    return (
+                                        <button key={kind} type="button" role="menuitemcheckbox" aria-checked={open} className={`perform-menu-item${open ? ' is-on' : ''}`} onClick={() => toggleKind(kind)}>
+                                            <span aria-hidden="true">{open ? '✓ ' : '  '}</span>{WINDOW_KINDS[kind].label}
+                                            <span className="perform-menu-note">{open ? 'open' : 'hidden'}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                            <div className="perform-menu-group perform-menu-sep">
+                                <button type="button" role="menuitem" className="perform-menu-item" disabled={!preset} onClick={() => { if (preset) pick(preset.id) }}>Reset layout</button>
+                            </div>
+                        </div>
+                    ) : null}
+                </div>
+                {missingDeck ? (
+                    <span className="perform-strip-notice" role="status">
+                        This view has no VJ deck.{' '}
+                        <button type="button" className="perform-strip-button" onClick={() => addWindow('deck')}>Open VJ Deck</button>
+                    </span>
+                ) : null}
                 {notice ? <span className="perform-strip-notice" role="status">{notice}</span> : null}
             </div>
 

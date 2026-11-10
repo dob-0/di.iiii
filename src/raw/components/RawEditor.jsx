@@ -58,6 +58,7 @@ import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import VjDeckView from './vjDeck/VjDeckView.jsx'
 import PerformDesk from '../../perform/PerformDesk.jsx'
 import DeskPerformSwitch from '../../perform/DeskPerformSwitch.jsx'
+import WindowsMenu from './WindowsMenu.jsx'
 import useShowClock, { ShowClockContext } from '../../perform/useShowClock.js'
 import RawHelpDialog from './RawHelpDialog.jsx'
 
@@ -112,7 +113,7 @@ import { buildObjectCards, buildScopeItems, thingBandBounds } from '../utils/obj
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
-import { RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, centreWindowFrame, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { CARD_WIDTH, cardHeight, getCardBox } from '../utils/cardGeometry.js'
 import { settleCardStacks } from '../utils/cardStacks.js'
 import { placeNewCard } from '../utils/cardPlacement.js'
@@ -2758,6 +2759,44 @@ export default function RawEditor({
             || (narrowWindows && (node.parentId || null) === (currentScopeId || null) && !mountedPanelIds.has(node.id))
         )
     )
+    // The Windows button's list: every window of this level, open ones ticked.
+    // Choosing one shows it AND centres it where the person is looking (a
+    // window panned away, or clamped nowhere, is found the same way).
+    const levelWindows = [
+        ...visibleViewNodes,
+        ...hiddenPanelNodes.filter((node) => (node.parentId || null) === (currentScopeId || null))
+    ]
+    const windowItems = levelWindows.map((node) => ({
+        id: node.id,
+        label: frameOf(node).title || node.label || getNodeType(node.typeId)?.label || 'Panel',
+        open: frameOf(node).visible !== false && mountedPanelIds.has(node.id)
+    }))
+    const bringWindowHere = (nodeId, index = 0) => {
+        const node = authoredNodes.find((item) => item.id === nodeId)
+        if (!node) return
+        const frame = frameOf(node)
+        const centred = centreWindowFrame({
+            frame,
+            space: panelWindowSpace(frame, graphViewport),
+            viewport: graphViewport,
+            viewportWidth: typeof window === 'undefined' ? undefined : window.innerWidth,
+            viewportHeight: typeof window === 'undefined' ? undefined : window.innerHeight,
+            workspaceTop: chromeVisible ? workspaceTop : RAW_WINDOW_PADDING,
+            index
+        })
+        setLocalFrame(nodeId, {
+            visible: true,
+            minimized: false,
+            zIndex: topZIndex + 1 + index,
+            x: centred.x,
+            y: centred.y,
+            width: centred.width,
+            height: centred.height
+        })
+    }
+    const showAllWindows = () => {
+        windowItems.filter((item) => !item.open).forEach((item, index) => bringWindowHere(item.id, index))
+    }
     const paletteCommands = [
         {
             id: 'chrome',
@@ -3356,6 +3395,7 @@ export default function RawEditor({
             >
                 {barTools}
                 <DeskPerformSwitch current="desk" space={resolvedSpaceId} project={projectId} from="raw" />
+                <WindowsMenu items={windowItems} onChoose={(id) => bringWindowHere(id)} onShowAll={showAllWindows} />
             </SurfaceBar>
             {state.pendingSyncError && (
                 <div className="raw-sync-alert" role="alert">

@@ -345,6 +345,7 @@ export default function StudioShell({
     const rigSpaceId = liveProjectState?.spaceId
     const rigProjectId = document?.projectMeta?.id
     const projectHasRig = useMemo(() => hasRig(document?.entities || []), [document?.entities])
+    const hasDeckNode = Boolean(document?.nodes?.some?.((node) => node?.typeId === 'vj.deck'))
     const rigHref = projectHasRig && rigSpaceId && rigProjectId ? rigEntryPath(rigSpaceId, rigProjectId, 'plot') : null
     const [jamAllTools, setJamAllTools] = useState(loadJamAllTools)
     const jamMinimal = isJam && !jamAllTools
@@ -891,7 +892,7 @@ export default function StudioShell({
                     a connection (a deck, a picture) or a wall. A bare project
                     opens bare (the layers decision, 2026-09-23); "All tools"
                     and a project still loading show it, as they show every name. */}
-                {!isJam && (allTools || !layers?.open || layers.open.connections || layers.open.wall) ? (
+                {!isJam && (allTools || !layers?.open || layers.open.connections || layers.open.wall || hasDeckNode) ? (
                     <DeskPerformSwitch current="desk" space={liveProjectState?.spaceId} project={document?.projectMeta?.id} from="studio" />
                 ) : null}
                 {/* Rig, when the project holds one (a typed lamp or a rental list): the

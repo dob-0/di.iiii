@@ -133,3 +133,14 @@ describe('WikiPage backdrop (F138)', () => {
         }
     })
 })
+
+describe('WikiPage bar keeps the project', () => {
+    it('the bar links go back to the last visited project', () => {
+        window.sessionStorage.setItem('dii.lastProject', JSON.stringify({ space: 'lab', project: 'show' }))
+        const { container } = render(<WikiPage />)
+        const nodes = [...container.querySelectorAll('.sbar-link')].find((a) => a.textContent === 'Nodes')
+        expect(nodes?.getAttribute('href')).toContain('show')
+        window.sessionStorage.clear()
+    })
+})
+

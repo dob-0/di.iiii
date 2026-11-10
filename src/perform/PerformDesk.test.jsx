@@ -237,3 +237,32 @@ describe('the save box', () => {
         expect(placeholder).not.toMatch(/MOCT|MOXIR|Dilijan|Hayfilm/i)
     })
 })
+
+describe('the way back to a window', () => {
+    it('a preset without a deck, in a project that has one: a notice with "Open VJ Deck" adds it', () => {
+        renderDesk({ perform: { preset: 'wall', from: 'raw' } })
+        expect(windowTitles()).not.toContain('VJ Deck')
+        fireEvent.click(screen.getByRole('button', { name: 'Open VJ Deck' }))
+        expect(windowTitles()).toContain('VJ Deck')
+        expect(screen.queryByRole('button', { name: 'Open VJ Deck' })).toBe(null)
+    })
+
+    it('no notice when the project has no deck node', () => {
+        renderDesk({ perform: { preset: 'wall', from: 'raw' }, document: normalizeProjectDocument({ projectMeta: { id: 'show', spaceId: 'lab', title: 'show' }, nodes: [] }) })
+        expect(screen.queryByRole('button', { name: 'Open VJ Deck' })).toBe(null)
+    })
+
+    it('the Windows menu lists every kind with aria-checked, toggles, and Reset layout restores the preset', () => {
+        renderDesk()
+        fireEvent.click(screen.getByRole('button', { name: 'Windows' }))
+        const items = screen.getAllByRole('menuitemcheckbox')
+        expect(items.length).toBeGreaterThanOrEqual(10)
+        const deck = screen.getByRole('menuitemcheckbox', { name: /VJ Deck/ })
+        expect(deck.getAttribute('aria-checked')).toBe('true')
+        fireEvent.click(deck)
+        expect(windowTitles()).not.toContain('VJ Deck')
+        expect(screen.getByRole('menuitemcheckbox', { name: /VJ Deck/ }).getAttribute('aria-checked')).toBe('false')
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Reset layout' }))
+        expect(windowTitles()).toEqual(['VJ Deck'])
+    })
+})
