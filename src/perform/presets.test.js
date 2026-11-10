@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
     BUILT_IN_PRESETS,
+    GRID,
     WINDOW_KINDS,
     choosePreset,
     framesFromRects,
@@ -10,7 +11,10 @@ import {
     normalizePresetList,
     presetFromArrangement,
     presetGroups,
+    rectForAddedWindow,
     rectsFromFrames,
+    snapFrame,
+    unitSize,
     widthClassOf
 } from './presets.js'
 
@@ -67,15 +71,17 @@ describe('the built-ins on the real screens', () => {
     // grew over the deck. Every built-in, laid out and held to the window
     // floor, must leave no two windows overlapping, on the desk and the phone.
     const screens = {
-        wide: { left: 12, top: 88, width: 1440 - 24, height: 900 - 88 - 12 - 40 },
-        narrow: { left: 12, top: 96, width: 390 - 24, height: 844 - 96 - 12 - 120 }
+        // The whole viewport under the strip: no side padding, bottom reserve 0.
+        wide: { left: 0, top: 88, width: 1440, height: 900 - 88 },
+        narrow: { left: 0, top: 96, width: 390, height: 844 - 96 }
     }
     const overlap = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
     for (const preset of BUILT_IN_PRESETS) {
         for (const widthClass of ['wide', 'narrow']) {
             it(`${preset.name}, ${widthClass}: no two windows overlap`, () => {
-                const frames = Object.values(framesFromRects(preset[widthClass], screens[widthClass]))
-                    .map((frame) => ({ ...frame, width: Math.max(200, frame.width), height: Math.max(120, frame.height) }))
+                const unit = unitSize(screens[widthClass], GRID[widthClass])
+                const frames = Object.values(framesFromRects(preset[widthClass], screens[widthClass], { grid: GRID[widthClass] }))
+                    .map((frame) => ({ ...frame, width: Math.max(unit.width, frame.width), height: Math.max(unit.height, frame.height) }))
                 for (let i = 0; i < frames.length; i += 1) {
                     for (let j = i + 1; j < frames.length; j += 1) expect(overlap(frames[i], frames[j])).toBe(false)
                 }
@@ -133,11 +139,48 @@ describe('choosing which preset opens', () => {
 describe('rectangles and frames', () => {
     const area = { left: 0, top: 40, width: 1440, height: 860 }
 
-    it('a preset comes out the shape of the window it opens in', () => {
-        const frames = framesFromRects({ deck: [1, 2, 66, 95] }, area)
+    it('a preset comes out the shape of the window it opens in, on unit lines', () => {
+        const frames = framesFromRects({ deck: [0, 0, 50, 50], out: [50, 0, 50, 50] }, area)
         expect(frames.deck.pinned).toBe(true)
-        expect(frames.deck.x).toBe(Math.round(14.4 + 3))
-        expect(frames.deck.width).toBe(Math.round(950.4 - 6))
+        expect(frames.deck).toMatchObject({ x: 0, y: 40, width: 720, height: 430 })
+        // The same pixel is one block's right edge and the next one's left: no gutter.
+        expect(frames.out.x).toBe(frames.deck.x + frames.deck.width)
+    })
+
+    it('a rect that is off the unit lines snaps to them', () => {
+        const frames = framesFromRects({ a: [1, 2, 66, 95] }, area)
+        const unit = unitSize(area, GRID.wide)
+        expect(frames.a.x % unit.width).toBe(0)
+        expect(frames.a.width % unit.width).toBe(0)
+    })
+
+    it('every built-in fills the wide area exactly, with no empty unit', () => {
+        for (const preset of BUILT_IN_PRESETS.filter((p) => ['vj', 'vj-windows', 'show'].includes(p.id))) {
+            const filled = new Set()
+            for (const rect of Object.values(preset.wide)) {
+                const f = framesFromRects({ r: rect }, { left: 0, top: 0, width: 12, height: 8 }).r
+                for (let x = f.x; x < f.x + f.width; x += 1) for (let y = f.y; y < f.y + f.height; y += 1) filled.add(`${x},${y}`)
+            }
+            expect(filled.size, preset.id).toBe(96)
+        }
+    })
+
+    it('snapFrame puts a dragged frame on unit lines, and a fine drag cannot leave one', () => {
+        const unit = unitSize(area, GRID.wide)
+        const snapped = snapFrame({ x: 130, y: 70, width: 300, height: 200, zIndex: 3 }, area, GRID.wide)
+        expect(snapped.zIndex).toBe(3)
+        expect((snapped.x - area.left) % unit.width).toBeLessThan(2)
+        expect(snapped.width).toBeGreaterThanOrEqual(unit.width)
+    })
+
+    it('a window added by hand takes the first free unit area, else opens on top', () => {
+        const first = rectForAddedWindow('wide', 'cues', {})
+        expect(first.slice(0, 2)).toEqual([0, 0])
+        const used = { deck: [0, 0, 100, 100] }
+        const onTop = rectForAddedWindow('wide', 'cues', used)
+        expect(onTop[2]).toBeGreaterThan(0)
+        const half = rectForAddedWindow('wide', 'cues', { deck: [0, 0, 50, 100] })
+        expect(half[0]).toBeGreaterThanOrEqual(50)
     })
 
     it('frames → rects → frames is the same arrangement to the pixel', () => {

@@ -2,13 +2,13 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import DesktopWindow from '../raw/components/DesktopWindow.jsx'
 import { navigateInApp } from '../components/SurfaceBar.jsx'
 import { buildRawProjectPath } from '../raw/utils/rawRouting.js'
-import { RAW_WINDOW_PADDING, getBottomReserve } from '../raw/utils/windowLayout.js'
 import { useMapApi } from '../map/useMapDocument.js'
 import { buildPerformPath } from './performRouting.js'
 import {
     WINDOW_KINDS,
     WINDOW_ORDER,
     choosePreset,
+    GRID,
     framesFromRects,
     isComingKind,
     nextSlotId,
@@ -16,6 +16,8 @@ import {
     presetGroups,
     rectForAddedWindow,
     rectsFromFrames,
+    snapFrame,
+    unitSize,
     widthClassOf
 } from './presets.js'
 import PerformWindowBody, { windowTitle } from './PerformWindows.jsx'
@@ -36,16 +38,18 @@ import './perform.css'
 
 const STRIP_FALLBACK = 84
 
-// The same bounds DesktopWindow's clamp keeps a window inside (windowLayout.js):
-// a padding each side, and the bottom reserve the corner chrome needs (the
-// account chip on a phone). A preset laid into anything larger would be
-// squeezed by the clamp and its windows would overlap.
+// The area the blocks tile: the whole screen under the strip, edge to edge.
+// Nodes keeps a padding and a bottom reserve (windowLayout.js) because its
+// windows float over a canvas and a corner holds the zoom controls and the
+// delete button. Perform has neither, and nothing is minimised into a tray (a
+// minimised block stays in its place as its one header row), so nothing is
+// reserved here. UNCHECKED on a phone: the account chip (AccountButton,
+// fixed at the bottom-right) sits over the last block's corner.
 const measureArea = (stripBottom) => {
     const width = typeof window === 'undefined' ? 1440 : window.innerWidth
     const height = typeof window === 'undefined' ? 900 : window.innerHeight
-    const top = Math.max(0, Math.round(stripBottom || STRIP_FALLBACK)) + 4
-    const bottom = height - RAW_WINDOW_PADDING - getBottomReserve(width)
-    return { left: RAW_WINDOW_PADDING, top, width: Math.max(1, width - RAW_WINDOW_PADDING * 2), height: Math.max(1, bottom - top) }
+    const top = Math.max(0, Math.round(stripBottom || STRIP_FALLBACK))
+    return { left: 0, top, width: Math.max(1, width), height: Math.max(1, height - top) }
 }
 
 const replaceAddress = (path) => {
@@ -100,6 +104,11 @@ export default function PerformDesk({
     }, [])
     const area = useMemo(() => measureArea(stripBottom), [stripBottom, viewport]) // eslint-disable-line react-hooks/exhaustive-deps
     const widthClass = widthClassOf(viewport.width)
+    const grid = GRID[widthClass]
+    const unit = useMemo(() => unitSize(area, grid), [area, grid])
+    // What DesktopWindow keeps a block inside: the whole area, and no smaller than one unit.
+    const bounds = useMemo(() => ({ minLeft: 0, viewportPadding: 0, bottomReserve: 0, minWidth: unit.width, minHeight: unit.height }), [unit])
+    const gridProps = useMemo(() => ({ snap: (frame) => snapFrame(frame, area, grid), unit }), [area, grid, unit])
 
     const mine = useMemo(() => layout?.presets || [], [layout?.presets])
     const show = useMemo(() => document?.performState?.presets || [], [document?.performState?.presets])
@@ -147,7 +156,7 @@ export default function PerformDesk({
 
     const frames = useMemo(() => {
         if (!arrangement) return {}
-        const base = framesFromRects(arrangement.rects, area)
+        const base = framesFromRects(arrangement.rects, area, { grid })
         arrangement.order.forEach((id, index) => {
             if (base[id]) {
                 base[id].zIndex = 10 + index
@@ -155,7 +164,7 @@ export default function PerformDesk({
             }
         })
         return base
-    }, [arrangement, area])
+    }, [arrangement, area, grid])
 
     const change = useCallback((fn) => setArrangement((current) => (current ? { ...fn(current), changed: true } : current)), [])
 
@@ -191,7 +200,7 @@ export default function PerformDesk({
         return {
             ...current,
             windows: [...current.windows, { id, kind }],
-            rects: { ...current.rects, [id]: rectForAddedWindow(widthClass) },
+            rects: { ...current.rects, [id]: rectForAddedWindow(widthClass, kind, current.rects) },
             order: [...current.order, id]
         }
     })
@@ -231,7 +240,7 @@ export default function PerformDesk({
     const save = (target) => {
         if (!arrangement || !preset) return
         const name = saveName.trim() || `${preset.name} · ${target === 'mine' ? 'mine' : 'show'}`
-        const framesNow = framesFromRects(arrangement.rects, area)
+        const framesNow = framesFromRects(arrangement.rects, area, { grid })
         const saved = presetFromArrangement({
             name,
             source: target,
@@ -389,13 +398,14 @@ export default function PerformDesk({
             {arrangement ? arrangement.windows.map((item) => {
                 const frame = frames[item.id]
                 if (!frame) return null
-                const known = WINDOW_KINDS[item.kind]
                 return (
                     <DesktopWindow
                         key={`${arrangement.presetId}:${item.id}`}
                         windowState={frame}
                         title={windowTitle(item.kind)}
-                        kicker={known?.family || ''}
+                        blockKind={item.kind}
+                        bounds={bounds}
+                        grid={gridProps}
                         minTop={area.top}
                         space="screen"
                         onFocus={() => focusWindow(item.id)}

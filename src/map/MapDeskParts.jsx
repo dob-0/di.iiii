@@ -46,11 +46,13 @@ export const useMeasuredStage = (aspect) => {
     }
 }
 
-export function MapSurfaceList({ surfaces, selectedId, soloId, onSelect, onAdd, onToggle, onSolo, onFront }) {
+// `compact`: the Perform block. The block's own title row names it, so the heading goes, and
+// an empty state is a few words, never a sentence (the sentence stays on the Projection desk).
+export function MapSurfaceList({ surfaces, selectedId, soloId, onSelect, onAdd, onToggle, onSolo, onFront, compact = false }) {
     return (
         <>
             <div className="map-panel-head">
-                <h2>Surfaces</h2>
+                {compact ? null : <h2>Surfaces</h2>}
                 <button type="button" className="map-action" onClick={onAdd}>Add</button>
             </div>
             <ul className="map-surface-list">
@@ -76,16 +78,16 @@ export function MapSurfaceList({ surfaces, selectedId, soloId, onSelect, onAdd, 
                 ))}
             </ul>
             {!surfaces.length ? (
-                <p className="map-empty">No surfaces yet. Add one for each shape on the wall, then drag its corners onto that shape.</p>
+                <p className="map-empty" title="Add one for each shape on the wall, then drag its corners onto that shape.">{compact ? 'No surfaces' : 'No surfaces yet. Add one for each shape on the wall, then drag its corners onto that shape.'}</p>
             ) : null}
         </>
     )
 }
 
-export function MapMachinesList({ machines, ndiScan, surfaces }) {
+export function MapMachinesList({ machines, ndiScan, surfaces, compact = false }) {
     return (
         <div className="map-section">
-            <div className="map-panel-head"><h2>Machines</h2></div>
+            {compact ? null : <div className="map-panel-head"><h2>Machines</h2></div>}
             {machines.length ? machines.map(describeMachine).map((entry) => (
                 <p key={entry.id} className="map-machine">
                     <strong>{entry.name}</strong>
@@ -99,9 +101,9 @@ export function MapMachinesList({ machines, ndiScan, surfaces }) {
                         entry.ndi.length ? `NDI: ${entry.ndi.join(', ')}` : null
                     ].filter(Boolean).join(' · ')}</span>
                 </p>
-            )) : <p className="map-empty">Finding the machines showing this space…</p>}
+            )) : <p className="map-empty">{compact ? 'Finding machines…' : 'Finding the machines showing this space…'}</p>}
             {machines.length === 1 ? (
-                <p className="map-empty">Only this machine so far. Another appears while its output page is open.</p>
+                <p className="map-empty" title="Another appears while its output page is open.">{compact ? 'Only this machine' : 'Only this machine so far. Another appears while its output page is open.'}</p>
             ) : null}
             {/* This machine's own NDI autoscan: a reading, kept current by the
                 server — or, where it cannot look, the reason why. */}

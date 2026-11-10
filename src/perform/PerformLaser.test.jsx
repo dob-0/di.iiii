@@ -44,13 +44,14 @@ const renderMaster = ({ light = { up: true, reachable: true, blackout: false, ma
 describe('the laser window', () => {
     it('says how many cubes are connected of how many, and armed yes/no, read only', async () => {
         renderLaser()
-        expect(await screen.findByText(/2 of 3 cubes connected · armed no · sim off/)).toBeTruthy()
-        expect(screen.getByText('arm on the Laser page').getAttribute('href')).toBe('/laser/')
+        expect(await screen.findByText('2/3 CUBES · NOT ARMED')).toBeTruthy()
+        expect(screen.getByText('Laser page').getAttribute('title')).toBe('Arm on the Laser page')
+        expect(screen.getByText('Laser page').getAttribute('href')).toBe('/laser/')
     })
 
     it('has no arm control anywhere in the DOM, and nothing it renders ever posts to /laser/api/arm', async () => {
         const { container } = renderLaser()
-        await screen.findByText(/cubes connected/)
+        await screen.findByText(/CUBES/)
         expect(container.querySelector('button[aria-label*="rm" i]')).toBeNull()
         for (const button of container.querySelectorAll('button')) expect(button.textContent).not.toMatch(/^arm/i)
         fireEvent.click(container.querySelector('[data-look="ring"]'))
@@ -58,11 +59,11 @@ describe('the laser window', () => {
         expect(posts.some((p) => p.path.includes('arm'))).toBe(false)
     })
 
-    it('shows armed yes without the "arm on the Laser page" line', async () => {
+    it('shows ARMED without the Laser page link', async () => {
         world.engine = engine({ armed: true })
         renderLaser()
-        expect(await screen.findByText(/armed yes/)).toBeTruthy()
-        expect(screen.queryByText('arm on the Laser page')).toBeNull()
+        expect(await screen.findByText('2/3 CUBES · ARMED')).toBeTruthy()
+        expect(screen.queryByText('Laser page')).toBeNull()
     })
 
     it('lists the desk looks, marks the live one, and a press calls the desk Go endpoint', async () => {
@@ -77,8 +78,9 @@ describe('the laser window', () => {
     it('says so plainly when the desk has no looks', async () => {
         world.desk = desk({ looks: [] })
         renderLaser()
-        expect(await screen.findByText(/The laser desk has no looks/)).toBeTruthy()
-        expect(screen.getByText('Make one on the Laser desk').getAttribute('href')).toBe('/laser/desk/')
+        expect(await screen.findByText('NO LOOKS')).toBeTruthy()
+        expect(screen.getByText('Laser desk').getAttribute('title')).toBe('Make one on the Laser desk')
+        expect(screen.getByText('Laser desk').getAttribute('href')).toBe('/laser/desk/')
     })
 
     it('master slider and follow-light toggle use the desk endpoints', async () => {
@@ -96,13 +98,13 @@ describe('the laser window', () => {
         world.engine = null
         world.desk = null
         renderLaser()
-        expect(await screen.findByText('Laser engine not on this machine')).toBeTruthy()
+        expect(await screen.findByText('NO LASER ENGINE')).toBeTruthy()
     })
 
     it('a page that answers HTML (a hosted tier) is "not on this machine", not an error', async () => {
         fetch.mockImplementation(async () => new Response('<html></html>', { status: 200, headers: { 'Content-Type': 'text/html' } }))
         renderLaser()
-        expect(await screen.findByText('Laser engine not on this machine')).toBeTruthy()
+        expect(await screen.findByText('NO LASER ENGINE')).toBeTruthy()
     })
 })
 
@@ -194,7 +196,7 @@ describe('the Show preset and the laser kind', () => {
 
     it('Show has deck, master, cues, clock, laser with no overlapping rects, wide and narrow', () => {
         const show = BUILT_IN_PRESETS.find((p) => p.id === 'show')
-        expect(show.windows.map((w) => w.kind).sort()).toEqual(['clock', 'cues', 'deck', 'laser', 'master'])
+        expect(show.windows.map((w) => w.kind).sort()).toEqual(['clock', 'cues', 'deck', 'laser', 'lightlooks', 'master'])
         const hit = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1]
         for (const layout of [show.wide, show.narrow]) {
             const rects = Object.values(layout)

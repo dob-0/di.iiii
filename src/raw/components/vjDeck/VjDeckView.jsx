@@ -516,7 +516,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                         {asset.name || asset.id}
                                     </button>
                                 ))}
-                                {!videoAssets.length ? <span className="vj-deck-dim">No video in this project yet.</span> : null}
+                                {!videoAssets.length ? <span className="vj-deck-dim" title="No video in this project yet.">{mode === 'perform' ? 'No video' : 'No video in this project yet.'}</span> : null}
                                 {onUploadFile ? (
                                     <label className="vj-deck-button vj-deck-upload">
                                         {uploading ? `Bringing in ${uploading}` : 'Upload video'}
@@ -530,11 +530,14 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                 ) : (
                     <section className="vj-deck-panel vj-deck-sources" aria-label="Sources">
                         <div className="vj-deck-panel-head"><span className="vj-deck-label">Sources</span></div>
-                        <p className="vj-deck-hint">Tap an empty slot to choose a clip for it: a wired input, a camera or footage. Tap a clip to play it on its layer.</p>
+                        <p className="vj-deck-hint" title="Tap an empty slot to choose a clip for it: a wired input, a camera or footage. Tap a clip to play it on its layer.">
+                            {mode === 'perform' ? 'Tap a slot' : 'Tap an empty slot to choose a clip for it: a wired input, a camera or footage. Tap a clip to play it on its layer.'}
+                        </p>
                     </section>
                 )}
                 {selectedClip ? (
                     <ClipSettings
+                        compact={mode === 'perform'}
                         key={`${selected.layer}:${selected.column}`}
                         clip={selectedClip}
                         title={`${deck.layers[selected.layer].name}, slot ${selected.column + 1}`}
@@ -554,7 +557,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     )
 }
 
-function ClipSettings({ clip, title, name, editable, onChange, onRemove }) {
+function ClipSettings({ clip, title, name, editable, onChange, onRemove, compact = false }) {
     const isInput = clip.kind === 'input'
     const isCamera = clip.kind === 'camera'
     return (
@@ -564,7 +567,7 @@ function ClipSettings({ clip, title, name, editable, onChange, onRemove }) {
                 <span className="vj-deck-clip-name">{name}</span>
             </div>
             {isInput ? (
-                <p className="vj-deck-dim">This slot plays whatever is wired into {inputLabel(clip.input)}.</p>
+                <p className="vj-deck-dim" title={`This slot plays whatever is wired into ${inputLabel(clip.input)}.`}>{compact ? `Wired: ${inputLabel(clip.input)}` : `This slot plays whatever is wired into ${inputLabel(clip.input)}.`}</p>
             ) : isCamera ? (
                 <p className="vj-deck-dim vj-deck-clip-camera">Camera: {clip.camera}</p>
             ) : (

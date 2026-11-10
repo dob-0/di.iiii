@@ -42,9 +42,11 @@
     --vj-head: 198px;
     --vj-tile: 96px;
     --vj-tile-height: 64px;
-    --vj-control: 30px;
-    gap: var(--di-space-3);
-    padding: var(--di-space-3);
+    /* One control height with every other block on Perform (perform.css sets
+       --perform-control on .perform-shell: 24px, 44px on touch). */
+    --vj-control: var(--perform-control);
+    gap: var(--di-space-2);
+    padding: var(--di-space-2);
 }
 
 .vj-deck-label {

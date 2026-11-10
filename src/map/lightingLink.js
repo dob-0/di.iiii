@@ -227,3 +227,75 @@ export const setLightBlackout = (blackout, options) => postLight('api/master', {
 export const setLightMaster = (level, options) => postLight('api/master', {
     master: Math.round(Math.max(0, Math.min(1, Number(level) || 0)) * 255)
 }, options)
+
+// --- the Light block on Perform (2026-11-10) ---------------------------------
+//
+// The desk's looks as tiles. These go to the space's OWN address
+// (/light/space/<id>/api/…), not the bare one: a desk that is running another
+// space's show answers 409 `other-show` (serverXR/src/lighting/desk.js, the
+// showKey guard), which is how this page knows a press would land on a show
+// that is not this one — and never sends it. The bare `api/clock` the show
+// clock polls is not space-keyed, so it cannot say that.
+
+const spacePath = (spaceId, rest) => (spaceId ? `space/${encodeURIComponent(spaceId)}/${rest}` : rest)
+
+const getLightJson = async (path, { fetchImpl, signal } = {}) => {
+    const call = resolveFetch(fetchImpl)
+    if (!call) return { state: 'off' }
+    try {
+        const response = await call(lightingApiUrl(path), { signal, cache: 'no-store' })
+        if (response?.status === 409) return { state: 'other' }
+        if (!response?.ok || !answeredJson(response)) return { state: 'off' }
+        return { state: 'own', body: await response.json() }
+    } catch (error) {
+        if (error?.name === 'AbortError') throw error
+        return { state: 'off' }
+    }
+}
+
+/**
+ * One reading of the Light desk for this space:
+ *   { state: 'off' | 'other' | 'own', looks: [{ id, name }], liveId, master, blackout }
+ * off = no desk answers here; other = the desk runs another show;
+ * own = this space's (or this machine's) show. Never throws but on abort.
+ */
+export async function readLightLooks({ spaceId = null, fetchImpl, signal } = {}) {
+    const [fireable, summary] = await Promise.all([
+        getLightJson(spacePath(spaceId, 'api/fireable'), { fetchImpl, signal }),
+        getLightJson(spacePath(spaceId, 'api/summary'), { fetchImpl, signal })
+    ])
+    if (fireable.state !== 'own') return { state: fireable.state, looks: [], liveId: null, master: null, blackout: false }
+    const looks = (Array.isArray(fireable.body?.looks) ? fireable.body.looks : [])
+        .filter((look) => look && typeof look.id === 'string')
+        .map((look) => ({ id: look.id, name: look.name || look.id }))
+    const layers = Array.isArray(summary.body?.layers) ? summary.body.layers : []
+    const live = layers.find((layer) => layer?.on !== false && typeof layer?.lookId === 'string' && layer.lookId)
+    return {
+        state: 'own',
+        looks,
+        liveId: live ? live.lookId : null,
+        master: Number.isFinite(Number(summary.body?.master)) ? Number(summary.body.master) : null,
+        blackout: summary.body?.blackout === true
+    }
+}
+
+// The same call a cue makes for a look (recallCueLighting above), on the space's address.
+export const fireLightLook = (id, { spaceId = null, fetchImpl } = {}) => postLight(spacePath(spaceId, 'api/looks/fire'), { id }, { fetchImpl })
+
+// The master from a Light block: space-keyed, so another show's desk refuses it.
+export const setLightLooksMaster = (level, { spaceId = null, fetchImpl } = {}) => postLight(spacePath(spaceId, 'api/master'), {
+    master: Math.round(Math.max(0, Math.min(1, Number(level) || 0)) * 255)
+}, { fetchImpl })
+
+/**
+ * What the show clock's reading says about THIS space, in one word:
+ * 'off' (no desk or not open), 'other' (the open desk runs another space's
+ * show) or 'own'. The clock itself is not space-keyed (see above), so a Perform
+ * page for space A follows a desk that runs space B's tempo; this is how the
+ * page says so in words instead of showing a calm "live".
+ */
+export const lightRelation = (light, spaceId) => {
+    if (!light?.up) return light?.reachable ? 'closed' : 'off'
+    if (typeof light.show === 'string' && light.show && spaceId && light.show !== spaceId) return 'other'
+    return 'own'
+}

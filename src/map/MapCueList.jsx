@@ -26,7 +26,9 @@ export default function MapCueList({
     onAdd,
     onUpdate,
     onDelete,
-    onReorder
+    onReorder,
+    // The Perform block: its title row names it, and an empty state is a few words.
+    compact = false
 }) {
     const [playing, setPlaying] = useState(false)
     const [editingId, setEditingId] = useState(null)
@@ -71,7 +73,7 @@ export default function MapCueList({
     return (
         <div className="map-section">
             <div className="map-panel-head">
-                <h2>Cues</h2>
+                {compact ? <span /> : <h2>Cues</h2>}
                 <div className="map-row">
                     <button
                         type="button"
@@ -87,8 +89,8 @@ export default function MapCueList({
             </div>
 
             {!cues.length ? (
-                <p className="map-empty">
-                    No cues. Set the wall the way you want it, add a cue, and it keeps that state under a number key.
+                <p className="map-empty" title="Set the wall the way you want it, add a cue, and it keeps that state under a number key.">
+                    {compact ? 'No cues' : 'No cues. Set the wall the way you want it, add a cue, and it keeps that state under a number key.'}
                 </p>
             ) : null}
 
