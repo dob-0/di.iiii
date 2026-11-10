@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchLightTargets } from './lightingLink.js'
+import { readLaserDesk } from './laserLink.js'
 import { CUE_KEYS } from './cueFiring.js'
 
 // THE CUE LIST.
@@ -153,6 +154,25 @@ function useLightTargets() {
     return { targets, reachable }
 }
 
+// The laser desk's looks, same terms as the light picker: asked on open and on
+// focus, "no desk here" is an answer, a stored id the desk no longer lists is kept.
+function useLaserLooks() {
+    const [looks, setLooks] = useState([])
+    const [reachable, setReachable] = useState(true)
+    useEffect(() => {
+        let cancelled = false
+        const load = () => {
+            readLaserDesk()
+                .then((desk) => { if (!cancelled) { setLooks(desk.reachable ? desk.looks : []); setReachable(desk.reachable) } })
+                .catch(() => { if (!cancelled) { setLooks([]); setReachable(false) } })
+        }
+        load()
+        window.addEventListener('focus', load)
+        return () => { cancelled = true; window.removeEventListener('focus', load) }
+    }, [])
+    return { looks, reachable }
+}
+
 // The picker's value carries the KIND as well as the id, because a look and a scene are
 // both ids and the cue stores them in different fields.
 const targetValue = (kind, id) => `${kind}:${id}`
@@ -169,6 +189,7 @@ const targetPatch = (value) => {
 
 function MapCueEditor({ cue, surfaceCount, onUpdate, onCapture, onDelete, onMove }) {
     const { targets, reachable } = useLightTargets()
+    const laser = useLaserLooks()
     if (!cue) return null
     const chosen = targetOf(cue)
     // Something the desk no longer lists still gets an option of its own, or the select
@@ -241,6 +262,22 @@ function MapCueEditor({ cue, surfaceCount, onUpdate, onCapture, onDelete, onMove
                     </select>
                 ) : (
                     <p className="map-empty">Lighting desk not reachable — it runs on a local di.iiii</p>
+                )}
+            </label>
+            <label className="map-field map-field-inline">
+                <span>Laser</span>
+                {laser.reachable ? (
+                    <select
+                        value={cue.laserLook || ''}
+                        onChange={(event) => onUpdate?.(cue.id, { laserLook: event.target.value })}
+                        title="Make this look live on the laser desk when the cue fires, right after the light. It never arms the laser."
+                    >
+                        <option value="">— none —</option>
+                        {cue.laserLook && !laser.looks.some((look) => look.id === cue.laserLook) ? <option value={cue.laserLook}>{cue.laserLook} (not on the desk)</option> : null}
+                        {laser.looks.map((look) => <option key={look.id} value={look.id}>{look.name}</option>)}
+                    </select>
+                ) : (
+                    <p className="map-empty">Laser desk not reachable — it runs on a local di.iiii</p>
                 )}
             </label>
             <div className="map-row">

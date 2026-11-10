@@ -38,6 +38,7 @@ export const WINDOW_KINDS = {
     out: { label: 'Out', family: 'pictures', phase: 1 },
     clock: { label: 'Clock', family: 'time', phase: 1 },
     master: { label: 'Master · Blackout', family: 'light', phase: 1 },
+    laser: { label: 'Laser', family: 'light', phase: 1 },
     wall: { label: 'Wall', family: 'wall', phase: 1 },
     surfaces: { label: 'Surfaces', family: 'wall', phase: 1 },
     cues: { label: 'Cues', family: 'wall', phase: 1 },
@@ -55,7 +56,7 @@ export const WINDOW_KINDS = {
 
 // The order of the "+ window" list. Nodes is not a window: it is the way to
 // the whole patch, and sits under the list on its own line.
-export const WINDOW_ORDER = ['deck', 'out', 'clock', 'master', 'wall', 'wallout', 'surfaces', 'cues', 'machines', 'surface', 'scenes', 'looks', 'audio', 'status', 'footage', 'mysurface', 'now']
+export const WINDOW_ORDER = ['deck', 'out', 'clock', 'master', 'laser', 'wall', 'wallout', 'surfaces', 'cues', 'machines', 'surface', 'scenes', 'looks', 'audio', 'status', 'footage', 'mysurface', 'now']
 
 export const isKnownKind = (kind) => Object.prototype.hasOwnProperty.call(WINDOW_KINDS, kind)
 export const isComingKind = (kind) => isKnownKind(kind) && WINDOW_KINDS[kind].phase > 1
@@ -130,6 +131,14 @@ export const BUILT_IN_PRESETS = [
         windows: [w('cues'), w('master'), w('clock')],
         wide: { cues: [1, 2, 48, 95], master: [50, 2, 49, 60], clock: [50, 64, 49, 33] },
         narrow: { cues: [0, 0, 100, 50], master: [0, 50, 100, 30], clock: [0, 80, 100, 20] }
+    },
+    {
+        id: 'show',
+        name: 'Show',
+        who: 'Picture, light and laser together: the deck, the cues (one go), one blackout for all three, the laser looks.',
+        windows: [w('deck'), w('master'), w('cues'), w('clock'), w('laser')],
+        wide: { deck: [1, 2, 40, 60], cues: [42, 2, 29, 60], laser: [72, 2, 27, 60], master: [1, 64, 40, 33], clock: [42, 64, 57, 33] },
+        narrow: { cues: [0, 0, 100, 30], master: [0, 30, 100, 26], laser: [0, 56, 100, 44] }
     }
 ].map((preset) => ({ ...preset, source: 'builtin' }))
 
