@@ -138,4 +138,27 @@ describe('a Camera In opening its device', () => {
         await act(async () => { await vi.advanceTimersByTimeAsync(60000) })
         expect(getUserMedia).toHaveBeenCalledTimes(1)
     })
+
+    it('adding a second camera does not reopen the first, and removing one stops only its own tracks', async () => {
+        devices = [{ kind: 'videoinput', deviceId: 'p1', label: 'Phone' }, { kind: 'videoinput', deviceId: 'w1', label: 'Webcam' }]
+        const streams = []
+        setup()
+        getUserMedia.mockImplementation(async (constraints) => { opened.push(constraints); const stream = fakeStream(); streams.push(stream); return stream })
+        const one = { id: 'camA', typeId: 'top.camera', values: { device: 'p1', deviceLabel: 'Phone' } }
+        const two = { id: 'camB', typeId: 'top.camera', values: { device: 'w1', deviceLabel: 'Webcam' } }
+        const { rerender } = renderHook(({ nodes }) => useTopNetwork({ network: toTopNetwork({ nodes, edges: [] }) }), { initialProps: { nodes: [one] } })
+        await flush()
+        expect(getUserMedia).toHaveBeenCalledTimes(1)
+        const firstTrack = streams[0].getTracks()[0]
+        rerender({ nodes: [one, two] })
+        await flush()
+        expect(getUserMedia).toHaveBeenCalledTimes(2) // only the new one opened
+        expect(opened.at(-1)).toEqual({ video: { deviceId: { exact: 'w1' } }, audio: false })
+        expect(firstTrack.stop).not.toHaveBeenCalled()
+        const secondTrack = streams[1].getTracks()[0]
+        rerender({ nodes: [one] })
+        await flush()
+        expect(secondTrack.stop).toHaveBeenCalledTimes(1)
+        expect(firstTrack.stop).not.toHaveBeenCalled()
+    })
 })

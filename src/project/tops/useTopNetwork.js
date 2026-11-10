@@ -133,6 +133,9 @@ export function useTopNetwork({
     const peersRef = useRef(null)
     const outRef = useRef(null)
     const tracksRef = useRef(new Map())
+    // Cameras that are open right now: id -> { key, stream, engine }. The camera effect re-runs when
+    // the SET of cameras changes; only a camera whose own spec changed is closed and reopened.
+    const liveCamerasRef = useRef(new Map())
     const numbersRef = useRef({})
     const failedScripts = useRef(new Set())
     const inspected = useInspectedTop()
@@ -408,6 +411,17 @@ export function useTopNetwork({
     useEffect(() => {
         const cameras = JSON.parse(cameraKey)
         const ids = cameras.map(([id]) => id)
+        // Per camera: close what is gone or changed (or whose engine was replaced and so knows
+        // no video); an unchanged camera stays open and is not touched.
+        const live = liveCamerasRef.current
+        const wantedKeys = new Map(cameras.map((camera) => [camera[0], JSON.stringify(camera)]))
+        for (const [id, entry] of [...live]) {
+            if (wantedKeys.get(id) === entry.key && entry.engine === engineRef.current) continue
+            entry.engine?.setVideo(id, null)
+            entry.stream.getTracks().forEach((track) => track.stop())
+            tracksRef.current.delete(id)
+            live.delete(id)
+        }
         if (!ids.length) return undefined
         const media = globalThis.navigator?.mediaDevices
         if (!media?.getUserMedia) {
@@ -416,8 +430,6 @@ export function useTopNetwork({
             setError(refusal)
             return undefined
         }
-        const streams = []
-        const tracks = tracksRef.current
         let cancelled = false
         // A camera's id is per page: the Desk on another page of this machine
         // may have recorded a different one. The label is the fallback; a NAMED
@@ -445,6 +457,7 @@ export function useTopNetwork({
         const open = async (id) => {
             if (cancelled) return
             if (running.has(id)) { again.add(id); return }
+            if (live.has(id)) return // already open and unchanged
             running.add(id)
             clearTimeout(timers.get(id))
             try {
@@ -463,7 +476,7 @@ export function useTopNetwork({
                 }
                 if (!stream) stream = await openSharedCamera(media, { video: Object.keys(constraints).length ? constraints : true, audio: false })
                 if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return }
-                streams.push(stream)
+                live.set(id, { key: wantedKeys.get(id), stream, engine: engineRef.current })
                 attempts.delete(id)
                 const track = stream.getVideoTracks()[0]
                 if (track) {
@@ -484,17 +497,26 @@ export function useTopNetwork({
                 if (again.delete(id) && !cancelled && !tracksRef.current.has(id)) open(id)
             }
         }
-        const onDeviceChange = () => { for (const id of ids) if (!tracksRef.current.has(id)) open(id) }
+        const onDeviceChange = () => { for (const id of ids) if (!live.has(id)) open(id) }
         media.addEventListener?.('devicechange', onDeviceChange)
         for (const id of ids) open(id)
         return () => {
+            // Only this run's own work ends here; the open cameras outlive it (the next run keeps
+            // or closes each one, and the unmount effect below closes what is left).
             cancelled = true
             media.removeEventListener?.('devicechange', onDeviceChange)
             for (const timer of timers.values()) clearTimeout(timer)
-            for (const id of ids) { engineRef.current?.setVideo(id, null); tracks.delete(id) }
-            streams.forEach((stream) => stream.getTracks().forEach((track) => track.stop()))
         }
     }, [cameraKey, hasNodes, canvas])
+    useEffect(() => () => {
+        const live = liveCamerasRef.current
+        for (const [id, entry] of live) {
+            entry.engine?.setVideo(id, null)
+            entry.stream.getTracks().forEach((track) => track.stop())
+            tracksRef.current.delete(id)
+        }
+        live.clear()
+    }, [])
 
     return { error, machine: linkView.machine, peers: linkView.peers }
 }
