@@ -169,6 +169,7 @@ export const matchStreamDevice = (devices = [], name = '') => pickByLabel(
 
 function MapStreamSource({ name, effect = null, label, width, height }) {
     const [state, setState] = useState({ deviceId: '', problem: '' })
+    const resolveRef = useRef(null)
 
     useEffect(() => {
         let cancelled = false
@@ -199,19 +200,21 @@ function MapStreamSource({ name, effect = null, label, width, height }) {
                 if (!cancelled) setState({ deviceId: '', problem: error?.name === 'NotAllowedError' ? 'camera not permitted' : 'inputs unavailable' })
             }
         }
+        resolveRef.current = resolve
         resolve()
         // An input that appears later (the bridge starting after the page, a
         // capture card plugged in mid-show) is picked up without a reload.
         media.addEventListener?.('devicechange', resolve)
         return () => {
             cancelled = true
+            resolveRef.current = null
             media.removeEventListener?.('devicechange', resolve)
         }
     }, [name])
 
     if (state.problem) return <MapSourcePlaceholder label={label} detail={state.problem} width={width} height={height} />
     if (!state.deviceId) return <MapSourcePlaceholder label={label} detail={`looking for "${name}"…`} width={width} height={height} />
-    return <MapCameraSource deviceId={state.deviceId} effect={effect} label={label} width={width} height={height} />
+    return <MapCameraSource deviceId={state.deviceId} effect={effect} label={label} width={width} height={height} onStale={() => resolveRef.current?.()} />
 }
 
 // NDI® in, on the machine that draws. The same problem the `stream` surface
@@ -342,7 +345,17 @@ function MapVideoSource({ fileRef }) {
 // track is stopped on unmount. A refused or missing camera shows the reason on
 // the surface instead of going black, because a black rectangle on a wall is
 // indistinguishable from a mapping mistake.
-function MapCameraSource({ deviceId, effect = null, label, width, height }) {
+//
+// 2026-11-10 (owner row N3522): the output went black for good when a phone
+// feed hiccuped and the track ended, until someone reloaded the page. A track
+// that ends, or a device that is busy / not up yet, is now re-opened by itself
+// with a back-off; a refused permission is not retried.
+const REOPEN_MS = [500, 1000, 2000, 3000]
+const REOPEN_ERRORS = ['NotReadableError', 'TrackStartError', 'NotFoundError', 'OverconstrainedError', 'AbortError']
+
+function MapCameraSource({ deviceId, effect = null, label, width, height, onStale = null }) {
+    const staleRef = useRef(onStale)
+    useEffect(() => { staleRef.current = onStale })
     const videoRef = useRef(null)
     const canvasRef = useRef(null)
     const glowRef = useRef(null)
@@ -358,30 +371,65 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
     useEffect(() => {
         let stream = null
         let cancelled = false
+        let timer = null
+        let tries = 0
         const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
         if (!media?.getUserMedia) {
             setProblem('no camera access in this browser')
             return undefined
         }
         setProblem('')
-        media.getUserMedia({
-            video: deviceId ? { deviceId: { exact: deviceId } } : true,
-            audio: false
-        })
-            .then((result) => {
-                if (cancelled) {
-                    result.getTracks().forEach((track) => track.stop())
-                    return
-                }
-                stream = result
-                if (videoRef.current) videoRef.current.srcObject = result
+        // Stop and forget the open stream, so two are never open at once.
+        const drop = () => {
+            if (!stream) return
+            stream.removeEventListener?.('inactive', lost)
+            stream.getTracks().forEach((track) => { track.removeEventListener?.('ended', lost); track.stop() })
+            stream = null
+        }
+        const later = () => {
+            if (cancelled || timer) return
+            timer = setTimeout(() => { timer = null; open() }, REOPEN_MS[Math.min(tries++, REOPEN_MS.length - 1)])
+        }
+        // The device may have come back under another id: ask the lookup again.
+        function lost() {
+            drop()
+            later()
+            staleRef.current?.()
+        }
+        function open() {
+            media.getUserMedia({
+                video: deviceId ? { deviceId: { exact: deviceId } } : true,
+                audio: false
             })
-            .catch((error) => {
-                if (!cancelled) setProblem(error?.name === 'NotAllowedError' ? 'camera not permitted' : 'camera unavailable')
-            })
+                .then((result) => {
+                    if (cancelled) {
+                        result.getTracks().forEach((track) => track.stop())
+                        return
+                    }
+                    drop()
+                    stream = result
+                    tries = 0
+                    if (videoRef.current) videoRef.current.srcObject = result
+                    result.getVideoTracks().forEach((track) => track.addEventListener('ended', lost))
+                    result.addEventListener?.('inactive', lost)
+                    if (result.getVideoTracks().some((track) => track.readyState === 'ended')) lost()
+                })
+                .catch((error) => {
+                    if (cancelled) return
+                    const failure = error?.name
+                    if (failure !== 'NotAllowedError' && deviceId && REOPEN_ERRORS.includes(failure)) {
+                        later()
+                        if (failure === 'NotFoundError' || failure === 'OverconstrainedError') staleRef.current?.()
+                        return
+                    }
+                    setProblem(failure === 'NotAllowedError' ? 'camera not permitted' : 'camera unavailable')
+                })
+        }
+        open()
         return () => {
             cancelled = true
-            if (stream) stream.getTracks().forEach((track) => track.stop())
+            clearTimeout(timer)
+            drop()
         }
     }, [deviceId])
 
