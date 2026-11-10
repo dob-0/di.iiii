@@ -2231,6 +2231,11 @@ on U2 — OUTPUT on before the first GO lights every lamp. Owed: the owner's cal
 GO before OUTPUT, written in the night's run sheet). Also owed: the crew sheet says "maker's" for
 the PL5403 8ch / B380F 16ch lists, whose basis is TESTED on the Sevan units (audit B5).
 
+**The sheet in another language.** `patch-table.mjs --lang ru` prints the same addresses with Russian words and writes
+`patch-sheet.ru.md/.html/.pdf` beside the English sheet (which keeps its name and its bytes). The sheet's own words live in
+the script's `WORDS` table (one entry per language); the plan's words are `<key>_<lang>` beside `<key>` (`title_ru`,
+`crewLine_ru`, `crewNotes_ru`, a universe's `label_ru`/`run_ru`, a block's `name_ru`), the plain key when there is none.
+
 ## 20. The room as a camera sees it — beams in haze, exposure, the dark (2026-09-29)
 
 Owner: MOXIR "maximum close" to how the real night will look. Measured problem (dev visitor,

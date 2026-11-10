@@ -1,10 +1,12 @@
 {
   "patch": "platina-2026-11-10",
   "title": "Platina — Live in Yerevan: the patch (proposed), 50 units on 3 universes",
+  "title_ru": "Platina — Live in Yerevan: патч (черновик), 50 приборов на 3 юниверсах",
   "writtenAt": "2026-11-10",
   "owner": "2026-11-10 20:55 (ledger N3531): addresses for the Platina lights, now. The Platina side has no patch (forwarded chat, 2026-11-09: 'est patch?' — no, we can make it).",
   "status": "PROPOSED. Nothing here is confirmed by the Platina side or the rental house: the maker of 'Pixel Line IP', the mode set on each unit, who runs the desk, the node and its ports. The counts and names are the light plot's legend (PERED.pdf / _.pdf, read 2026-11-10).",
   "crewLine": "PROPOSED, not yet confirmed by the Platina side: check the mode on each unit before setting an address.",
+  "crewLine_ru": "ЧЕРНОВИК, не подтверждён стороной Platina: перед установкой адреса проверить режим на каждом приборе.",
   "howToRead": "docs/architecture/RIG_BUILD.md §19.5. No project document yet: the crew table comes from this plan alone — node scripts/rigbuild/patch-table.mjs --plan <this> --out <dir> --pdf. Never edit an address by hand: change the plan and print again.",
   "method": [
     "One universe per KIND, the owner's way (MOXIR, 2026-10-15): U1 the 11 B-EYE K10 washes; U2 the 7 Sharpy beams and the 8 HY B-EYE K15; U3 the 24 Pixel Line IP bars.",
@@ -137,7 +139,9 @@
       "universe": 1,
       "port": "A",
       "label": "The B-EYE K10 washes",
+      "label_ru": "Заливка B-EYE K10",
       "run": "output A → the 8 K10 on the over-stage truss, then the 3 K10 on the audience-side truss",
+      "run_ru": "выход A → 8 K10 на ферме над сценой, затем 3 K10 на ферме со стороны зала",
       "blocks": [
         {
           "select": {
@@ -145,6 +149,7 @@
             "type": "cp-aleda-beye-k10"
           },
           "name": "B-EYE K10, over-stage truss",
+          "name_ru": "B-EYE K10, ферма над сценой",
           "start": 1,
           "fixture": 101,
           "order": "id-asc",
@@ -157,6 +162,7 @@
             "type": "cp-aleda-beye-k10"
           },
           "name": "B-EYE K10, audience-side truss",
+          "name_ru": "B-EYE K10, ферма со стороны зала",
           "start": 281,
           "fixture": 109,
           "order": "id-asc",
@@ -169,7 +175,9 @@
       "universe": 2,
       "port": "B",
       "label": "The Sharpy beams and the HY B-EYE K15",
+      "label_ru": "Лучи Sharpy и HY B-EYE K15",
       "run": "output B → the 7 Sharpy on the over-stage truss; the 6 K15 on the stage floor; the 2 K15 at the sides",
+      "run_ru": "выход B → 7 Sharpy на ферме над сценой; 6 K15 на полу сцены; 2 K15 по бокам",
       "blocks": [
         {
           "select": {
@@ -177,6 +185,7 @@
             "type": "cp-sharpy"
           },
           "name": "Sharpy, over-stage truss",
+          "name_ru": "Sharpy, ферма над сценой",
           "start": 1,
           "fixture": 201,
           "order": "id-asc",
@@ -189,6 +198,7 @@
             "type": "cp-hy-beye-k15"
           },
           "name": "HY B-EYE K15, stage floor",
+          "name_ru": "HY B-EYE K15, пол сцены",
           "start": 201,
           "fixture": 221,
           "order": "id-asc",
@@ -201,6 +211,7 @@
             "type": "cp-hy-beye-k15"
           },
           "name": "HY B-EYE K15, the two sides",
+          "name_ru": "HY B-EYE K15, два боковых",
           "start": 417,
           "fixture": 227,
           "order": "id-asc",
@@ -213,7 +224,9 @@
       "universe": 3,
       "port": "C",
       "label": "The Pixel Line IP bars",
+      "label_ru": "Планки Pixel Line IP",
       "run": "output C → the 8 towers of 3 bars (4 towers each side)",
+      "run_ru": "выход C → 8 башен по 3 планки (по 4 башни с каждой стороны)",
       "blocks": [
         {
           "select": {
@@ -221,6 +234,7 @@
             "type": "acme-pixel-line-ip"
           },
           "name": "Pixel Line IP, the 8 towers",
+          "name_ru": "Pixel Line IP, 8 башен",
           "start": 1,
           "fixture": 301,
           "order": "id-asc",
@@ -234,5 +248,10 @@
     "PROPOSED patch, 2026-11-10: to be confirmed by the Platina side before a unit is set. Open: who runs the desk; the mode really set on each unit; the maker of the Pixel Line IP and its mode; the node and which output feeds which truss.",
     "Counting: 'the audience's left' is the left as seen from the hall, looking at the stage.",
     "U3 holds 24 devices on one DMX line only if the bars' data is daisy-chained tower to tower; split it where the cable run asks, the addresses stay."
+  ],
+  "crewNotes_ru": [
+    "ЧЕРНОВИК патча, 2026-11-10: должен быть подтверждён стороной Platina до установки адресов. Открыто: кто ведёт пульт; какой режим реально стоит на приборах; производитель Pixel Line IP и его режим; нода и какой выход питает какую ферму.",
+    "Счёт: «слева от зала» — это слева, если смотреть из зала на сцену.",
+    "В U3 24 прибора на одной линии DMX — только если планки соединены цепочкой от башни к башне; делить там, где удобно по кабелю, адреса остаются."
   ]
 }

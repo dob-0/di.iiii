@@ -11,3 +11,5 @@
 - Still undone: nothing is confirmed by the Platina side (modes on the units, the maker of the Pixel Line IP, who runs the
   desk, the node). No project document holds these lamps yet; no desk was patched. In this worktree
   `scripts/rigbuild/laserPlayToken.test.js` does not load (`Cannot find module 'express'`), not touched by this branch.
+
+- 2026-11-10 21:22: `--lang ru` for the patch sheet (owner N3541): WORDS table in patch-table.mjs, `_ru` keys in the Platina plan, 1 test; RU PDF 5 pages. Still a DRAFT on hold until the crew patch list arrives.

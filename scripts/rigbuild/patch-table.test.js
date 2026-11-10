@@ -127,3 +127,20 @@ describe('a plan that brings its own types (Platina, 2026-11-10)', () => {
         expect(() => tableModel({ plan: twice, library })).toThrow(/already in the library/)
     })
 })
+
+describe('the sheet in another language (--lang ru)', () => {
+    const file = 'scripts/place/rigs/platina-2026-11-10.patch.json'
+    const own = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, file), 'utf8'))
+    it('says the same addresses in Russian words, and leaves the English sheet as it was', () => {
+        const en = tableModel({ plan: own, library, planFile: file })
+        const ru = tableModel({ plan: own, library, planFile: file, lang: 'ru' })
+        const key = (r) => `${r.index} ${r.universe}.${r.address} ${r.footprint}`
+        expect(ru.rows.map(key)).toEqual(en.rows.map(key))
+        const md = renderMarkdown(ru)
+        expect(md).toContain('| Юниверс | Старт | Прибор | Режим | Кол-во | Адреса | Свободно после |')
+        expect(md).toContain('| U1 | 001 | B-EYE K10, ферма над сценой (A.leda B-EYE K10) | Standard, 21 кан. | 8 | 001, 036 … 246 (последний канал 266) |')
+        expect(md).toContain('ЧЕРНОВИК, не подтверждён стороной Platina')
+        expect(renderHtml(ru)).toContain('<html lang="ru">')
+        expect(renderMarkdown(en)).not.toMatch(/[а-яА-Я]/)
+    })
+})

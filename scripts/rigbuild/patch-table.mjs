@@ -4,7 +4,7 @@
  * docs/architecture/RIG_BUILD.md §19.5.
  *
  *   node scripts/rigbuild/patch-table.mjs --plan scripts/place/rigs/moxir-v2-patch-2026-10-09.json \
- *        [--out ~/Downloads/moxir/v2-patch] [--pdf]
+ *        [--out ~/Downloads/moxir/v2-patch] [--pdf] [--lang ru]   (--lang: the sheet's words; writes patch-sheet.<lang>.* beside the English)
  *
  * Without --out it prints the table as Markdown. With --out it writes
  *   patch-sheet.md     the same Markdown: one short table (universe, start address, fixture, mode), then every unit
@@ -31,6 +31,58 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const cell = (v) => String(v ?? '').replace(/\|/g, '\\|')
 const DMX_LINE_MAX = 32 // ANSI E1.11 (DMX512-A): devices on one line
 
+// Every word the sheet itself says, per language (`--lang`). The plan's own words (title, names, notes) come from the
+// plan: `<key>_<lang>` beside `<key>` (`title_ru`, `name_ru`, `crewNotes_ru` …), the plain key when there is none.
+const WORDS = {
+    en: {
+        written: (date, src) => `Written ${date} from ${src}.`,
+        thePatch: 'The patch',
+        head7: ['Universe', 'Start', 'Fixture', 'Mode', 'Units', 'Addresses', 'Free after'],
+        head6: ['Fixture #', 'Address', 'Last', 'Fixture', 'Unit', 'Mode'],
+        lastCh: (n) => `last ch ${n}`,
+        more: (n) => `${n} more`,
+        ch: 'ch',
+        assumed: ' (ASSUMED)',
+        notDmx: 'not DMX',
+        noAddress: 'no universe, no address',
+        used: (u) => `${u.used} of 512 channels used, ${u.free} free (${u.devices} devices)`,
+        notes: 'Notes',
+        everyUnit: (u) => `U${u.universe} — every unit · Art-Net ${u.artnet} · sACN ${u.universe} · node output ${u.port}`,
+        nUniverses: (list) => `Universe numbers: ${list.map((u) => `U${u.universe} is Art-Net ${u.artnet} (Port-Address ${u.portAddress}) and sACN ${u.universe}`).join('; ')}.`,
+        nFixture: `Fixture number: the hundred is the universe; the unit number counts along the block (the plot's numbering).`,
+        nLine: (max, list) => `At most ${max} devices on one DMX line (ANSI E1.11): ${list.map((u) => `U${u.universe} has ${u.devices} devices, so ${u.lines === 1 ? 'one line' : `at least ${u.lines} lines`}`).join('; ')}. The addresses do not depend on which line a unit sits on.`,
+        nAssumed: (b) => `${b.code}: the channel count (${b.footprint}) is ASSUMED. If the unit says more, read it before the night: ${pad3(b.room.from)}–${pad3(b.room.to)} are free.`,
+        nPitch: (b) => `${b.code}: the units stand ${b.pitch} addresses apart and use ${b.footprint}, so a mode of up to ${b.pitch} channels can be set on the night without moving an address.`,
+        nOwed: (b) => `${b.code}: the channel count (${b.footprint}) is sourced in the plan; the channel LIST is owed, so a desk needs its own fixture profile for this mode.`,
+        nFree: `Every block is followed by free addresses (the "free" column), so a unit added on the night takes the next address of its own block and nothing else moves.`
+    },
+    ru: {
+        written: (date, src) => `Составлено ${date} из ${src}.`,
+        thePatch: 'Патч',
+        head7: ['Юниверс', 'Старт', 'Прибор', 'Режим', 'Кол-во', 'Адреса', 'Свободно после'],
+        head6: ['№ прибора', 'Адрес', 'Последний', 'Прибор', '№ в блоке', 'Режим'],
+        lastCh: (n) => `последний канал ${n}`,
+        more: (n) => `ещё ${n}`,
+        ch: 'кан.',
+        assumed: ' (ПРЕДПОЛОЖЕНИЕ)',
+        notDmx: 'не DMX',
+        noAddress: 'без юниверса, без адреса',
+        used: (u) => `занято ${u.used} из 512 каналов, свободно ${u.free} (приборов: ${u.devices})`,
+        notes: 'Примечания',
+        everyUnit: (u) => `U${u.universe} — каждый прибор · Art-Net ${u.artnet} · sACN ${u.universe} · выход ноды ${u.port}`,
+        nUniverses: (list) => `Номера юниверсов: ${list.map((u) => `U${u.universe} — это Art-Net ${u.artnet} (Port-Address ${u.portAddress}) и sACN ${u.universe}`).join('; ')}.`,
+        nFixture: `Номер прибора: сотня — это юниверс; номер в блоке идёт по порядку блока (нумерация плота).`,
+        nLine: (max, list) => `Не больше ${max} приборов на одной линии DMX (ANSI E1.11): ${list.map((u) => `в U${u.universe} приборов: ${u.devices}, значит ${u.lines === 1 ? 'одна линия' : `минимум линий: ${u.lines}`}`).join('; ')}. Адреса не зависят от того, на какой линии стоит прибор.`,
+        nAssumed: (b) => `${b.code}: число каналов (${b.footprint}) — ПРЕДПОЛОЖЕНИЕ. Если на приборе больше, проверить до шоу: свободны ${pad3(b.room.from)}–${pad3(b.room.to)}.`,
+        nPitch: (b) => `${b.code}: приборы стоят с шагом ${b.pitch} адресов и занимают ${b.footprint}; режим до ${b.pitch} каналов можно включить на площадке, не сдвигая адреса.`,
+        nOwed: (b) => `${b.code}: число каналов (${b.footprint}) взято из источника в плане; СПИСКА каналов нет, поэтому пульту нужен свой профиль прибора для этого режима.`,
+        nFree: `После каждого блока есть свободные адреса (колонка «Свободно после»): прибор, добавленный на площадке, берёт следующий адрес своего блока, остальное не двигается.`
+    }
+}
+const wordsOf = (lang) => WORDS[lang] || die(`--lang "${lang}" is not one of ${Object.keys(WORDS).join(', ')}`)
+/** The plan's word for `key` in `lang` (`<key>_<lang>`), else the plain one. */
+const loc = (o, key, lang) => (lang && lang !== 'en' && o?.[`${key}_${lang}`]) || o?.[key]
+
 /** One block per fixture code (a note about a type is said once, not once per block). */
 const byCode = (blocks) => [...new Map(blocks.map((b) => [b.code, b])).values()]
 
@@ -44,7 +96,8 @@ const addressList = (list) => {
  * Everything the sheet says, as data. Pure. Throws when the plan does not fit.
  * @returns {{ title, writtenAt, decided, universes: object[], lan: object[], rows: object[], notes: string[], source: string }}
  */
-export const tableModel = ({ plan, library, planFile = '' }) => {
+export const tableModel = ({ plan, library, planFile = '', lang = 'en' }) => {
+    const W = wordsOf(lang)
     // A crew table needs addresses, and an address needs only the footprint: a mode whose channel list is owed still gets one.
     const planned = planPatch({ entities: expectedRoom(plan), library: libraryWithPlan(library, plan), plan, footprintOnly: true })
     if (planned.errors.length) throw new Error(`the plan does not fit:\n  ${planned.errors.join('\n  ')}`)
@@ -58,7 +111,7 @@ export const tableModel = ({ plan, library, planFile = '' }) => {
             const footprint = list[0].footprint
             const pitch = list.length > 1 ? list[1].address - list[0].address : (Number(plan.modes?.[list[0].type]?.pitch) || footprint)
             return {
-                name: b.name || list[0].code,
+                name: loc(b, 'name', lang) || list[0].code,
                 code: list[0].code,
                 universe: u.universe,
                 start: b.start,
@@ -80,8 +133,8 @@ export const tableModel = ({ plan, library, planFile = '' }) => {
         return {
             universe: u.universe,
             port: u.port || '',
-            label: u.label || '',
-            run: u.run || '',
+            label: loc(u, 'label', lang) || '',
+            run: loc(u, 'run', lang) || '',
             artnet: art.text,
             portAddress: art.portAddress,
             used: summary.used,
@@ -95,53 +148,54 @@ export const tableModel = ({ plan, library, planFile = '' }) => {
     const lan = (plan.offDmx || []).map((d) => ({ what: d.what || d.type, units: d.units, how: d.how || '', load: d.load || '' }))
     const rows = planned.assignments.map((a) => ({ ...a, name: universes.find((u) => u.universe === a.universe).blocks.find((b) => a.address >= b.start && a.address <= b.last).name }))
     const notes = [
-        `Universe numbers: ${universes.map((u) => `U${u.universe} is Art-Net ${u.artnet} (Port-Address ${u.portAddress}) and sACN ${u.universe}`).join('; ')}.`,
-        `Fixture number: the hundred is the universe; the unit number counts along the block (the plot's numbering).`,
-        `At most ${DMX_LINE_MAX} devices on one DMX line (ANSI E1.11): ${universes.map((u) => `U${u.universe} has ${u.devices} devices, so ${u.lines === 1 ? 'one line' : `at least ${u.lines} lines`}`).join('; ')}. The addresses do not depend on which line a unit sits on.`,
-        ...universes.flatMap((u) => u.blocks.filter((b) => b.assumed).map((b) => `${b.code}: the channel count (${b.footprint}) is ASSUMED. If the unit says more, read it before the night: ${pad3(b.room.from)}–${pad3(b.room.to)} are free.`)),
-        ...byCode(universes.flatMap((u) => u.blocks.filter((b) => b.pitch > b.footprint))).map((b) => `${b.code}: the units stand ${b.pitch} addresses apart and use ${b.footprint}, so a mode of up to ${b.pitch} channels can be set on the night without moving an address.`),
-        ...byCode(universes.flatMap((u) => u.blocks.filter((b) => b.listOwed))).map((b) => `${b.code}: the channel count (${b.footprint}) is sourced in the plan; the channel LIST is owed, so a desk needs its own fixture profile for this mode.`),
-        `Every block is followed by free addresses (the "free" column), so a unit added on the night takes the next address of its own block and nothing else moves.`,
-        ...(plan.crewNotes || [])
+        W.nUniverses(universes),
+        W.nFixture,
+        W.nLine(DMX_LINE_MAX, universes),
+        ...universes.flatMap((u) => u.blocks.filter((b) => b.assumed).map(W.nAssumed)),
+        ...byCode(universes.flatMap((u) => u.blocks.filter((b) => b.pitch > b.footprint))).map(W.nPitch),
+        ...byCode(universes.flatMap((u) => u.blocks.filter((b) => b.listOwed))).map(W.nOwed),
+        W.nFree,
+        ...(loc(plan, 'crewNotes', lang) || [])
     ]
     // The crew sheet says WHEN the owner decided, not the ledger row or his words (those stay in the plan).
     const decided = /^\d{4}-\d{2}-\d{2}/.exec(String(plan.owner || ''))?.[0] || ''
-    return { title: plan.title || plan.patch || 'Patch', writtenAt: plan.writtenAt || '', decided, crewLine: plan.crewLine || '', universes, lan, rows, notes, source: planFile }
+    return { lang, title: loc(plan, 'title', lang) || plan.patch || 'Patch', writtenAt: plan.writtenAt || '', decided, crewLine: loc(plan, 'crewLine', lang) || '', universes, lan, rows, notes, source: planFile }
 }
 
 // The line under the title: the plan's own words (`crewLine`) when it has them; else the MOXIR v2 sentence this sheet began with.
 const headLine = (model) => model.crewLine ? ` ${model.crewLine}` : (model.decided ? ` The owner's split of ${model.decided}: two universes, the cubes on the LAN, no DMX for them.` : '')
 
 // A mode the maker NAMES ("Standard") is printed by its name, since that is what the unit's menu shows; "16ch" is already the count.
-const modeText = (b) => `${/^\d+ch\b/.test(String(b.mode || '')) || !b.mode ? '' : `${b.mode}, `}${b.footprint} ch${b.assumed ? ' (ASSUMED)' : ''}`
+const modeText = (b, W = WORDS.en) => `${/^\d+ch\b/.test(String(b.mode || '')) || !b.mode ? '' : `${b.mode}, `}${b.footprint} ${W.ch}${b.assumed ? W.assumed : ''}`
 /** The block's name, with the type code added only when the name does not already carry it. */
 const fixtureLabel = (b) => (b.name.includes(b.code) ? b.name : `${b.name} (${b.code})`)
 
 /** The table as Markdown. Pure. */
 export const renderMarkdown = (model) => {
+    const W = wordsOf(model.lang || 'en')
     const out = []
     out.push(`# ${model.title}`, '')
-    out.push(`Written ${model.writtenAt} from \`${model.source || 'the plan'}\`.${headLine(model)}`, '')
-    out.push('## The patch', '')
-    out.push('| Universe | Start | Fixture | Mode | Units | Addresses | Free after |', '|---|---|---|---|---|---|---|')
+    out.push(`${W.written(model.writtenAt, `\`${model.source || 'the plan'}\``)}${headLine(model)}`, '')
+    out.push(`## ${W.thePatch}`, '')
+    out.push(`| ${W.head7.join(' | ')} |`, '|---|---|---|---|---|---|---|')
     for (const u of model.universes) {
         for (const b of u.blocks) {
-            out.push(`| U${u.universe} | ${pad3(b.start)} | ${cell(fixtureLabel(b))} | ${modeText(b)} | ${b.units} | ${b.addresses} (last ch ${pad3(b.last)}) | ${pad3(b.room.from)}–${pad3(b.room.to)} (${b.room.units} more) |`)
+            out.push(`| U${u.universe} | ${pad3(b.start)} | ${cell(fixtureLabel(b))} | ${modeText(b, W)} | ${b.units} | ${b.addresses} (${W.lastCh(pad3(b.last))}) | ${pad3(b.room.from)}–${pad3(b.room.to)} (${W.more(b.room.units)}) |`)
         }
     }
-    for (const d of model.lan) out.push(`| LAN | — | ${cell(d.what)} | not DMX | ${d.units} | no universe, no address | — |`)
+    for (const d of model.lan) out.push(`| LAN | — | ${cell(d.what)} | ${W.notDmx} | ${d.units} | ${W.noAddress} | — |`)
     out.push('')
-    out.push(model.universes.map((u) => `**U${u.universe}** ${u.used} of 512 channels used, ${u.free} free (${u.devices} devices)`).join(' · '), '')
+    out.push(model.universes.map((u) => `**U${u.universe}** ${W.used(u)}`).join(' · '), '')
     for (const d of model.lan) out.push(`**LaserCubes:** ${d.how}${d.load ? ` ${d.load}.` : ''}`, '')
-    out.push('## Notes', '')
+    out.push(`## ${W.notes}`, '')
     for (const n of model.notes) out.push(`- ${n}`)
     out.push('')
     for (const u of model.universes) {
-        out.push(`## U${u.universe} — every unit · Art-Net ${u.artnet} · sACN ${u.universe} · node output ${u.port}`, '')
+        out.push(`## ${W.everyUnit(u)}`, '')
         out.push(`${u.label} — ${u.run}`, '')
-        out.push('| Fixture # | Address | Last | Fixture | Unit | Mode |', '|---|---|---|---|---|---|')
+        out.push(`| ${W.head6.join(' | ')} |`, '|---|---|---|---|---|---|')
         for (const a of model.rows.filter((r) => r.universe === u.universe)) {
-            out.push(`| ${a.index} | ${u.universe}.${pad3(a.address)} | ${pad3(a.address + a.footprint - 1)} | ${cell(a.name)} | ${a.unit} | ${a.footprint} ch${a.assumed ? ' (ASSUMED)' : ''} |`)
+            out.push(`| ${a.index} | ${u.universe}.${pad3(a.address)} | ${pad3(a.address + a.footprint - 1)} | ${cell(a.name)} | ${a.unit} | ${a.footprint} ${W.ch}${a.assumed ? W.assumed : ''} |`)
         }
         out.push('')
     }
@@ -150,22 +204,23 @@ export const renderMarkdown = (model) => {
 
 /** The table as one printable HTML page (A4, plain tables: LibreOffice prints it, no browser). Pure. */
 export const renderHtml = (model) => {
+    const W = wordsOf(model.lang || 'en')
     const table = (head, rows, pad = 3) => `<table border="1" cellspacing="0" cellpadding="${pad}"><thead><tr>${head.map((h) => `<th align="left" bgcolor="#e6e6e6">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
     const short = []
-    for (const u of model.universes) for (const b of u.blocks) short.push([`U${u.universe}`, pad3(b.start), fixtureLabel(b), modeText(b), b.units, `${b.addresses} (last ch ${pad3(b.last)})`, `${pad3(b.room.from)}–${pad3(b.room.to)} (${b.room.units} more)`])
-    for (const d of model.lan) short.push(['LAN', '—', d.what, 'not DMX', d.units, 'no universe, no address', '—'])
-    const per = model.universes.map((u) => `<h2 style="page-break-before: always; margin-top: 0">U${u.universe} — every unit · Art-Net ${esc(u.artnet)} · sACN ${u.universe} · node output ${esc(u.port)}</h2><p>${esc(u.label)} — ${esc(u.run)}</p>${table(['Fixture #', 'Address', 'Last', 'Fixture', 'Unit', 'Mode'], model.rows.filter((r) => r.universe === u.universe).map((a) => [a.index, `${u.universe}.${pad3(a.address)}`, pad3(a.address + a.footprint - 1), a.name, a.unit, `${a.footprint} ch${a.assumed ? ' (ASSUMED)' : ''}`]), 1)}`).join('')
+    for (const u of model.universes) for (const b of u.blocks) short.push([`U${u.universe}`, pad3(b.start), fixtureLabel(b), modeText(b, W), b.units, `${b.addresses} (${W.lastCh(pad3(b.last))})`, `${pad3(b.room.from)}–${pad3(b.room.to)} (${W.more(b.room.units)})`])
+    for (const d of model.lan) short.push(['LAN', '—', d.what, W.notDmx, d.units, W.noAddress, '—'])
+    const per = model.universes.map((u) => `<h2 style="page-break-before: always; margin-top: 0">${esc(W.everyUnit(u))}</h2><p>${esc(u.label)} — ${esc(u.run)}</p>${table(W.head6, model.rows.filter((r) => r.universe === u.universe).map((a) => [a.index, `${u.universe}.${pad3(a.address)}`, pad3(a.address + a.footprint - 1), a.name, a.unit, `${a.footprint} ${W.ch}${a.assumed ? W.assumed : ''}`]), 1)}`).join('')
     return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>${esc(model.title)}</title>
+<html lang="${esc(model.lang || 'en')}"><head><meta charset="utf-8"><title>${esc(model.title)}</title>
 <style>body{font-family:Liberation Sans,Arial,sans-serif;font-size:10pt}h1{font-size:15pt}h2{font-size:12pt;margin-top:14pt}table{border-collapse:collapse;width:100%}td,th{font-size:7.5pt}</style></head>
 <body>
 <h1>${esc(model.title)}</h1>
-<p>Written ${esc(model.writtenAt)} from ${esc(model.source || 'the plan')}.${esc(headLine(model))}</p>
-<h2>The patch</h2>
-${table(['Universe', 'Start', 'Fixture', 'Mode', 'Units', 'Addresses', 'Free after'], short)}
-<p>${model.universes.map((u) => `<b>U${u.universe}</b> ${u.used} of 512 channels used, ${u.free} free (${u.devices} devices)`).join(' · ')}</p>
+<p>${esc(W.written(model.writtenAt, model.source || 'the plan'))}${esc(headLine(model))}</p>
+<h2>${esc(W.thePatch)}</h2>
+${table(W.head7, short)}
+<p>${model.universes.map((u) => `<b>U${u.universe}</b> ${esc(W.used(u))}`).join(' · ')}</p>
 ${model.lan.map((d) => `<p><b>LaserCubes:</b> ${esc(d.how)}${d.load ? ` ${esc(d.load)}.` : ''}</p>`).join('')}
-<h2>Notes</h2>
+<h2>${esc(W.notes)}</h2>
 <ul>${model.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>
 ${per}
 </body></html>
@@ -203,15 +258,17 @@ const main = () => {
     const args = parseArgs()
     const planFile = args.plan ? path.resolve(REPO_ROOT, String(args.plan)) : die('needs --plan <file.patch.json>')
     const plan = JSON.parse(fs.readFileSync(planFile, 'utf8'))
-    const model = tableModel({ plan, library: loadLibrary(), planFile: path.relative(REPO_ROOT, planFile) })
+    const lang = args.lang ? String(args.lang) : 'en'
+    const model = tableModel({ plan, library: loadLibrary(), planFile: path.relative(REPO_ROOT, planFile), lang })
+    const sheet = lang === 'en' ? 'patch-sheet' : `patch-sheet.${lang}` // the English sheet keeps its name; another language sits beside it
     if (!args.out) return say(renderMarkdown(model))
     const out = path.resolve(String(args.out).replace(/^~/, process.env.HOME))
     fs.mkdirSync(out, { recursive: true })
-    fs.writeFileSync(path.join(out, 'patch-sheet.md'), renderMarkdown(model) + '\n')
-    fs.writeFileSync(path.join(out, 'patch-sheet.html'), renderHtml(model))
+    fs.writeFileSync(path.join(out, `${sheet}.md`), renderMarkdown(model) + '\n')
+    fs.writeFileSync(path.join(out, `${sheet}.html`), renderHtml(model))
     fs.writeFileSync(path.join(out, 'patch.csv'), toCsv(model.rows, CSV_COLUMNS))
-    say(`${out}/patch-sheet.md, patch-sheet.html, patch.csv — ${model.rows.length} units, ${model.universes.length} universes`)
-    if (args.pdf) say(htmlToPdf(path.join(out, 'patch-sheet.html'), out))
+    say(`${out}/${sheet}.md, ${sheet}.html, patch.csv — ${model.rows.length} units, ${model.universes.length} universes`)
+    if (args.pdf) say(htmlToPdf(path.join(out, `${sheet}.html`), out))
 }
 
 if (isMainModule(import.meta.url)) {
