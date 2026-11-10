@@ -118,11 +118,12 @@ export default function PerformDesk({
     // person picks another.
     const [chosenId, setChosenId] = useState(null)
     const [notice, setNotice] = useState('')
+    const showDefault = document?.performState?.defaultPreset || null
     const choice = useMemo(() => {
         if (!hasLoaded) return null
         if (chosenId) return choosePreset({ requested: chosenId, mine, show })
-        return choosePreset({ requested: perform.preset, lastActive: layout?.activePreset, from: perform.from, mine, show })
-    }, [hasLoaded, chosenId, perform.preset, perform.from, layout?.activePreset, mine, show])
+        return choosePreset({ requested: perform.preset, lastActive: layout?.activePreset, showDefault, from: perform.from, mine, show })
+    }, [hasLoaded, chosenId, perform.preset, perform.from, layout?.activePreset, showDefault, mine, show])
     const preset = choice?.preset || null
 
     useEffect(() => {
@@ -324,6 +325,16 @@ export default function PerformDesk({
                                                     {item.name}
                                                     {coming ? <span className="perform-menu-note">{coming} coming in phase 2</span> : null}
                                                 </button>
+                                                {group.key === 'show' ? (
+                                                    <button
+                                                        type="button"
+                                                        className="perform-menu-remove"
+                                                        aria-pressed={showDefault === item.id}
+                                                        aria-label={showDefault === item.id ? `Stop ${item.name} being the show default` : `Set ${item.name} as the show default`}
+                                                        title={showDefault === item.id ? 'This show opens with it. Click to stop.' : 'Make every device open this show with it'}
+                                                        onClick={() => applyLocalOps({ type: 'setPerformDefaultPreset', payload: { presetId: showDefault === item.id ? '' : item.id } })}
+                                                    >{showDefault === item.id ? '★' : '☆'}</button>
+                                                ) : null}
                                                 {group.key !== 'builtin' ? (
                                                     <button type="button" className="perform-menu-remove" aria-label={`Remove ${item.name}`} onClick={() => remove(item)}>×</button>
                                                 ) : null}

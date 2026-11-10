@@ -159,6 +159,11 @@ describe('choosing which preset opens', () => {
     it('no address: this device’s last one, else the desk’s default', () => {
         expect(choosePreset({ lastActive: 'mine:fri', mine }).preset.id).toBe('mine:fri')
         expect(choosePreset({ from: 'map' }).preset.id).toBe('wall')
+        // the show's default sits between the address and this device's last one
+        const show = [{ id: 'show:nolaser', name: 'no laser', windows: [{ id: 'deck', kind: 'deck' }], wide: { deck: [0, 0, 100, 100] } }]
+        expect(choosePreset({ showDefault: 'show:nolaser', lastActive: 'mine:fri', mine, show }).preset.id).toBe('show:nolaser')
+        expect(choosePreset({ requested: 'wall', showDefault: 'show:nolaser', show }).preset.id).toBe('wall')
+        expect(choosePreset({ showDefault: 'show:gone', lastActive: 'mine:fri', mine, show }).preset.id).toBe('mine:fri')
         expect(choosePreset({}).preset.id).toBe('vj')
     })
 

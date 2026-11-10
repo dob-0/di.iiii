@@ -1693,7 +1693,13 @@ export const normalizePerformState = (perform = {}) => {
         presets.push({ ...preset, source: 'show' })
         if (presets.length >= PERFORM_PRESET_LIMIT) break
     }
-    return { presets }
+    // The preset a device opens by default for this show (2026-11-10): an id of one of the
+    // show's presets, or absent. A preset saved without a window (say the laser) therefore
+    // opens without it everywhere; "+ WINDOW" still brings it back.
+    const defaultPreset = typeof source.defaultPreset === 'string' && presets.some((preset) => preset.id === source.defaultPreset)
+        ? source.defaultPreset
+        : ''
+    return defaultPreset ? { presets, defaultPreset } : { presets }
 }
 
 // 'stream' is a live picture named by WHAT it is ("OBS Virtual Camera", "capture"), not by a
@@ -2440,14 +2446,24 @@ export const applyProjectOps = (document, ops = []) => {
                 // preset back where it was), else at the end.
                 const at = Number.isInteger(payload.index) && payload.index >= 0 ? Math.min(payload.index, presets.length) : presets.length
                 presets.splice(index === -1 ? at : index, 0, preset)
-                nextDocument.performState = normalizePerformState({ presets })
+                nextDocument.performState = normalizePerformState({ presets, defaultPreset: nextDocument.performState.defaultPreset })
+                break
+            }
+            // Which show preset opens by default ('' clears it). A preset id the show does not
+            // have is ignored by normalizePerformState, so the field can never point nowhere.
+            case 'setPerformDefaultPreset': {
+                nextDocument.performState = normalizePerformState({
+                    presets: nextDocument.performState.presets,
+                    defaultPreset: ensureString(payload.presetId)
+                })
                 break
             }
             case 'deletePerformPreset': {
                 const presetId = ensureString(payload.presetId)
                 if (!presetId) break
                 nextDocument.performState = normalizePerformState({
-                    presets: nextDocument.performState.presets.filter((existing) => existing.id !== presetId)
+                    presets: nextDocument.performState.presets.filter((existing) => existing.id !== presetId),
+                    defaultPreset: nextDocument.performState.defaultPreset
                 })
                 break
             }
@@ -2831,13 +2847,17 @@ const invertSingleOp = (document, op) => {
             if (index === -1) return [{ type: 'deletePerformPreset', payload: { presetId: preset.id } }]
             return [{ type: 'upsertPerformPreset', payload: { preset: cloneValue(presets[index]) } }]
         }
+        case 'setPerformDefaultPreset': return [{ type: 'setPerformDefaultPreset', payload: { presetId: document.performState?.defaultPreset || '' } }]
         case 'deletePerformPreset': {
             const presetId = ensureString(payload.presetId)
             const presets = document.performState?.presets || []
             const index = presets.findIndex((existing) => existing.id === presetId)
             if (index === -1) break
             // Back where it was in the list, not at the end: the menu reads in order.
-            return [{ type: 'upsertPerformPreset', payload: { preset: cloneValue(presets[index]), index } }]
+            return [
+                { type: 'upsertPerformPreset', payload: { preset: cloneValue(presets[index]), index } },
+                ...(document.performState?.defaultPreset === presetId ? [{ type: 'setPerformDefaultPreset', payload: { presetId } }] : [])
+            ]
         }
         case 'setMappingState': return patchInverse('setMappingState', document.mappingState)
         case 'reorderMappingSurfaces': {

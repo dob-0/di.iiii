@@ -678,6 +678,9 @@ describe('ESM/CJS mirror equivalence', () => {
       { type: 'deleteNode', payload: { nodeId: 'n5' } },
       { type: 'upsertPerformPreset', payload: { preset: { id: 'show:b', name: 'win projector', windows: [{ id: 'wallout', kind: 'wallout' }], wide: { wallout: [0, 0, 100, 100] } } } },
       { type: 'upsertPerformPreset', payload: { preset: { id: 'show:c', name: 'first', windows: [] }, index: 0 } },
+      { type: 'setPerformDefaultPreset', payload: { presetId: 'show:b' } },
+      { type: 'setPerformDefaultPreset', payload: { presetId: 'show:nope' } },
+      { type: 'setPerformDefaultPreset', payload: { presetId: 'show:c' } },
       { type: 'deletePerformPreset', payload: { presetId: 'show:a' } }
     ]
     for (const fixture of FIXTURES) {

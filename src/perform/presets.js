@@ -244,11 +244,12 @@ export const findPreset = (id, { mine = [], show = [] } = {}) => {
 
 /**
  * Which preset to open, and what to say when it is not the one asked for.
- * Order: the address, then this device's last one, then the default for the
+ * Order: the address, then the show's default preset (performState.defaultPreset: a preset
+ * saved without a window opens without it on every device), then this device's last one, then the default for the
  * desk the person came from. A `mine:` preset from another device is not
  * here — said, and its base (or VJ) opened instead of an empty desk.
  */
-export const choosePreset = ({ requested = null, lastActive = null, from = null, mine = [], show = [] } = {}) => {
+export const choosePreset = ({ requested = null, lastActive = null, showDefault = null, from = null, mine = [], show = [] } = {}) => {
     const lists = { mine, show }
     const fallbackId = DEFAULT_PRESET_FROM[from] || DEFAULT_PRESET_ID
     if (requested) {
@@ -261,6 +262,8 @@ export const choosePreset = ({ requested = null, lastActive = null, from = null,
                 : `There is no preset called “${requested}”. Opened the built-in one instead.`
         return { preset: builtInPreset(fallbackId), notice }
     }
+    const showOwn = showDefault ? presetGroups(lists).find((group) => group.key === 'show').presets.find((preset) => preset.id === showDefault) : null
+    if (showOwn) return { preset: showOwn, notice: '' }
     const last = lastActive ? findPreset(lastActive, lists) : null
     if (last) return { preset: last, notice: '' }
     return { preset: builtInPreset(fallbackId), notice: '' }
