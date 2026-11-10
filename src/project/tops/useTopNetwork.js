@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createTopEngine } from './topEngine.js'
 import { TOP_OPERATORS, resolveTopParams, runsHere, sendsOut } from './topOperators.js'
 import { topThumbnailGroups, topThumbnailsFor } from './topThumbnails.js'
+import { createThumbnailScheduler } from './thumbnailPlan.js'
 import { openSharedCamera } from './cameraPool.js'
 import { DECK_INPUTS, VJ_DECK_TYPE, expandDecks, isPictureType } from './vjDeck.js'
 import { useClipVideos } from './useClipVideos.js'
@@ -110,7 +111,6 @@ export const cameraRefusal = ({ secure = true, hasApi = true, errorName = '' } =
     return null
 }
 
-const THUMBNAIL_EVERY = 3
 const EMPTY = { nodes: [], wires: [] }
 
 /**
@@ -228,17 +228,17 @@ export function useTopNetwork({
         engineRef.current = engine
         let raf = 0
         let count = 0
+        const tiles = createThumbnailScheduler()
         const loop = (now) => {
             raf = requestAnimationFrame(loop)
             engine.frame(now)
             count += 1
-            if (thumbnails && count % THUMBNAIL_EVERY === 0) {
+            if (thumbnails) {
                 // One map per layer of registrations: a deck's master is on
-                // its card AND in its window at once.
-                for (const targets of topThumbnailGroups()) {
-                    const mine = new Map([...targets].filter(([nodeId]) => engine.has(nodeId)))
-                    if (mine.size) engine.thumbnails(mine)
-                }
+                // its card AND in its window at once. The scheduler says which
+                // tiles are due on this frame (small cards 4 a second, a few
+                // per frame; big windows as before).
+                for (const mine of tiles.due(topThumbnailGroups(), (nodeId) => engine.has(nodeId), now)) engine.thumbnails(mine)
             }
             peersRef.current?.pump()
             // Same task as the thumbnails, before the browser composites: the
