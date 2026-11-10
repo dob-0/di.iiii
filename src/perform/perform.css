@@ -1,7 +1,9 @@
 /* The Perform desk (PerformDesk.jsx): the same windows as Nodes, with no
    canvas behind them. Born on the spine — tokens from base.css only
-   (src/styles/spine.test.js). Nothing here restyles a window, the deck or
-   the Projection panes: it only lays them out and adds the one strip. */
+   (src/styles/spine.test.js). It lays the windows out, adds the one strip,
+   and (2026-11-10, owner N3511 "look how place used bad") gives the window
+   title bar the one-row dress below. The deck and the Projection panes are
+   not restyled. */
 
 .perform-shell {
     position: fixed;
@@ -364,5 +366,89 @@
     }
     .perform-master-row input[type='range'] {
         min-height: 44px;
+    }
+}
+
+/* The window title bar on Perform (2026-11-10, owner N3511). Measured before:
+   59px per bar at 1400 wide, and 130px in a 206px window at 700 wide, where
+   it wrapped to three rows and left the Clock 10px of body. A desk window on
+   Nodes travels over a canvas; here every window is fixed to the screen, so:
+   - one row, never wrapped; when the bar runs out the family word yields
+     first, then the title ends in an ellipsis; the three controls never move;
+   - the word "pinned" goes: it is true of every window on this page;
+   - no drop shadow: nothing floats over live content here (di-brand
+     SYSTEM.md rule 4), the 1px line carries the edge (rule 3).
+   Scoped to .perform-shell, so Nodes keeps its own bar. */
+.perform-shell .raw-window {
+    box-shadow: none;
+}
+
+.perform-shell .raw-window-header {
+    flex-wrap: nowrap;
+    gap: var(--di-space-2);
+    padding: var(--di-space-1) var(--di-space-2);
+}
+
+.perform-shell .raw-window-header > div:first-child {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: baseline;
+    gap: var(--di-space-2);
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.perform-shell .raw-window-kicker {
+    flex: 0 100 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-transform: uppercase;
+}
+
+.perform-shell .raw-window-header h3 {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.perform-shell .raw-window-actions {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+}
+
+.perform-shell .raw-window.is-pinned .raw-window-header::after {
+    content: none;
+}
+
+/* The three controls keep their 44px thumb target on a touch screen. With a
+   mouse or a trackpad (a desk, a laptop) 44px x 3 took 150px of a 206px bar
+   and cut the title to "Clo…"; 28px is the pointer size the strip's own
+   buttons sit near. */
+@media (pointer: fine) {
+    .perform-shell .raw-window-actions {
+        gap: 0;
+    }
+
+    .perform-shell .raw-window-actions button {
+        min-width: 28px;
+        min-height: 28px;
+        padding: 0 var(--di-space-2);
+    }
+}
+
+/* On a touch screen the controls stay 44px each, so a narrow window has room
+   for the controls or the title, not both (review of #1266: at 200px the
+   title was cut to "…"). There the bar may take a second row again, as it
+   did before: a name is never traded for a row. */
+@media (pointer: coarse) {
+    .perform-shell .raw-window-header {
+        flex-wrap: wrap;
+    }
+
+    /* Alone on the second row, the controls keep the right-hand edge where
+       Close always is (space-between puts a lone item on the left). */
+    .perform-shell .raw-window-actions {
+        margin-left: auto;
     }
 }
