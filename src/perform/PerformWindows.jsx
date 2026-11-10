@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { planBlackoutPress } from './blackoutPlan.js'
+import { buildPictureOutOptions } from '../map/pictureOutOptions.js'
 import MapCueList from '../map/MapCueList.jsx'
 import MapInspector from '../map/MapInspector.jsx'
 import { MapMachinesList, MapSurfaceList, MapWallView, nextCorners } from '../map/MapDeskParts.jsx'
@@ -266,23 +268,11 @@ function MasterWindow({ ctx }) {
     const toggleBlackout = async () => {
         const jobs = [] // [name, direction, promise]
         const wasLaserBlack = laserBlack
-        const sendLight = (dir) => jobs.push(['LIGHT', dir, setLightLooksBlackout(dir === 'on', { spaceId: ctx.spaceId })])
-        const sendLaser = (dir) => jobs.push(['LASER', dir, setLaserBlackout(dir === 'on')])
-        if (pendingNames.length) {
-            for (const name of pendingNames) {
-                if (name === 'LIGHT' && lightOwn) sendLight(pending.LIGHT)
-                if (name === 'LASER' && laserUp) sendLaser(pending.LASER)
-            }
-        } else if (!blackedOut) {
-            if (deckNode) {
-                writeDeckMaster(0, deckMaster > 0 ? deckMaster : 1)
-            }
-            if (lightOwn) sendLight('on')
-            if (laserUp) sendLaser('on')
-        } else {
-            if (deckNode && restore !== null) writeDeckMaster(restore)
-            if (lightOwn) sendLight('off')
-            if (laserSetHere) sendLaser('off')
+        const plan = planBlackoutPress({ blackedOut, restore, hasDeck: Boolean(deckNode), deckMaster, pending, lightOwn, laserUp, laserSetHere })
+        if (plan.deck) writeDeckMaster(plan.deck.level, plan.deck.keep)
+        for (const [name, dir] of plan.sends) {
+            if (name === 'LIGHT') jobs.push([name, dir, setLightLooksBlackout(dir === 'on', { spaceId: ctx.spaceId })])
+            else jobs.push([name, dir, setLaserBlackout(dir === 'on')])
         }
         const results = await Promise.all(jobs.map(async ([name, dir, call]) => [name, dir, await call]))
         const next = { ...pending }
@@ -615,7 +605,7 @@ function SurfaceSettingsWindow({ ctx }) {
             .catch(() => { if (!cancelled) setProjectOptions([]) })
         return () => { cancelled = true }
     }, [ctx.spaceId, ctx.projectId])
-    const pictureOutOptions = (ctx.document.nodes || []).filter((node) => node.typeId === 'top.out').map((node) => ({ id: node.id, label: node.label || 'Picture Out' }))
+    const pictureOutOptions = buildPictureOutOptions(ctx.document)
     return (
         <div className="perform-pane">
             <MapInspector

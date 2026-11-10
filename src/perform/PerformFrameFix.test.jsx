@@ -116,7 +116,7 @@ describe('the laser desk is machine-wide, and says so', () => {
 })
 
 describe('blackout state honesty', () => {
-    it('a failed laser POST: no "set here" flag, tag says failed, next press retries only the laser', async () => {
+    it('a failed laser POST: no "set here" flag, tag says failed, the next press LIFTS (the laser never went dark: dropped, not retried)', async () => {
         world.failPost = ['/laser/']
         const ctx = ctxWith()
         renderMaster({ ctx })
@@ -127,12 +127,10 @@ describe('blackout state honesty', () => {
         world.failPost = []
         const before = posts.length
         await press('Blackout · on')
-        expect(posts.slice(before)).toEqual([{ path: '/laser/desk/api/blackout', body: { on: true } }])
-        expect(ctx.applyLocalOps).toHaveBeenCalledTimes(1) // deck neither lifted nor re-sent
+        // no 'on' retry to the laser, and nothing is armed or sent to it
+        expect(posts.slice(before).filter((post) => post.path.includes('/laser/'))).toEqual([])
         expect(screen.queryByRole('alert')).toBeNull()
-        // the flag is set now, so the next press lifts it
-        await press('Blackout · on')
-        expect(laserBlackouts().at(-1)).toEqual({ on: false })
+        expect(tag('laser')).not.toBe('failed')
     })
 
     it('a failed lift keeps the flag and a second press lifts it again', async () => {

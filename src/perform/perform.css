@@ -813,6 +813,13 @@
     padding: var(--di-space-2);
 }
 
+/* Perform's own select rule has 8px padding: the caret needs its own room in the Effects head. */
+.perform-shell .raw-window-body select.vj-deck-fx-layer,
+.perform-shell .raw-window-body select.vj-deck-fx-add {
+    padding-right: 28px;
+    min-width: 9ch;
+}
+
 .perform-shell .vj-deck--perform .vj-deck-hint,
 .perform-shell .vj-deck--perform .vj-deck-dim {
     font-size: var(--di-text-1);

@@ -1806,3 +1806,10 @@ Cause: route audit (read in code, no browser): the Perform link carries no `?pre
 Fix: Perform strip gets a Windows menu (every kind, aria-checked, Reset layout) and a notice with "Open VJ Deck" when the project has a vj.deck node and the view shows none (`PerformDesk.jsx`); Nodes bar gets `WindowsMenu.jsx` (open/hidden list, show + centre via `centreWindowFrame` in `windowLayout.js`, Show all windows); `lastProject.js` remembers the project per tab and the Tools/Wiki bars read it; `StudioShell` shows the switch when a vj.deck node exists. Which preset opens is unchanged. Esc still hides a window the person opened or clicked (documented in the wiki), left as is.
 Guard: `src/perform/PerformDesk.test.jsx` ("the way back to a window"), `src/raw/components/WindowsMenu.test.jsx`, `RawEditor.test.jsx` ("comes back from the visible Windows button"), `src/components/lastProject.test.js`, `KitPage.test.jsx`, `WikiPage.test.jsx`, `StudioShell.test.jsx` (bare project with a deck).
 Lesson: a hide that is saved needs a visible, listed way back on the same surface; a hidden palette is not one.
+
+## Perform Blackout stayed "on" forever; Surface settings had no VJ Deck (Perform live test, 2026-11-11)
+
+Symptom: after one light/laser POST failed, every later Blackout press only retried that target and the deck master was never restored (4 presses, still "Blackout · on"). Perform's Surface settings source picker offered Picture Out only, the Projection desk also offered the VJ Deck.
+Cause: `toggleBlackout` (`PerformWindows.jsx`) took the "retry pending" branch whenever `pending` was non-empty and skipped the restore; `pictureOutOptions` filtered `top.out` only.
+Fix: `planBlackoutPress` (`perform/blackoutPlan.js`): a press while blacked out always restores the deck (when a level is kept); pending 'on' is dropped, pending 'off' is retried and stays named; lifting the laser never arms. `buildPictureOutOptions` (`map/pictureOutOptions.js`) is the one builder for Projection and Perform.
+Regression tests: `perform/blackoutPlan.test.js`, `map/pictureOutOptions.test.js`.

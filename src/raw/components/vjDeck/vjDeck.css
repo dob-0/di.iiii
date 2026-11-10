@@ -183,7 +183,9 @@
 
 .vj-deck-main {
     display: grid;
-    flex: 1 1 auto;
+    /* Never shrinks under its content: a short or narrow frame scrolls the deck, so the
+       bottom panels stay in flow under the grid instead of being drawn over it. */
+    flex: 1 0 auto;
     grid-template-columns: minmax(0, 1fr) var(--vj-monitor-w);
     gap: var(--di-space-3);
     min-height: 0;
@@ -527,6 +529,10 @@
 .vj-deck-fx-add {
     min-height: 28px;
     max-width: 100%;
+    /* Room for the caret: it must not be drawn over "LAYER 1" / "+ ADD EFFECT". */
+    min-width: 9ch;
+    padding-right: 28px;
+    text-overflow: ellipsis;
 }
 
 .vj-deck-fx .vj-deck-toggle[aria-pressed='true'] {
@@ -715,11 +721,13 @@
 /* --- sources: one line per source, scrolling inside the panel ------------- */
 
 .vj-deck-sources {
+    --vj-source-row: 24px;
     max-height: 240px;
 }
 
 .vj-deck-source-list {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
     overflow: auto;
@@ -730,28 +738,35 @@
     flex-direction: column;
 }
 
+/* One compact line per source: the kind as a small tag, then the name. */
 .vj-deck-source {
     display: grid;
-    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-columns: 44px minmax(0, 1fr);
     align-items: center;
-    gap: var(--di-space-2);
+    gap: var(--di-space-1);
     box-sizing: border-box;
-    min-height: var(--vj-list-row);
+    min-height: var(--vj-source-row);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     cursor: grab;
 }
 
 .vj-deck-source-kind {
+    overflow: hidden;
     color: var(--di-dim);
-    font-size: var(--di-text-2);
+    font-size: var(--di-text-1);
     letter-spacing: 0.08em;
+    line-height: 1;
+    text-overflow: ellipsis;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .vj-deck-source-name {
-    min-height: var(--vj-list-row);
+    min-height: var(--vj-source-row);
     max-width: 100%;
+    padding-block: 0;
     overflow: hidden;
+    line-height: 1;
     text-align: left;
     text-overflow: ellipsis;
     text-transform: none;
@@ -765,7 +780,9 @@
 }
 
 .vj-deck-source--upload .vj-deck-upload {
-    min-height: var(--vj-list-row);
+    min-height: var(--vj-source-row);
+    padding-block: 0;
+    line-height: 1;
 }
 
 .vj-deck-source-name:disabled {
@@ -872,6 +889,10 @@
 
     .vj-deck-grid {
         --vj-tile: 64px;
+    }
+
+    .vj-deck-sources {
+        --vj-source-row: 44px;
     }
 
     .vj-deck-tile,

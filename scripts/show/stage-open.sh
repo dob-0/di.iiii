@@ -13,6 +13,10 @@
 #      is made floating, then resized and moved (a tiled window ignores resize/move) .
 # Windows are found by comparing `hyprctl clients -j` before and after each launch (needs jq).
 #
+# RUN IT THROUGH `di-here` (di-here scripts/show/stage-open.sh ...): a browser started from an agent shell is treated
+# as agent work by di-window-watch, and its popups and output window are moved to another workspace (that broke the
+# owner's drop-downs on 2026-11-11).
+#
 # Nothing is closed or killed. Undo: close the two windows. --dry-run prints every command and runs none of them.
 # Agents must NOT run this for real: it opens windows on the owner's desktop (use --dry-run).
 set -euo pipefail
@@ -31,8 +35,11 @@ usage: stage-open.sh [--space S] [--project P] [--stage-ws N] [--tool-ws N] [--b
   --tool-ws        workspace for Perform        (default 1); floated, resized, moved
   --base           base URL of di.iiii          (default http://diiii.localhost)
   --preset         Perform preset id, added as ?preset= to the tool address (default: none, the show's own default)
-  --tool-geometry  X,Y,W,H of the Perform window (default 80,60,1036,837)
+  --tool-geometry  X,Y,W,H of the Perform window, X,Y RELATIVE to the monitor that holds --tool-ws (default 80,60,1036,837);
+                   the window is fitted inside that monitor
   --dry-run        print every command, run none
+Run it through di-here (a browser started from an agent shell is treated as agent work by di-window-watch,
+and its popups and output window are moved to another workspace).
 Opens: <base>/<space>/map/<project>/out (stage) and <base>/<space>/perform/<project> (tool), one Chromium, port 9224.
 USAGE
 }
@@ -106,9 +113,54 @@ fi
 eval_hl "hl.dispatch(hl.dsp.window.move({ workspace = $stage_ws, window = 'address:$stage_addr', follow = false }))"
 eval_hl "hl.dispatch(hl.dsp.window.fullscreen({ window = 'address:$stage_addr' }))"
 eval_hl "hl.dispatch(hl.dsp.window.move({ workspace = $tool_ws, window = 'address:$tool_addr', follow = false }))"
-eval_hl "hl.dispatch(hl.dsp.window.float({ window = 'address:$tool_addr' }))"
-eval_hl "hl.dispatch(hl.dsp.window.resize({ x = $tool_w, y = $tool_h, exact = true, window = 'address:$tool_addr' }))"
-eval_hl "hl.dispatch(hl.dsp.window.move({ x = $tool_x, y = $tool_y, exact = true, window = 'address:$tool_addr' }))"
+
+# Fit X,Y,W,H (relative to a monitor) inside that monitor; prints the absolute "x y w h".
+# Monitor JSON is hyprctl's: x, y, width, height (physical px), scale.
+fit_geometry() { # $1 = one monitor object (json)
+  jq -r --argjson x "$tool_x" --argjson y "$tool_y" --argjson w "$tool_w" --argjson h "$tool_h" '
+    ((.width / (.scale // 1)) | floor) as $mw | ((.height / (.scale // 1)) | floor) as $mh |
+    ([$w, $mw] | min) as $fw | ([$h, $mh] | min) as $fh |
+    ([([$x, $mw - $fw] | min), 0] | max) as $fx | ([([$y, $mh - $fh] | min), 0] | max) as $fy |
+    "\(.x + $fx) \(.y + $fy) \($fw) \($fh)"' <<<"$1"
+}
+# the monitor that holds the tool workspace (ask the window, which was just moved there)
+tool_monitor() {
+  local mid
+  mid=$(hyprctl clients -j | jq -r --arg a "$tool_addr" '.[] | select(.address==$a) | .monitor')
+  hyprctl monitors -j | jq -c --argjson id "${mid:-0}" '(map(select(.id==$id)) + .)[0]'
+}
+
+if [ "$dry" = 1 ]; then
+  echo "+ hyprctl clients -j / monitors -j   # find the monitor of workspace $tool_ws, fit $tool_w x $tool_h at +$tool_x,+$tool_y inside it"
+  echo "# dry run assumes a monitor at 0,0 1920x1080 scale 1"
+  read -r gx gy gw gh < <(fit_geometry '{"x":0,"y":0,"width":1920,"height":1080,"scale":1}')
+else
+  # the window may not have settled (a tiled window ignores float/resize/move): wait until it is mapped on the
+  # tool workspace, then float, resize, move; verify; retry once.
+  for _ in $(seq 1 20); do
+    hyprctl clients -j | jq -e --arg a "$tool_addr" '.[] | select(.address==$a and .mapped==true)' >/dev/null && break
+    sleep 0.25
+  done
+  read -r gx gy gw gh < <(fit_geometry "$(tool_monitor)")
+fi
+place_tool() {
+  eval_hl "hl.dispatch(hl.dsp.window.float({ window = 'address:$tool_addr', action = 'enable' }))"
+  [ "$dry" = 1 ] || sleep 0.3
+  eval_hl "hl.dispatch(hl.dsp.window.resize({ x = $gw, y = $gh, exact = true, window = 'address:$tool_addr' }))"
+  eval_hl "hl.dispatch(hl.dsp.window.move({ x = $gx, y = $gy, exact = true, window = 'address:$tool_addr' }))"
+}
+place_tool
+if [ "$dry" = 1 ]; then
+  echo "+ verify with hyprctl clients -j (floating, size $gw x $gh, at $gx,$gy); retry the placement once if it differs"
+else
+  sleep 0.5
+  verify() { hyprctl clients -j | jq -e --arg a "$tool_addr" --argjson w "$gw" --argjson h "$gh" '.[] | select(.address==$a and .floating==true and (.size[0]-$w|fabs)<=4 and (.size[1]-$h|fabs)<=4)' >/dev/null; }
+  if ! verify; then
+    echo "stage-open: tool window not placed yet, retrying once" >&2
+    place_tool; sleep 0.8
+    verify || { echo "stage-open: tool window is still not ${gw}x${gh} floating; place it by hand" >&2; exit 1; }
+  fi
+fi
 
 echo "stage: $stage_url  (workspace $stage_ws, fullscreen)"
-echo "tool:  $tool_url  (workspace $tool_ws, floating ${tool_w}x${tool_h} at $tool_x,$tool_y)"
+echo "tool:  $tool_url  (workspace $tool_ws, floating ${gw}x${gh} at $gx,$gy)"
