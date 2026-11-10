@@ -393,9 +393,10 @@ export const WIKI_ARTICLES = [
             'SETTINGS for the selected clip (speed, play mode, in and out) open from the line under the grid, never from the tap itself, so a phone can play clip after clip without closing anything.',
             'EVERY FILLED SLOT SHOWS A STILL of its clip, a frame from a little way into it, so the grid reads at a glance; the playing slot shows the live picture over it.',
             'THE TEMPO is the show\'s one clock. On your own machine, when the Light page is open, the lights keep the tempo and the deck follows it ("follows Light" beside the BPM); Tap on the deck sets it for both. With no Light page open the deck keeps its own. Reset puts it back to 120 with the beat on that instant. A double click is no longer read as a 300 bpm tap.',
-            'NOT YET: clips do not sync to the beat, and MIDI does not reach the grid.'
+            'EFFECTS: the EFFECTS panel (beside Sources and Clip) holds a stack of up to eight effects for one layer, or for the MASTER (switch LAYER | MASTER). Add Level, Tint, Blur, Edge, Feedback or Reframe; each has On, a Mix slider (dry / wet) and its main sliders, and can move up, down or be removed. A layer\'s effects run on its clip before the blend; the master\'s run after the last layer, before Master. An effect that is off costs nothing. On the Xone:K2, pots 9 to 12 drive the first effect of the selected stack: mix and its first three sliders; MIDI Learn binds any effect slider.',
+            'NOT YET: effects on a single clip, and clips do not sync to the beat.'
         ],
-        tags: ['vj', 'deck', 'resolume', 'clip', 'clips', 'footage', 'video', 'layers', 'blend', 'opacity', 'perform', 'live', 'pictures', 'bpm', 'tempo', 'tap'],
+        tags: ['vj', 'deck', 'effects', 'effect', 'fx', 'tint', 'blur', 'resolume', 'clip', 'clips', 'footage', 'video', 'layers', 'blend', 'opacity', 'perform', 'live', 'pictures', 'bpm', 'tempo', 'tap'],
         updated: '2026-11-10'
     },
     {

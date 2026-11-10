@@ -34,6 +34,7 @@ import { DEFAULT_BPM } from '../../../timeline/showClock.js'
 import { clipStill } from './clipStills.js'
 import { useDeckMidi } from '../../../perform/midi/useDeckMidi.js'
 import DeckMidiControl from '../../../perform/midi/DeckMidiControl.jsx'
+import EffectsPanel from './EffectsPanel.jsx'
 import './vjDeck.css'
 
 // The VJ deck: Resolume's clip grid for one vj.deck node.
@@ -201,6 +202,9 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const [picking, setPicking] = useState(null) // { layer, column }
     const [uploading, setUploading] = useState('')
     const [notice, setNotice] = useState('')
+    // Effects: the stack shown is a layer's (the selected clip's layer unless one is picked) or the master's.
+    const [fxScope, setFxScope] = useState('layer')
+    const [fxPick, setFxPick] = useState(null)
     const tapsRef = useRef([])
 
     // The same list and value a Video node's picker uses: the PROJECT's files
@@ -253,7 +257,8 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     }
     // MIDI (src/perform/midi): live while the deck is on screen; Learn binds the
     // control clicked on the deck (data-midi-target) to the next controller message.
-    const midi = useDeckMidi({ deckId, deck, write, stored: node?.values?.midiMap, onPatch: editable ? onPatchValues : null, onTap, enabled: editable })
+    const fxLayer = Math.min(deck.layers.length - 1, Math.max(0, fxPick ?? selected?.layer ?? 0))
+    const midi = useDeckMidi({ deckId, deck, write, stored: node?.values?.midiMap, onPatch: editable ? onPatchValues : null, onTap, enabled: editable, fxLayer: fxScope === 'master' ? -1 : fxLayer })
     const learnKeyOf = (event) => event.target?.closest?.('[data-midi-target]')?.getAttribute('data-midi-target') || ''
     const onLearnClick = (event) => {
         if (!midi.learning) return
@@ -283,6 +288,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
             return
         }
         setSelected({ layer: layerIndex, column })
+        setFxPick(null)
         write(trigger(deck, layerIndex, column))
     }
 
@@ -633,6 +639,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                         <p className="vj-deck-hint">Select a clip</p>
                     </section>
                 )}
+                <EffectsPanel deck={deck} scope={fxScope} layerIndex={fxLayer} onScope={setFxScope} onLayer={setFxPick} editable={editable} write={write} />
             </div>
         </div>
     )

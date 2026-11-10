@@ -27,6 +27,7 @@ import { K2_CHANNEL, XONE_K2_LEDS, defaultMap, isK2, k2IsRelative } from './xone
 // stored     node.values.midiMap
 // onPatch    (patch) => void — onPatchValues, for { midiMap }
 // onTap      the view's tap handler (the show clock or the deck's own taps)
+// fxLayer    the layer whose effects pots 9-12 drive (-1 = master)
 // deckId     one mounted hook instance per deck id owns the controller (see below)
 //
 // Three rules for a live show:
@@ -66,7 +67,7 @@ const claim = (id, token, listener) => {
 }
 const isOwner = (id, token) => slot(id).order[0] === token
 
-export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = true, deckId = '' }) {
+export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = true, deckId = '', fxLayer = -1 }) {
     const defaults = useMemo(() => defaultMap(), [])
     const overrides = useMemo(() => normalizeOverrides(stored), [stored])
     const map = useMemo(() => effectiveMap(defaults, overrides), [defaults, overrides])
@@ -91,7 +92,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const timer = useRef(null)
     const pickup = useRef(new Map())
     const live = useRef({})
-    useEffect(() => { live.current = { write, onTap, onPatch, map, stored, enabled: active } })
+    useEffect(() => { live.current = { write, onTap, onPatch, map, stored, enabled: active, fx: { layer: fxLayer } } })
     const tapState = useRef({ taps: [] })
 
     const flush = useCallback(() => {
@@ -151,7 +152,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
             return
         }
         const base = ahead.current
-        const next = applyMidi(base, message, current.map, { onTap: () => current.onTap?.(), tapState: tapState.current, pickup: pickup.current })
+        const next = applyMidi(base, message, current.map, { onTap: () => current.onTap?.(), tapState: tapState.current, pickup: pickup.current, fx: current.fx })
         if (next === base) return
         const continuous = isContinuousEntry(entryFor(message, current.map))
         if (!continuous) flush() // keep the order: a pending fader value goes out first

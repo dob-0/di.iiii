@@ -122,7 +122,8 @@ describe('the K2 default map', () => {
     })
     it('lists what it leaves free and keeps the laser and light out', () => {
         expect(XONE_K2_MAP.length + XONE_K2_FREE.length).toBe(58)
-        expect(XONE_K2_FREE).toContain('pot 9')
+        expect(XONE_K2_FREE).not.toContain('pot 9') // pots 9-12 drive the first effect
+        expect(XONE_K2_FREE).toContain('encoder 2')
         expect(XONE_K2_MAP.every((e) => !/laser|light|arm/i.test(e.action))).toBe(true)
     })
     it('plays the layout: fader 3, matrix G, pot switches, encoders', () => {

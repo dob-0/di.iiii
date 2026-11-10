@@ -470,8 +470,7 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
 }
 
 // The project's picture operators, run on this page and drawn from one Picture
-// Out. Processed at up to 640 wide like the camera glow; the corner-pin scales
-// the result onto the wall.
+// Out, at the surface's own size; the corner-pin places it on the wall.
 const NO_NETWORK = { nodes: [], wires: [] }
 
 function MapNetworkSource({ network, spaceId, assets, projectId, outNodeId, label, width, height }) {

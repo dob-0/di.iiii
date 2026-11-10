@@ -8,7 +8,7 @@
 //   matrix 4x4            clips: row = layer 1-4 (top row = layer 1), column 1-4
 //   pot row 1 (4 pots)    blend mode of layers 1-4
 //   pot row 2             speed of the playing clip of layers 1-4
-//   pot row 3             FREE
+//   pot row 3             FIRST EFFECT of the selected layer (master when MASTER is picked): mix, then its first three params
 //   pot switches row 1    bypass layers 1-4      (red while bypassed)
 //   pot switches row 2    solo layers 1-4        (green while solo)
 //   pot switches row 3    crossfader side A / B / off, layers 1-4
@@ -47,6 +47,8 @@ export const XONE_K2_MAP = [
     ...range(4).map((i) => bind(`pot switch ${i + 5}`, 'solo', { layer: i })),
     ...range(4).map((i) => bind(`pot switch ${i + 9}`, 'side', { layer: i })),
     ...range(4).map((i) => bind(`encoder ${i + 1} push`, 'column', { column: i })),
+    bind('pot 9', 'fx', { param: 'mix' }),
+    ...range(3).map((i) => bind(`pot ${i + 10}`, 'fx', { param: i })),
     bind('encoder 1', 'bpm', {}, { relative: true }),
     bind('encoder 5', 'crossfade', {}, { relative: true }),
     bind('encoder 5 push', 'tap'),
