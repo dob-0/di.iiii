@@ -238,6 +238,174 @@ void main() {
 }`
     },
 
+    // --- the Platina look wave (2026-11-10): the screen effects the artist's
+    // reference clips need that Level / Tint / Blur / Edge / Feedback / Reframe
+    // cannot make. Recipes: docs/ai/sessions/feat-deck-ref-effects.md.
+    // The picture pipeline carries no alpha (8-bit RGB, opaque canvas), so
+    // "transparent" is black: put a layer with a black background on a layer
+    // below with blend Add or Screen and the lower layer shows through.
+
+    'top.freeze': {
+        label: 'Freeze',
+        family: 'time',
+        inputs: ['a'],
+        params: [toggle('hold', 'Hold', 1)],
+        // Stateful like Feedback: `self` is this operator's own last frame. A
+        // freshly made target is cleared to alpha 0, and every frame this
+        // operator draws is alpha 1 — so alpha 0 in `self` means "nothing held
+        // yet": the first frame passes the live picture through and from then
+        // on `self` holds it. Effects that are off have no node (vjDeck.js
+        // runStack), so switching Freeze ON starts a fresh target and freezes
+        // the frame on screen at that moment; switching it off drops it.
+        fragment: `
+uniform sampler2D self;
+uniform float p_hold;
+void main() {
+    vec4 held = texture2D(self, uv);
+    vec3 live = texture2D(a, uv).rgb;
+    gl_FragColor = vec4((p_hold > 0.5 && held.a > 0.5) ? held.rgb : live, 1.0);
+}`
+    },
+
+    'top.silhouette': {
+        label: 'Silhouette',
+        family: 'adjust',
+        inputs: ['a'],
+        params: [
+            param('threshold', 'Threshold', 0.5, 0, 1),
+            param('soft', 'Softness', 0.05, 0, 0.5),
+            toggle('invert', 'Invert'),
+            colour('colour', 'Subject', '#ffffff'),
+            colour('back', 'Background', '#000000')
+        ],
+        // Luma against a threshold with a smooth edge: the bright part of the
+        // picture becomes the Subject colour, the rest the Background colour
+        // (Invert swaps which is which, for a dark figure on a light wall).
+        // Background black + the layer's blend Add/Screen lets what is below show.
+        fragment: `
+${LUMA}
+uniform float p_threshold;
+uniform float p_soft;
+uniform float p_invert;
+uniform vec3 p_colour;
+uniform vec3 p_back;
+void main() {
+    float l = luma(texture2D(a, uv).rgb);
+    float s = max(p_soft, 0.0005);
+    float m = smoothstep(p_threshold - s, p_threshold + s, l);
+    if (p_invert > 0.5) m = 1.0 - m;
+    gl_FragColor = vec4(mix(p_back, p_colour, m), 1.0);
+}`
+    },
+
+    'top.lineart': {
+        label: 'Line art',
+        family: 'analyse',
+        inputs: ['a'],
+        params: [
+            param('bands', 'Contours', 8, 1, 40, 1),
+            param('width', 'Line width', 1.5, 0.5, 6, 0.1),
+            param('edges', 'Outline', 0.5, 0, 1),
+            colour('colour', 'Line', '#4da6ff'),
+            colour('back', 'Background', '#000000')
+        ],
+        // Thin lines in one colour: the iso-lines of brightness (where luma
+        // crosses k / Contours — the nested contour stripes of a lit body)
+        // plus a Sobel outline. Line width is measured in pixels: the distance
+        // to the nearest iso-level divided by the local brightness gradient.
+        fragment: `
+${LUMA}
+uniform float p_bands;
+uniform float p_width;
+uniform float p_edges;
+uniform vec3 p_colour;
+uniform vec3 p_back;
+float at(vec2 o) { return luma(texture2D(a, uv + o * texel).rgb); }
+void main() {
+    float gx = -at(vec2(-1.0, 1.0)) - 2.0 * at(vec2(-1.0, 0.0)) - at(vec2(-1.0, -1.0))
+               + at(vec2( 1.0, 1.0)) + 2.0 * at(vec2( 1.0, 0.0)) + at(vec2( 1.0, -1.0));
+    float gy = -at(vec2(-1.0, -1.0)) - 2.0 * at(vec2(0.0, -1.0)) - at(vec2(1.0, -1.0))
+               + at(vec2(-1.0,  1.0)) + 2.0 * at(vec2(0.0,  1.0)) + at(vec2(1.0,  1.0));
+    float grad = length(vec2(gx, gy)) * 0.25;
+    float v = at(vec2(0.0)) * p_bands;
+    float d = abs(fract(v + 0.5) - 0.5);
+    float px = d / max(grad * p_bands, 0.02);
+    float iso = 1.0 - smoothstep(p_width - 0.5, p_width + 0.5, px);
+    float edge = clamp(grad * 6.0, 0.0, 1.0) * p_edges;
+    gl_FragColor = vec4(mix(p_back, p_colour, clamp(max(iso, edge), 0.0, 1.0)), 1.0);
+}`
+    },
+
+    'top.glitch': {
+        label: 'Glitch',
+        family: 'adjust',
+        inputs: ['a'],
+        // Reads `time` (the burst pattern changes `speed` times a second).
+        animated: true,
+        params: [
+            param('amount', 'Amount', 0.4, 0, 1),
+            param('speed', 'Speed', 8, 0, 30, 0.5),
+            param('blocks', 'Blocks', 14, 2, 64, 1),
+            param('split', 'RGB split', 0.3, 0, 1),
+            param('scan', 'Scanlines', 0.3, 0, 1)
+        ],
+        // Deterministic: every value is a hash of the block and floor(time *
+        // speed), never a random call, so the same time gives the same frame.
+        // A block row/column cell is shoved sideways when its hash is under
+        // Amount; the colour channels are read apart by RGB split; scanlines
+        // darken every second pixel row.
+        fragment: `
+uniform float p_amount;
+uniform float p_speed;
+uniform float p_blocks;
+uniform float p_split;
+uniform float p_scan;
+float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+void main() {
+    float step_ = floor(time * p_speed);
+    float aspect = texel.y / texel.x;
+    vec2 cell = floor(uv * vec2(p_blocks * aspect, p_blocks));
+    float on = step(hash21(cell + vec2(step_, 3.0)), p_amount);
+    float row = floor(uv.y * p_blocks);
+    float rowShove = (hash21(vec2(row, step_ + 7.0)) - 0.5) * 0.5 * step(hash21(vec2(row, step_)), p_amount * 0.5);
+    float shove = on * (hash21(cell + vec2(step_, 9.0)) - 0.5) * 0.3 * p_amount + rowShove * p_amount;
+    vec2 p = vec2(uv.x + shove, uv.y);
+    float sp = p_split * 0.03 * (0.3 + on);
+    float r = texture2D(a, vec2(p.x + sp, p.y)).r;
+    float g = texture2D(a, p).g;
+    float b = texture2D(a, vec2(p.x - sp, p.y)).b;
+    float line = mod(floor(uv.y / texel.y), 2.0);
+    vec3 c = vec3(r, g, b) * (1.0 - p_scan * 0.5 * line);
+    gl_FragColor = vec4(c, 1.0);
+}`
+    },
+
+    'top.pixelate': {
+        label: 'Pixelate',
+        family: 'adjust',
+        inputs: ['a'],
+        params: [
+            param('size', 'Block size', 12, 1, 128, 1),
+            param('levels', 'Posterize', 0, 0, 16, 1),
+            toggle('grey', 'Grey')
+        ],
+        // A mosaic of Block size pixels, optionally posterised to Posterize
+        // grey/colour steps (0 or 1 = off) and desaturated.
+        fragment: `
+${LUMA}
+uniform float p_size;
+uniform float p_levels;
+uniform float p_grey;
+void main() {
+    vec2 cell = texel * max(p_size, 1.0);
+    vec2 p = (floor(uv / cell) + 0.5) * cell;
+    vec3 c = texture2D(a, min(p, vec2(1.0))).rgb;
+    if (p_grey > 0.5) c = vec3(luma(c));
+    if (p_levels > 1.5) c = floor(c * p_levels + 0.5) / p_levels;
+    gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
+}`
+    },
+
     'top.blend': {
         label: 'Blend',
         family: 'combine',

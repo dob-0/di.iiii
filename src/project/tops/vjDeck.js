@@ -82,7 +82,12 @@ export const EFFECT_TYPES = {
     'top.blur': { main: ['size'] },
     'top.edge': { main: ['strength'] },
     'top.feedback': { main: ['trail'] },
-    'top.transform': { main: ['scale', 'rotate', 'moveX'] }
+    'top.transform': { main: ['scale', 'rotate', 'moveX'] },
+    'top.freeze': { main: ['hold'] },
+    'top.silhouette': { main: ['threshold', 'soft', 'invert', 'colour', 'back'] },
+    'top.lineart': { main: ['bands', 'width', 'colour'] },
+    'top.glitch': { main: ['amount', 'speed', 'split'] },
+    'top.pixelate': { main: ['size', 'levels', 'grey'] }
 }
 export const EFFECT_TYPE_IDS = Object.keys(EFFECT_TYPES)
 export const effectLabel = (type) => TOP_OPERATORS[type]?.label || type
