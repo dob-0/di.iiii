@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTopReport } from '../../../project/tops/topReports.js'
 import { registerTopThumbnail } from '../../../project/tops/topThumbnails.js'
 import {
     BLEND_MODES,
@@ -91,7 +92,19 @@ export const cameraFailureText = (failure) => {
     if (name === 'NotAllowedError' || name === 'SecurityError') return 'Cameras are blocked for this page: allow them in the address bar.'
     if (BUSY_CAMERA_ERRORS.has(name)) return 'The camera is busy in another program.'
     if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'No camera on this machine'
+    if (name === 'CameraNotFound') return failure.camera ? `Camera "${failure.camera}" not found.` : 'Camera not found.'
     return 'Could not open the camera.'
+}
+
+// Why a playing camera clip shows no picture: the engine's own report for its
+// camera node (topReports camera.error / errorName), in the same words as above.
+// Null while the camera is fine or not yet tried.
+function CameraFailure({ nodeId, camera, className }) {
+    const report = useTopReport(nodeId)?.camera
+    if (!report?.blocked && !report?.errorName) return null
+    if (!report.error && !report.errorName) return null
+    const text = report.errorName ? cameraFailureText({ name: report.errorName, camera }) : report.error
+    return <span className={`vj-deck-dim ${className}`} role="status">{text}</span>
 }
 
 function useCameras() {
@@ -510,6 +523,9 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             {playing && clip.kind === 'camera'
                                                 ? <DeckPicture nodeId={cameraNodeId(deckId, clip.camera, clip.device)} className="vj-deck-tile-picture" label={name} />
                                                 : null}
+                                            {playing && clip.kind === 'camera'
+                                                ? <CameraFailure nodeId={cameraNodeId(deckId, clip.camera, clip.device)} camera={clip.camera} className="vj-deck-tile-fail" />
+                                                : null}
                                             {clip?.kind === 'input' && inputSources?.[clip.input]
                                                 ? <DeckPicture nodeId={inputSources[clip.input]} className="vj-deck-tile-picture" label={name} />
                                                 : null}
@@ -537,6 +553,9 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                 : null}
                             {selectedPictureId
                                 ? <DeckPicture nodeId={selectedPictureId} className="vj-deck-monitor-picture" label={`Preview of ${selectedName}`} width={320} height={180} />
+                                : null}
+                            {selectedClip && selectedClip.kind === 'camera' && selectedPlaying
+                                ? <CameraFailure nodeId={selectedPictureId} camera={selectedClip.camera} className="vj-deck-monitor-empty vj-deck-monitor-fail" />
                                 : null}
                             {!selectedClip ? <span className="vj-deck-dim vj-deck-monitor-empty">Select a clip</span> : null}
                         </div>

@@ -9,6 +9,7 @@ import { createPicturePeers } from './picturePeers.js'
 import { createPictureOut } from './pictureOut.js'
 import { readTopReport, reportTop, useInspectedTop } from './topReports.js'
 import { compileTopScript } from './topScripts.js'
+import { CameraNotFoundError, cameraRetryDelay, cameraRetryable, resolveCamera } from './cameraResolve.js'
 
 // A camera's capabilities hold functions and odd objects on some browsers;
 // what crosses the network is plain numbers, strings and ranges.
@@ -418,58 +419,77 @@ export function useTopNetwork({
         const tracks = tracksRef.current
         let cancelled = false
         // A camera's id is per page: the Desk on another page of this machine
-        // may have recorded a different one. The label is the fallback, and the
-        // machine's default camera the last word.
-        const resolveCamera = async (deviceId, label) => {
-            if (!deviceId && !label) return true
+        // may have recorded a different one. The label is the fallback; a NAMED
+        // camera never falls to the default one (cameraResolve.js). A camera that
+        // cannot open is reported with its error name and tried again on a slow
+        // back-off, and at once when a device appears.
+        const timers = new Map()
+        const attempts = new Map()
+        const running = new Set()
+        const again = new Set()
+        const permission = { asked: false }
+        const failed = (id, caught) => {
+            const errorName = caught?.name || 'Error'
+            const camera = caught instanceof CameraNotFoundError ? caught.camera : null
+            const refusal = camera ? `Camera "${camera}" not found.` : cameraRefusal({ errorName })
+            reportTop(id, { camera: { error: refusal, errorName, blocked: true } })
+            setError(refusal)
+            if (!cameraRetryable(errorName)) return
+            const attempt = attempts.get(id) || 0
+            attempts.set(id, attempt + 1)
+            clearTimeout(timers.get(id))
+            timers.set(id, setTimeout(() => open(id), cameraRetryDelay(attempt)))
+        }
+        const spec = new Map(cameras.map(([id, deviceId, label, script]) => [id, { deviceId, label, script }]))
+        const open = async (id) => {
+            if (cancelled) return
+            if (running.has(id)) { again.add(id); return }
+            running.add(id)
+            clearTimeout(timers.get(id))
             try {
-                const list = (await media.enumerateDevices()).filter((device) => device.kind === 'videoinput')
-                const found = list.find((device) => device.deviceId === deviceId) || list.find((device) => label && device.label === label)
-                return found ? { deviceId: { exact: found.deviceId } } : true
-            } catch {
-                return true
+                const { deviceId, label, script } = spec.get(id)
+                const video = await resolveCamera(media, deviceId, label, permission)
+                const constraints = { ...(video === true ? {} : video), ...constraintsForRef.current(id) }
+                const compiled = script ? compileTopScript(script) : {}
+                let stream = null
+                if (compiled.open) {
+                    try {
+                        stream = await compiled.open({ constraints, deviceId: video?.deviceId?.exact || null, mediaDevices: media })
+                        reportTop(id, { script: null })
+                    } catch (error) {
+                        reportTop(id, { script: String(error?.message || error) })
+                    }
+                }
+                if (!stream) stream = await media.getUserMedia({ video: Object.keys(constraints).length ? constraints : true, audio: false })
+                if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return }
+                streams.push(stream)
+                attempts.delete(id)
+                const track = stream.getVideoTracks()[0]
+                if (track) {
+                    tracksRef.current.set(id, track)
+                    reportTop(id, { camera: { label: track.label, capabilities: plainCapabilities(track), settings: plainSettings(track), error: null, errorName: null, blocked: false } })
+                }
+                const element = globalThis.document.createElement('video')
+                element.muted = true
+                element.playsInline = true
+                element.srcObject = stream
+                element.play?.()?.catch?.(() => {})
+                engineRef.current?.setVideo(id, element)
+            } catch (caught) {
+                if (!cancelled) failed(id, caught)
+            } finally {
+                running.delete(id)
+                // A device changed while this try ran: look again, unless it opened.
+                if (again.delete(id) && !cancelled && !tracksRef.current.has(id)) open(id)
             }
         }
-        for (const [id, deviceId, label, script] of cameras) {
-            resolveCamera(deviceId, label)
-                .then(async (video) => {
-                    const constraints = { ...(video === true ? {} : video), ...constraintsForRef.current(id) }
-                    const compiled = script ? compileTopScript(script) : {}
-                    if (compiled.open) {
-                        try {
-                            const stream = await compiled.open({ constraints, deviceId: video?.deviceId?.exact || null, mediaDevices: media })
-                            reportTop(id, { script: null })
-                            return stream
-                        } catch (error) {
-                            reportTop(id, { script: String(error?.message || error) })
-                        }
-                    }
-                    return media.getUserMedia({ video: Object.keys(constraints).length ? constraints : true, audio: false })
-                })
-                .then((stream) => {
-                    if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return }
-                    streams.push(stream)
-                    const track = stream.getVideoTracks()[0]
-                    if (track) {
-                        tracksRef.current.set(id, track)
-                        reportTop(id, { camera: { label: track.label, capabilities: plainCapabilities(track), settings: plainSettings(track), error: null } })
-                    }
-                    const video = globalThis.document.createElement('video')
-                    video.muted = true
-                    video.playsInline = true
-                    video.srcObject = stream
-                    video.play().catch(() => {})
-                    engineRef.current?.setVideo(id, video)
-                })
-                .catch((caught) => {
-                    if (cancelled) return
-                    const refusal = cameraRefusal({ errorName: caught?.name || 'Error' })
-                    reportTop(id, { camera: { error: refusal, blocked: true } })
-                    setError(refusal)
-                })
-        }
+        const onDeviceChange = () => { for (const id of ids) if (!tracksRef.current.has(id)) open(id) }
+        media.addEventListener?.('devicechange', onDeviceChange)
+        for (const id of ids) open(id)
         return () => {
             cancelled = true
+            media.removeEventListener?.('devicechange', onDeviceChange)
+            for (const timer of timers.values()) clearTimeout(timer)
             for (const id of ids) { engineRef.current?.setVideo(id, null); tracks.delete(id) }
             streams.forEach((stream) => stream.getTracks().forEach((track) => track.stop()))
         }
