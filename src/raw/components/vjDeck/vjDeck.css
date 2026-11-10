@@ -8,6 +8,8 @@
     --vj-tile-height: 48px;
     --vj-control: 26px;
     --vj-row-min: 96px;
+    /* One row height for every list row (Sources, Clip, Effects): never under 28px. */
+    --vj-list-row: max(var(--vj-control), 28px);
     --vj-layers: 3;
     container-type: inline-size;
     container-name: vjdeck;
@@ -447,7 +449,7 @@
 
 .vj-deck-fx-top,
 .vj-deck-fx-head {
-    min-height: 24px;
+    min-height: var(--vj-list-row);
 }
 
 .vj-deck-fx-scope {
@@ -578,22 +580,47 @@
     pointer-events: none;
 }
 
+.vj-deck-list,
 .vj-deck-settings {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--di-space-2) var(--di-space-4);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
 }
 
+/* A list row: label left, control right, one height everywhere. */
+.vj-deck-list-row,
 .vj-deck-setting {
     display: grid;
-    grid-template-columns: 52px minmax(0, 1fr) auto;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--di-space-2);
+    box-sizing: border-box;
+    min-height: var(--vj-list-row);
+    min-width: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vj-deck-list-row > .vj-deck-list-value {
+    grid-column: span 2;
+}
+
+.vj-deck-list-value {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.vj-deck-list-row input[type='range'] {
+    min-height: var(--vj-list-row);
+    min-width: 0;
+    max-width: 100%;
 }
 
 .vj-deck-modes {
     display: flex;
     grid-column: span 2;
+    min-width: 0;
     gap: var(--di-space-1);
 }
 
@@ -623,6 +650,97 @@
 .vj-deck--perform .vj-deck-row,
 .vj-deck--inside .vj-deck-row {
     max-height: 200px;
+}
+
+/* --- sources: one line per source, scrolling inside the panel ------------- */
+
+.vj-deck-sources {
+    max-height: 240px;
+}
+
+.vj-deck-source-list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: auto;
+}
+
+.vj-deck-source-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.vj-deck-source {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    align-items: center;
+    gap: var(--di-space-2);
+    box-sizing: border-box;
+    min-height: var(--vj-list-row);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: grab;
+}
+
+.vj-deck-source-kind {
+    color: var(--di-dim);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.vj-deck-source-name {
+    min-height: var(--vj-list-row);
+    max-width: 100%;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    text-transform: none;
+    letter-spacing: 0;
+    white-space: nowrap;
+    border-color: transparent;
+}
+
+.vj-deck-source--upload {
+    cursor: default;
+}
+
+.vj-deck-source--upload .vj-deck-upload {
+    min-height: var(--vj-list-row);
+}
+
+.vj-deck-source-name:disabled {
+    cursor: grab;
+}
+
+/* A slot a drag is over: the one place it would land. */
+.vj-deck-tile.is-drop-target {
+    border-color: var(--di-ink);
+    border-style: solid;
+    box-shadow: inset 0 0 0 2px var(--di-ink);
+}
+
+.vj-deck-fx-open {
+    min-height: var(--vj-list-row);
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    text-transform: none;
+    letter-spacing: 0;
+    white-space: nowrap;
+    border: 0;
+    background: transparent;
+    color: var(--di-ink);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.vj-deck-fx-params[hidden] {
+    display: none;
+}
+
+.vj-deck-fx-params {
+    display: flex;
+    flex-direction: column;
 }
 
 /* --- a narrow deck: a phone, or a small window ---------------------------- */

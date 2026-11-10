@@ -300,6 +300,56 @@ export const trigger = (deck, layerIndex, column) => withLayer(deck, layerIndex,
     return layer
 })
 
+/**
+ * Move the clip in slot `from` to slot `to` ({ layer, column } each). An empty
+ * target takes it; a filled target swaps. A playing clip stays playing: the
+ * layer's `active` column follows it, and on another layer the old layer stops
+ * (or plays the swapped-in clip if that one was playing) and the new layer
+ * plays it only if it was playing, with a trigger so the engine starts it.
+ * The same slot, an empty source or a slot out of range returns `deck` itself.
+ */
+export const moveClip = (deck, from, to) => {
+    const fl = Number(from?.layer)
+    const fc = Number(from?.column)
+    const tl = Number(to?.layer)
+    const tc = Number(to?.column)
+    if (![fl, fc, tl, tc].every(Number.isInteger)) return deck
+    if (fl === tl && fc === tc) return deck
+    const next = normalizeDeck(deck)
+    const source = next.layers[fl]
+    const target = next.layers[tl]
+    if (!source || !target || fc < 0 || tc < 0 || fc >= source.clips.length || tc >= target.clips.length) return deck
+    const clipA = source.clips[fc]
+    if (!clipA) return deck
+    const clipB = target.clips[tc]
+    const playingA = source.active === fc
+    const playingB = Boolean(clipB) && target.active === tc
+    if (fl === tl) {
+        const clips = [...source.clips]
+        clips[fc] = clipB
+        clips[tc] = clipA
+        const active = playingA ? tc : playingB ? fc : source.active
+        next.layers = next.layers.map((layer, index) => (index === fl ? { ...layer, clips, active } : layer))
+        return next
+    }
+    next.layers = next.layers.map((layer, index) => {
+        if (index === fl) {
+            const clips = [...layer.clips]
+            clips[fc] = clipB
+            const active = playingB ? fc : playingA ? -1 : layer.active
+            return { ...layer, clips, active, trigger: playingB ? layer.trigger + 1 : layer.trigger }
+        }
+        if (index === tl) {
+            const clips = [...layer.clips]
+            clips[tc] = clipA
+            const active = playingA ? tc : playingB ? -1 : layer.active
+            return { ...layer, clips, active, trigger: playingA ? layer.trigger + 1 : layer.trigger }
+        }
+        return layer
+    })
+    return next
+}
+
 /** Play a whole column: every layer takes its clip there, a layer with nothing there goes empty. */
 export const triggerColumn = (deck, column) => {
     const next = normalizeDeck(deck)

@@ -18,6 +18,7 @@ import {
     crossfadeGain,
     expandDeck,
     masterNodeId,
+    moveClip,
     normalizeClip,
     normalizeDeck,
     removeLayer,
@@ -515,5 +516,72 @@ describe('camera clips', () => {
 
     it('the camera operator takes device and deviceLabel', () => {
         expect(TOP_OPERATORS['top.camera'].pickDevice).toBe('camera')
+    })
+})
+
+describe('moveClip', () => {
+    const base = () => {
+        let deck = createDeck()
+        deck = setClip(deck, 0, 0, assetClip('a'))
+        deck = setClip(deck, 0, 2, assetClip('b'))
+        deck = setClip(deck, 1, 1, assetClip('c'))
+        return deck
+    }
+    const at = (deck, layer, column) => deck.layers[layer].clips[column]?.asset ?? null
+
+    it('the same slot returns the same deck object', () => {
+        const deck = base()
+        expect(moveClip(deck, { layer: 0, column: 0 }, { layer: 0, column: 0 })).toBe(deck)
+    })
+    it('an empty source or a slot out of range changes nothing', () => {
+        const deck = base()
+        expect(moveClip(deck, { layer: 0, column: 5 }, { layer: 0, column: 1 })).toBe(deck)
+        expect(moveClip(deck, { layer: 0, column: 0 }, { layer: 9, column: 1 })).toBe(deck)
+    })
+    it('an empty target takes the clip', () => {
+        const next = moveClip(base(), { layer: 0, column: 0 }, { layer: 0, column: 4 })
+        expect(at(next, 0, 0)).toBeNull()
+        expect(at(next, 0, 4)).toBe('a')
+    })
+    it('a filled target swaps', () => {
+        const next = moveClip(base(), { layer: 0, column: 0 }, { layer: 0, column: 2 })
+        expect([at(next, 0, 0), at(next, 0, 2)]).toEqual(['b', 'a'])
+    })
+    it('a playing clip stays playing in its new slot on the same layer', () => {
+        const deck = trigger(base(), 0, 0)
+        const moved = moveClip(deck, { layer: 0, column: 0 }, { layer: 0, column: 4 })
+        expect(moved.layers[0].active).toBe(4)
+        const swapped = moveClip(deck, { layer: 0, column: 0 }, { layer: 0, column: 2 })
+        expect(swapped.layers[0].active).toBe(2)
+        // the swapped-in playing clip: dragging the idle one onto it
+        const back = moveClip(trigger(base(), 0, 2), { layer: 0, column: 0 }, { layer: 0, column: 2 })
+        expect(back.layers[0].active).toBe(0)
+    })
+    it('moved to another layer: the old layer stops, the new one plays it with a trigger', () => {
+        const deck = trigger(base(), 0, 0)
+        const moved = moveClip(deck, { layer: 0, column: 0 }, { layer: 2, column: 3 })
+        expect(moved.layers[0].active).toBe(-1)
+        expect(moved.layers[2].active).toBe(3)
+        expect(moved.layers[2].trigger).toBe(deck.layers[2].trigger + 1)
+        expect(at(moved, 2, 3)).toBe('a')
+    })
+    it('an idle clip moved to another layer does not start there', () => {
+        const moved = moveClip(base(), { layer: 0, column: 0 }, { layer: 2, column: 3 })
+        expect(moved.layers[2].active).toBe(-1)
+        expect(moved.layers[2].trigger).toBe(0)
+    })
+    it('a cross-layer swap hands each playing clip to its new layer', () => {
+        let deck = trigger(trigger(base(), 0, 0), 1, 1)
+        const moved = moveClip(deck, { layer: 0, column: 0 }, { layer: 1, column: 1 })
+        expect(at(moved, 0, 0)).toBe('c')
+        expect(at(moved, 1, 1)).toBe('a')
+        expect(moved.layers[0].active).toBe(0)
+        expect(moved.layers[1].active).toBe(1)
+    })
+    it('does not mutate its input', () => {
+        const deck = trigger(base(), 0, 0)
+        const copy = JSON.stringify(deck)
+        moveClip(deck, { layer: 0, column: 0 }, { layer: 1, column: 0 })
+        expect(JSON.stringify(deck)).toBe(copy)
     })
 })
