@@ -45,6 +45,10 @@ jobs:
         with:
           # The commit that actually deployed, not whatever main points at by
           # the time this runs.
+          # Kept on purpose (OpenSSF Scorecard flags workflow_run + head_sha): this
+          # tags exactly the commit the main deploy built. The trigger is limited to
+          # branches: [main], and Deploy VPS never runs on pull_request, so no
+          # untrusted pull request code is checked out here.
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
 
