@@ -204,7 +204,8 @@ const DEFINITIONS = {
                 id: 'surface',
                 label: 'Screen',
                 fields: [
-                    { label: 'Surface', component: 'surface', path: ['surfaceId'], type: 'mappingSurface' }
+                    { label: 'Shows', component: 'surface', path: ['surfaceId'], type: 'mappingSurface' },
+                    { label: 'Jump', component: 'surface', path: ['surfaceId'], type: 'screenLinks' }
                 ]
             }
         ]
@@ -323,6 +324,15 @@ const DEFINITIONS = {
                     { label: 'Spatial sound', component: 'media', path: ['spatial'], type: 'checkbox' },
                     { label: 'Full-volume radius', component: 'media', path: ['distance'], type: 'number', min: 0.5, max: 40, step: 0.5 },
                     { label: 'Falloff ends at', component: 'media', path: ['maxDistance'], type: 'number', min: 1, max: 200, step: 1 }
+                ]
+            },
+            // This object plays a video FILE. The live deck is a Screen:
+            // one button swaps it (the file object comes back with Undo).
+            {
+                id: 'liveDeck',
+                label: 'Live deck',
+                fields: [
+                    { label: 'Live deck', component: 'media', path: ['assetId'], type: 'screenSwap' }
                 ]
             }
         ]

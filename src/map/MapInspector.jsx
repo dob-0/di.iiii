@@ -6,7 +6,7 @@ import { MAPPING_EFFECT_PROMPT_MAX } from '../shared/projectSchema.js'
 
 const SOURCE_KINDS = [
     { id: 'test', label: 'Test pattern' },
-    { id: 'project', label: 'Project' },
+    { id: 'project', label: '3D scene' },
     { id: 'url', label: 'Web page' },
     { id: 'video', label: 'Video' },
     { id: 'image', label: 'Image' },
