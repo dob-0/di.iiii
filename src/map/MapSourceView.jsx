@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import MapTestPattern, { DEFAULT_TEST_PATTERN } from './mapTestPattern.jsx'
 import { startMotionGlow } from './motionGlow.js'
 import { startLiveAiRestyle } from './liveAiRestyle.js'
+import { resolveAlias } from '../project/tops/vjDeck.js'
+import { openSharedCamera } from '../project/tops/cameraPool.js'
 import { useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
@@ -62,7 +64,7 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
     }
 
     if (kind === 'network') {
-        if (!ref) return <MapSourcePlaceholder label={label} detail="no Picture Out chosen" width={width} height={height} />
+        if (!ref) return <MapSourcePlaceholder label={label} detail="no Picture Out or deck chosen" width={width} height={height} />
         // Off the output, a network runs only when Live is on — the desk and
         // the wall would otherwise each open the camera and run every operator.
         if (!live) return <MapSourcePlaceholder label={label} detail="pictures — turn Live on to run them here" width={width} height={height} />
@@ -364,7 +366,7 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
             return undefined
         }
         setProblem('')
-        media.getUserMedia({
+        openSharedCamera(media, {
             video: deviceId ? { deviceId: { exact: deviceId } } : true,
             audio: false
         })
@@ -474,10 +476,13 @@ function MapNetworkSource({ network, spaceId, assets, projectId, outNodeId, labe
     const scale = Math.min(1, 640 / width)
     const w = Math.max(1, Math.round(width * scale))
     const h = Math.max(1, Math.round(height * scale))
-    const present = Boolean(network?.nodes?.some((node) => node.id === outNodeId))
+    // A VJ deck is expanded into operators; its picture is its master's. A
+    // surface that names the deck reads the master (alias comes from toTopNetwork).
+    const shown = resolveAlias(outNodeId, network?.alias)
+    const present = Boolean(network?.nodes?.some((node) => node.id === shown))
     // Nothing to show → nothing to run; an empty network starts no engine.
-    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, assets, projectId, canvas, show: outNodeId, width: w, height: h })
-    if (!present) return <MapSourcePlaceholder label={label} detail="that Picture Out is gone" width={width} height={height} />
+    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, assets, projectId, canvas, show: shown, width: w, height: h })
+    if (!present) return <MapSourcePlaceholder label={label} detail="that Picture Out or deck is gone" width={width} height={height} />
     if (error) return <MapSourcePlaceholder label={label} detail={error} width={width} height={height} />
     return <canvas className="map-source-media" ref={setCanvas} width={w} height={h} />
 }

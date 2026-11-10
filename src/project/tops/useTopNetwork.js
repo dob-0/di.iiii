@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createTopEngine } from './topEngine.js'
 import { TOP_OPERATORS, resolveTopParams, runsHere, sendsOut } from './topOperators.js'
 import { topThumbnailGroups, topThumbnailsFor } from './topThumbnails.js'
+import { openSharedCamera } from './cameraPool.js'
 import { DECK_INPUTS, VJ_DECK_TYPE, expandDecks, isPictureType } from './vjDeck.js'
 import { useClipVideos } from './useClipVideos.js'
 import { acquireMachineLink, machinesIn, runnerOn } from './machineLink.js'
@@ -444,7 +445,7 @@ export function useTopNetwork({
                             reportTop(id, { script: String(error?.message || error) })
                         }
                     }
-                    return media.getUserMedia({ video: Object.keys(constraints).length ? constraints : true, audio: false })
+                    return openSharedCamera(media, { video: Object.keys(constraints).length ? constraints : true, audio: false })
                 })
                 .then((stream) => {
                     if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return }

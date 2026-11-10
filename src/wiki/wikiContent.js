@@ -389,13 +389,14 @@ export const WIKI_ARTICLES = [
             'CLIP IN plays a video from the project\'s files as a picture — the same files a Video node uses. Its settings are Speed, Play (Loop, Bounce or Once), In and Out (where in the clip it starts and stops, 0 to 1) and Playing. Wire its Picture into any picture operator.',
             'THE VJ DECK is one node with a grid: rows are layers, columns are slots. Tap an empty slot to fill it — with a video from the project (or upload one there), or with In 1 to In 4, whatever picture is wired into the deck\'s inputs. Tap a filled slot to play it; tap it again to restart it. A column number plays that whole column at once. The top row is the top layer.',
             'EACH LAYER has a blend (Mix, Add, Screen, Multiply, Difference), an opacity slider and Clear. MASTER fades the whole deck. The deck\'s Picture output is the mix — wire it to Picture Out for a screen or a projection surface, into Blur or Feedback first, or into another deck. Its card and its OUT show the mix live.',
+            'ON THE STAGE SCREEN: in Projection, pick a surface, set its Source to Pictures and choose "VJ Deck — name" under Picture Out or VJ Deck. The output page then shows the deck\'s mix live and follows every fader and clip you change in Perform. A deck with no clip playing is black. A camera used by a deck and by a surface on the same page is opened once.',
             'SETTINGS for the selected clip (speed, play mode, in and out) open from the line under the grid, never from the tap itself, so a phone can play clip after clip without closing anything.',
             'EVERY FILLED SLOT SHOWS A STILL of its clip, a frame from a little way into it, so the grid reads at a glance; the playing slot shows the live picture over it.',
             'THE TEMPO is the show\'s one clock. On your own machine, when the Light page is open, the lights keep the tempo and the deck follows it ("follows Light" beside the BPM); Tap on the deck sets it for both. With no Light page open the deck keeps its own. Reset puts it back to 120 with the beat on that instant. A double click is no longer read as a 300 bpm tap.',
             'NOT YET: clips do not sync to the beat, and MIDI does not reach the grid.'
         ],
         tags: ['vj', 'deck', 'resolume', 'clip', 'clips', 'footage', 'video', 'layers', 'blend', 'opacity', 'perform', 'live', 'pictures', 'bpm', 'tempo', 'tap'],
-        updated: '2026-09-24'
+        updated: '2026-11-10'
     },
     {
         id: 'perform',

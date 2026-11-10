@@ -85,9 +85,9 @@ export default function MapInspector({
 
             {surface.source.kind === 'network' ? (
                 <label className="map-field">
-                    <span>Picture Out</span>
+                    <span>Picture Out or VJ Deck</span>
                     <select value={surface.source.ref} onChange={(event) => setSource('network', event.target.value)}>
-                        <option value="">{pictureOutOptions.length ? 'Choose a Picture Out' : 'No Picture Out in this project yet'}</option>
+                        <option value="">{pictureOutOptions.length ? 'Choose a Picture Out or VJ Deck' : 'No Picture Out or VJ Deck in this project yet'}</option>
                         {pictureOutOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
                     </select>
                 </label>
