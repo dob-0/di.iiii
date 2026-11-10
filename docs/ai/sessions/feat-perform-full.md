@@ -38,3 +38,15 @@ Findings fixed (verified by reading first; all were real):
 **To confirm on the real K2 (not guessed):** `encoder 5` (crossfade nudge) and `encoder 6` (master nudge) carry the sheet's `check` note ("confirm relative by MIDI-learn"). The default keeps the sheet's `mode: relative` for both; a test pins that both are the only `check` rows. Turn each and see whether the value steps by a small amount (relative) or jumps (absolute); if absolute, relearn it in Learn.
 
 **Not tested:** no browser, no real K2, no real camera; the pointer/mouse behaviour of a native `<select>` is checked by `defaultPrevented` in jsdom, not by seeing it stay closed.
+
+## Clean-run layout fixes (2026-11-10)
+
+Seen on the owner's real window; each is a cause fixed in CSS or layout data, nothing hidden.
+
+1. **Master bar overlap** (`perform.css` `.perform-bar`): the bar was a no-wrap row with `overflow: hidden`, so at 979 px the DECK / LIGHT / LASER sliders, their numbers and the state words were squeezed onto each other. Now `flex-wrap: wrap`, `overflow: auto` (never a cut), the state words wrap (`.perform-states`), and a slider has a floor width (`min-width: min(100%, 120px)`) so it moves to the next line instead of under its neighbour.
+2. **Laser master over Follow light** (`.perform-row`): a no-wrap row holding the slider (number "100") and the button. The row wraps now.
+3. **Narrow layouts** (`presets.js`): `vj-windows`, `wall`, `light`, `caller`, `unattended`, `guest`, `show` had windows in `wide` that were missing in `narrow` (Show had no deck). Every preset now names every window in both classes, master is 2 rows tall everywhere (it needs two lines), and no two rects overlap. Narrow stays inside the viewport (blocks scroll inside themselves); the page never scrolls sideways. Wide `show`, `light`, `caller`, `remote`, `unattended`, `vj-windows` gave master/clock one row (or a 4-column cell); they got the rows they need.
+
+Tests: `presets.test.js` (every narrow layout names every window; no two rects overlap, wide and narrow; master is at least 2 rows) and `performLayoutContract.test.js` (the wrap rules are in the stylesheet). Measured on the page (979, 1536, 640, 570 px wide): no two controls inside a block intersect, nothing is wider than its block, `scrollWidth <= innerWidth`.
+
+Not fixed: the orange "dev copy" ribbon is fixed at the bottom-right and covers the last block's corner on a dev copy only. In narrow, a block that is short for its content (Cues, Deck) scrolls inside itself.

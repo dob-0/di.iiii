@@ -39,6 +39,37 @@ describe('the built-in presets', () => {
         }
     })
 
+    it('every preset names every one of its windows in the narrow layout too, and no two blocks overlap (wide or narrow)', () => {
+        for (const preset of BUILT_IN_PRESETS) {
+            const ids = preset.windows.map((item) => item.id).sort()
+            expect(Object.keys(preset.wide).sort(), `${preset.id} wide`).toEqual(ids)
+            expect(Object.keys(preset.narrow).sort(), `${preset.id} narrow`).toEqual(ids)
+            for (const widthClass of ['wide', 'narrow']) {
+                const entries = Object.entries(preset[widthClass])
+                for (let i = 0; i < entries.length; i += 1) {
+                    for (let j = i + 1; j < entries.length; j += 1) {
+                        const [idA, [ax, ay, aw, ah]] = entries[i]
+                        const [idB, [bx, by, bw, bh]] = entries[j]
+                        // 0.01 pct slack: rects are rounded to two decimals
+                        const apart = ax + aw <= bx + 0.01 || bx + bw <= ax + 0.01 || ay + ah <= by + 0.01 || by + bh <= ay + 0.01
+                        expect(apart, `${preset.id} ${widthClass}: ${idA} overlaps ${idB}`).toBe(true)
+                    }
+                }
+            }
+        }
+    })
+
+    it('a bar block (master, clock) is never given less than one unit of height it cannot wrap in: master is at least two rows tall on every preset', () => {
+        for (const preset of BUILT_IN_PRESETS) {
+            for (const item of preset.windows.filter((entry) => entry.kind === 'master')) {
+                for (const widthClass of ['wide', 'narrow']) {
+                    const rows = (preset[widthClass][item.id][3] / 100) * GRID[widthClass].rows
+                    expect(rows, `${preset.id} ${widthClass} master rows`).toBeGreaterThanOrEqual(2)
+                }
+            }
+        }
+    })
+
     it('VJ gives the deck the room; the four windows stay as VJ windows, and out, clock and master stay in the catalogue', () => {
         const vj = BUILT_IN_PRESETS.find((preset) => preset.id === 'vj')
         const windows = BUILT_IN_PRESETS.find((preset) => preset.id === 'vj-windows')
@@ -202,8 +233,8 @@ describe('rectangles and frames', () => {
         expect(saved.base).toBe('vj-windows')
         expect(saved.narrow).toEqual(vj.narrow)
         expect(Object.keys(saved.wide)).toEqual(['deck', 'out', 'clock', 'master'])
-        // master has no phone place in VJ, and still has none in the copy
-        expect(Object.keys(saved.narrow).sort()).toEqual(['clock', 'deck', 'out'])
+        // every window has a phone place, and the copy keeps them
+        expect(Object.keys(saved.narrow).sort()).toEqual(['clock', 'deck', 'master', 'out'])
     })
 
     it('a window closed before saving is not in the saved preset', () => {

@@ -361,18 +361,28 @@
     height: auto;
 }
 
-/* A one-row brick (Master, Clock): everything on one line, centred, nothing
-   wraps; what does not fit shrinks (a status ends in an ellipsis). */
+/* A bar brick (Master, Clock): one line when it fits; when it does not, its
+   items wrap onto the next line (never over each other, never cut by the
+   block's edge). A status still ends in an ellipsis when it is alone on a
+   line. Clean-run fix 2026-11-10: it was a no-wrap row, so three sliders, their
+   numbers and the state words were drawn on top of each other. */
 .perform-bar {
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
-    gap: var(--di-space-3);
-    overflow: hidden;
+    align-content: center;
+    gap: var(--di-space-1) var(--di-space-3);
+    overflow: auto;
+}
+
+.perform-shell .perform-bar > .perform-action {
+    align-self: center;
 }
 
 .perform-row {
     display: flex;
     flex: none;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--di-space-2);
     min-width: 0;
@@ -481,7 +491,9 @@
 
 .perform-states {
     display: flex;
-    flex: none;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    min-width: 0;
     align-items: center;
     gap: var(--di-space-3);
 }
@@ -717,7 +729,7 @@
     grid-template-columns: auto minmax(40px, 1fr) 3ch;
     align-items: center;
     gap: var(--di-space-2);
-    min-width: 0;
+    min-width: min(100%, 120px);
     color: var(--di-dim);
     font-size: var(--di-text-1);
     letter-spacing: 0.08em;

@@ -106,8 +106,8 @@ export const BUILT_IN_PRESETS = [
         who: 'The deck with the picture out, the clock and the master as separate windows.',
         windows: [w('deck'), w('out'), w('clock'), w('master')],
         ...layout(
-            { deck: [0, 0, 8, 8], out: [8, 0, 4, 6], clock: [8, 6, 4, 1], master: [8, 7, 4, 1] },
-            { out: [0, 0, 4, 2], clock: [0, 2, 4, 1], deck: [0, 3, 4, 5] }
+            { deck: [0, 0, 8, 8], out: [8, 0, 4, 3], clock: [8, 3, 4, 2], master: [8, 5, 4, 3] },
+            { out: [0, 0, 4, 2], deck: [0, 2, 4, 3], master: [0, 5, 4, 2], clock: [0, 7, 4, 1] }
         )
     },
     {
@@ -117,7 +117,7 @@ export const BUILT_IN_PRESETS = [
         windows: [w('surfaces'), w('cues'), w('wall'), w('wallout'), w('machines')],
         ...layout(
             { surfaces: [0, 0, 3, 4], cues: [0, 4, 3, 4], wall: [3, 0, 6, 8], wallout: [9, 0, 3, 5], machines: [9, 5, 3, 3] },
-            { wall: [0, 0, 4, 3], cues: [0, 3, 4, 3], surfaces: [0, 6, 4, 2] }
+            { wall: [0, 0, 4, 3], cues: [0, 3, 2, 2], wallout: [2, 3, 2, 2], surfaces: [0, 5, 4, 2], machines: [0, 7, 4, 1] }
         )
     },
     {
@@ -126,8 +126,8 @@ export const BUILT_IN_PRESETS = [
         who: 'The studio DMX rig and the club desk. Scenes, master, blackout, tempo.',
         windows: [w('scenes'), w('looks'), w('master'), w('clock'), w('audio')],
         ...layout(
-            { scenes: [0, 0, 4, 7], looks: [4, 0, 4, 7], audio: [8, 0, 4, 7], master: [0, 7, 8, 1], clock: [8, 7, 4, 1] },
-            { scenes: [0, 0, 4, 6], master: [0, 6, 4, 1], clock: [0, 7, 4, 1] }
+            { scenes: [0, 0, 4, 6], looks: [4, 0, 4, 6], audio: [8, 0, 4, 6], master: [0, 6, 8, 2], clock: [8, 6, 4, 2] },
+            { scenes: [0, 0, 4, 2], looks: [0, 2, 4, 2], audio: [0, 4, 4, 1], master: [0, 5, 4, 2], clock: [0, 7, 4, 1] }
         )
     },
     {
@@ -136,8 +136,8 @@ export const BUILT_IN_PRESETS = [
         who: 'Show mode: one person calls the show. One list, one clock; blackout reaches everything.',
         windows: [w('cues'), w('wall'), w('wallout'), w('deck'), w('clock'), w('master')],
         ...layout(
-            { cues: [0, 0, 4, 7], wall: [4, 0, 4, 4], wallout: [8, 0, 4, 4], deck: [4, 4, 8, 3], master: [0, 7, 8, 1], clock: [8, 7, 4, 1] },
-            { cues: [0, 0, 4, 7], master: [0, 7, 4, 1] }
+            { cues: [0, 0, 4, 6], wall: [4, 0, 4, 4], wallout: [8, 0, 4, 4], deck: [4, 4, 8, 2], master: [0, 6, 8, 2], clock: [8, 6, 4, 2] },
+            { cues: [0, 0, 4, 2], wall: [0, 2, 2, 1], wallout: [2, 2, 2, 1], deck: [0, 3, 4, 2], master: [0, 5, 4, 2], clock: [0, 7, 4, 1] }
         )
     },
     {
@@ -146,8 +146,8 @@ export const BUILT_IN_PRESETS = [
         who: 'The installation: machines play on their own for days. Nothing to touch but the one line and blackout.',
         windows: [w('wallout'), w('status'), w('master')],
         ...layout(
-            { wallout: [0, 0, 12, 7], status: [0, 7, 8, 1], master: [8, 7, 4, 1] },
-            { status: [0, 0, 4, 7], master: [0, 7, 4, 1] }
+            { wallout: [0, 0, 12, 6], status: [0, 6, 6, 2], master: [6, 6, 6, 2] },
+            { wallout: [0, 0, 4, 5], status: [0, 5, 4, 1], master: [0, 6, 4, 2] }
         )
     },
     {
@@ -157,7 +157,7 @@ export const BUILT_IN_PRESETS = [
         windows: [w('footage'), w('mysurface'), w('now')],
         ...layout(
             { footage: [0, 0, 5, 8], mysurface: [5, 0, 7, 5], now: [5, 5, 7, 3] },
-            { footage: [0, 0, 4, 5], mysurface: [0, 5, 4, 3] }
+            { footage: [0, 0, 4, 4], mysurface: [0, 4, 4, 3], now: [0, 7, 4, 1] }
         )
     },
     {
@@ -166,8 +166,8 @@ export const BUILT_IN_PRESETS = [
         who: 'The phone at the side of the room. Cues, master, blackout. Nothing to drag.',
         windows: [w('cues'), w('master'), w('clock')],
         ...layout(
-            { cues: [0, 0, 12, 6], master: [0, 6, 12, 1], clock: [0, 7, 12, 1] },
-            { cues: [0, 0, 4, 6], master: [0, 6, 4, 1], clock: [0, 7, 4, 1] }
+            { cues: [0, 0, 12, 5], master: [0, 5, 12, 2], clock: [0, 7, 12, 1] },
+            { cues: [0, 0, 4, 5], master: [0, 5, 4, 2], clock: [0, 7, 4, 1] }
         )
     },
     {
@@ -176,8 +176,8 @@ export const BUILT_IN_PRESETS = [
         who: 'Picture, light and laser together: the deck, the light looks, the laser looks, the cues (one go), one blackout for all three.',
         windows: [w('deck'), w('lightlooks'), w('laser'), w('cues'), w('master'), w('clock')],
         ...layout(
-            { deck: [0, 0, 6, 7], lightlooks: [6, 0, 3, 4], laser: [9, 0, 3, 4], cues: [6, 4, 6, 3], master: [0, 7, 8, 1], clock: [8, 7, 4, 1] },
-            { cues: [0, 0, 4, 2], lightlooks: [0, 2, 4, 2], laser: [0, 4, 4, 2], master: [0, 6, 4, 1], clock: [0, 7, 4, 1] }
+            { deck: [0, 0, 6, 6], lightlooks: [6, 0, 3, 4], laser: [9, 0, 3, 4], cues: [6, 4, 6, 2], master: [0, 6, 8, 2], clock: [8, 6, 4, 2] },
+            { deck: [0, 0, 4, 2], cues: [0, 2, 2, 1], lightlooks: [2, 2, 2, 1], laser: [0, 3, 4, 2], master: [0, 5, 4, 2], clock: [0, 7, 4, 1] }
         )
     }
 ].map((preset) => ({ ...preset, source: 'builtin' }))
