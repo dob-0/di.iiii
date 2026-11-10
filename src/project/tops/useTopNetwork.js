@@ -535,6 +535,9 @@ export function useTopNetwork({
                     flowed = true
                     return
                 }
+                // Never a frame yet: only a track the browser itself calls muted (no
+                // frames arriving) is given up on; a slow first frame is waited for.
+                if (!flowed && track?.muted !== true) return
                 if (Date.now() - since > (flowed ? CAMERA_STALL_MS : CAMERA_START_MS)) lose()
             }, 1000)
             track?.addEventListener?.('ended', lose)

@@ -59,6 +59,8 @@ export default function DesktopWindow({
     onToggleMinimize,
     onToggleMaximize,
     onTogglePin,
+    // Right-click on the title bar: (event) => void. The caller opens its window menu.
+    onTitleContextMenu = undefined,
     // A desk with no canvas (Perform) has nothing to pin a window against:
     // every window is on the screen, and a pin that does nothing is a lie.
     pinnable = true,
@@ -316,6 +318,7 @@ export default function DesktopWindow({
                 className="raw-window-header"
                 onPointerDown={startDrag}
                 onKeyDown={handleHeaderKeyDown}
+                onContextMenu={onTitleContextMenu}
                 tabIndex={0}
                 aria-label={`${title} — drag or use arrow keys to move`}
                 style={{ cursor: dragMode === 'drag' ? 'grabbing' : undefined }}

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import DesktopWindow from '../raw/components/DesktopWindow.jsx'
+import ContextMenu from '../raw/components/ContextMenu.jsx'
+import { pickEscapeWindow } from '../raw/utils/windowCascade.js'
 import { navigateInApp } from '../components/SurfaceBar.jsx'
 import { buildRawProjectPath } from '../raw/utils/rawRouting.js'
 import { useMapApi } from '../map/useMapDocument.js'
@@ -17,9 +19,11 @@ import {
     rectForAddedWindow,
     rectsFromFrames,
     snapFrame,
+    tileRects,
     unitSize,
     widthClassOf
 } from './presets.js'
+import { keysOf, nextWindowId, windowKeyAction } from './windowKeys.js'
 import PerformWindowBody, { windowTitle } from './PerformWindows.jsx'
 import './perform.css'
 
@@ -196,6 +200,11 @@ export default function PerformDesk({
             order: [...current.order.filter((item) => item !== id), id]
         }
     })
+    const addByHand = (kind) => {
+        const id = nextSlotId(kind, arrangement?.windows.map((item) => item.id) || [])
+        addWindow(kind)
+        setAddedIds((ids) => [...ids, id])
+    }
     const addWindow = (kind) => change((current) => {
         const id = nextSlotId(kind, current.windows.map((item) => item.id))
         return {
@@ -205,6 +214,61 @@ export default function PerformDesk({
             order: [...current.order, id]
         }
     })
+
+    // ARRANGE ALL: every open window tiled over the grid, no overlap, nothing minimised or maximised left over.
+    const arrangeAll = () => change((current) => {
+        const order = [...current.windows]
+            .sort((a, b) => {
+                const ra = current.rects[a.id] || [0, 0]
+                const rb = current.rects[b.id] || [0, 0]
+                return (ra[1] - rb[1]) || (ra[0] - rb[0])
+            })
+            .map((item) => item.id)
+        const tiled = tileRects(order, widthClass, area)
+        return {
+            ...current,
+            windows: current.windows.filter((item) => tiled[item.id]),
+            rects: tiled,
+            minimized: {},
+            restore: {}
+        }
+    })
+
+    // Windows put here by hand in this session: the only ones Esc hides (a preset's own are never lost to a stray key).
+    const [addedIds, setAddedIds] = useState([])
+    const [ctxMenu, setCtxMenu] = useState(null) // { x, y, title, items }
+    const addItems = () => WINDOW_ORDER.map((kind) => ({
+        id: `add-${kind}`,
+        label: WINDOW_KINDS[kind].label + (isComingKind(kind) ? ' (phase 2)' : ''),
+        run: () => addByHand(kind)
+    }))
+    const deskItems = () => ([
+        { id: 'add', label: 'Add window', kb: keysOf('add'), items: addItems() },
+        { id: 'arrange', label: 'Arrange all', kb: keysOf('arrange'), run: arrangeAll, disabled: !arrangement?.windows.length },
+        { sep: true },
+        { id: 'save-mine', label: 'Save as mine…', run: () => { setMenu('presets'); setSaving('mine') } },
+        { id: 'save-show', label: 'Save to the show…', run: () => { setMenu('presets'); setSaving('show') } }
+    ])
+    const windowItems = (id) => {
+        const full = arrangement?.rects[id]?.every((value, index) => value === [0, 0, 100, 100][index])
+        return [
+            { id: 'maximize', label: full ? 'Restore' : 'Maximize', kb: keysOf('maximize'), run: () => toggleMaximize(id) },
+            { id: 'minimize', label: arrangement?.minimized[id] ? 'Expand' : 'Minimize', run: () => toggleMinimize(id) },
+            { id: 'close', label: 'Hide this window', kb: addedIds.includes(id) ? keysOf('hide') : undefined, run: () => closeWindow(id), danger: true },
+            { sep: true },
+            ...deskItems()
+        ]
+    }
+    const openDeskMenu = (event) => {
+        event.preventDefault()
+        setCtxMenu({ x: event.clientX, y: event.clientY, items: deskItems() })
+    }
+    const openWindowMenu = (item) => (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        focusWindow(item.id)
+        setCtxMenu({ x: event.clientX, y: event.clientY, title: windowTitle(item.kind), items: windowItems(item.id) })
+    }
 
     const [menu, setMenu] = useState(null) // 'presets' | 'add' | null
     const [saving, setSaving] = useState(null) // 'mine' | 'show' | null
@@ -230,6 +294,39 @@ export default function PerformDesk({
             window.removeEventListener('pointerdown', onDown)
         }
     }, [menu])
+
+    // The keys (windowKeys.js): live whenever no menu is open, never in a field.
+    const keyState = useRef({})
+    useEffect(() => { keyState.current = { arrangement, addedIds, ctxMenu, menu, arrangeAll, toggleMaximize, closeWindow, addItems, focusWindow } })
+    useEffect(() => {
+        const onKeyDown = (event) => {
+            const live = keyState.current
+            if (!live.arrangement || live.ctxMenu || live.menu) return
+            const action = windowKeyAction(event)
+            if (!action) return
+            const { order, windows, minimized } = live.arrangement
+            const front = order[order.length - 1] || null
+            if (action === 'arrange') live.arrangeAll()
+            else if (action === 'maximize') { if (!front) return; live.toggleMaximize(front) }
+            else if (action === 'next' || action === 'prev') {
+                const nextId = nextWindowId(order, minimized, front, action === 'prev' ? -1 : 1)
+                if (!nextId) return
+                live.focusWindow(nextId)
+            } else if (action === 'add') {
+                setCtxMenu({ x: Math.round(window.innerWidth / 2) - 80, y: Math.round(window.innerHeight / 3), title: 'Add window', items: live.addItems() })
+            } else if (action === 'hide') {
+                const id = pickEscapeWindow(
+                    windows.map((item) => ({ id: item.id, zIndex: order.indexOf(item.id), minimized: Boolean(minimized[item.id]) })),
+                    live.addedIds
+                )
+                if (!id) return
+                live.closeWindow(id)
+            }
+            event.preventDefault()
+        }
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+    }, [])
 
     const pick = (id) => {
         setChosenId(id)
@@ -406,6 +503,10 @@ export default function PerformDesk({
                 {notice ? <span className="perform-strip-notice" role="status">{notice}</span> : null}
             </div>
 
+            {/* The empty desk: a right-click on it opens the same menu as the title bars. It sits under every window. */}
+            <div className="perform-desk-bg" role="presentation" data-testid="perform-desk" style={{ top: area.top }} onContextMenu={openDeskMenu} />
+            <ContextMenu open={Boolean(ctxMenu)} x={ctxMenu?.x || 0} y={ctxMenu?.y || 0} title={ctxMenu?.title} items={ctxMenu?.items || []} onClose={() => setCtxMenu(null)} />
+
             {arrangement ? arrangement.windows.map((item) => {
                 const frame = frames[item.id]
                 if (!frame) return null
@@ -422,6 +523,7 @@ export default function PerformDesk({
                         onFocus={() => focusWindow(item.id)}
                         onPatch={(patch) => patchFrame(item.id, patch)}
                         onClose={() => closeWindow(item.id)}
+                        onTitleContextMenu={openWindowMenu(item)}
                         onToggleMinimize={() => toggleMinimize(item.id)}
                         onToggleMaximize={() => toggleMaximize(item.id)}
                         pinnable={false}
