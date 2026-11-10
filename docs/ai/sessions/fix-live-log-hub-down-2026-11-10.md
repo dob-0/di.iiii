@@ -10,3 +10,11 @@
 - Now a count of hub-down ticks in a row (and since when) sits in `~/.cache/di/live-log/hub-down-<project>-<chat>.json` (not in the repository). Timer read: `OnUnitActiveSec=2min`, so N = 15 ticks = about 30 minutes; the 15th tick exits 1 with one line "hub-down since <stamp>". A success removes the file; a garbage or missing file counts from 0, an unwritable place exits 1. Cloudflare 521-524 are hub-down too.
 - Test: scripts/production/live-log.test.js 13 -> 51 tests (37 red before), `scripts/production/` 90 passed, 0 FAIL lines, rc 0, 10 runs in a row, 0 failed.
 - Not done: no timeout on fetch (TimeoutStartSec=300 covers it); nothing installed, the live copy follows after merge.
+
+## 2026-11-10 — live-log hub-down: second review round (f2-1259)
+
+- Test gap: the reset on the "page is already current" path (the most common success) had no test. New process tests: a state file with count 10, hub up, page current -> "unchanged" and the state file gone.
+- Rule now: a run that reached the hub and then exits for another reason (no code page: exit 1, inbox unreadable: exit 3) clears the count too; `--dry-run` never writes or removes state. Both were wrong before (old count survived; dry-run wrote it).
+- Pinned: a garbage `since` is never printed (a real date is), a float count is floored. The classifier table rows with a network code now say the code is not read (no status = hub-down).
+- Test: scripts/production/live-log.test.js 51 -> 60 tests; 7 mutants of the fixed lines, all killed.
+- Not done: a 404/401/403/500 on the first GET (the hub answered, but with a fault of ours) still keeps the count (existing test); nothing installed, the live copy follows after merge.

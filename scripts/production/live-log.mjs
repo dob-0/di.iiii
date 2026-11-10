@@ -36,6 +36,7 @@ export const HUB_DOWN_STATUS = new Set([429, 502, 503, 504, 521, 522, 523, 524, 
 export const HUB_DOWN_MAX_TICKS = 15;
 export const classifyFailure = ({ status } = {}) => (status === undefined || status === null || HUB_DOWN_STATUS.has(status) ? 'hub-down' : 'failure');
 let stateFile = null;
+let dryRun = false; // --dry-run never writes or removes the state
 // Read the state defensively (the lesson of #1258): anything that is not a finite whole count >= 1 counts as 0, anything that is not a date as now.
 export const readHubDownState = (raw, now = new Date()) => {
     let o = null; try { o = JSON.parse(raw); } catch { /* garbage: start over */ }
@@ -44,14 +45,14 @@ export const readHubDownState = (raw, now = new Date()) => {
     const ok = count > 0 && typeof o.since === 'string' && Number.isFinite(Date.parse(o.since));
     return { count, since: ok ? o.since : now.toISOString() };
 };
-const clearHubDown = () => { try { if (stateFile) rmSync(stateFile, { force: true }); } catch { /* nothing to clear */ } };
+const clearHubDown = () => { try { if (stateFile && !dryRun) rmSync(stateFile, { force: true }); } catch { /* nothing to clear */ } };
 export const hubDown = (what) => {
     let st = { count: 0, since: new Date().toISOString() };
     try { st = readHubDownState(readFileSync(stateFile, 'utf8')); } catch { /* no state yet: the first tick */ }
     const count = st.count + 1;
     try {
-        mkdirSync(dirname(stateFile), { recursive: true });
-        writeFileSync(stateFile, JSON.stringify({ count, since: st.since }));
+        if (!dryRun) { mkdirSync(dirname(stateFile), { recursive: true });
+        writeFileSync(stateFile, JSON.stringify({ count, since: st.since })); }
     } catch (e) {
         console.error(`live-log: hub-down (${what}) and the state file ${stateFile} cannot be written (${e.code || e.message}): cannot bound the quiet, failing`);
         process.exit(1);
@@ -155,7 +156,7 @@ function args(argv) {
 }
 
 function readInbox(root, chat) {
-    if (!existsSync(root)) { console.error(`live-log: inbox ${root} unreadable`); process.exit(3); }
+    if (!existsSync(root)) { clearHubDown(); console.error(`live-log: inbox ${root} unreadable`); process.exit(3); }
     const lines = []; const dirOf = {};
     for (const day of readdirSync(root).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort()) {
         const dir = join(root, day, 'groups', String(chat));
@@ -198,6 +199,7 @@ async function main() {
     if (!a.project || (!a.chat && !a.remove)) { console.error('usage: live-log.mjs --project <id> --chat <telegram group id> [--tier dev] [--dry-run] [--remove]'); process.exit(2); }
     const cred = JSON.parse(readFileSync(join(homedir(), '.config/di/credentials.json'), 'utf8'))[a.tier];
     if (!cred?.token) { console.error(`live-log: no stored login for ${a.tier} (run: di whoami)`); process.exit(1); }
+    dryRun = !!a.dryRun;
     stateFile = join(homedir(), '.cache/di/live-log', `hub-down-${a.project}-${a.chat || 'remove'}.json`.replace(/[^\w.-]/g, '_'));
     const base = cred.base.replace(/\/$/, '');
     const H = { Authorization: `Bearer ${cred.token}`, 'User-Agent': 'di-live-log', 'Content-Type': 'application/json' };
@@ -207,7 +209,7 @@ async function main() {
     if (!got.ok) { console.error(`live-log: GET ${route} -> ${got.status}`); process.exit(1); }
     const body = await got.json(); const doc = body.document ?? body;
     const files = doc.presentationState?.codeFiles; const idx = files?.findIndex((f) => f.name === 'index.html');
-    if (!files || idx < 0) { console.error('live-log: project has no code page index.html'); process.exit(1); }
+    if (!files || idx < 0) { clearHubDown(); console.error('live-log: project has no code page index.html'); process.exit(1); }
     const page = files[idx].content;
     let next;
     if (a.remove) next = unsplice(page);

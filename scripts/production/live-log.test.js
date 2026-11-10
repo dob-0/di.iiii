@@ -136,13 +136,75 @@ describe('live-log against a hub that answers badly', () => {
 });
 
 // Every code and status has one class. hub-down = the hub or the network is away (retry, bounded); failure = ours (exit 1 at once).
-describe('classifyFailure: the class of every status and code', () => {
+// The classifier reads only the status. A thrown network error has no status and is hub-down by that rule (hubFetch catches every thrown error);
+// the rows with a code say so: the code is not read, an unknown code gives the same answer.
+describe('classifyFailure: the class of every status and of "no status"', () => {
     const table = [
         [{ status: 429 }, 'hub-down'], [{ status: 502 }, 'hub-down'], [{ status: 503 }, 'hub-down'], [{ status: 504 }, 'hub-down'], [{ status: 530 }, 'hub-down'],
         [{ status: 521 }, 'hub-down'], [{ status: 522 }, 'hub-down'], [{ status: 523 }, 'hub-down'], [{ status: 524 }, 'hub-down'],
         [{ status: 401 }, 'failure'], [{ status: 403 }, 'failure'], [{ status: 404 }, 'failure'], [{ status: 500 }, 'failure'], [{ status: 400 }, 'failure'],
-        [{ code: 'ENOTFOUND' }, 'hub-down'], [{ code: 'EAI_AGAIN' }, 'hub-down'], [{ code: 'ECONNREFUSED' }, 'hub-down'], [{ code: 'ECONNRESET' }, 'hub-down'],
+        [{ code: 'ENOTFOUND' }, 'hub-down'], [{ code: 'NOT_A_REAL_CODE' }, 'hub-down'], [{ code: 'EAI_AGAIN' }, 'hub-down'], [{ code: 'ECONNREFUSED' }, 'hub-down'], [{ code: 'ECONNRESET' }, 'hub-down'],
         [{ code: 'ETIMEDOUT' }, 'hub-down'], [{ code: 'UND_ERR_CONNECT_TIMEOUT' }, 'hub-down'], [{ code: 'ENETUNREACH' }, 'hub-down'], [{ code: undefined }, 'hub-down'],
     ];
-    for (const [input, cls] of table) it(`${JSON.stringify(input)} -> ${cls}`, () => { expect(classifyFailure(input)).toBe(cls); });
+    for (const [input, cls] of table) it(`${input.status === undefined ? `no status (code ${input.code} is not read)` : `status ${input.status}`} -> ${cls}`, () => { expect(classifyFailure(input)).toBe(cls); });
+});
+
+// Finding rr-hubdown 1-3: the state after every kind of tick. A run that reached the hub clears the count; --dry-run never writes state.
+describe('live-log: the hub-down count after each kind of run (process tests)', () => {
+    const script = fileURLToPath(new URL('./live-log.mjs', import.meta.url));
+    const stateFile = (home) => join(home, '.cache/di/live-log/hub-down-p--1.json');
+    const current = `<main>${START}\n${render([], {})}\n${END}</main>`; // what the script itself would write for an empty inbox
+    // doc: the code files the hub returns; status: what the hub answers (200 = the doc); extra: more arguments; inbox: false = a path that does not exist
+    const go = async ({ seed, doc = { presentationState: { codeFiles: [{ name: 'index.html', content: current }] } }, status = 200, extra = [], inbox = true }) => {
+        const home = mkdtempSync(join(tmpdir(), 'live-log-st-'));
+        mkdirSync(join(home, '.config/di'), { recursive: true }); mkdirSync(join(home, '.cache/di/live-log'), { recursive: true });
+        if (seed !== undefined) writeFileSync(stateFile(home), JSON.stringify(seed));
+        const server = http.createServer((_q, res) => { res.statusCode = status; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ document: doc })); });
+        await new Promise((r) => server.listen(0, '127.0.0.1', r));
+        writeFileSync(join(home, '.config/di/credentials.json'), JSON.stringify({ dev: { token: 't', base: `http://127.0.0.1:${server.address().port}` } }));
+        const ib = join(home, 'inbox'); if (inbox) mkdirSync(ib);
+        const out = await new Promise((resolve) => {
+            const c = spawn(process.execPath, [script, '--project', 'p', '--chat', '-1', '--tier', 'dev', '--inbox', ib, ...extra], { env: { ...process.env, HOME: home } });
+            let o = ''; let err = ''; c.stdout.on('data', (d) => { o += d; }); c.stderr.on('data', (d) => { err += d; }); c.on('close', (code) => resolve({ code, out: o, err }));
+        });
+        server.close();
+        const state = existsSync(stateFile(home)) ? JSON.parse(readFileSync(stateFile(home), 'utf8')) : null;
+        rmSync(home, { recursive: true, force: true });
+        return { ...out, state };
+    };
+    const seed10 = { count: 10, since: '2026-11-10T04:00:00.000Z' };
+    it('the page is already current: prints unchanged and the count is cleared', async () => {
+        const r = await go({ seed: seed10 });
+        expect(r.code).toBe(0); expect(r.out).toContain('unchanged'); expect(r.state).toBeNull();
+    });
+    it('no code page (exit 1): the hub was reached, the count is cleared', async () => {
+        const r = await go({ seed: seed10, doc: { presentationState: { codeFiles: [] } } });
+        expect(r.code).toBe(1); expect(r.err).toContain('no code page'); expect(r.state).toBeNull();
+    });
+    it('inbox unreadable (exit 3): the hub was reached, the count is cleared', async () => {
+        const r = await go({ seed: seed10, inbox: false });
+        expect(r.code).toBe(3); expect(r.state).toBeNull();
+    });
+    it('--dry-run on a current page never clears the count', async () => {
+        const r = await go({ seed: seed10, extra: ['--dry-run'] });
+        expect(r.code).toBe(0); expect(r.state).toEqual(seed10);
+    });
+    it('--dry-run against a hub that is down never writes the count', async () => {
+        const r = await go({ seed: seed10, status: 503, extra: ['--dry-run'] });
+        expect(r.code).toBe(0); expect(r.state).toEqual(seed10);
+    });
+    it('--dry-run with no state file never creates one', async () => {
+        const r = await go({ status: 503, extra: ['--dry-run'] });
+        expect(r.code).toBe(0); expect(r.state).toBeNull();
+    });
+    it('a garbage since is not printed: the loud line carries a real date', async () => {
+        const r = await go({ seed: { count: 14, since: 'not a date <x>' }, status: 503 });
+        expect(r.code).toBe(1); expect(r.err).not.toContain('not a date');
+        expect(Number.isFinite(Date.parse(r.err.match(/since (\S+) /)[1]))).toBe(true);
+        expect(r.state.since).not.toBe('not a date <x>');
+    });
+    it('a float count is floored: 13.5 is 13, the tick makes 14', async () => {
+        const r = await go({ seed: { count: 13.5, since: '2026-11-10T04:00:00.000Z' }, status: 503 });
+        expect(r.code).toBe(0); expect(r.state.count).toBe(14);
+    });
 });
