@@ -26,7 +26,9 @@
 }
 
 .output-control input[type='number'] {
-    width: 7ch;
+    /* Five digits and the spinner: "1920" and "3840" are never cut. */
+    width: 9ch;
+    min-width: 9ch;
 }
 
 .output-control input[type='checkbox'] {

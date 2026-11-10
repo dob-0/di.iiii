@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
-    createOutputController, featuresForScreen, matchScreenOps, pickScreen, withOutputWindow, POLL_MS, loadScreens
+    createOutputController, featuresForScreen, matchScreenOps, pickScreen, resolveScreen, screenChoices, matchTarget, withOutputWindow, POLL_MS, loadScreens
 } from './outputWindows.js'
 import { answerPresence } from '../map/outputPresence.js'
 
@@ -97,10 +97,22 @@ describe('screens and size', () => {
         { index: 1, label: 'Projector', width: 1920, height: 1080, left: 1440, top: 0 }
     ]
     it('picks by label, then index, then size', () => {
-        expect(pickScreen(screens, { label: 'Projector', index: 0, size: null })).toBe(screens[1])
+        expect(pickScreen(screens, { label: 'Projector', index: 0, size: null })).toBe(screens[0])
+        expect(pickScreen(screens, { label: 'Projector', index: 9, size: null })).toBe(screens[1])
         expect(pickScreen(screens, { label: 'gone', index: 0 })).toBe(screens[0])
         expect(pickScreen(screens, { label: '', index: null, size: [1920, 1080] })).toBe(screens[1])
         expect(pickScreen(screens, null)).toBe(null)
+    })
+    it('shows the saved pick even before the screens are listed, and offers the picked size', () => {
+        const saved = { label: 'Screen 3', index: 2, size: [1281, 720] }
+        const only = [{ index: 0, label: 'Screen 1', width: 1707, height: 960, left: 0, top: 0 }]
+        expect(resolveScreen(only, saved)).toMatchObject({ index: 2, label: 'Screen 3', width: 1281, height: 720, saved: true })
+        expect(screenChoices(only, saved).map((s) => s.index)).toEqual([0, 2])
+        expect(screenChoices(screens, { index: 1 })).toBe(screens)
+        expect(matchTarget(only, saved)).toEqual([1281, 720])
+        expect(matchTarget(only, null)).toEqual([1707, 960])
+        expect(matchTarget(screens, { index: 1 })).toEqual([1920, 1080])
+        expect(resolveScreen(only, null)).toBe(null)
     })
     it('puts the window on the chosen screen', () => {
         expect(featuresForScreen(screens[1])).toBe('popup=yes,left=1440,top=0,width=1920,height=1080')

@@ -183,12 +183,13 @@
 
 .vj-deck-main {
     display: grid;
-    /* Never shrinks under its content: a short or narrow frame scrolls the deck, so the
-       bottom panels stay in flow under the grid instead of being drawn over it. */
-    flex: 1 0 auto;
+    /* Takes the height the bottom panels leave. The layer grid scrolls inside its own
+       box (.vj-deck-scroll), so many layers never push the panels off the frame. */
+    flex: 1 1 0;
     grid-template-columns: minmax(0, 1fr) var(--vj-monitor-w);
+    grid-template-rows: minmax(0, 1fr);
     gap: var(--di-space-3);
-    min-height: 0;
+    min-height: 220px;
 }
 
 .vj-deck-monitors {
@@ -196,6 +197,8 @@
     flex-direction: column;
     gap: var(--di-space-2);
     min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 /* S / M / L, hide Preview, and Take (Preview only) above the two monitors. */
@@ -280,8 +283,8 @@
 
 .vj-deck-scroll {
     flex: 1 1 auto;
-    /* A short frame (360px) keeps two layer rows and the column row; the deck scrolls instead. */
-    min-height: calc(var(--vj-tile-height) * 2 + var(--vj-control) + var(--di-space-2) * 3);
+    /* A short frame keeps the column row and one layer row in view; the grid scrolls inside. */
+    min-height: 0;
     min-width: 0;
     overflow: auto;
 }
@@ -502,7 +505,11 @@
 
 .vj-deck-bottom {
     display: grid;
-    flex: none;
+    /* Always visible at the foot of the deck: at least 160px, at most 40% of it; each panel scrolls. */
+    flex: 0 1 auto;
+    min-height: 160px;
+    max-height: 40%;
+    overflow-y: auto;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--di-space-3);
 }
@@ -533,6 +540,12 @@
     min-width: 9ch;
     padding-right: 28px;
     text-overflow: ellipsis;
+}
+
+/* Beats `.vj-deck-chip` and the Nodes page's select rules by one class. */
+.vj-deck-fx select.vj-deck-fx-layer,
+.vj-deck-fx select.vj-deck-fx-add {
+    padding-right: 28px;
 }
 
 .vj-deck-fx .vj-deck-toggle[aria-pressed='true'] {
@@ -826,6 +839,8 @@
     /* The monitors move under the grid, side by side. */
     .vj-deck-main {
         grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(120px, 1fr) auto;
+        min-height: 320px;
     }
 
     .vj-deck-monitors {

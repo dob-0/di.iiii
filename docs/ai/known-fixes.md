@@ -3,6 +3,13 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Perform live faults: arrow over text, panels off the page, Output settings, small Out picture (2026-11-11)
+
+Symptom: (A) the caret drew over "LAYER 1" / "+ ADD EFFECT" in the Effects head (computed padding stayed `0 7px`); (B) with 6 layers the Sources / Clip / Effects row started at y=801 on an 813px page; (C) Output settings showed "Where the browser puts it" for a saved Screen 3, cut "1920" to "192", and "Match the screen" offered the tool window's screen size; (D) the Out window's picture was a ~60px thumbnail.
+Cause: (A) Perform's one-control rule `.perform-shell .raw-window-body :is(button, select, input:not(..)):not(..)` is specificity 0,4,1 and beat the 0,3,1 select rule; (B) `.vj-deck-main` was `flex: 1 0 auto` (grew to the grid, deck scrolled); (C) `pickScreen` only searched the listed screens (before "List screens" that is one), inputs were `7ch`; (D) the canvas was `flex: 1 1 auto; min-height: 0` and shrank under the settings row.
+Fix: (A) doubled class in `perform.css` (0,5,1) plus `.vj-deck-fx select.vj-deck-fx-*` in `vjDeck.css`; (B) `.vj-deck-main` is `flex: 1 1 0` with the grid scrolling inside `.vj-deck-scroll`, `.vj-deck-bottom` keeps 160px minimum; (C) `resolveScreen` / `screenChoices` / `matchTarget` in `outputWindows.js` (index first, then label, then size, then the saved pick as an entry), inputs `9ch`; (D) `.perform-picture` is 16:9, full width, min 96px.
+Regression tests: `outputWindows.test.js` ("shows the saved pick even before the screens are listed"). CSS fixes (A, B, D) are checked by measurement on the page only.
+
 ## Objects said "No objects yet" beside six things on screen (Studio, UX audit F026, 2026-10-29)
 
 Symptom: a scene showed a sphere, boxes, a torus and a lamp, but the Objects window read "Objects (0) No objects yet." and a click on

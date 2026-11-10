@@ -43,17 +43,43 @@ export async function loadScreens(win = window) {
     }
 }
 
-// Which of the listed screens the document's saved choice means: label first
-// (survives a re-plug), then index, then size. null when nothing fits.
+// Which of the listed screens the document's saved choice means: index first (what the
+// list shows and the select stores), then label (survives a re-plug), then size.
+// null when nothing fits.
 export const pickScreen = (screens = [], want = null) => {
     if (!want || !screens.length) return null
+    if (Number.isInteger(want.index) && screens[want.index]) return screens[want.index]
     if (want.label) {
         const byLabel = screens.find((s) => s.label === want.label)
         if (byLabel) return byLabel
     }
-    if (Number.isInteger(want.index) && screens[want.index]) return screens[want.index]
     if (Array.isArray(want.size)) return screens.find((s) => s.width === want.size[0] && s.height === want.size[1]) || null
     return null
+}
+
+// The screen the Screen select shows: the listed one the saved choice means, or, before
+// "List screens" (or when that screen is unplugged), the saved choice itself as an
+// entry marked `saved` (its size comes from the document; it has no position).
+export const resolveScreen = (screens = [], want = null) => {
+    const listed = pickScreen(screens, want)
+    if (listed) return listed
+    if (!want || !(Number.isInteger(want.index) || want.label)) return null
+    const [width, height] = Array.isArray(want.size) ? want.size : [0, 0]
+    const index = Number.isInteger(want.index) ? want.index : screens.length
+    return { index, label: want.label || `Screen ${index + 1}`, width, height, left: 0, top: 0, primary: false, saved: true }
+}
+
+// The Screen select's entries: the listed screens, plus the saved one when it is not among them.
+export const screenChoices = (screens = [], want = null) => {
+    const picked = resolveScreen(screens, want)
+    return picked?.saved && !screens.some((s) => s.index === picked.index) ? [...screens, picked] : screens
+}
+
+// The size "Match the screen" offers: the PICKED screen's, else the one this tool window is on.
+export const matchTarget = (screens = [], want = null) => {
+    const picked = resolveScreen(screens, want)
+    const target = picked && picked.width > 0 && picked.height > 0 ? picked : screens[0]
+    return target ? [target.width, target.height] : null
 }
 
 // window.open features for a chosen screen: the window starts on that screen at its size.

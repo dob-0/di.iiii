@@ -450,12 +450,15 @@
     text-transform: uppercase;
 }
 
-/* The picture of a Picture Out, as big as the block lets it be. */
+/* The picture of a Picture Out: the block's full width at 16:9. It gives up height only
+   to the line under it (that line is flex: none), never below 96px. */
 .perform-picture {
     display: block;
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     width: 100%;
-    min-height: 0;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    min-height: 96px;
     object-fit: contain;
     background: var(--di-black);
 }
@@ -813,9 +816,10 @@
     padding: var(--di-space-2);
 }
 
-/* Perform's own select rule has 8px padding: the caret needs its own room in the Effects head. */
-.perform-shell .raw-window-body select.vj-deck-fx-layer,
-.perform-shell .raw-window-body select.vj-deck-fx-add {
+/* Perform's one-control rule (:is(...):not(...), specificity 0,4,1) set the 7px padding and won over
+   a 0,3,1 selector. Doubling the class makes this one 0,5,1: the caret gets its own room. */
+.perform-shell .raw-window-body select.vj-deck-fx-layer.vj-deck-fx-layer,
+.perform-shell .raw-window-body select.vj-deck-fx-add.vj-deck-fx-add {
     padding-right: 28px;
     min-width: 9ch;
 }

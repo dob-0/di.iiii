@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
     canPlaceOnScreen, currentScreen, featuresForScreen, loadScreens, matchScreenOps,
-    pickScreen, screenToDoc, useOutputWindow, withOutputWindow
+    matchTarget, resolveScreen, screenChoices, screenToDoc, useOutputWindow, withOutputWindow
 } from './outputWindows.js'
 import './outputControl.css'
 
@@ -29,7 +29,9 @@ export default function OutputControl({ ctx, className = '' }) {
         return () => { alive = false }
     }, [])
 
-    const chosen = pickScreen(screens, win.screen)
+    const chosen = resolveScreen(screens, win.screen)
+    const choices = screenChoices(screens, win.screen)
+    const matchSize = matchTarget(screens, win.screen)
     const setWindow = (patch) => mapApi.setOutput({ output: withOutputWindow(output, patch) })
     const listScreens = async () => {
         const got = await loadScreens()
@@ -38,12 +40,11 @@ export default function OutputControl({ ctx, className = '' }) {
     }
     const toggle = () => {
         if (out.isOpen) out.close()
-        else out.open({ features: featuresForScreen(chosen) })
+        else out.open({ features: featuresForScreen(chosen?.saved ? null : chosen) })
     }
     const match = () => {
-        const target = chosen || screens[0]
-        if (!target) return
-        mapApi.applyOps(matchScreenOps(mapping, [target.width, target.height]))
+        if (!matchSize) return
+        mapApi.applyOps(matchScreenOps(mapping, matchSize))
     }
     const note = out.blocked
         ? (out.via === 'ping' ? 'The output page did not close. Close it by hand.' : 'The browser blocked the window. Allow pop-ups for this site, then press again.')
@@ -72,7 +73,7 @@ export default function OutputControl({ ctx, className = '' }) {
                                 setWindow({ screen: screenToDoc(picked) })
                             }}>
                             <option value="">Where the browser puts it</option>
-                            {screens.map((s) => <option key={s.index} value={s.index}>{`${s.label} ${s.width}x${s.height}`}</option>)}
+                            {choices.map((s) => <option key={s.index} value={s.index}>{s.width > 0 ? `${s.label} ${s.width}x${s.height}` : s.label}</option>)}
                         </select>
                     </label>
                     {canPlaceOnScreen() ? <button type="button" className="perform-action" onClick={listScreens}>List screens</button> : null}
@@ -92,7 +93,7 @@ export default function OutputControl({ ctx, className = '' }) {
                     </div>
                     <button type="button" className="perform-action" onClick={match}
                         title="Sets the output and every surface to the screen's size">
-                        {`Match the screen${(chosen || screens[0]) ? ` (${(chosen || screens[0]).width}x${(chosen || screens[0]).height})` : ''}`}
+                        {`Match the screen${matchSize ? ` (${matchSize[0]}x${matchSize[1]})` : ''}`}
                     </button>
                 </div>
             ) : null}
