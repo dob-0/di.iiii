@@ -5,6 +5,7 @@ import { getModelClips, subscribeModelClips } from '../../project/viewport/model
 import { panTiltFromRotation, rotationFromPanTilt } from '../../project/viewport/spotLightAim.js'
 import { formatNumberDisplay } from '../utils/formatNumberDisplay.js'
 import FixtureField from './FixtureField.jsx'
+import { useScreenActions } from './ScreenActionsContext.js'
 
 // Clip names only exist once a viewport has loaded the model file, so this
 // select re-renders when the registry learns them. Empty value = all clips.
@@ -294,6 +295,45 @@ function SpotAimField({ field, value, onChange }) {
 
 const isBoundedNumber = (field) => field.type === 'number' && Number.isFinite(field.min) && Number.isFinite(field.max)
 
+// Two jumps from a Screen: to the Projection surface it shows, and to the deck
+// that makes the picture. Existing classes only (insp-field, scc-btn).
+function ScreenLinks() {
+    const actions = useScreenActions()
+    if (!actions) return null
+    return (
+        <div className="insp-field">
+            <div className="scc-buttons">
+                {actions.openProjection && (
+                    <button type="button" className="scc-btn" onClick={actions.openProjection} title="The wall mapping this picture goes through to the stage">
+                        Open in Projection
+                    </button>
+                )}
+                {actions.openDeck && (
+                    <button type="button" className="scc-btn" onClick={actions.openDeck} title="The VJ deck that makes this picture">
+                        Open the deck
+                    </button>
+                )}
+            </div>
+        </div>
+    )
+}
+
+// A file-video object: offer the live deck in its place.
+function ScreenSwap() {
+    const actions = useScreenActions()
+    if (!actions?.convertToScreen) return null
+    return (
+        <div className="insp-field">
+            <p className="sfp-empty">This object plays a video file. The live deck can play here instead.</p>
+            <div className="scc-buttons">
+                <button type="button" className="scc-btn" onClick={actions.convertToScreen} title="Same place and size; Undo brings the video back">
+                    Show the live deck here instead
+                </button>
+            </div>
+        </div>
+    )
+}
+
 function InspField({ field, value, assetOptions = [], spaceOptions = [], surfaceOptions = [], siblingSpaceId = null, lightingMirror, onChange }) {
     if (field.type === 'spotAim') {
         return <SpotAimField field={field} value={value} onChange={onChange} />
@@ -350,6 +390,9 @@ function InspField({ field, value, assetOptions = [], spaceOptions = [], surface
             </div>
         )
     }
+
+    if (field.type === 'screenLinks') return <ScreenLinks />
+    if (field.type === 'screenSwap') return <ScreenSwap />
 
     if (field.type === 'project') {
         return (
