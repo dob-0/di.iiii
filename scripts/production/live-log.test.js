@@ -36,7 +36,7 @@ describe('live-log', () => {
 });
 
 // The timer runs this every 2 min. A hub that is down (5xx, Cloudflare 530, no network) is the hub's state: logged, exit 0, the next tick retries.
-// A fault of ours (no login, 4xx, no code page) stays exit 1. Measured on aylmo 11-09: 13 failures in 26 min, all 503/530, one outage.
+// A fault of ours (no login, 4xx, no code page) stays exit 1. Measured on the timer's machine on 11-09: 13 failures in 26 min, all 503/530, one outage.
 describe('live-log against a hub that answers badly', () => {
     const script = fileURLToPath(new URL('./live-log.mjs', import.meta.url));
     const stateFile = (home) => join(home, '.cache/di/live-log/hub-down-p--1.json');
@@ -104,11 +104,6 @@ describe('live-log against a hub that answers badly', () => {
     it('a huge count in the state file is loud at once, not silent', async () => {
         expect((await run(503, { seed: { count: 1e9, since: '2026-11-10T04:00:00.000Z' } })).code).toBe(1);
     });
-    it('a failure of ours (404) does not touch the count', async () => {
-        const r = await run(404, { seed: { count: 7, since: '2026-11-10T04:00:00.000Z' }, keepHome: true });
-        const st = JSON.parse(readFileSync(stateFile(r.home), 'utf8')); rmSync(r.home, { recursive: true, force: true });
-        expect(r.code).toBe(1); expect(st.count).toBe(7);
-    });
     it('a success resets the count (the state file is gone)', async () => {
         const home = mkdtempSync(join(tmpdir(), 'live-log-ok-'));
         mkdirSync(join(home, '.config/di'), { recursive: true }); mkdirSync(join(home, '.cache/di/live-log'), { recursive: true });
@@ -155,11 +150,11 @@ describe('live-log: the hub-down count after each kind of run (process tests)', 
     const stateFile = (home) => join(home, '.cache/di/live-log/hub-down-p--1.json');
     const current = `<main>${START}\n${render([], {})}\n${END}</main>`; // what the script itself would write for an empty inbox
     // doc: the code files the hub returns; status: what the hub answers (200 = the doc); extra: more arguments; inbox: false = a path that does not exist
-    const go = async ({ seed, doc = { presentationState: { codeFiles: [{ name: 'index.html', content: current }] } }, status = 200, extra = [], inbox = true }) => {
+    const go = async ({ seed, doc = { presentationState: { codeFiles: [{ name: 'index.html', content: current }] } }, status = 200, putStatus = 200, extra = [], inbox = true }) => {
         const home = mkdtempSync(join(tmpdir(), 'live-log-st-'));
         mkdirSync(join(home, '.config/di'), { recursive: true }); mkdirSync(join(home, '.cache/di/live-log'), { recursive: true });
         if (seed !== undefined) writeFileSync(stateFile(home), JSON.stringify(seed));
-        const server = http.createServer((_q, res) => { res.statusCode = status; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ document: doc })); });
+        const server = http.createServer((q, res) => { res.statusCode = q.method === 'PUT' ? putStatus : status; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ document: doc })); });
         await new Promise((r) => server.listen(0, '127.0.0.1', r));
         writeFileSync(join(home, '.config/di/credentials.json'), JSON.stringify({ dev: { token: 't', base: `http://127.0.0.1:${server.address().port}` } }));
         const ib = join(home, 'inbox'); if (inbox) mkdirSync(ib);
@@ -206,5 +201,43 @@ describe('live-log: the hub-down count after each kind of run (process tests)', 
     it('a float count is floored: 13.5 is 13, the tick makes 14', async () => {
         const r = await go({ seed: { count: 13.5, since: '2026-11-10T04:00:00.000Z' }, status: 503 });
         expect(r.code).toBe(0); expect(r.state.count).toBe(14);
+    });
+    // Decision (round f3): the hub is DOWN when there is no answer or the answer is in HUB_DOWN_STATUS; any other answer (401, 403, 404, 500 ...) means the hub
+    // is UP and refuses us: a fault of ours, exit 1, and the count of hub-down ticks in a row is over, so it is cleared.
+    for (const st of [401, 403, 404, 500]) {
+        it(`first GET answers ${st}: the hub is up and refuses, exit 1, the count is cleared`, async () => {
+            const r = await go({ seed: seed10, status: st });
+            expect(r.code).toBe(1); expect(r.err).toContain('GET'); expect(r.err).not.toContain('hub-down'); expect(r.state).toBeNull();
+        });
+    }
+    it('first GET answers 503: still hub-down, the count goes on', async () => {
+        const r = await go({ seed: seed10, status: 503 });
+        expect(r.code).toBe(0); expect(r.state.count).toBe(11);
+    });
+    it('the hub answered, then a step throws (page has no place): exit 1, the count is cleared', async () => {
+        const r = await go({ seed: seed10, doc: { presentationState: { codeFiles: [{ name: 'index.html', content: '<p>no main here</p>' }] } } });
+        expect(r.code).toBe(1); expect(r.err).toContain('no place'); expect(r.state).toBeNull();
+    });
+    it('PUT answers 500: the hub is up and refuses, exit 1, the count is cleared', async () => {
+        const r = await go({ seed: seed10, doc: { presentationState: { codeFiles: [{ name: 'index.html', content: '<main></main>' }] } }, putStatus: 500 });
+        expect(r.code).toBe(1); expect(r.err).toContain('PUT -> 500'); expect(r.state).toBeNull();
+    });
+    it('GET fine but PUT is hub-down tick after tick: the count still grows and the 15th tick fails', async () => {
+        const doc = { presentationState: { codeFiles: [{ name: 'index.html', content: '<main></main>' }] } };
+        const r = await go({ seed: { count: 14, since: '2026-11-10T04:00:00.000Z' }, doc, putStatus: 503 });
+        expect(r.code).toBe(1); expect(r.err).toContain('hub-down since'); expect(r.state.count).toBe(15);
+    });
+    it('--dry-run, hub down, stored 15: the line says "would be 16", not stored; the file stays 15', async () => {
+        const seed15 = { count: 15, since: '2026-11-10T04:00:00.000Z' };
+        const r = await go({ seed: seed15, status: 503, extra: ['--dry-run'] });
+        expect(r.code).toBe(1); expect(r.err).toContain('would be 16'); expect(r.err).toContain('not stored'); expect(r.state).toEqual(seed15);
+    });
+    it('--dry-run, hub down, below the limit: the line says "would be", not stored', async () => {
+        const r = await go({ seed: seed10, status: 503, extra: ['--dry-run'] });
+        expect(r.code).toBe(0); expect(r.err).toContain('would be 11 of 15'); expect(r.err).toContain('not stored'); expect(r.state).toEqual(seed10);
+    });
+    it('a real run says the plain count (no "would be")', async () => {
+        const r = await go({ seed: seed10, status: 503 });
+        expect(r.err).toContain('(11 of 15 ticks)'); expect(r.err).not.toContain('would be');
     });
 });

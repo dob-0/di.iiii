@@ -31,7 +31,8 @@ import { createHash } from 'node:crypto';
 // not a fault of this job: say so, exit 0, the next tick retries. Everything else (no login, 4xx, no code page, 500 from our own server) stays exit 1.
 // The quiet is bounded: a count of hub-down ticks in a row (and since when) is kept in ~/.cache/di/live-log/hub-down-<project>-<chat>.json, outside
 // the repository. The installed timer is OnUnitActiveSec=2min, so 15 ticks in a row = about 30 minutes; the 15th exits 1 with one line that says since
-// when, and so does every tick after it. A success removes the file.
+// when, and so does every tick after it. The count means hub-down ticks in a row: any run in which the hub ANSWERED (a success, a refusal such as
+// 401/403/404/500, a later step that throws) removes the file. A hub that answers with something not in HUB_DOWN_STATUS is up and refuses us.
 export const HUB_DOWN_STATUS = new Set([429, 502, 503, 504, 521, 522, 523, 524, 530]);
 export const HUB_DOWN_MAX_TICKS = 15;
 export const classifyFailure = ({ status } = {}) => (status === undefined || status === null || HUB_DOWN_STATUS.has(status) ? 'hub-down' : 'failure');
@@ -57,8 +58,9 @@ export const hubDown = (what) => {
         console.error(`live-log: hub-down (${what}) and the state file ${stateFile} cannot be written (${e.code || e.message}): cannot bound the quiet, failing`);
         process.exit(1);
     }
-    if (count >= HUB_DOWN_MAX_TICKS) { console.error(`live-log: hub-down since ${st.since} (${count} ticks in a row, last: ${what}) - failing`); process.exit(1); }
-    console.error(`live-log: hub-down (${what}), skipped (${count} of ${HUB_DOWN_MAX_TICKS} ticks) - the next tick retries`);
+    const n = dryRun ? `would be ${count}` : `${count}`; const note = dryRun ? ', not stored' : ''; // a dry run stores nothing: say what a real run would store
+    if (count >= HUB_DOWN_MAX_TICKS) { console.error(`live-log: hub-down since ${st.since} (${n} ticks in a row${note}, last: ${what}) - failing`); process.exit(1); }
+    console.error(`live-log: hub-down (${what}), skipped (${n} of ${HUB_DOWN_MAX_TICKS} ticks${note}) - the next tick retries`);
     process.exit(0);
 };
 async function hubFetch(url, opts) {
@@ -206,7 +208,7 @@ async function main() {
     const route = `/api/projects/${encodeURIComponent(a.project)}/document`;
     const got = await hubFetch(base + route, { headers: H });
     if (!got.ok && classifyFailure(got) === 'hub-down') hubDown(`GET ${route} -> ${got.status}`);
-    if (!got.ok) { console.error(`live-log: GET ${route} -> ${got.status}`); process.exit(1); }
+    if (!got.ok) { clearHubDown(); console.error(`live-log: GET ${route} -> ${got.status}`); process.exit(1); }
     const body = await got.json(); const doc = body.document ?? body;
     const files = doc.presentationState?.codeFiles; const idx = files?.findIndex((f) => f.name === 'index.html');
     if (!files || idx < 0) { clearHubDown(); console.error('live-log: project has no code page index.html'); process.exit(1); }
@@ -228,10 +230,10 @@ async function main() {
     files[idx] = { ...files[idx], content: next };
     const put = await hubFetch(base + route, { method: 'PUT', headers: H, body: JSON.stringify(doc) });
     if (!put.ok && classifyFailure(put) === 'hub-down') hubDown(`PUT -> ${put.status}`);
-    if (!put.ok) { console.error(`live-log: PUT -> ${put.status}`); process.exit(1); }
+    if (!put.ok) { clearHubDown(); console.error(`live-log: PUT -> ${put.status}`); process.exit(1); }
     clearHubDown();
     const check = await (await hubFetch(base + route, { headers: H })).text();
     console.log(`live-log: written to ${a.tier} (${put.status}); check sha ${createHash('sha1').update(next).digest('hex').slice(0, 8)} present: ${check.includes(a.remove ? '' : START)}`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main().catch((e) => { console.error('live-log:', e.message); process.exit(1); });
+if (import.meta.url === `file://${process.argv[1]}`) main().catch((e) => { clearHubDown(); console.error('live-log:', e.message); process.exit(1); });

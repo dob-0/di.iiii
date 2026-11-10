@@ -1,6 +1,6 @@
 ## 2026-11-10 — live-log: a hub that is down is hub-down (exit 0)
 
-- aylmo ran 13 failed di-live-log-what-we-have ticks in 26 min on 11-09, all GET 503/530. Now hub-down, exit 0, the next 2-minute tick retries; 401/403/404/500 stay exit 1.
+- the timer's machine ran 13 failed di-live-log-what-we-have ticks in 26 min on 11-09, all GET 503/530. Now hub-down, exit 0, the next 2-minute tick retries; 401/403/404/500 stay exit 1.
 - Test: scripts/production/live-log.test.js, 13 passed, 0 FAIL lines, rc 0 (6 new red before, run against a local http server).
 - Not done: nothing installed or restarted; the live copy follows after merge.
 
@@ -18,3 +18,11 @@
 - Pinned: a garbage `since` is never printed (a real date is), a float count is floored. The classifier table rows with a network code now say the code is not read (no status = hub-down).
 - Test: scripts/production/live-log.test.js 51 -> 60 tests; 7 mutants of the fixed lines, all killed.
 - Not done: a 404/401/403/500 on the first GET (the hub answered, but with a fault of ours) still keeps the count (existing test); nothing installed, the live copy follows after merge.
+
+## 2026-11-10 — live-log hub-down: third review round (f3-1259)
+
+- Public-repo rule: the lines this pull request adds named a machine of the estate twice (script test comment, this file); both are now generic words. The old commit message keeps its word (no rewrite).
+- Rule now: the count means hub-down ticks in a row, so any run in which the hub ANSWERED clears it: a success, a 401/403/404/500 on the GET or the PUT (the hub is up and refuses us: exit 1, our fault), and a later step that throws (the top-level catch). Only no answer or a status in the hub-down set (429, 502-504, 521-524, 530) is hub-down. A GET that works followed by a PUT that is hub-down still counts (tested: the 15th tick fails).
+- `--dry-run` with the hub down prints "would be N ... not stored" instead of a count the file does not hold.
+- Test: scripts/production/live-log.test.js 60 -> 70 tests (8 red before); mutants of each fixed line killed.
+- Not done: nothing installed, the live copy follows after merge.
