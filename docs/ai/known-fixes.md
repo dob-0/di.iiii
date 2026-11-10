@@ -1790,3 +1790,9 @@ Cause: `scripts/di/continueGuard.mjs` (new in the PR) required `../../shared/con
 Fix: `continueGuard.mjs` tries both layouts (`../../shared/...`, then `../shared/...`) the way `scripts/di/nameResolve.mjs` does for the beacon, and names what is missing if neither answers.
 Guard: `scripts/di/continueGuard.test.js` "the packed layout" lays out `<root>/cli` + `<root>/shared` and runs the module with plain node; the old code fails it with the CI error. The class guards stay `scripts/di/openFile.test.js` (boots `cli.mjs` from a pack-shaped tree) and the install matrix. Checked on Linux with `npm run di:pack -- --slim`, `install.sh` into a scratch home, `up`, health 200, `/main` and `/studio` served, `di new` twice (the second says "continue: ...", exit 2), `down`.
 Lesson: a file under `scripts/di` that reaches outside its own folder must resolve in both layouts (checkout `../../x`, pack `../x`), by a loop like `nameResolve.mjs` or a twin like `nameMatch.mjs`. Run `npx vitest run scripts/di/openFile.test.js` before pushing a change to the CLI's imports.
+
+## The projection output stayed black after a camera track ended (2026-11-10, owner row N3522)
+Seen live: the `/out` page showed a phone camera (v4l2loopback fed by scrcpy) through a `stream` surface; after about an hour the MediaStreamTrack went to "ended" and the output stayed black until a reload, though the camera was back.
+Cause: `MapCameraSource` called getUserMedia once per device id and nothing listened for the track ending or for a first open that failed because the feed was not up yet.
+Fix: it re-opens by itself on track `ended` / stream `inactive` and on busy/not-found class errors, with a back-off (0.5, 1, 2 s, then 3 s), stopping old tracks first; the stream lookup is asked again; no retry on NotAllowedError; timers and listeners are cleared on unmount.
+Guard: `src/map/MapSourceView.reacquire.test.jsx` (fake timers, faked mediaDevices). Not checked on a real camera.

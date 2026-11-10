@@ -169,6 +169,7 @@ export const matchStreamDevice = (devices = [], name = '') => pickByLabel(
 
 function MapStreamSource({ name, effect = null, label, width, height }) {
     const [state, setState] = useState({ deviceId: '', problem: '' })
+    const resolveRef = useRef(null)
 
     useEffect(() => {
         let cancelled = false
@@ -181,37 +182,61 @@ function MapStreamSource({ name, effect = null, label, width, height }) {
             setState({ deviceId: '', problem: 'no camera access in this browser' })
             return undefined
         }
-        const resolve = async () => {
+        // A miss is retried on its own timer, because a loopback device that is
+        // restarting may never fire `devicechange` when it returns.
+        let timer = null
+        let tries = 0
+        let foundId = ''
+        let probed = false
+        const retry = () => {
+            if (cancelled || timer) return
+            timer = setTimeout(() => { timer = null; resolve() }, REOPEN_MS[Math.min(tries++, REOPEN_MS.length - 1)])
+        }
+        async function resolve() {
             try {
                 let devices = await media.enumerateDevices()
                 // Before permission every label is '', so nothing can match yet.
-                if (!devices.some((device) => device.kind === 'videoinput' && device.label)) {
+                // The throwaway stream that unlocks them is opened at most once
+                // per mount; a retry must never open a camera as a side effect.
+                if (!probed && !devices.some((device) => device.kind === 'videoinput' && device.label)) {
+                    probed = true
                     const probe = await media.getUserMedia({ video: true, audio: false })
                     probe.getTracks().forEach((track) => track.stop())
                     devices = await media.enumerateDevices()
                 }
                 if (cancelled) return
                 const found = matchStreamDevice(devices, name)
-                setState(found
-                    ? { deviceId: found.deviceId, problem: '' }
-                    : { deviceId: '', problem: `no input called "${name}" on this machine` })
+                if (found) {
+                    foundId = found.deviceId
+                    clearTimeout(timer)
+                    timer = null
+                    tries = 0
+                    setState({ deviceId: found.deviceId, problem: '' })
+                    return
+                }
+                // Once an id was found, a transient miss keeps the mounted camera.
+                if (!foundId) setState({ deviceId: '', problem: `no input called "${name}" on this machine` })
+                retry()
             } catch (error) {
                 if (!cancelled) setState({ deviceId: '', problem: error?.name === 'NotAllowedError' ? 'camera not permitted' : 'inputs unavailable' })
             }
         }
+        resolveRef.current = resolve
         resolve()
         // An input that appears later (the bridge starting after the page, a
         // capture card plugged in mid-show) is picked up without a reload.
         media.addEventListener?.('devicechange', resolve)
         return () => {
             cancelled = true
+            clearTimeout(timer)
+            resolveRef.current = null
             media.removeEventListener?.('devicechange', resolve)
         }
     }, [name])
 
     if (state.problem) return <MapSourcePlaceholder label={label} detail={state.problem} width={width} height={height} />
     if (!state.deviceId) return <MapSourcePlaceholder label={label} detail={`looking for "${name}"…`} width={width} height={height} />
-    return <MapCameraSource deviceId={state.deviceId} effect={effect} label={label} width={width} height={height} />
+    return <MapCameraSource deviceId={state.deviceId} effect={effect} label={label} width={width} height={height} onStale={() => resolveRef.current?.()} />
 }
 
 // NDI® in, on the machine that draws. The same problem the `stream` surface
@@ -342,12 +367,28 @@ function MapVideoSource({ fileRef }) {
 // track is stopped on unmount. A refused or missing camera shows the reason on
 // the surface instead of going black, because a black rectangle on a wall is
 // indistinguishable from a mapping mistake.
-function MapCameraSource({ deviceId, effect = null, label, width, height }) {
+//
+// 2026-11-10 (owner row N3522): the output went black for good when a phone
+// feed hiccuped and the track ended, until someone reloaded the page. A track
+// that ends, or a device that is busy / not up yet, is now re-opened by itself
+// with a back-off; a refused permission is not retried.
+const REOPEN_MS = [500, 1000, 2000, 3000]
+// A feed that stays live this long is healthy: only then does the back-off start over.
+const STABLE_MS = 5000
+const RECONNECTING = 'camera reconnecting…'
+const REOPEN_ERRORS = ['NotReadableError', 'TrackStartError', 'NotFoundError', 'OverconstrainedError', 'AbortError']
+
+function MapCameraSource({ deviceId, effect = null, label, width, height, onStale = null }) {
+    const staleRef = useRef(onStale)
+    useEffect(() => { staleRef.current = onStale })
     const videoRef = useRef(null)
     const canvasRef = useRef(null)
     const glowRef = useRef(null)
     const restyleRef = useRef(null)
     const [problem, setProblem] = useState('')
+    // A retry is pending: the <video> stays mounted (the stream needs it when it
+    // comes back) and the surface says so over it.
+    const [waiting, setWaiting] = useState(false)
     const motion = effect?.kind === 'motion'
     const ai = effect?.kind === 'ai'
     // The AI picture replaces the placeholder only once a frame has actually
@@ -358,30 +399,76 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
     useEffect(() => {
         let stream = null
         let cancelled = false
+        let timer = null
+        let stable = null
+        let tries = 0
+        let wasLive = false
         const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
         if (!media?.getUserMedia) {
             setProblem('no camera access in this browser')
             return undefined
         }
         setProblem('')
-        media.getUserMedia({
-            video: deviceId ? { deviceId: { exact: deviceId } } : true,
-            audio: false
-        })
-            .then((result) => {
-                if (cancelled) {
-                    result.getTracks().forEach((track) => track.stop())
-                    return
-                }
-                stream = result
-                if (videoRef.current) videoRef.current.srcObject = result
+        setWaiting(false)
+        // Stop and forget the open stream, so two are never open at once.
+        const drop = () => {
+            if (!stream) return
+            stream.removeEventListener?.('inactive', lost)
+            stream.getTracks().forEach((track) => { track.removeEventListener?.('ended', lost); track.stop() })
+            stream = null
+        }
+        const later = () => {
+            if (cancelled || timer) return
+            timer = setTimeout(() => { timer = null; open() }, REOPEN_MS[Math.min(tries++, REOPEN_MS.length - 1)])
+        }
+        // The device may have come back under another id: ask the lookup again.
+        function lost() {
+            clearTimeout(stable)
+            drop()
+            setWaiting(true)
+            later()
+            staleRef.current?.()
+        }
+        function open() {
+            media.getUserMedia({
+                video: deviceId ? { deviceId: { exact: deviceId } } : true,
+                audio: false
             })
-            .catch((error) => {
-                if (!cancelled) setProblem(error?.name === 'NotAllowedError' ? 'camera not permitted' : 'camera unavailable')
-            })
+                .then((result) => {
+                    if (cancelled) {
+                        result.getTracks().forEach((track) => track.stop())
+                        return
+                    }
+                    drop()
+                    stream = result
+                    wasLive = true
+                    setWaiting(false)
+                    clearTimeout(stable)
+                    stable = setTimeout(() => { tries = 0 }, STABLE_MS)
+                    if (videoRef.current) videoRef.current.srcObject = result
+                    result.getVideoTracks().forEach((track) => track.addEventListener('ended', lost))
+                    result.addEventListener?.('inactive', lost)
+                    if (result.getVideoTracks().some((track) => track.readyState === 'ended')) lost()
+                })
+                .catch((error) => {
+                    if (cancelled) return
+                    const failure = error?.name
+                    if (failure !== 'NotAllowedError' && (deviceId || wasLive) && REOPEN_ERRORS.includes(failure)) {
+                        // Say so on the surface: a black rectangle reads as a mapping mistake.
+                        setWaiting(true)
+                        later()
+                        if (failure === 'NotFoundError' || failure === 'OverconstrainedError') staleRef.current?.()
+                        return
+                    }
+                    setProblem(failure === 'NotAllowedError' ? 'camera not permitted' : 'camera unavailable')
+                })
+        }
+        open()
         return () => {
             cancelled = true
-            if (stream) stream.getTracks().forEach((track) => track.stop())
+            clearTimeout(timer)
+            clearTimeout(stable)
+            drop()
         }
     }, [deviceId])
 
@@ -447,19 +534,20 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
     const processed = motion || ai
     return (
         <>
-            <video className={processed ? 'map-source-hidden-video' : 'map-source-media'} ref={videoRef} autoPlay muted playsInline />
+            <video className={processed || waiting ? 'map-source-hidden-video' : 'map-source-media'} ref={videoRef} autoPlay muted playsInline />
             {processed ? (
                 <canvas
                     // Keyed by effect: the glow takes a WebGL context and the AI
                     // picture a 2D one, and a canvas can only ever give one kind.
                     key={ai ? 'ai' : 'motion'}
-                    className={ai && !aiPainted ? 'map-source-hidden-video' : 'map-source-media'}
+                    className={(ai && !aiPainted) || waiting ? 'map-source-hidden-video' : 'map-source-media'}
                     ref={canvasRef}
                     width={Math.max(1, Math.round(width * scale))}
                     height={Math.max(1, Math.round(height * scale))}
                 />
             ) : null}
-            {ai && !aiPainted ? <MapSourcePlaceholder label={label} detail={aiStatus} width={width} height={height} /> : null}
+            {waiting ? <MapSourcePlaceholder label={label} detail={RECONNECTING} width={width} height={height} /> : null}
+            {ai && !aiPainted && !waiting ? <MapSourcePlaceholder label={label} detail={aiStatus} width={width} height={height} /> : null}
         </>
     )
 }
