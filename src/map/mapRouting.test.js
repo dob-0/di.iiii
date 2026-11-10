@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { buildMapOutputPath, buildMapPath, getMapLocationState, isMapLocation } from './mapRouting.js'
+import { describe, expect, it, vi } from 'vitest'
+import { buildMapOutputPath, buildMapPath, getMapLocationState, isMapLocation, openMapOutput } from './mapRouting.js'
 
 const at = (pathname) => getMapLocationState({ pathname })
 
@@ -7,6 +7,14 @@ describe('map lane routing', () => {
     it('builds the desk and output addresses', () => {
         expect(buildMapPath('dilijan', 'wall')).toBe('/dilijan/map/wall')
         expect(buildMapOutputPath('dilijan', 'wall')).toBe('/dilijan/map/wall/out')
+    })
+
+    it('opens the stage window by name WITHOUT noopener (which would ignore the name) and cuts the opener by hand', () => {
+        const win = { opener: {} }
+        const open = vi.fn(() => win)
+        openMapOutput('dilijan', 'wall', open)
+        expect(open).toHaveBeenCalledWith('/dilijan/map/wall/out', 'di-map-out-wall')
+        expect(win.opener).toBeNull()
     })
 
     it('reads the desk address', () => {

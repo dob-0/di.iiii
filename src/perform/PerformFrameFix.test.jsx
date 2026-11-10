@@ -77,6 +77,31 @@ describe('Master with another space’s Light desk', () => {
     })
 })
 
+describe('blackout survives a reload (level kept in the document)', () => {
+    const patchOf = (ctx, i) => ctx.applyLocalOps.mock.calls[i][0].payload.patch.values
+
+    it('blackout stores the level in the deck node values', async () => {
+        const ctx = ctxWith()
+        ctx.document.nodes[0].values.deck.master = 0.6
+        renderMaster({ ctx })
+        await waitFor(() => expect(tag('laser')).toBe('live'))
+        await press('Blackout')
+        expect(patchOf(ctx, 0).blackoutRestore).toBe(0.6)
+        expect(patchOf(ctx, 0).deck.master).toBe(0)
+    })
+
+    it('a page loaded with deck master 0 and a stored level restores it with ONE press', async () => {
+        const ctx = ctxWith()
+        ctx.document.nodes[0].values = { deck: { master: 0 }, blackoutRestore: 0.6 }
+        renderMaster({ ctx })
+        await waitFor(() => expect(tag('laser')).toBe('live'))
+        await press('Blackout · on')
+        expect(ctx.applyLocalOps).toHaveBeenCalledTimes(1)
+        expect(patchOf(ctx, 0).deck.master).toBe(0.6)
+        expect(patchOf(ctx, 0).blackoutRestore).toBeUndefined()
+    })
+})
+
 describe('the laser desk is machine-wide, and says so', () => {
     it('shows a short word next to the LASER tag with the reason in its title, and in the Laser block', async () => {
         renderMaster()

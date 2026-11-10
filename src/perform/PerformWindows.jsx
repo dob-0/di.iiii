@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapCueList from '../map/MapCueList.jsx'
 import MapInspector from '../map/MapInspector.jsx'
 import { MapMachinesList, MapSurfaceList, MapWallView, nextCorners } from '../map/MapDeskParts.jsx'
-import { buildMapOutputPath, buildMapPath } from '../map/mapRouting.js'
+import { buildMapPath, openMapOutput } from '../map/mapRouting.js'
 import { cueForKey, isCueKey } from '../map/cueFiring.js'
 import { fireLightLook, lightRelation, lightingDeskPath, setLightLooksBlackout, setLightLooksMaster } from '../map/lightingLink.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
@@ -127,7 +127,7 @@ function OutWindow({ ctx }) {
                 <div className="perform-row">
                     <Status title="A preview, a few frames a second. The projector’s picture is the output page.">{out ? (out.label || 'Picture Out') : 'Deck master'} · preview</Status>
                     {surfaces.length ? (
-                        <button type="button" className="perform-action" onClick={() => window.open(buildMapOutputPath(ctx.spaceId, ctx.projectId), `di-map-out-${ctx.projectId}`, 'noopener')}>Open output</button>
+                        <button type="button" className="perform-action" onClick={() => openMapOutput(ctx.spaceId, ctx.projectId)}>Open output</button>
                     ) : null}
                 </div>
             ) : null}
@@ -229,7 +229,10 @@ function MasterWindow({ ctx }) {
     const laser = useLaser()
     const deckNode = firstOfType(ctx.document.nodes, 'vj.deck')
     const deckMaster = Number(deckNode?.values?.deck?.master ?? 1)
-    const [restore, setRestore] = useState(null) // the deck level before a blackout
+    // The deck level before a blackout lives in the DOCUMENT (deck node values), not in React
+    // state: after a reload the deck is at 0 with a stored level, and one press restores it.
+    const storedRestore = Number(deckNode?.values?.blackoutRestore)
+    const restore = deckMaster === 0 && storedRestore > 0 ? storedRestore : null
     // True only when THIS page put the light / laser desk dark AND the desk said yes: only then does it lift it.
     const [laserSetHere, setLaserSetHere] = useState(false)
     const [lightSetHere, setLightSetHere] = useState(false)
@@ -241,11 +244,13 @@ function MasterWindow({ ctx }) {
     const blackedOut = restore !== null || (lightOwn && light?.blackout === true) || lightSetHere || laserSetHere || pendingNames.length > 0
     const lightSlider = useSliderSend((raw) => setLightLooksMaster(raw / 255, { spaceId: ctx.spaceId }))
     const laserSlider = useSliderSend((level) => setLaserMaster(level))
-    const writeDeckMaster = useCallback((level) => {
+    // `keep` = the level to remember for the restore press (a number), or null to forget it.
+    const writeDeckMaster = useCallback((level, keep = null) => {
         if (!deckNode) return
+        const { blackoutRestore: _dropped, ...rest } = deckNode.values || {}
         ctx.applyLocalOps({
             type: 'updateNode',
-            payload: { nodeId: deckNode.id, patch: { values: { ...deckNode.values, deck: setMaster(deckNode.values?.deck, level) } } }
+            payload: { nodeId: deckNode.id, patch: { values: { ...rest, ...(keep ? { blackoutRestore: keep } : {}), deck: setMaster(deckNode.values?.deck, level) } } }
         })
     }, [ctx, deckNode])
 
@@ -269,14 +274,12 @@ function MasterWindow({ ctx }) {
             }
         } else if (!blackedOut) {
             if (deckNode) {
-                setRestore(deckMaster)
-                writeDeckMaster(0)
+                writeDeckMaster(0, deckMaster > 0 ? deckMaster : 1)
             }
             if (lightOwn) sendLight('on')
             if (laserUp) sendLaser('on')
         } else {
-            if (deckNode && restore !== null) writeDeckMaster(restore || 1)
-            setRestore(null)
+            if (deckNode && restore !== null) writeDeckMaster(restore)
             if (lightOwn) sendLight('off')
             if (laserSetHere) sendLaser('off')
         }
@@ -319,7 +322,7 @@ function MasterWindow({ ctx }) {
             {pendingNames.length ? <Status role="alert" tone="danger" title="The others were sent. Press again to retry the ones named.">NO ANSWER: {pendingNames.join(', ')}</Status> : null}
             {deckNode ? (
                 <Slider name="DECK" label="Deck master" min="0" max="1" step="0.01" value={deckMaster} shown={Math.round(deckMaster * 100)}
-                    onChange={(event) => { setRestore(null); writeDeckMaster(Number(event.target.value)) }} />
+                    onChange={(event) => { writeDeckMaster(Number(event.target.value)) }} />
             ) : null}
             {light?.up ? (
                 <Slider name="LIGHT" label="Light master" min="0" max="255" step="1" value={shownLight} shown={Math.round((shownLight / 255) * 100)}
@@ -503,7 +506,7 @@ function WallOutWindow({ ctx }) {
                 />
             ) : <Status title="The wall is empty: nothing goes out yet.">NOTHING OUT</Status>}
             <div className="perform-pane perform-pane--bar">
-                <button type="button" className="perform-action" onClick={() => window.open(buildMapOutputPath(ctx.spaceId, ctx.projectId), `di-map-out-${ctx.projectId}`, 'noopener')}>Open output</button>
+                <button type="button" className="perform-action" onClick={() => openMapOutput(ctx.spaceId, ctx.projectId)}>Open output</button>
             </div>
         </div>
     )
