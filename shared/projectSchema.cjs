@@ -245,6 +245,8 @@ const defaultMappingCue = {
   // fires. Absent unless set, so older documents round-trip unchanged.
   lightScene: '',
   lightLook: '',
+  // OPTIONAL: id of a laser-desk look made live when the cue fires, after the light.
+  laserLook: '',
   // Per-surface state keyed by surface id. GEOMETRY IS DELIBERATELY NOT IN A
   // CUE: corners and masks are the wall, cues are the show.
   surfaces: {}
@@ -1773,6 +1775,7 @@ const normalizeMappingCue = (cue = {}) => {
   // cue keeps them apart. A look wins when both are set: the desk is built on looks now,
   // and a cue that has been re-pointed at one has said what it means.
   const lightLook = ensureString(source.lightLook, '')
+  const laserLook = ensureString(source.laserLook, '')
   return {
     id: ensureString(source.id, ''),
     name: ensureString(source.name, ''),
@@ -1781,6 +1784,7 @@ const normalizeMappingCue = (cue = {}) => {
     hold: Math.max(0, ensureNumber(source.hold, defaultMappingCue.hold)),
     ...(lightLook ? { lightLook } : {}),
     ...(lightScene ? { lightScene } : {}),
+    ...(laserLook ? { laserLook } : {}),
     surfaces
   }
 }

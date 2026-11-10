@@ -285,6 +285,10 @@ export const defaultMappingCue = {
     // carry light are byte-identical after a round-trip.
     lightScene: '',
     lightLook: '',
+    // OPTIONAL: the id of a look on the laser desk (/laser/desk, local di.iiii)
+    // to make live when this cue fires, right after the light. Absent unless
+    // set, so old projects round-trip byte-identical.
+    laserLook: '',
     // Per-surface state, keyed by surface id: { enabled, opacity, source }.
     // GEOMETRY IS DELIBERATELY NOT IN A CUE. Corners and masks are the wall;
     // cues are the show. A cue that could move an alignment is a cue that can
@@ -1822,6 +1826,7 @@ export const normalizeMappingCue = (cue = {}) => {
     // cue keeps them apart. A look wins when both are set: the desk is built on looks
     // now, and a cue that has been re-pointed at one has said what it means.
     const lightLook = ensureString(source.lightLook, '')
+    const laserLook = ensureString(source.laserLook, '')
     return {
         id: ensureString(source.id, ''),
         name: ensureString(source.name, ''),
@@ -1830,6 +1835,7 @@ export const normalizeMappingCue = (cue = {}) => {
         hold: Math.max(0, ensureNumber(source.hold, defaultMappingCue.hold)),
         ...(lightLook ? { lightLook } : {}),
         ...(lightScene ? { lightScene } : {}),
+        ...(laserLook ? { laserLook } : {}),
         surfaces
     }
 }

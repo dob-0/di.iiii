@@ -366,3 +366,55 @@
         min-height: 44px;
     }
 }
+
+/* --- the laser and the three blackout tags ------------------------------- */
+
+.perform-state-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--di-space-1);
+}
+
+.perform-state-tag {
+    padding: 2px var(--di-space-2);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    color: var(--di-dim);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    text-transform: var(--di-label-case);
+    letter-spacing: var(--di-label-tracking);
+}
+
+.perform-state-tag.is-black {
+    border-color: var(--di-danger);
+    color: var(--di-danger);
+}
+
+.perform-state-tag.is-live {
+    color: var(--di-ink);
+    border-color: var(--di-ink);
+}
+
+.perform-fail {
+    color: var(--di-danger);
+}
+
+.perform-laser-looks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+    gap: var(--di-space-1);
+}
+
+.perform-laser-look {
+    align-self: stretch;
+    text-transform: var(--di-label-case);
+    letter-spacing: var(--di-label-tracking);
+}
+
+/* The live look: the one accent, meaning "this is on the cubes". */
+.perform-laser-look.is-live {
+    border-color: var(--ui-accent, var(--di-ink));
+    color: var(--ui-accent, var(--di-ink));
+    background: transparent;
+}

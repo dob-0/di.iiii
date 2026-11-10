@@ -14,9 +14,9 @@ import {
     widthClassOf
 } from './presets.js'
 
-describe('the seven built-in presets', () => {
-    it('are the seven he was shown, in his order', () => {
-        expect(BUILT_IN_PRESETS.map((preset) => preset.name)).toEqual(['VJ', 'Wall', 'Light', 'Caller', 'Unattended', 'Guest', 'Remote'])
+describe('the built-in presets', () => {
+    it('are the seven he was shown, in his order, then Show (picture + light + laser)', () => {
+        expect(BUILT_IN_PRESETS.map((preset) => preset.name)).toEqual(['VJ', 'Wall', 'Light', 'Caller', 'Unattended', 'Guest', 'Remote', 'Show'])
     })
 
     it('are data a normalizer keeps whole: every window a known kind, every rect on the workspace', () => {
@@ -41,6 +41,7 @@ describe('the seven built-in presets', () => {
         expect(coming('wall')).toEqual([])
         expect(coming('caller')).toEqual([])
         expect(coming('remote')).toEqual([])
+        expect(coming('show')).toEqual([])
         expect(coming('light')).toEqual(['scenes', 'looks', 'audio'])
         expect(coming('unattended')).toEqual(['status'])
         expect(coming('guest')).toEqual(['footage', 'mysurface', 'now'])
