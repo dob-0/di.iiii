@@ -15,6 +15,7 @@
 
 import { useEffect, useMemo, useRef } from 'react'
 import { createClipVideo, resolveClipUrl } from './clipVideos.js'
+import { acquireClipSource } from './clipSourceCache.js'
 
 const CLIP_TYPE = 'top.clip'
 
@@ -37,7 +38,7 @@ export const clipNodesOf = (network) => {
  * @param {string} [options.projectId]
  * @param {(values, options) => {video, update, dispose}} [options.create]  for tests
  */
-export function useClipVideos(network, { spaceId = '', engine = null, assets = null, projectId = null, create = createClipVideo } = {}) {
+export function useClipVideos(network, { spaceId = '', engine = null, assets = null, projectId = null, create = createClipVideo, loadSource = acquireClipSource } = {}) {
     const clipsRef = useRef(new Map())
     const engineSeen = useRef(null)
     const resolveRef = useRef(null)
@@ -65,11 +66,11 @@ export function useClipVideos(network, { spaceId = '', engine = null, assets = n
                 existing.update(values)
                 continue
             }
-            const clip = create(values, { resolveAssetUrl: (asset) => resolveRef.current(asset) })
+            const clip = create(values, { resolveAssetUrl: (asset) => resolveRef.current(asset), loadSource })
             clips.set(id, clip)
             target?.setVideo(id, clip.video)
         }
-    }, [clipsKey, resolveKey, engine, create])
+    }, [clipsKey, resolveKey, engine, create, loadSource])
 
     // The engine can be replaced (a new canvas, the last node removed and one
     // added back): the new one knows none of the videos.

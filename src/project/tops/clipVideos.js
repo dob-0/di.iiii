@@ -130,6 +130,9 @@ const needsCrossOrigin = (url) => {
  */
 export const createClipVideo = (values = {}, {
     resolveAssetUrl = (asset) => asset,
+    // (url) => { promise: Promise<objectUrl|null>, release } — plays the file
+    // from memory (clipSourceCache.js). Absent: the address is played directly.
+    loadSource = null,
     document: doc = globalThis.document,
     requestFrame = (callback) => globalThis.requestAnimationFrame(callback),
     cancelFrame = (handle) => globalThis.cancelAnimationFrame(handle)
@@ -211,18 +214,38 @@ export const createClipVideo = (values = {}, {
     }
     video.addEventListener('loadedmetadata', onMetadata)
 
+    let releaseSource = null
+    const applySource = (address, src) => {
+        if (needsCrossOrigin(address)) video.crossOrigin = 'anonymous'
+        else video.removeAttribute('crossorigin')
+        video.src = src
+    }
+
     const setSource = (next) => {
         if (next === url) return
         url = next
         direction = 1
+        if (releaseSource) { releaseSource(); releaseSource = null }
         if (!url) {
             video.removeAttribute('src')
             try { video.load() } catch { /* nothing loaded */ }
             return
         }
-        if (needsCrossOrigin(url)) video.crossOrigin = 'anonymous'
-        else video.removeAttribute('crossorigin')
-        video.src = url
+        if (!loadSource || /^(blob|data):/i.test(url)) {
+            applySource(url, url)
+            return
+        }
+        // The previous clip keeps playing until the new file is in memory: a
+        // switch never shows a gap, and never waits on a busy connection.
+        const wanted = url
+        const handle = loadSource(url)
+        releaseSource = handle.release
+        handle.promise.then((objectUrl) => {
+            if (disposed || url !== wanted) return
+            if (objectUrl) video.removeAttribute('crossorigin')
+            if (objectUrl) video.src = objectUrl
+            else applySource(wanted, wanted)
+        })
     }
 
     const update = (nextValues = {}) => {
@@ -256,6 +279,7 @@ export const createClipVideo = (values = {}, {
         if (disposed) return
         stop()
         disposed = true
+        if (releaseSource) { releaseSource(); releaseSource = null }
         video.removeEventListener('loadedmetadata', onMetadata)
         try { video.pause() } catch { /* already gone */ }
         video.removeAttribute('src')
