@@ -21,16 +21,45 @@
  * Exit: 0 written or unchanged · 1 install refused · 2 usage · 3 inbox unreadable.
  * Undo: the section sits between its two markers; `--remove` takes it (and the nav link) out again.
  */
-import { readFileSync, readdirSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, readdirSync, existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { join, dirname } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 
-// A hub that is down (Cloudflare 502/503/504/530, 429, or no network at all) is the hub's state, not a fault of this job: say so, exit 0,
-// the next 2-minute tick retries. Everything else (no login, 4xx, no code page, 500 from our own server) stays exit 1.
-export const HUB_DOWN_STATUS = new Set([429, 502, 503, 504, 530]);
-export const hubDown = (what) => { console.error(`live-log: hub-down (${what}), skipped - the next tick retries`); process.exit(0); };
+// A hub that is down (Cloudflare 502/503/504/530 and 521-524, 429, or no network at all: ENOTFOUND, EAI_AGAIN, ECONNREFUSED ...) is the hub's state,
+// not a fault of this job: say so, exit 0, the next tick retries. Everything else (no login, 4xx, no code page, 500 from our own server) stays exit 1.
+// The quiet is bounded: a count of hub-down ticks in a row (and since when) is kept in ~/.cache/di/live-log/hub-down-<project>-<chat>.json, outside
+// the repository. The installed timer is OnUnitActiveSec=2min, so 15 ticks in a row = about 30 minutes; the 15th exits 1 with one line that says since
+// when, and so does every tick after it. A success removes the file.
+export const HUB_DOWN_STATUS = new Set([429, 502, 503, 504, 521, 522, 523, 524, 530]);
+export const HUB_DOWN_MAX_TICKS = 15;
+export const classifyFailure = ({ status } = {}) => (status === undefined || status === null || HUB_DOWN_STATUS.has(status) ? 'hub-down' : 'failure');
+let stateFile = null;
+// Read the state defensively (the lesson of #1258): anything that is not a finite whole count >= 1 counts as 0, anything that is not a date as now.
+export const readHubDownState = (raw, now = new Date()) => {
+    let o = null; try { o = JSON.parse(raw); } catch { /* garbage: start over */ }
+    const n = o && typeof o === 'object' && !Array.isArray(o) ? o.count : undefined;
+    const count = typeof n === 'number' && Number.isFinite(n) && n >= 1 ? Math.floor(n) : 0;
+    const ok = count > 0 && typeof o.since === 'string' && Number.isFinite(Date.parse(o.since));
+    return { count, since: ok ? o.since : now.toISOString() };
+};
+const clearHubDown = () => { try { if (stateFile) rmSync(stateFile, { force: true }); } catch { /* nothing to clear */ } };
+export const hubDown = (what) => {
+    let st = { count: 0, since: new Date().toISOString() };
+    try { st = readHubDownState(readFileSync(stateFile, 'utf8')); } catch { /* no state yet: the first tick */ }
+    const count = st.count + 1;
+    try {
+        mkdirSync(dirname(stateFile), { recursive: true });
+        writeFileSync(stateFile, JSON.stringify({ count, since: st.since }));
+    } catch (e) {
+        console.error(`live-log: hub-down (${what}) and the state file ${stateFile} cannot be written (${e.code || e.message}): cannot bound the quiet, failing`);
+        process.exit(1);
+    }
+    if (count >= HUB_DOWN_MAX_TICKS) { console.error(`live-log: hub-down since ${st.since} (${count} ticks in a row, last: ${what}) - failing`); process.exit(1); }
+    console.error(`live-log: hub-down (${what}), skipped (${count} of ${HUB_DOWN_MAX_TICKS} ticks) - the next tick retries`);
+    process.exit(0);
+};
 async function hubFetch(url, opts) {
     try { return await fetch(url, opts); } catch (e) { return hubDown(`${opts?.method || 'GET'} ${new URL(url).pathname}: ${e.cause?.code || e.message}`); }
 }
@@ -169,11 +198,12 @@ async function main() {
     if (!a.project || (!a.chat && !a.remove)) { console.error('usage: live-log.mjs --project <id> --chat <telegram group id> [--tier dev] [--dry-run] [--remove]'); process.exit(2); }
     const cred = JSON.parse(readFileSync(join(homedir(), '.config/di/credentials.json'), 'utf8'))[a.tier];
     if (!cred?.token) { console.error(`live-log: no stored login for ${a.tier} (run: di whoami)`); process.exit(1); }
+    stateFile = join(homedir(), '.cache/di/live-log', `hub-down-${a.project}-${a.chat || 'remove'}.json`.replace(/[^\w.-]/g, '_'));
     const base = cred.base.replace(/\/$/, '');
     const H = { Authorization: `Bearer ${cred.token}`, 'User-Agent': 'di-live-log', 'Content-Type': 'application/json' };
     const route = `/api/projects/${encodeURIComponent(a.project)}/document`;
     const got = await hubFetch(base + route, { headers: H });
-    if (!got.ok && HUB_DOWN_STATUS.has(got.status)) hubDown(`GET ${route} -> ${got.status}`);
+    if (!got.ok && classifyFailure(got) === 'hub-down') hubDown(`GET ${route} -> ${got.status}`);
     if (!got.ok) { console.error(`live-log: GET ${route} -> ${got.status}`); process.exit(1); }
     const body = await got.json(); const doc = body.document ?? body;
     const files = doc.presentationState?.codeFiles; const idx = files?.findIndex((f) => f.name === 'index.html');
@@ -188,15 +218,16 @@ async function main() {
         const section = render(msgs, { tz: a.tz, pictures, title: a.title });
         const oldBlock = page.includes(START) ? page.slice(page.indexOf(START), page.indexOf(END)) : '';
         const strip = (s) => s.replace(/written [^.]*\./, '');
-        if (strip(oldBlock) === strip(`${START}\n${section}\n`)) { console.log(`live-log: unchanged (${msgs.length} messages)`); return; }
+        if (strip(oldBlock) === strip(`${START}\n${section}\n`)) { clearHubDown(); console.log(`live-log: unchanged (${msgs.length} messages)`); return; }
         next = splice(page, section);
         console.log(`live-log: ${msgs.length} messages, ${Object.keys(pictures).length} pictures, page ${page.length} -> ${next.length} chars`);
     }
     if (a.dryRun) { const out = a.out || join(tmpdir(), `live-log-${a.project}.html`); writeFileSync(out, next); console.log(`live-log: dry run, page in ${out}`); return; }
     files[idx] = { ...files[idx], content: next };
     const put = await hubFetch(base + route, { method: 'PUT', headers: H, body: JSON.stringify(doc) });
-    if (!put.ok && HUB_DOWN_STATUS.has(put.status)) hubDown(`PUT -> ${put.status}`);
+    if (!put.ok && classifyFailure(put) === 'hub-down') hubDown(`PUT -> ${put.status}`);
     if (!put.ok) { console.error(`live-log: PUT -> ${put.status}`); process.exit(1); }
+    clearHubDown();
     const check = await (await hubFetch(base + route, { headers: H })).text();
     console.log(`live-log: written to ${a.tier} (${put.status}); check sha ${createHash('sha1').update(next).digest('hex').slice(0, 8)} present: ${check.includes(a.remove ? '' : START)}`);
 }
