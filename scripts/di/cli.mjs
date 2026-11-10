@@ -1741,8 +1741,8 @@ const cmdAutoupdate = async (args) => {
     if (!requireInstalled(home)) return
     const action = args._[1] || 'status'
     if (action === 'run') {
-        // The timer's job. One log line, always; exit 1 only when it failed.
-        const { outcome, detail } = await autoupdate.runAutoUpdate({
+        // The timer's job. One log line, always; exit 1 only when it failed (a hub that is down is `hub-down`, exit 0, for the first hour).
+        const { outcome, detail, failed } = await autoupdate.runAutoUpdate({
             home,
             update: ({ channel }) => new Promise((resolve) => {
                 const child = spawn(process.execPath, [fileURLToPath(import.meta.url), 'update', '--channel', channel], { stdio: ['ignore', 'pipe', 'pipe'] })
@@ -1754,7 +1754,7 @@ const cmdAutoupdate = async (args) => {
             })
         })
         say(`${outcome} ${detail}`)
-        if (outcome === 'failed') process.exitCode = 1
+        if (failed) process.exitCode = 1 // hub-down (5xx / no network) is a logged wait, exit 0, until it lasts an hour
         try {
             const timer = await autoupdate.refreshTimer({ home })
             if (timer.changed) say(timer.ok ? `timer rewritten — now every ${autoupdate.EVERY_MINUTES} minutes` : `timer rewrite failed: ${timer.why}`)
