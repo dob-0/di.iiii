@@ -31,6 +31,8 @@ import { resolveClipUrl } from '../../../project/tops/clipVideos.js'
 import { useShowClockContext } from '../../../perform/useShowClock.js'
 import { DEFAULT_BPM } from '../../../timeline/showClock.js'
 import { clipStill } from './clipStills.js'
+import { useDeckMidi } from '../../../perform/midi/useDeckMidi.js'
+import DeckMidiControl from '../../../perform/midi/DeckMidiControl.jsx'
 import './vjDeck.css'
 
 // The VJ deck: Resolume's clip grid for one vj.deck node.
@@ -105,8 +107,15 @@ function useCameras() {
         try {
             const stream = await media.getUserMedia({ video: true })
             stream.getTracks().forEach((track) => track.stop())
-        } catch {
-            setState((current) => ({ ...current, error: 'The camera was not allowed.' }))
+        } catch (failure) {
+            // 2026-11-10 (owner row N3529): the default camera can be held by another
+            // program. The person's Allow still counts, so read the list again; say
+            // no only when the browser really refused or the list is still unnamed.
+            await read()
+            const refused = failure?.name === 'NotAllowedError'
+            setState((current) => (current.cameras.length
+                ? current
+                : { ...current, error: refused ? 'Cameras are blocked for this page: allow them in the address bar.' : 'The camera is busy in another program.' }))
             return
         }
         await read()
@@ -216,6 +225,14 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         tapsRef.current = []
         write(setBpm(deck, DEFAULT_BPM, now()))
     }
+    // MIDI (src/perform/midi): live while the deck is on screen; Learn binds the
+    // control clicked on the deck (data-midi-target) to the next controller message.
+    const midi = useDeckMidi({ deck, write, stored: node?.values?.midiMap, onPatch: editable ? onPatchValues : null, onTap, enabled: editable })
+    const onLearnClick = (event) => {
+        if (!midi.learning) return
+        const key = event.target.closest?.('[data-midi-target]')?.getAttribute('data-midi-target')
+        if (key && midi.pickTarget(key)) { event.preventDefault(); event.stopPropagation() }
+    }
     const clipUrl = (clip) => (clip?.kind === 'asset' ? resolveClipUrl(clip.asset, spaceId, { assets, projectId }) : '')
 
     const onTile = (layerIndex, column) => {
@@ -247,8 +264,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
             const asset = await onUploadFile(file)
             if (asset?.id) place({ kind: 'asset', asset: asset.id, label: asset.name || file.name })
             else setNotice(`Could not bring in ${file.name}.`)
-        } catch {
-            setNotice(`Could not bring in ${file.name}.`)
+        } catch (failure) {
+            // 2026-11-10 (owner row N3529): the server refuses a file over its limit
+            // with 413; say that, with the file's size, instead of a bare "could not".
+            const mb = Math.round(file.size / (1024 * 1024))
+            setNotice(failure?.status === 413
+                ? `${file.name} is ${mb} MB: too large to upload here (the limit is 100 MB unless this di was set higher).`
+                : `Could not bring in ${file.name}.`)
         } finally {
             setUploading('')
         }
@@ -271,12 +293,12 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                 : selectedPlaying ? clipNodeId(deckId, selected.layer) : ''
 
     return (
-        <div className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'}>
+        <div className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick}>
             <header className="vj-deck-top">
                 <div className="vj-deck-tempo">
                     <span className="vj-deck-label">BPM</span>
                     <output className="vj-deck-bpm" aria-label="Tempo">{shownBpm.toFixed(1)}</output>
-                    <button type="button" className="vj-deck-button" onClick={onTap} disabled={!editable && !followsLight}>Tap</button>
+                    <button type="button" className="vj-deck-button" data-midi-target="tap" onClick={onTap} disabled={!editable && !followsLight}>Tap</button>
                     <button
                         type="button"
                         className="vj-deck-button vj-deck-button--quiet"
@@ -287,6 +309,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     >Reset</button>
                     {followsLight ? <span className="vj-deck-dim vj-deck-leader" title="The Light desk on this machine keeps the show’s tempo; the deck follows it.">follows Light</span> : null}
                 </div>
+                <DeckMidiControl midi={midi} editable={editable} />
                 <div className="vj-deck-crossfader">
                     <span className="vj-deck-label">A</span>
                     <input
@@ -297,6 +320,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                         value={deck.crossfade}
                         disabled={!editable}
                         aria-label="Crossfader"
+                        data-midi-target="crossfade"
                         title="Crossfader: A on the left, B on the right"
                         onChange={(event) => write(setCrossfade(deck, event.target.value))}
                     />
@@ -312,6 +336,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                         value={deck.master}
                         disabled={!editable}
                         aria-label="Master"
+                        data-midi-target="master"
                         onChange={(event) => write(setMaster(deck, event.target.value))}
                     />
                     <span className="vj-deck-number">{percent(deck.master)}</span>
@@ -336,6 +361,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                     onClick={() => write(triggerColumn(deck, column))}
                                     disabled={!editable}
                                     aria-label={`Play column ${column + 1}`}
+                                    data-midi-target={`column:${column}`}
                                 >
                                     {column + 1}
                                 </button>
@@ -361,6 +387,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             className="vj-deck-button vj-deck-toggle vj-deck-bypass"
                                             aria-pressed={layer.bypass}
                                             aria-label={`Bypass ${layer.name}`}
+                                            data-midi-target={`bypass:${index}`}
                                             title="Bypass layer"
                                             disabled={!editable}
                                             onClick={() => write(setBypass(deck, layer.id, !layer.bypass))}
@@ -370,6 +397,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             className="vj-deck-button vj-deck-toggle vj-deck-solo"
                                             aria-pressed={layer.solo}
                                             aria-label={`Solo ${layer.name}`}
+                                            data-midi-target={`solo:${index}`}
                                             title="Solo layer"
                                             disabled={!editable}
                                             onClick={() => write(setSolo(deck, layer.id, !layer.solo))}
@@ -392,6 +420,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             value={layer.side}
                                             disabled={!editable}
                                             aria-label={`Crossfader side for ${layer.name}`}
+                                            data-midi-target={`side:${index}`}
                                             title="Crossfader side"
                                             onChange={(event) => write(setSide(deck, layer.id, event.target.value))}
                                         >
@@ -404,6 +433,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             value={layer.blend}
                                             disabled={!editable}
                                             aria-label={`${layer.name} blend`}
+                                            data-midi-target={`blend:${index}`}
                                             title={BLEND_MODES[Number(layer.blend)] || ''}
                                             onChange={(event) => write(setBlend(deck, index, event.target.value))}
                                         >
@@ -419,6 +449,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             value={layer.opacity}
                                             disabled={!editable}
                                             aria-label={`${layer.name} opacity`}
+                                            data-midi-target={`opacity:${index}`}
                                             onChange={(event) => write(setOpacity(deck, index, event.target.value))}
                                         />
                                         <span className="vj-deck-number">{percent(layer.opacity)}</span>
@@ -435,6 +466,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             type="button"
                                             className={`vj-deck-tile${clip ? '' : ' vj-deck-tile--empty'}${playing ? ' is-playing' : ''}${isSelected ? ' is-selected' : ''}`}
                                             aria-pressed={clip ? playing : undefined}
+                                            data-midi-target={`clip:${index}:${column}`}
                                             aria-label={clip ? `${layer.name}, slot ${column + 1}: ${name}` : `${layer.name}, slot ${column + 1}: add a clip`}
                                             disabled={!clip && !editable}
                                             onClick={() => onTile(index, column)}

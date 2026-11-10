@@ -92,8 +92,33 @@ describe('VjDeckView cameras', () => {
         const picker = await openPicker()
         fireEvent.click(within(picker).getByRole('button', { name: 'Allow cameras' }))
         await act(async () => {})
-        expect(within(picker).getByRole('status').textContent).toMatch(/not allowed/)
+        expect(within(picker).getByRole('status').textContent).toMatch(/busy in another program/)
         expect(within(picker).getByRole('button', { name: 'Allow cameras' })).toBeTruthy()
+    })
+
+    // 2026-11-10 (owner row N3529): the laptop camera was held by another program, so
+    // the open failed although the person had said yes; the phone was never listed.
+    it('a busy default camera still lists the cameras once the person allowed', async () => {
+        let asked = false
+        setMedia({
+            enumerateDevices: async () => [{ kind: 'videoinput', deviceId: 'd1', label: asked ? 'Phone' : '' }],
+            getUserMedia: async () => { asked = true; throw Object.assign(new Error('busy'), { name: 'NotReadableError' }) }
+        })
+        render(<Host />)
+        const picker = await openPicker()
+        fireEvent.click(within(picker).getByRole('button', { name: 'Allow cameras' }))
+        await act(async () => {})
+        expect(within(picker).getByRole('button', { name: 'Camera Phone' })).toBeTruthy()
+        expect(within(picker).queryByRole('status')).toBeNull()
+    })
+
+    it('a blocked permission says where to allow it', async () => {
+        setMedia({ enumerateDevices: async () => [{ kind: 'videoinput', deviceId: 'd1', label: '' }], getUserMedia: async () => { throw Object.assign(new Error('no'), { name: 'NotAllowedError' }) } })
+        render(<Host />)
+        const picker = await openPicker()
+        fireEvent.click(within(picker).getByRole('button', { name: 'Allow cameras' }))
+        await act(async () => {})
+        expect(within(picker).getByRole('status').textContent).toMatch(/blocked for this page/)
     })
 
     it('no mediaDevices: one quiet line, no throw', async () => {
