@@ -182,20 +182,41 @@ function MapStreamSource({ name, effect = null, label, width, height }) {
             setState({ deviceId: '', problem: 'no camera access in this browser' })
             return undefined
         }
-        const resolve = async () => {
+        // A miss is retried on its own timer, because a loopback device that is
+        // restarting may never fire `devicechange` when it returns.
+        let timer = null
+        let tries = 0
+        let foundId = ''
+        let probed = false
+        const retry = () => {
+            if (cancelled || timer) return
+            timer = setTimeout(() => { timer = null; resolve() }, REOPEN_MS[Math.min(tries++, REOPEN_MS.length - 1)])
+        }
+        async function resolve() {
             try {
                 let devices = await media.enumerateDevices()
                 // Before permission every label is '', so nothing can match yet.
-                if (!devices.some((device) => device.kind === 'videoinput' && device.label)) {
+                // The throwaway stream that unlocks them is opened at most once
+                // per mount; a retry must never open a camera as a side effect.
+                if (!probed && !devices.some((device) => device.kind === 'videoinput' && device.label)) {
+                    probed = true
                     const probe = await media.getUserMedia({ video: true, audio: false })
                     probe.getTracks().forEach((track) => track.stop())
                     devices = await media.enumerateDevices()
                 }
                 if (cancelled) return
                 const found = matchStreamDevice(devices, name)
-                setState(found
-                    ? { deviceId: found.deviceId, problem: '' }
-                    : { deviceId: '', problem: `no input called "${name}" on this machine` })
+                if (found) {
+                    foundId = found.deviceId
+                    clearTimeout(timer)
+                    timer = null
+                    tries = 0
+                    setState({ deviceId: found.deviceId, problem: '' })
+                    return
+                }
+                // Once an id was found, a transient miss keeps the mounted camera.
+                if (!foundId) setState({ deviceId: '', problem: `no input called "${name}" on this machine` })
+                retry()
             } catch (error) {
                 if (!cancelled) setState({ deviceId: '', problem: error?.name === 'NotAllowedError' ? 'camera not permitted' : 'inputs unavailable' })
             }
@@ -207,6 +228,7 @@ function MapStreamSource({ name, effect = null, label, width, height }) {
         media.addEventListener?.('devicechange', resolve)
         return () => {
             cancelled = true
+            clearTimeout(timer)
             resolveRef.current = null
             media.removeEventListener?.('devicechange', resolve)
         }
@@ -351,6 +373,8 @@ function MapVideoSource({ fileRef }) {
 // that ends, or a device that is busy / not up yet, is now re-opened by itself
 // with a back-off; a refused permission is not retried.
 const REOPEN_MS = [500, 1000, 2000, 3000]
+// A feed that stays live this long is healthy: only then does the back-off start over.
+const STABLE_MS = 5000
 const REOPEN_ERRORS = ['NotReadableError', 'TrackStartError', 'NotFoundError', 'OverconstrainedError', 'AbortError']
 
 function MapCameraSource({ deviceId, effect = null, label, width, height, onStale = null }) {
@@ -372,7 +396,9 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
         let stream = null
         let cancelled = false
         let timer = null
+        let stable = null
         let tries = 0
+        let wasLive = false
         const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
         if (!media?.getUserMedia) {
             setProblem('no camera access in this browser')
@@ -392,6 +418,7 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
         }
         // The device may have come back under another id: ask the lookup again.
         function lost() {
+            clearTimeout(stable)
             drop()
             later()
             staleRef.current?.()
@@ -408,7 +435,9 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
                     }
                     drop()
                     stream = result
-                    tries = 0
+                    wasLive = true
+                    clearTimeout(stable)
+                    stable = setTimeout(() => { tries = 0 }, STABLE_MS)
                     if (videoRef.current) videoRef.current.srcObject = result
                     result.getVideoTracks().forEach((track) => track.addEventListener('ended', lost))
                     result.addEventListener?.('inactive', lost)
@@ -417,7 +446,7 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
                 .catch((error) => {
                     if (cancelled) return
                     const failure = error?.name
-                    if (failure !== 'NotAllowedError' && deviceId && REOPEN_ERRORS.includes(failure)) {
+                    if (failure !== 'NotAllowedError' && (deviceId || wasLive) && REOPEN_ERRORS.includes(failure)) {
                         later()
                         if (failure === 'NotFoundError' || failure === 'OverconstrainedError') staleRef.current?.()
                         return
@@ -429,6 +458,7 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
         return () => {
             cancelled = true
             clearTimeout(timer)
+            clearTimeout(stable)
             drop()
         }
     }, [deviceId])
