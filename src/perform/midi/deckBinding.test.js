@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { createDeck, setClip, trigger } from '../../project/tops/vjDeck.js'
+import { BLEND_MODES, createDeck, setClip, trigger } from '../../project/tops/vjDeck.js'
 import {
     PICKUP_WINDOW, applyMidi, effectiveMap, entryFor, isContinuousEntry, softTakeover, ledBytes, ledChanges, ledsFor, learnEntry, normalizeOverrides, relativeDelta, targetFromKey, withOverride
 } from './deckBinding.js'
@@ -70,7 +70,7 @@ describe('applyMidi', () => {
     it('blend and clip speed come from a pot', () => {
         const deck = filled()
         const playing = trigger(deck, 0, 1)
-        expect(applyMidi(deck, cc(4, 127), [entry('cc', 4, 'blend', { layer: 0 })]).layers[0].blend).toBe('4')
+        expect(applyMidi(deck, cc(4, 127), [entry('cc', 4, 'blend', { layer: 0 })]).layers[0].blend).toBe(String(BLEND_MODES.length - 1))
         expect(applyMidi(playing, cc(8, 127), [entry('cc', 8, 'clipSpeed', { layer: 0 })]).layers[0].clips[1].speed).toBe(4)
         expect(applyMidi(deck, cc(8, 127), [entry('cc', 8, 'clipSpeed', { layer: 0 })])).toBe(deck)
     })
