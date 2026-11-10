@@ -146,7 +146,8 @@ const main = async () => {
     // di.iiii" true for developers and false for everyone the installer is
     // actually for. Tests stay behind; nothing at runtime imports them.
     await copy(path.join(ROOT, 'sdk'), path.join(stage, 'sdk'), (src) => !/\.(test|spec)\.(js|mjs)$/.test(src))
-    for (const script of ['space-bundle.mjs', 'install-bundle.mjs']) {
+    // `di sync --push` (scripts/di/syncPush.mjs) runs tier-sync.mjs, which needs its helpers beside it.
+    for (const script of ['space-bundle.mjs', 'install-bundle.mjs', 'tier-sync.mjs', 'stored-login.mjs', 'asset-remap-lib.mjs', 'project-visibility-lib.mjs', 'lib/isMainModule.mjs']) {
         await copy(path.join(ROOT, 'scripts', script), path.join(stage, 'scripts', script))
     }
     // Both compose files. The .di override is only an override (`!reset`
