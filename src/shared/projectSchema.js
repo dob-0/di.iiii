@@ -1889,6 +1889,27 @@ export const normalizeOutputShow = (show) => {
     return { machine, ...(name ? { name } : {}), screen }
 }
 
+// HOW THE OUTPUT'S WINDOW OPENS (Perform's output control, 2026-11-10): the screen
+// the window is put on (by label, index and size, like `show.screen`) and whether
+// it asks for full screen. Not `show`: `show` names the machine a stage box runs
+// the kiosk on; this is what the "Open output" button does on THIS machine.
+// Absent means absent, so every older mapping is byte-identical.
+export const normalizeOutputWindow = (win) => {
+  if (!win || typeof win !== 'object' || Array.isArray(win)) return null
+  const out = {}
+  if (win.screen && typeof win.screen === 'object' && !Array.isArray(win.screen)) {
+    const label = ensureString(win.screen.label, '').trim()
+    const index = Number.isInteger(win.screen.index) && win.screen.index >= 0 ? win.screen.index : null
+    const size = Array.isArray(win.screen.size) && win.screen.size.length === 2
+      && win.screen.size.every((value) => Number.isFinite(value) && value > 0)
+      ? [Math.round(win.screen.size[0]), Math.round(win.screen.size[1])]
+      : null
+    if (label || index !== null || size) out.screen = { label, index, size }
+  }
+  if (win.fullscreen === true) out.fullscreen = true
+  return Object.keys(out).length ? out : null
+}
+
 // The light pool's knobs (src/rigbuild/lightPool.js lightPoolOptions clamps the same way):
 // kept so the room reads them — the normaliser used to drop the whole key. Absent means
 // absent: only what the document says is written, each number clamped.
@@ -1915,11 +1936,13 @@ export const normalizeMappingState = (mapping = {}) => {
     const seen = new Set()
     const seenCues = new Set()
     const show = normalizeOutputShow(output.show)
+      const outWindow = normalizeOutputWindow(output.window)
     return {
         output: {
             width: Math.max(1, ensureNumber(output.width, defaultMappingState.output.width)),
             height: Math.max(1, ensureNumber(output.height, defaultMappingState.output.height)),
             ...(show ? { show } : {}),
+            ...(outWindow ? { window: outWindow } : {}),
             // 'auto' is the default and is not written; only the authored
             // black is — the same absent-means-absent rule as `show`.
             ...(output.slate === 'off' ? { slate: 'off' } : {})

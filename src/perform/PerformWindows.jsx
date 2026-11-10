@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapCueList from '../map/MapCueList.jsx'
 import MapInspector from '../map/MapInspector.jsx'
 import { MapMachinesList, MapSurfaceList, MapWallView, nextCorners } from '../map/MapDeskParts.jsx'
-import { buildMapPath, openMapOutput } from '../map/mapRouting.js'
+import { buildMapPath } from '../map/mapRouting.js'
+import OutputControl from './OutputControl.jsx'
 import { cueForKey, isCueKey } from '../map/cueFiring.js'
 import { fireLightLook, lightRelation, lightingDeskPath, setLightLooksBlackout, setLightLooksMaster } from '../map/lightingLink.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
@@ -127,7 +128,7 @@ function OutWindow({ ctx }) {
                 <div className="perform-row">
                     <Status title="A preview, a few frames a second. The projector’s picture is the output page.">{out ? (out.label || 'Picture Out') : 'Deck master'} · preview</Status>
                     {surfaces.length ? (
-                        <button type="button" className="perform-action" onClick={() => openMapOutput(ctx.spaceId, ctx.projectId)}>Open output</button>
+                        <OutputControl ctx={ctx} />
                     ) : null}
                 </div>
             ) : null}
@@ -506,7 +507,7 @@ function WallOutWindow({ ctx }) {
                 />
             ) : <Status title="The wall is empty: nothing goes out yet.">NOTHING OUT</Status>}
             <div className="perform-pane perform-pane--bar">
-                <button type="button" className="perform-action" onClick={() => openMapOutput(ctx.spaceId, ctx.projectId)}>Open output</button>
+                <OutputControl ctx={ctx} />
             </div>
         </div>
     )
