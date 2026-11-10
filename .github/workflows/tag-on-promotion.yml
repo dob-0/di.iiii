@@ -26,13 +26,16 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   tag:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    # Pushes the version tag.
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.decide.outputs.version }}
       tagged: ${{ steps.decide.outputs.tagged }}
@@ -47,6 +50,8 @@ jobs:
 
       - name: Decide the version
         id: decide
+        env:
+          ASKED_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           git fetch --tags --quiet
@@ -62,7 +67,7 @@ jobs:
             exit 0
           fi
 
-          asked="${{ inputs.version }}"
+          asked="$ASKED_VERSION"
           if [ -n "$asked" ]; then
             next="$asked"
           else

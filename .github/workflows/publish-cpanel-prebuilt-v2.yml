@@ -21,7 +21,7 @@ on:
         default: staging
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # Deploys wait for the behavioral browser checks (input-device contracts,
@@ -34,6 +34,9 @@ jobs:
     needs: checks
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    # Pushes the release to the cpanel-* branch with GITHUB_TOKEN.
+    permissions:
+      contents: write
     environment: ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'production' || 'staging' }}
     env:
       SOURCE_REF:    ${{ inputs.source_ref != '' && inputs.source_ref || github.ref_name }}
