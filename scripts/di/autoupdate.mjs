@@ -44,6 +44,13 @@ export const HUB_DOWN_LOUD_AFTER = 12
 export const isHubDown = (reason) =>
     /could not read the hub's health \([^)]*: (?:429|5\d\d)[;)]/.test(reason) || /fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN/.test(reason)
 
+// The stored count is read back from a file anyone can edit: only a positive integer counts, anything else is 0
+// (a string would concatenate, NaN/an object never reach the limit, and the alert would stay silent for ever).
+export const savedHubDownRuns = (state) => {
+    const n = state?.autoupdate?.hubDownRuns
+    return Number.isInteger(n) && n > 0 ? n : 0
+}
+
 export const logFile = (home) => path.join(paths(home).logs, 'autoupdate.log')
 
 export const unitDir = (env = process.env, homedir = os.homedir()) =>
@@ -152,6 +159,7 @@ export const runAutoUpdate = async ({
         const degrees = temp()
         if (degrees !== null && degrees > heatLimit) {
             outcome = 'skipped-heat'
+            hubDownRuns = savedHubDownRuns(state) // a run that did not talk to the hub says nothing about it: keep the count
             detail = `cpu package ${degrees} C > ${heatLimit} C — not updating while hot`
         } else {
             const before = state.version || null
@@ -167,7 +175,7 @@ export const runAutoUpdate = async ({
                 error = reason || text || `di update exited ${result.code}`
                 detail = `channel=${channel} ${error}`
                 if (isHubDown(error)) {
-                    hubDownRuns = (state.autoupdate?.hubDownRuns || 0) + 1
+                    hubDownRuns = savedHubDownRuns(state) + 1
                     if (hubDownRuns >= HUB_DOWN_LOUD_AFTER) detail = `channel=${channel} hub unreachable for ${hubDownRuns} runs: ${error}`
                     else outcome = 'hub-down'
                 }
@@ -273,6 +281,7 @@ export const statusOf = ({ home, run = systemctl, dir = unitDir() }) => {
         channel: state.channel || 'stable',
         lastCheck: auto.lastCheck || null,
         lastOutcome: auto.lastOutcome || null,
+        hubDownRuns: savedHubDownRuns(state),
         lastUpdate: state.lastUpdate?.at ? `${state.lastUpdate.at} (${state.lastUpdate.from} -> ${state.lastUpdate.to}, ${state.lastUpdate.channel})` : (auto.lastUpdate || null),
         lastError: auto.lastError || null,
         log: logFile(home)
@@ -281,7 +290,7 @@ export const statusOf = ({ home, run = systemctl, dir = unitDir() }) => {
 
 export const statusLines = (s) => [
     `automatic updates  ${s.installed ? (s.active ? 'on' : 'installed, timer not active') : 'off'} · channel ${s.channel}`,
-    `  last check   ${s.lastCheck ? `${s.lastCheck} (${s.lastOutcome})` : 'never'}`,
+    `  last check   ${s.lastCheck ? `${s.lastCheck} (${s.lastOutcome}${s.hubDownRuns ? `, ${s.hubDownRuns} of ${HUB_DOWN_LOUD_AFTER} runs` : ''})` : 'never'}`,
     `  last update  ${s.lastUpdate || 'never'}`,
     `  last error   ${s.lastError ? `${s.lastError.at} ${s.lastError.message}` : 'none'}`,
     `  log          ${s.log}`
