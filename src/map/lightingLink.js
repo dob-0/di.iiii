@@ -287,6 +287,12 @@ export const setLightLooksMaster = (level, { spaceId = null, fetchImpl } = {}) =
     master: Math.round(Math.max(0, Math.min(1, Number(level) || 0)) * 255)
 }, { fetchImpl })
 
+// The blackout from the Master block: space-keyed like the master, so a desk
+// that runs another space's show answers 409 and nothing goes dark there.
+export const setLightLooksBlackout = (blackout, { spaceId = null, fetchImpl } = {}) => postLight(spacePath(spaceId, 'api/master'), {
+    blackout: Boolean(blackout)
+}, { fetchImpl })
+
 /**
  * What the show clock's reading says about THIS space, in one word:
  * 'off' (no desk or not open), 'other' (the open desk runs another space's

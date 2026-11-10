@@ -7,21 +7,31 @@ export const LASER_POLL_MS = 2000
 
 export default function useLaser({ pollMs = LASER_POLL_MS } = {}) {
     const [reading, setReading] = useState({ engine: null, desk: null })
-    const alive = useRef(true)
-    const refresh = useCallback(async () => {
+    const mounted = useRef(true)
+    useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+    const fetchReading = useCallback(async () => {
         const [engine, desk] = await Promise.all([readLaserEngine().catch(() => ({ reachable: false })), readLaserDesk().catch(() => ({ reachable: false }))])
-        if (alive.current) setReading({ engine, desk })
         return { engine, desk }
     }, [])
+    const refresh = useCallback(async () => {
+        const next = await fetchReading()
+        if (mounted.current) setReading(next)
+        return next
+    }, [fetchReading])
+    // The loop owns its own `cancelled` (see useLightLooks): no shared flag between effect runs.
     useEffect(() => {
-        alive.current = true
+        let cancelled = false
         let timer = 0
         const tick = async () => {
-            if (typeof document === 'undefined' || document.visibilityState !== 'hidden') await refresh()
-            if (alive.current) timer = setTimeout(tick, pollMs)
+            if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+                const next = await fetchReading()
+                if (cancelled) return
+                setReading(next)
+            }
+            if (!cancelled) timer = setTimeout(tick, pollMs)
         }
         tick()
-        return () => { alive.current = false; clearTimeout(timer) }
-    }, [refresh, pollMs])
+        return () => { cancelled = true; clearTimeout(timer) }
+    }, [fetchReading, pollMs])
     return { ...reading, refresh, known: reading.engine !== null }
 }

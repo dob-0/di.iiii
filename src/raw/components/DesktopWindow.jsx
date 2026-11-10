@@ -163,7 +163,7 @@ export default function DesktopWindow({
             window.removeEventListener('resize', reclamp)
             window.removeEventListener('orientationchange', reclamp)
         }
-    }, [allowOverflowLeft, allowOverflowTop, minTop, inWorld])
+    }, [allowOverflowLeft, allowOverflowTop, minTop, inWorld, bounds])
 
     useEffect(() => {
         if (!dragMode) return undefined
