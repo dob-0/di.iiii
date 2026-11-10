@@ -27,6 +27,14 @@ import { homedir, tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 
+// A hub that is down (Cloudflare 502/503/504/530, 429, or no network at all) is the hub's state, not a fault of this job: say so, exit 0,
+// the next 2-minute tick retries. Everything else (no login, 4xx, no code page, 500 from our own server) stays exit 1.
+export const HUB_DOWN_STATUS = new Set([429, 502, 503, 504, 530]);
+export const hubDown = (what) => { console.error(`live-log: hub-down (${what}), skipped - the next tick retries`); process.exit(0); };
+async function hubFetch(url, opts) {
+    try { return await fetch(url, opts); } catch (e) { return hubDown(`${opts?.method || 'GET'} ${new URL(url).pathname}: ${e.cause?.code || e.message}`); }
+}
+
 export const START = '<!--live:start-->';
 export const END = '<!--live:end-->';
 const NAV = '<a href="#live">Live</a>';
@@ -164,7 +172,8 @@ async function main() {
     const base = cred.base.replace(/\/$/, '');
     const H = { Authorization: `Bearer ${cred.token}`, 'User-Agent': 'di-live-log', 'Content-Type': 'application/json' };
     const route = `/api/projects/${encodeURIComponent(a.project)}/document`;
-    const got = await fetch(base + route, { headers: H });
+    const got = await hubFetch(base + route, { headers: H });
+    if (!got.ok && HUB_DOWN_STATUS.has(got.status)) hubDown(`GET ${route} -> ${got.status}`);
     if (!got.ok) { console.error(`live-log: GET ${route} -> ${got.status}`); process.exit(1); }
     const body = await got.json(); const doc = body.document ?? body;
     const files = doc.presentationState?.codeFiles; const idx = files?.findIndex((f) => f.name === 'index.html');
@@ -185,9 +194,10 @@ async function main() {
     }
     if (a.dryRun) { const out = a.out || join(tmpdir(), `live-log-${a.project}.html`); writeFileSync(out, next); console.log(`live-log: dry run, page in ${out}`); return; }
     files[idx] = { ...files[idx], content: next };
-    const put = await fetch(base + route, { method: 'PUT', headers: H, body: JSON.stringify(doc) });
+    const put = await hubFetch(base + route, { method: 'PUT', headers: H, body: JSON.stringify(doc) });
+    if (!put.ok && HUB_DOWN_STATUS.has(put.status)) hubDown(`PUT -> ${put.status}`);
     if (!put.ok) { console.error(`live-log: PUT -> ${put.status}`); process.exit(1); }
-    const check = await (await fetch(base + route, { headers: H })).text();
+    const check = await (await hubFetch(base + route, { headers: H })).text();
     console.log(`live-log: written to ${a.tier} (${put.status}); check sha ${createHash('sha1').update(next).digest('hex').slice(0, 8)} present: ${check.includes(a.remove ? '' : START)}`);
 }
 

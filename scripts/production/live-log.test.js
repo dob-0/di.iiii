@@ -1,4 +1,11 @@
+// @vitest-environment node
 import { describe, it, expect } from 'vitest';
+import { spawn } from 'node:child_process';
+import http from 'node:http';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { collect, render, splice, unsplice, START, END } from './live-log.mjs';
 
 const m = (id, t, text, extra = {}) => ({ key: `-1:${id}`, message_id: id, t, sent: t, sender: 'A', kind: 'text', text, ...extra });
@@ -26,4 +33,35 @@ describe('live-log', () => {
         expect(unsplice(b)).toBe(page);
         expect(b.indexOf(END)).toBeGreaterThan(0);
     });
+});
+
+// The timer runs this every 2 min. A hub that is down (5xx, Cloudflare 530, no network) is the hub's state: logged, exit 0, the next tick retries.
+// A fault of ours (no login, 4xx, no code page) stays exit 1. Measured on aylmo 11-09: 13 failures in 26 min, all 503/530, one outage.
+describe('live-log against a hub that answers badly', () => {
+    const script = fileURLToPath(new URL('./live-log.mjs', import.meta.url));
+    const run = async (status) => {
+        const home = mkdtempSync(join(tmpdir(), 'live-log-home-'));
+        mkdirSync(join(home, '.config/di'), { recursive: true });
+        const server = http.createServer((_req, res) => { res.statusCode = status; res.end('x'); });
+        await new Promise((r) => server.listen(0, '127.0.0.1', r));
+        const base = status === 'refused' ? 'http://127.0.0.1:9' : `http://127.0.0.1:${server.address().port}`;
+        writeFileSync(join(home, '.config/di/credentials.json'), JSON.stringify({ dev: { token: 't', base } }));
+        const out = await new Promise((resolve) => {
+            const c = spawn(process.execPath, [script, '--project', 'p', '--chat', '-1', '--tier', 'dev'], { env: { ...process.env, HOME: home } });
+            let err = ''; c.stderr.on('data', (d) => { err += d; }); c.on('close', (code) => resolve({ code, err }));
+        });
+        server.close(); rmSync(home, { recursive: true, force: true });
+        return out;
+    };
+    for (const status of [502, 503, 504, 530, 429]) {
+        it(`HTTP ${status} is hub-down: exit 0 and says so`, async () => {
+            const r = await run(status);
+            expect(r.err).toContain('hub-down');
+            expect(r.code).toBe(0);
+        });
+    }
+    it('connection refused is hub-down: exit 0', async () => { const r = await run('refused'); expect(r.err).toContain('hub-down'); expect(r.code).toBe(0); });
+    for (const status of [401, 403, 404, 500]) {
+        it(`HTTP ${status} stays a failure: exit 1`, async () => { expect((await run(status)).code).toBe(1); });
+    }
 });
