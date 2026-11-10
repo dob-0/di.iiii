@@ -456,14 +456,20 @@
 }
 
 .vj-deck-fx-button {
-    min-width: 28px;
+    min-width: 36px;
     min-height: 28px;
 }
 
+.vj-deck-fx input[type='range'],
 .vj-deck-fx-layer,
 .vj-deck-fx-add {
     min-height: 28px;
     max-width: 100%;
+}
+
+.vj-deck-fx .vj-deck-toggle[aria-pressed='true'] {
+    background: var(--di-ink);
+    border-color: var(--di-ink);
 }
 
 .vj-deck-fx-effect {
