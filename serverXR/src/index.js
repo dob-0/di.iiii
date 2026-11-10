@@ -3541,7 +3541,7 @@ app.use((err, req, res, next) => {
   pushEvent('error', { message: err.message })
   logger.error(err)
   if (err?.code === 'LIMIT_FILE_SIZE') {
-    res.status(413).json({ error: 'Uploaded file is too large.' })
+    res.status(413).json({ error: 'Uploaded file is too large.', maxBytes: config.maxUploadBytes })
     return
   }
   if (err?.message === 'Unsupported asset type.') {
@@ -3710,6 +3710,9 @@ initStorage()
       ? https.createServer({ cert: tlsFiles.cert, key: tlsFiles.key }, app)
       : http.createServer(app)
     if (tlsFiles) logger.info(`Serving https — certificate ${process.env.TLS_CERT}`)
+    // Node ends any request still arriving after 300 s (requestTimeout). With no
+    // upload ceiling (a local install) a multi-GB file on slow wifi must not hit it.
+    if (!Number.isFinite(config.maxUploadBytes)) httpServer.requestTimeout = 0
     servedCertificate = tlsFiles ? certificateNames(tlsFiles.cert) : null
 
     initializeSocket(httpServer, {

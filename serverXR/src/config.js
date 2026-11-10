@@ -134,8 +134,19 @@ const basePath = normalizeBasePath(process.env.APP_BASE_PATH || process.env.BASE
 const apiToken = (process.env.API_TOKEN || process.env.SERVERXR_API_TOKEN || '').trim()
 const requireAuth = parseBool(process.env.REQUIRE_AUTH, isProduction)
 const corsOrigins = expandLoopbackOrigins(parseList(process.env.CORS_ORIGINS))
-const maxUploadMb = parseNumber(process.env.MAX_UPLOAD_MB, 100)
-const maxUploadBytes = Math.max(1, maxUploadMb) * 1024 * 1024
+// The one upload ceiling (multer, the raw PUT, the follow-files carrier). An
+// explicit MAX_UPLOAD_MB wins everywhere. Unset: a personal install (`di up`
+// sets DI_LOCAL=1; no hosted env — docker, cPanel, write-server-env — sets it)
+// has NO ceiling, it is one person's pro tool and the free-disk guard
+// (diskGuard.js) is the real limit; every other start keeps 100 MB.
+const resolveMaxUploadBytes = (env = process.env) => {
+  const raw = env.MAX_UPLOAD_MB
+  const explicit = raw !== undefined && String(raw).trim() !== '' && Number.isFinite(Number(raw))
+  if (explicit) return Math.max(1, Number(raw)) * 1024 * 1024
+  if (env.DI_LOCAL === '1') return Infinity
+  return 100 * 1024 * 1024
+}
+const maxUploadBytes = resolveMaxUploadBytes(process.env)
 // Floor of free disk below which state-changing requests get a 507 instead of
 // running the volume to ENOSPC mid-write (see diskGuard.js). 0 disables.
 const minFreeDiskMb = parseNumber(process.env.MIN_FREE_DISK_MB, 512)
@@ -503,4 +514,4 @@ const config = {
   }
 }
 
-module.exports = { config, normalizeBasePath, isCorsOriginAllowed, buildCorsOriginHandler }
+module.exports = { config, normalizeBasePath, isCorsOriginAllowed, buildCorsOriginHandler, resolveMaxUploadBytes }

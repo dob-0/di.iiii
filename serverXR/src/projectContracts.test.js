@@ -1559,6 +1559,26 @@ describe('verbatim asset PUT (a follow carrying files)', () => {
         expect(await leftovers(server)).toEqual([])
     })
 
+    // 2026-11-10: a VJ video over 100 MB died with MulterError on the owner's own
+    // machine. A local install (DI_LOCAL=1) has no ceiling; hosted keeps 100 MB.
+    it('a local install takes a multipart upload over the old 100 MB limit; a hosted one answers 413 with maxBytes', async () => {
+        const big = new Blob([Buffer.alloc(101 * 1024 * 1024, 7)], { type: 'video/mp4' })
+        const send = async (server) => {
+            await makeProject(server, 'bigvid')
+            const form = new FormData()
+            form.append('asset', big, 'big.mp4')
+            return fetch(`${server.baseUrl}/api/projects/bigvid/assets`, { method: 'POST', body: form })
+        }
+        const local = await startServer({ extraEnv: { DI_LOCAL: '1' } })
+        expect((await send(local)).status).toBe(200)
+        const hosted = await startServer()
+        const refused = await send(hosted).catch(() => null)
+        if (refused) {
+            expect(refused.status).toBe(413)
+            expect((await refused.json()).maxBytes).toBe(100 * 1024 * 1024)
+        }
+    }, 60_000)
+
     // The property the whole trust argument rests on: a key is for ONE space.
     // The route itself never looks at the space — the blanket editor gate does,
     // from the project's parent space — so this pins that wiring in place.

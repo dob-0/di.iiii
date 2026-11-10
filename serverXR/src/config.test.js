@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import { describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { isCorsOriginAllowed } = require('./config.js')
+const { isCorsOriginAllowed, resolveMaxUploadBytes } = require('./config.js')
 
 describe('isCorsOriginAllowed', () => {
     it('allows any origin when wildcard is configured', () => {
@@ -270,5 +270,25 @@ describe('config: hard-fails in production when AUTH_SESSION_SECRET falls back t
             expect(() => require('./config.js')).not.toThrow()
             expect(warnSpy).not.toHaveBeenCalledWith(expect.stringMatching(/AUTH_SESSION_SECRET is not set/))
         })
+    })
+})
+
+describe('resolveMaxUploadBytes (local installs have no upload wall)', () => {
+    const MB = 1024 * 1024
+    it('a local install (DI_LOCAL=1, NODE_ENV=production as `di up` sets it) has no limit by default', () => {
+        expect(resolveMaxUploadBytes({ DI_LOCAL: '1', NODE_ENV: 'production' })).toBe(Infinity)
+    })
+    it('an explicit MAX_UPLOAD_MB wins, local or not', () => {
+        expect(resolveMaxUploadBytes({ DI_LOCAL: '1', MAX_UPLOAD_MB: '250' })).toBe(250 * MB)
+        expect(resolveMaxUploadBytes({ MAX_UPLOAD_MB: '1000000' })).toBe(1000000 * MB)
+    })
+    it('hosted tiers (no DI_LOCAL) keep 100 MB, production or not', () => {
+        expect(resolveMaxUploadBytes({ NODE_ENV: 'production' })).toBe(100 * MB)
+        expect(resolveMaxUploadBytes({})).toBe(100 * MB)
+        expect(resolveMaxUploadBytes({ NODE_ENV: 'production', DI_LOCAL: '0' })).toBe(100 * MB)
+    })
+    it('a blank MAX_UPLOAD_MB counts as unset', () => {
+        expect(resolveMaxUploadBytes({ DI_LOCAL: '1', MAX_UPLOAD_MB: '' })).toBe(Infinity)
+        expect(resolveMaxUploadBytes({ MAX_UPLOAD_MB: '  ' })).toBe(100 * MB)
     })
 })

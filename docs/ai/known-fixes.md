@@ -1796,3 +1796,10 @@ Seen live: the `/out` page showed a phone camera (v4l2loopback fed by scrcpy) th
 Cause: `MapCameraSource` called getUserMedia once per device id and nothing listened for the track ending or for a first open that failed because the feed was not up yet.
 Fix: it re-opens by itself on track `ended` / stream `inactive` and on busy/not-found class errors, with a back-off (0.5, 1, 2 s, then 3 s), stopping old tracks first; the stream lookup is asked again; no retry on NotAllowedError; timers and listeners are cleared on unmount.
 Guard: `src/map/MapSourceView.reacquire.test.jsx` (fake timers, faked mediaDevices). Not checked on a real camera.
+
+## A VJ video over 100 MB was refused on the owner's own machine (2026-11-10, owner row N3529)
+Seen live: 21:15 upload of a VJ video, `MulterError: File too large` then `POST /serverXR/api/projects/<id>/assets 413`; the owner's rule for his own machine: "we don't need any limits, this is a pro tool".
+Cause: `serverXR/src/config.js` defaulted `MAX_UPLOAD_MB` to 100 for every start, local installs included; multer, the raw PUT and the follow-files carrier all read `config.maxUploadBytes`.
+Fix: `resolveMaxUploadBytes(env)`: explicit `MAX_UPLOAD_MB` wins; else `DI_LOCAL=1` (set only by `di up`, scripts/di/runner-node.mjs, never by docker, cPanel or write-server-env) means `Infinity`; else 100 MB as before. With no ceiling the HTTP server's `requestTimeout` is 0 (Node's 300 s would cut a multi-GB upload on slow wifi). The multer 413 body now carries `maxBytes`. The free-disk guard (`diskGuard.js`) is unchanged and is the real limit.
+Guard: `serverXR/src/config.test.js` (resolveMaxUploadBytes, 4 tests) and `serverXR/src/projectContracts.test.js` "a local install takes a multipart upload over the old 100 MB limit". Not checked: a real 4 GB file; the client 413 message lives only on feat/perform-full (not in dev) and still says 100 MB there.
+Lesson: a limit meant for the hosted tier needs the existing local signal (`DI_LOCAL`), not `NODE_ENV`: `di up` runs with NODE_ENV=production too.
