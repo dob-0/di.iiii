@@ -37,6 +37,12 @@ import { readState, writeState } from './state.mjs'
 export const EVERY_MINUTES = 5
 export const HEAT_LIMIT_C = 85
 export const UNIT = 'di-autoupdate'
+// The hub (dev.diiii.xyz / the release host) answering 5xx or not at all is the hub's state, not a fault of this install
+// (measured on aylmo: 132 "failed" ticks in 7 days, all 502/503/fetch failed, in two outages 11-03 and 11-09). It is logged as
+// `hub-down`, exit 0; after this many ticks in a row (12 x 5 min = 1 hour) it is a `failed` again, so a long outage stays loud.
+export const HUB_DOWN_LOUD_AFTER = 12
+export const isHubDown = (reason) =>
+    /could not read the hub's health \([^)]*: (?:429|5\d\d)[;)]/.test(reason) || /fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN/.test(reason)
 
 export const logFile = (home) => path.join(paths(home).logs, 'autoupdate.log')
 
@@ -140,6 +146,7 @@ export const runAutoUpdate = async ({
     let detail = ''
     let error = null
     let updated = null
+    let hubDownRuns = 0
 
     try {
         const degrees = temp()
@@ -159,6 +166,11 @@ export const runAutoUpdate = async ({
                 const reason = [text, ...lines.reverse()].find(l => !/^update failed, still on /.test(l))
                 error = reason || text || `di update exited ${result.code}`
                 detail = `channel=${channel} ${error}`
+                if (isHubDown(error)) {
+                    hubDownRuns = (state.autoupdate?.hubDownRuns || 0) + 1
+                    if (hubDownRuns >= HUB_DOWN_LOUD_AFTER) detail = `channel=${channel} hub unreachable for ${hubDownRuns} runs: ${error}`
+                    else outcome = 'hub-down'
+                }
             } else if (/already the newest|up to date|nothing to update to/i.test(text)) {
                 outcome = 'up-to-date'
                 detail = `channel=${channel} ${text}`
@@ -184,11 +196,12 @@ export const runAutoUpdate = async ({
         autoupdate: {
             lastCheck: at.toISOString(),
             lastOutcome: outcome,
+            hubDownRuns,
             lastUpdate: updated ? updated.at : (state.autoupdate?.lastUpdate || null),
             lastError: error ? { at: at.toISOString(), message: error } : (state.autoupdate?.lastError || null)
         }
     })
-    return { outcome, detail }
+    return { outcome, detail, failed: outcome === 'failed' }
 }
 
 const systemctl = (args) => {
