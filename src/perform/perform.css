@@ -462,7 +462,7 @@
 }
 
 .perform-state-tag {
-    padding: 2px var(--di-space-2);
+    padding: var(--di-space-1) var(--di-space-2);
     border: 1px solid var(--di-line);
     border-radius: var(--di-radius);
     color: var(--di-dim);
@@ -500,7 +500,7 @@
 
 /* The live look: the one accent, meaning "this is on the cubes". */
 .perform-laser-look.is-live {
-    border-color: var(--ui-accent, var(--di-ink));
-    color: var(--ui-accent, var(--di-ink));
+    border-color: var(--ui-accent);
+    color: var(--ui-accent);
     background: transparent;
 }
