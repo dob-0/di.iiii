@@ -88,6 +88,14 @@ export default function EffectsPanel({ deck, scope, layerIndex, onScope, onLayer
                                 <input type="color" className="vj-deck-fx-colour" value={effect.params[p.name]} disabled={!editable} aria-label={`${effectLabel(effect.type)} ${p.label}`} onChange={(event) => write(setEffectParam(deck, where, effect.id, p.name, event.target.value))} />
                                 <span className="vj-deck-number" />
                             </label>
+                        ) : p.options ? (
+                            <label className="vj-deck-list-row vj-deck-setting" key={p.name}>
+                                <span className="vj-deck-label">{p.label}</span>
+                                <select className="vj-deck-chip" value={String(effect.params[p.name])} disabled={!editable} aria-label={`${effectLabel(effect.type)} ${p.label}`} onChange={(event) => write(setEffectParam(deck, where, effect.id, p.name, event.target.value))}>
+                                    {p.options.map((option, optionIndex) => <option key={option} value={String(optionIndex)}>{option}</option>)}
+                                </select>
+                                <span className="vj-deck-number" />
+                            </label>
                         ) : (
                             <label className="vj-deck-list-row vj-deck-setting" key={p.name}>
                                 <span className="vj-deck-label">{p.label}</span>

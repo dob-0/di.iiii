@@ -19,7 +19,7 @@ import { DEFAULT_BPM, TAP_RESET_MS as CLOCK_TAP_RESET_MS, sanitizeEpoch, tapTemp
 export const VJ_DECK_TYPE = 'vj.deck'
 export const DECK_INPUTS = ['in1', 'in2', 'in3', 'in4']
 // Index order is what the shader reads (top.blend's `mode` choice).
-export const BLEND_MODES = ['Mix', 'Add', 'Screen', 'Multiply', 'Difference']
+export const BLEND_MODES = ['Mix', 'Add', 'Screen', 'Multiply', 'Difference', 'Subtract', 'Lighten', 'Darken', 'Overlay']
 // Index order is what top.clip reads.
 export const CLIP_MODES = ['Loop', 'Bounce', 'Once']
 export const DEFAULT_COLUMNS = 6
@@ -87,7 +87,14 @@ export const EFFECT_TYPES = {
     'top.silhouette': { main: ['threshold', 'soft', 'invert', 'colour', 'back'] },
     'top.lineart': { main: ['bands', 'width', 'colour'] },
     'top.glitch': { main: ['amount', 'speed', 'split'] },
-    'top.pixelate': { main: ['size', 'levels', 'grey'] }
+    'top.pixelate': { main: ['size', 'levels', 'grey'] },
+    'top.displace': { main: ['source', 'amountX', 'amountY', 'scale', 'speed'] },
+    'top.hsvadj': { main: ['hue', 'sat', 'value'] },
+    'top.mirror': { main: ['mode', 'flipX', 'flipY'] },
+    'top.key': { main: ['mode', 'colour', 'tolerance', 'soft'] },
+    'top.lookup': { main: ['shadows', 'mids', 'highs', 'amount'] },
+    'top.slope': { main: ['strength', 'angle', 'size', 'keep'] },
+    'top.glow': { main: ['threshold', 'radius', 'amount'] }
 }
 export const EFFECT_TYPE_IDS = Object.keys(EFFECT_TYPES)
 export const effectLabel = (type) => TOP_OPERATORS[type]?.label || type
