@@ -445,4 +445,10 @@
     .perform-shell .raw-window-header {
         flex-wrap: wrap;
     }
+
+    /* Alone on the second row, the controls keep the right-hand edge where
+       Close always is (space-between puts a lone item on the left). */
+    .perform-shell .raw-window-actions {
+        margin-left: auto;
+    }
 }
