@@ -11,6 +11,7 @@ import {
     clearLayer,
     clipNodeId,
     masterNodeId,
+    moveClip,
     normalizeDeck,
     removeLayer,
     setBlend,
@@ -80,6 +81,16 @@ function ClipStill({ url, inPoint, outPoint, label, className = 'vj-deck-tile-pi
     return <img className={className} src={still} alt="" aria-hidden="true" data-still-of={label} />
 }
 
+// Drag and drop: a filled tile carries its slot, a Sources row carries a clip
+// to make. Both go through dataTransfer with their own type, so a file or a
+// link dragged in from outside is never mistaken for one.
+export const DRAG_CLIP = 'application/x-di-deck-clip'
+export const DRAG_SOURCE = 'application/x-di-deck-source'
+const dragHas = (event, type) => Array.from(event.dataTransfer?.types || []).includes(type)
+const dragRead = (event, type) => {
+    try { return JSON.parse(event.dataTransfer.getData(type)) } catch { return null }
+}
+
 const inputLabel = (input) => `In ${DECK_INPUTS.indexOf(input) + 1}`
 const mediaDevicesOf = () => (typeof navigator !== 'undefined' && navigator.mediaDevices && typeof navigator.mediaDevices.enumerateDevices === 'function' ? navigator.mediaDevices : null)
 
@@ -145,23 +156,64 @@ function useCameras() {
     return { ...state, allow }
 }
 
-function CameraPicker({ onPick }) {
-    const { supported, cameras, needsPermission, error, allow } = useCameras()
+// One row of the Sources list: a small kind label and the name, on one line.
+// The row is the drag handle (type DRAG_SOURCE, the clip to make); the name is
+// the button, which puts the clip in the target slot.
+function SourceRow({ kind, name, label, clip, editable, canPlace, onPlace }) {
     return (
-        <div className="vj-deck-pick vj-deck-cameras" role="group" aria-label="Cameras">
-            <span className="vj-deck-label">Cameras</span>
-            <div className="vj-deck-pick-list">
-                {cameras.map((camera) => (
-                    <button key={`${camera.id}:${camera.label}`} type="button" className="vj-deck-button vj-deck-camera" aria-label={`Camera ${camera.label}`} onClick={() => onPick(camera)}>
-                        {camera.label}
-                    </button>
-                ))}
-                {needsPermission ? <button type="button" className="vj-deck-button vj-deck-allow-cameras" onClick={allow}>Allow cameras</button> : null}
-                {!supported ? <span className="vj-deck-dim vj-deck-camera-none">No camera on this machine</span> : null}
-                {supported && !cameras.length && !needsPermission && !error ? <span className="vj-deck-dim vj-deck-camera-none">No camera on this machine</span> : null}
-                {error ? <span className="vj-deck-dim" role="status">{error}</span> : null}
-            </div>
+        // The row is only a drag handle; its button is the keyboard and touch way to the same thing.
+        // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+        <div className="vj-deck-source" draggable={editable} onDragStart={(event) => {
+            event.dataTransfer.setData(DRAG_SOURCE, JSON.stringify(clip))
+            event.dataTransfer.effectAllowed = 'copy'
+        }}>
+            <span className="vj-deck-source-kind">{kind}</span>
+            <button type="button" className="vj-deck-button vj-deck-source-name" aria-label={label} title={name} disabled={!canPlace} onClick={() => onPlace(clip)}>{name}</button>
         </div>
+    )
+}
+
+// ALWAYS visible: every wired input, every camera and every video of the
+// project, one row each. A row is dragged onto any slot, or clicked to fill
+// the slot that is picked or selected (`target`).
+function SourcesPanel({ mode, editable, target, targetName, picking, onCancel, onPlace, videoAssets, onUploadFile, uploading, onFile, notice }) {
+    const { supported, cameras, needsPermission, error, allow } = useCameras()
+    const canPlace = editable && Boolean(target)
+    const row = (props) => <SourceRow key={props.label} editable={editable} canPlace={canPlace} onPlace={onPlace} {...props} />
+    return (
+        <section className="vj-deck-panel vj-deck-sources" aria-label={picking ? 'Add a clip' : 'Sources'}>
+            <div className="vj-deck-panel-head">
+                <span className="vj-deck-label">{target ? `Sources: ${picking ? 'add to' : 'put in'} ${targetName}` : 'Sources'}</span>
+                {picking ? <button type="button" className="vj-deck-button vj-deck-button--quiet" onClick={onCancel}>Cancel</button> : null}
+            </div>
+            {onUploadFile ? (
+                <div className="vj-deck-source vj-deck-source--upload">
+                    <span className="vj-deck-source-kind">File</span>
+                    <label className="vj-deck-button vj-deck-upload">
+                        {uploading ? `Bringing in ${uploading}` : 'Upload video'}
+                        <input type="file" accept="video/*" onChange={onFile} disabled={Boolean(uploading)} />
+                    </label>
+                </div>
+            ) : null}
+            {notice ? <span className="vj-deck-dim" role="status">{notice}</span> : null}
+            <div className="vj-deck-source-list">
+                <div className="vj-deck-source-group">
+                    {DECK_INPUTS.map((input) => row({ kind: 'Input', name: inputLabel(input), label: inputLabel(input), clip: { kind: 'input', input, label: inputLabel(input) } }))}
+                </div>
+                {/* Named only while a slot is being filled: the grid's own group count stays what it was. */}
+                <div role={picking ? 'group' : undefined} aria-label={picking ? 'Cameras' : undefined} className="vj-deck-source-group">
+                    {cameras.map((camera) => row({ kind: 'Camera', name: camera.label, label: `Camera ${camera.label}`, clip: { kind: 'camera', camera: camera.label, device: camera.id, label: camera.label } }))}
+                    {needsPermission ? <button type="button" className="vj-deck-button vj-deck-allow-cameras" onClick={allow}>Allow cameras</button> : null}
+                    {!supported || (!cameras.length && !needsPermission && !error) ? <span className="vj-deck-dim vj-deck-camera-none">No camera on this machine</span> : null}
+                    {error ? <span className="vj-deck-dim" role="status">{error}</span> : null}
+                </div>
+                <div className="vj-deck-source-group">
+                    {videoAssets.map((asset) => row({ kind: 'Video', name: asset.name || asset.id, label: asset.name || asset.id, clip: { kind: 'asset', asset: asset.id, label: asset.name || '' } }))}
+                    {!videoAssets.length ? <span className="vj-deck-dim" title="No video in this project yet.">{mode === 'perform' ? 'No video' : 'No video in this project yet.'}</span> : null}
+                </div>
+            </div>
+            {!target ? <p className="vj-deck-hint">{mode === 'perform' ? 'Drag onto a slot' : 'Drag a source onto a slot, or tap a slot first and then a source.'}</p> : null}
+        </section>
     )
 }
 
@@ -200,6 +252,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const editable = typeof onPatchValues === 'function'
     const [selected, setSelected] = useState(null) // { layer, column }
     const [picking, setPicking] = useState(null) // { layer, column }
+    const [dropTarget, setDropTarget] = useState(null) // { layer, column } under a drag
     const [uploading, setUploading] = useState('')
     const [notice, setNotice] = useState('')
     // Effects: the stack shown is a layer's (the selected clip's layer unless one is picked) or the master's.
@@ -231,6 +284,9 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     useEffect(() => {
         if (selected && !selectedClip) setSelected(null)
     }, [selected, selectedClip])
+
+    // Where a Sources row goes when clicked: the slot being filled, else the selected one.
+    const targetSlot = picking || (selectedClip ? selected : null)
 
     // ONE show clock (src/perform/useShowClock.js), when the page has one: the
     // Light desk leads it, and this deck shows and taps THAT tempo. Without a
@@ -294,7 +350,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
 
     // `slot` is the slot that was picked when the clip was chosen (an upload can finish
     // long after); the deck it goes into is always the latest one.
-    const place = (clip, slot = picking) => {
+    const place = (clip, slot = targetSlot) => {
         if (!slot) return
         const next = setClip(latestDeck.current, slot.layer, slot.column, { speed: 1, mode: '0', in: 0, out: 1, ...clip })
         write(next)
@@ -306,12 +362,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         const file = event.target.files?.[0]
         event.target.value = ''
         if (!file || !onUploadFile) return
-        const slot = picking
+        const slot = targetSlot
         setUploading(file.name)
         setNotice('')
         try {
             const asset = await onUploadFile(file)
-            if (asset?.id) place({ kind: 'asset', asset: asset.id, label: asset.name || file.name }, slot)
+            if (asset?.id && slot) place({ kind: 'asset', asset: asset.id, label: asset.name || file.name }, slot)
+            else if (asset?.id) setNotice(`${file.name} is in the list: drag it onto a slot.`)
             else setNotice(`Could not bring in ${file.name}.`)
         } catch (failure) {
             // 2026-11-10 (owner row N3529): the server refuses a file over its limit
@@ -323,6 +380,36 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                 : `Could not bring in ${file.name}${failure?.message ? `: ${failure.message}` : ''}.`)
         } finally {
             setUploading('')
+        }
+    }
+
+    // Drag and drop. A filled tile drags its slot (moveClip); a Sources row drags a clip to
+    // make. Every slot, filled or empty, takes either. A plain click is untouched.
+    const onTileDragStart = (event, layerIndex, column) => {
+        event.dataTransfer.setData(DRAG_CLIP, JSON.stringify({ layer: layerIndex, column }))
+        event.dataTransfer.effectAllowed = 'move'
+    }
+    const onTileDragOver = (event, layerIndex, column) => {
+        if (!editable || !(dragHas(event, DRAG_CLIP) || dragHas(event, DRAG_SOURCE))) return
+        event.preventDefault()
+        event.dataTransfer.dropEffect = dragHas(event, DRAG_CLIP) ? 'move' : 'copy'
+        setDropTarget((current) => (current?.layer === layerIndex && current?.column === column ? current : { layer: layerIndex, column }))
+    }
+    const onTileDrop = (event, layerIndex, column) => {
+        setDropTarget(null)
+        if (!editable) return
+        const to = { layer: layerIndex, column }
+        const from = dragRead(event, DRAG_CLIP)
+        if (from) {
+            event.preventDefault()
+            write(moveClip(latestDeck.current, from, to))
+            if (selected && selected.layer === from.layer && selected.column === from.column) setSelected(to)
+            return
+        }
+        const source = dragRead(event, DRAG_SOURCE)
+        if (source) {
+            event.preventDefault()
+            place({ speed: 1, mode: '0', in: 0, out: 1, ...source }, to)
         }
     }
 
@@ -514,11 +601,17 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                         <button
                                             key={column}
                                             type="button"
-                                            className={`vj-deck-tile${clip ? '' : ' vj-deck-tile--empty'}${playing ? ' is-playing' : ''}${isSelected ? ' is-selected' : ''}`}
+                                            className={`vj-deck-tile${clip ? '' : ' vj-deck-tile--empty'}${playing ? ' is-playing' : ''}${isSelected ? ' is-selected' : ''}${dropTarget?.layer === index && dropTarget?.column === column ? ' is-drop-target' : ''}`}
                                             aria-pressed={clip ? playing : undefined}
                                             data-midi-target={`clip:${index}:${column}`}
                                             aria-label={clip ? `${layer.name}, slot ${column + 1}: ${name}` : `${layer.name}, slot ${column + 1}: add a clip`}
                                             disabled={!clip && !editable}
+                                            draggable={Boolean(clip) && editable}
+                                            onDragStart={clip ? (event) => onTileDragStart(event, index, column) : undefined}
+                                            onDragOver={(event) => onTileDragOver(event, index, column)}
+                                            onDragLeave={() => setDropTarget((current) => (current?.layer === index && current?.column === column ? null : current))}
+                                            onDragEnd={() => setDropTarget(null)}
+                                            onDrop={(event) => onTileDrop(event, index, column)}
                                             onClick={() => onTile(index, column)}
                                         >
                                             {clip && clip.kind === 'asset'
@@ -577,55 +670,22 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
             </div>
 
             <div className="vj-deck-bottom">
-                {picking ? (
-                    <section className="vj-deck-panel vj-deck-sources" aria-label="Add a clip">
-                        <div className="vj-deck-panel-head">
-                            <span className="vj-deck-label">
-                                Sources: add to {deck.layers[picking.layer]?.name}, slot {picking.column + 1}
-                            </span>
-                            <button type="button" className="vj-deck-button vj-deck-button--quiet" onClick={() => setPicking(null)}>Cancel</button>
-                        </div>
-                        <div className="vj-deck-pick">
-                            <span className="vj-deck-label">Wired in</span>
-                            <div className="vj-deck-pick-list">
-                                {DECK_INPUTS.map((input) => (
-                                    <button key={input} type="button" className="vj-deck-button" onClick={() => place({ kind: 'input', input, label: inputLabel(input) })}>
-                                        {inputLabel(input)}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <CameraPicker onPick={(camera) => place({ kind: 'camera', camera: camera.label, device: camera.id, label: camera.label })} />
-                        <div className="vj-deck-pick">
-                            <span className="vj-deck-label">Footage</span>
-                            <div className="vj-deck-pick-list">
-                                {videoAssets.map((asset) => (
-                                    <button key={asset.id} type="button" className="vj-deck-button vj-deck-asset" onClick={() => place({ kind: 'asset', asset: asset.id, label: asset.name || '' })}>
-                                        {asset.name || asset.id}
-                                    </button>
-                                ))}
-                                {!videoAssets.length ? <span className="vj-deck-dim" title="No video in this project yet.">{mode === 'perform' ? 'No video' : 'No video in this project yet.'}</span> : null}
-                                {onUploadFile ? (
-                                    <label className="vj-deck-button vj-deck-upload">
-                                        {uploading ? `Bringing in ${uploading}` : 'Upload video'}
-                                        <input type="file" accept="video/*" onChange={onFile} disabled={Boolean(uploading)} />
-                                    </label>
-                                ) : null}
-                                {notice ? <span className="vj-deck-dim" role="status">{notice}</span> : null}
-                            </div>
-                        </div>
-                    </section>
-                ) : (
-                    <section className="vj-deck-panel vj-deck-sources" aria-label="Sources">
-                        <div className="vj-deck-panel-head"><span className="vj-deck-label">Sources</span></div>
-                        <p className="vj-deck-hint" title="Tap an empty slot to choose a clip for it: a wired input, a camera or footage. Tap a clip to play it on its layer.">
-                            {mode === 'perform' ? 'Tap a slot' : 'Tap an empty slot to choose a clip for it: a wired input, a camera or footage. Tap a clip to play it on its layer.'}
-                        </p>
-                    </section>
-                )}
+                <SourcesPanel
+                    mode={mode}
+                    editable={editable}
+                    target={targetSlot}
+                    targetName={targetSlot ? `${deck.layers[targetSlot.layer]?.name}, slot ${targetSlot.column + 1}` : ''}
+                    picking={Boolean(picking)}
+                    onCancel={() => setPicking(null)}
+                    onPlace={(clip) => place(clip)}
+                    videoAssets={videoAssets}
+                    onUploadFile={onUploadFile}
+                    uploading={uploading}
+                    onFile={onFile}
+                    notice={notice}
+                />
                 {selectedClip ? (
                     <ClipSettings
-                        compact={mode === 'perform'}
                         key={`${selected.layer}:${selected.column}`}
                         clip={selectedClip}
                         title={`${deck.layers[selected.layer].name}, slot ${selected.column + 1}`}
@@ -646,7 +706,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     )
 }
 
-function ClipSettings({ clip, title, name, editable, onChange, onRemove, compact = false }) {
+function ClipSettings({ clip, title, name, editable, onChange, onRemove }) {
     const isInput = clip.kind === 'input'
     const isCamera = clip.kind === 'camera'
     return (
@@ -655,47 +715,51 @@ function ClipSettings({ clip, title, name, editable, onChange, onRemove, compact
                 <span className="vj-deck-label">{title}</span>
                 <span className="vj-deck-clip-name">{name}</span>
             </div>
-            {isInput ? (
-                <p className="vj-deck-dim" title={`This slot plays whatever is wired into ${inputLabel(clip.input)}.`}>{compact ? `Wired: ${inputLabel(clip.input)}` : `This slot plays whatever is wired into ${inputLabel(clip.input)}.`}</p>
-            ) : isCamera ? (
-                <p className="vj-deck-dim vj-deck-clip-camera">Camera: {clip.camera}</p>
-            ) : (
-                <div className="vj-deck-settings">
-                    <label className="vj-deck-setting">
-                        <span className="vj-deck-label">Speed</span>
-                        <input type="range" min="0" max="4" step="0.05" value={clip.speed} disabled={!editable} aria-label="Speed" onChange={(event) => onChange({ speed: Number(event.target.value) })} />
-                        <span className="vj-deck-number">{clip.speed.toFixed(2)}x</span>
-                    </label>
-                    <label className="vj-deck-setting">
-                        <span className="vj-deck-label">In</span>
-                        <input type="range" min="0" max="1" step="0.01" value={clip.in} disabled={!editable} aria-label="In point" onChange={(event) => onChange({ in: Number(event.target.value) })} />
-                        <span className="vj-deck-number">{percent(clip.in)}%</span>
-                    </label>
-                    <label className="vj-deck-setting">
-                        <span className="vj-deck-label">Out</span>
-                        <input type="range" min="0" max="1" step="0.01" value={clip.out} disabled={!editable} aria-label="Out point" onChange={(event) => onChange({ out: Number(event.target.value) })} />
-                        <span className="vj-deck-number">{percent(clip.out)}%</span>
-                    </label>
-                    <div className="vj-deck-setting" role="radiogroup" aria-label="Play mode">
-                        <span className="vj-deck-label">Mode</span>
-                        <div className="vj-deck-modes">
-                            {CLIP_MODES.map((label, value) => (
-                                <button
-                                    key={label}
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={clip.mode === String(value)}
-                                    className={`vj-deck-button${clip.mode === String(value) ? ' is-on' : ''}`}
-                                    disabled={!editable}
-                                    onClick={() => onChange({ mode: String(value) })}
-                                >
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+            <div className="vj-deck-list vj-deck-settings">
+                <div className="vj-deck-list-row">
+                    <span className="vj-deck-label">Source</span>
+                    <span className="vj-deck-list-value vj-deck-clip-camera" title={isInput ? `This slot plays whatever is wired into ${inputLabel(clip.input)}.` : undefined}>
+                        {isInput ? `Wired: ${inputLabel(clip.input)}` : isCamera ? `Camera: ${clip.camera}` : `Video: ${name}`}
+                    </span>
                 </div>
-            )}
+                {!isInput && !isCamera ? (
+                    <>
+                        <label className="vj-deck-list-row vj-deck-setting">
+                            <span className="vj-deck-label">Speed</span>
+                            <input type="range" min="0" max="4" step="0.05" value={clip.speed} disabled={!editable} aria-label="Speed" onChange={(event) => onChange({ speed: Number(event.target.value) })} />
+                            <span className="vj-deck-number">{clip.speed.toFixed(2)}x</span>
+                        </label>
+                        <label className="vj-deck-list-row vj-deck-setting">
+                            <span className="vj-deck-label">In</span>
+                            <input type="range" min="0" max="1" step="0.01" value={clip.in} disabled={!editable} aria-label="In point" onChange={(event) => onChange({ in: Number(event.target.value) })} />
+                            <span className="vj-deck-number">{percent(clip.in)}%</span>
+                        </label>
+                        <label className="vj-deck-list-row vj-deck-setting">
+                            <span className="vj-deck-label">Out</span>
+                            <input type="range" min="0" max="1" step="0.01" value={clip.out} disabled={!editable} aria-label="Out point" onChange={(event) => onChange({ out: Number(event.target.value) })} />
+                            <span className="vj-deck-number">{percent(clip.out)}%</span>
+                        </label>
+                        <div className="vj-deck-list-row vj-deck-setting" role="radiogroup" aria-label="Play mode">
+                            <span className="vj-deck-label">Mode</span>
+                            <div className="vj-deck-modes">
+                                {CLIP_MODES.map((label, value) => (
+                                    <button
+                                        key={label}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={clip.mode === String(value)}
+                                        className={`vj-deck-button${clip.mode === String(value) ? ' is-on' : ''}`}
+                                        disabled={!editable}
+                                        onClick={() => onChange({ mode: String(value) })}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </>
+                ) : null}
+            </div>
             <div className="vj-deck-panel-foot">
                 <button type="button" className="vj-deck-button vj-deck-button--quiet" onClick={onRemove} disabled={!editable}>Remove clip</button>
             </div>

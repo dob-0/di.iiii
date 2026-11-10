@@ -566,7 +566,7 @@ describe('moveClip', () => {
         expect(at(moved, 2, 3)).toBe('a')
     })
     it('an idle clip moved to another layer does not start there', () => {
-        const moved = moveClip(trigger(base(), 2, 0) && base(), { layer: 0, column: 0 }, { layer: 2, column: 3 })
+        const moved = moveClip(base(), { layer: 0, column: 0 }, { layer: 2, column: 3 })
         expect(moved.layers[2].active).toBe(-1)
         expect(moved.layers[2].trigger).toBe(0)
     })
