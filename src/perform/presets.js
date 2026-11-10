@@ -454,3 +454,50 @@ export const rectForAddedWindow = (widthClass = 'wide', kind = null, rects = {})
     }
     return widthClass === 'narrow' ? nu(0, 3, 4, 3) : wu(3, 2, 6, 4)
 }
+
+/**
+ * ARRANGE ALL: tile the given windows over the whole unit grid, edge to edge,
+ * no gap and no overlap. Whole unit rows, and in each row whole unit columns
+ * (the remainder goes to the first ones), so the rectangles are exactly what
+ * a built-in preset is made of and snapFrame leaves them alone. The row/column
+ * count is the one whose cell shape is nearest a 16:9 picture in `area`
+ * (pixels), so a desk gets wide cells and a phone gets a stack.
+ *   ids   window ids, in the order they should read (left→right, top→bottom)
+ * Returns { id: [x, y, w, h] } in percent, like a preset. More windows than
+ * grid cells cannot tile on whole units: the extra ones are not placed.
+ */
+export const tileRects = (ids = [], widthClass = 'wide', area = {}) => {
+    const grid = GRID[widthClass] || GRID.wide
+    const list = ids.slice(0, grid.cols * grid.rows)
+    const count = list.length
+    if (!count) return {}
+    const aspect = (Number(area.width) || 16) / (Number(area.height) || 9)
+    let best = null
+    for (let rows = 1; rows <= Math.min(count, grid.rows); rows += 1) {
+        const cols = Math.ceil(count / rows)
+        if (cols > grid.cols) continue
+        const cell = aspect * (rows / cols)
+        const score = Math.abs(Math.log(cell / (16 / 9))) + (rows * cols - count) * 0.05
+        if (!best || score < best.score) best = { rows, cols, score }
+    }
+    const share = (total, parts, index) => {
+        const base = Math.floor(total / parts)
+        const extra = total % parts
+        const start = index * base + Math.min(index, extra)
+        return [start, base + (index < extra ? 1 : 0)]
+    }
+    const rect = unitRect(grid)
+    const out = {}
+    let cursor = 0
+    for (let row = 0; row < best.rows; row += 1) {
+        const remaining = count - cursor
+        const inRow = Math.ceil(remaining / (best.rows - row))
+        const [rowStart, rowHeight] = share(grid.rows, best.rows, row)
+        for (let col = 0; col < inRow; col += 1) {
+            const [colStart, colWidth] = share(grid.cols, inRow, col)
+            out[list[cursor]] = rect(colStart, rowStart, colWidth, rowHeight)
+            cursor += 1
+        }
+    }
+    return out
+}
