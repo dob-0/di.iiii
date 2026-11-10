@@ -3,6 +3,14 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## scan.glb failed the glTF validator with 2 alignment errors (global check, 2026-11-10)
+
+Symptom: Khronos validator (`gltf-validator` 2.0.0-dev.3.10) on `src/algoVrithm/assets/scan.glb`: 2 errors `ACCESSOR_TOTAL_OFFSET_ALIGNMENT` (`/accessors/1` byteOffset 599994, `/accessors/2` byteOffset 1303458, not multiples of 4); the other 19 tracked .glb/.gltf were clean.
+Cause: the exporter packed bufferViews back to back, so float accessors started 2 bytes off a 4-byte boundary (container layout only, the data was fine).
+Fix: lossless repack of that one file: each bufferView start padded to 4 bytes, JSON otherwise untouched. Proof: every accessor (count, type, componentType, min/max, decoded bytes), all 3 images, materials, nodes identical; a three.js render from one camera differs in 0 of 540000 pixels.
+Guard: `scripts/gltf-validate.test.js` validates every tracked .glb/.gltf and fails on errors (warnings allowed).
+Rollback: `git checkout <base> -- src/algoVrithm/assets/scan.glb` (old blob 54aeaf75ad706db48d0c3a68c3c90f14fc484a88).
+
 ## Objects said "No objects yet" beside six things on screen (Studio, UX audit F026, 2026-10-29)
 
 Symptom: a scene showed a sphere, boxes, a torus and a lamp, but the Objects window read "Objects (0) No objects yet." and a click on
