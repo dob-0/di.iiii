@@ -588,7 +588,7 @@ function CuesWindow({ ctx }) {
 }
 
 function MachinesWindow({ ctx }) {
-    const { machines, ndiScan } = useMachinePresence(ctx.spaceId)
+    const { machines, ndiScan } = useMachinePresence(ctx.spaceId, { ndi: 'poll' })
     return (
         <div className="perform-pane">
             <MapMachinesList compact machines={machines} ndiScan={ndiScan} surfaces={ctx.document.mappingState?.surfaces || []} />
