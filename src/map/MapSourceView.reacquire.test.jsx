@@ -207,6 +207,32 @@ describe('first open of a camera that is not there yet', () => {
         expect(getUserMedia).toHaveBeenCalledTimes(2)
         expect(container.querySelector('video').srcObject).toBe(live.stream)
     })
+
+    // Review round 2: a pending retry must say so, never a silent black rectangle.
+    it('says it is reconnecting while a first open keeps failing, and clears it when the picture is there', async () => {
+        const live = fakeStream()
+        getUserMedia.mockRejectedValueOnce(failure('NotFoundError')).mockResolvedValueOnce(live.stream)
+        const { container } = render(<MapSourceView surface={surface} />)
+        await flush()
+        expect(container.textContent).toContain('camera reconnecting')
+        expect(container.querySelector('video')).not.toBeNull()
+        await tick(500)
+        expect(container.querySelector('video').srcObject).toBe(live.stream)
+        expect(container.textContent).not.toContain('camera reconnecting')
+    })
+
+    it('says it is reconnecting after a live track ended', async () => {
+        const first = fakeStream()
+        const second = fakeStream()
+        getUserMedia.mockResolvedValueOnce(first.stream).mockResolvedValueOnce(second.stream)
+        const { container } = render(<MapSourceView surface={surface} />)
+        await flush()
+        expect(container.textContent).not.toContain('camera reconnecting')
+        act(() => { first.track.dispatchEvent(new Event('ended')) })
+        expect(container.textContent).toContain('camera reconnecting')
+        await tick(500)
+        expect(container.textContent).not.toContain('camera reconnecting')
+    })
 })
 
 describe('a stream surface (found by name) whose input drops out of the device list', () => {

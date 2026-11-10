@@ -375,6 +375,7 @@ function MapVideoSource({ fileRef }) {
 const REOPEN_MS = [500, 1000, 2000, 3000]
 // A feed that stays live this long is healthy: only then does the back-off start over.
 const STABLE_MS = 5000
+const RECONNECTING = 'camera reconnecting…'
 const REOPEN_ERRORS = ['NotReadableError', 'TrackStartError', 'NotFoundError', 'OverconstrainedError', 'AbortError']
 
 function MapCameraSource({ deviceId, effect = null, label, width, height, onStale = null }) {
@@ -385,6 +386,9 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
     const glowRef = useRef(null)
     const restyleRef = useRef(null)
     const [problem, setProblem] = useState('')
+    // A retry is pending: the <video> stays mounted (the stream needs it when it
+    // comes back) and the surface says so over it.
+    const [waiting, setWaiting] = useState(false)
     const motion = effect?.kind === 'motion'
     const ai = effect?.kind === 'ai'
     // The AI picture replaces the placeholder only once a frame has actually
@@ -405,6 +409,7 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
             return undefined
         }
         setProblem('')
+        setWaiting(false)
         // Stop and forget the open stream, so two are never open at once.
         const drop = () => {
             if (!stream) return
@@ -420,6 +425,7 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
         function lost() {
             clearTimeout(stable)
             drop()
+            setWaiting(true)
             later()
             staleRef.current?.()
         }
@@ -436,6 +442,7 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
                     drop()
                     stream = result
                     wasLive = true
+                    setWaiting(false)
                     clearTimeout(stable)
                     stable = setTimeout(() => { tries = 0 }, STABLE_MS)
                     if (videoRef.current) videoRef.current.srcObject = result
@@ -447,6 +454,8 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
                     if (cancelled) return
                     const failure = error?.name
                     if (failure !== 'NotAllowedError' && (deviceId || wasLive) && REOPEN_ERRORS.includes(failure)) {
+                        // Say so on the surface: a black rectangle reads as a mapping mistake.
+                        setWaiting(true)
                         later()
                         if (failure === 'NotFoundError' || failure === 'OverconstrainedError') staleRef.current?.()
                         return
@@ -525,19 +534,20 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
     const processed = motion || ai
     return (
         <>
-            <video className={processed ? 'map-source-hidden-video' : 'map-source-media'} ref={videoRef} autoPlay muted playsInline />
+            <video className={processed || waiting ? 'map-source-hidden-video' : 'map-source-media'} ref={videoRef} autoPlay muted playsInline />
             {processed ? (
                 <canvas
                     // Keyed by effect: the glow takes a WebGL context and the AI
                     // picture a 2D one, and a canvas can only ever give one kind.
                     key={ai ? 'ai' : 'motion'}
-                    className={ai && !aiPainted ? 'map-source-hidden-video' : 'map-source-media'}
+                    className={(ai && !aiPainted) || waiting ? 'map-source-hidden-video' : 'map-source-media'}
                     ref={canvasRef}
                     width={Math.max(1, Math.round(width * scale))}
                     height={Math.max(1, Math.round(height * scale))}
                 />
             ) : null}
-            {ai && !aiPainted ? <MapSourcePlaceholder label={label} detail={aiStatus} width={width} height={height} /> : null}
+            {waiting ? <MapSourcePlaceholder label={label} detail={RECONNECTING} width={width} height={height} /> : null}
+            {ai && !aiPainted && !waiting ? <MapSourcePlaceholder label={label} detail={aiStatus} width={width} height={height} /> : null}
         </>
     )
 }
