@@ -10,6 +10,9 @@
     --vj-row-min: 96px;
     /* One row height for every list row (Sources, Clip, Effects): never under 28px. */
     --vj-list-row: max(var(--vj-control), 28px);
+    /* The monitor column: S / M / L is this viewer's choice (data-monitor-size). */
+    --vj-monitor-w: 300px;
+    --vj-monitor-w-row: 1 1 0;
     --vj-layers: 3;
     container-type: inline-size;
     container-name: vjdeck;
@@ -28,6 +31,16 @@
     color: var(--di-ink);
     font-family: var(--di-mono);
     font-size: var(--di-text-3);
+}
+
+.vj-deck[data-monitor-size='s'] {
+    --vj-monitor-w: 140px;
+    --vj-monitor-w-row: 0 1 128px;
+}
+
+.vj-deck[data-monitor-size='m'] {
+    --vj-monitor-w: 210px;
+    --vj-monitor-w-row: 0 1 200px;
 }
 
 .vj-deck--inside {
@@ -116,8 +129,10 @@
 .vj-deck-button,
 .vj-deck-chip {
     box-sizing: border-box;
-    min-height: var(--vj-control);
+    /* Never under 28px, and a label is never cut mid-word. */
+    min-height: max(var(--vj-control), 28px);
     padding: 0 var(--di-space-2);
+    white-space: nowrap;
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: var(--di-radius);
@@ -169,7 +184,7 @@
 .vj-deck-main {
     display: grid;
     flex: 1 1 auto;
-    grid-template-columns: minmax(0, 1fr) 300px;
+    grid-template-columns: minmax(0, 1fr) var(--vj-monitor-w);
     gap: var(--di-space-3);
     min-height: 0;
 }
@@ -179,6 +194,49 @@
     flex-direction: column;
     gap: var(--di-space-2);
     min-width: 0;
+}
+
+/* S / M / L, hide Preview, and Take (Preview only) above the two monitors. */
+.vj-deck-monitor-tools {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-1) var(--di-space-2);
+    min-width: 0;
+}
+
+.vj-deck-sizes {
+    display: flex;
+    gap: var(--di-space-1);
+}
+
+.vj-deck-size {
+    min-width: 28px;
+}
+
+/* State by text and a mark, not by colour alone. */
+.vj-deck-button[aria-pressed='true'].vj-deck-size,
+.vj-deck-button[aria-pressed='true'].vj-deck-preview-only {
+    border-color: var(--di-ink);
+    box-shadow: inset 0 0 0 1px var(--di-ink);
+}
+
+.vj-deck-preview-only .vj-deck-state {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.vj-deck-take {
+    border-color: var(--di-ink);
+    box-shadow: inset 0 0 0 1px var(--di-ink);
+}
+
+.vj-deck-monitor-caption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-2);
 }
 
 .vj-deck-monitor {
@@ -220,7 +278,9 @@
 
 .vj-deck-scroll {
     flex: 1 1 auto;
-    min-height: 0;
+    /* A short frame (360px) keeps two layer rows and the column row; the deck scrolls instead. */
+    min-height: calc(var(--vj-tile-height) * 2 + var(--vj-control) + var(--di-space-2) * 3);
+    min-width: 0;
     overflow: auto;
 }
 
@@ -753,10 +813,15 @@
 
     .vj-deck-monitors {
         flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .vj-deck-monitor-tools {
+        flex: 1 0 100%;
     }
 
     .vj-deck-monitor {
-        flex: 1 1 0;
+        flex: var(--vj-monitor-w-row);
     }
 }
 
@@ -767,9 +832,10 @@
         --vj-tile-height: 52px;
     }
 
-    /* PREVIEW is dropped, OUTPUT stays; the bottom panels stack. */
-    .vj-deck-monitor--preview {
-        display: none;
+    /* Both monitors stay (Preview only needs Preview) but as a small strip;
+       the viewer can still hide Preview. The bottom panels stack. */
+    .vj-deck[data-monitor-size='l'] {
+        --vj-monitor-w-row: 0 1 128px;
     }
 
     .vj-deck-bottom {
@@ -786,7 +852,6 @@
 
     .vj-deck-scroll {
         flex-shrink: 0;
-        min-height: calc(var(--vj-tile-height) * 2 + var(--vj-control) + var(--di-space-2) * 3);
     }
 
     .vj-deck-pick {

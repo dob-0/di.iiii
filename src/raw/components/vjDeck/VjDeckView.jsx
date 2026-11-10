@@ -30,6 +30,7 @@ import {
 } from '../../../project/tops/vjDeck.js'
 import { detectAssetMediaKind } from '../../../utils/mediaAssetTypes.js'
 import { resolveClipUrl } from '../../../project/tops/clipVideos.js'
+import { isTypingTarget } from '../../../perform/windowKeys.js'
 import { useShowClockContext } from '../../../perform/useShowClock.js'
 import { DEFAULT_BPM } from '../../../timeline/showClock.js'
 import { clipStill } from './clipStills.js'
@@ -57,6 +58,22 @@ import './vjDeck.css'
 // in the CLIP panel, so nothing covers the grid and nothing needs a Close.
 
 const PLACEMENTS = new Set(['window', 'inside', 'perform'])
+
+// How the two monitors are shown is THIS viewer's choice (a phone and a desk want different
+// ones), so it is kept on the device, never in the show document. Storage may be blocked.
+export const MONITOR_SIZES = ['s', 'm', 'l']
+const MONITOR_KEY = 'di.vjDeck.monitors'
+const readMonitorPrefs = () => {
+    try {
+        const saved = JSON.parse(window.localStorage.getItem(MONITOR_KEY) || '{}')
+        return { size: MONITOR_SIZES.includes(saved?.size) ? saved.size : 'l', hidden: saved?.hidden === true }
+    } catch {
+        return { size: 'l', hidden: false }
+    }
+}
+const writeMonitorPrefs = (prefs) => {
+    try { window.localStorage.setItem(MONITOR_KEY, JSON.stringify(prefs)) } catch { /* the choice lasts until the page closes */ }
+}
 
 function DeckPicture({ nodeId, className, label, width = 160, height = 90 }) {
     const canvasRef = useRef(null)
@@ -259,6 +276,12 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const [fxScope, setFxScope] = useState('layer')
     const [fxPick, setFxPick] = useState(null)
     const tapsRef = useRef([])
+    const rootRef = useRef(null)
+    // PREVIEW ONLY: a click selects (the Preview pane shows it) and TAKE sends it live.
+    // View state of this person's screen, not of the show; MIDI always goes live.
+    const [previewOnly, setPreviewOnly] = useState(false)
+    const [monitors, setMonitors] = useState(readMonitorPrefs) // { size: 's'|'m'|'l', hidden }
+    const setMonitorPrefs = (patch) => setMonitors((current) => { const next = { ...current, ...patch }; writeMonitorPrefs(next); return next })
 
     // The same list and value a Video node's picker uses: the PROJECT's files
     // (document.assets), video only, stored as the asset id; an upload goes
@@ -345,8 +368,50 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         }
         setSelected({ layer: layerIndex, column })
         setFxPick(null)
-        write(trigger(latestDeck.current, layerIndex, column))
+        if (previewOnly) return
+        // The tile that is already playing stops its layer, the same as the x beside the name.
+        if (deck.layers[layerIndex].active === column) write(clearLayer(latestDeck.current, layerIndex))
+        else write(trigger(latestDeck.current, layerIndex, column))
     }
+
+    // Take: the previewed clip goes live (the only way out in Preview only besides MIDI).
+    const takeLive = () => {
+        if (!selected || !selectedClip || !editable) return
+        write(trigger(latestDeck.current, selected.layer, selected.column))
+    }
+    // Deselect: nothing selected, the Preview pane and the Clip panel go back to empty.
+    const deselect = () => { setSelected(null); setFxPick(null) }
+    // A click on the grid's own background (not on a tile or a control) deselects.
+    const onGridBackground = (event) => {
+        const list = event.target.classList
+        if (list?.contains('vj-deck-scroll') || list?.contains('vj-deck-grid') || list?.contains('vj-deck-row')) deselect()
+    }
+
+    // Esc clears the selection; Enter takes in Preview only. Never from a field, never while a
+    // menu is open or Learn is on, only when focus is on this deck or on nothing. The deck
+    // stops the event it used, so the Perform window keys (Esc hides a window) do not also run:
+    // windowKeyAction ignores a defaultPrevented key.
+    const keyState = useRef({})
+    useEffect(() => { keyState.current = { selected: Boolean(selectedClip), previewOnly, learning: midi.learning, deselect, takeLive } })
+    useEffect(() => {
+        const onKey = (event) => {
+            const live = keyState.current
+            if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
+            if (event.key !== 'Escape' && event.key !== 'Enter') return
+            if (live.learning || !live.selected || isTypingTarget(event.target)) return
+            const target = event.target
+            const mine = target === document.body || target === document.documentElement || rootRef.current?.contains(target)
+            if (!mine || document.querySelector('[role="menu"], [aria-haspopup][aria-expanded="true"]')) return
+            if (event.key === 'Escape') { live.deselect(); event.preventDefault(); return }
+            if (!live.previewOnly) return
+            // Enter on another button is that button's; on a tile or on Take it is ours.
+            if (target?.closest?.('button, a, summary') && !target.closest('.vj-deck-tile, .vj-deck-take')) return
+            live.takeLive()
+            event.preventDefault()
+        }
+        document.addEventListener('keydown', onKey)
+        return () => document.removeEventListener('keydown', onKey)
+    }, [])
 
     // `slot` is the slot that was picked when the clip was chosen (an upload can finish
     // long after); the deck it goes into is always the latest one.
@@ -429,8 +494,18 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                 ? (selectedPlaying ? cameraNodeId(deckId, selectedClip.camera, selectedClip.device) : '')
                 : selectedPlaying ? clipNodeId(deckId, selected.layer) : ''
 
+    const takeButton = (
+        <button
+            type="button"
+            className="vj-deck-button vj-deck-take"
+            disabled={!editable || !selectedClip}
+            onClick={takeLive}
+            title="Send the previewed clip live (Enter)"
+        >Take</button>
+    )
+
     return (
-        <div className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick} onPointerDownCapture={onLearnPress} onMouseDownCapture={onLearnPress} onKeyDownCapture={onLearnKey}>
+        <div ref={rootRef} className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-monitor-size={monitors.size} data-preview-only={previewOnly ? 'true' : 'false'} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick} onPointerDownCapture={onLearnPress} onMouseDownCapture={onLearnPress} onKeyDownCapture={onLearnKey}>
             <header className="vj-deck-top">
                 <div className="vj-deck-tempo">
                     <span className="vj-deck-label">BPM</span>
@@ -447,6 +522,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     {followsLight ? <span className="vj-deck-dim vj-deck-leader" title="The Light desk on this machine keeps the show’s tempo; the deck follows it.">follows Light</span> : null}
                 </div>
                 <DeckMidiControl midi={midi} editable={editable} />
+                <button
+                    type="button"
+                    className="vj-deck-button vj-deck-preview-only"
+                    aria-pressed={previewOnly}
+                    title="ON: a click only selects and shows in Preview; TAKE or Enter sends it live. MIDI always goes live."
+                    onClick={() => setPreviewOnly((value) => !value)}
+                >Preview only <span className="vj-deck-state" aria-hidden="true">{previewOnly ? 'on' : 'off'}</span></button>
                 <div className="vj-deck-crossfader">
                     <span className="vj-deck-label">A</span>
                     <input
@@ -486,7 +568,9 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
             </header>
 
             <div className="vj-deck-main">
-                <div className="vj-deck-scroll">
+                {/* Pointer shortcut only: the keyboard way to deselect is Esc (handled on document). */}
+                {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+                <div className="vj-deck-scroll" onClick={onGridBackground}>
                     <div className="vj-deck-grid" style={gridStyle}>
                         <div className="vj-deck-row vj-deck-columns" role="group" aria-label="Columns">
                             <span className="vj-deck-label vj-deck-columns-head">Columns</span>
@@ -639,8 +723,31 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                 </div>
 
                 <aside className="vj-deck-monitors" aria-label="Monitors">
+                    <div className="vj-deck-monitor-tools">
+                        <div className="vj-deck-sizes" role="toolbar" aria-label="Monitor size">
+                            {MONITOR_SIZES.map((size) => (
+                                <button
+                                    key={size}
+                                    type="button"
+                                    className="vj-deck-button vj-deck-size"
+                                    aria-pressed={monitors.size === size}
+                                    aria-label={`Monitor size ${size.toUpperCase()}`}
+                                    onClick={() => setMonitorPrefs({ size })}
+                                >{size.toUpperCase()}</button>
+                            ))}
+                        </div>
+                        <button
+                            type="button"
+                            className="vj-deck-button vj-deck-preview-toggle"
+                            aria-pressed={!monitors.hidden}
+                            aria-label={monitors.hidden ? 'Show Preview' : 'Hide Preview'}
+                            onClick={() => setMonitorPrefs({ hidden: !monitors.hidden })}
+                        >{monitors.hidden ? 'Show preview' : 'Hide preview'}</button>
+                        {previewOnly && monitors.hidden ? takeButton : null}
+                    </div>
+                    {monitors.hidden ? null : (
                     <figure className="vj-deck-monitor vj-deck-monitor--preview">
-                        <figcaption className="vj-deck-label vj-deck-monitor-caption">Preview</figcaption>
+                        <figcaption className="vj-deck-label vj-deck-monitor-caption"><span>Preview</span>{previewOnly ? takeButton : null}</figcaption>
                         <div className="vj-deck-monitor-screen">
                             {selectedClip && !selectedPlaying && !(selectedClip.kind === 'asset')
                                 ? <span className="vj-deck-dim vj-deck-monitor-empty vj-deck-monitor-idle">{selectedName}<br />not playing</span>
@@ -660,6 +767,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                             {!selectedClip ? <span className="vj-deck-dim vj-deck-monitor-empty">Select a clip</span> : null}
                         </div>
                     </figure>
+                    )}
                     <figure className="vj-deck-monitor vj-deck-monitor--output">
                         <figcaption className="vj-deck-label vj-deck-monitor-caption">Output</figcaption>
                         <div className="vj-deck-monitor-screen">

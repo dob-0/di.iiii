@@ -237,6 +237,8 @@ describe('VjDeckView a playing camera that cannot open', () => {
         await act(async () => {})
         const tile = screen.getByRole('button', { name: /Layer 1, slot 1: Phone/ })
         expect(within(tile).getByText('The camera is busy in another program.')).toBeTruthy()
+        // A tap on the playing tile stops it now; Preview only selects it without touching the output.
+        fireEvent.click(screen.getByRole('button', { name: /Preview only/ }))
         fireEvent.click(tile)
         const preview = document.querySelector('.vj-deck-monitor--preview')
         expect(within(preview).getByText('The camera is busy in another program.')).toBeTruthy()

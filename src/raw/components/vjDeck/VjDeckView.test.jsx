@@ -62,7 +62,7 @@ describe('VjDeckView', () => {
         expect(screen.getByRole('region', { name: 'Clip settings' })).toBeTruthy()
     })
 
-    it('tapping a clip plays it on its layer, and again restarts it', () => {
+    it('tapping a clip plays it on its layer, and tapping it again stops the layer', () => {
         const onValues = vi.fn()
         render(<Host onValues={onValues} initialDeck={setClip(createDeck(), 2, 0, { id: 'c1', kind: 'asset', asset: 'asset-dusk', label: 'dusk' })} />)
         const tile = screen.getByRole('button', { name: 'Layer 3, slot 1: dusk' })
@@ -71,7 +71,9 @@ describe('VjDeckView', () => {
         expect(lastDeck(onValues).layers[2]).toMatchObject({ active: 0, trigger: 1 })
         expect(screen.getByRole('button', { name: 'Layer 3, slot 1: dusk' }).getAttribute('aria-pressed')).toBe('true')
         fireEvent.click(screen.getByRole('button', { name: 'Layer 3, slot 1: dusk' }))
-        expect(lastDeck(onValues).layers[2].trigger).toBe(2)
+        expect(lastDeck(onValues).layers[2].active).toBe(-1)
+        fireEvent.click(screen.getByRole('button', { name: 'Layer 3, slot 1: dusk' }))
+        expect(lastDeck(onValues).layers[2]).toMatchObject({ active: 0, trigger: 2 })
         fireEvent.click(screen.getByRole('button', { name: 'Clear Layer 3' }))
         expect(lastDeck(onValues).layers[2].active).toBe(-1)
     })
