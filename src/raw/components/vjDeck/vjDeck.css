@@ -3,10 +3,12 @@
    On the spine — tokens from base.css, no colour literals (spine.test.js). */
 
 .vj-deck {
-    --vj-head: 156px;
+    --vj-head: 190px;
     --vj-tile: 64px;
     --vj-tile-height: 48px;
     --vj-control: 26px;
+    --vj-row-min: 96px;
+    --vj-layers: 3;
     container-type: inline-size;
     container-name: vjdeck;
     display: flex;
@@ -27,7 +29,7 @@
 }
 
 .vj-deck--inside {
-    --vj-head: 184px;
+    --vj-head: 210px;
     --vj-tile: 112px;
     --vj-tile-height: 72px;
     --vj-control: 32px;
@@ -37,7 +39,7 @@
 }
 
 .vj-deck--perform {
-    --vj-head: 164px;
+    --vj-head: 198px;
     --vj-tile: 96px;
     --vj-tile-height: 64px;
     --vj-control: 30px;
@@ -91,25 +93,18 @@
     width: 110px;
 }
 
-.vj-deck-out {
+/* The crossfader sits between the tempo and the master: A, the fader, B. */
+.vj-deck-crossfader {
     display: flex;
+    flex: 1 1 160px;
     align-items: center;
     gap: var(--di-space-2);
-    margin-left: auto;
+    min-width: 0;
+    max-width: 320px;
 }
 
-.vj-deck-out-picture {
-    display: block;
-    width: 80px;
-    height: 45px;
-    background: var(--di-black);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.vj-deck--inside .vj-deck-out-picture,
-.vj-deck--perform .vj-deck-out-picture {
-    width: 160px;
-    height: 90px;
+.vj-deck-crossfader input {
+    flex: 1 1 auto;
 }
 
 /* --- controls ------------------------------------------------------------- */
@@ -165,6 +160,58 @@
     accent-color: var(--di-ink);
 }
 
+/* --- main: the grid beside the monitors ------------------------------------ */
+
+.vj-deck-main {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: var(--di-space-3);
+    min-height: 0;
+}
+
+.vj-deck-monitors {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    min-width: 0;
+}
+
+.vj-deck-monitor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+    margin: 0;
+    min-width: 0;
+}
+
+.vj-deck-monitor-caption {
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.vj-deck-monitor-screen {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--di-black);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.vj-deck-monitor-picture {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 /* --- the grid ------------------------------------------------------------- */
 
 .vj-deck-scroll {
@@ -209,7 +256,6 @@
 }
 
 .vj-deck-layer-line .vj-deck-chip {
-    flex: 1 1 auto;
     min-width: 0;
 }
 
@@ -225,14 +271,49 @@
     text-overflow: ellipsis;
 }
 
-.vj-deck-layer-clear {
+.vj-deck-layer-clear,
+.vj-deck-toggle {
     flex: none;
+    min-width: var(--vj-control);
+    padding: 0;
+}
+
+/* B and S: off is a hairline button; on is a fill. Bypass takes the
+   warning of the semantic triple, solo the deck's one marker (ink). */
+.vj-deck-toggle[aria-pressed='true'] {
+    color: var(--di-bg);
+}
+
+.vj-deck-bypass[aria-pressed='true'] {
+    background: var(--di-warning);
+    border-color: var(--di-warning);
+}
+
+.vj-deck-solo[aria-pressed='true'] {
+    background: var(--di-ink);
+    border-color: var(--di-ink);
+}
+
+/* A bypassed layer stays in its place, dimmed: opacity, not a colour. */
+.vj-deck-row[data-bypass='true'] .vj-deck-tile,
+.vj-deck-row[data-bypass='true'] .vj-deck-layer-name,
+.vj-deck-row[data-bypass='true'] .vj-deck-layer .vj-deck-chip,
+.vj-deck-row[data-bypass='true'] .vj-deck-layer .vj-deck-number {
+    opacity: 0.4;
+}
+
+.vj-deck-side {
+    flex: none;
+    /* "A/B –" must read whole inside the 28px chip: the old 4.2ch box, with
+       its padding and the native arrow, left no room for any text. */
+    width: auto;
+    min-width: 8ch;
 }
 
 /* The blend has its line to itself: the longest name, Difference, must read
    whole at the narrowest head (128px on a phone). */
 .vj-deck-layer-line .vj-deck-blend {
-    width: 100%;
+    flex: 1 1 auto;
 }
 
 .vj-deck-leader {
@@ -324,6 +405,29 @@
     text-align: center;
 }
 
+/* --- bottom: sources and the selected clip ------------------------------- */
+
+.vj-deck-monitor-idle {
+    position: relative;
+    padding: var(--di-space-2);
+    text-align: center;
+}
+
+.vj-deck-camera {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-transform: none;
+}
+
+.vj-deck-bottom {
+    display: grid;
+    flex: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--di-space-3);
+}
+
 /* --- add a clip, clip settings -------------------------------------------- */
 
 .vj-deck-panel {
@@ -331,7 +435,7 @@
     flex: none;
     flex-direction: column;
     gap: var(--di-space-2);
-    max-height: 45%;
+    min-width: 0;
     overflow: auto;
     padding: var(--di-space-2) var(--di-space-3);
     border: 1px solid rgba(255, 255, 255, 0.14);
@@ -418,19 +522,6 @@
     flex: 1 1 0;
 }
 
-.vj-deck-selected {
-    display: flex;
-    flex: none;
-    align-items: center;
-    gap: var(--di-space-2);
-    min-width: 0;
-}
-
-.vj-deck-selected .vj-deck-clip-name {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
 .vj-deck-hint {
     flex: none;
     margin: 0;
@@ -438,28 +529,58 @@
     font-size: var(--di-text-2);
 }
 
+/* The perform and inside placements have the room: the layer rows share the
+   free height between the top bar and the bottom panels (each at least today's
+   row, at most 200px), tiles fill their row and keep the picture cover-cropped. */
+.vj-deck--perform .vj-deck-grid,
+.vj-deck--inside .vj-deck-grid {
+    display: grid;
+    grid-template-rows: auto repeat(var(--vj-layers), minmax(var(--vj-row-min), 1fr));
+    align-content: start;
+    min-height: 100%;
+    box-sizing: border-box;
+}
+
+.vj-deck--perform .vj-deck-row,
+.vj-deck--inside .vj-deck-row {
+    max-height: 200px;
+}
+
 /* --- a narrow deck: a phone, or a small window ---------------------------- */
+
+@container vjdeck (max-width: 900px) {
+    /* The monitors move under the grid, side by side. */
+    .vj-deck-main {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .vj-deck-monitors {
+        flex-direction: row;
+    }
+
+    .vj-deck-monitor {
+        flex: 1 1 0;
+    }
+}
 
 @container vjdeck (max-width: 560px) {
     .vj-deck-grid {
-        --vj-head: 128px;
+        --vj-head: 176px;
         --vj-tile: 60px;
         --vj-tile-height: 52px;
     }
 
-    .vj-deck-out {
-        margin-left: 0;
+    /* PREVIEW is dropped, OUTPUT stays; the bottom panels stack. */
+    .vj-deck-monitor--preview {
+        display: none;
     }
 
-    /* The header gave the grid almost nothing on a phone (walked 09-14):
-       a smaller Out, a tighter bar, and at least two layer rows kept. */
+    .vj-deck-bottom {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
     .vj-deck-top {
         gap: var(--di-space-1) var(--di-space-2);
-    }
-
-    .vj-deck .vj-deck-out-picture {
-        width: 96px;
-        height: 54px;
     }
 
     .vj-deck-master input {

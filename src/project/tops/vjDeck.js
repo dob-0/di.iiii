@@ -37,14 +37,18 @@ const choiceOf = (value, count, fallback = '0') => {
     return Number.isInteger(n) && n >= 0 && n < count ? String(n) : fallback
 }
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+const sideOf = (value, fallback = '') => (value === 'a' || value === 'b' || value === '' ? value : fallback)
 
 // --- the shape ------------------------------------------------------------
 
 /** A clip, defaults filled and every number in range. null for anything that is not one. */
 export const normalizeClip = (clip) => {
     if (!isObject(clip)) return null
-    const kind = clip.kind === 'input' ? 'input' : 'asset'
+    const kind = clip.kind === 'input' ? 'input' : clip.kind === 'camera' ? 'camera' : 'asset'
     if (kind === 'input' && !DECK_INPUTS.includes(clip.input)) return null
+    // A camera clip is a device by its label (what a person and another machine
+    // can read); `device` is the id this page last saw for it, only a hint.
+    if (kind === 'camera' && !(typeof clip.camera === 'string' && clip.camera.trim())) return null
     if (kind === 'asset' && !(typeof clip.asset === 'string' && clip.asset)) return null
     let start = clamp(clip.in, 0, 1, 0)
     let end = clamp(clip.out, 0, 1, 1)
@@ -59,7 +63,10 @@ export const normalizeClip = (clip) => {
         label: typeof clip.label === 'string' ? clip.label : ''
     }
     if (kind === 'asset') out.asset = clip.asset
-    else out.input = clip.input
+    else if (kind === 'camera') {
+        out.camera = clip.camera.trim()
+        out.device = typeof clip.device === 'string' ? clip.device : ''
+    } else out.input = clip.input
     return out
 }
 
@@ -72,6 +79,10 @@ export const createLayer = (index = 0, columns = DEFAULT_COLUMNS) => ({
     blend: '0',
     active: -1,
     trigger: 0,
+    // Resolume's B / S buttons and the crossfader side ('' = not on the fader).
+    bypass: false,
+    solo: false,
+    side: '',
     clips: Array.from({ length: columns }, () => null)
 })
 
@@ -84,6 +95,8 @@ export const createDeck = ({ layers = 3, columns = DEFAULT_COLUMNS, bpm = DEFAUL
         // phase anchor of src/timeline/showClock.js. 0 = never tapped.
         epoch: 0,
         master: 1,
+        // The crossfader, 0 = all A, 1 = all B; layers with side '' ignore it.
+        crossfade: 0.5,
         columns: cols,
         layers: Array.from({ length: Math.round(clamp(layers, 1, MAX_LAYERS, 3)) }, (_, index) => createLayer(index, cols))
     }
@@ -112,6 +125,9 @@ export const normalizeDeck = (raw) => {
             blend: choiceOf(layer.blend, BLEND_MODES.length),
             active: Number.isInteger(active) && active >= 0 && active < columns && clips[active] ? active : -1,
             trigger: Math.max(0, Math.floor(clamp(layer.trigger, 0, Number.MAX_SAFE_INTEGER, 0))),
+            bypass: layer.bypass === true,
+            solo: layer.solo === true,
+            side: sideOf(layer.side),
             clips
         }
     })
@@ -119,6 +135,7 @@ export const normalizeDeck = (raw) => {
         bpm: clamp(raw.bpm, MIN_BPM, MAX_BPM, DEFAULT_BPM),
         epoch: sanitizeEpoch(raw.epoch),
         master: clamp(raw.master, 0, 1, 1),
+        crossfade: clamp(raw.crossfade, 0, 1, 0.5),
         columns,
         layers: layers.length ? layers : createDeck({ columns }).layers
     }
@@ -175,7 +192,7 @@ export const setClip = (deck, layerIndex, column, clip) => withLayer(deck, layer
 export const updateClip = (deck, layerIndex, column, patch) => withLayer(deck, layerIndex, (layer) => {
     const clip = layer.clips[column]
     if (!clip || !isObject(patch)) return layer
-    const merged = normalizeClip({ ...clip, ...patch, id: clip.id, kind: clip.kind, asset: clip.asset, input: clip.input })
+    const merged = normalizeClip({ ...clip, ...patch, id: clip.id, kind: clip.kind, asset: clip.asset, input: clip.input, camera: clip.camera })
     // An in point dragged past the out point keeps the clip it had.
     if (merged && (patch.in !== undefined || patch.out !== undefined)) {
         const start = clamp(patch.in ?? clip.in, 0, 1, clip.in)
@@ -215,6 +232,40 @@ export const setBlend = (deck, layerIndex, blend) => withLayer(deck, layerIndex,
 
 export const renameLayer = (deck, layerIndex, name) => withLayer(deck, layerIndex, (layer) => ({ ...layer, name: String(name || '').trim() || layer.name }))
 
+// Edits by layer id (the B / S / A-B buttons know the layer, not its index).
+const withLayerId = (deck, layerId, change) => {
+    const next = normalizeDeck(deck)
+    next.layers = next.layers.map((layer) => (layer.id === layerId ? change({ ...layer }) : layer))
+    return next
+}
+
+/** Bypass a layer: it makes no picture, but keeps its playing clip for when it comes back. */
+export const setBypass = (deck, layerId, on) => withLayerId(deck, layerId, (layer) => ({ ...layer, bypass: on === true }))
+
+/** Solo a layer: while any layer is solo, only solo layers make a picture. */
+export const setSolo = (deck, layerId, on) => withLayerId(deck, layerId, (layer) => ({ ...layer, solo: on === true }))
+
+/** Put a layer on the crossfader's A or B side, or '' to take it off. */
+export const setSide = (deck, layerId, side) => withLayerId(deck, layerId, (layer) => ({ ...layer, side: sideOf(side, layer.side) }))
+
+export const setCrossfade = (deck, value) => {
+    const next = normalizeDeck(deck)
+    next.crossfade = clamp(value, 0, 1, next.crossfade)
+    return next
+}
+
+/**
+ * How much of a layer the crossfader lets through: 1 off the fader, and for a
+ * linear fade with both sides full in the middle, A = min(1, 2 (1 - x)),
+ * B = min(1, 2 x).
+ */
+export const crossfadeGain = (side, crossfade) => {
+    const x = clamp(crossfade, 0, 1, 0.5)
+    if (side === 'a') return Math.min(1, 2 * (1 - x))
+    if (side === 'b') return Math.min(1, 2 * x)
+    return 1
+}
+
 export const setMaster = (deck, master) => {
     const next = normalizeDeck(deck)
     next.master = clamp(master, 0, 1, next.master)
@@ -243,6 +294,13 @@ export const tapTempo = (taps = [], now = 0) => clockTapTempo(taps, now)
 export const clipNodeId = (deckId, layerIndex) => `${deckId}::L${layerIndex}::clip`
 export const blendNodeId = (deckId, layerIndex) => `${deckId}::L${layerIndex}::blend`
 export const masterNodeId = (deckId) => `${deckId}::master`
+// One camera operator per camera label in a deck: two clips of the same camera
+// share it (one getUserMedia). The key is a short hash so any label is a safe id.
+export const cameraNodeId = (deckId, label) => {
+    let h = 5381
+    for (const ch of String(label)) h = ((h * 33) ^ ch.codePointAt(0)) >>> 0
+    return `${deckId}::cam-${h.toString(36)}`
+}
 
 /**
  * A deck node → the picture operators that make its picture.
@@ -278,13 +336,24 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
     const nodes = []
     const wires = []
     let below = null
+    const anySolo = deck.layers.some((layer) => layer.solo)
     deck.layers.forEach((layer, index) => {
+        // Bypass and solo silence a layer without touching its playing clip.
+        if (layer.bypass || (anySolo && !layer.solo)) return
+        const opacity = layer.opacity * crossfadeGain(layer.side, deck.crossfade)
+        if (opacity <= 0) return
         const clip = layer.active >= 0 ? layer.clips[layer.active] : null
         if (!clip) return
         let source
         if (clip.kind === 'input') {
             source = fedBy.get(clip.input)
             if (!source) return
+        } else if (clip.kind === 'camera') {
+            source = cameraNodeId(deckId, clip.camera)
+            // top.camera resolves device id first, then label (useTopNetwork.js).
+            if (!nodes.some((node) => node.id === source)) {
+                nodes.push({ id: source, type: 'top.camera', values: { machine, device: clip.device, deviceLabel: clip.camera, mirror: false } })
+            }
         } else {
             source = clipNodeId(deckId, index)
             nodes.push({
@@ -303,7 +372,7 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
             })
         }
         const blend = blendNodeId(deckId, index)
-        nodes.push({ id: blend, type: 'top.blend', values: { machine, mode: layer.blend, mix: layer.opacity } })
+        nodes.push({ id: blend, type: 'top.blend', values: { machine, mode: layer.blend, mix: opacity } })
         if (below) wires.push({ from: below, to: blend, port: 'a' })
         wires.push({ from: source, to: blend, port: 'b' })
         below = blend

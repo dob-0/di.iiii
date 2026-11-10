@@ -14,9 +14,9 @@ import {
     widthClassOf
 } from './presets.js'
 
-describe('the seven built-in presets', () => {
-    it('are the seven he was shown, in his order', () => {
-        expect(BUILT_IN_PRESETS.map((preset) => preset.name)).toEqual(['VJ', 'Wall', 'Light', 'Caller', 'Unattended', 'Guest', 'Remote'])
+describe('the built-in presets', () => {
+    it('are the seven he was shown, in his order, with today’s VJ windows kept beside VJ', () => {
+        expect(BUILT_IN_PRESETS.map((preset) => preset.name)).toEqual(['VJ', 'VJ windows', 'Wall', 'Light', 'Caller', 'Unattended', 'Guest', 'Remote'])
     })
 
     it('are data a normalizer keeps whole: every window a known kind, every rect on the workspace', () => {
@@ -35,9 +35,19 @@ describe('the seven built-in presets', () => {
         }
     })
 
+    it('VJ gives the deck the room; the four windows stay as VJ windows, and out, clock and master stay in the catalogue', () => {
+        const vj = BUILT_IN_PRESETS.find((preset) => preset.id === 'vj')
+        const windows = BUILT_IN_PRESETS.find((preset) => preset.id === 'vj-windows')
+        expect(vj.windows.map((item) => item.kind)).toEqual(['deck'])
+        expect(vj.wide.deck[2]).toBeGreaterThanOrEqual(95)
+        expect(windows.windows.map((item) => item.kind)).toEqual(['deck', 'out', 'clock', 'master'])
+        for (const kind of ['out', 'clock', 'master']) expect(isKnownKind(kind)).toBe(true)
+    })
+
     it('VJ and Wall open only native windows (phase 1 works); the others say what is coming', () => {
         const coming = (id) => BUILT_IN_PRESETS.find((preset) => preset.id === id).windows.filter((item) => isComingKind(item.kind)).map((item) => item.kind)
         expect(coming('vj')).toEqual([])
+        expect(coming('vj-windows')).toEqual([])
         expect(coming('wall')).toEqual([])
         expect(coming('caller')).toEqual([])
         expect(coming('remote')).toEqual([])
@@ -141,11 +151,11 @@ describe('rectangles and frames', () => {
     })
 
     it('saving what is on screen keeps the other width class of the preset it came from', () => {
-        const vj = BUILT_IN_PRESETS[0]
+        const vj = BUILT_IN_PRESETS.find((preset) => preset.id === 'vj-windows')
         const frames = framesFromRects(vj.wide, area)
         const saved = presetFromArrangement({ name: 'friday', source: 'mine', windows: vj.windows, frames, area, widthClass: 'wide', previous: vj, now: 5 })
         expect(saved.id).toMatch(/^mine:/)
-        expect(saved.base).toBe('vj')
+        expect(saved.base).toBe('vj-windows')
         expect(saved.narrow).toEqual(vj.narrow)
         expect(Object.keys(saved.wide)).toEqual(['deck', 'out', 'clock', 'master'])
         // master has no phone place in VJ, and still has none in the copy
@@ -153,7 +163,7 @@ describe('rectangles and frames', () => {
     })
 
     it('a window closed before saving is not in the saved preset', () => {
-        const vj = BUILT_IN_PRESETS[0]
+        const vj = BUILT_IN_PRESETS.find((preset) => preset.id === 'vj-windows')
         const frames = framesFromRects(vj.wide, area)
         frames.clock = { ...frames.clock, visible: false }
         const saved = presetFromArrangement({ name: 'x', source: 'show', windows: vj.windows, frames, area, previous: vj })

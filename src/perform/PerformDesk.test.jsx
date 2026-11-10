@@ -53,8 +53,15 @@ beforeEach(() => {
 afterEach(() => window.localStorage.clear())
 
 describe('the Perform desk', () => {
-    it('opens the VJ preset: the deck (as its perform placement), out, clock, master — and no canvas', () => {
+    it('opens the VJ preset: the deck alone, as its perform placement, filling the room — and no canvas', () => {
         renderDesk()
+        expect(windowTitles()).toEqual(['VJ Deck'])
+        expect(screen.getByTestId('node-window').dataset.placement).toBe('perform')
+        expect(document.querySelector('.raw-graph-surface, .raw-canvas')).toBe(null)
+    })
+
+    it('opens VJ windows, today’s four: the deck (as its perform placement), out, clock, master — and no canvas', () => {
+        renderDesk({ perform: { preset: 'vj-windows', from: 'raw' } })
         expect(windowTitles()).toEqual(['VJ Deck', 'Out', 'Clock', 'Master · Blackout'])
         expect(screen.getByTestId('node-window').dataset.placement).toBe('perform')
         expect(document.querySelector('.raw-graph-surface, .raw-canvas')).toBe(null)
@@ -92,7 +99,7 @@ describe('the Perform desk', () => {
     })
 
     it('closing a window marks the preset changed; "+ window" brings any window back, and Nodes is the last line', () => {
-        renderDesk()
+        renderDesk({ perform: { preset: 'vj-windows', from: 'raw' } })
         const clockWindow = screen.getByRole('dialog', { name: 'Clock' })
         fireEvent.click(within(clockWindow).getByRole('button', { name: 'Close' }))
         expect(windowTitles()).toEqual(['VJ Deck', 'Out', 'Master · Blackout'])
@@ -106,14 +113,14 @@ describe('the Perform desk', () => {
     })
 
     it('save as mine writes the presets slot and opens the saved preset', () => {
-        const { layout } = renderDesk()
+        const { layout } = renderDesk({ perform: { preset: 'vj-windows', from: 'raw' } })
         fireEvent.click(screen.getByRole('button', { name: /VJ/ }))
         fireEvent.click(screen.getByRole('menuitem', { name: 'Save as mine…' }))
         fireEvent.change(screen.getByLabelText('Name for your preset'), { target: { value: 'friday, small room' } })
         fireEvent.click(screen.getByRole('button', { name: 'Save' }))
         expect(layout.setPresets).toHaveBeenCalledTimes(1)
         const saved = layout.setPresets.mock.calls[0][0][0]
-        expect(saved).toMatchObject({ name: 'friday, small room', source: 'mine', base: 'vj' })
+        expect(saved).toMatchObject({ name: 'friday, small room', source: 'mine', base: 'vj-windows' })
         expect(saved.windows.map((item) => item.kind)).toEqual(['deck', 'out', 'clock', 'master'])
         expect(screen.getByText(/Saved as “friday, small room” on this device/)).toBeTruthy()
     })
@@ -196,7 +203,7 @@ describe('the strip menus close the way menus close', () => {
 // read by every screen reader. The four beat dots are one picture with a name.
 describe('the clock window', () => {
     it('names the beat as an image, not as a bare div', () => {
-        renderDesk()
+        renderDesk({ perform: { preset: 'vj-windows', from: 'raw' } })
         const beats = document.querySelector('.perform-beats')
         expect(beats.getAttribute('role')).toBe('img')
         expect(beats.getAttribute('aria-label')).toMatch(/^Beat \d of 4$/)
