@@ -370,8 +370,8 @@
 }
 
 /* The window title bar on Perform (2026-11-10, owner N3511). Measured before:
-   61px per bar at 1400 wide, and 130px in a 206px window at 700 wide, where
-   it wrapped to three rows and left the Clock 13px of body. A desk window on
+   59px per bar at 1400 wide, and 130px in a 206px window at 700 wide, where
+   it wrapped to three rows and left the Clock 10px of body. A desk window on
    Nodes travels over a canvas; here every window is fixed to the screen, so:
    - one row, never wrapped; when the bar runs out the family word yields
      first, then the title ends in an ellipsis; the three controls never move;
@@ -434,5 +434,15 @@
         min-width: 28px;
         min-height: 28px;
         padding: 0 var(--di-space-2);
+    }
+}
+
+/* On a touch screen the controls stay 44px each, so a narrow window has room
+   for the controls or the title, not both (review of #1266: at 200px the
+   title was cut to "…"). There the bar may take a second row again, as it
+   did before: a name is never traded for a row. */
+@media (pointer: coarse) {
+    .perform-shell .raw-window-header {
+        flex-wrap: wrap;
     }
 }
