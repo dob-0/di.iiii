@@ -88,7 +88,9 @@ export default function MapSurface({ projectId, spaceId }) {
     // Picture Out nodes the inspector offers to show.
     const network = useMemo(() => toTopNetwork(doc), [doc])
     const pictureOutOptions = useMemo(
-        () => (doc?.nodes || []).filter((node) => node.typeId === 'top.out').map((node) => ({ id: node.id, label: node.label || 'Picture Out' })),
+        () => (doc?.nodes || [])
+            .filter((node) => node.typeId === 'top.out' || node.typeId === 'vj.deck')
+            .map((node) => ({ id: node.id, label: node.typeId === 'vj.deck' ? `VJ Deck — ${node.label || node.id}` : (node.label || 'Picture Out') })),
         [doc]
     )
     const [localReference, setLocalReferenceFile] = useLocalFileUrl()
