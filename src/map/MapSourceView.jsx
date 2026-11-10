@@ -54,6 +54,9 @@ const requestSurfaceBoot = createPreviewBootQueue()
 // way; a slow page keeps loading, it just stops blocking its neighbours.
 const BOOT_SLOT_TIMEOUT_MS = 15000
 
+// The widest a Pictures surface (a Picture Out or a VJ deck) is drawn.
+export const PICTURE_MAX_WIDTH = 1920
+
 export default function MapSourceView({ surface, spaceId = '', live = true, network = null, assets = null, projectId = null, label = '' }) {
     const [width, height] = surface.resolution
     const kind = surface.source?.kind || 'test'
@@ -473,7 +476,9 @@ const NO_NETWORK = { nodes: [], wires: [] }
 
 function MapNetworkSource({ network, spaceId, assets, projectId, outNodeId, label, width, height }) {
     const [canvas, setCanvas] = useState(null)
-    const scale = Math.min(1, 640 / width)
+    // Drawn at the surface's own size, up to PICTURE_MAX_WIDTH: this IS the
+    // picture on the wall, and 640 stretched to a 1920 screen is soft.
+    const scale = Math.min(1, PICTURE_MAX_WIDTH / width)
     const w = Math.max(1, Math.round(width * scale))
     const h = Math.max(1, Math.round(height * scale))
     // A VJ deck is expanded into operators; its picture is its master's. A
