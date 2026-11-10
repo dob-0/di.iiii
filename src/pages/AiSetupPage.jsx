@@ -83,6 +83,12 @@ export default function AiSetupPage() {
                     <p>Get a key by signing in from a terminal, once:</p>
                     <pre><code>{`${COMMANDS.install}\n${COMMANDS.login}`}</code></pre>
                     <p>
+                        <code>di login</code> needs a di newer than 0.4.3. The released 0.4.3 does not have it
+                        yet: it answers <code>no such command: login</code>. Check yours with <code>di --version</code>.
+                        On 0.4.3, use the page without a key above, and try di on your own computer with no
+                        account: <a href="/ai/join.md">Start with di.iiii</a>.
+                    </p>
+                    <p>
                         Then read your level, with the key the login saved
                         in <code>~/.config/di/credentials.json</code> (or set <code>DI_TOKEN</code>):
                     </p>
@@ -93,9 +99,15 @@ export default function AiSetupPage() {
                     <h2>an assistant on your own machine</h2>
                     <p>
                         Claude Code, and any other assistant that speaks MCP (the Model Context
-                        Protocol), can use di.iiii as a set of tools. After <code>di login</code>, add it once:
+                        Protocol), can use di.iiii as a set of tools. On a di newer than 0.4.3, sign in
+                        with <code>di login</code>, then add it once:
                     </p>
                     <pre><code>{COMMANDS.mcp}</code></pre>
+                    <p>
+                        On the released 0.4.3, <code>di mcp</code> has no <code>--base</code> (it takes{' '}
+                        <code>--port N</code> only), so that line does not fit it. <code>claude mcp add di -- di mcp</code> is
+                        the form 0.4.3 lists in <code>di mcp --help</code>; it talks to the di.iiii running on your own computer.
+                    </p>
                     <p>
                         The tools: {TOOLS.map((tool, i) => (
                             <span key={tool}>{i ? ', ' : ''}<code>{tool}</code></span>

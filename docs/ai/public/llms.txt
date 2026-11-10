@@ -12,6 +12,7 @@ Identified apps and crawlers get 300 API reads a minute per address; anonymous p
 ## Start here
 
 - [What di.iiii is](https://diiii.xyz/ai/about.md): the spaces, the editor, who makes it, in one page of markdown
+- [Start with di.iiii](https://diiii.xyz/ai/join.md): install di and make a saved space on your own computer, no account
 - [Words](https://diiii.xyz/ai/words.md): what each word in di.iiii means, and only that
 - [For apps](https://diiii.xyz/for-apps): how to identify, the limits, what is off-limits, how to ask for more
 - [Spaces](https://diiii.xyz/spaces): every public space, one card each

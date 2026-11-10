@@ -371,14 +371,14 @@ export const WIKI_ARTICLES = [
         title: 'Your install\'s network name',
         summary: 'After di login, one command gives this install a name other machines can use, and a certificate of its own for it that renews itself.',
         body: [
-            'CLAIM IT. Sign in once with di login, then type di name. The install asks the name broker for a label made of your handle and four letters, like ponyo-k7q2, and keeps its name under l.diiii.xyz. An account holds up to three names.',
+            'CLAIM IT. This needs a di newer than 0.4.3 (di --version shows yours); the released 0.4.3 has neither di login nor di name. Sign in once with di login, then type di name. The install asks the name broker for a label made of your handle and four letters, like ponyo-k7q2, and keeps its name under l.diiii.xyz. An account holds up to three names.',
             'ITS OWN CERTIFICATE. The same command then asks Let\'s Encrypt for a certificate for the name and everything under it. The key is made on this machine and never leaves it; the broker only writes the one proof record Let\'s Encrypt asks for. Everything lives in the .di/name folder in your home folder, and nothing there touches the certificate di up serves today.',
             'IT LOOKS AFTER ITSELF. A certificate lasts 90 days. di up checks it when it starts, and the daily update check does too; below 30 days left it renews. A failed renewal leaves the old certificate and writes one line to .di/logs/name.log. Your own address, http://diiii.localhost/, is never touched.',
             'SEE IT. di status ends with one line: the name and the date the certificate runs until, or "none — run di name". di name --status says the same without asking anyone; di name --renew renews now if it is due; di name --forget removes the local files (the broker keeps the label until it is revoked).',
             'NOT YET: the name does not carry a space to another machine by itself. Sharing and following by name come next.'
         ],
         tags: ['name', 'network name', 'certificate', 'tls', 'https', 'label', 'di name', 'broker', 'renew', 'letsencrypt'],
-        updated: '2026-10-28'
+        updated: '2026-11-10'
     },
     {
         id: 'vj-deck-and-clip-in',
@@ -774,7 +774,7 @@ export const WIKI_ARTICLES = [
         body: [
             'If you work in a terminal — with the di command, or with Claude in a terminal — you can sign it in as yourself once. After that it does not send you to the browser for every space.',
             { list: [
-                'In the terminal, run di login. It shows a code of eight letters, like BDFG-HJKL.',
+                'In the terminal, run di login. It needs a di newer than 0.4.3: the released 0.4.3 answers “no such command: login”, so check yours with di --version first. It shows a code of eight letters, like BDFG-HJKL.',
                 'In the browser, open /device. Sign in with your account if you are not already. Type the code yourself: it is never pre-filled, and no link carries it.',
                 'Read what is asking: the name the terminal gave itself, when it asked and where from. Approve it only if you just started it yourself. If you did not, press Deny.',
                 'The terminal then says who it is signed in as. If that is not you, run di logout.'
@@ -784,7 +784,7 @@ export const WIKI_ARTICLES = [
             'To end a terminal, run di logout in it, or open /device and press Revoke beside it under “Terminals signed in as you”. Signing out of the browser does not end it. A terminal nobody has used for 90 days ends by itself, and none lasts longer than a year.'
         ],
         tags: ['terminal', 'cli', 'login', 'di login', 'di logout', 'sign in', 'token', 'claude', 'revoke', 'device'],
-        updated: '2026-10-07'
+        updated: '2026-11-10'
     },
     {
         id: 'public-page-node',
@@ -2654,12 +2654,12 @@ export const WIKI_ARTICLES = [
         summary: 'Any assistant can read what di.iiii shows the public by its address; a key lets it read at your level. The steps are at /ai/setup.',
         body: [
             'An assistant on the web (Claude, ChatGPT, duck.ai, Gemini) can read di.iiii if you give it an address: https://diiii.xyz/llms.txt is the map, and https://diiii.xyz/ai/context is what di.iiii is and the words it uses, in one page. Without a key it reads only what anyone can.',
-            'di.iiii keeps that context at six levels: public, registered, partner, crew, core and owner. The server reads your level from your key, and you can ask for a lower one but never a higher one. A key comes from signing in from a terminal once (di login).',
+            'di.iiii keeps that context at six levels: public, registered, partner, crew, core and owner. The server reads your level from your key, and you can ask for a lower one but never a higher one. A key comes from signing in from a terminal once (di login, which needs a di newer than 0.4.3; the released 0.4.3 answers “no such command: login”).',
             'An assistant on your own machine that speaks MCP, such as Claude Code, can use di.iiii as tools: claude mcp add di -- di mcp. One of the tools, di_context, reads the context at your level.',
             'Every step, with the lines to copy, is on the page /ai/setup, and the same words for an assistant are at /ai/setup.md.'
         ],
         tags: ['ai', 'assistant', 'claude', 'chatgpt', 'duck.ai', 'mcp', 'context', 'levels', 'setup', 'llms.txt'],
-        updated: '2026-10-27'
+        updated: '2026-11-10'
     }
 ]
 
