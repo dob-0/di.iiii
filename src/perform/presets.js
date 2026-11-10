@@ -62,13 +62,23 @@ export const isComingKind = (kind) => isKnownKind(kind) && WINDOW_KINDS[kind].ph
 
 const w = (id, kind = id) => ({ id, kind })
 
-// The seven, from his real use (the sketch he was shown on 2026-09-24,
+// The built-ins, from his real use (the sketch he was shown on 2026-09-24,
 // local.thedi.studio/lab/p/perform-sketch). The rectangles are the sketch's.
 export const BUILT_IN_PRESETS = [
     {
         id: 'vj',
         name: 'VJ',
-        who: 'Club and laser nights. The deck is the instrument; the wall only has to be right.',
+        who: 'Club and laser nights. The deck is the instrument and fills the room: grid, preview, output, sources and clip settings in one.',
+        windows: [w('deck')],
+        wide: { deck: [1, 2, 98, 95] },
+        narrow: { deck: [0, 0, 100, 100] }
+    },
+    {
+        // Today's four windows, kept whole (the arrangement before the deck got
+        // its own preview and output monitors).
+        id: 'vj-windows',
+        name: 'VJ windows',
+        who: 'The deck with the picture out, the clock and the master as separate windows.',
         windows: [w('deck'), w('out'), w('clock'), w('master')],
         wide: { deck: [1, 2, 66, 95], out: [68, 2, 31, 44], clock: [68, 48, 31, 25], master: [68, 75, 31, 22] },
         narrow: { out: [0, 0, 100, 22], clock: [0, 22, 100, 28], deck: [0, 50, 100, 50] }
