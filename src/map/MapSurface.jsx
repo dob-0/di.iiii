@@ -6,7 +6,7 @@ import { cueForKey, isCueKey } from './cueFiring.js'
 import { useMapDocument } from './useMapDocument.js'
 import { useProjectLayers } from '../project/useProjectLayers.js'
 import { toTopNetwork } from '../project/tops/useTopNetwork.js'
-import { buildMapOutputPath } from './mapRouting.js'
+import { openMapOutput } from './mapRouting.js'
 import { listProjects } from '../project/services/projectsApi.js'
 import { transportWarning } from './transportCeiling.js'
 import { lightingDeskPath, probeLightingDesk } from './lightingLink.js'
@@ -298,7 +298,7 @@ export default function MapSurface({ projectId, spaceId }) {
     }, [surfaces, cues, applyOps])
 
     const openOutput = useCallback(() => {
-        window.open(buildMapOutputPath(spaceId, projectId), `di-map-out-${projectId}`, 'noopener')
+        openMapOutput(spaceId, projectId)
     }, [spaceId, projectId])
 
     const moveSurface = useCallback((surfaceId, direction) => {

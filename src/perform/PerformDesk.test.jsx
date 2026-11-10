@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { normalizeProjectDocument } from '../shared/projectSchema.js'
 import { ShowClockContext } from './useShowClock.js'
@@ -135,6 +135,21 @@ describe('the Perform desk', () => {
         expect(op.type).toBe('upsertPerformPreset')
         expect(op.payload.preset).toMatchObject({ name: 'sunday', source: 'show' })
         expect(op.payload.preset.id).toMatch(/^show:/)
+    })
+
+    it('a show preset can be made the show default, and a show with a default opens it without an address', () => {
+        const doc = normalizeProjectDocument({
+            projectMeta: { id: 'show', spaceId: 'lab', title: 'show' },
+            nodes: [{ id: 'deck-1', typeId: 'vj.deck', label: 'VJ Deck', values: {} }],
+            performState: { presets: [{ id: 'show:nolaser', name: 'no laser', windows: [{ id: 'deck', kind: 'deck' }], wide: { deck: [0, 0, 100, 100] } }] }
+        })
+        const { applyLocalOps } = renderDesk({ document: doc, perform: { preset: null, from: 'raw' } })
+        fireEvent.click(screen.getByRole('button', { name: /VJ/ }))
+        fireEvent.click(screen.getByRole('button', { name: 'Set no laser as the show default' }))
+        expect(applyLocalOps.mock.calls.at(-1)[0]).toEqual({ type: 'setPerformDefaultPreset', payload: { presetId: 'show:nolaser' } })
+        cleanup()
+        renderDesk({ document: { ...doc, performState: { ...doc.performState, defaultPreset: 'show:nolaser' } }, perform: { preset: null, from: 'raw' } })
+        expect(document.querySelector('[data-preset]').getAttribute('data-preset')).toBe('show:nolaser')
     })
 
     it('a preset kept on this device cannot be shared as a link — it says why', () => {

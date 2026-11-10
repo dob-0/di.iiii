@@ -126,6 +126,8 @@ const needsCrossOrigin = (url) => {
  * @param {object} values   the node's values (see normaliseClipValues)
  * @param {object} [options]
  * @param {(asset: string) => string} [options.resolveAssetUrl]  asset → URL; default: the value itself
+ * @param {(message: string|null) => void} [options.onError]  a file that fails to load says so (a message);
+ *        null once a later file loads. Without it a failed file kept the old frame, silently.
  * @returns {{ video: HTMLVideoElement, update: (values: object) => void, dispose: () => void }}
  */
 export const createClipVideo = (values = {}, {
@@ -133,6 +135,7 @@ export const createClipVideo = (values = {}, {
     // (url) => { promise: Promise<objectUrl|null>, release } — plays the file
     // from memory (clipSourceCache.js). Absent: the address is played directly.
     loadSource = null,
+    onError = null,
     document: doc = globalThis.document,
     requestFrame = (callback) => globalThis.requestAnimationFrame(callback),
     cancelFrame = (handle) => globalThis.cancelAnimationFrame(handle)
@@ -213,6 +216,15 @@ export const createClipVideo = (values = {}, {
         else seek(clipWindow(video.duration, current).start)
     }
     video.addEventListener('loadedmetadata', onMetadata)
+    const onVideoError = () => {
+        if (disposed || !url) return // taking the source away is not a failure
+        const code = video.error?.code
+        const detail = video.error?.message || (code ? `media error ${code}` : 'it could not be played')
+        onError?.(`Clip file failed: ${detail}`)
+    }
+    const onLoadedData = () => { if (!disposed) onError?.(null) }
+    video.addEventListener('error', onVideoError)
+    video.addEventListener('loadeddata', onLoadedData)
 
     let releaseSource = null
     const applySource = (address, src) => {
@@ -281,6 +293,8 @@ export const createClipVideo = (values = {}, {
         disposed = true
         if (releaseSource) { releaseSource(); releaseSource = null }
         video.removeEventListener('loadedmetadata', onMetadata)
+        video.removeEventListener('error', onVideoError)
+        video.removeEventListener('loadeddata', onLoadedData)
         try { video.pause() } catch { /* already gone */ }
         video.removeAttribute('src')
         // Releases the decoder; a removed src alone keeps it until GC.

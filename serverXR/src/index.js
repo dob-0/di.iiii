@@ -3541,7 +3541,7 @@ app.use((err, req, res, next) => {
   pushEvent('error', { message: err.message })
   logger.error(err)
   if (err?.code === 'LIMIT_FILE_SIZE') {
-    res.status(413).json({ error: 'Uploaded file is too large.' })
+    res.status(413).json({ error: 'Uploaded file is too large.', maxBytes: config.maxUploadBytes })
     return
   }
   if (err?.message === 'Unsupported asset type.') {

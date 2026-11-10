@@ -252,7 +252,32 @@ describe('VjDeckView', () => {
         const file = new File(['x'], 'big.mp4', { type: 'video/mp4' })
         Object.defineProperty(file, 'size', { value: 250 * 1024 * 1024 })
         fireEvent.change(screen.getByLabelText('Upload video'), { target: { files: [file] } })
-        await vi.waitFor(() => expect(screen.getByText(/big\.mp4 is 250 MB: too large to upload/)).toBeTruthy())
+        await vi.waitFor(() => expect(screen.getByText(/big\.mp4: the server refused it for size/)).toBeTruthy())
+    })
+
+    it('a 413 that carries maxBytes names the limit; other failures show their message', async () => {
+        const onUploadFile = vi.fn()
+            .mockRejectedValueOnce(Object.assign(new Error('too large'), { status: 413, maxBytes: 100 * 1024 * 1024 }))
+            .mockRejectedValueOnce(new Error('disk full'))
+        render(<Host onUploadFile={onUploadFile} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Layer 2, slot 3: add a clip' }))
+        const file = new File(['x'], 'big.mp4', { type: 'video/mp4' })
+        fireEvent.change(screen.getByLabelText('Upload video'), { target: { files: [file] } })
+        await vi.waitFor(() => expect(screen.getByText(/big\.mp4 is too large: this di takes 100 MB/)).toBeTruthy())
+        fireEvent.change(screen.getByLabelText('Upload video'), { target: { files: [file] } })
+        await vi.waitFor(() => expect(screen.getByText(/Could not bring in big\.mp4: disk full/)).toBeTruthy())
+    })
+
+    // Audit 2026-11-10: handlers built from the render-time deck; two edits in one frame lost one.
+    it('two edits before the host re-renders both land', () => {
+        const patches = []
+        const deck = setClip(createDeck(), 0, 1, { id: 'c1', kind: 'asset', asset: 'asset-dusk' })
+        render(<VjDeckView node={{ id: 'deck-1', typeId: 'vj.deck', values: { machine: '', deck } }} assets={assets} onPatchValues={(p) => patches.push(p)} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Play column 2' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Bypass Layer 1' }))
+        const last = patches.at(-1).deck
+        expect(last.layers[0].bypass).toBe(true)
+        expect(last.layers[0].active).toBe(1)
     })
 
     it('every placement behaves the same; only the density class differs', () => {

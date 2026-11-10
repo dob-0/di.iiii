@@ -177,8 +177,12 @@ export const submitProjectOps = async (projectId, baseVersion, ops = []) => {
 // Content-address the file locally so identical bytes can skip the upload.
 // Returns '' when hashing is unavailable (non-secure context, odd File impl);
 // the server hashes on receipt either way.
+const HASH_MAX_BYTES = 256 * 1024 * 1024
+
 export const hashFileSha256 = async (file) => {
     if (!globalThis.crypto?.subtle?.digest || typeof file?.arrayBuffer !== 'function') return ''
+    // arrayBuffer() holds the whole file in memory: past this, skip hashing (the server names it).
+    if (file.size > HASH_MAX_BYTES) return ''
     try {
         const digest = await globalThis.crypto.subtle.digest('SHA-256', await file.arrayBuffer())
         return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('')

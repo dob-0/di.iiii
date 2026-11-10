@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { createClipVideo, resolveClipUrl } from './clipVideos.js'
 import { acquireClipSource } from './clipSourceCache.js'
+import { reportTop } from './topReports.js'
 
 const CLIP_TYPE = 'top.clip'
 
@@ -66,7 +67,7 @@ export function useClipVideos(network, { spaceId = '', engine = null, assets = n
                 existing.update(values)
                 continue
             }
-            const clip = create(values, { resolveAssetUrl: (asset) => resolveRef.current(asset), loadSource })
+            const clip = create(values, { resolveAssetUrl: (asset) => resolveRef.current(asset), loadSource, onError: (error) => reportTop(id, { error }) })
             clips.set(id, clip)
             target?.setVideo(id, clip.video)
         }

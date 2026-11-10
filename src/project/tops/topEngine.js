@@ -70,6 +70,19 @@ export const shaderSourceFor = (type, values = {}) => {
 /** The lines every operator's shader is compiled with, above its own code. */
 export const SHADER_PREAMBLE = PREAMBLE.trim()
 
+// A paused video keeps its currentTime, so "time unchanged" alone would skip the upload
+// when a node's footage is switched to another paused file (same node id, same time,
+// other picture). A new element or a new source forgets the time it was uploaded at.
+export const videoMoved = (slot, video) => {
+    const source = video.currentSrc || video.src || ''
+    if (slot.lastVideo !== video || slot.lastVideoSrc !== source) {
+        slot.lastVideo = video
+        slot.lastVideoSrc = source
+        slot.lastVideoTime = undefined
+    }
+    return video.currentTime !== slot.lastVideoTime
+}
+
 /**
  * Compile a fragment shader the way the engine would, and say what is wrong.
  * For the editor: a mistake is shown while typing, on the machine typing it,
@@ -341,7 +354,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         for (const id of remoteIds) {
             const slot = slotFor({ id, type: '__remote' })
             const video = remoteVideos.get(id)
-            if (!video || video.readyState < 2 || video.currentTime === slot.lastVideoTime) continue
+            if (!video || video.readyState < 2 || !videoMoved(slot, video)) continue
             slot.lastVideoTime = video.currentTime
             gl.bindTexture(gl.TEXTURE_2D, slot.now.texture)
             gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
@@ -383,7 +396,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             // Camera In and Clip In alike: whatever <video> setVideo gave this node.
             if (operator.source) {
                 const video = videos.get(node.id)
-                if (video && video.readyState >= 2 && video.currentTime !== slot.lastVideoTime) {
+                if (video && video.readyState >= 2 && videoMoved(slot, video)) {
                     slot.lastVideoTime = video.currentTime
                     gl.bindTexture(gl.TEXTURE_2D, slot.source)
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video)
