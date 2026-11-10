@@ -1,0 +1,5 @@
+## 2026-10-29 — di.bo as the easy link: a design for how di.bo hands out links and carries shared things (ledger N1476)
+- New design doc docs/ai/di-bo-sharing.md: what di.bo, the wifi door, names and follow do today (with sources), twelve integration points ranked, the first slice (the wifi link on the owner's phone, checked before it is sent) with its test, later slices, risks, not-do, five owner questions.
+- Design only, no product code: a draft PR; nothing was deployed or started and no message was sent. Measured the same day: after a restart the wifi record in DNS keeps a private address while the door is closed, so the doc reads the door's state from the install, never from DNS alone.
+- Owed rows named in the doc: the boot re-point of the record in di.iiii, owner-only and quiet-hours guards in the di.bo send scripts, a join-codes rule in the act-token gate, `DI_SITE` before di-studio.xyz lapses, vocabulary rows (install, guest, label, join code, hub).
+- Not tested: nothing was built and nothing was seen on a phone; `npm run docs:ai:check` is the only check run on this branch.
