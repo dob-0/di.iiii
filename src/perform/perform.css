@@ -474,6 +474,11 @@
     border-color: var(--di-ink);
 }
 
+.perform-mark.is-failed {
+    border-color: var(--di-ink);
+    border-style: dashed;
+}
+
 .perform-states {
     display: flex;
     flex: none;
@@ -495,8 +500,14 @@
     color: var(--di-ink);
 }
 
-.perform-state.is-black {
+.perform-state.is-black,
+.perform-state.is-failed {
     color: var(--di-ink);
+}
+
+.perform-state-note {
+    color: var(--di-dim);
+    font-size: var(--di-text-1);
 }
 
 /* --- the clock ------------------------------------------------------------- */

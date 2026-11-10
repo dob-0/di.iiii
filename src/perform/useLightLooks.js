@@ -10,24 +10,36 @@ export const LIGHT_POLL_MS = 3000
 
 export default function useLightLooks({ spaceId, enabled, pollMs = LIGHT_POLL_MS, read = readLightLooks } = {}) {
     const [reading, setReading] = useState(null)
-    const alive = useRef(true)
+    const mounted = useRef(true)
     const readRef = useRef(read)
     useEffect(() => { readRef.current = read })
+    useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+    const fetchReading = useCallback(
+        () => readRef.current({ spaceId }).catch(() => ({ state: 'off', looks: [], liveId: null, master: null, blackout: false })),
+        [spaceId]
+    )
+    // An explicit refresh (after a press) only needs the page to be mounted.
     const refresh = useCallback(async () => {
-        const next = await readRef.current({ spaceId }).catch(() => ({ state: 'off', looks: [], liveId: null, master: null, blackout: false }))
-        if (alive.current) setReading(next)
+        const next = await fetchReading()
+        if (mounted.current) setReading(next)
         return next
-    }, [spaceId])
+    }, [fetchReading])
+    // The poll loop belongs to ITS effect run: a `cancelled` of its own, so a quick
+    // off/on cannot leave the old loop alive beside the new one (2 loops = double polling).
     useEffect(() => {
-        alive.current = true
         if (!enabled) { setReading(null); return undefined }
+        let cancelled = false
         let timer = 0
         const tick = async () => {
-            if (typeof document === 'undefined' || document.visibilityState !== 'hidden') await refresh()
-            if (alive.current) timer = setTimeout(tick, pollMs)
+            if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+                const next = await fetchReading()
+                if (cancelled) return
+                setReading(next)
+            }
+            if (!cancelled) timer = setTimeout(tick, pollMs)
         }
         tick()
-        return () => { alive.current = false; clearTimeout(timer) }
-    }, [enabled, refresh, pollMs])
+        return () => { cancelled = true; clearTimeout(timer) }
+    }, [enabled, fetchReading, pollMs])
     return { reading, refresh }
 }

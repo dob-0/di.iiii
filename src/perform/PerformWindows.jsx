@@ -4,7 +4,7 @@ import MapInspector from '../map/MapInspector.jsx'
 import { MapMachinesList, MapSurfaceList, MapWallView, nextCorners } from '../map/MapDeskParts.jsx'
 import { buildMapOutputPath, buildMapPath } from '../map/mapRouting.js'
 import { cueForKey, isCueKey } from '../map/cueFiring.js'
-import { fireLightLook, lightRelation, lightingDeskPath, setLightBlackout, setLightLooksMaster, setLightMaster } from '../map/lightingLink.js'
+import { fireLightLook, lightRelation, lightingDeskPath, setLightLooksBlackout, setLightLooksMaster } from '../map/lightingLink.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import { toTopNetwork } from '../project/tops/useTopNetwork.js'
 import { registerTopThumbnail } from '../project/tops/topThumbnails.js'
@@ -14,6 +14,7 @@ import { phaseAt } from '../timeline/showClock.js'
 import { useShowClockContext } from './useShowClock.js'
 import useLaser from './useLaser.js'
 import useLightLooks from './useLightLooks.js'
+import useSliderSend from './useSliderSend.js'
 import { goLaserLook, laserDeskPath, laserLooksPath, setLaserBlackout, setLaserFollowLight, setLaserMaster } from '../map/laserLink.js'
 // The Projection desk's own stylesheet: its panes look here exactly as they do there.
 import '../map/mapSurface.css'
@@ -56,11 +57,11 @@ function Switch({ on, onChange, label, title, children, disabled = false }) {
     )
 }
 
-function Slider({ name, label, min, max, step, value, onChange, onPointerUp, onBlur, shown }) {
+function Slider({ name, label, min, max, step, value, onChange, onPointerUp, onBlur, shown, disabled = false, title }) {
     return (
-        <label className="perform-slider">
+        <label className="perform-slider" title={title}>
             <span>{name}</span>
-            <input type="range" className="perform-range" min={min} max={max} step={step} value={value} aria-label={label} onChange={onChange} onPointerUp={onPointerUp} onBlur={onBlur} />
+            <input type="range" className="perform-range" min={min} max={max} step={step} value={value} aria-label={label} disabled={disabled} onChange={onChange} onPointerUp={onPointerUp} onBlur={onBlur} />
             <output>{shown}</output>
         </label>
     )
@@ -201,30 +202,45 @@ function ClockWindow({ ctx }) {
 // One tag per target: PICTURE / LIGHT / LASER, each live, black or absent, read
 // from the real state (the deck's master, the Light desk's clock, the laser desk).
 // A small square (filled = live, empty = black, dim = absent) and the word.
-function StateTag({ name, state }) {
+function StateTag({ name, state, note, why }) {
     return (
-        <span className={`perform-state is-${state}`} data-target={name.toLowerCase()} data-state={state} title={`${name} ${state}`}>
+        <span className={`perform-state is-${state}`} data-target={name.toLowerCase()} data-state={state} title={why || `${name} ${state}`}>
             <Mark state={state} />
             {name}
+            {note ? <span className="perform-state-note"> {note}</span> : null}
             <span className="perform-sr"> {state}</span>
         </span>
     )
 }
 
+// The laser desk has no show key (serverXR/src/laser: nothing in the desk or
+// engine state names a space or show), so this page cannot tell whether it
+// holds THIS space's laser look. It says so, in two words, instead of calm.
+const LASER_SCOPE = 'MACHINE-WIDE'
+const LASER_SCOPE_WHY = 'The laser desk belongs to this machine, not to a space: it holds no show key, so this page cannot tell whose look it is playing. Its blackout and master act on whatever it holds.'
+
 function MasterWindow({ ctx }) {
     const clock = useShowClockContext()
     const light = clock?.light
+    const relation = lightRelation(light, ctx.spaceId)
+    // Only a desk that runs THIS space's show is ever written to. 'other' = another
+    // show on this machine's desk: nothing is sent to it (the server would answer 409 too).
+    const lightOwn = relation === 'own'
     const laser = useLaser()
     const deckNode = firstOfType(ctx.document.nodes, 'vj.deck')
     const deckMaster = Number(deckNode?.values?.deck?.master ?? 1)
     const [restore, setRestore] = useState(null) // the deck level before a blackout
-    // True only when THIS page put the laser desk dark: only then does it lift it.
+    // True only when THIS page put the light / laser desk dark AND the desk said yes: only then does it lift it.
     const [laserSetHere, setLaserSetHere] = useState(false)
-    const [failed, setFailed] = useState([])
-    const [laserLevel, setLaserLevel] = useState(null) // the slider while a hand is on it
+    const [lightSetHere, setLightSetHere] = useState(false)
+    // Targets whose last POST failed, with the direction to retry: { LIGHT: 'on' | 'off', LASER: ... }.
+    const [pending, setPending] = useState({})
     const laserUp = laser.desk?.reachable === true
     const laserBlack = laserUp && laser.desk.blackout === true
-    const blackedOut = restore !== null || light?.blackout === true || laserSetHere
+    const pendingNames = Object.keys(pending)
+    const blackedOut = restore !== null || (lightOwn && light?.blackout === true) || lightSetHere || laserSetHere || pendingNames.length > 0
+    const lightSlider = useSliderSend((raw) => setLightLooksMaster(raw / 255, { spaceId: ctx.spaceId }))
+    const laserSlider = useSliderSend((level) => setLaserMaster(level))
     const writeDeckMaster = useCallback((level) => {
         if (!deckNode) return
         ctx.applyLocalOps({
@@ -236,38 +252,52 @@ function MasterWindow({ ctx }) {
     // One button, everything dark: the deck's master to zero (kept, to come
     // back to), the Light desk's blackout and the laser desk's blackout. The
     // wall shows the deck's picture, so it goes dark with it. Each target is
-    // sent on its own; one that fails is named and does not stop the others.
-    // Lifting the laser blackout never arms: arming is the Laser page's.
+    // sent on its own; one that fails is named, keeps its own state and is
+    // RETRIED by the next press (the others are not touched again). A flag
+    // ("this page set it") is set only when the desk answered yes.
+    // The Light is sent only to a desk that runs this space's show, at the
+    // space's own address. Lifting the laser blackout never arms: arming is the Laser page's.
     const toggleBlackout = async () => {
-        const jobs = []
-        if (!blackedOut) {
+        const jobs = [] // [name, direction, promise]
+        const wasLaserBlack = laserBlack
+        const sendLight = (dir) => jobs.push(['LIGHT', dir, setLightLooksBlackout(dir === 'on', { spaceId: ctx.spaceId })])
+        const sendLaser = (dir) => jobs.push(['LASER', dir, setLaserBlackout(dir === 'on')])
+        if (pendingNames.length) {
+            for (const name of pendingNames) {
+                if (name === 'LIGHT' && lightOwn) sendLight(pending.LIGHT)
+                if (name === 'LASER' && laserUp) sendLaser(pending.LASER)
+            }
+        } else if (!blackedOut) {
             if (deckNode) {
                 setRestore(deckMaster)
                 writeDeckMaster(0)
             }
-            if (light?.up) jobs.push(['LIGHT', setLightBlackout(true)])
-            if (laserUp) {
-                if (!laser.desk.blackout) setLaserSetHere(true)
-                jobs.push(['LASER', setLaserBlackout(true)])
-            }
+            if (lightOwn) sendLight('on')
+            if (laserUp) sendLaser('on')
         } else {
             if (deckNode && restore !== null) writeDeckMaster(restore || 1)
             setRestore(null)
-            if (light?.up) jobs.push(['LIGHT', setLightBlackout(false)])
-            if (laserSetHere) {
-                jobs.push(['LASER', setLaserBlackout(false)])
-                setLaserSetHere(false)
-            }
+            if (lightOwn) sendLight('off')
+            if (laserSetHere) sendLaser('off')
         }
-        const results = await Promise.all(jobs.map(async ([name, call]) => [name, await call]))
-        setFailed(results.filter(([, ok]) => !ok).map(([name]) => name))
+        const results = await Promise.all(jobs.map(async ([name, dir, call]) => [name, dir, await call]))
+        const next = { ...pending }
+        for (const name of pendingNames) if (!jobs.some(([n]) => n === name)) delete next[name] // its target is gone: nothing to retry
+        for (const [name, dir, ok] of results) {
+            if (!ok) { next[name] = dir; continue }
+            delete next[name]
+            if (name === 'LIGHT') setLightSetHere(dir === 'on')
+            if (name === 'LASER') setLaserSetHere(dir === 'on' ? !wasLaserBlack : false)
+        }
+        setPending(next)
         laser.refresh()
     }
 
     const pictureState = !deckNode ? 'absent' : (restore !== null || deckMaster === 0 ? 'black' : 'live')
-    const lightState = !light?.up ? 'absent' : (light.blackout ? 'black' : 'live')
-    const laserState = !laserUp ? 'absent' : (laserBlack ? 'black' : 'live')
-    const shownLaser = laserLevel ?? (laserUp ? laser.desk.master : 1)
+    const lightState = pending.LIGHT ? 'failed' : (relation === 'other' ? 'other' : (!light?.up ? 'absent' : (light.blackout || lightSetHere ? 'black' : 'live')))
+    const laserState = pending.LASER ? 'failed' : (!laserUp ? 'absent' : (laserBlack ? 'black' : 'live'))
+    const shownLaser = laserSlider.local ?? (laserUp ? laser.desk.master : 1)
+    const shownLight = lightSlider.local ?? (light?.master ?? 255)
 
     return (
         <div className="perform-pane perform-bar perform-master">
@@ -276,28 +306,31 @@ function MasterWindow({ ctx }) {
                 className={`perform-action perform-action--danger${blackedOut ? ' is-on' : ''}`}
                 aria-pressed={blackedOut}
                 onClick={toggleBlackout}
-                disabled={!deckNode && !light?.up && !laserUp}
+                disabled={!deckNode && !lightOwn && !laserUp}
+                title={pendingNames.length ? `Press again to retry: ${pendingNames.join(', ')}` : undefined}
             >
                 {blackedOut ? 'Blackout · on' : 'Blackout'}
             </button>
             <div className="perform-states" role="group" aria-label="What is black">
                 <StateTag name="PICTURE" state={pictureState} />
-                <StateTag name="LIGHT" state={lightState} />
-                <StateTag name="LASER" state={laserState} />
+                <StateTag name="LIGHT" state={lightState} note={relation === 'other' ? 'other show' : ''} why={relation === 'other' ? LIGHT_WHY.other : undefined} />
+                <StateTag name="LASER" state={laserState} note={laserUp ? LASER_SCOPE.toLowerCase() : ''} why={laserUp ? LASER_SCOPE_WHY : undefined} />
             </div>
-            {failed.length ? <Status role="alert" tone="danger" title="The others were sent.">NO ANSWER: {failed.join(', ')}</Status> : null}
+            {pendingNames.length ? <Status role="alert" tone="danger" title="The others were sent. Press again to retry the ones named.">NO ANSWER: {pendingNames.join(', ')}</Status> : null}
             {deckNode ? (
                 <Slider name="DECK" label="Deck master" min="0" max="1" step="0.01" value={deckMaster} shown={Math.round(deckMaster * 100)}
                     onChange={(event) => { setRestore(null); writeDeckMaster(Number(event.target.value)) }} />
             ) : null}
             {light?.up ? (
-                <Slider name="LIGHT" label="Light master" min="0" max="255" step="1" value={light.master ?? 255} shown={Math.round(((light.master ?? 255) / 255) * 100)}
-                    onChange={(event) => setLightMaster(Number(event.target.value) / 255)} />
+                <Slider name="LIGHT" label="Light master" min="0" max="255" step="1" value={shownLight} shown={Math.round((shownLight / 255) * 100)}
+                    disabled={!lightOwn} title={lightOwn ? undefined : LIGHT_WHY.other}
+                    onChange={(event) => { if (lightOwn) lightSlider.push(Number(event.target.value)) }}
+                    onPointerUp={lightSlider.release} onBlur={lightSlider.release} />
             ) : null}
             {laserUp ? (
                 <Slider name="LASER" label="Laser level" min="0" max="1" step="0.01" value={shownLaser} shown={Math.round(shownLaser * 100)}
-                    onChange={(event) => { const level = Number(event.target.value); setLaserLevel(level); setLaserMaster(level) }}
-                    onPointerUp={() => setLaserLevel(null)} onBlur={() => setLaserLevel(null)} />
+                    onChange={(event) => laserSlider.push(Number(event.target.value))}
+                    onPointerUp={laserSlider.release} onBlur={laserSlider.release} />
             ) : null}
         </div>
     )
@@ -315,7 +348,7 @@ function LightLooksWindow({ ctx }) {
     const clock = useShowClockContext()
     const relation = lightRelation(clock?.light, ctx.spaceId)
     const { reading, refresh } = useLightLooks({ spaceId: ctx.spaceId, enabled: relation === 'own' })
-    const [master, setMaster] = useState(null) // the slider while a hand is on it
+    const masterSlider = useSliderSend((level) => setLightLooksMaster(level, { spaceId: ctx.spaceId }))
     if (relation !== 'own') {
         return <div className="perform-pane perform-light" data-light={relation}><Status title={LIGHT_WHY[relation]}>{LIGHT_WORDS[relation]}</Status></div>
     }
@@ -324,15 +357,15 @@ function LightLooksWindow({ ctx }) {
         const word = reading.state === 'other' ? LIGHT_WORDS.other : LIGHT_WORDS.off
         return <div className="perform-pane perform-light" data-light={reading.state}><Status title={LIGHT_WHY[reading.state === 'other' ? 'other' : 'off']}>{word}</Status></div>
     }
-    const shown = master ?? (reading.master ?? 255) / 255
+    const shown = masterSlider.local ?? (reading.master ?? 255) / 255
     return (
         <div className="perform-pane perform-light" data-light="own" data-live={reading.liveId || ''}>
             <div className="perform-row">
                 <Mark state={reading.blackout ? 'black' : 'live'} />
                 <Status title={`${reading.looks.length} looks on the desk`}>{reading.blackout ? 'LIGHT BLACKOUT' : `${reading.looks.length} LOOKS`}</Status>
                 <Slider name="MASTER" label="Light desk master" min="0" max="1" step="0.01" value={shown} shown={Math.round(shown * 100)}
-                    onChange={(event) => { const level = Number(event.target.value); setMaster(level); setLightLooksMaster(level, { spaceId: ctx.spaceId }) }}
-                    onPointerUp={() => setMaster(null)} onBlur={() => setMaster(null)} />
+                    onChange={(event) => masterSlider.push(Number(event.target.value))}
+                    onPointerUp={masterSlider.release} onBlur={masterSlider.release} />
             </div>
             {reading.looks.length ? (
                 <div className="perform-tiles" role="group" aria-label="Light looks">
@@ -364,13 +397,13 @@ function LightLooksWindow({ ctx }) {
 
 function LaserWindow() {
     const laser = useLaser()
-    const [master, setMaster] = useState(null) // the slider while a hand is on it
+    const masterSlider = useSliderSend((level) => setLaserMaster(level))
     const { engine, desk } = laser
     if (!laser.known) return <div className="perform-pane perform-laser"><Status>READING LASER</Status></div>
     if (!engine?.reachable) {
         return <div className="perform-pane perform-laser"><Status>NO LASER ENGINE</Status></div>
     }
-    const shownMaster = master ?? (desk?.reachable ? desk.master : 1)
+    const shownMaster = masterSlider.local ?? (desk?.reachable ? desk.master : 1)
     return (
         <div className="perform-pane perform-laser" data-armed={engine.armed ? 'yes' : 'no'}>
             <div className="perform-row">
@@ -378,6 +411,7 @@ function LaserWindow() {
                 <Status title={engine.sim === null ? '' : `Simulation ${engine.sim ? 'on' : 'off'}`}>
                     {engine.connected}/{engine.total} CUBES · {engine.armed ? 'ARMED' : 'NOT ARMED'}
                 </Status>
+                <Status title={LASER_SCOPE_WHY}>{LASER_SCOPE}</Status>
                 {!engine.armed ? <a className="perform-link" href={laserDeskPath()} target="_blank" rel="noreferrer" title="Arm on the Laser page">Laser page</a> : null}
             </div>
             {desk?.reachable ? (
@@ -407,8 +441,8 @@ function LaserWindow() {
                     )}
                     <div className="perform-row">
                         <Slider name="MASTER" label="Laser master" min="0" max="1" step="0.01" value={shownMaster} shown={Math.round(shownMaster * 100)}
-                            onChange={(event) => { const level = Number(event.target.value); setMaster(level); setLaserMaster(level) }}
-                            onPointerUp={() => setMaster(null)} onBlur={() => setMaster(null)} />
+                            onChange={(event) => masterSlider.push(Number(event.target.value))}
+                            onPointerUp={masterSlider.release} onBlur={masterSlider.release} />
                         <Switch on={desk.followLight} label="Laser follows Light" title="The laser takes the Light desk’s look and tempo"
                             onChange={async (on) => { await setLaserFollowLight(on); laser.refresh() }}>Follow light</Switch>
                     </div>
