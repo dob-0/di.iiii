@@ -26,6 +26,8 @@ const keyOf = (constraints) => {
 export const openSharedCamera = async (media, constraints) => {
     const key = keyOf(constraints)
     let entry = pool.get(key)
+    // A capture that has ended is not shared again: the next opener gets a fresh one.
+    if (entry?.dead) { pool.delete(key); entry = null }
     if (!entry) {
         entry = { master: null, refs: 0 }
         entry.master = media.getUserMedia(constraints).catch((error) => {
@@ -47,6 +49,12 @@ export const openSharedCamera = async (media, constraints) => {
         entry.refs -= 1
         if (pool.get(key) === entry) pool.delete(key)
         return master
+    }
+    if (master.getVideoTracks?.()[0]?.readyState === 'ended') {
+        entry.refs -= 1
+        entry.dead = true
+        if (pool.get(key) === entry) pool.delete(key)
+        return openSharedCamera(media, constraints)
     }
     const stream = master.clone()
     let released = false

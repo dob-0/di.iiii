@@ -29,6 +29,10 @@ const plainSettings = (track) => {
 // and Level operators that make its picture (tops/vjDeck.js), and every wire
 // out of it is rewritten to read its master. `alias` says which engine
 // operator has a deck's picture (deck id → its master's id).
+// A camera with no new frame for this long has stopped (it never started: the longer one).
+export const CAMERA_STALL_MS = 4000
+export const CAMERA_START_MS = 12000
+
 export const toTopNetwork = (document) => {
     const nodes = (document?.nodes || [])
         .filter((node) => isPictureType(node.typeId))
@@ -398,6 +402,7 @@ export function useTopNetwork({
         return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
     }
     const constraintsForRef = useRef(constraintsFor)
+    const lostCameraRef = useRef(() => {})
     useEffect(() => { constraintsForRef.current = constraintsFor })
     useEffect(() => {
         for (const [nodeId, constraints] of JSON.parse(constraintsKey)) {
@@ -489,6 +494,7 @@ export function useTopNetwork({
                 element.srcObject = stream
                 element.play?.()?.catch?.(() => {})
                 engineRef.current?.setVideo(id, element)
+                watchCamera(id, stream, element, track)
             } catch (caught) {
                 if (!cancelled) failed(id, caught)
             } finally {
@@ -496,6 +502,42 @@ export function useTopNetwork({
                 // A device changed while this try ran: look again, unless it opened.
                 if (again.delete(id) && !cancelled && !tracksRef.current.has(id)) open(id)
             }
+        }
+        // A camera that was open can stop: its feed restarts (a phone over wifi), the
+        // cable is pulled, the device ends the track. The picture then stays on its
+        // last frame for ever unless somebody looks. Each open camera is watched: an
+        // ended track, or no new frame for CAMERA_STALL_MS, closes it and opens it
+        // again on the same back-off as a camera that never opened.
+        lostCameraRef.current = (id) => {
+            if (cancelled || !spec.has(id)) return
+            failed(id, { name: 'CameraStopped' })
+        }
+        const watchCamera = (id, stream, element, track) => {
+            let last = null
+            let since = Date.now()
+            let flowed = false
+            const lose = () => {
+                clearInterval(timer)
+                track?.removeEventListener?.('ended', lose)
+                if (live.get(id)?.stream !== stream) return
+                live.get(id).engine?.setVideo(id, null)
+                stream.getTracks().forEach((each) => each.stop())
+                tracksRef.current.delete(id)
+                live.delete(id)
+                lostCameraRef.current(id)
+            }
+            const timer = setInterval(() => {
+                if (live.get(id)?.stream !== stream) { clearInterval(timer); return }
+                const now = element.currentTime
+                if (now !== last && element.readyState >= 2) {
+                    last = now
+                    since = Date.now()
+                    flowed = true
+                    return
+                }
+                if (Date.now() - since > (flowed ? CAMERA_STALL_MS : CAMERA_START_MS)) lose()
+            }, 1000)
+            track?.addEventListener?.('ended', lose)
         }
         const onDeviceChange = () => { for (const id of ids) if (!live.has(id)) open(id) }
         media.addEventListener?.('devicechange', onDeviceChange)
