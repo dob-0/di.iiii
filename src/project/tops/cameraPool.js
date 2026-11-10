@@ -42,6 +42,12 @@ export const openSharedCamera = async (media, constraints) => {
         entry.refs -= 1
         throw error
     }
+    // A stream that cannot be cloned is not shared: the caller owns it alone.
+    if (typeof master?.clone !== 'function') {
+        entry.refs -= 1
+        if (pool.get(key) === entry) pool.delete(key)
+        return master
+    }
     const stream = master.clone()
     let released = false
     const release = () => {
