@@ -188,7 +188,7 @@ describe('G09: structured data', () => {
     expect(blocks.map((b) => b['@type']).sort()).toEqual(['Organization', 'WebSite'])
     const site = blocks.find((b) => b['@type'] === 'WebSite')
     expect(site).toMatchObject({ '@context': 'https://schema.org', name: 'di.iiii', url: 'https://diiii.xyz/' })
-    expect(blocks.find((b) => b['@type'] === 'Organization')).toMatchObject({ name: 'di.i', url: 'https://thedi.studio' })
+    expect(blocks.find((b) => b['@type'] === 'Organization')).toMatchObject({ name: 'di.iiii', url: 'https://diiii.xyz' })
   })
 
   it('a space and a project are creative works, the project inside its space', async () => {
