@@ -36,10 +36,10 @@ describe('the two Xone:K2 consoles', () => {
         expect(entry.relative).toBe(true)
     })
 
-    it('T4 the other 55 entries equal the K2 ones, and K2 is unchanged (58 entries)', () => {
-        const changed = ['fader 4', 'pot 12', 'encoder 3']
+    it('T4 the other 39 entries equal the K2 ones (the 16 matrix buttons run top-down, see k2ButtonRows.test.js), and K2 is unchanged (58 entries)', () => {
+        const changed = ['fader 4', 'pot 12', 'encoder 3', ...'ABCDEFGHIJKLMNOP'.split('').map((letter) => `matrix ${letter}`)]
         const rest = XONE_K2_19_MAP.filter((entry) => !changed.includes(entry.control))
-        expect(rest).toHaveLength(55)
+        expect(rest).toHaveLength(39)
         for (const entry of rest) expect(entry).toEqual(byControl(XONE_K2_MAP, entry.control))
         expect(XONE_K2_MAP).toHaveLength(58)
         expect(XONE_K2_FREE.length).toBe(0)

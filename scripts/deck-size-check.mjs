@@ -1,5 +1,6 @@
 // deck-size-check — the 36-case size matrix for the VJ deck (2 pages x 2 deck shapes x 9 page sizes).
-//   DI_TEST_LANES=3 DI_TEST_LANE=3 di-test-browser run scripts/deck-size-check.mjs -- [--base url] [--tag word] [--shots dir] [--json file] [--only P1|P2] [--sizes WxH,WxH]
+//   DI_TEST_LANES=3 DI_TEST_LANE=3 di-test-browser run scripts/deck-size-check.mjs -- [--base url] [--tag word] [--shots dir] [--json file] [--only P1|P2] [--sizes WxH,WxH] [--layout JSON]
+// --layout JSON stores di.vjDeck.layout (the dragged panel sizes) before the page loads, e.g. --layout '{"v":1,"head":0.5,"monitorW":0.6,"bottomH":0.6,"cols":[0.2,0.6]}'
 // Counts over the whole document.body: a overlapping sibling boxes (> 2 px both ways; absolute/fixed excluded),
 // b cuts by a box that cannot scroll + layer rows under the Columns header, c cut words, d sideways page scroll,
 // h (Perform only, measure) Perform windows covering each other. Parts outside .vj-deck are listed as "frame".
@@ -14,6 +15,8 @@ const JSON_OUT = arg('json', null)
 const ONLY = arg('only', null)
 const VIDEO = String(arg('video', process.env.DECK_CHECK_VIDEO || ''))
 const E_ONLY = Boolean(arg('e', false))
+const LAYOUT = arg('layout', null)
+if (LAYOUT) JSON.parse(String(LAYOUT)) // fail loudly on a bad value, before any browser starts
 const PASSWORD = 'driver-passphrase-9x'
 const SHAPES = [[5, 8], [8, 16]]
 const SIZES = String(arg('sizes', '1920x1000,1706x922,1280x720,960x1000,853x922,640x922,568x922,1706x460,853x460')).split(',').map((s) => s.split('x').map(Number))
@@ -134,6 +137,8 @@ const hosts = {
 const rows = []
 const browser = await chromium.connectOverCDP(process.env.DI_TEST_CDP)
 const context = await browser.newContext({ viewport: { width: 1706, height: 922 } })
+await context.addInitScript(() => { try { Object.defineProperty(navigator, 'requestMIDIAccess', { value: undefined, configurable: true }) } catch { /* none */ } }) // no MIDI in the test page
+if (LAYOUT) await context.addInitScript((value) => { try { window.localStorage.setItem('di.vjDeck.layout', value) } catch { /* none */ } }, String(LAYOUT))
 const page = await context.newPage()
 page.setDefaultTimeout(20000)
 const t0 = Date.now()

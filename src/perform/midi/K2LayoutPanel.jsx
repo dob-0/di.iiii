@@ -1,7 +1,9 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { describeAction, shortMatch } from './deckBinding.js'
+import { jobOf, lineOf } from './k2Jobs.js'
+import { faceOfConsole } from './k2Face.js'
+import { K2_WINDOW_NAME } from './k2Channel.js'
 import { TOUCH_MS, controlKey } from './k2Monitor.js'
-import { K2_CHANNEL, K2_CONSOLES, XONE_K2_CONTROLS } from './xoneK2.js'
+import { K2_CONSOLES, XONE_K2_CONTROLS } from './xoneK2.js'
 import './k2LayoutPanel.css'
 
 // The Xone:K2 drawn as it is, every control labelled with what it does NOW (the effective
@@ -12,14 +14,14 @@ import './k2LayoutPanel.css'
 // monitor  useDeckMidi().k2Monitor (subscribe / getSnapshot)
 // console  the active console { id, name, free } (K2 or K2 (1.9)); consoles = both; onPickConsole(id)
 // onClose  () => void
+// windowPath / publisher  where the controller window lives and the courier that feeds it (useDeckMidi().k2Publisher);
+//          the Device button shows only when the console's controller has a drawn face (k2Face.js) and a path is given
+// openWindow (url, name, features) => Window | null   window.open by default
 // fxEffect which effect of the selected stack the third pot row turns (0-based)
 
 const byName = new Map(XONE_K2_CONTROLS.map((item) => [item.control, item]))
 const range = (count) => Array.from({ length: count }, (_, index) => index)
 const MATRIX = 'ABCDEFGHIJKLMNOP'.split('').map((letter) => `matrix ${letter}`)
-const entryOf = (map, control) => (Array.isArray(map) ? map : []).find((entry) => entry?.match
-    && entry.match.kind === control.kind && entry.match.number === control.number
-    && (!entry.match.channel || entry.match.channel === K2_CHANNEL))
 
 // Rows top to bottom, as the device is laid out; each row is four cells of control names.
 const ROWS = [
@@ -32,7 +34,22 @@ const ROWS = [
 const SHOWN = { 'layer button': 'LAYER', 'exit setup button': 'EXIT SETUP' }
 const shownName = (name) => SHOWN[name] || name.replace('matrix ', '').replace('encoder', 'enc').replace('pot switch', 'sw').replace('fader', 'fader')
 
-export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, console: current = K2_CONSOLES[0], consoles = K2_CONSOLES, onPickConsole }) {
+// The one open controller window of this page: a second press brings it forward.
+let deviceWindow = null
+export const WINDOW_FEATURES = 'popup=yes,width=440,height=1000'
+export const BLOCKED_NOTE = 'The browser blocked the controller window. Allow pop-ups for this page, then press Device again.'
+
+export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, console: current = K2_CONSOLES[0], consoles = K2_CONSOLES, onPickConsole, windowPath = '', publisher = null, openWindow = (...args) => window.open(...args) }) {
+    const [blocked, setBlocked] = useState(false)
+    const face = faceOfConsole(current)
+    const openDevice = () => {
+        publisher?.ensure()
+        try { if (deviceWindow && !deviceWindow.closed) { deviceWindow.focus?.(); setBlocked(false); return } } catch { deviceWindow = null }
+        const opened = openWindow(windowPath, K2_WINDOW_NAME, WINDOW_FEATURES)
+        deviceWindow = opened || null
+        setBlocked(!opened)
+        try { opened?.focus?.() } catch { /* a window that cannot be focused is still open */ }
+    }
     const snap = useSyncExternalStore(monitor.subscribe, monitor.getSnapshot)
     const [selected, setSelected] = useState('')
     const [faded, setFaded] = useState(null) // the snapshot whose lights have run out
@@ -57,15 +74,15 @@ export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, con
 
     const chosen = selected ? byName.get(selected) : null
     const detail = chosen
-        ? `${chosen.control} · ${shortMatch(chosen)} · ${(current.free || []).includes(chosen.control) && !entryOf(map, chosen) ? 'not used' : describeAction(entryOf(map, chosen), { fxEffect })}`
+        ? lineOf(chosen, map, current, fxEffect)
         : 'Click a control to see its message and what it does'
 
     const control = (name) => {
         const item = byName.get(name)
         if (!item) return null
         const key = controlKey(item.kind, item.number)
-        const unused = (current.free || []).includes(name) && !entryOf(map, item)
-        const label = unused ? 'not used' : describeAction(entryOf(map, item), { fxEffect })
+        const label = jobOf(item, map, current, fxEffect)
+        const unused = label === 'not used'
         const held = Boolean(snap.held[key])
         const lit = faded !== snap && (held || snap.at - (snap.touched[key] ?? -Infinity) < TOUCH_MS)
         const analog = item.type === 'pot' || item.type === 'fader'
@@ -98,6 +115,7 @@ export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, con
                         <button key={item.id} type="button" className={`k2-switch-item${item.id === current.id ? ' is-on' : ''}`} aria-pressed={item.id === current.id} onClick={() => onPickConsole?.(item.id)}>{item.name}</button>
                     ))}
                 </span>
+                {face && windowPath ? <button type="button" className="k2-device" title="Open the controller as a picture in its own window" onClick={openDevice}>Device</button> : null}
                 <button type="button" className="k2-close" onClick={onClose} aria-label="Close the K2 layout">Close</button>
             </header>
             <div className="k2-body">
@@ -109,6 +127,7 @@ export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, con
                     </div>
                 ))}
             </div>
+            {blocked ? <p className="k2-detail" role="alert">{BLOCKED_NOTE}</p> : null}
             <p className="k2-detail" role="status" aria-live="polite">{detail}</p>
         </section>
     )

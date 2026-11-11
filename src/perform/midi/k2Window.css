@@ -1,0 +1,46 @@
+/* The controller window (K2Window.jsx). Spine tokens only, square corners, no shadow, no glow, no
+   transition. The drawing is in face units and scales with the window (viewBox): at the default
+   window of 440 x 1000 the scale is about 2.4 px per unit, so the 5.6 unit job text is 13.4 px.
+   Light colours are the deck's own (red bypass or off, amber loaded, green playing). */
+.k2w {
+    box-sizing: border-box;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--di-bg);
+    color: var(--di-ink);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+}
+.k2w-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--di-space-2); padding: var(--di-space-2) var(--di-space-3); border-bottom: 1px solid var(--di-line); }
+.k2w-title { margin: 0; font-size: var(--di-text-3); font-weight: 400; color: var(--di-ink); }
+.k2w-status { color: var(--di-dim); font-size: var(--di-text-2); }
+.k2w-main { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: var(--di-space-2); }
+.k2w-svg { width: 100%; height: 100%; display: block; }
+.k2w-wait { margin: 0; max-width: 28em; color: var(--di-dim); font-size: var(--di-text-3); line-height: 1.5; }
+.k2w-readout { box-sizing: border-box; margin: 0; height: 6.5em; overflow-y: auto; padding: var(--di-space-2) var(--di-space-3); border-top: 1px solid var(--di-line); color: var(--di-ink); font-size: var(--di-text-3); line-height: 1.4; overflow-wrap: anywhere; }
+
+.k2w-body { fill: var(--di-surface-2); stroke: var(--di-faint); stroke-width: 0.4; }
+.k2w-plate { fill: var(--di-bg); stroke: var(--di-line); stroke-width: 0.3; }
+.k2w-shape { fill: var(--di-surface-2); stroke: var(--di-faint); stroke-width: 0.4; }
+.k2w-knob { fill: var(--di-bg); }
+.k2w-mark { stroke: var(--di-ink); stroke-width: 0.6; }
+.k2w-slot { fill: var(--di-bg); stroke: var(--di-faint); stroke-width: 0.3; }
+.k2w-cap { fill: var(--di-ink); stroke: var(--di-bg); }
+.k2w-shape.is-red { fill: var(--di-danger); }
+.k2w-shape.is-amber { fill: var(--di-warning); }
+.k2w-shape.is-green { fill: var(--di-success); }
+.k2w-shape.is-held { fill: var(--di-ink); stroke: var(--di-ink); }
+.k2w-shape.is-flash { stroke: var(--di-ink); stroke-width: 1.2; }
+.k2w-printed { fill: var(--di-dim); font-family: var(--di-mono); }
+.k2w-job { fill: var(--di-ink); font-family: var(--di-mono); }
+.k2w-control.is-unused .k2w-job { fill: var(--di-faint); }
+.k2w-control.is-unused .k2w-shape { stroke: var(--di-line); }
+/* text on a lit pad or button is dark so it keeps its contrast on the light */
+.k2w-pad-group.is-lit .k2w-job, .k2w-pad-group.is-lit .k2w-printed,
+.k2w-button-group.is-lit .k2w-printed { fill: var(--di-bg); }
+.k2w-control { cursor: pointer; outline: none; }
+.k2w-ring { fill: transparent; stroke: transparent; stroke-width: 0.8; }
+.k2w-control:hover .k2w-ring { stroke: var(--di-line); }
+.k2w-control.is-pinned .k2w-ring { stroke: var(--di-ink); }
+.k2w-control:focus-visible .k2w-ring { stroke: var(--di-cyan); }

@@ -1,0 +1,500 @@
+{
+ "controller": "XONE:K2",
+ "source": "Hand-set for this drawing from the K2's order of controls (src/perform/midi/K2LayoutPanel.jsx ROWS) and the lead's memory of the maker's sheet; not measured on a unit.",
+ "units": "face units, 1 unit = about 1 mm if the assumed body size is right",
+ "body": {
+  "width": 135,
+  "height": 370,
+  "assumed": true,
+  "note": "ASSUMED width 135 from the lead's memory of the maker's sheet, not checked; the height is set by room for a 2-line job under every control (the assumed 358 left no room), so it is drawn, not measured."
+ },
+ "text": {
+  "size": 5.2,
+  "lineHeight": 5.6,
+  "wrapChars": 9,
+  "maxLines": 2,
+  "jobWidth": 28
+ },
+ "controls": {
+  "encoder 1": {
+   "kind": "knob",
+   "x": 22.5,
+   "y": 11,
+   "size": 12,
+   "printed": "",
+   "jobTop": 18.5,
+   "mode": "relative"
+  },
+  "encoder 2": {
+   "kind": "knob",
+   "x": 52.5,
+   "y": 11,
+   "size": 12,
+   "printed": "",
+   "jobTop": 18.5,
+   "mode": "relative"
+  },
+  "encoder 3": {
+   "kind": "knob",
+   "x": 82.5,
+   "y": 11,
+   "size": 12,
+   "printed": "",
+   "jobTop": 18.5,
+   "mode": "relative"
+  },
+  "encoder 4": {
+   "kind": "knob",
+   "x": 112.5,
+   "y": 11,
+   "size": 12,
+   "printed": "",
+   "jobTop": 18.5,
+   "mode": "relative"
+  },
+  "encoder 1 push": {
+   "kind": "push",
+   "x": 22.5,
+   "y": 11,
+   "size": 6,
+   "printed": "",
+   "jobTop": 30.5,
+   "within": "encoder 1"
+  },
+  "encoder 2 push": {
+   "kind": "push",
+   "x": 52.5,
+   "y": 11,
+   "size": 6,
+   "printed": "",
+   "jobTop": 30.5,
+   "within": "encoder 2"
+  },
+  "encoder 3 push": {
+   "kind": "push",
+   "x": 82.5,
+   "y": 11,
+   "size": 6,
+   "printed": "",
+   "jobTop": 30.5,
+   "within": "encoder 3"
+  },
+  "encoder 4 push": {
+   "kind": "push",
+   "x": 112.5,
+   "y": 11,
+   "size": 6,
+   "printed": "",
+   "jobTop": 30.5,
+   "within": "encoder 4"
+  },
+  "pot 1": {
+   "kind": "knob",
+   "x": 22.5,
+   "y": 49,
+   "size": 10,
+   "printed": "",
+   "jobTop": 55
+  },
+  "pot 2": {
+   "kind": "knob",
+   "x": 52.5,
+   "y": 49,
+   "size": 10,
+   "printed": "",
+   "jobTop": 55
+  },
+  "pot 3": {
+   "kind": "knob",
+   "x": 82.5,
+   "y": 49,
+   "size": 10,
+   "printed": "",
+   "jobTop": 55
+  },
+  "pot 4": {
+   "kind": "knob",
+   "x": 112.5,
+   "y": 49,
+   "size": 10,
+   "printed": "",
+   "jobTop": 55
+  },
+  "pot switch 1": {
+   "kind": "switch",
+   "x": 22.5,
+   "y": 69.2,
+   "size": 6,
+   "printed": "",
+   "jobTop": 73.2
+  },
+  "pot switch 2": {
+   "kind": "switch",
+   "x": 52.5,
+   "y": 69.2,
+   "size": 6,
+   "printed": "",
+   "jobTop": 73.2
+  },
+  "pot switch 3": {
+   "kind": "switch",
+   "x": 82.5,
+   "y": 69.2,
+   "size": 6,
+   "printed": "",
+   "jobTop": 73.2
+  },
+  "pot switch 4": {
+   "kind": "switch",
+   "x": 112.5,
+   "y": 69.2,
+   "size": 6,
+   "printed": "",
+   "jobTop": 73.2
+  },
+  "pot 5": {
+   "kind": "knob",
+   "x": 22.5,
+   "y": 92.5,
+   "size": 10,
+   "printed": "",
+   "jobTop": 98.5
+  },
+  "pot 6": {
+   "kind": "knob",
+   "x": 52.5,
+   "y": 92.5,
+   "size": 10,
+   "printed": "",
+   "jobTop": 98.5
+  },
+  "pot 7": {
+   "kind": "knob",
+   "x": 82.5,
+   "y": 92.5,
+   "size": 10,
+   "printed": "",
+   "jobTop": 98.5
+  },
+  "pot 8": {
+   "kind": "knob",
+   "x": 112.5,
+   "y": 92.5,
+   "size": 10,
+   "printed": "",
+   "jobTop": 98.5
+  },
+  "pot switch 5": {
+   "kind": "switch",
+   "x": 22.5,
+   "y": 112.7,
+   "size": 6,
+   "printed": "",
+   "jobTop": 116.7
+  },
+  "pot switch 6": {
+   "kind": "switch",
+   "x": 52.5,
+   "y": 112.7,
+   "size": 6,
+   "printed": "",
+   "jobTop": 116.7
+  },
+  "pot switch 7": {
+   "kind": "switch",
+   "x": 82.5,
+   "y": 112.7,
+   "size": 6,
+   "printed": "",
+   "jobTop": 116.7
+  },
+  "pot switch 8": {
+   "kind": "switch",
+   "x": 112.5,
+   "y": 112.7,
+   "size": 6,
+   "printed": "",
+   "jobTop": 116.7
+  },
+  "pot 9": {
+   "kind": "knob",
+   "x": 22.5,
+   "y": 136,
+   "size": 10,
+   "printed": "",
+   "jobTop": 142
+  },
+  "pot 10": {
+   "kind": "knob",
+   "x": 52.5,
+   "y": 136,
+   "size": 10,
+   "printed": "",
+   "jobTop": 142
+  },
+  "pot 11": {
+   "kind": "knob",
+   "x": 82.5,
+   "y": 136,
+   "size": 10,
+   "printed": "",
+   "jobTop": 142
+  },
+  "pot 12": {
+   "kind": "knob",
+   "x": 112.5,
+   "y": 136,
+   "size": 10,
+   "printed": "",
+   "jobTop": 142
+  },
+  "pot switch 9": {
+   "kind": "switch",
+   "x": 22.5,
+   "y": 156.2,
+   "size": 6,
+   "printed": "",
+   "jobTop": 160.2
+  },
+  "pot switch 10": {
+   "kind": "switch",
+   "x": 52.5,
+   "y": 156.2,
+   "size": 6,
+   "printed": "",
+   "jobTop": 160.2
+  },
+  "pot switch 11": {
+   "kind": "switch",
+   "x": 82.5,
+   "y": 156.2,
+   "size": 6,
+   "printed": "",
+   "jobTop": 160.2
+  },
+  "pot switch 12": {
+   "kind": "switch",
+   "x": 112.5,
+   "y": 156.2,
+   "size": 6,
+   "printed": "",
+   "jobTop": 160.2
+  },
+  "fader 1": {
+   "kind": "fader",
+   "x": 22.5,
+   "y": 190,
+   "size": 30,
+   "printed": "",
+   "jobTop": 206,
+   "length": 30
+  },
+  "fader 2": {
+   "kind": "fader",
+   "x": 52.5,
+   "y": 190,
+   "size": 30,
+   "printed": "",
+   "jobTop": 206,
+   "length": 30
+  },
+  "fader 3": {
+   "kind": "fader",
+   "x": 82.5,
+   "y": 190,
+   "size": 30,
+   "printed": "",
+   "jobTop": 206,
+   "length": 30
+  },
+  "fader 4": {
+   "kind": "fader",
+   "x": 112.5,
+   "y": 190,
+   "size": 30,
+   "printed": "",
+   "jobTop": 206,
+   "length": 30
+  },
+  "matrix A": {
+   "kind": "pad",
+   "x": 22.5,
+   "y": 232,
+   "size": 24,
+   "printed": "A",
+   "jobTop": 227.2
+  },
+  "matrix B": {
+   "kind": "pad",
+   "x": 52.5,
+   "y": 232,
+   "size": 24,
+   "printed": "B",
+   "jobTop": 227.2
+  },
+  "matrix C": {
+   "kind": "pad",
+   "x": 82.5,
+   "y": 232,
+   "size": 24,
+   "printed": "C",
+   "jobTop": 227.2
+  },
+  "matrix D": {
+   "kind": "pad",
+   "x": 112.5,
+   "y": 232,
+   "size": 24,
+   "printed": "D",
+   "jobTop": 227.2
+  },
+  "matrix E": {
+   "kind": "pad",
+   "x": 22.5,
+   "y": 257,
+   "size": 24,
+   "printed": "E",
+   "jobTop": 252.2
+  },
+  "matrix F": {
+   "kind": "pad",
+   "x": 52.5,
+   "y": 257,
+   "size": 24,
+   "printed": "F",
+   "jobTop": 252.2
+  },
+  "matrix G": {
+   "kind": "pad",
+   "x": 82.5,
+   "y": 257,
+   "size": 24,
+   "printed": "G",
+   "jobTop": 252.2
+  },
+  "matrix H": {
+   "kind": "pad",
+   "x": 112.5,
+   "y": 257,
+   "size": 24,
+   "printed": "H",
+   "jobTop": 252.2
+  },
+  "matrix I": {
+   "kind": "pad",
+   "x": 22.5,
+   "y": 282,
+   "size": 24,
+   "printed": "I",
+   "jobTop": 277.2
+  },
+  "matrix J": {
+   "kind": "pad",
+   "x": 52.5,
+   "y": 282,
+   "size": 24,
+   "printed": "J",
+   "jobTop": 277.2
+  },
+  "matrix K": {
+   "kind": "pad",
+   "x": 82.5,
+   "y": 282,
+   "size": 24,
+   "printed": "K",
+   "jobTop": 277.2
+  },
+  "matrix L": {
+   "kind": "pad",
+   "x": 112.5,
+   "y": 282,
+   "size": 24,
+   "printed": "L",
+   "jobTop": 277.2
+  },
+  "matrix M": {
+   "kind": "pad",
+   "x": 22.5,
+   "y": 307,
+   "size": 24,
+   "printed": "M",
+   "jobTop": 302.2
+  },
+  "matrix N": {
+   "kind": "pad",
+   "x": 52.5,
+   "y": 307,
+   "size": 24,
+   "printed": "N",
+   "jobTop": 302.2
+  },
+  "matrix O": {
+   "kind": "pad",
+   "x": 82.5,
+   "y": 307,
+   "size": 24,
+   "printed": "O",
+   "jobTop": 302.2
+  },
+  "matrix P": {
+   "kind": "pad",
+   "x": 112.5,
+   "y": 307,
+   "size": 24,
+   "printed": "P",
+   "jobTop": 302.2
+  },
+  "layer button": {
+   "kind": "button",
+   "x": 22.5,
+   "y": 331,
+   "size": 18,
+   "printed": "LAYER",
+   "jobTop": 341.5
+  },
+  "encoder 5": {
+   "kind": "knob",
+   "x": 52.5,
+   "y": 331,
+   "size": 12,
+   "printed": "",
+   "jobTop": 338.5,
+   "mode": "relative"
+  },
+  "encoder 5 push": {
+   "kind": "push",
+   "x": 52.5,
+   "y": 331,
+   "size": 6,
+   "printed": "",
+   "jobTop": 350.5,
+   "within": "encoder 5"
+  },
+  "encoder 6": {
+   "kind": "knob",
+   "x": 82.5,
+   "y": 331,
+   "size": 12,
+   "printed": "",
+   "jobTop": 338.5,
+   "mode": "relative"
+  },
+  "encoder 6 push": {
+   "kind": "push",
+   "x": 82.5,
+   "y": 331,
+   "size": 6,
+   "printed": "",
+   "jobTop": 350.5,
+   "within": "encoder 6"
+  },
+  "exit setup button": {
+   "kind": "button",
+   "x": 112.5,
+   "y": 331,
+   "size": 18,
+   "printed": "EXIT SETUP",
+   "jobTop": 341.5
+  }
+ }
+}
