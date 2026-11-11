@@ -235,13 +235,13 @@ describe('epic-build: solid steel stops a beam (2026-10-14)', () => {
     it('what counts as steel: by kind, flag or structural word; a speaker, deck, barrier and chain are not', () => {
         expect(solids.filter(isSteelSolid).map((s) => s.id)).toEqual(['rig-far-crane-z-12-girder-a', 'rig-crane-bar', 'rig-hoist-1-steel', 'rig-tower-cube6', 'rig-line-1', 'x'])
     })
-    it('a solid anchored at its base is lifted by half its height (a box entity is drawn from its centre)', () => {
+    it('a solid stands on its foot: base-anchored goes in as it is, centre-given is lowered by half its height (BoxObject draws upward from its position)', () => {
         const out = v1Entities({ fixtures: [], solids: [
             { id: 'deck', name: 'deck', kind: 'box', anchor: 'base', p: [0, 0, 2], s: [14, 0.6, 7] },
             { id: 'beam', name: 'beam', kind: 'box', p: [0, 6, 2], s: [8, 0.4, 0.4] }
         ] })
-        expect(out.find((e) => e.id === 'deck').components.transform.position).toEqual([0, 0.3, 2])
-        expect(out.find((e) => e.id === 'beam').components.transform.position).toEqual([0, 6, 2])
+        expect(out.find((e) => e.id === 'deck').components.transform.position).toEqual([0, 0, 2])
+        expect(out.find((e) => e.id === 'beam').components.transform.position).toEqual([0, 5.8, 2])
     })
 
     it('a new build flags its steel boxes and only those', () => {

@@ -2,19 +2,27 @@
 import { describe, it, expect } from 'vitest'
 import { pictureEntity, pngSize } from './screen-picture.mjs'
 
-const screen = { id: 'platina-screen', components: { transform: { position: [-0.04, 2.67, 0], rotation: [0, 0, 0], scale: [4.01, 2.5, 0.1] } } }
+const screen = { id: 'platina-screen', components: { transform: { position: [-0.04, 1.42, 0], rotation: [0, 0, 0], scale: [4.01, 2.5, 0.1] } } }
 
 describe('the picture on the LED screen', () => {
     it('covers the screen exactly: an image plane is 3 high and aspect x 3 wide', () => {
         const e = pictureEntity({ screen, assetId: 'a1', px: { width: 1024, height: 640 } })
-        const [sx, sy] = e.components.transform.scale
+        // the image plane is drawn lying flat; the entity stands it up (+90 deg about x), so its height is the scale's z
+        const [sx, sy, sz] = e.components.transform.scale
         expect(sx * (1024 / 640) * 3).toBeCloseTo(4.01, 2)
-        expect(sy * 3).toBeCloseTo(2.5, 2)
+        expect(sz * 3).toBeCloseTo(2.5, 2)
+        expect(sy).toBe(1)
+        expect(e.components.transform.rotation[0]).toBeCloseTo(Math.PI / 2, 5)
+        // where the plane's top edge (local 0, 0.01, -1.5 before the entity's scale and turn) lands: straight above, facing the audience
+        const [rx] = e.components.transform.rotation
+        const y = 0.01 * sy, z = -1.5 * sz
+        expect(y * Math.cos(rx) - z * Math.sin(rx)).toBeCloseTo(1.25, 2)
+        expect(y * Math.sin(rx) + z * Math.cos(rx)).toBeGreaterThan(0)
         expect(e.type).toBe('image')
         expect(e.components.media.assetId).toBe('a1')
     })
 
-    it('sits just in front of the audience face, at the screen centre', () => {
+    it('sits just in front of the audience face, at the screen centre (the box stands on its position, so the centre is half a height up)', () => {
         const e = pictureEntity({ screen, assetId: 'a1', px: { width: 1024, height: 640 } })
         expect(e.components.transform.position).toEqual([-0.04, 2.67, 0.055])
     })

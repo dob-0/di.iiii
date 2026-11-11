@@ -60,6 +60,22 @@ describe('Platina rig plan 2026-11-11', () => {
         }
     })
 
+    it('no lamp is in the air: a standing lamp has a solid or a lamp right under its foot, a hung one a truss right above', () => {
+        const top = (s) => s.p[1] + s.s[1]
+        const over = (f, s, pad) => Math.abs(f.p[0] - s.p[0]) <= s.s[0] / 2 + pad && Math.abs(f.p[2] - s.p[2]) <= s.s[2] / 2 + pad
+        for (const f of rig.fixtures) {
+            const foot = f.p[1] - f.size_m[1] / 2, head = f.p[1] + f.size_m[1] / 2
+            if (f.hung) {
+                const truss = rig.solids.filter((s) => s.kind === 'truss' && over(f, s, 0.3))
+                expect(truss.some((s) => Math.abs((s.p[1] - s.s[1] / 2) - head) < 0.15), `${f.id} hangs under nothing`).toBe(true)
+                continue
+            }
+            const onSolid = rig.solids.some((s) => s.kind === 'box' && over(f, s, 0.05) && Math.abs(top(s) - foot) < 0.06)
+            const onLamp = rig.fixtures.some((g) => g !== f && Math.abs(g.p[0] - f.p[0]) < 0.05 && Math.abs(g.p[2] - f.p[2]) < 0.05 && Math.abs(g.p[1] + g.size_m[1] / 2 - foot) < 0.06)
+            expect(onSolid || onLamp, `${f.id} stands on nothing (foot at ${foot.toFixed(2)} m)`).toBe(true)
+        }
+    })
+
     it('says measured / from-plan-words / PROPOSED and a source for every item, PROPOSED for XP-16R and hazers', () => {
         for (const x of [...rig.fixtures, ...rig.solids]) {
             expect(x.status, x.id).toMatch(/measured|from-plan-words|PROPOSED/)

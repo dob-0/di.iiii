@@ -19,6 +19,10 @@ import { isMainModule } from '../lib/isMainModule.mjs'
 
 const IMAGE_PLANE_H = 3 // ImageObject draws a plane 3 units high, aspect × 3 wide
 const GAP = 0.005       // in front of the cabinet face, so the two faces do not fight
+// ImageObject lays its plane FLAT (a floor sticker: the mesh is turned -90 deg about x). A wall picture stands it up again
+// with +90 deg about x; the plane's height then runs along the entity's own z, so the HEIGHT is the scale's third number.
+// (2026-11-12: with rotation 0 the picture lay flat inside the wall, seen only as a thin red band at its foot.)
+const UPRIGHT = [Math.round(Math.PI / 2 * 1e6) / 1e6, 0, 0]
 
 /** Width and height of a PNG from its header. Throws on anything else. */
 export const pngSize = (buf) => {
@@ -26,7 +30,7 @@ export const pngSize = (buf) => {
     return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) }
 }
 
-/** The picture entity for a screen entity (a box drawn from its centre, +z = the audience). Pure. */
+/** The picture entity for a screen entity (a box drawn upward from its position = its foot, +z = the audience). Pure. */
 export const pictureEntity = ({ screen, assetId, px, level = 1 }) => {
     const t = screen.components.transform
     const [w, h, d] = t.scale
@@ -35,7 +39,7 @@ export const pictureEntity = ({ screen, assetId, px, level = 1 }) => {
     return {
         id: `${screen.id}-picture`, type: 'image', name: `${screen.id}: the picture on the wall (${px.width} x ${px.height} px)`, parentId: null,
         components: {
-            transform: { position: [t.position[0], t.position[1], r(t.position[2] + d / 2 + GAP)], rotation: [0, 0, 0], scale: [r(w / (aspect * IMAGE_PLANE_H)), r(h / IMAGE_PLANE_H), 1] },
+            transform: { position: [t.position[0], r(t.position[1] + h / 2), r(t.position[2] + d / 2 + GAP)], rotation: UPRIGHT, scale: [r(w / (aspect * IMAGE_PLANE_H)), 1, r(h / IMAGE_PLANE_H)] },
             appearance: { opacity: Math.max(0, Math.min(1, Number(level) || 0)) },
             media: { assetId }
         }

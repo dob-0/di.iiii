@@ -169,7 +169,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -762,6 +762,52 @@
     0.1
    ],
    "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-stand-l",
+   "name": "stand pole under side K15 7",
+   "kind": "box",
+   "anchor": "base",
+   "status": "from-plan-words",
+   "p": [
+    -6.47,
+    0.6,
+    5.3
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.06,
+    2.63,
+    0.06
+   ],
+   "source": "plot-front.png draws a pole at the side K15 (height measured, the place of the pole under the lamp is ours)"
+  },
+  {
+   "id": "platina-stand-r",
+   "name": "stand pole under side K15 8",
+   "kind": "box",
+   "anchor": "base",
+   "status": "from-plan-words",
+   "p": [
+    6.38,
+    0.6,
+    5.3
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.06,
+    2.63,
+    0.06
+   ],
+   "source": "plot-front.png draws a pole at the side K15 (height measured, the place of the pole under the lamp is ours)"
   }
  ],
  "fixtures": [
@@ -793,7 +839,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -863,7 +909,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -933,7 +979,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1003,7 +1049,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1073,7 +1119,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1143,7 +1189,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1213,7 +1259,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1283,7 +1329,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1353,7 +1399,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1423,7 +1469,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1493,7 +1539,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1563,7 +1609,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1633,7 +1679,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1703,7 +1749,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1773,7 +1819,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1843,7 +1889,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1913,7 +1959,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -1983,7 +2029,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -2053,7 +2099,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -2123,7 +2169,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -2193,7 +2239,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -2263,7 +2309,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -2333,7 +2379,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
@@ -2403,7 +2449,7 @@
     "basis": "EXACT",
     "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
     "draw": {
-     "penumbra": 0.5,
+     "penumbra": 1,
      "haze": 0.35,
      "reach_m": 24,
      "basis": "ASSUMED: renderer class values for a bar, not maker data"
