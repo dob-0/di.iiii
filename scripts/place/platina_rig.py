@@ -204,6 +204,9 @@ def r2(v):
     return round(float(v), 2)
 
 
+XP_REST = 'deck'   # where the 5 XP-16R without a drawn point go: 'deck' (ours, no hang point) or 'truss' (--xp-rest truss)
+
+
 def build(repo, M):
     plan = json.load(open(os.path.join(repo, PLAN)))
     types = plan['modes']
@@ -343,21 +346,33 @@ def build(repo, M):
     for i, x in enumerate(sorted(sx_)):
         add(f'platina-k15-{7 + i:02d}', 'cp-hy-beye-k15', 'k15-sides', [x, sy_, sz_], [math.pi, 0, 0], 0.2618, 'measured', 'x plot-front.png lamp body, z plot-side.png/plot-top.png, height plot-front.png: on a stand at the side (the plot shows a pole)',
             f'K15 {7 + i} side stand', [M['k15_side']['body_front_m'][0], M['k15_side']['body_front_m'][1], 0.36], i, {'aim_home': 'straight up', 'stand': 'on a pole beside the body (plot-front.png)'})
-    # XP-16R: PROPOSED. 7 in the plot's Sharpy slots on the over-stage truss, 5 on the audience-side truss
+    # XP-16R: PROPOSED. 7 in the plot's Sharpy slots on the over-stage truss (the truss the 8 K10 of the offer hang on);
+    # the other 5 stand on the deck (default, --xp-rest deck) or hang on the audience-side truss (--xp-rest truss, the first version)
     slots = sorted(M['sharpy']['x_top_m']); zs = M['k10']['over_z_side_m']
     ya = (ty - tsec / 2 - 0.35)
     xa = [-3.5, -1.75, 0.0, 1.75, 3.5]
     za = T['aud']['z_side'] + 0.14
     # the XP-16R hangs UNDER its truss: body centre = truss underside - 0.05 m clamp - half the maker's height (585 mm).
     # At the K10's height its real body stood 0.07 m inside the truss (geometry check, 2026-11-11)
-    yx = ty - tsec / 2 - 0.05 - max(stand['acme-xp16r-bsw'].get('size_mm') or [585]) / 2000
+    xp_h = max(stand['acme-xp16r-bsw'].get('size_mm') or [585]) / 1000
+    yx = ty - tsec / 2 - 0.05 - xp_h / 2
     for i in range(12):
         if i < 7:
             p = [slots[i], yx, zs]; src = 'PROPOSED: the plot\'s 7 Sharpy slots on the over-stage truss (the drawing\'s own beam-lamp hang points, positions measured from plot-top.png)'
-        else:
+        elif XP_REST == 'truss':
             p = [xa[i - 7], yx, za]; src = 'PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot\'s 3 K10 slots there are free)'
-        add(f'platina-xp16r-{i + 1:02d}', 'acme-xp16r-bsw', 'xp16r-proposed', p, [0, 0, 0], 0.0262, 'PROPOSED', src, f'XP-16R {i + 1}', [0.35, 0.50, 0.30], i,
-            {'aim_home': 'straight down', 'beam_note': 'angle_rad = half of the maker\'s 3 deg beam (manual photometric diagram)', 'why': 'beam heads of every drawn rig of this kind hang over the stage; no paper places them'})
+        else:
+            # owner 2026-11-11 (N3756): "we dont now we can hang no ... max smart way to use the others". The offer drops the 3 K10
+            # of the audience-side truss, so that truss may not come at all; a lamp standing on the deck needs no hang point.
+            # The 6 deck K15 stand in a row with 5 gaps (1.27 m pitch): one XP-16R in each gap gives a floor row wash / beam / wash,
+            # the same alternation the drawing hangs over the stage (K10 / beam lamp). Top of the body 0.585 m over the deck,
+            # under the screen's lower edge.
+            gx = [(fx_[j] + fx_[j + 1]) / 2 for j in range(5)]
+            # 0.25 m in front of the K15 row: the 3 deg beam then rises 0.33 m clear of the screen face (in the row's own line it would graze it)
+            p = [round(gx[i - 7], 2), round(deck + xp_h / 2, 2), round(fz + 0.25, 2)]; src = 'PROPOSED (ours, no hang point needed): standing on the deck in the 5 gaps of the K15 row, 0.25 m in front of it, beam up'
+        up = i >= 7 and XP_REST != 'truss'
+        add(f'platina-xp16r-{i + 1:02d}', 'acme-xp16r-bsw', 'xp16r-proposed', p, [math.pi, 0, 0] if up else [0, 0, 0], 0.0262, 'PROPOSED', src, f'XP-16R {i + 1}', [0.35, 0.50, 0.30], i,
+            {'aim_home': 'straight up (standing on the deck)' if up else 'straight down', 'beam_note': 'angle_rad = half of the maker\'s 3 deg beam (manual photometric diagram)', 'why': 'beam heads of every drawn rig of this kind hang over the stage; no paper places them'})
     # hazers: PROPOSED
     for i, x in enumerate([-3.4, 3.4]):
         add(f'platina-hazer-{i + 1}', 'magmatic-magma-prime', 'hazer', [x, deck + 0.20, -0.55], [-math.pi / 2, 0, 0], 0.0, 'PROPOSED',
@@ -438,7 +453,10 @@ def geometry_checks(rig):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--repo', default='.'); ap.add_argument('--plot-dir', default=PLOT_DIR); ap.add_argument('--out', default=None); ap.add_argument('--check', action='store_true')
+    ap.add_argument('--xp-rest', choices=['deck', 'truss'], default='deck', help='the 5 XP-16R with no drawn point: standing on the deck (default) or on the audience-side truss')
     a = ap.parse_args()
+    global XP_REST
+    XP_REST = a.xp_rest
     M = measure(a.plot_dir)
     rig = build(a.repo, M)
     leaks, rows = geometry_checks(rig)

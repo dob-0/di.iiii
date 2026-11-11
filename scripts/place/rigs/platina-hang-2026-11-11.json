@@ -3812,12 +3812,12 @@
    "part": "XP-16R 8",
    "status": "PROPOSED",
    "p": [
-    -3.5,
-    6.22,
-    8.17
+    -2.6,
+    0.89,
+    0.38
    ],
    "r": [
-    0,
+    3.1416,
     0,
     0
    ],
@@ -3827,7 +3827,7 @@
     0.58,
     0.34
    ],
-   "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
+   "source": "PROPOSED (ours, no hang point needed): standing on the deck in the 5 gaps of the K15 row, 0.25 m in front of it, beam up",
    "profile": {
     "library": "acme-xp16r-bsw",
     "basis": "EXACT",
@@ -3872,7 +3872,7 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 8 of 12)"
    },
-   "aim_home": "straight down",
+   "aim_home": "straight up (standing on the deck)",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
@@ -3883,12 +3883,12 @@
    "part": "XP-16R 9",
    "status": "PROPOSED",
    "p": [
-    -1.75,
-    6.22,
-    8.17
+    -1.33,
+    0.89,
+    0.38
    ],
    "r": [
-    0,
+    3.1416,
     0,
     0
    ],
@@ -3898,7 +3898,7 @@
     0.58,
     0.34
    ],
-   "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
+   "source": "PROPOSED (ours, no hang point needed): standing on the deck in the 5 gaps of the K15 row, 0.25 m in front of it, beam up",
    "profile": {
     "library": "acme-xp16r-bsw",
     "basis": "EXACT",
@@ -3943,7 +3943,7 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 9 of 12)"
    },
-   "aim_home": "straight down",
+   "aim_home": "straight up (standing on the deck)",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
@@ -3954,12 +3954,12 @@
    "part": "XP-16R 10",
    "status": "PROPOSED",
    "p": [
-    0.0,
-    6.22,
-    8.17
+    -0.05,
+    0.89,
+    0.38
    ],
    "r": [
-    0,
+    3.1416,
     0,
     0
    ],
@@ -3969,7 +3969,7 @@
     0.58,
     0.34
    ],
-   "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
+   "source": "PROPOSED (ours, no hang point needed): standing on the deck in the 5 gaps of the K15 row, 0.25 m in front of it, beam up",
    "profile": {
     "library": "acme-xp16r-bsw",
     "basis": "EXACT",
@@ -4014,7 +4014,7 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 10 of 12)"
    },
-   "aim_home": "straight down",
+   "aim_home": "straight up (standing on the deck)",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
@@ -4025,12 +4025,12 @@
    "part": "XP-16R 11",
    "status": "PROPOSED",
    "p": [
-    1.75,
-    6.22,
-    8.17
+    1.23,
+    0.89,
+    0.38
    ],
    "r": [
-    0,
+    3.1416,
     0,
     0
    ],
@@ -4040,7 +4040,7 @@
     0.58,
     0.34
    ],
-   "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
+   "source": "PROPOSED (ours, no hang point needed): standing on the deck in the 5 gaps of the K15 row, 0.25 m in front of it, beam up",
    "profile": {
     "library": "acme-xp16r-bsw",
     "basis": "EXACT",
@@ -4085,7 +4085,7 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 11 of 12)"
    },
-   "aim_home": "straight down",
+   "aim_home": "straight up (standing on the deck)",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
@@ -4096,12 +4096,12 @@
    "part": "XP-16R 12",
    "status": "PROPOSED",
    "p": [
-    3.5,
-    6.22,
-    8.17
+    2.51,
+    0.89,
+    0.38
    ],
    "r": [
-    0,
+    3.1416,
     0,
     0
    ],
@@ -4111,7 +4111,7 @@
     0.58,
     0.34
    ],
-   "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
+   "source": "PROPOSED (ours, no hang point needed): standing on the deck in the 5 gaps of the K15 row, 0.25 m in front of it, beam up",
    "profile": {
     "library": "acme-xp16r-bsw",
     "basis": "EXACT",
@@ -4156,7 +4156,7 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 12 of 12)"
    },
-   "aim_home": "straight down",
+   "aim_home": "straight up (standing on the deck)",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
