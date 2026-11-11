@@ -367,6 +367,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('topLookup', 'top.lookup', { label: 'Grade', col: 12, row: 3 })
     add('topSlope', 'top.slope', { label: 'Emboss', col: 12, row: 4 })
     add('topGlow', 'top.glow', { label: 'Glow', col: 12, row: 5 })
+    add('topBlocks', 'top.blocks', { label: 'Blocks', col: 12, row: 6 })
     add('monitor', 'stream.monitor', { label: 'Monitor', col: 7, row: 0 })
     add('machinesDesk', 'view.desk', { label: 'Desk', col: 7, row: 1 })
     // The VJ deck plays the camera as a clip on its bottom layer (in1).
