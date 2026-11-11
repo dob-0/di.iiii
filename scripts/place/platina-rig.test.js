@@ -48,7 +48,9 @@ describe('Platina rig plan 2026-11-11', () => {
             expect(x.source, x.id).toBeTruthy()
         }
         expect(rig.fixtures.filter((f) => /xp16r|hazer/.test(f.id)).every((f) => f.status === 'PROPOSED')).toBe(true)
-        expect(rig.fixtures.every((f) => f.profile && f.profile.basis === 'ASSUMED')).toBe(true)
+        // since 2026-11-11 every unit is its real library type (no stand-in), with the maker's limits where the base has them
+        expect(rig.fixtures.every((f) => f.profile && f.profile.library === f.type && !f.profile.stand_in && /^EXACT/.test(f.profile.basis))).toBe(true)
+        expect(rig.fixtures.filter((f) => /xp16r/.test(f.id)).every((f) => f.profile.zoom_deg[0] === 3 && f.profile.pan_tilt_deg[1] === 270 && f.size_m[1] === 0.58)).toBe(true)
     })
 
     it('measures the plot on a 1 m grid: truss 8 m, bar stacks 3 m, screen 4.0 x 2.5 m', () => {

@@ -36,7 +36,7 @@ describe('platina_hang.py views', () => {
 })
 
 describe('platina_hang.py', () => {
-    it('makes the hang from the committed rig: 54 units, every unit has a part and a dmx, stand-ins stay ASSUMED', () => {
+    it('makes the hang from the committed rig: 54 units, every unit has a part and a dmx, every unit is its real library type', () => {
         const out = path.join(dir, 'hang.json')
         const r = py('platina_hang.py', '--rig', rigPath, '--out', out)
         expect(r.status).toBe(0)
@@ -46,7 +46,8 @@ describe('platina_hang.py', () => {
         expect(h.head_kinds).toEqual(['acme-xp16r-bsw'])
         expect(h.defaultLook).toBe('work-light')
         expect(h.hang.from).toBe(rigPath)
-        expect(h.fixtures.every((u) => u.profile?.basis === 'ASSUMED')).toBe(true)
+        // since 2026-11-11 every unit is its real library type (no stand-in): the profile names the library file and the maker's identification
+        expect(h.fixtures.every((u) => u.profile?.library === u.type && !u.profile.stand_in && /^EXACT/.test(u.profile.basis))).toBe(true)
         expect(h.looks).toBeUndefined()
     })
     it('is deterministic: two runs, same bytes', () => {

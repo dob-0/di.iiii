@@ -77,7 +77,22 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
    "cp-hy-beye-k15": {
     "library": "cp-hy-beye-k15",
@@ -93,7 +108,17 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
    "acme-xp16r-bsw": {
     "library": "acme-xp16r-bsw",
@@ -112,7 +137,22 @@
      "zoom": true,
      "src": "ACME-XP16-MAN",
      "basis": "EXACT"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
    },
    "acme-pixel-line-ip": {
     "library": "acme-pixel-line-ip",
@@ -131,12 +171,26 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
    "magmatic-magma-prime": {
     "library": "magmatic-magma-prime",
     "basis": "EXACT",
     "why": "the real hazer: fluid consumption from its manual",
+    "size_mm": [
+     338,
+     160,
+     400
+    ],
+    "weight_kg": 10.2,
+    "power_w": 700,
     "fluid_ml_per_min": {
      "value": 3.4,
      "src": "MAGMA-MAN",
@@ -826,9 +880,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 1, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -848,8 +902,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 5,
     "address": 1,
@@ -882,9 +944,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 1, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -904,8 +966,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 5,
     "address": 118,
@@ -938,9 +1008,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 1, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -960,8 +1030,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 5,
     "address": 235,
@@ -994,9 +1072,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 2, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1016,8 +1094,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 5,
     "address": 352,
@@ -1050,9 +1136,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 2, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1072,8 +1158,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 6,
     "address": 1,
@@ -1106,9 +1200,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 2, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1128,8 +1222,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 6,
     "address": 118,
@@ -1162,9 +1264,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 3, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1184,8 +1286,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 6,
     "address": 235,
@@ -1218,9 +1328,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 3, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1240,8 +1350,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 6,
     "address": 352,
@@ -1274,9 +1392,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 3, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1296,8 +1414,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 7,
     "address": 1,
@@ -1330,9 +1456,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 4, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1352,8 +1478,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 7,
     "address": 118,
@@ -1386,9 +1520,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 4, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1408,8 +1542,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 7,
     "address": 235,
@@ -1442,9 +1584,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 4, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1464,8 +1606,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 7,
     "address": 352,
@@ -1498,9 +1648,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 5, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1520,8 +1670,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 8,
     "address": 1,
@@ -1554,9 +1712,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 5, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1576,8 +1734,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 8,
     "address": 118,
@@ -1610,9 +1776,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 5, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1632,8 +1798,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 8,
     "address": 235,
@@ -1666,9 +1840,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 6, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1688,8 +1862,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 8,
     "address": 352,
@@ -1722,9 +1904,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 6, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1744,8 +1926,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 9,
     "address": 1,
@@ -1778,9 +1968,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 6, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1800,8 +1990,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 9,
     "address": 118,
@@ -1834,9 +2032,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 7, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1856,8 +2054,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 9,
     "address": 235,
@@ -1890,9 +2096,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 7, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1912,8 +2118,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 9,
     "address": 352,
@@ -1946,9 +2160,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 7, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -1968,8 +2182,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 10,
     "address": 1,
@@ -2002,9 +2224,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 8, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -2024,8 +2246,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 10,
     "address": 118,
@@ -2058,9 +2288,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 8, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -2080,8 +2310,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 10,
     "address": 235,
@@ -2114,9 +2352,9 @@
    ],
    "angle_rad": 0.8814,
    "size_m": [
-    0.06,
+    0.09,
     1.0,
-    0.11
+    0.12
    ],
    "source": "tower 8, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
@@ -2136,8 +2374,16 @@
      "zoom": false,
      "src": "ACME-PLIP-DS",
      "basis": "EXACT"
-    }
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 10,
     "address": 352,
@@ -2170,9 +2416,9 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.35,
-    0.45,
-    0.27
+    0.36,
+    0.49,
+    0.25
    ],
    "source": "x plot-top.png glyph centroid (slot 1 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
@@ -2189,8 +2435,24 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 1,
     "address": 1,
@@ -2221,9 +2483,9 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.35,
-    0.45,
-    0.27
+    0.36,
+    0.49,
+    0.25
    ],
    "source": "x plot-top.png glyph centroid (slot 2 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
@@ -2240,8 +2502,24 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 1,
     "address": 112,
@@ -2272,9 +2550,9 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.35,
-    0.45,
-    0.27
+    0.36,
+    0.49,
+    0.25
    ],
    "source": "x plot-top.png glyph centroid (slot 3 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
@@ -2291,8 +2569,24 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 1,
     "address": 223,
@@ -2323,9 +2617,9 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.35,
-    0.45,
-    0.27
+    0.36,
+    0.49,
+    0.25
    ],
    "source": "x plot-top.png glyph centroid (slot 4 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
@@ -2342,8 +2636,24 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 1,
     "address": 334,
@@ -2374,9 +2684,9 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.35,
-    0.45,
-    0.27
+    0.36,
+    0.49,
+    0.25
    ],
    "source": "x plot-top.png glyph centroid (slot 5 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
@@ -2393,8 +2703,24 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 2,
     "address": 1,
@@ -2425,9 +2751,9 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.35,
-    0.45,
-    0.27
+    0.36,
+    0.49,
+    0.25
    ],
    "source": "x plot-top.png glyph centroid (slot 6 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
@@ -2444,8 +2770,24 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 2,
     "address": 112,
@@ -2476,9 +2818,9 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.35,
-    0.45,
-    0.27
+    0.36,
+    0.49,
+    0.25
    ],
    "source": "x plot-top.png glyph centroid (slot 7 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
@@ -2495,8 +2837,24 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 2,
     "address": 223,
@@ -2527,9 +2885,9 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.35,
-    0.45,
-    0.27
+    0.36,
+    0.49,
+    0.25
    ],
    "source": "x plot-top.png glyph centroid (slot 8 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
@@ -2546,8 +2904,24 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 2,
     "address": 334,
@@ -2597,8 +2971,19 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
    "dmx": {
     "universe": 3,
     "address": 1,
@@ -2648,8 +3033,19 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
    "dmx": {
     "universe": 3,
     "address": 113,
@@ -2699,8 +3095,19 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
    "dmx": {
     "universe": 3,
     "address": 225,
@@ -2750,8 +3157,19 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
    "dmx": {
     "universe": 3,
     "address": 337,
@@ -2801,8 +3219,19 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
    "dmx": {
     "universe": 4,
     "address": 1,
@@ -2852,8 +3281,19 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
    "dmx": {
     "universe": 4,
     "address": 113,
@@ -2903,8 +3343,19 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
    "dmx": {
     "universe": 4,
     "address": 225,
@@ -2954,8 +3405,19 @@
      "lumens": 5500,
      "src": "CP-K10-MAN",
      "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
    },
+   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
    "dmx": {
     "universe": 4,
     "address": 337,
@@ -2976,7 +3438,7 @@
    "status": "PROPOSED",
    "p": [
     -3.13,
-    6.34,
+    6.22,
     2.29
    ],
    "r": [
@@ -2986,9 +3448,9 @@
    ],
    "angle_rad": 0.0262,
    "size_m": [
-    0.35,
-    0.5,
-    0.3
+    0.39,
+    0.58,
+    0.34
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
@@ -3008,8 +3470,24 @@
      "zoom": true,
      "src": "ACME-XP16-MAN",
      "basis": "EXACT"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 11,
     "address": 1,
@@ -3031,7 +3509,7 @@
    "status": "PROPOSED",
    "p": [
     -2.1,
-    6.34,
+    6.22,
     2.29
    ],
    "r": [
@@ -3041,9 +3519,9 @@
    ],
    "angle_rad": 0.0262,
    "size_m": [
-    0.35,
-    0.5,
-    0.3
+    0.39,
+    0.58,
+    0.34
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
@@ -3063,8 +3541,24 @@
      "zoom": true,
      "src": "ACME-XP16-MAN",
      "basis": "EXACT"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 11,
     "address": 22,
@@ -3086,7 +3580,7 @@
    "status": "PROPOSED",
    "p": [
     -1.08,
-    6.34,
+    6.22,
     2.29
    ],
    "r": [
@@ -3096,9 +3590,9 @@
    ],
    "angle_rad": 0.0262,
    "size_m": [
-    0.35,
-    0.5,
-    0.3
+    0.39,
+    0.58,
+    0.34
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
@@ -3118,8 +3612,24 @@
      "zoom": true,
      "src": "ACME-XP16-MAN",
      "basis": "EXACT"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 11,
     "address": 43,
@@ -3141,7 +3651,7 @@
    "status": "PROPOSED",
    "p": [
     -0.08,
-    6.34,
+    6.22,
     2.29
    ],
    "r": [
@@ -3151,9 +3661,9 @@
    ],
    "angle_rad": 0.0262,
    "size_m": [
-    0.35,
-    0.5,
-    0.3
+    0.39,
+    0.58,
+    0.34
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
@@ -3173,8 +3683,24 @@
      "zoom": true,
      "src": "ACME-XP16-MAN",
      "basis": "EXACT"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 11,
     "address": 64,
@@ -3196,7 +3722,7 @@
    "status": "PROPOSED",
    "p": [
     0.93,
-    6.34,
+    6.22,
     2.29
    ],
    "r": [
@@ -3206,9 +3732,9 @@
    ],
    "angle_rad": 0.0262,
    "size_m": [
-    0.35,
-    0.5,
-    0.3
+    0.39,
+    0.58,
+    0.34
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
@@ -3228,8 +3754,24 @@
      "zoom": true,
      "src": "ACME-XP16-MAN",
      "basis": "EXACT"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 11,
     "address": 85,
@@ -3251,7 +3793,7 @@
    "status": "PROPOSED",
    "p": [
     1.97,
-    6.34,
+    6.22,
     2.29
    ],
    "r": [
@@ -3261,9 +3803,9 @@
    ],
    "angle_rad": 0.0262,
    "size_m": [
-    0.35,
-    0.5,
-    0.3
+    0.39,
+    0.58,
+    0.34
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
@@ -3283,8 +3825,24 @@
      "zoom": true,
      "src": "ACME-XP16-MAN",
      "basis": "EXACT"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 11,
     "address": 106,
@@ -3306,7 +3864,7 @@
    "status": "PROPOSED",
    "p": [
     2.95,
-    6.34,
+    6.22,
     2.29
    ],
    "r": [
@@ -3316,9 +3874,9 @@
    ],
    "angle_rad": 0.0262,
    "size_m": [
-    0.35,
-    0.5,
-    0.3
+    0.39,
+    0.58,
+    0.34
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
@@ -3338,8 +3896,24 @@
      "zoom": true,
      "src": "ACME-XP16-MAN",
      "basis": "EXACT"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 11,
     "address": 127,
@@ -3361,7 +3935,7 @@
    "status": "PROPOSED",
    "p": [
     -3.5,
-    6.34,
+    6.22,
     8.17
    ],
    "r": [
@@ -3371,9 +3945,9 @@
    ],
    "angle_rad": 0.0262,
    "size_m": [
-    0.35,
-    0.5,
-    0.3
+    0.39,
+    0.58,
+    0.34
    ],
    "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
    "profile": {
@@ -3393,8 +3967,24 @@
      "zoom": true,
      "src": "ACME-XP16-MAN",
      "basis": "EXACT"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 11,
     "address": 148,
@@ -3416,7 +4006,7 @@
    "status": "PROPOSED",
    "p": [
     -1.75,
-    6.34,
+    6.22,
     8.17
    ],
    "r": [
@@ -3426,9 +4016,9 @@
    ],
    "angle_rad": 0.0262,
    "size_m": [
-    0.35,
-    0.5,
-    0.3
+    0.39,
+    0.58,
+    0.34
    ],
    "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
    "profile": {
@@ -3448,8 +4038,24 @@
      "zoom": true,
      "src": "ACME-XP16-MAN",
      "basis": "EXACT"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 11,
     "address": 169,
@@ -3471,7 +4077,7 @@
    "status": "PROPOSED",
    "p": [
     0.0,
-    6.34,
+    6.22,
     8.17
    ],
    "r": [
@@ -3481,9 +4087,9 @@
    ],
    "angle_rad": 0.0262,
    "size_m": [
-    0.35,
-    0.5,
-    0.3
+    0.39,
+    0.58,
+    0.34
    ],
    "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
    "profile": {
@@ -3503,8 +4109,24 @@
      "zoom": true,
      "src": "ACME-XP16-MAN",
      "basis": "EXACT"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 11,
     "address": 190,
@@ -3526,7 +4148,7 @@
    "status": "PROPOSED",
    "p": [
     1.75,
-    6.34,
+    6.22,
     8.17
    ],
    "r": [
@@ -3536,9 +4158,9 @@
    ],
    "angle_rad": 0.0262,
    "size_m": [
-    0.35,
-    0.5,
-    0.3
+    0.39,
+    0.58,
+    0.34
    ],
    "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
    "profile": {
@@ -3558,8 +4180,24 @@
      "zoom": true,
      "src": "ACME-XP16-MAN",
      "basis": "EXACT"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 11,
     "address": 211,
@@ -3581,7 +4219,7 @@
    "status": "PROPOSED",
    "p": [
     3.5,
-    6.34,
+    6.22,
     8.17
    ],
    "r": [
@@ -3591,9 +4229,9 @@
    ],
    "angle_rad": 0.0262,
    "size_m": [
-    0.35,
-    0.5,
-    0.3
+    0.39,
+    0.58,
+    0.34
    ],
    "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
    "profile": {
@@ -3613,8 +4251,24 @@
      "zoom": true,
      "src": "ACME-XP16-MAN",
      "basis": "EXACT"
-    }
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 11,
     "address": 232,
@@ -3655,12 +4309,20 @@
     "library": "magmatic-magma-prime",
     "basis": "EXACT",
     "why": "the real hazer: fluid consumption from its manual",
+    "size_mm": [
+     338,
+     160,
+     400
+    ],
+    "weight_kg": 10.2,
+    "power_w": 700,
     "fluid_ml_per_min": {
      "value": 3.4,
      "src": "MAGMA-MAN",
      "basis": "EXACT"
     }
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 4,
     "address": 461,
@@ -3701,12 +4363,20 @@
     "library": "magmatic-magma-prime",
     "basis": "EXACT",
     "why": "the real hazer: fluid consumption from its manual",
+    "size_mm": [
+     338,
+     160,
+     400
+    ],
+    "weight_kg": 10.2,
+    "power_w": 700,
     "fluid_ml_per_min": {
      "value": 3.4,
      "src": "MAGMA-MAN",
      "basis": "EXACT"
     }
    },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 4,
     "address": 466,

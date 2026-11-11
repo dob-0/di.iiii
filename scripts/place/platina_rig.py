@@ -233,6 +233,13 @@ def build(repo, M):
             p['photometry'] = {'lux': o['lux'], 'at_m': o['at_m'], 'beam_deg': o.get('beam_deg'), 'zoom': bool(o.get('zoom_deg')), 'src': o.get('photometrySrc'), 'basis': o.get('photometryBasis')}
         elif lumens:
             p['photometry'] = dict(lumens)
+        val = lambda x: x.get('value') if isinstance(x, dict) else x
+        # the maker's limits the simulator must stay inside: pan / tilt travel, zoom range, outer size
+        for k_out, k_in in (('pan_tilt_deg', 'pan_tilt_deg'), ('size_mm', 'size_mm'), ('weight_kg', 'weight_kg'), ('power_w', 'power_w')):
+            if val(t.get(k_in)) is not None:
+                p[k_out] = val(t.get(k_in))
+        if o.get('zoom_deg'):
+            p['zoom_deg'] = o['zoom_deg']
         fl = t.get('fluid_ml_per_min')
         if isinstance(fl, dict) and fl.get('value'):
             p['fluid_ml_per_min'] = {'value': fl['value'], 'src': fl.get('src'), 'basis': fl.get('basis')}
@@ -250,6 +257,17 @@ def build(repo, M):
     def add(id_, type_, group, p, r, angle, status, source, part, size, i=None, extra=None):
         d = {'id': id_, 'type': type_, 'group': group, 'part': part, 'status': status, 'p': [r2(v) for v in p], 'r': [round(v, 4) for v in r], 'angle_rad': angle,
              'size_m': [r2(v) for v in size], 'source': source, 'profile': stand[type_]}
+        # the body's size is the MAKER'S when the library has it (largest maker dimension on the axis the drawing's own size is
+        # largest on, and so on: the drawing gives the orientation, the maker the millimetres); else the plot symbol's, said so
+        mm = stand[type_].get('size_mm')
+        if mm and len(mm) == 3:
+            order = sorted(range(3), key=lambda a: -size[a]); big = sorted(mm, reverse=True)
+            out = [0, 0, 0]
+            for rank, axis in enumerate(order):
+                out[axis] = r2(big[rank] / 1000)
+            d['size_m'] = out; d['size_basis'] = "maker's outer size (library size_mm), oriented as drawn"
+        else:
+            d['size_basis'] = 'from the plot symbol: the maker\'s outer size is not in the papers held'
         d['dmx'] = dmx(group, i)
         if extra:
             d.update(extra)
@@ -330,11 +348,14 @@ def build(repo, M):
     ya = (ty - tsec / 2 - 0.35)
     xa = [-3.5, -1.75, 0.0, 1.75, 3.5]
     za = T['aud']['z_side'] + 0.14
+    # the XP-16R hangs UNDER its truss: body centre = truss underside - 0.05 m clamp - half the maker's height (585 mm).
+    # At the K10's height its real body stood 0.07 m inside the truss (geometry check, 2026-11-11)
+    yx = ty - tsec / 2 - 0.05 - max(stand['acme-xp16r-bsw'].get('size_mm') or [585]) / 2000
     for i in range(12):
         if i < 7:
-            p = [slots[i], yk, zs]; src = 'PROPOSED: the plot\'s 7 Sharpy slots on the over-stage truss (the drawing\'s own beam-lamp hang points, positions measured from plot-top.png)'
+            p = [slots[i], yx, zs]; src = 'PROPOSED: the plot\'s 7 Sharpy slots on the over-stage truss (the drawing\'s own beam-lamp hang points, positions measured from plot-top.png)'
         else:
-            p = [xa[i - 7], yk, za]; src = 'PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot\'s 3 K10 slots there are free)'
+            p = [xa[i - 7], yx, za]; src = 'PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot\'s 3 K10 slots there are free)'
         add(f'platina-xp16r-{i + 1:02d}', 'acme-xp16r-bsw', 'xp16r-proposed', p, [0, 0, 0], 0.0262, 'PROPOSED', src, f'XP-16R {i + 1}', [0.35, 0.50, 0.30], i,
             {'aim_home': 'straight down', 'beam_note': 'angle_rad = half of the maker\'s 3 deg beam (manual photometric diagram)', 'why': 'beam heads of every drawn rig of this kind hang over the stage; no paper places them'})
     # hazers: PROPOSED
