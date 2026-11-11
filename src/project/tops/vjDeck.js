@@ -75,8 +75,8 @@ export const normalizeClip = (clip) => {
 // the master's). `main` is what the panel and MIDI show first: numeric params
 // become sliders, a colour param a colour input. See PROGRESS.md (the feat-deck-effects entry).
 
-// One of every effect fits on a stack (18 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
-export const MAX_EFFECTS = 18
+// One of every effect fits on a stack (19 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
+export const MAX_EFFECTS = 19
 export const EFFECT_TYPES = {
     'top.level': { main: ['gain', 'brightness', 'gamma'] },
     'top.tint': { main: ['amount', 'bright'] },
@@ -85,9 +85,10 @@ export const EFFECT_TYPES = {
     'top.feedback': { main: ['trail'] },
     'top.transform': { main: ['scale', 'rotate', 'moveX'] },
     'top.freeze': { main: ['hold'] },
-    'top.silhouette': { main: ['threshold', 'soft', 'invert', 'colour', 'back'] },
+    'top.silhouette': { main: ['threshold', 'soft', 'invert', 'colour', 'back', 'drift', 'flash'] },
     'top.lineart': { main: ['bands', 'width', 'colour'] },
     'top.glitch': { main: ['amount', 'speed', 'split'] },
+    'top.blocks': { main: ['amount', 'size', 'rate', 'shift', 'hold'] },
     'top.pixelate': { main: ['size', 'levels', 'grey'] },
     'top.displace': { main: ['source', 'amountX', 'amountY', 'scale', 'speed'] },
     'top.hsvadj': { main: ['hue', 'sat', 'value'] },
