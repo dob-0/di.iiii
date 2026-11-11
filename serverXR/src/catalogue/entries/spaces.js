@@ -544,11 +544,19 @@ module.exports = [
   },
   {
     route: "POST /api/spaces/bundle/uploads/:id/finish",
-    summary: "join the parts, check size and sha256, and open the file like POST /api/spaces/bundle does",
+    summary: "finish an upload in parts: answers 202 at once, then joins the parts, checks size and sha256 and opens the file like POST /api/spaces/bundle does",
     reach: "private",
     role: "editor",
     agent: false,
-    note: "same answers as the single POST (201, space_exists 409). Missing parts answer 409 parts_missing and the upload is kept. The parts are removed either way."
+    note: "the result is read with GET on the upload (same codes as the single POST, space_exists 409 included). Missing parts answer 409 parts_missing and the upload is kept; a second finish answers 409 already_finishing."
+  },
+  {
+    route: "GET /api/spaces/bundle/uploads/:id",
+    summary: "the state of an upload in parts: receiving, joining, importing, done (with the space id) or failed (with the reason and code)",
+    reach: "read",
+    role: "editor",
+    agent: false,
+    note: "finish answers 202 and the join + import run in the background; poll this. Only the account that started the upload may read it."
   },
   {
     route: "DELETE /api/spaces/bundle/uploads/:id",

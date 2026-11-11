@@ -56,7 +56,21 @@ const start = (server, bytes, extra = {}, headers = ADMIN) => fetch(`${server.ba
 const put = (server, id, n, bytes, headers = ADMIN) => fetch(`${server.base}/api/spaces/bundle/uploads/${id}/parts/${n}`, {
     method: 'PUT', headers: { ...headers, 'Content-Type': 'application/octet-stream' }, body: bytes
 })
-const finish = (server, id, headers = ADMIN) => fetch(`${server.base}/api/spaces/bundle/uploads/${id}/finish`, { method: 'POST', headers: { ...JSON_HEADERS, ...headers }, body: '{}' })
+const finishRaw = (server, id, headers = ADMIN) => fetch(`${server.base}/api/spaces/bundle/uploads/${id}/finish`, { method: 'POST', headers: { ...JSON_HEADERS, ...headers }, body: '{}' })
+const state = (server, id, headers = ADMIN) => fetch(`${server.base}/api/spaces/bundle/uploads/${id}`, { headers })
+// Finish answers 202 and the work runs in the background: wait for the job to
+// end and answer like the single POST would (status + body).
+const finish = async (server, id, headers = ADMIN) => {
+    const first = await finishRaw(server, id, headers)
+    if (first.status !== 202) return first
+    let said = null
+    await vi.waitFor(async () => {
+        said = await (await state(server, id, headers)).json()
+        expect(['done', 'failed']).toContain(said.state)
+    }, { timeout: 30000, interval: 100 })
+    const { state: _state, httpStatus, ...body } = said
+    return { status: httpStatus, json: async () => body }
+}
 const sendAll = async (server, id, bytes, partBytes, skip = []) => {
     const parts = Math.ceil(bytes.length / partBytes)
     for (let n = 1; n <= parts; n += 1) {
@@ -67,6 +81,10 @@ const sendAll = async (server, id, bytes, partBytes, skip = []) => {
 }
 const left = (server) => readdir(server.partsDir).catch(() => [])
 const gone = (server) => vi.waitFor(async () => { expect(await readdir(server.partsDir).catch(() => [])).toEqual([]) })
+// After a job only meta.json + status.json (the result) stay: no part, no joined copy.
+const noBytes = async (server) => {
+    for (const id of await left(server)) expect((await readdir(path.join(server.partsDir, id))).sort()).toEqual(['meta.json', 'status.json'])
+}
 
 describe('a space file sent in parts', () => {
     it('opens a file sent in several parts, as the name asked, and leaves no parts behind', async () => {
@@ -80,7 +98,7 @@ describe('a space file sent in parts', () => {
         const done = await finish(server, begun.uploadId)
         expect(done.status).toBe(201)
         expect((await done.json()).spaceId).toBe('arrived')
-        await gone(server)
+        await noBytes(server)
         const listed = await (await fetch(`${server.base}/api/spaces`, { headers: ADMIN })).json()
         expect(listed.spaces.map((space) => space.id)).toContain('arrived')
     }, 60000)
@@ -93,7 +111,7 @@ describe('a space file sent in parts', () => {
         const done = await finish(server, begun.uploadId)
         expect(done.status).toBe(409)
         expect((await done.json()).code).toBe('space_exists')
-        await gone(server)
+        await noBytes(server)
     }, 60000)
 
     it('refuses a file whose sha256 is not the one announced, opens nothing, removes the parts', async () => {
@@ -107,7 +125,7 @@ describe('a space file sent in parts', () => {
         const done = await finish(server, begun.uploadId)
         expect(done.status).toBe(422)
         expect((await done.json()).code).toBe('sha256_mismatch')
-        await gone(server)
+        await noBytes(server)
         const listed = await (await fetch(`${server.base}/api/spaces`, { headers: ADMIN })).json()
         expect(listed.spaces.map((space) => space.id)).not.toContain('never')
     }, 60000)
@@ -149,6 +167,28 @@ describe('a space file sent in parts', () => {
         await gone(server)
     }, 60000)
 
+    it('finish answers 202 at once, a second finish is already_finishing, GET reports the job to the owner and clears on DELETE', async () => {
+        const server = await startServer()
+        const bytes = await savedFile(server, 'job-source')
+        const begun = await (await start(server, bytes, { as: 'job-copy' })).json()
+        await sendAll(server, begun.uploadId, bytes, begun.partBytes)
+        expect((await (await state(server, begun.uploadId)).json()).state).toBe('receiving')
+        const first = await finishRaw(server, begun.uploadId)
+        expect(first.status).toBe(202)
+        const second = await finishRaw(server, begun.uploadId)
+        expect(second.status).toBe(409)
+        expect((await second.json()).code).toBe('already_finishing')
+        let said
+        await vi.waitFor(async () => {
+            said = await (await state(server, begun.uploadId)).json()
+            expect(said.state).toBe('done')
+        }, { timeout: 30000, interval: 100 })
+        expect(said.spaceId).toBe('job-copy')
+        expect((await fetch(`${server.base}/api/spaces/bundle/uploads/${begun.uploadId}`, { method: 'DELETE', headers: ADMIN })).status).toBe(200)
+        await gone(server)
+        expect((await state(server, begun.uploadId)).status).toBe(404)
+    }, 60000)
+
     it('with auth on: no sign-in is refused at every step', async () => {
         const server = await startServer({ requireAuth: true })
         const bytes = Buffer.alloc(3000, 7)
@@ -157,6 +197,8 @@ describe('a space file sent in parts', () => {
         expect(begun.uploadId).toBeTruthy()
         expect([401, 403]).toContain((await put(server, begun.uploadId, 1, bytes.subarray(0, 104), {})).status)
         expect([401, 403]).toContain((await finish(server, begun.uploadId, {})).status)
+        expect([401, 403]).toContain((await state(server, begun.uploadId, {})).status)
+        expect((await state(server, begun.uploadId)).status).toBe(200)
         expect((await put(server, begun.uploadId, 1, bytes.subarray(0, 104))).status).toBe(200)
     }, 60000)
 })

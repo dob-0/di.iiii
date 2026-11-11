@@ -556,10 +556,41 @@ const sendInParts = async ({ base, headers, resolved, name, size, host, as, time
         if (!done) { await cancel(); return { stop: ui.openToPartFailed(n, parts, host, last) } }
         say(style.dim(ui.openToPartSent(n, parts, Math.min(size, n * partBytes), size)))
     }
-    return await (async () => {
-        const finished = await fetch(`${door}/${uploadId}/finish`, { method: 'POST', headers: json, body: '{}', signal: timeout() })
-        return { response: finished, body: await finished.json().catch(() => ({})) }
-    })()
+    const finished = await fetch(`${door}/${uploadId}/finish`, { method: 'POST', headers: json, body: '{}', signal: timeout() })
+    const finishedBody = await finished.json().catch(() => ({}))
+    // 202: the join and the import run on that server, which would outlive a
+    // proxy's wait for one answer (Cloudflare: 125 s). Ask how it goes.
+    if (finished.status !== 202) return { response: finished, body: finishedBody }
+    const every = process.env.DI_OPEN_TO_POLL_MS === undefined ? 3000 : Number(process.env.DI_OPEN_TO_POLL_MS)
+    const until = Date.now() + (Number(process.env.DI_OPEN_TO_FINISH_TIMEOUT_MS) || 30 * 60 * 1000)
+    let shown = ''
+    let broken = 0
+    while (Date.now() < until) {
+        if (every) await new Promise((r) => setTimeout(r, every))
+        let state
+        try {
+            const polled = await fetch(`${door}/${uploadId}`, { headers, signal: AbortSignal.timeout(30000) })
+            state = await polled.json().catch(() => ({}))
+            if (!polled.ok) { state = { state: 'failed', httpStatus: polled.status, error: state?.error || `${host} answered ${polled.status}`, code: state?.code } }
+            broken = 0
+        } catch (error) {
+            // A dropped poll is not a failed import: the server keeps working.
+            broken += 1
+            if (broken >= 5) return { stop: ui.openToPollLost(host, String(error?.message || error)) }
+            continue
+        }
+        if (state.state !== shown && (state.state === 'joining' || state.state === 'importing')) {
+            shown = state.state
+            say(style.dim(ui.openToJob(state.state, host)))
+        }
+        if (state.state === 'done' || state.state === 'failed') {
+            fetch(`${door}/${uploadId}`, { method: 'DELETE', headers, signal: AbortSignal.timeout(15000) }).catch(() => {})
+            const { state: _state, httpStatus, ...body } = state
+            const status = state.state === 'done' ? (httpStatus || 201) : (httpStatus || 500)
+            return { response: { ok: state.state === 'done', status }, body }
+        }
+    }
+    return { stop: ui.openToJobTimedOut(host) }
 }
 
 /**
