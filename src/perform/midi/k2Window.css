@@ -1,6 +1,6 @@
 /* The controller window (K2Window.jsx). Spine tokens only, square corners, no shadow, no glow, no
    transition. The drawing is in face units and scales with the window (viewBox): at the default
-   window of 440 x 1000 the scale is about 2.4 px per unit, so the 5.6 unit job text is 13.4 px.
+   window of 440 x 860 the scale is about 2.3 px per unit, so the 5.2 unit text is 12 px (the floor, base.css).
    Light colours are the deck's own (red bypass or off, amber loaded, green playing). */
 .k2w {
     box-sizing: border-box;
@@ -15,7 +15,10 @@
 .k2w-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--di-space-2); padding: var(--di-space-2) var(--di-space-3); border-bottom: 1px solid var(--di-line); }
 .k2w-title { margin: 0; font-size: var(--di-text-3); font-weight: 400; color: var(--di-ink); }
 .k2w-status { color: var(--di-dim); font-size: var(--di-text-2); }
-.k2w-main { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: var(--di-space-2); }
+.k2w-main { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: var(--di-space-1) var(--di-space-2); }
+/* The dev-tree strip (components/treeChip.css) is fixed over the bottom 30 px of every page of a dev copy:
+   keep the readout above it, in this window only. Production has no strip and no gap. */
+body:has(.tree-chip) .k2w { padding-bottom: calc(var(--di-space-6) + var(--di-space-2)); }
 .k2w-svg { width: 100%; height: 100%; display: block; }
 .k2w-wait { margin: 0; max-width: 28em; color: var(--di-dim); font-size: var(--di-text-3); line-height: 1.5; }
 .k2w-readout { box-sizing: border-box; margin: 0; height: 6.5em; overflow-y: auto; padding: var(--di-space-2) var(--di-space-3); border-top: 1px solid var(--di-line); color: var(--di-ink); font-size: var(--di-text-3); line-height: 1.4; overflow-wrap: anywhere; }

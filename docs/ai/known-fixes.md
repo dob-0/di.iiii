@@ -1911,3 +1911,11 @@ Cause: the cleanup of the preview effects in VjDeckView.jsx (CameraPreview) and 
 Fix: both cleanups set the video's srcObject to null after the tracks stop (off and unmount; on again opens a fresh stream through the effect); cameraPool.js calls subscribeSourcesOff on every open (idempotent).
 Guard: src/map/MapSourceView.sourceOff.test.jsx (off, on again, unmount), src/project/tops/cameraPool.off.test.js (stop after a reset).
 Lesson: stopping a stream's tracks is not letting go of it: clear the element that shows it in the same cleanup.
+
+## 2026-11-12 — Controller window: pad labels cut at both sides, face taller than the screen, dev strip over the readout
+
+Symptom: (1) the 16 pad labels ("L1 clip 1") were wider than the pads and cut on both sides; (2) the window opened 999 high with a 875 px face, taller than a 922 px screen, so labels shrank or the page scrolled; (3) the fixed dev strip at the foot of a dev copy covered the last readout lines.
+Cause: (1) the face drew the label in a 24 unit pad with the same 28 unit text box as every control; (2) the face (135 x 370 units) was fixed to the real unit's proportions and the open call asked for a fixed height; (3) the strip is fixed bottom right over every page and the window did not leave room.
+Fix: `xone-k2-face.json` redrawn squatter (144 x 293 units, columns 34 apart, pads 31 x 22 with the label inside, same order and grouping); `k2Face.js` shapeBox and `K2Window.jsx` take an optional width and height per control; `K2LayoutPanel.jsx` `windowFeatures()` asks for screen.availHeight minus 60 (600 to 1000, 860 without a screen); `k2Window.css` leaves the strip's height under the readout, only where `.tree-chip` exists, only in this window. deckBinding.js and TreeChip are unchanged.
+Guard: `k2WindowFit.test.js` (every label of every console fits its pad, no label boxes overlap, the face fits 860 px at 12 px text, device order kept, window height from the screen, strip gap in this window only).
+Lesson: a face that is data still needs a fit test against the real screen and the real text; measure the drawn text size, not the size in units.

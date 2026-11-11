@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import K2Window from './K2Window.jsx'
-import K2LayoutPanel, { BLOCKED_NOTE, WINDOW_FEATURES } from './K2LayoutPanel.jsx'
+import K2LayoutPanel, { BLOCKED_NOTE, windowFeatures } from './K2LayoutPanel.jsx'
 import { K2_WINDOW_NAME, createK2Publisher } from './k2Channel.js'
 import { jobsFor, linesFor } from './k2Jobs.js'
 import { createK2Monitor } from './k2Monitor.js'
@@ -127,7 +127,7 @@ describe('the Device button', () => {
         const openWindow = vi.fn(() => null)
         panel({ openWindow })
         fireEvent.click(screen.getByRole('button', { name: 'Device' }))
-        expect(openWindow).toHaveBeenCalledWith('/s/perform/p/k2', K2_WINDOW_NAME, WINDOW_FEATURES)
+        expect(openWindow).toHaveBeenCalledWith('/s/perform/p/k2', K2_WINDOW_NAME, windowFeatures())
         expect(screen.getByRole('alert').textContent).toBe(BLOCKED_NOTE)
     })
 
@@ -144,7 +144,7 @@ describe('the Device button', () => {
         expect(opened.focus).toHaveBeenCalledTimes(2)
         expect(publisher.ensure).toHaveBeenCalledTimes(2)
         expect(screen.queryByRole('alert')).toBeNull()
-        expect(WINDOW_FEATURES).toMatch(/width=440,height=1000/)
+        expect(windowFeatures()).toMatch(/^popup=yes,width=440,height=\d+$/)
     })
 
     it('appears only when the console has a face and a path is given', () => {

@@ -36,7 +36,14 @@ const shownName = (name) => SHOWN[name] || name.replace('matrix ', '').replace('
 
 // The one open controller window of this page: a second press brings it forward.
 let deviceWindow = null
-export const WINDOW_FEATURES = 'popup=yes,width=440,height=1000'
+// The window asks for the height the screen can show (the free height minus room for the title bar and the
+// window manager's border), never more than 1000, never less than 600; with no screen it asks for 860.
+export const WINDOW_MARGIN = 60
+export const windowFeatures = (screenLike = typeof window !== 'undefined' ? window.screen : null) => {
+    const free = Number(screenLike?.availHeight)
+    const height = Number.isFinite(free) && free > 0 ? Math.min(1000, Math.max(600, Math.round(free - WINDOW_MARGIN))) : 860
+    return `popup=yes,width=440,height=${height}`
+}
 export const BLOCKED_NOTE = 'The browser blocked the controller window. Allow pop-ups for this page, then press Device again.'
 
 export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, console: current = K2_CONSOLES[0], consoles = K2_CONSOLES, onPickConsole, windowPath = '', publisher = null, openWindow = (...args) => window.open(...args) }) {
@@ -45,7 +52,7 @@ export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, con
     const openDevice = () => {
         publisher?.ensure()
         try { if (deviceWindow && !deviceWindow.closed) { deviceWindow.focus?.(); setBlocked(false); return } } catch { deviceWindow = null }
-        const opened = openWindow(windowPath, K2_WINDOW_NAME, WINDOW_FEATURES)
+        const opened = openWindow(windowPath, K2_WINDOW_NAME, windowFeatures())
         deviceWindow = opened || null
         setBlocked(!opened)
         try { opened?.focus?.() } catch { /* a window that cannot be focused is still open */ }

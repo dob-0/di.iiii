@@ -28,14 +28,15 @@ export const wrapJob = (text, { wrapChars = 9, maxLines = 2 } = {}) => {
     return kept
 }
 
-/** The rectangle of a control's shape: { left, top, right, bottom } in face units. */
+/** The rectangle of a control's shape (`width` and `height` are optional, `size` is the default for both): { left, top, right, bottom } in face units. */
 export const shapeBox = (control) => {
-    const half = control.size / 2
     if (control.kind === 'fader') {
         const long = (control.length || control.size) / 2
         return { left: control.x - 4, top: control.y - long, right: control.x + 4, bottom: control.y + long }
     }
-    return { left: control.x - half, top: control.y - half, right: control.x + half, bottom: control.y + half }
+    const halfWide = (control.width ?? control.size) / 2
+    const halfHigh = (control.height ?? control.size) / 2
+    return { left: control.x - halfWide, top: control.y - halfHigh, right: control.x + halfWide, bottom: control.y + halfHigh }
 }
 
 /** The room a control takes with its job text under it (or inside it). */

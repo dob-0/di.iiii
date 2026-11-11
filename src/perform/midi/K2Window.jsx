@@ -9,7 +9,7 @@ import './k2Window.css'
 // writes no document, triggers nothing. It draws any controller that has a face (xone-k2-face.json).
 // Drawing rules and sizes: k2Window.css. The face is in face units; the viewBox scales it.
 
-const MARGIN = 4
+const MARGIN = 2
 const FLASH_MS = 300
 const HINT = 'Hover or Tab to a control to see what it does. Click to pin it.'
 const NO_FEED = {}
@@ -42,7 +42,9 @@ function Shape({ control, value, held, flash, light }) {
             </g>
         )
     }
-    return <rect className={`${cls} k2w-${kind}`} x={x - half} y={y - half} width={size} height={size} />
+    const wide = control.width ?? size
+    const high = control.height ?? size
+    return <rect className={`${cls} k2w-${kind}`} x={x - wide / 2} y={y - high / 2} width={wide} height={high} />
 }
 
 export default function K2Window({ makeChannel, setTimer, clearTimer, now }) {
@@ -134,7 +136,7 @@ export default function K2Window({ makeChannel, setTimer, clearTimer, now }) {
                             <rect className="k2w-ring" x={room.left - 0.5} y={room.top - 0.5} width={room.right - room.left + 1} height={room.bottom - room.top + 1} />
                             <Shape control={control} value={value} held={held} flash={Boolean(state.flash[name])} light={snapshot.lights?.[name]} />
                             {printed.map((word, index) => (inside
-                                ? <text key={word} className="k2w-printed" x={control.x - control.size / 2 + 2} y={control.y - control.size / 2 + text.size} textAnchor="start" fontSize={text.size}>{word}</text>
+                                ? <text key={word} className="k2w-printed" x={control.x - (control.width ?? control.size) / 2 + 2} y={control.y - (control.height ?? control.size) / 2 + text.size} textAnchor="start" fontSize={text.size}>{word}</text>
                                 : <text key={word} className="k2w-printed" x={control.x} y={control.y + (index - (printed.length - 1) / 2) * text.lineHeight + text.size * 0.35} textAnchor="middle" fontSize={text.size}>{word}</text>))}
                             <text className="k2w-job" x={control.x} y={jobY} textAnchor="middle" fontSize={text.size} data-job>
                                 {jobLines.map((line, index) => <tspan key={index} x={control.x} dy={index === 0 ? 0 : text.lineHeight}>{line}</tspan>)}
