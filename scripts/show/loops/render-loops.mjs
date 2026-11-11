@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // render-loops.mjs - seamless generative video loops from fragment shaders, frame by frame.
-// Usage: node render-loops.mjs <spec.json> [--only name[,name]] [--keep-frames]
+// Usage: node render-loops.mjs <spec.json> [--only name[,name]] [--stills N]
+// --stills N: N evenly spaced phases of every loop as PNG into OUT/stills/NAME-K.png (K = 1..N, phase (K-1)/N); no ffmpeg, no mp4.
 // Method: Playwright's own headless Chromium (software GL), time = loop phase i/N, PNG frames piped to ffmpeg.
 // Licence: repo licence (our own work). No production names here: they live in the spec only.
 import { createRequire } from 'node:module';
-import { readFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,9 +15,11 @@ const require = createRequire(path.resolve(here, '../../../package.json'));
 const { chromium } = require('playwright');
 
 const args = process.argv.slice(2);
-const specPath = args.find((a) => !a.startsWith('--'));
+const specPath = args.find((a, i) => !a.startsWith('--') && !(i > 0 && ['--only', '--stills'].includes(args[i - 1])));
 if (!specPath) { console.error('usage: render-loops.mjs spec.json [--only a,b]'); process.exit(2); }
 const only = args.includes('--only') ? args[args.indexOf('--only') + 1].split(',') : null;
+const stills = args.includes('--stills') ? parseInt(args[args.indexOf('--stills') + 1], 10) : 0;
+if (args.includes('--stills') && !(stills >= 1)) { console.error('--stills needs a whole number >= 1'); process.exit(2); }
 const spec = JSON.parse(readFileSync(specPath, 'utf8'));
 const { width: W, height: H } = spec.size, FPS = spec.fps, BPM = spec.bpm;
 const outDir = path.resolve(path.dirname(specPath), spec.out || 'out');
@@ -58,6 +61,15 @@ try {
     }, { frag, W, H, c0: hex(pal.c0 || '#0b0420'), c1: hex(pal.c1 || '#db01a8'), c2: hex(pal.c2 || '#a020c8'),
          p: [...(L.params || []), 0, 0, 0, 0].slice(0, 4) }).catch((e) => String(e.message).slice(0, 600));
     if (ok !== 'ok') { console.error(`FAIL ${L.name}: ${ok}`); failed++; continue; }
+    if (stills) {
+      const sd = path.join(outDir, 'stills'); mkdirSync(sd, { recursive: true });
+      for (let k = 0; k < stills; k++) {
+        const b64 = await page.evaluate((ph) => window.__draw(ph), k / stills);
+        writeFileSync(path.join(sd, `${L.name}-${k + 1}.png`), Buffer.from(b64, 'base64'));
+      }
+      console.log(`${L.name}: ${stills} stills, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+      continue;
+    }
     const N = frameCount(L.bars);
     const file = path.join(outDir, L.name + '.mp4');
     const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'png', '-i', '-',
