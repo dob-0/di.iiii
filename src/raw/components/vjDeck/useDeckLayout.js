@@ -58,12 +58,16 @@ export default function useDeckLayout(rootRef) {
     const boxRef = useRef(box)
     const timer = useRef(0)
     const pending = useRef(null)
+    // True from the first preview of a drag to its commit or cancel: the size observer then leaves
+    // React state alone (the bottom row changes height every frame of an S4 drag).
+    const dragging = useRef(false)
 
     useEffect(() => { layoutRef.current = layout }, [layout])
     useEffect(() => { boxRef.current = box }, [box])
 
     // The box and the measured sizes: now, and whenever the deck or its bottom row changes size.
     const sync = useCallback(() => {
+        if (dragging.current) return
         const root = rootRef.current
         const next = measureBox(root)
         if (!next) return
@@ -103,7 +107,7 @@ export default function useDeckLayout(rootRef) {
 
     const flush = useCallback(() => {
         if (timer.current) { clearTimeout(timer.current); timer.current = 0 }
-        if (pending.current) { writeLayout(window.localStorage, pending.current.layout); pending.current = null }
+        if (pending.current) { writeLayout(undefined, pending.current.layout); pending.current = null }
     }, [])
     useEffect(() => flush, [flush])
 
@@ -138,18 +142,25 @@ export default function useDeckLayout(rootRef) {
     }, [nowOf])
 
     const preview = useCallback((id, value) => {
+        dragging.current = true
         const next = applySeam(layoutRef.current, id, value, boxRef.current, nowOf())
         paint(next, boxRef.current)
     }, [nowOf, paint])
 
     const commit = useCallback((id, value, { immediate = false } = {}) => {
+        dragging.current = false
         const next = applySeam(layoutRef.current, id, value, boxRef.current, nowOf())
         layoutRef.current = next
         setLayout(next)
         persist(next, immediate)
     }, [nowOf, persist])
 
-    const cancel = useCallback(() => paint(layoutRef.current, boxRef.current), [paint])
+    // The one sync after a drag that stored nothing (a commit syncs through its layout change).
+    const cancel = useCallback(() => {
+        dragging.current = false
+        paint(layoutRef.current, boxRef.current)
+        sync()
+    }, [paint, sync])
 
     const resetSeam = useCallback((id) => {
         const next = clearSeam(layoutRef.current, id)
@@ -195,6 +206,7 @@ export default function useDeckLayout(rootRef) {
         preview,
         commit,
         cancel,
+        refresh: sync,
         resetSeam,
         resetAll,
         clearMonitorW

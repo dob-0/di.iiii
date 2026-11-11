@@ -1,3 +1,4 @@
+import { Profiler } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import VjDeckView from './VjDeckView.jsx'
@@ -260,5 +261,150 @@ describe('the monitor presets and the other keys', () => {
         const all = Object.keys(window.localStorage).map((key) => window.localStorage.getItem(key)).join(' ')
         expect(all).not.toMatch(/previewOnly/i)
         expect(root().getAttribute('data-preview-only')).toBe('true')
+    })
+})
+
+
+// Repairs after the review and the hand walk of 2026-11-11 (fix-3 F1 to F6, F9).
+describe('storage that throws', () => {
+    it('F1: a localStorage getter that throws still renders the default layout, and a write does nothing', () => {
+        vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => { throw new DOMException('blocked', 'SecurityError') })
+        expect(() => mount()).not.toThrow()
+        expect(root().getAttribute('data-layout')).toBe('default')
+        expect(root().getAttribute('style')).toBeNull()
+        expect(() => { press(seam('s1'), 'ArrowRight'); settle() }).not.toThrow()
+        expect(root().getAttribute('data-layout')).toBe('custom') // the choice lives for this visit only
+    })
+})
+
+describe('a drag stores only a real move', () => {
+    const down = (grip, x, id = 1) => act(() => { fireEvent.pointerDown(grip, { clientX: x, clientY: 100, button: 0, pointerId: id }) })
+    const move = (grip, x, id = 1) => act(() => { fireEvent.pointerMove(grip, { clientX: x, clientY: 100, pointerId: id }) })
+    const up = (grip, x, id = 1) => act(() => { fireEvent.pointerUp(grip, { clientX: x, clientY: 100, pointerId: id }) })
+    const nothing = () => {
+        expect(stored()).toBeNull()
+        expect(root().getAttribute('data-layout')).toBe('default')
+        expect(root().hasAttribute('data-bottom')).toBe(false)
+        expect(screen.queryByRole('button', { name: 'Reset layout' })).toBeNull()
+    }
+
+    it('F3: a click with less than a pixel of jitter stores nothing and leaves the layout unset', () => {
+        mount()
+        const grip = seam('s2')
+        down(grip, 1000)
+        move(grip, 1000.4)
+        up(grip, 1000.4)
+        nothing()
+    })
+
+    it('F3: a drag out and back to the start stores nothing', () => {
+        mount()
+        const grip = seam('s4')
+        act(() => { fireEvent.pointerDown(grip, { clientX: 500, clientY: 700, button: 0, pointerId: 1 }) })
+        act(() => { fireEvent.pointerMove(grip, { clientX: 500, clientY: 640, pointerId: 1 }) })
+        act(() => { fireEvent.pointerMove(grip, { clientX: 500, clientY: 700, pointerId: 1 }) })
+        act(() => { fireEvent.pointerUp(grip, { clientX: 500, clientY: 700, pointerId: 1 }) })
+        nothing()
+    })
+
+    it('F4: a lost pointer capture cancels the drag: no mark, nothing stored, a later pointerup does nothing', () => {
+        mount()
+        const grip = seam('s2')
+        down(grip, 1000)
+        move(grip, 900)
+        expect(grip.classList.contains('is-dragging')).toBe(true)
+        act(() => { fireEvent.lostPointerCapture(grip, { pointerId: 1 }) })
+        expect(grip.classList.contains('is-dragging')).toBe(false)
+        expect(root().hasAttribute('data-seam-dragging')).toBe(false)
+        up(grip, 900)
+        nothing()
+    })
+
+    it('F4: a second pointer while a drag is open is ignored (its move and its up change nothing)', () => {
+        mount()
+        const grip = seam('s2')
+        down(grip, 1000, 1)
+        down(grip, 400, 2)
+        move(grip, 100, 2)
+        up(grip, 100, 2)
+        expect(grip.classList.contains('is-dragging')).toBe(true) // still the first drag
+        move(grip, 900, 1)
+        up(grip, 900, 1)
+        // pointer 1 moved left by 100 px: the monitor column grew by 100 px from its measured 140 min.
+        expect(stored().monitorW).toBeCloseTo(240 / 1706, 4)
+    })
+
+    it('F5: the deck root carries a mark from drag start to drag end', () => {
+        mount()
+        const grip = seam('s5')
+        expect(root().hasAttribute('data-seam-dragging')).toBe(false)
+        down(grip, 600)
+        expect(root().getAttribute('data-seam-dragging')).toBe('s5')
+        move(grip, 650)
+        up(grip, 650)
+        expect(root().hasAttribute('data-seam-dragging')).toBe(false)
+    })
+})
+
+describe('the size observer during a drag of S4', () => {
+    it('F2: no render while the drag is open, one commit after it', () => {
+        let bottom = 265
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function rect() {
+            const height = this.classList?.contains('vj-deck-bottom') ? bottom : 0
+            return { x: 0, y: 0, left: 0, top: 0, right: 0, bottom: height, width: 0, height, toJSON() {} }
+        })
+        let renders = 0
+        render(
+            <Profiler id="deck" onRender={() => { renders += 1 }}>
+                <VjDeckView node={{ id: 'deck-1', typeId: 'vj.deck', values: { machine: '', deck: createDeck() } }} onPatchValues={vi.fn()} />
+            </Profiler>
+        )
+        settle()
+        const grip = seam('s4')
+        act(() => { fireEvent.pointerDown(grip, { clientX: 500, clientY: 700, button: 0, pointerId: 1 }) })
+        const before = renders
+        for (let step = 1; step <= 8; step += 1) {
+            act(() => { fireEvent.pointerMove(grip, { clientX: 500, clientY: 700 - step * 10, pointerId: 1 }) })
+            act(() => { frames.splice(0).forEach((frame) => frame(0)) })
+            bottom = 265 + step * 10 // the preview changes the bottom row every frame
+            act(() => { observers.forEach((callback) => callback([])) }) // and the observer fires
+        }
+        expect(renders - before).toBe(0)
+        act(() => { fireEvent.pointerUp(grip, { clientX: 500, clientY: 620, pointerId: 1 }) })
+        expect(renders - before).toBeGreaterThanOrEqual(1)
+        expect(renders - before).toBeLessThanOrEqual(2)
+        expect(stored().bottomH).toBeGreaterThan(0)
+    })
+})
+
+describe('what is announced and what is a tab stop', () => {
+    it('F6: after S / M / L the announced value of an unset seam is the fresh one', () => {
+        window.localStorage.setItem('di.vjDeck.monitors', '{"size":"l"}')
+        const widths = { s: 140, m: 210, l: 300 }
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function rect() {
+            const width = this.classList?.contains('vj-deck-monitors') ? widths[root().getAttribute('data-monitor-size')] : 0
+            return { x: 0, y: 0, left: 0, top: 0, right: width, bottom: 0, width, height: 0, toJSON() {} }
+        })
+        mount()
+        expect(seam('s2').getAttribute('aria-valuenow')).toBe(String(Math.round((300 / 1706) * 100)))
+        act(() => { fireEvent.click(screen.getByRole('button', { name: 'Monitor size S' })) })
+        expect(seam('s2').getAttribute('aria-valuenow')).toBe(String(Math.round((140 / 1706) * 100)))
+        act(() => { fireEvent.click(screen.getByRole('button', { name: 'Monitor size M' })) })
+        expect(seam('s2').getAttribute('aria-valuenow')).toBe(String(Math.round((210 / 1706) * 100)))
+    })
+
+    it('F9: the file input is out of the tab order and the accessibility tree; the visible button works by keyboard', () => {
+        const onUploadFile = vi.fn()
+        render(<VjDeckView node={{ id: 'deck-1', typeId: 'vj.deck', values: { machine: '', deck: createDeck() } }} onPatchValues={vi.fn()} onUploadFile={onUploadFile} />)
+        const input = document.querySelector('.vj-deck-upload input[type="file"]')
+        expect(input.getAttribute('tabindex')).toBe('-1')
+        expect(input.getAttribute('aria-hidden')).toBe('true')
+        const button = screen.getByRole('button', { name: 'Upload video' })
+        expect(button.getAttribute('tabindex')).toBe('0')
+        const click = vi.spyOn(input, 'click')
+        fireEvent.keyDown(button, { key: 'Enter' })
+        fireEvent.keyDown(button, { key: ' ' })
+        fireEvent.keyDown(button, { key: 'a' })
+        expect(click).toHaveBeenCalledTimes(2)
     })
 })

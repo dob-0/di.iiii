@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTopReport } from '../../../project/tops/topReports.js'
 import { registerTopThumbnail } from '../../../project/tops/topThumbnails.js'
 import {
@@ -254,9 +254,22 @@ function SourcesPanel({ mode, editable, target, targetName, picking, onCancel, o
                     {onUploadFile ? (
                         <div className="vj-deck-source vj-deck-source--upload">
                             <span className="vj-deck-source-kind">File</span>
-                            <label className="vj-deck-button vj-deck-upload">
+                            {/* The visible label is the button and the keyboard stop; the real file input is out of the
+                                tab order and the accessibility tree (a 1px control that read as a second Upload). */}
+                            <label
+                                className="vj-deck-button vj-deck-upload"
+                                // eslint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role -- a label with a file input IS the button; the input is hidden from keys and readers
+                                role="button"
+                                tabIndex={uploading ? -1 : 0}
+                                aria-disabled={uploading ? 'true' : undefined}
+                                onKeyDown={(event) => {
+                                    if (uploading || (event.key !== 'Enter' && event.key !== ' ')) return
+                                    event.preventDefault()
+                                    event.currentTarget.querySelector('input')?.click()
+                                }}
+                            >
                                 {uploading ? `Bringing in ${uploading}` : 'Upload video'}
-                                <input type="file" accept="video/*" onChange={onFile} disabled={Boolean(uploading)} />
+                                <input type="file" accept="video/*" onChange={onFile} disabled={Boolean(uploading)} tabIndex={-1} aria-hidden="true" />
                             </label>
                         </div>
                     ) : null}
@@ -321,6 +334,10 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const [monitors, setMonitors] = useState(readMonitorPrefs) // { size: 's'|'m'|'l', hidden }
     // The borders between the panels: this viewer's sizes, never the show's (useDeckLayout.js).
     const deckLayout = useDeckLayout(rootRef)
+    // S / M / L and Hide preview change the monitor column's width without changing the deck box:
+    // measure again so the announced seam value is the fresh one.
+    const { refresh: refreshLayout } = deckLayout
+    useLayoutEffect(() => { refreshLayout() }, [monitors.size, monitors.hidden, refreshLayout])
     const paneId = (name) => `vj-deck-${deckLayout.uid}-${name}`
     const seam = (id, shown, orientation, label, controls, sign = 1) => (shown ? (
         <DeckSeam
