@@ -9,7 +9,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { REPO_ROOT } from '../place/common.mjs'
-import { readGeometry } from '../place/fixtures-glb.mjs'
+import { builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { analyse } from './footprints.mjs'
 import { isMover } from './ground-movers.mjs'
 import { loadLibrary } from './library.mjs'
@@ -31,7 +31,7 @@ const withoutPermanentObjects = (h) => {
 }
 const hall = withoutPermanentObjects(read(spec.hall))
 const manifest = read('scripts/place/fixtures/fixtures.json')
-const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
 const library = loadLibrary()
 const GROUND = ['minimal-ground', 'full-ground']
 

@@ -246,3 +246,12 @@ describe('the MOXIR Minimal plan', () => {
         for (const u of plan.universes) for (const b of u.blocks) expect(b.group).toBeUndefined()
     })
 })
+
+describe('a crew table needs only the footprint (footprintOnly)', () => {
+    const type = { id: 't', code: 'T', modes: [{ name: 'Standard', footprint: 21, channels: null, src: 'x' }] }
+    it('a desk patch still refuses a mode with no channel list; a crew table takes it and says the list is owed', () => {
+        expect(resolveMode(type, 'Standard')).toBe(null)
+        expect(resolveMode(type, 'Standard', { footprintOnly: true })).toEqual({ crew: 'Standard', desk: 'Standard', footprint: 21, assumed: false, listOwed: true })
+        expect(resolveMode(type, 'Shapes', { footprintOnly: true })).toBe(null)
+    })
+})

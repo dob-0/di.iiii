@@ -8,13 +8,13 @@ import { describe, expect, it } from 'vitest'
 
 import { REPO_ROOT } from '../place/common.mjs'
 import { buildRig } from '../place/rig-lib.mjs'
-import { readGeometry } from '../place/fixtures-glb.mjs'
+import { builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 
 const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8'))
 const rig = read('scripts/place/rigs/moxir-2026-10-17-known-full.json')
 const hall = read(rig.hall)
 const manifest = read('scripts/place/fixtures/fixtures.json')
-const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
 const layer = read('scripts/place/rigs/moxir-hall-dims-2026-10-02.json')
 const added = (layer.massing_add || [])
 const KNOWN_INSIDE = ['rig-par-press-cut-03', 'rig-par-press-sides-01', 'rig-par-press-sides-02', 'rig-beam380-columns-02']

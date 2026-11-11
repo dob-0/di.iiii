@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
 
 import { REPO_ROOT } from '../place/common.mjs'
 import { RIG_PREFIX, buildRig, soloKeeps, stageFrame } from '../place/rig-lib.mjs'
-import { readGeometry } from '../place/fixtures-glb.mjs'
+import { builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import { findVersion, rigFileOf, RIGS_DIR, versionRig, VERSIONS_FILE } from './versions.mjs'
 import { piecesFromRigBoxes } from './load-plot.mjs'
@@ -18,7 +18,7 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8'))
 const spec = read(VERSIONS_FILE)
 const hall = read(spec.hall)
 const manifest = read('scripts/place/fixtures/fixtures.json')
-const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
 const rig = read(rigFileOf(spec.set, 'minimal-xflat-heads'))
 const fixed = read(rigFileOf(spec.set, 'minimal-xflat'))
 // The X was designed on Minimal as it was BEFORE the cut (2026-09-29, #664 made Minimal the cut's

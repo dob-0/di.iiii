@@ -21,6 +21,7 @@
 // channel, in order, and becomes the desk profile's role (the desk's own
 // alphabet: letters, digits, _ and -).
 import { assumedModesOf, isAssumedMode } from './assumedProfiles.js'
+import { PLATINA_CHANNEL_LISTS } from './platinaChannelLists.js'
 
 const OFL_COMMIT = '4992b86027ee3cba19644bc7417435a68c8cdcb5'
 export const OFL_CHANNEL_LISTS = {
@@ -225,6 +226,9 @@ const modesOf = (kind) => {
             footprint,
             channels: listed ? listed.map((c) => ({ ...c })) : null,
             channelsSource: listed ? { fixture: entry.fixture, url: entry.url, licence: entry.licence, basis: entry.basis } : null,
+            // the maker's own name for the mode and what a crew must know about it (manifest `modes_info`), where the manifest has them
+            ...(kind.modes_info?.[footprint]?.label ? { label: kind.modes_info[footprint].label } : {}),
+            ...(kind.modes_info?.[footprint]?.note ? { note: kind.modes_info[footprint].note } : {}),
             src: spec?.src ?? null,
             basis: spec?.basis ?? null
         }
@@ -284,6 +288,8 @@ const B380F_WHEEL_SEEN = [
 ]
 
 export const MAKER_CHANNEL_LISTS = {
+    // the Platina rental lamps (2026-11-11): generated from scripts/place/fixtures/charts/ by scripts/rigbuild/chart-lists.mjs
+    ...PLATINA_CHANNEL_LISTS,
     // APPROVED (the owner's word, 2026-10-16 16:2x — he sent the printed manual: "the beam real chart"): UP-B380F runs the
     // PRINTED "MOVEHEAD FIXTURE USER MANUAL" shipped with the unit (ch. 3, pp. 13-15), 16 ch, pan FIRST — the order the 10-09
     // walk found on the Sevan units. Value ranges verbatim in scripts/place/fixtures/charts/up-b380f.json; photos in
@@ -483,7 +489,7 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
             // each emitter's CIE 1931 xy and lumens at full, when a source gives them (dmxDecode.js emitterMix)
             ...(kind.emitters ? { emitters: kind.emitters } : {}),
             nozzle_d_mm: Number(kind.model?.params?.nozzle_d_mm) > 0 ? Number(kind.model.params.nozzle_d_mm) : null,
-            model3d: {
+            model3d: kind.model?.owed ? { glb: null, sidecar: null, owed: kind.model.owed, licence: manifest?.modelsLicence?.licence || null } : {
                 glb: `${glbDir}/${kindKey}.glb`,
                 sidecar: `${glbDir}/${kindKey}.json`,
                 builtBy: sidecar?.builtBy || null,

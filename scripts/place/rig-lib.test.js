@@ -8,13 +8,13 @@ import {
     LASER_MIN_HEIGHT_M, RIG_PREFIX, aimAt, beamHitsBox, beamHitsCrane, buildRig, candelaAt, checkLaser, classPhotometry, columnsFor, groupAxis,
     lightDistance, openingOps, openingShot, performerBox, pickEven, realIndices, stageFrame, surfaceHit
 } from './rig-lib.mjs'
-import { readGeometry } from './fixtures-glb.mjs'
+import { builtKinds, readGeometry } from './fixtures-glb.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const rig = JSON.parse(fs.readFileSync(path.join(here, 'rigs', 'moxir-2026-10-17.json'), 'utf8'))
 const manifest = JSON.parse(fs.readFileSync(path.join(here, 'fixtures', 'fixtures.json'), 'utf8'))
 // The models as built and committed (fixtures/glb/<kind>.json beside each GLB).
-const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
 
 // The hall.json hall.py wrote for MOXIR on 2026-09-28 (v2: flat space frame,
 // 4 spans, the owner's zones as revised for the DJ place), committed so the

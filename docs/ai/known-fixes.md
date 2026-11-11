@@ -1832,3 +1832,15 @@ Seen in the owner's recording `2026-11-11 04-56-28.mp4` at 0:10–0:12: the Plat
 Cause: `MapSourcePlaceholder` (`map/MapSourceView.jsx`) rendered the same name card on the output (`MapOutput`) as on the desk, for every empty or waiting source (no Picture Out chosen, deck gone, reconnecting, no file).
 Fix: `MapPlaceholderContext` — `MapStage` takes `placeholders` (default true, the desk keeps its cards); `MapOutput` passes `placeholders={false}`, so an empty surface draws nothing and the stage background (black by default) shows.
 Guard: `src/map/MapStage.placeholders.test.jsx`. Not yet seen on the real output window.
+
+## An LED bar's strip never drew: the schema dropped `beam.emitter` (2026-11-11, owner row N3767)
+Seen in the room: the Platina pixel lines stayed round spots though the rig file gave each a 1 m bar emitter; the document read back 0 entities with `beam.emitter`.
+Cause: the beam normaliser in the shared schema keeps only the keys it names, so a new beam key written by a builder is dropped on save; and a scratch serverXR started before the schema change keeps dropping it until it is restarted.
+Fix: `normalizeBeamEmitter` in both twins (`shared/projectSchema.cjs`, `src/shared/projectSchema.js`); restart the scratch stack after a schema change (`di-dev down <tree>; di-dev up <tree> --api scratch`).
+Guard: `src/shared/projectSchema.light.test.js` (browser and server twin keep a bar emitter, drop another shape). Seen on the agent screen: 24 bars drawn.
+
+## Hung lamps drew as standing lamps: the builder never wrote `fixture.hung` (2026-11-12, owner row N3767)
+Seen in the room: the Platina lamps under the truss had their bodies below the lens, as if standing in the air, and a head pattern turned them with a standing lamp's signs.
+Cause: `scripts/rigbuild/epic-build.mjs` built the lamp's `fixture` without `hung`; the room reads `fixture.hung === true` (sheet.js, headMotion.js), so every lamp counted as standing.
+Fix: a rig unit says `hung: true` (platina_rig.py: the K10 over the stage, the XP-16R under the truss) and epic-build carries it into `fixture.hung`.
+Guard: `scripts/place/platina-rig.test.js` (the hung rows say hung, the deck row does not; the beam lamps' rest aim leans toward the audience). Seen on the agent screen: bodies above the lens, under the truss.

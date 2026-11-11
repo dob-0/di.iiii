@@ -8,14 +8,16 @@ OUT = IN with version/title/date/what updated, `looks` = the scenes in the rig l
 heads, laser_colour, desk_caps, notes; kebab ids; nulls dropped), `cues` = one {look, name, fade, hold} per scene, `loop` true;
 the old looks/cues are kept as looks_v<old>/cues_v<old> (underscored version), never lost.
 Validates: every parts key is a fixtures[].part of the rig, ids unique, hex lower-case #rrggbb, levels 0..1, heads only with
-kinds ['up-b380f']. Exits 1 and writes nothing when a check fails.
+kinds ['up-b380f'] (or, when the rig file has `head_kinds`, a subset of that list). Exits 1 and writes nothing when a check fails.
 """
 import argparse, datetime, json, re, sys
 
 def kebab(s): return re.sub(r'-+', '-', re.sub(r'[^a-z0-9]+', '-', s.lower())).strip('-')
 
-def looks_from_scenes(scenes, parts):
-    """The scenes in the rig look schema: (looks, cues, errors). Shared with rig_generate.py."""
+def looks_from_scenes(scenes, parts, head_kinds=None):
+    """The scenes in the rig look schema: (looks, cues, errors). Shared with rig_generate.py.
+    head_kinds = the rig/hang file's own `head_kinds` (type ids that may carry a heads pattern). None = the legacy rule
+    (heads.kinds must be exactly ['up-b380f']); a list = heads.kinds must be a non-empty subset of it."""
     errs, looks, cues, ids = [], [], [], set()
     for s in scenes:
         i = kebab(s['id'])
@@ -25,7 +27,10 @@ def looks_from_scenes(scenes, parts):
             if p not in parts: errs.append(f'{i}: part {p!r} not in rig')
             if not (re.fullmatch(r'#[0-9a-f]{6}', v[0]) and 0 <= v[1] <= 1): errs.append(f'{i}: bad value {p!r} {v}')
         h = s.get('heads')
-        if h and h.get('kinds') != ['up-b380f']: errs.append(f'{i}: heads kinds {h.get("kinds")}')
+        if h:
+            k = h.get('kinds')
+            ok = (k != [] and isinstance(k, list) and set(k) <= set(head_kinds)) if head_kinds is not None else k == ['up-b380f']
+            if not ok: errs.append(f'{i}: heads kinds {k}')
         look = {k: s.get(k) for k in ('title', 'act', 'intent', 'parts', 'motion', 'heads', 'laser_colour', 'desk_caps', 'notes')}
         looks.append({'id': i, **{k: v for k, v in look.items() if v is not None}})
         c = s.get('cue') or {}
@@ -41,7 +46,7 @@ def main():
     sc = json.load(open(a.scenes)); scenes = sc['scenes'] if isinstance(sc, dict) else sc
     rig = json.load(open(a.rig))
     parts = sorted({f['part'] for f in rig['fixtures'] if f.get('part')})
-    looks, cues, errs = looks_from_scenes(scenes, parts)
+    looks, cues, errs = looks_from_scenes(scenes, parts, rig.get('head_kinds'))
     if errs:
         print('\n'.join(errs[:40])); sys.exit(1)
     old = str(rig.get('version', 'old')).replace('.', '_')

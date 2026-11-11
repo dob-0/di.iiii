@@ -26,14 +26,14 @@ describe('a viewer loads only the types its project uses', () => {
         expect(typeIdsUsedBy([lamp('x', 'ofl-someone-else')])).toEqual([])
     })
 
-    it('MEASURED: 3 of 13 types, and the bytes of those 3 files against the whole library', async () => {
+    it('MEASURED: 3 of 18 types, and the bytes of those 3 files against the whole library', async () => {
         const library = await loadProjectLibrary(DOC)
         expect(library.types.map((t) => t.id)).toEqual(['up-b380f', 'up-pl5403', 'ext-hazer'])
         expect(library.types[0]).toEqual(TYPE_LIBRARY.types.find((t) => t.id === 'up-b380f'))
         const all = TYPE_LIBRARY.types.map((t) => t.id)
         const before = bytesOf(all)
         const after = bytesOf(library.types.map((t) => t.id))
-        expect(all).toHaveLength(13)
+        expect(all).toHaveLength(18)
         expect(after).toBeLessThan(before / 2)
         // the numbers the PR reports (source JSON, pretty-printed; the built chunks are measured by `npm run build`)
         console.info(`[projectTypes] before: ${all.length} types, ${before} B · after: ${library.types.length} types, ${after} B (${Math.round((100 * after) / before)} %)`)
@@ -59,7 +59,7 @@ describe('a kind added to the room', () => {
     })
 })
 
-// The tool surfaces take the whole library as ONE file (library/all.json, generated), not as 13 per-type files plus
+// The tool surfaces take the whole library as ONE file (library/all.json, generated), not as 18 per-type files plus
 // the index: measured by `vite build` on 2026-10-20, 15 files were 31,835 B gzip against dev's one chunk of 16,722 B.
 // The per-type files stay the room's (a project loads only what it uses); a type is in both, from one generator.
 describe('the whole library is one file for the tools', () => {

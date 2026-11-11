@@ -11,7 +11,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { buildRig } from './rig-lib.mjs'
-import { readGeometry } from './fixtures-glb.mjs'
+import { builtKinds, readGeometry } from './fixtures-glb.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const rigs = path.join(here, 'rigs')
@@ -100,7 +100,7 @@ describe.skipIf(!hasPython)('crane_height.py on photo 007', () => {
 describe('the minimal rig under the measured crane (moxir-hall-2026-09-29-crane-dj.hall.json)', () => {
     const read = (f) => JSON.parse(fs.readFileSync(path.join(rigs, f), 'utf8'))
     const manifest = JSON.parse(fs.readFileSync(path.join(here, 'fixtures', 'fixtures.json'), 'utf8'))
-    const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+    const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
     const rig = read('moxir-2026-10-17-minimal.json')
     const hall = read('moxir-hall-2026-09-29-crane-dj.hall.json')
     const { entities } = buildRig(rig, hall, { geometry, manifest })
@@ -131,7 +131,7 @@ describe('the minimal rig under the measured crane (moxir-hall-2026-09-29-crane-
 describe('the flat crane line (middle) under the measured crane (moxir-hall-2026-09-29-crane-dj.hall.json)', () => {
     const read = (f) => JSON.parse(fs.readFileSync(path.join(rigs, f), 'utf8'))
     const manifest = JSON.parse(fs.readFileSync(path.join(here, 'fixtures', 'fixtures.json'), 'utf8'))
-    const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+    const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
     const rig = read('moxir-2026-10-17-middle.json')
     const hall = read('moxir-hall-2026-09-29-crane-dj.hall.json')
     const { entities } = buildRig(rig, hall, { geometry, manifest })

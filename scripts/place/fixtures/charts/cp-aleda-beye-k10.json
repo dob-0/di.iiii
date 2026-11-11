@@ -1,0 +1,4642 @@
+{
+ "kind": "aledaK10",
+ "code": "CP-ALEDA-BEYE-K10",
+ "maker": "Clay Paky S.p.A.",
+ "model": "A.LEDA B-EYE K10 (C61419)",
+ "manual": {
+  "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+  "date": "IST009/001 EN Rev.F 08/2016",
+  "read": "2026-11-11, pdftotext + page images p20, p22",
+  "basis": "EXACT",
+  "note": "the K10 manual also covers K10 Easy (C61415) and K20 (C61420); a copy hosted by a rental company, not Claypaky's own server"
+ },
+ "howToRead": "value ranges are [from, to, meaning] parsed from the maker's own text (`text` is that text, verbatim); `role` is di's role; `cap` / `default` only where the manual's range supports them (others are owed). Every mode here is read from the maker's manual (EXACT).",
+ "modes": {
+  "21": {
+   "status": "EXACT",
+   "name": "Basic Standard",
+   "note": "Basic engine, Standard mode (display: Set Up > Basic Engine > Mode = Standard), p22.",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Red",
+     "role": "r",
+     "page": "p22"
+    },
+    {
+     "ch": 2,
+     "function": "Red fine",
+     "role": "rFine",
+     "page": "p22"
+    },
+    {
+     "ch": 3,
+     "function": "Green",
+     "role": "g",
+     "page": "p22"
+    },
+    {
+     "ch": 4,
+     "function": "Green fine",
+     "role": "gFine",
+     "page": "p22"
+    },
+    {
+     "ch": 5,
+     "function": "Blue",
+     "role": "b",
+     "page": "p22"
+    },
+    {
+     "ch": 6,
+     "function": "Blue fine",
+     "role": "bFine",
+     "page": "p22"
+    },
+    {
+     "ch": 7,
+     "function": "White",
+     "role": "w",
+     "page": "p22"
+    },
+    {
+     "ch": 8,
+     "function": "White fine",
+     "role": "wFine",
+     "page": "p22"
+    },
+    {
+     "ch": 9,
+     "function": "Linear CTO",
+     "role": "cto",
+     "text": "p24: 255=2500K, 224=3200K, 188=4000K, 144=5000K, 117=5600K, 99=6000K, 54=7000K, 10=8000K, 0-9 unused; WHITE disabled while CTO active",
+     "ranges": [
+      [
+       255,
+       255,
+       "2500K"
+      ],
+      [
+       224,
+       224,
+       "3200K"
+      ],
+      [
+       188,
+       188,
+       "4000K"
+      ],
+      [
+       144,
+       144,
+       "5000K"
+      ],
+      [
+       117,
+       117,
+       "5600K"
+      ],
+      [
+       99,
+       99,
+       "6000K"
+      ],
+      [
+       54,
+       54,
+       "7000K"
+      ],
+      [
+       10,
+       10,
+       "8000K"
+      ],
+      [
+       0,
+       9,
+       "unused"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 10,
+     "function": "Macro colour",
+     "role": "macro",
+     "text": "p24: table of LEE-referenced colours, 0-9 = off (see colour.macro_table)",
+     "ranges": [
+      [
+       0,
+       9,
+       "off (see colour.macro_table)"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 11,
+     "function": "Strobe",
+     "role": "strobe",
+     "text": "p25: 252-255 open, 239-251 random fast, 226-238 random medium, 213-225 random slow, 208-212 open, 207 fast pulsation 25/s .. 108 slow pulsation 0.5/s, 104-107 open, 103 fast strobe 25/s .. 4 slow strobe 1/s, 0-3 closed",
+     "ranges": [
+      [
+       252,
+       255,
+       "open"
+      ],
+      [
+       239,
+       251,
+       "random fast"
+      ],
+      [
+       226,
+       238,
+       "random medium"
+      ],
+      [
+       213,
+       225,
+       "random slow"
+      ],
+      [
+       208,
+       212,
+       "open"
+      ],
+      [
+       207,
+       207,
+       "fast pulsation 25/s .. 108 slow pulsation 0.5/s"
+      ],
+      [
+       104,
+       107,
+       "open"
+      ],
+      [
+       103,
+       103,
+       "fast strobe 25/s .. 4 slow strobe 1/s"
+      ],
+      [
+       0,
+       3,
+       "closed"
+      ]
+     ],
+     "page": "p22",
+     "default": 255,
+     "cap": {
+      "shutter": [
+       {
+        "from": 0,
+        "to": 3,
+        "open": false
+       },
+       {
+        "from": 104,
+        "to": 107,
+        "open": true
+       },
+       {
+        "from": 208,
+        "to": 212,
+        "open": true
+       },
+       {
+        "from": 252,
+        "to": 255,
+        "open": true
+       }
+      ]
+     }
+    },
+    {
+     "ch": 12,
+     "function": "Dimmer",
+     "role": "dimmer",
+     "page": "p22"
+    },
+    {
+     "ch": 13,
+     "function": "Dimmer fine",
+     "role": "dimmerFine",
+     "page": "p22"
+    },
+    {
+     "ch": 14,
+     "function": "Pan",
+     "role": "pan",
+     "text": "p25: 16-bit with Pan fine; home after reset without DMX = 128",
+     "ranges": [
+      [
+       16,
+       16,
+       "-bit with Pan fine"
+      ]
+     ],
+     "page": "p22",
+     "default": 128
+    },
+    {
+     "ch": 15,
+     "function": "Pan fine",
+     "role": "panFine",
+     "page": "p22"
+    },
+    {
+     "ch": 16,
+     "function": "Tilt",
+     "role": "tilt",
+     "text": "p25: 16-bit with Tilt fine; home after reset without DMX = 128",
+     "ranges": [
+      [
+       16,
+       16,
+       "-bit with Tilt fine"
+      ]
+     ],
+     "page": "p22",
+     "default": 128
+    },
+    {
+     "ch": 17,
+     "function": "Tilt fine",
+     "role": "tiltFine",
+     "page": "p22"
+    },
+    {
+     "ch": 18,
+     "function": "Function",
+     "role": "function",
+     "text": "p25: 103-105 = Pixel map enabled (immediate); 98-102/93-97/88-92/83-87/78-82 halogen sim 2500/2000/1200/1000/750 W; 73-77 halogen off (default); 68-72/63-67/58-62 RGBW gamma 2.0/1.5(default)/1.0; 53-57/48-52(default)/43-47/38-42 dimmer curve 4/3/2/1; 25-37 pan-tilt normal; 12-24 pan-tilt fast (default); 0-11 unused. Selections take effect after holding the range 5 s (except pixel map).",
+     "ranges": [
+      [
+       103,
+       105,
+       "Pixel map enabled (immediate)"
+      ],
+      [
+       98,
+       102,
+       "/93-97/88-92/83-87/78-82 halogen sim 2500/2000/1200/1000/750 W"
+      ],
+      [
+       73,
+       77,
+       "halogen off (default)"
+      ],
+      [
+       68,
+       72,
+       "/63-67/58-62 RGBW gamma 2.0/1.5(default)/1.0"
+      ],
+      [
+       53,
+       57,
+       "/48-52(default)/43-47/38-42 dimmer curve 4/3/2/1"
+      ],
+      [
+       25,
+       37,
+       "pan-tilt normal"
+      ],
+      [
+       12,
+       24,
+       "pan-tilt fast (default)"
+      ],
+      [
+       0,
+       11,
+       "unused. Selections take effect after holding the range 5 s (except pixel map)."
+      ]
+     ],
+     "page": "p22",
+     "default": 0
+    },
+    {
+     "ch": 19,
+     "function": "Reset",
+     "role": "control",
+     "text": "p26: 128-255 complete reset; 77-127 pan/tilt reset; 26-76 zoom (effects) reset; 0-25 unused; each after holding 5 s",
+     "ranges": [
+      [
+       128,
+       255,
+       "complete reset"
+      ],
+      [
+       77,
+       127,
+       "pan/tilt reset"
+      ],
+      [
+       26,
+       76,
+       "zoom (effects) reset"
+      ],
+      [
+       0,
+       25,
+       "unused"
+      ]
+     ],
+     "page": "p22",
+     "default": 0
+    },
+    {
+     "ch": 20,
+     "function": "Zoom",
+     "role": "zoom",
+     "text": "p26: 0 narrow beam .. 255 wide beam",
+     "ranges": [
+      [
+       0,
+       0,
+       "narrow beam .. 255 wide beam"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 21,
+     "function": "Zoom rotation",
+     "role": "zoomRotation",
+     "text": "p26: 0-127 linear rotation / indexed zone (lens angle 0..60 deg, only when zoom channel 0-45), 128-190 CW slow..fast, 191-192 stop, 193-255 CCW; with zoom at 255 it sets lens offset angle 0..+4 deg",
+     "ranges": [
+      [
+       0,
+       127,
+       "linear rotation / indexed zone (lens angle 0..60 deg, only when zoom channel 0-45)"
+      ],
+      [
+       128,
+       190,
+       "CW slow..fast"
+      ],
+      [
+       191,
+       192,
+       "stop"
+      ],
+      [
+       193,
+       255,
+       "CCW"
+      ]
+     ],
+     "page": "p22"
+    }
+   ]
+  },
+  "35": {
+   "status": "EXACT",
+   "name": "Basic Shapes",
+   "note": "Basic engine, Shape mode (Set Up > Basic Engine > Mode = Shape), p22. Channels 1-21 are the Standard list.",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Red",
+     "role": "r",
+     "page": "p22"
+    },
+    {
+     "ch": 2,
+     "function": "Red fine",
+     "role": "rFine",
+     "page": "p22"
+    },
+    {
+     "ch": 3,
+     "function": "Green",
+     "role": "g",
+     "page": "p22"
+    },
+    {
+     "ch": 4,
+     "function": "Green fine",
+     "role": "gFine",
+     "page": "p22"
+    },
+    {
+     "ch": 5,
+     "function": "Blue",
+     "role": "b",
+     "page": "p22"
+    },
+    {
+     "ch": 6,
+     "function": "Blue fine",
+     "role": "bFine",
+     "page": "p22"
+    },
+    {
+     "ch": 7,
+     "function": "White",
+     "role": "w",
+     "page": "p22"
+    },
+    {
+     "ch": 8,
+     "function": "White fine",
+     "role": "wFine",
+     "page": "p22"
+    },
+    {
+     "ch": 9,
+     "function": "Linear CTO",
+     "role": "cto",
+     "text": "p24: 255=2500K, 224=3200K, 188=4000K, 144=5000K, 117=5600K, 99=6000K, 54=7000K, 10=8000K, 0-9 unused; WHITE disabled while CTO active",
+     "ranges": [
+      [
+       255,
+       255,
+       "2500K"
+      ],
+      [
+       224,
+       224,
+       "3200K"
+      ],
+      [
+       188,
+       188,
+       "4000K"
+      ],
+      [
+       144,
+       144,
+       "5000K"
+      ],
+      [
+       117,
+       117,
+       "5600K"
+      ],
+      [
+       99,
+       99,
+       "6000K"
+      ],
+      [
+       54,
+       54,
+       "7000K"
+      ],
+      [
+       10,
+       10,
+       "8000K"
+      ],
+      [
+       0,
+       9,
+       "unused"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 10,
+     "function": "Macro colour",
+     "role": "macro",
+     "text": "p24: table of LEE-referenced colours, 0-9 = off (see colour.macro_table)",
+     "ranges": [
+      [
+       0,
+       9,
+       "off (see colour.macro_table)"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 11,
+     "function": "Strobe",
+     "role": "strobe",
+     "text": "p25: 252-255 open, 239-251 random fast, 226-238 random medium, 213-225 random slow, 208-212 open, 207 fast pulsation 25/s .. 108 slow pulsation 0.5/s, 104-107 open, 103 fast strobe 25/s .. 4 slow strobe 1/s, 0-3 closed",
+     "ranges": [
+      [
+       252,
+       255,
+       "open"
+      ],
+      [
+       239,
+       251,
+       "random fast"
+      ],
+      [
+       226,
+       238,
+       "random medium"
+      ],
+      [
+       213,
+       225,
+       "random slow"
+      ],
+      [
+       208,
+       212,
+       "open"
+      ],
+      [
+       207,
+       207,
+       "fast pulsation 25/s .. 108 slow pulsation 0.5/s"
+      ],
+      [
+       104,
+       107,
+       "open"
+      ],
+      [
+       103,
+       103,
+       "fast strobe 25/s .. 4 slow strobe 1/s"
+      ],
+      [
+       0,
+       3,
+       "closed"
+      ]
+     ],
+     "page": "p22",
+     "default": 255,
+     "cap": {
+      "shutter": [
+       {
+        "from": 0,
+        "to": 3,
+        "open": false
+       },
+       {
+        "from": 104,
+        "to": 107,
+        "open": true
+       },
+       {
+        "from": 208,
+        "to": 212,
+        "open": true
+       },
+       {
+        "from": 252,
+        "to": 255,
+        "open": true
+       }
+      ]
+     }
+    },
+    {
+     "ch": 12,
+     "function": "Dimmer",
+     "role": "dimmer",
+     "page": "p22"
+    },
+    {
+     "ch": 13,
+     "function": "Dimmer fine",
+     "role": "dimmerFine",
+     "page": "p22"
+    },
+    {
+     "ch": 14,
+     "function": "Pan",
+     "role": "pan",
+     "text": "p25: 16-bit with Pan fine; home after reset without DMX = 128",
+     "ranges": [
+      [
+       16,
+       16,
+       "-bit with Pan fine"
+      ]
+     ],
+     "page": "p22",
+     "default": 128
+    },
+    {
+     "ch": 15,
+     "function": "Pan fine",
+     "role": "panFine",
+     "page": "p22"
+    },
+    {
+     "ch": 16,
+     "function": "Tilt",
+     "role": "tilt",
+     "text": "p25: 16-bit with Tilt fine; home after reset without DMX = 128",
+     "ranges": [
+      [
+       16,
+       16,
+       "-bit with Tilt fine"
+      ]
+     ],
+     "page": "p22",
+     "default": 128
+    },
+    {
+     "ch": 17,
+     "function": "Tilt fine",
+     "role": "tiltFine",
+     "page": "p22"
+    },
+    {
+     "ch": 18,
+     "function": "Function",
+     "role": "function",
+     "text": "p25: 103-105 = Pixel map enabled (immediate); 98-102/93-97/88-92/83-87/78-82 halogen sim 2500/2000/1200/1000/750 W; 73-77 halogen off (default); 68-72/63-67/58-62 RGBW gamma 2.0/1.5(default)/1.0; 53-57/48-52(default)/43-47/38-42 dimmer curve 4/3/2/1; 25-37 pan-tilt normal; 12-24 pan-tilt fast (default); 0-11 unused. Selections take effect after holding the range 5 s (except pixel map).",
+     "ranges": [
+      [
+       103,
+       105,
+       "Pixel map enabled (immediate)"
+      ],
+      [
+       98,
+       102,
+       "/93-97/88-92/83-87/78-82 halogen sim 2500/2000/1200/1000/750 W"
+      ],
+      [
+       73,
+       77,
+       "halogen off (default)"
+      ],
+      [
+       68,
+       72,
+       "/63-67/58-62 RGBW gamma 2.0/1.5(default)/1.0"
+      ],
+      [
+       53,
+       57,
+       "/48-52(default)/43-47/38-42 dimmer curve 4/3/2/1"
+      ],
+      [
+       25,
+       37,
+       "pan-tilt normal"
+      ],
+      [
+       12,
+       24,
+       "pan-tilt fast (default)"
+      ],
+      [
+       0,
+       11,
+       "unused. Selections take effect after holding the range 5 s (except pixel map)."
+      ]
+     ],
+     "page": "p22",
+     "default": 0
+    },
+    {
+     "ch": 19,
+     "function": "Reset",
+     "role": "control",
+     "text": "p26: 128-255 complete reset; 77-127 pan/tilt reset; 26-76 zoom (effects) reset; 0-25 unused; each after holding 5 s",
+     "ranges": [
+      [
+       128,
+       255,
+       "complete reset"
+      ],
+      [
+       77,
+       127,
+       "pan/tilt reset"
+      ],
+      [
+       26,
+       76,
+       "zoom (effects) reset"
+      ],
+      [
+       0,
+       25,
+       "unused"
+      ]
+     ],
+     "page": "p22",
+     "default": 0
+    },
+    {
+     "ch": 20,
+     "function": "Zoom",
+     "role": "zoom",
+     "text": "p26: 0 narrow beam .. 255 wide beam",
+     "ranges": [
+      [
+       0,
+       0,
+       "narrow beam .. 255 wide beam"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 21,
+     "function": "Zoom rotation",
+     "role": "zoomRotation",
+     "text": "p26: 0-127 linear rotation / indexed zone (lens angle 0..60 deg, only when zoom channel 0-45), 128-190 CW slow..fast, 191-192 stop, 193-255 CCW; with zoom at 255 it sets lens offset angle 0..+4 deg",
+     "ranges": [
+      [
+       0,
+       127,
+       "linear rotation / indexed zone (lens angle 0..60 deg, only when zoom channel 0-45)"
+      ],
+      [
+       128,
+       190,
+       "CW slow..fast"
+      ],
+      [
+       191,
+       192,
+       "stop"
+      ],
+      [
+       193,
+       255,
+       "CCW"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 22,
+     "function": "Shape Selection",
+     "role": "shape",
+     "text": "p27-28: shape slots 0-7 macro off, table of macros; K10 and K20 columns",
+     "page": "p22"
+    },
+    {
+     "ch": 23,
+     "function": "Shape Speed",
+     "role": "shapeSpeed",
+     "page": "p22"
+    },
+    {
+     "ch": 24,
+     "function": "Shape Fade",
+     "role": "shapeFade",
+     "text": "p29: 0-15 snap, 16..246-255 smooth fading curves (gamma 0.5 .. 2 / automatic)",
+     "ranges": [
+      [
+       0,
+       15,
+       "snap"
+      ],
+      [
+       16,
+       16,
+       "..246-255 smooth fading curves (gamma 0.5 .. 2 / automatic)"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 25,
+     "function": "Shape R",
+     "role": "shapeR",
+     "page": "p22"
+    },
+    {
+     "ch": 26,
+     "function": "Shape G",
+     "role": "shapeG",
+     "page": "p22"
+    },
+    {
+     "ch": 27,
+     "function": "Shape B",
+     "role": "shapeB",
+     "page": "p22"
+    },
+    {
+     "ch": 28,
+     "function": "Shape W",
+     "role": "shapeW",
+     "page": "p22"
+    },
+    {
+     "ch": 29,
+     "function": "Shape Dimmer",
+     "role": "shapeDimmer",
+     "page": "p22"
+    },
+    {
+     "ch": 30,
+     "function": "Background Dimmer",
+     "role": "bgDimmer",
+     "page": "p22"
+    },
+    {
+     "ch": 31,
+     "function": "Shape Transition",
+     "role": "shapeTransition",
+     "text": "p29: 0-4 no fade, 5=100 ms, 73=0.5 s, 113=1 s, 171=2 s, 216=3 s, 255=4 s",
+     "ranges": [
+      [
+       0,
+       4,
+       "no fade"
+      ],
+      [
+       5,
+       5,
+       "100 ms"
+      ],
+      [
+       73,
+       73,
+       "0.5 s"
+      ],
+      [
+       113,
+       113,
+       "1 s"
+      ],
+      [
+       171,
+       171,
+       "2 s"
+      ],
+      [
+       216,
+       216,
+       "3 s"
+      ],
+      [
+       255,
+       255,
+       "4 s"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 32,
+     "function": "Shape Offset",
+     "role": "shapeOffset",
+     "page": "p22"
+    },
+    {
+     "ch": 33,
+     "function": "Foreground Strobe",
+     "role": "fgStrobe",
+     "page": "p22"
+    },
+    {
+     "ch": 34,
+     "function": "Background Strobe",
+     "role": "bgStrobe",
+     "page": "p22"
+    },
+    {
+     "ch": 35,
+     "function": "Background Select",
+     "role": "bgSelect",
+     "text": "p29: 255 mirror effect, 16-254 no selection (K10), 0-15 pixel/ring combinations (K10: 14 'Pixel 1 + Ring 2 + Ring 3', 15 'Ring 2 + Ring 3')",
+     "ranges": [
+      [
+       255,
+       255,
+       "mirror effect"
+      ],
+      [
+       16,
+       254,
+       "no selection (K10)"
+      ],
+      [
+       0,
+       15,
+       "pixel/ring combinations (K10: 14 'Pixel 1 + Ring 2 + Ring 3'"
+      ],
+      [
+       15,
+       15,
+       "'Ring 2 + Ring 3')"
+      ]
+     ],
+     "page": "p22"
+    }
+   ]
+  },
+  "57": {
+   "status": "EXACT",
+   "name": "Pixel RGB",
+   "note": "Pixel engine, RGB: 19 LEDs x 3, LEDs only, NO pan / tilt / zoom / dimmer (those live in the basic engine). A second engine with its own DMX address and universe (Set Up > Pixels Engine), switched on by the basic engine FUNCTION channel (value 103-105 = pixel map enabled), p22, p25.",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Red LED 1",
+     "role": "p01r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 2,
+     "function": "Green LED 1",
+     "role": "p01g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 3,
+     "function": "Blue LED 1",
+     "role": "p01b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 4,
+     "function": "Red LED 2",
+     "role": "p02r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 5,
+     "function": "Green LED 2",
+     "role": "p02g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 6,
+     "function": "Blue LED 2",
+     "role": "p02b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 7,
+     "function": "Red LED 3",
+     "role": "p03r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 8,
+     "function": "Green LED 3",
+     "role": "p03g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 9,
+     "function": "Blue LED 3",
+     "role": "p03b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 10,
+     "function": "Red LED 4",
+     "role": "p04r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 11,
+     "function": "Green LED 4",
+     "role": "p04g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 12,
+     "function": "Blue LED 4",
+     "role": "p04b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 13,
+     "function": "Red LED 5",
+     "role": "p05r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 14,
+     "function": "Green LED 5",
+     "role": "p05g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 15,
+     "function": "Blue LED 5",
+     "role": "p05b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 16,
+     "function": "Red LED 6",
+     "role": "p06r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 17,
+     "function": "Green LED 6",
+     "role": "p06g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 18,
+     "function": "Blue LED 6",
+     "role": "p06b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 19,
+     "function": "Red LED 7",
+     "role": "p07r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 20,
+     "function": "Green LED 7",
+     "role": "p07g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 21,
+     "function": "Blue LED 7",
+     "role": "p07b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 22,
+     "function": "Red LED 8",
+     "role": "p08r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 23,
+     "function": "Green LED 8",
+     "role": "p08g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 24,
+     "function": "Blue LED 8",
+     "role": "p08b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 25,
+     "function": "Red LED 9",
+     "role": "p09r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 26,
+     "function": "Green LED 9",
+     "role": "p09g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 27,
+     "function": "Blue LED 9",
+     "role": "p09b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 28,
+     "function": "Red LED 10",
+     "role": "p10r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 29,
+     "function": "Green LED 10",
+     "role": "p10g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 30,
+     "function": "Blue LED 10",
+     "role": "p10b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 31,
+     "function": "Red LED 11",
+     "role": "p11r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 32,
+     "function": "Green LED 11",
+     "role": "p11g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 33,
+     "function": "Blue LED 11",
+     "role": "p11b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 34,
+     "function": "Red LED 12",
+     "role": "p12r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 35,
+     "function": "Green LED 12",
+     "role": "p12g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 36,
+     "function": "Blue LED 12",
+     "role": "p12b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 37,
+     "function": "Red LED 13",
+     "role": "p13r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 38,
+     "function": "Green LED 13",
+     "role": "p13g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 39,
+     "function": "Blue LED 13",
+     "role": "p13b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 40,
+     "function": "Red LED 14",
+     "role": "p14r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 41,
+     "function": "Green LED 14",
+     "role": "p14g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 42,
+     "function": "Blue LED 14",
+     "role": "p14b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 43,
+     "function": "Red LED 15",
+     "role": "p15r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 44,
+     "function": "Green LED 15",
+     "role": "p15g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 45,
+     "function": "Blue LED 15",
+     "role": "p15b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 46,
+     "function": "Red LED 16",
+     "role": "p16r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 47,
+     "function": "Green LED 16",
+     "role": "p16g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 48,
+     "function": "Blue LED 16",
+     "role": "p16b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 49,
+     "function": "Red LED 17",
+     "role": "p17r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 50,
+     "function": "Green LED 17",
+     "role": "p17g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 51,
+     "function": "Blue LED 17",
+     "role": "p17b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 52,
+     "function": "Red LED 18",
+     "role": "p18r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 53,
+     "function": "Green LED 18",
+     "role": "p18g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 54,
+     "function": "Blue LED 18",
+     "role": "p18b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 55,
+     "function": "Red LED 19",
+     "role": "p19r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 56,
+     "function": "Green LED 19",
+     "role": "p19g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 57,
+     "function": "Blue LED 19",
+     "role": "p19b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    }
+   ]
+  },
+  "76": {
+   "status": "EXACT",
+   "name": "Pixel RGBW",
+   "note": "Pixel engine, RGBW: 19 LEDs x 4, LEDs only, no pan / tilt / zoom / dimmer. Second engine, own address, enabled from the basic engine FUNCTION channel 103-105, p22, p25.",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Red LED 1",
+     "role": "p01r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 2,
+     "function": "Green LED 1",
+     "role": "p01g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 3,
+     "function": "Blue LED 1",
+     "role": "p01b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 4,
+     "function": "White LED 1",
+     "role": "p01w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 5,
+     "function": "Red LED 2",
+     "role": "p02r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 6,
+     "function": "Green LED 2",
+     "role": "p02g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 7,
+     "function": "Blue LED 2",
+     "role": "p02b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 8,
+     "function": "White LED 2",
+     "role": "p02w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 9,
+     "function": "Red LED 3",
+     "role": "p03r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 10,
+     "function": "Green LED 3",
+     "role": "p03g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 11,
+     "function": "Blue LED 3",
+     "role": "p03b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 12,
+     "function": "White LED 3",
+     "role": "p03w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 13,
+     "function": "Red LED 4",
+     "role": "p04r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 14,
+     "function": "Green LED 4",
+     "role": "p04g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 15,
+     "function": "Blue LED 4",
+     "role": "p04b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 16,
+     "function": "White LED 4",
+     "role": "p04w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 17,
+     "function": "Red LED 5",
+     "role": "p05r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 18,
+     "function": "Green LED 5",
+     "role": "p05g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 19,
+     "function": "Blue LED 5",
+     "role": "p05b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 20,
+     "function": "White LED 5",
+     "role": "p05w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 21,
+     "function": "Red LED 6",
+     "role": "p06r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 22,
+     "function": "Green LED 6",
+     "role": "p06g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 23,
+     "function": "Blue LED 6",
+     "role": "p06b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 24,
+     "function": "White LED 6",
+     "role": "p06w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 25,
+     "function": "Red LED 7",
+     "role": "p07r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 26,
+     "function": "Green LED 7",
+     "role": "p07g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 27,
+     "function": "Blue LED 7",
+     "role": "p07b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 28,
+     "function": "White LED 7",
+     "role": "p07w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 29,
+     "function": "Red LED 8",
+     "role": "p08r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 30,
+     "function": "Green LED 8",
+     "role": "p08g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 31,
+     "function": "Blue LED 8",
+     "role": "p08b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 32,
+     "function": "White LED 8",
+     "role": "p08w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 33,
+     "function": "Red LED 9",
+     "role": "p09r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 34,
+     "function": "Green LED 9",
+     "role": "p09g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 35,
+     "function": "Blue LED 9",
+     "role": "p09b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 36,
+     "function": "White LED 9",
+     "role": "p09w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 37,
+     "function": "Red LED 10",
+     "role": "p10r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 38,
+     "function": "Green LED 10",
+     "role": "p10g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 39,
+     "function": "Blue LED 10",
+     "role": "p10b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 40,
+     "function": "White LED 10",
+     "role": "p10w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 41,
+     "function": "Red LED 11",
+     "role": "p11r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 42,
+     "function": "Green LED 11",
+     "role": "p11g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 43,
+     "function": "Blue LED 11",
+     "role": "p11b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 44,
+     "function": "White LED 11",
+     "role": "p11w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 45,
+     "function": "Red LED 12",
+     "role": "p12r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 46,
+     "function": "Green LED 12",
+     "role": "p12g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 47,
+     "function": "Blue LED 12",
+     "role": "p12b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 48,
+     "function": "White LED 12",
+     "role": "p12w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 49,
+     "function": "Red LED 13",
+     "role": "p13r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 50,
+     "function": "Green LED 13",
+     "role": "p13g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 51,
+     "function": "Blue LED 13",
+     "role": "p13b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 52,
+     "function": "White LED 13",
+     "role": "p13w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 53,
+     "function": "Red LED 14",
+     "role": "p14r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 54,
+     "function": "Green LED 14",
+     "role": "p14g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 55,
+     "function": "Blue LED 14",
+     "role": "p14b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 56,
+     "function": "White LED 14",
+     "role": "p14w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 57,
+     "function": "Red LED 15",
+     "role": "p15r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 58,
+     "function": "Green LED 15",
+     "role": "p15g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 59,
+     "function": "Blue LED 15",
+     "role": "p15b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 60,
+     "function": "White LED 15",
+     "role": "p15w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 61,
+     "function": "Red LED 16",
+     "role": "p16r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 62,
+     "function": "Green LED 16",
+     "role": "p16g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 63,
+     "function": "Blue LED 16",
+     "role": "p16b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 64,
+     "function": "White LED 16",
+     "role": "p16w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 65,
+     "function": "Red LED 17",
+     "role": "p17r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 66,
+     "function": "Green LED 17",
+     "role": "p17g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 67,
+     "function": "Blue LED 17",
+     "role": "p17b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 68,
+     "function": "White LED 17",
+     "role": "p17w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 69,
+     "function": "Red LED 18",
+     "role": "p18r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 70,
+     "function": "Green LED 18",
+     "role": "p18g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 71,
+     "function": "Blue LED 18",
+     "role": "p18b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 72,
+     "function": "White LED 18",
+     "role": "p18w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 73,
+     "function": "Red LED 19",
+     "role": "p19r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 74,
+     "function": "Green LED 19",
+     "role": "p19g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 75,
+     "function": "Blue LED 19",
+     "role": "p19b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    },
+    {
+     "ch": 76,
+     "function": "White LED 19",
+     "role": "p19w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22"
+    }
+   ]
+  },
+  "111": {
+   "status": "EXACT",
+   "name": "Shapes + Pixel RGBW",
+   "note": "The combined mode the Platina plan uses: the Shapes list (35) followed by the Pixel RGBW list (76). It is TWO ENGINES addressed side by side: patch the basic engine at address A and the pixel engine at A + 35 (own address and universe in the lamp's menu); channel 18 (FUNCTION) at 103-105 enables the pixel map. Not a single mode of the lamp: a patch convention built from two exact lists (manual p22, p25; the manual's own note on two engines).",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Red",
+     "role": "r",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 1
+    },
+    {
+     "ch": 2,
+     "function": "Red fine",
+     "role": "rFine",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 2
+    },
+    {
+     "ch": 3,
+     "function": "Green",
+     "role": "g",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 3
+    },
+    {
+     "ch": 4,
+     "function": "Green fine",
+     "role": "gFine",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 4
+    },
+    {
+     "ch": 5,
+     "function": "Blue",
+     "role": "b",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 5
+    },
+    {
+     "ch": 6,
+     "function": "Blue fine",
+     "role": "bFine",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 6
+    },
+    {
+     "ch": 7,
+     "function": "White",
+     "role": "w",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 7
+    },
+    {
+     "ch": 8,
+     "function": "White fine",
+     "role": "wFine",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 8
+    },
+    {
+     "ch": 9,
+     "function": "Linear CTO",
+     "role": "cto",
+     "text": "p24: 255=2500K, 224=3200K, 188=4000K, 144=5000K, 117=5600K, 99=6000K, 54=7000K, 10=8000K, 0-9 unused; WHITE disabled while CTO active",
+     "ranges": [
+      [
+       255,
+       255,
+       "2500K"
+      ],
+      [
+       224,
+       224,
+       "3200K"
+      ],
+      [
+       188,
+       188,
+       "4000K"
+      ],
+      [
+       144,
+       144,
+       "5000K"
+      ],
+      [
+       117,
+       117,
+       "5600K"
+      ],
+      [
+       99,
+       99,
+       "6000K"
+      ],
+      [
+       54,
+       54,
+       "7000K"
+      ],
+      [
+       10,
+       10,
+       "8000K"
+      ],
+      [
+       0,
+       9,
+       "unused"
+      ]
+     ],
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 9
+    },
+    {
+     "ch": 10,
+     "function": "Macro colour",
+     "role": "macro",
+     "text": "p24: table of LEE-referenced colours, 0-9 = off (see colour.macro_table)",
+     "ranges": [
+      [
+       0,
+       9,
+       "off (see colour.macro_table)"
+      ]
+     ],
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 10
+    },
+    {
+     "ch": 11,
+     "function": "Strobe",
+     "role": "strobe",
+     "text": "p25: 252-255 open, 239-251 random fast, 226-238 random medium, 213-225 random slow, 208-212 open, 207 fast pulsation 25/s .. 108 slow pulsation 0.5/s, 104-107 open, 103 fast strobe 25/s .. 4 slow strobe 1/s, 0-3 closed",
+     "ranges": [
+      [
+       252,
+       255,
+       "open"
+      ],
+      [
+       239,
+       251,
+       "random fast"
+      ],
+      [
+       226,
+       238,
+       "random medium"
+      ],
+      [
+       213,
+       225,
+       "random slow"
+      ],
+      [
+       208,
+       212,
+       "open"
+      ],
+      [
+       207,
+       207,
+       "fast pulsation 25/s .. 108 slow pulsation 0.5/s"
+      ],
+      [
+       104,
+       107,
+       "open"
+      ],
+      [
+       103,
+       103,
+       "fast strobe 25/s .. 4 slow strobe 1/s"
+      ],
+      [
+       0,
+       3,
+       "closed"
+      ]
+     ],
+     "page": "p22",
+     "default": 255,
+     "cap": {
+      "shutter": [
+       {
+        "from": 0,
+        "to": 3,
+        "open": false
+       },
+       {
+        "from": 104,
+        "to": 107,
+        "open": true
+       },
+       {
+        "from": 208,
+        "to": 212,
+        "open": true
+       },
+       {
+        "from": 252,
+        "to": 255,
+        "open": true
+       }
+      ]
+     },
+     "engine": "basic",
+     "engine_ch": 11
+    },
+    {
+     "ch": 12,
+     "function": "Dimmer",
+     "role": "dimmer",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 12
+    },
+    {
+     "ch": 13,
+     "function": "Dimmer fine",
+     "role": "dimmerFine",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 13
+    },
+    {
+     "ch": 14,
+     "function": "Pan",
+     "role": "pan",
+     "text": "p25: 16-bit with Pan fine; home after reset without DMX = 128",
+     "ranges": [
+      [
+       16,
+       16,
+       "-bit with Pan fine"
+      ]
+     ],
+     "page": "p22",
+     "default": 128,
+     "engine": "basic",
+     "engine_ch": 14
+    },
+    {
+     "ch": 15,
+     "function": "Pan fine",
+     "role": "panFine",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 15
+    },
+    {
+     "ch": 16,
+     "function": "Tilt",
+     "role": "tilt",
+     "text": "p25: 16-bit with Tilt fine; home after reset without DMX = 128",
+     "ranges": [
+      [
+       16,
+       16,
+       "-bit with Tilt fine"
+      ]
+     ],
+     "page": "p22",
+     "default": 128,
+     "engine": "basic",
+     "engine_ch": 16
+    },
+    {
+     "ch": 17,
+     "function": "Tilt fine",
+     "role": "tiltFine",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 17
+    },
+    {
+     "ch": 18,
+     "function": "Function",
+     "role": "function",
+     "text": "p25: 103-105 = Pixel map enabled (immediate); 98-102/93-97/88-92/83-87/78-82 halogen sim 2500/2000/1200/1000/750 W; 73-77 halogen off (default); 68-72/63-67/58-62 RGBW gamma 2.0/1.5(default)/1.0; 53-57/48-52(default)/43-47/38-42 dimmer curve 4/3/2/1; 25-37 pan-tilt normal; 12-24 pan-tilt fast (default); 0-11 unused. Selections take effect after holding the range 5 s (except pixel map).",
+     "ranges": [
+      [
+       103,
+       105,
+       "Pixel map enabled (immediate)"
+      ],
+      [
+       98,
+       102,
+       "/93-97/88-92/83-87/78-82 halogen sim 2500/2000/1200/1000/750 W"
+      ],
+      [
+       73,
+       77,
+       "halogen off (default)"
+      ],
+      [
+       68,
+       72,
+       "/63-67/58-62 RGBW gamma 2.0/1.5(default)/1.0"
+      ],
+      [
+       53,
+       57,
+       "/48-52(default)/43-47/38-42 dimmer curve 4/3/2/1"
+      ],
+      [
+       25,
+       37,
+       "pan-tilt normal"
+      ],
+      [
+       12,
+       24,
+       "pan-tilt fast (default)"
+      ],
+      [
+       0,
+       11,
+       "unused. Selections take effect after holding the range 5 s (except pixel map)."
+      ]
+     ],
+     "page": "p22",
+     "default": 0,
+     "engine": "basic",
+     "engine_ch": 18
+    },
+    {
+     "ch": 19,
+     "function": "Reset",
+     "role": "control",
+     "text": "p26: 128-255 complete reset; 77-127 pan/tilt reset; 26-76 zoom (effects) reset; 0-25 unused; each after holding 5 s",
+     "ranges": [
+      [
+       128,
+       255,
+       "complete reset"
+      ],
+      [
+       77,
+       127,
+       "pan/tilt reset"
+      ],
+      [
+       26,
+       76,
+       "zoom (effects) reset"
+      ],
+      [
+       0,
+       25,
+       "unused"
+      ]
+     ],
+     "page": "p22",
+     "default": 0,
+     "engine": "basic",
+     "engine_ch": 19
+    },
+    {
+     "ch": 20,
+     "function": "Zoom",
+     "role": "zoom",
+     "text": "p26: 0 narrow beam .. 255 wide beam",
+     "ranges": [
+      [
+       0,
+       0,
+       "narrow beam .. 255 wide beam"
+      ]
+     ],
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 20
+    },
+    {
+     "ch": 21,
+     "function": "Zoom rotation",
+     "role": "zoomRotation",
+     "text": "p26: 0-127 linear rotation / indexed zone (lens angle 0..60 deg, only when zoom channel 0-45), 128-190 CW slow..fast, 191-192 stop, 193-255 CCW; with zoom at 255 it sets lens offset angle 0..+4 deg",
+     "ranges": [
+      [
+       0,
+       127,
+       "linear rotation / indexed zone (lens angle 0..60 deg, only when zoom channel 0-45)"
+      ],
+      [
+       128,
+       190,
+       "CW slow..fast"
+      ],
+      [
+       191,
+       192,
+       "stop"
+      ],
+      [
+       193,
+       255,
+       "CCW"
+      ]
+     ],
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 21
+    },
+    {
+     "ch": 22,
+     "function": "Shape Selection",
+     "role": "shape",
+     "text": "p27-28: shape slots 0-7 macro off, table of macros; K10 and K20 columns",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 22
+    },
+    {
+     "ch": 23,
+     "function": "Shape Speed",
+     "role": "shapeSpeed",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 23
+    },
+    {
+     "ch": 24,
+     "function": "Shape Fade",
+     "role": "shapeFade",
+     "text": "p29: 0-15 snap, 16..246-255 smooth fading curves (gamma 0.5 .. 2 / automatic)",
+     "ranges": [
+      [
+       0,
+       15,
+       "snap"
+      ],
+      [
+       16,
+       16,
+       "..246-255 smooth fading curves (gamma 0.5 .. 2 / automatic)"
+      ]
+     ],
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 24
+    },
+    {
+     "ch": 25,
+     "function": "Shape R",
+     "role": "shapeR",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 25
+    },
+    {
+     "ch": 26,
+     "function": "Shape G",
+     "role": "shapeG",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 26
+    },
+    {
+     "ch": 27,
+     "function": "Shape B",
+     "role": "shapeB",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 27
+    },
+    {
+     "ch": 28,
+     "function": "Shape W",
+     "role": "shapeW",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 28
+    },
+    {
+     "ch": 29,
+     "function": "Shape Dimmer",
+     "role": "shapeDimmer",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 29
+    },
+    {
+     "ch": 30,
+     "function": "Background Dimmer",
+     "role": "bgDimmer",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 30
+    },
+    {
+     "ch": 31,
+     "function": "Shape Transition",
+     "role": "shapeTransition",
+     "text": "p29: 0-4 no fade, 5=100 ms, 73=0.5 s, 113=1 s, 171=2 s, 216=3 s, 255=4 s",
+     "ranges": [
+      [
+       0,
+       4,
+       "no fade"
+      ],
+      [
+       5,
+       5,
+       "100 ms"
+      ],
+      [
+       73,
+       73,
+       "0.5 s"
+      ],
+      [
+       113,
+       113,
+       "1 s"
+      ],
+      [
+       171,
+       171,
+       "2 s"
+      ],
+      [
+       216,
+       216,
+       "3 s"
+      ],
+      [
+       255,
+       255,
+       "4 s"
+      ]
+     ],
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 31
+    },
+    {
+     "ch": 32,
+     "function": "Shape Offset",
+     "role": "shapeOffset",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 32
+    },
+    {
+     "ch": 33,
+     "function": "Foreground Strobe",
+     "role": "fgStrobe",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 33
+    },
+    {
+     "ch": 34,
+     "function": "Background Strobe",
+     "role": "bgStrobe",
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 34
+    },
+    {
+     "ch": 35,
+     "function": "Background Select",
+     "role": "bgSelect",
+     "text": "p29: 255 mirror effect, 16-254 no selection (K10), 0-15 pixel/ring combinations (K10: 14 'Pixel 1 + Ring 2 + Ring 3', 15 'Ring 2 + Ring 3')",
+     "ranges": [
+      [
+       255,
+       255,
+       "mirror effect"
+      ],
+      [
+       16,
+       254,
+       "no selection (K10)"
+      ],
+      [
+       0,
+       15,
+       "pixel/ring combinations (K10: 14 'Pixel 1 + Ring 2 + Ring 3'"
+      ],
+      [
+       15,
+       15,
+       "'Ring 2 + Ring 3')"
+      ]
+     ],
+     "page": "p22",
+     "engine": "basic",
+     "engine_ch": 35
+    },
+    {
+     "ch": 36,
+     "function": "Red LED 1",
+     "role": "p01r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 1
+    },
+    {
+     "ch": 37,
+     "function": "Green LED 1",
+     "role": "p01g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 2
+    },
+    {
+     "ch": 38,
+     "function": "Blue LED 1",
+     "role": "p01b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 3
+    },
+    {
+     "ch": 39,
+     "function": "White LED 1",
+     "role": "p01w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 4
+    },
+    {
+     "ch": 40,
+     "function": "Red LED 2",
+     "role": "p02r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 5
+    },
+    {
+     "ch": 41,
+     "function": "Green LED 2",
+     "role": "p02g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 6
+    },
+    {
+     "ch": 42,
+     "function": "Blue LED 2",
+     "role": "p02b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 7
+    },
+    {
+     "ch": 43,
+     "function": "White LED 2",
+     "role": "p02w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 8
+    },
+    {
+     "ch": 44,
+     "function": "Red LED 3",
+     "role": "p03r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 9
+    },
+    {
+     "ch": 45,
+     "function": "Green LED 3",
+     "role": "p03g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 10
+    },
+    {
+     "ch": 46,
+     "function": "Blue LED 3",
+     "role": "p03b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 11
+    },
+    {
+     "ch": 47,
+     "function": "White LED 3",
+     "role": "p03w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 12
+    },
+    {
+     "ch": 48,
+     "function": "Red LED 4",
+     "role": "p04r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 13
+    },
+    {
+     "ch": 49,
+     "function": "Green LED 4",
+     "role": "p04g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 14
+    },
+    {
+     "ch": 50,
+     "function": "Blue LED 4",
+     "role": "p04b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 15
+    },
+    {
+     "ch": 51,
+     "function": "White LED 4",
+     "role": "p04w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 16
+    },
+    {
+     "ch": 52,
+     "function": "Red LED 5",
+     "role": "p05r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 17
+    },
+    {
+     "ch": 53,
+     "function": "Green LED 5",
+     "role": "p05g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 18
+    },
+    {
+     "ch": 54,
+     "function": "Blue LED 5",
+     "role": "p05b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 19
+    },
+    {
+     "ch": 55,
+     "function": "White LED 5",
+     "role": "p05w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 20
+    },
+    {
+     "ch": 56,
+     "function": "Red LED 6",
+     "role": "p06r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 21
+    },
+    {
+     "ch": 57,
+     "function": "Green LED 6",
+     "role": "p06g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 22
+    },
+    {
+     "ch": 58,
+     "function": "Blue LED 6",
+     "role": "p06b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 23
+    },
+    {
+     "ch": 59,
+     "function": "White LED 6",
+     "role": "p06w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 24
+    },
+    {
+     "ch": 60,
+     "function": "Red LED 7",
+     "role": "p07r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 25
+    },
+    {
+     "ch": 61,
+     "function": "Green LED 7",
+     "role": "p07g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 26
+    },
+    {
+     "ch": 62,
+     "function": "Blue LED 7",
+     "role": "p07b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 27
+    },
+    {
+     "ch": 63,
+     "function": "White LED 7",
+     "role": "p07w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 28
+    },
+    {
+     "ch": 64,
+     "function": "Red LED 8",
+     "role": "p08r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 29
+    },
+    {
+     "ch": 65,
+     "function": "Green LED 8",
+     "role": "p08g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 30
+    },
+    {
+     "ch": 66,
+     "function": "Blue LED 8",
+     "role": "p08b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 31
+    },
+    {
+     "ch": 67,
+     "function": "White LED 8",
+     "role": "p08w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 32
+    },
+    {
+     "ch": 68,
+     "function": "Red LED 9",
+     "role": "p09r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 33
+    },
+    {
+     "ch": 69,
+     "function": "Green LED 9",
+     "role": "p09g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 34
+    },
+    {
+     "ch": 70,
+     "function": "Blue LED 9",
+     "role": "p09b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 35
+    },
+    {
+     "ch": 71,
+     "function": "White LED 9",
+     "role": "p09w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 36
+    },
+    {
+     "ch": 72,
+     "function": "Red LED 10",
+     "role": "p10r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 37
+    },
+    {
+     "ch": 73,
+     "function": "Green LED 10",
+     "role": "p10g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 38
+    },
+    {
+     "ch": 74,
+     "function": "Blue LED 10",
+     "role": "p10b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 39
+    },
+    {
+     "ch": 75,
+     "function": "White LED 10",
+     "role": "p10w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 40
+    },
+    {
+     "ch": 76,
+     "function": "Red LED 11",
+     "role": "p11r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 41
+    },
+    {
+     "ch": 77,
+     "function": "Green LED 11",
+     "role": "p11g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 42
+    },
+    {
+     "ch": 78,
+     "function": "Blue LED 11",
+     "role": "p11b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 43
+    },
+    {
+     "ch": 79,
+     "function": "White LED 11",
+     "role": "p11w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 44
+    },
+    {
+     "ch": 80,
+     "function": "Red LED 12",
+     "role": "p12r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 45
+    },
+    {
+     "ch": 81,
+     "function": "Green LED 12",
+     "role": "p12g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 46
+    },
+    {
+     "ch": 82,
+     "function": "Blue LED 12",
+     "role": "p12b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 47
+    },
+    {
+     "ch": 83,
+     "function": "White LED 12",
+     "role": "p12w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 48
+    },
+    {
+     "ch": 84,
+     "function": "Red LED 13",
+     "role": "p13r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 49
+    },
+    {
+     "ch": 85,
+     "function": "Green LED 13",
+     "role": "p13g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 50
+    },
+    {
+     "ch": 86,
+     "function": "Blue LED 13",
+     "role": "p13b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 51
+    },
+    {
+     "ch": 87,
+     "function": "White LED 13",
+     "role": "p13w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 52
+    },
+    {
+     "ch": 88,
+     "function": "Red LED 14",
+     "role": "p14r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 53
+    },
+    {
+     "ch": 89,
+     "function": "Green LED 14",
+     "role": "p14g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 54
+    },
+    {
+     "ch": 90,
+     "function": "Blue LED 14",
+     "role": "p14b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 55
+    },
+    {
+     "ch": 91,
+     "function": "White LED 14",
+     "role": "p14w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 56
+    },
+    {
+     "ch": 92,
+     "function": "Red LED 15",
+     "role": "p15r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 57
+    },
+    {
+     "ch": 93,
+     "function": "Green LED 15",
+     "role": "p15g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 58
+    },
+    {
+     "ch": 94,
+     "function": "Blue LED 15",
+     "role": "p15b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 59
+    },
+    {
+     "ch": 95,
+     "function": "White LED 15",
+     "role": "p15w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 60
+    },
+    {
+     "ch": 96,
+     "function": "Red LED 16",
+     "role": "p16r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 61
+    },
+    {
+     "ch": 97,
+     "function": "Green LED 16",
+     "role": "p16g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 62
+    },
+    {
+     "ch": 98,
+     "function": "Blue LED 16",
+     "role": "p16b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 63
+    },
+    {
+     "ch": 99,
+     "function": "White LED 16",
+     "role": "p16w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 64
+    },
+    {
+     "ch": 100,
+     "function": "Red LED 17",
+     "role": "p17r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 65
+    },
+    {
+     "ch": 101,
+     "function": "Green LED 17",
+     "role": "p17g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 66
+    },
+    {
+     "ch": 102,
+     "function": "Blue LED 17",
+     "role": "p17b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 67
+    },
+    {
+     "ch": 103,
+     "function": "White LED 17",
+     "role": "p17w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 68
+    },
+    {
+     "ch": 104,
+     "function": "Red LED 18",
+     "role": "p18r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 69
+    },
+    {
+     "ch": 105,
+     "function": "Green LED 18",
+     "role": "p18g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 70
+    },
+    {
+     "ch": 106,
+     "function": "Blue LED 18",
+     "role": "p18b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 71
+    },
+    {
+     "ch": 107,
+     "function": "White LED 18",
+     "role": "p18w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 72
+    },
+    {
+     "ch": 108,
+     "function": "Red LED 19",
+     "role": "p19r",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 73
+    },
+    {
+     "ch": 109,
+     "function": "Green LED 19",
+     "role": "p19g",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 74
+    },
+    {
+     "ch": 110,
+     "function": "Blue LED 19",
+     "role": "p19b",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 75
+    },
+    {
+     "ch": 111,
+     "function": "White LED 19",
+     "role": "p19w",
+     "text": "0 = LED off .. 255 = LED on",
+     "ranges": [
+      [
+       0,
+       0,
+       "LED off .. 255 = LED on"
+      ]
+     ],
+     "page": "p22",
+     "engine": "pixel",
+     "engine_ch": 76
+    }
+   ]
+  }
+ },
+ "pixels": "the pixel engine is a second engine (own address) switched on by basic FUNCTION 103-105",
+ "owed": [
+  "shape macro slot names (manual p27-28 not transcribed)",
+  "macro colour table (p24; not carried as caps)",
+  "beam angle at the zoom ends (OFL range only)",
+  "zoom cap (degrees per DMX value)",
+  "which of K10 / K10 Easy the rented lamps are",
+  "pixel cell centres (p30: LED 1 centre, 2-7 first ring, 8-19 outer ring)"
+ ]
+}

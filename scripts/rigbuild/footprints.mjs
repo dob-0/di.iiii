@@ -42,7 +42,7 @@ import path from 'node:path'
 
 import { parseArgs, die, say, readJson, REPO_ROOT } from '../place/common.mjs'
 import { RIG_PREFIX, buildRig, candelaAt, craneSolids } from '../place/rig-lib.mjs'
-import { readGeometry } from '../place/fixtures-glb.mjs'
+import { builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import { typeById, typeIdOf } from '../../src/rigbuild/fixtureTypes.js'
 import { hallFirstSurface, shellOf } from './hall-reach.mjs'
@@ -510,7 +510,7 @@ const main = () => {
     const args = parseArgs()
     const spec = readJson(path.join(REPO_ROOT, VERSIONS_FILE))
     const manifest = readJson(path.join(REPO_ROOT, 'scripts/place/fixtures/fixtures.json'))
-    const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+    const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
     const library = loadLibrary()
     const jobs = args.rig ? [{ id: null, file: path.resolve(String(args.rig)) }] : String(args.version || DEFAULT_VERSIONS.join(',')).split(',').map((s) => s.trim()).filter(Boolean).map((id) => ({ id, file: path.join(REPO_ROOT, rigFileOf(spec.set, id)) }))
     const outDir = path.resolve(String(args.out || path.join(os.homedir(), 'Downloads', 'moxir-devices')))

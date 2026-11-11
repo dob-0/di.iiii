@@ -25,7 +25,7 @@ import fs from 'node:fs'
 import { parseArgs, die, say, REPO_ROOT } from '../place/common.mjs'
 import { makeClient, readToken } from '../place/api.mjs'
 import { atmosphereOfRig, buildRig } from '../place/rig-lib.mjs'
-import { readGeometry } from '../place/fixtures-glb.mjs'
+import { builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { isMainModule } from '../lib/isMainModule.mjs'
 
 export const KIT_RIG = 'scripts/place/rigs/moxir-2026-10-17-known-kit.json'
@@ -61,7 +61,7 @@ export const kitFromRig = () => {
     const rig = read(KIT_RIG)
     const hall = read(rig.hall)
     const manifest = read('scripts/place/fixtures/fixtures.json')
-    const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+    const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
     const built = buildRig(rig, hall, { geometry, manifest })
     const laser = built.entities.find((e) => e.components?.beam?.laser)?.components.beam.laser
     if (!laser) throw new Error(`${KIT_RIG}: no laser line in the built rig`)

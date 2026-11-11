@@ -1,0 +1,257 @@
+{
+  "patch": "platina-2026-11-10",
+  "title": "Platina — Live in Yerevan: the patch (proposed), 50 units on 3 universes",
+  "title_ru": "Platina — Live in Yerevan: патч (черновик), 50 приборов на 3 юниверсах",
+  "writtenAt": "2026-11-10",
+  "owner": "2026-11-10 20:55 (ledger N3531): addresses for the Platina lights, now. The Platina side has no patch (forwarded chat, 2026-11-09: 'est patch?' — no, we can make it).",
+  "status": "PROPOSED. Nothing here is confirmed by the Platina side or the rental house: the maker of 'Pixel Line IP', the mode set on each unit, who runs the desk, the node and its ports. The counts and names are the light plot's legend (PERED.pdf / _.pdf, read 2026-11-10).",
+  "crewLine": "PROPOSED, not yet confirmed by the Platina side: check the mode on each unit before setting an address.",
+  "crewLine_ru": "ЧЕРНОВИК, не подтверждён стороной Platina: перед установкой адреса проверить режим на каждом приборе.",
+  "howToRead": "docs/architecture/RIG_BUILD.md §19.5. No project document yet: the crew table comes from this plan alone — node scripts/rigbuild/patch-table.mjs --plan <this> --out <dir> --pdf. Never edit an address by hand: change the plan and print again.",
+  "method": [
+    "One universe per KIND, the owner's way (MOXIR, 2026-10-15): U1 the 11 B-EYE K10 washes; U2 the 7 Sharpy beams and the 8 HY B-EYE K15; U3 the 24 Pixel Line IP bars.",
+    "Every unit is patched in its maker's SMALLEST full mode, and the units stand one LARGER mode apart (pitch): K10 35 (Shapes), Sharpy 20 (Vector), K15 36 (Shape), Pixel Line 21. A unit switched to the larger mode on the night keeps its address.",
+    "Blocks start on round numbers; the fixture number's hundred is the universe.",
+    "Fit: U1 11 x 35 = 385 of 512; U2 7 x 20 = 140 (001-140) + 8 x 36 = 288 (201-488); U3 24 x 21 = 504 of 512."
+  ],
+  "node": {
+    "what": "ASSUMED: one Art-Net / sACN node with 3 DMX outputs (or the house desk's own outputs); not on the plot",
+    "numbering": "U1 = Art-Net 0.0.0 = sACN 1; U2 = 0.0.1 = sACN 2; U3 = 0.0.2 = sACN 3"
+  },
+  "types": [
+    {
+      "id": "cp-aleda-beye-k10",
+      "code": "A.leda B-EYE K10",
+      "maker": "Claypaky",
+      "identified": "the legend's own name",
+      "modes": [
+        {
+          "name": "Standard",
+          "footprint": 21,
+          "channels": null,
+          "src": "https://github.com/OpenLightingProject/open-fixture-library/blob/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/clay-paky/a-leda-b-eye-k10.json (Open Fixture Library, MIT; its manual link: https://e-assist.tech/servlet/checkDocumentsFile?Id=729), read 2026-11-10"
+        },
+        {
+          "name": "Shapes",
+          "footprint": 35,
+          "channels": null,
+          "src": "the same file"
+        }
+      ]
+    },
+    {
+      "id": "cp-sharpy",
+      "code": "Sharpy",
+      "maker": "Claypaky",
+      "identified": "the legend says 'Sharpy' only: the Claypaky original is ASSUMED (a clone may count differently)",
+      "modes": [
+        {
+          "name": "Standard",
+          "footprint": 16,
+          "channels": null,
+          "src": "https://github.com/OpenLightingProject/open-fixture-library/blob/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/clay-paky/sharpy.json (Open Fixture Library, MIT; its manual link: https://e-assist.tech/servlet/checkDocumentsFile?Id=284), read 2026-11-10"
+        },
+        {
+          "name": "Vector",
+          "footprint": 20,
+          "channels": null,
+          "src": "the same file"
+        }
+      ]
+    },
+    {
+      "id": "cp-hy-beye-k15",
+      "code": "HY B-EYE K15",
+      "maker": "Claypaky",
+      "identified": "the legend's own name",
+      "modes": [
+        {
+          "name": "Standard",
+          "footprint": 22,
+          "channels": null,
+          "src": "Claypaky datasheet 01.2021, '22/36/57/76 DMX channels. Basic Engine (Standard and Shape Mode). Pixel Engine (RGB and RGBW Mode)': https://goknight.com/content/documentation/HyB-EyeK15_Datasheet_01.2021.pdf, read 2026-11-10. ASSUMED: the four counts are in the order of the four modes (22 = Standard)"
+        },
+        {
+          "name": "Shape",
+          "footprint": 36,
+          "channels": null,
+          "src": "the same datasheet, the same assumption"
+        }
+      ]
+    },
+    {
+      "id": "acme-pixel-line-ip",
+      "code": "Pixel Line IP",
+      "maker": "ACME (PROBABLE: the legend names no maker)",
+      "identified": "PROBABLE",
+      "modes": [
+        {
+          "name": "7ch",
+          "footprint": 7,
+          "channels": null,
+          "src": "rental listings give 'Control Channels: 7/15/17/21/33/39/35/38/70/112/117' (4wall, https://www.4wall.com/rentals/9759251/acme-pixel-line-ip-led, as quoted by a web search 2026-11-10; the page itself refused our fetch). The maker's manual is NOT read: which functions each count holds is unknown"
+        },
+        {
+          "name": "15ch",
+          "footprint": 15,
+          "channels": null,
+          "src": "the same listing"
+        },
+        {
+          "name": "17ch",
+          "footprint": 17,
+          "channels": null,
+          "src": "the same listing"
+        },
+        {
+          "name": "21ch",
+          "footprint": 21,
+          "channels": null,
+          "src": "the same listing"
+        }
+      ]
+    }
+  ],
+  "modes": {
+    "cp-aleda-beye-k10": {
+      "crew": "Standard",
+      "pitch": 35,
+      "why": "the smallest full mode; 35 apart leaves room for Shapes"
+    },
+    "cp-sharpy": {
+      "crew": "Standard",
+      "pitch": 20,
+      "why": "the smallest mode; 20 apart leaves room for Vector"
+    },
+    "cp-hy-beye-k15": {
+      "crew": "Standard",
+      "pitch": 36,
+      "why": "the smallest mode; 36 apart leaves room for Shape"
+    },
+    "acme-pixel-line-ip": {
+      "crew": "7ch",
+      "pitch": 21,
+      "why": "the smallest mode (the whole bar as one light); 21 apart leaves room for the 15, 17 and 21 channel modes. Pixel-by-pixel modes (33 and up) need more universes and a new plan"
+    }
+  },
+  "universes": [
+    {
+      "universe": 1,
+      "port": "A",
+      "label": "The B-EYE K10 washes",
+      "label_ru": "Заливка B-EYE K10",
+      "run": "output A → the 8 K10 on the over-stage truss, then the 3 K10 on the audience-side truss",
+      "run_ru": "выход A → 8 K10 на ферме над сценой, затем 3 K10 на ферме со стороны зала",
+      "blocks": [
+        {
+          "select": {
+            "group": "k10-over-stage",
+            "type": "cp-aleda-beye-k10"
+          },
+          "name": "B-EYE K10, over-stage truss",
+          "name_ru": "B-EYE K10, ферма над сценой",
+          "start": 1,
+          "fixture": 101,
+          "order": "id-asc",
+          "units": 8,
+          "what": "the 8 K10 on the over-stage truss (the one that also carries the Sharpys), counted from the audience's left"
+        },
+        {
+          "select": {
+            "group": "k10-audience-side",
+            "type": "cp-aleda-beye-k10"
+          },
+          "name": "B-EYE K10, audience-side truss",
+          "name_ru": "B-EYE K10, ферма со стороны зала",
+          "start": 281,
+          "fixture": 109,
+          "order": "id-asc",
+          "units": 3,
+          "what": "the 3 K10 on the audience-side truss, counted from the audience's left"
+        }
+      ]
+    },
+    {
+      "universe": 2,
+      "port": "B",
+      "label": "The Sharpy beams and the HY B-EYE K15",
+      "label_ru": "Лучи Sharpy и HY B-EYE K15",
+      "run": "output B → the 7 Sharpy on the over-stage truss; the 6 K15 on the stage floor; the 2 K15 at the sides",
+      "run_ru": "выход B → 7 Sharpy на ферме над сценой; 6 K15 на полу сцены; 2 K15 по бокам",
+      "blocks": [
+        {
+          "select": {
+            "group": "sharpy-over-stage",
+            "type": "cp-sharpy"
+          },
+          "name": "Sharpy, over-stage truss",
+          "name_ru": "Sharpy, ферма над сценой",
+          "start": 1,
+          "fixture": 201,
+          "order": "id-asc",
+          "units": 7,
+          "what": "the 7 Sharpy on the over-stage truss, counted from the audience's left"
+        },
+        {
+          "select": {
+            "group": "k15-floor",
+            "type": "cp-hy-beye-k15"
+          },
+          "name": "HY B-EYE K15, stage floor",
+          "name_ru": "HY B-EYE K15, пол сцены",
+          "start": 201,
+          "fixture": 221,
+          "order": "id-asc",
+          "units": 6,
+          "what": "the 6 K15 in a row on the stage floor in front of the screen, counted from the audience's left"
+        },
+        {
+          "select": {
+            "group": "k15-sides",
+            "type": "cp-hy-beye-k15"
+          },
+          "name": "HY B-EYE K15, the two sides",
+          "name_ru": "HY B-EYE K15, два боковых",
+          "start": 417,
+          "fixture": 227,
+          "order": "id-asc",
+          "units": 2,
+          "what": "the 2 K15 on stands at the sides: the audience's left first, then the right"
+        }
+      ]
+    },
+    {
+      "universe": 3,
+      "port": "C",
+      "label": "The Pixel Line IP bars",
+      "label_ru": "Планки Pixel Line IP",
+      "run": "output C → the 8 towers of 3 bars (4 towers each side)",
+      "run_ru": "выход C → 8 башен по 3 планки (по 4 башни с каждой стороны)",
+      "blocks": [
+        {
+          "select": {
+            "group": "pixel-line",
+            "type": "acme-pixel-line-ip"
+          },
+          "name": "Pixel Line IP, the 8 towers",
+          "name_ru": "Pixel Line IP, 8 башен",
+          "start": 1,
+          "fixture": 301,
+          "order": "id-asc",
+          "units": 24,
+          "what": "the 24 bars: towers counted from the audience's left (1-4 left side, 5-8 right side), in each tower the bottom bar first; units 1-3 are tower 1, 4-6 tower 2, and so on"
+        }
+      ]
+    }
+  ],
+  "crewNotes": [
+    "PROPOSED patch, 2026-11-10: to be confirmed by the Platina side before a unit is set. Open: who runs the desk; the mode really set on each unit; the maker of the Pixel Line IP and its mode; the node and which output feeds which truss.",
+    "Counting: 'the audience's left' is the left as seen from the hall, looking at the stage.",
+    "U3 holds 24 devices on one DMX line only if the bars' data is daisy-chained tower to tower; split it where the cable run asks, the addresses stay."
+  ],
+  "crewNotes_ru": [
+    "ЧЕРНОВИК патча, 2026-11-10: должен быть подтверждён стороной Platina до установки адресов. Открыто: кто ведёт пульт; какой режим реально стоит на приборах; производитель Pixel Line IP и его режим; нода и какой выход питает какую ферму.",
+    "Счёт: «слева от зала» — это слева, если смотреть из зала на сцену.",
+    "В U3 24 прибора на одной линии DMX — только если планки соединены цепочкой от башни к башне; делить там, где удобно по кабелю, адреса остаются."
+  ]
+}

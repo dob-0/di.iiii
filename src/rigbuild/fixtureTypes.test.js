@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { LIBRARY_DIR, buildLibrary, libraryFiles } from '../../scripts/rigbuild/types.mjs'
 import { loadLibrary } from '../../scripts/rigbuild/library.mjs'
+import { MODULE_FILE, moduleText } from '../../scripts/rigbuild/chart-lists.mjs'
 import { PROVENANCE_BASES, footprintOf, modeOf, powerOf, typeById, typeFlags, typeIdOf, typesFromManifest, valueBasesOf } from './fixtureTypes.js'
 import { isAssumedMode } from './assumedProfiles.js'
 
@@ -20,7 +21,7 @@ describe('the fixture library (src/rigbuild/types/library/: the starter set)', (
     })
 
     it('carries every type\'s provenance: how it is identified, the date its sources were read, which, and how each value was got', () => {
-        expect(committed.types).toHaveLength(13)
+        expect(committed.types).toHaveLength(18)
         for (const t of committed.types) {
             expect(['exact', 'equivalent'], t.id).toContain(t.provenance.identified)
             expect(t.provenance.date, t.id).toMatch(/^\d{4}-\d{2}-\d{2}$/)
@@ -40,7 +41,8 @@ describe('the fixture library (src/rigbuild/types/library/: the starter set)', (
     it('holds the nine rental codes (UP-COB200 since the cut and the halo, 2026-09-29), the three other-supplier planning types, and the owner’s LaserCube', () => {
         expect(committed.types.map((t) => t.code).filter((c) => c.startsWith('UP-')).sort()).toEqual(
             ['UP-250BSW', 'UP-B380F', 'UP-COB200', 'UP-HK1915', 'UP-LA40WF', 'UP-PL5403', 'UP-Q108S', 'UP-YH600F', 'UP-YZ31P'])
-        expect(committed.types.map((t) => t.code).filter((c) => !c.startsWith('UP-')).sort()).toEqual(['EXT-BLINDER', 'EXT-HAZER', 'EXT-LC-ULTRA-MK2', 'EXT-STROBE'])
+        expect(committed.types.map((t) => t.code).filter((c) => !c.startsWith('UP-')).sort()).toEqual(
+            ['ACME-PIXEL-LINE-IP', 'ACME-XP16R-BSW', 'CP-ALEDA-BEYE-K10', 'CP-HY-BEYE-K15', 'EXT-BLINDER', 'EXT-HAZER', 'EXT-LC-ULTRA-MK2', 'EXT-STROBE', 'MAGMATIC-MAGMA-PRIME'])
         // The planning types are modelled on an equivalent; the LaserCube (2026-10-04) is the
         // owner's own unit, identified EXACTLY from its maker's page and manual.
         for (const t of committed.types.filter((x) => x.code.startsWith('EXT-'))) {
@@ -98,6 +100,72 @@ describe('the fixture library (src/rigbuild/types/library/: the starter set)', (
         expect(typeById(committed, 'UP-PL5403').power_w.value).toBe(162) // the rating, kept as published
         expect(powerOf(typeById(committed, 'UP-PL5403'))).toBe(200) // what it draws: the stated supply (audit A-05)
         expect(typeById(committed, 'UP-PL5403').power_w).toMatchObject({ basis: 'EXACT', src: 'D-CN' })
+    })
+})
+
+describe('the Platina rental lamps (joined 2026-11-11, from the makers\' manuals)', () => {
+    const modes = (id) => typeById(committed, id).modes.map((m) => m.footprint)
+    it('are in the library with the makers\' mode sizes, all identified exactly', () => {
+        expect(modes('cp-aleda-beye-k10')).toEqual([21, 35, 57, 76, 111])
+        expect(modes('cp-hy-beye-k15')).toEqual([22, 36, 57, 76, 112])
+        expect(modes('acme-pixel-line-ip')).toEqual([7, 15, 21, 39, 112, 17, 33, 65, 68, 117, 70])
+        expect(modes('acme-xp16r-bsw')).toEqual([19, 21])
+        expect(modes('magmatic-magma-prime')).toEqual([1, 3, 5])
+        for (const id of ['cp-aleda-beye-k10', 'cp-hy-beye-k15', 'acme-pixel-line-ip', 'acme-xp16r-bsw', 'magmatic-magma-prime']) {
+            expect(typeById(committed, id).provenance.identified, id).toBe('exact')
+            expect(typeById(committed, id).provenance.date, id).toBe('2026-11-11')
+        }
+    })
+
+    it('take their roles from the committed charts (src/rigbuild/platinaChannelLists.js is generated, never edited by hand)', () => {
+        expect(fs.readFileSync(path.join(ROOT, MODULE_FILE), 'utf8')).toBe(moduleText())
+    })
+
+    it('connect every channel list the maker printed (a list as long as its mode) and keep roles unique', () => {
+        for (const id of ['cp-aleda-beye-k10', 'acme-pixel-line-ip', 'acme-xp16r-bsw', 'magmatic-magma-prime']) {
+            for (const m of typeById(committed, id).modes) {
+                expect(m.channels, `${id} ${m.name}`).toHaveLength(m.footprint)
+                expect(new Set(m.channels.map((c) => c.role)).size, `${id} ${m.name}`).toBe(m.footprint)
+                expect(m.channelsSource.basis).toBe('EXACT')
+            }
+        }
+    })
+
+    it('K15: the channel lists are OWED, and the Aqua variant is not copied in as this lamp', () => {
+        const k15 = typeById(committed, 'cp-hy-beye-k15')
+        for (const m of k15.modes) {
+            expect(m.channels, m.name).toBe(null)
+            expect(typeFlags({ type: 'cp-hy-beye-k15', mode: m.name }, committed).map((f) => f.code)).toContain('channels-owed')
+        }
+        // the body is built since 2026-11-12 (size from the K15 & K25 manual p10); only the channel lists stay owed
+        expect(k15.model3d.glb).toMatch(/hyK15\.glb$/)
+    })
+
+    it('K10: the pixel modes carry LED cells only (no pan, tilt, dimmer, zoom); the combined mode is two engines side by side', () => {
+        const k10 = typeById(committed, 'cp-aleda-beye-k10')
+        const by = (n) => k10.modes.find((m) => m.footprint === n)
+        for (const n of [57, 76]) {
+            const roles = by(n).channels.map((c) => c.role)
+            expect(roles.every((r) => /^p\d\d[rgbw]$/.test(r)), n).toBe(true)
+            for (const banned of ['pan', 'tilt', 'dimmer', 'zoom', 'panFine', 'tiltFine']) expect(roles).not.toContain(banned)
+        }
+        expect(by(57).channels).toHaveLength(57)
+        expect(by(111).channels.map((c) => c.role)).toEqual([...by(35).channels, ...by(76).channels].map((c) => c.role))
+        expect(by(111).note).toMatch(/two engines/i)
+        expect(by(111).note).toMatch(/A \+ 35/)
+    })
+
+    it('the Magma Prime is a hazer (the room\'s haze field reads that word), with its fluid use from the manual (3.4 ml/min)', () => {
+        const h = typeById(committed, 'magmatic-magma-prime')
+        expect(h.category).toBe('hazer')
+        expect(h.fluid_ml_per_min).toMatchObject({ value: 3.4, src: 'MAGMA-MAN', basis: 'EXACT' })
+    })
+
+    it('every Platina lamp has its built body on disk', () => {
+        for (const id of ['cp-aleda-beye-k10', 'cp-hy-beye-k15', 'acme-xp16r-bsw', 'acme-pixel-line-ip', 'magmatic-magma-prime']) {
+            expect(typeById(committed, id).model3d.glb, id).toMatch(/\.glb$/)
+            expect(fs.existsSync(path.join(ROOT, typeById(committed, id).model3d.glb)), id).toBe(true)
+        }
     })
 })
 

@@ -89,7 +89,8 @@ const main = async () => {
     // laptop's own GPU; Playwright's bundled Chromium is not installed there.
     // Elsewhere: a HEADED Chromium on the NVIDIA card through PRIME render offload, ANGLE on
     // Vulkan — the combination that reached the RTX 3080 on aylmo (rig-look.mjs).
-    const browser = process.platform === 'win32' ? await chromium.launch({
+    // DI_TEST_CDP (di-test-browser run): the agent-screen browser already on the GPU; no window of our own.
+    const browser = process.env.DI_TEST_CDP ? await chromium.connectOverCDP(process.env.DI_TEST_CDP) : process.platform === 'win32' ? await chromium.launch({
         channel: 'chrome',
         headless: true,
         args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--ignore-certificate-errors']

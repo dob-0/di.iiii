@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
 
 import { REPO_ROOT } from '../place/common.mjs'
 import { RIG_PREFIX, bottomChordAt, buildRig, linePoint, stageFrame } from '../place/rig-lib.mjs'
-import { readGeometry } from '../place/fixtures-glb.mjs'
+import { builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { piecesFromRigBoxes } from './load-plot.mjs'
 import { moxirDocument } from './moxir.mjs'
 import { loadLibrary } from './library.mjs'
@@ -25,7 +25,7 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8'))
 const spec = read(VERSIONS_FILE)
 const hall = read(spec.hall)
 const manifest = read('scripts/place/fixtures/fixtures.json')
-const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
 const types = loadLibrary().types
 const CUT = ['minimal', 'minimal-cut-movers']
 const rigs = Object.fromEntries(CUT.map((id) => [id, read(rigFileOf(spec.set, id))]))

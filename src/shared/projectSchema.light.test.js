@@ -44,5 +44,12 @@ describe('the kit\'s light fields survive the schema, in the browser and on the 
             const odd = normalize({ entities: [{ ...lamp, components: { ...lamp.components, beam: { visible: true, laser: { mW: [1], nm: [532] } } } }] })
             expect(odd.entities[0].components.beam.laser).toBeUndefined()
         })
+        it(`${name}: keeps an LED bar's strip (beam.emitter), and drops a shape it does not know`, () => {
+            const bar = normalize({ entities: [{ ...lamp, components: { ...lamp.components, beam: { visible: true, emitter: { shape: 'bar', width: 0.09, length: 1 } } } }] })
+            expect(bar.entities[0].components.beam.emitter).toEqual({ shape: 'bar', width: 0.09, length: 1 })
+            const odd = normalize({ entities: [{ ...lamp, components: { ...lamp.components, beam: { visible: true, emitter: { shape: 'ring' } } } }] })
+            expect(odd.entities[0].components.beam.emitter).toBeUndefined()
+            expect(normalize({ entities: [lamp] }).entities[0].components.beam.emitter).toBeUndefined()
+        })
     }
 })

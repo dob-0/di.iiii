@@ -22,7 +22,7 @@ import path from 'node:path'
 
 import { parseArgs, die, say, readJson, REPO_ROOT } from '../place/common.mjs'
 import { buildRig } from '../place/rig-lib.mjs'
-import { readGeometry } from '../place/fixtures-glb.mjs'
+import { builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import { typeById, typeIdOf } from '../../src/rigbuild/fixtureTypes.js'
 import { loadLibrary } from './library.mjs'
@@ -180,7 +180,7 @@ export const analysis = () => {
     const spec = readJson(path.join(REPO_ROOT, VERSIONS_FILE))
     const hall = readJson(path.join(REPO_ROOT, spec.hall))
     const manifest = readJson(path.join(REPO_ROOT, 'scripts/place/fixtures/fixtures.json'))
-    const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+    const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
     const library = loadLibrary()
     const g = hall.geometry
     const dance = zoneBox(hall, 'dance')

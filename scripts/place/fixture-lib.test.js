@@ -75,3 +75,22 @@ describe('a machine that does not move (CO2, spark, smoke)', () => {
         close(posed.dir, [0, 1, 0])
     })
 })
+
+describe('a body with no motor that a hand turns to its aim (an LED bar)', () => {
+    const bar = { motion: 'none', aimedByHand: true, lensY: 0.126, parts: ['Base', 'Head', 'Lens'] }
+
+    it('faces its window along the aim, keeps its lens where the standing lens is, and stands its length upright', () => {
+        const posed = aimFixture(bar, { pos: [2, 1, 0] }, { dir: [0, 0, 1] })
+        close(posed.dir, [0, 0, 1])
+        close(posed.lens, [2, 1.126, 0])
+        const m = posed.parts.Head
+        close([m.elements[0], m.elements[1], m.elements[2]], [0, 1, 0]) // the bar's length (local X) in the room
+    })
+
+    it('lies along room X when it aims straight up, and without an aim stands as it was built', () => {
+        const up = aimFixture(bar, { pos: [0, 0, 0] }, { dir: [0, 1, 0] })
+        const m = up.parts.Head
+        close([m.elements[0], m.elements[1], m.elements[2]], [1, 0, 0])
+        close(aimFixture(bar, { pos: [0, 0, 0] }, {}).dir, [0, 1, 0])
+    })
+})

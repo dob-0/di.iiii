@@ -2173,6 +2173,20 @@ Checked by `src/rigbuild/moxirV2Patch.test.js` (overlap, whole in one universe, 
 
 Owed: the cabling plan (nodes, which unit on which line); the smoke machine's channel count (1 assumed, maybe 2); how the Poligraf laser and the smoke machine are addressed on the unit; the B380F's channels 11–16 on a real unit; the LaserCube stream on a real cube (#847); the 40 W lasers' safety numbers (NOHD, aerial clearance, the crossing zone with the cubes), which the patch does not touch.
 
+#### 19.5.1 A plan with its own types, and a crew table from the footprint alone (Platina, 2026-11-10)
+
+A show whose fixtures are not in the shared library yet carries them in its plan: `types` (id, code,
+modes with `footprint` and `src`, where the count was read), joined by `libraryWithPlan`
+(`src/rigbuild/patchPlan.js`); a type may not reuse a library id, and a mode without `src` is refused.
+The crew table (`patch-table.mjs`) plans with `footprintOnly`: a mode whose channel COUNT is sourced
+but whose channel LIST is owed still gets addresses (an address needs only the footprint, §2.1), and
+the sheet says "channel list owed". A desk patch (`patch-plan.mjs`) does not take this path: it still
+needs a channel list. `modes.<type>.pitch` stands the units one larger mode apart, so a mode change on
+the night moves no address; `crewLine` is the sentence under the title. First plan:
+`scripts/place/rigs/platina-2026-11-10.patch.json` (50 units of the light plot's legend, 3 universes,
+PROPOSED: no mode is confirmed by the Platina side). Tests: `scripts/rigbuild/patch-table.test.js`,
+`src/rigbuild/patchPlan.test.js`.
+
 ### 19.6 One chosen version on its desk — planned offline, applied with the desk stopped (2026-10-05)
 
 The owed rule of §19.4, as a script: `scripts/rigbuild/desk-plan.mjs`. Why (the MOXIR audit of
@@ -2216,6 +2230,11 @@ their addresses). **At rest the planned desk is NOT dark**: a desk fixture rests
 on U2 — OUTPUT on before the first GO lights every lamp. Owed: the owner's call (rest dark, or
 GO before OUTPUT, written in the night's run sheet). Also owed: the crew sheet says "maker's" for
 the PL5403 8ch / B380F 16ch lists, whose basis is TESTED on the Sevan units (audit B5).
+
+**The sheet in another language.** `patch-table.mjs --lang ru` prints the same addresses with Russian words and writes
+`patch-sheet.ru.md/.html/.pdf` beside the English sheet (which keeps its name and its bytes). The sheet's own words live in
+the script's `WORDS` table (one entry per language); the plan's words are `<key>_<lang>` beside `<key>` (`title_ru`,
+`crewLine_ru`, `crewNotes_ru`, a universe's `label_ru`/`run_ru`, a block's `name_ru`), the plain key when there is none.
 
 ## 20. The room as a camera sees it — beams in haze, exposure, the dark (2026-09-29)
 

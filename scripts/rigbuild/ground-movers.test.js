@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest'
 
 import { REPO_ROOT } from '../place/common.mjs'
 import { buildRig, stageFrame } from '../place/rig-lib.mjs'
-import { readGeometry } from '../place/fixtures-glb.mjs'
+import { builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import { findVersion, RIGS_DIR, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 import { loadLibrary } from './library.mjs'
@@ -21,7 +21,7 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8'))
 const spec = read(VERSIONS_FILE)
 const hall = read(spec.hall)
 const manifest = read('scripts/place/fixtures/fixtures.json')
-const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
 const library = loadLibrary()
 const GROUND = ['minimal-ground', 'full-ground']
 // Also ground-only, and checked against the same policy, but a SUBSET (only the fixtures whose DMX is known): not held to the two versions' full type list.

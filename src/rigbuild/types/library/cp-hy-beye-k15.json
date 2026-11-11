@@ -1,0 +1,187 @@
+{
+  "id": "cp-hy-beye-k15",
+  "code": "CP-HY-BEYE-K15",
+  "identified": "EXACT",
+  "identifiedNote": "EXACT - Clay Paky's own model HY B-EYE K15 (C61480), read from its datasheet; the rented unit's variant is not confirmed. The channel lists are OWED (maker login)",
+  "maker": "Clay Paky S.p.A.",
+  "model": "CP-HY-BEYE-K15",
+  "modelledOn": null,
+  "product": "Clay Paky HY B-EYE K15, 19 x RGBW LED moving head with Kaleido FX and a pixel engine",
+  "makerModel": "HY B-EYE K15 (C61480)",
+  "manual": {
+    "url": "https://goknight.com/content/documentation/HyB-EyeK15_Datasheet_01.2021.pdf",
+    "date": "01/2021",
+    "read": "2026-11-11, pdftotext p1",
+    "basis": "EXACT",
+    "note": "datasheet only; the standard K15 DMX chart was NOT obtained (claypaky.it links to e-assist.tech, login; two manual hosts refused automated reading). The K15 AQUA chart is a different variant and is NOT copied in as this lamp"
+  },
+  "makerChart": {
+    "file": "scripts/place/fixtures/charts/cp-hy-beye-k15.json",
+    "modes": {
+      "22": "OWED",
+      "36": "OWED",
+      "57": "OWED",
+      "76": "OWED",
+      "112": "OWED"
+    }
+  },
+  "category": "moving-head",
+  "modes": [
+    {
+      "name": "22ch",
+      "footprint": 22,
+      "channels": null,
+      "channelsSource": null,
+      "label": "Basic (22 per datasheet)",
+      "note": "From the datasheet's '22/36/57/76 DMX channels' only. CHANNEL LIST OWED: the standard K15 DMX chart sits behind the maker's login (claypaky.it -> e-assist.tech). 22 is probably Standard + Freq (the AQUA sheet counts Standard 21 / Standard Freq 22): an inference, not read.",
+      "src": "CP-K15-DS",
+      "basis": "EXACT"
+    },
+    {
+      "name": "36ch",
+      "footprint": 36,
+      "channels": null,
+      "channelsSource": null,
+      "label": "Shape (36 per datasheet)",
+      "note": "From the datasheet only. CHANNEL LIST OWED. Probably Shape + Freq (AQUA: Shape 35 / Shape Freq 36): an inference, not read.",
+      "src": "CP-K15-DS",
+      "basis": "EXACT"
+    },
+    {
+      "name": "57ch",
+      "footprint": 57,
+      "channels": null,
+      "channelsSource": null,
+      "label": "Pixel RGB",
+      "note": "From the datasheet only. CHANNEL LIST OWED. Pixel engine, own address (user menu 02.2022); pixels only, no pan / tilt / zoom - inferred from the menu structure and the K10 manual, not read for the K15.",
+      "src": "CP-K15-DS",
+      "basis": "EXACT"
+    },
+    {
+      "name": "76ch",
+      "footprint": 76,
+      "channels": null,
+      "channelsSource": null,
+      "label": "Pixel RGBW",
+      "note": "From the datasheet only. CHANNEL LIST OWED. Pixel engine RGBW, 19 x 4; pixels only (inferred, as above).",
+      "src": "CP-K15-DS",
+      "basis": "EXACT"
+    },
+    {
+      "name": "112ch",
+      "footprint": 112,
+      "channels": null,
+      "channelsSource": null,
+      "label": "Shape + Pixel RGBW",
+      "note": "The combined mode the Platina plan uses: the 36-channel basic list followed by the 76-channel pixel list = 112, two engines addressed side by side (pixel address = basic address + 36). LIST OWED with the two it is made of.",
+      "src": "CP-K15-DS",
+      "basis": "EXACT"
+    }
+  ],
+  "defaultMode": "22ch",
+  "modesOwed": false,
+  "assumedMode": null,
+  "power_w": {
+    "value": 700,
+    "src": "CP-K15-DS",
+    "basis": "EXACT",
+    "note": "datasheet p1 '700 VA at 230 V' - VA, not W; kept as published"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 20.7,
+    "src": "CP-K15-DS",
+    "basis": "EXACT",
+    "note": "datasheet p1"
+  },
+  "size_mm": {
+    "value": [
+      391,
+      329,
+      438
+    ],
+    "src": "CP-K15-MAN",
+    "basis": "EXACT",
+    "order": "W x D x H, head upright (home)",
+    "note": "manual p10 drawing: base 329 x 387, 391 across the yoke, 438 high with the head upright, 496 with the head horizontal, lens face 240, head 224 deep zoomed in / 264 zoomed out. The maker's product page (claypaky.it/products/hy-b-eye-k15, read 2026-11-12) gives the same base 329 x 387 and 496 mm. Which base side lies along the yoke is read from the drawing (387), not printed."
+  },
+  "pan_tilt_deg": {
+    "value": [
+      540,
+      200
+    ],
+    "src": "CP-K15-DS",
+    "basis": "EXACT",
+    "note": "datasheet p1; 16-bit pan / tilt"
+  },
+  "ip": {
+    "value": "IP20",
+    "src": "CP-K15-DS",
+    "basis": "EXACT",
+    "note": "datasheet p1"
+  },
+  "optics": {
+    "beam_deg": null,
+    "zoom_deg": [
+      4,
+      60
+    ],
+    "lux": null,
+    "at_m": null,
+    "photometrySrc": null,
+    "photometryBasis": null
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": null,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/hyK15.glb",
+    "sidecar": "scripts/place/fixtures/glb/hyK15.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": 0.12,
+    "tiltY": 0.346,
+    "lensY": 0.438,
+    "sizeAtHome_mm": {
+      "width_x": 390,
+      "depth_z": 333,
+      "height_y": 436
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "CP-K15-DS": {
+      "url": "https://goknight.com/content/documentation/HyB-EyeK15_Datasheet_01.2021.pdf",
+      "what": "Clay Paky HY B-EYE K15 datasheet, 01/2021, 1 page (hosted by the distributor Knight)",
+      "publisher": "Clay Paky S.p.A. (host: goknight.com)",
+      "accessed": "2026-11-11"
+    },
+    "CP-K15-MAN": {
+      "url": "https://goknight.com/content/documentation/HyB-EyeK15&K25_InstructionManual_05.2023.pdf",
+      "what": "Clay Paky HY B-EYE K15 / K25 instruction manual, IST01D/001 Rev.A 05/2023 (no DMX chart inside)",
+      "publisher": "Clay Paky S.p.A. (host: goknight.com)",
+      "accessed": "2026-11-11"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "hyK15",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "exact",
+    "date": "2026-11-11",
+    "sources": [
+      "CP-K15-DS",
+      "CP-K15-MAN"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 0,
+      "datasheet": 11,
+      "equivalent": 0,
+      "assumed": 0,
+      "unknown": 0
+    }
+  }
+}
