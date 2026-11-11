@@ -319,3 +319,20 @@ describe('map from the right-click menu', () => {
         expect(fake.sent).toContainEqual([0x9e, 109, 127]) // note 37 took the clip: green
     })
 })
+
+describe('a K2 set to another MIDI channel (the owner\'s sends on 2, N3636)', () => {
+    it('its buttons and faders still play the deck, and the lights are sent back on that channel', async () => {
+        const { fake, writes } = await mount()
+        expect(fake.sent.length).toBeGreaterThan(0)
+        expect(fake.sent.every((bytes) => bytes[0] === 0x9e)).toBe(true) // factory channel 15 until the device is heard
+        fake.sent.length = 0
+        send(fake, [0x91, 37, 127]) // matrix B (layer 1, slot 2) on channel 2
+        expect(writes.at(-1).layers[0].active).toBe(1)
+        expect(fake.sent.length).toBeGreaterThan(0)
+        expect(fake.sent.every((bytes) => bytes[0] === 0x91)).toBe(true)
+        send(fake, [0xb1, FADER_2, 127])
+        send(fake, [0xb1, FADER_2, 0])
+        act(() => { vi.advanceTimersByTime(WRITE_GAP_MS * 2) })
+        expect(writes.at(-1).layers[1].opacity).toBe(0)
+    })
+})

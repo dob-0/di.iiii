@@ -123,7 +123,11 @@ describe('the K2 default map', () => {
     it('lists what it leaves free and keeps the laser and light out', () => {
         expect(XONE_K2_MAP.length + XONE_K2_FREE.length).toBe(58)
         expect(XONE_K2_FREE).not.toContain('pot 9') // pots 9-12 drive the first effect
-        expect(XONE_K2_FREE).toContain('encoder 2')
+        // the top knobs 2-4 carry what four strips cannot: layers 5 and 6, and the master effect (N3635)
+        expect(XONE_K2_FREE).toEqual(['layer button', 'encoder 6 push', 'exit setup button'])
+        const turn = { kind: 'cc', cc: 1, channel: 15, value: 127 } // encoder 2, one step down
+        const six = createDeck({ layers: 6, columns: 4 })
+        expect(applyMidi(six, turn, defaultMap()).layers[4].opacity).toBeLessThan(six.layers[4].opacity)
         expect(XONE_K2_MAP.every((e) => !/laser|light|arm/i.test(e.action))).toBe(true)
     })
     it('plays the layout: fader 3, matrix G, pot switches, encoders', () => {

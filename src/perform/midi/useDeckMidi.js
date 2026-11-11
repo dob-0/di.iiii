@@ -144,9 +144,23 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const learnRef = useRef({ learning, target, once })
     useEffect(() => { learnRef.current = { learning, target, once } }, [learning, target, once])
 
-    const onMessage = useCallback((message) => {
+    // The K2's MIDI channel is a setting on the device (15 from the factory, 2 on the owner's, measured N3636).
+    // The map is written for K2_CHANNEL, so a K2 message is read as if it came on that channel, and the
+    // lights are sent back on the channel the device was last heard on.
+    const k2Live = useRef(false)
+    const [heard, setHeard] = useState(K2_CHANNEL)
+    const heardRef = useRef(K2_CHANNEL)
+
+    const onMessage = useCallback((raw) => {
         const current = live.current
         if (!current.enabled) return
+        let message = raw
+        if (k2Live.current && Number.isInteger(raw?.channel) && raw.channel !== K2_CHANNEL) {
+            if (heardRef.current !== raw.channel) { heardRef.current = raw.channel; setHeard(raw.channel) }
+            message = { ...raw, channel: K2_CHANNEL }
+        } else if (k2Live.current && raw?.channel === K2_CHANNEL && heardRef.current !== K2_CHANNEL) {
+            heardRef.current = K2_CHANNEL; setHeard(K2_CHANNEL)
+        }
         const { learning: isLearning, target: wanted, once: justOne } = learnRef.current
         if (isLearning) {
             // While learning, a message never plays the deck: it binds the picked control.
@@ -172,7 +186,8 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const ports = useMidiPorts({ active, onMessage })
     const device = ports.inputs[0] ? ports.inputs.find(isK2) || ports.inputs[0] : null
     const k2Output = ports.outputs.find(isK2) || null
-    const outputKey = k2Output ? `${k2Output.id}:${k2Output.state}:${ports.generation}` : ''
+    useEffect(() => { k2Live.current = Boolean(device) && isK2(device) })
+    const outputKey = k2Output ? `${k2Output.id}:${k2Output.state}:${ports.generation}:${heard}` : ''
 
     // LEDs go to the K2's output only, never to another device. The "already sent" cache
     // is forgotten whenever the output goes away or its state changes, so a K2 that was
@@ -181,14 +196,14 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const sentKey = useRef('')
     const sendRef = useRef(ports.send)
     useEffect(() => { sendRef.current = ports.send })
-    const leds = useMemo(() => ledsFor(deck, map, XONE_K2_LEDS, K2_CHANNEL), [deck, map])
+    const leds = useMemo(() => ledsFor(deck, map, XONE_K2_LEDS, heard), [deck, map, heard])
     useEffect(() => {
         if (sentKey.current !== outputKey) { sentRef.current = new Map(); sentKey.current = outputKey }
         if (!outputKey || !active || !k2Output) return
         // a button that lost its binding goes dark first, then the new picture
-        for (const led of ledClears(leds, sentRef.current, K2_CHANNEL)) sendRef.current(k2Output.id, ledBytes(led))
+        for (const led of ledClears(leds, sentRef.current, heard)) sendRef.current(k2Output.id, ledBytes(led))
         for (const led of ledChanges(leds, sentRef.current)) sendRef.current(k2Output.id, ledBytes(led))
-    }, [leds, outputKey, active, k2Output])
+    }, [leds, outputKey, active, k2Output, heard])
 
     let state = 'absent'
     if (device) state = isK2(device) ? 'k2' : 'listening'

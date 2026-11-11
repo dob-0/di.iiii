@@ -50,6 +50,10 @@ export const XONE_K2_MAP = [
     bind('pot 9', 'fx', { param: 'mix' }),
     ...range(3).map((i) => bind(`pot ${i + 10}`, 'fx', { param: i })),
     bind('encoder 1', 'bpm', {}, { relative: true }),
+    // the deck has six layers and the K2 four strips: the two layers without a fader get a top knob (N3635)
+    bind('encoder 2', 'opacity', { layer: 4 }, { relative: true }),
+    bind('encoder 3', 'opacity', { layer: 5 }, { relative: true }),
+    bind('encoder 4', 'fx', { param: 'mix', layer: -1 }, { relative: true }),
     bind('encoder 5', 'crossfade', {}, { relative: true }),
     bind('encoder 5 push', 'tap'),
     bind('encoder 6', 'master', {}, { relative: true })

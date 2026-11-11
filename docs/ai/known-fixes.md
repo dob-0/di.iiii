@@ -1838,3 +1838,9 @@ Symptom: the deck said "no controller"; the page had MIDI permission but listed 
 Cause: Chromium finds hardware MIDI ports through udev and the Flatpak sandbox has no `/run/udev`.
 Fix: `scripts/show/k2-browser-access.sh on` (read-only per-user override; `off` undoes it), then `scripts/show/stage-restart.sh <stage-open options>` (asks the browser to quit over its debugging port, opens the stage and Perform again; nothing is killed). Both take `--dry-run`.
 Guard: none automated (needs the hardware); `k2-browser-access.sh status` prints the override and the ports Linux sees.
+
+## The K2 was seen ("K2") but no knob or button moved the deck, and its lights stayed dark (2026-11-11, owner rows N3630/N3632/N3636)
+Symptom: the deck said `K2`, the owner pressed and turned; nothing happened. Measured: 467 messages on the wire (`aseqdump -p 28:0`) in 80 s, 0 deck controls changed.
+Cause: the K2's MIDI channel is a device setting (15 from the factory); the owner's sends on channel 2. The default map matched channel 15 only, and the lights were sent on 15.
+Fix: `useDeckMidi.js` reads a K2 message as if it came on `K2_CHANNEL` and sends the lights back on the channel last heard (the LED cache is forgotten when that channel changes). After the fix, same measure: 10 deck controls changed in 70 s.
+Guard: `useDeckMidi.test.jsx` ("a K2 set to another MIDI channel"). The lights on the real K2 are seen by the owner only.
