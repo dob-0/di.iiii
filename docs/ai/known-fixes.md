@@ -1826,3 +1826,15 @@ Seen live: the `/out` page showed a phone camera (v4l2loopback fed by scrcpy) th
 Cause: `MapCameraSource` called getUserMedia once per device id and nothing listened for the track ending or for a first open that failed because the feed was not up yet.
 Fix: it re-opens by itself on track `ended` / stream `inactive` and on busy/not-found class errors, with a back-off (0.5, 1, 2 s, then 3 s), stopping old tracks first; the stream lookup is asked again; no retry on NotAllowedError; timers and listeners are cleared on unmount.
 Guard: `src/map/MapSourceView.reacquire.test.jsx` (fake timers, faked mediaDevices). Not checked on a real camera.
+
+## A click on a playing clip (to change its effects) switched the clip off (2026-11-11, owner row N3634)
+Symptom: on the VJ Deck, clicking the tile that plays, to reach its clip settings or add an effect, stopped its layer: the picture went off.
+Cause: `VjDeckView.jsx` `onSlot` wrote `clearLayer` when the clicked tile was the active one ("tap again stops", a deliberate earlier design).
+Fix: a click on the playing tile only selects it; any other tile still triggers. A layer stops with the x beside its name (`Clear Layer N`).
+Guard: `VjDeckView.preview.test.jsx` ("keeps it playing and only selects it"), `VjDeckView.test.jsx` (tap again keeps `active`, the x stops). Seen on the agent browser against the real deck: the same two clips play before and after the click.
+
+## The Xone:K2 was invisible to the show browser (Flatpak Chromium Web MIDI, 2026-11-11, owner rows N3621/N3630)
+Symptom: the deck said "no controller"; the page had MIDI permission but listed only "Midi Through Port-0", while `amidi -l` showed the K2.
+Cause: Chromium finds hardware MIDI ports through udev and the Flatpak sandbox has no `/run/udev`.
+Fix: `scripts/show/k2-browser-access.sh on` (read-only per-user override; `off` undoes it), then `scripts/show/stage-restart.sh <stage-open options>` (asks the browser to quit over its debugging port, opens the stage and Perform again; nothing is killed). Both take `--dry-run`.
+Guard: none automated (needs the hardware); `k2-browser-access.sh status` prints the override and the ports Linux sees.

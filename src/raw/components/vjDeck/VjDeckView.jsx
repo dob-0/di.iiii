@@ -405,9 +405,10 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         setSelected({ layer: layerIndex, column })
         setFxPick(null)
         if (previewOnly) return
-        // The tile that is already playing stops its layer, the same as the x beside the name.
-        if (deck.layers[layerIndex].active === column) write(clearLayer(latestDeck.current, layerIndex))
-        else write(trigger(latestDeck.current, layerIndex, column))
+        // A click on the tile that is already playing only selects it (to reach its clip and effects): it stopped
+        // the layer before, so picking a clip to change an effect switched the picture off (owner, N3634).
+        // The x beside the layer's name is the one way to stop a layer.
+        if (deck.layers[layerIndex].active !== column) write(trigger(latestDeck.current, layerIndex, column))
     }
 
     // Take: the previewed clip goes live (the only way out in Preview only besides MIDI).
