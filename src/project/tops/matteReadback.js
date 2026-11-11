@@ -60,7 +60,7 @@ export const createMatteReadback = (gl, width, height) => {
                 if (status !== gl.ALREADY_SIGNALED && status !== gl.CONDITION_SATISFIED) { fail(); return false }
                 dropSync()
                 gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer)
-                gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, dst, 0, bytes)
+                gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, dst)
                 gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null)
                 return true
             } catch {

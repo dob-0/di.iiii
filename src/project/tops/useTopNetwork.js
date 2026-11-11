@@ -125,10 +125,12 @@ const EMPTY = { nodes: [], wires: [] }
  * @param {(nodeId, numbers) => void} [options.onMeasure]  Analyze readings, local and remote
  * @param {Array|Map} [options.assets]        the project's files, so a Clip In's asset id finds its video
  * @param {string} [options.projectId]        the project those files belong to
+ * @param {object} [options.engineOptions]    extra createTopEngine options (asyncReadback, maxFps, matteRunsPerSecond); a page passes a constant
  */
 export function useTopNetwork({
     network = EMPTY, spaceId = '', canvas = null, show = null, thumbnails = false, onMeasure = null,
-    assets = null, projectId = null, width = 640, height = 360
+    assets = null, projectId = null, width = 640, height = 360,
+    engineOptions = null
 }) {
     const [error, setError] = useState('')
     const [link, setLink] = useState(null)
@@ -145,6 +147,8 @@ export function useTopNetwork({
     const inspected = useInspectedTop()
     const onMeasureRef = useRef(onMeasure)
     const showRef = useRef(show)
+    // Read once, when the engine is made: a page passes a constant.
+    const engineOptionsRef = useRef(engineOptions)
     useEffect(() => {
         onMeasureRef.current = onMeasure
         showRef.current = show
@@ -191,6 +195,7 @@ export function useTopNetwork({
                 canvas: target,
                 width,
                 height,
+                ...engineOptionsRef.current,
                 onMeasure: (id, numbers) => {
                     numbersRef.current[id] = numbers
                     onMeasureRef.current?.(id, numbers)
@@ -231,7 +236,8 @@ export function useTopNetwork({
         const tiles = createThumbnailScheduler()
         const loop = (now) => {
             raf = requestAnimationFrame(loop)
-            engine.frame(now)
+            // A capped engine (engineOptions.maxFps) skips frames: nothing else is due on a skipped one.
+            if (engine.frame(now) === false) return
             count += 1
             if (thumbnails) {
                 // One map per layer of registrations: a deck's master is on

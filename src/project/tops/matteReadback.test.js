@@ -17,7 +17,7 @@ const fakeGl = () => {
         flush: () => calls.push('flush'),
         clientWaitSync: (s, flags, timeout) => { calls.push(`clientWaitSync:${flags}:${timeout}`); return gl.signal },
         deleteSync: () => calls.push('deleteSync'),
-        getBufferSubData: (t, off, dst, dOff, len) => { calls.push(`getBufferSubData:${len}`); dst.fill(7) },
+        getBufferSubData: (t, off, dst, dOff, len) => { calls.push(`getBufferSubData:${dst.length}`); dst.fill(7) },
         deleteBuffer: () => calls.push('deleteBuffer'),
         isContextLost: () => gl.lost
     }

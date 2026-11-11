@@ -95,3 +95,32 @@ describe('a Send Out on the page that runs it', () => {
         expect(sender.stop).toHaveBeenCalledTimes(1)
     })
 })
+
+describe('engine options and a capped engine', () => {
+    it('hands engineOptions to the engine when it is made (asyncReadback, maxFps, matteRunsPerSecond)', async () => {
+        const { createTopEngine } = await import('./topEngine.js')
+        createTopEngine.mockClear()
+        renderHook(() => useTopNetwork({ network: toTopNetwork(document), engineOptions: { maxFps: 30, matteRunsPerSecond: 15 } }))
+        expect(createTopEngine.mock.calls[0][0]).toMatchObject({ maxFps: 30, matteRunsPerSecond: 15 })
+    })
+
+    it('without engineOptions the engine gets no cap', async () => {
+        const { createTopEngine } = await import('./topEngine.js')
+        createTopEngine.mockClear()
+        renderHook(() => useTopNetwork({ network: toTopNetwork(document) }))
+        expect(createTopEngine.mock.calls[0][0].maxFps).toBeUndefined()
+    })
+
+    it('a skipped frame (engine.frame() === false) pumps nothing and shows nothing', () => {
+        renderHook(() => useTopNetwork({ network: toTopNetwork(document), show: 'out', thumbnails: true }))
+        engine.frame.mockImplementation(() => false)
+        engine.show.mockClear(); sender.pump.mockClear(); engine.thumbnails.mockClear()
+        act(() => { frames[0](16) })
+        expect(engine.show).not.toHaveBeenCalled()
+        expect(sender.pump).not.toHaveBeenCalled()
+        expect(engine.thumbnails).not.toHaveBeenCalled()
+        engine.frame.mockImplementation(() => true)
+        act(() => { frames.at(-1)(32) })
+        expect(engine.show).toHaveBeenCalledTimes(1)
+    })
+})
