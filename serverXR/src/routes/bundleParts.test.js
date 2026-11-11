@@ -109,4 +109,34 @@ describe('bundle parts', () => {
         expect(seen.files).toEqual(['joined.diiii', 'meta.json', 'status.json'])
         expect(fs.readdirSync(path.join(root, id)).sort()).toEqual(['meta.json', 'status.json'])
     })
+    it('finish: two finishes at the same moment start one join, the other gets already_finishing', async () => {
+        let imports = 0
+        const text = '0123456789'
+        const { handlers, root } = setup({ statfs: async () => ({ bavail: 1e12, bsize: 1 }) }, async (req, res) => {
+            imports += 1
+            res.status(201).json({ spaceId: 'x' })
+        })
+        let res = respond()
+        await handlers[START](startReq('u1', { size: 10, sha256: sha(text), name: 'x.diiii' }), res, (e) => { throw e })
+        const id = res.body.uploadId
+        for (const [n, piece] of [[1, '0123'], [2, '4567'], [3, '89']]) fs.writeFileSync(path.join(root, id, `part-00000${n}`), piece)
+        const req = { authState: { type: 'session', subject: 'u1' }, params: { id }, body: {} }
+        const a = respond()
+        const b = respond()
+        await Promise.all([
+            handlers['post /api/spaces/bundle/uploads/:id/finish'](req, a, (e) => { throw e }),
+            handlers['post /api/spaces/bundle/uploads/:id/finish'](req, b, (e) => { throw e })
+        ])
+        expect([a.code, b.code].sort()).toEqual([202, 409])
+        expect([a.body.code, b.body.code]).toContain('already_finishing')
+        let status
+        for (let i = 0; i < 100 && status?.state !== 'done'; i += 1) {
+            await new Promise((r) => setTimeout(r, 20))
+            const got = respond()
+            await handlers['get /api/spaces/bundle/uploads/:id'](req, got, (e) => { throw e })
+            status = got.body
+        }
+        expect(status.state).toBe('done')
+        expect(imports).toBe(1)
+    })
 })

@@ -260,23 +260,31 @@ const registerBundleParts = (router, {
       const upload = await open(req, res)
       if (!upload) return
       const { meta, dir } = upload
-      if (running.has(upload.id) || await readJson(path.join(dir, 'status.json'))) {
+      // Claimed before any await: two finishes at once must not both start a join.
+      if (running.has(upload.id)) {
         return res.status(409).json({ error: 'This upload is already being finished.', code: 'already_finishing' })
       }
-      const missing = []
-      for (let n = 1; n <= meta.parts; n += 1) {
-        if (!fs.existsSync(path.join(dir, partName(n)))) missing.push(n)
-      }
-      if (missing.length) {
-        // Kept: the sender can put the missing parts and finish again.
-        const shown = missing.slice(0, 20)
-        return res.status(409).json({ error: `Parts missing: ${shown.join(', ')}${missing.length > shown.length ? ' …' : ''}.`, code: 'parts_missing', missing: shown })
-      }
       running.add(upload.id)
-      await writeStatus(dir, { state: 'joining' })
-      // Not awaited: the answer must come before a proxy gives up on it.
-      runJob(req, upload).catch(() => {})
-      res.status(202).json({ uploadId: upload.id, state: 'joining' })
+      let started = false
+      try {
+        if (await readJson(path.join(dir, 'status.json'))) {
+          return res.status(409).json({ error: 'This upload is already being finished.', code: 'already_finishing' })
+        }
+        const missing = []
+        for (let n = 1; n <= meta.parts; n += 1) {
+          if (!fs.existsSync(path.join(dir, partName(n)))) missing.push(n)
+        }
+        if (missing.length) {
+          // Kept: the sender can put the missing parts and finish again.
+          const shown = missing.slice(0, 20)
+          return res.status(409).json({ error: `Parts missing: ${shown.join(', ')}${missing.length > shown.length ? ' …' : ''}.`, code: 'parts_missing', missing: shown })
+        }
+        await writeStatus(dir, { state: 'joining' })
+        // Not awaited: the answer must come before a proxy gives up on it.
+        started = true
+        runJob(req, upload).catch(() => {})
+        res.status(202).json({ uploadId: upload.id, state: 'joining' })
+      } finally { if (!started) running.delete(upload.id) }
     } catch (error) { next(error) }
   })
 
