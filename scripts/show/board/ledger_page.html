@@ -1,0 +1,67 @@
+<title>{{NAME}} Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a show-desk list, one band per thing on stage, cards sorted by what needs your hands */
+:root{
+  --bg:#f3f3f1; --panel:#ffffff; --fg:#141414; --mute:#5e5e5a; --line:#d9d9d4;
+  --you:#b45309; --run:#1d4ed8; --open:#6b6b66; --done:#15803d; --bad:#b91c1c;
+  --sans:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0b0b; --panel:#151515; --fg:#ececea; --mute:#9a9a95; --line:#2a2a28;
+  --you:#f59e0b; --run:#60a5fa; --open:#8a8a85; --done:#4ade80; --bad:#f87171; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b0b0b; --panel:#151515; --fg:#ececea; --mute:#9a9a95; --line:#2a2a28;
+  --you:#f59e0b; --run:#60a5fa; --open:#8a8a85; --done:#4ade80; --bad:#f87171; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.45}
+main{max-width:1100px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px}
+.head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:12px;border-bottom:2px solid var(--fg);padding-bottom:12px}
+h1{font-family:var(--mono);font-size:1.6rem;margin:0;letter-spacing:.02em}
+.head p{margin:0;color:var(--mute);font-family:var(--mono);font-size:.8rem}
+.tally{display:flex;flex-wrap:wrap;gap:8px}
+.tally span{font-family:var(--mono);font-size:.8rem;padding:4px 10px;border:1px solid var(--line);background:var(--panel)}
+.tally b{font-size:1rem;margin-right:6px}
+.t-bad b{color:var(--bad)} .t-you b{color:var(--you)} .t-run b{color:var(--run)} .t-open b{color:var(--open)} .t-done b{color:var(--done)}
+section{display:flex;flex-direction:column;gap:10px}
+section header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+h2{font-size:1.05rem;margin:0;text-transform:uppercase;letter-spacing:.08em}
+section header p{margin:0;color:var(--mute);font-size:.85rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.row,.pr{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c);padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.k-you{--c:var(--you)} .k-run{--c:var(--run)} .k-open{--c:var(--open)} .k-done{--c:var(--done)} .k-bad{--c:var(--bad)} .pr{--c:var(--run)}
+.top{display:flex;gap:10px;align-items:center;font-family:var(--mono);font-size:.75rem;color:var(--mute)}
+.chip{color:var(--c);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.who{margin-left:auto}
+.ask{margin:0;font-weight:500;overflow-wrap:anywhere}
+.state{margin:0;color:var(--mute);font-size:.85rem;overflow-wrap:anywhere}
+details{font-size:.8rem;color:var(--mute)} summary{cursor:pointer}
+summary:focus-visible,a:focus-visible{outline:2px solid var(--run);outline-offset:2px}
+.words{font-style:italic;margin:6px 0 0}
+a{color:var(--run)}
+.pr ul{list-style:none;margin:0;padding:0;font-family:var(--mono);font-size:.78rem;display:flex;flex-direction:column;gap:2px}
+.pr li span{display:inline-block;width:6.5em}
+.c-pass span{color:var(--done)} .c-fail span{color:var(--bad)} .c-pending span{color:var(--you)} .c-skipping span{color:var(--open)}
+.lane{margin:0;font-size:.85rem;overflow-wrap:anywhere}.lane b{font-family:var(--mono);font-size:.72rem;color:var(--mute);margin-right:6px}
+.count{font-family:var(--mono);font-size:1rem;font-weight:600;color:var(--you)}
+.agent{--c:var(--fg)}
+.brs{margin:0;padding:0;list-style:none;font-family:var(--mono);font-size:.75rem;display:flex;flex-direction:column;gap:2px;overflow-wrap:anywhere}
+.no{color:var(--bad)} .ok{color:var(--done)}
+.foot{color:var(--mute);font-size:.8rem;font-family:var(--mono)}
+</style>
+<main>
+  <div class="head">
+    <div><h1>{{TITLE}}</h1><p>{{SUB}} · board made {{NOW}} · <span class="count" id="cd"></span></p></div>
+    <div class="tally">
+      <span class="t-bad"><b>{{BAD}}</b>problem</span><span class="t-you"><b>{{YOU}}</b>try it</span><span class="t-run"><b>{{RUN}}</b>working</span>
+      <span class="t-open"><b>{{OPEN}}</b>not started</span><span class="t-done"><b>{{DONE}}</b>done</span>
+    </div>
+  </div>
+  {{FACTS}}
+  {{AGENTS}}
+  {{SECTIONS}}
+  {{BRANCHES}}
+  <section><header><h2>Pull requests</h2><p>Code waiting to merge, with its checks.</p></header><div class="grid">{{PRS}}</div></section>
+  <p class="foot">Made from the owner ledger, the chats' lane and handover files, git and GitHub by {{SOURCE}}. “Try it” means the work is built or installed and waits for your hands. A card shows the state the owning chat last wrote.</p>
+</main>
+<script>(function(){var s=new Date("{{SHOWAT}}"),e=document.getElementById("cd");function f(){var m=Math.floor((s-new Date())/6e4);e.textContent=m>0?Math.floor(m/60)+" h "+(m%60)+" min to doors":"show time"}f();setInterval(f,3e4)})()</script>

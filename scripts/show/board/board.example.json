@@ -1,0 +1,24 @@
+{
+  "title": "SHOW NAME",
+  "name": "Show name",
+  "sub": "City · day and time of the show",
+  "showAt": "2026-01-01T20:00:00+04:00",
+  "source": "scripts/show/board/ledger_board.py (di.iiii) with this show's board.json",
+  "ledger": "~/work/OWNER_REQUESTS_2026-09-30.md",
+  "reports": "~/work/agent-reports-2026-01-01/",
+  "firstRow": 0,
+  "treesRoot": "~/work",
+  "treeGlob": "~/work/di.iiii-*",
+  "branchMatch": "show-name",
+  "branchLabel": "show",
+  "chats": [
+    {"name": "lead", "session": "00000000", "what": "Leads: reads every chat, keeps this board", "handover": "HANDOVER-lead.md", "trees": []}
+  ],
+  "areas": [
+    {"name": "Lights", "what": "Lamps, patch, light scenes.", "match": "light|lamp|patch|dmx"},
+    {"name": "Other", "what": "Everything else.", "match": ""}
+  ],
+  "prs": [
+    {"repo": "owner/repo", "number": 1, "note": "what this pull request is"}
+  ]
+}
