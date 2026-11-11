@@ -19,6 +19,8 @@
 
 import { watchVideoFrames, hasNewFrame } from './videoFrames.js'
 import { bodyMatte, MATTE_W, MATTE_H } from './bodyMatte.js'
+import { createMatteReadback } from './matteReadback.js'
+import { createGovernor } from './frameGovernor.js'
 import { pickMatteRuns } from './matteScheduler.js'
 import { TOP_OPERATORS, isTopType, measurePixels, resolveTopParams, hexToRgb01 } from './topOperators.js'
 
@@ -206,10 +208,18 @@ const freeTarget = (gl, target) => {
  * @param {number} options.width   processing resolution (every operator)
  * @param {number} options.height
  * @param {(nodeId: string, numbers: object) => void} [options.onMeasure]  Analyze results
+ * @param {boolean} [options.asyncReadback]  Body: read the source picture through a WebGL2 pixel buffer + fence
+ *   (the page never waits for the graphics process); WebGL1 or a lost context keeps the blocking read. Default off.
+ * @param {number} [options.maxFps]  at most this many draws a second (frame() returns false when it skips); 0 = unlimited (default)
+ * @param {number} [options.matteRunsPerSecond]  at most this many Body model runs a second; 0 = unlimited (default)
  */
-export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure = null, resolveParams = null } = {}) => {
-    const gl = canvas.getContext('webgl', { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: false })
+export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure = null, resolveParams = null, asyncReadback = false, maxFps = 0, matteRunsPerSecond = 0 } = {}) => {
+    const attributes = { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: false }
+    // The shaders are GLSL ES 1.00 and run unchanged in a WebGL2 context; it is asked for only when the
+    // non-blocking read-back is on (a canvas keeps the first kind it was given).
+    const gl = (asyncReadback && canvas.getContext('webgl2', attributes)) || canvas.getContext('webgl', attributes)
     if (!gl) throw new Error('no WebGL on this machine')
+    const governor = createGovernor({ maxFps, runsPerSecond: matteRunsPerSecond })
 
     // The engine's own clock starts here, not at the first frame() — so a
     // network that never calls frame() still has a well-defined "elapsed 0",
@@ -344,7 +354,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             inputsFor.get(wire.to)[wire.port || 'a'] = wire.from
         }
         const wanted = new Set(nodes.filter((node) => TOP_OPERATORS[node.type].matte).map((node) => inputsFor.get(node.id).b).filter(Boolean))
-        for (const [id, state] of matteStates) if (!wanted.has(id)) { gl.deleteTexture(state.texture); matteStates.delete(id) }
+        for (const [id, state] of matteStates) if (!wanted.has(id)) { state.reader?.dispose(); gl.deleteTexture(state.texture); matteStates.delete(id) }
         for (const [id, slot] of slots) {
             if (byId.has(id)) continue
             if (slot.type === '__remote') { gl.deleteTexture(slot.now.texture); slots.delete(id); continue }
@@ -434,7 +444,12 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         if (state.frame === matteFrames) return state
         state.frame = matteFrames
         const service = bodyMatte()
-        if (service.status() !== 'ready' || !readSource) { state.ready = false; return state }
+        if (service.status() !== 'ready' || !readSource) { state.reader?.cancel(); state.ready = false; return state }
+        // A read that was started on an earlier frame: never wait for it, look again next frame.
+        if (state.reader?.pending()) {
+            if (!state.reader.poll(mattePixels)) return state
+            return finishRead(state, service, sourceId)
+        }
         // Not this source's turn (the budget went to an older mask): it keeps the mask it has.
         if (!matteAllowed.has(sourceId)) return state
         if (!matteTarget) {
@@ -443,7 +458,17 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         }
         bindTexture(present, 'a', 0, readSource)
         draw(present, matteTarget)
+        if (asyncReadback && state.reader !== null) {
+            if (state.reader === undefined) state.reader = createMatteReadback(gl, MATTE_W, MATTE_H)
+            if (state.reader && state.reader.start()) return state
+            if (state.reader?.failed()) { state.reader.dispose(); state.reader = null }
+        }
         gl.readPixels(0, 0, MATTE_W, MATTE_H, gl.RGBA, gl.UNSIGNED_BYTE, mattePixels)
+        return finishRead(state, service, sourceId)
+    }
+
+    // The 480x270 picture is in mattePixels: skip it when it equals the last one, else hand it to the model.
+    const finishRead = (state, service, sourceId) => {
         const words = new Uint32Array(mattePixels.buffer)
         let same = state.previous !== null
         if (same) for (let i = 0; i < words.length; i += 1) if (words[i] !== state.previous[i]) { same = false; break }
@@ -477,32 +502,41 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
     }
 
     // Which sources may start a model run this frame (see matteScheduler.js).
-    const planMatteRuns = () => {
+    const planMatteRuns = (now) => {
         matteAllowed = new Set()
         const service = bodyMatte()
         if (service.status() !== 'ready') return
+        if (!governor.runDue(now)) return
         const seen = new Set()
         const candidates = []
+        let pending = 0
         for (const id of order) {
             const node = byId.get(id)
             if (!TOP_OPERATORS[node.type].matte || !matteWanted(node)) continue
             const source = inputsFor.get(id)?.b
             if (!source || seen.has(source)) continue
             seen.add(source)
-            candidates.push({ id: source, lastPicked: matteStates.get(source)?.picked ?? -Infinity })
+            const reading = matteStates.get(source)?.reader?.pending()
+            if (reading) pending += 1
+            else candidates.push({ id: source, lastPicked: matteStates.get(source)?.picked ?? -Infinity })
         }
-        for (const picked of pickMatteRuns(candidates, service.budget())) {
+        // A read already under way will use a run of the budget when it completes.
+        const picks = pickMatteRuns(candidates, Math.max(0, service.budget() - pending))
+        if (picks.length) governor.noteRun(now)
+        for (const picked of picks) {
             matteAllowed.add(picked)
             const state = matteStates.get(picked)
             if (state) state.picked = matteFrames
         }
     }
 
+    // Returns false when this frame was skipped (maxFps), true when it was drawn.
     const frame = (now = performance.now()) => {
+        if (!governor.drawDue(now)) return false
         pullRemotes()
         matteFrames += 1
         applyMatteAnswers()
-        planMatteRuns()
+        planMatteRuns(now)
         // One clock for the whole frame: every operator that reads `time`
         // (Clouds, Shape) sees the same instant a wire between them would.
         const clock = clockSecondsFor(now - createdAt)
@@ -601,6 +635,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
                 onMeasure(node.id, measurePixels(measurePixelsBuffer, MEASURE_W, MEASURE_H, threshold))
             }
         }
+        return true
     }
 
     /** Draw one operator's current output onto the engine canvas (the projector). */
@@ -637,7 +672,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         width,
         height,
         setNetwork,
-        setVideo: (nodeId, video) => { watch(nodeId, video); if (video) videos.set(nodeId, video); else videos.delete(nodeId) },
+        setVideo: (nodeId, video) => { matteStates.get(nodeId)?.reader?.cancel(); watch(nodeId, video); if (video) videos.set(nodeId, video); else videos.delete(nodeId) },
         setRemoteVideo: (nodeId, video) => { watch(nodeId, video); if (video) remoteVideos.set(nodeId, video); else remoteVideos.delete(nodeId) },
         frame,
         show,
@@ -656,7 +691,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             watchers.clear()
             freeTarget(gl, measureTarget)
             if (matteTarget) freeTarget(gl, matteTarget)
-            for (const state of matteStates.values()) gl.deleteTexture(state.texture)
+            for (const state of matteStates.values()) { state.reader?.dispose(); gl.deleteTexture(state.texture) }
             matteStates.clear()
             for (const compiled of programs.values()) if (compiled.program) gl.deleteProgram(compiled.program)
             gl.getExtension('WEBGL_lose_context')?.loseContext()
