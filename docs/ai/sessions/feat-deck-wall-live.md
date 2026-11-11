@@ -29,4 +29,9 @@ The operator turns it off with Live wall when frames matter.
 switch is per browser. The branch can be left unmerged.
 
 ## Tested / not tested
-See the pull request and the report of the job; this note is filled with the results there.
+- Ran: on a scratch stack of this tree, `stage-base.mjs` and `epic-build.mjs --hall none --apply` (441 entities, 36 cues), then
+  `wall-live.mjs` dry (2 ops), `--apply` (2 ops, read back one `platina-screen-live` plane, surface network -> deck node, animation
+  static) and a second `--apply` (0 ops, still one plane). One deck clip was pointed at a stored file of ours (an uploaded mp4 asset).
+- Not run: the vitest files (`liveWall.test.js`, `LiveWall.test.jsx`, `wall-live.test.js`): the show laptop's frame-rate gate stayed
+  closed (exit 1 six times, then exit 2), and the draft pull request starts no CI run because it conflicts with dev (the deck line).
+- Not looked at: no browser page was opened; the room views were not seen.
