@@ -118,6 +118,11 @@
      540,
      200
     ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
     "weight_kg": 20.7,
     "power_w": 700,
     "zoom_deg": [
@@ -822,7 +827,13 @@
    "tower": 1,
    "bar_in_tower": 1,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-02",
@@ -886,7 +897,13 @@
    "tower": 1,
    "bar_in_tower": 2,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-03",
@@ -950,7 +967,13 @@
    "tower": 1,
    "bar_in_tower": 3,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-04",
@@ -1014,7 +1037,13 @@
    "tower": 2,
    "bar_in_tower": 1,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-05",
@@ -1078,7 +1107,13 @@
    "tower": 2,
    "bar_in_tower": 2,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-06",
@@ -1142,7 +1177,13 @@
    "tower": 2,
    "bar_in_tower": 3,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-07",
@@ -1206,7 +1247,13 @@
    "tower": 3,
    "bar_in_tower": 1,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-08",
@@ -1270,7 +1317,13 @@
    "tower": 3,
    "bar_in_tower": 2,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-09",
@@ -1334,7 +1387,13 @@
    "tower": 3,
    "bar_in_tower": 3,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-10",
@@ -1398,7 +1457,13 @@
    "tower": 4,
    "bar_in_tower": 1,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-11",
@@ -1462,7 +1527,13 @@
    "tower": 4,
    "bar_in_tower": 2,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-12",
@@ -1526,7 +1597,13 @@
    "tower": 4,
    "bar_in_tower": 3,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-13",
@@ -1590,7 +1667,13 @@
    "tower": 5,
    "bar_in_tower": 1,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-14",
@@ -1654,7 +1737,13 @@
    "tower": 5,
    "bar_in_tower": 2,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-15",
@@ -1718,7 +1807,13 @@
    "tower": 5,
    "bar_in_tower": 3,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-16",
@@ -1782,7 +1877,13 @@
    "tower": 6,
    "bar_in_tower": 1,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-17",
@@ -1846,7 +1947,13 @@
    "tower": 6,
    "bar_in_tower": 2,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-18",
@@ -1910,7 +2017,13 @@
    "tower": 6,
    "bar_in_tower": 3,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-19",
@@ -1974,7 +2087,13 @@
    "tower": 7,
    "bar_in_tower": 1,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-20",
@@ -2038,7 +2157,13 @@
    "tower": 7,
    "bar_in_tower": 2,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-21",
@@ -2102,7 +2227,13 @@
    "tower": 7,
    "bar_in_tower": 3,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-22",
@@ -2166,7 +2297,13 @@
    "tower": 8,
    "bar_in_tower": 1,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-23",
@@ -2230,7 +2367,13 @@
    "tower": 8,
    "bar_in_tower": 2,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-pixel-24",
@@ -2294,7 +2437,13 @@
    "tower": 8,
    "bar_in_tower": 3,
    "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
-   "aim_home": "horizontal +z"
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
   },
   {
    "id": "platina-k10-01",
@@ -2850,8 +2999,8 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.38,
-    0.4,
+    0.39,
+    0.44,
     0.33
    ],
    "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
@@ -2874,6 +3023,11 @@
      540,
      200
     ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
     "weight_kg": 20.7,
     "power_w": 700,
     "zoom_deg": [
@@ -2881,7 +3035,7 @@
      60
     ]
    },
-   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 3,
     "address": 1,
@@ -2912,8 +3066,8 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.38,
-    0.4,
+    0.39,
+    0.44,
     0.33
    ],
    "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
@@ -2936,6 +3090,11 @@
      540,
      200
     ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
     "weight_kg": 20.7,
     "power_w": 700,
     "zoom_deg": [
@@ -2943,7 +3102,7 @@
      60
     ]
    },
-   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 3,
     "address": 113,
@@ -2974,8 +3133,8 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.38,
-    0.4,
+    0.39,
+    0.44,
     0.33
    ],
    "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
@@ -2998,6 +3157,11 @@
      540,
      200
     ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
     "weight_kg": 20.7,
     "power_w": 700,
     "zoom_deg": [
@@ -3005,7 +3169,7 @@
      60
     ]
    },
-   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 3,
     "address": 225,
@@ -3036,8 +3200,8 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.38,
-    0.4,
+    0.39,
+    0.44,
     0.33
    ],
    "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
@@ -3060,6 +3224,11 @@
      540,
      200
     ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
     "weight_kg": 20.7,
     "power_w": 700,
     "zoom_deg": [
@@ -3067,7 +3236,7 @@
      60
     ]
    },
-   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 3,
     "address": 337,
@@ -3098,8 +3267,8 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.38,
-    0.4,
+    0.39,
+    0.44,
     0.33
    ],
    "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
@@ -3122,6 +3291,11 @@
      540,
      200
     ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
     "weight_kg": 20.7,
     "power_w": 700,
     "zoom_deg": [
@@ -3129,7 +3303,7 @@
      60
     ]
    },
-   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 4,
     "address": 1,
@@ -3160,8 +3334,8 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
-    0.38,
-    0.4,
+    0.39,
+    0.44,
     0.33
    ],
    "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
@@ -3184,6 +3358,11 @@
      540,
      200
     ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
     "weight_kg": 20.7,
     "power_w": 700,
     "zoom_deg": [
@@ -3191,7 +3370,7 @@
      60
     ]
    },
-   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 4,
     "address": 113,
@@ -3222,9 +3401,9 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
+    0.44,
     0.39,
-    0.38,
-    0.36
+    0.33
    ],
    "source": "x plot-front.png lamp body, z plot-side.png/plot-top.png, height plot-front.png: on a stand at the side (the plot shows a pole)",
    "profile": {
@@ -3246,6 +3425,11 @@
      540,
      200
     ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
     "weight_kg": 20.7,
     "power_w": 700,
     "zoom_deg": [
@@ -3253,7 +3437,7 @@
      60
     ]
    },
-   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 4,
     "address": 225,
@@ -3284,9 +3468,9 @@
    ],
    "angle_rad": 0.2618,
    "size_m": [
+    0.44,
     0.39,
-    0.38,
-    0.36
+    0.33
    ],
    "source": "x plot-front.png lamp body, z plot-side.png/plot-top.png, height plot-front.png: on a stand at the side (the plot shows a pole)",
    "profile": {
@@ -3308,6 +3492,11 @@
      540,
      200
     ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
     "weight_kg": 20.7,
     "power_w": 700,
     "zoom_deg": [
@@ -3315,7 +3504,7 @@
      60
     ]
    },
-   "size_basis": "from the plot symbol: the maker's outer size is not in the papers held",
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
    "dmx": {
     "universe": 4,
     "address": 337,
@@ -4380,6 +4569,22 @@
      0.0
     ],
     "fov": 58,
+    "live": true
+   },
+   {
+    "id": "render",
+    "label": "Like the render",
+    "position": [
+     -0.04,
+     3.0,
+     30.25
+    ],
+    "target": [
+     -0.04,
+     3.0,
+     0.0
+    ],
+    "fov": 32,
     "live": true
    },
    {

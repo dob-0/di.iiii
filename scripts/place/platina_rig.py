@@ -325,7 +325,9 @@ def build(repo, M):
             yc = bar_y0 + barh * (j + 0.5)
             add(f'platina-pixel-{n + 1:02d}', 'acme-pixel-line-ip', f'pixel-line-g{n // 4 + 1}', [x, yc, z], [-math.pi / 2, 0, 0], 0.8814, 'measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience\'s left)',
                 f'tower {t + 1}, bar {j + 1} from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck', f'pixel line tower {t + 1} bar {j + 1}', [bw, barh, bd], n % 4,
-                {'tower': t + 1, 'bar_in_tower': j + 1, 'face': '+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole', 'aim_home': 'horizontal +z'})
+                {'tower': t + 1, 'bar_in_tower': j + 1, 'face': '+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole', 'aim_home': 'horizontal +z',
+                 # what the eye sees of this lamp: a 1 m glowing strip, not a point (its length runs up the pole = the lamp's local z)
+                 'emitter': {'shape': 'bar', 'width_m': 0.09, 'length_m': 1.0, 'basis': "maker's outer size 1,000 x 90 mm (library size_mm)"}})
             n += 1
     # K10 over the stage: 8, from the audience's left
     kx = sorted(M['k10']['over_x_top_m']); zl = M['k10']['over_z_side_m']; yk = (M['k10']['y_front_centre_m'] + M['k10']['y_side_centre_m']) / 2

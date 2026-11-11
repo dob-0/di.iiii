@@ -327,10 +327,12 @@ export const patchOps = (doc, rig) => {
 const beamOf = (f, hall, report) => {
     const length = reachOf(f, hall)
     const haze = f?.profile?.draw?.haze ?? HAZE[photoKind(f)] ?? 0.35
-    if (length !== 0) return { visible: true, haze, length }
+    // `emitter`: the lamp's own glowing face as the eye sees it (an LED bar is a 1 m strip, not a point); the room view draws it
+    const emitter = f?.emitter?.shape ? { emitter: { shape: f.emitter.shape, width: Number(f.emitter.width_m) || 0.1, length: Number(f.emitter.length_m) || 1 } } : {}
+    if (length !== 0) return { visible: true, haze, length, ...emitter }
     const at = lampFirstSurface(f, hall)
     report?.push({ id: f.id, why: at.why, surface: at.name })
-    return { visible: false, haze }
+    return { visible: false, haze, ...emitter }
 }
 
 /** v1.0's entities from the rig file. `report` (an array) collects the lamps whose first hit is 0 m. Pure. */

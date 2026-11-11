@@ -1167,7 +1167,10 @@ const normalizeEntity = (entity = {}) => {
       // have no cutoff (light.distance 0) and its beam still end. Stored only when given.
       ...(ensureNumber(sourceComponents.beam.length, 0) > 0 ? { length: Math.min(1000, ensureNumber(sourceComponents.beam.length, 0)) } : {}),
       // `laser` (2026-10-09): a laser drawn as a line source (src/objectComponents/laserLine.js). Stored only when valid.
-      ...(normalizeBeamLaser(sourceComponents.beam.laser) ? { laser: normalizeBeamLaser(sourceComponents.beam.laser) } : {})
+      ...(normalizeBeamLaser(sourceComponents.beam.laser) ? { laser: normalizeBeamLaser(sourceComponents.beam.laser) } : {}),
+      // `emitter` (2026-11-12): the lamp's glowing face when it is not a lens — an LED bar is a strip `width` x
+      // `length` metres (the maker's outer size), drawn as that strip (EntityContent.jsx). Stored only when valid.
+      ...(normalizeBeamEmitter(sourceComponents.beam.emitter) ? { emitter: normalizeBeamEmitter(sourceComponents.beam.emitter) } : {})
     }
   }
   // THE JOIN to the lighting desk (`index`) plus the plot's patch beside it —
@@ -1341,6 +1344,12 @@ const normalizeWorldState = (world = {}) => {
 // `components.beam.optics` (2026-10-01, src/objectComponents/beamOptics.js): what is in
 // the beam's path — a radial prism, a honeycomb prism, frost, a gobo — set by the desk's
 // DMX or a look. Plain numbers, clamped; absent parts left out; null when nothing is in.
+const normalizeBeamEmitter = (emitter) => {
+  if (!emitter || typeof emitter !== 'object' || emitter.shape !== 'bar') return null
+  const size = (v, fallback) => Math.min(10, Math.max(0.01, ensureNumber(v, fallback)))
+  return { shape: 'bar', width: size(emitter.width, 0.1), length: size(emitter.length, 1) }
+}
+
 const normalizeBeamOptics = (optics) => {
   if (!optics || typeof optics !== 'object' || Array.isArray(optics)) return null
   const out = {}

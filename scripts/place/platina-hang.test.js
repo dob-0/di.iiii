@@ -20,7 +20,7 @@ describe('platina_hang.py views', () => {
         const out = path.join(dir, 'hv.json')
         expect(py('platina_hang.py', '--rig', rigPath, '--out', out).status).toBe(0)
         const v = read(out).views
-        expect(v.viewPresets.map((p) => p.label)).toEqual(['Audience', 'FOH', 'Side', 'Top'])
+        expect(v.viewPresets.map((p) => p.label)).toEqual(['Audience', 'FOH', 'Like the render', 'Side', 'Top'])
         expect(v.fixedCamera.position).toEqual(v.viewPresets[0].position)
         expect(v.fixedCamera.position[2]).toBeGreaterThan(6.25)
         expect(v.fixedCamera.position[2]).toBeLessThan(20)

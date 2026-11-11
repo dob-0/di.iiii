@@ -35,6 +35,8 @@ def views_of(rig):
     def view(id, label, pos, tgt, fov): return {'id': id, 'label': label, 'position': [round(v, 2) for v in pos], 'target': tgt, 'fov': fov, 'live': True}
     presets = [view('audience', 'Audience', [cx, 1.7, front + 9], target, 62),
                view('foh', 'FOH', [cx, 2.5, front + 14], target, 58),
+               # the rental's own renders: far, flat, from the front (owner 2026-11-11: compare our picture with theirs)
+               view('render', 'Like the render', [cx, 3.0, front + 24], [cx, 3.0, scr['p'][2]], 32),
                view('side', 'Side', [cx - 18, 3.0, d['p'][2]], [cx, 3.0, d['p'][2]], 50),
                view('top', 'Top', [cx, 26.0, d['p'][2] + 0.5], [cx, 0, d['p'][2]], 55)]
     a = presets[0]
