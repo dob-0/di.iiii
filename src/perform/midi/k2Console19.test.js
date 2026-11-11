@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { applyMidi } from './deckBinding.js'
-import { createDeck } from '../../project/tops/vjDeck.js'
+import { addEffect, createDeck } from '../../project/tops/vjDeck.js'
 import { K2_CONSOLES, K2_CONSOLE_DEFAULT, XONE_K2_MAP, XONE_K2_19_MAP, XONE_K2_19_FREE, XONE_K2_FREE, consoleOf, defaultMap } from './xoneK2.js'
 
 const byControl = (map, name) => map.find((entry) => entry.control === name)
@@ -56,5 +56,22 @@ describe('the two Xone:K2 consoles', () => {
         for (const value of [0, 1, 64, 127]) expect(applyMidi(deck, cc(19, value), map19)).toEqual(deck)
         expect(applyMidi(deck, cc(19, 127), defaultMap('k2')).layers[3].opacity).toBe(1)
         expect(applyMidi(deck, cc(19, 127), defaultMap()).layers[3].opacity).toBe(1)
+    })
+
+    it('T3b through applyMidi: on K2 (1.9) one encoder 3 tick nudges the third knob of the picked effect by a fiftieth of its range and moves no level; on K2 the same tick is the level of layer 6', () => {
+        // top.level: gain 0..20, brightness -1..1, gamma 0.1..4 (the third knob; range 3.9)
+        const deck = addEffect(sixLayers(), 0, 'top.level')
+        const ctx = { fx: { layer: 0, effect: 0 } }
+        const gamma = (d) => d.layers[0].effects[0].params.gamma
+        const levels = (d) => d.layers.map((layer) => layer.opacity)
+        const map19 = defaultMap('k2-1.9')
+        const up = applyMidi(deck, cc(2, 1), map19, ctx) // CC 2 = encoder 3, value 1 = one tick up
+        const down = applyMidi(deck, cc(2, 127), map19, ctx) // 127 = one tick down
+        expect(gamma(up) - gamma(deck)).toBeCloseTo(3.9 / 50, 3)
+        expect(gamma(down) - gamma(deck)).toBeCloseTo(-3.9 / 50, 3)
+        expect(levels(up)).toEqual(levels(deck))
+        const k2 = applyMidi(deck, cc(2, 1), defaultMap('k2'), ctx)
+        expect(k2.layers[5].opacity).toBeGreaterThan(0.5)
+        expect(gamma(k2)).toBe(gamma(deck))
     })
 })
