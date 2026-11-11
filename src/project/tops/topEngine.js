@@ -19,6 +19,7 @@
 
 import { watchVideoFrames, hasNewFrame } from './videoFrames.js'
 import { bodyMatte, MATTE_W, MATTE_H } from './bodyMatte.js'
+import { pickMatteRuns } from './matteScheduler.js'
 import { TOP_OPERATORS, isTopType, measurePixels, resolveTopParams, hexToRgb01 } from './topOperators.js'
 
 const VERTEX = `
@@ -276,6 +277,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
     // One mask per SOURCE picture (not per Body effect): two Body effects on the same
     // layer share one model run. Keyed by the id of the node that makes the source.
     const matteStates = new Map()
+    let matteAllowed = new Set()
     let mattePixels = null
 
     let network = { nodes: [], wires: [] }
@@ -426,13 +428,15 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-            state = { texture, ready: false, previous: null, image: null, frame: -1 }
+            state = { texture, ready: false, previous: null, frame: -1, picked: -Infinity }
             matteStates.set(sourceId, state)
         }
         if (state.frame === matteFrames) return state
         state.frame = matteFrames
         const service = bodyMatte()
         if (service.status() !== 'ready' || !readSource) { state.ready = false; return state }
+        // Not this source's turn (the budget went to an older mask): it keeps the mask it has.
+        if (!matteAllowed.has(sourceId)) return state
         if (!matteTarget) {
             matteTarget = makeTarget(gl, MATTE_W, MATTE_H)
             mattePixels = new Uint8Array(MATTE_W * MATTE_H * 4)
@@ -446,25 +450,59 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         if (same) return state
         state.previous = state.previous || new Uint32Array(words.length)
         state.previous.set(words)
-        if (!state.image) state.image = new ImageData(MATTE_W, MATTE_H)
+        // A fresh array each run: it is handed to the worker (transferred), not kept.
+        const data = new Uint8ClampedArray(MATTE_W * MATTE_H * 4)
         const rowBytes = MATTE_W * 4
         for (let y = 0; y < MATTE_H; y += 1) {
-            state.image.data.set(mattePixels.subarray((MATTE_H - 1 - y) * rowBytes, (MATTE_H - y) * rowBytes), y * rowBytes)
+            data.set(mattePixels.subarray((MATTE_H - 1 - y) * rowBytes, (MATTE_H - y) * rowBytes), y * rowBytes)
         }
-        for (let i = 3; i < state.image.data.length; i += 4) state.image.data[i] = 255
-        const result = service.run(state.image)
-        if (!result) return state
-        gl.bindTexture(gl.TEXTURE_2D, state.texture)
-        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, result.width, result.height, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, result.bytes)
-        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4)
-        state.ready = true
+        for (let i = 3; i < data.length; i += 4) data[i] = 255
+        service.submit(sourceId, { data, width: MATTE_W, height: MATTE_H })
         return state
+    }
+
+    // The masks the model finished since the last frame (a worker answers when it is done,
+    // never inside a frame): upload each to its source's texture. A source that went away
+    // is skipped.
+    const applyMatteAnswers = () => {
+        for (const answer of bodyMatte().poll()) {
+            const state = matteStates.get(answer.key)
+            if (!state) continue
+            gl.bindTexture(gl.TEXTURE_2D, state.texture)
+            gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, answer.width, answer.height, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, answer.bytes)
+            gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4)
+            state.ready = true
+        }
+    }
+
+    // Which sources may start a model run this frame (see matteScheduler.js).
+    const planMatteRuns = () => {
+        matteAllowed = new Set()
+        const service = bodyMatte()
+        if (service.status() !== 'ready') return
+        const seen = new Set()
+        const candidates = []
+        for (const id of order) {
+            const node = byId.get(id)
+            if (!TOP_OPERATORS[node.type].matte || !matteWanted(node)) continue
+            const source = inputsFor.get(id)?.b
+            if (!source || seen.has(source)) continue
+            seen.add(source)
+            candidates.push({ id: source, lastPicked: matteStates.get(source)?.picked ?? -Infinity })
+        }
+        for (const picked of pickMatteRuns(candidates, service.budget())) {
+            matteAllowed.add(picked)
+            const state = matteStates.get(picked)
+            if (state) state.picked = matteFrames
+        }
     }
 
     const frame = (now = performance.now()) => {
         pullRemotes()
         matteFrames += 1
+        applyMatteAnswers()
+        planMatteRuns()
         // One clock for the whole frame: every operator that reads `time`
         // (Clouds, Shape) sees the same instant a wire between them would.
         const clock = clockSecondsFor(now - createdAt)
