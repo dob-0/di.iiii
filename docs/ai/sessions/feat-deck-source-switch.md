@@ -1,0 +1,7 @@
+## 2026-11-11 - VJ deck: On / Off switch on every live source (owner: "also turn off on button how that in the obs")
+
+- Devices, Network and Inputs rows of the Sources panel end with an On / Off button (aria-pressed, a title that says what a press does). Files have none.
+- Off = this computer stops using the source: the camera pool stops every clone and the capture, refuses a new open (also one that resolves late), the picture network never opens the camera and drops its video, an input clip's blend goes to Amount 0, a wall camera surface and the deck's camera PREVIEW close. A camera that is off is not reported as missing (the see-through rule for a really missing camera is unchanged).
+- State: localStorage `di.vjDeck.sourcesOff` = `{ v: 1, off: [keys] }`, per computer and browser profile, never in the project. Keys: `camera:<label>` (what a camera clip stores in `camera`), `input:<in1..in4>` (what an input clip stores), `ndi:<label>` (no clip exists). Other pages follow by the storage event; the page itself by one store with subscribe.
+- Files: src/project/tops/sourceSwitch.js (store), cameraPool.js, useTopNetwork.js, vjDeck.js (blend mark), src/map/MapSourceView.jsx, src/raw/components/vjDeck/SourceSwitch.jsx + sourceSwitch.css, VjDeckView.jsx (row wiring only). Tests beside each.
+- Not done: a Camera In node with only a device id (no label) is released by the pool but may report "stopped" until it is switched on; an input source that is also a camera node feeding other consumers keeps running for them.
