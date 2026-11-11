@@ -57,3 +57,11 @@ reads the same schematic in every version). Try in that section stays a Studio-s
   the scene name through the existing show chip only.
 - "Lamp bodies dark" in Show: the bodies render as they do today; a darker body material is owed if the GPU look asks.
 - The look is unvalidated until seen on the GPU (v2-11 "second-drop" and "green-breath", Tech and Show from one camera).
+
+## Addendum 2026-11-12 — Tech as the operator mode (owner N3818; OPEN for the owner's yes)
+
+Tech now keeps what an operator needs to check a running cue: the rig's data holders (`rigLooks`, `rigParts`, `venuePlan`), so
+the cue plays and the SHOW chip and SCENES row are present; the stage solids of a room that holds a rig; and an image or video
+that is a screen, LED wall, projection or backdrop (its texture is not greyed). The flat cone is front-faced at opacity 0.22.
+ONE CHANGE TO THIS DECISION: Tech no longer keeps the authored exposure; it draws at exposure 1 (`TECH_EXPOSURE`), because a room
+authored for haze (0.1) drew every solid black. Measured on Platina (1920x1080, 54 lamps lit): Tech 38 fps, Show 20–29 fps.
