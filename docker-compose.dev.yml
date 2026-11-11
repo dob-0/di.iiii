@@ -30,6 +30,10 @@ services:
       # Deliberately separate from production's secrets -- same signing
       # key across environments would let a dev-tier session cookie be
       # replayed against production if CORS/cookie scoping ever slipped.
+      # The dev tier takes a whole space file over the wire (`di open FILE --to
+      # https://dev.diiii.xyz`; platina.diiii was 843 MB, owner row N3847). The
+      # base file's 100 MB stays for production. Guard: scripts/uploadLimit.test.js.
+      MAX_UPLOAD_MB: ${DEV_MAX_UPLOAD_MB:-2048}
       REQUIRE_AUTH: ${DEV_REQUIRE_AUTH:-true}
       ADMIN_API_TOKEN: ${DEV_ADMIN_API_TOKEN:-}
       AUTH_SESSION_SECRET: ${DEV_AUTH_SESSION_SECRET:?set DEV_AUTH_SESSION_SECRET in the dev .env}
