@@ -406,6 +406,7 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
     const [aiStatus, setAiStatus] = useState('reaching the live-AI engine…')
 
     useEffect(() => {
+        const video = videoRef.current
         let stream = null
         let cancelled = false
         let timer = null
@@ -485,6 +486,8 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
             clearTimeout(timer)
             clearTimeout(stable)
             drop()
+            // Source off or unmount: no last frame stays and the stream object is let go; on again opens a fresh one.
+            if (video) video.srcObject = null
         }
     }, [deviceId, sourcesOff])
 

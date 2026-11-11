@@ -1874,3 +1874,11 @@ Fix: five seams on the deck (S1 layer strip | grid, S2 grid | monitors, S4 main 
 Measured (walk part S, 1706x922 unless said; build-2.md): outer scroll 0 at six sizes (was 22/22/22/30); layer rows cut 0/0/0 at 1920x1000/1706x922/1440x810; cut clip names 0 at 1706x922 (was 10); all 5 seams change boxes, reset and move by keys; 0 overlapping panels in every step and in the extreme layout at six sizes; 36-case size check a 0 b 0 c 0 d 0 with nothing stored and with the extreme layout; no non-GET request or remount caused by dragging; Reset layout gives the default picture (0 differing pixels).
 Guard: `deckLayout.test.js` (clamp, key, store, real column gap, stacked main), `VjDeckView.resize.test.jsx` (seams, keys, reset, no write), `vjDeck.css.test.js` (end room on the scroll box, five-layer rule, tile wrap, Sources uncapped), `scripts/deck-comfort-walk.mjs --part S` and `scripts/deck-size-check.mjs --layout JSON` (browser, lane 3).
 Lesson: a layout fix is proven by measuring the stored extreme and the default at several sizes, not by reading CSS; a CSS variable set inline on a parent must not be re-declared on a child.
+
+## 2026-11-11 - Source switch: a camera switched off kept its last frame; the pool stopped listening after a reset
+
+Symptom: review of the source switch: a camera preview switched off stopped its tracks but the video element kept its stream (last frame on screen, stream object held); the camera pool subscribed to the switch once per module, so after the switch's listeners were reset it never stopped a source again.
+Cause: the cleanup of the preview effects in VjDeckView.jsx (CameraPreview) and MapSourceView.jsx only stopped tracks; cameraPool.js guarded its subscription with a module flag that the reset did not clear.
+Fix: both cleanups set the video's srcObject to null after the tracks stop (off and unmount; on again opens a fresh stream through the effect); cameraPool.js calls subscribeSourcesOff on every open (idempotent).
+Guard: src/map/MapSourceView.sourceOff.test.jsx (off, on again, unmount), src/project/tops/cameraPool.off.test.js (stop after a reset).
+Lesson: stopping a stream's tracks is not letting go of it: clear the element that shows it in the same cleanup.

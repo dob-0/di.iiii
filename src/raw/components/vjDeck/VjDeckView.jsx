@@ -286,6 +286,7 @@ function CameraPreview({ camera, device, className }) {
         if (off || !media?.getUserMedia || !media.enumerateDevices) return undefined
         let cancelled = false
         let stream = null
+        const video = videoRef.current
         ;(async () => {
             try {
                 const list = (await media.enumerateDevices()).filter((item) => item.kind === 'videoinput')
@@ -299,6 +300,8 @@ function CameraPreview({ camera, device, className }) {
         return () => {
             cancelled = true
             stream?.getTracks?.().forEach((track) => track.stop())
+            // The picture goes with the tracks: no last frame, no stream object held; switching on asks for a fresh one.
+            if (video) video.srcObject = null
         }
     }, [camera, device, off])
     return <video ref={videoRef} className={className} muted playsInline aria-label={`Preview of ${camera}`} data-camera-preview="true" />

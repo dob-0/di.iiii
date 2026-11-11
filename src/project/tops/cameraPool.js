@@ -55,11 +55,10 @@ const onSwitch = () => {
         entry.master?.then?.((master) => master.getTracks().forEach((track) => track.stop()), () => {})
     }
 }
-let watching = false
 
 export const openSharedCamera = async (media, constraints) => {
     const key = keyOf(constraints)
-    if (!watching) { watching = true; subscribeSourcesOff(onSwitch) }
+    subscribeSourcesOff(onSwitch) // a Set add: once per page, and again after the listeners were reset
     // Nothing off (the usual case): not one extra call.
     if (getSourcesOff().size) {
         const label = await labelOfDevice(media, key)

@@ -86,4 +86,15 @@ describe('camera pool and the source switch', () => {
         expect(media.enumerateDevices).not.toHaveBeenCalled()
         expect(cameraPoolSize()).toBeGreaterThan(0)
     })
+    it('still stops a source that goes off after the listeners were reset', async () => {
+        // The pool used to subscribe once per module; a reset of the switch dropped it for good.
+        const first = makeMedia()
+        await openSharedCamera(first, dev(first.front))
+        resetSourcesOffForTest()
+        const media = makeMedia()
+        const a = await openSharedCamera(media, dev(media.front))
+        setSourceOff(cameraSourceKey('Front'), true)
+        expect(stopped(a)).toBe(true)
+        expect(media.masters[0].tracks[0].stopped).toBe(true)
+    })
 })
