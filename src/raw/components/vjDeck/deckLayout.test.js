@@ -70,10 +70,13 @@ describe('read and write', () => {
 })
 
 describe('which seams exist', () => {
-    it('s1 and s2 need more than 900px, s4 more than 560px, s5 and s6 more than 560px and room for three panels', () => {
+    it('s1 and s2 need more than 900px, s4 and s5/s6 more than 683px (the bottom row stacks below) and room for three panels', () => {
         expect(seamsShown({ ...BOX, width: 901 })).toEqual({ s1s2: true, s4: true, s56: true })
         expect(seamsShown({ ...BOX, width: 900 })).toEqual({ s1s2: false, s4: true, s56: true })
-        expect(seamsShown({ ...BOX, width: 561 })).toMatchObject({ s4: true, s56: false })
+        // Round 4: the bottom row stacks at 683px or less, so s4, s5 and s6 begin at 684px together.
+        expect(seamsShown({ ...BOX, width: 684 })).toEqual({ s1s2: false, s4: true, s56: true })
+        expect(seamsShown({ ...BOX, width: 683 })).toEqual({ s1s2: false, s4: false, s56: false })
+        expect(seamsShown({ ...BOX, width: 561 })).toEqual({ s1s2: false, s4: false, s56: false })
         expect(seamsShown({ ...BOX, width: 560 })).toEqual({ s1s2: false, s4: false, s56: false })
         expect(seamsShown(null)).toEqual({ s1s2: false, s4: false, s56: false })
     })

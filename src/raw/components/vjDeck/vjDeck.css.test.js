@@ -43,11 +43,13 @@ describe('vjDeck.css guards', () => {
 
     it('F7: a seam zone lies over the gap, never over a tile (S4 is the 7px gap, S1 starts left of the tiles)', () => {
         const s4 = block(".vj-deck-seam[data-seam='s4'] {")
-        expect(s4).toContain('--vj-zone: var(--vj-gap)')
-        expect(s4).toContain('bottom: calc(var(--vj-gap) * -1)')
+        // Round 4: both zones grew to 12px (deckPanes.test.js reads the sizes): S4 5px into the empty top
+        // padding of the bottom panels, S1 into the layer strip's right padding, now 12px.
+        expect(s4).toContain('--vj-zone: var(--di-space-3)')
+        expect(s4).toContain('bottom: calc(var(--di-space-3) * -1)')
         const s1 = block(".vj-deck-seam[data-seam='s1'] {")
-        expect(s1).toContain('--vj-zone: calc(var(--di-space-2) + var(--di-space-1))')
-        expect(s1).toContain('left: calc(var(--vj-head) - var(--di-space-2))')
+        expect(s1).toContain('--vj-zone: var(--di-space-3)')
+        expect(s1).toContain('left: calc(var(--vj-head) - var(--di-space-3) + var(--di-space-1))')
         expect(block(".vj-deck-seam[data-seam='s2'] {")).toContain('right: var(--vj-monitor-w)')
         expect(css).not.toContain('--vj-seam:')
     })
