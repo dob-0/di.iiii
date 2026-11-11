@@ -1882,3 +1882,19 @@ Cause: the matrix rows counted up from layer 1 (`layer = floor(i / 4)`) while th
 Fix: in console K2 (1.9) only, A-D play layer 4, E-H layer 3, I-L layer 2, M-P layer 1 (`xoneK2.js`); the lights, the K2 panel and the K2 window read the same map, so they follow. Console K2 keeps its order.
 Guard: `k2ButtonRows.test.js` (K2 rows pinned unchanged; K2 (1.9) rows for presses, job texts and lights), `k2Console19.test.js` T4.
 Lesson: a controller's rows must be checked against how the screen draws the same things, by pressing, not by reading the map.
+
+## 2026-11-11 — VJ deck seams: blocked storage broke the deck, a drag re-rendered it every frame, a click stored a size (review-2, walk-2)
+
+Symptom: (1) with site data blocked the whole deck failed to render; (2) dragging the S4 seam re-rendered the deck on every pointer move while the output played; (3) a click with sub-pixel jitter, or a drag out and back, made the bottom row fixed, showed Reset layout and stored a size.
+Cause: (1) `window.localStorage` was read as a default parameter and an argument, outside the try (`deckLayout.js` readLayout/writeLayout, `useDeckLayout.js` flush); (2) the ResizeObserver on `.vj-deck-bottom` fired every frame of the preview and `sync()` set React state; (3) `DeckSeam.jsx` committed whenever any non-zero delta had happened.
+Fix: every storage access inside the try; `sync()` returns while a drag is open (ref set by the first preview, cleared by commit or cancel, one sync after); commit only when the value moved 1 px or more. Also: lost pointer capture and a second pointer are handled, `data-seam-dragging` on the deck root switches text selection off, the announced value is re-measured after S/M/L, the upload input is out of the tab order, the grab zones lie over the gaps only.
+Guard: `VjDeckView.resize.test.jsx` F1 (throwing getter), F2 (Profiler render count during an S4 drag with an observer firing every move), F3 (jitter and out-and-back), `vjDeck.css.test.js`.
+Lesson: a storage getter can throw, so the access itself belongs inside the try; and a state update from an observer must be paused while a drag owns the size.
+
+## 2026-11-11 — VJ deck seams: unmount and window resize in a drag, touch zone over a scrollbar (review-3)
+
+Symptom: (1) a seam that unmounted in the middle of a drag (hidden by a small box, or the deck closed) left the drag flag set, so the size observer stayed paused; (2) a window resize in a drag kept the old box and the old limits (the observer is paused by design during a drag); (3) on touch the wide S5/S6 zones lay over the right-edge scrollbar of the panel before them.
+Cause: `DeckSeam.jsx` cleanup only removed the mark and the frame, never called `onCancel`; nothing listened for the window resize while a drag was open; `vjDeck.css` coarse rule grew S5/S6 to both sides (`margin-left` negative).
+Fix: cleanup calls `onCancel` for an open drag; a window `resize` listener cancels (clears the flag, measures the fresh box), reads the seam again, counts from the pointer and previews the fresh value; coarse S5/S6 grow to the right only (no `margin-left`, base `--vj-lead`).
+Guard: `VjDeckView.resize.test.jsx` "a drag that is cut short" (3 tests, all fail on the old `DeckSeam.jsx`), `vjDeck.css.test.js` touch zone rule. Not measured on a touch screen.
+Lesson: a drag that owns shared state must release it in its own unmount cleanup, and a pause for a drag needs a way out for the events the pause hides.

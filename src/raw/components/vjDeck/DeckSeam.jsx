@@ -17,6 +17,8 @@ import { keyValue } from './deckLayout.js'
 // `read()` returns the seam's sizes in px NOW ({ value, min, max, dim }), measured by the parent: a
 // fresh read at the start of each drag and key, so a stale prop can never move the wrong amount.
 // `sign` is +1 when moving the seam right (or up) grows the value, -1 when it shrinks it.
+// While a drag is open the deck root carries data-seam-dragging (CSS: no text selection).
+const MARK = 'data-seam-dragging'
 const ARROWS = { vertical: ['ArrowLeft', 'ArrowRight'], horizontal: ['ArrowUp', 'ArrowDown'] }
 
 export default function DeckSeam({ id, orientation, label, controls, now, sign = 1, read, onPreview, onCommit, onCancel, onReset }) {
@@ -27,26 +29,59 @@ export default function DeckSeam({ id, orientation, label, controls, now, sign =
     const dim = now.dim || 1
     const percent = (px) => Math.round((px / dim) * 100)
 
-    useEffect(() => () => { if (frame.current) cancelAnimationFrame(frame.current) }, [])
+    const latest = useRef({})
+    latest.current = { id, read, onPreview, onCancel }
+
+    // Unmounted in the middle of a drag (the seam is hidden when the box gets small): release the
+    // mark and tell the layout, or its drag flag stays set and the size observer stays paused.
+    useEffect(() => () => {
+        if (frame.current) { cancelAnimationFrame(frame.current); frame.current = 0 }
+        const open = drag.current
+        if (!open) return
+        drag.current = null
+        open.deck?.removeAttribute(MARK)
+        latest.current.onCancel?.(latest.current.id)
+    }, [])
+
+    // The window is resized in the middle of a drag: the sizes and limits taken at pointerdown belong
+    // to the old box. Cancel (clears the drag flag and measures the fresh box), then take the seam's
+    // sizes again, count from where the pointer is now, and show the value that fits the fresh box.
+    useEffect(() => {
+        const onResize = () => {
+            const open = drag.current
+            if (!open) return
+            const { id: seamId, read: readNow, onPreview: preview, onCancel: cancel } = latest.current
+            cancel(seamId)
+            const fresh = readNow()
+            drag.current = { ...open, ...fresh, start: open.at ?? open.start, next: fresh.value }
+            preview(seamId, fresh.value)
+        }
+        window.addEventListener('resize', onResize)
+        return () => window.removeEventListener('resize', onResize)
+    }, [])
 
     const onPointerDown = (event) => {
         if (event.button !== undefined && event.button !== 0) return
         event.preventDefault()
         event.stopPropagation()
+        // A second finger or pointer while a drag is open must not take the drag over.
+        if (drag.current) return
         const state = read()
-        drag.current = { ...state, start: vertical ? event.clientX : event.clientY, next: state.value, moved: false }
+        const deck = event.currentTarget.closest('.vj-deck')
+        drag.current = { ...state, pointerId: event.pointerId, deck, start: vertical ? event.clientX : event.clientY, next: state.value }
         event.currentTarget.setPointerCapture?.(event.pointerId)
         event.currentTarget.classList.add('is-dragging')
+        deck?.setAttribute(MARK, id)
     }
 
     const onPointerMove = (event) => {
         const current = drag.current
-        if (!current) return
-        const delta = (vertical ? event.clientX : event.clientY) - current.start
+        if (!current || event.pointerId !== current.pointerId) return
+        current.at = vertical ? event.clientX : event.clientY
+        const delta = current.at - current.start
         // Down grows a horizontal seam's value the other way round: the seam sits ABOVE the bottom row.
         const raw = current.value + sign * (vertical ? delta : -delta)
         current.next = Math.min(current.max, Math.max(current.min, raw))
-        current.moved = current.moved || Math.abs(delta) > 0
         if (!frame.current) {
             frame.current = requestAnimationFrame(() => {
                 frame.current = 0
@@ -57,12 +92,16 @@ export default function DeckSeam({ id, orientation, label, controls, now, sign =
 
     const finish = (event, commit) => {
         const current = drag.current
+        if (current && event.pointerId !== current.pointerId) return
         drag.current = null
         if (frame.current) { cancelAnimationFrame(frame.current); frame.current = 0 }
         event.currentTarget.classList.remove('is-dragging')
+        current?.deck?.removeAttribute(MARK)
         event.currentTarget.releasePointerCapture?.(event.pointerId)
         if (!current) return
-        if (commit && current.moved) onCommit(id, current.next, { immediate: true })
+        // Only a real move of one pixel or more stores a size: a click with jitter, or a drag out
+        // and back, leaves the layout unset.
+        if (commit && Math.abs(current.next - current.value) >= 1) onCommit(id, current.next, { immediate: true })
         else onCancel(id)
     }
 
@@ -100,6 +139,7 @@ export default function DeckSeam({ id, orientation, label, controls, now, sign =
             onPointerMove={onPointerMove}
             onPointerUp={(event) => finish(event, true)}
             onPointerCancel={(event) => finish(event, false)}
+            onLostPointerCapture={(event) => finish(event, false)}
             onDoubleClick={(event) => { event.stopPropagation(); onReset(id) }}
             onKeyDown={onKeyDown}
         />

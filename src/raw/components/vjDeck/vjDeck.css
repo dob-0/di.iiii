@@ -15,12 +15,10 @@
     --vj-monitor-w-row: 1 1 0;
     --vj-layers: 3;
     /* The seams (DeckSeam.jsx): one hairline for every new rule, a grip mark that keeps 3:1
-       against the panel ground (WCAG 1.4.11), the gap the root keeps between its rows, and the
-       width of a seam's hit zone (24px for a finger). */
+       against the panel ground (WCAG 1.4.11), and the gap the root keeps between its rows. */
     --vj-line: rgba(255, 255, 255, 0.14);
     --vj-grip: var(--di-dim);
     --vj-gap: var(--di-space-2);
-    --vj-seam: 12px;
     container-type: inline-size;
     container-name: vjdeck;
     position: relative;
@@ -847,7 +845,7 @@
     font-size: var(--di-text-1);
     letter-spacing: var(--di-label-tracking);
     line-height: 1;
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     white-space: nowrap;
 }
 
@@ -977,7 +975,16 @@
 
 /* --- seams: the borders between panels, draggable (DeckSeam.jsx, deckLayout.js) ----- */
 
+/* A seam's grab zone lies over the GAP between two panels and may grow only over EMPTY padding
+   (S1: the layer strip's right padding; S4 and S5/S6 on a finger: the bottom panels' border and
+   padding). It never lies over a clip tile or a control: a click there is the tile's. Numbers:
+   S1 10px (3px gap + 7px strip padding), S2 12px, S5 and S6 12px (24px on a finger), S4 7px
+   (15px on a finger). --vj-zone is the zone's size across the seam, --vj-lead the distance from the
+   zone's start to the gap's centre line, where the hairline and the mark are drawn. */
 .vj-deck-seam {
+    --vj-zone: var(--di-space-3);
+    --vj-lead: calc(var(--di-space-3) / 2);
+    --vj-mark: var(--di-space-7);
     position: absolute;
     z-index: 3;
     box-sizing: border-box;
@@ -996,107 +1003,126 @@
     background: var(--vj-line);
 }
 
-/* the grip mark: 3px x 24px in the middle, so the border can be found at rest */
+/* the resting mark: 3px wide, 40px long (--di-space-1 by --di-space-7), in the middle of the seam */
 .vj-deck-seam::after {
     background: var(--vj-grip);
 }
 
 .vj-deck-seam[aria-orientation='vertical'] {
-    width: var(--vj-seam);
+    width: var(--vj-zone);
     cursor: col-resize;
 }
 
 .vj-deck-seam[aria-orientation='vertical']::before {
     top: 0;
     bottom: 0;
-    left: calc(50% - 0.5px);
+    left: calc(var(--vj-lead) - 0.5px);
     width: 1px;
 }
 
 .vj-deck-seam[aria-orientation='vertical']::after {
-    top: calc(50% - 12px);
-    left: calc(50% - 1.5px);
-    width: 3px;
-    height: 24px;
+    top: calc(50% - var(--vj-mark) / 2);
+    left: calc(var(--vj-lead) - var(--di-space-1) / 2);
+    width: var(--di-space-1);
+    height: var(--vj-mark);
 }
 
 .vj-deck-seam[aria-orientation='horizontal'] {
-    height: var(--vj-seam);
+    height: var(--vj-zone);
     cursor: row-resize;
 }
 
 .vj-deck-seam[aria-orientation='horizontal']::before {
     left: 0;
     right: 0;
-    top: calc(50% - 0.5px);
+    top: calc(var(--vj-lead) - 0.5px);
     height: 1px;
 }
 
 .vj-deck-seam[aria-orientation='horizontal']::after {
-    left: calc(50% - 12px);
-    top: calc(50% - 1.5px);
-    width: 24px;
-    height: 3px;
+    left: calc(50% - var(--vj-mark) / 2);
+    top: calc(var(--vj-lead) - var(--di-space-1) / 2);
+    width: var(--vj-mark);
+    height: var(--di-space-1);
 }
 
-/* hover and keyboard focus: cyan at .55; while dragging: full (precedent: .di-director-handle) */
+/* Hover and keyboard focus: the whole seam shows as a 1px line, and the mark, in --di-cyan (the
+   brand's focused and active colour, no glow, no size change); while dragging the same. */
 .vj-deck-seam:hover::before,
 .vj-deck-seam:hover::after,
 .vj-deck-seam:focus-visible::before,
-.vj-deck-seam:focus-visible::after {
-    background: rgba(var(--di-cyan-rgb), 0.55);
-}
-
+.vj-deck-seam:focus-visible::after,
 .vj-deck-seam.is-dragging::before,
 .vj-deck-seam.is-dragging::after {
     background: var(--di-cyan);
 }
 
-/* S1: right edge of the layer strip (the 3px gap after it is its centre). */
-.vj-deck-seam[data-seam='s1'] {
-    top: 0;
-    bottom: 0;
-    left: calc(var(--vj-head) + var(--di-space-1) / 2 - var(--vj-seam) / 2);
+/* No text selection while a seam is dragged (DeckSeam.jsx sets the mark on the deck root). */
+.vj-deck[data-seam-dragging] {
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-/* S2: the gap between the clip grid and the monitor column. */
+/* S1: the layer strip's right padding (7px) and the 3px gap after it; the tiles start after the gap. */
+.vj-deck-seam[data-seam='s1'] {
+    --vj-zone: calc(var(--di-space-2) + var(--di-space-1));
+    --vj-lead: calc(var(--di-space-2) + var(--di-space-1) / 2);
+    top: 0;
+    bottom: 0;
+    left: calc(var(--vj-head) - var(--di-space-2));
+}
+
+/* S2: exactly the gap between the clip grid and the monitor column. */
 .vj-deck-seam[data-seam='s2'] {
     top: 0;
     bottom: 0;
-    right: calc(var(--vj-monitor-w) + var(--di-space-3) / 2 - var(--vj-seam) / 2);
+    right: var(--vj-monitor-w);
 }
 
-/* S4: the gap between the main row and the bottom row (it hangs from the main row's foot). */
+/* S4: exactly the gap under the main row (it hangs from the main row's foot). */
 .vj-deck-seam[data-seam='s4'] {
+    --vj-zone: var(--vj-gap);
+    --vj-lead: calc(var(--vj-gap) / 2);
     left: 0;
     right: 0;
-    bottom: calc(var(--vj-gap) / -2 - var(--vj-seam) / 2);
+    bottom: calc(var(--vj-gap) * -1);
 }
 
-/* S5 and S6: the gaps between the three bottom panels. */
+/* S5 and S6: exactly the gaps between the three bottom panels. */
 .vj-deck-seam[data-seam='s5'] {
     top: 0;
     bottom: 0;
-    left: calc((100% - 2 * var(--di-space-3)) / 3 + var(--di-space-3) / 2 - var(--vj-seam) / 2);
+    left: calc((100% - 2 * var(--di-space-3)) / 3);
 }
 
 .vj-deck[data-cols='fixed'] .vj-deck-seam[data-seam='s5'] {
-    left: calc(var(--vj-bottom-a) + var(--di-space-3) / 2 - var(--vj-seam) / 2);
+    left: var(--vj-bottom-a);
 }
 
 .vj-deck-seam[data-seam='s6'] {
     top: 0;
     bottom: 0;
-    left: calc((100% - 2 * var(--di-space-3)) * 2 / 3 + var(--di-space-3) * 1.5 - var(--vj-seam) / 2);
+    left: calc((100% - 2 * var(--di-space-3)) * 2 / 3 + var(--di-space-3));
 }
 
 .vj-deck[data-cols='fixed'] .vj-deck-seam[data-seam='s6'] {
-    left: calc(var(--vj-bottom-a) + var(--vj-bottom-b) + var(--di-space-3) * 1.5 - var(--vj-seam) / 2);
+    left: calc(var(--vj-bottom-a) + var(--vj-bottom-b) + var(--di-space-3));
 }
 
+/* A finger: S5 and S6 grow 12px to the RIGHT only, into the next panel's border and padding (13px of
+   empty room). The left side stays at the gap: that is the edge of the panel before it, and its
+   scrollbar sits there, so a finger can still take the scrollbar. The line and the mark stay in the
+   middle of the gap (--vj-lead is the base). S4 grows 8px down into the panels' top border and
+   padding. S1 and S2 stay as they are: their neighbours hold tiles. Not measured on a touch screen. */
 @media (pointer: coarse) {
-    .vj-deck {
-        --vj-seam: 24px;
+    .vj-deck-seam[data-seam='s5'],
+    .vj-deck-seam[data-seam='s6'] {
+        --vj-zone: calc(var(--di-space-3) * 2);
+    }
+
+    .vj-deck-seam[data-seam='s4'] {
+        --vj-zone: calc(var(--vj-gap) + var(--di-space-2) + 1px);
+        bottom: calc((var(--vj-gap) + var(--di-space-2) + 1px) * -1);
     }
 }
 

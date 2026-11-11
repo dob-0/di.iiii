@@ -12,14 +12,13 @@ const OUT = String(arg('out', '.'))
 const PART = String(arg('part', 'A'))
 fs.mkdirSync(OUT, { recursive: true })
 const PASSWORD = 'driver-passphrase-9x'
-const NAMES = ['1 BACK', '2 MID', '3 CAM', '4 WORDS', '5 TOP']
-const CLIPS = ['platina-words-demo2.png', 'glow-magenta.png', 'tunnel-grid-long-name-v3.png', 'cam-loop.png', 'words-outro.png', 'back-noise.png', 'strobe-white.png', 'title-card-final-final.png']
+const NAMES = ['1 BACK', '2 MID', '3 CAM', '4 TEXT', '5 TOP']
+const CLIPS = ['clip-one-demo.png', 'glow-magenta.png', 'tunnel-grid-long-name-v3.png', 'cam-loop.png', 'title-outro.png', 'back-noise.png', 'strobe-white.png', 'title-card-final-final.png']
 const t0 = Date.now()
 const log = (...a) => console.log(...a)
 
 const SEL = ['.vj-deck', '.vj-deck-top', '.vj-deck-main', '.vj-deck-scroll', '.vj-deck-columns', '.vj-deck-grid', '.vj-deck-layer', '.vj-deck-column', '.vj-deck-tile', '.vj-deck-monitors', '.vj-deck-monitor-tools', '.vj-deck-monitor--preview', '.vj-deck-monitor--output', '.vj-deck-bottom', '.vj-deck-sources', '.vj-deck-source-list', '.vj-deck-source-files-list', '.vj-deck-clip', '.vj-deck-fx']
 
-/* eslint-disable no-undef */
 const snapInPage = (sels) => { const o = {}; for (const s of sels) { const e = document.querySelector(s); if (!e) { o[s] = null; continue } const r = e.getBoundingClientRect(); o[s] = [Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)] } return o }
 const countsInPage = () => {
     const deck = document.querySelector('.vj-deck'); if (!deck) return { error: 'no deck' }
@@ -77,7 +76,6 @@ const reachInPage = () => {
     out.layerHead = (() => { const h = document.querySelector('.vj-deck-layer > :first-child'); const r = h && h.getBoundingClientRect(); return r ? `${Math.round(r.width)}x${Math.round(r.height)}` : null })()
     return out
 }
-/* eslint-enable no-undef */
 
 const apiOf = (page) => (method, url, body) => page.evaluate(async ({ method, url, body }) => {
     const a = await fetch(`/serverXR${url}`, { method, credentials: 'include', headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined })
@@ -108,7 +106,6 @@ const shot = (page, name, full = true) => page.screenshot({ path: path.join(OUT,
 const diff = (a, b, min = 8) => { const o = []; for (const k of Object.keys(a)) { const x = a[k]; const y = b[k]; if (!x && !y) continue; if (!x || !y) { o.push(`${k} ${x ? 'gone' : 'appeared'}`); continue } const d = x.map((v, i) => y[i] - v); if (d.some((v) => Math.abs(v) > min)) o.push(`${k} [${x}] -> [${y}]`) } return o }
 
 // ---- part S: the seams (build 2). One run, one summary line, one JSON. ----
-/* eslint-disable no-undef */
 const deckStateInPage = () => {
     const deck = document.querySelector('.vj-deck'); if (!deck) return { error: 'no deck' }
     const nm = (e) => `${e.tagName.toLowerCase()}.${(typeof e.className === 'string' ? e.className : '').trim().split(/\s+/).slice(0, 2).join('.')}`
@@ -164,7 +161,6 @@ const pngDiffInPage = async ({ a, b }) => {
     for (let i = 0; i < A.data.length; i += 4) { const d = Math.abs(A.data[i] - B.data[i]) + Math.abs(A.data[i + 1] - B.data[i + 1]) + Math.abs(A.data[i + 2] - B.data[i + 2]); if (d > 24) { n += 1; const p = i / 4; const x = p % A.width; const y = Math.floor(p / A.width); x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y) } }
     return { size: `${A.width}x${A.height}`, diff: n, box: n ? [x0, y0, x1, y1] : null }
 }
-/* eslint-enable no-undef */
 
 const LAYOUT_KEY = 'di.vjDeck.layout'
 const EXTREME = { v: 1, head: 0.5, monitorW: 0.6, bottomH: 0.6, cols: [0.2, 0.6] }
@@ -311,17 +307,356 @@ const partS = async (projectId) => {
     R.noMidi = await page.evaluate(() => typeof navigator.requestMIDIAccess)
 }
 
+// ---- part H: the human check, round 2 (one run, one summary line, result-H.json) ----
+const pixelsInPage = async ({ b, pts }) => {
+    const blob = await (await fetch(`data:image/png;base64,${b}`)).blob(); const bm = await createImageBitmap(blob)
+    const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height; const x = c.getContext('2d'); x.drawImage(bm, 0, 0)
+    return pts.map(([px, py]) => { const d = x.getImageData(Math.round(px), Math.round(py), 1, 1).data; return [d[0], d[1], d[2]] })
+}
+const brandInPage = () => {
+    const deck = document.querySelector('.vj-deck'); const out = { radius: [], shadow: [], small: [], glow: [] }
+    const nm = (e) => `${e.tagName.toLowerCase()}.${(typeof e.className === 'string' ? e.className : '').trim().split(/\s+/).slice(0, 2).join('.')}`
+    for (const e of deck.querySelectorAll('*')) {
+        const r = e.getBoundingClientRect(); if (!r.width || !r.height) continue
+        const cs = getComputedStyle(e)
+        if (parseFloat(cs.borderTopLeftRadius) > 0 && !(e.tagName === 'INPUT' && e.type === 'range')) out.radius.push(nm(e))
+        if (cs.boxShadow !== 'none') out.shadow.push(nm(e))
+        if (cs.filter !== 'none' && /blur|drop-shadow/.test(cs.filter)) out.glow.push(nm(e))
+        if ([...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && parseFloat(cs.fontSize) < 12) out.small.push(`${nm(e)} ${cs.fontSize} "${(e.textContent || '').trim().slice(0, 18)}"`)
+    }
+    for (const k of Object.keys(out)) out[k] = [...new Set(out[k])]
+    const seam = document.querySelector('.vj-deck-seam'); const cs = seam && getComputedStyle(seam); const a = seam && getComputedStyle(seam, '::after')
+    out.seam = seam ? { title: seam.title, role: seam.getAttribute('role'), tabindex: seam.getAttribute('tabindex'), label: seam.getAttribute('aria-label'), controls: seam.getAttribute('aria-controls'), shadow: cs.boxShadow, radius: a.borderRadius, gripShadow: a.boxShadow } : null
+    return out
+}
+const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b) }
+const contrast = (a, b) => { const x = lum(a); const y = lum(b); return Math.round(((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)) * 100) / 100 }
+const partH = async (projectId) => {
+    const reqs = []; const frames = []
+    page.on('request', (r) => reqs.push({ m: r.method(), u: r.url().slice(0, 90), t: Date.now() }))
+    page.on('websocket', (ws) => ws.on('framesent', () => frames.push(Date.now())))
+    const step = async (name, fn) => { try { await fn() } catch (e) { (R.stepErrors ||= {})[name] = String(e.message || e).slice(0, 200) } }
+    const settle = async () => { await page.mouse.move(5, 5); await wait(250) }
+    const centre = (p) => ({ x: p.x + p.w / 2, y: p.y + p.h / 2 })
+    const probe = (id) => page.evaluate(seamProbeInPage, id)
+    const stateOf = () => page.evaluate(deckStateInPage)
+    const M = { s1: 'strip', s2: 'mon', s4: 'bottom', s5: 'src', s6: 'fx' }
+    const IDS = ['s1', 's2', 's4', 's5', 's6']
+    const horiz = { s4: true }
+    const compact = (s) => ({ ov: s.overlaps, sc: s.scroll, scW: s.scrollW, strip: s.strip, grid: s.grid, mon: s.mon, main: s.main, bottom: s.bottom, src: s.src, clip: s.clip, fx: s.fx, vars: s.vars.length, reset: s.reset, seams: s.seams.join(',') })
+    const audit = async (label, shotName) => {
+        const s = await stateOf(); const c = await page.evaluate(countsInPage)
+        const o = { label, ...compact(s), cut: c.cut?.length, cutSample: (c.cut || []).slice(0, 3), covered: c.covered?.length, coveredSample: (c.covered || []).slice(0, 3), clipped: c.clipped?.length, clippedSample: (c.clipped || []).slice(0, 3), controls: c.controls, small: c.small?.length }
+        if (shotName) o.shot = await shot(page, shotName, false)
+        return o
+    }
+    const dragTo = async (id, tx, ty, steps = 8, slow = 0) => {
+        const p = await probe(id); const c = centre(p)
+        await page.mouse.move(c.x, c.y); await wait(40); await page.mouse.down()
+        if (slow) { for (let i = 1; i <= steps; i += 1) { await page.mouse.move(c.x + ((tx - c.x) * i) / steps, c.y + ((ty - c.y) * i) / steps); await page.waitForTimeout(slow) } } else await page.mouse.move(tx, ty, { steps })
+        await page.mouse.up(); await wait(200)
+    }
+    const dragBy = (id, d, steps, slow) => { return probe(id).then((p) => { const c = centre(p); return dragTo(id, horiz[id] ? c.x : c.x + d, horiz[id] ? c.y + d : c.y, steps, slow) }) }
+    const dbl = async (id) => { const p = await probe(id); const c = centre(p); await page.mouse.dblclick(c.x, c.y); await wait(250) }
+    const parkAndShot = async (name) => { await page.evaluate(() => { for (const e of document.querySelectorAll('.vj-deck-scroll, .vj-deck-bottom, .vj-deck')) e.scrollTop = 0 }); await settle(); return page.screenshot({ scale: 'css' }).then((b) => { fs.writeFileSync(path.join(OUT, name), b); return b }) }
+    await page.setViewportSize({ width: 1706, height: 922 })
+    // ===== A. the default look =====
+    await openP1(page, projectId); await wait(600)
+    R.noMidi = await page.evaluate(() => typeof navigator.requestMIDIAccess)
+    const defShot = await parkAndShot('A-default-1706x922.png')
+    R.A = {}
+    await step('A-probe', async () => {
+        const grips = {}; const pts = []; const meta = []
+        for (const id of IDS) {
+            const p = await probe(id); if (!p) { grips[id] = { missing: true }; continue }
+            const c = centre(p); const v = !horiz[id]
+            const gx = c.x; const gy = c.y
+            const side = v ? [[c.x - 9, c.y], [c.x + 9, c.y]] : [[c.x, c.y - 9], [c.x, c.y + 9]]
+            meta.push(id); pts.push([gx, gy], ...side)
+            grips[id] = { rect: `${Math.round(p.x)},${Math.round(p.y)} ${Math.round(p.w)}x${Math.round(p.h)}`, cursor: p.cursor, grip: p.grip, line: p.line, aria: `${p.now}/${p.min}/${p.max}` }
+        }
+        const px = await page.evaluate(pixelsInPage, { b: defShot.toString('base64'), pts })
+        meta.forEach((id, i) => { const g = px[i * 3]; const a = px[i * 3 + 1]; const b = px[i * 3 + 2]; grips[id].px = { grip: g.join(','), a: a.join(','), b: b.join(','), contrastA: contrast(g, a), contrastB: contrast(g, b) } })
+        R.A.grips = grips
+        R.A.brand = await page.evaluate(brandInPage)
+    })
+    await step('A-round1', async () => {
+        R.A.counts = await page.evaluate(countsInPage); const c = R.A.counts; R.A.countsShort = { controls: c.controls, small: c.small.length, smallList: c.small.slice(0, 4), cut: c.cut.length, cutList: c.cut.slice(0, 6), covered: c.covered.length, clipped: c.clipped.length, clippedList: c.clipped.slice(0, 4), tiny: c.tiny.length, scrollers: c.scrollers.slice(0, 6), page: c.page }
+        delete R.A.counts
+        R.A.defaults = await page.evaluate(defaultsInPage)
+        R.A.state = compact(await stateOf())
+        await page.evaluate(() => { for (const e of document.querySelectorAll('.vj-deck-source-list, .vj-deck-sources, .vj-deck-bottom')) e.scrollTop = 0 })
+        R.A.sourcesShot = await shot(page, 'A-sources.png', false)
+    })
+    // ===== B. layout stored -> sizes -> reload -> reset (nothing added to the deck yet) =====
+    R.B = { sizes: {} }
+    await step('B-custom', async () => {
+        await dragBy('s1', 50); await dragBy('s2', -120); await dragBy('s4', -80); await dragBy('s5', 90); await dragBy('s6', -70)
+        R.B.custom = await audit('custom 1706x922', 'B-custom-1706x922.png'); await settle()
+        R.B.customStored = await page.evaluate(() => { try { return localStorage.getItem('di.vjDeck.layout') } catch { return 'ERR' } })
+        R.B.customBtns = await page.evaluate(() => [...document.querySelectorAll('.vj-deck-monitor-tools button')].map((b) => `${b.textContent.trim()}:${b.getAttribute('aria-pressed')}`))
+        for (const [w, h] of [[1920, 1000], [1280, 720], [1024, 700], [853, 922], [1706, 922]]) {
+            await page.setViewportSize({ width: w, height: h }); await wait(600)
+            R.B.sizes[`${w}x${h}`] = await audit(`custom at ${w}x${h}`, `B-custom-${w}x${h}.png`)
+        }
+    })
+    await step('B-reload', async () => {
+        R.B.vars0 = (await stateOf()).vars
+        await openP1(page, projectId); await wait(600)
+        const s = await stateOf(); R.B.reloadKept = { vars: s.vars, same: JSON.stringify(s.vars) === JSON.stringify(R.B.vars0), reset: s.reset, stored: s.stored }
+        R.B.reloadAudit = await audit('after reload', 'B-reload.png')
+        await page.getByRole('button', { name: /reset layout/i }).click(); await wait(500)
+        const b = await parkAndShot('B-after-reset.png'); const pd = await page.evaluate(pngDiffInPage, { a: defShot.toString('base64'), b: b.toString('base64') })
+        const s2 = await stateOf(); R.B.reset = { diffPx: pd.diff, box: pd.box, size: pd.size, btnGone: !s2.reset, storedNull: s2.stored === null, vars: s2.vars.length, style: s2.style }
+    })
+    // ===== C. hands: every seam, fast / slow / far, dbl, keys =====
+    R.C = {}
+    for (const id of IDS) await step(`C-${id}`, async () => {
+        const o = {}; const m = M[id]; o.v0 = (await stateOf())[m]
+        await dragBy(id, 100, 1); o.fastPlus = (await stateOf())[m]
+        await dragBy(id, -100, 1); o.fastMinus = (await stateOf())[m]
+        await dragBy(id, 100, 30, 12); o.slowPlus = (await stateOf())[m]
+        await dragBy(id, -100, 30, 12); o.slowMinus = (await stateOf())[m]
+        await dragTo(id, horiz[id] ? 800 : -60, horiz[id] ? 2 : 400, 3); const lo = await stateOf(); o.farLow = lo[m]; o.farLowOv = lo.overlaps; o.farLowScroll = lo.scroll
+        await dragTo(id, horiz[id] ? 800 : 1900, horiz[id] ? 940 : 400, 3); const hi = await stateOf(); o.farHigh = hi[m]; o.farHighOv = hi.overlaps; o.farHighScroll = hi.scroll
+        o.farLowAudit = undefined; await dbl(id); const r = await stateOf(); o.afterDbl = r[m]; o.dblVars = r.vars.length; o.dblStored = r.stored
+        R.C[id] = o
+    })
+    await step('C-keys', async () => {
+        const k = {}
+        await page.evaluate(() => { document.activeElement && document.activeElement.blur && document.activeElement.blur(); window.scrollTo(0, 0) })
+        await page.locator('.vj-deck-top button, .vj-deck button').first().focus()
+        const order = []; const sel0 = await page.evaluate(() => document.querySelectorAll('.vj-deck-tile.is-selected').length)
+        for (let i = 0; i < 260; i += 1) {
+            await page.keyboard.press('Tab')
+            const a = await page.evaluate(() => { const e = document.activeElement; return e && e.dataset && e.dataset.seam ? e.dataset.seam : (e && e.closest && !e.closest('.vj-deck') ? 'OUT' : '') })
+            if (a === 'OUT') { k.leftDeckAtTab = i; break }
+            if (a) order.push(`${a}@${i}`)
+            if (order.length >= 5) break
+        }
+        k.tabOrder = order
+        const seam = await page.evaluate(() => document.activeElement?.dataset?.seam || null); k.focusedNow = seam
+        k.focusPic = await shot(page, 'C-keyboard-focus.png', false)
+        const tgt = 's2'; await page.evaluate((t) => document.querySelector(`.vj-deck-seam[data-seam="${t}"]`).focus(), tgt); await wait(120)
+        const val = () => page.evaluate((t) => { const e = document.querySelector(`.vj-deck-seam[data-seam="${t}"]`); return `${e.getAttribute('aria-valuenow')} (${e.getAttribute('aria-valuemin')}..${e.getAttribute('aria-valuemax')}) mon=${Math.round(document.querySelector('.vj-deck-monitors').getBoundingClientRect().width)}` }, tgt)
+        k.start = await val()
+        for (const [name, key] of [['right', 'ArrowRight'], ['shiftRight', 'Shift+ArrowRight'], ['left', 'ArrowLeft'], ['shiftLeft', 'Shift+ArrowLeft'], ['home', 'Home'], ['end', 'End'], ['enter1', 'Enter'], ['enter2', 'Enter']]) { await page.keyboard.press(key); await wait(320); k[name] = await val() }
+        k.overlapAfterEnd = (await stateOf()).overlaps
+        k.selAfter = await page.evaluate(() => document.querySelectorAll('.vj-deck-tile.is-selected').length); k.selBefore = sel0
+        await page.keyboard.press('Escape'); await wait(200); k.focusAfterEsc = await page.evaluate(() => document.activeElement?.dataset?.seam || document.activeElement?.tagName)
+        k.storedAfterKeys = (await stateOf()).stored
+        await dbl(tgt); k.afterDbl = await val()
+        R.C.keys = k
+    })
+    // ===== D. clip playing + effects (changes the deck document) =====
+    R.D = {}
+    await step('D-play', async () => {
+        const po = page.locator('.vj-deck-preview-only'); R.D.previewOnlyDefault = await po.getAttribute('aria-pressed')
+        if (R.D.previewOnlyDefault === 'true') await po.click()   // NOT preview-only: a click plays
+        await wait(200)
+        const tile = page.locator('.vj-deck-tile:not(.vj-deck-tile--empty)').first()
+        R.D.tileBefore = await tile.getAttribute('class'); await tile.click(); await wait(500); R.D.tileAfter = await tile.getAttribute('class')
+        R.D.layerActive = await page.evaluate(() => [...document.querySelectorAll('.vj-deck-layer')].map((l) => l.className.replace(/vj-deck-layer\s*/, '')).join('|'))
+        R.D.canvas = await page.evaluate(() => [...document.querySelectorAll('.vj-deck-monitor--output canvas')].map((c) => `${c.width}x${c.height}`))
+    })
+    await step('D-fx', async () => {
+        await page.locator('.vj-deck-tile:not(.vj-deck-tile--empty)').first().click(); await wait(200)
+        const bh = () => page.evaluate(() => Math.round(document.querySelector('.vj-deck-bottom').getBoundingClientRect().height))
+        const addFx = async (t) => { await page.locator('select[aria-label="Add effect"]').selectOption(t); await wait(300) }
+        R.D.bottom0 = await bh(); await addFx('top.glow'); R.D.bottom1 = await bh(); await addFx('top.blur'); R.D.bottom2 = await bh()
+        R.D.jumpDefault = `${R.D.bottom0} -> ${R.D.bottom1} -> ${R.D.bottom2}`
+        await dragBy('s4', -100, 6); R.D.afterS4 = await bh(); await addFx('top.glitch'); R.D.bottom3 = await bh(); await addFx('top.tint'); R.D.bottom4 = await bh()
+        R.D.jumpAfterDrag = `${R.D.afterS4} -> ${R.D.bottom3} -> ${R.D.bottom4}`
+        R.D.fxCount = await page.locator('.vj-deck-fx-effect').count()
+        R.D.fxScroll = await page.evaluate(() => { const f = document.querySelector('.vj-deck-fx'); const sc = [f, ...f.querySelectorAll('*')].filter((e) => ['auto', 'scroll'].includes(getComputedStyle(e).overflowY)); return sc.map((e) => `${e.className} ${e.scrollHeight}/${e.clientHeight}`) })
+        R.D.fxShot = await shot(page, 'D-fx4-s4dragged.png', false)
+        R.D.nestedScrollers = await page.evaluate(() => { let n = 0; const out = []; for (const e of document.querySelectorAll('.vj-deck-bottom *')) { const cs = getComputedStyle(e); if (['auto', 'scroll'].includes(cs.overflowY) && e.scrollHeight > e.clientHeight + 1) { for (let p = e.parentElement; p && !p.classList.contains('vj-deck-bottom'); p = p.parentElement) { const ps = getComputedStyle(p); if (['auto', 'scroll'].includes(ps.overflowY) && p.scrollHeight > p.clientHeight + 1) { n += 1; out.push(`${(e.className || '').toString().slice(0, 30)} in ${(p.className || '').toString().slice(0, 30)}`); break } } } } return { n, out } })
+    })
+    await step('D-drag-playing', async () => {
+        const out = []
+        for (const id of IDS) { await dragBy(id, id === 's4' ? -60 : 70, 8); const s = await stateOf(); out.push(`${id}: ov ${s.overlaps} scroll ${s.scroll}`) }
+        R.D.dragPlaying = out
+        R.D.auditPlayingFx = await audit('playing + 4 fx, all seams dragged', 'D-playing-fx-dragged.png')
+        R.D.canvasAfter = await page.evaluate(() => [...document.querySelectorAll('.vj-deck-monitor--output canvas')].map((c) => `${c.width}x${c.height}`))
+        R.D.layerActiveAfter = await page.evaluate(() => [...document.querySelectorAll('.vj-deck-layer')].map((l) => l.className.replace(/vj-deck-layer\s*/, '')).join('|'))
+    })
+    await step('D-sizes-with-fx', async () => {
+        R.D.sizes = {}
+        for (const [w, h] of [[1280, 720], [853, 922], [1706, 922]]) { await page.setViewportSize({ width: w, height: h }); await wait(600); R.D.sizes[`${w}x${h}`] = await audit(`fx+drag at ${w}x${h}`, `D-fx-${w}x${h}.png`) }
+    })
+    // ===== E. show safety =====
+    R.E = {}
+    await step('E-safety', async () => {
+        for (const id of IDS) await dbl(id); await settle()
+        const deckH = await page.evaluateHandle(() => document.querySelector('.vj-deck'))
+        const t0d = Date.now(); const r0 = reqs.length; const f0 = frames.length
+        for (const id of IDS) { await dragBy(id, 60, 12); await dragBy(id, -60, 12) }
+        const t1d = Date.now(); const T = t1d - t0d
+        const dragReq = reqs.slice(r0).filter((r) => r.t >= t0d && r.t <= t1d); const dragFr = frames.slice(f0).filter((t) => t >= t0d && t <= t1d).length
+        await settle(); const t0i = Date.now(); const r1 = reqs.length; const f1 = frames.length; await wait(T); const t1i = Date.now()
+        const idleReq = reqs.slice(r1).filter((r) => r.t >= t0i && r.t <= t1i); const idleFr = frames.slice(f1).filter((t) => t >= t0i && t <= t1i).length
+        const nonGet = (a) => a.filter((r) => r.m !== 'GET')
+        R.E.dragMs = T; R.E.dragReq = dragReq.length; R.E.idleReq = idleReq.length; R.E.dragNonGet = nonGet(dragReq).map((r) => `${r.m} ${r.u.slice(-40)}`).slice(0, 6); R.E.idleNonGet = nonGet(idleReq).map((r) => `${r.m} ${r.u.slice(-40)}`).slice(0, 6); R.E.dragFrames = dragFr; R.E.idleFrames = idleFr
+        R.E.sameNode = await page.evaluate((h) => h === document.querySelector('.vj-deck'), deckH)
+        R.E.canvas = await page.evaluate(() => [...document.querySelectorAll('.vj-deck-monitor--output canvas')].map((c) => `${c.getAttribute('width')}x${c.getAttribute('height')}`))
+    })
+    await step('E-controls', async () => {
+        const btn = async (name) => page.evaluate((n) => { const b = [...document.querySelectorAll('.vj-deck-monitor-tools button')].find((x) => x.textContent.trim() === n); return b ? { pressed: b.getAttribute('aria-pressed'), cls: b.className } : null }, name)
+        const monW = () => page.evaluate(() => Math.round(document.querySelector('.vj-deck-monitors').getBoundingClientRect().width))
+        R.E.monDefault = await monW(); const sizes = {}
+        for (const n of ['S', 'M', 'L']) { const b = page.locator('.vj-deck-monitor-tools button', { hasText: new RegExp(`^${n}$`) }); if (await b.count()) { await b.first().click(); await wait(300); sizes[n] = { mon: await monW(), pressed: (await btn(n))?.pressed } } else sizes[n] = 'no button' }
+        await dragBy('s2', 60, 8); sizes.afterDrag = { mon: await monW(), pressedAny: await page.evaluate(() => [...document.querySelectorAll('.vj-deck-monitor-tools button[aria-pressed="true"]')].map((b) => b.textContent.trim())) }
+        const M2 = page.locator('.vj-deck-monitor-tools button', { hasText: /^M$/ }); if (await M2.count()) { await M2.first().click(); await wait(300); sizes.mAfter = { mon: await monW(), stored: (await stateOf()).stored } }
+        R.E.sizes = sizes
+        const hide = page.locator('button', { hasText: /Hide preview/ }); R.E.hidePreview = await hide.count() ? 'present' : 'absent'
+        if (await hide.count()) { await hide.first().click(); await wait(400); R.E.hidden = await page.evaluate(() => !!document.querySelector('.vj-deck-monitor--preview') && document.querySelector('.vj-deck-monitor--preview').getBoundingClientRect().width > 0); await page.locator('button', { hasText: /Show preview/ }).first().click(); await wait(400); R.E.shownAgain = await page.evaluate(() => document.querySelector('.vj-deck-monitor--preview').getBoundingClientRect().width > 0) }
+        const k2 = page.locator('.vj-deck button', { hasText: /^K2$/ }); R.E.k2 = {}
+        if (await k2.count()) { await k2.first().click(); await wait(500); R.E.k2.open = await page.evaluate(() => !!document.querySelector('[class*="k2" i]:not(button)')); R.E.k2.shot = await shot(page, 'E-k2-open.png', false); const s = await stateOf(); R.E.k2.ov = s.overlaps; await k2.first().click(); await wait(300) }
+        else R.E.k2.note = 'no K2 button'
+        const tile = page.locator('.vj-deck-tile:not(.vj-deck-tile--empty)').nth(3); const c0 = await tile.getAttribute('class'); await tile.click(); await wait(400); R.E.clip = { before: c0, after: await tile.getAttribute('class') }
+    })
+    // ===== F. Perform page =====
+    R.F = {}
+    await step('F-perform', async () => {
+        await page.setViewportSize({ width: 1706, height: 922 }); await openP2(page, projectId)
+        const s0 = await stateOf(); R.F.default = compact(s0); R.F.defaultShot = await shot(page, 'F-perform-default.png', false)
+        R.F.seams = {}
+        for (const id of IDS) { const p = await probe(id); if (!p) { R.F.seams[id] = 'absent'; continue } const m = M[id]; const v0 = (await stateOf())[m]; await dragBy(id, horiz[id] ? -60 : 60, 8); const s = await stateOf(); R.F.seams[id] = `${v0} -> ${s[m]} ov ${s.overlaps} scroll ${s.scroll}` }
+        R.F.drag = await audit('perform dragged', 'F-perform-dragged.png')
+        for (const [w, h] of [[1280, 720], [1920, 1000]]) { await page.setViewportSize({ width: w, height: h }); await wait(600); R.F[`${w}x${h}`] = await audit(`perform at ${w}x${h}`, `F-perform-${w}x${h}.png`) }
+        await page.setViewportSize({ width: 1706, height: 922 }); await wait(400)
+        if (await page.getByRole('button', { name: /reset layout/i }).count()) await page.getByRole('button', { name: /reset layout/i }).click()
+    })
+}
+
+// ---- part H2: the second look (round 2): default state at 4 sizes in both pages, seam hit zones over controls, round-1 numbers with 5 effects, coarse pointer, text selection ----
+const hitsInPage = () => {
+    // for every seam: which controls / tiles does its hit zone touch, and by how many px; what is under its centre line at 5 points
+    const deck = document.querySelector('.vj-deck'); const out = {}
+    const nm = (e) => `${e.tagName.toLowerCase()}.${(typeof e.className === 'string' ? e.className : '').trim().split(/\s+/).slice(0, 2).join('.')}${e.getAttribute('aria-label') ? ' "' + e.getAttribute('aria-label').slice(0, 24) + '"' : ''}`
+    const targets = [...deck.querySelectorAll('button, input, select, textarea, [role="button"], .vj-deck-tile')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1 })
+    for (const s of deck.querySelectorAll('.vj-deck-seam')) {
+        const b = s.getBoundingClientRect(); const hit = []
+        for (const t of targets) {
+            const r = t.getBoundingClientRect(); const ox = Math.min(b.right, r.right) - Math.max(b.left, r.left); const oy = Math.min(b.bottom, r.bottom) - Math.max(b.top, r.top)
+            if (ox > 0.5 && oy > 0.5) hit.push(`${nm(t)} ${Math.round(ox)}x${Math.round(oy)}`)
+        }
+        out[s.dataset.seam] = { rect: `${Math.round(b.x)},${Math.round(b.y)} ${Math.round(b.width)}x${Math.round(b.height)}`, touches: hit.length, list: hit.slice(0, 5) }
+    }
+    return out
+}
+// F7 (fix-3): a point 2px inside each edge of the first and the last tile of the lowest layer, and of the
+// first and the last tile of column 1, must hit that tile (no seam zone lies over a tile).
+const tileEdgesInPage = () => {
+    const rows = [...document.querySelectorAll('.vj-deck-grid .vj-deck-row:not(.vj-deck-columns)')].filter((r) => r.querySelector('.vj-deck-tile'))
+    if (!rows.length) return { checked: 0, fails: ['no layer rows'] }
+    const rowTiles = (r) => [...r.querySelectorAll('.vj-deck-tile')]
+    const lowest = rowTiles(rows[rows.length - 1])
+    const tiles = [lowest[0], lowest[lowest.length - 1], rowTiles(rows[0])[0], rowTiles(rows[rows.length - 1])[0]]
+    const fails = []; let checked = 0
+    for (const t of new Set(tiles)) {
+        t.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+        const r = t.getBoundingClientRect(); const cx = r.left + r.width / 2; const cy = r.top + r.height / 2
+        const label = `${t.getAttribute('aria-label') || t.textContent.trim().slice(0, 20)} ${Math.round(r.width)}x${Math.round(r.height)}`
+        for (const [edge, x, y] of [['left', r.left + 2, cy], ['right', r.right - 2, cy], ['top', cx, r.top + 2], ['bottom', cx, r.bottom - 2]]) {
+            checked += 1
+            const hit = document.elementFromPoint(x, y)
+            if (!hit || hit.closest('.vj-deck-tile') !== t) fails.push(`${label} ${edge} edge hits ${hit ? hit.className || hit.tagName : 'nothing'}`)
+        }
+    }
+    return { checked, fails }
+}
+const partH2 = async (projectId) => {
+    const step = async (name, fn) => { try { await fn() } catch (e) { (R.stepErrors ||= {})[name] = String(e.message || e).slice(0, 200) } }
+    const stateOf = () => page.evaluate(deckStateInPage)
+    const settle = async () => { await page.mouse.move(5, 5); await wait(250) }
+    const compact = (s) => ({ ov: s.overlaps, sc: s.scroll, strip: s.strip, grid: s.grid, mon: s.mon, main: s.main, bottom: s.bottom, src: s.src, clip: s.clip, fx: s.fx, deckW: s.deckW, deckH: s.deckH, vars: s.vars.length, seams: s.seams.join(',') })
+    const audit = async (label, shotName) => {
+        const s = await stateOf(); const c = await page.evaluate(countsInPage); const d = await page.evaluate(defaultsInPage)
+        const o = { label, ...compact(s), layers: d.layers, cutRows: d.cutRows, cutNames: d.cutNames.length, cut: c.cut.length, covered: c.covered.length, coveredSample: c.covered.slice(0, 3), controls: c.controls, small: c.small.length, tiny: c.tiny.length }
+        if (shotName) o.shot = await shot(page, shotName, false)
+        return o
+    }
+    R.H2 = { p1: {}, perform: {} }
+    await page.setViewportSize({ width: 1706, height: 922 })
+    await openP1(page, projectId); await wait(600)
+    await step('p1-default-sizes', async () => {
+        for (const [w, h] of [[1920, 1000], [1706, 922], [1440, 810], [1280, 720]]) {
+            await page.setViewportSize({ width: w, height: h }); await wait(600); await settle()
+            R.H2.p1[`${w}x${h}`] = { ...(await audit(`P1 default ${w}x${h}`, `H2-p1-${w}x${h}.png`)), hits: await page.evaluate(hitsInPage) }
+        }
+        await page.setViewportSize({ width: 1706, height: 922 }); await wait(500)
+    })
+    await step('tile-edges', async () => {
+        R.H2.tileEdges = {}
+        for (const [w, h] of [[1706, 922], [1440, 810]]) {
+            await page.setViewportSize({ width: w, height: h }); await wait(600); await settle()
+            R.H2.tileEdges[`${w}x${h}`] = await page.evaluate(tileEdgesInPage)
+        }
+        await page.setViewportSize({ width: 1706, height: 922 }); await wait(500)
+    })
+    await step('coarse', async () => {
+        const cdp = await context.newCDPSession(page)
+        await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'pointer', value: 'coarse' }, { name: 'hover', value: 'none' }] }); await wait(400)
+        R.H2.coarse = await page.evaluate(() => [...document.querySelectorAll('.vj-deck-seam')].map((s) => { const b = s.getBoundingClientRect(); return `${s.dataset.seam} ${Math.round(b.width)}x${Math.round(b.height)}` }))
+        R.H2.coarseMatches = await page.evaluate(() => matchMedia('(pointer: coarse)').matches)
+        await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'pointer', value: 'fine' }, { name: 'hover', value: 'hover' }] }); await wait(300)
+    })
+    await step('selection', async () => {
+        const p = await page.evaluate(seamProbeInPage, 's2'); const cx = p.x + p.w / 2; const cy = p.y + p.h / 2
+        await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(cx - 150, cy + 200, { steps: 10 }); await page.mouse.up(); await wait(200)
+        R.H2.selectionAfterDrag = await page.evaluate(() => window.getSelection().toString().length)
+        R.H2.bodyCursorDuringNone = await page.evaluate(() => getComputedStyle(document.body).cursor)
+        await page.mouse.dblclick(cx, cy); await wait(200)
+        R.H2.selectionAfterDbl = await page.evaluate(() => window.getSelection().toString().length)
+        // a click on the first tile's left edge (inside the S1 hit zone?) and the last tile's right edge
+        const edge = await page.evaluate(() => { const t = document.querySelector('.vj-deck-tile'); const r = t.getBoundingClientRect(); const e1 = document.elementFromPoint(r.left + 2, r.top + 40); const t8 = [...document.querySelectorAll('.vj-deck-tile')].filter((x) => x.getBoundingClientRect().top === r.top).pop(); const r8 = t8.getBoundingClientRect(); const e2 = document.elementFromPoint(r8.right - 2, r8.top + 40); return { firstLeft2px: `${e1.tagName}.${(e1.className || '').toString().slice(0, 30)}`, lastRight2px: `${e2.tagName}.${(e2.className || '').toString().slice(0, 30)}` } })
+        R.H2.edgeClicks = edge
+    })
+    await step('round1-with-5fx', async () => {
+        const po = page.locator('.vj-deck-preview-only'); if ((await po.getAttribute('aria-pressed')) !== 'true') await po.click()
+        const addFx = async (type) => { await page.locator('select[aria-label="Add effect"]').selectOption(type); await wait(250) }
+        await page.locator('.vj-deck-tile').nth(8 * 2).click().catch(() => {}); await wait(200)
+        const layerSel = page.locator('select[aria-label="Effects layer"]'); if (await layerSel.count()) await layerSel.selectOption('2').catch(() => {})
+        for (const t of ['top.glow', 'top.blur', 'top.glitch']) await addFx(t).catch(() => {})
+        const mr = page.locator('[aria-label="Effects of"] >> text=/master/i').first(); if (await mr.count()) await mr.click(); await wait(200)
+        for (const t of ['top.tint', 'top.hsvadj']) await addFx(t).catch(() => {})
+        R.H2.fx = await page.locator('.vj-deck-fx-effect').count()
+        await page.setViewportSize({ width: 1706, height: 922 }); await wait(500); await settle()
+        R.H2.round1 = { ...(await audit('5 fx like round 1 at 1706x922', 'H2-5fx-1706x922.png')) }
+        R.H2.round1Reach = await page.evaluate(reachInPage)
+        const bh = () => page.evaluate(() => Math.round(document.querySelector('.vj-deck-bottom').getBoundingClientRect().height))
+        R.H2.bottomWith5fx = await bh()
+    })
+    await step('perform-default', async () => {
+        await page.evaluate(() => { try { localStorage.removeItem('di.vjDeck.layout') } catch { /* none */ } })
+        await openP2(page, projectId)
+        for (const [w, h] of [[1920, 1000], [1706, 922], [1440, 810], [1280, 720]]) {
+            await page.setViewportSize({ width: w, height: h }); await wait(700); await settle()
+            R.H2.perform[`${w}x${h}`] = { ...(await audit(`Perform default ${w}x${h}`, `H2-perform-${w}x${h}.png`)), hits: await page.evaluate(hitsInPage) }
+        }
+    })
+    await step('perform-s4-extreme', async () => {
+        await page.setViewportSize({ width: 1280, height: 720 }); await wait(500)
+        const p = await page.evaluate(seamProbeInPage, 's4'); if (p) { const cx = p.x + p.w / 2; const cy = p.y + p.h / 2; await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(cx, cy - 300, { steps: 10 }); await page.mouse.up(); await wait(300) }
+        R.H2.perform.s4Up1280 = await audit('Perform 1280x720, s4 dragged up', 'H2-perform-1280-s4up.png')
+        if (await page.getByRole('button', { name: /reset layout/i }).count()) await page.getByRole('button', { name: /reset layout/i }).click()
+    })
+}
+
 const browser = await chromium.connectOverCDP(process.env.DI_TEST_CDP)
 const context = await browser.newContext({ viewport: { width: 1706, height: 922 }, deviceScaleFactor: 1.5 })
 await context.addInitScript(() => { try { Object.defineProperty(navigator, 'requestMIDIAccess', { value: undefined, configurable: true }) } catch { /* none */ } })
-if (PART === 'S') await context.addInitScript(() => { try { navigator.mediaDevices.enumerateDevices = async () => [{ kind: 'videoinput', label: 'Walk camera', deviceId: 'walkcam1', groupId: 'g' }] } catch { /* none */ } })
+if (['S', 'H', 'H2'].includes(PART)) await context.addInitScript(() => { try { navigator.mediaDevices.enumerateDevices = async () => [{ kind: 'videoinput', label: 'Walk camera', deviceId: 'walkcam1', groupId: 'g' }] } catch { /* none */ } })
 const page = await context.newPage(); page.setDefaultTimeout(15000)
 const R = { part: PART }
 const snap = () => page.evaluate(snapInPage, SEL)
 const wait = (ms = 250) => page.waitForTimeout(ms)
 try {
-    const projectId = PART === 'S' ? await setupS(page) : await setup(page)
+    const projectId = ['S', 'H', 'H2'].includes(PART) ? await setupS(page) : await setup(page)
     if (PART === 'S') await partS(projectId)
+    else if (PART === 'H') await partH(projectId)
+    else if (PART === 'H2') await partH2(projectId)
     else if (PART === 'P') {
         await openP1(page, projectId)
         R.probe = await page.evaluate(() => { const d = document.querySelector('.vj-deck'); const g = (s) => { const e = document.querySelector(s); if (!e) return null; const c = getComputedStyle(e); const b = e.getBoundingClientRect(); return { h: Math.round(b.height), minH: c.minHeight, maxH: c.maxHeight, flex: c.flex, ctl: c.getPropertyValue('--vj-control'), layers: c.getPropertyValue('--vj-layers'), rowMin: c.getPropertyValue('--vj-row-min'), gap: c.rowGap, rows: c.gridTemplateRows } }; return { cls: d.className, deckH: d.clientHeight, pad: getComputedStyle(d).padding, main: g('.vj-deck-main'), bottom: g('.vj-deck-bottom'), grid: g('.vj-deck-grid'), scroll: g('.vj-deck-scroll'), top: g('.vj-deck-top'), root: g('.vj-deck'), row: g('.vj-deck-layer') } })
@@ -389,7 +724,7 @@ try {
         const step = async (action, fn) => { await rst(); await wait(100); const b = await snap(); try { await fn() } catch (e) { R.shifts.push({ action, panel: 'ERROR', before: '', after: e.message.slice(0, 90) }); return } await wait(300); const a = await snap(); const ds = diff(b, a, 8); for (const d of ds) { const m = d.match(/^(\S+) (.*) -> (.*)$/); R.shifts.push(m ? { action, panel: m[1], before: m[2], after: m[3] } : { action, panel: d, before: '', after: '' }) } if (!ds.length) R.shifts.push({ action, panel: '(none)', before: 'no panel moved > 8 px', after: '' }) }
         await step('select clip 1 BACK slot 1', () => page.locator('.vj-deck-tile').nth(0).click())
         await shot(page, 'A-clip-selected.png')
-        await step('select another clip (4 WORDS slot 6)', () => page.locator('.vj-deck-tile').nth(3 * 8 + 5).click())
+        await step('select another clip (4 TEXT slot 6)', () => page.locator('.vj-deck-tile').nth(3 * 8 + 5).click())
         await step('add effect (Glow) on layer', async () => { const r = page.locator('[aria-label="Effects of"] >> text=/layer/i').first(); if (await r.count()) await r.click(); await page.locator('select[aria-label="Add effect"]').selectOption('top.mirror') })
         await step('open effect settings (expand)', () => page.locator('.vj-deck-fx-open').first().click())
         await shot(page, 'A-effect-open.png')
@@ -445,7 +780,7 @@ try {
         const drag = async (x, y, dx, dy) => { await page.mouse.move(x, y); await wait(60); const cur = await page.evaluate(({ x, y }) => { const e = document.elementFromPoint(x, y); return e ? getComputedStyle(e).cursor : '' }, { x, y }); await page.mouse.down(); await page.mouse.move(x + dx / 2, y + dy / 2, { steps: 6 }); await page.mouse.move(x + dx, y + dy, { steps: 8 }); await page.mouse.up(); await wait(300); return cur }
         R.ops = []
         if (dk) {
-            const [bx, by, bw, bh] = dk.b; const [hx, hy, hw, hh] = dk.h
+            const [hx, hy, hw, hh] = dk.h
             let b0 = await deckBox(); let cur = await drag(hx + hw / 2 - 100, hy + hh / 2, -60, 40); let b1 = await deckBox(); R.ops.push({ op: 'drag title bar (-60,+40)', cursor: cur, before: b0, after: b1 })
             if (dk.rz) { b0 = await deckBox(); cur = await drag(dk.rz[0] + dk.rz[2] / 2, dk.rz[1] + dk.rz[3] / 2, -120, -90); b1 = await deckBox(); R.ops.push({ op: 'drag corner grip bottom-right (-120,-90) smaller', cursor: cur, before: b0, after: b1 }) }
             b0 = await deckBox(); cur = await drag(b0[0] + b0[2] - 2, b0[1] + b0[3] / 2, 100, 0); b1 = await deckBox(); R.ops.push({ op: 'drag right edge +100', cursor: cur, before: b0, after: b1 })
@@ -470,7 +805,7 @@ try {
         R.start = await boxes(); R.ops = []
         const hdr = async (i) => page.evaluate((i) => { const h = [...document.querySelectorAll('.raw-window-header')][i].getBoundingClientRect(); return [h.x + 40, h.y + h.height / 2, h.width] }, i)
         for (const [i, dx, dy] of [[1, -300, 150], [1, -700, 0], [2, 0, -200], [0, 250, 0]]) {
-            const [x, y] = await hdr(i); const b0 = await boxes()
+            const [x, y] = await hdr(i)
             await page.mouse.move(x, y); await wait(60); await page.mouse.down(); await page.mouse.move(x + dx / 2, y + dy / 2, { steps: 8 }); await page.mouse.move(x + dx, y + dy, { steps: 10 }); await page.mouse.up(); await wait(400)
             R.ops.push({ op: `drag header #${i} by ${dx},${dy}`, after: await boxes() })
         }
@@ -509,11 +844,13 @@ try {
     await context.close().catch(() => {})
 }
 fs.writeFileSync(path.join(OUT, `result-${PART}.json`), JSON.stringify(R, null, 2))
+if (PART === 'H') log(`H errors ${JSON.stringify(R.stepErrors || {})} | default ${JSON.stringify(R.A?.state)} | reset diff ${R.B?.reset?.diffPx} | jump ${R.D?.jumpDefault} / ${R.D?.jumpAfterDrag} | safety drag/idle req ${R.E?.dragReq}/${R.E?.idleReq} frames ${R.E?.dragFrames}/${R.E?.idleFrames} sameNode ${R.E?.sameNode} | perform ${JSON.stringify(R.F?.seams)}`)
 if (PART === 'S') {
     const S = R.seams || {}; const ids = Object.keys(S); const n = (f) => ids.filter((i) => f(S[i])).length
     const def = R.defaults || {}; const ext = R.extreme || {}
     const ov = Object.values(ext).reduce((a, e) => a + e.overlaps, 0) + (R.stepsMaxOverlap || 0)
     log(`S seams ${ids.length} | cursor ${n((o) => /resize/.test(o.probe?.cursor || ''))}/5 | moved ${n((o) => o.boxesChanged > 0 && o.plus !== o.v0)}/5 | reset ${n((o) => o.afterReset === o.v0 && o.finalReset === o.v0)}/5 | keys ${n((o) => o.keyA !== o.v0 && o.home !== o.end)}/5 | overlap max ${R.stepsMaxOverlap} ext ${Object.values(ext).map((e) => e.overlaps).join(',')} | scroll drag max ${R.stepsMaxScroll} default ${Object.entries(def).map(([k, v]) => `${k}:${v.scroll}`).join(' ')} | cutRows ${Object.values(def).slice(0, 3).map((v) => v.cutRows).join(',')} | cutNames ${def['1706x922']?.cutNames?.length} | ext scroll ${Object.values(ext).map((e) => e.scroll).join(',')} | safety nonGet ${R.safety?.nonGetDrag}/${R.safety?.nonGetIdle} ws ${R.safety?.wsDrag}/${R.safety?.wsIdle} sameNode ${R.safety?.sameNode} | reload kept ${R.reload?.stored} | reset diff px ${R.afterReset?.pixelsDiffer} btn gone ${R.afterReset?.buttonGone} | ov ${ov}`)
 }
+if (PART === 'H2') log(`H2 tile edges (2px inside, must hit the tile): ${Object.entries(R.H2?.tileEdges || {}).map(([k, v]) => `${k} ${v.checked - v.fails.length}/${v.checked}${v.fails.length ? ' FAIL ' + v.fails.slice(0, 3).join('; ') : ''}`).join(' | ') || 'not run'}`)
 log(`part ${PART} done in ${Math.round((Date.now() - t0) / 1000)} s${R.error ? ' ERROR ' + R.error.slice(0, 300) : ''} -> ${path.join(OUT, `result-${PART}.json`)}`)
 process.exit(0)

@@ -62,20 +62,23 @@ export const sanitizeLayout = (raw) => {
 export const hasLayout = (layout) => Object.keys(layout || {}).length > 0
 
 /** The stored layout (or {}). Storage may be blocked or hold anything: that reads as nothing stored. */
-export const readLayout = (storage = typeof window === 'undefined' ? null : window.localStorage) => {
+export const readLayout = (storage) => {
     try {
-        return sanitizeLayout(JSON.parse(storage.getItem(LAYOUT_KEY) || 'null'))
+        // The window.localStorage getter itself throws when site data is blocked: it stays inside the try.
+        const store = storage ?? window.localStorage
+        return sanitizeLayout(JSON.parse(store.getItem(LAYOUT_KEY) || 'null'))
     } catch {
         return {}
     }
 }
 
 /** Stores the layout; an empty one removes the key. Returns true when storage took it. */
-export const writeLayout = (storage = typeof window === 'undefined' ? null : window.localStorage, layout = {}) => {
+export const writeLayout = (storage, layout = {}) => {
     try {
+        const store = storage ?? window.localStorage
         const clean = sanitizeLayout(layout)
-        if (!hasLayout(clean)) storage.removeItem(LAYOUT_KEY)
-        else storage.setItem(LAYOUT_KEY, JSON.stringify({ v: LAYOUT_VERSION, ...clean }))
+        if (!hasLayout(clean)) store.removeItem(LAYOUT_KEY)
+        else store.setItem(LAYOUT_KEY, JSON.stringify({ v: LAYOUT_VERSION, ...clean }))
         return true
     } catch {
         return false
