@@ -739,11 +739,11 @@
     max-height: 200px;
 }
 
-/* --- sources: one line per source, scrolling inside the panel ------------- */
+/* --- sources: four groups, DEVICES first, scrolling inside the panel ------ */
 
 .vj-deck-sources {
     --vj-source-row: 24px;
-    max-height: 240px;
+    min-height: 0;
 }
 
 /* A panel never squeezes its own rows (the Effects head wrapped to two lines and lay
@@ -756,21 +756,42 @@
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    min-height: calc(var(--vj-source-row) * 2);
+    gap: var(--di-space-2);
+    min-height: calc(var(--vj-source-row) * 3);
     overflow: auto;
 }
 
 .vj-deck-source-group {
     display: flex;
+    flex: none;
     flex-direction: column;
 }
 
-/* One compact line per source: the kind as a small tag, then the name. */
+.vj-deck-source-head {
+    padding: var(--di-space-1) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    color: var(--di-dim);
+    font-size: var(--di-text-1);
+    letter-spacing: var(--di-label-tracking);
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/* FILES never push the devices out of view: the long list scrolls inside four rows. */
+.vj-deck-source-files-list {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(var(--vj-source-row) * 4);
+    overflow: auto;
+}
+
+/* One line per source: the kind as a small tag (its full word), the name, a state. */
 .vj-deck-source {
     display: grid;
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
     align-items: center;
-    gap: var(--di-space-1);
+    gap: var(--di-space-2);
     box-sizing: border-box;
     min-height: var(--vj-source-row);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -778,14 +799,46 @@
 }
 
 .vj-deck-source-kind {
-    overflow: hidden;
+    min-width: 7ch;
     color: var(--di-dim);
     font-size: var(--di-text-1);
     letter-spacing: 0.08em;
     line-height: 1;
-    text-overflow: ellipsis;
     text-transform: uppercase;
     white-space: nowrap;
+}
+
+.vj-deck-source-state {
+    color: var(--di-dim);
+    font-size: var(--di-text-1);
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.vj-deck-source-state.is-live {
+    color: var(--di-ink);
+    box-shadow: inset 2px 0 0 var(--di-ink);
+    padding-left: var(--di-space-1);
+}
+
+.vj-deck-source.is-unplayable {
+    cursor: default;
+}
+
+.vj-deck-source.is-unplayable .vj-deck-source-name {
+    color: var(--di-dim);
+}
+
+.vj-deck-source--upload {
+    cursor: default;
+}
+
+.vj-deck-source--upload .vj-deck-upload {
+    min-height: var(--vj-source-row);
+    padding-block: 0;
+    line-height: 1;
 }
 
 .vj-deck-source-name {
@@ -802,18 +855,12 @@
     border-color: transparent;
 }
 
-.vj-deck-source--upload {
-    cursor: default;
-}
-
-.vj-deck-source--upload .vj-deck-upload {
-    min-height: var(--vj-source-row);
-    padding-block: 0;
-    line-height: 1;
-}
-
 .vj-deck-source-name:disabled {
     cursor: grab;
+}
+
+.vj-deck-source.is-unplayable .vj-deck-source-name:disabled {
+    cursor: default;
 }
 
 /* A slot a drag is over: the one place it would land. */
