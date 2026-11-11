@@ -754,6 +754,8 @@
 
 .vj-deck-sources {
     --vj-source-row: 24px;
+    /* The cap stays: a taller panel takes the layer rows' room (five rows no longer fit a 922px page). */
+    max-height: 240px;
     min-height: 0;
 }
 
@@ -789,12 +791,10 @@
     white-space: nowrap;
 }
 
-/* FILES never push the devices out of view: the long list scrolls inside four rows. */
+/* FILES come last, so a long list never pushes the devices out of view. One scroll box: the list's. */
 .vj-deck-source-files-list {
     display: flex;
     flex-direction: column;
-    max-height: calc(var(--vj-source-row) * 4);
-    overflow: auto;
 }
 
 /* One line per source: the kind as a small tag (its full word), the name, a state. */
