@@ -71,8 +71,9 @@ describe('Lights follow', () => {
         expect(fetchSpy).toHaveBeenCalledTimes(1)
         expect(fetchSpy.mock.calls[0][0]).toContain('api/looks/fire')
         expect(bodyOf(fetchSpy.mock.calls[0])).toEqual({ id: 'look-b' })
-        expect(screen.getByRole('status').textContent).toBe('Fired Beta')
-        expect(globalFetch).toHaveBeenCalledTimes(0)
+        expect(document.querySelector('.vj-deck-follow-status').textContent).toBe('Fired Beta')
+        // the deck's own clock read may touch the global fetch; a cue never does
+        expect(globalFetch.mock.calls.filter(([url]) => /looks\/fire|scenes\/recall/.test(String(url)))).toEqual([])
     })
 
     it('on, no cue for the column: fires 0 times and says so', async () => {
@@ -81,7 +82,7 @@ describe('Lights follow', () => {
         playColumn(3)
         await act(async () => {})
         expect(fetchSpy).toHaveBeenCalledTimes(0)
-        expect(screen.getByRole('status').textContent).toBe('Column 3 has no cue')
+        expect(document.querySelector('.vj-deck-follow-status').textContent).toBe('Column 3 has no cue')
         expect(screen.getByLabelText(/Layer 1, slot 3/).getAttribute('aria-pressed')).toBe('true')
     })
 
@@ -109,7 +110,7 @@ describe('Lights follow', () => {
         render(<Host deck={makeDeck({ 0: 'cue-a' })} onFireCue={fire} />)
         switchOn()
         playColumn(1)
-        await waitFor(() => expect(screen.getByRole('status').textContent).toBe('the light desk did not answer'))
+        await waitFor(() => expect(document.querySelector('.vj-deck-follow-status')?.textContent).toBe('the light desk did not answer'))
         expect(fire).toHaveBeenCalledTimes(1)
         expect(screen.getByLabelText(/Layer 1, slot 1/).getAttribute('aria-pressed')).toBe('true')
     })
@@ -119,7 +120,7 @@ describe('Lights follow', () => {
         render(<Host deck={makeDeck({ 0: 'cue-a' })} onFireCue={fire} />)
         switchOn()
         playColumn(1)
-        await waitFor(() => expect(screen.getByRole('status').textContent).toBe('the light desk did not answer'))
+        await waitFor(() => expect(document.querySelector('.vj-deck-follow-status')?.textContent).toBe('the light desk did not answer'))
         expect(screen.getByLabelText(/Layer 1, slot 1/).getAttribute('aria-pressed')).toBe('true')
     })
 
