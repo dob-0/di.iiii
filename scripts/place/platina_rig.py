@@ -385,7 +385,7 @@ def build(repo, M):
         'patch': {'plan': PLAN, 'universes': 11, 'units': 54, 'status': 'PROPOSED, not confirmed by the rental side'},
         'solids': solids, 'fixtures': fixtures,
         'owed': ['Ask the Platina side: where the 12 XP-16R hang, where the 2 hazers stand, whether the 3 audience-side K10 / 7 Sharpy of the 11-10 plot are really not coming, the LED screen size (cabinets), the truss heights.',
-                 'K10/K15 optics, pan/tilt and the XP-16R/Pixel Line shapes are stand-ins (profiles.missing); read the real files before any aim or beam-length number is trusted.'],
+                 'K15 output and body size are not published in the papers held (the K10 figure and the plot symbol stand in); the cells of K10/K15/Pixel Line are one cone per lamp.'],
     }
     return rig
 
