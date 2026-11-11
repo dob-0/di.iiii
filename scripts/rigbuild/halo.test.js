@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
 
 import { REPO_ROOT } from '../place/common.mjs'
 import { RIG_PREFIX, buildRig, performerBox, stageFrame } from '../place/rig-lib.mjs'
-import { readGeometry } from '../place/fixtures-glb.mjs'
+import { builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import { rigFileOf, VERSIONS_FILE } from './versions.mjs'
 import { variantOf } from './load-version.mjs'
@@ -21,7 +21,7 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8'))
 const spec = read(VERSIONS_FILE)
 const hall = read(spec.hall)
 const manifest = read('scripts/place/fixtures/fixtures.json')
-const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
 const minimal = read(rigFileOf(spec.set, 'minimal'))
 const fixed = read(rigFileOf(spec.set, 'minimal-halo'))
 const heads = read(rigFileOf(spec.set, 'minimal-halo-heads'))
