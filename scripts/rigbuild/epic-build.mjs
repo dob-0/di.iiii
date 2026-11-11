@@ -391,7 +391,9 @@ export const v1Entities = (rig, { hall = null, report = null } = {}) => {
         const ghost = s.id.startsWith('rig-shell-')          // the building's ghost shell (outer walls, roof): seen through (owner 2026-10-12)
         const color = ghost ? '#9aa0a6' : s.id === 'rig-ash-wall' ? '#070707' : s.id.startsWith('rig-pa-') ? '#202226' : '#6f7378'
         const size = s.kind === 'tower' ? [0.29, r3(6 * s.s[1]), 0.29] : s.s
-        out.push(box(s.id, s.name.slice(0, 200), s.p, size, color, ghost ? (s.opacity ?? 0.2) : 1, ghost ? 0.9 : s.id === 'rig-ash-wall' ? 0.98 : 0.85, !ghost && isSteelSolid(s)))   // box(…, opacity, roughness, steel)
+        // a solid that says anchor 'base' gives p as the middle of its FOOT; a box entity is drawn from its centre
+        const pos = s.anchor === 'base' ? [s.p[0], r3(s.p[1] + size[1] / 2), s.p[2]] : s.p
+        out.push(box(s.id, s.name.slice(0, 200), pos, size, color, ghost ? (s.opacity ?? 0.2) : 1, ghost ? 0.9 : s.id === 'rig-ash-wall' ? 0.98 : 0.85, !ghost && isSteelSolid(s)))   // box(…, opacity, roughness, steel)
     }
     return out
 }

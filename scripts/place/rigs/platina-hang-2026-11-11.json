@@ -241,6 +241,7 @@
    "id": "platina-screen",
    "name": "LED screen 4.01 x 2.5 m (P3.9 cabinets 0.5 m: 8 x 5 = 1024 x 640 px; the file name says 8 x 5, the drawing gives 8 x 5 cabinets)",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     -0.04,
@@ -309,6 +310,7 @@
    "id": "platina-deck",
    "name": "stage deck 0.6 m high; bounding box, the front edge is an arc (see outline)",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     -0.04,
@@ -346,6 +348,7 @@
    "id": "platina-wing-l1",
    "name": "wing panel (unlabelled tall box on the plot) L1",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     -5.33,
@@ -368,6 +371,7 @@
    "id": "platina-wing-r1",
    "name": "wing panel (unlabelled tall box on the plot) R1",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     5.33,
@@ -390,6 +394,7 @@
    "id": "platina-wing-l2",
    "name": "wing panel (unlabelled tall box on the plot) L2",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     -6.01,
@@ -412,6 +417,7 @@
    "id": "platina-wing-r2",
    "name": "wing panel (unlabelled tall box on the plot) R2",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     6.01,
@@ -434,6 +440,7 @@
    "id": "platina-wing-l3",
    "name": "wing panel (unlabelled tall box on the plot) L3",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     -6.71,
@@ -456,6 +463,7 @@
    "id": "platina-wing-r3",
    "name": "wing panel (unlabelled tall box on the plot) R3",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     6.71,
@@ -478,6 +486,7 @@
    "id": "platina-wing-l4",
    "name": "wing panel (unlabelled tall box on the plot) L4",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     -7.09,
@@ -500,6 +509,7 @@
    "id": "platina-wing-r4",
    "name": "wing panel (unlabelled tall box on the plot) R4",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     7.09,
@@ -522,6 +532,7 @@
    "id": "platina-riser-l",
    "name": "platform box on the deck (unlabelled on the plot)",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     -3.71,
@@ -544,6 +555,7 @@
    "id": "platina-riser-r",
    "name": "platform box on the deck (unlabelled on the plot)",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     3.65,
@@ -566,6 +578,7 @@
    "id": "platina-tower-1",
    "name": "tower 1 pole (counted from the audience's left)",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     -6.46,
@@ -588,6 +601,7 @@
    "id": "platina-tower-2",
    "name": "tower 2 pole (counted from the audience's left)",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     -5.82,
@@ -610,6 +624,7 @@
    "id": "platina-tower-3",
    "name": "tower 3 pole (counted from the audience's left)",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     -5.1,
@@ -632,6 +647,7 @@
    "id": "platina-tower-4",
    "name": "tower 4 pole (counted from the audience's left)",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     -4.49,
@@ -654,6 +670,7 @@
    "id": "platina-tower-5",
    "name": "tower 5 pole (counted from the audience's left)",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     4.47,
@@ -676,6 +693,7 @@
    "id": "platina-tower-6",
    "name": "tower 6 pole (counted from the audience's left)",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     5.06,
@@ -698,6 +716,7 @@
    "id": "platina-tower-7",
    "name": "tower 7 pole (counted from the audience's left)",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     5.88,
@@ -720,6 +739,7 @@
    "id": "platina-tower-8",
    "name": "tower 8 pole (counted from the audience's left)",
    "kind": "box",
+   "anchor": "base",
    "status": "measured",
    "p": [
     6.45,

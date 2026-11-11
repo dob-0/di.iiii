@@ -279,7 +279,7 @@ def build(repo, M):
     # ---------------------------------------------------------------- solids (measured)
     sc = M['screen']; sx = (sc['x'][0] + sc['x'][1]) / 2; sw = sc['x'][1] - sc['x'][0]
     sh_ = sc['y_front'][1] - sc['y_front'][0]
-    solids.append({'id': 'platina-screen', 'name': f'LED screen {r2(sw)} x {r2(sh_)} m (P3.9 cabinets 0.5 m: 8 x 5 = 1024 x 640 px; the file name says 8 x 5, the drawing gives 8 x 5 cabinets)', 'kind': 'box', 'status': 'measured',
+    solids.append({'id': 'platina-screen', 'name': f'LED screen {r2(sw)} x {r2(sh_)} m (P3.9 cabinets 0.5 m: 8 x 5 = 1024 x 640 px; the file name says 8 x 5, the drawing gives 8 x 5 cabinets)', 'kind': 'box', 'anchor': 'base', 'status': 'measured',
                    'p': [r2(sx), r2(sc['y_front'][0]), r2((sc['z'][0] + sc['z'][1]) / 2)], 'r': [0, 0, 0], 's': [r2(sw), r2(sh_), r2(sc['z'][1] - sc['z'][0])],
                    'source': 'plot-front.png outline x 610..1014, y 438..690 on grid 1 m; plot-side.png faces x 451/463 (thickness), bottom y 741; screen-from-plot-8x5.png (same size)'})
     T = M['truss']
@@ -293,18 +293,18 @@ def build(repo, M):
                    'p': [r2(sum(T['aud']['x_top']) / 2), r2(T['aud']['y_side']), r2(T['aud']['z_side'])], 'r': [0, 0, 0], 's': [r2(aw), r2(tsec), r2(tsec)], 'sections': 4,
                    'source': 'plot-top.png y 860, x 525..1135; z and height plot-side.png (square at x 1425..1463)'})
     dx = M['deck']['x_front_m']; dz = M['deck']['z_side_m']
-    solids.append({'id': 'platina-deck', 'name': f'stage deck {deck} m high; bounding box, the front edge is an arc (see outline)', 'kind': 'box', 'status': 'measured', 'p': [r2((dx[0] + dx[1]) / 2), 0.0, r2((dz[0] + dz[1]) / 2)], 'r': [0, 0, 0],
+    solids.append({'id': 'platina-deck', 'name': f'stage deck {deck} m high; bounding box, the front edge is an arc (see outline)', 'kind': 'box', 'anchor': 'base', 'status': 'measured', 'p': [r2((dx[0] + dx[1]) / 2), 0.0, r2((dz[0] + dz[1]) / 2)], 'r': [0, 0, 0],
                    's': [r2(dx[1] - dx[0]), deck, r2(dz[1] - dz[0])],
                    'outline_xz': [[r2(M['deck']['front_arc_end_x_top_m'][0]), r2(M['deck']['front_arc_end_z_top_m'])], [0.0, r2(M['deck']['front_arc_centre_z_top_m'])], [r2(M['deck']['front_arc_end_x_top_m'][1]), r2(M['deck']['front_arc_end_z_top_m'])]],
                    'outline_note': 'front arc through its two ends and its middle (plot-top.png y 645 at x 298/1365, y 713 at x 832)',
                    'source': f'plot-front.png deck x 107..1517, deck height {r2(M["deck_h_parts"][0])} m (front) / {r2(M["deck_h_parts"][1])} m (side), z plot-side.png 339..1228'})
     for k, w in enumerate(M['wings']):
         zc = (w['z'][0] + w['z'][1]) / 2; xc = (w['x'][0] + w['x'][1]) / 2
-        solids.append({'id': f'platina-wing-{w["side"].lower()}{k // 2 + 1}', 'name': f'wing panel (unlabelled tall box on the plot) {w["side"]}{k // 2 + 1}', 'kind': 'box', 'status': 'measured',
+        solids.append({'id': f'platina-wing-{w["side"].lower()}{k // 2 + 1}', 'name': f'wing panel (unlabelled tall box on the plot) {w["side"]}{k // 2 + 1}', 'kind': 'box', 'anchor': 'base', 'status': 'measured',
                        'p': [r2(xc), 0.0, r2(zc)], 'r': [0, 0, 0], 's': [r2(w['x'][1] - w['x'][0]), r2(M['wing_h_front_m'][1]), r2(w['z'][1] - w['z'][0])],
                        'source': 'plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834' + ('; mirrored from the left, right-hand edges checked' if w['side'] == 'R' else '')})
     for k, xr in enumerate(M['risers']['x_top_m']):
-        solids.append({'id': f'platina-riser-{"lr"[k]}', 'name': 'platform box on the deck (unlabelled on the plot)', 'kind': 'box', 'status': 'measured',
+        solids.append({'id': f'platina-riser-{"lr"[k]}', 'name': 'platform box on the deck (unlabelled on the plot)', 'kind': 'box', 'anchor': 'base', 'status': 'measured',
                        'p': [r2((xr[0] + xr[1]) / 2), deck, r2((M['risers']['z_top_m'][0] + M['risers']['z_top_m'][1]) / 2)], 'r': [0, 0, 0],
                        's': [r2(xr[1] - xr[0]), r2(M['risers']['h_front_m']), r2(M['risers']['z_top_m'][1] - M['risers']['z_top_m'][0])],
                        'source': 'plot-top.png box x ' + f'{r2(xr[0])}..{r2(xr[1])} m, z; height plot-front.png y 672..772'})
@@ -319,7 +319,7 @@ def build(repo, M):
     bw, bd = M['towers']['bar_w_front_m'], M['towers']['bar_d_side_m']
     n = 0
     for t, (x, z) in enumerate(towers):
-        solids.append({'id': f'platina-tower-{t + 1}', 'name': f'tower {t + 1} pole (counted from the audience\'s left)', 'kind': 'box', 'status': 'measured', 'p': [r2(x), 0.0, r2(z)], 'r': [0, 0, 0],
+        solids.append({'id': f'platina-tower-{t + 1}', 'name': f'tower {t + 1} pole (counted from the audience\'s left)', 'kind': 'box', 'anchor': 'base', 'status': 'measured', 'p': [r2(x), 0.0, r2(z)], 'r': [0, 0, 0],
                        's': [0.1, r2(bar_y0), 0.1], 'source': 'plot-front.png pole under the bars (x lines 159..170 and the like)'})
         for j in range(3):
             yc = bar_y0 + barh * (j + 0.5)
