@@ -111,6 +111,13 @@ describe('Platina rig plan 2026-11-11', () => {
         rig.fixtures.forEach((f) => expect(f.p[1] - f.size_m[1] / 2).toBeGreaterThan(rig.solids.find((s) => s.id === 'platina-deck').s[1] - 0.05))
     })
 
+    it('every solid is opaque and there is a floor: light stops at the first surface (owner N3835)', () => {
+        expect(rig.solids.every((s) => s.opaque === true)).toBe(true)
+        const floor = rig.solids.find((s) => s.id === 'platina-floor')
+        expect(floor.p[1] + floor.s[1]).toBeCloseTo(0, 5)
+        expect(floor.status).toBe('PROPOSED')
+    })
+
     it('lists what the plot has and the offer has not (3 audience-side K10, 7 Sharpy) as plot_only, not built', () => {
         expect(rig.plot_only.k10_audience_side.count).toBe(3)
         expect(rig.plot_only.sharpy.count).toBe(7)

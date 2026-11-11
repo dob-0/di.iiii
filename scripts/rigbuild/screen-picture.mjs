@@ -41,7 +41,10 @@ export const pictureEntity = ({ screen, assetId, px, level = 1 }) => {
         components: {
             transform: { position: [t.position[0], r(t.position[1] + h / 2), r(t.position[2] + d / 2 + GAP)], rotation: UPRIGHT, scale: [r(w / (aspect * IMAGE_PLANE_H)), 1, r(h / IMAGE_PLANE_H)] },
             appearance: { opacity: Math.max(0, Math.min(1, Number(level) || 0)) },
-            media: { assetId }
+            media: { assetId },
+            // a wall does not drift: with no animation the room's walk mode gives a loose object an idle motion
+            // (entityAnimation.js resolveAnimation), and the picture floated off its screen (owner N3853, 2026-11-12)
+            animation: { mode: 'static', speed: 1, amplitude: 1 }
         }
     }
 }
