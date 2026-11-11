@@ -292,6 +292,8 @@
 /* --- the grid ------------------------------------------------------------- */
 
 .vj-deck-scroll {
+    /* None until the end room is measured and set inline here (VjDeckView.jsx); the grid inherits it. */
+    --vj-end-room: 0px;
     flex: 1 1 auto;
     /* A short frame keeps the column row and one layer row in view; the grid scrolls inside. */
     min-height: 0;
@@ -309,8 +311,7 @@
 }
 
 .vj-deck-grid {
-    /* The end room is measured and set inline (VjDeckView.jsx); none until then. */
-    --vj-end-room: 0px;
+    /* The end room is measured and set inline on .vj-deck-scroll (VjDeckView.jsx) and inherited here. */
     display: flex;
     flex-direction: column;
     gap: var(--di-space-1);
@@ -412,6 +413,8 @@
 }
 
 .vj-deck-tile {
+    /* A tile narrower than 180px wraps its name onto two lines (the query below). */
+    container-type: inline-size;
     position: relative;
     display: flex;
     align-items: flex-end;
@@ -475,6 +478,21 @@
     background: transparent;
 }
 
+/* The name of a clip wraps onto two lines (broken anywhere) while its tile is narrower than 180px;
+   the whole name stays in the tile's title. */
+@container (max-width: 179px) {
+    .vj-deck-tile:not(.vj-deck-tile--empty) .vj-deck-tile-name {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-all;
+        line-height: 1.25;
+    }
+}
+
 .vj-deck-tile.is-playing .vj-deck-tile-name {
     background: var(--di-ink);
     color: var(--di-bg);
@@ -531,11 +549,11 @@
 
 .vj-deck-bottom {
     display: grid;
-    /* Always visible at the foot of the deck: at least 160px, at most 40% of it. The row never
+    /* Always visible at the foot of the deck: at least 150px, at most 40% of it. The row never
        scrolls: each panel does (one scroller per panel). A dragged height (--vj-bottom-h) fixes it. */
     position: relative;
     flex: 0 1 auto;
-    min-height: 160px;
+    min-height: 150px;
     max-height: 40%;
     overflow: hidden;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -767,20 +785,28 @@
     max-height: 200px;
 }
 
-/* Up to five layers are whole in the default state: the main row asks for its columns row and its
-   layer rows, and the bottom row gives the height back down to its 160px (its panels scroll).
-   A dragged bottom height wins (data-bottom='fixed'); the narrow rule below keeps its own minimum. */
-@container vjdeck (min-width: 901px) {
-    .vj-deck--perform .vj-deck-main,
-    .vj-deck--inside .vj-deck-main {
-        min-height: max(
-            220px,
-            calc(var(--vj-control) + var(--di-space-1) + min(var(--vj-layers), 5) * (var(--vj-row-min) + var(--di-space-1)))
-        );
-    }
+/* Up to five layers are whole in the default state: the main row asks for its Columns row and its
+   layer rows (the Columns row, then one layer row and one gap per layer), and the bottom row gives the
+   height back, down to its minimum (its panels scroll). It is asked on a frame of 800px or more;
+   a shorter one keeps today's rule (the grid scrolls inside). A dragged bottom height wins
+   (data-bottom='fixed'); the narrow rule below keeps its own minimum. */
+.vj-deck--window {
+    /* A window's layer row is as high as its layer head (three controls), not a grid track. */
+    --vj-row-min: 94px;
+}
 
-    .vj-deck[data-bottom='fixed'] .vj-deck-main {
-        min-height: 220px;
+@media (min-height: 800px) {
+    @container vjdeck (min-width: 901px) {
+        .vj-deck .vj-deck-main {
+            min-height: max(
+                220px,
+                calc(max(var(--vj-control), 28px) + min(var(--vj-layers), 5) * (var(--vj-row-min) + var(--di-space-1)))
+            );
+        }
+
+        .vj-deck[data-bottom='fixed'] .vj-deck-main {
+            min-height: 220px;
+        }
     }
 }
 

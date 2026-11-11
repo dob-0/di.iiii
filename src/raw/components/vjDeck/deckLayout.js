@@ -30,6 +30,8 @@ export const LIMITS = {
     bottomMin: 120,
     bottomMaxShare: 0.6,
     mainMin: 220,
+    // At 900px or less the monitors stack under the grid and the CSS main row keeps 520px.
+    mainMinNarrow: 520,
     panelMin: 220
 }
 
@@ -87,29 +89,34 @@ export const writeLayout = (storage = typeof window === 'undefined' ? null : win
  */
 export const seamsShown = (box) => {
     if (!box || !(box.width > 0)) return { s1s2: false, s4: false, s56: false }
-    const gap = box.gap || 0
     return {
         s1s2: box.width > NARROW.sideBySide,
         s4: box.width > NARROW.stacked && box.height > 0,
-        s56: box.width > NARROW.stacked && box.width - 2 * gap >= 3 * LIMITS.panelMin
+        s56: box.width > NARROW.stacked && box.width - 2 * colGapOf(box) >= 3 * LIMITS.panelMin
     }
 }
+
+/** The gap between columns (the bottom row's; the main row uses the same token). Falls back to the row gap. */
+const colGapOf = (box) => (box.colGap != null ? box.colGap : box.gap || 0)
 
 /** The widest the monitor column may be: the grid keeps 734px (more when the strip is wider than 198px). */
 const monitorMax = (box, headPx) => {
     const extra = Math.max(0, (headPx || LIMITS.gridMinHead) - LIMITS.gridMinHead)
-    return Math.max(LIMITS.monitorMin, Math.min(LIMITS.monitorMax, box.width - (LIMITS.gridMin + extra) - (box.gap || 0)))
+    return Math.max(LIMITS.monitorMin, Math.min(LIMITS.monitorMax, box.width - (LIMITS.gridMin + extra) - colGapOf(box)))
 }
 
 /** The tallest the bottom row may be: 60% of the deck, and the main row keeps 220px. */
 const bottomMax = (box) => Math.max(
     LIMITS.bottomMin,
-    Math.min(LIMITS.bottomMaxShare * box.height, box.height - (box.top || 0) - 2 * (box.gap || 0) - LIMITS.mainMin)
+    Math.min(
+        LIMITS.bottomMaxShare * box.height,
+        box.height - (box.top || 0) - 2 * (box.gap || 0) - (box.width <= NARROW.sideBySide ? LIMITS.mainMinNarrow : LIMITS.mainMin)
+    )
 )
 
 /** Panel widths a and b (Sources, Clip) clamped so that all three panels keep 220px. */
 export const clampCols = (a, b, box) => {
-    const room = box.width - 2 * (box.gap || 0)
+    const room = box.width - 2 * colGapOf(box)
     const first = clamp(a, LIMITS.panelMin, room - 2 * LIMITS.panelMin)
     return [first, clamp(b, LIMITS.panelMin, room - first - LIMITS.panelMin)]
 }
@@ -148,7 +155,7 @@ export const seamLimits = (id, box, now = {}) => {
             return { min: LIMITS.panelMin, max: Math.max(LIMITS.panelMin, sum - LIMITS.panelMin), dim: box.width }
         }
         case 's6': {
-            const room = box.width - 2 * (box.gap || 0)
+            const room = box.width - 2 * colGapOf(box)
             return { min: LIMITS.panelMin, max: Math.max(LIMITS.panelMin, room - (now.a || 0) - LIMITS.panelMin), dim: box.width }
         }
         default: return { min: 0, max: 0, dim: 1 }

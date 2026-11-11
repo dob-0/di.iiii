@@ -113,6 +113,26 @@ describe('clamp', () => {
         expect(clampCols(10, 10, BOX)).toEqual([220, 220])
     })
 
+    it('the gap between the bottom panels is the column gap, not the row gap (walk 2026-11-11: Effects was 210px)', () => {
+        const real = { ...BOX, gap: 7, colGap: 12 }
+        const [a, b] = clampCols(1500, 1500, real)
+        expect(real.width - 2 * 12 - a - b).toBe(220)
+        expect(seamLimits('s6', real, { a: 556, b: 556 }).max).toBe(real.width - 24 - 556 - 220)
+        expect(seamsShown({ ...real, width: 684 }).s56).toBe(true)
+        expect(seamsShown({ ...real, width: 683 }).s56).toBe(false)
+    })
+
+    it('the monitor column leaves the grid 734px with the real column gap', () => {
+        expect(resolveLayout({ monitorW: 0.6 }, { width: 1000, height: 800, top: 28, gap: 7, colGap: 12 }).monitorW).toBe(1000 - 734 - 12)
+    })
+
+    it('stacked at 900px or less the main row keeps its 520px: the bottom row stops there', () => {
+        const stacked = { width: 853, height: 780, top: 28, gap: 7, colGap: 12 }
+        expect(resolveLayout({ bottomH: 0.6 }, stacked).bottomH).toBe(780 - 28 - 14 - 520)
+        expect(seamLimits('s4', stacked).max).toBe(780 - 28 - 14 - 520)
+        expect(seamLimits('s4', { ...stacked, height: 600 }).max).toBe(120)
+    })
+
     it('a seam that is not shown writes nothing', () => {
         const narrow = { ...BOX, width: 650 }
         expect(resolveLayout({ head: 0.1, monitorW: 0.1, bottomH: 0.3, cols: [0.3, 0.3] }, narrow)).toEqual({ bottomH: expect.any(Number) })

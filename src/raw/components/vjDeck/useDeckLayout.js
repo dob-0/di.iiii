@@ -30,7 +30,9 @@ const measureBox = (root) => {
     const width = root.clientWidth - px(style.paddingLeft) - px(style.paddingRight)
     const height = root.clientHeight - px(style.paddingTop) - px(style.paddingBottom)
     const top = root.querySelector('.vj-deck-top')?.getBoundingClientRect().height || 0
-    return { width: Math.round(width), height: Math.round(height), top: Math.round(top), gap: px(style.rowGap) || px(style.gap) }
+    const bottom = root.querySelector('.vj-deck-bottom')
+    const colGap = bottom ? px(window.getComputedStyle(bottom).columnGap) : null
+    return { width: Math.round(width), height: Math.round(height), top: Math.round(top), gap: px(style.rowGap) || px(style.gap), colGap }
 }
 
 const measureSizes = (root) => {
@@ -45,7 +47,7 @@ const measureSizes = (root) => {
     }
 }
 
-const sameBox = (x, y) => x === y || (x && y && x.width === y.width && x.height === y.height && x.top === y.top && x.gap === y.gap)
+const sameBox = (x, y) => x === y || (x && y && x.width === y.width && x.height === y.height && x.top === y.top && x.gap === y.gap && x.colGap === y.colGap)
 
 export default function useDeckLayout(rootRef) {
     const uid = useId().replace(/:/g, '')
