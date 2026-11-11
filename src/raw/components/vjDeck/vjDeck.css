@@ -288,6 +288,15 @@
     min-height: 0;
     min-width: 0;
     overflow: auto;
+    /* A layer row rests whole under the sticky Columns header, never half under it:
+       rows snap to the line below the header, and the end of the grid has room for the
+       last row to reach it (SPEC rule 3). */
+    scroll-snap-type: y mandatory;
+    scroll-padding-top: calc(var(--vj-control) + var(--di-space-1));
+}
+
+.vj-deck-scroll .vj-deck-row:not(.vj-deck-columns) {
+    scroll-snap-align: start;
 }
 
 .vj-deck-grid {
@@ -295,6 +304,7 @@
     flex-direction: column;
     gap: var(--di-space-1);
     min-width: min-content;
+    padding-bottom: var(--vj-end-room, 0px);
 }
 
 .vj-deck-row {
@@ -464,6 +474,7 @@
     top: 0;
     z-index: 1;
     background: var(--di-bg);
+    min-height: var(--vj-control);
 }
 
 .vj-deck-columns-head {
@@ -988,6 +999,16 @@
 
     .vj-deck-chip {
         padding: 0 var(--di-space-1);
+    }
+
+    /* 44px buttons leave the name 19px: it takes its own line so it reads whole. */
+    .vj-deck-layer-line:first-child {
+        flex-wrap: wrap;
+    }
+
+    .vj-deck-layer-line:first-child .vj-deck-layer-name {
+        order: 5;
+        flex: 1 0 100%;
     }
 }
 

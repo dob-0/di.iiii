@@ -312,6 +312,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const [fxPick, setFxPick] = useState(null)
     const tapsRef = useRef([])
     const rootRef = useRef(null)
+    const scrollRef = useRef(null)
     // PREVIEW ONLY: a click selects (the Preview pane shows it) and TAKE sends it live.
     // View state of this person's screen, not of the show; MIDI always goes live.
     const [previewOnly, setPreviewOnly] = useState(false)
@@ -332,6 +333,30 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     // The newest deck this view has seen or written: an upload that finishes after a
     // long wait places its clip into THIS, never into the deck captured when the file
     // was chosen (that would undo every change made meanwhile).
+    // End room for the snap (SPEC rule 3): when the layer rows overflow their box, the grid gets
+    // room below the last row so that row can also rest right under the Columns header.
+    useEffect(() => {
+        const box = scrollRef.current
+        if (!box || typeof ResizeObserver === 'undefined') return undefined
+        const measure = () => {
+            const rows = box.querySelectorAll('.vj-deck-row:not(.vj-deck-columns)')
+            const head = box.querySelector('.vj-deck-columns')
+            const last = rows[rows.length - 1]
+            if (!last || !head) return
+            const boxTop = box.getBoundingClientRect().top - box.scrollTop
+            const lastRect = last.getBoundingClientRect()
+            const contentBottom = lastRect.bottom - boxTop
+            const gap = parseFloat(getComputedStyle(box.firstElementChild).rowGap) || 0
+            const room = contentBottom > box.clientHeight + 1 ? Math.max(0, Math.round(box.clientHeight - head.offsetHeight - gap - lastRect.height)) : 0
+            box.style.setProperty('--vj-end-room', `${room}px`)
+        }
+        measure()
+        const watcher = new ResizeObserver(measure)
+        watcher.observe(box)
+        box.querySelectorAll('.vj-deck-row').forEach((row) => watcher.observe(row))
+        return () => watcher.disconnect()
+    }, [deck.layers.length, deck.columns])
+
     const latestDeck = useRef(deck)
     useEffect(() => { latestDeck.current = deck }, [deck])
     const write = (nextDeck) => {
@@ -651,7 +676,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
             <div className="vj-deck-main">
                 {/* Pointer shortcut only: the keyboard way to deselect is Esc (handled on document). */}
                 {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-                <div className="vj-deck-scroll" onClick={onGridBackground}>
+                <div className="vj-deck-scroll" ref={scrollRef} onClick={onGridBackground}>
                     <div className="vj-deck-grid" style={gridStyle}>
                         <div className="vj-deck-row vj-deck-columns" role="group" aria-label="Columns">
                             <span className="vj-deck-label vj-deck-columns-head">Columns</span>
