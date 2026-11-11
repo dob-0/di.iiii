@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import MapTestPattern, { DEFAULT_TEST_PATTERN } from './mapTestPattern.jsx'
 import { startMotionGlow } from './motionGlow.js'
 import { startLiveAiRestyle } from './liveAiRestyle.js'
@@ -651,7 +651,15 @@ function MapPageSource({ src, isProject, label, width, height }) {
     )
 }
 
+// Whether a surface with no picture shows its name card. The desk wants it
+// (the operator must see which surface is empty and why); the wall does not
+// (owner, 2026-11-11, N3689: "just black or nothing better than the surface 1").
+// MapStage sets it from its `placeholders` prop; MapOutput turns it off.
+export const MapPlaceholderContext = createContext(true)
+
 export function MapSourcePlaceholder({ label = '', detail = '', width = 1280, height = 720 }) {
+    const show = useContext(MapPlaceholderContext)
+    if (!show) return null
     // Sized in SOURCE pixels, like the test patterns: a placeholder is drawn
     // into the surface's own box and then pinned, so a fixed CSS size would
     // shrink to nothing on a surface that lands small on the wall.

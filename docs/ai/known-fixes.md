@@ -1826,3 +1826,9 @@ Seen live: the `/out` page showed a phone camera (v4l2loopback fed by scrcpy) th
 Cause: `MapCameraSource` called getUserMedia once per device id and nothing listened for the track ending or for a first open that failed because the feed was not up yet.
 Fix: it re-opens by itself on track `ended` / stream `inactive` and on busy/not-found class errors, with a back-off (0.5, 1, 2 s, then 3 s), stopping old tracks first; the stream lookup is asked again; no retry on NotAllowedError; timers and listeners are cleared on unmount.
 Guard: `src/map/MapSourceView.reacquire.test.jsx` (fake timers, faked mediaDevices). Not checked on a real camera.
+
+## The wall showed a surface's name card ("Surface 1") mid-show (2026-11-11, owner row N3689)
+Seen in the owner's recording `2026-11-11 04-56-28.mp4` at 0:10–0:12: the Platina output went black, then drew the "Surface 1" placeholder card while the deck's Preview still had a picture. Owner: "just black or nothing better than the surface 1".
+Cause: `MapSourcePlaceholder` (`map/MapSourceView.jsx`) rendered the same name card on the output (`MapOutput`) as on the desk, for every empty or waiting source (no Picture Out chosen, deck gone, reconnecting, no file).
+Fix: `MapPlaceholderContext` — `MapStage` takes `placeholders` (default true, the desk keeps its cards); `MapOutput` passes `placeholders={false}`, so an empty surface draws nothing and the stage background (black by default) shows.
+Guard: `src/map/MapStage.placeholders.test.jsx`. Not yet seen on the real output window.

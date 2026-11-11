@@ -113,7 +113,7 @@ export default function MapOutput({ projectId, spaceId }) {
     return (
         <div className={`map-output${idle ? ' is-idle' : ''}`}>
             {stage.width > 0 ? (
-                <MapStage mapping={fallbackMapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} assets={doc?.assets || null} projectId={projectId} live />
+                <MapStage mapping={fallbackMapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} assets={doc?.assets || null} projectId={projectId} live placeholders={false} />
             ) : null}
             {isPreview ? null : <MapOutputControls />}
             <RigBlackout />

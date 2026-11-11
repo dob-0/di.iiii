@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import MapSourceView from './MapSourceView.jsx'
+import MapSourceView, { MapPlaceholderContext } from './MapSourceView.jsx'
 import { cornerPinTransform, cornersToPixels, isDegenerateQuad, maskToClipPath, surfaceFilter } from './cornerPin.js'
 
 // Every surface, pinned, at a given pixel size. The desk and the output route
@@ -19,7 +19,9 @@ export default function MapStage({
     network = null,
     assets = null,
     projectId = null,
-    className = ''
+    className = '',
+    // false on the wall: an empty surface draws nothing instead of its name card
+    placeholders = true
 }) {
     const surfaces = useMemo(() => {
         if (!(width > 0) || !(height > 0)) return []
@@ -34,6 +36,7 @@ export default function MapStage({
     }, [mapping, width, height, soloSurfaceId])
 
     return (
+        <MapPlaceholderContext.Provider value={placeholders}>
         <div
             className={`map-stage ${className}`.trim()}
             style={{ width, height, background: mapping?.background || '#000000' }}
@@ -69,5 +72,6 @@ export default function MapStage({
                 )
             })}
         </div>
+        </MapPlaceholderContext.Provider>
     )
 }
