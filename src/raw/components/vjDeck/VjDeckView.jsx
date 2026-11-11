@@ -342,7 +342,10 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     // control clicked on the deck (data-midi-target) to the next controller message.
     const fxLayer = Math.min(deck.layers.length - 1, Math.max(0, fxPick ?? selected?.layer ?? 0))
     const [k2Open, setK2Open] = useState(false)
-    const midi = useDeckMidi({ deckId, deck, write, stored: node?.values?.midiMap, onPatch: editable ? onPatchValues : null, onTap, enabled: editable, fxLayer: fxScope === 'master' ? -1 : fxLayer })
+    const [fxIndex, setFxIndex] = useState(0) // which effect of the selected stack the K2's third pot row turns
+    // K2 LAYER button: this layer's effects (leaves Master scope); K2 encoder 6 push: the next effect
+    const onFxLayer = (index) => { setFxPick(index); setFxScope('layer'); setFxIndex(0) }
+    const midi = useDeckMidi({ deckId, deck, write, stored: node?.values?.midiMap, onPatch: editable ? onPatchValues : null, onTap, enabled: editable, fxLayer: fxScope === 'master' ? -1 : fxLayer, fxEffect: fxIndex, onFxLayer, onFxEffect: setFxIndex })
     const learnKeyOf = (event) => event.target?.closest?.('[data-midi-target]')?.getAttribute('data-midi-target') || ''
     const onLearnClick = (event) => {
         if (!midi.learning) return
@@ -855,10 +858,10 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                         <p className="vj-deck-hint">Select a clip</p>
                     </section>
                 )}
-                <EffectsPanel deck={deck} scope={fxScope} layerIndex={fxLayer} onScope={setFxScope} onLayer={setFxPick} editable={editable} write={write} />
+                <EffectsPanel deck={deck} scope={fxScope} layerIndex={fxLayer} onScope={setFxScope} onLayer={setFxPick} editable={editable} write={write} fxIndex={fxIndex} />
             </div>
             <MidiMapOverlay rootRef={rootRef} midi={midi} layoutKey={deck} />
-            {k2Open ? <K2LayoutPanel map={midi.map} monitor={midi.k2Monitor} onClose={() => setK2Open(false)} /> : null}
+            {k2Open ? <K2LayoutPanel map={midi.map} monitor={midi.k2Monitor} fxEffect={fxIndex} onClose={() => setK2Open(false)} /> : null}
             <ContextMenu open={Boolean(menu)} x={menu?.x} y={menu?.y} title={menu?.label} items={menuItems} fromKeyboard={Boolean(menu?.fromKeyboard)} onClose={() => setMenu(null)} />
         </div>
     )

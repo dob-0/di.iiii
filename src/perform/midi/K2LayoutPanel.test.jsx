@@ -34,7 +34,7 @@ describe('K2 layout panel', () => {
         expect(screen.getByLabelText('matrix G: L2 clip 3')).toBeTruthy()
         expect(screen.getByLabelText('pot switch 1: Bypass L1')).toBeTruthy()
         expect(screen.getByLabelText('encoder 1: BPM')).toBeTruthy()
-        expect(screen.getByLabelText('layer button: free')).toBeTruthy()
+        expect(screen.getByLabelText('layer button: Next FX layer')).toBeTruthy()
     })
 
     it('a learned override changes the label', () => {
@@ -94,7 +94,7 @@ describe('through the hook', () => {
         render(<K2LayoutPanel map={map} monitor={k2Monitor} onClose={() => {}} />)
         // the owner's K2 sends on channel 2; layer button (note 12) is free in the map
         act(() => input.onmidimessage({ data: [0x91, 12, 127] }))
-        expect(screen.getByLabelText('layer button: free').className).toContain('is-held')
+        expect(screen.getByLabelText('layer button: Next FX layer').className).toContain('is-held')
         act(() => input.onmidimessage({ data: [0xb1, 16, 100] }))
         act(() => { vi.advanceTimersByTime(40) })
         expect(screen.getByLabelText('fader 1: Layer 1 level').querySelector('[data-k2-value]').textContent).toBe('100')

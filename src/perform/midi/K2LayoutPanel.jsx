@@ -11,6 +11,7 @@ import './k2LayoutPanel.css'
 // map      the effective map (useDeckMidi().map)
 // monitor  useDeckMidi().k2Monitor (subscribe / getSnapshot)
 // onClose  () => void
+// fxEffect which effect of the selected stack the third pot row turns (0-based)
 
 const byName = new Map(XONE_K2_CONTROLS.map((item) => [item.control, item]))
 const range = (count) => Array.from({ length: count }, (_, index) => index)
@@ -30,7 +31,7 @@ const ROWS = [
 const SHOWN = { 'layer button': 'LAYER', 'exit setup button': 'EXIT SETUP' }
 const shownName = (name) => SHOWN[name] || name.replace('matrix ', '').replace('encoder', 'enc').replace('pot switch', 'sw').replace('fader', 'fader')
 
-export default function K2LayoutPanel({ map, monitor, onClose }) {
+export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0 }) {
     const snap = useSyncExternalStore(monitor.subscribe, monitor.getSnapshot)
     const [selected, setSelected] = useState('')
     const [faded, setFaded] = useState(null) // the snapshot whose lights have run out
@@ -55,14 +56,14 @@ export default function K2LayoutPanel({ map, monitor, onClose }) {
 
     const chosen = selected ? byName.get(selected) : null
     const detail = chosen
-        ? `${chosen.control} · ${shortMatch(chosen)} · ${describeAction(entryOf(map, chosen))}`
+        ? `${chosen.control} · ${shortMatch(chosen)} · ${describeAction(entryOf(map, chosen), { fxEffect })}`
         : 'Click a control to see its message and what it does'
 
     const control = (name) => {
         const item = byName.get(name)
         if (!item) return null
         const key = controlKey(item.kind, item.number)
-        const label = describeAction(entryOf(map, item))
+        const label = describeAction(entryOf(map, item), { fxEffect })
         const held = Boolean(snap.held[key])
         const lit = faded !== snap && (held || snap.at - (snap.touched[key] ?? -Infinity) < TOUCH_MS)
         const analog = item.type === 'pot' || item.type === 'fader'

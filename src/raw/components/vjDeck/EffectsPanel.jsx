@@ -24,7 +24,7 @@ import {
 const percent = (value) => `${Math.round(value * 100)}`
 const shown = (value, step) => (step >= 1 ? String(Math.round(value)) : Number(value).toFixed(step >= 0.1 ? 1 : 2))
 
-export default function EffectsPanel({ deck, scope, layerIndex, onScope, onLayer, editable, write }) {
+export default function EffectsPanel({ deck, scope, layerIndex, onScope, onLayer, editable, write, fxIndex = 0 }) {
     const isMaster = scope === MASTER_STACK
     const where = isMaster ? MASTER_STACK : layerIndex
     const stack = stackOf(deck, where) || []
@@ -69,7 +69,7 @@ export default function EffectsPanel({ deck, scope, layerIndex, onScope, onLayer
                 const numeric = effectNumericParams(effect.type)
                 const isOpen = open.has(effect.id)
                 return (
-                    <div className="vj-deck-fx-effect" key={effect.id} role="group" aria-label={`${effectLabel(effect.type)} effect`} data-on={effect.on ? 'true' : 'false'}>
+                    <div className={`vj-deck-fx-effect${index === Math.min(fxIndex, stack.length - 1) ? ' is-midi-current' : ''}`} key={effect.id} role="group" aria-label={`${effectLabel(effect.type)} effect`} data-on={effect.on ? 'true' : 'false'}>
                         <div className="vj-deck-fx-head">
                             <button type="button" className="vj-deck-button vj-deck-toggle vj-deck-fx-button" aria-pressed={effect.on} aria-label={`${effectLabel(effect.type)} on`} disabled={!editable} onClick={() => write(setEffectOn(deck, where, effect.id, !effect.on))}>On</button>
                             <button type="button" className="vj-deck-fx-name vj-deck-fx-open" aria-expanded={isOpen} aria-label={`${effectLabel(effect.type)} settings`} onClick={() => toggle(effect.id)}>{isOpen ? '▾' : '▸'} {effectLabel(effect.type)}</button>

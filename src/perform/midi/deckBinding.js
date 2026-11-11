@@ -23,6 +23,7 @@ import {
     setBypass,
     setCrossfade,
     setEffectMix,
+    setEffectOn,
     setEffectParam,
     stackOf,
     MASTER_STACK,
@@ -67,7 +68,57 @@ export const ACTIONS = {
     tap: { args: [], button: true },
     // An effect's mix or one of its numeric main params. args { param: 'mix' | 0..2, layer?, effect? }:
     // no layer = the selected stack (ctx.fx.layer, -1 = master), no effect = its first.
-    fx: { args: [], button: false, relativeOk: true }
+    fx: { args: [], button: false, relativeOk: true },
+    // Effect n (args.slot, 0-based) of the selected stack on / off.
+    fxToggle: { args: [], button: true },
+    // The next layer (with clips) whose effects the pots address; the view owns that choice (ctx.onFxLayer).
+    fxLayerNext: { args: [], button: true },
+    // The next effect of the selected stack that the pots turn (ctx.onFxEffect).
+    fxNext: { args: [], button: true },
+    // FREEZE while held: hold 1 on every Freeze effect of the master and the selected layer, 0 on release.
+    hold: { args: [], button: false }
+}
+
+// --- the effects half of the K2: which stack, which effect, freeze ----------------
+
+const stackFor = (base, layer) => (Number.isInteger(layer) && layer >= 0 ? base.layers[layer]?.effects : base.effects) || []
+
+/** Freeze effects a held button acts on: the master's and the selected layer's. [{ where, effect }]. */
+export const holdTargets = (deck, fxLayer = -1) => {
+    const base = normalizeDeck(deck)
+    const out = base.effects.filter((effect) => effect.type === 'top.freeze').map((effect) => ({ where: MASTER_STACK, effect }))
+    if (Number.isInteger(fxLayer) && fxLayer >= 0) {
+        for (const effect of base.layers[fxLayer]?.effects || []) if (effect.type === 'top.freeze') out.push({ where: fxLayer, effect })
+    }
+    return out
+}
+
+/** The deck with `hold` (1 / 0) set on those Freeze effects, or the same object when nothing changes. */
+export const setFreezeHold = (deck, fxLayer, hold) => {
+    let next = deck
+    for (const { where, effect } of holdTargets(deck, fxLayer)) {
+        if (Number(effect.params.hold) === hold) continue
+        next = setEffectParam(next, where, effect.id, 'hold', hold)
+    }
+    return next
+}
+
+/** The next layer, after `fxLayer` (-1 = master: start at the first), that has a clip; wraps; null when none. */
+export const nextFxLayer = (deck, fxLayer = -1) => {
+    const base = normalizeDeck(deck)
+    const count = base.layers.length
+    const start = Number.isInteger(fxLayer) && fxLayer >= 0 ? fxLayer : -1
+    for (let step = 1; step <= count; step += 1) {
+        const index = (start + step + count) % count
+        if (base.layers[index].clips.some(Boolean)) return index
+    }
+    return null
+}
+
+/** The next effect index in the stack of `fxLayer` (-1 = master), wrapping; null for an empty stack. */
+export const nextFxIndex = (deck, fxLayer = -1, current = 0) => {
+    const count = stackFor(normalizeDeck(deck), fxLayer).length
+    return count ? (Math.min(Math.max(0, current | 0), count - 1) + 1) % count : null
 }
 
 // --- reading a message ------------------------------------------------------
@@ -190,7 +241,9 @@ const run = (deck, control, entry, ctx) => {
             const where = args.layer === undefined ? ctx.fx?.layer : args.layer
             if (!Number.isInteger(where)) return deck
             const master = where < 0
-            const effect = (master ? base.effects : base.layers[where]?.effects)?.[args.effect ?? 0]
+            // no layer given = the selected stack, and then the selected effect of it (K2 encoder 6 push)
+            const slot = args.effect ?? (args.layer === undefined ? ctx.fx?.effect : 0) ?? 0
+            const effect = (master ? base.effects : base.layers[where]?.effects)?.[slot]
             if (!effect) return deck
             const stack = master ? 'master' : where
             if (args.param === 'mix') {
@@ -201,6 +254,23 @@ const run = (deck, control, entry, ctx) => {
             const span = p.max - p.min
             return nextOr(continuous(effect.params[p.name], control, entry, { step: span / 50, from: (x) => p.min + x * span, to: (x) => (x - p.min) / span }, ctx), (v) => setEffectParam(base, stack, effect.id, p.name, v))
         }
+        case 'fxToggle': {
+            const where = ctx.fx?.layer
+            if (!Number.isInteger(where) || !Number.isInteger(args.slot)) return deck
+            const effect = stackFor(base, where)[args.slot]
+            return effect ? setEffectOn(base, where < 0 ? MASTER_STACK : where, effect.id, !effect.on) : deck
+        }
+        case 'fxLayerNext': {
+            const to = nextFxLayer(base, ctx.fx?.layer)
+            if (to !== null) ctx.onFxLayer?.(to)
+            return deck
+        }
+        case 'fxNext': {
+            const to = nextFxIndex(base, ctx.fx?.layer, ctx.fx?.effect)
+            if (to !== null) ctx.onFxEffect?.(to)
+            return deck
+        }
+        case 'hold': return setFreezeHold(deck, ctx.holdLayer ?? ctx.fx?.layer, control.press ? 1 : 0)
         case 'tap': {
             // The view owns the clock (the show clock, or the deck's own taps).
             if (typeof ctx.onTap === 'function') { ctx.onTap(); return deck }
@@ -361,7 +431,7 @@ export const learnEntry = (target, message, hints = {}) => {
 // --- LED feedback ------------------------------------------------------------------
 
 /** Which colour (red | amber | green | null) a bound control shows for this deck. */
-export const ledColour = (deck, entry) => {
+export const ledColour = (deck, entry, ctx = {}) => {
     const base = normalizeDeck(deck)
     const args = entry.args || {}
     const layer = layerAt(base, args.layer)
@@ -378,6 +448,12 @@ export const ledColour = (deck, entry) => {
         case 'bypass': return layer?.bypass ? 'red' : null
         case 'solo': return layer?.solo ? 'green' : null
         case 'side': return layer?.side === 'a' ? 'amber' : layer?.side === 'b' ? 'green' : null
+        case 'fxToggle': {
+            if (!Number.isInteger(ctx.fx?.layer) || !Number.isInteger(args.slot)) return null
+            const effect = stackFor(base, ctx.fx.layer)[args.slot]
+            return effect ? (effect.on ? 'green' : 'red') : null
+        }
+        case 'hold': return holdTargets(base, ctx.fx?.layer).some(({ effect }) => effect.on && Number(effect.params.hold) > 0) ? 'amber' : null
         default: return null
     }
 }
@@ -387,7 +463,7 @@ export const ledColour = (deck, entry) => {
  * (`ledTable[note] = { red, amber, green }` note numbers), three messages — the
  * wanted colour at velocity 127, the others at 0. [{ channel, note, velocity }].
  */
-export const ledsFor = (deck, map, ledTable = {}, channel = 15) => {
+export const ledsFor = (deck, map, ledTable = {}, channel = 15, ctx = {}) => {
     const out = []
     const seen = new Set()
     for (const entry of map || []) {
@@ -395,7 +471,7 @@ export const ledsFor = (deck, map, ledTable = {}, channel = 15) => {
         const notes = ledTable[entry.match.number]
         if (!notes || seen.has(entry.match.number)) continue
         seen.add(entry.match.number)
-        const colour = ledColour(deck, entry)
+        const colour = ledColour(deck, entry, ctx)
         for (const name of ['red', 'amber', 'green']) out.push({ channel, note: notes[name], velocity: name === colour ? 127 : 0 })
     }
     return out
@@ -435,7 +511,7 @@ export const ledBytes = (led) => [0x90 | ((led.channel - 1) & 0x0f), led.note & 
  * What a map entry does, in the short words the K2 panel prints on a control:
  * "Layer 2 level", "L1 clip 3", "Bypass L1", "BPM". No entry = "free".
  */
-export const describeAction = (entry) => {
+export const describeAction = (entry, ctx = {}) => {
     if (!entry?.action) return 'free'
     const args = entry.args || {}
     const layer = Number.isInteger(args.layer) && args.layer >= 0 ? args.layer + 1 : 0
@@ -454,7 +530,15 @@ export const describeAction = (entry) => {
         case 'master': return 'Master'
         case 'bpm': return 'BPM'
         case 'tap': return 'Tap tempo'
+        case 'fxToggle': return Number.isInteger(args.slot) ? `FX ${args.slot + 1} on/off` : 'Effect on/off'
+        case 'fxLayerNext': return 'Next FX layer'
+        case 'fxNext': return 'Next effect'
+        case 'hold': return 'Freeze (hold)'
         case 'fx': {
+            if (args.layer === undefined && args.effect === undefined && Number.isInteger(ctx.fxEffect)) {
+                const name = `FX ${ctx.fxEffect + 1}`
+                return args.param === 'mix' ? `${name} MIX` : Number.isInteger(args.param) ? `${name} PARAM ${args.param + 1}` : name
+            }
             const scope = args.layer === -1 ? 'Master fx' : layer ? `L${layer} fx` : 'Fx'
             return args.param === 'mix' ? `${scope} mix` : Number.isInteger(args.param) ? `${scope} param ${args.param + 1}` : scope
         }

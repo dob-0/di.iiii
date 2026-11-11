@@ -565,6 +565,10 @@
     border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
+/* the effect the K2's third pot row turns (EffectsPanel fxIndex) */
+.vj-deck-fx-effect.is-midi-current {
+    box-shadow: inset 2px 0 0 var(--di-cyan);
+}
 .vj-deck-fx-effect[data-on='false'] {
     opacity: 0.55;
 }

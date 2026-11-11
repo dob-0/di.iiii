@@ -11,12 +11,13 @@
 //   pot row 3             FIRST EFFECT of the selected layer (master when MASTER is picked): mix, then its first three params
 //   pot switches row 1    bypass layers 1-4      (red while bypassed)
 //   pot switches row 2    solo layers 1-4        (green while solo)
-//   pot switches row 3    crossfader side A / B / off, layers 1-4
+//   pot switches row 3    effect 1-4 of the selected layer on / off (green on, red off); side A/B is not mapped (Learn can)
 //   top encoders 1-4 push play column 1-4
 //   top encoder 1 turn    tempo nudge; encoders 2-4 turn FREE
 //   bottom encoder 5      turn = crossfade nudge, push = tap tempo
-//   bottom encoder 6      turn = master nudge, push FREE
-//   LAYER, EXIT SETUP     FREE (the K2's own layer / setup keys)
+//   bottom encoder 6      turn = master nudge, push = next effect (which one pots 9-12 turn)
+//   LAYER                 next layer for effects (skips empty layers)
+//   EXIT SETUP            FREEZE while held (hold 1 on the Freeze effects of master + selected layer)
 
 import sheet from './xone-k2-default.json'
 
@@ -45,7 +46,7 @@ export const XONE_K2_MAP = [
     ...range(4).map((i) => bind(`pot ${i + 5}`, 'clipSpeed', { layer: i })),
     ...range(4).map((i) => bind(`pot switch ${i + 1}`, 'bypass', { layer: i })),
     ...range(4).map((i) => bind(`pot switch ${i + 5}`, 'solo', { layer: i })),
-    ...range(4).map((i) => bind(`pot switch ${i + 9}`, 'side', { layer: i })),
+    ...range(4).map((i) => bind(`pot switch ${i + 9}`, 'fxToggle', { slot: i })),
     ...range(4).map((i) => bind(`encoder ${i + 1} push`, 'column', { column: i })),
     bind('pot 9', 'fx', { param: 'mix' }),
     ...range(3).map((i) => bind(`pot ${i + 10}`, 'fx', { param: i })),
@@ -56,6 +57,9 @@ export const XONE_K2_MAP = [
     bind('encoder 4', 'fx', { param: 'mix', layer: -1 }, { relative: true }),
     bind('encoder 5', 'crossfade', {}, { relative: true }),
     bind('encoder 5 push', 'tap'),
+    bind('layer button', 'fxLayerNext'),
+    bind('encoder 6 push', 'fxNext'),
+    bind('exit setup button', 'hold'),
     bind('encoder 6', 'master', {}, { relative: true })
 ]
 

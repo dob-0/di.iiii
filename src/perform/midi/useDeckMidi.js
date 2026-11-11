@@ -10,6 +10,8 @@ import {
     ledChanges,
     ledClears,
     ledsFor,
+    holdTargets,
+    setFreezeHold,
     bindingFor,
     describeMatch,
     shortMatch,
@@ -73,7 +75,7 @@ const claim = (id, token, listener) => {
 }
 const isOwner = (id, token) => slot(id).order[0] === token
 
-export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = true, deckId = '', fxLayer = -1 }) {
+export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = true, deckId = '', fxLayer = -1, fxEffect = 0, onFxLayer, onFxEffect }) {
     const defaults = useMemo(() => defaultMap(), [])
     const overrides = useMemo(() => normalizeOverrides(stored), [stored])
     const map = useMemo(() => effectiveMap(defaults, overrides), [defaults, overrides])
@@ -98,7 +100,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const timer = useRef(null)
     const pickup = useRef(new Map())
     const live = useRef({})
-    useEffect(() => { live.current = { write, onTap, onPatch, map, stored, enabled: active, fx: { layer: fxLayer } } })
+    useEffect(() => { live.current = { write, onTap, onPatch, map, stored, enabled: active, fx: { layer: fxLayer, effect: fxEffect }, onFxLayer, onFxEffect } })
     const tapState = useRef({ taps: [] })
 
     const flush = useCallback(() => {
@@ -152,6 +154,9 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const [heard, setHeard] = useState(K2_CHANNEL)
     const heardRef = useRef(K2_CHANNEL)
     const monitorRef = useRef(null) // set by the monitor effect at the end of the hook
+    // FREEZE while held (the K2's EXIT SETUP): the layer the hold was pressed on, null = not held.
+    const holdLayerRef = useRef(null)
+    const [holdNote, setHoldNote] = useState('')
 
     const onMessage = useCallback((raw) => {
         const current = live.current
@@ -176,7 +181,19 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
             return
         }
         const base = ahead.current
-        const next = applyMidi(base, message, current.map, { onTap: () => current.onTap?.(), tapState: tapState.current, pickup: pickup.current, fx: current.fx })
+        let holdLayer
+        const bound = entryFor(message, current.map)
+        const heldNow = bound?.action === 'hold'
+        if (heldNow) {
+            const press = controlOf(message)?.press
+            if (press && !holdTargets(base, current.fx.layer).length) { setHoldNote('no Freeze effect to hold'); return }
+            if (press) { holdLayerRef.current = current.fx.layer; setHoldNote('') } else holdLayer = holdLayerRef.current ?? undefined
+        }
+        const next = applyMidi(base, message, current.map, {
+            onTap: () => current.onTap?.(), tapState: tapState.current, pickup: pickup.current, fx: current.fx, holdLayer,
+            onFxLayer: (index) => current.onFxLayer?.(index), onFxEffect: (index) => current.onFxEffect?.(index)
+        })
+        if (heldNow && !controlOf(message)?.press) { holdLayerRef.current = null; setHoldNote('') }
         if (next === base) return
         const continuous = isContinuousEntry(entryFor(message, current.map))
         if (!continuous) flush() // keep the order: a pending fader value goes out first
@@ -199,7 +216,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const sentKey = useRef('')
     const sendRef = useRef(ports.send)
     useEffect(() => { sendRef.current = ports.send })
-    const leds = useMemo(() => ledsFor(deck, map, XONE_K2_LEDS, heard), [deck, map, heard])
+    const leds = useMemo(() => ledsFor(deck, map, XONE_K2_LEDS, heard, { fx: { layer: fxLayer, effect: fxEffect } }), [deck, map, heard, fxLayer, fxEffect])
     useEffect(() => {
         if (sentKey.current !== outputKey) { sentRef.current = new Map(); sentKey.current = outputKey }
         if (!outputKey || !active || !k2Output) return
@@ -247,6 +264,31 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
 
     // The live monitor for the K2 panel (kept last: added after the hooks above).
     const [k2Monitor] = useState(() => createK2Monitor())
+    // A hold whose release never comes (controller unplugged, deck unmounted, page hidden) lets go.
+    const releaseHold = useCallback(() => {
+        const layer = holdLayerRef.current
+        if (layer === null) return
+        holdLayerRef.current = null
+        setHoldNote('')
+        const base = ahead.current
+        const next = setFreezeHold(base, layer, 0)
+        if (next === base) return
+        ahead.current = next
+        dirty.current = true
+        flush()
+    }, [flush])
+    const present = Boolean(device)
+    useEffect(() => { if (!present || !active) releaseHold() }, [present, active, releaseHold])
+    useEffect(() => {
+        const onHide = () => { if (document.hidden) releaseHold() }
+        document.addEventListener('visibilitychange', onHide)
+        window.addEventListener('pagehide', releaseHold)
+        return () => {
+            document.removeEventListener('visibilitychange', onHide)
+            window.removeEventListener('pagehide', releaseHold)
+            releaseHold()
+        }
+    }, [releaseHold])
     useEffect(() => { monitorRef.current = k2Monitor; return () => k2Monitor.dispose() }, [k2Monitor])
 
     return {
@@ -263,6 +305,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         reset,
         controlOf,
         map,
-        k2Monitor
+        k2Monitor,
+        note: holdNote
     }
 }
