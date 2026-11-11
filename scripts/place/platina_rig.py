@@ -365,6 +365,11 @@ def build(repo, M):
             f'hazer {i + 1}', [0.16, 0.40, 0.34], i, {'aim_home': 'horizontal +z (output toward the audience)', 'machine': 'hazer', 'size_note': 'the maker\'s 338 x 160 x 400 mm (L x W x H, manual p16)'})
     rig = {
         'version': '1.0', 'title': 'Platina - Live in Yerevan: rig plan for the visualiser (stage, trusses, towers measured from the 11-10 light plot; 54 lamps of the 11-11 offer)', 'date': '2026-11-11',
+        # the room's ONE camera level (three.js toneMappingExposure). MEASURED 2026-11-11 on the GPU (pics8, cues 12 and 18 at
+        # 1 / 0.3 / 0.1 / 0.03): at 1 (the MOXIR hall's number) every cue floods (frame mean 168-228 of 255); at 0.1 the room
+        # stays dark and the beams read (mean 43-48), the nearest to the rental side's own look pictures in the offer
+        # (mean 14-24, pictures without our UI); 0.03 loses the beams. Haze x0.25 at 0.1 only dims the beams: the flood was the camera.
+        'camera': {'exposure': 0.1, 'basis': 'MEASURED 2026-11-11: GPU sweep 1 / 0.3 / 0.1 / 0.03 on cues 12 and 18 against the look pictures inside the offer (PLATINA_EH-YVN_14-11-26_OFFER_2.xlsx)'},
         'what': 'Positions of every lamp of the offer (8 K10, 8 K15, 12 XP-16R, 24 Pixel Line, 2 hazers) in metres, with the 11-11 patch address. The plot shows 11 K10 + 7 Sharpy, the offer 8 K10 + 12 XP-16R: the 3 audience-side K10 and the 7 Sharpy are listed in plot_only and not built.',
         'written_by': 'scripts/place/platina_rig.py', 'generated_by': {'tool': 'scripts/place/platina_rig.py', 'plan': PLAN, 'plot_dir': PLOT_DIR, 'pictures': SRC},
         'schema': 'the MOXIR rig schema (moxir-v2-12-2026-10-17.json: fixtures[{id,type,p,r,angle_rad,dmx,status}] + solids[{id,name,kind,p,r,s}]) plus: per item status (measured / from-plan-words / PROPOSED), source, profile (stand-in), size_m, group (the patch plan\'s select.group)',

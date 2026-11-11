@@ -91,6 +91,9 @@ describe('epic-build: no cutoff, the fan direction and the rig\'s own air', () =
         const own = v1RenderOps({ atmosphere })[0].payload.patch.atmosphere
         expect(own).toEqual({ anisotropy: 0.74, haze: { model: 'nf-ff', volume_m3: 186890, dries: false } })
         expect(v1RenderOps()[0].payload.patch.atmosphere).toEqual({ scattering: 0.0169, anisotropy: 0.7, haze: null })
+        // a rig's own measured camera level is written; without one the document's level is not touched
+        expect(v1RenderOps({ exposure: 0.1 })[0].payload.patch.toneMappingExposure).toBe(0.1)
+        expect('toneMappingExposure' in v1RenderOps()[0].payload.patch).toBe(false)
     })
 })
 

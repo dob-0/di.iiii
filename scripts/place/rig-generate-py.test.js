@@ -67,7 +67,7 @@ describe.skipIf(!hasPython)('rig_generate.py', () => {
         expect(b.status, b.stdout + b.stderr).toBe(0)
         const c = gen('check', '--rig', out, '--against', path.join(rigs, v211[2]))
         expect(c.status, c.stdout).toBe(0)
-        expect(c.stdout).toContain('same: fixtures, solids, stage, atmosphere, views, showSource, loop, not_hung, looks, cues')
+        expect(c.stdout).toContain('same: fixtures, solids, stage, atmosphere, camera, views, showSource, loop, not_hung, looks, cues')
     })
 })
 

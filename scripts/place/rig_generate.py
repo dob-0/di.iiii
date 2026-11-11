@@ -33,7 +33,7 @@ from scenes_to_rig import looks_from_scenes  # noqa: E402
 
 HEADER = ('version', 'title', 'what', 'date', 'written_by')
 # what epic-build.mjs reads from a rig file (grep "rig\." scripts/rigbuild/epic-build.mjs, 2026-10-15)
-BUILD_KEYS = ('fixtures', 'solids', 'stage', 'atmosphere', 'views', 'showSource', 'loop', 'not_hung', 'looks', 'cues')
+BUILD_KEYS = ('fixtures', 'solids', 'stage', 'atmosphere', 'camera', 'views', 'showSource', 'loop', 'not_hung', 'looks', 'cues')
 
 
 def is_look_key(k): return k in ('looks', 'cues') or k.startswith(('looks_v', 'cues_v'))

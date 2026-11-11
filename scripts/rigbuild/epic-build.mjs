@@ -485,12 +485,14 @@ export const V1_HAZE_SIGMA = 0.0169
 // chosen by eye on the real GPU in Lite (0.04 read as black, 0.3 shows columns, roof steel and the truss at a low level
 // while every look keeps its contrast). A measured lux reading on the night replaces it.
 export const V1_AMBIENT = 0.3
-export const v1RenderOps = ({ sigma = V1_HAZE_SIGMA, ambient = V1_AMBIENT, atmosphere = null } = {}) => [
+// `exposure`: a rig that states its own camera level (rig.camera.exposure, measured for its lamps) is drawn at it; else the
+// document's level is left alone (MOXIR's rooms run at 1).
+export const v1RenderOps = ({ sigma = V1_HAZE_SIGMA, ambient = V1_AMBIENT, atmosphere = null, exposure = null } = {}) => [
     // exposure.auto false: Full's camera adaptation (autoExposure.js, gain up to 3x) opened "the black" into a lit brown
     // hall (seen 10-08, Full, Floor z 38) — the old "flat brown" again. Full now draws at the room's one exposure, as Lite does.
     // A rig file that states its own `atmosphere` (MOXIR v2 B tuned, 2026-10-09: the ONE machine's two-zone haze) is drawn
     // with it; else v1.0's one uniform sigma.
-    { type: 'setRenderSettings', payload: { patch: { atmosphere: atmosphere ? atmosphereOfRig(atmosphere) : { scattering: sigma, anisotropy: 0.7, haze: null }, exposure: { auto: false } } } },
+    { type: 'setRenderSettings', payload: { patch: { atmosphere: atmosphere ? atmosphereOfRig(atmosphere) : { scattering: sigma, anisotropy: 0.7, haze: null }, exposure: { auto: false }, ...(exposure > 0 ? { toneMappingExposure: exposure } : {}) } } },
     { type: 'setWorldState', payload: { patch: { ambientLight: { color: '#a39c92', intensity: ambient } } } }
 ]
 
@@ -801,7 +803,7 @@ const main = async () => {
     // (an empty scratch desk) then does not drive the room (showClock.js showDriver)
     ops.push({ type: 'setMappingState', payload: { patch: { loop: rig.loop !== false, showEpoch: Date.now(), ...(rig.showSource ? { showSource: rig.showSource } : {}) } } })
     if (!looksOnly) ops.push({ type: 'setPresentationState', payload: { patch: viewsOf(rig) } })
-    if (!looksOnly) ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT), atmosphere: rig.atmosphere || null }))
+    if (!looksOnly) ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT), atmosphere: rig.atmosphere || null, exposure: Number(rig.camera?.exposure) || null }))
     say(`${project} @ v${got.body.version}: ${looksOnly ? 'looks only — ' : `delete ${old.length}, create ${ents.length}, `}${looks.looks.length} looks, ${cues.length} cues; ${ops.length} ops`)
     if (args.out) {
         fs.mkdirSync(String(args.out), { recursive: true })

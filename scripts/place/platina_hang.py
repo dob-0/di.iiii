@@ -58,6 +58,7 @@ def make(rig, src, head_kinds=None, default_look=DEFAULT_LOOK):
     out['defaultLook'] = default_look
     v = views_of(rig)
     if v: out['views'] = v
+    if rig.get('camera'): out['camera'] = rig['camera']   # the room's one camera level, measured (platina_rig.py)
     return out, []
 
 

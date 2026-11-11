@@ -5,6 +5,10 @@
   "date": "2026-11-11",
   "written_by": "scripts/place/platina_rig.py"
  },
+ "camera": {
+  "exposure": 0.1,
+  "basis": "MEASURED 2026-11-11: GPU sweep 1 / 0.3 / 0.1 / 0.03 on cues 12 and 18 against the look pictures inside the offer (PLATINA_EH-YVN_14-11-26_OFFER_2.xlsx)"
+ },
  "generated_by": {
   "tool": "scripts/place/platina_rig.py",
   "plan": "scripts/place/rigs/platina-2026-11-11.patch.json",
