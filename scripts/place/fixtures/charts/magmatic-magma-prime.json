@@ -182,7 +182,6 @@
   }
  },
  "owed": [
-  "fluid consumption in ml/min (haze field)",
   "which fluid the rental holds",
   "confirm the 1 CH function on the unit"
  ]

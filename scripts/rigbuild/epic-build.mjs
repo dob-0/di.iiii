@@ -84,6 +84,12 @@ export const photoKind = (f) => (typeof f?.profile?.stand_in === 'string' && f.p
 export const candelaOf = (f) => {
     const half = f.angle_rad ?? 0.1
     const deg = (2 * half * 180) / Math.PI
+    // The unit's OWN photometry (the rig file's profile.photometry, read from the fixture library): the maker's lux at a
+    // distance (candela = lux x d^2; a zoom lamp spreads the same flux, so x (stated beam / current beam)^2), or the maker's
+    // total lumens over the cone of the unit's beam (a uniform cone: an upper bound on axis). Else the tables below.
+    const ph = f?.profile?.photometry
+    if (ph && ph.lux > 0 && ph.at_m > 0) return ph.lux * ph.at_m ** 2 * (ph.zoom && ph.beam_deg > 0 && deg > 0 ? (ph.beam_deg / deg) ** 2 : 1)
+    if (ph && ph.lumens > 0 && half > 0) return ph.lumens / (2 * Math.PI * (1 - Math.cos(half)))
     switch (photoKind(f)) {
         case 'up-pl5403': return 609.56 / SCALE                         // beta's own PAR figure
         case 'up-b380f': return 1004000 / SCALE
@@ -108,7 +114,7 @@ export const reachOf = (f, dims = null) => {
     if (hit === 0) return 0
     if (hit != null && hit > 0) return r3(Math.min(Math.max(hit, MIN_REACH), MISS_REACH_CAP))
     if (Number(f.throw_m) > 0) return r3(Math.min(Math.max(Number(f.throw_m), 1), MISS_REACH_CAP))
-    return DIST[photoKind(f)] || 24
+    return Number(f?.profile?.draw?.reach_m) || DIST[photoKind(f)] || 24
 }
 const PENUMBRA = { 'up-pl5403': 0.5, 'up-b380f': 0.1, 'up-hk1915': 0.5, 'up-250bsw': 0.3, 'ext-blinder': 0.6, 'ext-strobe': 0.6 }
 const HAZE = { 'up-b380f': 1, 'ext-lc-ultra-mk2': 1, 'up-la40wf': 1 }
@@ -320,7 +326,7 @@ export const patchOps = (doc, rig) => {
  * with why = inside_slab | on_floor (physics_check.py's words). Pure but for the report. */
 const beamOf = (f, hall, report) => {
     const length = reachOf(f, hall)
-    const haze = HAZE[photoKind(f)] ?? 0.35
+    const haze = f?.profile?.draw?.haze ?? HAZE[photoKind(f)] ?? 0.35
     if (length !== 0) return { visible: true, haze, length }
     const at = lampFirstSurface(f, hall)
     report?.push({ id: f.id, why: at.why, surface: at.name })
@@ -354,6 +360,14 @@ export const v1Entities = (rig, { hall = null, report = null } = {}) => {
                 components: { transform: { position: f.p, rotation: r, scale: [1, 1, 1] }, fixture: { type: 'up-yz31p', unit: 1, circuit: f.circuit || '', position: 'floor', ...dmxOf(f) } } })
             continue
         }
+        if (f.machine) {
+            // a haze or smoke machine of any type (the rig unit says `machine`): a group the haze field reads through its library
+            // type (hazeField.js hazeMachinesOf: category + fluid_ml_per_min), never a lamp
+            const r = Array.isArray(f.r) && f.r.length === 3 ? f.r.map(Number) : [0, 0, 0]
+            out.push({ id: f.id, type: 'group', name: `${f.type.toUpperCase()} ${f.part || f.machine} (${f.status || ''})`.slice(0, 200), parentId: null,
+                components: { transform: { position: f.p, rotation: r, scale: [1, 1, 1] }, fixture: { type: f.type, unit: 1, circuit: f.circuit || '', position: 'floor', ...dmxOf(f) } } })
+            continue
+        }
         if (f.angle_rad == null) continue
         const fixture = { type: f.type, unit: 1, circuit: f.circuit || '', position: positionOf(f) }
         if (f.dmx) Object.assign(fixture, { universe: f.dmx.universe, address: f.dmx.address, mode: `${f.dmx.footprint}ch` })
@@ -363,7 +377,7 @@ export const v1Entities = (rig, { hall = null, report = null } = {}) => {
                 appearance: { color: f.colour || '#e8e4dc', opacity: 1 },
                 // NO CUTOFF (sim-physics, 2026-10-09; rig-lib lightDistance): distance 0 is pure inverse square; the drawn beam
                 // keeps its own length (beam.length), the cast throw to the first thing it meets (reachOf)
-                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: 0, angle: f.angle_rad, penumbra: PENUMBRA[photoKind(f)] ?? 0.4, decay: 2 },
+                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: 0, angle: f.angle_rad, penumbra: f?.profile?.draw?.penumbra ?? PENUMBRA[photoKind(f)] ?? 0.4, decay: 2 },
                 beam: beamOf(f, hall, report),
                 animation: { mode: 'static', speed: 1, amplitude: 1 },
                 fixture

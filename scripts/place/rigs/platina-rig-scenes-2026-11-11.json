@@ -64,29 +64,84 @@
   "library": "src/rigbuild/types/library (UP-*, EXT-*) and scripts/place/fixtures/fixtures.json kinds; none of the five Platina types has its own profile",
   "missing": {
    "cp-aleda-beye-k10": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    }
    },
    "cp-hy-beye-k15": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    }
    },
    "acme-xp16r-bsw": {
-    "stand_in": "up-b380f",
-    "basis": "ASSUMED",
-    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    }
    },
    "acme-pixel-line-ip": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "magmatic-magma-prime": {
-    "stand_in": "ext-hazer",
-    "basis": "ASSUMED",
-    "why": "EXT-HAZER is a planning type modelled on an Antari HZ-1000, not the Elation Magma Prime"
+    "library": "magmatic-magma-prime",
+    "basis": "EXACT",
+    "why": "the real hazer: fluid consumption from its manual",
+    "fluid_ml_per_min": {
+     "value": 3.4,
+     "src": "MAGMA-MAN",
+     "basis": "EXACT"
+    }
    }
   },
   "note": "a stand-in is only for geometry/optics in the visualiser; names and DMX modes come from the patch plan. Nothing here is invented as a maker profile."
@@ -769,7 +824,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -777,9 +832,23 @@
    ],
    "source": "tower 1, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 5,
@@ -811,7 +880,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -819,9 +888,23 @@
    ],
    "source": "tower 1, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 5,
@@ -853,7 +936,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -861,9 +944,23 @@
    ],
    "source": "tower 1, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 5,
@@ -895,7 +992,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -903,9 +1000,23 @@
    ],
    "source": "tower 2, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 5,
@@ -937,7 +1048,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -945,9 +1056,23 @@
    ],
    "source": "tower 2, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 6,
@@ -979,7 +1104,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -987,9 +1112,23 @@
    ],
    "source": "tower 2, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 6,
@@ -1021,7 +1160,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1029,9 +1168,23 @@
    ],
    "source": "tower 3, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 6,
@@ -1063,7 +1216,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1071,9 +1224,23 @@
    ],
    "source": "tower 3, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 6,
@@ -1105,7 +1272,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1113,9 +1280,23 @@
    ],
    "source": "tower 3, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 7,
@@ -1147,7 +1328,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1155,9 +1336,23 @@
    ],
    "source": "tower 4, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 7,
@@ -1189,7 +1384,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1197,9 +1392,23 @@
    ],
    "source": "tower 4, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 7,
@@ -1231,7 +1440,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1239,9 +1448,23 @@
    ],
    "source": "tower 4, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 7,
@@ -1273,7 +1496,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1281,9 +1504,23 @@
    ],
    "source": "tower 5, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 8,
@@ -1315,7 +1552,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1323,9 +1560,23 @@
    ],
    "source": "tower 5, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 8,
@@ -1357,7 +1608,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1365,9 +1616,23 @@
    ],
    "source": "tower 5, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 8,
@@ -1399,7 +1664,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1407,9 +1672,23 @@
    ],
    "source": "tower 6, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 8,
@@ -1441,7 +1720,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1449,9 +1728,23 @@
    ],
    "source": "tower 6, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 9,
@@ -1483,7 +1776,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1491,9 +1784,23 @@
    ],
    "source": "tower 6, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 9,
@@ -1525,7 +1832,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1533,9 +1840,23 @@
    ],
    "source": "tower 7, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 9,
@@ -1567,7 +1888,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1575,9 +1896,23 @@
    ],
    "source": "tower 7, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 9,
@@ -1609,7 +1944,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1617,9 +1952,23 @@
    ],
    "source": "tower 7, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 10,
@@ -1651,7 +2000,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1659,9 +2008,23 @@
    ],
    "source": "tower 8, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 10,
@@ -1693,7 +2056,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1701,9 +2064,23 @@
    ],
    "source": "tower 8, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 10,
@@ -1735,7 +2112,7 @@
     0,
     0
    ],
-   "angle_rad": 0.131,
+   "angle_rad": 0.8814,
    "size_m": [
     0.06,
     1.0,
@@ -1743,9 +2120,23 @@
    ],
    "source": "tower 8, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
    "profile": {
-    "stand_in": "up-pl5403",
-    "basis": "ASSUMED",
-    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 10,
@@ -1785,16 +2176,27 @@
    ],
    "source": "x plot-top.png glyph centroid (slot 1 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    }
    },
    "dmx": {
     "universe": 1,
     "address": 1,
     "footprint": 111,
     "fixture": 101,
-    "mode": "Shapes + Pixel RGBW",
+    "mode": "111ch",
     "port": "A",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 1 of 4)"
    },
@@ -1825,16 +2227,27 @@
    ],
    "source": "x plot-top.png glyph centroid (slot 2 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    }
    },
    "dmx": {
     "universe": 1,
     "address": 112,
     "footprint": 111,
     "fixture": 102,
-    "mode": "Shapes + Pixel RGBW",
+    "mode": "111ch",
     "port": "A",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 2 of 4)"
    },
@@ -1865,16 +2278,27 @@
    ],
    "source": "x plot-top.png glyph centroid (slot 3 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    }
    },
    "dmx": {
     "universe": 1,
     "address": 223,
     "footprint": 111,
     "fixture": 103,
-    "mode": "Shapes + Pixel RGBW",
+    "mode": "111ch",
     "port": "A",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 3 of 4)"
    },
@@ -1905,16 +2329,27 @@
    ],
    "source": "x plot-top.png glyph centroid (slot 4 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    }
    },
    "dmx": {
     "universe": 1,
     "address": 334,
     "footprint": 111,
     "fixture": 104,
-    "mode": "Shapes + Pixel RGBW",
+    "mode": "111ch",
     "port": "A",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 4 of 4)"
    },
@@ -1945,16 +2380,27 @@
    ],
    "source": "x plot-top.png glyph centroid (slot 5 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    }
    },
    "dmx": {
     "universe": 2,
     "address": 1,
     "footprint": 111,
     "fixture": 105,
-    "mode": "Shapes + Pixel RGBW",
+    "mode": "111ch",
     "port": "B",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 1 of 4)"
    },
@@ -1985,16 +2431,27 @@
    ],
    "source": "x plot-top.png glyph centroid (slot 6 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    }
    },
    "dmx": {
     "universe": 2,
     "address": 112,
     "footprint": 111,
     "fixture": 106,
-    "mode": "Shapes + Pixel RGBW",
+    "mode": "111ch",
     "port": "B",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 2 of 4)"
    },
@@ -2025,16 +2482,27 @@
    ],
    "source": "x plot-top.png glyph centroid (slot 7 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    }
    },
    "dmx": {
     "universe": 2,
     "address": 223,
     "footprint": 111,
     "fixture": 107,
-    "mode": "Shapes + Pixel RGBW",
+    "mode": "111ch",
     "port": "B",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 3 of 4)"
    },
@@ -2065,16 +2533,27 @@
    ],
    "source": "x plot-top.png glyph centroid (slot 8 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    }
    },
    "dmx": {
     "universe": 2,
     "address": 334,
     "footprint": 111,
     "fixture": 108,
-    "mode": "Shapes + Pixel RGBW",
+    "mode": "111ch",
     "port": "B",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 4 of 4)"
    },
@@ -2105,16 +2584,27 @@
    ],
    "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    }
    },
    "dmx": {
     "universe": 3,
     "address": 1,
     "footprint": 112,
     "fixture": 201,
-    "mode": "Shape + Pixel RGBW",
+    "mode": "112ch",
     "port": "C",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 1, order id-asc, unit 1 of 4)"
    },
@@ -2145,16 +2635,27 @@
    ],
    "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    }
    },
    "dmx": {
     "universe": 3,
     "address": 113,
     "footprint": 112,
     "fixture": 202,
-    "mode": "Shape + Pixel RGBW",
+    "mode": "112ch",
     "port": "C",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 1, order id-asc, unit 2 of 4)"
    },
@@ -2185,16 +2686,27 @@
    ],
    "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    }
    },
    "dmx": {
     "universe": 3,
     "address": 225,
     "footprint": 112,
     "fixture": 203,
-    "mode": "Shape + Pixel RGBW",
+    "mode": "112ch",
     "port": "C",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 1, order id-asc, unit 3 of 4)"
    },
@@ -2225,16 +2737,27 @@
    ],
    "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    }
    },
    "dmx": {
     "universe": 3,
     "address": 337,
     "footprint": 112,
     "fixture": 204,
-    "mode": "Shape + Pixel RGBW",
+    "mode": "112ch",
     "port": "C",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 1, order id-asc, unit 4 of 4)"
    },
@@ -2265,16 +2788,27 @@
    ],
    "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    }
    },
    "dmx": {
     "universe": 4,
     "address": 1,
     "footprint": 112,
     "fixture": 205,
-    "mode": "Shape + Pixel RGBW",
+    "mode": "112ch",
     "port": "D",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor-b (start 1, order id-asc, unit 1 of 2)"
    },
@@ -2305,16 +2839,27 @@
    ],
    "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    }
    },
    "dmx": {
     "universe": 4,
     "address": 113,
     "footprint": 112,
     "fixture": 206,
-    "mode": "Shape + Pixel RGBW",
+    "mode": "112ch",
     "port": "D",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor-b (start 1, order id-asc, unit 2 of 2)"
    },
@@ -2345,16 +2890,27 @@
    ],
    "source": "x plot-front.png lamp body, z plot-side.png/plot-top.png, height plot-front.png: on a stand at the side (the plot shows a pole)",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    }
    },
    "dmx": {
     "universe": 4,
     "address": 225,
     "footprint": 112,
     "fixture": 207,
-    "mode": "Shape + Pixel RGBW",
+    "mode": "112ch",
     "port": "D",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-sides (start 225, order id-asc, unit 1 of 2)"
    },
@@ -2385,16 +2941,27 @@
    ],
    "source": "x plot-front.png lamp body, z plot-side.png/plot-top.png, height plot-front.png: on a stand at the side (the plot shows a pole)",
    "profile": {
-    "stand_in": "up-hk1915",
-    "basis": "ASSUMED",
-    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    }
    },
    "dmx": {
     "universe": 4,
     "address": 337,
     "footprint": 112,
     "fixture": 208,
-    "mode": "Shape + Pixel RGBW",
+    "mode": "112ch",
     "port": "D",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-sides (start 225, order id-asc, unit 2 of 2)"
    },
@@ -2417,7 +2984,7 @@
     0,
     0
    ],
-   "angle_rad": 0.0157,
+   "angle_rad": 0.0262,
    "size_m": [
     0.35,
     0.5,
@@ -2425,21 +2992,35 @@
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
-    "stand_in": "up-b380f",
-    "basis": "ASSUMED",
-    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 11,
     "address": 1,
     "footprint": 21,
     "fixture": 501,
-    "mode": "Mode 2",
+    "mode": "21ch",
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 1 of 12)"
    },
    "aim_home": "straight down",
-   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
   {
@@ -2458,7 +3039,7 @@
     0,
     0
    ],
-   "angle_rad": 0.0157,
+   "angle_rad": 0.0262,
    "size_m": [
     0.35,
     0.5,
@@ -2466,21 +3047,35 @@
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
-    "stand_in": "up-b380f",
-    "basis": "ASSUMED",
-    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 11,
     "address": 22,
     "footprint": 21,
     "fixture": 502,
-    "mode": "Mode 2",
+    "mode": "21ch",
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 2 of 12)"
    },
    "aim_home": "straight down",
-   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
   {
@@ -2499,7 +3094,7 @@
     0,
     0
    ],
-   "angle_rad": 0.0157,
+   "angle_rad": 0.0262,
    "size_m": [
     0.35,
     0.5,
@@ -2507,21 +3102,35 @@
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
-    "stand_in": "up-b380f",
-    "basis": "ASSUMED",
-    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 11,
     "address": 43,
     "footprint": 21,
     "fixture": 503,
-    "mode": "Mode 2",
+    "mode": "21ch",
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 3 of 12)"
    },
    "aim_home": "straight down",
-   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
   {
@@ -2540,7 +3149,7 @@
     0,
     0
    ],
-   "angle_rad": 0.0157,
+   "angle_rad": 0.0262,
    "size_m": [
     0.35,
     0.5,
@@ -2548,21 +3157,35 @@
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
-    "stand_in": "up-b380f",
-    "basis": "ASSUMED",
-    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 11,
     "address": 64,
     "footprint": 21,
     "fixture": 504,
-    "mode": "Mode 2",
+    "mode": "21ch",
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 4 of 12)"
    },
    "aim_home": "straight down",
-   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
   {
@@ -2581,7 +3204,7 @@
     0,
     0
    ],
-   "angle_rad": 0.0157,
+   "angle_rad": 0.0262,
    "size_m": [
     0.35,
     0.5,
@@ -2589,21 +3212,35 @@
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
-    "stand_in": "up-b380f",
-    "basis": "ASSUMED",
-    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 11,
     "address": 85,
     "footprint": 21,
     "fixture": 505,
-    "mode": "Mode 2",
+    "mode": "21ch",
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 5 of 12)"
    },
    "aim_home": "straight down",
-   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
   {
@@ -2622,7 +3259,7 @@
     0,
     0
    ],
-   "angle_rad": 0.0157,
+   "angle_rad": 0.0262,
    "size_m": [
     0.35,
     0.5,
@@ -2630,21 +3267,35 @@
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
-    "stand_in": "up-b380f",
-    "basis": "ASSUMED",
-    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 11,
     "address": 106,
     "footprint": 21,
     "fixture": 506,
-    "mode": "Mode 2",
+    "mode": "21ch",
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 6 of 12)"
    },
    "aim_home": "straight down",
-   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
   {
@@ -2663,7 +3314,7 @@
     0,
     0
    ],
-   "angle_rad": 0.0157,
+   "angle_rad": 0.0262,
    "size_m": [
     0.35,
     0.5,
@@ -2671,21 +3322,35 @@
    ],
    "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
    "profile": {
-    "stand_in": "up-b380f",
-    "basis": "ASSUMED",
-    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 11,
     "address": 127,
     "footprint": 21,
     "fixture": 507,
-    "mode": "Mode 2",
+    "mode": "21ch",
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 7 of 12)"
    },
    "aim_home": "straight down",
-   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
   {
@@ -2704,7 +3369,7 @@
     0,
     0
    ],
-   "angle_rad": 0.0157,
+   "angle_rad": 0.0262,
    "size_m": [
     0.35,
     0.5,
@@ -2712,21 +3377,35 @@
    ],
    "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
    "profile": {
-    "stand_in": "up-b380f",
-    "basis": "ASSUMED",
-    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 11,
     "address": 148,
     "footprint": 21,
     "fixture": 508,
-    "mode": "Mode 2",
+    "mode": "21ch",
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 8 of 12)"
    },
    "aim_home": "straight down",
-   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
   {
@@ -2745,7 +3424,7 @@
     0,
     0
    ],
-   "angle_rad": 0.0157,
+   "angle_rad": 0.0262,
    "size_m": [
     0.35,
     0.5,
@@ -2753,21 +3432,35 @@
    ],
    "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
    "profile": {
-    "stand_in": "up-b380f",
-    "basis": "ASSUMED",
-    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 11,
     "address": 169,
     "footprint": 21,
     "fixture": 509,
-    "mode": "Mode 2",
+    "mode": "21ch",
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 9 of 12)"
    },
    "aim_home": "straight down",
-   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
   {
@@ -2786,7 +3479,7 @@
     0,
     0
    ],
-   "angle_rad": 0.0157,
+   "angle_rad": 0.0262,
    "size_m": [
     0.35,
     0.5,
@@ -2794,21 +3487,35 @@
    ],
    "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
    "profile": {
-    "stand_in": "up-b380f",
-    "basis": "ASSUMED",
-    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 11,
     "address": 190,
     "footprint": 21,
     "fixture": 510,
-    "mode": "Mode 2",
+    "mode": "21ch",
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 10 of 12)"
    },
    "aim_home": "straight down",
-   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
   {
@@ -2827,7 +3534,7 @@
     0,
     0
    ],
-   "angle_rad": 0.0157,
+   "angle_rad": 0.0262,
    "size_m": [
     0.35,
     0.5,
@@ -2835,21 +3542,35 @@
    ],
    "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
    "profile": {
-    "stand_in": "up-b380f",
-    "basis": "ASSUMED",
-    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 11,
     "address": 211,
     "footprint": 21,
     "fixture": 511,
-    "mode": "Mode 2",
+    "mode": "21ch",
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 11 of 12)"
    },
    "aim_home": "straight down",
-   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
   {
@@ -2868,7 +3589,7 @@
     0,
     0
    ],
-   "angle_rad": 0.0157,
+   "angle_rad": 0.0262,
    "size_m": [
     0.35,
     0.5,
@@ -2876,21 +3597,35 @@
    ],
    "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
    "profile": {
-    "stand_in": "up-b380f",
-    "basis": "ASSUMED",
-    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 11,
     "address": 232,
     "footprint": 21,
     "fixture": 512,
-    "mode": "Mode 2",
+    "mode": "21ch",
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 12 of 12)"
    },
    "aim_home": "straight down",
-   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
   },
   {
@@ -2901,7 +3636,7 @@
    "status": "PROPOSED",
    "p": [
     -3.4,
-    0.91,
+    0.8,
     -0.55
    ],
    "r": [
@@ -2911,15 +3646,20 @@
    ],
    "angle_rad": 0.0,
    "size_m": [
-    0.69,
-    0.51,
-    0.61
+    0.16,
+    0.4,
+    0.34
    ],
    "source": "PROPOSED: on the deck behind the screen line, outside the screen's width, between the screen and the back wall (-0.96 m): hidden from the audience, hazes the whole stage; the list and the plot place none",
    "profile": {
-    "stand_in": "ext-hazer",
-    "basis": "ASSUMED",
-    "why": "EXT-HAZER is a planning type modelled on an Antari HZ-1000, not the Elation Magma Prime"
+    "library": "magmatic-magma-prime",
+    "basis": "EXACT",
+    "why": "the real hazer: fluid consumption from its manual",
+    "fluid_ml_per_min": {
+     "value": 3.4,
+     "src": "MAGMA-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 4,
@@ -2931,7 +3671,8 @@
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block hazer (start 461, order id-asc, unit 1 of 2)"
    },
    "aim_home": "horizontal +z (output toward the audience)",
-   "stand_in_note": "size from EXT-HAZER (Antari HZ-1000, EQUIVALENT)"
+   "machine": "hazer",
+   "size_note": "the maker's 338 x 160 x 400 mm (L x W x H, manual p16)"
   },
   {
    "id": "platina-hazer-2",
@@ -2941,7 +3682,7 @@
    "status": "PROPOSED",
    "p": [
     3.4,
-    0.91,
+    0.8,
     -0.55
    ],
    "r": [
@@ -2951,15 +3692,20 @@
    ],
    "angle_rad": 0.0,
    "size_m": [
-    0.69,
-    0.51,
-    0.61
+    0.16,
+    0.4,
+    0.34
    ],
    "source": "PROPOSED: on the deck behind the screen line, outside the screen's width, between the screen and the back wall (-0.96 m): hidden from the audience, hazes the whole stage; the list and the plot place none",
    "profile": {
-    "stand_in": "ext-hazer",
-    "basis": "ASSUMED",
-    "why": "EXT-HAZER is a planning type modelled on an Antari HZ-1000, not the Elation Magma Prime"
+    "library": "magmatic-magma-prime",
+    "basis": "EXACT",
+    "why": "the real hazer: fluid consumption from its manual",
+    "fluid_ml_per_min": {
+     "value": 3.4,
+     "src": "MAGMA-MAN",
+     "basis": "EXACT"
+    }
    },
    "dmx": {
     "universe": 4,
@@ -2971,7 +3717,8 @@
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block hazer (start 461, order id-asc, unit 2 of 2)"
    },
    "aim_home": "horizontal +z (output toward the audience)",
-   "stand_in_note": "size from EXT-HAZER (Antari HZ-1000, EQUIVALENT)"
+   "machine": "hazer",
+   "size_note": "the maker's 338 x 160 x 400 mm (L x W x H, manual p16)"
   }
  ],
  "looks": [

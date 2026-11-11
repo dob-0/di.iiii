@@ -145,7 +145,12 @@
     "photometrySrc": null,
     "photometryBasis": null
   },
-  "fluid_ml_per_min": null,
+  "fluid_ml_per_min": {
+    "value": 3.4,
+    "src": "MAGMA-MAN",
+    "basis": "EXACT",
+    "note": "manual, SPECIFICATIONS > PERFORMANCE: Fluid Consumption 0.115 oz/min (3.4 ml/min); max output 4,000 CFM"
+  },
   "nozzle_d_mm": 50,
   "model3d": {
     "glb": "scripts/place/fixtures/glb/magmaPrime.glb",
@@ -185,7 +190,7 @@
     "values": {
       "measured": 0,
       "tested": 0,
-      "datasheet": 10,
+      "datasheet": 11,
       "equivalent": 0,
       "assumed": 0,
       "unknown": 0

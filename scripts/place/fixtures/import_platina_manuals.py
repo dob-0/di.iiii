@@ -403,7 +403,7 @@ def build(manuals):
             'weight_kg': spec(10.2, 'MAGMA-MAN', note='manual p16: 22.48 lbs'),
             'power_w': spec(700, 'MAGMA-MAN', note='manual p16 rated power; AC 120 V 60 Hz (US) or AC 230 V 50 Hz (EU) versions, breaker 9 A @ 120 V / 5 A @ 230 V'),
             'tank_l': spec(1.3, 'MAGMA-MAN', note='manual p16: fluid 1.3 L'),
-            'fluid_ml_per_min': unknown('the manual gives output as 4000 CFM max and no fluid consumption in ml/min: the room\'s haze field cannot be computed from it until it is measured or published'),
+            'fluid_ml_per_min': spec(3.4, 'MAGMA-MAN', note='manual, SPECIFICATIONS > PERFORMANCE: Fluid Consumption 0.115 oz/min (3.4 ml/min); max output 4,000 CFM'),
             'dmx_channels': spec([1, 3, 5], 'MAGMA-MAN', note="menu DMX SET > DMX Mode 1 / 3 / 5 (p12), table p14; the 1 CH list is read from the table layout (output volume), confirm on the unit"),
         },
         'modes_info': {k: {'label': v[0], 'note': v[2], 'page': v[3]} for k, v in mg_modes.items()},
@@ -439,7 +439,7 @@ OWED = {
     'cp-aleda-beye-k10': ['shape macro slot names (manual p27-28 not transcribed)', 'macro colour table (p24; not carried as caps)', 'beam angle at the zoom ends (OFL range only)', 'zoom cap (degrees per DMX value)', 'which of K10 / K10 Easy the rented lamps are', 'pixel cell centres (p30: LED 1 centre, 2-7 first ring, 8-19 outer ring)'],
     'acme-pixel-line-ip': ['modes 35, 38, 70N, 119 of the datasheet (not in the manual copy)', 'physical cell order', 'frost cap (the manual says 128+ is full fog, so a linear curve is not stated)', 'revision / variant of the rented bars'],
     'acme-xp16r-bsw': ['colour and gobo slot names and counts (14 vs 29 colours, 17 vs 16 gobos: the manual disagrees with itself)', 'colour wheel / gobo slot caps', 'zoom direction (0-255 = 100%-0%: which end is narrow is not stated)', 'prism 2 cap', 'IP rating', 'whether the rented unit has 23 channels (no such XP-16R was found)'],
-    'magmatic-magma-prime': ['fluid consumption in ml/min (haze field)', 'which fluid the rental holds', 'confirm the 1 CH function on the unit'],
+    'magmatic-magma-prime': ['which fluid the rental holds', 'confirm the 1 CH function on the unit'],
 }
 
 

@@ -404,3 +404,19 @@ describe('epic-build: a lamp with a stand-in profile is lit as its stand-in (Pla
         for (const f of rig.fixtures) expect(photoKind(f)).toBe(f.type)
     })
 })
+
+describe('a unit with its own profile (the fixture library\'s real figures, 2026-11-11)', () => {
+    it('candela comes from the maker\'s lux at a distance, spread by zoom, or from the maker\'s lumens over the beam cone', () => {
+        const lux = { type: 'x', angle_rad: (1.5 * Math.PI) / 180, profile: { photometry: { lux: 810000, at_m: 5, beam_deg: 3, zoom: true } } }
+        expect(Math.round(candelaOf(lux))).toBe(20250000)
+        expect(Math.round(candelaOf({ ...lux, angle_rad: (3 * Math.PI) / 180 }))).toBe(5062500)
+        expect(Math.round(candelaOf({ type: 'x', angle_rad: 0.8814, profile: { photometry: { lux: 1163, at_m: 2, beam_deg: 101, zoom: false } } }))).toBe(4652)
+        expect(Math.round(candelaOf({ type: 'x', angle_rad: Math.PI / 2, profile: { photometry: { lumens: 6283 } } }))).toBe(1000)
+    })
+    it('a unit that says `machine` becomes a group of its own type, never a lamp', () => {
+        const [e] = v1Entities({ fixtures: [{ id: 'h1', type: 'magmatic-magma-prime', machine: 'hazer', p: [0, 1, 0], r: [0, 0, 0], angle_rad: 0, part: 'hazer 1', status: 'PROPOSED' }], solids: [] })
+        expect(e.type).toBe('group')
+        expect(e.components.fixture.type).toBe('magmatic-magma-prime')
+        expect(e.components.light).toBeUndefined()
+    })
+})

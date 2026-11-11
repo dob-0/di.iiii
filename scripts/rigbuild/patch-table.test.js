@@ -81,10 +81,15 @@ describe('the crew table of the MOXIR v2 patch', () => {
     })
 })
 
+// The 11-10 and 11-11-full plans were written BEFORE the five rented lamps joined the shared library (2026-11-11), so they bring
+// those types themselves. They stay as written (records of their day); they are read here with the library of that day, which is
+// what "a plan that brings its own types" means. The current plan (platina-2026-11-11.patch.json) uses the library's types.
+const libraryBefore = (p) => ({ ...library, types: library.types.filter((t) => !(p.types || []).some((o) => o.id === t.id)) })
+
 describe('a plan that brings its own types (Platina, 2026-11-10)', () => {
     const file = 'scripts/place/rigs/platina-2026-11-10.patch.json'
     const own = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, file), 'utf8'))
-    const m = () => tableModel({ plan: own, library, planFile: file })
+    const m = () => tableModel({ plan: own, library: libraryBefore(own), planFile: file })
 
     it('gives all 50 units of the plot an address, none overlapping, none past 512', () => {
         const rows = m().rows
@@ -121,7 +126,7 @@ describe('a plan that brings its own types (Platina, 2026-11-10)', () => {
         expect(m().notes.filter((n) => /channel LIST is owed/.test(n))).toHaveLength(4)
         const bad = structuredClone(own)
         delete bad.types[0].modes[0].src
-        expect(() => tableModel({ plan: bad, library })).toThrow(/does not say where its channel count comes from/)
+        expect(() => tableModel({ plan: bad, library: libraryBefore(bad) })).toThrow(/does not say where its channel count comes from/)
         const twice = structuredClone(own)
         twice.types[0].id = library.types[0].id
         expect(() => tableModel({ plan: twice, library })).toThrow(/already in the library/)
@@ -132,8 +137,8 @@ describe('the sheet in another language (--lang ru)', () => {
     const file = 'scripts/place/rigs/platina-2026-11-10.patch.json'
     const own = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, file), 'utf8'))
     it('says the same addresses in Russian words, and leaves the English sheet as it was', () => {
-        const en = tableModel({ plan: own, library, planFile: file })
-        const ru = tableModel({ plan: own, library, planFile: file, lang: 'ru' })
+        const en = tableModel({ plan: own, library: libraryBefore(own), planFile: file })
+        const ru = tableModel({ plan: own, library: libraryBefore(own), planFile: file, lang: 'ru' })
         const key = (r) => `${r.index} ${r.universe}.${r.address} ${r.footprint}`
         expect(ru.rows.map(key)).toEqual(en.rows.map(key))
         const md = renderMarkdown(ru)
@@ -149,7 +154,7 @@ describe('the Platina full-mode plan (2026-11-11, from the rental offer)', () =>
     const file = 'scripts/place/rigs/platina-2026-11-11-full.patch.json'
     const full = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, file), 'utf8'))
     it('patches 52 units on 9 universes, every unit in its largest sourced mode, nothing over 512', () => {
-        const m = tableModel({ plan: full, library, planFile: file })
+        const m = tableModel({ plan: full, library: libraryBefore(full), planFile: file })
         expect(m.rows).toHaveLength(52)
         expect(m.universes.map((u) => u.universe)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
         expect(m.universes.every((u) => u.used <= 512)).toBe(true)
@@ -158,6 +163,6 @@ describe('the Platina full-mode plan (2026-11-11, from the rental offer)', () =>
         expect(fp('XP-16R BSW')).toEqual([23])
         expect(fp('HY B-EYE K15')).toEqual([76])
         expect(fp('Pixel Line IP')).toEqual([117])
-        expect(renderMarkdown(tableModel({ plan: full, library, planFile: file, lang: 'ru' }))).toContain('ЧЕРНОВИК')
+        expect(renderMarkdown(tableModel({ plan: full, library: libraryBefore(full), planFile: file, lang: 'ru' }))).toContain('ЧЕРНОВИК')
     })
 })

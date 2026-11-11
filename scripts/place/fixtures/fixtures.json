@@ -2135,10 +2135,10 @@
      "note": "manual p16: fluid 1.3 L"
     },
     "fluid_ml_per_min": {
-     "value": null,
-     "basis": "UNKNOWN",
-     "accessed": "2026-11-11",
-     "note": "the manual gives output as 4000 CFM max and no fluid consumption in ml/min: the room's haze field cannot be computed from it until it is measured or published"
+     "value": 3.4,
+     "src": "MAGMA-MAN",
+     "basis": "EXACT",
+     "note": "manual, SPECIFICATIONS > PERFORMANCE: Fluid Consumption 0.115 oz/min (3.4 ml/min); max output 4,000 CFM"
     },
     "dmx_channels": {
      "value": [

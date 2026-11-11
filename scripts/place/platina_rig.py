@@ -209,8 +209,9 @@ def build(repo, M):
     types = plan['modes']
     blocks = {b['select']['group']: (u['universe'], b) for u in plan['universes'] for b in u['blocks']}
     deck = r2(M['deck_h_m'])
-    # the channel count of each type's chosen mode comes from the plan itself (types[].modes by the crew name), never from a table here
-    FP = {t['id']: next(m['footprint'] for m in t['modes'] if m['name'] == types[t['id']]['crew']) for t in plan['types']}
+    # the channel count of each type's chosen mode comes from the fixture library (the type's mode of the plan's crew name), never from a table here
+    lib = lambda tid: json.load(open(os.path.join(repo, 'src/rigbuild/types/library', tid + '.json')))
+    FP = {tid: next(m['footprint'] for m in lib(tid)['modes'] if m['name'] == spec['crew']) for tid, spec in types.items()}
     fixtures, solids = [], []
 
     def dmx(group, i):
@@ -219,12 +220,31 @@ def build(repo, M):
         return {'universe': uni, 'address': b['start'] + i * FP[t], 'footprint': FP[t], 'fixture': b['fixture'] + i, 'mode': types[t]['crew'], 'port': 'ABCDEFGHIJK'[uni - 1],
                 'from': f'{PLAN} block {group} (start {b["start"]}, order id-asc, unit {i + 1} of {b["units"]})'}
 
+    # Each unit's profile comes from the fixture library (the real lamp, owner 11-11 N3738 "all real"): the maker's light
+    # output and beam, read from the type file. `draw` holds the renderer's own class values (penumbra, air share, reach),
+    # which no maker states. A figure the maker does not publish is said so, with what stands in for it.
+    DRAW = {'wash': {'penumbra': 0.5, 'haze': 0.35, 'reach_m': 18}, 'beam': {'penumbra': 0.1, 'haze': 1, 'reach_m': 40}, 'bar': {'penumbra': 0.5, 'haze': 0.35, 'reach_m': 24}}
+    def profile(tid, cls, lumens=None, why=''):
+        t = lib(tid); o = t.get('optics') or {}
+        p = {'library': tid, 'basis': t.get('identified'), 'why': why}
+        if cls:
+            p['draw'] = dict(DRAW[cls], basis='ASSUMED: renderer class values for a ' + cls + ', not maker data')
+        if o.get('lux') and o.get('at_m'):
+            p['photometry'] = {'lux': o['lux'], 'at_m': o['at_m'], 'beam_deg': o.get('beam_deg'), 'zoom': bool(o.get('zoom_deg')), 'src': o.get('photometrySrc'), 'basis': o.get('photometryBasis')}
+        elif lumens:
+            p['photometry'] = dict(lumens)
+        fl = t.get('fluid_ml_per_min')
+        if isinstance(fl, dict) and fl.get('value'):
+            p['fluid_ml_per_min'] = {'value': fl['value'], 'src': fl.get('src'), 'basis': fl.get('basis')}
+        return p
+    K10_LM = {'lumens': 5500, 'src': 'CP-K10-MAN', 'basis': 'EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit\'s beam angle, an upper bound on axis'}
+    K15_LM = {'lumens': 5500, 'src': 'CP-K10-MAN', 'basis': 'ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10\'s 5500 lumens stand in; the real K15 is brighter'}
     stand = {
-        'cp-aleda-beye-k10': {'stand_in': 'up-hk1915', 'basis': 'ASSUMED', 'why': 'UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)'},
-        'cp-hy-beye-k15': {'stand_in': 'up-hk1915', 'basis': 'ASSUMED', 'why': 'same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED'},
-        'acme-xp16r-bsw': {'stand_in': 'up-b380f', 'basis': 'ASSUMED', 'why': 'a "16R" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot'},
-        'acme-pixel-line-ip': {'stand_in': 'up-pl5403', 'basis': 'ASSUMED', 'why': 'no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot'},
-        'magmatic-magma-prime': {'stand_in': 'ext-hazer', 'basis': 'ASSUMED', 'why': 'EXT-HAZER is a planning type modelled on an Antari HZ-1000, not the Elation Magma Prime'},
+        'cp-aleda-beye-k10': profile('cp-aleda-beye-k10', 'wash', K10_LM, 'the real lamp: zoom 4-60 deg, output from its manual'),
+        'cp-hy-beye-k15': profile('cp-hy-beye-k15', 'wash', K15_LM, 'the real lamp; its output is not published in the papers held, body from the plot symbol'),
+        'acme-xp16r-bsw': profile('acme-xp16r-bsw', 'beam', None, 'the real lamp: the manual\'s photometric diagram at its 3 deg beam'),
+        'acme-pixel-line-ip': profile('acme-pixel-line-ip', 'bar', None, 'the real bar: the datasheet\'s 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot'),
+        'magmatic-magma-prime': profile('magmatic-magma-prime', None, None, 'the real hazer: fluid consumption from its manual'),
     }
 
     def add(id_, type_, group, p, r, angle, status, source, part, size, i=None, extra=None):
@@ -282,7 +302,7 @@ def build(repo, M):
                        's': [0.1, r2(bar_y0), 0.1], 'source': 'plot-front.png pole under the bars (x lines 159..170 and the like)'})
         for j in range(3):
             yc = bar_y0 + barh * (j + 0.5)
-            add(f'platina-pixel-{n + 1:02d}', 'acme-pixel-line-ip', f'pixel-line-g{n // 4 + 1}', [x, yc, z], [-math.pi / 2, 0, 0], 0.131, 'measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience\'s left)',
+            add(f'platina-pixel-{n + 1:02d}', 'acme-pixel-line-ip', f'pixel-line-g{n // 4 + 1}', [x, yc, z], [-math.pi / 2, 0, 0], 0.8814, 'measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience\'s left)',
                 f'tower {t + 1}, bar {j + 1} from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck', f'pixel line tower {t + 1} bar {j + 1}', [bw, barh, bd], n % 4,
                 {'tower': t + 1, 'bar_in_tower': j + 1, 'face': '+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole', 'aim_home': 'horizontal +z'})
             n += 1
@@ -315,13 +335,13 @@ def build(repo, M):
             p = [slots[i], yk, zs]; src = 'PROPOSED: the plot\'s 7 Sharpy slots on the over-stage truss (the drawing\'s own beam-lamp hang points, positions measured from plot-top.png)'
         else:
             p = [xa[i - 7], yk, za]; src = 'PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot\'s 3 K10 slots there are free)'
-        add(f'platina-xp16r-{i + 1:02d}', 'acme-xp16r-bsw', 'xp16r-proposed', p, [0, 0, 0], 0.0157, 'PROPOSED', src, f'XP-16R {i + 1}', [0.35, 0.50, 0.30], i,
-            {'aim_home': 'straight down', 'beam_note': 'angle_rad ASSUMED from the stand-in beam 1.8 deg', 'why': 'beam heads of every drawn rig of this kind hang over the stage; no paper places them'})
+        add(f'platina-xp16r-{i + 1:02d}', 'acme-xp16r-bsw', 'xp16r-proposed', p, [0, 0, 0], 0.0262, 'PROPOSED', src, f'XP-16R {i + 1}', [0.35, 0.50, 0.30], i,
+            {'aim_home': 'straight down', 'beam_note': 'angle_rad = half of the maker\'s 3 deg beam (manual photometric diagram)', 'why': 'beam heads of every drawn rig of this kind hang over the stage; no paper places them'})
     # hazers: PROPOSED
     for i, x in enumerate([-3.4, 3.4]):
-        add(f'platina-hazer-{i + 1}', 'magmatic-magma-prime', 'hazer', [x, deck + 0.31, -0.55], [-math.pi / 2, 0, 0], 0.0, 'PROPOSED',
+        add(f'platina-hazer-{i + 1}', 'magmatic-magma-prime', 'hazer', [x, deck + 0.20, -0.55], [-math.pi / 2, 0, 0], 0.0, 'PROPOSED',
             'PROPOSED: on the deck behind the screen line, outside the screen\'s width, between the screen and the back wall (-0.96 m): hidden from the audience, hazes the whole stage; the list and the plot place none',
-            f'hazer {i + 1}', [0.69, 0.51, 0.61], i, {'aim_home': 'horizontal +z (output toward the audience)', 'stand_in_note': 'size from EXT-HAZER (Antari HZ-1000, EQUIVALENT)'})
+            f'hazer {i + 1}', [0.16, 0.40, 0.34], i, {'aim_home': 'horizontal +z (output toward the audience)', 'machine': 'hazer', 'size_note': 'the maker\'s 338 x 160 x 400 mm (L x W x H, manual p16)'})
     rig = {
         'version': '1.0', 'title': 'Platina - Live in Yerevan: rig plan for the visualiser (stage, trusses, towers measured from the 11-10 light plot; 54 lamps of the 11-11 offer)', 'date': '2026-11-11',
         'what': 'Positions of every lamp of the offer (8 K10, 8 K15, 12 XP-16R, 24 Pixel Line, 2 hazers) in metres, with the 11-11 patch address. The plot shows 11 K10 + 7 Sharpy, the offer 8 K10 + 12 XP-16R: the 3 audience-side K10 and the 7 Sharpy are listed in plot_only and not built.',

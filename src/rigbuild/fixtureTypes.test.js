@@ -155,10 +155,10 @@ describe('the Platina rental lamps (joined 2026-11-11, from the makers\' manuals
         expect(by(111).note).toMatch(/A \+ 35/)
     })
 
-    it('the Magma Prime is a hazer (the room\'s haze field reads that word), with its fluid output owed', () => {
+    it('the Magma Prime is a hazer (the room\'s haze field reads that word), with its fluid use from the manual (3.4 ml/min)', () => {
         const h = typeById(committed, 'magmatic-magma-prime')
         expect(h.category).toBe('hazer')
-        expect(h.fluid_ml_per_min).toBe(null)
+        expect(h.fluid_ml_per_min).toMatchObject({ value: 3.4, src: 'MAGMA-MAN', basis: 'EXACT' })
     })
 
     it('every built body is the size its maker prints, and a lamp with no known size has none', () => {
