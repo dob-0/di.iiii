@@ -6,7 +6,10 @@
 //   new Worker(new URL('./bodyMatteWorker.js', import.meta.url))
 // (the form Vite builds in dev and in production).
 //
-// Messages in:  { type: 'init', base, model }                       -> { type: 'ready' } | { type: 'error', message }
+// `delegate` picks where the model itself runs: 'CPU' (wasm, on this worker's own core) or 'GPU'
+// (WebGL on an OffscreenCanvas). bodyMatte.js chooses; see BODY_MATTE_WORKER_DELEGATE there for why.
+//
+// Messages in:  { type: 'init', base, model, delegate }             -> { type: 'ready', delegate } | { type: 'error', message }
 //               { type: 'run', seq, key, data (RGBA bytes, transferred), width, height }
 //                                                                    -> { type: 'mask', seq, key, bytes, width, height, ms } | { type: 'fail', seq, message }
 //               { type: 'close' }
@@ -15,17 +18,18 @@ let lastStamp = 0
 
 const post = (message, transfer) => self.postMessage(message, transfer || [])
 
-const init = async ({ base, model }) => {
+const init = async ({ base, model, delegate }) => {
+    const where = delegate === 'CPU' ? 'CPU' : 'GPU'
     try {
         const vision = await import(/* @vite-ignore */ `${base}/vision_bundle.mjs`)
         const files = await vision.FilesetResolver.forVisionTasks(`${base}/wasm`)
         segmenter = await vision.ImageSegmenter.createFromOptions(files, {
-            baseOptions: { modelAssetPath: model, delegate: 'GPU' },
+            baseOptions: { modelAssetPath: model, delegate: where },
             runningMode: 'VIDEO',
             outputConfidenceMasks: true,
             outputCategoryMask: false
         })
-        post({ type: 'ready' })
+        post({ type: 'ready', delegate: where })
     } catch (error) {
         post({ type: 'error', message: String((error && error.message) || error) })
     }

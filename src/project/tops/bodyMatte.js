@@ -59,6 +59,12 @@ const WORKER_INIT_TIMEOUT_MS = 30000
 // The first run after loading compiles the model's shaders: 2.0 s was the longest measured
 // (2026-11-11, machine load 11-20), so the limit sits well above it.
 export const WORKER_RUN_TIMEOUT_MS = 5000
+// Where the worker runs the model: 'GPU' (WebGL in the worker) or 'CPU' (wasm on the worker's own
+// core). Measured 2026-11-11 on one source (platina/matte-cpu/RESULT.md): the card 26.6 ms a run,
+// the processor 33.6 ms; the pilot asked for <= 25 ms, so the card stays the default. A browser
+// has ONE graphics thread for every page and worker, so this is worth measuring again together
+// with the page's own read-back of the source (7-8 ms a call in that same test, either way).
+export const BODY_MATTE_WORKER_DELEGATE = 'GPU'
 
 /** A classic worker (see bodyMatteWorker.js); null when this page cannot run one. */
 const defaultCreateWorker = () => {
@@ -79,7 +85,7 @@ const defaultCreateWorker = () => {
  *    posted and the answer is polled when it arrives; without one submit runs the model
  *    at once (the engine budgets that to one run a frame) and poll hands the result over.
  */
-export const createBodyMatte = ({ loadSegmenter, clock = () => performance.now(), createWorker } = {}) => {
+export const createBodyMatte = ({ loadSegmenter, clock = () => performance.now(), createWorker, workerDelegate = BODY_MATTE_WORKER_DELEGATE } = {}) => {
     const injected = loadSegmenter !== undefined
     const loadMain = loadSegmenter || defaultLoadModule
     const makeWorker = createWorker !== undefined ? createWorker : injected ? null : defaultCreateWorker
@@ -87,6 +93,7 @@ export const createBodyMatte = ({ loadSegmenter, clock = () => performance.now()
     let segmenter = null
     let loading = null
     let worker = null
+    let workerSays = null
     let workerTimer = null
     let inFlight = null
     let seq = 0
@@ -127,6 +134,7 @@ export const createBodyMatte = ({ loadSegmenter, clock = () => performance.now()
             try { gone.postMessage({ type: 'close' }) } catch { /* already gone */ }
             try { gone.terminate() } catch { /* already gone */ }
         }
+        workerSays = null
         inFlight = null
     }
 
@@ -144,6 +152,7 @@ export const createBodyMatte = ({ loadSegmenter, clock = () => performance.now()
         if (message.type === 'ready') {
             if (workerTimer) { clearTimeout(workerTimer); workerTimer = null }
             if (!holders.size) { endWorker(); setStatus('idle'); return }
+            workerSays = message.delegate || null
             setStatus('ready')
         } else if (message.type === 'error') {
             workerFailed(which)
@@ -173,7 +182,7 @@ export const createBodyMatte = ({ loadSegmenter, clock = () => performance.now()
         made.onmessageerror = () => workerFailed(made)
         workerTimer = setTimeout(() => workerFailed(made), WORKER_INIT_TIMEOUT_MS)
         try {
-            made.postMessage({ type: 'init', base: absolute(BODY_MATTE_BASE), model: absolute(BODY_MATTE_MODEL) })
+            made.postMessage({ type: 'init', base: absolute(BODY_MATTE_BASE), model: absolute(BODY_MATTE_MODEL), delegate: workerDelegate })
         } catch {
             workerFailed(made)
             return true
@@ -235,6 +244,8 @@ export const createBodyMatte = ({ loadSegmenter, clock = () => performance.now()
         holders: () => holders.size,
         /** 'worker' | 'page' | null: where the model runs now. */
         where: () => (worker ? 'worker' : segmenter || loading ? 'page' : null),
+        /** 'CPU' | 'GPU' | null: what the model runs on now, as the worker itself reported it (the page path uses the graphics card). */
+        delegate: () => (worker ? workerSays : segmenter ? 'GPU' : null),
         stats: () => ({
             ...stats,
             meanMs: stats.runs ? stats.msTotal / stats.runs : 0,

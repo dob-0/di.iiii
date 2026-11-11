@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { WORKER_RUN_TIMEOUT_MS, createBodyMatte } from './bodyMatte.js'
+import { BODY_MATTE_WORKER_DELEGATE, WORKER_RUN_TIMEOUT_MS, createBodyMatte } from './bodyMatte.js'
 
 const fakeWorker = () => {
     const w = {
@@ -42,6 +42,27 @@ describe('body matte on a worker', () => {
         expect(matte.status()).toBe('ready')
         expect(matte.statusText()).toBe('')
         expect(matte.where()).toBe('worker')
+    })
+
+    // Where the model runs (graphics card or processor) is a measured choice, so it is a parameter:
+    // the service tells the worker, and the worker says back what it really started.
+    it('tells the worker where to run the model (the default, or the one asked for) and reports what the worker says', () => {
+        const a = fakeWorker()
+        const first = createBodyMatte({ createWorker: () => a })
+        first.acquire('n')
+        expect(['CPU', 'GPU']).toContain(BODY_MATTE_WORKER_DELEGATE)
+        expect(a.sent[0]).toMatchObject({ type: 'init', delegate: BODY_MATTE_WORKER_DELEGATE })
+        expect(first.delegate()).toBe(null)
+        a.reply({ type: 'ready', delegate: BODY_MATTE_WORKER_DELEGATE })
+        expect(first.delegate()).toBe(BODY_MATTE_WORKER_DELEGATE)
+        first.release('n')
+        expect(first.delegate()).toBe(null)
+        for (const asked of ['CPU', 'GPU']) {
+            const b = fakeWorker()
+            const second = createBodyMatte({ createWorker: () => b, workerDelegate: asked })
+            second.acquire('n')
+            expect(b.sent[0]).toMatchObject({ type: 'init', delegate: asked })
+        }
     })
 
     it('posts a picture, allows one job at a time, and hands the answer over once', () => {
