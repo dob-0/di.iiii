@@ -666,6 +666,92 @@
   "acme-xp16r-bsw"
  ],
  "defaultLook": "work-light",
+ "views": {
+  "fixedCamera": {
+   "projection": "perspective",
+   "position": [
+    -0.04,
+    1.7,
+    15.25
+   ],
+   "target": [
+    -0.04,
+    3.62,
+    0.0
+   ],
+   "fov": 62,
+   "zoom": 1,
+   "near": 0.05,
+   "far": 400,
+   "locked": false
+  },
+  "viewPresets": [
+   {
+    "id": "audience",
+    "label": "Audience",
+    "position": [
+     -0.04,
+     1.7,
+     15.25
+    ],
+    "target": [
+     -0.04,
+     3.62,
+     0.0
+    ],
+    "fov": 62,
+    "live": true
+   },
+   {
+    "id": "foh",
+    "label": "FOH",
+    "position": [
+     -0.04,
+     2.5,
+     20.25
+    ],
+    "target": [
+     -0.04,
+     3.62,
+     0.0
+    ],
+    "fov": 58,
+    "live": true
+   },
+   {
+    "id": "side",
+    "label": "Side",
+    "position": [
+     -18.04,
+     3.0,
+     2.65
+    ],
+    "target": [
+     -0.04,
+     3.0,
+     2.65
+    ],
+    "fov": 50,
+    "live": true
+   },
+   {
+    "id": "top",
+    "label": "Top",
+    "position": [
+     -0.04,
+     26.0,
+     3.15
+    ],
+    "target": [
+     -0.04,
+     0,
+     2.65
+    ],
+    "fov": 55,
+    "live": true
+   }
+  ]
+ },
  "fixtures": [
   {
    "id": "platina-pixel-01",

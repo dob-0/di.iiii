@@ -77,10 +77,14 @@ const SCALE = 0.02          // the rig's one exposure number (moxir rig files ph
 const r3 = (v) => Math.round(v * 1000) / 1000
 
 /** Candela per unit at its zoom (fixtures.json photometry, the same as moxir_v1.py / epic_placement.py). */
+/** The type a lamp's PHOTOMETRY, reach, penumbra and haze are looked up by: the rig file's own stand-in (`profile.stand_in`, a
+ * lamp with no profile of its own, e.g. a Platina bar drawn as an IP PAR) when it names one, else its type. A type that
+ * no table knows used to fall to the 1000 cd default (intensity 20, ~30x dimmer than the PAR it stands in for). Pure. */
+export const photoKind = (f) => (typeof f?.profile?.stand_in === 'string' && f.profile.stand_in ? f.profile.stand_in : f?.type)
 export const candelaOf = (f) => {
     const half = f.angle_rad ?? 0.1
     const deg = (2 * half * 180) / Math.PI
-    switch (f.type) {
+    switch (photoKind(f)) {
         case 'up-pl5403': return 609.56 / SCALE                         // beta's own PAR figure
         case 'up-b380f': return 1004000 / SCALE
         case 'up-hk1915': return 350000 * (4 / deg) ** 2
@@ -104,7 +108,7 @@ export const reachOf = (f, dims = null) => {
     if (hit === 0) return 0
     if (hit != null && hit > 0) return r3(Math.min(Math.max(hit, MIN_REACH), MISS_REACH_CAP))
     if (Number(f.throw_m) > 0) return r3(Math.min(Math.max(Number(f.throw_m), 1), MISS_REACH_CAP))
-    return DIST[f.type] || 24
+    return DIST[photoKind(f)] || 24
 }
 const PENUMBRA = { 'up-pl5403': 0.5, 'up-b380f': 0.1, 'up-hk1915': 0.5, 'up-250bsw': 0.3, 'ext-blinder': 0.6, 'ext-strobe': 0.6 }
 const HAZE = { 'up-b380f': 1, 'ext-lc-ultra-mk2': 1, 'up-la40wf': 1 }
@@ -316,7 +320,7 @@ export const patchOps = (doc, rig) => {
  * with why = inside_slab | on_floor (physics_check.py's words). Pure but for the report. */
 const beamOf = (f, hall, report) => {
     const length = reachOf(f, hall)
-    const haze = HAZE[f.type] ?? 0.35
+    const haze = HAZE[photoKind(f)] ?? 0.35
     if (length !== 0) return { visible: true, haze, length }
     const at = lampFirstSurface(f, hall)
     report?.push({ id: f.id, why: at.why, surface: at.name })
@@ -359,7 +363,7 @@ export const v1Entities = (rig, { hall = null, report = null } = {}) => {
                 appearance: { color: f.colour || '#e8e4dc', opacity: 1 },
                 // NO CUTOFF (sim-physics, 2026-10-09; rig-lib lightDistance): distance 0 is pure inverse square; the drawn beam
                 // keeps its own length (beam.length), the cast throw to the first thing it meets (reachOf)
-                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: 0, angle: f.angle_rad, penumbra: PENUMBRA[f.type] ?? 0.4, decay: 2 },
+                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: 0, angle: f.angle_rad, penumbra: PENUMBRA[photoKind(f)] ?? 0.4, decay: 2 },
                 beam: beamOf(f, hall, report),
                 animation: { mode: 'static', speed: 1, amplitude: 1 },
                 fixture

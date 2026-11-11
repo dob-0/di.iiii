@@ -21,6 +21,27 @@ HEAD_KINDS = ['acme-xp16r-bsw']
 DEFAULT_LOOK = 'work-light'
 
 
+def views_of(rig):
+    """The room's camera and view buttons, from the rig's own geometry (epic-build viewsOf: rig `views`, else MOXIR's).
+    Audience = at the front of the deck + 9 m, eye 1.7 m, on the screen's centre line looking at the screen centre; FOH
+    + 14 m, 2.5 m; Side = 18 m out beside the stage; Top = above the deck. Returns None when the rig has no screen or deck."""
+    sol = {s['id']: s for s in rig.get('solids', []) if 'p' in s and 's' in s}
+    scr = next((s for s in sol.values() if s['id'].endswith('-screen')), None)
+    decks = [s for s in sol.values() if s['id'].endswith('-deck')]
+    if not scr or not decks: return None
+    d = decks[0]
+    cx, front = scr['p'][0], d['p'][2] + d['s'][2] / 2
+    target = [cx, round(scr['p'][1] + 2.2, 2), scr['p'][2]]            # above the screen's centre: the trusses and the stage both in frame
+    def view(id, label, pos, tgt, fov): return {'id': id, 'label': label, 'position': [round(v, 2) for v in pos], 'target': tgt, 'fov': fov, 'live': True}
+    presets = [view('audience', 'Audience', [cx, 1.7, front + 9], target, 62),
+               view('foh', 'FOH', [cx, 2.5, front + 14], target, 58),
+               view('side', 'Side', [cx - 18, 3.0, d['p'][2]], [cx, 3.0, d['p'][2]], 50),
+               view('top', 'Top', [cx, 26.0, d['p'][2] + 0.5], [cx, 0, d['p'][2]], 55)]
+    a = presets[0]
+    return {'fixedCamera': {'projection': 'perspective', 'position': a['position'], 'target': a['target'], 'fov': a['fov'], 'zoom': 1, 'near': 0.05, 'far': 400, 'locked': False},
+            'viewPresets': presets}  # every view live: visitors see all four (viewData.js: a view is data once one entry says live)
+
+
 def make(rig, src, head_kinds=None, default_look=DEFAULT_LOOK):
     head_kinds = HEAD_KINDS if head_kinds is None else head_kinds
     units = rig.get('fixtures', [])
@@ -35,6 +56,8 @@ def make(rig, src, head_kinds=None, default_look=DEFAULT_LOOK):
     out = hang_of(rig, src)
     out['head_kinds'] = list(head_kinds)
     out['defaultLook'] = default_look
+    v = views_of(rig)
+    if v: out['views'] = v
     return out, []
 
 

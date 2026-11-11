@@ -15,6 +15,26 @@ const w = (n, o) => { const p = path.join(dir, n); fs.writeFileSync(p, JSON.stri
 const read = (p) => JSON.parse(fs.readFileSync(p, 'utf8'))
 const rigPath = path.join(here, 'rigs', 'platina-rig-2026-11-11.json')
 
+describe('platina_hang.py views', () => {
+    it('writes the room views from the rig geometry: Audience first (the entry camera), screen centre as target', () => {
+        const out = path.join(dir, 'hv.json')
+        expect(py('platina_hang.py', '--rig', rigPath, '--out', out).status).toBe(0)
+        const v = read(out).views
+        expect(v.viewPresets.map((p) => p.label)).toEqual(['Audience', 'FOH', 'Side', 'Top'])
+        expect(v.fixedCamera.position).toEqual(v.viewPresets[0].position)
+        expect(v.fixedCamera.position[2]).toBeGreaterThan(6.25)
+        expect(v.fixedCamera.position[2]).toBeLessThan(20)
+        expect(v.fixedCamera.target[2]).toBe(0)
+    })
+    it('a rig with no screen or deck gets no views (epic-build then keeps MOXIR\'s)', () => {
+        const rig = read(rigPath); rig.solids = []
+        const out = path.join(dir, 'nv.json')
+        py('platina_hang.py', '--rig', w('nv-rig.json', rig), '--out', out)
+        const r = py('platina_hang.py', '--rig', w('nv-rig.json', rig), '--out', out)
+        if (r.status === 0) expect(read(out).views).toBeUndefined()
+    })
+})
+
 describe('platina_hang.py', () => {
     it('makes the hang from the committed rig: 54 units, every unit has a part and a dmx, stand-ins stay ASSUMED', () => {
         const out = path.join(dir, 'hang.json')

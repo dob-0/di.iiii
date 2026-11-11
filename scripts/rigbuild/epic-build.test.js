@@ -11,7 +11,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isSteelEntity } from '../../src/objectComponents/steelOccluder.js'
 import { RIG_FILE, isSteelSolid, steelTagOps, dirOfRotation, v1Entities, v1Looks, v1Cues, v1Views, v1RenderOps, dmxOf, patchOps,
-    NARROW_MODES, narrowModeOf, defaultModeRefusal, rebuildAllRefusal } from './epic-build.mjs'
+    NARROW_MODES, narrowModeOf, photoKind, candelaOf, defaultModeRefusal, rebuildAllRefusal } from './epic-build.mjs'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const rig = JSON.parse(fs.readFileSync(path.join(repo, RIG_FILE), 'utf8'))
@@ -387,4 +387,20 @@ describe('epic-build: the default mode is refused on a project that holds rig un
         expect(wet.code, wet.out).toBe(0)
         expect(wet.posts).toEqual(['POST /serverXR/api/projects/scratch-copy/ops'])
     }, 30000)
+})
+
+describe('epic-build: a lamp with a stand-in profile is lit as its stand-in (Platina, 2026-11-11)', () => {
+    const base = { id: 'u1', type: 'acme-pixel-line-ip', angle_rad: 0.131 }
+    it('photoKind takes profile.stand_in, else the type', () => {
+        expect(photoKind({ ...base, profile: { stand_in: 'up-pl5403' } })).toBe('up-pl5403')
+        expect(photoKind(base)).toBe('acme-pixel-line-ip')
+        expect(photoKind({ type: 'up-b380f' })).toBe('up-b380f')
+    })
+    it('the stand-in has its PAR figure, not the 1000 cd default (intensity 20 was ~30x too dim)', () => {
+        expect(candelaOf(base)).toBe(1000)
+        expect(candelaOf({ ...base, profile: { stand_in: 'up-pl5403' } })).toBeCloseTo(609.56 / 0.02, 6)
+    })
+    it('MOXIR units (no profile) are unchanged', () => {
+        for (const f of rig.fixtures) expect(photoKind(f)).toBe(f.type)
+    })
 })
