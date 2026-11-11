@@ -18,6 +18,12 @@
 //   bottom encoder 6      turn = master nudge, push = next effect (which one pots 9-12 turn)
 //   LAYER                 next layer for effects (skips empty layers)
 //   EXIT SETUP            FREEZE while held (hold 1 on the Freeze effects of master + selected layer)
+//
+// Second console `K2 (1.9)` (id k2-1.9) for a unit whose fader 4 is dead: the K2 map with three differences
+//   fader 4               NO binding (a dead fader must never move anything, also when it sends noise)
+//   pot 12                level of layer 4 (absolute; the knob right above the dead fader)
+//   encoder 3 turn        third knob of the picked effect (fx param 3, relative); pots 9-11 stay mix, param 1, param 2
+// Everything else is the same entry as in K2 (55 equal, 57 in all). Which console a deck uses is node.values.midiConsole.
 
 import sheet from './xone-k2-default.json'
 
@@ -63,10 +69,29 @@ export const XONE_K2_MAP = [
     bind('encoder 6', 'master', {}, { relative: true })
 ]
 
+/** K2 (1.9): the K2 map with fader 4 dropped, pot 12 = layer 4 level, encoder 3 = third effect knob. */
+export const XONE_K2_19_MAP = XONE_K2_MAP
+    .filter((entry) => entry.control !== 'fader 4')
+    .map((entry) => {
+        if (entry.control === 'pot 12') return bind('pot 12', 'opacity', { layer: 3 })
+        if (entry.control === 'encoder 3') return bind('encoder 3', 'fx', { param: 2 }, { relative: true })
+        return entry
+    })
+
+const freeOf = (map) => sheet.map((item) => item.control).filter((name) => !map.some((entry) => entry.control === name))
+
 /** Sheet controls the default map leaves unbound (free for Learn). */
-export const XONE_K2_FREE = sheet
-    .map((item) => item.control)
-    .filter((name) => !XONE_K2_MAP.some((entry) => entry.control === name))
+export const XONE_K2_FREE = freeOf(XONE_K2_MAP)
+export const XONE_K2_19_FREE = freeOf(XONE_K2_19_MAP)
+
+/** The consoles of the Xone:K2: the shown name and the map. A deck stores the id in values.midiConsole. */
+export const K2_CONSOLE_DEFAULT = 'k2'
+export const K2_CONSOLES = [
+    { id: 'k2', name: 'K2', map: XONE_K2_MAP, free: XONE_K2_FREE },
+    { id: 'k2-1.9', name: 'K2 (1.9)', map: XONE_K2_19_MAP, free: XONE_K2_19_FREE }
+]
+/** The console for a stored id; missing or unknown is K2. */
+export const consoleOf = (id) => K2_CONSOLES.find((item) => item.id === id) || K2_CONSOLES[0]
 
 /** note number → { red, amber, green } LED notes, from the sheet's led_notes. */
 export const XONE_K2_LEDS = Object.fromEntries(
@@ -79,7 +104,7 @@ export const k2IsRelative = (match) => sheet.some((item) => item.kind === match.
 export const XONE_K2_CONTROLS = sheet
 
 /** The map with the display name dropped, as applyMidi takes it. */
-export const defaultMap = () => XONE_K2_MAP.map(({ match, action, args, relative }) => ({ match, action, args, ...(relative ? { relative: true } : {}) }))
+export const defaultMap = (consoleId) => consoleOf(consoleId).map.map(({ match, action, args, relative }) => ({ match, action, args, ...(relative ? { relative: true } : {}) }))
 
 /** The input to listen on: the K2 by name, else the first one, else ''. */
 export const pickInputId = (devices = []) => {

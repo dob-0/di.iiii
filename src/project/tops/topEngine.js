@@ -81,6 +81,28 @@ export const SHADER_PREAMBLE = PREAMBLE.trim()
  */
 export const matteWanted = (node) => node?.values?.unseen !== true
 
+/**
+ * A live output never shows a helper picture. A camera with no stream is not a black
+ * picture, it is NO picture: what it feeds must leave the layers below visible.
+ *
+ *   top.blend whose `b` is blank  -> passes `a` through (nothing below: black); it is blank
+ *                                    itself only when `a` is missing or blank too
+ *   any other operator whose `a` is blank -> blank, draws black (an effect on nothing: a Body
+ *                                    on a camera without a picture must not paint)
+ *   anything else                 -> null, drawn as usual
+ *
+ * Pure: tested without a GL context (topEngine.blank.test.js).
+ */
+export const blankRule = ({ type, source = false, inputs = {}, blank = new Set() } = {}) => {
+    if (source) return null
+    if (type === 'top.blend') {
+        if (!inputs.b || !blank.has(inputs.b)) return null
+        return { pass: true, blank: !inputs.a || blank.has(inputs.a) }
+    }
+    if (inputs.a && blank.has(inputs.a)) return { pass: false, blank: true }
+    return null
+}
+
 // A paused video keeps its currentTime, so "time unchanged" alone would skip the upload
 // when a node's footage is switched to another paused file (same node id, same time,
 // other picture). A new element or a new source forgets the time it was uploaded at.
@@ -506,6 +528,8 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         // One clock for the whole frame: every operator that reads `time`
         // (Clouds, Shape) sees the same instant a wire between them would.
         const clock = clockSecondsFor(now - createdAt)
+        // Nodes that have NO PICTURE this frame (a camera with no stream). See `isBlank` below.
+        const blank = new Set()
         for (let index = 0; index < order.length; index += 1) {
             const node = byId.get(order[index])
             const operator = TOP_OPERATORS[node.type]
@@ -528,11 +552,25 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
                     slot.lastVideoTime = video.currentTime
                     gl.bindTexture(gl.TEXTURE_2D, slot.source)
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video)
+                    slot.pictured = true
                 }
                 bindTexture(compiled, 'source', 3, slot.source)
+                // A camera with no stream (absent, not opened yet, lost) has NO picture: not a
+                // black picture. What it feeds treats it as transparent (see isBlank).
+                if (operator.source === 'camera' && !(video && slot.pictured === true)) blank.add(node.id)
             }
 
             const inputs = inputsFor.get(node.id) || {}
+            const blanked = blankRule({ type: node.type, source: Boolean(operator.source), inputs, blank })
+            if (blanked) {
+                // Blend: the picture below passes through untouched. Anything else fed by a
+                // blank picture is blank itself and draws black. Both draw into the node's own
+                // target, so a thumbnail and a wire read it like any other picture.
+                bindTexture(present, 'a', 0, blanked.pass && inputs.a ? latest(inputs.a) : black)
+                draw(present, slot.now)
+                if (blanked.blank) blank.add(node.id)
+                continue
+            }
             const readA = inputs.a ? latest(inputs.a) : null
             const readB = inputs.b ? latest(inputs.b) : null
             // A Body nobody sees (a silent deck layer) keeps the mask it has: no model run.
@@ -637,7 +675,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         width,
         height,
         setNetwork,
-        setVideo: (nodeId, video) => { watch(nodeId, video); if (video) videos.set(nodeId, video); else videos.delete(nodeId) },
+        setVideo: (nodeId, video) => { const slot = slots.get(nodeId); if (slot && videos.get(nodeId) !== video) slot.pictured = false; watch(nodeId, video); if (video) videos.set(nodeId, video); else videos.delete(nodeId) },
         setRemoteVideo: (nodeId, video) => { watch(nodeId, video); if (video) remoteVideos.set(nodeId, video); else remoteVideos.delete(nodeId) },
         frame,
         show,

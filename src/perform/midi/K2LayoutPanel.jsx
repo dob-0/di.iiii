@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { describeAction, shortMatch } from './deckBinding.js'
 import { TOUCH_MS, controlKey } from './k2Monitor.js'
-import { K2_CHANNEL, XONE_K2_CONTROLS } from './xoneK2.js'
+import { K2_CHANNEL, K2_CONSOLES, XONE_K2_CONTROLS } from './xoneK2.js'
 import './k2LayoutPanel.css'
 
 // The Xone:K2 drawn as it is, every control labelled with what it does NOW (the effective
@@ -10,6 +10,7 @@ import './k2LayoutPanel.css'
 //
 // map      the effective map (useDeckMidi().map)
 // monitor  useDeckMidi().k2Monitor (subscribe / getSnapshot)
+// console  the active console { id, name, free } (K2 or K2 (1.9)); consoles = both; onPickConsole(id)
 // onClose  () => void
 // fxEffect which effect of the selected stack the third pot row turns (0-based)
 
@@ -31,7 +32,7 @@ const ROWS = [
 const SHOWN = { 'layer button': 'LAYER', 'exit setup button': 'EXIT SETUP' }
 const shownName = (name) => SHOWN[name] || name.replace('matrix ', '').replace('encoder', 'enc').replace('pot switch', 'sw').replace('fader', 'fader')
 
-export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0 }) {
+export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, console: current = K2_CONSOLES[0], consoles = K2_CONSOLES, onPickConsole }) {
     const snap = useSyncExternalStore(monitor.subscribe, monitor.getSnapshot)
     const [selected, setSelected] = useState('')
     const [faded, setFaded] = useState(null) // the snapshot whose lights have run out
@@ -56,14 +57,15 @@ export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0 }) {
 
     const chosen = selected ? byName.get(selected) : null
     const detail = chosen
-        ? `${chosen.control} · ${shortMatch(chosen)} · ${describeAction(entryOf(map, chosen), { fxEffect })}`
+        ? `${chosen.control} · ${shortMatch(chosen)} · ${(current.free || []).includes(chosen.control) && !entryOf(map, chosen) ? 'not used' : describeAction(entryOf(map, chosen), { fxEffect })}`
         : 'Click a control to see its message and what it does'
 
     const control = (name) => {
         const item = byName.get(name)
         if (!item) return null
         const key = controlKey(item.kind, item.number)
-        const label = describeAction(entryOf(map, item), { fxEffect })
+        const unused = (current.free || []).includes(name) && !entryOf(map, item)
+        const label = unused ? 'not used' : describeAction(entryOf(map, item), { fxEffect })
         const held = Boolean(snap.held[key])
         const lit = faded !== snap && (held || snap.at - (snap.touched[key] ?? -Infinity) < TOUCH_MS)
         const analog = item.type === 'pot' || item.type === 'fader'
@@ -73,7 +75,7 @@ export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0 }) {
             <button
                 key={name}
                 type="button"
-                className={`k2-control k2-control--${item.type}${lit ? ' is-lit' : ''}${held ? ' is-held' : ''}${selected === name ? ' is-selected' : ''}${label === 'free' ? ' is-free' : ''}`}
+                className={`k2-control k2-control--${item.type}${lit ? ' is-lit' : ''}${held ? ' is-held' : ''}${selected === name ? ' is-selected' : ''}${label === 'free' || unused ? ' is-free' : ''}`}
                 data-k2={name}
                 aria-label={`${name}: ${label}`}
                 aria-pressed={selected === name}
@@ -90,7 +92,12 @@ export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0 }) {
     return (
         <section className="k2-panel" aria-label="Xone:K2 layout">
             <header className="k2-panel-head">
-                <span className="k2-panel-title">Xone:K2</span>
+                <span className="k2-panel-title">{current.name}</span>
+                <span className="k2-switch" role="group" aria-label="K2 console">
+                    {consoles.map((item) => (
+                        <button key={item.id} type="button" className={`k2-switch-item${item.id === current.id ? ' is-on' : ''}`} aria-pressed={item.id === current.id} onClick={() => onPickConsole?.(item.id)}>{item.name}</button>
+                    ))}
+                </span>
                 <button type="button" className="k2-close" onClick={onClose} aria-label="Close the K2 layout">Close</button>
             </header>
             <div className="k2-body">
