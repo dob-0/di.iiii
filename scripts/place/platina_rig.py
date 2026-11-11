@@ -209,13 +209,14 @@ def build(repo, M):
     types = plan['modes']
     blocks = {b['select']['group']: (u['universe'], b) for u in plan['universes'] for b in u['blocks']}
     deck = r2(M['deck_h_m'])
-    FP = {'cp-aleda-beye-k10': 76, 'cp-hy-beye-k15': 76, 'acme-pixel-line-ip': 117, 'acme-xp16r-bsw': 23, 'magmatic-magma-prime': 5}
+    # the channel count of each type's chosen mode comes from the plan itself (types[].modes by the crew name), never from a table here
+    FP = {t['id']: next(m['footprint'] for m in t['modes'] if m['name'] == types[t['id']]['crew']) for t in plan['types']}
     fixtures, solids = [], []
 
     def dmx(group, i):
         uni, b = blocks[group]
         t = b['select']['type']
-        return {'universe': uni, 'address': b['start'] + i * FP[t], 'footprint': FP[t], 'fixture': b['fixture'] + i, 'mode': types[t]['crew'], 'port': 'ABCDEFGHIJ'[uni - 1],
+        return {'universe': uni, 'address': b['start'] + i * FP[t], 'footprint': FP[t], 'fixture': b['fixture'] + i, 'mode': types[t]['crew'], 'port': 'ABCDEFGHIJK'[uni - 1],
                 'from': f'{PLAN} block {group} (start {b["start"]}, order id-asc, unit {i + 1} of {b["units"]})'}
 
     stand = {
@@ -290,9 +291,9 @@ def build(repo, M):
     bk = M['k10']['body_front_m'] + [M['k10']['body_side_m'][0]]
     assert len(kx) == 8
     for i, x in enumerate(kx):
-        g = 'k10-over-stage' if i < 6 else 'k10-over-stage-b'
+        g = 'k10-over-stage' if i < 4 else 'k10-over-stage-b'
         add(f'platina-k10-{i + 1:02d}', 'cp-aleda-beye-k10', g, [x, yk, zl], [0, 0, 0], 0.2618, 'measured', f'x plot-top.png glyph centroid (slot {i + 1} of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss',
-            f'K10 {i + 1} over the stage', [bk[0], bk[1], bk[2]], i if i < 6 else i - 6, {'aim_home': 'straight down (pan 0 / tilt 0, hung)', 'beam_note': 'angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60'})
+            f'K10 {i + 1} over the stage', [bk[0], bk[1], bk[2]], i if i < 4 else i - 4, {'aim_home': 'straight down (pan 0 / tilt 0, hung)', 'beam_note': 'angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60'})
     # K15 floor row, 6; K15 sides, 2
     fx_ = sorted(M['k15_floor']['x_front_m']); fz = M['k15_floor']['z_side_m']
     fb = M['k15_floor']['body_front_m'] + [M['k15_floor']['body_side_m'][0]]
@@ -340,7 +341,7 @@ def build(repo, M):
             'note': 'a stand-in is only for geometry/optics in the visualiser; names and DMX modes come from the patch plan. Nothing here is invented as a maker profile.'},
         'plot_only': {'k10_audience_side': {'count': 3, 'x_m': [r2(x) for x in sorted(M['k10']['aud_x_top_m'])], 'z_m': r2(T['aud']['z_side'] + 0.14), 'status': 'measured, NOT in the offer, not built, not patched'},
                       'sharpy': {'count': 7, 'x_m': [r2(x) for x in slots], 'status': 'measured, NOT in the offer; their slots are used by 7 of the PROPOSED XP-16R'}},
-        'patch': {'plan': PLAN, 'universes': 10, 'units': 54, 'status': 'PROPOSED, not confirmed by the rental side'},
+        'patch': {'plan': PLAN, 'universes': 11, 'units': 54, 'status': 'PROPOSED, not confirmed by the rental side'},
         'solids': solids, 'fixtures': fixtures,
         'owed': ['Ask the Platina side: where the 12 XP-16R hang, where the 2 hazers stand, whether the 3 audience-side K10 / 7 Sharpy of the 11-10 plot are really not coming, the LED screen size (cabinets), the truss heights.',
                  'K10/K15 optics, pan/tilt and the XP-16R/Pixel Line shapes are stand-ins (profiles.missing); read the real files before any aim or beam-length number is trusted.'],

@@ -119,7 +119,7 @@
  },
  "patch": {
   "plan": "scripts/place/rigs/platina-2026-11-11.patch.json",
-  "universes": 10,
+  "universes": 11,
   "units": 54,
   "status": "PROPOSED, not confirmed by the rental side"
  },
@@ -656,12 +656,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 4,
+    "universe": 5,
     "address": 1,
     "footprint": 117,
     "fixture": 401,
     "mode": "117ch",
-    "port": "D",
+    "port": "E",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g1 (start 1, order id-asc, unit 1 of 4)"
    },
    "tower": 1,
@@ -698,12 +698,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 4,
+    "universe": 5,
     "address": 118,
     "footprint": 117,
     "fixture": 402,
     "mode": "117ch",
-    "port": "D",
+    "port": "E",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g1 (start 1, order id-asc, unit 2 of 4)"
    },
    "tower": 1,
@@ -740,12 +740,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 4,
+    "universe": 5,
     "address": 235,
     "footprint": 117,
     "fixture": 403,
     "mode": "117ch",
-    "port": "D",
+    "port": "E",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g1 (start 1, order id-asc, unit 3 of 4)"
    },
    "tower": 1,
@@ -782,12 +782,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 4,
+    "universe": 5,
     "address": 352,
     "footprint": 117,
     "fixture": 404,
     "mode": "117ch",
-    "port": "D",
+    "port": "E",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g1 (start 1, order id-asc, unit 4 of 4)"
    },
    "tower": 2,
@@ -824,12 +824,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 5,
+    "universe": 6,
     "address": 1,
     "footprint": 117,
     "fixture": 405,
     "mode": "117ch",
-    "port": "E",
+    "port": "F",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g2 (start 1, order id-asc, unit 1 of 4)"
    },
    "tower": 2,
@@ -866,12 +866,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 5,
+    "universe": 6,
     "address": 118,
     "footprint": 117,
     "fixture": 406,
     "mode": "117ch",
-    "port": "E",
+    "port": "F",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g2 (start 1, order id-asc, unit 2 of 4)"
    },
    "tower": 2,
@@ -908,12 +908,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 5,
+    "universe": 6,
     "address": 235,
     "footprint": 117,
     "fixture": 407,
     "mode": "117ch",
-    "port": "E",
+    "port": "F",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g2 (start 1, order id-asc, unit 3 of 4)"
    },
    "tower": 3,
@@ -950,12 +950,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 5,
+    "universe": 6,
     "address": 352,
     "footprint": 117,
     "fixture": 408,
     "mode": "117ch",
-    "port": "E",
+    "port": "F",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g2 (start 1, order id-asc, unit 4 of 4)"
    },
    "tower": 3,
@@ -992,12 +992,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 6,
+    "universe": 7,
     "address": 1,
     "footprint": 117,
     "fixture": 409,
     "mode": "117ch",
-    "port": "F",
+    "port": "G",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g3 (start 1, order id-asc, unit 1 of 4)"
    },
    "tower": 3,
@@ -1034,12 +1034,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 6,
+    "universe": 7,
     "address": 118,
     "footprint": 117,
     "fixture": 410,
     "mode": "117ch",
-    "port": "F",
+    "port": "G",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g3 (start 1, order id-asc, unit 2 of 4)"
    },
    "tower": 4,
@@ -1076,12 +1076,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 6,
+    "universe": 7,
     "address": 235,
     "footprint": 117,
     "fixture": 411,
     "mode": "117ch",
-    "port": "F",
+    "port": "G",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g3 (start 1, order id-asc, unit 3 of 4)"
    },
    "tower": 4,
@@ -1118,12 +1118,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 6,
+    "universe": 7,
     "address": 352,
     "footprint": 117,
     "fixture": 412,
     "mode": "117ch",
-    "port": "F",
+    "port": "G",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g3 (start 1, order id-asc, unit 4 of 4)"
    },
    "tower": 4,
@@ -1160,12 +1160,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 7,
+    "universe": 8,
     "address": 1,
     "footprint": 117,
     "fixture": 413,
     "mode": "117ch",
-    "port": "G",
+    "port": "H",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g4 (start 1, order id-asc, unit 1 of 4)"
    },
    "tower": 5,
@@ -1202,12 +1202,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 7,
+    "universe": 8,
     "address": 118,
     "footprint": 117,
     "fixture": 414,
     "mode": "117ch",
-    "port": "G",
+    "port": "H",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g4 (start 1, order id-asc, unit 2 of 4)"
    },
    "tower": 5,
@@ -1244,12 +1244,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 7,
+    "universe": 8,
     "address": 235,
     "footprint": 117,
     "fixture": 415,
     "mode": "117ch",
-    "port": "G",
+    "port": "H",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g4 (start 1, order id-asc, unit 3 of 4)"
    },
    "tower": 5,
@@ -1286,12 +1286,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 7,
+    "universe": 8,
     "address": 352,
     "footprint": 117,
     "fixture": 416,
     "mode": "117ch",
-    "port": "G",
+    "port": "H",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g4 (start 1, order id-asc, unit 4 of 4)"
    },
    "tower": 6,
@@ -1328,12 +1328,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 8,
+    "universe": 9,
     "address": 1,
     "footprint": 117,
     "fixture": 417,
     "mode": "117ch",
-    "port": "H",
+    "port": "I",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g5 (start 1, order id-asc, unit 1 of 4)"
    },
    "tower": 6,
@@ -1370,12 +1370,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 8,
+    "universe": 9,
     "address": 118,
     "footprint": 117,
     "fixture": 418,
     "mode": "117ch",
-    "port": "H",
+    "port": "I",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g5 (start 1, order id-asc, unit 2 of 4)"
    },
    "tower": 6,
@@ -1412,12 +1412,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 8,
+    "universe": 9,
     "address": 235,
     "footprint": 117,
     "fixture": 419,
     "mode": "117ch",
-    "port": "H",
+    "port": "I",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g5 (start 1, order id-asc, unit 3 of 4)"
    },
    "tower": 7,
@@ -1454,12 +1454,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 8,
+    "universe": 9,
     "address": 352,
     "footprint": 117,
     "fixture": 420,
     "mode": "117ch",
-    "port": "H",
+    "port": "I",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g5 (start 1, order id-asc, unit 4 of 4)"
    },
    "tower": 7,
@@ -1496,12 +1496,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 9,
+    "universe": 10,
     "address": 1,
     "footprint": 117,
     "fixture": 421,
     "mode": "117ch",
-    "port": "I",
+    "port": "J",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g6 (start 1, order id-asc, unit 1 of 4)"
    },
    "tower": 7,
@@ -1538,12 +1538,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 9,
+    "universe": 10,
     "address": 118,
     "footprint": 117,
     "fixture": 422,
     "mode": "117ch",
-    "port": "I",
+    "port": "J",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g6 (start 1, order id-asc, unit 2 of 4)"
    },
    "tower": 8,
@@ -1580,12 +1580,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 9,
+    "universe": 10,
     "address": 235,
     "footprint": 117,
     "fixture": 423,
     "mode": "117ch",
-    "port": "I",
+    "port": "J",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g6 (start 1, order id-asc, unit 3 of 4)"
    },
    "tower": 8,
@@ -1622,12 +1622,12 @@
     "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
    },
    "dmx": {
-    "universe": 9,
+    "universe": 10,
     "address": 352,
     "footprint": 117,
     "fixture": 424,
     "mode": "117ch",
-    "port": "I",
+    "port": "J",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g6 (start 1, order id-asc, unit 4 of 4)"
    },
    "tower": 8,
@@ -1666,11 +1666,11 @@
    "dmx": {
     "universe": 1,
     "address": 1,
-    "footprint": 76,
+    "footprint": 111,
     "fixture": 101,
-    "mode": "Pixel RGBW",
+    "mode": "Shapes + Pixel RGBW",
     "port": "A",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 1 of 6)"
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 1 of 4)"
    },
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
@@ -1705,12 +1705,12 @@
    },
    "dmx": {
     "universe": 1,
-    "address": 77,
-    "footprint": 76,
+    "address": 112,
+    "footprint": 111,
     "fixture": 102,
-    "mode": "Pixel RGBW",
+    "mode": "Shapes + Pixel RGBW",
     "port": "A",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 2 of 6)"
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 2 of 4)"
    },
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
@@ -1745,12 +1745,12 @@
    },
    "dmx": {
     "universe": 1,
-    "address": 153,
-    "footprint": 76,
+    "address": 223,
+    "footprint": 111,
     "fixture": 103,
-    "mode": "Pixel RGBW",
+    "mode": "Shapes + Pixel RGBW",
     "port": "A",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 3 of 6)"
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 3 of 4)"
    },
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
@@ -1785,12 +1785,12 @@
    },
    "dmx": {
     "universe": 1,
-    "address": 229,
-    "footprint": 76,
+    "address": 334,
+    "footprint": 111,
     "fixture": 104,
-    "mode": "Pixel RGBW",
+    "mode": "Shapes + Pixel RGBW",
     "port": "A",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 4 of 6)"
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 4 of 4)"
    },
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
@@ -1798,7 +1798,7 @@
   {
    "id": "platina-k10-05",
    "type": "cp-aleda-beye-k10",
-   "group": "k10-over-stage",
+   "group": "k10-over-stage-b",
    "part": "K10 5 over the stage",
    "status": "measured",
    "p": [
@@ -1824,13 +1824,13 @@
     "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
    },
    "dmx": {
-    "universe": 1,
-    "address": 305,
-    "footprint": 76,
+    "universe": 2,
+    "address": 1,
+    "footprint": 111,
     "fixture": 105,
-    "mode": "Pixel RGBW",
-    "port": "A",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 5 of 6)"
+    "mode": "Shapes + Pixel RGBW",
+    "port": "B",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 1 of 4)"
    },
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
@@ -1838,7 +1838,7 @@
   {
    "id": "platina-k10-06",
    "type": "cp-aleda-beye-k10",
-   "group": "k10-over-stage",
+   "group": "k10-over-stage-b",
    "part": "K10 6 over the stage",
    "status": "measured",
    "p": [
@@ -1864,13 +1864,13 @@
     "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
    },
    "dmx": {
-    "universe": 1,
-    "address": 381,
-    "footprint": 76,
+    "universe": 2,
+    "address": 112,
+    "footprint": 111,
     "fixture": 106,
-    "mode": "Pixel RGBW",
-    "port": "A",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 6 of 6)"
+    "mode": "Shapes + Pixel RGBW",
+    "port": "B",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 2 of 4)"
    },
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
@@ -1905,12 +1905,12 @@
    },
    "dmx": {
     "universe": 2,
-    "address": 1,
-    "footprint": 76,
+    "address": 223,
+    "footprint": 111,
     "fixture": 107,
-    "mode": "Pixel RGBW",
+    "mode": "Shapes + Pixel RGBW",
     "port": "B",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 1 of 2)"
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 3 of 4)"
    },
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
@@ -1945,12 +1945,12 @@
    },
    "dmx": {
     "universe": 2,
-    "address": 77,
-    "footprint": 76,
+    "address": 334,
+    "footprint": 111,
     "fixture": 108,
-    "mode": "Pixel RGBW",
+    "mode": "Shapes + Pixel RGBW",
     "port": "B",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 2 of 2)"
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 4 of 4)"
    },
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
@@ -1984,13 +1984,13 @@
     "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
    },
    "dmx": {
-    "universe": 2,
-    "address": 153,
-    "footprint": 76,
+    "universe": 3,
+    "address": 1,
+    "footprint": 112,
     "fixture": 201,
-    "mode": "Pixel RGBW",
-    "port": "B",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 153, order id-asc, unit 1 of 4)"
+    "mode": "Shape + Pixel RGBW",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 1, order id-asc, unit 1 of 4)"
    },
    "aim_home": "straight up (pan 0 / tilt 0, standing)",
    "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
@@ -2024,13 +2024,13 @@
     "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
    },
    "dmx": {
-    "universe": 2,
-    "address": 229,
-    "footprint": 76,
+    "universe": 3,
+    "address": 113,
+    "footprint": 112,
     "fixture": 202,
-    "mode": "Pixel RGBW",
-    "port": "B",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 153, order id-asc, unit 2 of 4)"
+    "mode": "Shape + Pixel RGBW",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 1, order id-asc, unit 2 of 4)"
    },
    "aim_home": "straight up (pan 0 / tilt 0, standing)",
    "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
@@ -2064,13 +2064,13 @@
     "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
    },
    "dmx": {
-    "universe": 2,
-    "address": 305,
-    "footprint": 76,
+    "universe": 3,
+    "address": 225,
+    "footprint": 112,
     "fixture": 203,
-    "mode": "Pixel RGBW",
-    "port": "B",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 153, order id-asc, unit 3 of 4)"
+    "mode": "Shape + Pixel RGBW",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 1, order id-asc, unit 3 of 4)"
    },
    "aim_home": "straight up (pan 0 / tilt 0, standing)",
    "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
@@ -2104,13 +2104,13 @@
     "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
    },
    "dmx": {
-    "universe": 2,
-    "address": 381,
-    "footprint": 76,
+    "universe": 3,
+    "address": 337,
+    "footprint": 112,
     "fixture": 204,
-    "mode": "Pixel RGBW",
-    "port": "B",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 153, order id-asc, unit 4 of 4)"
+    "mode": "Shape + Pixel RGBW",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 1, order id-asc, unit 4 of 4)"
    },
    "aim_home": "straight up (pan 0 / tilt 0, standing)",
    "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
@@ -2144,12 +2144,12 @@
     "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
    },
    "dmx": {
-    "universe": 3,
+    "universe": 4,
     "address": 1,
-    "footprint": 76,
+    "footprint": 112,
     "fixture": 205,
-    "mode": "Pixel RGBW",
-    "port": "C",
+    "mode": "Shape + Pixel RGBW",
+    "port": "D",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor-b (start 1, order id-asc, unit 1 of 2)"
    },
    "aim_home": "straight up (pan 0 / tilt 0, standing)",
@@ -2184,12 +2184,12 @@
     "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
    },
    "dmx": {
-    "universe": 3,
-    "address": 77,
-    "footprint": 76,
+    "universe": 4,
+    "address": 113,
+    "footprint": 112,
     "fixture": 206,
-    "mode": "Pixel RGBW",
-    "port": "C",
+    "mode": "Shape + Pixel RGBW",
+    "port": "D",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor-b (start 1, order id-asc, unit 2 of 2)"
    },
    "aim_home": "straight up (pan 0 / tilt 0, standing)",
@@ -2224,13 +2224,13 @@
     "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
    },
    "dmx": {
-    "universe": 3,
-    "address": 153,
-    "footprint": 76,
+    "universe": 4,
+    "address": 225,
+    "footprint": 112,
     "fixture": 207,
-    "mode": "Pixel RGBW",
-    "port": "C",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-sides (start 153, order id-asc, unit 1 of 2)"
+    "mode": "Shape + Pixel RGBW",
+    "port": "D",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-sides (start 225, order id-asc, unit 1 of 2)"
    },
    "aim_home": "straight up",
    "stand": "on a pole beside the body (plot-front.png)"
@@ -2264,13 +2264,13 @@
     "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
    },
    "dmx": {
-    "universe": 3,
-    "address": 229,
-    "footprint": 76,
+    "universe": 4,
+    "address": 337,
+    "footprint": 112,
     "fixture": 208,
-    "mode": "Pixel RGBW",
-    "port": "C",
-    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-sides (start 153, order id-asc, unit 2 of 2)"
+    "mode": "Shape + Pixel RGBW",
+    "port": "D",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-sides (start 225, order id-asc, unit 2 of 2)"
    },
    "aim_home": "straight up",
    "stand": "on a pole beside the body (plot-front.png)"
@@ -2304,12 +2304,12 @@
     "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
    },
    "dmx": {
-    "universe": 10,
+    "universe": 11,
     "address": 1,
-    "footprint": 23,
+    "footprint": 21,
     "fixture": 501,
-    "mode": "23ch ASSUMED",
-    "port": "J",
+    "mode": "Mode 2",
+    "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 1 of 12)"
    },
    "aim_home": "straight down",
@@ -2345,12 +2345,12 @@
     "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
    },
    "dmx": {
-    "universe": 10,
-    "address": 24,
-    "footprint": 23,
+    "universe": 11,
+    "address": 22,
+    "footprint": 21,
     "fixture": 502,
-    "mode": "23ch ASSUMED",
-    "port": "J",
+    "mode": "Mode 2",
+    "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 2 of 12)"
    },
    "aim_home": "straight down",
@@ -2386,12 +2386,12 @@
     "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
    },
    "dmx": {
-    "universe": 10,
-    "address": 47,
-    "footprint": 23,
+    "universe": 11,
+    "address": 43,
+    "footprint": 21,
     "fixture": 503,
-    "mode": "23ch ASSUMED",
-    "port": "J",
+    "mode": "Mode 2",
+    "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 3 of 12)"
    },
    "aim_home": "straight down",
@@ -2427,12 +2427,12 @@
     "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
    },
    "dmx": {
-    "universe": 10,
-    "address": 70,
-    "footprint": 23,
+    "universe": 11,
+    "address": 64,
+    "footprint": 21,
     "fixture": 504,
-    "mode": "23ch ASSUMED",
-    "port": "J",
+    "mode": "Mode 2",
+    "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 4 of 12)"
    },
    "aim_home": "straight down",
@@ -2468,12 +2468,12 @@
     "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
    },
    "dmx": {
-    "universe": 10,
-    "address": 93,
-    "footprint": 23,
+    "universe": 11,
+    "address": 85,
+    "footprint": 21,
     "fixture": 505,
-    "mode": "23ch ASSUMED",
-    "port": "J",
+    "mode": "Mode 2",
+    "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 5 of 12)"
    },
    "aim_home": "straight down",
@@ -2509,12 +2509,12 @@
     "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
    },
    "dmx": {
-    "universe": 10,
-    "address": 116,
-    "footprint": 23,
+    "universe": 11,
+    "address": 106,
+    "footprint": 21,
     "fixture": 506,
-    "mode": "23ch ASSUMED",
-    "port": "J",
+    "mode": "Mode 2",
+    "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 6 of 12)"
    },
    "aim_home": "straight down",
@@ -2550,12 +2550,12 @@
     "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
    },
    "dmx": {
-    "universe": 10,
-    "address": 139,
-    "footprint": 23,
+    "universe": 11,
+    "address": 127,
+    "footprint": 21,
     "fixture": 507,
-    "mode": "23ch ASSUMED",
-    "port": "J",
+    "mode": "Mode 2",
+    "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 7 of 12)"
    },
    "aim_home": "straight down",
@@ -2591,12 +2591,12 @@
     "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
    },
    "dmx": {
-    "universe": 10,
-    "address": 162,
-    "footprint": 23,
+    "universe": 11,
+    "address": 148,
+    "footprint": 21,
     "fixture": 508,
-    "mode": "23ch ASSUMED",
-    "port": "J",
+    "mode": "Mode 2",
+    "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 8 of 12)"
    },
    "aim_home": "straight down",
@@ -2632,12 +2632,12 @@
     "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
    },
    "dmx": {
-    "universe": 10,
-    "address": 185,
-    "footprint": 23,
+    "universe": 11,
+    "address": 169,
+    "footprint": 21,
     "fixture": 509,
-    "mode": "23ch ASSUMED",
-    "port": "J",
+    "mode": "Mode 2",
+    "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 9 of 12)"
    },
    "aim_home": "straight down",
@@ -2673,12 +2673,12 @@
     "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
    },
    "dmx": {
-    "universe": 10,
-    "address": 208,
-    "footprint": 23,
+    "universe": 11,
+    "address": 190,
+    "footprint": 21,
     "fixture": 510,
-    "mode": "23ch ASSUMED",
-    "port": "J",
+    "mode": "Mode 2",
+    "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 10 of 12)"
    },
    "aim_home": "straight down",
@@ -2714,12 +2714,12 @@
     "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
    },
    "dmx": {
-    "universe": 10,
-    "address": 231,
-    "footprint": 23,
+    "universe": 11,
+    "address": 211,
+    "footprint": 21,
     "fixture": 511,
-    "mode": "23ch ASSUMED",
-    "port": "J",
+    "mode": "Mode 2",
+    "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 11 of 12)"
    },
    "aim_home": "straight down",
@@ -2755,12 +2755,12 @@
     "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
    },
    "dmx": {
-    "universe": 10,
-    "address": 254,
-    "footprint": 23,
+    "universe": 11,
+    "address": 232,
+    "footprint": 21,
     "fixture": 512,
-    "mode": "23ch ASSUMED",
-    "port": "J",
+    "mode": "Mode 2",
+    "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 12 of 12)"
    },
    "aim_home": "straight down",
@@ -2796,12 +2796,12 @@
     "why": "EXT-HAZER is a planning type modelled on an Antari HZ-1000, not the Elation Magma Prime"
    },
    "dmx": {
-    "universe": 3,
+    "universe": 4,
     "address": 461,
     "footprint": 5,
     "fixture": 301,
     "mode": "5ch",
-    "port": "C",
+    "port": "D",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block hazer (start 461, order id-asc, unit 1 of 2)"
    },
    "aim_home": "horizontal +z (output toward the audience)",
@@ -2836,12 +2836,12 @@
     "why": "EXT-HAZER is a planning type modelled on an Antari HZ-1000, not the Elation Magma Prime"
    },
    "dmx": {
-    "universe": 3,
+    "universe": 4,
     "address": 466,
     "footprint": 5,
     "fixture": 302,
     "mode": "5ch",
-    "port": "C",
+    "port": "D",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block hazer (start 461, order id-asc, unit 2 of 2)"
    },
    "aim_home": "horizontal +z (output toward the audience)",
