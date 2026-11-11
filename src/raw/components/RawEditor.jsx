@@ -57,6 +57,8 @@ import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import VjDeckView from './vjDeck/VjDeckView.jsx'
 import PerformDesk from '../../perform/PerformDesk.jsx'
+import { useMapApi } from '../../map/useMapDocument.js'
+import { cueLightTarget } from '../../map/lightingLink.js'
 import DeskPerformSwitch from '../../perform/DeskPerformSwitch.jsx'
 import WindowsMenu from './WindowsMenu.jsx'
 import useShowClock, { ShowClockContext } from '../../perform/useShowClock.js'
@@ -452,6 +454,12 @@ export default function RawEditor({
     })
 
     const document = state.document
+    // Playing a deck column can fire its light cue (Lights follow, VjDeckView.jsx): the same
+    // fireCue path the Perform cue list uses, so the wall and the 3D room follow as for any cue.
+    // Resolves false when the light desk did not answer; true for a cue that names no light.
+    const deckCueApi = useMapApi(projectId, applyLocalOps)
+    const fireDeckCue = useCallback((cue) => Promise.resolve(deckCueApi.fireCue(cue))
+        .then((lit) => (cueLightTarget(cue) ? lit === true : true)), [deckCueApi])
     const isLocalWorkspace = !projectId
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     // The one bar, on a project's canvas (the bare canvas draws its own, in
@@ -2378,6 +2386,8 @@ export default function RawEditor({
                             const from = (document.nodes || []).find((candidate) => candidate.id === edge.fromNodeId)
                             return [edge.toPort, pictureIdOf(from) || edge.fromNodeId]
                         }))}
+                    cues={document.mappingState?.cues || []}
+                    onFireCue={fireDeckCue}
                     onPatchValues={(patch) => applyLocalOps({
                         type: 'updateNode',
                         payload: { nodeId: node.id, patch: { values: { ...node.values, ...patch } } }

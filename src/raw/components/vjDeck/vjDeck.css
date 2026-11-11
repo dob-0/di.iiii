@@ -513,6 +513,37 @@
     text-align: center;
 }
 
+/* The cue row sits under the sticky columns row and scrolls with the grid. */
+.vj-deck-cues {
+    position: static;
+}
+
+.vj-deck-column-cue {
+    min-width: 0;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vj-deck-follow {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    min-width: 0;
+}
+
+.vj-deck-follow-status {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* State by text and a mark, not by colour alone. */
+.vj-deck-button[aria-pressed='true'].vj-deck-lights-follow {
+    border-color: var(--di-ink);
+    box-shadow: inset 0 0 0 1px var(--di-ink);
+}
+
 /* --- bottom: sources and the selected clip ------------------------------- */
 
 .vj-deck-monitor-idle {
