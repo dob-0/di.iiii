@@ -115,3 +115,19 @@ describe('the rig\'s fixture bodies as one instanced GLB', () => {
         expect(names.length).toBe(new Set(names).size)
     })
 })
+
+describe('readers of the built models', () => {
+    // 2026-11-11: two kinds without a body (model.owed) broke 17 test files, because each reader listed the kinds itself.
+    // Every reader goes through builtKinds(manifest); a kind is either built or says its body is owed.
+    it('no script lists the kinds itself before reading their bodies', () => {
+        const root = path.resolve(dir, '..', '..')
+        const walk = (p) => fs.readdirSync(p, { withFileTypes: true }).flatMap((e) => e.name === 'node_modules' ? [] : e.isDirectory() ? walk(path.join(p, e.name)) : /\.(mjs|js|cjs)$/.test(e.name) ? [path.join(p, e.name)] : [])
+        const bad = walk(root).filter((f) => /Object\.keys\(manifest\.kinds\)\.map\(\(k\) => \[k, readGeometry\(k\)\]\)/.test(fs.readFileSync(f, 'utf8')))
+        expect(bad.map((f) => path.relative(root, f))).toEqual([])
+    })
+
+    it('every kind has its built body on disk, or says the body is owed', () => {
+        const missing = Object.keys(manifest.kinds).filter((k) => !manifest.kinds[k].model?.owed && !fs.existsSync(path.join(dir, 'glb', `${k}.json`)))
+        expect(missing).toEqual([])
+    })
+})
