@@ -5,6 +5,7 @@
  *
  *   node scripts/rigbuild/patch-table.mjs --plan scripts/place/rigs/moxir-v2-patch-2026-10-09.json \
  *        [--out ~/Downloads/moxir/v2-patch] [--pdf] [--lang ru]   (--lang: the sheet's words; writes patch-sheet.<lang>.* beside the English)
+ *        [--short --lang ru,en]   (one page, only universe/start/fixture/mode/units/addresses, one table per language: patch-short.html/.pdf)
  *
  * Without --out it prints the table as Markdown. With --out it writes
  *   patch-sheet.md     the same Markdown: one short table (universe, start address, fixture, mode), then every unit
@@ -227,6 +228,29 @@ ${per}
 `
 }
 
+/**
+ * The short sheet: ONE page, only what a crew needs to set the lamps (universe, start, fixture, mode, units, addresses),
+ * one table per language. Pure. `models` = one tableModel per language, in the order they are printed.
+ */
+export const renderShortHtml = (models) => {
+    const part = (model) => {
+        const W = wordsOf(model.lang || 'en')
+        const rows = []
+        for (const u of model.universes) for (const b of u.blocks) rows.push([`U${u.universe}`, pad3(b.start), fixtureLabel(b), modeText(b, W), b.units, `${b.addresses} (${W.lastCh(pad3(b.last))})`])
+        for (const d of model.lan) rows.push(['LAN', '—', d.what, W.notDmx, d.units, W.noAddress])
+        return `<h2>${esc(model.title)}</h2>
+<table border="1" cellspacing="0" cellpadding="2"><thead><tr>${W.head7.slice(0, 6).map((h) => `<th align="left" bgcolor="#e6e6e6">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>
+<p>${esc(headLine(model).trim())}</p>`
+    }
+    return `<!doctype html>
+<html lang="${esc(models[0]?.lang || 'en')}"><head><meta charset="utf-8"><title>${esc(models[0]?.title || 'Patch')}</title>
+<style>body{font-family:Liberation Sans,Arial,sans-serif;font-size:8pt}h2{font-size:10pt;margin:6pt 0 3pt}table{border-collapse:collapse;width:100%}td,th{font-size:7.5pt}p{margin:3pt 0}</style></head>
+<body>
+${models.map(part).join('\n')}
+</body></html>
+`
+}
+
 const CSV_COLUMNS = [
     { label: 'universe', value: (a) => a.universe },
     { label: 'address', value: (a) => a.address },
@@ -259,6 +283,17 @@ const main = () => {
     const planFile = args.plan ? path.resolve(REPO_ROOT, String(args.plan)) : die('needs --plan <file.patch.json>')
     const plan = JSON.parse(fs.readFileSync(planFile, 'utf8'))
     const lang = args.lang ? String(args.lang) : 'en'
+    if (args.short) {
+        // --short: one page for the crew, the languages of --lang (comma list) one under the other
+        if (!args.out) die('--short needs --out <dir>')
+        const out = path.resolve(String(args.out).replace(/^~/, process.env.HOME))
+        const models = lang.split(',').map((l) => tableModel({ plan, library: loadLibrary(), planFile: path.relative(REPO_ROOT, planFile), lang: l.trim() }))
+        fs.mkdirSync(out, { recursive: true })
+        fs.writeFileSync(path.join(out, 'patch-short.html'), renderShortHtml(models))
+        say(`${out}/patch-short.html — ${models[0].rows.length} units, ${models[0].universes.length} universes, ${models.map((m) => m.lang).join(' + ')}`)
+        if (args.pdf) say(htmlToPdf(path.join(out, 'patch-short.html'), out))
+        return
+    }
     const model = tableModel({ plan, library: loadLibrary(), planFile: path.relative(REPO_ROOT, planFile), lang })
     const sheet = lang === 'en' ? 'patch-sheet' : `patch-sheet.${lang}` // the English sheet keeps its name; another language sits beside it
     if (!args.out) return say(renderMarkdown(model))

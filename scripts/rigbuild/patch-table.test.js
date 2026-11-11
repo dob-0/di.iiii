@@ -6,7 +6,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { REPO_ROOT } from '../place/common.mjs'
 import { loadLibrary } from './library.mjs'
-import { renderHtml, renderMarkdown, tableModel } from './patch-table.mjs'
+import { renderHtml, renderMarkdown, renderShortHtml, tableModel } from './patch-table.mjs'
 
 const planFile = 'scripts/place/rigs/moxir-v2-patch-2026-10-09.json'
 const plan = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, planFile), 'utf8'))
@@ -146,6 +146,12 @@ describe('the sheet in another language (--lang ru)', () => {
         expect(md).toContain('| U1 | 001 | B-EYE K10, ферма над сценой (A.leda B-EYE K10) | Standard, 21 кан. | 8 | 001, 036 … 246 (последний канал 266) |')
         expect(md).toContain('ЧЕРНОВИК, не подтверждён стороной Platina')
         expect(renderHtml(ru)).toContain('<html lang="ru">')
+        // the short sheet: both languages on one page, the six needed columns, no per-unit pages
+        const short = renderShortHtml([ru, en])
+        expect(short).toContain('<th align="left" bgcolor="#e6e6e6">Адреса</th>')
+        expect(short).toContain('<th align="left" bgcolor="#e6e6e6">Addresses</th>')
+        expect(short).not.toContain('Свободно после')
+        expect(short).not.toContain('page-break-before')
         expect(renderMarkdown(en)).not.toMatch(/[а-яА-Я]/)
     })
 })
