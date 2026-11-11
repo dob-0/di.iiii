@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { planBlackoutPress } from './blackoutPlan.js'
+import { flagsToForgetAfterLift, planBlackoutPress } from './blackoutPlan.js'
 import { buildPictureOutOptions } from '../map/pictureOutOptions.js'
 import MapCueList from '../map/MapCueList.jsx'
 import MapInspector from '../map/MapInspector.jsx'
@@ -283,9 +283,20 @@ function MasterWindow({ ctx }) {
             if (name === 'LIGHT') setLightSetHere(dir === 'on')
             if (name === 'LASER') setLaserSetHere(dir === 'on' ? !wasLaserBlack : false)
         }
+        // A lift press that could not reach a desk (it closed, or runs another show now) forgets
+        // "this page set it": otherwise the flag never clears and the button darkens nothing again.
+        const stale = flagsToForgetAfterLift(blackedOut, jobs.map(([name]) => name))
+        if (stale.light) setLightSetHere(false)
+        if (stale.laser) setLaserSetHere(false)
         setPending(next)
         laser.refresh()
     }
+
+    // The master raised by hand or MIDI during a blackout ends that blackout: forget the kept
+    // level, or a later fade to 0 would read as "Blackout on" and a press would jump to the old level.
+    useEffect(() => {
+        if (deckNode && deckMaster > 0 && storedRestore > 0) writeDeckMaster(deckMaster, null)
+    }, [deckNode, deckMaster, storedRestore, writeDeckMaster])
 
     const pictureState = !deckNode ? 'absent' : (restore !== null || deckMaster === 0 ? 'black' : 'live')
     const lightState = pending.LIGHT ? 'failed' : (relation === 'other' ? 'other' : (!light?.up ? 'absent' : (light.blackout || lightSetHere ? 'black' : 'live')))

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { planBlackoutPress } from './blackoutPlan.js'
+import { flagsToForgetAfterLift, planBlackoutPress } from './blackoutPlan.js'
 
 const base = { hasDeck: true, deckMaster: 1, lightOwn: true, laserUp: false, laserSetHere: false }
 
@@ -29,5 +29,17 @@ describe('planBlackoutPress', () => {
         expect(none.sends).toEqual([])
         const set = planBlackoutPress({ ...base, lightOwn: false, laserUp: true, laserSetHere: true, blackedOut: true, restore: 1, pending: {} })
         expect(set.sends).toEqual([['LASER', 'off']])
+    })
+})
+
+describe('flagsToForgetAfterLift', () => {
+    it('a lift that cannot reach the light desk forgets the light flag, so the next press darkens again', () => {
+        const plan = planBlackoutPress({ blackedOut: true, restore: null, hasDeck: true, deckMaster: 1, pending: {}, lightOwn: false, laserUp: false, laserSetHere: false })
+        expect(plan.sends).toEqual([])
+        expect(flagsToForgetAfterLift(true, plan.sends.map(([n]) => n))).toEqual({ light: true, laser: true })
+    })
+    it('keeps the flag of a desk the lift was sent to, and forgets nothing on a blackout press', () => {
+        expect(flagsToForgetAfterLift(true, ['LASER'])).toEqual({ light: true, laser: false })
+        expect(flagsToForgetAfterLift(false, [])).toEqual({ light: false, laser: false })
     })
 })

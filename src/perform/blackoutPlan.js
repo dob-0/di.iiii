@@ -19,3 +19,11 @@ export function planBlackoutPress({ blackedOut, restore, hasDeck, deckMaster, pe
     if (laserPending ? (laserPending === 'off' && laserUp) : laserSetHere) sends.push(['LASER', 'off'])
     return { deck, sends }
 }
+
+// After a LIFT press: which "this page set it" flags to forget because that desk was not sent to
+// (unreachable, or not ours any more). Without this the page stays "blacked out" for ever and the
+// button stops darkening anything. A blackout press forgets nothing.
+export function flagsToForgetAfterLift(wasBlackedOut, sentNames = []) {
+    if (!wasBlackedOut) return { light: false, laser: false }
+    return { light: !sentNames.includes('LIGHT'), laser: !sentNames.includes('LASER') }
+}
