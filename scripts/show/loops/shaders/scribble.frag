@@ -3,8 +3,8 @@
 vec3 shade(vec2 px, vec2 uv){
   float st = floor(uPhase*uP.y);
   float m = fbm(uv*1.6 + 0.8*circ(1.0)) + 0.35*(uv.y - 0.45) + 0.06*vnoise(px*0.02);
-  float inside = smoothstep(0.50, 0.505, m);
-  float dense = smoothstep(0.64, 0.645, m);
+  float inside = smoothstep(0.585, 0.59, m);
+  float dense = smoothstep(0.71, 0.715, m);
   vec3 col = vec3(0.0);
   for(int L = 0; L < 2; L++){
     float fl = float(L);

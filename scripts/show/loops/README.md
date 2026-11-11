@@ -30,12 +30,13 @@ FLASH: luma jumps > 10 % between neighbouring frames, at most 3 per second.
 ## Shader parameters (uP.xyzw)
 glow-magenta: radius. rings: half-thickness px, rings per loop. bars: cell px, bar px. isolines: levels, half-thickness px.
 lights: cell px, dot radius px. chrome: ripple scale, rim strength. glitch: block px, steps per loop, slash count. twotone: period px, angle.
-slabs: stroke width px, pale offset px (down-right), resting fill brightness 0..1 (each slab rises to full red once per loop; 4 slabs, drift = 4 cells per loop).
-scribble: stroke half-thickness px, boil steps per loop (whole), hatch pitch px.
+slabs: unused px, pale offset px (down-right), resting fill brightness 0..1 (5 plain bars; each rises once per loop to 0.57 of the accent; drift = 5 cells per loop).
+scribble: stroke half-thickness px, boil steps per loop (whole), hatch pitch px (patch coverage about 40 %).
 marks: base cross half-size px, crosses per loop (whole, max 12), stroke half-thickness px.
-halftone: dot cell px (two screens, pale c2 and accent c1, out of register).
-dither: pixel block px (Bayer 4x4, one bit: c1, c2 at the peaks).
-cracks: hits per loop (whole, max 4), cracks per hit (whole, max 14), crack half-thickness px.
+halftone: dot cell px (ONE red screen, no grey, no dust; use 8 or more).
+dither: pixel block px (Bayer 4x4, one bit: c1 cores, c2 only as a one-block rim; 3 swells).
+cracks: hits per loop (whole, max 4), shards per hit (whole, max 10), stroke half-thickness px (dark ragged hole, straight shards, 2 web rings).
 scantear: line pitch px, jump steps per loop (whole), line thickness px.
+thermal: noise scale (about 1.3), first-step threshold 0..1 (higher = more black), step height (4 hard steps: black, dark c1, c1, c2).
 
 Licence: the repo's licence; our own work, no third-party material.
