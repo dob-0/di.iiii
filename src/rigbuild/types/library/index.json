@@ -81,7 +81,7 @@
     {
       "id": "acme-pixel-line-ip",
       "code": "ACME-PIXEL-LINE-IP",
-      "category": "par"
+      "category": "led-bar"
     },
     {
       "id": "acme-xp16r-bsw",

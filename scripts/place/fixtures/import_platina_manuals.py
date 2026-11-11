@@ -31,6 +31,7 @@ SOURCES = {
     'CP-K10-OFL': {'url': 'https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/clay-paky/a-leda-b-eye-k10.json',
                    'what': 'Clay Paky A.leda B-EYE K10 in the Open Fixture Library (MIT), pinned commit; used for the zoom range only (the manual gives no beam angle)',
                    'publisher': 'Open Fixture Library (MIT)', 'accessed': READ},
+    'CP-K15-MAN': {'url': 'https://goknight.com/content/documentation/HyB-EyeK15&K25_InstructionManual_05.2023.pdf', 'what': "Clay Paky HY B-EYE K15 & K25 instruction manual, 05/2023, 12 pages; p10 '5. DIMENSIONS' (hosted by the distributor Knight)", 'publisher': 'Clay Paky S.p.A. (host: goknight.com)', 'accessed': '2026-11-12'},
     'CP-K15-DS': {'url': 'https://goknight.com/content/documentation/HyB-EyeK15_Datasheet_01.2021.pdf',
                   'what': 'Clay Paky HY B-EYE K15 datasheet, 01/2021, 1 page (hosted by the distributor Knight)',
                   'publisher': 'Clay Paky S.p.A. (host: goknight.com)', 'accessed': READ},
@@ -295,7 +296,7 @@ def build(manuals):
         'maker_chart': {'file': 'scripts/place/fixtures/charts/cp-hy-beye-k15.json', 'modes': {k: 'OWED' for k in k15_info}},
         'look': 'The B-EYE family look: a round head with 19 lenses in a U-yoke.',
         'specs': {
-            'size_mm': unknown('not in the datasheet (it gives weight only); the K10 body is NOT assumed to be the K15 size'),
+            'size_mm': {'value': [391, 329, 438], 'src': 'CP-K15-MAN', 'basis': 'EXACT', 'order': 'W x D x H, head upright (home)', 'accessed': '2026-11-12', 'note': "manual p10 drawing: base 329 x 387, 391 across the yoke, 438 high with the head upright, 496 with the head horizontal, lens face 240, head 224 deep zoomed in / 264 zoomed out. The maker's product page (claypaky.it/products/hy-b-eye-k15, read 2026-11-12) gives the same base 329 x 387 and 496 mm. Which base side lies along the yoke is read from the drawing (387), not printed."},
             'weight_kg': spec(20.7, 'CP-K15-DS', note='datasheet p1'),
             'power_w': spec(700, 'CP-K15-DS', note="datasheet p1 '700 VA at 230 V' - VA, not W; kept as published"),
             'source': spec('19 RGBW LEDs, 40 W each driven (OSRAM OSTAR Stage II LE RTDUW S2WN), 6000 K', 'CP-K15-DS', note='datasheet p1'),
@@ -306,12 +307,12 @@ def build(manuals):
             'dmx_channels': spec([22, 36, 57, 76, 112], 'CP-K15-DS', note="datasheet '22/36/57/76 DMX channels'; 112 = the 36-channel basic list + the 76-channel pixel list (two engines, pixel address = basic address + 36). The channel LISTS are owed; the Aqua variant's chart is NOT used"),
         },
         'modes_info': {k: {'label': v[0], 'note': v[1]} for k, v in k15_info.items()},
-        'model': {'archetype': 'moving-head', 'owed': 'the K15 outer size is not in the datasheet read; no body is built until it is (the K10 body is not the K15 size)'},
+        'model': {'archetype': 'moving-head', 'params': {'base_mm': [387, 329, 120], 'handles': False, 'arm_t_mm': 25, 'arm_w_mm': 130, 'arm_gap_mm': 10, 'tilt_axis_mm': 346, 'head': {'shape': 'box', 'round': 0.22, 'width_mm': 300, 'depth_mm': 300, 'below_axis_mm': 140, 'above_axis_mm': 84, 'lens_mm': 40, 'lens_layout': 'hex19', 'lens_pitch_mm': 48}}, 'note': "drawn to the manual's p10 drawing: 391 across the yoke, 438 high upright, head 224 deep, 19 lenses inside the 240 mm face. ASSUMED (not printed): base height 120, head body 300 wide, tilt axis at 346 (496 with the head horizontal minus half the head)."},
     }
     charts['cp-hy-beye-k15'] = {
         'kind': 'hyK15', 'code': 'CP-HY-BEYE-K15', 'maker': 'Clay Paky S.p.A.', 'manual': kinds['hyK15']['manual'],
         'howToRead': 'the K15 channel lists are OWED: modes carry their footprint from the datasheet only. Nothing here is a K15 channel.',
-        'owed': ["the standard K15 DMX chart (claypaky.it / e-assist.tech, login) for Standard, Shape, Standard + Freq, Shape + Freq and the Pixel engine", 'outer size (body)', 'pixel map of the 19 LEDs'],
+        'owed': ["the standard K15 DMX chart (claypaky.it / e-assist.tech, login) for Standard, Shape, Standard + Freq, Shape + Freq and the Pixel engine", 'pixel map of the 19 LEDs'],
         'reference_only': "The K15 AQUA chart (a different variant, source CP-K15-AQUA) counts Standard 21 / Standard Freq 22 / Shape 35 / Shape Freq 36 / pixels 57 / 76. It is NOT this lamp and no channel of it is carried; it only shows why 22 and 36 are probably the Freq variants.",
         'modes': {k: {'status': 'OWED', 'name': v[0], 'note': v[1], 'channels': None} for k, v in k15_info.items()},
     }
@@ -346,7 +347,7 @@ def build(manuals):
         },
         'modes_info': {k: {'label': v[0], 'note': v[2], 'page': v[3]} for k, v in pl_modes.items()},
         'photometry': {'lux': 1163, 'at_m': 2, 'beam_deg': 101, 'src': 'ACME-PLIP-DS', 'basis': 'EXACT', 'centre': 'RGB LEDs at full, datasheet photometric table (the CW LEDs: 2,919 lux at 2 m, 108 deg)', 'note': 'datasheet: 101 deg RGB 1,163 / 291 / 129 / 73 lux at 2 / 4 / 6 / 8 m'},
-        'model': {'archetype': 'par', 'owed': 'the bar needs an LED-bar archetype in build_fixtures.py (the par archetype draws a round can, the strobe archetype a bracket head); the 1,000 x 90 x 124 mm size is known'},
+        'model': {'archetype': 'led-bar', 'params': {'box_mm': [1000, 90, 124], 'bracket_h_mm': 24, 'bracket_at': 0.3, 'window_w_mm': 70, 'cells': 16, 'fins': 3}, 'note': "drawn to the datasheet's omega-bracket size 1,000 x 90 x 124 mm (L x W x H). The window is cut into 16 cells (the 16 white cells of the 112-channel mode; the 32 RGB cells are two per drawn cell). Bracket height 24 mm and window width 70 mm are ASSUMED from the maker's photo, not published."},
     }
     charts['acme-pixel-line-ip'] = chart('pixelLineIp', kinds['pixelLineIp'], 'acme-pixel-line-ip', pl_modes, f,
                                          pixel_note='cell order Red1..32 left to right is NOT stated; the menu has Pixel Seq Invert')

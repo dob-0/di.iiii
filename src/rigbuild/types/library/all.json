@@ -5463,7 +5463,17 @@
         "basis": "EXACT",
         "note": "datasheet p1"
       },
-      "size_mm": null,
+      "size_mm": {
+        "value": [
+          391,
+          329,
+          438
+        ],
+        "src": "CP-K15-MAN",
+        "basis": "EXACT",
+        "order": "W x D x H, head upright (home)",
+        "note": "manual p10 drawing: base 329 x 387, 391 across the yoke, 438 high with the head upright, 496 with the head horizontal, lens face 240, head 224 deep zoomed in / 264 zoomed out. The maker's product page (claypaky.it/products/hy-b-eye-k15, read 2026-11-12) gives the same base 329 x 387 and 496 mm. Which base side lies along the yoke is read from the drawing (387), not printed."
+      },
       "pan_tilt_deg": {
         "value": [
           540,
@@ -5493,15 +5503,30 @@
       "fluid_ml_per_min": null,
       "nozzle_d_mm": null,
       "model3d": {
-        "glb": null,
-        "sidecar": null,
-        "owed": "the K15 outer size is not in the datasheet read; no body is built until it is (the K10 body is not the K15 size)",
+        "glb": "scripts/place/fixtures/glb/hyK15.glb",
+        "sidecar": "scripts/place/fixtures/glb/hyK15.json",
+        "builtBy": "scripts/place/fixtures/build_fixtures.py",
+        "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0.12,
+        "tiltY": 0.346,
+        "lensY": 0.438,
+        "sizeAtHome_mm": {
+          "width_x": 390,
+          "depth_z": 333,
+          "height_y": 436
+        },
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
         "CP-K15-DS": {
           "url": "https://goknight.com/content/documentation/HyB-EyeK15_Datasheet_01.2021.pdf",
           "what": "Clay Paky HY B-EYE K15 datasheet, 01/2021, 1 page (hosted by the distributor Knight)",
+          "publisher": "Clay Paky S.p.A. (host: goknight.com)",
+          "accessed": "2026-11-11"
+        },
+        "CP-K15-MAN": {
+          "url": "https://goknight.com/content/documentation/HyB-EyeK15&K25_InstructionManual_05.2023.pdf",
+          "what": "Clay Paky HY B-EYE K15 / K25 instruction manual, IST01D/001 Rev.A 05/2023 (no DMX chart inside)",
           "publisher": "Clay Paky S.p.A. (host: goknight.com)",
           "accessed": "2026-11-11"
         }
@@ -5516,12 +5541,13 @@
         "identified": "exact",
         "date": "2026-11-11",
         "sources": [
-          "CP-K15-DS"
+          "CP-K15-DS",
+          "CP-K15-MAN"
         ],
         "values": {
           "measured": 0,
           "tested": 0,
-          "datasheet": 10,
+          "datasheet": 11,
           "equivalent": 0,
           "assumed": 0,
           "unknown": 0
@@ -5562,7 +5588,7 @@
           "117": "EXACT"
         }
       },
-      "category": "par",
+      "category": "led-bar",
       "modes": [
         {
           "name": "7ch",
@@ -8039,9 +8065,18 @@
       "fluid_ml_per_min": null,
       "nozzle_d_mm": null,
       "model3d": {
-        "glb": null,
-        "sidecar": null,
-        "owed": "the bar needs an LED-bar archetype in build_fixtures.py (the par archetype draws a round can, the strobe archetype a bracket head); the 1,000 x 90 x 124 mm size is known",
+        "glb": "scripts/place/fixtures/glb/pixelLineIp.glb",
+        "sidecar": "scripts/place/fixtures/glb/pixelLineIp.json",
+        "builtBy": "scripts/place/fixtures/build_fixtures.py",
+        "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": null,
+        "tiltY": null,
+        "lensY": 0.126,
+        "sizeAtHome_mm": {
+          "width_x": 1000,
+          "depth_z": 92,
+          "height_y": 126
+        },
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {

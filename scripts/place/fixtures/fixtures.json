@@ -1676,10 +1676,16 @@
    "look": "The B-EYE family look: a round head with 19 lenses in a U-yoke.",
    "specs": {
     "size_mm": {
-     "value": null,
-     "basis": "UNKNOWN",
-     "accessed": "2026-11-11",
-     "note": "not in the datasheet (it gives weight only); the K10 body is NOT assumed to be the K15 size"
+     "value": [
+      391,
+      329,
+      438
+     ],
+     "src": "CP-K15-MAN",
+     "basis": "EXACT",
+     "order": "W x D x H, head upright (home)",
+     "accessed": "2026-11-12",
+     "note": "manual p10 drawing: base 329 x 387, 391 across the yoke, 438 high with the head upright, 496 with the head horizontal, lens face 240, head 224 deep zoomed in / 264 zoomed out. The maker's product page (claypaky.it/products/hy-b-eye-k15, read 2026-11-12) gives the same base 329 x 387 and 496 mm. Which base side lies along the yoke is read from the drawing (387), not printed."
     },
     "weight_kg": {
      "value": 20.7,
@@ -1766,7 +1772,30 @@
    },
    "model": {
     "archetype": "moving-head",
-    "owed": "the K15 outer size is not in the datasheet read; no body is built until it is (the K10 body is not the K15 size)"
+    "params": {
+     "base_mm": [
+      387,
+      329,
+      120
+     ],
+     "handles": false,
+     "arm_t_mm": 25,
+     "arm_w_mm": 130,
+     "arm_gap_mm": 10,
+     "tilt_axis_mm": 346,
+     "head": {
+      "shape": "box",
+      "round": 0.22,
+      "width_mm": 300,
+      "depth_mm": 300,
+      "below_axis_mm": 140,
+      "above_axis_mm": 84,
+      "lens_mm": 40,
+      "lens_layout": "hex19",
+      "lens_pitch_mm": 48
+     }
+    },
+    "note": "drawn to the manual's p10 drawing: 391 across the yoke, 438 high upright, head 224 deep, 19 lenses inside the 240 mm face. ASSUMED (not printed): base height 120, head body 300 wide, tilt axis at 346 (496 with the head horizontal minus half the head)."
    }
   },
   "pixelLineIp": {
@@ -1941,8 +1970,20 @@
     "note": "datasheet: 101 deg RGB 1,163 / 291 / 129 / 73 lux at 2 / 4 / 6 / 8 m"
    },
    "model": {
-    "archetype": "par",
-    "owed": "the bar needs an LED-bar archetype in build_fixtures.py (the par archetype draws a round can, the strobe archetype a bracket head); the 1,000 x 90 x 124 mm size is known"
+    "archetype": "led-bar",
+    "params": {
+     "box_mm": [
+      1000,
+      90,
+      124
+     ],
+     "bracket_h_mm": 24,
+     "bracket_at": 0.3,
+     "window_w_mm": 70,
+     "cells": 16,
+     "fins": 3
+    },
+    "note": "drawn to the datasheet's omega-bracket size 1,000 x 90 x 124 mm (L x W x H). The window is cut into 16 cells (the 16 white cells of the 112-channel mode; the 32 RGB cells are two per drawn cell). Bracket height 24 mm and window width 70 mm are ASSUMED from the maker's photo, not published."
    }
   },
   "xp16r": {

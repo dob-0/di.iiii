@@ -137,8 +137,8 @@ describe('the Platina rental lamps (joined 2026-11-11, from the makers\' manuals
             expect(m.channels, m.name).toBe(null)
             expect(typeFlags({ type: 'cp-hy-beye-k15', mode: m.name }, committed).map((f) => f.code)).toContain('channels-owed')
         }
-        expect(k15.model3d.glb).toBe(null)
-        expect(k15.model3d.owed).toMatch(/size/)
+        // the body is built since 2026-11-12 (size from the K15 & K25 manual p10); only the channel lists stay owed
+        expect(k15.model3d.glb).toMatch(/hyK15\.glb$/)
     })
 
     it('K10: the pixel modes carry LED cells only (no pan, tilt, dimmer, zoom); the combined mode is two engines side by side', () => {
@@ -161,12 +161,11 @@ describe('the Platina rental lamps (joined 2026-11-11, from the makers\' manuals
         expect(h.fluid_ml_per_min).toMatchObject({ value: 3.4, src: 'MAGMA-MAN', basis: 'EXACT' })
     })
 
-    it('every built body is the size its maker prints, and a lamp with no known size has none', () => {
-        for (const id of ['cp-aleda-beye-k10', 'acme-xp16r-bsw', 'magmatic-magma-prime']) {
+    it('every Platina lamp has its built body on disk', () => {
+        for (const id of ['cp-aleda-beye-k10', 'cp-hy-beye-k15', 'acme-xp16r-bsw', 'acme-pixel-line-ip', 'magmatic-magma-prime']) {
             expect(typeById(committed, id).model3d.glb, id).toMatch(/\.glb$/)
             expect(fs.existsSync(path.join(ROOT, typeById(committed, id).model3d.glb)), id).toBe(true)
         }
-        expect(typeById(committed, 'acme-pixel-line-ip').model3d.glb).toBe(null)
     })
 })
 

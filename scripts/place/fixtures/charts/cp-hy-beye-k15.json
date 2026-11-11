@@ -12,7 +12,6 @@
  "howToRead": "the K15 channel lists are OWED: modes carry their footprint from the datasheet only. Nothing here is a K15 channel.",
  "owed": [
   "the standard K15 DMX chart (claypaky.it / e-assist.tech, login) for Standard, Shape, Standard + Freq, Shape + Freq and the Pixel engine",
-  "outer size (body)",
   "pixel map of the 19 LEDs"
  ],
  "reference_only": "The K15 AQUA chart (a different variant, source CP-K15-AQUA) counts Standard 21 / Standard Freq 22 / Shape 35 / Shape Freq 36 / pixels 57 / 76. It is NOT this lamp and no channel of it is carried; it only shows why 22 and 36 are probably the Freq variants.",

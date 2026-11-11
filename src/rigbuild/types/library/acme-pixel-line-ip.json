@@ -32,7 +32,7 @@
       "117": "EXACT"
     }
   },
-  "category": "par",
+  "category": "led-bar",
   "modes": [
     {
       "name": "7ch",
@@ -2509,9 +2509,18 @@
   "fluid_ml_per_min": null,
   "nozzle_d_mm": null,
   "model3d": {
-    "glb": null,
-    "sidecar": null,
-    "owed": "the bar needs an LED-bar archetype in build_fixtures.py (the par archetype draws a round can, the strobe archetype a bracket head); the 1,000 x 90 x 124 mm size is known",
+    "glb": "scripts/place/fixtures/glb/pixelLineIp.glb",
+    "sidecar": "scripts/place/fixtures/glb/pixelLineIp.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": null,
+    "tiltY": null,
+    "lensY": 0.126,
+    "sizeAtHome_mm": {
+      "width_x": 1000,
+      "depth_z": 92,
+      "height_y": 126
+    },
     "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
   },
   "sources": {
