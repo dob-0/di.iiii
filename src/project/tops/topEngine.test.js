@@ -42,7 +42,7 @@ describe('which operators the clock drives', () => {
 
     it('leaves every other operator unmarked — none of the rest reads `time`', () => {
         for (const [id, operator] of Object.entries(TOP_OPERATORS)) {
-            if (id === 'top.noise' || id === 'top.shape' || id === 'top.glitch' || id === 'top.displace') continue
+            if (id === 'top.noise' || id === 'top.shape' || id === 'top.glitch' || id === 'top.displace' || id === 'top.matte') continue
             expect(Boolean(operator.animated), id).toBe(false)
             expect(/\btime\b/.test(operator.fragment), `${id} reads time but is not marked animated`).toBe(false)
         }

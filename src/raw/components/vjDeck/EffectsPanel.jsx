@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
+import { bodyMatte } from '../../../project/tops/bodyMatte.js'
 import {
     EFFECT_TYPE_IDS,
     MASTER_STACK,
@@ -23,6 +24,14 @@ import {
 
 const percent = (value) => `${Math.round(value * 100)}`
 const shown = (value, step) => (step >= 1 ? String(Math.round(value)) : Number(value).toFixed(step >= 0.1 ? 1 : 2))
+
+// The Body effect's model state in plain words, shown on its row while it is switched on.
+const subscribeBody = (listener) => bodyMatte().subscribe(listener)
+const bodyStatusText = () => bodyMatte().statusText()
+function BodyStatus() {
+    const text = useSyncExternalStore(subscribeBody, bodyStatusText, () => '')
+    return text ? <span className="vj-deck-hint vj-deck-fx-status" role="status">{text}</span> : null
+}
 
 export default function EffectsPanel({ deck, scope, layerIndex, onScope, onLayer, editable, write }) {
     const isMaster = scope === MASTER_STACK
@@ -76,6 +85,7 @@ export default function EffectsPanel({ deck, scope, layerIndex, onScope, onLayer
                             <button type="button" className="vj-deck-button vj-deck-fx-button" aria-label={`Move ${effectLabel(effect.type)} up`} title="Runs earlier" disabled={!editable || index === 0} onClick={() => write(moveEffect(deck, where, effect.id, -1))}>↑</button>
                             <button type="button" className="vj-deck-button vj-deck-fx-button" aria-label={`Move ${effectLabel(effect.type)} down`} title="Runs later" disabled={!editable || index === stack.length - 1} onClick={() => write(moveEffect(deck, where, effect.id, 1))}>↓</button>
                             <button type="button" className="vj-deck-button vj-deck-fx-button" aria-label={`Remove ${effectLabel(effect.type)}`} disabled={!editable} onClick={() => write(removeEffect(deck, where, effect.id))}>×</button>
+                            {effect.on && effect.type === 'top.matte' ? <BodyStatus /> : null}
                         </div>
                         <div className="vj-deck-fx-params" hidden={!isOpen}>
                         <label className="vj-deck-list-row vj-deck-setting">
