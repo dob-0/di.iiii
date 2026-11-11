@@ -29,7 +29,8 @@ const BY_TYPE = { 'up-b380f': 'circle', 'up-250bsw': 'square', 'up-hk1915': 'hex
 const LETTER = { 'co2-jet': 'C', 'spark-machine': 'S', 'smoke-machine': 'Z', hazer: 'H', 'fog-machine': 'F', effect: 'E', laser: 'L' }
 // A second type in a lettered category needs its own letter, or the key reads two as one:
 // the LaserCube Ultra MK2 (2026-10-04) is a laser beside the UP-LA40WF — K, for the cube.
-const LETTER_BY_TYPE = { 'ext-lc-ultra-mk2': 'K' }
+// the Magma Prime (2026-11-12) is a hazer beside the generic hazer: M, for Magma.
+const LETTER_BY_TYPE = { 'ext-lc-ultra-mk2': 'K', 'magmatic-magma-prime': 'M' }
 
 // A box on the floor with no beam: an effect. One list for the plot, the hand (hotbar)
 // and a new lamp (plotEdits): the hazer (RIG_BUILD.md §13) joined the first three.
