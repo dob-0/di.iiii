@@ -44,6 +44,7 @@ import { resetDeckValue } from '../../../perform/midi/deckBinding.js'
 import ContextMenu from '../ContextMenu.jsx'
 import EffectsPanel from './EffectsPanel.jsx'
 import DeckSeam from './DeckSeam.jsx'
+import FoldButton, { DeckFoldContext } from './FoldButton.jsx'
 import SourceSwitch, { useSourceOff } from './SourceSwitch.jsx'
 import { cameraSourceKey, inputSourceKey, networkSourceKey } from '../../../project/tops/sourceSwitch.js'
 import useDeckLayout from './useDeckLayout.js'
@@ -232,6 +233,7 @@ function SourcesPanel({ mode, editable, target, targetName, picking, onCancel, o
     return (
         <section className="vj-deck-panel vj-deck-sources" aria-label={picking ? 'Add a clip' : 'Sources'}>
             <div className="vj-deck-panel-head">
+                <FoldButton panel="sources" />
                 <span className="vj-deck-label">{target ? `Sources: ${picking ? 'add to' : 'put in'} ${targetName}` : 'Sources'}</span>
                 {picking ? <button type="button" className="vj-deck-button vj-deck-button--quiet" onClick={onCancel}>Cancel</button> : null}
             </div>
@@ -356,6 +358,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
             label={label}
             controls={controls}
             sign={sign}
+            locked={deckLayout.locked}
             now={deckLayout.stateOf(id)}
             read={() => deckLayout.read(id)}
             onPreview={deckLayout.preview}
@@ -650,8 +653,10 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         >Take</button>
     )
 
+    const foldValue = { folded: deckLayout.folded, locked: deckLayout.locked, toggle: deckLayout.toggleFolded }
     return (
-        <div ref={rootRef} className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-monitor-size={monitors.size} data-layout={deckLayout.custom ? 'custom' : 'default'} data-preview-only={previewOnly ? 'true' : 'false'} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick} onPointerDownCapture={onLearnPress} onMouseDownCapture={onLearnPress} onKeyDownCapture={onDeckKeyDown} onContextMenuCapture={onDeckContextMenu}>
+        <DeckFoldContext.Provider value={foldValue}>
+        <div ref={rootRef} className={`vj-deck vj-deck--${mode}`} data-k2={k2Open ? 'open' : undefined} data-placement={mode} data-monitor-size={monitors.size} data-layout={deckLayout.custom ? 'custom' : 'default'} data-preview-only={previewOnly ? 'true' : 'false'} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick} onPointerDownCapture={onLearnPress} onMouseDownCapture={onLearnPress} onKeyDownCapture={onDeckKeyDown} onContextMenuCapture={onDeckContextMenu}>
             <header className="vj-deck-top">
                 <div className="vj-deck-tempo">
                     <span className="vj-deck-label">BPM</span>
@@ -898,10 +903,20 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                             onClick={() => setMonitorPrefs({ hidden: !monitors.hidden })}
                         >{monitors.hidden ? 'Show preview' : 'Hide preview'}</button>
                         {previewOnly && monitors.hidden ? takeButton : null}
+                        <button
+                            type="button"
+                            className="vj-deck-button vj-deck-layout-lock"
+                            aria-pressed={deckLayout.locked}
+                            onClick={deckLayout.toggleLock}
+                            title={deckLayout.locked ? 'Let the borders and panels be moved again' : 'Keep the borders and panels where they are'}
+                        >{deckLayout.locked ? 'Unlock layout' : 'Lock layout'}</button>
                         {deckLayout.custom ? (
                             <button type="button" className="vj-deck-button vj-deck-layout-reset" onClick={deckLayout.resetAll} title="Put every panel back to its usual size">Reset layout</button>
                         ) : null}
                     </div>
+                    {deckLayout.measured && !deckLayout.shown.s1s2 ? (
+                        <span className="vj-deck-dim vj-deck-seams-hint" role="note">Some borders are hidden at this width. Make the window wider (over 900 px) to move them.</span>
+                    ) : null}
                     {monitors.hidden ? null : (
                     <figure className="vj-deck-monitor vj-deck-monitor--preview">
                         <figcaption className="vj-deck-label vj-deck-monitor-caption"><span>Preview</span>{previewOnly ? takeButton : null}</figcaption>
@@ -965,7 +980,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     />
                 ) : (
                     <section className="vj-deck-panel vj-deck-clip" aria-label="Clip">
-                        <div className="vj-deck-panel-head"><span className="vj-deck-label">Clip</span></div>
+                        <div className="vj-deck-panel-head"><FoldButton panel="clip" /><span className="vj-deck-label">Clip</span></div>
                         <p className="vj-deck-hint">Select a clip</p>
                     </section>
                 )}
@@ -977,6 +992,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
             {k2Open ? <K2LayoutPanel windowPath={spaceId && projectId ? buildK2WindowPath(spaceId, projectId) : ''} publisher={midi.k2Publisher} map={midi.map} monitor={midi.k2Monitor} console={midi.k2Console} consoles={midi.consoles} onPickConsole={editable ? midi.pickConsole : undefined} fxEffect={fxIndex} onClose={() => setK2Open(false)} /> : null}
             <ContextMenu open={Boolean(menu)} x={menu?.x} y={menu?.y} title={menu?.label} items={menuItems} fromKeyboard={Boolean(menu?.fromKeyboard)} onClose={() => setMenu(null)} />
         </div>
+        </DeckFoldContext.Provider>
     )
 }
 
@@ -986,6 +1002,7 @@ function ClipSettings({ clip, title, name, editable, onChange, onRemove }) {
     return (
         <section className="vj-deck-panel vj-deck-clip" aria-label="Clip settings">
             <div className="vj-deck-panel-head">
+                <FoldButton panel="clip" />
                 <span className="vj-deck-label">{title}</span>
                 <span className="vj-deck-clip-name">{name}</span>
             </div>

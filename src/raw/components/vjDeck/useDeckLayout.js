@@ -2,13 +2,17 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import {
     LAYOUT_VAR_NAMES,
     applySeam,
-    clearSeam,
-    hasLayout,
+    foldColumns,
+    foldedOf,
+    hasArrangement,
     layoutVars,
     readLayout,
+    resetArrangement,
+    resetOneSeam,
     resolveLayout,
     seamLimits,
     seamsShown,
+    toggleFold,
     writeLayout
 } from './deckLayout.js'
 
@@ -98,8 +102,20 @@ export default function useDeckLayout(rootRef) {
         Object.entries(vars).forEach(([name, value]) => root.style.setProperty(name, value))
         if (resolved.bottomH != null) root.setAttribute('data-bottom', 'fixed')
         else root.removeAttribute('data-bottom')
-        if (resolved.cols) root.setAttribute('data-cols', 'fixed')
-        else root.removeAttribute('data-cols')
+        // A folded panel: the others share the rest equally, so a dragged column width is not applied.
+        const folded = foldedOf(nextLayout)
+        if (folded.length) {
+            root.setAttribute('data-fold', folded.join(' '))
+            root.style.setProperty('--vj-fold-cols', foldColumns(folded))
+            root.removeAttribute('data-cols')
+            root.style.removeProperty('--vj-bottom-cols')
+        } else {
+            root.removeAttribute('data-fold')
+            if (resolved.cols) root.setAttribute('data-cols', 'fixed')
+            else root.removeAttribute('data-cols')
+        }
+        if (nextLayout?.locked) root.setAttribute('data-locked', 'true')
+        else root.removeAttribute('data-locked')
         if (!root.getAttribute('style')) root.removeAttribute('style')
     }, [rootRef])
 
@@ -149,6 +165,7 @@ export default function useDeckLayout(rootRef) {
 
     const commit = useCallback((id, value, { immediate = false } = {}) => {
         dragging.current = false
+        if (layoutRef.current.locked) return
         const next = applySeam(layoutRef.current, id, value, boxRef.current, nowOf())
         layoutRef.current = next
         setLayout(next)
@@ -163,25 +180,53 @@ export default function useDeckLayout(rootRef) {
     }, [paint, sync])
 
     const resetSeam = useCallback((id) => {
-        const next = clearSeam(layoutRef.current, id)
+        if (layoutRef.current.locked) return
+        const next = resetOneSeam(layoutRef.current, id, boxRef.current, nowOf())
+        layoutRef.current = next
+        setLayout(next)
+        persist(next, true)
+    }, [persist, nowOf])
+
+    // The whole-layout reset works while the layout is locked (the lock stays: it is the viewer's own).
+    const resetAll = useCallback(() => {
+        const next = resetArrangement(layoutRef.current)
         layoutRef.current = next
         setLayout(next)
         persist(next, true)
     }, [persist])
 
-    const resetAll = useCallback(() => {
-        layoutRef.current = {}
-        setLayout({})
-        persist({}, true)
+    // Fold or unfold one bottom panel; the last open one cannot fold. Nothing happens while locked.
+    const toggleFolded = useCallback((panel) => {
+        if (layoutRef.current.locked) return
+        const next = toggleFold(layoutRef.current, panel)
+        if (next === layoutRef.current) return
+        layoutRef.current = next
+        setLayout(next)
+        persist(next, true)
+    }, [persist])
+
+    const toggleLock = useCallback(() => {
+        const next = { ...layoutRef.current }
+        if (next.locked) delete next.locked
+        else next.locked = true
+        layoutRef.current = next
+        setLayout(next)
+        persist(next, true)
     }, [persist])
 
     // The monitor presets win over a dragged width (decision D4).
     const clearMonitorW = useCallback(() => {
         if (layoutRef.current.monitorW == null) return
-        resetSeam('s2')
-    }, [resetSeam])
+        const next = resetOneSeam(layoutRef.current, 's2')
+        layoutRef.current = next
+        setLayout(next)
+        persist(next, true)
+    }, [persist])
 
-    const shown = seamsShown(box)
+    const folded = foldedOf(layout)
+    const seams = seamsShown(box)
+    // A border next to a folded panel is not shown, and the two panels left open share the rest equally.
+    const shown = folded.length ? { ...seams, s56: false } : seams
     const stateOf = (id) => {
         if (!box) return { value: 0, min: 0, max: 0, dim: 1 }
         const stored = resolveLayout(layout, box)
@@ -199,7 +244,11 @@ export default function useDeckLayout(rootRef) {
     return {
         uid,
         layout,
-        custom: hasLayout(layout),
+        custom: hasArrangement(layout),
+        locked: Boolean(layout.locked),
+        folded,
+        measured: box != null,
+        wide: seams,
         shown,
         stateOf,
         read,
@@ -209,6 +258,8 @@ export default function useDeckLayout(rootRef) {
         refresh: sync,
         resetSeam,
         resetAll,
+        toggleFolded,
+        toggleLock,
         clearMonitorW
     }
 }
