@@ -23,7 +23,7 @@ import {
 } from './deckBinding.js'
 import { useMidiPorts } from './midiPorts.js'
 import { createK2Monitor } from './k2Monitor.js'
-import { K2_CHANNEL, XONE_K2_LEDS, defaultMap, isK2, k2IsRelative } from './xoneK2.js'
+import { K2_CHANNEL, K2_CONSOLES, XONE_K2_LEDS, consoleOf, defaultMap, isK2, k2IsRelative } from './xoneK2.js'
 
 // The live half of the MIDI binding: listens on the K2 (else the first input),
 // applies messages to the deck, keeps Learn, and lights the K2's buttons.
@@ -36,6 +36,7 @@ import { K2_CHANNEL, XONE_K2_LEDS, defaultMap, isK2, k2IsRelative } from './xone
 // onPatch    (patch) => void — onPatchValues, for { midiMap }
 // onTap      the view's tap handler (the show clock or the deck's own taps)
 // fxLayer    the layer whose effects pots 9-12 drive (-1 = master)
+// console    node.values.midiConsole: the id of the K2 console (missing or unknown = k2); pickConsole(id) patches { midiConsole }
 // deckId     one mounted hook instance per deck id owns the controller (see below)
 //
 // Three rules for a live show:
@@ -75,8 +76,9 @@ const claim = (id, token, listener) => {
 }
 const isOwner = (id, token) => slot(id).order[0] === token
 
-export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = true, deckId = '', fxLayer = -1, fxEffect = 0, onFxLayer, onFxEffect }) {
-    const defaults = useMemo(() => defaultMap(), [])
+export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = true, deckId = '', console: consoleId, fxLayer = -1, fxEffect = 0, onFxLayer, onFxEffect }) {
+    const k2Console = consoleOf(consoleId)
+    const defaults = useMemo(() => defaultMap(k2Console.id), [k2Console.id])
     const overrides = useMemo(() => normalizeOverrides(stored), [stored])
     const map = useMemo(() => effectiveMap(defaults, overrides), [defaults, overrides])
 
@@ -257,6 +259,13 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         live.current.onPatch?.({ midiMap: withoutOverride(live.current.stored, found) })
         return true
     }, [])
+    // Pick the K2 console: only { midiConsole } is patched; the learned midiMap stays on top of either one.
+    const pickConsole = useCallback((id) => {
+        if (!K2_CONSOLES.some((item) => item.id === id)) return false
+        pickup.current = new Map()
+        live.current.onPatch?.({ midiConsole: id })
+        return true
+    }, [])
     const reset = useCallback(() => {
         live.current.onPatch?.({ midiMap: null })
         setTarget(null)
@@ -303,6 +312,9 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         bindingOf,
         unmap,
         reset,
+        k2Console,
+        consoles: K2_CONSOLES,
+        pickConsole,
         controlOf,
         map,
         k2Monitor,
