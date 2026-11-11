@@ -14,6 +14,7 @@
 
 import { generateId } from '../../shared/projectSchema.js'
 import { TOP_OPERATORS, isTopType, resolveTopParams } from './topOperators.js'
+import { inputSourceKey, markSourceNode } from './sourceSwitch.js'
 import { DEFAULT_BPM, TAP_RESET_MS as CLOCK_TAP_RESET_MS, sanitizeEpoch, tapTempo as clockTapTempo } from '../../timeline/showClock.js'
 
 export const VJ_DECK_TYPE = 'vj.deck'
@@ -556,7 +557,11 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
             })
         }
         const blend = blendNodeId(deckId, index)
-        nodes.push({ id: blend, type: 'top.blend', values: { machine, mode: layer.blend, mix: opacity } })
+        const blendNode = { id: blend, type: 'top.blend', values: { machine, mode: layer.blend, mix: opacity } }
+        // An input clip's blend remembers which input it plays, so the source switch can silence it
+        // without the network carrying any extra value (sourceSwitch.js).
+        if (clip.kind === 'input') markSourceNode(blendNode, inputSourceKey(clip.input))
+        nodes.push(blendNode)
         if (below) wires.push({ from: below, to: blend, port: 'a' })
         wires.push({ from: runStack(layer.effects, source, (id) => layerEffectNodeId(deckId, index, id), (id) => layerEffectMixNodeId(deckId, index, id), opacity <= 0), to: blend, port: 'b' })
         below = blend

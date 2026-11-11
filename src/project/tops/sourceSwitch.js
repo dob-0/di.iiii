@@ -104,3 +104,33 @@ export const resetSourcesOffForTest = () => {
     if (attached) globalThis.removeEventListener?.('storage', onStorage)
     attached = false
 }
+
+// --- which operator plays which source ----------------------------------------------------
+// A deck input clip plays a node wired into the deck, so the expanded network no longer says
+// "input 1". The deck's blend for that clip is marked here (a WeakMap: the network's values are
+// not touched, so a network with nothing off is byte for byte what it was).
+const marks = new WeakMap()
+export const markSourceNode = (node, key) => { if (node && key) marks.set(node, key) }
+export const sourceKeyOfNode = (node) => marks.get(node) || ''
+
+/** A camera operator's source key: its label, as a clip stores it. */
+export const cameraNodeSourceKey = (node) => cameraSourceKey(node?.values?.deviceLabel)
+
+/**
+ * The network as it must run with these sources off: the blend of an input clip that is off
+ * gets Amount 0, so the layers below show through (a layer is silenced by its mix, never by
+ * dropping nodes, the rule of vjDeck.js). Nothing off: the very same network object.
+ */
+export const applySourcesOff = (network, off) => {
+    if (!off?.size || !network?.nodes?.length) return network
+    let changed = false
+    const nodes = network.nodes.map((node) => {
+        const key = sourceKeyOfNode(node)
+        if (!key || !off.has(key) || node.values?.mix === 0) return node
+        changed = true
+        const silenced = { ...node, values: { ...node.values, mix: 0 } }
+        markSourceNode(silenced, key)
+        return silenced
+    })
+    return changed ? { ...network, nodes } : network
+}
