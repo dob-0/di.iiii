@@ -14,7 +14,7 @@ const library = loadLibrary()
 describe('the Platina patch of the rental list, full modes (2026-11-11)', () => {
     const m = tableModel({ plan, library, planFile: file })
     it('has the list counts on 10 universes, nothing over 512, the XP-16R alone in the last one', () => {
-        expect(m.rows).toHaveLength(56)
+        expect(m.rows).toHaveLength(54)
         expect(m.universes.map((u) => u.universe)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         expect(m.universes.every((u) => u.used <= 512)).toBe(true)
         const n = (code) => m.rows.filter((r) => r.code === code).length

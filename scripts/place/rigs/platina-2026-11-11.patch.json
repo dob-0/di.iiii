@@ -1,7 +1,7 @@
 {
  "patch": "platina-2026-11-11",
- "title": "Platina - Live in Yerevan: the patch from the rental list, FULL modes (PROPOSED, 2026-11-11), 56 units on 10 universes",
- "title_ru": "Platina - Live in Yerevan: патч по списку аренды, ПОЛНЫЕ режимы (ЧЕРНОВИК, 2026-11-11), 56 приборов на 10 юниверсах",
+ "title": "Platina - Live in Yerevan: the patch from the rental list, FULL modes (PROPOSED, 2026-11-11), 54 units on 10 universes",
+ "title_ru": "Platina - Live in Yerevan: патч по списку аренды, ПОЛНЫЕ режимы (ЧЕРНОВИК, 2026-11-11), 54 прибора на 10 юниверсах",
  "writtenAt": "2026-11-11",
  "owner": "N3655/N3671: every lamp in its full mode; the list is what is rented; the grandMA2 is not used for now, di sends the DMX over Art-Net (N3664).",
  "status": "PROPOSED, 2026-11-11. The counts are the rental list's. Nothing is confirmed by the rental side: maker and mode of each lamp, the node. Types with a channel count from a maker document: K10, K15, Pixel Line IP (manual copy), Magma Prime. ASSUMED: the XP-16R BWS (23 ch) - own universe, U10.",
