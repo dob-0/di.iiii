@@ -70,13 +70,3 @@ the look on screen (no browser was opened).
 
 No deck blackout or clear-all in the model (only `clearLayer`, `master`). Tap goes through the view because the show clock
 may own the tempo.
-
-## 2026-11-11 — K2 controller window (Device button)
-
-Branch `feat/deck-k2-window`. The K2 panel has a Device button that opens one named pop-out window
-(`di-k2-controller-window`, 440 x 1000) showing the controller as a drawing, read only.
-- Route `/{space}/perform/{projectId}/k2` (`k2WindowRouting.js`, dispatched in `RootApp.jsx` before the Perform line); no gate, no project load.
-- Face as data: `xone-k2-face.json` (kind, x, y, size, printed text, job-text place for each of the 58 controls; body 135 wide ASSUMED). A console whose controller has no face gets no Device button (`k2Face.js`).
-- Words: `k2Jobs.js` is the one source of "what a control does now" for the panel cells and the window.
-- Courier: `k2Channel.js`, BroadcastChannel `di-k2-controller-window-v1` (messages in the file header). Only the deck page talks to MIDI; the window never asks for MIDI access. `useDeckMidi` owns the publisher (`k2Publisher`): free while no window asked, one events batch per animation frame, no deck render per MIDI event.
-- Not seen in a browser when it was built; tests are vitest only (`k2Face`, `k2Channel`, `K2Window`, `k2Publish.hook`, `k2WindowRouting`).
