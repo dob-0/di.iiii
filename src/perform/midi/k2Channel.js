@@ -27,6 +27,18 @@ export const SILENT_MS = ASK_MS * 4
 const nameByKey = new Map(XONE_K2_CONTROLS.map((item) => [controlKey(item.kind, item.number), item.control]))
 export const controlNameOf = (control) => nameByKey.get(controlKey(control?.kind, control?.number)) || ''
 
+/** A monitor snapshot (keys like "cc:16") as { values: { control: n }, held: { control: true } } by control name. */
+export const namedValues = (snap = {}) => {
+    const values = {}
+    const held = {}
+    for (const item of XONE_K2_CONTROLS) {
+        const key = controlKey(item.kind, item.number)
+        if (Number.isFinite(snap.values?.[key])) values[item.control] = snap.values[key]
+        if (snap.held?.[key]) held[item.control] = true
+    }
+    return { values, held }
+}
+
 /** The light colour of every control the app drives: { control: 'red' | 'amber' | 'green' | 'off' } from ledsFor(). */
 export const lightsOf = (leds = []) => {
     const velocity = new Map(leds.map((led) => [led.note, led.velocity]))
@@ -71,7 +83,7 @@ export function createK2Publisher({ source, makeChannel = () => (typeof Broadcas
 
     const post = (message) => { try { channel?.postMessage(message) } catch { /* a closed channel: nothing to tell */ } }
     const sendSnapshot = () => {
-        let parts = null
+        let parts
         try { parts = source() } catch { parts = null }
         if (parts) post({ type: 'snapshot', ...parts, at: now() })
     }

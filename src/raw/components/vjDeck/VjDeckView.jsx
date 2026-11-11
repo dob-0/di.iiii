@@ -39,6 +39,7 @@ import { useDeckMidi } from '../../../perform/midi/useDeckMidi.js'
 import DeckMidiControl from '../../../perform/midi/DeckMidiControl.jsx'
 import MidiMapOverlay from '../../../perform/midi/MidiMapOverlay.jsx'
 import K2LayoutPanel from '../../../perform/midi/K2LayoutPanel.jsx'
+import { buildK2WindowPath } from '../../../perform/midi/k2WindowRouting.js'
 import { resetDeckValue } from '../../../perform/midi/deckBinding.js'
 import ContextMenu from '../ContextMenu.jsx'
 import EffectsPanel from './EffectsPanel.jsx'
@@ -948,7 +949,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                 {seam('s6', deckLayout.shown.s56, 'vertical', 'Resize Clip and Effects', paneId('bottom'))}
             </div>
             <MidiMapOverlay rootRef={rootRef} midi={midi} layoutKey={deck} />
-            {k2Open ? <K2LayoutPanel map={midi.map} monitor={midi.k2Monitor} console={midi.k2Console} consoles={midi.consoles} onPickConsole={editable ? midi.pickConsole : undefined} fxEffect={fxIndex} onClose={() => setK2Open(false)} /> : null}
+            {k2Open ? <K2LayoutPanel windowPath={spaceId && projectId ? buildK2WindowPath(spaceId, projectId) : ''} publisher={midi.k2Publisher} map={midi.map} monitor={midi.k2Monitor} console={midi.k2Console} consoles={midi.consoles} onPickConsole={editable ? midi.pickConsole : undefined} fxEffect={fxIndex} onClose={() => setK2Open(false)} /> : null}
             <ContextMenu open={Boolean(menu)} x={menu?.x} y={menu?.y} title={menu?.label} items={menuItems} fromKeyboard={Boolean(menu?.fromKeyboard)} onClose={() => setMenu(null)} />
         </div>
     )

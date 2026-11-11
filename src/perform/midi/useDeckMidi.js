@@ -23,7 +23,9 @@ import {
 } from './deckBinding.js'
 import { useMidiPorts } from './midiPorts.js'
 import { createK2Monitor } from './k2Monitor.js'
-import { K2_CHANNEL, K2_CONSOLES, XONE_K2_LEDS, consoleOf, defaultMap, isK2, k2IsRelative } from './xoneK2.js'
+import { createK2Publisher, eventOf, lightsOf, namedValues } from './k2Channel.js'
+import { jobsFor, linesFor } from './k2Jobs.js'
+import { K2_CHANNEL, K2_CONSOLES, K2_NAME, XONE_K2_LEDS, consoleOf, defaultMap, isK2, k2IsRelative } from './xoneK2.js'
 
 // The live half of the MIDI binding: listens on the K2 (else the first input),
 // applies messages to the deck, keeps Learn, and lights the K2's buttons.
@@ -156,6 +158,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const [heard, setHeard] = useState(K2_CHANNEL)
     const heardRef = useRef(K2_CHANNEL)
     const monitorRef = useRef(null) // set by the monitor effect at the end of the hook
+    const publisherRef = useRef(null) // the controller window's courier, set at the end of the hook
     // FREEZE while held (the K2's EXIT SETUP): the layer the hold was pressed on, null = not held.
     const holdLayerRef = useRef(null)
     const [holdNote, setHoldNote] = useState('')
@@ -171,6 +174,12 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
             heardRef.current = K2_CHANNEL; setHeard(K2_CHANNEL)
         }
         monitorRef.current?.push(message) // the K2 panel's live picture; no deck write, no render here
+        // the controller window (k2Channel.js): nothing at all unless a window asked for it
+        const publisher = publisherRef.current
+        if (publisher?.isListening()) {
+            const event = eventOf(controlOf(message))
+            if (event) publisher.push(event)
+        }
         const { learning: isLearning, target: wanted, once: justOne } = learnRef.current
         if (isLearning) {
             // While learning, a message never plays the deck: it binds the picked control.
@@ -300,6 +309,29 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     }, [releaseHold])
     useEffect(() => { monitorRef.current = k2Monitor; return () => k2Monitor.dispose() }, [k2Monitor])
 
+    // The controller window's courier (k2Channel.js). One BroadcastChannel is opened while this
+    // instance owns the deck (it only listens for a request); a snapshot is built only when a window
+    // asked, and publishing per MIDI event is one flag test while none did. No render, no state.
+    const [feed] = useState(() => ({ build: null }))
+    const [k2Publisher] = useState(() => createK2Publisher({ source: () => feed.build?.() ?? null }))
+    useEffect(() => {
+        feed.build = () => ({
+            controller: K2_NAME,
+            consoleId: k2Console.id,
+            consoleName: k2Console.name,
+            labels: jobsFor(map, k2Console, fxEffect),
+            lines: linesFor(map, k2Console, fxEffect),
+            lights: lightsOf(leds),
+            ...namedValues(k2Monitor.getSnapshot())
+        })
+    })
+    useEffect(() => {
+        publisherRef.current = k2Publisher
+        if (active) k2Publisher.ensure()
+        return () => { publisherRef.current = null; k2Publisher.dispose() }
+    }, [k2Publisher, active])
+    useEffect(() => { k2Publisher.changed() }, [k2Publisher, leds, map, k2Console, fxEffect])
+
     return {
         state,
         deviceName: device?.name || '',
@@ -318,6 +350,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         controlOf,
         map,
         k2Monitor,
+        k2Publisher,
         note: holdNote
     }
 }
