@@ -43,3 +43,18 @@ describe('flagsToForgetAfterLift', () => {
         expect(flagsToForgetAfterLift(false, [])).toEqual({ light: false, laser: false })
     })
 })
+
+describe('laser set here, then its desk drops away', () => {
+    const base = { blackedOut: true, restore: null, hasDeck: true, deckMaster: 1, lightOwn: false }
+    it('the first lift is still sent (and kept to retry when it fails); the desk back, the next press lifts', () => {
+        const first = planBlackoutPress({ ...base, pending: {}, laserUp: false, laserSetHere: true })
+        expect(first.sends).toEqual([['LASER', 'off']])
+        expect(flagsToForgetAfterLift(true, ['LASER']).laser).toBe(false)
+        expect(planBlackoutPress({ ...base, pending: { LASER: 'off' }, laserUp: true, laserSetHere: true }).sends).toEqual([['LASER', 'off']])
+    })
+    it('a second press with the desk still gone lets go (the Laser page lifts it), so the button never goes dead', () => {
+        const again = planBlackoutPress({ ...base, pending: { LASER: 'off' }, laserUp: false, laserSetHere: true })
+        expect(again.sends).toEqual([])
+        expect(flagsToForgetAfterLift(true, []).laser).toBe(true)
+    })
+})

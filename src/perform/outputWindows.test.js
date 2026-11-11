@@ -117,6 +117,8 @@ describe('screens and size', () => {
     it('puts the window on the chosen screen', () => {
         expect(featuresForScreen(screens[1])).toBe('popup=yes,left=1440,top=0,width=1920,height=1080')
         expect(featuresForScreen(null)).toBe('')
+        // a screen with a panel: the window stays inside the usable area its left/top come from
+        expect(featuresForScreen({ left: 0, top: 32, width: 1920, height: 1080, availWidth: 1920, availHeight: 1048 })).toBe('popup=yes,left=0,top=32,width=1920,height=1048')
     })
     it('match the screen writes the output size AND every surface resolution', () => {
         const mapping = { output: { width: 1920, height: 1080, slate: 'off' }, surfaces: [{ id: 'a', resolution: [1280, 720] }, { id: 'b', resolution: [1280, 720] }] }

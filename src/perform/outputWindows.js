@@ -22,6 +22,9 @@ const describeScreen = (s, index) => ({
     height: Math.round(s.height),
     left: Math.round(s.availLeft ?? s.left ?? 0),
     top: Math.round(s.availTop ?? s.top ?? 0),
+    // The window is placed inside the same usable area its left/top come from (a panel or bar shrinks it).
+    availWidth: Math.round(s.availWidth ?? s.width),
+    availHeight: Math.round(s.availHeight ?? s.height),
     primary: Boolean(s.isPrimary)
 })
 
@@ -84,7 +87,7 @@ export const matchTarget = (screens = [], want = null) => {
 
 // window.open features for a chosen screen: the window starts on that screen at its size.
 export const featuresForScreen = (screen) => (screen
-    ? `popup=yes,left=${screen.left},top=${screen.top},width=${screen.width},height=${screen.height}`
+    ? `popup=yes,left=${screen.left},top=${screen.top},width=${screen.availWidth ?? screen.width},height=${screen.availHeight ?? screen.height}`
     : '')
 
 export const screenToDoc = (screen) => (screen ? { label: screen.label, index: screen.index, size: [screen.width, screen.height] } : null)

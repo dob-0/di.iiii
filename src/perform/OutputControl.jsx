@@ -5,6 +5,22 @@ import {
 } from './outputWindows.js'
 import './outputControl.css'
 
+// A size field: what is typed is a draft; only a whole number of 1 or more is written to the
+// project (shared with the stage). An emptied or half-typed field writes nothing, and shows the
+// saved value again when left.
+function SizeInput({ label, value, onCommit }) {
+    const [draft, setDraft] = useState(null)
+    return (
+        <input type="number" min="1" aria-label={label} value={draft ?? value}
+            onChange={(event) => {
+                const text = event.target.value
+                const n = Math.round(Number(text))
+                if (text !== '' && Number.isFinite(n) && n >= 1) { setDraft(null); onCommit(n) } else setDraft(text)
+            }}
+            onBlur={() => setDraft(null)} />
+    )
+}
+
 // THE OUTPUT BUTTON: one toggle (open / close, and it says which), and beside it the
 // settings of that window. Stored in the project document (mapping.output), so every
 // desk and the stage box read the same answer; nothing here is browser storage.
@@ -85,11 +101,9 @@ export default function OutputControl({ ctx, className = '' }) {
                     {win.fullscreen ? <p className="output-note">A browser allows full screen only after a click or key press in the output window: click it once. Nothing is drawn on the projector for that.</p> : null}
                     <div className="output-field">
                         <span>Size</span>
-                        <input type="number" min="1" aria-label="Output width" value={output.width}
-                            onChange={(event) => mapApi.setOutput({ output: { ...output, width: Number(event.target.value) || 1 } })} />
+                        <SizeInput label="Output width" value={output.width} onCommit={(width) => mapApi.setOutput({ output: { ...output, width } })} />
                         <span aria-hidden="true">x</span>
-                        <input type="number" min="1" aria-label="Output height" value={output.height}
-                            onChange={(event) => mapApi.setOutput({ output: { ...output, height: Number(event.target.value) || 1 } })} />
+                        <SizeInput label="Output height" value={output.height} onCommit={(height) => mapApi.setOutput({ output: { ...output, height } })} />
                     </div>
                     <button type="button" className="perform-action" onClick={match}
                         title="Sets the output and every surface to the screen's size">
