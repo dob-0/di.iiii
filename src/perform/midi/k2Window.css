@@ -37,6 +37,7 @@ body:has(.tree-chip) .k2w { padding-bottom: calc(var(--di-space-6) + var(--di-sp
 .k2w-shape.is-flash { stroke: var(--di-ink); stroke-width: 1.2; }
 .k2w-printed { fill: var(--di-dim); font-family: var(--di-mono); }
 .k2w-job { fill: var(--di-ink); font-family: var(--di-mono); }
+.k2w-control.is-press .k2w-job { fill: var(--di-dim); } /* the press job of an encoder reads as the second, quieter label */
 .k2w-control.is-unused .k2w-job { fill: var(--di-faint); }
 .k2w-control.is-unused .k2w-shape { stroke: var(--di-line); }
 /* text on a lit pad or button is dark so it keeps its contrast on the light */

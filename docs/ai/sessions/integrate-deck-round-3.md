@@ -10,3 +10,5 @@
 - Fixed: pad labels cut at the sides (face redrawn squatter, label inside a 31 x 22 pad), face taller than the screen (window asks screen.availHeight minus 60; text 12.4 px at 440 x 860 and 853 x 860), dev strip over the readout (gap under the readout in this window only).
 - Tested: K2 and deck tests in src/perform/midi and src/raw/components/vjDeck (summary in the job report); seen in a browser at 440x860, 853x860, 360x700, preset K2 and K2 (1.9): no page scroll, 0 label clashes. At 360x700 the text is 9.6 px (the screen is too small for 12 px).
 - Not tested: the real K2, a real tiling window manager, the owner's own screen.
+- Second pass on the K2 window: fader caps no longer cover the first label line (cap now in the fader box, one-line fader and pad labels, "LN" for "Layer N"), and each encoder's press job is set apart from its turn job (half a line of gap and the dim ink).
+- Seen at 440x860, 853x860, 360x700, K2 and K2 (1.9): 0 labels covered with the faders at both ends (end positions set in the page by moving the cap, not by a real fader), smallest label gap 2.9 px, text 12.3 px, no page scroll.

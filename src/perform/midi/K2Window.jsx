@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDocumentTitle from '../../hooks/useDocumentTitle.js'
 import { applyEvents, createK2Feed, emptyState, stateFromSnapshot } from './k2Channel.js'
-import { faceOfController, jobBox, shapeBox, unionBox, wrapJob } from './k2Face.js'
+import { faceOfController, faceLines, faderCapBox, jobBox, shapeBox, unionBox } from './k2Face.js'
 import './k2Window.css'
 
 // THE CONTROLLER WINDOW: the K2 drawn as a picture of itself, every control saying what it does now,
@@ -34,11 +34,11 @@ function Shape({ control, value, held, flash, light }) {
     if (kind === 'fader') {
         const length = control.length || size
         const top = y - length / 2
-        const capY = Number.isFinite(value) ? top + length - (Math.min(127, Math.max(0, value)) / 127) * length : top + length
+        const cap = faderCapBox(control, value)
         return (
             <g>
                 <rect className="k2w-slot" x={x - 1} y={top} width={2} height={length} />
-                <rect className={`${cls} k2w-cap`} x={x - 4} y={capY - 2.5} width={8} height={5} />
+                <rect className={`${cls} k2w-cap`} x={cap.left} y={cap.top} width={cap.right - cap.left} height={cap.bottom - cap.top} />
             </g>
         )
     }
@@ -110,7 +110,7 @@ export default function K2Window({ makeChannel, setTimer, clearTimer, now }) {
                     const unused = job === 'not used'
                     const room = unionBox(shapeBox(control), jobBox(control, text))
                     const inside = control.kind === 'pad'
-                    const jobLines = wrapJob(job, text)
+                    const jobLines = faceLines(control, job, text)
                     const printed = control.printed ? control.printed.split(' ') : []
                     const value = state.values[name]
                     const held = Boolean(state.held[name])
@@ -119,7 +119,7 @@ export default function K2Window({ makeChannel, setTimer, clearTimer, now }) {
                     return (
                         <g
                             key={name}
-                            className={`k2w-control k2w-${control.kind}-group${unused ? ' is-unused' : ''}${pinned === name ? ' is-pinned' : ''}${lit ? ' is-lit' : ''}`}
+                            className={`k2w-control k2w-${control.kind}-group${control.within ? ' is-press' : ''}${unused ? ' is-unused' : ''}${pinned === name ? ' is-pinned' : ''}${lit ? ' is-lit' : ''}`}
                             data-control={name}
                             data-value={Number.isFinite(value) ? value : undefined}
                             role="button"

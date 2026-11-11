@@ -59,6 +59,20 @@ describe('K2 controller window', () => {
         expect(requestMIDIAccess).not.toHaveBeenCalled()
     })
 
+    it('draws the press job of every encoder as the quiet second label, for every console, and the layer words as LN', () => {
+        for (const current of K2_CONSOLES) {
+            cleanup()
+            const { props } = setup(current)
+            render(<K2Window {...props} />)
+            for (const name of Object.keys(face.controls)) {
+                const press = Boolean(face.controls[name].within)
+                expect(controlEl(name).getAttribute('class').includes('is-press'), `${current.id} ${name}`).toBe(press)
+            }
+            expect(controlEl('fader 1').querySelector('[data-job]').textContent).toBe('L1 level')
+            expect(controlEl('fader 1').getAttribute('aria-label')).toBe('fader 1: Layer 1 level')
+        }
+    })
+
     it('draws the same words as the panel cells, for both consoles', () => {
         for (const current of K2_CONSOLES) {
             const { props } = setup(current)

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import face from './xone-k2-face.json'
 import sheet from './xone-k2-default.json'
-import { boxesOverlap, faceOfConsole, faceOfController, jobBox, shapeBox, unionBox, wrapJob } from './k2Face.js'
+import { boxesOverlap, faceOfConsole, faceOfController, faceLines, jobBox, shapeBox, shortLayer, unionBox, wrapJob } from './k2Face.js'
 import { K2_CONSOLES } from './xoneK2.js'
 
 const names = Object.keys(face.controls)
@@ -74,5 +74,20 @@ describe('the K2 face', () => {
         expect(wrapJob('BPM')).toEqual(['BPM'])
         expect(wrapJob('a very long unbreakable-word here again more')).toHaveLength(2)
         for (const line of wrapJob('a very long unbreakable-word here again more')) expect(line.length).toBeLessThanOrEqual(9)
+    })
+})
+
+describe('the words a face prints', () => {
+    it('shows "Layer N" as "LN" and leaves every other word alone', () => {
+        expect(shortLayer('Layer 1 level')).toBe('L1 level')
+        expect(shortLayer('Layer 12 level and Layer 3')).toBe('L12 level and L3')
+        expect(shortLayer('Layer level')).toBe('Layer level')
+        expect(shortLayer('Master fx mix')).toBe('Master fx mix')
+        expect(shortLayer(undefined)).toBe('')
+    })
+
+    it('wraps to the control\'s own line count', () => {
+        expect(faceLines({}, 'Master fx mix', { wrapChars: 9, maxLines: 2 })).toEqual(['Master fx', 'mix'])
+        expect(faceLines({ maxLines: 1 }, 'Layer 1 level', { wrapChars: 9, maxLines: 2 })).toEqual(['L1 level'])
     })
 })
