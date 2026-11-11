@@ -42,6 +42,8 @@ import K2LayoutPanel from '../../../perform/midi/K2LayoutPanel.jsx'
 import { resetDeckValue } from '../../../perform/midi/deckBinding.js'
 import ContextMenu from '../ContextMenu.jsx'
 import EffectsPanel from './EffectsPanel.jsx'
+import DeckSeam from './DeckSeam.jsx'
+import useDeckLayout from './useDeckLayout.js'
 import './vjDeck.css'
 
 // The VJ deck: Resolume's clip grid for one vj.deck node.
@@ -317,6 +319,25 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     // View state of this person's screen, not of the show; MIDI always goes live.
     const [previewOnly, setPreviewOnly] = useState(false)
     const [monitors, setMonitors] = useState(readMonitorPrefs) // { size: 's'|'m'|'l', hidden }
+    // The borders between the panels: this viewer's sizes, never the show's (useDeckLayout.js).
+    const deckLayout = useDeckLayout(rootRef)
+    const paneId = (name) => `vj-deck-${deckLayout.uid}-${name}`
+    const seam = (id, shown, orientation, label, controls, sign = 1) => (shown ? (
+        <DeckSeam
+            key={id}
+            id={id}
+            orientation={orientation}
+            label={label}
+            controls={controls}
+            sign={sign}
+            now={deckLayout.stateOf(id)}
+            read={() => deckLayout.read(id)}
+            onPreview={deckLayout.preview}
+            onCommit={deckLayout.commit}
+            onCancel={deckLayout.cancel}
+            onReset={deckLayout.resetSeam}
+        />
+    ) : null)
     const setMonitorPrefs = (patch) => setMonitors((current) => { const next = { ...current, ...patch }; writeMonitorPrefs(next); return next })
 
     // The same list and value a Video node's picker uses: the PROJECT's files
@@ -604,7 +625,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     )
 
     return (
-        <div ref={rootRef} className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-monitor-size={monitors.size} data-preview-only={previewOnly ? 'true' : 'false'} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick} onPointerDownCapture={onLearnPress} onMouseDownCapture={onLearnPress} onKeyDownCapture={onDeckKeyDown} onContextMenuCapture={onDeckContextMenu}>
+        <div ref={rootRef} className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-monitor-size={monitors.size} data-layout={deckLayout.custom ? 'custom' : 'default'} data-preview-only={previewOnly ? 'true' : 'false'} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick} onPointerDownCapture={onLearnPress} onMouseDownCapture={onLearnPress} onKeyDownCapture={onDeckKeyDown} onContextMenuCapture={onDeckContextMenu}>
             <header className="vj-deck-top">
                 <div className="vj-deck-tempo">
                     <span className="vj-deck-label">BPM</span>
@@ -673,10 +694,10 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                 </div>
             </header>
 
-            <div className="vj-deck-main">
+            <div className="vj-deck-main" style={{ '--vj-layers': deck.layers.length }}>
                 {/* Pointer shortcut only: the keyboard way to deselect is Esc (handled on document). */}
                 {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-                <div className="vj-deck-scroll" ref={scrollRef} onClick={onGridBackground}>
+                <div className="vj-deck-scroll" id={paneId('grid')} ref={scrollRef} onClick={onGridBackground}>
                     <div className="vj-deck-grid" style={gridStyle}>
                         <div className="vj-deck-row vj-deck-columns" role="group" aria-label="Columns">
                             <span className="vj-deck-label vj-deck-columns-head">Columns</span>
@@ -829,7 +850,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     </div>
                 </div>
 
-                <aside className="vj-deck-monitors" aria-label="Monitors">
+                <aside className="vj-deck-monitors" id={paneId('monitors')} aria-label="Monitors">
                     <div className="vj-deck-monitor-tools">
                         <div className="vj-deck-sizes" role="toolbar" aria-label="Monitor size">
                             {MONITOR_SIZES.map((size) => (
@@ -837,9 +858,9 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                     key={size}
                                     type="button"
                                     className="vj-deck-button vj-deck-size"
-                                    aria-pressed={monitors.size === size}
+                                    aria-pressed={monitors.size === size && deckLayout.layout.monitorW == null}
                                     aria-label={`Monitor size ${size.toUpperCase()}`}
-                                    onClick={() => setMonitorPrefs({ size })}
+                                    onClick={() => { setMonitorPrefs({ size }); deckLayout.clearMonitorW() }}
                                 >{size.toUpperCase()}</button>
                             ))}
                         </div>
@@ -851,6 +872,9 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                             onClick={() => setMonitorPrefs({ hidden: !monitors.hidden })}
                         >{monitors.hidden ? 'Show preview' : 'Hide preview'}</button>
                         {previewOnly && monitors.hidden ? takeButton : null}
+                        {deckLayout.custom ? (
+                            <button type="button" className="vj-deck-button vj-deck-layout-reset" onClick={deckLayout.resetAll} title="Put every panel back to its usual size">Reset layout</button>
+                        ) : null}
                     </div>
                     {monitors.hidden ? null : (
                     <figure className="vj-deck-monitor vj-deck-monitor--preview">
@@ -882,9 +906,12 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                         </div>
                     </figure>
                 </aside>
+                {seam('s1', deckLayout.shown.s1s2, 'vertical', 'Resize the layer strip and the clip grid', paneId('grid'))}
+                {seam('s2', deckLayout.shown.s1s2, 'vertical', 'Resize the clip grid and the monitors', paneId('monitors'), -1)}
+                {seam('s4', deckLayout.shown.s4, 'horizontal', 'Resize the clip grid and the panels below', paneId('bottom'))}
             </div>
 
-            <div className="vj-deck-bottom">
+            <div className="vj-deck-bottom" id={paneId('bottom')}>
                 <SourcesPanel
                     mode={mode}
                     editable={editable}
@@ -917,6 +944,8 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     </section>
                 )}
                 <EffectsPanel deck={deck} scope={fxScope} layerIndex={fxLayer} onScope={setFxScope} onLayer={setFxPick} editable={editable} write={write} fxIndex={fxIndex} />
+                {seam('s5', deckLayout.shown.s56, 'vertical', 'Resize Sources and Clip', paneId('bottom'))}
+                {seam('s6', deckLayout.shown.s56, 'vertical', 'Resize Clip and Effects', paneId('bottom'))}
             </div>
             <MidiMapOverlay rootRef={rootRef} midi={midi} layoutKey={deck} />
             {k2Open ? <K2LayoutPanel map={midi.map} monitor={midi.k2Monitor} console={midi.k2Console} consoles={midi.consoles} onPickConsole={editable ? midi.pickConsole : undefined} fxEffect={fxIndex} onClose={() => setK2Open(false)} /> : null}
