@@ -48,7 +48,7 @@ describe('VjDeckView cameras', () => {
         render(<Host onValues={onValues} />)
         const picker = await openPicker()
         const group = within(picker).getByRole('group', { name: 'Cameras' })
-        expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(['Phone', 'Webcam'])
+        expect(within(group).getAllByRole('button').filter((b) => !b.classList.contains('vj-deck-source-switch')).map((b) => b.textContent)).toEqual(['Phone', 'Webcam'])
         expect(listeners.devicechange).toBeTypeOf('function')
         fireEvent.click(within(group).getByRole('button', { name: 'Camera Phone' }))
         expect(lastDeck(onValues).layers[0].clips[0]).toMatchObject({ kind: 'camera', camera: 'Phone', device: 'd1', label: 'Phone' })

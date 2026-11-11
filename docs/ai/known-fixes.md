@@ -1898,3 +1898,11 @@ Cause: `DeckSeam.jsx` cleanup only removed the mark and the frame, never called 
 Fix: cleanup calls `onCancel` for an open drag; a window `resize` listener cancels (clears the flag, measures the fresh box), reads the seam again, counts from the pointer and previews the fresh value; coarse S5/S6 grow to the right only (no `margin-left`, base `--vj-lead`).
 Guard: `VjDeckView.resize.test.jsx` "a drag that is cut short" (3 tests, all fail on the old `DeckSeam.jsx`), `vjDeck.css.test.js` touch zone rule. Not measured on a touch screen.
 Lesson: a drag that owns shared state must release it in its own unmount cleanup, and a pause for a drag needs a way out for the events the pause hides.
+
+## 2026-11-11 - Source switch: a camera switched off kept its last frame; the pool stopped listening after a reset
+
+Symptom: review of the source switch: a camera preview switched off stopped its tracks but the video element kept its stream (last frame on screen, stream object held); the camera pool subscribed to the switch once per module, so after the switch's listeners were reset it never stopped a source again.
+Cause: the cleanup of the preview effects in VjDeckView.jsx (CameraPreview) and MapSourceView.jsx only stopped tracks; cameraPool.js guarded its subscription with a module flag that the reset did not clear.
+Fix: both cleanups set the video's srcObject to null after the tracks stop (off and unmount; on again opens a fresh stream through the effect); cameraPool.js calls subscribeSourcesOff on every open (idempotent).
+Guard: src/map/MapSourceView.sourceOff.test.jsx (off, on again, unmount), src/project/tops/cameraPool.off.test.js (stop after a reset).
+Lesson: stopping a stream's tracks is not letting go of it: clear the element that shows it in the same cleanup.
