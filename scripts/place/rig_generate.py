@@ -19,6 +19,8 @@ build  writes header + the hang's keys + `fixtures` with `groups` expanded + loo
          {"kind": "mirror", "of": "<prefix>", "axis_x": -5.2, "prefix": "rig-y", "part"?, "dmx"?}
                                                                       the units of group <of>, mirrored about x = axis_x
                                                                       (p.x -> 2a - x; Euler XYZ r -> (rx, -ry, -rz))
+       Hang key `head_kinds` (optional list of type ids): the types a scene's heads pattern may name; absent = the legacy
+       ['up-b380f'] only (MOXIR). Data, not a production name.
        Checks (exit 1, nothing written): unique unit ids; every unit has id, type, p[3], r[3]; no two units share a
        DMX channel in one universe; every scene part is a unit part; the scenes checks of scenes_to_rig.py.
 check  compares the keys the project build reads (scripts/rigbuild/epic-build.mjs) between two rig files; exit 1 on a
@@ -96,7 +98,7 @@ def build(hang, scenes_doc, version, title, date, what=None, hang_path=None, sce
     units = list(hang.get('fixtures', [])) + expand(hang.get('groups'))
     errs = unit_errors(units)
     parts = sorted({u['part'] for u in units if u.get('part')})
-    looks, cues, e2 = looks_from_scenes(scenes, parts)
+    looks, cues, e2 = looks_from_scenes(scenes, parts, hang.get('head_kinds'))
     errs += e2
     if errs: return None, errs
     body = {k: v for k, v in hang.items() if k not in ('hang', 'groups', 'fixtures')}

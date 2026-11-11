@@ -1,0 +1,2892 @@
+{
+ "hang": {
+  "from": "scripts/place/rigs/platina-rig-2026-11-11.json",
+  "version": "1.0",
+  "date": "2026-11-11",
+  "written_by": "scripts/place/platina_rig.py"
+ },
+ "generated_by": {
+  "tool": "scripts/place/platina_rig.py",
+  "plan": "scripts/place/rigs/platina-2026-11-11.patch.json",
+  "plot_dir": "/home/dob/work/di.iiii-platina/spaces/platina/assets",
+  "pictures": {
+   "front": "plot-front.png (11-10 light plot, front view, 1654x1170 px)",
+   "top": "plot-top.png (11-10 light plot, top view, 1654x1170 px)",
+   "side": "plot-side.png (11-10 light plot, side view, 1654x1170 px)"
+  }
+ },
+ "schema": "the MOXIR rig schema (moxir-v2-12-2026-10-17.json: fixtures[{id,type,p,r,angle_rad,dmx,status}] + solids[{id,name,kind,p,r,s}]) plus: per item status (measured / from-plan-words / PROPOSED), source, profile (stand-in), size_m, group (the patch plan's select.group)",
+ "frame": "metres, Y up from the AUDIENCE floor (stage deck top at y = 0.6), +x = the audience's right, +z toward the audience, z = 0 the screen's middle plane, x = 0 the axis of the 8 pixel towers. Rotation three.js Euler XYZ radians: an unrotated beam points -Y (down); [pi,0,0] points up; [-pi/2,0,0] points +z. p = the middle of the lamp body; box solids base-anchored (p.y = the base), truss p = the middle of the section.",
+ "method": "scripts/place/platina_rig.py: grid pitch per picture from the light-grey lines; one square = 1 m, proved on standard parts (see calibration); colour blobs and dark-line edges against the grid; numbers rounded to 1 cm (a drawing px is 1.0-1.3 cm, the symbols are split by drawn lines: positions are good to about 0.05 m).",
+ "calibration": {
+  "px_per_m": {
+   "front_px_per_m": 100.725,
+   "top_px_per_m": 76.453125,
+   "side_px_per_m": 123.41176470588235
+  },
+  "grid_lines_used": {
+   "front": 20,
+   "top": 32,
+   "side": 17
+  },
+  "proofs_m": {
+   "front_truss_len_m": 8.11,
+   "top_truss_over_len_m": 7.98,
+   "top_truss_aud_len_m": 7.98,
+   "front_bar_stack_m": 3.03,
+   "side_bar_stack_m": 3.01,
+   "front_screen_w_m": 4.01,
+   "front_screen_h_m": 2.5,
+   "top_screen_w_m": 4.04,
+   "side_truss_section_m": 0.4,
+   "person_side_m": 1.73
+  },
+  "reading": "truss 4 x 2 m = 8.0; 3 stacked bars = 3.0; screen 4.0 x 2.5; the drawn person 1.74 m: all within 0.1 m of 1 m per square in all three views"
+ },
+ "kit": {
+  "cp-aleda-beye-k10": 8,
+  "cp-hy-beye-k15": 8,
+  "acme-xp16r-bsw": 12,
+  "acme-pixel-line-ip": 24,
+  "magmatic-magma-prime": 2
+ },
+ "kit_note": "counts of the offer (rental list scripts/rigbuild/rentals/platina-2026-11-11.json, offer of 2026-11-11); no prices are kept here",
+ "screen": {
+  "solid": "platina-screen",
+  "cabinets": "8 x 5 of 0.5 m, 128 px each = 1024 x 640 px (16:10)",
+  "status": "measured from the drawing, NOT confirmed by the Platina side (ask the screen crew)"
+ },
+ "axis_note": {
+  "screen_centre_x_m": -0.04,
+  "truss_over_centre_x_m": -0.14,
+  "why": "the plot is not exactly symmetric: the screen and the trusses sit 0.03-0.1 m left of the tower axis; kept as drawn"
+ },
+ "profiles": {
+  "library": "src/rigbuild/types/library (UP-*, EXT-*) and scripts/place/fixtures/fixtures.json kinds; none of the five Platina types has its own profile",
+  "missing": {
+   "cp-aleda-beye-k10": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+   },
+   "cp-hy-beye-k15": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+   },
+   "acme-xp16r-bsw": {
+    "stand_in": "up-b380f",
+    "basis": "ASSUMED",
+    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+   },
+   "acme-pixel-line-ip": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "magmatic-magma-prime": {
+    "stand_in": "ext-hazer",
+    "basis": "ASSUMED",
+    "why": "EXT-HAZER is a planning type modelled on an Antari HZ-1000, not the Elation Magma Prime"
+   }
+  },
+  "note": "a stand-in is only for geometry/optics in the visualiser; names and DMX modes come from the patch plan. Nothing here is invented as a maker profile."
+ },
+ "plot_only": {
+  "k10_audience_side": {
+   "count": 3,
+   "x_m": [
+    -2.68,
+    -0.02,
+    2.61
+   ],
+   "z_m": 8.17,
+   "status": "measured, NOT in the offer, not built, not patched"
+  },
+  "sharpy": {
+   "count": 7,
+   "x_m": [
+    -3.13,
+    -2.1,
+    -1.08,
+    -0.08,
+    0.93,
+    1.97,
+    2.95
+   ],
+   "status": "measured, NOT in the offer; their slots are used by 7 of the PROPOSED XP-16R"
+  }
+ },
+ "patch": {
+  "plan": "scripts/place/rigs/platina-2026-11-11.patch.json",
+  "universes": 10,
+  "units": 54,
+  "status": "PROPOSED, not confirmed by the rental side"
+ },
+ "solids": [
+  {
+   "id": "platina-screen",
+   "name": "LED screen 4.01 x 2.5 m (P3.9 cabinets 0.5 m: 8 x 5 = 1024 x 640 px; the file name says 8 x 5, the drawing gives 8 x 5 cabinets)",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    -0.04,
+    1.42,
+    0.0
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    4.01,
+    2.5,
+    0.1
+   ],
+   "source": "plot-front.png outline x 610..1014, y 438..690 on grid 1 m; plot-side.png faces x 451/463 (thickness), bottom y 741; screen-from-plot-8x5.png (same size)"
+  },
+  {
+   "id": "platina-truss-over",
+   "name": "over-stage truss 7.98 m (4 sections x 2 m), square section 0.38 m, the 11-10 plan's \"over-stage truss\"",
+   "kind": "truss",
+   "status": "measured",
+   "p": [
+    -0.14,
+    6.75,
+    2.17
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    7.98,
+    0.38,
+    0.38
+   ],
+   "sections": 4,
+   "source": "x/length plot-top.png (y 385, x 518..1128, grid 76.4 px/m), cross-check plot-front.png length; z and height plot-side.png (square at x 700..742, y 62..102)"
+  },
+  {
+   "id": "platina-truss-aud",
+   "name": "audience-side truss 7.98 m (4 sections), the 11-10 plan's \"audience-side truss\"; the plot hangs 3 K10 here that are NOT in the 11-11 offer",
+   "kind": "truss",
+   "status": "measured",
+   "p": [
+    -0.05,
+    6.75,
+    8.03
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    7.98,
+    0.38,
+    0.38
+   ],
+   "sections": 4,
+   "source": "plot-top.png y 860, x 525..1135; z and height plot-side.png (square at x 1425..1463)"
+  },
+  {
+   "id": "platina-deck",
+   "name": "stage deck 0.6 m high; bounding box, the front edge is an arc (see outline)",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    -0.04,
+    0.0,
+    2.65
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    14.0,
+    0.6,
+    7.2
+   ],
+   "outline_xz": [
+    [
+     -7.01,
+     5.34
+    ],
+    [
+     0.0,
+     6.23
+    ],
+    [
+     6.95,
+     5.34
+    ]
+   ],
+   "outline_note": "front arc through its two ends and its middle (plot-top.png y 645 at x 298/1365, y 713 at x 832)",
+   "source": "plot-front.png deck x 107..1517, deck height 0.62 m (front) / 0.59 m (side), z plot-side.png 339..1228"
+  },
+  {
+   "id": "platina-wing-l1",
+   "name": "wing panel (unlabelled tall box on the plot) L1",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    -5.33,
+    0.0,
+    0.09
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.01,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834"
+  },
+  {
+   "id": "platina-wing-r1",
+   "name": "wing panel (unlabelled tall box on the plot) R1",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    5.33,
+    0.0,
+    0.09
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.01,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked"
+  },
+  {
+   "id": "platina-wing-l2",
+   "name": "wing panel (unlabelled tall box on the plot) L2",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    -6.01,
+    0.0,
+    1.26
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.25,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834"
+  },
+  {
+   "id": "platina-wing-r2",
+   "name": "wing panel (unlabelled tall box on the plot) R2",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    6.01,
+    0.0,
+    1.26
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.25,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked"
+  },
+  {
+   "id": "platina-wing-l3",
+   "name": "wing panel (unlabelled tall box on the plot) L3",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    -6.71,
+    0.0,
+    2.82
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.28,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834"
+  },
+  {
+   "id": "platina-wing-r3",
+   "name": "wing panel (unlabelled tall box on the plot) R3",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    6.71,
+    0.0,
+    2.82
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.28,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked"
+  },
+  {
+   "id": "platina-wing-l4",
+   "name": "wing panel (unlabelled tall box on the plot) L4",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    -7.09,
+    0.0,
+    4.24
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    1.5,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834"
+  },
+  {
+   "id": "platina-wing-r4",
+   "name": "wing panel (unlabelled tall box on the plot) R4",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    7.09,
+    0.0,
+    4.24
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    1.5,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked"
+  },
+  {
+   "id": "platina-riser-l",
+   "name": "platform box on the deck (unlabelled on the plot)",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    -3.71,
+    0.6,
+    5.0
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    1.99,
+    0.99,
+    1.5
+   ],
+   "source": "plot-top.png box x -4.71..-2.72 m, z; height plot-front.png y 672..772"
+  },
+  {
+   "id": "platina-riser-r",
+   "name": "platform box on the deck (unlabelled on the plot)",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    3.65,
+    0.6,
+    5.0
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.0,
+    0.99,
+    1.5
+   ],
+   "source": "plot-top.png box x 2.64..4.65 m, z; height plot-front.png y 672..772"
+  },
+  {
+   "id": "platina-tower-1",
+   "name": "tower 1 pole (counted from the audience's left)",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    -6.46,
+    0.0,
+    4.58
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-2",
+   "name": "tower 2 pole (counted from the audience's left)",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    -5.82,
+    0.0,
+    3.23
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-3",
+   "name": "tower 3 pole (counted from the audience's left)",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    -5.1,
+    0.0,
+    1.7
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-4",
+   "name": "tower 4 pole (counted from the audience's left)",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    -4.49,
+    0.0,
+    0.54
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-5",
+   "name": "tower 5 pole (counted from the audience's left)",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    4.47,
+    0.0,
+    0.54
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-6",
+   "name": "tower 6 pole (counted from the audience's left)",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    5.06,
+    0.0,
+    1.7
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-7",
+   "name": "tower 7 pole (counted from the audience's left)",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    5.88,
+    0.0,
+    3.23
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-8",
+   "name": "tower 8 pole (counted from the audience's left)",
+   "kind": "box",
+   "status": "measured",
+   "p": [
+    6.45,
+    0.0,
+    4.58
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  }
+ ],
+ "fixtures": [
+  {
+   "id": "platina-pixel-01",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g1",
+   "part": "pixel line tower 1 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -6.46,
+    2.09,
+    4.58
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 1, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 4,
+    "address": 1,
+    "footprint": 117,
+    "fixture": 401,
+    "mode": "117ch",
+    "port": "D",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g1 (start 1, order id-asc, unit 1 of 4)"
+   },
+   "tower": 1,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-02",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g1",
+   "part": "pixel line tower 1 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -6.46,
+    3.1,
+    4.58
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 1, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 4,
+    "address": 118,
+    "footprint": 117,
+    "fixture": 402,
+    "mode": "117ch",
+    "port": "D",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g1 (start 1, order id-asc, unit 2 of 4)"
+   },
+   "tower": 1,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-03",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g1",
+   "part": "pixel line tower 1 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -6.46,
+    4.1,
+    4.58
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 1, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 4,
+    "address": 235,
+    "footprint": 117,
+    "fixture": 403,
+    "mode": "117ch",
+    "port": "D",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g1 (start 1, order id-asc, unit 3 of 4)"
+   },
+   "tower": 1,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-04",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g1",
+   "part": "pixel line tower 2 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -5.82,
+    2.09,
+    3.23
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 2, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 4,
+    "address": 352,
+    "footprint": 117,
+    "fixture": 404,
+    "mode": "117ch",
+    "port": "D",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g1 (start 1, order id-asc, unit 4 of 4)"
+   },
+   "tower": 2,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-05",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g2",
+   "part": "pixel line tower 2 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -5.82,
+    3.1,
+    3.23
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 2, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 5,
+    "address": 1,
+    "footprint": 117,
+    "fixture": 405,
+    "mode": "117ch",
+    "port": "E",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g2 (start 1, order id-asc, unit 1 of 4)"
+   },
+   "tower": 2,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-06",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g2",
+   "part": "pixel line tower 2 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -5.82,
+    4.1,
+    3.23
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 2, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 5,
+    "address": 118,
+    "footprint": 117,
+    "fixture": 406,
+    "mode": "117ch",
+    "port": "E",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g2 (start 1, order id-asc, unit 2 of 4)"
+   },
+   "tower": 2,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-07",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g2",
+   "part": "pixel line tower 3 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -5.1,
+    2.09,
+    1.7
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 3, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 5,
+    "address": 235,
+    "footprint": 117,
+    "fixture": 407,
+    "mode": "117ch",
+    "port": "E",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g2 (start 1, order id-asc, unit 3 of 4)"
+   },
+   "tower": 3,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-08",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g2",
+   "part": "pixel line tower 3 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -5.1,
+    3.1,
+    1.7
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 3, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 5,
+    "address": 352,
+    "footprint": 117,
+    "fixture": 408,
+    "mode": "117ch",
+    "port": "E",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g2 (start 1, order id-asc, unit 4 of 4)"
+   },
+   "tower": 3,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-09",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g3",
+   "part": "pixel line tower 3 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -5.1,
+    4.1,
+    1.7
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 3, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 6,
+    "address": 1,
+    "footprint": 117,
+    "fixture": 409,
+    "mode": "117ch",
+    "port": "F",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g3 (start 1, order id-asc, unit 1 of 4)"
+   },
+   "tower": 3,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-10",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g3",
+   "part": "pixel line tower 4 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -4.49,
+    2.09,
+    0.54
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 4, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 6,
+    "address": 118,
+    "footprint": 117,
+    "fixture": 410,
+    "mode": "117ch",
+    "port": "F",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g3 (start 1, order id-asc, unit 2 of 4)"
+   },
+   "tower": 4,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-11",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g3",
+   "part": "pixel line tower 4 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -4.49,
+    3.1,
+    0.54
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 4, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 6,
+    "address": 235,
+    "footprint": 117,
+    "fixture": 411,
+    "mode": "117ch",
+    "port": "F",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g3 (start 1, order id-asc, unit 3 of 4)"
+   },
+   "tower": 4,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-12",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g3",
+   "part": "pixel line tower 4 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -4.49,
+    4.1,
+    0.54
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 4, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 6,
+    "address": 352,
+    "footprint": 117,
+    "fixture": 412,
+    "mode": "117ch",
+    "port": "F",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g3 (start 1, order id-asc, unit 4 of 4)"
+   },
+   "tower": 4,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-13",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g4",
+   "part": "pixel line tower 5 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    4.47,
+    2.09,
+    0.54
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 5, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 7,
+    "address": 1,
+    "footprint": 117,
+    "fixture": 413,
+    "mode": "117ch",
+    "port": "G",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g4 (start 1, order id-asc, unit 1 of 4)"
+   },
+   "tower": 5,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-14",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g4",
+   "part": "pixel line tower 5 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    4.47,
+    3.1,
+    0.54
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 5, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 7,
+    "address": 118,
+    "footprint": 117,
+    "fixture": 414,
+    "mode": "117ch",
+    "port": "G",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g4 (start 1, order id-asc, unit 2 of 4)"
+   },
+   "tower": 5,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-15",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g4",
+   "part": "pixel line tower 5 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    4.47,
+    4.1,
+    0.54
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 5, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 7,
+    "address": 235,
+    "footprint": 117,
+    "fixture": 415,
+    "mode": "117ch",
+    "port": "G",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g4 (start 1, order id-asc, unit 3 of 4)"
+   },
+   "tower": 5,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-16",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g4",
+   "part": "pixel line tower 6 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    5.06,
+    2.09,
+    1.7
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 6, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 7,
+    "address": 352,
+    "footprint": 117,
+    "fixture": 416,
+    "mode": "117ch",
+    "port": "G",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g4 (start 1, order id-asc, unit 4 of 4)"
+   },
+   "tower": 6,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-17",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g5",
+   "part": "pixel line tower 6 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    5.06,
+    3.1,
+    1.7
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 6, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 8,
+    "address": 1,
+    "footprint": 117,
+    "fixture": 417,
+    "mode": "117ch",
+    "port": "H",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g5 (start 1, order id-asc, unit 1 of 4)"
+   },
+   "tower": 6,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-18",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g5",
+   "part": "pixel line tower 6 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    5.06,
+    4.1,
+    1.7
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 6, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 8,
+    "address": 118,
+    "footprint": 117,
+    "fixture": 418,
+    "mode": "117ch",
+    "port": "H",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g5 (start 1, order id-asc, unit 2 of 4)"
+   },
+   "tower": 6,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-19",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g5",
+   "part": "pixel line tower 7 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    5.88,
+    2.09,
+    3.23
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 7, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 8,
+    "address": 235,
+    "footprint": 117,
+    "fixture": 419,
+    "mode": "117ch",
+    "port": "H",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g5 (start 1, order id-asc, unit 3 of 4)"
+   },
+   "tower": 7,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-20",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g5",
+   "part": "pixel line tower 7 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    5.88,
+    3.1,
+    3.23
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 7, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 8,
+    "address": 352,
+    "footprint": 117,
+    "fixture": 420,
+    "mode": "117ch",
+    "port": "H",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g5 (start 1, order id-asc, unit 4 of 4)"
+   },
+   "tower": 7,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-21",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g6",
+   "part": "pixel line tower 7 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    5.88,
+    4.1,
+    3.23
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 7, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 9,
+    "address": 1,
+    "footprint": 117,
+    "fixture": 421,
+    "mode": "117ch",
+    "port": "I",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g6 (start 1, order id-asc, unit 1 of 4)"
+   },
+   "tower": 7,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-22",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g6",
+   "part": "pixel line tower 8 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    6.45,
+    2.09,
+    4.58
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 8, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 9,
+    "address": 118,
+    "footprint": 117,
+    "fixture": 422,
+    "mode": "117ch",
+    "port": "I",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g6 (start 1, order id-asc, unit 2 of 4)"
+   },
+   "tower": 8,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-23",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g6",
+   "part": "pixel line tower 8 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    6.45,
+    3.1,
+    4.58
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 8, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 9,
+    "address": 235,
+    "footprint": 117,
+    "fixture": 423,
+    "mode": "117ch",
+    "port": "I",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g6 (start 1, order id-asc, unit 3 of 4)"
+   },
+   "tower": 8,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-pixel-24",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g6",
+   "part": "pixel line tower 8 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    6.45,
+    4.1,
+    4.58
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.131,
+   "size_m": [
+    0.06,
+    1.0,
+    0.11
+   ],
+   "source": "tower 8, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "stand_in": "up-pl5403",
+    "basis": "ASSUMED",
+    "why": "no LED-bar profile exists; the IP PAR-54X3 is the nearest RGBW IP wash (beam 15 deg). The bar is 1.0 x ~0.07 x ~0.11 m from the plot"
+   },
+   "dmx": {
+    "universe": 9,
+    "address": 352,
+    "footprint": 117,
+    "fixture": 424,
+    "mode": "117ch",
+    "port": "I",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g6 (start 1, order id-asc, unit 4 of 4)"
+   },
+   "tower": 8,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z"
+  },
+  {
+   "id": "platina-k10-01",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage",
+   "part": "K10 1 over the stage",
+   "status": "measured",
+   "p": [
+    -3.56,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.35,
+    0.45,
+    0.27
+   ],
+   "source": "x plot-top.png glyph centroid (slot 1 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+   },
+   "dmx": {
+    "universe": 1,
+    "address": 1,
+    "footprint": 76,
+    "fixture": 101,
+    "mode": "Pixel RGBW",
+    "port": "A",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 1 of 6)"
+   },
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-02",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage",
+   "part": "K10 2 over the stage",
+   "status": "measured",
+   "p": [
+    -2.57,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.35,
+    0.45,
+    0.27
+   ],
+   "source": "x plot-top.png glyph centroid (slot 2 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+   },
+   "dmx": {
+    "universe": 1,
+    "address": 77,
+    "footprint": 76,
+    "fixture": 102,
+    "mode": "Pixel RGBW",
+    "port": "A",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 2 of 6)"
+   },
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-03",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage",
+   "part": "K10 3 over the stage",
+   "status": "measured",
+   "p": [
+    -1.57,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.35,
+    0.45,
+    0.27
+   ],
+   "source": "x plot-top.png glyph centroid (slot 3 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+   },
+   "dmx": {
+    "universe": 1,
+    "address": 153,
+    "footprint": 76,
+    "fixture": 103,
+    "mode": "Pixel RGBW",
+    "port": "A",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 3 of 6)"
+   },
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-04",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage",
+   "part": "K10 4 over the stage",
+   "status": "measured",
+   "p": [
+    -0.56,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.35,
+    0.45,
+    0.27
+   ],
+   "source": "x plot-top.png glyph centroid (slot 4 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+   },
+   "dmx": {
+    "universe": 1,
+    "address": 229,
+    "footprint": 76,
+    "fixture": 104,
+    "mode": "Pixel RGBW",
+    "port": "A",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 4 of 6)"
+   },
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-05",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage",
+   "part": "K10 5 over the stage",
+   "status": "measured",
+   "p": [
+    0.43,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.35,
+    0.45,
+    0.27
+   ],
+   "source": "x plot-top.png glyph centroid (slot 5 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+   },
+   "dmx": {
+    "universe": 1,
+    "address": 305,
+    "footprint": 76,
+    "fixture": 105,
+    "mode": "Pixel RGBW",
+    "port": "A",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 5 of 6)"
+   },
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-06",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage",
+   "part": "K10 6 over the stage",
+   "status": "measured",
+   "p": [
+    1.44,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.35,
+    0.45,
+    0.27
+   ],
+   "source": "x plot-top.png glyph centroid (slot 6 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+   },
+   "dmx": {
+    "universe": 1,
+    "address": 381,
+    "footprint": 76,
+    "fixture": 106,
+    "mode": "Pixel RGBW",
+    "port": "A",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 6 of 6)"
+   },
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-07",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage-b",
+   "part": "K10 7 over the stage",
+   "status": "measured",
+   "p": [
+    2.44,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.35,
+    0.45,
+    0.27
+   ],
+   "source": "x plot-top.png glyph centroid (slot 7 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+   },
+   "dmx": {
+    "universe": 2,
+    "address": 1,
+    "footprint": 76,
+    "fixture": 107,
+    "mode": "Pixel RGBW",
+    "port": "B",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 1 of 2)"
+   },
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-08",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage-b",
+   "part": "K10 8 over the stage",
+   "status": "measured",
+   "p": [
+    3.42,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.35,
+    0.45,
+    0.27
+   ],
+   "source": "x plot-top.png glyph centroid (slot 8 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "UP-HK1915 is modelled on the K10 itself (fixtures.json: size/weight EQUIVALENT of the A.leda B-EYE K10, 19 x 15 W RGBW, zoom 4-60, pan/tilt 540/230)"
+   },
+   "dmx": {
+    "universe": 2,
+    "address": 77,
+    "footprint": 76,
+    "fixture": 108,
+    "mode": "Pixel RGBW",
+    "port": "B",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 2 of 2)"
+   },
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k15-01",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-floor",
+   "part": "K15 1 stage-floor row",
+   "status": "measured",
+   "p": [
+    -3.24,
+    0.8,
+    0.13
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.38,
+    0.4,
+    0.33
+   ],
+   "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+   },
+   "dmx": {
+    "universe": 2,
+    "address": 153,
+    "footprint": 76,
+    "fixture": 201,
+    "mode": "Pixel RGBW",
+    "port": "B",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 153, order id-asc, unit 1 of 4)"
+   },
+   "aim_home": "straight up (pan 0 / tilt 0, standing)",
+   "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
+  },
+  {
+   "id": "platina-k15-02",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-floor",
+   "part": "K15 2 stage-floor row",
+   "status": "measured",
+   "p": [
+    -1.96,
+    0.8,
+    0.13
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.38,
+    0.4,
+    0.33
+   ],
+   "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+   },
+   "dmx": {
+    "universe": 2,
+    "address": 229,
+    "footprint": 76,
+    "fixture": 202,
+    "mode": "Pixel RGBW",
+    "port": "B",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 153, order id-asc, unit 2 of 4)"
+   },
+   "aim_home": "straight up (pan 0 / tilt 0, standing)",
+   "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
+  },
+  {
+   "id": "platina-k15-03",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-floor",
+   "part": "K15 3 stage-floor row",
+   "status": "measured",
+   "p": [
+    -0.69,
+    0.8,
+    0.13
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.38,
+    0.4,
+    0.33
+   ],
+   "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+   },
+   "dmx": {
+    "universe": 2,
+    "address": 305,
+    "footprint": 76,
+    "fixture": 203,
+    "mode": "Pixel RGBW",
+    "port": "B",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 153, order id-asc, unit 3 of 4)"
+   },
+   "aim_home": "straight up (pan 0 / tilt 0, standing)",
+   "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
+  },
+  {
+   "id": "platina-k15-04",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-floor",
+   "part": "K15 4 stage-floor row",
+   "status": "measured",
+   "p": [
+    0.59,
+    0.8,
+    0.13
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.38,
+    0.4,
+    0.33
+   ],
+   "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+   },
+   "dmx": {
+    "universe": 2,
+    "address": 381,
+    "footprint": 76,
+    "fixture": 204,
+    "mode": "Pixel RGBW",
+    "port": "B",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 153, order id-asc, unit 4 of 4)"
+   },
+   "aim_home": "straight up (pan 0 / tilt 0, standing)",
+   "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
+  },
+  {
+   "id": "platina-k15-05",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-floor-b",
+   "part": "K15 5 stage-floor row",
+   "status": "measured",
+   "p": [
+    1.87,
+    0.8,
+    0.13
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.38,
+    0.4,
+    0.33
+   ],
+   "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+   },
+   "dmx": {
+    "universe": 3,
+    "address": 1,
+    "footprint": 76,
+    "fixture": 205,
+    "mode": "Pixel RGBW",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor-b (start 1, order id-asc, unit 1 of 2)"
+   },
+   "aim_home": "straight up (pan 0 / tilt 0, standing)",
+   "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
+  },
+  {
+   "id": "platina-k15-06",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-floor-b",
+   "part": "K15 6 stage-floor row",
+   "status": "measured",
+   "p": [
+    3.15,
+    0.8,
+    0.13
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.38,
+    0.4,
+    0.33
+   ],
+   "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+   },
+   "dmx": {
+    "universe": 3,
+    "address": 77,
+    "footprint": 76,
+    "fixture": 206,
+    "mode": "Pixel RGBW",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor-b (start 1, order id-asc, unit 2 of 2)"
+   },
+   "aim_home": "straight up (pan 0 / tilt 0, standing)",
+   "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
+  },
+  {
+   "id": "platina-k15-07",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-sides",
+   "part": "K15 7 side stand",
+   "status": "measured",
+   "p": [
+    -6.47,
+    3.42,
+    5.3
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.39,
+    0.38,
+    0.36
+   ],
+   "source": "x plot-front.png lamp body, z plot-side.png/plot-top.png, height plot-front.png: on a stand at the side (the plot shows a pole)",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+   },
+   "dmx": {
+    "universe": 3,
+    "address": 153,
+    "footprint": 76,
+    "fixture": 207,
+    "mode": "Pixel RGBW",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-sides (start 153, order id-asc, unit 1 of 2)"
+   },
+   "aim_home": "straight up",
+   "stand": "on a pole beside the body (plot-front.png)"
+  },
+  {
+   "id": "platina-k15-08",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-sides",
+   "part": "K15 8 side stand",
+   "status": "measured",
+   "p": [
+    6.38,
+    3.42,
+    5.3
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.39,
+    0.38,
+    0.36
+   ],
+   "source": "x plot-front.png lamp body, z plot-side.png/plot-top.png, height plot-front.png: on a stand at the side (the plot shows a pole)",
+   "profile": {
+    "stand_in": "up-hk1915",
+    "basis": "ASSUMED",
+    "why": "same 19-lens RGBW head family; the K15 has stronger LEDs and a larger head, so size is taken from the plot symbol, optics ASSUMED"
+   },
+   "dmx": {
+    "universe": 3,
+    "address": 229,
+    "footprint": 76,
+    "fixture": 208,
+    "mode": "Pixel RGBW",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-sides (start 153, order id-asc, unit 2 of 2)"
+   },
+   "aim_home": "straight up",
+   "stand": "on a pole beside the body (plot-front.png)"
+  },
+  {
+   "id": "platina-xp16r-01",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 1",
+   "status": "PROPOSED",
+   "p": [
+    -3.13,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.0157,
+   "size_m": [
+    0.35,
+    0.5,
+    0.3
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "stand_in": "up-b380f",
+    "basis": "ASSUMED",
+    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+   },
+   "dmx": {
+    "universe": 10,
+    "address": 1,
+    "footprint": 23,
+    "fixture": 501,
+    "mode": "23ch ASSUMED",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 1 of 12)"
+   },
+   "aim_home": "straight down",
+   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-02",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 2",
+   "status": "PROPOSED",
+   "p": [
+    -2.1,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.0157,
+   "size_m": [
+    0.35,
+    0.5,
+    0.3
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "stand_in": "up-b380f",
+    "basis": "ASSUMED",
+    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+   },
+   "dmx": {
+    "universe": 10,
+    "address": 24,
+    "footprint": 23,
+    "fixture": 502,
+    "mode": "23ch ASSUMED",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 2 of 12)"
+   },
+   "aim_home": "straight down",
+   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-03",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 3",
+   "status": "PROPOSED",
+   "p": [
+    -1.08,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.0157,
+   "size_m": [
+    0.35,
+    0.5,
+    0.3
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "stand_in": "up-b380f",
+    "basis": "ASSUMED",
+    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+   },
+   "dmx": {
+    "universe": 10,
+    "address": 47,
+    "footprint": 23,
+    "fixture": 503,
+    "mode": "23ch ASSUMED",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 3 of 12)"
+   },
+   "aim_home": "straight down",
+   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-04",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 4",
+   "status": "PROPOSED",
+   "p": [
+    -0.08,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.0157,
+   "size_m": [
+    0.35,
+    0.5,
+    0.3
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "stand_in": "up-b380f",
+    "basis": "ASSUMED",
+    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+   },
+   "dmx": {
+    "universe": 10,
+    "address": 70,
+    "footprint": 23,
+    "fixture": 504,
+    "mode": "23ch ASSUMED",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 4 of 12)"
+   },
+   "aim_home": "straight down",
+   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-05",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 5",
+   "status": "PROPOSED",
+   "p": [
+    0.93,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.0157,
+   "size_m": [
+    0.35,
+    0.5,
+    0.3
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "stand_in": "up-b380f",
+    "basis": "ASSUMED",
+    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+   },
+   "dmx": {
+    "universe": 10,
+    "address": 93,
+    "footprint": 23,
+    "fixture": 505,
+    "mode": "23ch ASSUMED",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 5 of 12)"
+   },
+   "aim_home": "straight down",
+   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-06",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 6",
+   "status": "PROPOSED",
+   "p": [
+    1.97,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.0157,
+   "size_m": [
+    0.35,
+    0.5,
+    0.3
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "stand_in": "up-b380f",
+    "basis": "ASSUMED",
+    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+   },
+   "dmx": {
+    "universe": 10,
+    "address": 116,
+    "footprint": 23,
+    "fixture": 506,
+    "mode": "23ch ASSUMED",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 6 of 12)"
+   },
+   "aim_home": "straight down",
+   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-07",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 7",
+   "status": "PROPOSED",
+   "p": [
+    2.95,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.0157,
+   "size_m": [
+    0.35,
+    0.5,
+    0.3
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "stand_in": "up-b380f",
+    "basis": "ASSUMED",
+    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+   },
+   "dmx": {
+    "universe": 10,
+    "address": 139,
+    "footprint": 23,
+    "fixture": 507,
+    "mode": "23ch ASSUMED",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 7 of 12)"
+   },
+   "aim_home": "straight down",
+   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-08",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 8",
+   "status": "PROPOSED",
+   "p": [
+    -3.5,
+    6.34,
+    8.17
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.0157,
+   "size_m": [
+    0.35,
+    0.5,
+    0.3
+   ],
+   "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
+   "profile": {
+    "stand_in": "up-b380f",
+    "basis": "ASSUMED",
+    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+   },
+   "dmx": {
+    "universe": 10,
+    "address": 162,
+    "footprint": 23,
+    "fixture": 508,
+    "mode": "23ch ASSUMED",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 8 of 12)"
+   },
+   "aim_home": "straight down",
+   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-09",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 9",
+   "status": "PROPOSED",
+   "p": [
+    -1.75,
+    6.34,
+    8.17
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.0157,
+   "size_m": [
+    0.35,
+    0.5,
+    0.3
+   ],
+   "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
+   "profile": {
+    "stand_in": "up-b380f",
+    "basis": "ASSUMED",
+    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+   },
+   "dmx": {
+    "universe": 10,
+    "address": 185,
+    "footprint": 23,
+    "fixture": 509,
+    "mode": "23ch ASSUMED",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 9 of 12)"
+   },
+   "aim_home": "straight down",
+   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-10",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 10",
+   "status": "PROPOSED",
+   "p": [
+    0.0,
+    6.34,
+    8.17
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.0157,
+   "size_m": [
+    0.35,
+    0.5,
+    0.3
+   ],
+   "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
+   "profile": {
+    "stand_in": "up-b380f",
+    "basis": "ASSUMED",
+    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+   },
+   "dmx": {
+    "universe": 10,
+    "address": 208,
+    "footprint": 23,
+    "fixture": 510,
+    "mode": "23ch ASSUMED",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 10 of 12)"
+   },
+   "aim_home": "straight down",
+   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-11",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 11",
+   "status": "PROPOSED",
+   "p": [
+    1.75,
+    6.34,
+    8.17
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.0157,
+   "size_m": [
+    0.35,
+    0.5,
+    0.3
+   ],
+   "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
+   "profile": {
+    "stand_in": "up-b380f",
+    "basis": "ASSUMED",
+    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+   },
+   "dmx": {
+    "universe": 10,
+    "address": 231,
+    "footprint": 23,
+    "fixture": 511,
+    "mode": "23ch ASSUMED",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 11 of 12)"
+   },
+   "aim_home": "straight down",
+   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-12",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 12",
+   "status": "PROPOSED",
+   "p": [
+    3.5,
+    6.34,
+    8.17
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.0157,
+   "size_m": [
+    0.35,
+    0.5,
+    0.3
+   ],
+   "source": "PROPOSED: 5 evenly on the audience-side truss, 1.75 m pitch, symmetric about the axis (the plot's 3 K10 slots there are free)",
+   "profile": {
+    "stand_in": "up-b380f",
+    "basis": "ASSUMED",
+    "why": "a \"16R\" is a discharge-lamp beam/spot/wash head like the 380 W beam (1.8 deg, pan/tilt 540/270); runner-up up-250bsw (LED spot/wash, zoom 10-30). Size from the 11-10 Sharpy slot"
+   },
+   "dmx": {
+    "universe": 10,
+    "address": 254,
+    "footprint": 23,
+    "fixture": 512,
+    "mode": "23ch ASSUMED",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 12 of 12)"
+   },
+   "aim_home": "straight down",
+   "beam_note": "angle_rad ASSUMED from the stand-in beam 1.8 deg",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-hazer-1",
+   "type": "magmatic-magma-prime",
+   "group": "hazer",
+   "part": "hazer 1",
+   "status": "PROPOSED",
+   "p": [
+    -3.4,
+    0.91,
+    -0.55
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.0,
+   "size_m": [
+    0.69,
+    0.51,
+    0.61
+   ],
+   "source": "PROPOSED: on the deck behind the screen line, outside the screen's width, between the screen and the back wall (-0.96 m): hidden from the audience, hazes the whole stage; the list and the plot place none",
+   "profile": {
+    "stand_in": "ext-hazer",
+    "basis": "ASSUMED",
+    "why": "EXT-HAZER is a planning type modelled on an Antari HZ-1000, not the Elation Magma Prime"
+   },
+   "dmx": {
+    "universe": 3,
+    "address": 461,
+    "footprint": 5,
+    "fixture": 301,
+    "mode": "5ch",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block hazer (start 461, order id-asc, unit 1 of 2)"
+   },
+   "aim_home": "horizontal +z (output toward the audience)",
+   "stand_in_note": "size from EXT-HAZER (Antari HZ-1000, EQUIVALENT)"
+  },
+  {
+   "id": "platina-hazer-2",
+   "type": "magmatic-magma-prime",
+   "group": "hazer",
+   "part": "hazer 2",
+   "status": "PROPOSED",
+   "p": [
+    3.4,
+    0.91,
+    -0.55
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.0,
+   "size_m": [
+    0.69,
+    0.51,
+    0.61
+   ],
+   "source": "PROPOSED: on the deck behind the screen line, outside the screen's width, between the screen and the back wall (-0.96 m): hidden from the audience, hazes the whole stage; the list and the plot place none",
+   "profile": {
+    "stand_in": "ext-hazer",
+    "basis": "ASSUMED",
+    "why": "EXT-HAZER is a planning type modelled on an Antari HZ-1000, not the Elation Magma Prime"
+   },
+   "dmx": {
+    "universe": 3,
+    "address": 466,
+    "footprint": 5,
+    "fixture": 302,
+    "mode": "5ch",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block hazer (start 461, order id-asc, unit 2 of 2)"
+   },
+   "aim_home": "horizontal +z (output toward the audience)",
+   "stand_in_note": "size from EXT-HAZER (Antari HZ-1000, EQUIVALENT)"
+  }
+ ],
+ "owed": [
+  "Ask the Platina side: where the 12 XP-16R hang, where the 2 hazers stand, whether the 3 audience-side K10 / 7 Sharpy of the 11-10 plot are really not coming, the LED screen size (cabinets), the truss heights.",
+  "K10/K15 optics, pan/tilt and the XP-16R/Pixel Line shapes are stand-ins (profiles.missing); read the real files before any aim or beam-length number is trusted."
+ ],
+ "checks": {
+  "geometry": {
+   "tool": "scripts/place/platina_rig.py geometry_checks (body boxes vs trusses/screen/towers, 0.03 m contact tolerance; home beam axis vs the screen)",
+   "leaks": [],
+   "k15_row_axis_clearance": [
+    {
+     "lamp": "platina-k15-01",
+     "axis_clearance_to_screen_front_m": 0.08
+    },
+    {
+     "lamp": "platina-k15-02",
+     "axis_clearance_to_screen_front_m": 0.08
+    },
+    {
+     "lamp": "platina-k15-03",
+     "axis_clearance_to_screen_front_m": 0.08
+    },
+    {
+     "lamp": "platina-k15-04",
+     "axis_clearance_to_screen_front_m": 0.08
+    },
+    {
+     "lamp": "platina-k15-05",
+     "axis_clearance_to_screen_front_m": 0.08
+    },
+    {
+     "lamp": "platina-k15-06",
+     "axis_clearance_to_screen_front_m": 0.08
+    }
+   ],
+   "physics_check_py": "NOT RUN: it needs a project document and a hall record through the API (no server this round)"
+  }
+ },
+ "head_kinds": [
+  "acme-xp16r-bsw"
+ ],
+ "defaultLook": "work-light"
+}

@@ -436,7 +436,7 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
         return { id: lk.id.replace(/_/g, '-'), title: lk.title.slice(0, 60), intent: (lk.intent || '').slice(0, 480), ...(lk.act != null ? { act: lk.act } : {}), aims, colours, levels, ...(lk.parts ? { parts: lk.parts } : {}), ...(lk.laser_colour ? { laser_colour: lk.laser_colour } : {}), ...(lk.desk_caps ? { desk_caps: lk.desk_caps } : {}), ...(lk.motion ? { motion: lk.motion } : {}), ...(lk.heads ? { heads: lk.heads } : {}) }
     }
     const looks = rig.looks.some((l) => l.id === 'black') ? rig.looks : [{ id: 'black', title: 'The black', intent: 'Nothing lit; the smoke stays. 3-5 s before every laser moment and before the roof.', parts: {} }, ...rig.looks]
-    return { source: rigFile === RIG_FILE ? `${RIG_FILE} (MOXIR v1.0, scripts/place/moxir_v1.py)` : `${rigFile} (${rig.version || 'MOXIR'})`, writtenAt: '2026-10-08', defaultLook: 'still-smoking', looks: looks.map(lookOf) }
+    return { source: rigFile === RIG_FILE ? `${RIG_FILE} (MOXIR v1.0, scripts/place/moxir_v1.py)` : `${rigFile} (${rig.version || 'MOXIR'})`, writtenAt: '2026-10-08', defaultLook: rig.defaultLook || 'still-smoking', looks: looks.map(lookOf) }
 }
 
 /** A rig file's OWN cue list (MOXIR v2 layouts, 2026-10-09: rig.cues [{look, name, fade, hold}], one per look it carries), else
