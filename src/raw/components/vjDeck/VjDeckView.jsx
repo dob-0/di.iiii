@@ -37,6 +37,7 @@ import { clipStill } from './clipStills.js'
 import { useDeckMidi } from '../../../perform/midi/useDeckMidi.js'
 import DeckMidiControl from '../../../perform/midi/DeckMidiControl.jsx'
 import MidiMapOverlay from '../../../perform/midi/MidiMapOverlay.jsx'
+import K2LayoutPanel from '../../../perform/midi/K2LayoutPanel.jsx'
 import { resetDeckValue } from '../../../perform/midi/deckBinding.js'
 import ContextMenu from '../ContextMenu.jsx'
 import EffectsPanel from './EffectsPanel.jsx'
@@ -340,6 +341,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     // MIDI (src/perform/midi): live while the deck is on screen; Learn binds the
     // control clicked on the deck (data-midi-target) to the next controller message.
     const fxLayer = Math.min(deck.layers.length - 1, Math.max(0, fxPick ?? selected?.layer ?? 0))
+    const [k2Open, setK2Open] = useState(false)
     const midi = useDeckMidi({ deckId, deck, write, stored: node?.values?.midiMap, onPatch: editable ? onPatchValues : null, onTap, enabled: editable, fxLayer: fxScope === 'master' ? -1 : fxLayer })
     const learnKeyOf = (event) => event.target?.closest?.('[data-midi-target]')?.getAttribute('data-midi-target') || ''
     const onLearnClick = (event) => {
@@ -559,6 +561,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     {followsLight ? <span className="vj-deck-dim vj-deck-leader" title="The Light desk on this machine keeps the show’s tempo; the deck follows it.">follows Light</span> : null}
                 </div>
                 <DeckMidiControl midi={midi} editable={editable} />
+                <button
+                    type="button"
+                    className={`vj-deck-button${k2Open ? ' is-on' : ''}`}
+                    aria-pressed={k2Open}
+                    onClick={() => setK2Open((on) => !on)}
+                    title="Show the Xone:K2 layout with what each control does and what it sends"
+                >K2</button>
                 <button
                     type="button"
                     className="vj-deck-button vj-deck-preview-only"
@@ -849,6 +858,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                 <EffectsPanel deck={deck} scope={fxScope} layerIndex={fxLayer} onScope={setFxScope} onLayer={setFxPick} editable={editable} write={write} />
             </div>
             <MidiMapOverlay rootRef={rootRef} midi={midi} layoutKey={deck} />
+            {k2Open ? <K2LayoutPanel map={midi.map} monitor={midi.k2Monitor} onClose={() => setK2Open(false)} /> : null}
             <ContextMenu open={Boolean(menu)} x={menu?.x} y={menu?.y} title={menu?.label} items={menuItems} fromKeyboard={Boolean(menu?.fromKeyboard)} onClose={() => setMenu(null)} />
         </div>
     )

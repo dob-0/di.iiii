@@ -20,6 +20,7 @@ import {
     withOverride
 } from './deckBinding.js'
 import { useMidiPorts } from './midiPorts.js'
+import { createK2Monitor } from './k2Monitor.js'
 import { K2_CHANNEL, XONE_K2_LEDS, defaultMap, isK2, k2IsRelative } from './xoneK2.js'
 
 // The live half of the MIDI binding: listens on the K2 (else the first input),
@@ -150,6 +151,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const k2Live = useRef(false)
     const [heard, setHeard] = useState(K2_CHANNEL)
     const heardRef = useRef(K2_CHANNEL)
+    const monitorRef = useRef(null) // set by the monitor effect at the end of the hook
 
     const onMessage = useCallback((raw) => {
         const current = live.current
@@ -161,6 +163,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         } else if (k2Live.current && raw?.channel === K2_CHANNEL && heardRef.current !== K2_CHANNEL) {
             heardRef.current = K2_CHANNEL; setHeard(K2_CHANNEL)
         }
+        monitorRef.current?.push(message) // the K2 panel's live picture; no deck write, no render here
         const { learning: isLearning, target: wanted, once: justOne } = learnRef.current
         if (isLearning) {
             // While learning, a message never plays the deck: it binds the picked control.
@@ -242,6 +245,10 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         setTarget(null)
     }, [])
 
+    // The live monitor for the K2 panel (kept last: added after the hooks above).
+    const [k2Monitor] = useState(() => createK2Monitor())
+    useEffect(() => { monitorRef.current = k2Monitor; return () => k2Monitor.dispose() }, [k2Monitor])
+
     return {
         state,
         deviceName: device?.name || '',
@@ -254,6 +261,8 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         bindingOf,
         unmap,
         reset,
-        controlOf
+        controlOf,
+        map,
+        k2Monitor
     }
 }

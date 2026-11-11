@@ -430,3 +430,34 @@ export const ledClears = (leds, sent, channel = 15) => {
 
 /** The raw bytes of one LED message: a note-on, velocity 0 = off. */
 export const ledBytes = (led) => [0x90 | ((led.channel - 1) & 0x0f), led.note & 0x7f, led.velocity & 0x7f]
+
+/**
+ * What a map entry does, in the short words the K2 panel prints on a control:
+ * "Layer 2 level", "L1 clip 3", "Bypass L1", "BPM". No entry = "free".
+ */
+export const describeAction = (entry) => {
+    if (!entry?.action) return 'free'
+    const args = entry.args || {}
+    const layer = Number.isInteger(args.layer) && args.layer >= 0 ? args.layer + 1 : 0
+    const column = Number.isInteger(args.column) ? args.column + 1 : 0
+    switch (entry.action) {
+        case 'opacity': return layer ? `Layer ${layer} level` : 'Layer level'
+        case 'blend': return layer ? `L${layer} blend` : 'Blend'
+        case 'clipSpeed': return layer ? `L${layer} speed` : 'Clip speed'
+        case 'bypass': return layer ? `Bypass L${layer}` : 'Bypass'
+        case 'solo': return layer ? `Solo L${layer}` : 'Solo'
+        case 'side': return layer ? `L${layer} side A/B` : 'Side A/B'
+        case 'clip': return layer && column ? `L${layer} clip ${column}` : 'Clip'
+        case 'column': return column ? `Play column ${column}` : 'Play column'
+        case 'clearLayer': return layer ? `Clear L${layer}` : 'Clear layer'
+        case 'crossfade': return 'Crossfade'
+        case 'master': return 'Master'
+        case 'bpm': return 'BPM'
+        case 'tap': return 'Tap tempo'
+        case 'fx': {
+            const scope = args.layer === -1 ? 'Master fx' : layer ? `L${layer} fx` : 'Fx'
+            return args.param === 'mix' ? `${scope} mix` : Number.isInteger(args.param) ? `${scope} param ${args.param + 1}` : scope
+        }
+        default: return 'free'
+    }
+}
