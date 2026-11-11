@@ -1874,3 +1874,11 @@ Fix: five seams on the deck (S1 layer strip | grid, S2 grid | monitors, S4 main 
 Measured (walk part S, 1706x922 unless said; build-2.md): outer scroll 0 at six sizes (was 22/22/22/30); layer rows cut 0/0/0 at 1920x1000/1706x922/1440x810; cut clip names 0 at 1706x922 (was 10); all 5 seams change boxes, reset and move by keys; 0 overlapping panels in every step and in the extreme layout at six sizes; 36-case size check a 0 b 0 c 0 d 0 with nothing stored and with the extreme layout; no non-GET request or remount caused by dragging; Reset layout gives the default picture (0 differing pixels).
 Guard: `deckLayout.test.js` (clamp, key, store, real column gap, stacked main), `VjDeckView.resize.test.jsx` (seams, keys, reset, no write), `vjDeck.css.test.js` (end room on the scroll box, five-layer rule, tile wrap, Sources uncapped), `scripts/deck-comfort-walk.mjs --part S` and `scripts/deck-size-check.mjs --layout JSON` (browser, lane 3).
 Lesson: a layout fix is proven by measuring the stored extreme and the default at several sizes, not by reading CSS; a CSS variable set inline on a parent must not be re-declared on a child.
+
+## 2026-11-11 — K2 (1.9): the top button row played layer 1 while the deck screen draws layer 4 on top
+
+Symptom: the owner pressed button A and got the layer drawn at the bottom of the deck screen.
+Cause: the matrix rows counted up from layer 1 (`layer = floor(i / 4)`) while the deck draws the highest layer first.
+Fix: in console K2 (1.9) only, A-D play layer 4, E-H layer 3, I-L layer 2, M-P layer 1 (`xoneK2.js`); the lights, the K2 panel and the K2 window read the same map, so they follow. Console K2 keeps its order.
+Guard: `k2ButtonRows.test.js` (K2 rows pinned unchanged; K2 (1.9) rows for presses, job texts and lights), `k2Console19.test.js` T4.
+Lesson: a controller's rows must be checked against how the screen draws the same things, by pressing, not by reading the map.

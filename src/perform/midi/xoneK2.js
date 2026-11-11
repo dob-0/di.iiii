@@ -5,7 +5,7 @@
 //
 // Layout (layer / column are 1-based on the device, 0-based in the entries):
 //   faders 1-4            opacity of layers 1-4
-//   matrix 4x4            clips: row = layer 1-4 (top row = layer 1), column 1-4
+//   matrix 4x4            clips: row = layer 1-4 (K2: top row = layer 1; K2 (1.9) below runs the other way), column 1-4
 //   pot row 1 (4 pots)    blend mode of layers 1-4
 //   pot row 2             speed of the playing clip of layers 1-4
 //   pot row 3             FIRST EFFECT of the selected layer (master when MASTER is picked): mix, then its first three params
@@ -19,11 +19,12 @@
 //   LAYER                 next layer for effects (skips empty layers)
 //   EXIT SETUP            FREEZE while held (hold 1 on the Freeze effects of master + selected layer)
 //
-// Second console `K2 (1.9)` (id k2-1.9) for a unit whose fader 4 is dead: the K2 map with three differences
+// Second console `K2 (1.9)` (id k2-1.9) for a unit whose fader 4 is dead: the K2 map with four differences
+//   matrix 4x4            rows run top-down as the deck screen draws them: A-D layer 4, E-H layer 3, I-L layer 2, M-P layer 1 (K2 keeps top row = layer 1)
 //   fader 4               NO binding (a dead fader must never move anything, also when it sends noise)
 //   pot 12                level of layer 4 (absolute; the knob right above the dead fader)
 //   encoder 3 turn        third knob of the picked effect (fx param 3, relative); pots 9-11 stay mix, param 1, param 2
-// Everything else is the same entry as in K2 (55 equal, 57 in all). Which console a deck uses is node.values.midiConsole.
+// Everything else is the same entry as in K2 (39 equal, 57 in all). Which console a deck uses is node.values.midiConsole.
 
 import sheet from './xone-k2-default.json'
 
@@ -69,10 +70,12 @@ export const XONE_K2_MAP = [
     bind('encoder 6', 'master', {}, { relative: true })
 ]
 
-/** K2 (1.9): the K2 map with fader 4 dropped, pot 12 = layer 4 level, encoder 3 = third effect knob. */
+/** K2 (1.9): the K2 map with fader 4 dropped, button rows top-down (layer 4 on top), pot 12 = layer 4 level, encoder 3 = third effect knob. */
 export const XONE_K2_19_MAP = XONE_K2_MAP
     .filter((entry) => entry.control !== 'fader 4')
     .map((entry) => {
+        const cell = MATRIX_NAMES.indexOf(entry.control)
+        if (cell >= 0) return bind(entry.control, 'clip', { layer: 3 - Math.floor(cell / 4), column: cell % 4 })
         if (entry.control === 'pot 12') return bind('pot 12', 'opacity', { layer: 3 })
         if (entry.control === 'encoder 3') return bind('encoder 3', 'fx', { param: 2 }, { relative: true })
         return entry
