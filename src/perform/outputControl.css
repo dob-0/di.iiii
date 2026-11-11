@@ -10,6 +10,7 @@
 .output-control-row,
 .output-field {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--di-space-2);
     min-width: 0;

@@ -166,6 +166,8 @@ export default function PerformDesk({
             if (base[id]) {
                 base[id].zIndex = 10 + index
                 base[id].minimized = Boolean(arrangement.minimized[id])
+                // Maximised (and so "Restore" in the title bar) only while a rect to go back to is kept.
+                base[id].maximized = Boolean(arrangement.restore?.[id])
             }
         })
         return base

@@ -212,6 +212,15 @@
     min-height: var(--perform-control);
 }
 
+/* The dev-tree badge (components/treeChip.css) is fixed at the bottom right, where it
+   lay over the Master window's LASER row. On Perform it sits in the strip under the top
+   bar, whose right half is empty, so it covers no control. */
+body:has(.perform-shell) .tree-chip {
+    top: calc(40px + (var(--perform-strip-h, 31px) - 20px) / 2);
+    bottom: auto;
+    max-width: max(120px, calc(100vw - 330px));
+}
+
 /* --- the block: one frame, one header row ---------------------------------- */
 
 /* Blocks tile edge to edge on a unit grid (presets.js GRID). Between two
@@ -372,7 +381,9 @@
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    align-content: center;
+    /* start, not center: a bar window taller than its content (Clock, Master) keeps its
+       content under the header and leaves the spare room at the foot. */
+    align-content: flex-start;
     gap: var(--di-space-1) var(--di-space-3);
     overflow: auto;
 }

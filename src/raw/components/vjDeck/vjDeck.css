@@ -55,7 +55,7 @@
 
 .vj-deck--perform {
     --vj-head: 198px;
-    --vj-tile: 96px;
+    --vj-tile: 64px;
     --vj-tile-height: 64px;
     /* One control height with every other block on Perform (perform.css sets
        --perform-control on .perform-shell: 24px, 44px on touch). */
@@ -491,6 +491,9 @@
     justify-content: center;
     padding: var(--di-space-2);
     text-align: center;
+    /* The words wrap inside the tile instead of being cut with no dots. */
+    white-space: normal;
+    overflow-wrap: anywhere;
     overflow: hidden;
     pointer-events: none;
 }
@@ -738,11 +741,17 @@
     max-height: 240px;
 }
 
+/* A panel never squeezes its own rows (the Effects head wrapped to two lines and lay
+   over the first effect): the panel scrolls. Only the source list gives way. */
+.vj-deck-panel > :not(.vj-deck-source-list) {
+    flex-shrink: 0;
+}
+
 .vj-deck-source-list {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    min-height: 0;
+    min-height: calc(var(--vj-source-row) * 2);
     overflow: auto;
 }
 
@@ -839,8 +848,10 @@
     /* The monitors move under the grid, side by side. */
     .vj-deck-main {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: minmax(120px, 1fr) auto;
-        min-height: 320px;
+        /* The grid keeps the column row and about three layers (it scrolls inside), the
+           monitors keep their strip; the deck scrolls when the frame is shorter. */
+        grid-template-rows: minmax(300px, 1fr) auto;
+        min-height: 520px;
     }
 
     .vj-deck-monitors {
@@ -860,7 +871,8 @@
 @container vjdeck (max-width: 560px) {
     .vj-deck-grid {
         --vj-head: 176px;
-        --vj-tile: 60px;
+        /* 6 columns fit a 568px window: 176 + 6 x 52 + gaps stays under the 543px column. */
+        --vj-tile: 52px;
         --vj-tile-height: 52px;
     }
 
@@ -870,8 +882,13 @@
         --vj-monitor-w-row: 0 1 128px;
     }
 
+    /* Stacked panels take their own height and the deck scrolls: squeezed into 40% they
+       showed half a source row and one cut effect. */
     .vj-deck-bottom {
         grid-template-columns: minmax(0, 1fr);
+        flex: 0 0 auto;
+        max-height: none;
+        overflow-y: visible;
     }
 
     .vj-deck-top {

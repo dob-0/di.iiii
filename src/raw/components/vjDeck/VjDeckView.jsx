@@ -687,6 +687,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                             type="button"
                                             className={`vj-deck-tile${clip ? '' : ' vj-deck-tile--empty'}${playing ? ' is-playing' : ''}${isSelected ? ' is-selected' : ''}${dropTarget?.layer === index && dropTarget?.column === column ? ' is-drop-target' : ''}`}
                                             aria-pressed={clip ? playing : undefined}
+                                            title={clip ? name : undefined}
                                             data-midi-target={`clip:${index}:${column}`}
                                             aria-label={clip ? `${layer.name}, slot ${column + 1}: ${name}` : `${layer.name}, slot ${column + 1}: add a clip`}
                                             disabled={!clip && !editable}
