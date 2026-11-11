@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createBodyMatte } from './bodyMatte.js'
+import { WORKER_RUN_TIMEOUT_MS, createBodyMatte } from './bodyMatte.js'
 
 const fakeWorker = () => {
     const w = {
@@ -132,6 +132,47 @@ describe('body matte on a worker', () => {
         expect(matte.budget()).toBe(1)
         expect(matte.submit('src', picture())).toBe(true)
         expect(matte.poll()).toHaveLength(1)
+    })
+
+    // A worker that is alive but never answers a run (a lost GPU context, a hang) sends no
+    // error event: without a limit the job stays out, the budget stays 0 and the mask on
+    // stage stays frozen without a word. The render loop asks budget() every frame, so the
+    // limit is checked there.
+    it('falls back when a run is not answered in time (a stuck worker), counted as a worker failure', async () => {
+        const w = fakeWorker()
+        let now = 1000
+        const matte = createBodyMatte({ createWorker: () => w, loadSegmenter: async () => fakeSegmenter(), clock: () => now })
+        ready(w, matte)
+        expect(matte.submit('src', picture())).toBe(true)
+        now += WORKER_RUN_TIMEOUT_MS
+        expect(matte.budget()).toBe(0)
+        expect(matte.where()).toBe('worker')
+        expect(w.terminated).toBe(false)
+        now += 1
+        expect(matte.budget()).toBe(0)
+        expect(w.terminated).toBe(true)
+        expect(matte.stats().workerFailures).toBe(1)
+        await tick()
+        expect(matte.where()).toBe('page')
+        expect(matte.status()).toBe('ready')
+        expect(matte.budget()).toBe(1)
+        expect(matte.submit('src', picture())).toBe(true)
+        expect(matte.poll()).toHaveLength(1)
+    })
+
+    it('keeps the worker when a slow answer still comes inside the limit, and an idle worker has no limit', () => {
+        const w = fakeWorker()
+        let now = 0
+        const matte = createBodyMatte({ createWorker: () => w, clock: () => now })
+        ready(w, matte)
+        matte.submit('src', picture())
+        now += WORKER_RUN_TIMEOUT_MS - 1
+        expect(matte.budget()).toBe(0)
+        w.reply(mask(w.runs()[0].seq, 'src'))
+        now += 10 * WORKER_RUN_TIMEOUT_MS
+        expect(matte.budget()).toBe(1)
+        expect(matte.where()).toBe('worker')
+        expect(matte.stats().workerFailures).toBe(0)
     })
 
     it('falls back when no worker can be made or making it throws', async () => {

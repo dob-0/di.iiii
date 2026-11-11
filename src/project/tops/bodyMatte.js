@@ -54,6 +54,11 @@ const defaultLoadModule = async () => {
 }
 
 const WORKER_INIT_TIMEOUT_MS = 30000
+// A run that is not answered in this long means the worker is stuck (a lost GPU context, a
+// hang): the page-thread path takes over, so the mask never stays frozen without a word.
+// The first run after loading compiles the model's shaders: 2.0 s was the longest measured
+// (2026-11-11, machine load 11-20), so the limit sits well above it.
+export const WORKER_RUN_TIMEOUT_MS = 5000
 
 /** A classic worker (see bodyMatteWorker.js); null when this page cannot run one. */
 const defaultCreateWorker = () => {
@@ -236,9 +241,17 @@ export const createBodyMatte = ({ loadSegmenter, clock = () => performance.now()
             ageMean: stats.answers ? stats.ageTotal / stats.answers : 0
         }),
         subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) },
-        /** How many runs may start now: worker idle = 1, worker busy = 0, page path = 1, not ready = 0. */
+        /**
+         * How many runs may start now: worker idle = 1, worker busy = 0, page path = 1, not ready = 0.
+         * The render loop asks every frame, so this is also where a stuck worker is noticed: a run
+         * older than WORKER_RUN_TIMEOUT_MS ends the worker and the page-thread path loads.
+         */
         budget() {
             if (status !== 'ready') return 0
+            if (worker && inFlight && clock() - inFlight.sentAt > WORKER_RUN_TIMEOUT_MS) {
+                workerFailed(worker)
+                return 0
+            }
             if (worker) return inFlight ? 0 : 1
             return 1
         },
