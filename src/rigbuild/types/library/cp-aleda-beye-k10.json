@@ -1,0 +1,1504 @@
+{
+  "id": "cp-aleda-beye-k10",
+  "code": "CP-ALEDA-BEYE-K10",
+  "identified": "EXACT",
+  "identifiedNote": "EXACT - Clay Paky's own model A.LEDA B-EYE K10 (C61419); the rental list says 'A.leda K10 19x15'. Whether the rented lamps are K10 or K10 Easy (20/34-channel basic modes) and their firmware is not confirmed: read it on the display (Information > System Version)",
+  "maker": "Clay Paky S.p.A.",
+  "model": "CP-ALEDA-BEYE-K10",
+  "modelledOn": null,
+  "product": "Clay Paky A.LEDA B-EYE K10, 19 x 15 W RGBW LED moving head wash with Kaleido shapes and a pixel engine",
+  "makerModel": "A.LEDA B-EYE K10 (C61419)",
+  "manual": {
+    "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+    "date": "IST009/001 EN Rev.F 08/2016",
+    "read": "2026-11-11, pdftotext + page images p20, p22",
+    "basis": "EXACT",
+    "note": "the K10 manual also covers K10 Easy (C61415) and K20 (C61420); a copy hosted by a rental company, not Claypaky's own server"
+  },
+  "makerChart": {
+    "file": "scripts/place/fixtures/charts/cp-aleda-beye-k10.json",
+    "modes": {
+      "21": "EXACT",
+      "35": "EXACT",
+      "57": "EXACT",
+      "76": "EXACT",
+      "111": "EXACT"
+    }
+  },
+  "category": "moving-head",
+  "modes": [
+    {
+      "name": "21ch",
+      "footprint": 21,
+      "channels": [
+        {
+          "role": "r",
+          "label": "Red"
+        },
+        {
+          "role": "rFine",
+          "label": "Red fine"
+        },
+        {
+          "role": "g",
+          "label": "Green"
+        },
+        {
+          "role": "gFine",
+          "label": "Green fine"
+        },
+        {
+          "role": "b",
+          "label": "Blue"
+        },
+        {
+          "role": "bFine",
+          "label": "Blue fine"
+        },
+        {
+          "role": "w",
+          "label": "White"
+        },
+        {
+          "role": "wFine",
+          "label": "White fine"
+        },
+        {
+          "role": "cto",
+          "label": "Linear CTO (255=2500K, 224=3200K, 188=4000K, 144=5000K, 117=5600K, 99=6000K, 54=7000K, 10=8000K, 0-9 unused; WHITE disabled while CTO active)"
+        },
+        {
+          "role": "macro",
+          "label": "Macro colour (table of LEE-referenced colours, 0-9 = off (see colour.macro_table))"
+        },
+        {
+          "role": "strobe",
+          "label": "Strobe (252-255 open, 239-251 random fast, 226-238 random medium, 213-225 random slow, 208-212 open, 207 fast pulsation 25/s .. 108 slow pulsation 0.5/s, 104-107 open, 103 fast strobe 25/s .. 4 slow strobe 1/s, 0-3 closed)",
+          "default": 255,
+          "cap": {
+            "shutter": [
+              {
+                "from": 0,
+                "to": 3,
+                "open": false
+              },
+              {
+                "from": 104,
+                "to": 107,
+                "open": true
+              },
+              {
+                "from": 208,
+                "to": 212,
+                "open": true
+              },
+              {
+                "from": 252,
+                "to": 255,
+                "open": true
+              }
+            ]
+          }
+        },
+        {
+          "role": "dimmer",
+          "label": "Dimmer"
+        },
+        {
+          "role": "dimmerFine",
+          "label": "Dimmer fine"
+        },
+        {
+          "role": "pan",
+          "label": "Pan (16-bit with Pan fine; home after reset without DMX = 128)",
+          "default": 128
+        },
+        {
+          "role": "panFine",
+          "label": "Pan fine"
+        },
+        {
+          "role": "tilt",
+          "label": "Tilt (16-bit with Tilt fine; home after reset without DMX = 128)",
+          "default": 128
+        },
+        {
+          "role": "tiltFine",
+          "label": "Tilt fine"
+        },
+        {
+          "role": "function",
+          "label": "Function (103-105 = Pixel map enabled (immediate); 98-102/93-97/88-92/83-87/78-82 halogen sim 2500/2000/1200/1000/750 W; 73-77 halogen off (default); 68-72/63-67/58-62 RGBW gamma 2.0/1.5(default)/1.0; 53-57/48-52(default)/43-47/38-42 dimmer curve 4/3/2/1; 25-37 pan-tilt normal; 12-24 pan-tilt fast (default); 0-11 unused. Selections take effect after holding the range 5 s (except pixel map).)",
+          "default": 0
+        },
+        {
+          "role": "control",
+          "label": "Reset (128-255 complete reset; 77-127 pan/tilt reset; 26-76 zoom (effects) reset; 0-25 unused; each after holding 5 s)",
+          "default": 0
+        },
+        {
+          "role": "zoom",
+          "label": "Zoom (0 narrow beam .. 255 wide beam)"
+        },
+        {
+          "role": "zoomRotation",
+          "label": "Zoom rotation (0-127 linear rotation / indexed zone (lens angle 0..60 deg, only when zoom channel 0-45), 128-190 CW slow..fast, 191-192 stop, 193-255 CCW; with zoom at 255 it sets lens offset angle 0..+4 deg)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "Clay Paky S.p.A. A.LEDA B-EYE K10 (C61419) (https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf)",
+        "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "Basic Standard",
+      "note": "Basic engine, Standard mode (display: Set Up > Basic Engine > Mode = Standard), p22.",
+      "src": "CP-K10-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "35ch",
+      "footprint": 35,
+      "channels": [
+        {
+          "role": "r",
+          "label": "Red"
+        },
+        {
+          "role": "rFine",
+          "label": "Red fine"
+        },
+        {
+          "role": "g",
+          "label": "Green"
+        },
+        {
+          "role": "gFine",
+          "label": "Green fine"
+        },
+        {
+          "role": "b",
+          "label": "Blue"
+        },
+        {
+          "role": "bFine",
+          "label": "Blue fine"
+        },
+        {
+          "role": "w",
+          "label": "White"
+        },
+        {
+          "role": "wFine",
+          "label": "White fine"
+        },
+        {
+          "role": "cto",
+          "label": "Linear CTO (255=2500K, 224=3200K, 188=4000K, 144=5000K, 117=5600K, 99=6000K, 54=7000K, 10=8000K, 0-9 unused; WHITE disabled while CTO active)"
+        },
+        {
+          "role": "macro",
+          "label": "Macro colour (table of LEE-referenced colours, 0-9 = off (see colour.macro_table))"
+        },
+        {
+          "role": "strobe",
+          "label": "Strobe (252-255 open, 239-251 random fast, 226-238 random medium, 213-225 random slow, 208-212 open, 207 fast pulsation 25/s .. 108 slow pulsation 0.5/s, 104-107 open, 103 fast strobe 25/s .. 4 slow strobe 1/s, 0-3 closed)",
+          "default": 255,
+          "cap": {
+            "shutter": [
+              {
+                "from": 0,
+                "to": 3,
+                "open": false
+              },
+              {
+                "from": 104,
+                "to": 107,
+                "open": true
+              },
+              {
+                "from": 208,
+                "to": 212,
+                "open": true
+              },
+              {
+                "from": 252,
+                "to": 255,
+                "open": true
+              }
+            ]
+          }
+        },
+        {
+          "role": "dimmer",
+          "label": "Dimmer"
+        },
+        {
+          "role": "dimmerFine",
+          "label": "Dimmer fine"
+        },
+        {
+          "role": "pan",
+          "label": "Pan (16-bit with Pan fine; home after reset without DMX = 128)",
+          "default": 128
+        },
+        {
+          "role": "panFine",
+          "label": "Pan fine"
+        },
+        {
+          "role": "tilt",
+          "label": "Tilt (16-bit with Tilt fine; home after reset without DMX = 128)",
+          "default": 128
+        },
+        {
+          "role": "tiltFine",
+          "label": "Tilt fine"
+        },
+        {
+          "role": "function",
+          "label": "Function (103-105 = Pixel map enabled (immediate); 98-102/93-97/88-92/83-87/78-82 halogen sim 2500/2000/1200/1000/750 W; 73-77 halogen off (default); 68-72/63-67/58-62 RGBW gamma 2.0/1.5(default)/1.0; 53-57/48-52(default)/43-47/38-42 dimmer curve 4/3/2/1; 25-37 pan-tilt normal; 12-24 pan-tilt fast (default); 0-11 unused. Selections take effect after holding the range 5 s (except pixel map).)",
+          "default": 0
+        },
+        {
+          "role": "control",
+          "label": "Reset (128-255 complete reset; 77-127 pan/tilt reset; 26-76 zoom (effects) reset; 0-25 unused; each after holding 5 s)",
+          "default": 0
+        },
+        {
+          "role": "zoom",
+          "label": "Zoom (0 narrow beam .. 255 wide beam)"
+        },
+        {
+          "role": "zoomRotation",
+          "label": "Zoom rotation (0-127 linear rotation / indexed zone (lens angle 0..60 deg, only when zoom channel 0-45), 128-190 CW slow..fast, 191-192 stop, 193-255 CCW; with zoom at 255 it sets lens offset angle 0..+4 deg)"
+        },
+        {
+          "role": "shape",
+          "label": "Shape Selection (shape slots 0-7 macro off, table of macros; K10 and K20 columns)"
+        },
+        {
+          "role": "shapeSpeed",
+          "label": "Shape Speed"
+        },
+        {
+          "role": "shapeFade",
+          "label": "Shape Fade (0-15 snap, 16..246-255 smooth fading curves (gamma 0.5 .. 2 / automatic))"
+        },
+        {
+          "role": "shapeR",
+          "label": "Shape R"
+        },
+        {
+          "role": "shapeG",
+          "label": "Shape G"
+        },
+        {
+          "role": "shapeB",
+          "label": "Shape B"
+        },
+        {
+          "role": "shapeW",
+          "label": "Shape W"
+        },
+        {
+          "role": "shapeDimmer",
+          "label": "Shape Dimmer"
+        },
+        {
+          "role": "bgDimmer",
+          "label": "Background Dimmer"
+        },
+        {
+          "role": "shapeTransition",
+          "label": "Shape Transition (0-4 no fade, 5=100 ms, 73=0.5 s, 113=1 s, 171=2 s, 216=3 s, 255=4 s)"
+        },
+        {
+          "role": "shapeOffset",
+          "label": "Shape Offset"
+        },
+        {
+          "role": "fgStrobe",
+          "label": "Foreground Strobe"
+        },
+        {
+          "role": "bgStrobe",
+          "label": "Background Strobe"
+        },
+        {
+          "role": "bgSelect",
+          "label": "Background Select (255 mirror effect, 16-254 no selection (K10), 0-15 pixel/ring combinations (K10: 14 'Pixel 1 + Ring 2 + Ring 3', 15 'Ring 2 + Ring 3'))"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "Clay Paky S.p.A. A.LEDA B-EYE K10 (C61419) (https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf)",
+        "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "Basic Shapes",
+      "note": "Basic engine, Shape mode (Set Up > Basic Engine > Mode = Shape), p22. Channels 1-21 are the Standard list.",
+      "src": "CP-K10-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "57ch",
+      "footprint": 57,
+      "channels": [
+        {
+          "role": "p01r",
+          "label": "Red LED 1"
+        },
+        {
+          "role": "p01g",
+          "label": "Green LED 1"
+        },
+        {
+          "role": "p01b",
+          "label": "Blue LED 1"
+        },
+        {
+          "role": "p02r",
+          "label": "Red LED 2"
+        },
+        {
+          "role": "p02g",
+          "label": "Green LED 2"
+        },
+        {
+          "role": "p02b",
+          "label": "Blue LED 2"
+        },
+        {
+          "role": "p03r",
+          "label": "Red LED 3"
+        },
+        {
+          "role": "p03g",
+          "label": "Green LED 3"
+        },
+        {
+          "role": "p03b",
+          "label": "Blue LED 3"
+        },
+        {
+          "role": "p04r",
+          "label": "Red LED 4"
+        },
+        {
+          "role": "p04g",
+          "label": "Green LED 4"
+        },
+        {
+          "role": "p04b",
+          "label": "Blue LED 4"
+        },
+        {
+          "role": "p05r",
+          "label": "Red LED 5"
+        },
+        {
+          "role": "p05g",
+          "label": "Green LED 5"
+        },
+        {
+          "role": "p05b",
+          "label": "Blue LED 5"
+        },
+        {
+          "role": "p06r",
+          "label": "Red LED 6"
+        },
+        {
+          "role": "p06g",
+          "label": "Green LED 6"
+        },
+        {
+          "role": "p06b",
+          "label": "Blue LED 6"
+        },
+        {
+          "role": "p07r",
+          "label": "Red LED 7"
+        },
+        {
+          "role": "p07g",
+          "label": "Green LED 7"
+        },
+        {
+          "role": "p07b",
+          "label": "Blue LED 7"
+        },
+        {
+          "role": "p08r",
+          "label": "Red LED 8"
+        },
+        {
+          "role": "p08g",
+          "label": "Green LED 8"
+        },
+        {
+          "role": "p08b",
+          "label": "Blue LED 8"
+        },
+        {
+          "role": "p09r",
+          "label": "Red LED 9"
+        },
+        {
+          "role": "p09g",
+          "label": "Green LED 9"
+        },
+        {
+          "role": "p09b",
+          "label": "Blue LED 9"
+        },
+        {
+          "role": "p10r",
+          "label": "Red LED 10"
+        },
+        {
+          "role": "p10g",
+          "label": "Green LED 10"
+        },
+        {
+          "role": "p10b",
+          "label": "Blue LED 10"
+        },
+        {
+          "role": "p11r",
+          "label": "Red LED 11"
+        },
+        {
+          "role": "p11g",
+          "label": "Green LED 11"
+        },
+        {
+          "role": "p11b",
+          "label": "Blue LED 11"
+        },
+        {
+          "role": "p12r",
+          "label": "Red LED 12"
+        },
+        {
+          "role": "p12g",
+          "label": "Green LED 12"
+        },
+        {
+          "role": "p12b",
+          "label": "Blue LED 12"
+        },
+        {
+          "role": "p13r",
+          "label": "Red LED 13"
+        },
+        {
+          "role": "p13g",
+          "label": "Green LED 13"
+        },
+        {
+          "role": "p13b",
+          "label": "Blue LED 13"
+        },
+        {
+          "role": "p14r",
+          "label": "Red LED 14"
+        },
+        {
+          "role": "p14g",
+          "label": "Green LED 14"
+        },
+        {
+          "role": "p14b",
+          "label": "Blue LED 14"
+        },
+        {
+          "role": "p15r",
+          "label": "Red LED 15"
+        },
+        {
+          "role": "p15g",
+          "label": "Green LED 15"
+        },
+        {
+          "role": "p15b",
+          "label": "Blue LED 15"
+        },
+        {
+          "role": "p16r",
+          "label": "Red LED 16"
+        },
+        {
+          "role": "p16g",
+          "label": "Green LED 16"
+        },
+        {
+          "role": "p16b",
+          "label": "Blue LED 16"
+        },
+        {
+          "role": "p17r",
+          "label": "Red LED 17"
+        },
+        {
+          "role": "p17g",
+          "label": "Green LED 17"
+        },
+        {
+          "role": "p17b",
+          "label": "Blue LED 17"
+        },
+        {
+          "role": "p18r",
+          "label": "Red LED 18"
+        },
+        {
+          "role": "p18g",
+          "label": "Green LED 18"
+        },
+        {
+          "role": "p18b",
+          "label": "Blue LED 18"
+        },
+        {
+          "role": "p19r",
+          "label": "Red LED 19"
+        },
+        {
+          "role": "p19g",
+          "label": "Green LED 19"
+        },
+        {
+          "role": "p19b",
+          "label": "Blue LED 19"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "Clay Paky S.p.A. A.LEDA B-EYE K10 (C61419) (https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf)",
+        "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "Pixel RGB",
+      "note": "Pixel engine, RGB: 19 LEDs x 3, LEDs only, NO pan / tilt / zoom / dimmer (those live in the basic engine). A second engine with its own DMX address and universe (Set Up > Pixels Engine), switched on by the basic engine FUNCTION channel (value 103-105 = pixel map enabled), p22, p25.",
+      "src": "CP-K10-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "76ch",
+      "footprint": 76,
+      "channels": [
+        {
+          "role": "p01r",
+          "label": "Red LED 1"
+        },
+        {
+          "role": "p01g",
+          "label": "Green LED 1"
+        },
+        {
+          "role": "p01b",
+          "label": "Blue LED 1"
+        },
+        {
+          "role": "p01w",
+          "label": "White LED 1"
+        },
+        {
+          "role": "p02r",
+          "label": "Red LED 2"
+        },
+        {
+          "role": "p02g",
+          "label": "Green LED 2"
+        },
+        {
+          "role": "p02b",
+          "label": "Blue LED 2"
+        },
+        {
+          "role": "p02w",
+          "label": "White LED 2"
+        },
+        {
+          "role": "p03r",
+          "label": "Red LED 3"
+        },
+        {
+          "role": "p03g",
+          "label": "Green LED 3"
+        },
+        {
+          "role": "p03b",
+          "label": "Blue LED 3"
+        },
+        {
+          "role": "p03w",
+          "label": "White LED 3"
+        },
+        {
+          "role": "p04r",
+          "label": "Red LED 4"
+        },
+        {
+          "role": "p04g",
+          "label": "Green LED 4"
+        },
+        {
+          "role": "p04b",
+          "label": "Blue LED 4"
+        },
+        {
+          "role": "p04w",
+          "label": "White LED 4"
+        },
+        {
+          "role": "p05r",
+          "label": "Red LED 5"
+        },
+        {
+          "role": "p05g",
+          "label": "Green LED 5"
+        },
+        {
+          "role": "p05b",
+          "label": "Blue LED 5"
+        },
+        {
+          "role": "p05w",
+          "label": "White LED 5"
+        },
+        {
+          "role": "p06r",
+          "label": "Red LED 6"
+        },
+        {
+          "role": "p06g",
+          "label": "Green LED 6"
+        },
+        {
+          "role": "p06b",
+          "label": "Blue LED 6"
+        },
+        {
+          "role": "p06w",
+          "label": "White LED 6"
+        },
+        {
+          "role": "p07r",
+          "label": "Red LED 7"
+        },
+        {
+          "role": "p07g",
+          "label": "Green LED 7"
+        },
+        {
+          "role": "p07b",
+          "label": "Blue LED 7"
+        },
+        {
+          "role": "p07w",
+          "label": "White LED 7"
+        },
+        {
+          "role": "p08r",
+          "label": "Red LED 8"
+        },
+        {
+          "role": "p08g",
+          "label": "Green LED 8"
+        },
+        {
+          "role": "p08b",
+          "label": "Blue LED 8"
+        },
+        {
+          "role": "p08w",
+          "label": "White LED 8"
+        },
+        {
+          "role": "p09r",
+          "label": "Red LED 9"
+        },
+        {
+          "role": "p09g",
+          "label": "Green LED 9"
+        },
+        {
+          "role": "p09b",
+          "label": "Blue LED 9"
+        },
+        {
+          "role": "p09w",
+          "label": "White LED 9"
+        },
+        {
+          "role": "p10r",
+          "label": "Red LED 10"
+        },
+        {
+          "role": "p10g",
+          "label": "Green LED 10"
+        },
+        {
+          "role": "p10b",
+          "label": "Blue LED 10"
+        },
+        {
+          "role": "p10w",
+          "label": "White LED 10"
+        },
+        {
+          "role": "p11r",
+          "label": "Red LED 11"
+        },
+        {
+          "role": "p11g",
+          "label": "Green LED 11"
+        },
+        {
+          "role": "p11b",
+          "label": "Blue LED 11"
+        },
+        {
+          "role": "p11w",
+          "label": "White LED 11"
+        },
+        {
+          "role": "p12r",
+          "label": "Red LED 12"
+        },
+        {
+          "role": "p12g",
+          "label": "Green LED 12"
+        },
+        {
+          "role": "p12b",
+          "label": "Blue LED 12"
+        },
+        {
+          "role": "p12w",
+          "label": "White LED 12"
+        },
+        {
+          "role": "p13r",
+          "label": "Red LED 13"
+        },
+        {
+          "role": "p13g",
+          "label": "Green LED 13"
+        },
+        {
+          "role": "p13b",
+          "label": "Blue LED 13"
+        },
+        {
+          "role": "p13w",
+          "label": "White LED 13"
+        },
+        {
+          "role": "p14r",
+          "label": "Red LED 14"
+        },
+        {
+          "role": "p14g",
+          "label": "Green LED 14"
+        },
+        {
+          "role": "p14b",
+          "label": "Blue LED 14"
+        },
+        {
+          "role": "p14w",
+          "label": "White LED 14"
+        },
+        {
+          "role": "p15r",
+          "label": "Red LED 15"
+        },
+        {
+          "role": "p15g",
+          "label": "Green LED 15"
+        },
+        {
+          "role": "p15b",
+          "label": "Blue LED 15"
+        },
+        {
+          "role": "p15w",
+          "label": "White LED 15"
+        },
+        {
+          "role": "p16r",
+          "label": "Red LED 16"
+        },
+        {
+          "role": "p16g",
+          "label": "Green LED 16"
+        },
+        {
+          "role": "p16b",
+          "label": "Blue LED 16"
+        },
+        {
+          "role": "p16w",
+          "label": "White LED 16"
+        },
+        {
+          "role": "p17r",
+          "label": "Red LED 17"
+        },
+        {
+          "role": "p17g",
+          "label": "Green LED 17"
+        },
+        {
+          "role": "p17b",
+          "label": "Blue LED 17"
+        },
+        {
+          "role": "p17w",
+          "label": "White LED 17"
+        },
+        {
+          "role": "p18r",
+          "label": "Red LED 18"
+        },
+        {
+          "role": "p18g",
+          "label": "Green LED 18"
+        },
+        {
+          "role": "p18b",
+          "label": "Blue LED 18"
+        },
+        {
+          "role": "p18w",
+          "label": "White LED 18"
+        },
+        {
+          "role": "p19r",
+          "label": "Red LED 19"
+        },
+        {
+          "role": "p19g",
+          "label": "Green LED 19"
+        },
+        {
+          "role": "p19b",
+          "label": "Blue LED 19"
+        },
+        {
+          "role": "p19w",
+          "label": "White LED 19"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "Clay Paky S.p.A. A.LEDA B-EYE K10 (C61419) (https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf)",
+        "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "Pixel RGBW",
+      "note": "Pixel engine, RGBW: 19 LEDs x 4, LEDs only, no pan / tilt / zoom / dimmer. Second engine, own address, enabled from the basic engine FUNCTION channel 103-105, p22, p25.",
+      "src": "CP-K10-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "111ch",
+      "footprint": 111,
+      "channels": [
+        {
+          "role": "r",
+          "label": "Red"
+        },
+        {
+          "role": "rFine",
+          "label": "Red fine"
+        },
+        {
+          "role": "g",
+          "label": "Green"
+        },
+        {
+          "role": "gFine",
+          "label": "Green fine"
+        },
+        {
+          "role": "b",
+          "label": "Blue"
+        },
+        {
+          "role": "bFine",
+          "label": "Blue fine"
+        },
+        {
+          "role": "w",
+          "label": "White"
+        },
+        {
+          "role": "wFine",
+          "label": "White fine"
+        },
+        {
+          "role": "cto",
+          "label": "Linear CTO (255=2500K, 224=3200K, 188=4000K, 144=5000K, 117=5600K, 99=6000K, 54=7000K, 10=8000K, 0-9 unused; WHITE disabled while CTO active)"
+        },
+        {
+          "role": "macro",
+          "label": "Macro colour (table of LEE-referenced colours, 0-9 = off (see colour.macro_table))"
+        },
+        {
+          "role": "strobe",
+          "label": "Strobe (252-255 open, 239-251 random fast, 226-238 random medium, 213-225 random slow, 208-212 open, 207 fast pulsation 25/s .. 108 slow pulsation 0.5/s, 104-107 open, 103 fast strobe 25/s .. 4 slow strobe 1/s, 0-3 closed)",
+          "default": 255,
+          "cap": {
+            "shutter": [
+              {
+                "from": 0,
+                "to": 3,
+                "open": false
+              },
+              {
+                "from": 104,
+                "to": 107,
+                "open": true
+              },
+              {
+                "from": 208,
+                "to": 212,
+                "open": true
+              },
+              {
+                "from": 252,
+                "to": 255,
+                "open": true
+              }
+            ]
+          }
+        },
+        {
+          "role": "dimmer",
+          "label": "Dimmer"
+        },
+        {
+          "role": "dimmerFine",
+          "label": "Dimmer fine"
+        },
+        {
+          "role": "pan",
+          "label": "Pan (16-bit with Pan fine; home after reset without DMX = 128)",
+          "default": 128
+        },
+        {
+          "role": "panFine",
+          "label": "Pan fine"
+        },
+        {
+          "role": "tilt",
+          "label": "Tilt (16-bit with Tilt fine; home after reset without DMX = 128)",
+          "default": 128
+        },
+        {
+          "role": "tiltFine",
+          "label": "Tilt fine"
+        },
+        {
+          "role": "function",
+          "label": "Function (103-105 = Pixel map enabled (immediate); 98-102/93-97/88-92/83-87/78-82 halogen sim 2500/2000/1200/1000/750 W; 73-77 halogen off (default); 68-72/63-67/58-62 RGBW gamma 2.0/1.5(default)/1.0; 53-57/48-52(default)/43-47/38-42 dimmer curve 4/3/2/1; 25-37 pan-tilt normal; 12-24 pan-tilt fast (default); 0-11 unused. Selections take effect after holding the range 5 s (except pixel map).)",
+          "default": 0
+        },
+        {
+          "role": "control",
+          "label": "Reset (128-255 complete reset; 77-127 pan/tilt reset; 26-76 zoom (effects) reset; 0-25 unused; each after holding 5 s)",
+          "default": 0
+        },
+        {
+          "role": "zoom",
+          "label": "Zoom (0 narrow beam .. 255 wide beam)"
+        },
+        {
+          "role": "zoomRotation",
+          "label": "Zoom rotation (0-127 linear rotation / indexed zone (lens angle 0..60 deg, only when zoom channel 0-45), 128-190 CW slow..fast, 191-192 stop, 193-255 CCW; with zoom at 255 it sets lens offset angle 0..+4 deg)"
+        },
+        {
+          "role": "shape",
+          "label": "Shape Selection (shape slots 0-7 macro off, table of macros; K10 and K20 columns)"
+        },
+        {
+          "role": "shapeSpeed",
+          "label": "Shape Speed"
+        },
+        {
+          "role": "shapeFade",
+          "label": "Shape Fade (0-15 snap, 16..246-255 smooth fading curves (gamma 0.5 .. 2 / automatic))"
+        },
+        {
+          "role": "shapeR",
+          "label": "Shape R"
+        },
+        {
+          "role": "shapeG",
+          "label": "Shape G"
+        },
+        {
+          "role": "shapeB",
+          "label": "Shape B"
+        },
+        {
+          "role": "shapeW",
+          "label": "Shape W"
+        },
+        {
+          "role": "shapeDimmer",
+          "label": "Shape Dimmer"
+        },
+        {
+          "role": "bgDimmer",
+          "label": "Background Dimmer"
+        },
+        {
+          "role": "shapeTransition",
+          "label": "Shape Transition (0-4 no fade, 5=100 ms, 73=0.5 s, 113=1 s, 171=2 s, 216=3 s, 255=4 s)"
+        },
+        {
+          "role": "shapeOffset",
+          "label": "Shape Offset"
+        },
+        {
+          "role": "fgStrobe",
+          "label": "Foreground Strobe"
+        },
+        {
+          "role": "bgStrobe",
+          "label": "Background Strobe"
+        },
+        {
+          "role": "bgSelect",
+          "label": "Background Select (255 mirror effect, 16-254 no selection (K10), 0-15 pixel/ring combinations (K10: 14 'Pixel 1 + Ring 2 + Ring 3', 15 'Ring 2 + Ring 3'))"
+        },
+        {
+          "role": "p01r",
+          "label": "Red LED 1"
+        },
+        {
+          "role": "p01g",
+          "label": "Green LED 1"
+        },
+        {
+          "role": "p01b",
+          "label": "Blue LED 1"
+        },
+        {
+          "role": "p01w",
+          "label": "White LED 1"
+        },
+        {
+          "role": "p02r",
+          "label": "Red LED 2"
+        },
+        {
+          "role": "p02g",
+          "label": "Green LED 2"
+        },
+        {
+          "role": "p02b",
+          "label": "Blue LED 2"
+        },
+        {
+          "role": "p02w",
+          "label": "White LED 2"
+        },
+        {
+          "role": "p03r",
+          "label": "Red LED 3"
+        },
+        {
+          "role": "p03g",
+          "label": "Green LED 3"
+        },
+        {
+          "role": "p03b",
+          "label": "Blue LED 3"
+        },
+        {
+          "role": "p03w",
+          "label": "White LED 3"
+        },
+        {
+          "role": "p04r",
+          "label": "Red LED 4"
+        },
+        {
+          "role": "p04g",
+          "label": "Green LED 4"
+        },
+        {
+          "role": "p04b",
+          "label": "Blue LED 4"
+        },
+        {
+          "role": "p04w",
+          "label": "White LED 4"
+        },
+        {
+          "role": "p05r",
+          "label": "Red LED 5"
+        },
+        {
+          "role": "p05g",
+          "label": "Green LED 5"
+        },
+        {
+          "role": "p05b",
+          "label": "Blue LED 5"
+        },
+        {
+          "role": "p05w",
+          "label": "White LED 5"
+        },
+        {
+          "role": "p06r",
+          "label": "Red LED 6"
+        },
+        {
+          "role": "p06g",
+          "label": "Green LED 6"
+        },
+        {
+          "role": "p06b",
+          "label": "Blue LED 6"
+        },
+        {
+          "role": "p06w",
+          "label": "White LED 6"
+        },
+        {
+          "role": "p07r",
+          "label": "Red LED 7"
+        },
+        {
+          "role": "p07g",
+          "label": "Green LED 7"
+        },
+        {
+          "role": "p07b",
+          "label": "Blue LED 7"
+        },
+        {
+          "role": "p07w",
+          "label": "White LED 7"
+        },
+        {
+          "role": "p08r",
+          "label": "Red LED 8"
+        },
+        {
+          "role": "p08g",
+          "label": "Green LED 8"
+        },
+        {
+          "role": "p08b",
+          "label": "Blue LED 8"
+        },
+        {
+          "role": "p08w",
+          "label": "White LED 8"
+        },
+        {
+          "role": "p09r",
+          "label": "Red LED 9"
+        },
+        {
+          "role": "p09g",
+          "label": "Green LED 9"
+        },
+        {
+          "role": "p09b",
+          "label": "Blue LED 9"
+        },
+        {
+          "role": "p09w",
+          "label": "White LED 9"
+        },
+        {
+          "role": "p10r",
+          "label": "Red LED 10"
+        },
+        {
+          "role": "p10g",
+          "label": "Green LED 10"
+        },
+        {
+          "role": "p10b",
+          "label": "Blue LED 10"
+        },
+        {
+          "role": "p10w",
+          "label": "White LED 10"
+        },
+        {
+          "role": "p11r",
+          "label": "Red LED 11"
+        },
+        {
+          "role": "p11g",
+          "label": "Green LED 11"
+        },
+        {
+          "role": "p11b",
+          "label": "Blue LED 11"
+        },
+        {
+          "role": "p11w",
+          "label": "White LED 11"
+        },
+        {
+          "role": "p12r",
+          "label": "Red LED 12"
+        },
+        {
+          "role": "p12g",
+          "label": "Green LED 12"
+        },
+        {
+          "role": "p12b",
+          "label": "Blue LED 12"
+        },
+        {
+          "role": "p12w",
+          "label": "White LED 12"
+        },
+        {
+          "role": "p13r",
+          "label": "Red LED 13"
+        },
+        {
+          "role": "p13g",
+          "label": "Green LED 13"
+        },
+        {
+          "role": "p13b",
+          "label": "Blue LED 13"
+        },
+        {
+          "role": "p13w",
+          "label": "White LED 13"
+        },
+        {
+          "role": "p14r",
+          "label": "Red LED 14"
+        },
+        {
+          "role": "p14g",
+          "label": "Green LED 14"
+        },
+        {
+          "role": "p14b",
+          "label": "Blue LED 14"
+        },
+        {
+          "role": "p14w",
+          "label": "White LED 14"
+        },
+        {
+          "role": "p15r",
+          "label": "Red LED 15"
+        },
+        {
+          "role": "p15g",
+          "label": "Green LED 15"
+        },
+        {
+          "role": "p15b",
+          "label": "Blue LED 15"
+        },
+        {
+          "role": "p15w",
+          "label": "White LED 15"
+        },
+        {
+          "role": "p16r",
+          "label": "Red LED 16"
+        },
+        {
+          "role": "p16g",
+          "label": "Green LED 16"
+        },
+        {
+          "role": "p16b",
+          "label": "Blue LED 16"
+        },
+        {
+          "role": "p16w",
+          "label": "White LED 16"
+        },
+        {
+          "role": "p17r",
+          "label": "Red LED 17"
+        },
+        {
+          "role": "p17g",
+          "label": "Green LED 17"
+        },
+        {
+          "role": "p17b",
+          "label": "Blue LED 17"
+        },
+        {
+          "role": "p17w",
+          "label": "White LED 17"
+        },
+        {
+          "role": "p18r",
+          "label": "Red LED 18"
+        },
+        {
+          "role": "p18g",
+          "label": "Green LED 18"
+        },
+        {
+          "role": "p18b",
+          "label": "Blue LED 18"
+        },
+        {
+          "role": "p18w",
+          "label": "White LED 18"
+        },
+        {
+          "role": "p19r",
+          "label": "Red LED 19"
+        },
+        {
+          "role": "p19g",
+          "label": "Green LED 19"
+        },
+        {
+          "role": "p19b",
+          "label": "Blue LED 19"
+        },
+        {
+          "role": "p19w",
+          "label": "White LED 19"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "Clay Paky S.p.A. A.LEDA B-EYE K10 (C61419) (https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf)",
+        "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "Shapes + Pixel RGBW",
+      "note": "The combined mode the Platina plan uses: the Shapes list (35) followed by the Pixel RGBW list (76). It is TWO ENGINES addressed side by side: patch the basic engine at address A and the pixel engine at A + 35 (own address and universe in the lamp's menu); channel 18 (FUNCTION) at 103-105 enables the pixel map. Not a single mode of the lamp: a patch convention built from two exact lists (manual p22, p25; the manual's own note on two engines).",
+      "src": "CP-K10-MAN",
+      "basis": "EXACT"
+    }
+  ],
+  "defaultMode": "21ch",
+  "modesOwed": false,
+  "assumedMode": null,
+  "power_w": {
+    "value": 450,
+    "src": "CP-K10-MAN",
+    "basis": "EXACT",
+    "note": "p20 'Input power K10 450 VA' - the manual gives VA, not W; kept as published"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 14.5,
+    "src": "CP-K10-MAN",
+    "basis": "EXACT",
+    "note": "p20: K10 14.5 kg (K10 Easy: not stated; K20 21 kg)"
+  },
+  "size_mm": {
+    "value": [
+      358,
+      253,
+      494
+    ],
+    "src": "CP-K10-MAN",
+    "basis": "EXACT",
+    "order": "W x D x H",
+    "note": "p20 drawing: base 253 x 358, 494 high with the head tilted forward (423 with the head upright), 360 across the yoke, 248 head; the 3D body is the one built for the same drawing (aledaK10)"
+  },
+  "pan_tilt_deg": {
+    "value": [
+      540,
+      210
+    ],
+    "src": "CP-K10-MAN",
+    "basis": "EXACT",
+    "note": "p20"
+  },
+  "ip": {
+    "value": "IP20",
+    "src": "CP-K10-MAN",
+    "basis": "EXACT",
+    "note": "p20"
+  },
+  "optics": {
+    "beam_deg": null,
+    "zoom_deg": [
+      4,
+      60
+    ],
+    "lux": null,
+    "at_m": null,
+    "photometrySrc": null,
+    "photometryBasis": null
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": null,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/aledaK10.glb",
+    "sidecar": "scripts/place/fixtures/glb/aledaK10.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": 0.12,
+    "tiltY": 0.36,
+    "lensY": 0.496,
+    "sizeAtHome_mm": {
+      "width_x": 370,
+      "depth_z": 250,
+      "height_y": 494
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "CP-K10-MAN": {
+      "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+      "what": "Clay Paky A.LEDA B-EYE K10 / K10 EASY / K20 user manual, IST009/001 EN Rev.F 08/2016, 32 pages (a copy on the rental company 4wall's server; Claypaky's own DMX chart is behind a login). Page numbers are PDF pages.",
+      "publisher": "Clay Paky S.p.A. (copy hosted by 4wall)",
+      "accessed": "2026-11-11"
+    },
+    "CP-K10-OFL": {
+      "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/clay-paky/a-leda-b-eye-k10.json",
+      "what": "Clay Paky A.leda B-EYE K10 in the Open Fixture Library (MIT), pinned commit; used for the zoom range only (the manual gives no beam angle)",
+      "publisher": "Open Fixture Library (MIT)",
+      "accessed": "2026-11-11"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "aledaK10",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "exact",
+    "date": "2026-11-11",
+    "sources": [
+      "CP-K10-MAN",
+      "CP-K10-OFL"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 0,
+      "datasheet": 16,
+      "equivalent": 0,
+      "assumed": 0,
+      "unknown": 0
+    }
+  }
+}

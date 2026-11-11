@@ -1,0 +1,8242 @@
+{
+ "kind": "pixelLineIp",
+ "code": "ACME-PIXEL-LINE-IP",
+ "maker": "ACME (Foshan Yi Feng Electric Industrial Co.)",
+ "model": "PIXEL LINE IP (STROBE 3 IP)",
+ "manual": {
+  "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+  "date": "2026 (copy; no date in the file)",
+  "read": "2026-11-11, pdftotext p6, p9-25",
+  "basis": "EXACT",
+  "product_page": "https://en.acmelighting.com/upload/other/20260415/19b3a847ddd50afd52b6a73d0065a1c7.pdf",
+  "note": "white-label manual copy on a third-party host; the datasheet is ACME's own and lists 13 modes (35, 38, 70N, 119 are not in the manual copy)"
+ },
+ "howToRead": "value ranges are [from, to, meaning] parsed from the maker's own text (`text` is that text, verbatim); `role` is di's role; `cap` / `default` only where the manual's range supports them (others are owed). Every mode here is read from the maker's manual (EXACT).",
+ "modes": {
+  "7": {
+   "status": "EXACT",
+   "name": "7 Channel",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Red",
+     "role": "r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 2,
+     "function": "Green",
+     "role": "g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 3,
+     "function": "Blue",
+     "role": "b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 4,
+     "function": "White",
+     "role": "w",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 5,
+     "function": "Dimming",
+     "role": "dimmer",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 6,
+     "function": "Dimmer fine",
+     "role": "dimmerFine",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 7,
+     "function": "Atomized glass (SMART Glass frost)",
+     "role": "frost",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    }
+   ],
+   "src": "acme-pixel-line-ip/manual.pdf p10"
+  },
+  "15": {
+   "status": "EXACT",
+   "name": "15 Channel",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Red",
+     "role": "r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 2,
+     "function": "Green",
+     "role": "g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 3,
+     "function": "Blue",
+     "role": "b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 4,
+     "function": "White",
+     "role": "w",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 5,
+     "function": "Preset colours",
+     "role": "macro",
+     "text": "001-008 Color 1 ... 249-255 Color 32 (8 per slot, 32 slots)",
+     "ranges": [
+      [
+       1,
+       8,
+       "Color 1 ... 249-255 Color 32 (8 per slot"
+      ],
+      [
+       32,
+       32,
+       "slots)"
+      ]
+     ]
+    },
+    {
+     "ch": 6,
+     "function": "Dimming",
+     "role": "dimmer",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 7,
+     "function": "Dimmer fine",
+     "role": "dimmerFine",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 8,
+     "function": "Strobe duration",
+     "role": "strobeDuration",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 9,
+     "function": "Strobe rate",
+     "role": "strobeRate",
+     "text": "000-005 no function; 006-255 slow to fast",
+     "ranges": [
+      [
+       0,
+       5,
+       "no function"
+      ],
+      [
+       6,
+       255,
+       "slow to fast"
+      ]
+     ]
+    },
+    {
+     "ch": 10,
+     "function": "Strobe",
+     "role": "strobe",
+     "text": "000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe",
+     "ranges": [
+      [
+       0,
+       5,
+       "none"
+      ],
+      [
+       6,
+       50,
+       "slow open fast close"
+      ],
+      [
+       51,
+       100,
+       "fast open slow close"
+      ],
+      [
+       101,
+       150,
+       "slow open slow close"
+      ],
+      [
+       151,
+       200,
+       "lightning"
+      ],
+      [
+       201,
+       255,
+       "random strobe"
+      ]
+     ]
+    },
+    {
+     "ch": 11,
+     "function": "Built-in effects (RGB)",
+     "role": "effect",
+     "text": "000-005 none; 006-011 Effect 1 ... 240-255 Effect 40 (6 per slot)",
+     "ranges": [
+      [
+       0,
+       5,
+       "none"
+      ],
+      [
+       6,
+       11,
+       "Effect 1 ... 240-255 Effect 40 (6 per slot)"
+      ]
+     ]
+    },
+    {
+     "ch": 12,
+     "function": "Built-in effects (W)",
+     "role": "effectW",
+     "text": "000-005 none; 006-030 Effect 1 ... 206-255 Effect 9",
+     "ranges": [
+      [
+       0,
+       5,
+       "none"
+      ],
+      [
+       6,
+       30,
+       "Effect 1 ... 206-255 Effect 9"
+      ]
+     ]
+    },
+    {
+     "ch": 13,
+     "function": "Built-in effect speed",
+     "role": "effectSpeed",
+     "text": "000-127 forward slow to fast; 128-255 reverse slow to fast",
+     "ranges": [
+      [
+       0,
+       127,
+       "forward slow to fast"
+      ],
+      [
+       128,
+       255,
+       "reverse slow to fast"
+      ]
+     ]
+    },
+    {
+     "ch": 14,
+     "function": "Fade out effect",
+     "role": "fade",
+     "text": "0%-100%",
+     "ranges": [
+      [
+       0,
+       0,
+       "%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 15,
+     "function": "Atomized glass (SMART Glass frost)",
+     "role": "frost",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    }
+   ],
+   "src": "acme-pixel-line-ip/manual.pdf p10-12"
+  },
+  "21": {
+   "status": "EXACT",
+   "name": "21 Channel",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Red",
+     "role": "r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 2,
+     "function": "Green",
+     "role": "g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 3,
+     "function": "Blue",
+     "role": "b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 4,
+     "function": "Preset colours",
+     "role": "macro",
+     "text": "001-008 Color 1 ... 249-255 Color 32",
+     "ranges": [
+      [
+       1,
+       8,
+       "Color 1 ... 249-255 Color 32"
+      ]
+     ]
+    },
+    {
+     "ch": 5,
+     "function": "Dimming (RGB)",
+     "role": "dimmer",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 6,
+     "function": "Dimmer fine (RGB)",
+     "role": "dimmerFine",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 7,
+     "function": "Strobe duration (RGB)",
+     "role": "strobeDuration",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 8,
+     "function": "Strobe rate (RGB)",
+     "role": "strobeRate",
+     "text": "000-005 no function; 006-255 slow to fast",
+     "ranges": [
+      [
+       0,
+       5,
+       "no function"
+      ],
+      [
+       6,
+       255,
+       "slow to fast"
+      ]
+     ]
+    },
+    {
+     "ch": 9,
+     "function": "Strobe (RGB)",
+     "role": "strobe",
+     "text": "000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe",
+     "ranges": [
+      [
+       0,
+       5,
+       "none"
+      ],
+      [
+       6,
+       50,
+       "slow open fast close"
+      ],
+      [
+       51,
+       100,
+       "fast open slow close"
+      ],
+      [
+       101,
+       150,
+       "slow open slow close"
+      ],
+      [
+       151,
+       200,
+       "lightning"
+      ],
+      [
+       201,
+       255,
+       "random strobe"
+      ]
+     ]
+    },
+    {
+     "ch": 10,
+     "function": "Built-in effects (RGB)",
+     "role": "effect",
+     "text": "000-005 none; 006-011 Effect 1 ... 240-255 Effect 40",
+     "ranges": [
+      [
+       0,
+       5,
+       "none"
+      ],
+      [
+       6,
+       11,
+       "Effect 1 ... 240-255 Effect 40"
+      ]
+     ]
+    },
+    {
+     "ch": 11,
+     "function": "Built-in effect speed (RGB)",
+     "role": "effectSpeed",
+     "text": "000-127 forward; 128-255 reverse",
+     "ranges": [
+      [
+       0,
+       127,
+       "forward"
+      ],
+      [
+       128,
+       255,
+       "reverse"
+      ]
+     ]
+    },
+    {
+     "ch": 12,
+     "function": "Fade out effect (RGB)",
+     "role": "fade",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 13,
+     "function": "Dimming (W)",
+     "role": "dimmerW",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 14,
+     "function": "Dimmer fine (W)",
+     "role": "dimmerFineW",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 15,
+     "function": "Strobe duration (W)",
+     "role": "strobeDurationW",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 16,
+     "function": "Strobe rate (W)",
+     "role": "strobeRateW",
+     "text": "000-005 no function; 006-255 slow to fast",
+     "ranges": [
+      [
+       0,
+       5,
+       "no function"
+      ],
+      [
+       6,
+       255,
+       "slow to fast"
+      ]
+     ]
+    },
+    {
+     "ch": 17,
+     "function": "Strobe (W)",
+     "role": "strobeW",
+     "text": "000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe",
+     "ranges": [
+      [
+       0,
+       5,
+       "none"
+      ],
+      [
+       6,
+       50,
+       "slow open fast close"
+      ],
+      [
+       51,
+       100,
+       "fast open slow close"
+      ],
+      [
+       101,
+       150,
+       "slow open slow close"
+      ],
+      [
+       151,
+       200,
+       "lightning"
+      ],
+      [
+       201,
+       255,
+       "random strobe"
+      ]
+     ]
+    },
+    {
+     "ch": 18,
+     "function": "Built-in effects (W)",
+     "role": "effectW",
+     "text": "000-005 none; 006-030 Effect 1 ... 206-255 Effect 9",
+     "ranges": [
+      [
+       0,
+       5,
+       "none"
+      ],
+      [
+       6,
+       30,
+       "Effect 1 ... 206-255 Effect 9"
+      ]
+     ]
+    },
+    {
+     "ch": 19,
+     "function": "Built-in effect speed (W)",
+     "role": "effectSpeedW",
+     "text": "000-127 forward; 128-255 reverse",
+     "ranges": [
+      [
+       0,
+       127,
+       "forward"
+      ],
+      [
+       128,
+       255,
+       "reverse"
+      ]
+     ]
+    },
+    {
+     "ch": 20,
+     "function": "Fade out effect (W)",
+     "role": "fadeW",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 21,
+     "function": "Atomized glass (SMART Glass frost)",
+     "role": "frost",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    }
+   ],
+   "src": "acme-pixel-line-ip/manual.pdf p12-14"
+  },
+  "39": {
+   "status": "EXACT",
+   "name": "39 Channel",
+   "note": "8 RGB cells + 4 W cells with own dimmer/strobe/frost",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Red1",
+     "role": "p01r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 2,
+     "function": "Green1",
+     "role": "p01g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 3,
+     "function": "Blue1",
+     "role": "p01b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 4,
+     "function": "Red2",
+     "role": "p02r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 5,
+     "function": "Green2",
+     "role": "p02g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 6,
+     "function": "Blue2",
+     "role": "p02b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 7,
+     "function": "Red3",
+     "role": "p03r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 8,
+     "function": "Green3",
+     "role": "p03g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 9,
+     "function": "Blue3",
+     "role": "p03b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 10,
+     "function": "Red4",
+     "role": "p04r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 11,
+     "function": "Green4",
+     "role": "p04g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 12,
+     "function": "Blue4",
+     "role": "p04b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 13,
+     "function": "Red5",
+     "role": "p05r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 14,
+     "function": "Green5",
+     "role": "p05g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 15,
+     "function": "Blue5",
+     "role": "p05b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 16,
+     "function": "Red6",
+     "role": "p06r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 17,
+     "function": "Green6",
+     "role": "p06g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 18,
+     "function": "Blue6",
+     "role": "p06b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 19,
+     "function": "Red7",
+     "role": "p07r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 20,
+     "function": "Green7",
+     "role": "p07g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 21,
+     "function": "Blue7",
+     "role": "p07b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 22,
+     "function": "Red8",
+     "role": "p08r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 23,
+     "function": "Green8",
+     "role": "p08g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 24,
+     "function": "Blue8",
+     "role": "p08b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 25,
+     "function": "Dimming (RGB)",
+     "role": "dimmer",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 26,
+     "function": "Dimmer fine (RGB)",
+     "role": "dimmerFine",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 27,
+     "function": "Strobe duration (RGB)",
+     "role": "strobeDuration",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 28,
+     "function": "Strobe rate (RGB)",
+     "role": "strobeRate",
+     "text": "000-005 no function; 006-255 slow to fast",
+     "ranges": [
+      [
+       0,
+       5,
+       "no function"
+      ],
+      [
+       6,
+       255,
+       "slow to fast"
+      ]
+     ]
+    },
+    {
+     "ch": 29,
+     "function": "Strobe (RGB)",
+     "role": "strobe",
+     "text": "000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe",
+     "ranges": [
+      [
+       0,
+       5,
+       "none"
+      ],
+      [
+       6,
+       50,
+       "slow open fast close"
+      ],
+      [
+       51,
+       100,
+       "fast open slow close"
+      ],
+      [
+       101,
+       150,
+       "slow open slow close"
+      ],
+      [
+       151,
+       200,
+       "lightning"
+      ],
+      [
+       201,
+       255,
+       "random strobe"
+      ]
+     ]
+    },
+    {
+     "ch": 30,
+     "function": "White1",
+     "role": "cw01",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 31,
+     "function": "White2",
+     "role": "cw02",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 32,
+     "function": "White3",
+     "role": "cw03",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 33,
+     "function": "White4",
+     "role": "cw04",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14-15"
+    },
+    {
+     "ch": 34,
+     "function": "Dimming (W)",
+     "role": "dimmerW",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 35,
+     "function": "Dimmer fine (W)",
+     "role": "dimmerFineW",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 36,
+     "function": "Strobe duration (W)",
+     "role": "strobeDurationW",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 37,
+     "function": "Strobe rate (W)",
+     "role": "strobeRateW",
+     "text": "000-005 no function; 006-255 slow to fast",
+     "ranges": [
+      [
+       0,
+       5,
+       "no function"
+      ],
+      [
+       6,
+       255,
+       "slow to fast"
+      ]
+     ]
+    },
+    {
+     "ch": 38,
+     "function": "Strobe (W)",
+     "role": "strobeW",
+     "text": "000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe",
+     "ranges": [
+      [
+       0,
+       5,
+       "none"
+      ],
+      [
+       6,
+       50,
+       "slow open fast close"
+      ],
+      [
+       51,
+       100,
+       "fast open slow close"
+      ],
+      [
+       101,
+       150,
+       "slow open slow close"
+      ],
+      [
+       151,
+       200,
+       "lightning"
+      ],
+      [
+       201,
+       255,
+       "random strobe"
+      ]
+     ]
+    },
+    {
+     "ch": 39,
+     "function": "Atomized glass (SMART Glass frost)",
+     "role": "frost",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    }
+   ],
+   "src": "acme-pixel-line-ip/manual.pdf p14-15"
+  },
+  "112": {
+   "status": "EXACT",
+   "name": "112 Channel",
+   "note": "32 RGB cells + 16 W cells, no dimmer/strobe/frost channel (pure pixels)",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Red1",
+     "role": "p01r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 2,
+     "function": "Green1",
+     "role": "p01g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 3,
+     "function": "Blue1",
+     "role": "p01b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 4,
+     "function": "Red2",
+     "role": "p02r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 5,
+     "function": "Green2",
+     "role": "p02g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 6,
+     "function": "Blue2",
+     "role": "p02b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 7,
+     "function": "Red3",
+     "role": "p03r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 8,
+     "function": "Green3",
+     "role": "p03g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 9,
+     "function": "Blue3",
+     "role": "p03b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 10,
+     "function": "Red4",
+     "role": "p04r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 11,
+     "function": "Green4",
+     "role": "p04g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 12,
+     "function": "Blue4",
+     "role": "p04b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 13,
+     "function": "Red5",
+     "role": "p05r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 14,
+     "function": "Green5",
+     "role": "p05g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 15,
+     "function": "Blue5",
+     "role": "p05b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 16,
+     "function": "Red6",
+     "role": "p06r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 17,
+     "function": "Green6",
+     "role": "p06g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 18,
+     "function": "Blue6",
+     "role": "p06b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 19,
+     "function": "Red7",
+     "role": "p07r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 20,
+     "function": "Green7",
+     "role": "p07g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 21,
+     "function": "Blue7",
+     "role": "p07b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 22,
+     "function": "Red8",
+     "role": "p08r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 23,
+     "function": "Green8",
+     "role": "p08g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 24,
+     "function": "Blue8",
+     "role": "p08b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 25,
+     "function": "Red9",
+     "role": "p09r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 26,
+     "function": "Green9",
+     "role": "p09g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 27,
+     "function": "Blue9",
+     "role": "p09b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 28,
+     "function": "Red10",
+     "role": "p10r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 29,
+     "function": "Green10",
+     "role": "p10g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 30,
+     "function": "Blue10",
+     "role": "p10b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 31,
+     "function": "Red11",
+     "role": "p11r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 32,
+     "function": "Green11",
+     "role": "p11g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 33,
+     "function": "Blue11",
+     "role": "p11b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 34,
+     "function": "Red12",
+     "role": "p12r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 35,
+     "function": "Green12",
+     "role": "p12g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 36,
+     "function": "Blue12",
+     "role": "p12b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 37,
+     "function": "Red13",
+     "role": "p13r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 38,
+     "function": "Green13",
+     "role": "p13g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 39,
+     "function": "Blue13",
+     "role": "p13b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 40,
+     "function": "Red14",
+     "role": "p14r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 41,
+     "function": "Green14",
+     "role": "p14g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 42,
+     "function": "Blue14",
+     "role": "p14b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 43,
+     "function": "Red15",
+     "role": "p15r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 44,
+     "function": "Green15",
+     "role": "p15g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 45,
+     "function": "Blue15",
+     "role": "p15b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 46,
+     "function": "Red16",
+     "role": "p16r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 47,
+     "function": "Green16",
+     "role": "p16g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 48,
+     "function": "Blue16",
+     "role": "p16b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 49,
+     "function": "Red17",
+     "role": "p17r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 50,
+     "function": "Green17",
+     "role": "p17g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 51,
+     "function": "Blue17",
+     "role": "p17b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 52,
+     "function": "Red18",
+     "role": "p18r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 53,
+     "function": "Green18",
+     "role": "p18g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 54,
+     "function": "Blue18",
+     "role": "p18b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 55,
+     "function": "Red19",
+     "role": "p19r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 56,
+     "function": "Green19",
+     "role": "p19g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 57,
+     "function": "Blue19",
+     "role": "p19b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 58,
+     "function": "Red20",
+     "role": "p20r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 59,
+     "function": "Green20",
+     "role": "p20g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 60,
+     "function": "Blue20",
+     "role": "p20b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 61,
+     "function": "Red21",
+     "role": "p21r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 62,
+     "function": "Green21",
+     "role": "p21g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 63,
+     "function": "Blue21",
+     "role": "p21b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 64,
+     "function": "Red22",
+     "role": "p22r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 65,
+     "function": "Green22",
+     "role": "p22g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 66,
+     "function": "Blue22",
+     "role": "p22b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 67,
+     "function": "Red23",
+     "role": "p23r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 68,
+     "function": "Green23",
+     "role": "p23g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 69,
+     "function": "Blue23",
+     "role": "p23b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 70,
+     "function": "Red24",
+     "role": "p24r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 71,
+     "function": "Green24",
+     "role": "p24g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 72,
+     "function": "Blue24",
+     "role": "p24b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 73,
+     "function": "Red25",
+     "role": "p25r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 74,
+     "function": "Green25",
+     "role": "p25g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 75,
+     "function": "Blue25",
+     "role": "p25b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 76,
+     "function": "Red26",
+     "role": "p26r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 77,
+     "function": "Green26",
+     "role": "p26g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 78,
+     "function": "Blue26",
+     "role": "p26b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 79,
+     "function": "Red27",
+     "role": "p27r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 80,
+     "function": "Green27",
+     "role": "p27g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 81,
+     "function": "Blue27",
+     "role": "p27b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 82,
+     "function": "Red28",
+     "role": "p28r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 83,
+     "function": "Green28",
+     "role": "p28g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 84,
+     "function": "Blue28",
+     "role": "p28b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 85,
+     "function": "Red29",
+     "role": "p29r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 86,
+     "function": "Green29",
+     "role": "p29g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 87,
+     "function": "Blue29",
+     "role": "p29b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 88,
+     "function": "Red30",
+     "role": "p30r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 89,
+     "function": "Green30",
+     "role": "p30g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 90,
+     "function": "Blue30",
+     "role": "p30b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 91,
+     "function": "Red31",
+     "role": "p31r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 92,
+     "function": "Green31",
+     "role": "p31g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 93,
+     "function": "Blue31",
+     "role": "p31b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 94,
+     "function": "Red32",
+     "role": "p32r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 95,
+     "function": "Green32",
+     "role": "p32g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 96,
+     "function": "Blue32",
+     "role": "p32b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p15-17"
+    },
+    {
+     "ch": 97,
+     "function": "White1",
+     "role": "cw01",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 98,
+     "function": "White2",
+     "role": "cw02",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 99,
+     "function": "White3",
+     "role": "cw03",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 100,
+     "function": "White4",
+     "role": "cw04",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 101,
+     "function": "White5",
+     "role": "cw05",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 102,
+     "function": "White6",
+     "role": "cw06",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 103,
+     "function": "White7",
+     "role": "cw07",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 104,
+     "function": "White8",
+     "role": "cw08",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 105,
+     "function": "White9",
+     "role": "cw09",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 106,
+     "function": "White10",
+     "role": "cw10",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 107,
+     "function": "White11",
+     "role": "cw11",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 108,
+     "function": "White12",
+     "role": "cw12",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 109,
+     "function": "White13",
+     "role": "cw13",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 110,
+     "function": "White14",
+     "role": "cw14",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 111,
+     "function": "White15",
+     "role": "cw15",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    },
+    {
+     "ch": 112,
+     "function": "White16",
+     "role": "cw16",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17"
+    }
+   ],
+   "src": "acme-pixel-line-ip/manual.pdf p15-17"
+  },
+  "17": {
+   "status": "EXACT",
+   "name": "17 Channel",
+   "note": "4 RGB + 4 W cells + frost",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Red1",
+     "role": "p01r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17-18"
+    },
+    {
+     "ch": 2,
+     "function": "Green1",
+     "role": "p01g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17-18"
+    },
+    {
+     "ch": 3,
+     "function": "Blue1",
+     "role": "p01b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17-18"
+    },
+    {
+     "ch": 4,
+     "function": "Red2",
+     "role": "p02r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17-18"
+    },
+    {
+     "ch": 5,
+     "function": "Green2",
+     "role": "p02g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17-18"
+    },
+    {
+     "ch": 6,
+     "function": "Blue2",
+     "role": "p02b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17-18"
+    },
+    {
+     "ch": 7,
+     "function": "Red3",
+     "role": "p03r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17-18"
+    },
+    {
+     "ch": 8,
+     "function": "Green3",
+     "role": "p03g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17-18"
+    },
+    {
+     "ch": 9,
+     "function": "Blue3",
+     "role": "p03b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17-18"
+    },
+    {
+     "ch": 10,
+     "function": "Red4",
+     "role": "p04r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17-18"
+    },
+    {
+     "ch": 11,
+     "function": "Green4",
+     "role": "p04g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17-18"
+    },
+    {
+     "ch": 12,
+     "function": "Blue4",
+     "role": "p04b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p17-18"
+    },
+    {
+     "ch": 13,
+     "function": "White1",
+     "role": "cw01",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 14,
+     "function": "White2",
+     "role": "cw02",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 15,
+     "function": "White3",
+     "role": "cw03",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 16,
+     "function": "White4",
+     "role": "cw04",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 17,
+     "function": "Atomized glass (SMART Glass frost)",
+     "role": "frost",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    }
+   ],
+   "src": "acme-pixel-line-ip/manual.pdf p17-18"
+  },
+  "33": {
+   "status": "EXACT",
+   "name": "33 Channel",
+   "note": "8 RGB + 8 W cells + frost",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Red1",
+     "role": "p01r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 2,
+     "function": "Green1",
+     "role": "p01g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 3,
+     "function": "Blue1",
+     "role": "p01b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 4,
+     "function": "Red2",
+     "role": "p02r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 5,
+     "function": "Green2",
+     "role": "p02g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 6,
+     "function": "Blue2",
+     "role": "p02b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 7,
+     "function": "Red3",
+     "role": "p03r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 8,
+     "function": "Green3",
+     "role": "p03g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 9,
+     "function": "Blue3",
+     "role": "p03b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 10,
+     "function": "Red4",
+     "role": "p04r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 11,
+     "function": "Green4",
+     "role": "p04g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 12,
+     "function": "Blue4",
+     "role": "p04b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 13,
+     "function": "Red5",
+     "role": "p05r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 14,
+     "function": "Green5",
+     "role": "p05g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 15,
+     "function": "Blue5",
+     "role": "p05b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 16,
+     "function": "Red6",
+     "role": "p06r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 17,
+     "function": "Green6",
+     "role": "p06g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 18,
+     "function": "Blue6",
+     "role": "p06b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 19,
+     "function": "Red7",
+     "role": "p07r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 20,
+     "function": "Green7",
+     "role": "p07g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 21,
+     "function": "Blue7",
+     "role": "p07b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 22,
+     "function": "Red8",
+     "role": "p08r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 23,
+     "function": "Green8",
+     "role": "p08g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 24,
+     "function": "Blue8",
+     "role": "p08b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 25,
+     "function": "White1",
+     "role": "cw01",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 26,
+     "function": "White2",
+     "role": "cw02",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 27,
+     "function": "White3",
+     "role": "cw03",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 28,
+     "function": "White4",
+     "role": "cw04",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 29,
+     "function": "White5",
+     "role": "cw05",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 30,
+     "function": "White6",
+     "role": "cw06",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 31,
+     "function": "White7",
+     "role": "cw07",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 32,
+     "function": "White8",
+     "role": "cw08",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18"
+    },
+    {
+     "ch": 33,
+     "function": "Atomized glass (SMART Glass frost)",
+     "role": "frost",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    }
+   ],
+   "src": "acme-pixel-line-ip/manual.pdf p18"
+  },
+  "65": {
+   "status": "EXACT",
+   "name": "65 Channel",
+   "note": "16 RGB + 16 W cells + frost",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Red1",
+     "role": "p01r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 2,
+     "function": "Green1",
+     "role": "p01g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 3,
+     "function": "Blue1",
+     "role": "p01b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 4,
+     "function": "Red2",
+     "role": "p02r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 5,
+     "function": "Green2",
+     "role": "p02g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 6,
+     "function": "Blue2",
+     "role": "p02b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 7,
+     "function": "Red3",
+     "role": "p03r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 8,
+     "function": "Green3",
+     "role": "p03g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 9,
+     "function": "Blue3",
+     "role": "p03b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 10,
+     "function": "Red4",
+     "role": "p04r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 11,
+     "function": "Green4",
+     "role": "p04g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 12,
+     "function": "Blue4",
+     "role": "p04b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 13,
+     "function": "Red5",
+     "role": "p05r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 14,
+     "function": "Green5",
+     "role": "p05g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 15,
+     "function": "Blue5",
+     "role": "p05b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 16,
+     "function": "Red6",
+     "role": "p06r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 17,
+     "function": "Green6",
+     "role": "p06g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 18,
+     "function": "Blue6",
+     "role": "p06b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 19,
+     "function": "Red7",
+     "role": "p07r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 20,
+     "function": "Green7",
+     "role": "p07g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 21,
+     "function": "Blue7",
+     "role": "p07b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 22,
+     "function": "Red8",
+     "role": "p08r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 23,
+     "function": "Green8",
+     "role": "p08g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 24,
+     "function": "Blue8",
+     "role": "p08b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 25,
+     "function": "Red9",
+     "role": "p09r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 26,
+     "function": "Green9",
+     "role": "p09g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 27,
+     "function": "Blue9",
+     "role": "p09b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 28,
+     "function": "Red10",
+     "role": "p10r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 29,
+     "function": "Green10",
+     "role": "p10g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 30,
+     "function": "Blue10",
+     "role": "p10b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 31,
+     "function": "Red11",
+     "role": "p11r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 32,
+     "function": "Green11",
+     "role": "p11g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 33,
+     "function": "Blue11",
+     "role": "p11b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 34,
+     "function": "Red12",
+     "role": "p12r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 35,
+     "function": "Green12",
+     "role": "p12g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 36,
+     "function": "Blue12",
+     "role": "p12b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 37,
+     "function": "Red13",
+     "role": "p13r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 38,
+     "function": "Green13",
+     "role": "p13g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 39,
+     "function": "Blue13",
+     "role": "p13b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 40,
+     "function": "Red14",
+     "role": "p14r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 41,
+     "function": "Green14",
+     "role": "p14g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 42,
+     "function": "Blue14",
+     "role": "p14b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 43,
+     "function": "Red15",
+     "role": "p15r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 44,
+     "function": "Green15",
+     "role": "p15g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 45,
+     "function": "Blue15",
+     "role": "p15b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 46,
+     "function": "Red16",
+     "role": "p16r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 47,
+     "function": "Green16",
+     "role": "p16g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 48,
+     "function": "Blue16",
+     "role": "p16b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p18-19"
+    },
+    {
+     "ch": 49,
+     "function": "White1",
+     "role": "cw01",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 50,
+     "function": "White2",
+     "role": "cw02",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 51,
+     "function": "White3",
+     "role": "cw03",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 52,
+     "function": "White4",
+     "role": "cw04",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 53,
+     "function": "White5",
+     "role": "cw05",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 54,
+     "function": "White6",
+     "role": "cw06",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 55,
+     "function": "White7",
+     "role": "cw07",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 56,
+     "function": "White8",
+     "role": "cw08",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 57,
+     "function": "White9",
+     "role": "cw09",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 58,
+     "function": "White10",
+     "role": "cw10",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 59,
+     "function": "White11",
+     "role": "cw11",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 60,
+     "function": "White12",
+     "role": "cw12",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 61,
+     "function": "White13",
+     "role": "cw13",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 62,
+     "function": "White14",
+     "role": "cw14",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 63,
+     "function": "White15",
+     "role": "cw15",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 64,
+     "function": "White16",
+     "role": "cw16",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p19"
+    },
+    {
+     "ch": 65,
+     "function": "Atomized glass (SMART Glass frost)",
+     "role": "frost",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    }
+   ],
+   "src": "acme-pixel-line-ip/manual.pdf p18-20"
+  },
+  "68": {
+   "status": "EXACT",
+   "name": "68 Channel",
+   "note": "dimming, strobe RGB, strobe W, frost + 16 RGB + 16 W cells",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Dimming",
+     "role": "dimmer",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20"
+    },
+    {
+     "ch": 2,
+     "function": "Strobe (RGB)",
+     "role": "strobe",
+     "text": "000-005 no function; 006-127 strobe slow to fast; 128-130 none; 131-250 random strobe; 251-255 none",
+     "ranges": [
+      [
+       0,
+       5,
+       "no function"
+      ],
+      [
+       6,
+       127,
+       "strobe slow to fast"
+      ],
+      [
+       128,
+       130,
+       "none"
+      ],
+      [
+       131,
+       250,
+       "random strobe"
+      ],
+      [
+       251,
+       255,
+       "none"
+      ]
+     ],
+     "page": "p20"
+    },
+    {
+     "ch": 3,
+     "function": "Strobe (W)",
+     "role": "strobeW",
+     "text": "000-005 no function; 006-127 strobe slow to fast; 128-130 none; 131-250 random strobe; 251-255 none",
+     "ranges": [
+      [
+       0,
+       5,
+       "no function"
+      ],
+      [
+       6,
+       127,
+       "strobe slow to fast"
+      ],
+      [
+       128,
+       130,
+       "none"
+      ],
+      [
+       131,
+       250,
+       "random strobe"
+      ],
+      [
+       251,
+       255,
+       "none"
+      ]
+     ],
+     "page": "p20"
+    },
+    {
+     "ch": 4,
+     "function": "Atomized glass (SMART Glass frost)",
+     "role": "frost",
+     "text": "000-255",
+     "ranges": [
+      [
+       0,
+       255,
+       null
+      ]
+     ],
+     "page": "p20"
+    },
+    {
+     "ch": 5,
+     "function": "Red1",
+     "role": "p01r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 6,
+     "function": "Green1",
+     "role": "p01g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 7,
+     "function": "Blue1",
+     "role": "p01b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 8,
+     "function": "Red2",
+     "role": "p02r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 9,
+     "function": "Green2",
+     "role": "p02g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 10,
+     "function": "Blue2",
+     "role": "p02b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 11,
+     "function": "Red3",
+     "role": "p03r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 12,
+     "function": "Green3",
+     "role": "p03g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 13,
+     "function": "Blue3",
+     "role": "p03b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 14,
+     "function": "Red4",
+     "role": "p04r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 15,
+     "function": "Green4",
+     "role": "p04g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 16,
+     "function": "Blue4",
+     "role": "p04b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 17,
+     "function": "Red5",
+     "role": "p05r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 18,
+     "function": "Green5",
+     "role": "p05g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 19,
+     "function": "Blue5",
+     "role": "p05b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 20,
+     "function": "Red6",
+     "role": "p06r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 21,
+     "function": "Green6",
+     "role": "p06g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 22,
+     "function": "Blue6",
+     "role": "p06b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 23,
+     "function": "Red7",
+     "role": "p07r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 24,
+     "function": "Green7",
+     "role": "p07g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 25,
+     "function": "Blue7",
+     "role": "p07b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 26,
+     "function": "Red8",
+     "role": "p08r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 27,
+     "function": "Green8",
+     "role": "p08g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 28,
+     "function": "Blue8",
+     "role": "p08b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 29,
+     "function": "Red9",
+     "role": "p09r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 30,
+     "function": "Green9",
+     "role": "p09g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 31,
+     "function": "Blue9",
+     "role": "p09b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 32,
+     "function": "Red10",
+     "role": "p10r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 33,
+     "function": "Green10",
+     "role": "p10g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 34,
+     "function": "Blue10",
+     "role": "p10b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 35,
+     "function": "Red11",
+     "role": "p11r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 36,
+     "function": "Green11",
+     "role": "p11g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 37,
+     "function": "Blue11",
+     "role": "p11b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 38,
+     "function": "Red12",
+     "role": "p12r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 39,
+     "function": "Green12",
+     "role": "p12g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 40,
+     "function": "Blue12",
+     "role": "p12b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 41,
+     "function": "Red13",
+     "role": "p13r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 42,
+     "function": "Green13",
+     "role": "p13g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 43,
+     "function": "Blue13",
+     "role": "p13b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 44,
+     "function": "Red14",
+     "role": "p14r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 45,
+     "function": "Green14",
+     "role": "p14g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 46,
+     "function": "Blue14",
+     "role": "p14b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 47,
+     "function": "Red15",
+     "role": "p15r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 48,
+     "function": "Green15",
+     "role": "p15g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 49,
+     "function": "Blue15",
+     "role": "p15b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 50,
+     "function": "Red16",
+     "role": "p16r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 51,
+     "function": "Green16",
+     "role": "p16g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 52,
+     "function": "Blue16",
+     "role": "p16b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p20-21"
+    },
+    {
+     "ch": 53,
+     "function": "White1",
+     "role": "cw01",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 54,
+     "function": "White2",
+     "role": "cw02",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 55,
+     "function": "White3",
+     "role": "cw03",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 56,
+     "function": "White4",
+     "role": "cw04",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 57,
+     "function": "White5",
+     "role": "cw05",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 58,
+     "function": "White6",
+     "role": "cw06",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 59,
+     "function": "White7",
+     "role": "cw07",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 60,
+     "function": "White8",
+     "role": "cw08",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 61,
+     "function": "White9",
+     "role": "cw09",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 62,
+     "function": "White10",
+     "role": "cw10",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 63,
+     "function": "White11",
+     "role": "cw11",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 64,
+     "function": "White12",
+     "role": "cw12",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 65,
+     "function": "White13",
+     "role": "cw13",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 66,
+     "function": "White14",
+     "role": "cw14",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 67,
+     "function": "White15",
+     "role": "cw15",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    },
+    {
+     "ch": 68,
+     "function": "White16",
+     "role": "cw16",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p21"
+    }
+   ],
+   "src": "acme-pixel-line-ip/manual.pdf p20-21"
+  },
+  "117": {
+   "status": "EXACT",
+   "name": "117 Channel",
+   "note": "LARGEST. master dimmer, strobe (3 ch), frost + 32 RGB + 16 W cells",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Dimming",
+     "role": "dimmer",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 2,
+     "function": "Strobe duration",
+     "role": "strobeDuration",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 3,
+     "function": "Strobe rate",
+     "role": "strobeRate",
+     "text": "000-005 no function; 006-255 slow to fast",
+     "ranges": [
+      [
+       0,
+       5,
+       "no function"
+      ],
+      [
+       6,
+       255,
+       "slow to fast"
+      ]
+     ]
+    },
+    {
+     "ch": 4,
+     "function": "Strobe",
+     "role": "strobe",
+     "text": "000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe (use with duration/rate)",
+     "ranges": [
+      [
+       0,
+       5,
+       "none"
+      ],
+      [
+       6,
+       50,
+       "slow open fast close"
+      ],
+      [
+       51,
+       100,
+       "fast open slow close"
+      ],
+      [
+       101,
+       150,
+       "slow open slow close"
+      ],
+      [
+       151,
+       200,
+       "lightning"
+      ],
+      [
+       201,
+       255,
+       "random strobe (use with duration/rate)"
+      ]
+     ]
+    },
+    {
+     "ch": 5,
+     "function": "Atomized glass (SMART Glass frost)",
+     "role": "frost",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ]
+    },
+    {
+     "ch": 6,
+     "function": "Red1",
+     "role": "p01r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 7,
+     "function": "Green1",
+     "role": "p01g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 8,
+     "function": "Blue1",
+     "role": "p01b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 9,
+     "function": "Red2",
+     "role": "p02r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 10,
+     "function": "Green2",
+     "role": "p02g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 11,
+     "function": "Blue2",
+     "role": "p02b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 12,
+     "function": "Red3",
+     "role": "p03r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 13,
+     "function": "Green3",
+     "role": "p03g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 14,
+     "function": "Blue3",
+     "role": "p03b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 15,
+     "function": "Red4",
+     "role": "p04r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 16,
+     "function": "Green4",
+     "role": "p04g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 17,
+     "function": "Blue4",
+     "role": "p04b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 18,
+     "function": "Red5",
+     "role": "p05r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 19,
+     "function": "Green5",
+     "role": "p05g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 20,
+     "function": "Blue5",
+     "role": "p05b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 21,
+     "function": "Red6",
+     "role": "p06r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 22,
+     "function": "Green6",
+     "role": "p06g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 23,
+     "function": "Blue6",
+     "role": "p06b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 24,
+     "function": "Red7",
+     "role": "p07r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 25,
+     "function": "Green7",
+     "role": "p07g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 26,
+     "function": "Blue7",
+     "role": "p07b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 27,
+     "function": "Red8",
+     "role": "p08r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 28,
+     "function": "Green8",
+     "role": "p08g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 29,
+     "function": "Blue8",
+     "role": "p08b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 30,
+     "function": "Red9",
+     "role": "p09r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 31,
+     "function": "Green9",
+     "role": "p09g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 32,
+     "function": "Blue9",
+     "role": "p09b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 33,
+     "function": "Red10",
+     "role": "p10r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 34,
+     "function": "Green10",
+     "role": "p10g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 35,
+     "function": "Blue10",
+     "role": "p10b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 36,
+     "function": "Red11",
+     "role": "p11r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 37,
+     "function": "Green11",
+     "role": "p11g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 38,
+     "function": "Blue11",
+     "role": "p11b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 39,
+     "function": "Red12",
+     "role": "p12r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 40,
+     "function": "Green12",
+     "role": "p12g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 41,
+     "function": "Blue12",
+     "role": "p12b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 42,
+     "function": "Red13",
+     "role": "p13r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 43,
+     "function": "Green13",
+     "role": "p13g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 44,
+     "function": "Blue13",
+     "role": "p13b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 45,
+     "function": "Red14",
+     "role": "p14r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 46,
+     "function": "Green14",
+     "role": "p14g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 47,
+     "function": "Blue14",
+     "role": "p14b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 48,
+     "function": "Red15",
+     "role": "p15r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 49,
+     "function": "Green15",
+     "role": "p15g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 50,
+     "function": "Blue15",
+     "role": "p15b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 51,
+     "function": "Red16",
+     "role": "p16r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 52,
+     "function": "Green16",
+     "role": "p16g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 53,
+     "function": "Blue16",
+     "role": "p16b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 54,
+     "function": "Red17",
+     "role": "p17r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 55,
+     "function": "Green17",
+     "role": "p17g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 56,
+     "function": "Blue17",
+     "role": "p17b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 57,
+     "function": "Red18",
+     "role": "p18r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 58,
+     "function": "Green18",
+     "role": "p18g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 59,
+     "function": "Blue18",
+     "role": "p18b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 60,
+     "function": "Red19",
+     "role": "p19r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 61,
+     "function": "Green19",
+     "role": "p19g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 62,
+     "function": "Blue19",
+     "role": "p19b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 63,
+     "function": "Red20",
+     "role": "p20r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 64,
+     "function": "Green20",
+     "role": "p20g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 65,
+     "function": "Blue20",
+     "role": "p20b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 66,
+     "function": "Red21",
+     "role": "p21r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 67,
+     "function": "Green21",
+     "role": "p21g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 68,
+     "function": "Blue21",
+     "role": "p21b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 69,
+     "function": "Red22",
+     "role": "p22r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 70,
+     "function": "Green22",
+     "role": "p22g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 71,
+     "function": "Blue22",
+     "role": "p22b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 72,
+     "function": "Red23",
+     "role": "p23r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 73,
+     "function": "Green23",
+     "role": "p23g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 74,
+     "function": "Blue23",
+     "role": "p23b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 75,
+     "function": "Red24",
+     "role": "p24r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 76,
+     "function": "Green24",
+     "role": "p24g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 77,
+     "function": "Blue24",
+     "role": "p24b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 78,
+     "function": "Red25",
+     "role": "p25r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 79,
+     "function": "Green25",
+     "role": "p25g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 80,
+     "function": "Blue25",
+     "role": "p25b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 81,
+     "function": "Red26",
+     "role": "p26r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 82,
+     "function": "Green26",
+     "role": "p26g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 83,
+     "function": "Blue26",
+     "role": "p26b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 84,
+     "function": "Red27",
+     "role": "p27r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 85,
+     "function": "Green27",
+     "role": "p27g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 86,
+     "function": "Blue27",
+     "role": "p27b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 87,
+     "function": "Red28",
+     "role": "p28r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 88,
+     "function": "Green28",
+     "role": "p28g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 89,
+     "function": "Blue28",
+     "role": "p28b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 90,
+     "function": "Red29",
+     "role": "p29r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 91,
+     "function": "Green29",
+     "role": "p29g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 92,
+     "function": "Blue29",
+     "role": "p29b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 93,
+     "function": "Red30",
+     "role": "p30r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 94,
+     "function": "Green30",
+     "role": "p30g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 95,
+     "function": "Blue30",
+     "role": "p30b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 96,
+     "function": "Red31",
+     "role": "p31r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 97,
+     "function": "Green31",
+     "role": "p31g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 98,
+     "function": "Blue31",
+     "role": "p31b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 99,
+     "function": "Red32",
+     "role": "p32r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 100,
+     "function": "Green32",
+     "role": "p32g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 101,
+     "function": "Blue32",
+     "role": "p32b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p22-23"
+    },
+    {
+     "ch": 102,
+     "function": "White1",
+     "role": "cw01",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 103,
+     "function": "White2",
+     "role": "cw02",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 104,
+     "function": "White3",
+     "role": "cw03",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 105,
+     "function": "White4",
+     "role": "cw04",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 106,
+     "function": "White5",
+     "role": "cw05",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 107,
+     "function": "White6",
+     "role": "cw06",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 108,
+     "function": "White7",
+     "role": "cw07",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 109,
+     "function": "White8",
+     "role": "cw08",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 110,
+     "function": "White9",
+     "role": "cw09",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 111,
+     "function": "White10",
+     "role": "cw10",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 112,
+     "function": "White11",
+     "role": "cw11",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 113,
+     "function": "White12",
+     "role": "cw12",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 114,
+     "function": "White13",
+     "role": "cw13",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 115,
+     "function": "White14",
+     "role": "cw14",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 116,
+     "function": "White15",
+     "role": "cw15",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    },
+    {
+     "ch": 117,
+     "function": "White16",
+     "role": "cw16",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p23-24"
+    }
+   ],
+   "src": "acme-pixel-line-ip/manual.pdf p21-24"
+  },
+  "70": {
+   "status": "EXACT",
+   "name": "70 Channel",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Dimming",
+     "role": "dimmer",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24"
+    },
+    {
+     "ch": 2,
+     "function": "Strobe (RGB)",
+     "role": "strobe",
+     "text": "000-005 no function; 006-127 strobe slow to fast; 128-130 none; 131-250 random strobe; 251-255 none",
+     "ranges": [
+      [
+       0,
+       5,
+       "no function"
+      ],
+      [
+       6,
+       127,
+       "strobe slow to fast"
+      ],
+      [
+       128,
+       130,
+       "none"
+      ],
+      [
+       131,
+       250,
+       "random strobe"
+      ],
+      [
+       251,
+       255,
+       "none"
+      ]
+     ],
+     "page": "p24"
+    },
+    {
+     "ch": 3,
+     "function": "Strobe (W)",
+     "role": "strobeW",
+     "text": "000-005 no function; 006-127 strobe slow to fast; 128-130 none; 131-250 random strobe; 251-255 none",
+     "ranges": [
+      [
+       0,
+       5,
+       "no function"
+      ],
+      [
+       6,
+       127,
+       "strobe slow to fast"
+      ],
+      [
+       128,
+       130,
+       "none"
+      ],
+      [
+       131,
+       250,
+       "random strobe"
+      ],
+      [
+       251,
+       255,
+       "none"
+      ]
+     ],
+     "page": "p24"
+    },
+    {
+     "ch": 4,
+     "function": "Atomized glass (SMART Glass frost)",
+     "role": "frost",
+     "text": "000-255",
+     "ranges": [
+      [
+       0,
+       255,
+       null
+      ]
+     ],
+     "page": "p24"
+    },
+    {
+     "ch": 5,
+     "function": "Red1",
+     "role": "p01r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 6,
+     "function": "Green1",
+     "role": "p01g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 7,
+     "function": "Blue1",
+     "role": "p01b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 8,
+     "function": "Red2",
+     "role": "p02r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 9,
+     "function": "Green2",
+     "role": "p02g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 10,
+     "function": "Blue2",
+     "role": "p02b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 11,
+     "function": "Red3",
+     "role": "p03r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 12,
+     "function": "Green3",
+     "role": "p03g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 13,
+     "function": "Blue3",
+     "role": "p03b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 14,
+     "function": "Red4",
+     "role": "p04r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 15,
+     "function": "Green4",
+     "role": "p04g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 16,
+     "function": "Blue4",
+     "role": "p04b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 17,
+     "function": "Red5",
+     "role": "p05r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 18,
+     "function": "Green5",
+     "role": "p05g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 19,
+     "function": "Blue5",
+     "role": "p05b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 20,
+     "function": "Red6",
+     "role": "p06r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 21,
+     "function": "Green6",
+     "role": "p06g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 22,
+     "function": "Blue6",
+     "role": "p06b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 23,
+     "function": "Red7",
+     "role": "p07r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 24,
+     "function": "Green7",
+     "role": "p07g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 25,
+     "function": "Blue7",
+     "role": "p07b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 26,
+     "function": "Red8",
+     "role": "p08r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 27,
+     "function": "Green8",
+     "role": "p08g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 28,
+     "function": "Blue8",
+     "role": "p08b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 29,
+     "function": "Red9",
+     "role": "p09r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 30,
+     "function": "Green9",
+     "role": "p09g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 31,
+     "function": "Blue9",
+     "role": "p09b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 32,
+     "function": "Red10",
+     "role": "p10r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 33,
+     "function": "Green10",
+     "role": "p10g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 34,
+     "function": "Blue10",
+     "role": "p10b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 35,
+     "function": "Red11",
+     "role": "p11r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 36,
+     "function": "Green11",
+     "role": "p11g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 37,
+     "function": "Blue11",
+     "role": "p11b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 38,
+     "function": "Red12",
+     "role": "p12r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 39,
+     "function": "Green12",
+     "role": "p12g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 40,
+     "function": "Blue12",
+     "role": "p12b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 41,
+     "function": "Red13",
+     "role": "p13r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 42,
+     "function": "Green13",
+     "role": "p13g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 43,
+     "function": "Blue13",
+     "role": "p13b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 44,
+     "function": "Red14",
+     "role": "p14r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 45,
+     "function": "Green14",
+     "role": "p14g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 46,
+     "function": "Blue14",
+     "role": "p14b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 47,
+     "function": "Red15",
+     "role": "p15r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 48,
+     "function": "Green15",
+     "role": "p15g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 49,
+     "function": "Blue15",
+     "role": "p15b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 50,
+     "function": "Red16",
+     "role": "p16r",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 51,
+     "function": "Green16",
+     "role": "p16g",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 52,
+     "function": "Blue16",
+     "role": "p16b",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p24-25"
+    },
+    {
+     "ch": 53,
+     "function": "White1",
+     "role": "cw01",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 54,
+     "function": "White2",
+     "role": "cw02",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 55,
+     "function": "White3",
+     "role": "cw03",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 56,
+     "function": "White4",
+     "role": "cw04",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 57,
+     "function": "White5",
+     "role": "cw05",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 58,
+     "function": "White6",
+     "role": "cw06",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 59,
+     "function": "White7",
+     "role": "cw07",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 60,
+     "function": "White8",
+     "role": "cw08",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 61,
+     "function": "White9",
+     "role": "cw09",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 62,
+     "function": "White10",
+     "role": "cw10",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 63,
+     "function": "White11",
+     "role": "cw11",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 64,
+     "function": "White12",
+     "role": "cw12",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 65,
+     "function": "White13",
+     "role": "cw13",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 66,
+     "function": "White14",
+     "role": "cw14",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 67,
+     "function": "White15",
+     "role": "cw15",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 68,
+     "function": "White16",
+     "role": "cw16",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 69,
+     "function": "Fade out effect (RGB)",
+     "role": "fade",
+     "text": "0%-100%",
+     "ranges": [
+      [
+       0,
+       0,
+       "%-100%"
+      ]
+     ],
+     "page": "p25"
+    },
+    {
+     "ch": 70,
+     "function": "Fade out effect (W)",
+     "role": "fadeW",
+     "text": "0%-100%",
+     "ranges": [
+      [
+       0,
+       0,
+       "%-100%"
+      ]
+     ],
+     "page": "p25"
+    }
+   ],
+   "src": "acme-pixel-line-ip/manual.pdf p24-25"
+  }
+ },
+ "pixels": "cell order Red1..32 left to right is NOT stated; the menu has Pixel Seq Invert",
+ "owed": [
+  "modes 35, 38, 70N, 119 of the datasheet (not in the manual copy)",
+  "physical cell order",
+  "frost cap (the manual says 128+ is full fog, so a linear curve is not stated)",
+  "revision / variant of the rented bars"
+ ]
+}

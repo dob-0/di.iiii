@@ -12,7 +12,7 @@ import path from 'node:path'
 
 import { readJson, say, REPO_ROOT } from '../place/common.mjs'
 import { buildRig } from '../place/rig-lib.mjs'
-import { FIXTURE_DIR, readGeometry } from '../place/fixtures-glb.mjs'
+import { FIXTURE_DIR, builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { moxirDocument, patchMoxir } from './moxir.mjs'
 import { loadLibrary } from './library.mjs'
 import { patchCsv, powerCsv, renderSheetHtml, sheetModel } from '../../src/rigbuild/sheet.js'
@@ -26,7 +26,7 @@ export const report = async ({ out, hallFile = null, only = null }) => {
     const spec = readJson(path.join(REPO_ROOT, VERSIONS_FILE))
     const hall = readJson(hallFile || path.join(REPO_ROOT, spec.hall || DEFAULT_HALL))
     const manifest = readJson(path.join(FIXTURE_DIR, 'fixtures.json'))
-    const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+    const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
     const baseLibrary = loadLibrary()
     // the supplier's rates: only from the owner's private file (DI_PRIVATE_PRICES), never from the repo
     const prices = readPrivatePrices()

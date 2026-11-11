@@ -1,0 +1,43 @@
+{
+  "kind": "hyK15",
+  "code": "CP-HY-BEYE-K15",
+  "glb": "hyK15.glb",
+  "builtBy": "scripts/place/fixtures/build_fixtures.py",
+  "scriptSha256": "d24dc54e4aa3634edb1489c36d5c02c0d3d86690a4b96c6a85e8ec7b72f07e16",
+  "blender": "5.2.3 LTS",
+  "archetype": "moving-head",
+  "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+  "panY": 0.12,
+  "tiltY": 0.346,
+  "lensY": 0.438,
+  "motion": "pan-tilt",
+  "parts": [
+    "Base",
+    "Yoke",
+    "Head",
+    "Lens"
+  ],
+  "sizeAtHome_mm": {
+    "width_x": 390,
+    "depth_z": 333,
+    "height_y": 436
+  },
+  "triangles": {
+    "Base": 56,
+    "Yoke": 280,
+    "Head": 120,
+    "Lens": 114,
+    "total": 570
+  },
+  "datasheetSize_mm": [
+    391,
+    329,
+    438
+  ],
+  "deviationFromDatasheet_pct": [
+    1.2,
+    -0.3,
+    -0.5
+  ],
+  "comparedParts": "all"
+}

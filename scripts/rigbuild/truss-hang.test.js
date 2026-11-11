@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest'
 
 import { REPO_ROOT } from '../place/common.mjs'
 import { buildRig, stageFrame } from '../place/rig-lib.mjs'
-import { readGeometry } from '../place/fixtures-glb.mjs'
+import { builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { RIG_PREFIX } from './ground-movers.mjs'
 import { PIECES_GLB_DIR } from './pieces-glb.mjs'
 import { rigFileOf, VERSIONS_FILE } from './versions.mjs'
@@ -18,7 +18,7 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8'))
 const spec = read(VERSIONS_FILE)
 const hall = read(spec.hall)
 const manifest = read('scripts/place/fixtures/fixtures.json')
-const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
 
 // a base-anchored box (rig-lib `box`) turned by three.js Euler 'XYZ' [a, 0, c]: its +Y goes to (-sin c, cos c cos a, cos c sin a)
 const topOf = (e) => {

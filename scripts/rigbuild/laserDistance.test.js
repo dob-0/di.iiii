@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { REPO_ROOT } from '../place/common.mjs'
 import { RIG_PREFIX, buildRig } from '../place/rig-lib.mjs'
 import { LASER_MIN_HEIGHT_M, laserDistanceFailures, laserLampFailure, laserLampsOf } from '../place/laser-distance.mjs'
-import { readGeometry } from '../place/fixtures-glb.mjs'
+import { builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { rotationFromPanTilt } from '../../src/project/viewport/spotLightAim.js'
 import { allVersions, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 
@@ -18,7 +18,7 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8'))
 const spec = read(VERSIONS_FILE)
 const hall = read(spec.hall)
 const manifest = read('scripts/place/fixtures/fixtures.json')
-const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
 // counted straight from the rig file, NOT through the module's selector: what the check must cover
 const countOf = (rig, fixture) => rig.groups.filter((g) => rig.classes[g.class]?.fixture === fixture).reduce((s, g) => s + g.count, 0)
 

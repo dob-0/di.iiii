@@ -1921,3 +1921,32 @@ Guard: `k2WindowFit.test.js` (every label of every console fits its pad, no labe
 Lesson: a face that is data still needs a fit test against the real screen and the real text; measure the drawn text size, not the size in units.
 Second pass (same day): (4) the fader caps at rest covered the top of the first label line and the second line touched the pad row, because the fader's box ignored the cap (2.5 units past the track at each end); (5) in the encoder row the turn job and the press job stacked with no gap and read as one four-line label. Fix: the fader box now includes the cap, fader and pad labels are one line (per-control `maxLines`), "Layer N" is drawn "LN" (`shortLayer`, readout and aria-label keep the words), every label keeps 0.9 unit (2 px) from every foreign shape, and the press job has half a line of gap and the dim ink (`.is-press`).
 Guard: `k2WindowFit.test.js` (every label against every shape and fader cap at value 0 and 127 and every other label, all consoles; encoder job gap and dim class), `k2Face.test.js` (shortLayer, faceLines), `K2Window.test.jsx` (is-press on every push, LN on the fader).
+
+## An LED bar's strip never drew: the schema dropped `beam.emitter` (2026-11-11, owner row N3767)
+Seen in the room: the Platina pixel lines stayed round spots though the rig file gave each a 1 m bar emitter; the document read back 0 entities with `beam.emitter`.
+Cause: the beam normaliser in the shared schema keeps only the keys it names, so a new beam key written by a builder is dropped on save; and a scratch serverXR started before the schema change keeps dropping it until it is restarted.
+Fix: `normalizeBeamEmitter` in both twins (`shared/projectSchema.cjs`, `src/shared/projectSchema.js`); restart the scratch stack after a schema change (`di-dev down <tree>; di-dev up <tree> --api scratch`).
+Guard: `src/shared/projectSchema.light.test.js` (browser and server twin keep a bar emitter, drop another shape). Seen on the agent screen: 24 bars drawn.
+
+## Hung lamps drew as standing lamps: the builder never wrote `fixture.hung` (2026-11-12, owner row N3767)
+Seen in the room: the Platina lamps under the truss had their bodies below the lens, as if standing in the air, and a head pattern turned them with a standing lamp's signs.
+Cause: `scripts/rigbuild/epic-build.mjs` built the lamp's `fixture` without `hung`; the room reads `fixture.hung === true` (sheet.js, headMotion.js), so every lamp counted as standing.
+Fix: a rig unit says `hung: true` (platina_rig.py: the K10 over the stage, the XP-16R under the truss) and epic-build carries it into `fixture.hung`.
+Guard: `scripts/place/platina-rig.test.js` (the hung rows say hung, the deck row does not; the beam lamps' rest aim leans toward the audience). Seen on the agent screen: bodies above the lens, under the truss.
+
+## 2026-11-12 — A rig's walls, wings, deck and stands hung half their own height in the air (rig build)
+Symptom (owner, Platina scratch room): a side lamp "in the air", the wing panels floating, the wall box 1.25 m above its picture.
+Cause: `BoxObject.jsx` draws a box standing ON its position (the mesh is lifted by half its height). The 11-11 rule in `scripts/rigbuild/epic-build.mjs` took a box as drawn from its centre and ADDED half a height to every base-anchored solid.
+Fix: a base-anchored solid goes in at its foot as it is; a solid given by its centre (a truss) is lowered by half its height. The two side K15 also got their stand poles as solids (`platina_rig.py`).
+Guard: `scripts/rigbuild/epic-build.test.js` (a solid stands on its foot), `scripts/place/platina-rig.test.js` (no lamp is in the air: a solid or a lamp right under each standing lamp, a truss right over each hung one). Seen on the agent screen: wings on the deck, poles under the side lamps.
+
+## 2026-11-12 — The picture on the LED wall did not show (wall picture script)
+Symptom (owner): "where are the visuals on the screen"; only a thin red band at the wall's foot.
+Cause: `ImageObject.jsx` lays its plane flat (a floor sticker, the mesh turned -90 degrees about x). `scripts/rigbuild/screen-picture.mjs` wrote the entity with rotation 0, so the picture lay flat inside the wall.
+Fix: the picture entity is turned +90 degrees about x; its height is then the scale's third number; its centre is half a height above the wall box's position.
+Guard: `scripts/rigbuild/screen-picture.test.js` (the plane's top edge lands straight above, facing the audience). Seen on the agent screen: the red verticals fill the wall.
+
+## 2026-11-12 — A room that starts at the middle quality notch never reached full on a 60 Hz screen (frame-rate governor)
+Symptom: with the start at notch 2 (owner: mid by default, then "best quality + max fps") the room stayed at notch 2: the climb needed over 70 fps, a 60 Hz screen shows 60.
+Fix: `hasRoom` in `src/project/viewport/qualityGovernor.js`: a rate at the screen's own ceiling (the highest window seen, within 2) and over the target may climb; the step-down rule and the 60 s wait after a failed climb keep it from see-sawing.
+Guard: `src/project/viewport/qualityGovernor.test.js`. Measured on the agent screen (1280 x 720, Platina scratch room): notch 2 at 3 s, notch 0 at 33 s, 60 fps.

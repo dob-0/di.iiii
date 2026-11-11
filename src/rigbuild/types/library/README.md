@@ -7,6 +7,14 @@ UPlight rental units, the three planning types and the LaserCube — are the **s
 > *"In time we will add devices; our task is to collect real, close data so it is right in
 > real life."* — the owner, 2026-10-13
 
+The **Platina rental set** joined on 2026-11-11 (five lamps read from the makers' own manuals: Claypaky A.LEDA B-EYE K10 and
+HY B-EYE K15, ACME Pixel Line IP and XP-16R BSW III, Magmatic Magma Prime). Their charts are in
+`scripts/place/fixtures/charts/<id>.json` (written by `scripts/place/fixtures/import_platina_manuals.py` from the manual read;
+`node scripts/rigbuild/chart-lists.mjs` turns them into `src/rigbuild/platinaChannelLists.js`). The manifest stands without
+the manuals folder (URLs, page numbers, read date); the PDFs are kept on the aylmo machine only, in
+`~/work/platina/manuals-2026-11-11/`, never in the repo. What is still owed (the K15's channel lists, two bodies, caps) is in
+each chart's `owed` list and each kind's `model.owed`.
+
 ## What is here
 
 | File | What it holds |
