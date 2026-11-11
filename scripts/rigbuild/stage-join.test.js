@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { planJoin, joinOps, undoOps, wallPlane } from './stage-join.mjs'
+import { lookSettings } from './stage-join.mjs'
 
 const box = { id: 'platina-screen', type: 'box', components: { transform: { position: [-0.04, 1.42, 0], rotation: [0, 0, 0], scale: [4.01, 2.5, 0.1] } } }
 const source = { entities: [box, { id: 'lamp-1', type: 'spotLight', components: {} }, { id: 'platina-screen-picture', type: 'image', components: {} }], mappingState: { cues: [{ id: 'c1' }, { id: 'c2' }] } }
@@ -31,5 +32,20 @@ describe('stage-join: the stage comes into the project that holds the deck (owne
         const undo = undoOps({ entityIds: plan.entities.map((e) => e.id), cueIds: plan.cues.map((c) => c.id) })
         expect(made.map((o) => o.type)).toEqual(['createEntity', 'createEntity', 'createEntity', 'createMappingCue'])
         expect(undo.map((o) => o.payload.entityId || o.payload.cueId)).toEqual(['platina-screen', 'lamp-1', 'platina-screen-live', 'c2'])
+    })
+})
+
+describe('lookSettings (owner N3875)', () => {
+    it('carries only the differing look keys and keeps the target values for the undo', () => {
+        const source = { renderSettings: { toneMappingExposure: 0.1, atmosphere: { scattering: 0.0169 }, antialias: true }, worldState: { ambientLight: { intensity: 0.3 }, gridVisible: true }, presentationState: { viewPresets: [{ id: 'render' }], entryView: 'fixed-camera' } }
+        const target = { renderSettings: { toneMappingExposure: 1, antialias: true }, worldState: { ambientLight: { intensity: 0.85 } }, presentationState: { entryView: 'scene' } }
+        const { ops, before } = lookSettings({ source, target })
+        expect(ops).toEqual([
+            { type: 'setRenderSettings', payload: { patch: { toneMappingExposure: 0.1, atmosphere: { scattering: 0.0169 } } } },
+            { type: 'setWorldState', payload: { patch: { ambientLight: { intensity: 0.3 } } } },
+            { type: 'setPresentationState', payload: { patch: { viewPresets: [{ id: 'render' }] } } }
+        ])
+        expect(before[0].payload.patch).toEqual({ toneMappingExposure: 1, atmosphere: null })
+        expect(lookSettings({ source, target: source }).ops).toEqual([])
     })
 })

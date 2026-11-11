@@ -50,13 +50,33 @@ export const planJoin = ({ source, target, wall = 'platina-screen', surface = ''
     return { entities: plane ? [...entities, plane] : entities, cues, surfaceId: out?.id || '', plane: Boolean(plane), why: !out ? 'the target has no network surface' : !box ? `no wall box ${wall}` : '' }
 }
 
+// The room's look travels with the stage (owner N3875: the joined room was white and grey): exposure, haze, room light and
+// the saved views. Only keys that differ; `before` holds the target's own values for the undo (null = the key was absent).
+const LOOK_KEYS = { setRenderSettings: ['renderSettings', ['toneMappingExposure', 'exposure', 'atmosphere']], setWorldState: ['worldState', ['ambientLight', 'directionalLight']], setPresentationState: ['presentationState', ['viewPresets']] }
+export const lookSettings = ({ source, target }) => {
+    const ops = [], before = []
+    for (const [type, [part, keys]] of Object.entries(LOOK_KEYS)) {
+        const patch = {}, back = {}
+        for (const k of keys) {
+            const a = source?.[part]?.[k], b = target?.[part]?.[k]
+            if (a === undefined || JSON.stringify(a) === JSON.stringify(b)) continue
+            patch[k] = a
+            back[k] = b === undefined ? null : b
+        }
+        if (Object.keys(patch).length) { ops.push({ type, payload: { patch } }); before.push({ type, payload: { patch: back } }) }
+    }
+    return { ops, before }
+}
+
 export const joinOps = (plan) => [
     ...plan.entities.map((entity) => ({ type: 'createEntity', payload: { entity } })),
-    ...plan.cues.map((cue) => ({ type: 'createMappingCue', payload: { cue } }))
+    ...plan.cues.map((cue) => ({ type: 'createMappingCue', payload: { cue } })),
+    ...(plan.settings || [])
 ]
 export const undoOps = (manifest) => [
     ...(manifest.entityIds || []).map((entityId) => ({ type: 'deleteEntity', payload: { entityId } })),
-    ...(manifest.cueIds || []).map((cueId) => ({ type: 'deleteMappingCue', payload: { cueId } }))
+    ...(manifest.cueIds || []).map((cueId) => ({ type: 'deleteMappingCue', payload: { cueId } })),
+    ...(manifest.settingsBefore || [])
 ]
 
 const main = async () => {
@@ -84,6 +104,9 @@ const main = async () => {
     const fromApi = String(args['from-api'] || die('needs --from-api')).replace(/\/+$/, '')
     const source = (await read(makeClient(fromApi, ''), String(args['from-project'] || die('needs --from-project')))).document
     const plan = planJoin({ source, target: before.document, wall: String(args.wall || 'platina-screen'), surface: String(args.surface || '') })
+    const look = lookSettings({ source, target: before.document })
+    plan.settings = look.ops
+    say(`look settings to carry: ${look.ops.map((o) => `${o.type}(${Object.keys(o.payload.patch).join(',')})`).join(' ') || 'none'}`)
     say(`${project} version ${before.version}: now ${JSON.stringify(count(before.document))}; would add ${plan.entities.length} entities (live wall plane: ${plan.plane}${plan.why ? ', ' + plan.why : ''}, surface ${plan.surfaceId || 'none'}) and ${plan.cues.length} cues`)
     if (!args.apply) return say('dry run: nothing written (--apply writes)')
     const dir = path.resolve(String(args['backup-dir'] || die('--apply needs --backup-dir')))
@@ -92,7 +115,7 @@ const main = async () => {
     const backup = path.join(dir, `${project}-before-stage-join-${stamp}.json`)
     const manifestFile = path.join(dir, `${project}-stage-join-${stamp}.manifest.json`)
     fs.writeFileSync(backup, JSON.stringify(before))
-    fs.writeFileSync(manifestFile, JSON.stringify({ project, api, baseVersion: before.version, entityIds: plan.entities.map((e) => e.id), cueIds: plan.cues.map((c) => c.id) }, null, 1))
+    fs.writeFileSync(manifestFile, JSON.stringify({ project, api, baseVersion: before.version, entityIds: plan.entities.map((e) => e.id), cueIds: plan.cues.map((c) => c.id), settingsBefore: look.before }, null, 1))
     await post(joinOps(plan), 'join')
     const after = await read(client, project)
     const a = count(after.document), b = count(before.document)
