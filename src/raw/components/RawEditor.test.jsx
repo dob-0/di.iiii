@@ -1836,6 +1836,24 @@ describe('RawEditor toolbar names the project, not the space', () => {
         mockLoadOnMount = null
     })
 
+    it('a window hidden with the x comes back from the visible Windows button, shown again', async () => {
+        mockLoadOnMount = {
+            document: {
+                nodes: [{ id: 'deck-1', typeId: 'vj.deck', label: 'VJ Deck', values: { frame: { visible: false, x: 40, y: 80, width: 400, height: 300 } } }],
+                edges: [],
+                projectMeta: { title: 'Show', spaceId: 'lab' }
+            },
+            version: 1
+        }
+        render(<RawEditor projectId="p-win" spaceId="lab" />)
+        fireEvent.click(await screen.findByRole('button', { name: /Windows · 1 hidden/ }))
+        const item = screen.getByRole('menuitemcheckbox', { name: /VJ Deck/ })
+        expect(item.getAttribute('aria-checked')).toBe('false')
+        fireEvent.click(item)
+        // The window is shown again: nothing is hidden any more.
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Windows' })).toBeTruthy())
+    })
+
     it('names the project once: the bar says it, there is no second bar', async () => {
         mockLoadOnMount = {
             document: {

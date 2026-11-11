@@ -285,6 +285,10 @@ export const defaultMappingCue = {
     // carry light are byte-identical after a round-trip.
     lightScene: '',
     lightLook: '',
+    // OPTIONAL: the id of a look on the laser desk (/laser/desk, local di.iiii)
+    // to make live when this cue fires, right after the light. Absent unless
+    // set, so old projects round-trip byte-identical.
+    laserLook: '',
     // Per-surface state, keyed by surface id: { enabled, opacity, source }.
     // GEOMETRY IS DELIBERATELY NOT IN A CUE. Corners and masks are the wall;
     // cues are the show. A cue that could move an alignment is a cue that can
@@ -1689,7 +1693,13 @@ export const normalizePerformState = (perform = {}) => {
         presets.push({ ...preset, source: 'show' })
         if (presets.length >= PERFORM_PRESET_LIMIT) break
     }
-    return { presets }
+    // The preset a device opens by default for this show (2026-11-10): an id of one of the
+    // show's presets, or absent. A preset saved without a window (say the laser) therefore
+    // opens without it everywhere; "+ WINDOW" still brings it back.
+    const defaultPreset = typeof source.defaultPreset === 'string' && presets.some((preset) => preset.id === source.defaultPreset)
+        ? source.defaultPreset
+        : ''
+    return defaultPreset ? { presets, defaultPreset } : { presets }
 }
 
 // 'stream' is a live picture named by WHAT it is ("OBS Virtual Camera", "capture"), not by a
@@ -1822,6 +1832,7 @@ export const normalizeMappingCue = (cue = {}) => {
     // cue keeps them apart. A look wins when both are set: the desk is built on looks
     // now, and a cue that has been re-pointed at one has said what it means.
     const lightLook = ensureString(source.lightLook, '')
+    const laserLook = ensureString(source.laserLook, '')
     return {
         id: ensureString(source.id, ''),
         name: ensureString(source.name, ''),
@@ -1830,6 +1841,7 @@ export const normalizeMappingCue = (cue = {}) => {
         hold: Math.max(0, ensureNumber(source.hold, defaultMappingCue.hold)),
         ...(lightLook ? { lightLook } : {}),
         ...(lightScene ? { lightScene } : {}),
+        ...(laserLook ? { laserLook } : {}),
         surfaces
     }
 }
@@ -1877,6 +1889,27 @@ export const normalizeOutputShow = (show) => {
     return { machine, ...(name ? { name } : {}), screen }
 }
 
+// HOW THE OUTPUT'S WINDOW OPENS (Perform's output control, 2026-11-10): the screen
+// the window is put on (by label, index and size, like `show.screen`) and whether
+// it asks for full screen. Not `show`: `show` names the machine a stage box runs
+// the kiosk on; this is what the "Open output" button does on THIS machine.
+// Absent means absent, so every older mapping is byte-identical.
+export const normalizeOutputWindow = (win) => {
+  if (!win || typeof win !== 'object' || Array.isArray(win)) return null
+  const out = {}
+  if (win.screen && typeof win.screen === 'object' && !Array.isArray(win.screen)) {
+    const label = ensureString(win.screen.label, '').trim()
+    const index = Number.isInteger(win.screen.index) && win.screen.index >= 0 ? win.screen.index : null
+    const size = Array.isArray(win.screen.size) && win.screen.size.length === 2
+      && win.screen.size.every((value) => Number.isFinite(value) && value > 0)
+      ? [Math.round(win.screen.size[0]), Math.round(win.screen.size[1])]
+      : null
+    if (label || index !== null || size) out.screen = { label, index, size }
+  }
+  if (win.fullscreen === true) out.fullscreen = true
+  return Object.keys(out).length ? out : null
+}
+
 // The light pool's knobs (src/rigbuild/lightPool.js lightPoolOptions clamps the same way):
 // kept so the room reads them — the normaliser used to drop the whole key. Absent means
 // absent: only what the document says is written, each number clamped.
@@ -1903,11 +1936,13 @@ export const normalizeMappingState = (mapping = {}) => {
     const seen = new Set()
     const seenCues = new Set()
     const show = normalizeOutputShow(output.show)
+      const outWindow = normalizeOutputWindow(output.window)
     return {
         output: {
             width: Math.max(1, ensureNumber(output.width, defaultMappingState.output.width)),
             height: Math.max(1, ensureNumber(output.height, defaultMappingState.output.height)),
             ...(show ? { show } : {}),
+            ...(outWindow ? { window: outWindow } : {}),
             // 'auto' is the default and is not written; only the authored
             // black is — the same absent-means-absent rule as `show`.
             ...(output.slate === 'off' ? { slate: 'off' } : {})
@@ -2434,14 +2469,24 @@ export const applyProjectOps = (document, ops = []) => {
                 // preset back where it was), else at the end.
                 const at = Number.isInteger(payload.index) && payload.index >= 0 ? Math.min(payload.index, presets.length) : presets.length
                 presets.splice(index === -1 ? at : index, 0, preset)
-                nextDocument.performState = normalizePerformState({ presets })
+                nextDocument.performState = normalizePerformState({ presets, defaultPreset: nextDocument.performState.defaultPreset })
+                break
+            }
+            // Which show preset opens by default ('' clears it). A preset id the show does not
+            // have is ignored by normalizePerformState, so the field can never point nowhere.
+            case 'setPerformDefaultPreset': {
+                nextDocument.performState = normalizePerformState({
+                    presets: nextDocument.performState.presets,
+                    defaultPreset: ensureString(payload.presetId)
+                })
                 break
             }
             case 'deletePerformPreset': {
                 const presetId = ensureString(payload.presetId)
                 if (!presetId) break
                 nextDocument.performState = normalizePerformState({
-                    presets: nextDocument.performState.presets.filter((existing) => existing.id !== presetId)
+                    presets: nextDocument.performState.presets.filter((existing) => existing.id !== presetId),
+                    defaultPreset: nextDocument.performState.defaultPreset
                 })
                 break
             }
@@ -2825,13 +2870,17 @@ const invertSingleOp = (document, op) => {
             if (index === -1) return [{ type: 'deletePerformPreset', payload: { presetId: preset.id } }]
             return [{ type: 'upsertPerformPreset', payload: { preset: cloneValue(presets[index]) } }]
         }
+        case 'setPerformDefaultPreset': return [{ type: 'setPerformDefaultPreset', payload: { presetId: document.performState?.defaultPreset || '' } }]
         case 'deletePerformPreset': {
             const presetId = ensureString(payload.presetId)
             const presets = document.performState?.presets || []
             const index = presets.findIndex((existing) => existing.id === presetId)
             if (index === -1) break
             // Back where it was in the list, not at the end: the menu reads in order.
-            return [{ type: 'upsertPerformPreset', payload: { preset: cloneValue(presets[index]), index } }]
+            return [
+                { type: 'upsertPerformPreset', payload: { preset: cloneValue(presets[index]), index } },
+                ...(document.performState?.defaultPreset === presetId ? [{ type: 'setPerformDefaultPreset', payload: { presetId } }] : [])
+            ]
         }
         case 'setMappingState': return patchInverse('setMappingState', document.mappingState)
         case 'reorderMappingSurfaces': {

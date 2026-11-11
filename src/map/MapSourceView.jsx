@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import MapTestPattern, { DEFAULT_TEST_PATTERN } from './mapTestPattern.jsx'
 import { startMotionGlow } from './motionGlow.js'
 import { startLiveAiRestyle } from './liveAiRestyle.js'
+import { resolveAlias } from '../project/tops/vjDeck.js'
+import { openSharedCamera } from '../project/tops/cameraPool.js'
 import { useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
@@ -52,6 +54,9 @@ const requestSurfaceBoot = createPreviewBootQueue()
 // way; a slow page keeps loading, it just stops blocking its neighbours.
 const BOOT_SLOT_TIMEOUT_MS = 15000
 
+// The widest a Pictures surface (a Picture Out or a VJ deck) is drawn.
+export const PICTURE_MAX_WIDTH = 1920
+
 export default function MapSourceView({ surface, spaceId = '', live = true, network = null, assets = null, projectId = null, label = '' }) {
     const [width, height] = surface.resolution
     const kind = surface.source?.kind || 'test'
@@ -62,7 +67,7 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
     }
 
     if (kind === 'network') {
-        if (!ref) return <MapSourcePlaceholder label={label} detail="no Picture Out chosen" width={width} height={height} />
+        if (!ref) return <MapSourcePlaceholder label={label} detail="no Picture Out or deck chosen" width={width} height={height} />
         // Off the output, a network runs only when Live is on — the desk and
         // the wall would otherwise each open the camera and run every operator.
         if (!live) return <MapSourcePlaceholder label={label} detail="pictures — turn Live on to run them here" width={width} height={height} />
@@ -410,7 +415,10 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
         }
         setProblem('')
         setWaiting(false)
-        // Stop and forget the open stream, so two are never open at once.
+        // Stop and forget the open stream, so two are never open at once. The
+        // stream is this view's own clone from the shared camera pool: stopping
+        // its tracks only gives back this view's share (the pool stops the
+        // device when the last view is done), never another view's picture.
         const drop = () => {
             if (!stream) return
             stream.removeEventListener?.('inactive', lost)
@@ -430,7 +438,10 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
             staleRef.current?.()
         }
         function open() {
-            media.getUserMedia({
+            // Through the pool, so two views of one camera do not open it twice;
+            // the pool does not serve a capture whose track has ended, so a
+            // retry after lost() really re-opens the device.
+            openSharedCamera(media, {
                 video: deviceId ? { deviceId: { exact: deviceId } } : true,
                 audio: false
             })
@@ -553,19 +564,23 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
 }
 
 // The project's picture operators, run on this page and drawn from one Picture
-// Out. Processed at up to 640 wide like the camera glow; the corner-pin scales
-// the result onto the wall.
+// Out, at the surface's own size; the corner-pin places it on the wall.
 const NO_NETWORK = { nodes: [], wires: [] }
 
 function MapNetworkSource({ network, spaceId, assets, projectId, outNodeId, label, width, height }) {
     const [canvas, setCanvas] = useState(null)
-    const scale = Math.min(1, 640 / width)
+    // Drawn at the surface's own size, up to PICTURE_MAX_WIDTH: this IS the
+    // picture on the wall, and 640 stretched to a 1920 screen is soft.
+    const scale = Math.min(1, PICTURE_MAX_WIDTH / width)
     const w = Math.max(1, Math.round(width * scale))
     const h = Math.max(1, Math.round(height * scale))
-    const present = Boolean(network?.nodes?.some((node) => node.id === outNodeId))
+    // A VJ deck is expanded into operators; its picture is its master's. A
+    // surface that names the deck reads the master (alias comes from toTopNetwork).
+    const shown = resolveAlias(outNodeId, network?.alias)
+    const present = Boolean(network?.nodes?.some((node) => node.id === shown))
     // Nothing to show → nothing to run; an empty network starts no engine.
-    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, assets, projectId, canvas, show: outNodeId, width: w, height: h })
-    if (!present) return <MapSourcePlaceholder label={label} detail="that Picture Out is gone" width={width} height={height} />
+    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, assets, projectId, canvas, show: shown, width: w, height: h })
+    if (!present) return <MapSourcePlaceholder label={label} detail="that Picture Out or deck is gone" width={width} height={height} />
     if (error) return <MapSourcePlaceholder label={label} detail={error} width={width} height={height} />
     return <canvas className="map-source-media" ref={setCanvas} width={w} height={h} />
 }

@@ -175,7 +175,7 @@ function NodeRow({ row, onOpen, onEditInNodes }) {
             <span className="spa-name">{label}</span>
             <span className="spa-type">{row.type}</span>
             {onEditInNodes && (
-                <button type="button" className="spa-node-edit" onClick={onEditInNodes} title="Made in Nodes — open Nodes to edit it" aria-label={`Edit ${label} in Nodes`}>
+                <button type="button" className="spa-node-edit" onClick={() => onEditInNodes(row.id)} title="Made in Nodes — open Nodes to edit it" aria-label={`Edit ${label} in Nodes`}>
                     Edit in Nodes
                 </button>
             )}

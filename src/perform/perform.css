@@ -1,9 +1,29 @@
 /* The Perform desk (PerformDesk.jsx): the same windows as Nodes, with no
    canvas behind them. Born on the spine — tokens from base.css only
    (src/styles/spine.test.js). It lays the windows out, adds the one strip,
-   and (2026-11-10, owner N3511 "look how place used bad") gives the window
-   title bar the one-row dress below. The deck and the Projection panes are
-   not restyled. */
+   and (2026-11-10, owner: "we need all ui like lego and minimal") makes every
+   window a BLOCK: one anatomy, one grid, one control look. The rules are in
+   docs/ai/sessions/feat-perform-full.md (from di-brand SYSTEM.md section 1).
+   The window title bar gets the one-row dress further down (2026-11-10, owner
+   N3511 "look how place used bad"). Every rule below is scoped under
+   .perform-shell: Nodes is not touched. */
+
+/* The two sizes everything on this page is built from. A fine pointer gets
+   24px; a touch screen keeps the 44px target (WCAG 2.5.8 and the platform's
+   own floor). The header, every control, every tile row and the slider track
+   all read these two, so no block can be a different height from its
+   neighbour. */
+.perform-shell {
+    --perform-control: 24px;
+    --perform-head: 24px;
+}
+
+@media (pointer: coarse) {
+    .perform-shell {
+        --perform-control: 44px;
+        --perform-head: 44px;
+    }
+}
 
 .perform-shell {
     position: fixed;
@@ -178,9 +198,151 @@
     font-size: var(--di-text-3);
 }
 
-/* --- inside the windows ---------------------------------------------------- */
+
+/* The strip's buttons are controls like any other: one height, one look. */
+.perform-strip-button {
+    min-height: var(--perform-control);
+    padding: 0 var(--di-space-2);
+    font-size: var(--di-text-1);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.perform-menu-item {
+    min-height: var(--perform-control);
+}
+
+/* The dev-tree badge (components/treeChip.css) is fixed at the bottom right, where it
+   lay over the Master window's LASER row. On Perform it sits in the strip under the top
+   bar, whose right half is empty, so it covers no control. */
+body:has(.perform-shell) .tree-chip {
+    top: 45px;
+    bottom: auto;
+    max-width: max(120px, calc(100vw - 330px));
+}
+
+/* --- the block: one frame, one header row ---------------------------------- */
+
+/* Blocks tile edge to edge on a unit grid (presets.js GRID). Between two
+   blocks there is ONE 1px line: each block draws only its right and bottom
+   edge, the left and top are the neighbour's (or the screen's). No gap, no
+   shadow (SYSTEM.md rules 3 and 4: the line carries structure; nothing floats
+   over live content here), square corners (rule 2). */
+.perform-shell .raw-window {
+    box-sizing: border-box;
+    border: 0;
+    border-right: 1px solid var(--di-line);
+    border-bottom: 1px solid var(--di-line);
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--di-bg);
+}
+
+/* The header: ONE row, 24px (44px on touch), the NAME at the left in mono
+   uppercase, tracked, small; the three window controls at the right, seen only
+   while the header is hovered or holds focus (always on touch, where there is
+   no hover). The family kicker and the word "pinned" are not shown. */
+.perform-shell .raw-window-header {
+    box-sizing: border-box;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-2);
+    height: var(--perform-head);
+    min-height: var(--perform-head);
+    padding: 0 0 0 var(--di-space-2);
+    background: var(--di-bg);
+    border-bottom: 1px solid var(--di-line);
+}
+
+.perform-shell .raw-window-header > div:first-child {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    min-width: 0;
+}
+
+.perform-shell .raw-window-kicker {
+    display: none;
+}
+
+.perform-shell .raw-window-header h3 {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--di-dim);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-1);
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    line-height: var(--perform-head);
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.perform-shell .raw-window.is-pinned .raw-window-header::after {
+    content: none;
+}
+
+.perform-shell .raw-window-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 0;
+    opacity: 0;
+    transition: opacity 0.1s;
+}
+
+.perform-shell .raw-window-header:hover .raw-window-actions,
+.perform-shell .raw-window-header:focus-within .raw-window-actions {
+    opacity: 1;
+}
+
+.perform-shell .raw-window-actions button {
+    box-sizing: border-box;
+    width: var(--perform-head);
+    min-width: 0;
+    height: var(--perform-head);
+    min-height: 0;
+    padding: 0;
+    font-size: var(--di-text-2);
+}
+
+.perform-shell .raw-window-header:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 1px var(--di-cyan);
+}
+
+@media (pointer: coarse) {
+    .perform-shell .raw-window-actions {
+        opacity: 1;
+    }
+}
+
+/* The corner grip is a mark of the window's furniture, not of meaning: dim
+   strokes, not the accent. */
+.perform-shell .raw-window-resizer {
+    width: 12px;
+    height: 12px;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent 50%, var(--di-faint) 50%, var(--di-faint) 62%, transparent 62%);
+    opacity: 0.6;
+}
+
+@media (pointer: coarse) {
+    .perform-shell .raw-window-resizer {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+/* --- inside the block ------------------------------------------------------ */
 
 .perform-pane {
+    container-type: inline-size;
+    container-name: perform-block;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -190,8 +352,9 @@
     overflow: auto;
     padding: var(--di-space-2);
     background: var(--di-bg);
-    font-family: var(--di-sans);
-    font-size: var(--di-text-3);
+    color: var(--di-ink);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
 }
 
 .perform-pane .map-frame {
@@ -204,143 +367,404 @@
     padding: 0;
 }
 
-.perform-dim {
+.perform-pane--bar {
+    flex: none;
+    height: auto;
+}
+
+/* A bar brick (Master, Clock): one line when it fits; when it does not, its
+   items wrap onto the next line (never over each other, never cut by the
+   block's edge). A status still ends in an ellipsis when it is alone on a
+   line. Clean-run fix 2026-11-10: it was a no-wrap row, so three sliders, their
+   numbers and the state words were drawn on top of each other. */
+.perform-bar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    /* start, not center: a bar window taller than its content (Clock, Master) keeps its
+       content under the header and leaves the spare room at the foot. */
+    align-content: flex-start;
+    gap: var(--di-space-1) var(--di-space-3);
+    overflow: auto;
+}
+
+.perform-shell .perform-bar > .perform-action {
+    align-self: center;
+}
+
+.perform-row {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-2);
+    min-width: 0;
+}
+
+/* Status: one line, at most four words, never a sentence. */
+.perform-status {
+    min-width: 0;
     margin: 0;
+    overflow: hidden;
     color: var(--di-dim);
     font-family: var(--di-mono);
-    font-size: var(--di-text-2);
+    font-size: var(--di-text-1);
+    letter-spacing: 0.08em;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
 }
 
-.perform-read {
-    margin: 0;
-    color: var(--di-ink);
-    font-family: var(--di-mono);
-    font-size: var(--di-text-3);
-}
-
-.perform-action {
-    align-self: flex-start;
-    min-height: 36px;
-    padding: 0 var(--di-space-3);
-    background: transparent;
-    border: 1px solid var(--di-ink);
-    border-radius: var(--di-radius);
-    color: var(--di-ink);
-    font-family: var(--di-mono);
-    font-size: var(--di-text-3);
-    letter-spacing: 0.04em;
-    cursor: pointer;
-}
-
-.perform-action:disabled {
-    opacity: 0.4;
-    cursor: default;
-}
-
-.perform-action.is-on {
-    background: var(--di-ink);
-    color: var(--di-bg);
-}
-
-.perform-action--danger {
-    border-color: var(--di-danger);
+.perform-status.is-danger {
     color: var(--di-danger);
 }
 
-.perform-action--danger.is-on {
-    background: var(--di-danger);
-    color: var(--di-bg);
+.perform-pane > .perform-status {
+    flex: none;
 }
 
-/* A window that is not native yet: dim, and saying so in words. */
+/* A link in the ink colour with an underline, never the browser's purple. */
+.perform-shell .perform-link,
+.perform-shell .perform-link:visited {
+    color: var(--di-ink);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-1);
+    letter-spacing: 0.08em;
+    text-decoration: underline;
+    text-transform: uppercase;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+}
+
+.perform-shell .perform-link:hover {
+    color: var(--di-cyan);
+}
+
+.perform-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* A block that is not native yet: one tag, dim. */
 .perform-coming {
     justify-content: center;
     opacity: 0.72;
-    border: 1px dashed var(--di-line);
 }
 
 .perform-coming-tag {
     align-self: flex-start;
-    padding: var(--di-space-1) var(--di-space-2);
-    border: 1px solid var(--di-line);
-    border-radius: var(--di-radius);
     color: var(--di-dim);
-    font-family: var(--di-mono);
-    font-size: var(--di-text-2);
-    letter-spacing: var(--di-label-tracking);
-    text-transform: var(--di-label-case);
+    font-size: var(--di-text-1);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
-/* The picture of a Picture Out, as big as the window lets it be. */
+/* The picture of a Picture Out: the block's full width at 16:9. It gives up height only
+   to the line under it (that line is flex: none), never below 96px. */
 .perform-picture {
     display: block;
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     width: 100%;
-    min-height: 0;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    min-height: 96px;
     object-fit: contain;
     background: var(--di-black);
 }
 
-/* --- the clock ----------------------------------------------------------- */
+/* --- the marks: a square, meaning only ------------------------------------- */
 
-.perform-clock {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--di-space-2) var(--di-space-4);
+/* Filled in the accent = live. Empty with an ink edge = black. A dim edge =
+   absent. A square (SYSTEM.md rule 2: status dots are square). */
+.perform-mark {
+    display: inline-block;
+    flex: none;
+    box-sizing: border-box;
+    width: 8px;
+    height: 8px;
+    border: 1px solid var(--di-faint);
+    background: transparent;
 }
 
-.perform-clock-bpm {
-    font-family: var(--di-mono);
-    font-size: var(--di-text-7);
+.perform-mark.is-live,
+.perform-beat.is-on {
+    border-color: var(--di-cyan);
+    background: var(--di-cyan);
+}
+
+.perform-mark.is-black {
+    border-color: var(--di-ink);
+}
+
+.perform-mark.is-failed {
+    border-color: var(--di-ink);
+    border-style: dashed;
+}
+
+.perform-states {
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    min-width: 0;
+    align-items: center;
+    gap: var(--di-space-3);
+}
+
+.perform-state {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-1);
+    color: var(--di-dim);
+    font-size: var(--di-text-1);
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+}
+
+.perform-state.is-live {
+    color: var(--di-ink);
+}
+
+.perform-state.is-black,
+.perform-state.is-failed {
+    color: var(--di-ink);
+}
+
+.perform-state-note {
+    color: var(--di-dim);
+    font-size: var(--di-text-1);
+}
+
+/* --- the clock ------------------------------------------------------------- */
+
+.perform-bpm {
+    flex: none;
+    font-size: var(--di-text-5);
     font-variant-numeric: tabular-nums;
 }
 
 .perform-beats {
     display: flex;
-    gap: var(--di-space-2);
+    flex: none;
+    gap: var(--di-space-1);
 }
 
-/* status dot, not a control: square like every light (owner rule, rectangles only). */
 .perform-beat {
-    width: 14px;
-    height: 14px;
-    border: 1px solid var(--di-dim);
-    border-radius: var(--di-radius);
+    box-sizing: border-box;
+    width: 8px;
+    height: 8px;
+    border: 1px solid var(--di-faint);
 }
 
-.perform-beat.is-on {
-    background: var(--di-ink);
+/* --- the one control look -------------------------------------------------- */
+
+/* Button, select, text field, toggle and slider: one height (--perform-control),
+   a 1px line, square corners, mono uppercase. It covers every native control
+   inside a block, the VJ deck's and the Projection panes' included; the deck's
+   tile and column buttons are pictures and stay as they are. */
+.perform-shell .raw-window-body :is(button, select, input:not([type='range'], [type='checkbox'], [type='radio'], [type='file'], [type='color'], [type='hidden'])):not(.vj-deck-tile, .vj-deck-column, .perform-tile, .map-cue-fire, .map-surface-name) {
+    box-sizing: border-box;
+    min-height: var(--perform-control);
+    min-width: var(--perform-control);
+    margin: 0;
+    padding: 0 var(--di-space-2);
+    background-color: transparent;
+    border: 1px solid var(--di-line);
+    border-radius: 0;
+    color: var(--di-ink);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-1);
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.perform-shell .raw-window-body :is(button, select, input):not(.vj-deck-tile, .vj-deck-column):hover:not(:disabled) {
     border-color: var(--di-ink);
 }
 
-.perform-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--di-space-2);
-    color: var(--di-dim);
-    font-family: var(--di-mono);
-    font-size: var(--di-text-2);
+.perform-shell .raw-window-body :is(button, select, input, a):focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 1px var(--di-cyan);
 }
 
-/* --- the master ---------------------------------------------------------- */
+.perform-shell .raw-window-body :is(button, select, input):disabled {
+    opacity: 0.4;
+    cursor: default;
+}
 
-.perform-master-row {
+.perform-shell .perform-action {
+    align-self: flex-start;
+    flex: none;
+    white-space: nowrap;
+}
+
+/* On, pressed, live: the accent, and only for that. */
+.perform-shell .raw-window-body :is(button.is-on, button[aria-pressed='true']):not(.perform-action--danger, .vj-deck-bypass, .vj-deck-solo) {
+    border-color: var(--di-cyan);
+    background-color: rgba(var(--di-cyan-rgb), 0.1);
+    color: var(--di-cyan);
+}
+
+.perform-shell .perform-action--danger {
+    border-color: var(--di-danger);
+    color: var(--di-danger);
+}
+
+.perform-shell .perform-action--danger.is-on,
+.perform-shell .perform-action--danger[aria-pressed='true'] {
+    background-color: var(--di-danger);
+    color: var(--di-bg);
+}
+
+/* A select: no native chrome; the arrow is two drawn strokes. */
+.perform-shell .raw-window-body select {
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: var(--di-space-5);
+    background-image: linear-gradient(45deg, transparent 50%, var(--di-dim) 50%), linear-gradient(135deg, var(--di-dim) 50%, transparent 50%);
+    background-position: calc(100% - 12px) 50%, calc(100% - 8px) 50%;
+    background-repeat: no-repeat;
+    background-size: 4px 4px;
+    text-overflow: ellipsis;
+}
+
+.perform-shell .raw-window-body select option {
+    background: var(--di-surface-2);
+    color: var(--di-ink);
+}
+
+/* A toggle is a square button (aria-pressed), never a native checkbox. */
+.perform-shell .raw-window-body input[type='checkbox'] {
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    flex: none;
+    width: var(--perform-control);
+    height: var(--perform-control);
+    margin: 0;
+    background: transparent;
+    border: 1px solid var(--di-line);
+    border-radius: 0;
+    cursor: pointer;
+}
+
+.perform-shell .raw-window-body input[type='checkbox']:checked {
+    border-color: var(--di-cyan);
+    background: rgba(var(--di-cyan-rgb), 0.1);
+    box-shadow: inset 0 0 0 4px var(--di-cyan);
+}
+
+/* A slider: a thin square track and a square cap (a fader cap, 8 x 16, not
+   a round knob). SYSTEM.md rule 2 allows a round thumb at 13px because a
+   square one there reads as a tick; this cap is taller than the track and
+   the control, so it still reads as something to take hold of. */
+.perform-shell .raw-window-body input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    min-width: 0;
+    height: var(--perform-control);
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    cursor: pointer;
+}
+
+.perform-shell .raw-window-body input[type='range']::-webkit-slider-runnable-track {
+    height: 16px;
+    background: linear-gradient(var(--di-line), var(--di-line)) center / 100% 2px no-repeat;
+    border: 0;
+    border-radius: 0;
+}
+
+.perform-shell .raw-window-body input[type='range']::-moz-range-track {
+    height: 16px;
+    background: linear-gradient(var(--di-line), var(--di-line)) center / 100% 2px no-repeat;
+    border: 0;
+    border-radius: 0;
+}
+
+.perform-shell .raw-window-body input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 8px;
+    height: 16px;
+    background: var(--di-ink);
+    border: 0;
+    border-radius: 0;
+}
+
+.perform-shell .raw-window-body input[type='range']::-moz-range-thumb {
+    width: 8px;
+    height: 16px;
+    background: var(--di-ink);
+    border: 0;
+    border-radius: 0;
+}
+
+.perform-shell .raw-window-body input[type='range']:focus-visible {
+    outline: none;
+}
+
+.perform-shell .raw-window-body input[type='range']:focus-visible::-webkit-slider-thumb {
+    background: var(--di-cyan);
+}
+
+.perform-shell .raw-window-body input[type='range']:focus-visible::-moz-range-thumb {
+    background: var(--di-cyan);
+}
+
+@media (pointer: coarse) {
+    .perform-shell .raw-window-body input[type='range']::-webkit-slider-thumb {
+        width: 12px;
+        height: 28px;
+    }
+
+    .perform-shell .raw-window-body input[type='range']::-moz-range-thumb {
+        width: 12px;
+        height: 28px;
+    }
+
+    .perform-shell .raw-window-body input[type='range']::-webkit-slider-runnable-track,
+    .perform-shell .raw-window-body input[type='range']::-moz-range-track {
+        height: 28px;
+    }
+}
+
+/* NAME, the track, the number: one slider, the same in every block. */
+.perform-slider {
     display: grid;
-    grid-template-columns: 64px minmax(0, 1fr) 4ch;
+    flex: 1 1 140px;
+    grid-template-columns: auto minmax(40px, 1fr) 3ch;
     align-items: center;
     gap: var(--di-space-2);
-    font-family: var(--di-mono);
-    font-size: var(--di-text-2);
+    min-width: min(100%, 120px);
+    color: var(--di-dim);
+    font-size: var(--di-text-1);
+    letter-spacing: 0.08em;
 }
 
-.perform-master-row input[type='range'] {
-    width: 100%;
+.perform-slider output {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+/* The target floor, stated once (UX audit F094, WCAG 2.5.8): nothing in a Perform window is under
+   24px on a pointer, 44px on a touch screen. The blocks' own control size (--perform-control) already
+   gives 24 / 44; these rules keep the floor if a block sets less. The window's own square, dash and
+   cross are 44px in raw.css (.raw-window-actions button). */
+.perform-pane :is(button, select, input:not([type='checkbox'], [type='radio'], [type='range'], [type='hidden'])) {
     min-height: 24px;
-    accent-color: var(--di-ink);
+    min-width: 24px;
 }
 
-/* WCAG 2.5.8: the box was the browser's 13 px. */
 .perform-toggle input {
     width: 24px;
     height: 24px;
@@ -348,107 +772,121 @@
     accent-color: var(--di-ink);
 }
 
-/* Target floor (UX audit F094, WCAG 2.5.8): nothing in a perform window is under 24 px.
-   The window's own square, dash and cross are 44 px in raw.css (.raw-window-actions button). */
-.perform-pane :is(button, select, input:not([type='checkbox'], [type='radio'], [type='range'], [type='hidden'])) {
+.perform-master-row input[type='range'] {
     min-height: 24px;
-    min-width: 24px;
 }
 
-@media (pointer: coarse), (max-width: 600px) {
-    .perform-strip-button,
-    .perform-action {
-        min-height: 44px;
-    }
-    /* On touch the whole label is the 44 px target; the box inside it stays 24 px. */
+@media (pointer: coarse) {
+    /* On touch the whole label is the 44px target; the box inside it stays 24px. */
     .perform-toggle {
         min-height: 44px;
     }
+
     .perform-master-row input[type='range'] {
         min-height: 44px;
     }
 }
 
-/* The window title bar on Perform (2026-11-10, owner N3511). Measured before:
-   59px per bar at 1400 wide, and 130px in a 206px window at 700 wide, where
-   it wrapped to three rows and left the Clock 10px of body. A desk window on
-   Nodes travels over a canvas; here every window is fixed to the screen, so:
-   - one row, never wrapped; when the bar runs out the family word yields
-     first, then the title ends in an ellipsis; the three controls never move;
-   - the word "pinned" goes: it is true of every window on this page;
-   - no drop shadow: nothing floats over live content here (di-brand
-     SYSTEM.md rule 4), the 1px line carries the edge (rule 3).
-   Scoped to .perform-shell, so Nodes keeps its own bar. */
-.perform-shell .raw-window {
-    box-shadow: none;
-}
+/* --- look tiles: equal cells, nothing overflows ----------------------------- */
 
-.perform-shell .raw-window-header {
-    flex-wrap: nowrap;
-    gap: var(--di-space-2);
-    padding: var(--di-space-1) var(--di-space-2);
-}
-
-.perform-shell .raw-window-header > div:first-child {
-    display: flex;
+.perform-tiles {
+    display: grid;
     flex: 1 1 auto;
-    align-items: baseline;
-    gap: var(--di-space-2);
-    min-width: 0;
-    white-space: nowrap;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: var(--perform-control);
+    align-content: start;
+    gap: var(--di-space-1);
+    min-height: 0;
+    overflow: auto;
 }
 
-.perform-shell .raw-window-kicker {
-    flex: 0 100 auto;
+@container perform-block (min-width: 220px) {
+    .perform-tiles {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@container perform-block (min-width: 340px) {
+    .perform-tiles {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@container perform-block (min-width: 520px) {
+    .perform-tiles {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+}
+
+.perform-shell .perform-tile {
+    box-sizing: border-box;
     min-width: 0;
+    padding: 0 var(--di-space-2);
     overflow: hidden;
+    background: transparent;
+    border: 1px solid var(--di-line);
+    border-radius: 0;
+    color: var(--di-ink);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-1);
+    letter-spacing: 0.04em;
+    text-align: left;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.perform-shell .perform-tile:hover {
+    border-color: var(--di-ink);
+}
+
+.perform-shell .perform-tile.is-live {
+    border-color: var(--di-cyan);
+    background: rgba(var(--di-cyan-rgb), 0.1);
+    box-shadow: inset 2px 0 0 var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.perform-shell .perform-tile:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 1px var(--di-cyan);
+}
+
+/* --- the VJ deck inside a block: the same control height and gaps ------------ */
+
+.perform-shell .vj-deck--perform {
+    gap: var(--di-space-2);
+    padding: var(--di-space-2);
+}
+
+/* Perform's one-control rule (:is(...):not(...), specificity 0,4,1) set the 7px padding and won over
+   a 0,3,1 selector. Doubling the class makes this one 0,5,1: the caret gets its own room. */
+.perform-shell .raw-window-body select.vj-deck-fx-layer.vj-deck-fx-layer,
+.perform-shell .raw-window-body select.vj-deck-fx-add.vj-deck-fx-add {
+    padding-right: calc(var(--di-space-4) + var(--di-space-3));
+    min-width: 9ch;
+}
+
+.perform-shell .vj-deck--perform .vj-deck-hint,
+.perform-shell .vj-deck--perform .vj-deck-dim {
+    font-size: var(--di-text-1);
+    letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
-.perform-shell .raw-window-header h3 {
-    flex: 0 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+/* The empty desk, under every window (windows start at z-index 10): it only exists to take a right-click. */
+.perform-desk-bg {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    background: transparent;
 }
 
-.perform-shell .raw-window-actions {
-    flex: 0 0 auto;
-    flex-wrap: nowrap;
-}
-
-.perform-shell .raw-window.is-pinned .raw-window-header::after {
-    content: none;
-}
-
-/* The three controls keep their 44px thumb target on a touch screen. With a
-   mouse or a trackpad (a desk, a laptop) 44px x 3 took 150px of a 206px bar
-   and cut the title to "Clo…"; 28px is the pointer size the strip's own
-   buttons sit near. */
-@media (pointer: fine) {
-    .perform-shell .raw-window-actions {
-        gap: 0;
-    }
-
-    .perform-shell .raw-window-actions button {
-        min-width: 28px;
-        min-height: 28px;
-        padding: 0 var(--di-space-2);
-    }
-}
-
-/* On a touch screen the controls stay 44px each, so a narrow window has room
-   for the controls or the title, not both (review of #1266: at 200px the
-   title was cut to "…"). There the bar may take a second row again, as it
-   did before: a name is never traded for a row. */
-@media (pointer: coarse) {
-    .perform-shell .raw-window-header {
-        flex-wrap: wrap;
-    }
-
-    /* Alone on the second row, the controls keep the right-hand edge where
-       Close always is (space-between puts a lone item on the left). */
-    .perform-shell .raw-window-actions {
-        margin-left: auto;
-    }
-}
+/* Dev's title-bar rules (#1266, owner N3511) are not repeated here: the block
+   header above ("the block: one frame, one header row") already does what they
+   did (one nowrap row, family word and "pinned" gone, no shadow, title ends in
+   an ellipsis) with a fixed --perform-head height. Its min 28px / wrap-on-touch
+   overrides would break that fixed height and the one-control-size rule. */

@@ -65,4 +65,40 @@ describe('performState', () => {
         ])
         expect(after.performState).toEqual(doc.performState)
     })
+
+    describe('defaultPreset (the show opens with this one)', () => {
+        const base = () => normalizeProjectDocument({ performState: { presets: [preset('show:a'), preset('show:b')] } })
+
+        it('is absent by default and set / cleared by setPerformDefaultPreset', () => {
+            let doc = base()
+            expect(doc.performState.defaultPreset).toBeUndefined()
+            doc = applyProjectOps(doc, [{ type: 'setPerformDefaultPreset', payload: { presetId: 'show:b' } }])
+            expect(doc.performState.defaultPreset).toBe('show:b')
+            doc = applyProjectOps(doc, [{ type: 'setPerformDefaultPreset', payload: { presetId: '' } }])
+            expect(doc.performState).toEqual({ presets: base().performState.presets })
+        })
+
+        it('an id the show does not have is dropped, on the op and on load', () => {
+            const doc = applyProjectOps(base(), [{ type: 'setPerformDefaultPreset', payload: { presetId: 'show:ghost' } }])
+            expect(doc.performState.defaultPreset).toBeUndefined()
+            expect(normalizeProjectDocument({ performState: { presets: [preset('show:a')], defaultPreset: 'x' } }).performState.defaultPreset).toBeUndefined()
+        })
+
+        it('survives an upsert, goes with its preset when that is deleted, and undo brings both back', () => {
+            let doc = applyProjectOps(base(), [{ type: 'setPerformDefaultPreset', payload: { presetId: 'show:a' } }])
+            doc = applyProjectOps(doc, [{ type: 'upsertPerformPreset', payload: { preset: preset('show:a', { name: 'renamed' }) } }])
+            expect(doc.performState.defaultPreset).toBe('show:a')
+            const del = [{ type: 'deletePerformPreset', payload: { presetId: 'show:a' } }]
+            const gone = applyProjectOps(doc, del)
+            expect(gone.performState.defaultPreset).toBeUndefined()
+            expect(applyProjectOps(gone, invertProjectOps(doc, del)).performState).toEqual(doc.performState)
+        })
+
+        it('its inverse restores the previous default', () => {
+            const doc = applyProjectOps(base(), [{ type: 'setPerformDefaultPreset', payload: { presetId: 'show:a' } }])
+            const ops = [{ type: 'setPerformDefaultPreset', payload: { presetId: 'show:b' } }]
+            const after = applyProjectOps(doc, ops)
+            expect(applyProjectOps(after, invertProjectOps(doc, ops)).performState).toEqual(doc.performState)
+        })
+    })
 })

@@ -12,19 +12,26 @@ import {
     aliasWires,
     buildVjDeckNodeTypes,
     clearLayer,
+    cameraNodeId,
     clipNodeId,
     createDeck,
+    crossfadeGain,
     expandDeck,
     masterNodeId,
+    moveClip,
     normalizeClip,
     normalizeDeck,
     removeLayer,
     resolveAlias,
     setBlend,
     setBpm,
+    setBypass,
     setClip,
+    setCrossfade,
     setMaster,
     setOpacity,
+    setSide,
+    setSolo,
     tapTempo,
     trigger,
     triggerColumn,
@@ -346,6 +353,109 @@ describe('expandDeck', () => {
     })
 })
 
+describe('bypass, solo and the crossfader', () => {
+    const played = () => {
+        let deck = createDeck({ layers: 3 })
+        for (let i = 0; i < 3; i += 1) deck = trigger(setClip(deck, i, 0, assetClip(`c${i}`)), i, 0)
+        return deck
+    }
+    const blends = (deck) => expandDeck(deckNode(deck)).nodes.filter((node) => node.type === 'top.blend')
+
+    it('an old stored deck gets the defaults and expands exactly as before', () => {
+        const old = {
+            bpm: 120,
+            master: 1,
+            columns: 2,
+            layers: [
+                { id: 'a', opacity: 0.5, blend: '1', active: 0, trigger: 1, clips: [assetClip('x'), null] },
+                { id: 'b', opacity: 1, blend: '0', active: -1, trigger: 0, clips: [null, null] },
+                { id: 'c', opacity: 1, blend: '0', active: 1, trigger: 2, clips: [null, assetClip('y')] }
+            ]
+        }
+        const deck = normalizeDeck(old)
+        expect(deck.crossfade).toBe(0.5)
+        expect(deck.layers.map((layer) => [layer.bypass, layer.solo, layer.side])).toEqual([[false, false, ''], [false, false, ''], [false, false, '']])
+        const out = expandDeck(deckNode(old))
+        expect(out.nodes.map((node) => [node.id, node.type, node.values.mix])).toEqual([
+            ['deck::L0::clip', 'top.clip', undefined],
+            ['deck::L0::blend', 'top.blend', 0.5],
+            ['deck::L2::clip', 'top.clip', undefined],
+            ['deck::L2::blend', 'top.blend', 1],
+            ['deck::master', 'top.level', undefined]
+        ])
+        expect(out.wires).toEqual([
+            { from: 'deck::L0::clip', to: 'deck::L0::blend', port: 'b' },
+            { from: 'deck::L0::blend', to: 'deck::L2::blend', port: 'a' },
+            { from: 'deck::L2::clip', to: 'deck::L2::blend', port: 'b' },
+            { from: 'deck::L2::blend', to: 'deck::master', port: 'a' }
+        ])
+    })
+
+    it('bypass silences a layer by mix 0 and keeps its nodes', () => {
+        let deck = setBypass(played(), 'layer-2', true)
+        expect(blends(deck).map((node) => [node.id, node.values.mix])).toEqual([['deck::L0::blend', 1], ['deck::L1::blend', 0], ['deck::L2::blend', 1]])
+        expect(deck.layers[1].active).toBe(0)
+        deck = setBypass(deck, 'layer-2', false)
+        expect(blends(deck).map((node) => node.values.mix)).toEqual([1, 1, 1])
+        expect(setBypass(deck, 'nope', true)).toEqual(deck)
+    })
+
+    it('solo lets only solo layers through (the others at mix 0), and solo does not beat bypass', () => {
+        const mixes = (deck) => blends(deck).map((node) => node.values.mix)
+        let deck = setSolo(played(), 'layer-3', true)
+        expect(mixes(deck)).toEqual([0, 0, 1])
+        deck = setSolo(deck, 'layer-1', true)
+        expect(mixes(deck)).toEqual([1, 0, 1])
+        deck = setBypass(deck, 'layer-3', true)
+        expect(mixes(deck)).toEqual([1, 0, 0])
+        expect(setSolo(deck, 'layer-1', false).layers[0].solo).toBe(false)
+    })
+
+    it('crossfadeGain is full through the middle and linear to the ends', () => {
+        expect([0, 0.25, 0.5, 0.75, 1].map((x) => crossfadeGain('a', x))).toEqual([1, 1, 1, 0.5, 0])
+        expect([0, 0.25, 0.5, 0.75, 1].map((x) => crossfadeGain('b', x))).toEqual([0, 0.5, 1, 1, 1])
+        expect([0, 0.5, 1].map((x) => crossfadeGain('', x))).toEqual([1, 1, 1])
+    })
+
+    it('the crossfader scales opacity and mutes a silent layer at mix 0', () => {
+        let deck = setSide(setSide(played(), 'layer-1', 'a'), 'layer-3', 'b')
+        deck = setOpacity(setCrossfade(deck, 0.75), 2, 0.8)
+        expect(blends(deck).map((node) => node.values.mix)).toEqual([0.5, 1, 0.8])
+        deck = setCrossfade(deck, 1)
+        expect(blends(deck).map((node) => [node.id, node.values.mix])).toEqual([['deck::L0::blend', 0], ['deck::L1::blend', 1], ['deck::L2::blend', 0.8]])
+    })
+
+    it('node ids stay identical across opacity 1 -> 0 -> 1, bypass, solo and the crossfader', () => {
+        const idsOf = (deck) => expandDeck(deckNode(deck)).nodes.map((node) => node.id)
+        const wiresOf = (deck) => JSON.stringify(expandDeck(deckNode(deck)).wires)
+        const base = played()
+        const states = [
+            setOpacity(base, 1, 0),
+            setBypass(base, 'layer-2', true),
+            setSolo(base, 'layer-3', true),
+            setCrossfade(setSide(base, 'layer-1', 'a'), 1),
+            setOpacity(setOpacity(base, 1, 0), 1, 1)
+        ]
+        for (const state of states) {
+            expect(idsOf(state)).toEqual(idsOf(base))
+            expect(wiresOf(state)).toBe(wiresOf(base))
+        }
+        expect(idsOf(base)).toContain('deck::L1::clip')
+        expect(expandDeck(deckNode(setOpacity(base, 1, 0))).nodes.find((node) => node.id === 'deck::L1::blend').values.mix).toBe(0)
+    })
+
+    it('invalid values clamp or fall back', () => {
+        expect(setCrossfade(createDeck(), 4).crossfade).toBe(1)
+        expect(setCrossfade(createDeck(), 'x').crossfade).toBe(0.5)
+        expect(normalizeDeck({ crossfade: -3 }).crossfade).toBe(0)
+        expect(setSide(createDeck(), 'layer-1', 'z').layers[0].side).toBe('')
+        const raw = { layers: [{ id: 'q', bypass: 'yes', solo: 1, side: 'c' }] }
+        expect(normalizeDeck(raw).layers[0]).toMatchObject({ bypass: false, solo: false, side: '' })
+        expect(crossfadeGain('a', 'junk')).toBe(1)
+        expect(JSON.parse(JSON.stringify(setSolo(createDeck(), 'layer-1', true)))).toEqual(setSolo(createDeck(), 'layer-1', true))
+    })
+})
+
 describe('the vj.deck node type', () => {
     it('is a picture node with four picture inputs and one picture out', () => {
         const type = buildVjDeckNodeTypes()[VJ_DECK_TYPE]
@@ -354,5 +464,124 @@ describe('the vj.deck node type', () => {
         expect(type.inputs.every((port) => port.type === 'texture')).toBe(true)
         expect(type.outputs).toEqual([{ id: 'out', type: 'texture', label: 'Picture' }])
         expect(normalizeDeck(type.defaultValues.deck)).toEqual(type.defaultValues.deck)
+    })
+})
+
+describe('camera clips', () => {
+    const cam = (camera, extra = {}) => ({ id: `c-${camera}`, kind: 'camera', camera, label: camera, ...extra })
+    const withCams = () => {
+        let deck = createDeck({ layers: 2 })
+        deck = trigger(setClip(deck, 0, 0, cam('Phone', { device: 'dev-1' })), 0, 0)
+        deck = trigger(setClip(deck, 1, 0, cam('Phone', { device: 'dev-1' })), 1, 0)
+        return deck
+    }
+
+    it('normalises: needs a label, keeps the device as a hint, drops speed-style fields nowhere else', () => {
+        expect(normalizeClip({ kind: 'camera', camera: '  Phone ', device: 'd1', label: 'Phone' })).toMatchObject({ kind: 'camera', camera: 'Phone', device: 'd1' })
+        expect(normalizeClip({ kind: 'camera', camera: '' })).toBeNull()
+        expect(normalizeClip({ kind: 'camera' })).toBeNull()
+        expect(normalizeClip({ kind: 'camera', camera: 'Phone', device: 5 }).device).toBe('')
+        const deck = setClip(createDeck(), 0, 0, cam('Phone'))
+        expect(updateClip(deck, 0, 0, { label: 'Cam' }).layers[0].clips[0]).toMatchObject({ kind: 'camera', camera: 'Phone', label: 'Cam' })
+    })
+
+    it('expands to one top.camera shared by two clips, with label and device', () => {
+        const out = expandDeck(deckNode(withCams()))
+        const cams = out.nodes.filter((node) => node.type === 'top.camera')
+        expect(cams).toHaveLength(1)
+        expect(cams[0].id).toBe(cameraNodeId('deck', 'Phone', 'dev-1'))
+        expect(cams[0].values).toMatchObject({ device: 'dev-1', deviceLabel: 'Phone', mirror: false })
+        expect(out.nodes.some((node) => node.type === 'top.clip')).toBe(false)
+        expect(out.wires.filter((wire) => wire.port === 'b').map((wire) => wire.from)).toEqual([cams[0].id, cams[0].id])
+        expect(cameraNodeId('deck', 'Phone', 'dev-1')).not.toBe(cameraNodeId('deck', 'Other', 'dev-1'))
+    })
+
+    it('bypass, solo and the crossfader still apply to a camera layer', () => {
+        const blends = (deck) => expandDeck(deckNode(deck)).nodes.filter((node) => node.type === 'top.blend')
+        const mixes = (deck) => blends(deck).map((node) => node.values.mix)
+        expect(mixes(setBypass(withCams(), 'layer-1', true))).toEqual([0, 1])
+        expect(mixes(setSolo(withCams(), 'layer-1', true))).toEqual([1, 0])
+        const faded = setCrossfade(setSide(withCams(), 'layer-1', 'a'), 1)
+        expect(mixes(faded)).toEqual([0, 1])
+        // the camera stays open (same node) even with every layer silenced
+        const silent = expandDeck(deckNode(setBypass(setBypass(withCams(), 'layer-1', true), 'layer-2', true)))
+        expect(silent.nodes.filter((node) => node.type === 'top.camera').map((node) => node.id)).toEqual([cameraNodeId('deck', 'Phone', 'dev-1')])
+    })
+
+    it('two cameras with one label but different devices are two nodes; no device hint keeps the old id', () => {
+        expect(cameraNodeId('deck', 'Cam', 'a')).not.toBe(cameraNodeId('deck', 'Cam', 'b'))
+        expect(cameraNodeId('deck', 'Cam', '')).toBe(cameraNodeId('deck', 'Cam'))
+        expect(cameraNodeId('deck', 'Phone')).toBe('deck::cam-' + (() => { let h = 5381; for (const ch of 'Phone') h = ((h * 33) ^ ch.codePointAt(0)) >>> 0; return h.toString(36) })())
+    })
+
+    it('the camera operator takes device and deviceLabel', () => {
+        expect(TOP_OPERATORS['top.camera'].pickDevice).toBe('camera')
+    })
+})
+
+describe('moveClip', () => {
+    const base = () => {
+        let deck = createDeck()
+        deck = setClip(deck, 0, 0, assetClip('a'))
+        deck = setClip(deck, 0, 2, assetClip('b'))
+        deck = setClip(deck, 1, 1, assetClip('c'))
+        return deck
+    }
+    const at = (deck, layer, column) => deck.layers[layer].clips[column]?.asset ?? null
+
+    it('the same slot returns the same deck object', () => {
+        const deck = base()
+        expect(moveClip(deck, { layer: 0, column: 0 }, { layer: 0, column: 0 })).toBe(deck)
+    })
+    it('an empty source or a slot out of range changes nothing', () => {
+        const deck = base()
+        expect(moveClip(deck, { layer: 0, column: 5 }, { layer: 0, column: 1 })).toBe(deck)
+        expect(moveClip(deck, { layer: 0, column: 0 }, { layer: 9, column: 1 })).toBe(deck)
+    })
+    it('an empty target takes the clip', () => {
+        const next = moveClip(base(), { layer: 0, column: 0 }, { layer: 0, column: 4 })
+        expect(at(next, 0, 0)).toBeNull()
+        expect(at(next, 0, 4)).toBe('a')
+    })
+    it('a filled target swaps', () => {
+        const next = moveClip(base(), { layer: 0, column: 0 }, { layer: 0, column: 2 })
+        expect([at(next, 0, 0), at(next, 0, 2)]).toEqual(['b', 'a'])
+    })
+    it('a playing clip stays playing in its new slot on the same layer', () => {
+        const deck = trigger(base(), 0, 0)
+        const moved = moveClip(deck, { layer: 0, column: 0 }, { layer: 0, column: 4 })
+        expect(moved.layers[0].active).toBe(4)
+        const swapped = moveClip(deck, { layer: 0, column: 0 }, { layer: 0, column: 2 })
+        expect(swapped.layers[0].active).toBe(2)
+        // the swapped-in playing clip: dragging the idle one onto it
+        const back = moveClip(trigger(base(), 0, 2), { layer: 0, column: 0 }, { layer: 0, column: 2 })
+        expect(back.layers[0].active).toBe(0)
+    })
+    it('moved to another layer: the old layer stops, the new one plays it with a trigger', () => {
+        const deck = trigger(base(), 0, 0)
+        const moved = moveClip(deck, { layer: 0, column: 0 }, { layer: 2, column: 3 })
+        expect(moved.layers[0].active).toBe(-1)
+        expect(moved.layers[2].active).toBe(3)
+        expect(moved.layers[2].trigger).toBe(deck.layers[2].trigger + 1)
+        expect(at(moved, 2, 3)).toBe('a')
+    })
+    it('an idle clip moved to another layer does not start there', () => {
+        const moved = moveClip(base(), { layer: 0, column: 0 }, { layer: 2, column: 3 })
+        expect(moved.layers[2].active).toBe(-1)
+        expect(moved.layers[2].trigger).toBe(0)
+    })
+    it('a cross-layer swap hands each playing clip to its new layer', () => {
+        let deck = trigger(trigger(base(), 0, 0), 1, 1)
+        const moved = moveClip(deck, { layer: 0, column: 0 }, { layer: 1, column: 1 })
+        expect(at(moved, 0, 0)).toBe('c')
+        expect(at(moved, 1, 1)).toBe('a')
+        expect(moved.layers[0].active).toBe(0)
+        expect(moved.layers[1].active).toBe(1)
+    })
+    it('does not mutate its input', () => {
+        const deck = trigger(base(), 0, 0)
+        const copy = JSON.stringify(deck)
+        moveClip(deck, { layer: 0, column: 0 }, { layer: 1, column: 0 })
+        expect(JSON.stringify(deck)).toBe(copy)
     })
 })

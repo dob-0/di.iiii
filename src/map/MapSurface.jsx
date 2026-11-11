@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { buildPictureOutOptions } from './pictureOutOptions.js'
 import MapInspector from './MapInspector.jsx'
 import { MapMachinesList, MapSurfaceList, MapWallView, nextCorners } from './MapDeskParts.jsx'
 import MapCueList from './MapCueList.jsx'
@@ -6,7 +7,7 @@ import { cueForKey, isCueKey } from './cueFiring.js'
 import { useMapDocument } from './useMapDocument.js'
 import { useProjectLayers } from '../project/useProjectLayers.js'
 import { toTopNetwork } from '../project/tops/useTopNetwork.js'
-import { buildMapOutputPath } from './mapRouting.js'
+import { openMapOutput } from './mapRouting.js'
 import { listProjects } from '../project/services/projectsApi.js'
 import { transportWarning } from './transportCeiling.js'
 import { lightingDeskPath, probeLightingDesk } from './lightingLink.js'
@@ -87,10 +88,7 @@ export default function MapSurface({ projectId, spaceId }) {
     // The project's picture operators: what a Pictures surface runs, and the
     // Picture Out nodes the inspector offers to show.
     const network = useMemo(() => toTopNetwork(doc), [doc])
-    const pictureOutOptions = useMemo(
-        () => (doc?.nodes || []).filter((node) => node.typeId === 'top.out').map((node) => ({ id: node.id, label: node.label || 'Picture Out' })),
-        [doc]
-    )
+    const pictureOutOptions = useMemo(() => buildPictureOutOptions(doc), [doc])
     const [localReference, setLocalReferenceFile] = useLocalFileUrl()
     const [transferText, setTransferText] = useState(null)
     const [lightingHere, setLightingHere] = useState(false)
@@ -296,7 +294,7 @@ export default function MapSurface({ projectId, spaceId }) {
     }, [surfaces, cues, applyOps])
 
     const openOutput = useCallback(() => {
-        window.open(buildMapOutputPath(spaceId, projectId), `di-map-out-${projectId}`, 'noopener')
+        openMapOutput(spaceId, projectId)
     }, [spaceId, projectId])
 
     const moveSurface = useCallback((surfaceId, direction) => {

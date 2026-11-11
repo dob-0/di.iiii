@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CLOCK_WRAP_SECONDS, clockSecondsFor } from './topEngine.js'
+import { CLOCK_WRAP_SECONDS, clockSecondsFor, videoMoved } from './topEngine.js'
 import { TOP_OPERATORS } from './topOperators.js'
 
 // The engine's per-frame render loop needs a real WebGL context to exercise
@@ -42,9 +42,28 @@ describe('which operators the clock drives', () => {
 
     it('leaves every other operator unmarked — none of the rest reads `time`', () => {
         for (const [id, operator] of Object.entries(TOP_OPERATORS)) {
-            if (id === 'top.noise' || id === 'top.shape') continue
+            if (id === 'top.noise' || id === 'top.shape' || id === 'top.glitch' || id === 'top.displace') continue
             expect(Boolean(operator.animated), id).toBe(false)
             expect(/\btime\b/.test(operator.fragment), `${id} reads time but is not marked animated`).toBe(false)
         }
+    })
+})
+
+describe('uploading a paused video', () => {
+    it('skips an unchanged paused frame, but uploads again when the source changes at the same time', () => {
+        const slot = { lastVideoTime: -1 }
+        const video = { currentTime: 3, currentSrc: 'blob:a' }
+        expect(videoMoved(slot, video)).toBe(true)
+        slot.lastVideoTime = video.currentTime // what the engine does after uploading
+        expect(videoMoved(slot, video)).toBe(false)
+        video.currentSrc = 'blob:b' // another paused clip, same node, same currentTime
+        expect(videoMoved(slot, video)).toBe(true)
+    })
+
+    it('a new element for the node uploads too', () => {
+        const slot = { lastVideoTime: -1 }
+        expect(videoMoved(slot, { currentTime: 0, currentSrc: 'x' })).toBe(true)
+        slot.lastVideoTime = 0
+        expect(videoMoved(slot, { currentTime: 0, currentSrc: 'x' })).toBe(true)
     })
 })

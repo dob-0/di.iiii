@@ -1308,6 +1308,10 @@
 }
 
 .raw-window-actions {
+    /* Above the resize handles (z 12): the top-right corner handle is 14px square
+       and used to lie over the Close button, so Close could not be clicked. */
+    position: relative;
+    z-index: 13;
     display: flex;
     flex-wrap: wrap;
     gap: var(--di-space-2);

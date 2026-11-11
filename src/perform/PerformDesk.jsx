@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import DesktopWindow from '../raw/components/DesktopWindow.jsx'
+import ContextMenu from '../raw/components/ContextMenu.jsx'
+import { pickEscapeWindow } from '../raw/utils/windowCascade.js'
 import { navigateInApp } from '../components/SurfaceBar.jsx'
 import { buildRawProjectPath } from '../raw/utils/rawRouting.js'
-import { RAW_WINDOW_PADDING, getBottomReserve } from '../raw/utils/windowLayout.js'
 import { useMapApi } from '../map/useMapDocument.js'
 import { buildPerformPath } from './performRouting.js'
 import {
     WINDOW_KINDS,
     WINDOW_ORDER,
     choosePreset,
+    GRID,
     framesFromRects,
     isComingKind,
     nextSlotId,
@@ -16,8 +18,12 @@ import {
     presetGroups,
     rectForAddedWindow,
     rectsFromFrames,
+    snapFrame,
+    tileRects,
+    unitSize,
     widthClassOf
 } from './presets.js'
+import { keysOf, nextWindowId, windowKeyAction } from './windowKeys.js'
 import PerformWindowBody, { windowTitle } from './PerformWindows.jsx'
 import './perform.css'
 
@@ -36,16 +42,18 @@ import './perform.css'
 
 const STRIP_FALLBACK = 84
 
-// The same bounds DesktopWindow's clamp keeps a window inside (windowLayout.js):
-// a padding each side, and the bottom reserve the corner chrome needs (the
-// account chip on a phone). A preset laid into anything larger would be
-// squeezed by the clamp and its windows would overlap.
+// The area the blocks tile: the whole screen under the strip, edge to edge.
+// Nodes keeps a padding and a bottom reserve (windowLayout.js) because its
+// windows float over a canvas and a corner holds the zoom controls and the
+// delete button. Perform has neither, and nothing is minimised into a tray (a
+// minimised block stays in its place as its one header row), so nothing is
+// reserved here. UNCHECKED on a phone: the account chip (AccountButton,
+// fixed at the bottom-right) sits over the last block's corner.
 const measureArea = (stripBottom) => {
     const width = typeof window === 'undefined' ? 1440 : window.innerWidth
     const height = typeof window === 'undefined' ? 900 : window.innerHeight
-    const top = Math.max(0, Math.round(stripBottom || STRIP_FALLBACK)) + 4
-    const bottom = height - RAW_WINDOW_PADDING - getBottomReserve(width)
-    return { left: RAW_WINDOW_PADDING, top, width: Math.max(1, width - RAW_WINDOW_PADDING * 2), height: Math.max(1, bottom - top) }
+    const top = Math.max(0, Math.round(stripBottom || STRIP_FALLBACK))
+    return { left: 0, top, width: Math.max(1, width), height: Math.max(1, height - top) }
 }
 
 const replaceAddress = (path) => {
@@ -100,6 +108,11 @@ export default function PerformDesk({
     }, [])
     const area = useMemo(() => measureArea(stripBottom), [stripBottom, viewport]) // eslint-disable-line react-hooks/exhaustive-deps
     const widthClass = widthClassOf(viewport.width)
+    const grid = GRID[widthClass]
+    const unit = useMemo(() => unitSize(area, grid), [area, grid])
+    // What DesktopWindow keeps a block inside: the whole area, and no smaller than one unit.
+    const bounds = useMemo(() => ({ minLeft: 0, viewportPadding: 0, bottomReserve: 0, minWidth: unit.width, minHeight: unit.height }), [unit])
+    const gridProps = useMemo(() => ({ snap: (frame) => snapFrame(frame, area, grid), unit }), [area, grid, unit])
 
     const mine = useMemo(() => layout?.presets || [], [layout?.presets])
     const show = useMemo(() => document?.performState?.presets || [], [document?.performState?.presets])
@@ -109,11 +122,12 @@ export default function PerformDesk({
     // person picks another.
     const [chosenId, setChosenId] = useState(null)
     const [notice, setNotice] = useState('')
+    const showDefault = document?.performState?.defaultPreset || null
     const choice = useMemo(() => {
         if (!hasLoaded) return null
         if (chosenId) return choosePreset({ requested: chosenId, mine, show })
-        return choosePreset({ requested: perform.preset, lastActive: layout?.activePreset, from: perform.from, mine, show })
-    }, [hasLoaded, chosenId, perform.preset, perform.from, layout?.activePreset, mine, show])
+        return choosePreset({ requested: perform.preset, lastActive: layout?.activePreset, showDefault, from: perform.from, mine, show })
+    }, [hasLoaded, chosenId, perform.preset, perform.from, layout?.activePreset, showDefault, mine, show])
     const preset = choice?.preset || null
 
     useEffect(() => {
@@ -136,7 +150,7 @@ export default function PerformDesk({
             minimized: {},
             changed: false
         })
-    }, [preset, widthClass]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [preset, widthClass, arrangement === null]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // The address says which preset is open, so "copy link" and a reload agree.
     useEffect(() => {
@@ -147,15 +161,17 @@ export default function PerformDesk({
 
     const frames = useMemo(() => {
         if (!arrangement) return {}
-        const base = framesFromRects(arrangement.rects, area)
+        const base = framesFromRects(arrangement.rects, area, { grid })
         arrangement.order.forEach((id, index) => {
             if (base[id]) {
                 base[id].zIndex = 10 + index
                 base[id].minimized = Boolean(arrangement.minimized[id])
+                // Maximised (and so "Restore" in the title bar) only while a rect to go back to is kept.
+                base[id].maximized = Boolean(arrangement.restore?.[id])
             }
         })
         return base
-    }, [arrangement, area])
+    }, [arrangement, area, grid])
 
     const change = useCallback((fn) => setArrangement((current) => (current ? { ...fn(current), changed: true } : current)), [])
 
@@ -186,15 +202,75 @@ export default function PerformDesk({
             order: [...current.order.filter((item) => item !== id), id]
         }
     })
+    const addByHand = (kind) => {
+        const id = nextSlotId(kind, arrangement?.windows.map((item) => item.id) || [])
+        addWindow(kind)
+        setAddedIds((ids) => [...ids, id])
+    }
     const addWindow = (kind) => change((current) => {
         const id = nextSlotId(kind, current.windows.map((item) => item.id))
         return {
             ...current,
             windows: [...current.windows, { id, kind }],
-            rects: { ...current.rects, [id]: rectForAddedWindow(widthClass) },
+            rects: { ...current.rects, [id]: rectForAddedWindow(widthClass, kind, current.rects) },
             order: [...current.order, id]
         }
     })
+
+    // ARRANGE ALL: every open window tiled over the grid, no overlap, nothing minimised or maximised left over.
+    const arrangeAll = () => change((current) => {
+        const order = [...current.windows]
+            .sort((a, b) => {
+                const ra = current.rects[a.id] || [0, 0]
+                const rb = current.rects[b.id] || [0, 0]
+                return (ra[1] - rb[1]) || (ra[0] - rb[0])
+            })
+            .map((item) => item.id)
+        const tiled = tileRects(order, widthClass, area)
+        return {
+            ...current,
+            windows: current.windows.filter((item) => tiled[item.id]),
+            rects: tiled,
+            minimized: {},
+            restore: {}
+        }
+    })
+
+    // Windows put here by hand in this session: the only ones Esc hides (a preset's own are never lost to a stray key).
+    const [addedIds, setAddedIds] = useState([])
+    const [ctxMenu, setCtxMenu] = useState(null) // { x, y, title, items }
+    const addItems = () => WINDOW_ORDER.map((kind) => ({
+        id: `add-${kind}`,
+        label: WINDOW_KINDS[kind].label + (isComingKind(kind) ? ' (phase 2)' : ''),
+        run: () => addByHand(kind)
+    }))
+    const deskItems = () => ([
+        { id: 'add', label: 'Add window', kb: keysOf('add'), items: addItems() },
+        { id: 'arrange', label: 'Arrange all', kb: keysOf('arrange'), run: arrangeAll, disabled: !arrangement?.windows.length },
+        { sep: true },
+        { id: 'save-mine', label: 'Save as mine…', run: () => { setMenu('presets'); setSaving('mine') } },
+        { id: 'save-show', label: 'Save to the show…', run: () => { setMenu('presets'); setSaving('show') } }
+    ])
+    const windowItems = (id) => {
+        const full = arrangement?.rects[id]?.every((value, index) => value === [0, 0, 100, 100][index])
+        return [
+            { id: 'maximize', label: full ? 'Restore' : 'Maximize', kb: keysOf('maximize'), run: () => toggleMaximize(id) },
+            { id: 'minimize', label: arrangement?.minimized[id] ? 'Expand' : 'Minimize', run: () => toggleMinimize(id) },
+            { id: 'close', label: 'Hide this window', kb: addedIds.includes(id) ? keysOf('hide') : undefined, run: () => closeWindow(id), danger: true },
+            { sep: true },
+            ...deskItems()
+        ]
+    }
+    const openDeskMenu = (event) => {
+        event.preventDefault()
+        setCtxMenu({ x: event.clientX, y: event.clientY, items: deskItems() })
+    }
+    const openWindowMenu = (item) => (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        focusWindow(item.id)
+        setCtxMenu({ x: event.clientX, y: event.clientY, title: windowTitle(item.kind), items: windowItems(item.id) })
+    }
 
     const [menu, setMenu] = useState(null) // 'presets' | 'add' | null
     const [saving, setSaving] = useState(null) // 'mine' | 'show' | null
@@ -203,9 +279,10 @@ export default function PerformDesk({
     // or a press anywhere outside it.
     const presetsAnchor = useRef(null)
     const addAnchor = useRef(null)
+    const windowsAnchor = useRef(null)
     useEffect(() => {
         if (!menu) return undefined
-        const anchor = (menu === 'presets' ? presetsAnchor : addAnchor).current
+        const anchor = (menu === 'presets' ? presetsAnchor : menu === 'windows' ? windowsAnchor : addAnchor).current
         const close = (refocus) => {
             setMenu(null)
             setSaving(null)
@@ -221,6 +298,39 @@ export default function PerformDesk({
         }
     }, [menu])
 
+    // The keys (windowKeys.js): live whenever no menu is open, never in a field.
+    const keyState = useRef({})
+    useEffect(() => { keyState.current = { arrangement, addedIds, ctxMenu, menu, arrangeAll, toggleMaximize, closeWindow, addItems, focusWindow } })
+    useEffect(() => {
+        const onKeyDown = (event) => {
+            const live = keyState.current
+            if (!live.arrangement || live.ctxMenu || live.menu) return
+            const action = windowKeyAction(event)
+            if (!action) return
+            const { order, windows, minimized } = live.arrangement
+            const front = order[order.length - 1] || null
+            if (action === 'arrange') live.arrangeAll()
+            else if (action === 'maximize') { if (!front) return; live.toggleMaximize(front) }
+            else if (action === 'next' || action === 'prev') {
+                const nextId = nextWindowId(order, minimized, front, action === 'prev' ? -1 : 1)
+                if (!nextId) return
+                live.focusWindow(nextId)
+            } else if (action === 'add') {
+                setCtxMenu({ x: Math.round(window.innerWidth / 2) - 80, y: Math.round(window.innerHeight / 3), title: 'Add window', items: live.addItems() })
+            } else if (action === 'hide') {
+                const id = pickEscapeWindow(
+                    windows.map((item) => ({ id: item.id, zIndex: order.indexOf(item.id), minimized: Boolean(minimized[item.id]) })),
+                    live.addedIds
+                )
+                if (!id) return
+                live.closeWindow(id)
+            }
+            event.preventDefault()
+        }
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+    }, [])
+
     const pick = (id) => {
         setChosenId(id)
         setNotice('')
@@ -231,7 +341,7 @@ export default function PerformDesk({
     const save = (target) => {
         if (!arrangement || !preset) return
         const name = saveName.trim() || `${preset.name} · ${target === 'mine' ? 'mine' : 'show'}`
-        const framesNow = framesFromRects(arrangement.rects, area)
+        const framesNow = framesFromRects(arrangement.rects, area, { grid })
         const saved = presetFromArrangement({
             name,
             source: target,
@@ -279,6 +389,19 @@ export default function PerformDesk({
     }), [document, spaceId, projectId, applyLocalOps, mapApi, renderNode, machines, wall, onAddDeck, isLocalInstall])
 
     const groups = presetGroups({ mine, show })
+    // The way back to the deck: the project has a VJ deck but the windows on screen show none.
+    const hasDeckNode = Boolean(document?.nodes?.some?.((node) => node?.typeId === 'vj.deck'))
+    const deckOnScreen = Boolean(arrangement?.windows.some((item) => item.kind === 'deck'))
+    const missingDeck = Boolean(arrangement) && hasDeckNode && !deckOnScreen
+    const toggleKind = (kind) => {
+        const open = arrangement?.windows.some((item) => item.kind === kind)
+        if (open) change((current) => ({
+            ...current,
+            windows: current.windows.filter((item) => item.kind !== kind),
+            order: current.order.filter((id) => current.windows.find((item) => item.id === id)?.kind !== kind)
+        }))
+        else addWindow(kind)
+    }
     const nodesHref = buildRawProjectPath(projectId, spaceId)
 
     return (
@@ -315,6 +438,16 @@ export default function PerformDesk({
                                                     {item.name}
                                                     {coming ? <span className="perform-menu-note">{coming} coming in phase 2</span> : null}
                                                 </button>
+                                                {group.key === 'show' ? (
+                                                    <button
+                                                        type="button"
+                                                        className="perform-menu-remove"
+                                                        aria-pressed={showDefault === item.id}
+                                                        aria-label={showDefault === item.id ? `Stop ${item.name} being the show default` : `Set ${item.name} as the show default`}
+                                                        title={showDefault === item.id ? 'This show opens with it. Click to stop.' : 'Make every device open this show with it'}
+                                                        onClick={() => applyLocalOps({ type: 'setPerformDefaultPreset', payload: { presetId: showDefault === item.id ? '' : item.id } })}
+                                                    >{showDefault === item.id ? '★' : '☆'}</button>
+                                                ) : null}
                                                 {group.key !== 'builtin' ? (
                                                     <button type="button" className="perform-menu-remove" aria-label={`Remove ${item.name}`} onClick={() => remove(item)}>×</button>
                                                 ) : null}
@@ -383,24 +516,63 @@ export default function PerformDesk({
                         </div>
                     ) : null}
                 </div>
+                <div className="perform-menu-anchor" ref={windowsAnchor}>
+                    <button
+                        type="button"
+                        className="perform-strip-button"
+                        aria-haspopup="true"
+                        aria-expanded={menu === 'windows'}
+                        onClick={() => setMenu(menu === 'windows' ? null : 'windows')}
+                    >Windows</button>
+                    {menu === 'windows' ? (
+                        <div className="perform-menu" role="menu" aria-label="Windows">
+                            <div className="perform-menu-group">
+                                {WINDOW_ORDER.map((kind) => {
+                                    const open = Boolean(arrangement?.windows.some((item) => item.kind === kind))
+                                    return (
+                                        <button key={kind} type="button" role="menuitemcheckbox" aria-checked={open} className={`perform-menu-item${open ? ' is-on' : ''}`} onClick={() => toggleKind(kind)}>
+                                            <span aria-hidden="true">{open ? '✓ ' : '  '}</span>{WINDOW_KINDS[kind].label}
+                                            <span className="perform-menu-note">{open ? 'open' : 'hidden'}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                            <div className="perform-menu-group perform-menu-sep">
+                                <button type="button" role="menuitem" className="perform-menu-item" disabled={!preset} onClick={() => { if (preset) pick(preset.id) }}>Reset layout</button>
+                            </div>
+                        </div>
+                    ) : null}
+                </div>
+                {missingDeck ? (
+                    <span className="perform-strip-notice" role="status">
+                        This view has no VJ deck.{' '}
+                        <button type="button" className="perform-strip-button" onClick={() => addWindow('deck')}>Open VJ Deck</button>
+                    </span>
+                ) : null}
                 {notice ? <span className="perform-strip-notice" role="status">{notice}</span> : null}
             </div>
+
+            {/* The empty desk: a right-click on it opens the same menu as the title bars. It sits under every window. */}
+            <div className="perform-desk-bg" role="presentation" data-testid="perform-desk" style={{ top: area.top }} onContextMenu={openDeskMenu} />
+            <ContextMenu open={Boolean(ctxMenu)} x={ctxMenu?.x || 0} y={ctxMenu?.y || 0} title={ctxMenu?.title} items={ctxMenu?.items || []} onClose={() => setCtxMenu(null)} />
 
             {arrangement ? arrangement.windows.map((item) => {
                 const frame = frames[item.id]
                 if (!frame) return null
-                const known = WINDOW_KINDS[item.kind]
                 return (
                     <DesktopWindow
                         key={`${arrangement.presetId}:${item.id}`}
                         windowState={frame}
                         title={windowTitle(item.kind)}
-                        kicker={known?.family || ''}
+                        blockKind={item.kind}
+                        bounds={bounds}
+                        grid={gridProps}
                         minTop={area.top}
                         space="screen"
                         onFocus={() => focusWindow(item.id)}
                         onPatch={(patch) => patchFrame(item.id, patch)}
                         onClose={() => closeWindow(item.id)}
+                        onTitleContextMenu={openWindowMenu(item)}
                         onToggleMinimize={() => toggleMinimize(item.id)}
                         onToggleMaximize={() => toggleMaximize(item.id)}
                         pinnable={false}

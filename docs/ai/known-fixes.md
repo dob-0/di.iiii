@@ -3,6 +3,13 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Perform live faults: arrow over text, panels off the page, Output settings, small Out picture (2026-11-11)
+
+Symptom: (A) the caret drew over "LAYER 1" / "+ ADD EFFECT" in the Effects head (computed padding stayed `0 7px`); (B) with 6 layers the Sources / Clip / Effects row started at y=801 on an 813px page; (C) Output settings showed "Where the browser puts it" for a saved Screen 3, cut "1920" to "192", and "Match the screen" offered the tool window's screen size; (D) the Out window's picture was a ~60px thumbnail.
+Cause: (A) Perform's one-control rule `.perform-shell .raw-window-body :is(button, select, input:not(..)):not(..)` is specificity 0,4,1 and beat the 0,3,1 select rule; (B) `.vj-deck-main` was `flex: 1 0 auto` (grew to the grid, deck scrolled); (C) `pickScreen` only searched the listed screens (before "List screens" that is one), inputs were `7ch`; (D) the canvas was `flex: 1 1 auto; min-height: 0` and shrank under the settings row.
+Fix: (A) doubled class in `perform.css` (0,5,1) plus `.vj-deck-fx select.vj-deck-fx-*` in `vjDeck.css`; (B) `.vj-deck-main` is `flex: 1 1 0` with the grid scrolling inside `.vj-deck-scroll`, `.vj-deck-bottom` keeps 160px minimum; (C) `resolveScreen` / `screenChoices` / `matchTarget` in `outputWindows.js` (index first, then label, then size, then the saved pick as an entry), inputs `9ch`; (D) `.perform-picture` is 16:9, full width, min 96px.
+Regression tests: `outputWindows.test.js` ("shows the saved pick even before the screens are listed"). CSS fixes (A, B, D) are checked by measurement on the page only.
+
 ## Objects said "No objects yet" beside six things on screen (Studio, UX audit F026, 2026-10-29)
 
 Symptom: a scene showed a sphere, boxes, a torus and a lamp, but the Objects window read "Objects (0) No objects yet." and a click on
@@ -1790,6 +1797,29 @@ Cause: `scripts/di/continueGuard.mjs` (new in the PR) required `../../shared/con
 Fix: `continueGuard.mjs` tries both layouts (`../../shared/...`, then `../shared/...`) the way `scripts/di/nameResolve.mjs` does for the beacon, and names what is missing if neither answers.
 Guard: `scripts/di/continueGuard.test.js` "the packed layout" lays out `<root>/cli` + `<root>/shared` and runs the module with plain node; the old code fails it with the CI error. The class guards stay `scripts/di/openFile.test.js` (boots `cli.mjs` from a pack-shaped tree) and the install matrix. Checked on Linux with `npm run di:pack -- --slim`, `install.sh` into a scratch home, `up`, health 200, `/main` and `/studio` served, `di new` twice (the second says "continue: ...", exit 2), `down`.
 Lesson: a file under `scripts/di` that reaches outside its own folder must resolve in both layouts (checkout `../../x`, pack `../x`), by a loop like `nameResolve.mjs` or a twin like `nameMatch.mjs`. Run `npx vitest run scripts/di/openFile.test.js` before pushing a change to the CLI's imports.
+
+## 2026-11-10 — a camera that cannot open showed a black tile; a named camera fell to the default one
+
+Symptom: (1) the deck's playing "Phone" tile and PREVIEW were plain black, no words, while `getUserMedia` rejected with `NotReadableError` (v4l2loopback allows one reader, another browser held it). (2) On the first open of the page in a window the clip saved as camera "Phone" played the laptop's "Integrated Webcam"; after one reload it played the phone.
+Cause: (1) `useTopNetwork.js` camera effect reported the failure into `topReports` as a sentence only (no error name) and never tried again; `VjDeckView.jsx` did not read `camera.error` for a playing clip. (2) `resolveCamera` returned `true` (the default camera) whenever neither the id (per browser profile) nor the label (empty strings until this page holds a permission) was in `enumerateDevices()`.
+Fix: `src/project/tops/cameraResolve.js` is the one rule: no label and no id = default; a named camera is found by id then label, with one permission probe when every label is hidden, else it throws `CameraNotFound`, never the default. The effect retries 2 s, 4 s, 8 s then every 8 s and at once on `devicechange`; a refusal by the person is not retried. `camera.errorName` joins `camera.error` in the report; the deck's tile and PREVIEW (selected and playing) show `cameraFailureText` of it. `MapSourceView.jsx` (named inputs: "no input called ..." placeholder, no default fallback) was read and left alone.
+Guard: `src/project/tops/useTopNetwork.camera.test.jsx` (busy + back-off + later success, hidden labels, absent + devicechange, unnamed default, refusal not retried) and `src/raw/components/vjDeck/VjDeckView.camera.test.jsx` "a playing camera that cannot open". Not tried on real cameras (the agent browser has none).
+Lesson: "not found in the list" before permission means "labels hidden", not "absent"; a source that names a device must never degrade to a default device silently.
+
+## 2026-11-10 — "I lost the VJ deck and can't get the window back": no visible way back to a window
+
+Symptom: the owner, before a show, could not get the VJ deck window back. A Perform link opened a preset without a deck (the last used one) and said nothing; a window closed with x or Esc in Nodes came back only through the hidden Ctrl+K palette; Tools and Wiki dropped the project from the bar; a bare project in Studio had no Desk | Perform even with a deck node.
+Cause: route audit (read in code, no browser): the Perform link carries no `?preset`, `choosePreset` takes this device's last one; the hidden-window list (`hiddenPanelNodes`) fed only the palette; `KitPage`/`WikiPage` gave `SurfaceBar` no space/project; `StudioShell` gated the switch on layers only.
+Fix: Perform strip gets a Windows menu (every kind, aria-checked, Reset layout) and a notice with "Open VJ Deck" when the project has a vj.deck node and the view shows none (`PerformDesk.jsx`); Nodes bar gets `WindowsMenu.jsx` (open/hidden list, show + centre via `centreWindowFrame` in `windowLayout.js`, Show all windows); `lastProject.js` remembers the project per tab and the Tools/Wiki bars read it; `StudioShell` shows the switch when a vj.deck node exists. Which preset opens is unchanged. Esc still hides a window the person opened or clicked (documented in the wiki), left as is.
+Guard: `src/perform/PerformDesk.test.jsx` ("the way back to a window"), `src/raw/components/WindowsMenu.test.jsx`, `RawEditor.test.jsx` ("comes back from the visible Windows button"), `src/components/lastProject.test.js`, `KitPage.test.jsx`, `WikiPage.test.jsx`, `StudioShell.test.jsx` (bare project with a deck).
+Lesson: a hide that is saved needs a visible, listed way back on the same surface; a hidden palette is not one.
+
+## Perform Blackout stayed "on" forever; Surface settings had no VJ Deck (Perform live test, 2026-11-11)
+
+Symptom: after one light/laser POST failed, every later Blackout press only retried that target and the deck master was never restored (4 presses, still "Blackout · on"). Perform's Surface settings source picker offered Picture Out only, the Projection desk also offered the VJ Deck.
+Cause: `toggleBlackout` (`PerformWindows.jsx`) took the "retry pending" branch whenever `pending` was non-empty and skipped the restore; `pictureOutOptions` filtered `top.out` only.
+Fix: `planBlackoutPress` (`perform/blackoutPlan.js`): a press while blacked out always restores the deck (when a level is kept); pending 'on' is dropped, pending 'off' is retried and stays named; lifting the laser never arms. `buildPictureOutOptions` (`map/pictureOutOptions.js`) is the one builder for Projection and Perform.
+Regression tests: `perform/blackoutPlan.test.js`, `map/pictureOutOptions.test.js`.
 
 ## The projection output stayed black after a camera track ended (2026-11-10, owner row N3522)
 Seen live: the `/out` page showed a phone camera (v4l2loopback fed by scrcpy) through a `stream` surface; after about an hour the MediaStreamTrack went to "ended" and the output stayed black until a reload, though the camera was back.

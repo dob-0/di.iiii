@@ -18,6 +18,7 @@ import KitPreview from './KitPreview.jsx'
 import kitWeights from './kitWeights.json'
 import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { pageTitle } from '../hooks/pageTitles.js'
+import { readLastProject } from '../components/lastProject.js'
 
 /**
  * `/tools` — the Kit.
@@ -183,11 +184,12 @@ export default function KitPage({ isLocalInstall = false }) {
         [sandboxSpaceId]
     )
     const stackGroups = useMemo(() => kitStackGroups(), [])
+    const lastProject = useMemo(() => readLastProject(), [])
     const count = groups.reduce((total, group) => total + group.tools.length, 0)
 
     return (
         <div className="kit">
-            <SurfaceBar here="tools" isLocalInstall={isLocalInstall} hidden={isEmbed} />
+            <SurfaceBar here="tools" space={lastProject.space} project={lastProject.project} isLocalInstall={isLocalInstall} hidden={isEmbed} />
 
             <main className="kit-page">
                 <header className="kit-intro">

@@ -523,3 +523,39 @@ export function getDockedPanelFrame({ viewportWidth, viewportHeight, top = DEFAU
     const height = Math.max(RAW_WINDOW_MIN_HEIGHT, viewportHeight - y - Math.max(DOCKED_PANEL_BOTTOM_CLEARANCE, getBottomReserve(viewportWidth)))
     return { x: viewportWidth - width - RAW_WINDOW_PADDING, y, width, height, pinned: true, minimized: false, visible: true }
 }
+
+// A window brought to the middle of what the person can see. The frame is in
+// the window's OWN units — screen pixels for a pinned window, graph units for
+// one that lives in the world — so the centre is converted through the viewport
+// and the result goes through placeNewWindowFrame's clamp: whole on screen,
+// never under the bar. `index` steps a few windows apart (Show all).
+export function centreWindowFrame({
+    frame = {},
+    space = 'screen',
+    viewport = null,
+    viewportWidth,
+    viewportHeight,
+    workspaceTop = DEFAULT_RAW_WORKSPACE_TOP,
+    index = 0
+} = {}) {
+    const vp = viewport && Number.isFinite(viewport.zoom) && viewport.zoom > 0 ? viewport : null
+    const inWorld = space === 'world' && vp !== null
+    const scale = inWorld ? vp.zoom : 1
+    const width = Number(frame.width) || RAW_WINDOW_MIN_WIDTH
+    const height = Number(frame.height) || RAW_WINDOW_MIN_HEIGHT
+    const step = 32 * index
+    const screenCx = (Number(viewportWidth) || 1280) / 2 + step
+    const screenCy = workspaceTop + ((Number(viewportHeight) || 800) - workspaceTop) / 2 + step
+    const originX = (Number(vp?.originLeft) || 0) + (Number(vp?.panX) || 0)
+    const originY = (Number(vp?.originTop) || 0) + (Number(vp?.panY) || 0)
+    const x = inWorld ? (screenCx - originX) / scale - width / 2 : screenCx - width / 2
+    const y = inWorld ? (screenCy - originY) / scale - height / 2 : screenCy - height / 2
+    return placeNewWindowFrame({
+        frame: { ...frame, x, y, width, height },
+        space,
+        viewport,
+        viewportWidth,
+        viewportHeight,
+        workspaceTop
+    })
+}

@@ -17,6 +17,7 @@
 //
 // Nothing here knows about React, the project document or the network sync.
 
+import { watchVideoFrames, hasNewFrame } from './videoFrames.js'
 import { TOP_OPERATORS, isTopType, measurePixels, resolveTopParams, hexToRgb01 } from './topOperators.js'
 
 const VERTEX = `
@@ -69,6 +70,19 @@ export const shaderSourceFor = (type, values = {}) => {
 
 /** The lines every operator's shader is compiled with, above its own code. */
 export const SHADER_PREAMBLE = PREAMBLE.trim()
+
+// A paused video keeps its currentTime, so "time unchanged" alone would skip the upload
+// when a node's footage is switched to another paused file (same node id, same time,
+// other picture). A new element or a new source forgets the time it was uploaded at.
+export const videoMoved = (slot, video) => {
+    const source = video.currentSrc || video.src || ''
+    if (slot.lastVideo !== video || slot.lastVideoSrc !== source) {
+        slot.lastVideo = video
+        slot.lastVideoSrc = source
+        slot.lastVideoTime = undefined
+    }
+    return video.currentTime !== slot.lastVideoTime
+}
 
 /**
  * Compile a fragment shader the way the engine would, and say what is wrong.
@@ -275,6 +289,15 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
     }
 
     const remoteVideos = new Map()
+    // One frame watcher per element, so an upload happens once per new picture.
+    const watchers = new Map()
+    const watch = (nodeId, video) => {
+        const old = watchers.get(nodeId)
+        if (old && old.video === video) return
+        if (old) { old.watch?.stop(); watchers.delete(nodeId) }
+        if (video) watchers.set(nodeId, { video, watch: watchVideoFrames(video) })
+    }
+    const watchOf = (nodeId) => watchers.get(nodeId)?.watch || null
     let remoteIds = new Set()
 
     const setNetwork = (next) => {
@@ -341,7 +364,8 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         for (const id of remoteIds) {
             const slot = slotFor({ id, type: '__remote' })
             const video = remoteVideos.get(id)
-            if (!video || video.readyState < 2 || video.currentTime === slot.lastVideoTime) continue
+            if (!video || video.readyState < 2) continue
+            if (!hasNewFrame(slot, video, watchOf(id), videoMoved(slot, video))) continue
             slot.lastVideoTime = video.currentTime
             gl.bindTexture(gl.TEXTURE_2D, slot.now.texture)
             gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
@@ -383,7 +407,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             // Camera In and Clip In alike: whatever <video> setVideo gave this node.
             if (operator.source) {
                 const video = videos.get(node.id)
-                if (video && video.readyState >= 2 && video.currentTime !== slot.lastVideoTime) {
+                if (video && video.readyState >= 2 && hasNewFrame(slot, video, watchOf(node.id), videoMoved(slot, video))) {
                     slot.lastVideoTime = video.currentTime
                     gl.bindTexture(gl.TEXTURE_2D, slot.source)
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video)
@@ -486,8 +510,8 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         width,
         height,
         setNetwork,
-        setVideo: (nodeId, video) => { if (video) videos.set(nodeId, video); else videos.delete(nodeId) },
-        setRemoteVideo: (nodeId, video) => { if (video) remoteVideos.set(nodeId, video); else remoteVideos.delete(nodeId) },
+        setVideo: (nodeId, video) => { watch(nodeId, video); if (video) videos.set(nodeId, video); else videos.delete(nodeId) },
+        setRemoteVideo: (nodeId, video) => { watch(nodeId, video); if (video) remoteVideos.set(nodeId, video); else remoteVideos.delete(nodeId) },
         frame,
         show,
         thumbnails,
@@ -502,6 +526,8 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
                 if (slot.source) gl.deleteTexture(slot.source)
             }
             slots.clear()
+            for (const entry of watchers.values()) entry.watch?.stop()
+            watchers.clear()
             freeTarget(gl, measureTarget)
             for (const compiled of programs.values()) if (compiled.program) gl.deleteProgram(compiled.program)
             gl.getExtension('WEBGL_lose_context')?.loseContext()
