@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { describeAction, shortMatch } from './deckBinding.js'
+import { jobOf, lineOf } from './k2Jobs.js'
 import { TOUCH_MS, controlKey } from './k2Monitor.js'
-import { K2_CHANNEL, K2_CONSOLES, XONE_K2_CONTROLS } from './xoneK2.js'
+import { K2_CONSOLES, XONE_K2_CONTROLS } from './xoneK2.js'
 import './k2LayoutPanel.css'
 
 // The Xone:K2 drawn as it is, every control labelled with what it does NOW (the effective
@@ -17,9 +17,6 @@ import './k2LayoutPanel.css'
 const byName = new Map(XONE_K2_CONTROLS.map((item) => [item.control, item]))
 const range = (count) => Array.from({ length: count }, (_, index) => index)
 const MATRIX = 'ABCDEFGHIJKLMNOP'.split('').map((letter) => `matrix ${letter}`)
-const entryOf = (map, control) => (Array.isArray(map) ? map : []).find((entry) => entry?.match
-    && entry.match.kind === control.kind && entry.match.number === control.number
-    && (!entry.match.channel || entry.match.channel === K2_CHANNEL))
 
 // Rows top to bottom, as the device is laid out; each row is four cells of control names.
 const ROWS = [
@@ -57,15 +54,15 @@ export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, con
 
     const chosen = selected ? byName.get(selected) : null
     const detail = chosen
-        ? `${chosen.control} · ${shortMatch(chosen)} · ${(current.free || []).includes(chosen.control) && !entryOf(map, chosen) ? 'not used' : describeAction(entryOf(map, chosen), { fxEffect })}`
+        ? lineOf(chosen, map, current, fxEffect)
         : 'Click a control to see its message and what it does'
 
     const control = (name) => {
         const item = byName.get(name)
         if (!item) return null
         const key = controlKey(item.kind, item.number)
-        const unused = (current.free || []).includes(name) && !entryOf(map, item)
-        const label = unused ? 'not used' : describeAction(entryOf(map, item), { fxEffect })
+        const label = jobOf(item, map, current, fxEffect)
+        const unused = label === 'not used'
         const held = Boolean(snap.held[key])
         const lit = faded !== snap && (held || snap.at - (snap.touched[key] ?? -Infinity) < TOUCH_MS)
         const analog = item.type === 'pot' || item.type === 'fader'
