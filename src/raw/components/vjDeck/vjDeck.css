@@ -541,14 +541,14 @@
     max-width: 100%;
     /* Room for the caret: it must not be drawn over "LAYER 1" / "+ ADD EFFECT". */
     min-width: 9ch;
-    padding-right: 28px;
+    padding-right: calc(var(--di-space-4) + var(--di-space-3));
     text-overflow: ellipsis;
 }
 
 /* Beats `.vj-deck-chip` and the Nodes page's select rules by one class. */
 .vj-deck-fx select.vj-deck-fx-layer,
 .vj-deck-fx select.vj-deck-fx-add {
-    padding-right: 28px;
+    padding-right: calc(var(--di-space-4) + var(--di-space-3));
 }
 
 .vj-deck-fx .vj-deck-toggle[aria-pressed='true'] {

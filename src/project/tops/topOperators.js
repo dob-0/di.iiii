@@ -240,7 +240,7 @@ void main() {
 
     // --- the Platina look wave (2026-11-10): the screen effects the artist's
     // reference clips need that Level / Tint / Blur / Edge / Feedback / Reframe
-    // cannot make. Recipes: docs/ai/sessions/feat-deck-ref-effects.md.
+    // cannot make. Recipes: PROGRESS.md (the feat-deck-ref-effects entry).
     // The picture pipeline carries no alpha (8-bit RGB, opaque canvas), so
     // "transparent" is black: put a layer with a black background on a layer
     // below with blend Add or Screen and the lower layer shows through.
@@ -408,7 +408,7 @@ void main() {
 
     // --- TouchDesigner look operators (2026-11-10, feat-deck-td-effects.md):
     // the ones his own .toe files use most that di.iiii lacked. Spec table and
-    // the TD operator each one answers: docs/ai/sessions/feat-deck-td-effects.md.
+    // the TD operator each one answers: PROGRESS.md (the feat-deck-td-effects entry).
 
     'top.displace': {
         label: 'Displace',

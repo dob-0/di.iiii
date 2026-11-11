@@ -73,7 +73,7 @@ export const normalizeClip = (clip) => {
 // --- effects ---------------------------------------------------------------
 // An effect is one of the existing picture operators on a stack (a layer's, or
 // the master's). `main` is what the panel and MIDI show first: numeric params
-// become sliders, a colour param a colour input. See docs/ai/sessions/feat-deck-effects.md.
+// become sliders, a colour param a colour input. See PROGRESS.md (the feat-deck-effects entry).
 
 // One of every effect fits on a stack (18 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
 export const MAX_EFFECTS = 18

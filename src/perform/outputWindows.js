@@ -3,7 +3,7 @@ import { buildMapOutputPath } from '../map/mapRouting.js'
 import { outputPresenceChannel, outputWindowName } from '../map/outputPresence.js'
 
 // THE OUTPUT WINDOW, AS A THING THE PERFORM DESK CAN OPEN, CLOSE AND ASK ABOUT.
-// Design and the multi-output plan: docs/ai/sessions/feat-perform-output-control.md.
+// Design and the multi-output plan: PROGRESS.md (the feat-perform-output-control entry).
 
 export const POLL_MS = 1000
 const PING_WAIT_MS = 400

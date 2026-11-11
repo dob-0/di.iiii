@@ -216,7 +216,7 @@
    lay over the Master window's LASER row. On Perform it sits in the strip under the top
    bar, whose right half is empty, so it covers no control. */
 body:has(.perform-shell) .tree-chip {
-    top: calc(40px + (var(--perform-strip-h, 31px) - 20px) / 2);
+    top: 45px;
     bottom: auto;
     max-width: max(120px, calc(100vw - 330px));
 }
@@ -756,6 +756,37 @@ body:has(.perform-shell) .tree-chip {
     text-align: right;
 }
 
+/* The target floor, stated once (UX audit F094, WCAG 2.5.8): nothing in a Perform window is under
+   24px on a pointer, 44px on a touch screen. The blocks' own control size (--perform-control) already
+   gives 24 / 44; these rules keep the floor if a block sets less. The window's own square, dash and
+   cross are 44px in raw.css (.raw-window-actions button). */
+.perform-pane :is(button, select, input:not([type='checkbox'], [type='radio'], [type='range'], [type='hidden'])) {
+    min-height: 24px;
+    min-width: 24px;
+}
+
+.perform-toggle input {
+    width: 24px;
+    height: 24px;
+    margin: 0;
+    accent-color: var(--di-ink);
+}
+
+.perform-master-row input[type='range'] {
+    min-height: 24px;
+}
+
+@media (pointer: coarse) {
+    /* On touch the whole label is the 44px target; the box inside it stays 24px. */
+    .perform-toggle {
+        min-height: 44px;
+    }
+
+    .perform-master-row input[type='range'] {
+        min-height: 44px;
+    }
+}
+
 /* --- look tiles: equal cells, nothing overflows ----------------------------- */
 
 .perform-tiles {
@@ -833,7 +864,7 @@ body:has(.perform-shell) .tree-chip {
    a 0,3,1 selector. Doubling the class makes this one 0,5,1: the caret gets its own room. */
 .perform-shell .raw-window-body select.vj-deck-fx-layer.vj-deck-fx-layer,
 .perform-shell .raw-window-body select.vj-deck-fx-add.vj-deck-fx-add {
-    padding-right: 28px;
+    padding-right: calc(var(--di-space-4) + var(--di-space-3));
     min-width: 9ch;
 }
 

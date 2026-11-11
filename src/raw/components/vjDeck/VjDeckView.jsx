@@ -52,7 +52,7 @@ import './vjDeck.css'
 // network runner is live fills them; until then the tile shows its name. A
 // playing INPUT tile shows the node wired into that input (`inputSources`).
 //
-// Laid out like Resolume's (docs/ai/sessions/feat-vj-resolume-layout.md): a top
+// Laid out like Resolume's (PROGRESS.md (the feat-vj-resolume-layout entry)): a top
 // bar, the clip grid beside two monitors (PREVIEW, OUTPUT), and SOURCES and CLIP
 // panels underneath. A tap only plays; the selected clip's settings are always
 // in the CLIP panel, so nothing covers the grid and nothing needs a Close.

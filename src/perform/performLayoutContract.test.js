@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 // The clean-run layout faults (owner, 2026-11-10): sliders, labels and numbers
 // drawn over each other in the Master bar, the Laser master over its button.
 // jsdom has no layout, so the contract is read from the stylesheet; the real
-// widths are measured on the page (docs/ai/sessions/feat-perform-full.md).
+// widths are measured on the page (PROGRESS.md (the feat-perform-full entry)).
 const css = readFileSync(fileURLToPath(new URL('./perform.css', import.meta.url)), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 const rule = (selector) => {
     const start = css.indexOf(`\n${selector} {`)

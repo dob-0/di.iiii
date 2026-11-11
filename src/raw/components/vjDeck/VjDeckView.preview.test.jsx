@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import VjDeckView from './VjDeckView.jsx'
 import { createDeck, setClip, trigger } from '../../../project/tops/vjDeck.js'
 
-// Deselect, Preview only + TAKE, and the monitor size (docs/ai/sessions/feat-deck-preview-take.md).
+// Deselect, Preview only + TAKE, and the monitor size (PROGRESS.md (the feat-deck-preview-take entry)).
 const assets = [{ id: 'asset-rain', name: 'rain.webm', mimeType: 'video/webm' }]
 const clip = (asset) => ({ id: `c-${asset}`, kind: 'asset', asset, label: asset })
 
