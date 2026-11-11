@@ -144,3 +144,20 @@ describe('the sheet in another language (--lang ru)', () => {
         expect(renderMarkdown(en)).not.toMatch(/[а-яА-Я]/)
     })
 })
+
+describe('the Platina full-mode plan (2026-11-11, from the rental offer)', () => {
+    const file = 'scripts/place/rigs/platina-2026-11-11-full.patch.json'
+    const full = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, file), 'utf8'))
+    it('patches 52 units on 9 universes, every unit in its largest sourced mode, nothing over 512', () => {
+        const m = tableModel({ plan: full, library, planFile: file })
+        expect(m.rows).toHaveLength(52)
+        expect(m.universes.map((u) => u.universe)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
+        expect(m.universes.every((u) => u.used <= 512)).toBe(true)
+        const fp = (code) => [...new Set(m.rows.filter((r) => r.code === code).map((r) => r.footprint))]
+        expect(fp('A.leda B-EYE K10')).toEqual([35])
+        expect(fp('XP-16R BSW')).toEqual([23])
+        expect(fp('HY B-EYE K15')).toEqual([76])
+        expect(fp('Pixel Line IP')).toEqual([117])
+        expect(renderMarkdown(tableModel({ plan: full, library, planFile: file, lang: 'ru' }))).toContain('ЧЕРНОВИК')
+    })
+})

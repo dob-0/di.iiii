@@ -13,3 +13,5 @@
   `scripts/rigbuild/laserPlayToken.test.js` does not load (`Cannot find module 'express'`), not touched by this branch.
 
 - 2026-11-10 21:22: `--lang ru` for the patch sheet (owner N3541): WORDS table in patch-table.mjs, `_ru` keys in the Platina plan, 1 test; RU PDF 5 pages. Still a DRAFT on hold until the crew patch list arrives.
+
+- 2026-11-11 16:32: full-mode plan from the rental offer (owner N3655): new file platina-2026-11-11-full.patch.json (52 units, 9 universes: K10 35 ch, XP-16R BSW 23 ch unverified, K15 76 ch, Pixel Line IP 117 ch), 1 test; the small-mode draft is kept. Sheets in ~/work/platina/patch-2026-11-11-full (EN + RU, 11 pages each).
