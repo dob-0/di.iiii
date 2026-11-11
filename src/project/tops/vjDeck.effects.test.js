@@ -36,7 +36,7 @@ describe('effect normalisation', () => {
             { type: 'nope' },
             { type: 'top.blur', params: { size: 999 }, mix: 7 },
             { type: 'top.send' },
-            ...Array.from({ length: 12 }, () => ({ type: 'top.edge' }))
+            ...Array.from({ length: MAX_EFFECTS + 4 }, () => ({ type: 'top.edge' }))
         ])
         expect(stack[0].type).toBe('top.blur')
         expect(stack[0].params.size).toBe(TOP_OPERATORS['top.blur'].params[0].max)

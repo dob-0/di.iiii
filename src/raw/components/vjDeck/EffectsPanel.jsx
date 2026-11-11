@@ -3,6 +3,7 @@ import {
     EFFECT_TYPE_IDS,
     MASTER_STACK,
     addEffect,
+    MAX_EFFECTS,
     effectLabel,
     effectMainParams,
     effectNumericParams,
@@ -55,11 +56,11 @@ export default function EffectsPanel({ deck, scope, layerIndex, onScope, onLayer
                 <select
                     className="vj-deck-chip vj-deck-fx-add"
                     value=""
-                    disabled={!editable}
+                    disabled={!editable || stack.length >= MAX_EFFECTS}
                     aria-label="Add effect"
                     onChange={(event) => { if (event.target.value) onAdd(event.target.value) }}
                 >
-                    <option value="">+ Add effect</option>
+                    <option value="">{stack.length >= MAX_EFFECTS ? `Full: ${MAX_EFFECTS} of ${MAX_EFFECTS}` : '+ Add effect'}</option>
                     {EFFECT_TYPE_IDS.map((type) => <option key={type} value={type}>{effectLabel(type)}</option>)}
                 </select>
             </div>

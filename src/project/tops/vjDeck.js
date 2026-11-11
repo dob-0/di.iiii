@@ -75,7 +75,8 @@ export const normalizeClip = (clip) => {
 // the master's). `main` is what the panel and MIDI show first: numeric params
 // become sliders, a colour param a colour input. See docs/ai/sessions/feat-deck-effects.md.
 
-export const MAX_EFFECTS = 8
+// One of every effect fits on a stack (18 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
+export const MAX_EFFECTS = 18
 export const EFFECT_TYPES = {
     'top.level': { main: ['gain', 'brightness', 'gamma'] },
     'top.tint': { main: ['amount', 'bright'] },
