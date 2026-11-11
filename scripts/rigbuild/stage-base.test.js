@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { deckSolidOf, stageBaseEntities } from './stage-base.mjs'
 import { lookFrame } from '../../src/rigbuild/looks.js'
 import { normalizeVenuePlan } from '../../src/shared/projectSchema.js'
+import { isArchitectureEntity } from '../../src/project/viewport/smartView/smartViewGeometry.js'
 
 const rig = { title: 'T', solids: [
     { id: 'a-screen', kind: 'box', p: [0, 1.4, 0], s: [4, 2.5, 0.1] },
@@ -36,5 +37,14 @@ describe('stage-base', () => {
     it('into -1 faces the audience the other way; no deck throws', () => {
         expect(lookFrame(stageBaseEntities(rig, { into: -1 })).stage.into).toBe(-1)
         expect(() => stageBaseEntities({ solids: [] })).toThrow(/no deck solid/)
+    })
+})
+
+describe('the stage frame is not the building (2026-11-11: the haze was shut into a 12 cm box and no beam was drawn)', () => {
+    it('rig-venue carries a venuePlan for aiming, and says it is a frame, so the room does not bound its air by it', () => {
+        const venue = stageBaseEntities(rig).find((e) => e.id === 'rig-venue')
+        expect(venue.components.venuePlan).toBeTruthy()
+        expect(isArchitectureEntity(venue)).toBe(false)
+        expect(isArchitectureEntity({ ...venue, components: { ...venue.components, viewRole: undefined } })).toBe(true)
     })
 })

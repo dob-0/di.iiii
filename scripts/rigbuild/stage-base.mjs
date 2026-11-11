@@ -72,7 +72,11 @@ export const stageBaseEntities = (rig, { deck = null, into = 1 } = {}) => {
     }
     return [
         { id: 'rig-show', type: 'group', name: 'the show', parentId: null, components: { transform: base([0, 0, 0]) } },
-        { id: 'rig-venue', type: 'group', name: 'venue', parentId: null, components: { transform: base([0, 0, 0]), venuePlan: plan } },
+        { id: 'rig-venue', type: 'group', name: 'venue', parentId: null, components: { transform: base([0, 0, 0]), venuePlan: plan,
+            // NOT the building: an entity with a venuePlan is taken for the hall (smartViewGeometry.js isArchitectureEntity), and the room
+            // bounds its haze by the building's box (beamReach.js buildingOf). This frame has no walls, only a 12 cm marker: its box
+            // shut the air into +-0.06 m and no beam was drawn at all (measured 2026-11-11: uHazeBoxMin/Max +-0.06). A frame has open air.
+            viewRole: 'frame' } },
         ...tiles
     ]
 }
