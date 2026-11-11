@@ -1,0 +1,9 @@
+## 2026-11-12 — Platina stage lights: the rental's rig on the real lamps, their bodies, the crew patch
+
+- The Platina rental lamps (ALEDA B-EYE K10, HY B-EYE K15, ACME XP-16R, ACME Pixel Line IP, Magma Prime) are in the fixture library from the makers' manuals, with a source for every number. Every one has a built 3D body: the K15 from the K15 & K25 manual's dimensions drawing, the pixel line as a new `led-bar` archetype (a body a hand turns to its aim, `aimedByHand` in fixture-lib). The room draws all five (FixtureBodies.jsx).
+- The rig follows the rental's drawing (`scripts/place/platina_rig.py`, one command `scripts/place/platina_build.sh`); the five XP-16R with no hang point in the drawing stand on the deck (`--xp-rest truss` keeps the earlier placing). The rig states its own camera level (0.1, measured on the GPU).
+- New in the document schema, browser and server twins: `beam.emitter {shape: 'bar', width, length}`, an LED bar's glowing strip, drawn as that strip in the room. A scratch serverXR must be restarted after a schema change or it drops the key.
+- `scripts/rigbuild/screen-picture.mjs` lays a still on a project's LED screen; `patch-table.mjs --short` makes the one-page two-language patch; epic-build lifts a solid anchored at its base by half its height.
+- The plot had 11 unlettered lamp types for 8 outlines: five outlines added, and the Magma Prime hazer has its own letter (M).
+- Still undone: the full scene set and the stress cues (a new v3 spec file), the 30 s light piece to the track, the wall's brightness gain and the wall as a light source, the K15 channel lists (maker login), the K15 pixel map. The rental has not said where 12 XP-16R hang.
+- Lesson kept as a guard test (`scripts/place/fixtures.test.js`): readers of the built bodies go through `builtKinds`. The reader set for a library change includes `src/rigbuild`.
