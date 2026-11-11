@@ -11,7 +11,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isSteelEntity } from '../../src/objectComponents/steelOccluder.js'
 import { RIG_FILE, isSteelSolid, steelTagOps, dirOfRotation, v1Entities, v1Looks, v1Cues, v1Views, v1RenderOps, dmxOf, patchOps,
-    NARROW_MODES, narrowModeOf, defaultModeRefusal, rebuildAllRefusal } from './epic-build.mjs'
+    NARROW_MODES, narrowModeOf, photoKind, candelaOf, defaultModeRefusal, rebuildAllRefusal } from './epic-build.mjs'
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const rig = JSON.parse(fs.readFileSync(path.join(repo, RIG_FILE), 'utf8'))
@@ -91,6 +91,9 @@ describe('epic-build: no cutoff, the fan direction and the rig\'s own air', () =
         const own = v1RenderOps({ atmosphere })[0].payload.patch.atmosphere
         expect(own).toEqual({ anisotropy: 0.74, haze: { model: 'nf-ff', volume_m3: 186890, dries: false } })
         expect(v1RenderOps()[0].payload.patch.atmosphere).toEqual({ scattering: 0.0169, anisotropy: 0.7, haze: null })
+        // a rig's own measured camera level is written; without one the document's level is not touched
+        expect(v1RenderOps({ exposure: 0.1 })[0].payload.patch.toneMappingExposure).toBe(0.1)
+        expect('toneMappingExposure' in v1RenderOps()[0].payload.patch).toBe(false)
     })
 })
 
@@ -232,6 +235,15 @@ describe('epic-build: solid steel stops a beam (2026-10-14)', () => {
     it('what counts as steel: by kind, flag or structural word; a speaker, deck, barrier and chain are not', () => {
         expect(solids.filter(isSteelSolid).map((s) => s.id)).toEqual(['rig-far-crane-z-12-girder-a', 'rig-crane-bar', 'rig-hoist-1-steel', 'rig-tower-cube6', 'rig-line-1', 'x'])
     })
+    it('a solid stands on its foot: base-anchored goes in as it is, centre-given is lowered by half its height (BoxObject draws upward from its position)', () => {
+        const out = v1Entities({ fixtures: [], solids: [
+            { id: 'deck', name: 'deck', kind: 'box', anchor: 'base', p: [0, 0, 2], s: [14, 0.6, 7] },
+            { id: 'beam', name: 'beam', kind: 'box', p: [0, 6, 2], s: [8, 0.4, 0.4] }
+        ] })
+        expect(out.find((e) => e.id === 'deck').components.transform.position).toEqual([0, 0, 2])
+        expect(out.find((e) => e.id === 'beam').components.transform.position).toEqual([0, 5.8, 2])
+    })
+
     it('a new build flags its steel boxes and only those', () => {
         const rig = { fixtures: [], solids: solids.map((s) => ({ ...s, p: [0, 0, 0], s: [1, 1, 1], name: s.id })) }
         const out = v1Entities(rig)
@@ -387,4 +399,36 @@ describe('epic-build: the default mode is refused on a project that holds rig un
         expect(wet.code, wet.out).toBe(0)
         expect(wet.posts).toEqual(['POST /serverXR/api/projects/scratch-copy/ops'])
     }, 30000)
+})
+
+describe('epic-build: a lamp with a stand-in profile is lit as its stand-in (Platina, 2026-11-11)', () => {
+    const base = { id: 'u1', type: 'acme-pixel-line-ip', angle_rad: 0.131 }
+    it('photoKind takes profile.stand_in, else the type', () => {
+        expect(photoKind({ ...base, profile: { stand_in: 'up-pl5403' } })).toBe('up-pl5403')
+        expect(photoKind(base)).toBe('acme-pixel-line-ip')
+        expect(photoKind({ type: 'up-b380f' })).toBe('up-b380f')
+    })
+    it('the stand-in has its PAR figure, not the 1000 cd default (intensity 20 was ~30x too dim)', () => {
+        expect(candelaOf(base)).toBe(1000)
+        expect(candelaOf({ ...base, profile: { stand_in: 'up-pl5403' } })).toBeCloseTo(609.56 / 0.02, 6)
+    })
+    it('MOXIR units (no profile) are unchanged', () => {
+        for (const f of rig.fixtures) expect(photoKind(f)).toBe(f.type)
+    })
+})
+
+describe('a unit with its own profile (the fixture library\'s real figures, 2026-11-11)', () => {
+    it('candela comes from the maker\'s lux at a distance, spread by zoom, or from the maker\'s lumens over the beam cone', () => {
+        const lux = { type: 'x', angle_rad: (1.5 * Math.PI) / 180, profile: { photometry: { lux: 810000, at_m: 5, beam_deg: 3, zoom: true } } }
+        expect(Math.round(candelaOf(lux))).toBe(20250000)
+        expect(Math.round(candelaOf({ ...lux, angle_rad: (3 * Math.PI) / 180 }))).toBe(5062500)
+        expect(Math.round(candelaOf({ type: 'x', angle_rad: 0.8814, profile: { photometry: { lux: 1163, at_m: 2, beam_deg: 101, zoom: false } } }))).toBe(4652)
+        expect(Math.round(candelaOf({ type: 'x', angle_rad: Math.PI / 2, profile: { photometry: { lumens: 6283 } } }))).toBe(1000)
+    })
+    it('a unit that says `machine` becomes a group of its own type, never a lamp', () => {
+        const [e] = v1Entities({ fixtures: [{ id: 'h1', type: 'magmatic-magma-prime', machine: 'hazer', p: [0, 1, 0], r: [0, 0, 0], angle_rad: 0, part: 'hazer 1', status: 'PROPOSED' }], solids: [] })
+        expect(e.type).toBe('group')
+        expect(e.components.fixture.type).toBe('magmatic-magma-prime')
+        expect(e.components.light).toBeUndefined()
+    })
 })

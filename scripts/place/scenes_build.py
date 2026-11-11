@@ -13,6 +13,7 @@ SPEC.json = {"config": {...}, "scenes": [...], <any other top-level key is copie
   config.parts            optional list of every allowed part name; a scene part outside it is an error
   scene: id title act intent parts{part: [hex, level]} motion heads laser_colour fade_s hold_s notes
          floor (false = no floor strips) floor_colour ([hex, level] overrides the act's floor)
+         screen_look (optional: the screen look the scene is made for, copied through)
 The build adds the floor strips (a scene's own parts win), the cue {fade_s, hold_s}, desk_caps, loop true and loop_s = sum of cues.
 Checks: unique ids, act 1.., hex colours, levels 0..1, cue seconds >= 0, parts allowed, and (when the file has a `palette`) every part colour is
 one of palette[].hex or beam_wheel_seen[].hex — the production's accepted colours (2026-10-17). The desk cap is data for the desk (a part's look level is a previs value); laser levels are checked by laser_frames.py.
@@ -40,7 +41,9 @@ def build(spec):
         scenes.append({'id': s['id'], 'title': s['title'], 'act': s['act'], 'intent': s.get('intent', ''), 'parts': parts,
                        'motion': s.get('motion'), 'heads': s.get('heads'), 'laser_colour': s.get('laser_colour'),
                        'desk_caps': cfg.get('desk_caps') if capped else None,
-                       'cue': {'fade_s': s.get('fade_s', 3), 'hold_s': s.get('hold_s', 24)}, 'notes': s.get('notes', '')})
+                       'cue': {'fade_s': s.get('fade_s', 3), 'hold_s': s.get('hold_s', 24)}, 'notes': s.get('notes', ''),
+                       # the screen look this light scene is made for (optional; data for whoever pairs lights and visuals)
+                       **({'screen_look': s['screen_look']} if s.get('screen_look') else {})})
     out.update({'loop': True, 'loop_s': sum(x['cue']['fade_s'] + x['cue']['hold_s'] for x in scenes), 'scenes': scenes})
     return out
 

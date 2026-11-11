@@ -17,6 +17,11 @@ import blinderUrl from '../../scripts/place/fixtures/glb/blinder.glb?url'
 import hazerUrl from '../../scripts/place/fixtures/glb/hazer.glb?url'
 import cob200Url from '../../scripts/place/fixtures/glb/cob200.glb?url'
 import lasercubeUrl from '../../scripts/place/fixtures/glb/lasercube.glb?url'
+import aledaK10Url from '../../scripts/place/fixtures/glb/aledaK10.glb?url'
+import hyK15Url from '../../scripts/place/fixtures/glb/hyK15.glb?url'
+import xp16rUrl from '../../scripts/place/fixtures/glb/xp16r.glb?url'
+import pixelLineIpUrl from '../../scripts/place/fixtures/glb/pixelLineIp.glb?url'
+import magmaPrimeUrl from '../../scripts/place/fixtures/glb/magmaPrime.glb?url'
 import beam380 from '../../scripts/place/fixtures/glb/beam380.json'
 import beeEye from '../../scripts/place/fixtures/glb/beeEye.json'
 import bsw250 from '../../scripts/place/fixtures/glb/bsw250.json'
@@ -30,6 +35,11 @@ import blinder from '../../scripts/place/fixtures/glb/blinder.json'
 import hazer from '../../scripts/place/fixtures/glb/hazer.json'
 import cob200 from '../../scripts/place/fixtures/glb/cob200.json'
 import lasercube from '../../scripts/place/fixtures/glb/lasercube.json'
+import aledaK10 from '../../scripts/place/fixtures/glb/aledaK10.json'
+import hyK15 from '../../scripts/place/fixtures/glb/hyK15.json'
+import xp16r from '../../scripts/place/fixtures/glb/xp16r.json'
+import pixelLineIp from '../../scripts/place/fixtures/glb/pixelLineIp.json'
+import magmaPrime from '../../scripts/place/fixtures/glb/magmaPrime.json'
 
 // THE LAMPS' BODIES in the room — one body per lamp entity, posed where its beam goes
 // (docs/architecture/RIG_BUILD.md §12; the owed item of §10.8 for view A).
@@ -59,7 +69,13 @@ const KINDS = {
     strobe: { url: strobeUrl, geo: strobe },
     blinder: { url: blinderUrl, geo: blinder },
     hazer: { url: hazerUrl, geo: hazer },
-    cob200: { url: cob200Url, geo: cob200 }
+    cob200: { url: cob200Url, geo: cob200 },
+    // the Platina rental lamps (2026-11-12): every kind of the base is drawn (rigBodies.test.js holds that)
+    aledaK10: { url: aledaK10Url, geo: aledaK10 },
+    hyK15: { url: hyK15Url, geo: hyK15 },
+    xp16r: { url: xp16rUrl, geo: xp16r },
+    pixelLineIp: { url: pixelLineIpUrl, geo: pixelLineIp },
+    magmaPrime: { url: magmaPrimeUrl, geo: magmaPrime }
 }
 
 /** The body kind of a type: the basename of its model3d.glb ("…/bsw250.glb" → "bsw250"). */

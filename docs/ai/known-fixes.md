@@ -1937,3 +1937,38 @@ Cause: (1) windows are free frames with no collision, and the stack top shows wh
 Fix: a strip button "Arrange all" (same `arrangeAll`, same disabled rule, key in its title); `src/perform/arrangementStore.js` keeps `{ presetId, widthClass, windows, rects, order, minimized, restore }` per device under `di.perform.arrangement.v1:<space>:<project>` on every change, restores it on mount (clamped into the desk, a corrupt or old value reads as nothing, a different preset or width class is not used); picking a preset, Reset layout and Save clear it. Nothing goes into the project document.
 Guard: `arrangeAll.test.js` (2, 4 and 7 windows on 1706x922 and 1280x720: no two pixel rectangles intersect, none outside the desk), `arrangementStore.test.js` (store, clamp, corrupt, stale ids, storage refused), `PerformArrangement.test.jsx` (button, disabled, remount restore, Reset layout, clamp on restore).
 Lesson: state a person builds by hand (a layout) must survive the reload that every install causes; keep it in one store with one key, and give every hidden action a visible control.
+
+## An LED bar's strip never drew: the schema dropped `beam.emitter` (2026-11-11, owner row N3767)
+Seen in the room: the Platina pixel lines stayed round spots though the rig file gave each a 1 m bar emitter; the document read back 0 entities with `beam.emitter`.
+Cause: the beam normaliser in the shared schema keeps only the keys it names, so a new beam key written by a builder is dropped on save; and a scratch serverXR started before the schema change keeps dropping it until it is restarted.
+Fix: `normalizeBeamEmitter` in both twins (`shared/projectSchema.cjs`, `src/shared/projectSchema.js`); restart the scratch stack after a schema change (`di-dev down <tree>; di-dev up <tree> --api scratch`).
+Guard: `src/shared/projectSchema.light.test.js` (browser and server twin keep a bar emitter, drop another shape). Seen on the agent screen: 24 bars drawn.
+
+## Hung lamps drew as standing lamps: the builder never wrote `fixture.hung` (2026-11-12, owner row N3767)
+Seen in the room: the Platina lamps under the truss had their bodies below the lens, as if standing in the air, and a head pattern turned them with a standing lamp's signs.
+Cause: `scripts/rigbuild/epic-build.mjs` built the lamp's `fixture` without `hung`; the room reads `fixture.hung === true` (sheet.js, headMotion.js), so every lamp counted as standing.
+Fix: a rig unit says `hung: true` (platina_rig.py: the K10 over the stage, the XP-16R under the truss) and epic-build carries it into `fixture.hung`.
+Guard: `scripts/place/platina-rig.test.js` (the hung rows say hung, the deck row does not; the beam lamps' rest aim leans toward the audience). Seen on the agent screen: bodies above the lens, under the truss.
+
+## 2026-11-12 — A rig's walls, wings, deck and stands hung half their own height in the air (rig build)
+Symptom (owner, Platina scratch room): a side lamp "in the air", the wing panels floating, the wall box 1.25 m above its picture.
+Cause: `BoxObject.jsx` draws a box standing ON its position (the mesh is lifted by half its height). The 11-11 rule in `scripts/rigbuild/epic-build.mjs` took a box as drawn from its centre and ADDED half a height to every base-anchored solid.
+Fix: a base-anchored solid goes in at its foot as it is; a solid given by its centre (a truss) is lowered by half its height. The two side K15 also got their stand poles as solids (`platina_rig.py`).
+Guard: `scripts/rigbuild/epic-build.test.js` (a solid stands on its foot), `scripts/place/platina-rig.test.js` (no lamp is in the air: a solid or a lamp right under each standing lamp, a truss right over each hung one). Seen on the agent screen: wings on the deck, poles under the side lamps.
+
+## 2026-11-12 — The picture on the LED wall did not show (wall picture script)
+Symptom (owner): "where are the visuals on the screen"; only a thin red band at the wall's foot.
+Cause: `ImageObject.jsx` lays its plane flat (a floor sticker, the mesh turned -90 degrees about x). `scripts/rigbuild/screen-picture.mjs` wrote the entity with rotation 0, so the picture lay flat inside the wall.
+Fix: the picture entity is turned +90 degrees about x; its height is then the scale's third number; its centre is half a height above the wall box's position.
+Guard: `scripts/rigbuild/screen-picture.test.js` (the plane's top edge lands straight above, facing the audience). Seen on the agent screen: the red verticals fill the wall.
+
+## 2026-11-12 — A room that starts at the middle quality notch never reached full on a 60 Hz screen (frame-rate governor)
+Symptom: with the start at notch 2 (owner: mid by default, then "best quality + max fps") the room stayed at notch 2: the climb needed over 70 fps, a 60 Hz screen shows 60.
+Fix: `hasRoom` in `src/project/viewport/qualityGovernor.js`: a rate at the screen's own ceiling (the highest window seen, within 2) and over the target may climb; the step-down rule and the 60 s wait after a failed climb keep it from see-sawing.
+Guard: `src/project/viewport/qualityGovernor.test.js`. Measured on the agent screen (1280 x 720, Platina scratch room): notch 2 at 3 s, notch 0 at 33 s, 60 fps.
+
+## 2026-11-12 — Tech (operator mode) showed no cue, a flat pale screen and no SHOW chip / SCENES (N3818)
+Symptom (owner): `?render=tech` gave a pale beige screen, lamps and stage almost invisible, no cue colours, no SHOW chip, no SCENES button.
+Cause: (1) `techEntities` (src/shared/renderPlan.js) dropped the group that holds `components.rigLooks` (and rigParts, venuePlan); the cue player reads the looks from the entity list it is fed (`rigLooksOf`, src/rigbuild/useRigLook.js), found none, so no driver, no chip, no scenes row, no posed lamps. (2) With no cue every lamp stood at its authored state and the Tech cone (SpotLightObject.jsx, DoubleSide, opacity 0.28, normal blending) of 50+ lamps stacked into one flat colour over the camera. (3) Stage solids (towers, wings, screen frame, stands) and the wall picture were dropped by `isShowThing`; the picture's texture would also have been swapped for grey by SchematicSurfaces. (4) The authored exposure 0.1 (a haze setting) made Tech's plain grey solids black.
+Fix: renderPlan keeps the data holders, the stage solids of a room that holds a rig, and an image/video named screen/led/wall/projection/backdrop; ImageObject marks its mesh `userData.keepTexture` and SchematicSurfaces skips it; the Tech cone is FrontSide at 0.22; Tech fixes the exposure at 1 (TECH_EXPOSURE).
+Guard: `src/shared/renderPlan.test.js` (operator-mode block), `src/objectComponents/SpotLightObject.schematic.test.js`, `src/project/viewport/renderPlanParity.test.js`. Seen on the agent screen, drop-magenta Tech.

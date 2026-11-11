@@ -1,0 +1,2562 @@
+{
+  "id": "acme-pixel-line-ip",
+  "code": "ACME-PIXEL-LINE-IP",
+  "identified": "EXACT",
+  "identifiedNote": "EXACT - ACME's PIXEL LINE IP (STROBE 3 IP), 1 m, IP66. The manual copy carries the white-label brand 'GML Grand Master Light'; which revision / variant (STROBE 3 IP 672 RGB or STROBE 1) the rented bars are is not confirmed",
+  "maker": "ACME (Foshan Yi Feng Electric Industrial Co.)",
+  "model": "ACME-PIXEL-LINE-IP",
+  "modelledOn": null,
+  "product": "ACME PIXEL LINE IP (STROBE 3 IP), 1 m LED bar, 32 RGB + 16 white (CW) cells, IP66",
+  "makerModel": "PIXEL LINE IP (STROBE 3 IP)",
+  "manual": {
+    "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+    "date": "2026 (copy; no date in the file)",
+    "read": "2026-11-11, pdftotext p6, p9-25",
+    "basis": "EXACT",
+    "product_page": "https://en.acmelighting.com/upload/other/20260415/19b3a847ddd50afd52b6a73d0065a1c7.pdf",
+    "note": "white-label manual copy on a third-party host; the datasheet is ACME's own and lists 13 modes (35, 38, 70N, 119 are not in the manual copy)"
+  },
+  "makerChart": {
+    "file": "scripts/place/fixtures/charts/acme-pixel-line-ip.json",
+    "modes": {
+      "7": "EXACT",
+      "15": "EXACT",
+      "17": "EXACT",
+      "21": "EXACT",
+      "33": "EXACT",
+      "39": "EXACT",
+      "65": "EXACT",
+      "68": "EXACT",
+      "70": "EXACT",
+      "112": "EXACT",
+      "117": "EXACT"
+    }
+  },
+  "category": "led-bar",
+  "modes": [
+    {
+      "name": "7ch",
+      "footprint": 7,
+      "channels": [
+        {
+          "role": "r",
+          "label": "Red (0-255 = 0%-100%)"
+        },
+        {
+          "role": "g",
+          "label": "Green (0-255 = 0%-100%)"
+        },
+        {
+          "role": "b",
+          "label": "Blue (0-255 = 0%-100%)"
+        },
+        {
+          "role": "w",
+          "label": "White (0-255 = 0%-100%)"
+        },
+        {
+          "role": "dimmer",
+          "label": "Dimming (0-255 = 0%-100%)"
+        },
+        {
+          "role": "dimmerFine",
+          "label": "Dimmer fine (0-255 = 0%-100%)"
+        },
+        {
+          "role": "frost",
+          "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+        "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "7 Channel",
+      "src": "ACME-PLIP-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "15ch",
+      "footprint": 15,
+      "channels": [
+        {
+          "role": "r",
+          "label": "Red (0-255 = 0%-100%)"
+        },
+        {
+          "role": "g",
+          "label": "Green (0-255 = 0%-100%)"
+        },
+        {
+          "role": "b",
+          "label": "Blue (0-255 = 0%-100%)"
+        },
+        {
+          "role": "w",
+          "label": "White (0-255 = 0%-100%)"
+        },
+        {
+          "role": "macro",
+          "label": "Preset colours (001-008 Color 1 ... 249-255 Color 32 (8 per slot, 32 slots))"
+        },
+        {
+          "role": "dimmer",
+          "label": "Dimming (0-255 = 0%-100%)"
+        },
+        {
+          "role": "dimmerFine",
+          "label": "Dimmer fine (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobeDuration",
+          "label": "Strobe duration (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobeRate",
+          "label": "Strobe rate (000-005 no function; 006-255 slow to fast)"
+        },
+        {
+          "role": "strobe",
+          "label": "Strobe (000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe)"
+        },
+        {
+          "role": "effect",
+          "label": "Built-in effects (RGB) (000-005 none; 006-011 Effect 1 ... 240-255 Effect 40 (6 per slot))"
+        },
+        {
+          "role": "effectW",
+          "label": "Built-in effects (W) (000-005 none; 006-030 Effect 1 ... 206-255 Effect 9)"
+        },
+        {
+          "role": "effectSpeed",
+          "label": "Built-in effect speed (000-127 forward slow to fast; 128-255 reverse slow to fast)"
+        },
+        {
+          "role": "fade",
+          "label": "Fade out effect (0%-100%)"
+        },
+        {
+          "role": "frost",
+          "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+        "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "15 Channel",
+      "src": "ACME-PLIP-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "21ch",
+      "footprint": 21,
+      "channels": [
+        {
+          "role": "r",
+          "label": "Red (0-255 = 0%-100%)"
+        },
+        {
+          "role": "g",
+          "label": "Green (0-255 = 0%-100%)"
+        },
+        {
+          "role": "b",
+          "label": "Blue (0-255 = 0%-100%)"
+        },
+        {
+          "role": "macro",
+          "label": "Preset colours (001-008 Color 1 ... 249-255 Color 32)"
+        },
+        {
+          "role": "dimmer",
+          "label": "Dimming (RGB) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "dimmerFine",
+          "label": "Dimmer fine (RGB) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobeDuration",
+          "label": "Strobe duration (RGB) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobeRate",
+          "label": "Strobe rate (RGB) (000-005 no function; 006-255 slow to fast)"
+        },
+        {
+          "role": "strobe",
+          "label": "Strobe (RGB) (000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe)"
+        },
+        {
+          "role": "effect",
+          "label": "Built-in effects (RGB) (000-005 none; 006-011 Effect 1 ... 240-255 Effect 40)"
+        },
+        {
+          "role": "effectSpeed",
+          "label": "Built-in effect speed (RGB) (000-127 forward; 128-255 reverse)"
+        },
+        {
+          "role": "fade",
+          "label": "Fade out effect (RGB) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "dimmerW",
+          "label": "Dimming (W) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "dimmerFineW",
+          "label": "Dimmer fine (W) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobeDurationW",
+          "label": "Strobe duration (W) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobeRateW",
+          "label": "Strobe rate (W) (000-005 no function; 006-255 slow to fast)"
+        },
+        {
+          "role": "strobeW",
+          "label": "Strobe (W) (000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe)"
+        },
+        {
+          "role": "effectW",
+          "label": "Built-in effects (W) (000-005 none; 006-030 Effect 1 ... 206-255 Effect 9)"
+        },
+        {
+          "role": "effectSpeedW",
+          "label": "Built-in effect speed (W) (000-127 forward; 128-255 reverse)"
+        },
+        {
+          "role": "fadeW",
+          "label": "Fade out effect (W) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "frost",
+          "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+        "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "21 Channel",
+      "src": "ACME-PLIP-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "39ch",
+      "footprint": 39,
+      "channels": [
+        {
+          "role": "p01r",
+          "label": "Red1"
+        },
+        {
+          "role": "p01g",
+          "label": "Green1"
+        },
+        {
+          "role": "p01b",
+          "label": "Blue1"
+        },
+        {
+          "role": "p02r",
+          "label": "Red2"
+        },
+        {
+          "role": "p02g",
+          "label": "Green2"
+        },
+        {
+          "role": "p02b",
+          "label": "Blue2"
+        },
+        {
+          "role": "p03r",
+          "label": "Red3"
+        },
+        {
+          "role": "p03g",
+          "label": "Green3"
+        },
+        {
+          "role": "p03b",
+          "label": "Blue3"
+        },
+        {
+          "role": "p04r",
+          "label": "Red4"
+        },
+        {
+          "role": "p04g",
+          "label": "Green4"
+        },
+        {
+          "role": "p04b",
+          "label": "Blue4"
+        },
+        {
+          "role": "p05r",
+          "label": "Red5"
+        },
+        {
+          "role": "p05g",
+          "label": "Green5"
+        },
+        {
+          "role": "p05b",
+          "label": "Blue5"
+        },
+        {
+          "role": "p06r",
+          "label": "Red6"
+        },
+        {
+          "role": "p06g",
+          "label": "Green6"
+        },
+        {
+          "role": "p06b",
+          "label": "Blue6"
+        },
+        {
+          "role": "p07r",
+          "label": "Red7"
+        },
+        {
+          "role": "p07g",
+          "label": "Green7"
+        },
+        {
+          "role": "p07b",
+          "label": "Blue7"
+        },
+        {
+          "role": "p08r",
+          "label": "Red8"
+        },
+        {
+          "role": "p08g",
+          "label": "Green8"
+        },
+        {
+          "role": "p08b",
+          "label": "Blue8"
+        },
+        {
+          "role": "dimmer",
+          "label": "Dimming (RGB) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "dimmerFine",
+          "label": "Dimmer fine (RGB) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobeDuration",
+          "label": "Strobe duration (RGB) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobeRate",
+          "label": "Strobe rate (RGB) (000-005 no function; 006-255 slow to fast)"
+        },
+        {
+          "role": "strobe",
+          "label": "Strobe (RGB) (000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe)"
+        },
+        {
+          "role": "cw01",
+          "label": "White1"
+        },
+        {
+          "role": "cw02",
+          "label": "White2"
+        },
+        {
+          "role": "cw03",
+          "label": "White3"
+        },
+        {
+          "role": "cw04",
+          "label": "White4"
+        },
+        {
+          "role": "dimmerW",
+          "label": "Dimming (W) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "dimmerFineW",
+          "label": "Dimmer fine (W) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobeDurationW",
+          "label": "Strobe duration (W) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobeRateW",
+          "label": "Strobe rate (W) (000-005 no function; 006-255 slow to fast)"
+        },
+        {
+          "role": "strobeW",
+          "label": "Strobe (W) (000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe)"
+        },
+        {
+          "role": "frost",
+          "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+        "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "39 Channel",
+      "note": "8 RGB cells + 4 W cells with own dimmer/strobe/frost",
+      "src": "ACME-PLIP-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "112ch",
+      "footprint": 112,
+      "channels": [
+        {
+          "role": "p01r",
+          "label": "Red1"
+        },
+        {
+          "role": "p01g",
+          "label": "Green1"
+        },
+        {
+          "role": "p01b",
+          "label": "Blue1"
+        },
+        {
+          "role": "p02r",
+          "label": "Red2"
+        },
+        {
+          "role": "p02g",
+          "label": "Green2"
+        },
+        {
+          "role": "p02b",
+          "label": "Blue2"
+        },
+        {
+          "role": "p03r",
+          "label": "Red3"
+        },
+        {
+          "role": "p03g",
+          "label": "Green3"
+        },
+        {
+          "role": "p03b",
+          "label": "Blue3"
+        },
+        {
+          "role": "p04r",
+          "label": "Red4"
+        },
+        {
+          "role": "p04g",
+          "label": "Green4"
+        },
+        {
+          "role": "p04b",
+          "label": "Blue4"
+        },
+        {
+          "role": "p05r",
+          "label": "Red5"
+        },
+        {
+          "role": "p05g",
+          "label": "Green5"
+        },
+        {
+          "role": "p05b",
+          "label": "Blue5"
+        },
+        {
+          "role": "p06r",
+          "label": "Red6"
+        },
+        {
+          "role": "p06g",
+          "label": "Green6"
+        },
+        {
+          "role": "p06b",
+          "label": "Blue6"
+        },
+        {
+          "role": "p07r",
+          "label": "Red7"
+        },
+        {
+          "role": "p07g",
+          "label": "Green7"
+        },
+        {
+          "role": "p07b",
+          "label": "Blue7"
+        },
+        {
+          "role": "p08r",
+          "label": "Red8"
+        },
+        {
+          "role": "p08g",
+          "label": "Green8"
+        },
+        {
+          "role": "p08b",
+          "label": "Blue8"
+        },
+        {
+          "role": "p09r",
+          "label": "Red9"
+        },
+        {
+          "role": "p09g",
+          "label": "Green9"
+        },
+        {
+          "role": "p09b",
+          "label": "Blue9"
+        },
+        {
+          "role": "p10r",
+          "label": "Red10"
+        },
+        {
+          "role": "p10g",
+          "label": "Green10"
+        },
+        {
+          "role": "p10b",
+          "label": "Blue10"
+        },
+        {
+          "role": "p11r",
+          "label": "Red11"
+        },
+        {
+          "role": "p11g",
+          "label": "Green11"
+        },
+        {
+          "role": "p11b",
+          "label": "Blue11"
+        },
+        {
+          "role": "p12r",
+          "label": "Red12"
+        },
+        {
+          "role": "p12g",
+          "label": "Green12"
+        },
+        {
+          "role": "p12b",
+          "label": "Blue12"
+        },
+        {
+          "role": "p13r",
+          "label": "Red13"
+        },
+        {
+          "role": "p13g",
+          "label": "Green13"
+        },
+        {
+          "role": "p13b",
+          "label": "Blue13"
+        },
+        {
+          "role": "p14r",
+          "label": "Red14"
+        },
+        {
+          "role": "p14g",
+          "label": "Green14"
+        },
+        {
+          "role": "p14b",
+          "label": "Blue14"
+        },
+        {
+          "role": "p15r",
+          "label": "Red15"
+        },
+        {
+          "role": "p15g",
+          "label": "Green15"
+        },
+        {
+          "role": "p15b",
+          "label": "Blue15"
+        },
+        {
+          "role": "p16r",
+          "label": "Red16"
+        },
+        {
+          "role": "p16g",
+          "label": "Green16"
+        },
+        {
+          "role": "p16b",
+          "label": "Blue16"
+        },
+        {
+          "role": "p17r",
+          "label": "Red17"
+        },
+        {
+          "role": "p17g",
+          "label": "Green17"
+        },
+        {
+          "role": "p17b",
+          "label": "Blue17"
+        },
+        {
+          "role": "p18r",
+          "label": "Red18"
+        },
+        {
+          "role": "p18g",
+          "label": "Green18"
+        },
+        {
+          "role": "p18b",
+          "label": "Blue18"
+        },
+        {
+          "role": "p19r",
+          "label": "Red19"
+        },
+        {
+          "role": "p19g",
+          "label": "Green19"
+        },
+        {
+          "role": "p19b",
+          "label": "Blue19"
+        },
+        {
+          "role": "p20r",
+          "label": "Red20"
+        },
+        {
+          "role": "p20g",
+          "label": "Green20"
+        },
+        {
+          "role": "p20b",
+          "label": "Blue20"
+        },
+        {
+          "role": "p21r",
+          "label": "Red21"
+        },
+        {
+          "role": "p21g",
+          "label": "Green21"
+        },
+        {
+          "role": "p21b",
+          "label": "Blue21"
+        },
+        {
+          "role": "p22r",
+          "label": "Red22"
+        },
+        {
+          "role": "p22g",
+          "label": "Green22"
+        },
+        {
+          "role": "p22b",
+          "label": "Blue22"
+        },
+        {
+          "role": "p23r",
+          "label": "Red23"
+        },
+        {
+          "role": "p23g",
+          "label": "Green23"
+        },
+        {
+          "role": "p23b",
+          "label": "Blue23"
+        },
+        {
+          "role": "p24r",
+          "label": "Red24"
+        },
+        {
+          "role": "p24g",
+          "label": "Green24"
+        },
+        {
+          "role": "p24b",
+          "label": "Blue24"
+        },
+        {
+          "role": "p25r",
+          "label": "Red25"
+        },
+        {
+          "role": "p25g",
+          "label": "Green25"
+        },
+        {
+          "role": "p25b",
+          "label": "Blue25"
+        },
+        {
+          "role": "p26r",
+          "label": "Red26"
+        },
+        {
+          "role": "p26g",
+          "label": "Green26"
+        },
+        {
+          "role": "p26b",
+          "label": "Blue26"
+        },
+        {
+          "role": "p27r",
+          "label": "Red27"
+        },
+        {
+          "role": "p27g",
+          "label": "Green27"
+        },
+        {
+          "role": "p27b",
+          "label": "Blue27"
+        },
+        {
+          "role": "p28r",
+          "label": "Red28"
+        },
+        {
+          "role": "p28g",
+          "label": "Green28"
+        },
+        {
+          "role": "p28b",
+          "label": "Blue28"
+        },
+        {
+          "role": "p29r",
+          "label": "Red29"
+        },
+        {
+          "role": "p29g",
+          "label": "Green29"
+        },
+        {
+          "role": "p29b",
+          "label": "Blue29"
+        },
+        {
+          "role": "p30r",
+          "label": "Red30"
+        },
+        {
+          "role": "p30g",
+          "label": "Green30"
+        },
+        {
+          "role": "p30b",
+          "label": "Blue30"
+        },
+        {
+          "role": "p31r",
+          "label": "Red31"
+        },
+        {
+          "role": "p31g",
+          "label": "Green31"
+        },
+        {
+          "role": "p31b",
+          "label": "Blue31"
+        },
+        {
+          "role": "p32r",
+          "label": "Red32"
+        },
+        {
+          "role": "p32g",
+          "label": "Green32"
+        },
+        {
+          "role": "p32b",
+          "label": "Blue32"
+        },
+        {
+          "role": "cw01",
+          "label": "White1"
+        },
+        {
+          "role": "cw02",
+          "label": "White2"
+        },
+        {
+          "role": "cw03",
+          "label": "White3"
+        },
+        {
+          "role": "cw04",
+          "label": "White4"
+        },
+        {
+          "role": "cw05",
+          "label": "White5"
+        },
+        {
+          "role": "cw06",
+          "label": "White6"
+        },
+        {
+          "role": "cw07",
+          "label": "White7"
+        },
+        {
+          "role": "cw08",
+          "label": "White8"
+        },
+        {
+          "role": "cw09",
+          "label": "White9"
+        },
+        {
+          "role": "cw10",
+          "label": "White10"
+        },
+        {
+          "role": "cw11",
+          "label": "White11"
+        },
+        {
+          "role": "cw12",
+          "label": "White12"
+        },
+        {
+          "role": "cw13",
+          "label": "White13"
+        },
+        {
+          "role": "cw14",
+          "label": "White14"
+        },
+        {
+          "role": "cw15",
+          "label": "White15"
+        },
+        {
+          "role": "cw16",
+          "label": "White16"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+        "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "112 Channel",
+      "note": "32 RGB cells + 16 W cells, no dimmer/strobe/frost channel (pure pixels)",
+      "src": "ACME-PLIP-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "17ch",
+      "footprint": 17,
+      "channels": [
+        {
+          "role": "p01r",
+          "label": "Red1"
+        },
+        {
+          "role": "p01g",
+          "label": "Green1"
+        },
+        {
+          "role": "p01b",
+          "label": "Blue1"
+        },
+        {
+          "role": "p02r",
+          "label": "Red2"
+        },
+        {
+          "role": "p02g",
+          "label": "Green2"
+        },
+        {
+          "role": "p02b",
+          "label": "Blue2"
+        },
+        {
+          "role": "p03r",
+          "label": "Red3"
+        },
+        {
+          "role": "p03g",
+          "label": "Green3"
+        },
+        {
+          "role": "p03b",
+          "label": "Blue3"
+        },
+        {
+          "role": "p04r",
+          "label": "Red4"
+        },
+        {
+          "role": "p04g",
+          "label": "Green4"
+        },
+        {
+          "role": "p04b",
+          "label": "Blue4"
+        },
+        {
+          "role": "cw01",
+          "label": "White1"
+        },
+        {
+          "role": "cw02",
+          "label": "White2"
+        },
+        {
+          "role": "cw03",
+          "label": "White3"
+        },
+        {
+          "role": "cw04",
+          "label": "White4"
+        },
+        {
+          "role": "frost",
+          "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+        "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "17 Channel",
+      "note": "4 RGB + 4 W cells + frost",
+      "src": "ACME-PLIP-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "33ch",
+      "footprint": 33,
+      "channels": [
+        {
+          "role": "p01r",
+          "label": "Red1"
+        },
+        {
+          "role": "p01g",
+          "label": "Green1"
+        },
+        {
+          "role": "p01b",
+          "label": "Blue1"
+        },
+        {
+          "role": "p02r",
+          "label": "Red2"
+        },
+        {
+          "role": "p02g",
+          "label": "Green2"
+        },
+        {
+          "role": "p02b",
+          "label": "Blue2"
+        },
+        {
+          "role": "p03r",
+          "label": "Red3"
+        },
+        {
+          "role": "p03g",
+          "label": "Green3"
+        },
+        {
+          "role": "p03b",
+          "label": "Blue3"
+        },
+        {
+          "role": "p04r",
+          "label": "Red4"
+        },
+        {
+          "role": "p04g",
+          "label": "Green4"
+        },
+        {
+          "role": "p04b",
+          "label": "Blue4"
+        },
+        {
+          "role": "p05r",
+          "label": "Red5"
+        },
+        {
+          "role": "p05g",
+          "label": "Green5"
+        },
+        {
+          "role": "p05b",
+          "label": "Blue5"
+        },
+        {
+          "role": "p06r",
+          "label": "Red6"
+        },
+        {
+          "role": "p06g",
+          "label": "Green6"
+        },
+        {
+          "role": "p06b",
+          "label": "Blue6"
+        },
+        {
+          "role": "p07r",
+          "label": "Red7"
+        },
+        {
+          "role": "p07g",
+          "label": "Green7"
+        },
+        {
+          "role": "p07b",
+          "label": "Blue7"
+        },
+        {
+          "role": "p08r",
+          "label": "Red8"
+        },
+        {
+          "role": "p08g",
+          "label": "Green8"
+        },
+        {
+          "role": "p08b",
+          "label": "Blue8"
+        },
+        {
+          "role": "cw01",
+          "label": "White1"
+        },
+        {
+          "role": "cw02",
+          "label": "White2"
+        },
+        {
+          "role": "cw03",
+          "label": "White3"
+        },
+        {
+          "role": "cw04",
+          "label": "White4"
+        },
+        {
+          "role": "cw05",
+          "label": "White5"
+        },
+        {
+          "role": "cw06",
+          "label": "White6"
+        },
+        {
+          "role": "cw07",
+          "label": "White7"
+        },
+        {
+          "role": "cw08",
+          "label": "White8"
+        },
+        {
+          "role": "frost",
+          "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+        "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "33 Channel",
+      "note": "8 RGB + 8 W cells + frost",
+      "src": "ACME-PLIP-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "65ch",
+      "footprint": 65,
+      "channels": [
+        {
+          "role": "p01r",
+          "label": "Red1"
+        },
+        {
+          "role": "p01g",
+          "label": "Green1"
+        },
+        {
+          "role": "p01b",
+          "label": "Blue1"
+        },
+        {
+          "role": "p02r",
+          "label": "Red2"
+        },
+        {
+          "role": "p02g",
+          "label": "Green2"
+        },
+        {
+          "role": "p02b",
+          "label": "Blue2"
+        },
+        {
+          "role": "p03r",
+          "label": "Red3"
+        },
+        {
+          "role": "p03g",
+          "label": "Green3"
+        },
+        {
+          "role": "p03b",
+          "label": "Blue3"
+        },
+        {
+          "role": "p04r",
+          "label": "Red4"
+        },
+        {
+          "role": "p04g",
+          "label": "Green4"
+        },
+        {
+          "role": "p04b",
+          "label": "Blue4"
+        },
+        {
+          "role": "p05r",
+          "label": "Red5"
+        },
+        {
+          "role": "p05g",
+          "label": "Green5"
+        },
+        {
+          "role": "p05b",
+          "label": "Blue5"
+        },
+        {
+          "role": "p06r",
+          "label": "Red6"
+        },
+        {
+          "role": "p06g",
+          "label": "Green6"
+        },
+        {
+          "role": "p06b",
+          "label": "Blue6"
+        },
+        {
+          "role": "p07r",
+          "label": "Red7"
+        },
+        {
+          "role": "p07g",
+          "label": "Green7"
+        },
+        {
+          "role": "p07b",
+          "label": "Blue7"
+        },
+        {
+          "role": "p08r",
+          "label": "Red8"
+        },
+        {
+          "role": "p08g",
+          "label": "Green8"
+        },
+        {
+          "role": "p08b",
+          "label": "Blue8"
+        },
+        {
+          "role": "p09r",
+          "label": "Red9"
+        },
+        {
+          "role": "p09g",
+          "label": "Green9"
+        },
+        {
+          "role": "p09b",
+          "label": "Blue9"
+        },
+        {
+          "role": "p10r",
+          "label": "Red10"
+        },
+        {
+          "role": "p10g",
+          "label": "Green10"
+        },
+        {
+          "role": "p10b",
+          "label": "Blue10"
+        },
+        {
+          "role": "p11r",
+          "label": "Red11"
+        },
+        {
+          "role": "p11g",
+          "label": "Green11"
+        },
+        {
+          "role": "p11b",
+          "label": "Blue11"
+        },
+        {
+          "role": "p12r",
+          "label": "Red12"
+        },
+        {
+          "role": "p12g",
+          "label": "Green12"
+        },
+        {
+          "role": "p12b",
+          "label": "Blue12"
+        },
+        {
+          "role": "p13r",
+          "label": "Red13"
+        },
+        {
+          "role": "p13g",
+          "label": "Green13"
+        },
+        {
+          "role": "p13b",
+          "label": "Blue13"
+        },
+        {
+          "role": "p14r",
+          "label": "Red14"
+        },
+        {
+          "role": "p14g",
+          "label": "Green14"
+        },
+        {
+          "role": "p14b",
+          "label": "Blue14"
+        },
+        {
+          "role": "p15r",
+          "label": "Red15"
+        },
+        {
+          "role": "p15g",
+          "label": "Green15"
+        },
+        {
+          "role": "p15b",
+          "label": "Blue15"
+        },
+        {
+          "role": "p16r",
+          "label": "Red16"
+        },
+        {
+          "role": "p16g",
+          "label": "Green16"
+        },
+        {
+          "role": "p16b",
+          "label": "Blue16"
+        },
+        {
+          "role": "cw01",
+          "label": "White1"
+        },
+        {
+          "role": "cw02",
+          "label": "White2"
+        },
+        {
+          "role": "cw03",
+          "label": "White3"
+        },
+        {
+          "role": "cw04",
+          "label": "White4"
+        },
+        {
+          "role": "cw05",
+          "label": "White5"
+        },
+        {
+          "role": "cw06",
+          "label": "White6"
+        },
+        {
+          "role": "cw07",
+          "label": "White7"
+        },
+        {
+          "role": "cw08",
+          "label": "White8"
+        },
+        {
+          "role": "cw09",
+          "label": "White9"
+        },
+        {
+          "role": "cw10",
+          "label": "White10"
+        },
+        {
+          "role": "cw11",
+          "label": "White11"
+        },
+        {
+          "role": "cw12",
+          "label": "White12"
+        },
+        {
+          "role": "cw13",
+          "label": "White13"
+        },
+        {
+          "role": "cw14",
+          "label": "White14"
+        },
+        {
+          "role": "cw15",
+          "label": "White15"
+        },
+        {
+          "role": "cw16",
+          "label": "White16"
+        },
+        {
+          "role": "frost",
+          "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+        "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "65 Channel",
+      "note": "16 RGB + 16 W cells + frost",
+      "src": "ACME-PLIP-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "68ch",
+      "footprint": 68,
+      "channels": [
+        {
+          "role": "dimmer",
+          "label": "Dimming (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobe",
+          "label": "Strobe (RGB) (000-005 no function; 006-127 strobe slow to fast; 128-130 none; 131-250 random strobe; 251-255 none)"
+        },
+        {
+          "role": "strobeW",
+          "label": "Strobe (W) (000-005 no function; 006-127 strobe slow to fast; 128-130 none; 131-250 random strobe; 251-255 none)"
+        },
+        {
+          "role": "frost",
+          "label": "Atomized glass (SMART Glass frost) (000-255)"
+        },
+        {
+          "role": "p01r",
+          "label": "Red1"
+        },
+        {
+          "role": "p01g",
+          "label": "Green1"
+        },
+        {
+          "role": "p01b",
+          "label": "Blue1"
+        },
+        {
+          "role": "p02r",
+          "label": "Red2"
+        },
+        {
+          "role": "p02g",
+          "label": "Green2"
+        },
+        {
+          "role": "p02b",
+          "label": "Blue2"
+        },
+        {
+          "role": "p03r",
+          "label": "Red3"
+        },
+        {
+          "role": "p03g",
+          "label": "Green3"
+        },
+        {
+          "role": "p03b",
+          "label": "Blue3"
+        },
+        {
+          "role": "p04r",
+          "label": "Red4"
+        },
+        {
+          "role": "p04g",
+          "label": "Green4"
+        },
+        {
+          "role": "p04b",
+          "label": "Blue4"
+        },
+        {
+          "role": "p05r",
+          "label": "Red5"
+        },
+        {
+          "role": "p05g",
+          "label": "Green5"
+        },
+        {
+          "role": "p05b",
+          "label": "Blue5"
+        },
+        {
+          "role": "p06r",
+          "label": "Red6"
+        },
+        {
+          "role": "p06g",
+          "label": "Green6"
+        },
+        {
+          "role": "p06b",
+          "label": "Blue6"
+        },
+        {
+          "role": "p07r",
+          "label": "Red7"
+        },
+        {
+          "role": "p07g",
+          "label": "Green7"
+        },
+        {
+          "role": "p07b",
+          "label": "Blue7"
+        },
+        {
+          "role": "p08r",
+          "label": "Red8"
+        },
+        {
+          "role": "p08g",
+          "label": "Green8"
+        },
+        {
+          "role": "p08b",
+          "label": "Blue8"
+        },
+        {
+          "role": "p09r",
+          "label": "Red9"
+        },
+        {
+          "role": "p09g",
+          "label": "Green9"
+        },
+        {
+          "role": "p09b",
+          "label": "Blue9"
+        },
+        {
+          "role": "p10r",
+          "label": "Red10"
+        },
+        {
+          "role": "p10g",
+          "label": "Green10"
+        },
+        {
+          "role": "p10b",
+          "label": "Blue10"
+        },
+        {
+          "role": "p11r",
+          "label": "Red11"
+        },
+        {
+          "role": "p11g",
+          "label": "Green11"
+        },
+        {
+          "role": "p11b",
+          "label": "Blue11"
+        },
+        {
+          "role": "p12r",
+          "label": "Red12"
+        },
+        {
+          "role": "p12g",
+          "label": "Green12"
+        },
+        {
+          "role": "p12b",
+          "label": "Blue12"
+        },
+        {
+          "role": "p13r",
+          "label": "Red13"
+        },
+        {
+          "role": "p13g",
+          "label": "Green13"
+        },
+        {
+          "role": "p13b",
+          "label": "Blue13"
+        },
+        {
+          "role": "p14r",
+          "label": "Red14"
+        },
+        {
+          "role": "p14g",
+          "label": "Green14"
+        },
+        {
+          "role": "p14b",
+          "label": "Blue14"
+        },
+        {
+          "role": "p15r",
+          "label": "Red15"
+        },
+        {
+          "role": "p15g",
+          "label": "Green15"
+        },
+        {
+          "role": "p15b",
+          "label": "Blue15"
+        },
+        {
+          "role": "p16r",
+          "label": "Red16"
+        },
+        {
+          "role": "p16g",
+          "label": "Green16"
+        },
+        {
+          "role": "p16b",
+          "label": "Blue16"
+        },
+        {
+          "role": "cw01",
+          "label": "White1"
+        },
+        {
+          "role": "cw02",
+          "label": "White2"
+        },
+        {
+          "role": "cw03",
+          "label": "White3"
+        },
+        {
+          "role": "cw04",
+          "label": "White4"
+        },
+        {
+          "role": "cw05",
+          "label": "White5"
+        },
+        {
+          "role": "cw06",
+          "label": "White6"
+        },
+        {
+          "role": "cw07",
+          "label": "White7"
+        },
+        {
+          "role": "cw08",
+          "label": "White8"
+        },
+        {
+          "role": "cw09",
+          "label": "White9"
+        },
+        {
+          "role": "cw10",
+          "label": "White10"
+        },
+        {
+          "role": "cw11",
+          "label": "White11"
+        },
+        {
+          "role": "cw12",
+          "label": "White12"
+        },
+        {
+          "role": "cw13",
+          "label": "White13"
+        },
+        {
+          "role": "cw14",
+          "label": "White14"
+        },
+        {
+          "role": "cw15",
+          "label": "White15"
+        },
+        {
+          "role": "cw16",
+          "label": "White16"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+        "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "68 Channel",
+      "note": "dimming, strobe RGB, strobe W, frost + 16 RGB + 16 W cells",
+      "src": "ACME-PLIP-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "117ch",
+      "footprint": 117,
+      "channels": [
+        {
+          "role": "dimmer",
+          "label": "Dimming (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobeDuration",
+          "label": "Strobe duration (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobeRate",
+          "label": "Strobe rate (000-005 no function; 006-255 slow to fast)"
+        },
+        {
+          "role": "strobe",
+          "label": "Strobe (000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe (use with duration/rate))"
+        },
+        {
+          "role": "frost",
+          "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+        },
+        {
+          "role": "p01r",
+          "label": "Red1"
+        },
+        {
+          "role": "p01g",
+          "label": "Green1"
+        },
+        {
+          "role": "p01b",
+          "label": "Blue1"
+        },
+        {
+          "role": "p02r",
+          "label": "Red2"
+        },
+        {
+          "role": "p02g",
+          "label": "Green2"
+        },
+        {
+          "role": "p02b",
+          "label": "Blue2"
+        },
+        {
+          "role": "p03r",
+          "label": "Red3"
+        },
+        {
+          "role": "p03g",
+          "label": "Green3"
+        },
+        {
+          "role": "p03b",
+          "label": "Blue3"
+        },
+        {
+          "role": "p04r",
+          "label": "Red4"
+        },
+        {
+          "role": "p04g",
+          "label": "Green4"
+        },
+        {
+          "role": "p04b",
+          "label": "Blue4"
+        },
+        {
+          "role": "p05r",
+          "label": "Red5"
+        },
+        {
+          "role": "p05g",
+          "label": "Green5"
+        },
+        {
+          "role": "p05b",
+          "label": "Blue5"
+        },
+        {
+          "role": "p06r",
+          "label": "Red6"
+        },
+        {
+          "role": "p06g",
+          "label": "Green6"
+        },
+        {
+          "role": "p06b",
+          "label": "Blue6"
+        },
+        {
+          "role": "p07r",
+          "label": "Red7"
+        },
+        {
+          "role": "p07g",
+          "label": "Green7"
+        },
+        {
+          "role": "p07b",
+          "label": "Blue7"
+        },
+        {
+          "role": "p08r",
+          "label": "Red8"
+        },
+        {
+          "role": "p08g",
+          "label": "Green8"
+        },
+        {
+          "role": "p08b",
+          "label": "Blue8"
+        },
+        {
+          "role": "p09r",
+          "label": "Red9"
+        },
+        {
+          "role": "p09g",
+          "label": "Green9"
+        },
+        {
+          "role": "p09b",
+          "label": "Blue9"
+        },
+        {
+          "role": "p10r",
+          "label": "Red10"
+        },
+        {
+          "role": "p10g",
+          "label": "Green10"
+        },
+        {
+          "role": "p10b",
+          "label": "Blue10"
+        },
+        {
+          "role": "p11r",
+          "label": "Red11"
+        },
+        {
+          "role": "p11g",
+          "label": "Green11"
+        },
+        {
+          "role": "p11b",
+          "label": "Blue11"
+        },
+        {
+          "role": "p12r",
+          "label": "Red12"
+        },
+        {
+          "role": "p12g",
+          "label": "Green12"
+        },
+        {
+          "role": "p12b",
+          "label": "Blue12"
+        },
+        {
+          "role": "p13r",
+          "label": "Red13"
+        },
+        {
+          "role": "p13g",
+          "label": "Green13"
+        },
+        {
+          "role": "p13b",
+          "label": "Blue13"
+        },
+        {
+          "role": "p14r",
+          "label": "Red14"
+        },
+        {
+          "role": "p14g",
+          "label": "Green14"
+        },
+        {
+          "role": "p14b",
+          "label": "Blue14"
+        },
+        {
+          "role": "p15r",
+          "label": "Red15"
+        },
+        {
+          "role": "p15g",
+          "label": "Green15"
+        },
+        {
+          "role": "p15b",
+          "label": "Blue15"
+        },
+        {
+          "role": "p16r",
+          "label": "Red16"
+        },
+        {
+          "role": "p16g",
+          "label": "Green16"
+        },
+        {
+          "role": "p16b",
+          "label": "Blue16"
+        },
+        {
+          "role": "p17r",
+          "label": "Red17"
+        },
+        {
+          "role": "p17g",
+          "label": "Green17"
+        },
+        {
+          "role": "p17b",
+          "label": "Blue17"
+        },
+        {
+          "role": "p18r",
+          "label": "Red18"
+        },
+        {
+          "role": "p18g",
+          "label": "Green18"
+        },
+        {
+          "role": "p18b",
+          "label": "Blue18"
+        },
+        {
+          "role": "p19r",
+          "label": "Red19"
+        },
+        {
+          "role": "p19g",
+          "label": "Green19"
+        },
+        {
+          "role": "p19b",
+          "label": "Blue19"
+        },
+        {
+          "role": "p20r",
+          "label": "Red20"
+        },
+        {
+          "role": "p20g",
+          "label": "Green20"
+        },
+        {
+          "role": "p20b",
+          "label": "Blue20"
+        },
+        {
+          "role": "p21r",
+          "label": "Red21"
+        },
+        {
+          "role": "p21g",
+          "label": "Green21"
+        },
+        {
+          "role": "p21b",
+          "label": "Blue21"
+        },
+        {
+          "role": "p22r",
+          "label": "Red22"
+        },
+        {
+          "role": "p22g",
+          "label": "Green22"
+        },
+        {
+          "role": "p22b",
+          "label": "Blue22"
+        },
+        {
+          "role": "p23r",
+          "label": "Red23"
+        },
+        {
+          "role": "p23g",
+          "label": "Green23"
+        },
+        {
+          "role": "p23b",
+          "label": "Blue23"
+        },
+        {
+          "role": "p24r",
+          "label": "Red24"
+        },
+        {
+          "role": "p24g",
+          "label": "Green24"
+        },
+        {
+          "role": "p24b",
+          "label": "Blue24"
+        },
+        {
+          "role": "p25r",
+          "label": "Red25"
+        },
+        {
+          "role": "p25g",
+          "label": "Green25"
+        },
+        {
+          "role": "p25b",
+          "label": "Blue25"
+        },
+        {
+          "role": "p26r",
+          "label": "Red26"
+        },
+        {
+          "role": "p26g",
+          "label": "Green26"
+        },
+        {
+          "role": "p26b",
+          "label": "Blue26"
+        },
+        {
+          "role": "p27r",
+          "label": "Red27"
+        },
+        {
+          "role": "p27g",
+          "label": "Green27"
+        },
+        {
+          "role": "p27b",
+          "label": "Blue27"
+        },
+        {
+          "role": "p28r",
+          "label": "Red28"
+        },
+        {
+          "role": "p28g",
+          "label": "Green28"
+        },
+        {
+          "role": "p28b",
+          "label": "Blue28"
+        },
+        {
+          "role": "p29r",
+          "label": "Red29"
+        },
+        {
+          "role": "p29g",
+          "label": "Green29"
+        },
+        {
+          "role": "p29b",
+          "label": "Blue29"
+        },
+        {
+          "role": "p30r",
+          "label": "Red30"
+        },
+        {
+          "role": "p30g",
+          "label": "Green30"
+        },
+        {
+          "role": "p30b",
+          "label": "Blue30"
+        },
+        {
+          "role": "p31r",
+          "label": "Red31"
+        },
+        {
+          "role": "p31g",
+          "label": "Green31"
+        },
+        {
+          "role": "p31b",
+          "label": "Blue31"
+        },
+        {
+          "role": "p32r",
+          "label": "Red32"
+        },
+        {
+          "role": "p32g",
+          "label": "Green32"
+        },
+        {
+          "role": "p32b",
+          "label": "Blue32"
+        },
+        {
+          "role": "cw01",
+          "label": "White1"
+        },
+        {
+          "role": "cw02",
+          "label": "White2"
+        },
+        {
+          "role": "cw03",
+          "label": "White3"
+        },
+        {
+          "role": "cw04",
+          "label": "White4"
+        },
+        {
+          "role": "cw05",
+          "label": "White5"
+        },
+        {
+          "role": "cw06",
+          "label": "White6"
+        },
+        {
+          "role": "cw07",
+          "label": "White7"
+        },
+        {
+          "role": "cw08",
+          "label": "White8"
+        },
+        {
+          "role": "cw09",
+          "label": "White9"
+        },
+        {
+          "role": "cw10",
+          "label": "White10"
+        },
+        {
+          "role": "cw11",
+          "label": "White11"
+        },
+        {
+          "role": "cw12",
+          "label": "White12"
+        },
+        {
+          "role": "cw13",
+          "label": "White13"
+        },
+        {
+          "role": "cw14",
+          "label": "White14"
+        },
+        {
+          "role": "cw15",
+          "label": "White15"
+        },
+        {
+          "role": "cw16",
+          "label": "White16"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+        "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "117 Channel",
+      "note": "LARGEST. master dimmer, strobe (3 ch), frost + 32 RGB + 16 W cells",
+      "src": "ACME-PLIP-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "70ch",
+      "footprint": 70,
+      "channels": [
+        {
+          "role": "dimmer",
+          "label": "Dimming (0-255 = 0%-100%)"
+        },
+        {
+          "role": "strobe",
+          "label": "Strobe (RGB) (000-005 no function; 006-127 strobe slow to fast; 128-130 none; 131-250 random strobe; 251-255 none)"
+        },
+        {
+          "role": "strobeW",
+          "label": "Strobe (W) (000-005 no function; 006-127 strobe slow to fast; 128-130 none; 131-250 random strobe; 251-255 none)"
+        },
+        {
+          "role": "frost",
+          "label": "Atomized glass (SMART Glass frost) (000-255)"
+        },
+        {
+          "role": "p01r",
+          "label": "Red1"
+        },
+        {
+          "role": "p01g",
+          "label": "Green1"
+        },
+        {
+          "role": "p01b",
+          "label": "Blue1"
+        },
+        {
+          "role": "p02r",
+          "label": "Red2"
+        },
+        {
+          "role": "p02g",
+          "label": "Green2"
+        },
+        {
+          "role": "p02b",
+          "label": "Blue2"
+        },
+        {
+          "role": "p03r",
+          "label": "Red3"
+        },
+        {
+          "role": "p03g",
+          "label": "Green3"
+        },
+        {
+          "role": "p03b",
+          "label": "Blue3"
+        },
+        {
+          "role": "p04r",
+          "label": "Red4"
+        },
+        {
+          "role": "p04g",
+          "label": "Green4"
+        },
+        {
+          "role": "p04b",
+          "label": "Blue4"
+        },
+        {
+          "role": "p05r",
+          "label": "Red5"
+        },
+        {
+          "role": "p05g",
+          "label": "Green5"
+        },
+        {
+          "role": "p05b",
+          "label": "Blue5"
+        },
+        {
+          "role": "p06r",
+          "label": "Red6"
+        },
+        {
+          "role": "p06g",
+          "label": "Green6"
+        },
+        {
+          "role": "p06b",
+          "label": "Blue6"
+        },
+        {
+          "role": "p07r",
+          "label": "Red7"
+        },
+        {
+          "role": "p07g",
+          "label": "Green7"
+        },
+        {
+          "role": "p07b",
+          "label": "Blue7"
+        },
+        {
+          "role": "p08r",
+          "label": "Red8"
+        },
+        {
+          "role": "p08g",
+          "label": "Green8"
+        },
+        {
+          "role": "p08b",
+          "label": "Blue8"
+        },
+        {
+          "role": "p09r",
+          "label": "Red9"
+        },
+        {
+          "role": "p09g",
+          "label": "Green9"
+        },
+        {
+          "role": "p09b",
+          "label": "Blue9"
+        },
+        {
+          "role": "p10r",
+          "label": "Red10"
+        },
+        {
+          "role": "p10g",
+          "label": "Green10"
+        },
+        {
+          "role": "p10b",
+          "label": "Blue10"
+        },
+        {
+          "role": "p11r",
+          "label": "Red11"
+        },
+        {
+          "role": "p11g",
+          "label": "Green11"
+        },
+        {
+          "role": "p11b",
+          "label": "Blue11"
+        },
+        {
+          "role": "p12r",
+          "label": "Red12"
+        },
+        {
+          "role": "p12g",
+          "label": "Green12"
+        },
+        {
+          "role": "p12b",
+          "label": "Blue12"
+        },
+        {
+          "role": "p13r",
+          "label": "Red13"
+        },
+        {
+          "role": "p13g",
+          "label": "Green13"
+        },
+        {
+          "role": "p13b",
+          "label": "Blue13"
+        },
+        {
+          "role": "p14r",
+          "label": "Red14"
+        },
+        {
+          "role": "p14g",
+          "label": "Green14"
+        },
+        {
+          "role": "p14b",
+          "label": "Blue14"
+        },
+        {
+          "role": "p15r",
+          "label": "Red15"
+        },
+        {
+          "role": "p15g",
+          "label": "Green15"
+        },
+        {
+          "role": "p15b",
+          "label": "Blue15"
+        },
+        {
+          "role": "p16r",
+          "label": "Red16"
+        },
+        {
+          "role": "p16g",
+          "label": "Green16"
+        },
+        {
+          "role": "p16b",
+          "label": "Blue16"
+        },
+        {
+          "role": "cw01",
+          "label": "White1"
+        },
+        {
+          "role": "cw02",
+          "label": "White2"
+        },
+        {
+          "role": "cw03",
+          "label": "White3"
+        },
+        {
+          "role": "cw04",
+          "label": "White4"
+        },
+        {
+          "role": "cw05",
+          "label": "White5"
+        },
+        {
+          "role": "cw06",
+          "label": "White6"
+        },
+        {
+          "role": "cw07",
+          "label": "White7"
+        },
+        {
+          "role": "cw08",
+          "label": "White8"
+        },
+        {
+          "role": "cw09",
+          "label": "White9"
+        },
+        {
+          "role": "cw10",
+          "label": "White10"
+        },
+        {
+          "role": "cw11",
+          "label": "White11"
+        },
+        {
+          "role": "cw12",
+          "label": "White12"
+        },
+        {
+          "role": "cw13",
+          "label": "White13"
+        },
+        {
+          "role": "cw14",
+          "label": "White14"
+        },
+        {
+          "role": "cw15",
+          "label": "White15"
+        },
+        {
+          "role": "cw16",
+          "label": "White16"
+        },
+        {
+          "role": "fade",
+          "label": "Fade out effect (RGB) (0%-100%)"
+        },
+        {
+          "role": "fadeW",
+          "label": "Fade out effect (W) (0%-100%)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+        "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "70 Channel",
+      "src": "ACME-PLIP-MAN",
+      "basis": "EXACT"
+    }
+  ],
+  "defaultMode": "7ch",
+  "modesOwed": false,
+  "assumedMode": null,
+  "power_w": {
+    "value": 420,
+    "src": "ACME-PLIP-MAN",
+    "basis": "EXACT",
+    "note": "manual p6; datasheet also 420 W"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 8.3,
+    "src": "ACME-PLIP-MAN",
+    "basis": "EXACT",
+    "note": "manual p6 'NW 8.3 kg (not incl. clamps)'; the datasheet says 7.3 kg (omega bracket) / 8.3 kg (sliding clamp)"
+  },
+  "size_mm": {
+    "value": [
+      1000,
+      90,
+      124
+    ],
+    "src": "ACME-PLIP-DS",
+    "basis": "EXACT",
+    "order": "L x W x H",
+    "note": "datasheet 'Omega bracket version' 1,000 x 90 x 124 mm; with the sliding clamp 1,000 x 192 x 237 mm. The manual p10 says 'Fixture size 100*124*90 mm (L*W*H)' - a missing zero (100 for 1000) and W / H swapped against the datasheet; the datasheet is used"
+  },
+  "pan_tilt_deg": null,
+  "ip": {
+    "value": "IP66",
+    "src": "ACME-PLIP-MAN",
+    "basis": "EXACT",
+    "note": "manual: protection rating IP66"
+  },
+  "optics": {
+    "beam_deg": 101,
+    "zoom_deg": null,
+    "lux": 1163,
+    "at_m": 2,
+    "photometrySrc": "ACME-PLIP-DS",
+    "photometryBasis": "EXACT",
+    "note": "datasheet: 101 deg RGB 1,163 / 291 / 129 / 73 lux at 2 / 4 / 6 / 8 m"
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": null,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/pixelLineIp.glb",
+    "sidecar": "scripts/place/fixtures/glb/pixelLineIp.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": null,
+    "tiltY": null,
+    "lensY": 0.126,
+    "sizeAtHome_mm": {
+      "width_x": 1000,
+      "depth_z": 92,
+      "height_y": 126
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "ACME-PLIP-DS": {
+      "url": "https://en.acmelighting.com/upload/other/20260415/19b3a847ddd50afd52b6a73d0065a1c7.pdf",
+      "what": "ACME's own datasheet for PIXEL LINE IP / STROBE 3 IP, 2 pages (2026-04); lists 13 modes, the manual copy 11",
+      "publisher": "ACME (en.acmelighting.com)",
+      "accessed": "2026-11-11"
+    },
+    "ACME-PLIP-MAN": {
+      "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+      "what": "User manual of the PIXEL LINE IP (STROBE 3 IP), 27 pages; the cover shows the white-label brand 'GML Grand Master Light', no ACME name in the text; third-party host",
+      "publisher": "ACME (white-label copy, third-party host)",
+      "accessed": "2026-11-11"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "pixelLineIp",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "exact",
+    "date": "2026-11-11",
+    "sources": [
+      "ACME-PLIP-DS",
+      "ACME-PLIP-MAN"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 0,
+      "datasheet": 28,
+      "equivalent": 0,
+      "assumed": 0,
+      "unknown": 0
+    }
+  }
+}

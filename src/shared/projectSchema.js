@@ -1189,7 +1189,9 @@ export const normalizeEntity = (entity = {}) => {
             // have no cutoff (light.distance 0) and its beam still end. Stored only when given.
             ...(ensureNumber(sourceComponents.beam.length, 0) > 0 ? { length: Math.min(1000, ensureNumber(sourceComponents.beam.length, 0)) } : {}),
             // `laser` (2026-10-09): a laser drawn as a line source (src/objectComponents/laserLine.js). Stored only when valid.
-            ...(normalizeBeamLaser(sourceComponents.beam.laser) ? { laser: normalizeBeamLaser(sourceComponents.beam.laser) } : {})
+            ...(normalizeBeamLaser(sourceComponents.beam.laser) ? { laser: normalizeBeamLaser(sourceComponents.beam.laser) } : {}),
+            // `emitter` (2026-11-12): an LED bar's glowing strip, width x length metres. Mirror of shared/projectSchema.cjs.
+            ...(normalizeBeamEmitter(sourceComponents.beam.emitter) ? { emitter: normalizeBeamEmitter(sourceComponents.beam.emitter) } : {})
         }
     }
     // THE JOIN between a lamp in the room and a lamp on the lighting desk: the
@@ -1395,6 +1397,12 @@ const LASER_NM = new Set([455, 525, 638])
 const laserFramePoints = (points) => (Array.isArray(points) ? points : []).slice(0, 2000)
     .filter((p) => Array.isArray(p) && p.length >= 5 && p.slice(0, 5).every((v) => Number.isFinite(Number(v))))
     .map((p) => [0, 1, 2, 3, 4].map((k) => (k < 2 ? Math.min(1, Math.max(-1, Number(p[k]))) : Math.min(1, Math.max(0, Number(p[k]))))))
+const normalizeBeamEmitter = (emitter) => {
+    if (!emitter || typeof emitter !== 'object' || emitter.shape !== 'bar') return null
+    const size = (v, fallback) => Math.min(10, Math.max(0.01, ensureNumber(v, fallback)))
+    return { shape: 'bar', width: size(emitter.width, 0.1), length: size(emitter.length, 1) }
+}
+
 const normalizeBeamLaser = (laser) => {
     if (!laser || typeof laser !== 'object' || !Array.isArray(laser.mW) || !Array.isArray(laser.nm)) return null
     if (laser.mW.length !== laser.nm.length || laser.mW.length < 1 || laser.mW.length > 3) return null

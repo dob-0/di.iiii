@@ -1,0 +1,90 @@
+{
+ "rentalList": {
+  "name": "Platina 14.11.2026 - rental list (offer of 2026-11-11), light column",
+  "source": "/home/dob/work/platina/offer-2026-11-11/offer-2.txt (the offer, read 2026-11-11). No prices are kept here.",
+  "writtenAt": "2026-11-11",
+  "items": [
+   {
+    "code": "Hazer Elation MAGMA PRIME + fan",
+    "type": "magmatic-magma-prime",
+    "ordered": 2,
+    "status": "confirmed",
+    "fullMode": "5ch (fog output, output volume, fan, output duration, interval)",
+    "source": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf",
+    "note": "maker's manual (hosted by a distributor) read; model name matches; DMX modes 1/3/5, full = 5; fan is channel 3; patched"
+   },
+   {
+    "code": "LED WASH - A.leda K10 19x15",
+    "type": "cp-aleda-beye-k10",
+    "ordered": 8,
+    "status": "probable",
+    "fullMode": "Pixel RGBW 76 ch (19 pixels x R,G,B,W); other modes Standard 21, Shapes 35, Pixel RGB 57",
+    "source": "https://github.com/OpenLightingProject/open-fixture-library/blob/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/clay-paky/a-leda-b-eye-k10.json",
+    "note": "Open Fixture Library (MIT) quoting the Claypaky manual (e-assist.tech Id=729, not read); the maker's own page returned 404; copy not excluded"
+   },
+   {
+    "code": "Acme xp16r BWS",
+    "type": "acme-xp16r-bsw",
+    "ordered": 12,
+    "status": "unknown",
+    "fullMode": "largest mode NOT known; ASSUMED 23 ch (Mode1)",
+    "source": "https://en.acmelighting.com/Info/productdetail/cat_id/16/id/121",
+    "note": "ACME's range page has no XP-16R BSW; a search snippet of a manualshive page says Mode1 23 channels (page refused fetch); a XP-16R BSW PRO exists"
+   },
+   {
+    "code": "artnet",
+    "type": "artnet-node",
+    "ordered": 1,
+    "status": "unknown",
+    "fullMode": "not a lamp",
+    "source": "",
+    "note": "maker, model, ports unknown"
+   },
+   {
+    "code": "Pixel Line IP (LED-bar)",
+    "type": "acme-pixel-line-ip",
+    "ordered": 24,
+    "status": "probable",
+    "fullMode": "117 ch (largest of 7/15/21/39/112/17/33/65/68/117/70); channel list NOT read",
+    "source": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+    "note": "PIXEL LINE IP user manual copy (third-party host); ACME lists PIXEL LINE IP at https://en.acmelighting.com/Info/productdetail/cat_id/16/id/121; the rental names no maker"
+   },
+   {
+    "code": "B-Eye K15 (monototem + floods)",
+    "type": "cp-hy-beye-k15",
+    "ordered": 8,
+    "status": "probable",
+    "fullMode": "Pixel RGBW 76 ch (19 x RGBW); other modes 22/36/57",
+    "source": "https://goknight.com/content/documentation/HyB-EyeK15_Datasheet_01.2021.pdf",
+    "note": "Claypaky datasheet 01.2021 read: '22/36/57/76 DMX channels', 19 RGBW LEDs; the order of the four counts is ASSUMED; list not read"
+   },
+   {
+    "code": "CO2 jet",
+    "type": "co2-jet",
+    "ordered": 4,
+    "status": "unknown",
+    "fullMode": "not patched",
+    "source": "",
+    "note": "run by the rental's effects operator; DMX or by hand unknown"
+   },
+   {
+    "code": "GrandMA2",
+    "type": "grandma2",
+    "ordered": 1,
+    "status": "n/a",
+    "fullMode": "not used for now (N3664)",
+    "source": "",
+    "note": "di sends the DMX over Art-Net"
+   },
+   {
+    "code": "Screen 4x2,5m Absen p3.9",
+    "type": "led-screen",
+    "ordered": 1,
+    "status": "n/a",
+    "fullMode": "video, not DMX",
+    "source": "",
+    "note": ""
+   }
+  ]
+ }
+}

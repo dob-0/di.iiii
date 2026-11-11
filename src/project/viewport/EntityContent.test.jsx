@@ -83,6 +83,18 @@ describe('EntityContent mapping', () => {
         expect(el.props.data).toBe('https://cdn/x.png')
     })
 
+    it('draws an LED bar as its glowing strip when the beam says so, else the small cone', () => {
+        const bar = render({ type: 'spotLight', components: { light: { color: '#ff0000', intensity: 2 }, beam: { emitter: { shape: 'bar', width: 0.09, length: 1 } } } })
+        const strip = bar.props.children[1]
+        expect(strip.props.children[0].type).toBe('boxGeometry')
+        expect(strip.props.children[0].props.args).toEqual([0.09, 0.06, 1])
+        expect(strip.props.children[1].props.color).toBe('#ff0000')
+        const off = render({ type: 'spotLight', components: { light: { color: '#ff0000', intensity: 0 }, beam: { emitter: { shape: 'bar', width: 0.09, length: 1 } } } })
+        expect(off.props.children[1].props.children[1].props.color).toBe('#0b0b0c')
+        const cone = render({ type: 'spotLight', components: { light: { color: '#ffffff', intensity: 2 } } })
+        expect(cone.props.children[1].props.children[0].type).toBe('coneGeometry')
+    })
+
     it('renders light entities as a fragment with a light host element', () => {
         const el = render({ type: 'pointLight', components: { light: { color: '#fff', intensity: 2 } } })
         expect(el.type).toBe(Fragment)

@@ -1,0 +1,409 @@
+{
+  "id": "acme-xp16r-bsw",
+  "code": "ACME-XP16R-BSW",
+  "identified": "EXACT",
+  "identifiedNote": "EXACT - ACME's XP-16R BSW III (the manual's title). The rental list says 'xp16r BWS' (sic): the revision of the rented hardware is NOT confirmed (no document read shows a 23-channel XP-16R; a 32-page web copy labelled XP-16R BSW was in fact the XP-15R SZ manual and was rejected)",
+  "maker": "ACME (Foshan Yi Feng Electric Industrial Co.)",
+  "model": "ACME-XP16R-BSW",
+  "modelledOn": null,
+  "product": "ACME XP-16R BSW III, 16R discharge beam / spot / wash moving head",
+  "makerModel": "XP-16R BSW III",
+  "manual": {
+    "url": "https://en.acmelighting.com/Uploads/download/file_material/1548730155bda9de23c5da5e98.pdf",
+    "date": "2018-02-05 (PDF metadata)",
+    "read": "2026-11-11, pdftotext + page image p6",
+    "basis": "EXACT"
+  },
+  "makerChart": {
+    "file": "scripts/place/fixtures/charts/acme-xp16r-bsw.json",
+    "modes": {
+      "19": "EXACT",
+      "21": "EXACT"
+    }
+  },
+  "category": "moving-head",
+  "modes": [
+    {
+      "name": "19ch",
+      "footprint": 19,
+      "channels": [
+        {
+          "role": "pan",
+          "label": "Pan (0-255 = 0 to 540 deg (16-bit with ch2))",
+          "default": 128
+        },
+        {
+          "role": "panFine",
+          "label": "Pan fine"
+        },
+        {
+          "role": "tilt",
+          "label": "Tilt (0-255 = 0 to 270 deg (16-bit with ch4))",
+          "default": 128
+        },
+        {
+          "role": "tiltFine",
+          "label": "Tilt fine"
+        },
+        {
+          "role": "speed",
+          "label": "Pan/Tilt speed (fast to slow)"
+        },
+        {
+          "role": "control",
+          "label": "Special function (incl. lamp on/off, resets) (000-049 none; 050 enable / 060 disable auto colour frost; 070 enable / 080 disable blackout while pan/tilt moves; 090/100 same for colour change; 110/120 same for gobo change; 130 lamp on; 140 pan/tilt reset; 150 effect reset; 160 fan quiet; 170 fan fast; 180 lamp full power; 190 lamp half power; 200 all reset; 230 lamp off (each a 10-wide band, hold ~5 s))",
+          "default": 0
+        },
+        {
+          "role": "color",
+          "label": "Colour wheel (000-002 white; Color 1..29 in 2-3 value steps (003-004 ... 061-063); 064-127 indexing; 128-189 CCW fast-slow; 190-193 stop; 194-255 CW slow-fast)"
+        },
+        {
+          "role": "gobo",
+          "label": "Gobo wheel 1 (static) (000-003 open; Gobo 1..16 in 3-value steps (004-006 ... 049-055); 056-127 shake; 128-189 CCW; 190-193 stop; 194-255 CW)"
+        },
+        {
+          "role": "gobo2",
+          "label": "Gobo wheel 2 (rotating) (000-005 open; Gobo 2-1..2-12 (006-010 ... 062-067); 068-127 shake; 128-189 CCW; 190-193 stop; 194-255 CW)"
+        },
+        {
+          "role": "gobo2Rotation",
+          "label": "Rotating gobo index/rotation (000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast)"
+        },
+        {
+          "role": "prism",
+          "label": "Prism 1 (8-facet) in/out (000-007 no prism; 008-255 prism in)",
+          "cap": {
+            "prism": true,
+            "prismIn": {
+              "from": 8,
+              "facets": 8,
+              "basis": "MANUAL p26-29: 008-255 prism 1 in; 8 facets from the manual p5"
+            }
+          }
+        },
+        {
+          "role": "rotation",
+          "label": "Prism 1 rotation (000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast)",
+          "cap": {
+            "prismRotation": {
+              "prism": 1,
+              "index": {
+                "from": 0,
+                "to": 127
+              },
+              "basis": "MANUAL p26-29: 0-127 index; 128-189 CCW, 190-193 stop, 194-255 CW"
+            }
+          }
+        },
+        {
+          "role": "prism2",
+          "label": "Prism 2 (6-linear) in/out (000-007 no prism; 008-255 prism in)"
+        },
+        {
+          "role": "prism2Rotation",
+          "label": "Prism 2 rotation (000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast)"
+        },
+        {
+          "role": "zoom",
+          "label": "Zoom (0-255 = 100% to 0%)"
+        },
+        {
+          "role": "focus",
+          "label": "Focus (0-255 near to far)"
+        },
+        {
+          "role": "frost",
+          "label": "Frost (000-007 off; 008-255 on)",
+          "cap": {
+            "frost": {
+              "from": 8,
+              "to": 255,
+              "basis": "MANUAL p26: 000-007 off; 008-255 on (an insert, not a curve)"
+            }
+          }
+        },
+        {
+          "role": "strobe",
+          "label": "Shutter/strobe (000-007 shutter off; 008-015 open; 016-131 strobe slow-fast; 132-167 slow open fast close; 168-203 fast open slow close; 204-239 slow open slow close; 240-247 random strobe; 248-255 open)",
+          "default": 255,
+          "cap": {
+            "shutter": [
+              {
+                "from": 0,
+                "to": 7,
+                "open": false
+              },
+              {
+                "from": 8,
+                "to": 15,
+                "open": true
+              },
+              {
+                "from": 248,
+                "to": 255,
+                "open": true
+              }
+            ]
+          }
+        },
+        {
+          "role": "dimmer",
+          "label": "Dimmer (0-255 = 0%-100%)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) XP-16R BSW III (https://en.acmelighting.com/Uploads/download/file_material/1548730155bda9de23c5da5e98.pdf)",
+        "url": "https://en.acmelighting.com/Uploads/download/file_material/1548730155bda9de23c5da5e98.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "Mode 1",
+      "src": "ACME-XP16-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "21ch",
+      "footprint": 21,
+      "channels": [
+        {
+          "role": "pan",
+          "label": "Pan (0-255 = 0 to 540 deg (16-bit with ch2))",
+          "default": 128
+        },
+        {
+          "role": "panFine",
+          "label": "Pan fine"
+        },
+        {
+          "role": "tilt",
+          "label": "Tilt (0-255 = 0 to 270 deg (16-bit with ch4))",
+          "default": 128
+        },
+        {
+          "role": "tiltFine",
+          "label": "Tilt fine"
+        },
+        {
+          "role": "speed",
+          "label": "Pan/Tilt speed (fast to slow)"
+        },
+        {
+          "role": "control",
+          "label": "Special function (incl. lamp on/off, resets) (000-049 none; 050 enable / 060 disable auto colour frost; 070 enable / 080 disable blackout while pan/tilt moves; 090/100 same for colour change; 110/120 same for gobo change; 130 lamp on; 140 pan/tilt reset; 150 effect reset; 160 fan quiet; 170 fan fast; 180 lamp full power; 190 lamp half power; 200 all reset; 230 lamp off (each a 10-wide band, hold ~5 s))",
+          "default": 0
+        },
+        {
+          "role": "color",
+          "label": "Colour wheel (000-002 white; Color 1..29 in 2-3 value steps (003-004 ... 061-063); 064-127 indexing; 128-189 CCW fast-slow; 190-193 stop; 194-255 CW slow-fast)"
+        },
+        {
+          "role": "gobo",
+          "label": "Gobo wheel 1 (static) (000-003 open; Gobo 1..16 in 3-value steps (004-006 ... 049-055); 056-127 shake; 128-189 CCW; 190-193 stop; 194-255 CW)"
+        },
+        {
+          "role": "gobo2",
+          "label": "Gobo wheel 2 (rotating) (000-005 open; Gobo 2-1..2-12 (006-010 ... 062-067); 068-127 shake; 128-189 CCW; 190-193 stop; 194-255 CW)"
+        },
+        {
+          "role": "gobo2Rotation",
+          "label": "Rotating gobo index/rotation (000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast)"
+        },
+        {
+          "role": "prism",
+          "label": "Prism 1 (8-facet) in/out (000-007 no prism; 008-255 prism in)",
+          "cap": {
+            "prism": true,
+            "prismIn": {
+              "from": 8,
+              "facets": 8,
+              "basis": "MANUAL p26-29: 008-255 prism 1 in; 8 facets from the manual p5"
+            }
+          }
+        },
+        {
+          "role": "rotation",
+          "label": "Prism 1 rotation (000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast)",
+          "cap": {
+            "prismRotation": {
+              "prism": 1,
+              "index": {
+                "from": 0,
+                "to": 127
+              },
+              "basis": "MANUAL p26-29: 0-127 index; 128-189 CCW, 190-193 stop, 194-255 CW"
+            }
+          }
+        },
+        {
+          "role": "prism2",
+          "label": "Prism 2 (6-linear) in/out (000-007 no prism; 008-255 prism in)"
+        },
+        {
+          "role": "prism2Rotation",
+          "label": "Prism 2 rotation (000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast)"
+        },
+        {
+          "role": "zoom",
+          "label": "Zoom (0-255 = 100% to 0%)"
+        },
+        {
+          "role": "zoomFine",
+          "label": "Zoom fine"
+        },
+        {
+          "role": "focus",
+          "label": "Focus (near to far)"
+        },
+        {
+          "role": "focusFine",
+          "label": "Focus fine"
+        },
+        {
+          "role": "frost",
+          "label": "Frost (000-007 off; 008-255 on)",
+          "cap": {
+            "frost": {
+              "from": 8,
+              "to": 255,
+              "basis": "MANUAL p29: 000-007 off; 008-255 on (an insert, not a curve)"
+            }
+          }
+        },
+        {
+          "role": "strobe",
+          "label": "Shutter/strobe (000-007 shutter off; 008-015 open; 016-131 strobe slow-fast; 132-167 slow open fast close; 168-203 fast open slow close; 204-239 slow open slow close; 240-247 random strobe; 248-255 open)",
+          "default": 255,
+          "cap": {
+            "shutter": [
+              {
+                "from": 0,
+                "to": 7,
+                "open": false
+              },
+              {
+                "from": 8,
+                "to": 15,
+                "open": true
+              },
+              {
+                "from": 248,
+                "to": 255,
+                "open": true
+              }
+            ]
+          }
+        },
+        {
+          "role": "dimmer",
+          "label": "Dimmer (0-255 = 0%-100%)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) XP-16R BSW III (https://en.acmelighting.com/Uploads/download/file_material/1548730155bda9de23c5da5e98.pdf)",
+        "url": "https://en.acmelighting.com/Uploads/download/file_material/1548730155bda9de23c5da5e98.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "Mode 2",
+      "note": "LARGEST. adds zoom fine and focus fine",
+      "src": "ACME-XP16-MAN",
+      "basis": "EXACT"
+    }
+  ],
+  "defaultMode": "19ch",
+  "modesOwed": false,
+  "assumedMode": null,
+  "power_w": {
+    "value": 480,
+    "src": "ACME-XP16-MAN",
+    "basis": "EXACT",
+    "note": "manual p4"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 21.4,
+    "src": "ACME-XP16-MAN",
+    "basis": "EXACT",
+    "note": "manual p5C"
+  },
+  "size_mm": {
+    "value": [
+      393,
+      344,
+      585
+    ],
+    "src": "ACME-XP16-MAN",
+    "basis": "EXACT",
+    "order": "W x D x H",
+    "note": "manual p5C 'Dimension 585 x 344 x 393 mm'; the drawing: 585 high, 393 wide (front), 344 deep (base with handles), 230 head thickness"
+  },
+  "pan_tilt_deg": {
+    "value": [
+      540,
+      270
+    ],
+    "src": "ACME-XP16-MAN",
+    "basis": "EXACT",
+    "note": "manual p5"
+  },
+  "ip": null,
+  "optics": {
+    "beam_deg": 3,
+    "zoom_deg": [
+      3,
+      32
+    ],
+    "lux": 810000,
+    "at_m": 5,
+    "photometrySrc": "ACME-XP16-MAN",
+    "photometryBasis": "EXACT",
+    "note": "manual p5C photometric diagram: 3 deg 810,000 / 200,000 / 90,000 / 52,000 lux at 5 / 10 / 15 / 20 m; 32 deg 9,700 / 2,100 / 950 / 900 lux"
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": null,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/xp16r.glb",
+    "sidecar": "scripts/place/fixtures/glb/xp16r.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": 0.13,
+    "tiltY": 0.44,
+    "lensY": 0.578,
+    "sizeAtHome_mm": {
+      "width_x": 400,
+      "depth_z": 348,
+      "height_y": 576
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "ACME-XP16-MAN": {
+      "url": "https://en.acmelighting.com/Uploads/download/file_material/1548730155bda9de23c5da5e98.pdf",
+      "what": "ACME user manual 'XP-16R BSW III', 36 pages, PDF metadata 2018-02-05",
+      "publisher": "ACME (en.acmelighting.com)",
+      "accessed": "2026-11-11"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "xp16r",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "exact",
+    "date": "2026-11-11",
+    "sources": [
+      "ACME-XP16-MAN"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 0,
+      "datasheet": 10,
+      "equivalent": 0,
+      "assumed": 0,
+      "unknown": 0
+    }
+  }
+}

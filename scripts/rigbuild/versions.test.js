@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
 import { REPO_ROOT } from '../place/common.mjs'
 import { RIG_PREFIX, buildRig, groupAxis, performerBox, stageFrame } from '../place/rig-lib.mjs'
 import { LASER_MIN_HEIGHT_M, laserDistanceFailures, laserLampsOf } from '../place/laser-distance.mjs'
-import { readGeometry } from '../place/fixtures-glb.mjs'
+import { builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import { allVersions, costing, generated, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 import { parsePrices, specWithPrivatePrices, withPrivatePrices } from './privatePrices.mjs'
@@ -22,7 +22,7 @@ const spec = read(VERSIONS_FILE)
 const hall = read(spec.hall)
 const manifest = read('scripts/place/fixtures/fixtures.json')
 const performerBoxZ = (rig, stage) => performerBox(rig, stage).z
-const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
 const rigs = Object.fromEntries(spec.versions.map((v) => [v.id, read(rigFileOf(spec.set, v.id))]))
 const lists = Object.fromEntries(spec.versions.map((v) => [v.id, read(rentalFileOf(spec.set, v.id)).rentalList]))
 const COMMERCIAL = /co2|spark|confetti|butterfly/i

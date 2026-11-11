@@ -69,11 +69,11 @@ describe('the ground versions, baked per look (measured)', async () => {
     const path = await import('node:path')
     const { buildRig } = await import('./rig-lib.mjs')
     const { washGlb } = await import('./wash-glb.mjs')
-    const { readGeometry } = await import('./fixtures-glb.mjs')
+    const { builtKinds, readGeometry } = await import('./fixtures-glb.mjs')
     const { washEntityId } = await import('../../src/rigbuild/looks.js')
     const here = path.dirname(fileURLToPath(import.meta.url))
     const manifest = JSON.parse(fs.readFileSync(path.join(here, 'fixtures', 'fixtures.json'), 'utf8'))
-    const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+    const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
     const spec = JSON.parse(fs.readFileSync(path.join(here, 'rigs', 'moxir-versions-2026-10-17.json'), 'utf8'))
     const hall = JSON.parse(fs.readFileSync(path.join(here, '..', '..', spec.hall), 'utf8')) // the versions' own hall (crane over the DJ)
 

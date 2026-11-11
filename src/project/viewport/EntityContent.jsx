@@ -220,13 +220,23 @@ export default function EntityContent({ entity, assetMap, screens = null }) {
     }
     case 'spotLight': {
         const l = entity.components?.light || {}
+        const emitterBar = entity.components?.beam?.emitter?.shape === 'bar' ? entity.components.beam.emitter : null
         return (
             <>
                 <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} beam={entity.components?.beam || null} fitted={lampIsFitted(entity.components)} />
-                <mesh>
-                    <coneGeometry args={[0.07, 0.2, 8]} />
-                    <meshStandardMaterial color={l.color || '#ffffff'} emissive={l.color || '#ffffff'} emissiveIntensity={0.8} />
-                </mesh>
+                {emitterBar ? (
+                    // an LED bar is seen as its glowing strip (beam.emitter, rig data): length along the lamp's local z,
+                    // lit in the lamp's colour while it is on, a dark housing when it is off
+                    <mesh>
+                        <boxGeometry args={[emitterBar.width || 0.1, 0.06, emitterBar.length || 1]} />
+                        <meshBasicMaterial color={(l.intensity ?? 2) > 0 ? (l.color || '#ffffff') : '#0b0b0c'} toneMapped={false} />
+                    </mesh>
+                ) : (
+                    <mesh>
+                        <coneGeometry args={[0.07, 0.2, 8]} />
+                        <meshStandardMaterial color={l.color || '#ffffff'} emissive={l.color || '#ffffff'} emissiveIntensity={0.8} />
+                    </mesh>
+                )}
             </>
         )
     }

@@ -18,8 +18,9 @@ describe('the fixtures manifest', () => {
     it('gives every number a source it lists, or says it is an assumption', () => {
         for (const [kind, entry] of Object.entries(manifest.kinds)) {
             // UP- is the rental house's own code; EXT- a planning type for a line from another
-            // supplier (strobe, blinder, hazer: the rental list has none — RIG_BUILD.md §15).
-            expect(entry.code, kind).toMatch(/^(UP|EXT)-/)
+            // supplier (strobe, blinder, hazer: the rental list has none — RIG_BUILD.md §15); CP- / ACME- / MAGMATIC-
+            // are the Platina rental lamps (2026-11-11), coded by their makers' own model names.
+            expect(entry.code, kind).toMatch(/^(UP|EXT|CP|ACME|MAGMATIC)-/)
             if (entry.code.startsWith('EXT-')) expect(entry.identified, kind).toMatch(/another supplier/)
             for (const [field, spec] of Object.entries(entry.specs)) {
                 expect(['EXACT', 'COMPONENT', 'EQUIVALENT', 'TESTED', 'ARCHIVED', 'UNKNOWN', 'ASSUMED'], `${kind}.${field}`).toContain(spec.basis)
@@ -67,7 +68,8 @@ describe('the fixtures manifest', () => {
 })
 
 describe('the built models', () => {
-    for (const kind of Object.keys(manifest.kinds)) {
+    // a kind whose outer size is not known says so (`model.owed`) and has no body yet — it is not drawn from a guess
+    for (const kind of Object.keys(manifest.kinds).filter((k) => !manifest.kinds[k].model?.owed)) {
         it(`${kind}: was built by the current build_fixtures.py, with its parts and pivots recorded`, () => {
             const geo = readGeometry(kind)
             // A GLB built by an older script is stale: rebuild in Blender.
@@ -111,5 +113,21 @@ describe('the rig\'s fixture bodies as one instanced GLB', () => {
         // One Body, one Lens … material for the whole rig, not one per kind.
         const names = doc.getRoot().listMaterials().map((m) => m.getName())
         expect(names.length).toBe(new Set(names).size)
+    })
+})
+
+describe('readers of the built models', () => {
+    // 2026-11-11: two kinds without a body (model.owed) broke 17 test files, because each reader listed the kinds itself.
+    // Every reader goes through builtKinds(manifest); a kind is either built or says its body is owed.
+    it('no script lists the kinds itself before reading their bodies', () => {
+        const root = path.resolve(dir, '..', '..')
+        const walk = (p) => fs.readdirSync(p, { withFileTypes: true }).flatMap((e) => e.name === 'node_modules' ? [] : e.isDirectory() ? walk(path.join(p, e.name)) : /\.(mjs|js|cjs)$/.test(e.name) ? [path.join(p, e.name)] : [])
+        const bad = walk(root).filter((f) => /Object\.keys\(manifest\.kinds\)\.map\(\(k\) => \[k, readGeometry\(k\)\]\)/.test(fs.readFileSync(f, 'utf8')))
+        expect(bad.map((f) => path.relative(root, f))).toEqual([])
+    })
+
+    it('every kind has its built body on disk, or says the body is owed', () => {
+        const missing = Object.keys(manifest.kinds).filter((k) => !manifest.kinds[k].model?.owed && !fs.existsSync(path.join(dir, 'glb', `${k}.json`)))
+        expect(missing).toEqual([])
     })
 })

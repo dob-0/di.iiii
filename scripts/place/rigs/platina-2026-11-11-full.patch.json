@@ -1,0 +1,374 @@
+{
+  "patch": "platina-2026-11-11-full",
+  "title": "Platina — Live in Yerevan: full-mode patch (draft), 52 units on 9 universes",
+  "title_ru": "Platina — Live in Yerevan: патч в полном режиме (черновик), 52 прибора на 9 юниверсах",
+  "writtenAt": "2026-11-11",
+  "owner": "2026-11-11 (ledger N3655): all fixtures in full mode, from what they rent. The small-mode draft of 11-10 is kept beside this file.",
+  "status": "PROPOSED 2026-11-11, full mode on every fixture (the owner, 11-11). Fixture list from the rental offer PLATINA_EH-YVN_14-11-26_OFFER_2.xlsx (sent by the owner through di.bo, 2026-11-11 15:57). Not confirmed by the Platina crew; the crew patch their own GrandMA2.",
+  "crewLine": "DRAFT, not confirmed by the Platina crew: every fixture in its largest mode; read the mode on each unit before setting an address.",
+  "crewLine_ru": "ЧЕРНОВИК, не подтверждён стороной Platina: каждый прибор в максимальном режиме; перед установкой адреса проверить режим на приборе.",
+  "howToRead": "docs/architecture/RIG_BUILD.md §19.5. No project document yet: the crew table comes from this plan alone — node scripts/rigbuild/patch-table.mjs --plan <this> --out <dir> --pdf. Never edit an address by hand: change the plan and print again.",
+  "method": [
+    "Full mode on every fixture (the owner, 2026-11-11); fixture counts from the rental offer, not the plot.",
+    "No unit is split over two universes; a kind stays together where it fits.",
+    "The small-mode draft platina-2026-11-10.patch.json (3 universes) is kept as the fallback."
+  ],
+  "node": {
+    "what": "the offer lists 'artnet' x1 and a GrandMA2; the node's port count is not known",
+    "numbering": "U1 = Art-Net 0.0.0 = sACN 1 … U9 = Art-Net 0.0.8 = sACN 9"
+  },
+  "types": [
+    {
+      "id": "cp-aleda-beye-k10",
+      "code": "A.leda B-EYE K10",
+      "maker": "Claypaky",
+      "identified": "the legend's own name",
+      "modes": [
+        {
+          "name": "Standard",
+          "footprint": 21,
+          "channels": null,
+          "src": "https://github.com/OpenLightingProject/open-fixture-library/blob/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/clay-paky/a-leda-b-eye-k10.json (Open Fixture Library, MIT; its manual link: https://e-assist.tech/servlet/checkDocumentsFile?Id=729), read 2026-11-10"
+        },
+        {
+          "name": "Shapes",
+          "footprint": 35,
+          "channels": null,
+          "src": "the same file"
+        }
+      ]
+    },
+    {
+      "id": "acme-xp-16r-bsw",
+      "code": "XP-16R BSW",
+      "maker": "ACME",
+      "identified": "the offer writes 'Acme xp16r BWS'; ACME's model name is XP-16R BSW (PROBABLE)",
+      "modes": [
+        {
+          "name": "Mode1",
+          "footprint": 23,
+          "channels": null,
+          "src": "manual index snippet 'Mode1 23 channels': https://manualshive.com/en/manual/acme/xp-16r-bsw/458568?page=24 (search result read 2026-11-11; the page text is jumbled and may mix another model). UNVERIFIED: read the unit's menu; other modes are not known"
+        }
+      ]
+    },
+    {
+      "id": "cp-hy-beye-k15",
+      "code": "HY B-EYE K15",
+      "maker": "Claypaky",
+      "identified": "the legend's own name",
+      "modes": [
+        {
+          "name": "Standard",
+          "footprint": 22,
+          "channels": null,
+          "src": "Claypaky datasheet 01.2021, '22/36/57/76 DMX channels. Basic Engine (Standard and Shape Mode). Pixel Engine (RGB and RGBW Mode)': https://goknight.com/content/documentation/HyB-EyeK15_Datasheet_01.2021.pdf, read 2026-11-10. ASSUMED: the four counts are in the order of the four modes (22 = Standard)"
+        },
+        {
+          "name": "Shape",
+          "footprint": 36,
+          "channels": null,
+          "src": "the same datasheet, the same assumption"
+        },
+        {
+          "name": "76ch",
+          "footprint": 76,
+          "channels": null,
+          "src": "Claypaky datasheet 01.2021, '22/36/57/76 DMX channels': https://goknight.com/content/documentation/HyB-EyeK15_Datasheet_01.2021.pdf, read 2026-11-10. The largest of the four counts; the maker's name of this mode is not read"
+        }
+      ]
+    },
+    {
+      "id": "acme-pixel-line-ip",
+      "code": "Pixel Line IP",
+      "maker": "ACME (PROBABLE: the legend names no maker)",
+      "identified": "PROBABLE",
+      "modes": [
+        {
+          "name": "7ch",
+          "footprint": 7,
+          "channels": null,
+          "src": "rental listings give 'Control Channels: 7/15/17/21/33/39/35/38/70/112/117' (4wall, https://www.4wall.com/rentals/9759251/acme-pixel-line-ip-led, as quoted by a web search 2026-11-10; the page itself refused our fetch). The maker's manual is NOT read: which functions each count holds is unknown"
+        },
+        {
+          "name": "15ch",
+          "footprint": 15,
+          "channels": null,
+          "src": "the same listing"
+        },
+        {
+          "name": "17ch",
+          "footprint": 17,
+          "channels": null,
+          "src": "the same listing"
+        },
+        {
+          "name": "21ch",
+          "footprint": 21,
+          "channels": null,
+          "src": "the same listing"
+        },
+        {
+          "name": "117ch",
+          "footprint": 117,
+          "channels": null,
+          "src": "rental listing, 'DMX Protocol Modes: 11' with 7, 15, 17, 21, 33, 39, 35, 38, 70, 112 and 117 channels: https://www.4wall.com/rentals/9759251/acme-pixel-line-ip-led (search result read 2026-11-11). NOT the maker's manual: read the unit's menu before the night"
+        }
+      ]
+    }
+  ],
+  "modes": {
+    "cp-aleda-beye-k10": {
+      "crew": "Shapes",
+      "why": "the largest mode in the profile (35 channels)"
+    },
+    "acme-xp-16r-bsw": {
+      "crew": "Mode1",
+      "why": "the only mode with a found channel count (23); unverified"
+    },
+    "cp-hy-beye-k15": {
+      "crew": "76ch",
+      "why": "the largest of the four counts on the datasheet"
+    },
+    "acme-pixel-line-ip": {
+      "crew": "117ch",
+      "why": "the largest mode on the rental listing: every section of the bar on its own"
+    }
+  },
+  "universes": [
+    {
+      "universe": 1,
+      "port": "1",
+      "label": "B-EYE K10 wash and 2 K15",
+      "label_ru": "Заливка B-EYE K10 и 2 K15",
+      "run": "universe 1 → the 8 K10, then the 2 K15 at the sides",
+      "run_ru": "юниверс 1 → 8 K10, затем 2 K15 по бокам",
+      "blocks": [
+        {
+          "select": {
+            "group": "k10",
+            "type": "cp-aleda-beye-k10"
+          },
+          "name": "B-EYE K10",
+          "name_ru": "B-EYE K10",
+          "start": 1,
+          "fixture": 101,
+          "order": "id-asc",
+          "units": 8,
+          "what": "the 8 A.leda B-EYE K10 of the offer, counted from the audience's left"
+        },
+        {
+          "select": {
+            "group": "k15-sides",
+            "type": "cp-hy-beye-k15"
+          },
+          "name": "HY B-EYE K15, the two at the sides",
+          "name_ru": "HY B-EYE K15, два боковых",
+          "start": 301,
+          "fixture": 111,
+          "order": "id-asc",
+          "units": 2,
+          "what": "2 of the 8 K15"
+        }
+      ]
+    },
+    {
+      "universe": 2,
+      "port": "2",
+      "label": "XP-16R BSW",
+      "label_ru": "XP-16R BSW",
+      "run": "universe 2 → the 12 XP-16R BSW",
+      "run_ru": "юниверс 2 → 12 XP-16R BSW",
+      "blocks": [
+        {
+          "select": {
+            "group": "xp16r",
+            "type": "acme-xp-16r-bsw"
+          },
+          "name": "XP-16R BSW",
+          "name_ru": "XP-16R BSW",
+          "start": 1,
+          "fixture": 201,
+          "order": "id-asc",
+          "units": 12,
+          "what": "the 12 Acme XP-16R BSW of the offer; where each hangs is not on the plot (the plot shows 7 Sharpy)"
+        }
+      ]
+    },
+    {
+      "universe": 3,
+      "port": "3",
+      "label": "HY B-EYE K15, floor",
+      "label_ru": "HY B-EYE K15, пол",
+      "run": "universe 3 → the 6 K15 on the stage floor",
+      "run_ru": "юниверс 3 → 6 K15 на полу сцены",
+      "blocks": [
+        {
+          "select": {
+            "group": "k15-floor",
+            "type": "cp-hy-beye-k15"
+          },
+          "name": "HY B-EYE K15, stage floor",
+          "name_ru": "HY B-EYE K15, пол сцены",
+          "start": 1,
+          "fixture": 301,
+          "order": "id-asc",
+          "units": 6,
+          "what": "6 of the 8 K15, counted from the audience's left"
+        }
+      ]
+    },
+    {
+      "universe": 4,
+      "port": "4",
+      "label": "Pixel Line IP, bars 1–4",
+      "label_ru": "Pixel Line IP, планки 1–4",
+      "run": "universe 4 → Pixel Line IP bars 1 to 4",
+      "run_ru": "юниверс 4 → планки Pixel Line IP 1–4",
+      "blocks": [
+        {
+          "select": {
+            "group": "pixel-line-4",
+            "type": "acme-pixel-line-ip"
+          },
+          "name": "Pixel Line IP, bars 1–4",
+          "name_ru": "Pixel Line IP, планки 1–4",
+          "start": 1,
+          "fixture": 401,
+          "order": "id-asc",
+          "units": 4,
+          "what": "bars 1 to 4 of the 24, counted tower by tower from the audience's left, top bar first"
+        }
+      ]
+    },
+    {
+      "universe": 5,
+      "port": "5",
+      "label": "Pixel Line IP, bars 5–8",
+      "label_ru": "Pixel Line IP, планки 5–8",
+      "run": "universe 5 → Pixel Line IP bars 5 to 8",
+      "run_ru": "юниверс 5 → планки Pixel Line IP 5–8",
+      "blocks": [
+        {
+          "select": {
+            "group": "pixel-line-5",
+            "type": "acme-pixel-line-ip"
+          },
+          "name": "Pixel Line IP, bars 5–8",
+          "name_ru": "Pixel Line IP, планки 5–8",
+          "start": 1,
+          "fixture": 501,
+          "order": "id-asc",
+          "units": 4,
+          "what": "bars 5 to 8 of the 24, counted tower by tower from the audience's left, top bar first"
+        }
+      ]
+    },
+    {
+      "universe": 6,
+      "port": "6",
+      "label": "Pixel Line IP, bars 9–12",
+      "label_ru": "Pixel Line IP, планки 9–12",
+      "run": "universe 6 → Pixel Line IP bars 9 to 12",
+      "run_ru": "юниверс 6 → планки Pixel Line IP 9–12",
+      "blocks": [
+        {
+          "select": {
+            "group": "pixel-line-6",
+            "type": "acme-pixel-line-ip"
+          },
+          "name": "Pixel Line IP, bars 9–12",
+          "name_ru": "Pixel Line IP, планки 9–12",
+          "start": 1,
+          "fixture": 601,
+          "order": "id-asc",
+          "units": 4,
+          "what": "bars 9 to 12 of the 24, counted tower by tower from the audience's left, top bar first"
+        }
+      ]
+    },
+    {
+      "universe": 7,
+      "port": "7",
+      "label": "Pixel Line IP, bars 13–16",
+      "label_ru": "Pixel Line IP, планки 13–16",
+      "run": "universe 7 → Pixel Line IP bars 13 to 16",
+      "run_ru": "юниверс 7 → планки Pixel Line IP 13–16",
+      "blocks": [
+        {
+          "select": {
+            "group": "pixel-line-7",
+            "type": "acme-pixel-line-ip"
+          },
+          "name": "Pixel Line IP, bars 13–16",
+          "name_ru": "Pixel Line IP, планки 13–16",
+          "start": 1,
+          "fixture": 701,
+          "order": "id-asc",
+          "units": 4,
+          "what": "bars 13 to 16 of the 24, counted tower by tower from the audience's left, top bar first"
+        }
+      ]
+    },
+    {
+      "universe": 8,
+      "port": "8",
+      "label": "Pixel Line IP, bars 17–20",
+      "label_ru": "Pixel Line IP, планки 17–20",
+      "run": "universe 8 → Pixel Line IP bars 17 to 20",
+      "run_ru": "юниверс 8 → планки Pixel Line IP 17–20",
+      "blocks": [
+        {
+          "select": {
+            "group": "pixel-line-8",
+            "type": "acme-pixel-line-ip"
+          },
+          "name": "Pixel Line IP, bars 17–20",
+          "name_ru": "Pixel Line IP, планки 17–20",
+          "start": 1,
+          "fixture": 801,
+          "order": "id-asc",
+          "units": 4,
+          "what": "bars 17 to 20 of the 24, counted tower by tower from the audience's left, top bar first"
+        }
+      ]
+    },
+    {
+      "universe": 9,
+      "port": "9",
+      "label": "Pixel Line IP, bars 21–24",
+      "label_ru": "Pixel Line IP, планки 21–24",
+      "run": "universe 9 → Pixel Line IP bars 21 to 24",
+      "run_ru": "юниверс 9 → планки Pixel Line IP 21–24",
+      "blocks": [
+        {
+          "select": {
+            "group": "pixel-line-9",
+            "type": "acme-pixel-line-ip"
+          },
+          "name": "Pixel Line IP, bars 21–24",
+          "name_ru": "Pixel Line IP, планки 21–24",
+          "start": 1,
+          "fixture": 901,
+          "order": "id-asc",
+          "units": 4,
+          "what": "bars 21 to 24 of the 24, counted tower by tower from the audience's left, top bar first"
+        }
+      ]
+    }
+  ],
+  "crewNotes": [
+    "DRAFT of 2026-11-11, full mode on every fixture. Fixture counts from the rental offer: 8 A.leda K10, 12 Acme XP-16R BSW, 8 B-Eye K15, 24 Pixel Line IP; desk GrandMA2, 1 Art-Net node.",
+    "Nine universes: one Art-Net node gives as many DMX outputs as it has ports. The 24 bars alone take 6 universes; the rental listing says the bar takes Art-Net and sACN itself (not read in the maker's manual).",
+    "XP-16R BSW: 23 channels is from an unclear manual snippet. If the unit shows another count, universe 2 has room: 12 units fit up to 42 channels each.",
+    "Pixel Line IP: 4 bars to a universe (468 of 512), so a universe ends inside a tower of 3 bars.",
+    "Counting: \"from the audience's left\" is the left as seen from the hall, looking at the stage."
+  ],
+  "crewNotes_ru": [
+    "ЧЕРНОВИК от 2026-11-11, каждый прибор в максимальном режиме. Количество из сметы аренды: 8 A.leda K10, 12 Acme XP-16R BSW, 8 B-Eye K15, 24 Pixel Line IP; пульт GrandMA2, 1 нода Art-Net.",
+    "Девять юниверсов: одна нода Art-Net даёт столько выходов DMX, сколько у неё портов. Только 24 планки занимают 6 юниверсов; в описании прокатной компании сказано, что планка сама принимает Art-Net и sACN (в мануале производителя не проверено).",
+    "XP-16R BSW: 23 канала — из неясного фрагмента мануала. Если на приборе другое число, в юниверсе 2 есть место: 12 приборов помещаются при режиме до 42 каналов.",
+    "Pixel Line IP: 4 планки на юниверс (468 из 512), поэтому юниверс заканчивается внутри башни из 3 планок.",
+    "Счёт: «слева от зала» — это слева, если смотреть из зала на сцену."
+  ]
+}
