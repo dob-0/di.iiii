@@ -72,6 +72,14 @@ export const shaderSourceFor = (type, values = {}) => {
 /** The lines every operator's shader is compiled with, above its own code. */
 export const SHADER_PREAMBLE = PREAMBLE.trim()
 
+/**
+ * Does this Body operator need a fresh mask this frame? Not when the deck marked it
+ * `unseen` (its layer is silent: fader down, bypassed, not in the solo, or faded out by
+ * the crossfader). The model run is the dear part of Body (about 14 ms each on the show
+ * machine), so a layer nobody sees must not pay it.
+ */
+export const matteWanted = (node) => node?.values?.unseen !== true
+
 // A paused video keeps its currentTime, so "time unchanged" alone would skip the upload
 // when a node's footage is switched to another paused file (same node id, same time,
 // other picture). A new element or a new source forgets the time it was uploaded at.
@@ -489,7 +497,10 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             const inputs = inputsFor.get(node.id) || {}
             const readA = inputs.a ? latest(inputs.a) : null
             const readB = inputs.b ? latest(inputs.b) : null
-            const matteState = slot.matte && inputs.b ? refreshMatte(inputs.b, readB) : null
+            // A Body nobody sees (a silent deck layer) keeps the mask it has: no model run.
+            const matteState = slot.matte && inputs.b
+                ? (matteWanted(node) ? refreshMatte(inputs.b, readB) : matteStates.get(inputs.b) || null)
+                : null
             let params = resolveTopParams(node.type, node.values)
             if (resolveParams) {
                 try {

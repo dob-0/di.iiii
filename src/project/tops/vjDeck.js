@@ -494,17 +494,22 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
     // A stack after `input`: each ON effect is the operator plus a Blend (Mix mode:
     // a = what came in, b = the effect, Amount = the effect's mix = dry/wet).
     // Off or empty adds nothing. Returns the id the next stage reads.
-    const runStack = (stack, input, effectIdOf, mixIdOf) => {
+    const runStack = (stack, input, effectIdOf, mixIdOf, unseen = false) => {
         let current = input
         for (const effect of stack) {
             if (!effect.on) continue
             const fx = effectIdOf(effect.id)
             const wet = mixIdOf(effect.id)
-            nodes.push({ id: fx, type: effect.type, values: { machine, ...effect.params } })
+            const matte = Boolean(TOP_OPERATORS[effect.type]?.matte)
+            // A Body on a silent layer keeps its node (so the model stays loaded and nothing
+            // restarts when the fader comes up) but is told nobody sees it: the engine then
+            // does not run the model for it. Three Body layers with two faders down cost
+            // three model runs a frame (17 frames a second on the show machine, 2026-11-11).
+            nodes.push({ id: fx, type: effect.type, values: { machine, ...effect.params, ...(matte && unseen ? { unseen: true } : {}) } })
             wires.push({ from: current, to: fx, port: 'a' })
             // Body looks for the person in what the stack started from (the layer's
             // own picture, before its other effects), and paints over `a`.
-            if (TOP_OPERATORS[effect.type]?.matte) wires.push({ from: input, to: fx, port: 'b' })
+            if (matte) wires.push({ from: input, to: fx, port: 'b' })
             nodes.push({ id: wet, type: 'top.blend', values: { machine, mode: '0', mix: effect.mix } })
             wires.push({ from: current, to: wet, port: 'a' })
             wires.push({ from: fx, to: wet, port: 'b' })
@@ -553,7 +558,7 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
         const blend = blendNodeId(deckId, index)
         nodes.push({ id: blend, type: 'top.blend', values: { machine, mode: layer.blend, mix: opacity } })
         if (below) wires.push({ from: below, to: blend, port: 'a' })
-        wires.push({ from: runStack(layer.effects, source, (id) => layerEffectNodeId(deckId, index, id), (id) => layerEffectMixNodeId(deckId, index, id)), to: blend, port: 'b' })
+        wires.push({ from: runStack(layer.effects, source, (id) => layerEffectNodeId(deckId, index, id), (id) => layerEffectMixNodeId(deckId, index, id), opacity <= 0), to: blend, port: 'b' })
         below = blend
     })
 
