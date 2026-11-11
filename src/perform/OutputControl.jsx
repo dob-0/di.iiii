@@ -10,6 +10,8 @@ import './outputControl.css'
 // saved value again when left.
 function SizeInput({ label, value, onCommit }) {
     const [draft, setDraft] = useState(null)
+    // A change from elsewhere (another desk, Match the screen) wins over a half-typed draft.
+    useEffect(() => setDraft(null), [value])
     return (
         <input type="number" min="1" aria-label={label} value={draft ?? value}
             onChange={(event) => {
