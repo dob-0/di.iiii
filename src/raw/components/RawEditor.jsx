@@ -126,6 +126,32 @@ import {
 import useWorkspaceLayout from '../utils/useWorkspaceLayout.js'
 import { cycleFocus, isMaximised, maximiseFrame, restoreFrame } from '../utils/workspaceLayout.js'
 import { peekRawEnterNode, clearRawEnterNode } from '../utils/rawEnterNodeHandoff.js'
+
+// The open node (the VJ deck, any node's inside) lives in the address as
+// ?enter=<nodeId>: browser Back leaves it, Forward re-enters, a reload, a deep
+// link and a new tab open it again. Other query params (preset, from) are kept.
+const ENTER_PARAM = 'enter'
+const readEnterParam = () => {
+    if (typeof window === 'undefined') return null
+    try { return new URLSearchParams(window.location.search).get(ENTER_PARAM) || null } catch { return null }
+}
+const addressWithEnter = (nodeId) => {
+    const url = new URL(window.location.href)
+    if (nodeId) url.searchParams.set(ENTER_PARAM, nodeId)
+    else url.searchParams.delete(ENTER_PARAM)
+    return `${url.pathname}${url.search}${url.hash}`
+}
+// ids from the root's child down to nodeId, by parentId (cycle-safe)
+const scopeChainTo = (nodes, nodeId) => {
+    const byId = new Map(nodes.map((node) => [node.id, node]))
+    const chain = []
+    let id = nodeId
+    while (id && byId.has(id) && !chain.includes(id)) {
+        chain.unshift(id)
+        id = byId.get(id).parentId || null
+    }
+    return chain
+}
 import {
     detectDeviceType,
     getDefaultNodeScale,
@@ -466,15 +492,22 @@ export default function RawEditor({
     // real one) once per mount, then re-checked on every `nodes` change until
     // the handed-off node actually shows up, since the document may still be
     // syncing from the server on first render. Cleared only once applied.
-    const [pendingEnterNodeId, setPendingEnterNodeId] = useState(() => peekRawEnterNode(projectId))
+    const [pendingEnterNodeId, setPendingEnterNodeId] = useState(() => peekRawEnterNode(projectId) || readEnterParam())
     useEffect(() => {
         if (!pendingEnterNodeId) return
         if (authoredNodes.some((node) => node.id === pendingEnterNodeId)) {
-            scopeGoToRoot(pendingEnterNodeId)
+            const [first, ...rest] = scopeChainTo(authoredNodes, pendingEnterNodeId)
+            scopeGoToRoot(first)
+            rest.forEach((id) => scopeEnterNode(id))
             clearRawEnterNode()
             setPendingEnterNodeId(null)
+        } else if (authoredNodes.length > 0) {
+            // an unknown id (stale link, deleted node): ignore it, drop the param
+            clearRawEnterNode()
+            setPendingEnterNodeId(null)
+            if (readEnterParam()) window.history.replaceState(window.history.state, '', addressWithEnter(null))
         }
-    }, [pendingEnterNodeId, authoredNodes, scopeGoToRoot])
+    }, [pendingEnterNodeId, authoredNodes, scopeGoToRoot, scopeEnterNode])
     // Panel windows are scoped exactly like graph cards. Before, this filtered
     // the whole document, so every universe.world node at any depth kept a live
     // <Canvas> mounted in every scope — see selectMountedPanelNodes.
@@ -815,6 +848,18 @@ export default function RawEditor({
         scopeEnterNode(nodeId)
     }, [authoredNodes, scopeEnterNode, selectedNodeId, selectedEntity, clearSelection])
 
+    // "Open VJ Deck": the deck may live in another scope than the one open now,
+    // so walk its parent chain from the root unless it is a direct child here.
+    const openDeckFromAnywhere = useCallback((deck) => {
+        if (!deck) return
+        if ((deck.parentId || null) === (currentScopeId || null)) { handleEnterNode(deck.id); return }
+        const [first, ...rest] = scopeChainTo(authoredNodes, deck.id)
+        if (!first) return
+        if (selectedNodeId || selectedEntity) clearSelection()
+        scopeGoToRoot(first)
+        rest.forEach((id) => scopeEnterNode(id))
+    }, [currentScopeId, authoredNodes, handleEnterNode, scopeGoToRoot, scopeEnterNode, selectedNodeId, selectedEntity, clearSelection])
+
     const handleNavigateToScope = useCallback((targetIndex) => {
         // Fullscreen SURVIVES scope navigation now: walking through a door
         // swaps which room fills the screen, which is the TouchDesigner
@@ -828,37 +873,55 @@ export default function RawEditor({
     // phone when a space hides the chrome (showChrome:false removes the back
     // button and breadcrumb, and the Escape fallback needs a keyboard) —
     // without it a chromeless scope is a dead end on touch.
-    const scopeDepthRef = useRef(0)
-    const navigateUpRef = useRef(() => {})
+    // History (G2/G7): the open node is the address (?enter=<id>), one history
+    // entry per step in. The old guard pushed an entry at the root and on every
+    // Back, so Back at the Nodes root was swallowed; now there is no guard —
+    // Back inside a node pops to the address before it (and a chromeless phone
+    // still has its way out), Back at the root leaves Nodes like any page.
+    const navStackRef = useRef(navStack)
+    const authoredNodesRef = useRef(authoredNodes)
+    const navigateToScopeRef = useRef(handleNavigateToScope)
+    const prevDepthRef = useRef(navStack.length)
     useEffect(() => {
-        scopeDepthRef.current = navStack.length
-        navigateUpRef.current = () => handleNavigateToScope(navStack.length - 2)
-    }, [navStack, handleNavigateToScope])
+        navStackRef.current = navStack
+        authoredNodesRef.current = authoredNodes
+        navigateToScopeRef.current = handleNavigateToScope
+    }, [navStack, authoredNodes, handleNavigateToScope])
     useEffect(() => {
         if (typeof window === 'undefined') return undefined
         const onPop = () => {
-            // Depth 1 IS the root ([null]) — the old `> 0` guard was always
-            // true, so Back at root navigated to stack index -1 and rendered
-            // a false-empty canvas that read as total data loss on a phone
-            // (the document was intact all along; measured on the S24).
-            if (scopeDepthRef.current > 1) {
-                navigateUpRef.current()
-                window.history.pushState({ rawScope: true }, '')
-            } else {
-                // At root, Back stays put: re-arm the guard entry so the app
-                // neither blanks nor silently exits mid-edit. Leaving is what
-                // ← Projects and the tab are for.
-                window.history.pushState({ rawScope: true }, '')
+            const target = readEnterParam()
+            const stack = navStackRef.current
+            if (!target) {
+                if (stack.length > 1) navigateToScopeRef.current(0)
+                return
             }
+            if (stack[stack.length - 1] === target) return
+            const at = stack.indexOf(target)
+            if (at >= 0) { navigateToScopeRef.current(at); return }
+            if (authoredNodesRef.current.some((node) => node.id === target)) setPendingEnterNodeId(target)
+            else window.history.replaceState(window.history.state, '', addressWithEnter(null))
         }
         window.addEventListener('popstate', onPop)
         return () => window.removeEventListener('popstate', onPop)
     }, [])
     useEffect(() => {
         if (typeof window === 'undefined') return
-        // arm one history entry when entering the first scope level
-        if (navStack.length === 1) window.history.pushState({ rawScope: true }, '')
-    }, [navStack.length])
+        const param = readEnterParam()
+        const prev = prevDepthRef.current
+        prevDepthRef.current = navStack.length
+        if (currentScopeId) {
+            if (param === currentScopeId) return
+            const address = addressWithEnter(currentScopeId)
+            if (navStack.length > prev) window.history.pushState({ rawScope: true }, '', address)
+            else window.history.replaceState(window.history.state, '', address)
+        } else if (param && param !== pendingEnterNodeId) {
+            // left the node by Esc / crumb: step back over the entry we pushed
+            // when it is the one just above the root, else just clean the address
+            if (prev === 2 && window.history.state?.rawScope) window.history.back()
+            else window.history.replaceState(window.history.state, '', addressWithEnter(null))
+        }
+    }, [navStack, currentScopeId, pendingEnterNodeId])
 
     const handleInspectorChange = (component, nextComponentValue) => {
         if (scopedSelectedNode) {
@@ -3398,6 +3461,9 @@ export default function RawEditor({
             >
                 {barTools}
                 <DeskPerformSwitch current="desk" space={resolvedSpaceId} project={projectId} from="raw" />
+                {firstDeck && currentScopeId !== firstDeck.id ? (
+                    <button type="button" className="sbar-link raw-windows-button" onClick={() => openDeckFromAnywhere(firstDeck)}>Open VJ Deck</button>
+                ) : null}
                 <WindowsMenu items={windowItems} onChoose={(id) => bringWindowHere(id)} onShowAll={showAllWindows} />
             </SurfaceBar>
             {state.pendingSyncError && (

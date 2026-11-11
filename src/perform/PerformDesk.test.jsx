@@ -190,6 +190,37 @@ describe('Desk | Perform', () => {
     })
 })
 
+describe('G3: the deck full page from Perform', () => {
+    const openAdd = () => fireEvent.click(screen.getByRole('button', { name: '+ window' }))
+
+    it('+ window offers VJ deck, full page: Nodes of this project with ?enter=<deck node id>', () => {
+        renderDesk()
+        openAdd()
+        const item = screen.getByRole('menuitem', { name: /VJ deck, full page/ })
+        expect(item.getAttribute('href')).toBe('/lab/raw/projects/show?enter=deck-1')
+        expect(screen.getByRole('menuitem', { name: /the whole patch/ }).getAttribute('href')).toBe('/lab/raw/projects/show')
+    })
+
+    it('a project with no deck node has no such item', () => {
+        const noDeck = normalizeProjectDocument({ projectMeta: { id: 'show', spaceId: 'lab', title: 'show' }, nodes: [] })
+        renderDesk({ document: noDeck })
+        openAdd()
+        expect(screen.queryByRole('menuitem', { name: /VJ deck, full page/ })).toBeNull()
+    })
+})
+
+describe('G4: the switch on Tools and Wiki', () => {
+    it('elsewhere: neither half is marked and both are ways in', () => {
+        render(<DeskPerformSwitch current="elsewhere" space="lab" project="show" from="raw" />)
+        expect(document.querySelector('[aria-current]')).toBeNull()
+        expect(screen.getByRole('link', { name: 'Desk' })).toHaveAttribute('href', '/lab/raw/projects/show')
+        expect(screen.getByRole('link', { name: 'Perform' })).toHaveAttribute('href', '/lab/perform/show?from=raw')
+        const ev = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 })
+        screen.getByRole('link', { name: 'Desk' }).dispatchEvent(ev)
+        expect(ev.defaultPrevented).toBe(true)
+    })
+})
+
 // Audit 2026-10-21 (docs/ai/audits/2026-10-21-rig-show-pages.md, row F1): a menu that only its own button
 // could close. Escape and a press outside close it (Nielsen 3, user control; WAI-ARIA APG menu button).
 describe('the strip menus close the way menus close', () => {
