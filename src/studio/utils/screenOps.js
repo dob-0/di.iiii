@@ -19,10 +19,13 @@ export const findPictureSource = (document) => {
     return nodes.find((node) => node?.typeId === 'vj.deck') || nodes.find((node) => node?.typeId === 'top.out') || null
 }
 
-// An existing surface that already shows pictures (kind network with a ref).
+// An existing surface that already shows pictures: kind network, and its ref is a node that is
+// still in the document. A surface left pointing at a deleted deck shows nothing, so it is skipped
+// and a new one is made on the live deck instead (review 2026-11-12, N3876 #2).
 export const findPictureSurface = (document) => {
     const surfaces = document?.mappingState?.surfaces || []
-    return surfaces.find((surface) => surface?.source?.kind === 'network' && surface.source.ref) || null
+    const nodeIds = new Set((Array.isArray(document?.nodes) ? document.nodes : []).map((node) => node?.id))
+    return surfaces.find((surface) => surface?.source?.kind === 'network' && surface.source.ref && nodeIds.has(surface.source.ref)) || null
 }
 
 // What a picture source is called to a person.

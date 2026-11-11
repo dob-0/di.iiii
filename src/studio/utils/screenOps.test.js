@@ -34,6 +34,19 @@ describe('buildScreenOps', () => {
         expect(made.ops.map((op) => op.type)).toEqual(['createEntity'])
     })
 
+    it('skips a surface whose deck was deleted and makes one on the live deck', () => {
+        const d = doc({ nodes: [deck], mappingState: { surfaces: [{ id: 'srf-dead', name: 'Old', source: { kind: 'network', ref: 'node-gone' } }] } })
+        const made = buildScreenOps(d)
+        expect(made.createdSurface).toBe(true)
+        expect(made.surfaceId).not.toBe('srf-dead')
+        expect(made.ops[0].payload.surface.source).toEqual({ kind: 'network', ref: 'node-deck' })
+    })
+
+    it('with only a dead surface and no deck, stays unbound', () => {
+        const d = doc({ mappingState: { surfaces: [{ id: 'srf-dead', source: { kind: 'network', ref: 'node-gone' } }] } })
+        expect(buildScreenOps(d).bound).toBe(false)
+    })
+
     it('with neither deck nor out makes the plane unbound', () => {
         const made = buildScreenOps(doc())
         expect(made.bound).toBe(false)
