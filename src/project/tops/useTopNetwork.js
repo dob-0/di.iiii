@@ -131,6 +131,10 @@ export function useTopNetwork({
     assets = null, projectId = null, width = 640, height = 360
 }) {
     const [error, setError] = useState('')
+    // A camera that cannot open is NOT a fault of the picture: the output stays up and the camera's
+    // clip is transparent (topEngine.js blankRule). The reason is reported per node (reportTop) and
+    // returned here for a screen that wants to say it, never as `error`, which replaces the picture.
+    const [cameraError, setCameraError] = useState('')
     const [link, setLink] = useState(null)
     const [linkView, setLinkView] = useState({ machine: null, peers: [] })
     const engineRef = useRef(null)
@@ -432,7 +436,7 @@ export function useTopNetwork({
         if (!media?.getUserMedia) {
             const refusal = cameraRefusal({ secure: globalThis.isSecureContext !== false, hasApi: false })
             for (const id of ids) reportTop(id, { camera: { error: refusal, blocked: true } })
-            setError(refusal)
+            setCameraError(refusal)
             return undefined
         }
         let cancelled = false
@@ -451,7 +455,7 @@ export function useTopNetwork({
             const camera = caught instanceof CameraNotFoundError ? caught.camera : null
             const refusal = camera ? `Camera "${camera}" not found.` : cameraRefusal({ errorName })
             reportTop(id, { camera: { error: refusal, errorName, blocked: true } })
-            setError(refusal)
+            setCameraError(refusal)
             if (!cameraRetryable(errorName)) return
             const attempt = attempts.get(id) || 0
             attempts.set(id, attempt + 1)
@@ -563,5 +567,5 @@ export function useTopNetwork({
         live.clear()
     }, [])
 
-    return { error, machine: linkView.machine, peers: linkView.peers }
+    return { error, cameraError, machine: linkView.machine, peers: linkView.peers }
 }
