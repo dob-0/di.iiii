@@ -1882,3 +1882,11 @@ Cause: (1) `window.localStorage` was read as a default parameter and an argument
 Fix: every storage access inside the try; `sync()` returns while a drag is open (ref set by the first preview, cleared by commit or cancel, one sync after); commit only when the value moved 1 px or more. Also: lost pointer capture and a second pointer are handled, `data-seam-dragging` on the deck root switches text selection off, the announced value is re-measured after S/M/L, the upload input is out of the tab order, the grab zones lie over the gaps only.
 Guard: `VjDeckView.resize.test.jsx` F1 (throwing getter), F2 (Profiler render count during an S4 drag with an observer firing every move), F3 (jitter and out-and-back), `vjDeck.css.test.js`.
 Lesson: a storage getter can throw, so the access itself belongs inside the try; and a state update from an observer must be paused while a drag owns the size.
+
+## 2026-11-11 — VJ deck seams: unmount and window resize in a drag, touch zone over a scrollbar (review-3)
+
+Symptom: (1) a seam that unmounted in the middle of a drag (hidden by a small box, or the deck closed) left the drag flag set, so the size observer stayed paused; (2) a window resize in a drag kept the old box and the old limits (the observer is paused by design during a drag); (3) on touch the wide S5/S6 zones lay over the right-edge scrollbar of the panel before them.
+Cause: `DeckSeam.jsx` cleanup only removed the mark and the frame, never called `onCancel`; nothing listened for the window resize while a drag was open; `vjDeck.css` coarse rule grew S5/S6 to both sides (`margin-left` negative).
+Fix: cleanup calls `onCancel` for an open drag; a window `resize` listener cancels (clears the flag, measures the fresh box), reads the seam again, counts from the pointer and previews the fresh value; coarse S5/S6 grow to the right only (no `margin-left`, base `--vj-lead`).
+Guard: `VjDeckView.resize.test.jsx` "a drag that is cut short" (3 tests, all fail on the old `DeckSeam.jsx`), `vjDeck.css.test.js` touch zone rule. Not measured on a touch screen.
+Lesson: a drag that owns shared state must release it in its own unmount cleanup, and a pause for a drag needs a way out for the events the pause hides.

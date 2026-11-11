@@ -29,9 +29,35 @@ export default function DeckSeam({ id, orientation, label, controls, now, sign =
     const dim = now.dim || 1
     const percent = (px) => Math.round((px / dim) * 100)
 
+    const latest = useRef({})
+    latest.current = { id, read, onPreview, onCancel }
+
+    // Unmounted in the middle of a drag (the seam is hidden when the box gets small): release the
+    // mark and tell the layout, or its drag flag stays set and the size observer stays paused.
     useEffect(() => () => {
-        if (frame.current) cancelAnimationFrame(frame.current)
-        drag.current?.deck?.removeAttribute(MARK)
+        if (frame.current) { cancelAnimationFrame(frame.current); frame.current = 0 }
+        const open = drag.current
+        if (!open) return
+        drag.current = null
+        open.deck?.removeAttribute(MARK)
+        latest.current.onCancel?.(latest.current.id)
+    }, [])
+
+    // The window is resized in the middle of a drag: the sizes and limits taken at pointerdown belong
+    // to the old box. Cancel (clears the drag flag and measures the fresh box), then take the seam's
+    // sizes again, count from where the pointer is now, and show the value that fits the fresh box.
+    useEffect(() => {
+        const onResize = () => {
+            const open = drag.current
+            if (!open) return
+            const { id: seamId, read: readNow, onPreview: preview, onCancel: cancel } = latest.current
+            cancel(seamId)
+            const fresh = readNow()
+            drag.current = { ...open, ...fresh, start: open.at ?? open.start, next: fresh.value }
+            preview(seamId, fresh.value)
+        }
+        window.addEventListener('resize', onResize)
+        return () => window.removeEventListener('resize', onResize)
     }, [])
 
     const onPointerDown = (event) => {
@@ -51,7 +77,8 @@ export default function DeckSeam({ id, orientation, label, controls, now, sign =
     const onPointerMove = (event) => {
         const current = drag.current
         if (!current || event.pointerId !== current.pointerId) return
-        const delta = (vertical ? event.clientX : event.clientY) - current.start
+        current.at = vertical ? event.clientX : event.clientY
+        const delta = current.at - current.start
         // Down grows a horizontal seam's value the other way round: the seam sits ABOVE the bottom row.
         const raw = current.value + sign * (vertical ? delta : -delta)
         current.next = Math.min(current.max, Math.max(current.min, raw))

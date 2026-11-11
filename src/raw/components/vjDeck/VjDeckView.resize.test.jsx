@@ -346,6 +346,54 @@ describe('a drag stores only a real move', () => {
     })
 })
 
+describe('a drag that is cut short', () => {
+    it('unmounting in the middle of a drag releases the deck mark and the listeners', () => {
+        const removed = vi.spyOn(window, 'removeEventListener')
+        mount()
+        const grip = seam('s2')
+        act(() => { fireEvent.pointerDown(grip, { clientX: 1000, clientY: 100, button: 0, pointerId: 1 }) })
+        act(() => { fireEvent.pointerMove(grip, { clientX: 900, clientY: 100, pointerId: 1 }) })
+        const deck = root()
+        expect(deck.hasAttribute('data-seam-dragging')).toBe(true)
+        cleanup()
+        expect(deck.hasAttribute('data-seam-dragging')).toBe(false)
+        expect(removed.mock.calls.some(([name]) => name === 'resize')).toBe(true)
+        expect(stored()).toBeNull()
+    })
+
+    it('a seam hidden in the middle of a drag cancels it: the observer works again afterwards', () => {
+        mount()
+        const grip = seam('s5')
+        act(() => { fireEvent.pointerDown(grip, { clientX: 500, clientY: 700, button: 0, pointerId: 1 }) })
+        act(() => { fireEvent.pointerMove(grip, { clientX: 450, clientY: 700, pointerId: 1 }) })
+        act(() => { frames.splice(0).forEach((frame) => frame(0)) })
+        box = { width: 560, height: box.height }
+        act(() => { window.dispatchEvent(new Event('resize')) }) // S5 and S6 are not drawn at this width: the seam unmounts under the finger
+        expect(seam('s5')).toBeNull()
+        expect(root().hasAttribute('data-seam-dragging')).toBe(false)
+        resizeTo(1706)
+        expect(seam('s5')).not.toBeNull() // the paused observer would have left the old box
+        expect(stored()).toBeNull()
+    })
+
+    it('a window resize in the middle of a drag takes the fresh box: the drag goes on with new limits', () => {
+        mount()
+        const grip = seam('s2')
+        act(() => { fireEvent.pointerDown(grip, { clientX: 1000, clientY: 100, button: 0, pointerId: 1 }) })
+        act(() => { fireEvent.pointerMove(grip, { clientX: 900, clientY: 100, pointerId: 1 }) })
+        act(() => { frames.splice(0).forEach((frame) => frame(0)) })
+        box = { width: 1000, height: box.height }
+        act(() => { window.dispatchEvent(new Event('resize')) })
+        // Far to the left: the value must stop at the fresh box's maximum (28 % of 1000), not the old one (28 % of 1706).
+        act(() => { fireEvent.pointerMove(grip, { clientX: 0, clientY: 100, pointerId: 1 }) })
+        act(() => { frames.splice(0).forEach((frame) => frame(0)) })
+        expect(Number.parseFloat(root().style.getPropertyValue('--vj-monitor-w'))).toBeLessThanOrEqual(280.5)
+        act(() => { fireEvent.pointerUp(grip, { clientX: 0, clientY: 100, pointerId: 1 }) })
+        expect(stored().monitorW).toBeLessThanOrEqual(0.2801)
+        expect(stored().monitorW).toBeGreaterThan(0)
+    })
+})
+
 describe('the size observer during a drag of S4', () => {
     it('F2: no render while the drag is open, one commit after it', () => {
         let bottom = 265

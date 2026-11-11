@@ -1109,15 +1109,15 @@
     left: calc(var(--vj-bottom-a) + var(--vj-bottom-b) + var(--di-space-3));
 }
 
-/* A finger: S5 and S6 grow 6px into each bottom panel's border and padding (13px of empty room),
-   S4 grows 8px down into the panels' top border and padding. S1 and S2 stay as they are: their
-   neighbours hold tiles. Not measured on a touch screen. */
+/* A finger: S5 and S6 grow 12px to the RIGHT only, into the next panel's border and padding (13px of
+   empty room). The left side stays at the gap: that is the edge of the panel before it, and its
+   scrollbar sits there, so a finger can still take the scrollbar. The line and the mark stay in the
+   middle of the gap (--vj-lead is the base). S4 grows 8px down into the panels' top border and
+   padding. S1 and S2 stay as they are: their neighbours hold tiles. Not measured on a touch screen. */
 @media (pointer: coarse) {
     .vj-deck-seam[data-seam='s5'],
     .vj-deck-seam[data-seam='s6'] {
         --vj-zone: calc(var(--di-space-3) * 2);
-        --vj-lead: var(--di-space-3);
-        margin-left: calc(var(--di-space-3) / -2);
     }
 
     .vj-deck-seam[data-seam='s4'] {

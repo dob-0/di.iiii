@@ -52,6 +52,15 @@ describe('vjDeck.css guards', () => {
         expect(css).not.toContain('--vj-seam:')
     })
 
+    it('touch: S5 and S6 grow to the right only, so the scrollbar of the panel before them stays free', () => {
+        const start = css.indexOf('@media (pointer: coarse) {\n    .vj-deck-seam[data-seam=\'s5\']')
+        expect(start).toBeGreaterThan(-1)
+        const rule = css.slice(start, css.indexOf("data-seam='s4'", start))
+        expect(rule).toContain('--vj-zone: calc(var(--di-space-3) * 2)')
+        expect(rule).not.toContain('margin-left')
+        expect(rule).not.toContain('--vj-lead')
+    })
+
     it('F8: hover and focus draw the whole seam in --di-cyan; the resting mark is 40px long', () => {
         const rule = block('.vj-deck-seam:hover::before,')
         expect(rule).toContain('.vj-deck-seam:focus-visible::before')
