@@ -3862,6 +3862,4827 @@
           "unknown": 0
         }
       }
+    },
+    {
+      "id": "cp-aleda-beye-k10",
+      "code": "CP-ALEDA-BEYE-K10",
+      "identified": "EXACT",
+      "identifiedNote": "EXACT - Clay Paky's own model A.LEDA B-EYE K10 (C61419); the rental list says 'A.leda K10 19x15'. Whether the rented lamps are K10 or K10 Easy (20/34-channel basic modes) and their firmware is not confirmed: read it on the display (Information > System Version)",
+      "maker": "Clay Paky S.p.A.",
+      "model": "CP-ALEDA-BEYE-K10",
+      "modelledOn": null,
+      "product": "Clay Paky A.LEDA B-EYE K10, 19 x 15 W RGBW LED moving head wash with Kaleido shapes and a pixel engine",
+      "makerModel": "A.LEDA B-EYE K10 (C61419)",
+      "manual": {
+        "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+        "date": "IST009/001 EN Rev.F 08/2016",
+        "read": "2026-11-11, pdftotext + page images p20, p22",
+        "basis": "EXACT",
+        "note": "the K10 manual also covers K10 Easy (C61415) and K20 (C61420); a copy hosted by a rental company, not Claypaky's own server"
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/cp-aleda-beye-k10.json",
+        "modes": {
+          "21": "EXACT",
+          "35": "EXACT",
+          "57": "EXACT",
+          "76": "EXACT",
+          "111": "EXACT"
+        }
+      },
+      "category": "moving-head",
+      "modes": [
+        {
+          "name": "21ch",
+          "footprint": 21,
+          "channels": [
+            {
+              "role": "r",
+              "label": "Red"
+            },
+            {
+              "role": "rFine",
+              "label": "Red fine"
+            },
+            {
+              "role": "g",
+              "label": "Green"
+            },
+            {
+              "role": "gFine",
+              "label": "Green fine"
+            },
+            {
+              "role": "b",
+              "label": "Blue"
+            },
+            {
+              "role": "bFine",
+              "label": "Blue fine"
+            },
+            {
+              "role": "w",
+              "label": "White"
+            },
+            {
+              "role": "wFine",
+              "label": "White fine"
+            },
+            {
+              "role": "cto",
+              "label": "Linear CTO (255=2500K, 224=3200K, 188=4000K, 144=5000K, 117=5600K, 99=6000K, 54=7000K, 10=8000K, 0-9 unused; WHITE disabled while CTO active)"
+            },
+            {
+              "role": "macro",
+              "label": "Macro colour (table of LEE-referenced colours, 0-9 = off (see colour.macro_table))"
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe (252-255 open, 239-251 random fast, 226-238 random medium, 213-225 random slow, 208-212 open, 207 fast pulsation 25/s .. 108 slow pulsation 0.5/s, 104-107 open, 103 fast strobe 25/s .. 4 slow strobe 1/s, 0-3 closed)",
+              "default": 255,
+              "cap": {
+                "shutter": [
+                  {
+                    "from": 0,
+                    "to": 3,
+                    "open": false
+                  },
+                  {
+                    "from": 104,
+                    "to": 107,
+                    "open": true
+                  },
+                  {
+                    "from": 208,
+                    "to": 212,
+                    "open": true
+                  },
+                  {
+                    "from": 252,
+                    "to": 255,
+                    "open": true
+                  }
+                ]
+              }
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimmer"
+            },
+            {
+              "role": "dimmerFine",
+              "label": "Dimmer fine"
+            },
+            {
+              "role": "pan",
+              "label": "Pan (16-bit with Pan fine; home after reset without DMX = 128)",
+              "default": 128
+            },
+            {
+              "role": "panFine",
+              "label": "Pan fine"
+            },
+            {
+              "role": "tilt",
+              "label": "Tilt (16-bit with Tilt fine; home after reset without DMX = 128)",
+              "default": 128
+            },
+            {
+              "role": "tiltFine",
+              "label": "Tilt fine"
+            },
+            {
+              "role": "function",
+              "label": "Function (103-105 = Pixel map enabled (immediate); 98-102/93-97/88-92/83-87/78-82 halogen sim 2500/2000/1200/1000/750 W; 73-77 halogen off (default); 68-72/63-67/58-62 RGBW gamma 2.0/1.5(default)/1.0; 53-57/48-52(default)/43-47/38-42 dimmer curve 4/3/2/1; 25-37 pan-tilt normal; 12-24 pan-tilt fast (default); 0-11 unused. Selections take effect after holding the range 5 s (except pixel map).)",
+              "default": 0
+            },
+            {
+              "role": "control",
+              "label": "Reset (128-255 complete reset; 77-127 pan/tilt reset; 26-76 zoom (effects) reset; 0-25 unused; each after holding 5 s)",
+              "default": 0
+            },
+            {
+              "role": "zoom",
+              "label": "Zoom (0 narrow beam .. 255 wide beam)"
+            },
+            {
+              "role": "zoomRotation",
+              "label": "Zoom rotation (0-127 linear rotation / indexed zone (lens angle 0..60 deg, only when zoom channel 0-45), 128-190 CW slow..fast, 191-192 stop, 193-255 CCW; with zoom at 255 it sets lens offset angle 0..+4 deg)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "Clay Paky S.p.A. A.LEDA B-EYE K10 (C61419) (https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf)",
+            "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "Basic Standard",
+          "note": "Basic engine, Standard mode (display: Set Up > Basic Engine > Mode = Standard), p22.",
+          "src": "CP-K10-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "35ch",
+          "footprint": 35,
+          "channels": [
+            {
+              "role": "r",
+              "label": "Red"
+            },
+            {
+              "role": "rFine",
+              "label": "Red fine"
+            },
+            {
+              "role": "g",
+              "label": "Green"
+            },
+            {
+              "role": "gFine",
+              "label": "Green fine"
+            },
+            {
+              "role": "b",
+              "label": "Blue"
+            },
+            {
+              "role": "bFine",
+              "label": "Blue fine"
+            },
+            {
+              "role": "w",
+              "label": "White"
+            },
+            {
+              "role": "wFine",
+              "label": "White fine"
+            },
+            {
+              "role": "cto",
+              "label": "Linear CTO (255=2500K, 224=3200K, 188=4000K, 144=5000K, 117=5600K, 99=6000K, 54=7000K, 10=8000K, 0-9 unused; WHITE disabled while CTO active)"
+            },
+            {
+              "role": "macro",
+              "label": "Macro colour (table of LEE-referenced colours, 0-9 = off (see colour.macro_table))"
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe (252-255 open, 239-251 random fast, 226-238 random medium, 213-225 random slow, 208-212 open, 207 fast pulsation 25/s .. 108 slow pulsation 0.5/s, 104-107 open, 103 fast strobe 25/s .. 4 slow strobe 1/s, 0-3 closed)",
+              "default": 255,
+              "cap": {
+                "shutter": [
+                  {
+                    "from": 0,
+                    "to": 3,
+                    "open": false
+                  },
+                  {
+                    "from": 104,
+                    "to": 107,
+                    "open": true
+                  },
+                  {
+                    "from": 208,
+                    "to": 212,
+                    "open": true
+                  },
+                  {
+                    "from": 252,
+                    "to": 255,
+                    "open": true
+                  }
+                ]
+              }
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimmer"
+            },
+            {
+              "role": "dimmerFine",
+              "label": "Dimmer fine"
+            },
+            {
+              "role": "pan",
+              "label": "Pan (16-bit with Pan fine; home after reset without DMX = 128)",
+              "default": 128
+            },
+            {
+              "role": "panFine",
+              "label": "Pan fine"
+            },
+            {
+              "role": "tilt",
+              "label": "Tilt (16-bit with Tilt fine; home after reset without DMX = 128)",
+              "default": 128
+            },
+            {
+              "role": "tiltFine",
+              "label": "Tilt fine"
+            },
+            {
+              "role": "function",
+              "label": "Function (103-105 = Pixel map enabled (immediate); 98-102/93-97/88-92/83-87/78-82 halogen sim 2500/2000/1200/1000/750 W; 73-77 halogen off (default); 68-72/63-67/58-62 RGBW gamma 2.0/1.5(default)/1.0; 53-57/48-52(default)/43-47/38-42 dimmer curve 4/3/2/1; 25-37 pan-tilt normal; 12-24 pan-tilt fast (default); 0-11 unused. Selections take effect after holding the range 5 s (except pixel map).)",
+              "default": 0
+            },
+            {
+              "role": "control",
+              "label": "Reset (128-255 complete reset; 77-127 pan/tilt reset; 26-76 zoom (effects) reset; 0-25 unused; each after holding 5 s)",
+              "default": 0
+            },
+            {
+              "role": "zoom",
+              "label": "Zoom (0 narrow beam .. 255 wide beam)"
+            },
+            {
+              "role": "zoomRotation",
+              "label": "Zoom rotation (0-127 linear rotation / indexed zone (lens angle 0..60 deg, only when zoom channel 0-45), 128-190 CW slow..fast, 191-192 stop, 193-255 CCW; with zoom at 255 it sets lens offset angle 0..+4 deg)"
+            },
+            {
+              "role": "shape",
+              "label": "Shape Selection (shape slots 0-7 macro off, table of macros; K10 and K20 columns)"
+            },
+            {
+              "role": "shapeSpeed",
+              "label": "Shape Speed"
+            },
+            {
+              "role": "shapeFade",
+              "label": "Shape Fade (0-15 snap, 16..246-255 smooth fading curves (gamma 0.5 .. 2 / automatic))"
+            },
+            {
+              "role": "shapeR",
+              "label": "Shape R"
+            },
+            {
+              "role": "shapeG",
+              "label": "Shape G"
+            },
+            {
+              "role": "shapeB",
+              "label": "Shape B"
+            },
+            {
+              "role": "shapeW",
+              "label": "Shape W"
+            },
+            {
+              "role": "shapeDimmer",
+              "label": "Shape Dimmer"
+            },
+            {
+              "role": "bgDimmer",
+              "label": "Background Dimmer"
+            },
+            {
+              "role": "shapeTransition",
+              "label": "Shape Transition (0-4 no fade, 5=100 ms, 73=0.5 s, 113=1 s, 171=2 s, 216=3 s, 255=4 s)"
+            },
+            {
+              "role": "shapeOffset",
+              "label": "Shape Offset"
+            },
+            {
+              "role": "fgStrobe",
+              "label": "Foreground Strobe"
+            },
+            {
+              "role": "bgStrobe",
+              "label": "Background Strobe"
+            },
+            {
+              "role": "bgSelect",
+              "label": "Background Select (255 mirror effect, 16-254 no selection (K10), 0-15 pixel/ring combinations (K10: 14 'Pixel 1 + Ring 2 + Ring 3', 15 'Ring 2 + Ring 3'))"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "Clay Paky S.p.A. A.LEDA B-EYE K10 (C61419) (https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf)",
+            "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "Basic Shapes",
+          "note": "Basic engine, Shape mode (Set Up > Basic Engine > Mode = Shape), p22. Channels 1-21 are the Standard list.",
+          "src": "CP-K10-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "57ch",
+          "footprint": 57,
+          "channels": [
+            {
+              "role": "p01r",
+              "label": "Red LED 1"
+            },
+            {
+              "role": "p01g",
+              "label": "Green LED 1"
+            },
+            {
+              "role": "p01b",
+              "label": "Blue LED 1"
+            },
+            {
+              "role": "p02r",
+              "label": "Red LED 2"
+            },
+            {
+              "role": "p02g",
+              "label": "Green LED 2"
+            },
+            {
+              "role": "p02b",
+              "label": "Blue LED 2"
+            },
+            {
+              "role": "p03r",
+              "label": "Red LED 3"
+            },
+            {
+              "role": "p03g",
+              "label": "Green LED 3"
+            },
+            {
+              "role": "p03b",
+              "label": "Blue LED 3"
+            },
+            {
+              "role": "p04r",
+              "label": "Red LED 4"
+            },
+            {
+              "role": "p04g",
+              "label": "Green LED 4"
+            },
+            {
+              "role": "p04b",
+              "label": "Blue LED 4"
+            },
+            {
+              "role": "p05r",
+              "label": "Red LED 5"
+            },
+            {
+              "role": "p05g",
+              "label": "Green LED 5"
+            },
+            {
+              "role": "p05b",
+              "label": "Blue LED 5"
+            },
+            {
+              "role": "p06r",
+              "label": "Red LED 6"
+            },
+            {
+              "role": "p06g",
+              "label": "Green LED 6"
+            },
+            {
+              "role": "p06b",
+              "label": "Blue LED 6"
+            },
+            {
+              "role": "p07r",
+              "label": "Red LED 7"
+            },
+            {
+              "role": "p07g",
+              "label": "Green LED 7"
+            },
+            {
+              "role": "p07b",
+              "label": "Blue LED 7"
+            },
+            {
+              "role": "p08r",
+              "label": "Red LED 8"
+            },
+            {
+              "role": "p08g",
+              "label": "Green LED 8"
+            },
+            {
+              "role": "p08b",
+              "label": "Blue LED 8"
+            },
+            {
+              "role": "p09r",
+              "label": "Red LED 9"
+            },
+            {
+              "role": "p09g",
+              "label": "Green LED 9"
+            },
+            {
+              "role": "p09b",
+              "label": "Blue LED 9"
+            },
+            {
+              "role": "p10r",
+              "label": "Red LED 10"
+            },
+            {
+              "role": "p10g",
+              "label": "Green LED 10"
+            },
+            {
+              "role": "p10b",
+              "label": "Blue LED 10"
+            },
+            {
+              "role": "p11r",
+              "label": "Red LED 11"
+            },
+            {
+              "role": "p11g",
+              "label": "Green LED 11"
+            },
+            {
+              "role": "p11b",
+              "label": "Blue LED 11"
+            },
+            {
+              "role": "p12r",
+              "label": "Red LED 12"
+            },
+            {
+              "role": "p12g",
+              "label": "Green LED 12"
+            },
+            {
+              "role": "p12b",
+              "label": "Blue LED 12"
+            },
+            {
+              "role": "p13r",
+              "label": "Red LED 13"
+            },
+            {
+              "role": "p13g",
+              "label": "Green LED 13"
+            },
+            {
+              "role": "p13b",
+              "label": "Blue LED 13"
+            },
+            {
+              "role": "p14r",
+              "label": "Red LED 14"
+            },
+            {
+              "role": "p14g",
+              "label": "Green LED 14"
+            },
+            {
+              "role": "p14b",
+              "label": "Blue LED 14"
+            },
+            {
+              "role": "p15r",
+              "label": "Red LED 15"
+            },
+            {
+              "role": "p15g",
+              "label": "Green LED 15"
+            },
+            {
+              "role": "p15b",
+              "label": "Blue LED 15"
+            },
+            {
+              "role": "p16r",
+              "label": "Red LED 16"
+            },
+            {
+              "role": "p16g",
+              "label": "Green LED 16"
+            },
+            {
+              "role": "p16b",
+              "label": "Blue LED 16"
+            },
+            {
+              "role": "p17r",
+              "label": "Red LED 17"
+            },
+            {
+              "role": "p17g",
+              "label": "Green LED 17"
+            },
+            {
+              "role": "p17b",
+              "label": "Blue LED 17"
+            },
+            {
+              "role": "p18r",
+              "label": "Red LED 18"
+            },
+            {
+              "role": "p18g",
+              "label": "Green LED 18"
+            },
+            {
+              "role": "p18b",
+              "label": "Blue LED 18"
+            },
+            {
+              "role": "p19r",
+              "label": "Red LED 19"
+            },
+            {
+              "role": "p19g",
+              "label": "Green LED 19"
+            },
+            {
+              "role": "p19b",
+              "label": "Blue LED 19"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "Clay Paky S.p.A. A.LEDA B-EYE K10 (C61419) (https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf)",
+            "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "Pixel RGB",
+          "note": "Pixel engine, RGB: 19 LEDs x 3, LEDs only, NO pan / tilt / zoom / dimmer (those live in the basic engine). A second engine with its own DMX address and universe (Set Up > Pixels Engine), switched on by the basic engine FUNCTION channel (value 103-105 = pixel map enabled), p22, p25.",
+          "src": "CP-K10-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "76ch",
+          "footprint": 76,
+          "channels": [
+            {
+              "role": "p01r",
+              "label": "Red LED 1"
+            },
+            {
+              "role": "p01g",
+              "label": "Green LED 1"
+            },
+            {
+              "role": "p01b",
+              "label": "Blue LED 1"
+            },
+            {
+              "role": "p01w",
+              "label": "White LED 1"
+            },
+            {
+              "role": "p02r",
+              "label": "Red LED 2"
+            },
+            {
+              "role": "p02g",
+              "label": "Green LED 2"
+            },
+            {
+              "role": "p02b",
+              "label": "Blue LED 2"
+            },
+            {
+              "role": "p02w",
+              "label": "White LED 2"
+            },
+            {
+              "role": "p03r",
+              "label": "Red LED 3"
+            },
+            {
+              "role": "p03g",
+              "label": "Green LED 3"
+            },
+            {
+              "role": "p03b",
+              "label": "Blue LED 3"
+            },
+            {
+              "role": "p03w",
+              "label": "White LED 3"
+            },
+            {
+              "role": "p04r",
+              "label": "Red LED 4"
+            },
+            {
+              "role": "p04g",
+              "label": "Green LED 4"
+            },
+            {
+              "role": "p04b",
+              "label": "Blue LED 4"
+            },
+            {
+              "role": "p04w",
+              "label": "White LED 4"
+            },
+            {
+              "role": "p05r",
+              "label": "Red LED 5"
+            },
+            {
+              "role": "p05g",
+              "label": "Green LED 5"
+            },
+            {
+              "role": "p05b",
+              "label": "Blue LED 5"
+            },
+            {
+              "role": "p05w",
+              "label": "White LED 5"
+            },
+            {
+              "role": "p06r",
+              "label": "Red LED 6"
+            },
+            {
+              "role": "p06g",
+              "label": "Green LED 6"
+            },
+            {
+              "role": "p06b",
+              "label": "Blue LED 6"
+            },
+            {
+              "role": "p06w",
+              "label": "White LED 6"
+            },
+            {
+              "role": "p07r",
+              "label": "Red LED 7"
+            },
+            {
+              "role": "p07g",
+              "label": "Green LED 7"
+            },
+            {
+              "role": "p07b",
+              "label": "Blue LED 7"
+            },
+            {
+              "role": "p07w",
+              "label": "White LED 7"
+            },
+            {
+              "role": "p08r",
+              "label": "Red LED 8"
+            },
+            {
+              "role": "p08g",
+              "label": "Green LED 8"
+            },
+            {
+              "role": "p08b",
+              "label": "Blue LED 8"
+            },
+            {
+              "role": "p08w",
+              "label": "White LED 8"
+            },
+            {
+              "role": "p09r",
+              "label": "Red LED 9"
+            },
+            {
+              "role": "p09g",
+              "label": "Green LED 9"
+            },
+            {
+              "role": "p09b",
+              "label": "Blue LED 9"
+            },
+            {
+              "role": "p09w",
+              "label": "White LED 9"
+            },
+            {
+              "role": "p10r",
+              "label": "Red LED 10"
+            },
+            {
+              "role": "p10g",
+              "label": "Green LED 10"
+            },
+            {
+              "role": "p10b",
+              "label": "Blue LED 10"
+            },
+            {
+              "role": "p10w",
+              "label": "White LED 10"
+            },
+            {
+              "role": "p11r",
+              "label": "Red LED 11"
+            },
+            {
+              "role": "p11g",
+              "label": "Green LED 11"
+            },
+            {
+              "role": "p11b",
+              "label": "Blue LED 11"
+            },
+            {
+              "role": "p11w",
+              "label": "White LED 11"
+            },
+            {
+              "role": "p12r",
+              "label": "Red LED 12"
+            },
+            {
+              "role": "p12g",
+              "label": "Green LED 12"
+            },
+            {
+              "role": "p12b",
+              "label": "Blue LED 12"
+            },
+            {
+              "role": "p12w",
+              "label": "White LED 12"
+            },
+            {
+              "role": "p13r",
+              "label": "Red LED 13"
+            },
+            {
+              "role": "p13g",
+              "label": "Green LED 13"
+            },
+            {
+              "role": "p13b",
+              "label": "Blue LED 13"
+            },
+            {
+              "role": "p13w",
+              "label": "White LED 13"
+            },
+            {
+              "role": "p14r",
+              "label": "Red LED 14"
+            },
+            {
+              "role": "p14g",
+              "label": "Green LED 14"
+            },
+            {
+              "role": "p14b",
+              "label": "Blue LED 14"
+            },
+            {
+              "role": "p14w",
+              "label": "White LED 14"
+            },
+            {
+              "role": "p15r",
+              "label": "Red LED 15"
+            },
+            {
+              "role": "p15g",
+              "label": "Green LED 15"
+            },
+            {
+              "role": "p15b",
+              "label": "Blue LED 15"
+            },
+            {
+              "role": "p15w",
+              "label": "White LED 15"
+            },
+            {
+              "role": "p16r",
+              "label": "Red LED 16"
+            },
+            {
+              "role": "p16g",
+              "label": "Green LED 16"
+            },
+            {
+              "role": "p16b",
+              "label": "Blue LED 16"
+            },
+            {
+              "role": "p16w",
+              "label": "White LED 16"
+            },
+            {
+              "role": "p17r",
+              "label": "Red LED 17"
+            },
+            {
+              "role": "p17g",
+              "label": "Green LED 17"
+            },
+            {
+              "role": "p17b",
+              "label": "Blue LED 17"
+            },
+            {
+              "role": "p17w",
+              "label": "White LED 17"
+            },
+            {
+              "role": "p18r",
+              "label": "Red LED 18"
+            },
+            {
+              "role": "p18g",
+              "label": "Green LED 18"
+            },
+            {
+              "role": "p18b",
+              "label": "Blue LED 18"
+            },
+            {
+              "role": "p18w",
+              "label": "White LED 18"
+            },
+            {
+              "role": "p19r",
+              "label": "Red LED 19"
+            },
+            {
+              "role": "p19g",
+              "label": "Green LED 19"
+            },
+            {
+              "role": "p19b",
+              "label": "Blue LED 19"
+            },
+            {
+              "role": "p19w",
+              "label": "White LED 19"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "Clay Paky S.p.A. A.LEDA B-EYE K10 (C61419) (https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf)",
+            "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "Pixel RGBW",
+          "note": "Pixel engine, RGBW: 19 LEDs x 4, LEDs only, no pan / tilt / zoom / dimmer. Second engine, own address, enabled from the basic engine FUNCTION channel 103-105, p22, p25.",
+          "src": "CP-K10-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "111ch",
+          "footprint": 111,
+          "channels": [
+            {
+              "role": "r",
+              "label": "Red"
+            },
+            {
+              "role": "rFine",
+              "label": "Red fine"
+            },
+            {
+              "role": "g",
+              "label": "Green"
+            },
+            {
+              "role": "gFine",
+              "label": "Green fine"
+            },
+            {
+              "role": "b",
+              "label": "Blue"
+            },
+            {
+              "role": "bFine",
+              "label": "Blue fine"
+            },
+            {
+              "role": "w",
+              "label": "White"
+            },
+            {
+              "role": "wFine",
+              "label": "White fine"
+            },
+            {
+              "role": "cto",
+              "label": "Linear CTO (255=2500K, 224=3200K, 188=4000K, 144=5000K, 117=5600K, 99=6000K, 54=7000K, 10=8000K, 0-9 unused; WHITE disabled while CTO active)"
+            },
+            {
+              "role": "macro",
+              "label": "Macro colour (table of LEE-referenced colours, 0-9 = off (see colour.macro_table))"
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe (252-255 open, 239-251 random fast, 226-238 random medium, 213-225 random slow, 208-212 open, 207 fast pulsation 25/s .. 108 slow pulsation 0.5/s, 104-107 open, 103 fast strobe 25/s .. 4 slow strobe 1/s, 0-3 closed)",
+              "default": 255,
+              "cap": {
+                "shutter": [
+                  {
+                    "from": 0,
+                    "to": 3,
+                    "open": false
+                  },
+                  {
+                    "from": 104,
+                    "to": 107,
+                    "open": true
+                  },
+                  {
+                    "from": 208,
+                    "to": 212,
+                    "open": true
+                  },
+                  {
+                    "from": 252,
+                    "to": 255,
+                    "open": true
+                  }
+                ]
+              }
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimmer"
+            },
+            {
+              "role": "dimmerFine",
+              "label": "Dimmer fine"
+            },
+            {
+              "role": "pan",
+              "label": "Pan (16-bit with Pan fine; home after reset without DMX = 128)",
+              "default": 128
+            },
+            {
+              "role": "panFine",
+              "label": "Pan fine"
+            },
+            {
+              "role": "tilt",
+              "label": "Tilt (16-bit with Tilt fine; home after reset without DMX = 128)",
+              "default": 128
+            },
+            {
+              "role": "tiltFine",
+              "label": "Tilt fine"
+            },
+            {
+              "role": "function",
+              "label": "Function (103-105 = Pixel map enabled (immediate); 98-102/93-97/88-92/83-87/78-82 halogen sim 2500/2000/1200/1000/750 W; 73-77 halogen off (default); 68-72/63-67/58-62 RGBW gamma 2.0/1.5(default)/1.0; 53-57/48-52(default)/43-47/38-42 dimmer curve 4/3/2/1; 25-37 pan-tilt normal; 12-24 pan-tilt fast (default); 0-11 unused. Selections take effect after holding the range 5 s (except pixel map).)",
+              "default": 0
+            },
+            {
+              "role": "control",
+              "label": "Reset (128-255 complete reset; 77-127 pan/tilt reset; 26-76 zoom (effects) reset; 0-25 unused; each after holding 5 s)",
+              "default": 0
+            },
+            {
+              "role": "zoom",
+              "label": "Zoom (0 narrow beam .. 255 wide beam)"
+            },
+            {
+              "role": "zoomRotation",
+              "label": "Zoom rotation (0-127 linear rotation / indexed zone (lens angle 0..60 deg, only when zoom channel 0-45), 128-190 CW slow..fast, 191-192 stop, 193-255 CCW; with zoom at 255 it sets lens offset angle 0..+4 deg)"
+            },
+            {
+              "role": "shape",
+              "label": "Shape Selection (shape slots 0-7 macro off, table of macros; K10 and K20 columns)"
+            },
+            {
+              "role": "shapeSpeed",
+              "label": "Shape Speed"
+            },
+            {
+              "role": "shapeFade",
+              "label": "Shape Fade (0-15 snap, 16..246-255 smooth fading curves (gamma 0.5 .. 2 / automatic))"
+            },
+            {
+              "role": "shapeR",
+              "label": "Shape R"
+            },
+            {
+              "role": "shapeG",
+              "label": "Shape G"
+            },
+            {
+              "role": "shapeB",
+              "label": "Shape B"
+            },
+            {
+              "role": "shapeW",
+              "label": "Shape W"
+            },
+            {
+              "role": "shapeDimmer",
+              "label": "Shape Dimmer"
+            },
+            {
+              "role": "bgDimmer",
+              "label": "Background Dimmer"
+            },
+            {
+              "role": "shapeTransition",
+              "label": "Shape Transition (0-4 no fade, 5=100 ms, 73=0.5 s, 113=1 s, 171=2 s, 216=3 s, 255=4 s)"
+            },
+            {
+              "role": "shapeOffset",
+              "label": "Shape Offset"
+            },
+            {
+              "role": "fgStrobe",
+              "label": "Foreground Strobe"
+            },
+            {
+              "role": "bgStrobe",
+              "label": "Background Strobe"
+            },
+            {
+              "role": "bgSelect",
+              "label": "Background Select (255 mirror effect, 16-254 no selection (K10), 0-15 pixel/ring combinations (K10: 14 'Pixel 1 + Ring 2 + Ring 3', 15 'Ring 2 + Ring 3'))"
+            },
+            {
+              "role": "p01r",
+              "label": "Red LED 1"
+            },
+            {
+              "role": "p01g",
+              "label": "Green LED 1"
+            },
+            {
+              "role": "p01b",
+              "label": "Blue LED 1"
+            },
+            {
+              "role": "p01w",
+              "label": "White LED 1"
+            },
+            {
+              "role": "p02r",
+              "label": "Red LED 2"
+            },
+            {
+              "role": "p02g",
+              "label": "Green LED 2"
+            },
+            {
+              "role": "p02b",
+              "label": "Blue LED 2"
+            },
+            {
+              "role": "p02w",
+              "label": "White LED 2"
+            },
+            {
+              "role": "p03r",
+              "label": "Red LED 3"
+            },
+            {
+              "role": "p03g",
+              "label": "Green LED 3"
+            },
+            {
+              "role": "p03b",
+              "label": "Blue LED 3"
+            },
+            {
+              "role": "p03w",
+              "label": "White LED 3"
+            },
+            {
+              "role": "p04r",
+              "label": "Red LED 4"
+            },
+            {
+              "role": "p04g",
+              "label": "Green LED 4"
+            },
+            {
+              "role": "p04b",
+              "label": "Blue LED 4"
+            },
+            {
+              "role": "p04w",
+              "label": "White LED 4"
+            },
+            {
+              "role": "p05r",
+              "label": "Red LED 5"
+            },
+            {
+              "role": "p05g",
+              "label": "Green LED 5"
+            },
+            {
+              "role": "p05b",
+              "label": "Blue LED 5"
+            },
+            {
+              "role": "p05w",
+              "label": "White LED 5"
+            },
+            {
+              "role": "p06r",
+              "label": "Red LED 6"
+            },
+            {
+              "role": "p06g",
+              "label": "Green LED 6"
+            },
+            {
+              "role": "p06b",
+              "label": "Blue LED 6"
+            },
+            {
+              "role": "p06w",
+              "label": "White LED 6"
+            },
+            {
+              "role": "p07r",
+              "label": "Red LED 7"
+            },
+            {
+              "role": "p07g",
+              "label": "Green LED 7"
+            },
+            {
+              "role": "p07b",
+              "label": "Blue LED 7"
+            },
+            {
+              "role": "p07w",
+              "label": "White LED 7"
+            },
+            {
+              "role": "p08r",
+              "label": "Red LED 8"
+            },
+            {
+              "role": "p08g",
+              "label": "Green LED 8"
+            },
+            {
+              "role": "p08b",
+              "label": "Blue LED 8"
+            },
+            {
+              "role": "p08w",
+              "label": "White LED 8"
+            },
+            {
+              "role": "p09r",
+              "label": "Red LED 9"
+            },
+            {
+              "role": "p09g",
+              "label": "Green LED 9"
+            },
+            {
+              "role": "p09b",
+              "label": "Blue LED 9"
+            },
+            {
+              "role": "p09w",
+              "label": "White LED 9"
+            },
+            {
+              "role": "p10r",
+              "label": "Red LED 10"
+            },
+            {
+              "role": "p10g",
+              "label": "Green LED 10"
+            },
+            {
+              "role": "p10b",
+              "label": "Blue LED 10"
+            },
+            {
+              "role": "p10w",
+              "label": "White LED 10"
+            },
+            {
+              "role": "p11r",
+              "label": "Red LED 11"
+            },
+            {
+              "role": "p11g",
+              "label": "Green LED 11"
+            },
+            {
+              "role": "p11b",
+              "label": "Blue LED 11"
+            },
+            {
+              "role": "p11w",
+              "label": "White LED 11"
+            },
+            {
+              "role": "p12r",
+              "label": "Red LED 12"
+            },
+            {
+              "role": "p12g",
+              "label": "Green LED 12"
+            },
+            {
+              "role": "p12b",
+              "label": "Blue LED 12"
+            },
+            {
+              "role": "p12w",
+              "label": "White LED 12"
+            },
+            {
+              "role": "p13r",
+              "label": "Red LED 13"
+            },
+            {
+              "role": "p13g",
+              "label": "Green LED 13"
+            },
+            {
+              "role": "p13b",
+              "label": "Blue LED 13"
+            },
+            {
+              "role": "p13w",
+              "label": "White LED 13"
+            },
+            {
+              "role": "p14r",
+              "label": "Red LED 14"
+            },
+            {
+              "role": "p14g",
+              "label": "Green LED 14"
+            },
+            {
+              "role": "p14b",
+              "label": "Blue LED 14"
+            },
+            {
+              "role": "p14w",
+              "label": "White LED 14"
+            },
+            {
+              "role": "p15r",
+              "label": "Red LED 15"
+            },
+            {
+              "role": "p15g",
+              "label": "Green LED 15"
+            },
+            {
+              "role": "p15b",
+              "label": "Blue LED 15"
+            },
+            {
+              "role": "p15w",
+              "label": "White LED 15"
+            },
+            {
+              "role": "p16r",
+              "label": "Red LED 16"
+            },
+            {
+              "role": "p16g",
+              "label": "Green LED 16"
+            },
+            {
+              "role": "p16b",
+              "label": "Blue LED 16"
+            },
+            {
+              "role": "p16w",
+              "label": "White LED 16"
+            },
+            {
+              "role": "p17r",
+              "label": "Red LED 17"
+            },
+            {
+              "role": "p17g",
+              "label": "Green LED 17"
+            },
+            {
+              "role": "p17b",
+              "label": "Blue LED 17"
+            },
+            {
+              "role": "p17w",
+              "label": "White LED 17"
+            },
+            {
+              "role": "p18r",
+              "label": "Red LED 18"
+            },
+            {
+              "role": "p18g",
+              "label": "Green LED 18"
+            },
+            {
+              "role": "p18b",
+              "label": "Blue LED 18"
+            },
+            {
+              "role": "p18w",
+              "label": "White LED 18"
+            },
+            {
+              "role": "p19r",
+              "label": "Red LED 19"
+            },
+            {
+              "role": "p19g",
+              "label": "Green LED 19"
+            },
+            {
+              "role": "p19b",
+              "label": "Blue LED 19"
+            },
+            {
+              "role": "p19w",
+              "label": "White LED 19"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "Clay Paky S.p.A. A.LEDA B-EYE K10 (C61419) (https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf)",
+            "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "Shapes + Pixel RGBW",
+          "note": "The combined mode the Platina plan uses: the Shapes list (35) followed by the Pixel RGBW list (76). It is TWO ENGINES addressed side by side: patch the basic engine at address A and the pixel engine at A + 35 (own address and universe in the lamp's menu); channel 18 (FUNCTION) at 103-105 enables the pixel map. Not a single mode of the lamp: a patch convention built from two exact lists (manual p22, p25; the manual's own note on two engines).",
+          "src": "CP-K10-MAN",
+          "basis": "EXACT"
+        }
+      ],
+      "defaultMode": "21ch",
+      "modesOwed": false,
+      "assumedMode": null,
+      "power_w": {
+        "value": 450,
+        "src": "CP-K10-MAN",
+        "basis": "EXACT",
+        "note": "p20 'Input power K10 450 VA' - the manual gives VA, not W; kept as published"
+      },
+      "supply_w": null,
+      "weight_kg": {
+        "value": 14.5,
+        "src": "CP-K10-MAN",
+        "basis": "EXACT",
+        "note": "p20: K10 14.5 kg (K10 Easy: not stated; K20 21 kg)"
+      },
+      "size_mm": {
+        "value": [
+          358,
+          253,
+          494
+        ],
+        "src": "CP-K10-MAN",
+        "basis": "EXACT",
+        "order": "W x D x H",
+        "note": "p20 drawing: base 253 x 358, 494 high with the head tilted forward (423 with the head upright), 360 across the yoke, 248 head; the 3D body is the one built for the same drawing (aledaK10)"
+      },
+      "pan_tilt_deg": {
+        "value": [
+          540,
+          210
+        ],
+        "src": "CP-K10-MAN",
+        "basis": "EXACT",
+        "note": "p20"
+      },
+      "ip": {
+        "value": "IP20",
+        "src": "CP-K10-MAN",
+        "basis": "EXACT",
+        "note": "p20"
+      },
+      "optics": {
+        "beam_deg": null,
+        "zoom_deg": [
+          4,
+          60
+        ],
+        "lux": null,
+        "at_m": null,
+        "photometrySrc": null,
+        "photometryBasis": null
+      },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
+      "model3d": {
+        "glb": "scripts/place/fixtures/glb/aledaK10.glb",
+        "sidecar": "scripts/place/fixtures/glb/aledaK10.json",
+        "builtBy": "scripts/place/fixtures/build_fixtures.py",
+        "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0.12,
+        "tiltY": 0.36,
+        "lensY": 0.496,
+        "sizeAtHome_mm": {
+          "width_x": 370,
+          "depth_z": 250,
+          "height_y": 494
+        },
+        "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+      },
+      "sources": {
+        "CP-K10-MAN": {
+          "url": "https://cdn01.4wall.com/cms/rentals/files/f5c4630faaa764.pdf",
+          "what": "Clay Paky A.LEDA B-EYE K10 / K10 EASY / K20 user manual, IST009/001 EN Rev.F 08/2016, 32 pages (a copy on the rental company 4wall's server; Claypaky's own DMX chart is behind a login). Page numbers are PDF pages.",
+          "publisher": "Clay Paky S.p.A. (copy hosted by 4wall)",
+          "accessed": "2026-11-11"
+        },
+        "CP-K10-OFL": {
+          "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/clay-paky/a-leda-b-eye-k10.json",
+          "what": "Clay Paky A.leda B-EYE K10 in the Open Fixture Library (MIT), pinned commit; used for the zoom range only (the manual gives no beam angle)",
+          "publisher": "Open Fixture Library (MIT)",
+          "accessed": "2026-11-11"
+        }
+      },
+      "manifest": {
+        "file": "scripts/place/fixtures/fixtures.json",
+        "kind": "aledaK10",
+        "writtenAt": "2026-09-28",
+        "accessed": "2026-09-28"
+      },
+      "provenance": {
+        "identified": "exact",
+        "date": "2026-11-11",
+        "sources": [
+          "CP-K10-MAN",
+          "CP-K10-OFL"
+        ],
+        "values": {
+          "measured": 0,
+          "tested": 0,
+          "datasheet": 16,
+          "equivalent": 0,
+          "assumed": 0,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "id": "cp-hy-beye-k15",
+      "code": "CP-HY-BEYE-K15",
+      "identified": "EXACT",
+      "identifiedNote": "EXACT - Clay Paky's own model HY B-EYE K15 (C61480), read from its datasheet; the rented unit's variant is not confirmed. The channel lists are OWED (maker login)",
+      "maker": "Clay Paky S.p.A.",
+      "model": "CP-HY-BEYE-K15",
+      "modelledOn": null,
+      "product": "Clay Paky HY B-EYE K15, 19 x RGBW LED moving head with Kaleido FX and a pixel engine",
+      "makerModel": "HY B-EYE K15 (C61480)",
+      "manual": {
+        "url": "https://goknight.com/content/documentation/HyB-EyeK15_Datasheet_01.2021.pdf",
+        "date": "01/2021",
+        "read": "2026-11-11, pdftotext p1",
+        "basis": "EXACT",
+        "note": "datasheet only; the standard K15 DMX chart was NOT obtained (claypaky.it links to e-assist.tech, login; two manual hosts refused automated reading). The K15 AQUA chart is a different variant and is NOT copied in as this lamp"
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/cp-hy-beye-k15.json",
+        "modes": {
+          "22": "OWED",
+          "36": "OWED",
+          "57": "OWED",
+          "76": "OWED",
+          "112": "OWED"
+        }
+      },
+      "category": "moving-head",
+      "modes": [
+        {
+          "name": "22ch",
+          "footprint": 22,
+          "channels": null,
+          "channelsSource": null,
+          "label": "Basic (22 per datasheet)",
+          "note": "From the datasheet's '22/36/57/76 DMX channels' only. CHANNEL LIST OWED: the standard K15 DMX chart sits behind the maker's login (claypaky.it -> e-assist.tech). 22 is probably Standard + Freq (the AQUA sheet counts Standard 21 / Standard Freq 22): an inference, not read.",
+          "src": "CP-K15-DS",
+          "basis": "EXACT"
+        },
+        {
+          "name": "36ch",
+          "footprint": 36,
+          "channels": null,
+          "channelsSource": null,
+          "label": "Shape (36 per datasheet)",
+          "note": "From the datasheet only. CHANNEL LIST OWED. Probably Shape + Freq (AQUA: Shape 35 / Shape Freq 36): an inference, not read.",
+          "src": "CP-K15-DS",
+          "basis": "EXACT"
+        },
+        {
+          "name": "57ch",
+          "footprint": 57,
+          "channels": null,
+          "channelsSource": null,
+          "label": "Pixel RGB",
+          "note": "From the datasheet only. CHANNEL LIST OWED. Pixel engine, own address (user menu 02.2022); pixels only, no pan / tilt / zoom - inferred from the menu structure and the K10 manual, not read for the K15.",
+          "src": "CP-K15-DS",
+          "basis": "EXACT"
+        },
+        {
+          "name": "76ch",
+          "footprint": 76,
+          "channels": null,
+          "channelsSource": null,
+          "label": "Pixel RGBW",
+          "note": "From the datasheet only. CHANNEL LIST OWED. Pixel engine RGBW, 19 x 4; pixels only (inferred, as above).",
+          "src": "CP-K15-DS",
+          "basis": "EXACT"
+        },
+        {
+          "name": "112ch",
+          "footprint": 112,
+          "channels": null,
+          "channelsSource": null,
+          "label": "Shape + Pixel RGBW",
+          "note": "The combined mode the Platina plan uses: the 36-channel basic list followed by the 76-channel pixel list = 112, two engines addressed side by side (pixel address = basic address + 36). LIST OWED with the two it is made of.",
+          "src": "CP-K15-DS",
+          "basis": "EXACT"
+        }
+      ],
+      "defaultMode": "22ch",
+      "modesOwed": false,
+      "assumedMode": null,
+      "power_w": {
+        "value": 700,
+        "src": "CP-K15-DS",
+        "basis": "EXACT",
+        "note": "datasheet p1 '700 VA at 230 V' - VA, not W; kept as published"
+      },
+      "supply_w": null,
+      "weight_kg": {
+        "value": 20.7,
+        "src": "CP-K15-DS",
+        "basis": "EXACT",
+        "note": "datasheet p1"
+      },
+      "size_mm": null,
+      "pan_tilt_deg": {
+        "value": [
+          540,
+          200
+        ],
+        "src": "CP-K15-DS",
+        "basis": "EXACT",
+        "note": "datasheet p1; 16-bit pan / tilt"
+      },
+      "ip": {
+        "value": "IP20",
+        "src": "CP-K15-DS",
+        "basis": "EXACT",
+        "note": "datasheet p1"
+      },
+      "optics": {
+        "beam_deg": null,
+        "zoom_deg": [
+          4,
+          60
+        ],
+        "lux": null,
+        "at_m": null,
+        "photometrySrc": null,
+        "photometryBasis": null
+      },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
+      "model3d": {
+        "glb": null,
+        "sidecar": null,
+        "owed": "the K15 outer size is not in the datasheet read; no body is built until it is (the K10 body is not the K15 size)",
+        "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+      },
+      "sources": {
+        "CP-K15-DS": {
+          "url": "https://goknight.com/content/documentation/HyB-EyeK15_Datasheet_01.2021.pdf",
+          "what": "Clay Paky HY B-EYE K15 datasheet, 01/2021, 1 page (hosted by the distributor Knight)",
+          "publisher": "Clay Paky S.p.A. (host: goknight.com)",
+          "accessed": "2026-11-11"
+        }
+      },
+      "manifest": {
+        "file": "scripts/place/fixtures/fixtures.json",
+        "kind": "hyK15",
+        "writtenAt": "2026-09-28",
+        "accessed": "2026-09-28"
+      },
+      "provenance": {
+        "identified": "exact",
+        "date": "2026-11-11",
+        "sources": [
+          "CP-K15-DS"
+        ],
+        "values": {
+          "measured": 0,
+          "tested": 0,
+          "datasheet": 10,
+          "equivalent": 0,
+          "assumed": 0,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "id": "acme-pixel-line-ip",
+      "code": "ACME-PIXEL-LINE-IP",
+      "identified": "EXACT",
+      "identifiedNote": "EXACT - ACME's PIXEL LINE IP (STROBE 3 IP), 1 m, IP66. The manual copy carries the white-label brand 'GML Grand Master Light'; which revision / variant (STROBE 3 IP 672 RGB or STROBE 1) the rented bars are is not confirmed",
+      "maker": "ACME (Foshan Yi Feng Electric Industrial Co.)",
+      "model": "ACME-PIXEL-LINE-IP",
+      "modelledOn": null,
+      "product": "ACME PIXEL LINE IP (STROBE 3 IP), 1 m LED bar, 32 RGB + 16 white (CW) cells, IP66",
+      "makerModel": "PIXEL LINE IP (STROBE 3 IP)",
+      "manual": {
+        "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+        "date": "2026 (copy; no date in the file)",
+        "read": "2026-11-11, pdftotext p6, p9-25",
+        "basis": "EXACT",
+        "product_page": "https://en.acmelighting.com/upload/other/20260415/19b3a847ddd50afd52b6a73d0065a1c7.pdf",
+        "note": "white-label manual copy on a third-party host; the datasheet is ACME's own and lists 13 modes (35, 38, 70N, 119 are not in the manual copy)"
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/acme-pixel-line-ip.json",
+        "modes": {
+          "7": "EXACT",
+          "15": "EXACT",
+          "17": "EXACT",
+          "21": "EXACT",
+          "33": "EXACT",
+          "39": "EXACT",
+          "65": "EXACT",
+          "68": "EXACT",
+          "70": "EXACT",
+          "112": "EXACT",
+          "117": "EXACT"
+        }
+      },
+      "category": "par",
+      "modes": [
+        {
+          "name": "7ch",
+          "footprint": 7,
+          "channels": [
+            {
+              "role": "r",
+              "label": "Red (0-255 = 0%-100%)"
+            },
+            {
+              "role": "g",
+              "label": "Green (0-255 = 0%-100%)"
+            },
+            {
+              "role": "b",
+              "label": "Blue (0-255 = 0%-100%)"
+            },
+            {
+              "role": "w",
+              "label": "White (0-255 = 0%-100%)"
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimming (0-255 = 0%-100%)"
+            },
+            {
+              "role": "dimmerFine",
+              "label": "Dimmer fine (0-255 = 0%-100%)"
+            },
+            {
+              "role": "frost",
+              "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+            "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "7 Channel",
+          "src": "ACME-PLIP-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "15ch",
+          "footprint": 15,
+          "channels": [
+            {
+              "role": "r",
+              "label": "Red (0-255 = 0%-100%)"
+            },
+            {
+              "role": "g",
+              "label": "Green (0-255 = 0%-100%)"
+            },
+            {
+              "role": "b",
+              "label": "Blue (0-255 = 0%-100%)"
+            },
+            {
+              "role": "w",
+              "label": "White (0-255 = 0%-100%)"
+            },
+            {
+              "role": "macro",
+              "label": "Preset colours (001-008 Color 1 ... 249-255 Color 32 (8 per slot, 32 slots))"
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimming (0-255 = 0%-100%)"
+            },
+            {
+              "role": "dimmerFine",
+              "label": "Dimmer fine (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobeDuration",
+              "label": "Strobe duration (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobeRate",
+              "label": "Strobe rate (000-005 no function; 006-255 slow to fast)"
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe (000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe)"
+            },
+            {
+              "role": "effect",
+              "label": "Built-in effects (RGB) (000-005 none; 006-011 Effect 1 ... 240-255 Effect 40 (6 per slot))"
+            },
+            {
+              "role": "effectW",
+              "label": "Built-in effects (W) (000-005 none; 006-030 Effect 1 ... 206-255 Effect 9)"
+            },
+            {
+              "role": "effectSpeed",
+              "label": "Built-in effect speed (000-127 forward slow to fast; 128-255 reverse slow to fast)"
+            },
+            {
+              "role": "fade",
+              "label": "Fade out effect (0%-100%)"
+            },
+            {
+              "role": "frost",
+              "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+            "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "15 Channel",
+          "src": "ACME-PLIP-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "21ch",
+          "footprint": 21,
+          "channels": [
+            {
+              "role": "r",
+              "label": "Red (0-255 = 0%-100%)"
+            },
+            {
+              "role": "g",
+              "label": "Green (0-255 = 0%-100%)"
+            },
+            {
+              "role": "b",
+              "label": "Blue (0-255 = 0%-100%)"
+            },
+            {
+              "role": "macro",
+              "label": "Preset colours (001-008 Color 1 ... 249-255 Color 32)"
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimming (RGB) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "dimmerFine",
+              "label": "Dimmer fine (RGB) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobeDuration",
+              "label": "Strobe duration (RGB) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobeRate",
+              "label": "Strobe rate (RGB) (000-005 no function; 006-255 slow to fast)"
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe (RGB) (000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe)"
+            },
+            {
+              "role": "effect",
+              "label": "Built-in effects (RGB) (000-005 none; 006-011 Effect 1 ... 240-255 Effect 40)"
+            },
+            {
+              "role": "effectSpeed",
+              "label": "Built-in effect speed (RGB) (000-127 forward; 128-255 reverse)"
+            },
+            {
+              "role": "fade",
+              "label": "Fade out effect (RGB) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "dimmerW",
+              "label": "Dimming (W) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "dimmerFineW",
+              "label": "Dimmer fine (W) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobeDurationW",
+              "label": "Strobe duration (W) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobeRateW",
+              "label": "Strobe rate (W) (000-005 no function; 006-255 slow to fast)"
+            },
+            {
+              "role": "strobeW",
+              "label": "Strobe (W) (000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe)"
+            },
+            {
+              "role": "effectW",
+              "label": "Built-in effects (W) (000-005 none; 006-030 Effect 1 ... 206-255 Effect 9)"
+            },
+            {
+              "role": "effectSpeedW",
+              "label": "Built-in effect speed (W) (000-127 forward; 128-255 reverse)"
+            },
+            {
+              "role": "fadeW",
+              "label": "Fade out effect (W) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "frost",
+              "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+            "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "21 Channel",
+          "src": "ACME-PLIP-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "39ch",
+          "footprint": 39,
+          "channels": [
+            {
+              "role": "p01r",
+              "label": "Red1"
+            },
+            {
+              "role": "p01g",
+              "label": "Green1"
+            },
+            {
+              "role": "p01b",
+              "label": "Blue1"
+            },
+            {
+              "role": "p02r",
+              "label": "Red2"
+            },
+            {
+              "role": "p02g",
+              "label": "Green2"
+            },
+            {
+              "role": "p02b",
+              "label": "Blue2"
+            },
+            {
+              "role": "p03r",
+              "label": "Red3"
+            },
+            {
+              "role": "p03g",
+              "label": "Green3"
+            },
+            {
+              "role": "p03b",
+              "label": "Blue3"
+            },
+            {
+              "role": "p04r",
+              "label": "Red4"
+            },
+            {
+              "role": "p04g",
+              "label": "Green4"
+            },
+            {
+              "role": "p04b",
+              "label": "Blue4"
+            },
+            {
+              "role": "p05r",
+              "label": "Red5"
+            },
+            {
+              "role": "p05g",
+              "label": "Green5"
+            },
+            {
+              "role": "p05b",
+              "label": "Blue5"
+            },
+            {
+              "role": "p06r",
+              "label": "Red6"
+            },
+            {
+              "role": "p06g",
+              "label": "Green6"
+            },
+            {
+              "role": "p06b",
+              "label": "Blue6"
+            },
+            {
+              "role": "p07r",
+              "label": "Red7"
+            },
+            {
+              "role": "p07g",
+              "label": "Green7"
+            },
+            {
+              "role": "p07b",
+              "label": "Blue7"
+            },
+            {
+              "role": "p08r",
+              "label": "Red8"
+            },
+            {
+              "role": "p08g",
+              "label": "Green8"
+            },
+            {
+              "role": "p08b",
+              "label": "Blue8"
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimming (RGB) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "dimmerFine",
+              "label": "Dimmer fine (RGB) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobeDuration",
+              "label": "Strobe duration (RGB) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobeRate",
+              "label": "Strobe rate (RGB) (000-005 no function; 006-255 slow to fast)"
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe (RGB) (000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe)"
+            },
+            {
+              "role": "cw01",
+              "label": "White1"
+            },
+            {
+              "role": "cw02",
+              "label": "White2"
+            },
+            {
+              "role": "cw03",
+              "label": "White3"
+            },
+            {
+              "role": "cw04",
+              "label": "White4"
+            },
+            {
+              "role": "dimmerW",
+              "label": "Dimming (W) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "dimmerFineW",
+              "label": "Dimmer fine (W) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobeDurationW",
+              "label": "Strobe duration (W) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobeRateW",
+              "label": "Strobe rate (W) (000-005 no function; 006-255 slow to fast)"
+            },
+            {
+              "role": "strobeW",
+              "label": "Strobe (W) (000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe)"
+            },
+            {
+              "role": "frost",
+              "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+            "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "39 Channel",
+          "note": "8 RGB cells + 4 W cells with own dimmer/strobe/frost",
+          "src": "ACME-PLIP-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "112ch",
+          "footprint": 112,
+          "channels": [
+            {
+              "role": "p01r",
+              "label": "Red1"
+            },
+            {
+              "role": "p01g",
+              "label": "Green1"
+            },
+            {
+              "role": "p01b",
+              "label": "Blue1"
+            },
+            {
+              "role": "p02r",
+              "label": "Red2"
+            },
+            {
+              "role": "p02g",
+              "label": "Green2"
+            },
+            {
+              "role": "p02b",
+              "label": "Blue2"
+            },
+            {
+              "role": "p03r",
+              "label": "Red3"
+            },
+            {
+              "role": "p03g",
+              "label": "Green3"
+            },
+            {
+              "role": "p03b",
+              "label": "Blue3"
+            },
+            {
+              "role": "p04r",
+              "label": "Red4"
+            },
+            {
+              "role": "p04g",
+              "label": "Green4"
+            },
+            {
+              "role": "p04b",
+              "label": "Blue4"
+            },
+            {
+              "role": "p05r",
+              "label": "Red5"
+            },
+            {
+              "role": "p05g",
+              "label": "Green5"
+            },
+            {
+              "role": "p05b",
+              "label": "Blue5"
+            },
+            {
+              "role": "p06r",
+              "label": "Red6"
+            },
+            {
+              "role": "p06g",
+              "label": "Green6"
+            },
+            {
+              "role": "p06b",
+              "label": "Blue6"
+            },
+            {
+              "role": "p07r",
+              "label": "Red7"
+            },
+            {
+              "role": "p07g",
+              "label": "Green7"
+            },
+            {
+              "role": "p07b",
+              "label": "Blue7"
+            },
+            {
+              "role": "p08r",
+              "label": "Red8"
+            },
+            {
+              "role": "p08g",
+              "label": "Green8"
+            },
+            {
+              "role": "p08b",
+              "label": "Blue8"
+            },
+            {
+              "role": "p09r",
+              "label": "Red9"
+            },
+            {
+              "role": "p09g",
+              "label": "Green9"
+            },
+            {
+              "role": "p09b",
+              "label": "Blue9"
+            },
+            {
+              "role": "p10r",
+              "label": "Red10"
+            },
+            {
+              "role": "p10g",
+              "label": "Green10"
+            },
+            {
+              "role": "p10b",
+              "label": "Blue10"
+            },
+            {
+              "role": "p11r",
+              "label": "Red11"
+            },
+            {
+              "role": "p11g",
+              "label": "Green11"
+            },
+            {
+              "role": "p11b",
+              "label": "Blue11"
+            },
+            {
+              "role": "p12r",
+              "label": "Red12"
+            },
+            {
+              "role": "p12g",
+              "label": "Green12"
+            },
+            {
+              "role": "p12b",
+              "label": "Blue12"
+            },
+            {
+              "role": "p13r",
+              "label": "Red13"
+            },
+            {
+              "role": "p13g",
+              "label": "Green13"
+            },
+            {
+              "role": "p13b",
+              "label": "Blue13"
+            },
+            {
+              "role": "p14r",
+              "label": "Red14"
+            },
+            {
+              "role": "p14g",
+              "label": "Green14"
+            },
+            {
+              "role": "p14b",
+              "label": "Blue14"
+            },
+            {
+              "role": "p15r",
+              "label": "Red15"
+            },
+            {
+              "role": "p15g",
+              "label": "Green15"
+            },
+            {
+              "role": "p15b",
+              "label": "Blue15"
+            },
+            {
+              "role": "p16r",
+              "label": "Red16"
+            },
+            {
+              "role": "p16g",
+              "label": "Green16"
+            },
+            {
+              "role": "p16b",
+              "label": "Blue16"
+            },
+            {
+              "role": "p17r",
+              "label": "Red17"
+            },
+            {
+              "role": "p17g",
+              "label": "Green17"
+            },
+            {
+              "role": "p17b",
+              "label": "Blue17"
+            },
+            {
+              "role": "p18r",
+              "label": "Red18"
+            },
+            {
+              "role": "p18g",
+              "label": "Green18"
+            },
+            {
+              "role": "p18b",
+              "label": "Blue18"
+            },
+            {
+              "role": "p19r",
+              "label": "Red19"
+            },
+            {
+              "role": "p19g",
+              "label": "Green19"
+            },
+            {
+              "role": "p19b",
+              "label": "Blue19"
+            },
+            {
+              "role": "p20r",
+              "label": "Red20"
+            },
+            {
+              "role": "p20g",
+              "label": "Green20"
+            },
+            {
+              "role": "p20b",
+              "label": "Blue20"
+            },
+            {
+              "role": "p21r",
+              "label": "Red21"
+            },
+            {
+              "role": "p21g",
+              "label": "Green21"
+            },
+            {
+              "role": "p21b",
+              "label": "Blue21"
+            },
+            {
+              "role": "p22r",
+              "label": "Red22"
+            },
+            {
+              "role": "p22g",
+              "label": "Green22"
+            },
+            {
+              "role": "p22b",
+              "label": "Blue22"
+            },
+            {
+              "role": "p23r",
+              "label": "Red23"
+            },
+            {
+              "role": "p23g",
+              "label": "Green23"
+            },
+            {
+              "role": "p23b",
+              "label": "Blue23"
+            },
+            {
+              "role": "p24r",
+              "label": "Red24"
+            },
+            {
+              "role": "p24g",
+              "label": "Green24"
+            },
+            {
+              "role": "p24b",
+              "label": "Blue24"
+            },
+            {
+              "role": "p25r",
+              "label": "Red25"
+            },
+            {
+              "role": "p25g",
+              "label": "Green25"
+            },
+            {
+              "role": "p25b",
+              "label": "Blue25"
+            },
+            {
+              "role": "p26r",
+              "label": "Red26"
+            },
+            {
+              "role": "p26g",
+              "label": "Green26"
+            },
+            {
+              "role": "p26b",
+              "label": "Blue26"
+            },
+            {
+              "role": "p27r",
+              "label": "Red27"
+            },
+            {
+              "role": "p27g",
+              "label": "Green27"
+            },
+            {
+              "role": "p27b",
+              "label": "Blue27"
+            },
+            {
+              "role": "p28r",
+              "label": "Red28"
+            },
+            {
+              "role": "p28g",
+              "label": "Green28"
+            },
+            {
+              "role": "p28b",
+              "label": "Blue28"
+            },
+            {
+              "role": "p29r",
+              "label": "Red29"
+            },
+            {
+              "role": "p29g",
+              "label": "Green29"
+            },
+            {
+              "role": "p29b",
+              "label": "Blue29"
+            },
+            {
+              "role": "p30r",
+              "label": "Red30"
+            },
+            {
+              "role": "p30g",
+              "label": "Green30"
+            },
+            {
+              "role": "p30b",
+              "label": "Blue30"
+            },
+            {
+              "role": "p31r",
+              "label": "Red31"
+            },
+            {
+              "role": "p31g",
+              "label": "Green31"
+            },
+            {
+              "role": "p31b",
+              "label": "Blue31"
+            },
+            {
+              "role": "p32r",
+              "label": "Red32"
+            },
+            {
+              "role": "p32g",
+              "label": "Green32"
+            },
+            {
+              "role": "p32b",
+              "label": "Blue32"
+            },
+            {
+              "role": "cw01",
+              "label": "White1"
+            },
+            {
+              "role": "cw02",
+              "label": "White2"
+            },
+            {
+              "role": "cw03",
+              "label": "White3"
+            },
+            {
+              "role": "cw04",
+              "label": "White4"
+            },
+            {
+              "role": "cw05",
+              "label": "White5"
+            },
+            {
+              "role": "cw06",
+              "label": "White6"
+            },
+            {
+              "role": "cw07",
+              "label": "White7"
+            },
+            {
+              "role": "cw08",
+              "label": "White8"
+            },
+            {
+              "role": "cw09",
+              "label": "White9"
+            },
+            {
+              "role": "cw10",
+              "label": "White10"
+            },
+            {
+              "role": "cw11",
+              "label": "White11"
+            },
+            {
+              "role": "cw12",
+              "label": "White12"
+            },
+            {
+              "role": "cw13",
+              "label": "White13"
+            },
+            {
+              "role": "cw14",
+              "label": "White14"
+            },
+            {
+              "role": "cw15",
+              "label": "White15"
+            },
+            {
+              "role": "cw16",
+              "label": "White16"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+            "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "112 Channel",
+          "note": "32 RGB cells + 16 W cells, no dimmer/strobe/frost channel (pure pixels)",
+          "src": "ACME-PLIP-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "17ch",
+          "footprint": 17,
+          "channels": [
+            {
+              "role": "p01r",
+              "label": "Red1"
+            },
+            {
+              "role": "p01g",
+              "label": "Green1"
+            },
+            {
+              "role": "p01b",
+              "label": "Blue1"
+            },
+            {
+              "role": "p02r",
+              "label": "Red2"
+            },
+            {
+              "role": "p02g",
+              "label": "Green2"
+            },
+            {
+              "role": "p02b",
+              "label": "Blue2"
+            },
+            {
+              "role": "p03r",
+              "label": "Red3"
+            },
+            {
+              "role": "p03g",
+              "label": "Green3"
+            },
+            {
+              "role": "p03b",
+              "label": "Blue3"
+            },
+            {
+              "role": "p04r",
+              "label": "Red4"
+            },
+            {
+              "role": "p04g",
+              "label": "Green4"
+            },
+            {
+              "role": "p04b",
+              "label": "Blue4"
+            },
+            {
+              "role": "cw01",
+              "label": "White1"
+            },
+            {
+              "role": "cw02",
+              "label": "White2"
+            },
+            {
+              "role": "cw03",
+              "label": "White3"
+            },
+            {
+              "role": "cw04",
+              "label": "White4"
+            },
+            {
+              "role": "frost",
+              "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+            "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "17 Channel",
+          "note": "4 RGB + 4 W cells + frost",
+          "src": "ACME-PLIP-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "33ch",
+          "footprint": 33,
+          "channels": [
+            {
+              "role": "p01r",
+              "label": "Red1"
+            },
+            {
+              "role": "p01g",
+              "label": "Green1"
+            },
+            {
+              "role": "p01b",
+              "label": "Blue1"
+            },
+            {
+              "role": "p02r",
+              "label": "Red2"
+            },
+            {
+              "role": "p02g",
+              "label": "Green2"
+            },
+            {
+              "role": "p02b",
+              "label": "Blue2"
+            },
+            {
+              "role": "p03r",
+              "label": "Red3"
+            },
+            {
+              "role": "p03g",
+              "label": "Green3"
+            },
+            {
+              "role": "p03b",
+              "label": "Blue3"
+            },
+            {
+              "role": "p04r",
+              "label": "Red4"
+            },
+            {
+              "role": "p04g",
+              "label": "Green4"
+            },
+            {
+              "role": "p04b",
+              "label": "Blue4"
+            },
+            {
+              "role": "p05r",
+              "label": "Red5"
+            },
+            {
+              "role": "p05g",
+              "label": "Green5"
+            },
+            {
+              "role": "p05b",
+              "label": "Blue5"
+            },
+            {
+              "role": "p06r",
+              "label": "Red6"
+            },
+            {
+              "role": "p06g",
+              "label": "Green6"
+            },
+            {
+              "role": "p06b",
+              "label": "Blue6"
+            },
+            {
+              "role": "p07r",
+              "label": "Red7"
+            },
+            {
+              "role": "p07g",
+              "label": "Green7"
+            },
+            {
+              "role": "p07b",
+              "label": "Blue7"
+            },
+            {
+              "role": "p08r",
+              "label": "Red8"
+            },
+            {
+              "role": "p08g",
+              "label": "Green8"
+            },
+            {
+              "role": "p08b",
+              "label": "Blue8"
+            },
+            {
+              "role": "cw01",
+              "label": "White1"
+            },
+            {
+              "role": "cw02",
+              "label": "White2"
+            },
+            {
+              "role": "cw03",
+              "label": "White3"
+            },
+            {
+              "role": "cw04",
+              "label": "White4"
+            },
+            {
+              "role": "cw05",
+              "label": "White5"
+            },
+            {
+              "role": "cw06",
+              "label": "White6"
+            },
+            {
+              "role": "cw07",
+              "label": "White7"
+            },
+            {
+              "role": "cw08",
+              "label": "White8"
+            },
+            {
+              "role": "frost",
+              "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+            "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "33 Channel",
+          "note": "8 RGB + 8 W cells + frost",
+          "src": "ACME-PLIP-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "65ch",
+          "footprint": 65,
+          "channels": [
+            {
+              "role": "p01r",
+              "label": "Red1"
+            },
+            {
+              "role": "p01g",
+              "label": "Green1"
+            },
+            {
+              "role": "p01b",
+              "label": "Blue1"
+            },
+            {
+              "role": "p02r",
+              "label": "Red2"
+            },
+            {
+              "role": "p02g",
+              "label": "Green2"
+            },
+            {
+              "role": "p02b",
+              "label": "Blue2"
+            },
+            {
+              "role": "p03r",
+              "label": "Red3"
+            },
+            {
+              "role": "p03g",
+              "label": "Green3"
+            },
+            {
+              "role": "p03b",
+              "label": "Blue3"
+            },
+            {
+              "role": "p04r",
+              "label": "Red4"
+            },
+            {
+              "role": "p04g",
+              "label": "Green4"
+            },
+            {
+              "role": "p04b",
+              "label": "Blue4"
+            },
+            {
+              "role": "p05r",
+              "label": "Red5"
+            },
+            {
+              "role": "p05g",
+              "label": "Green5"
+            },
+            {
+              "role": "p05b",
+              "label": "Blue5"
+            },
+            {
+              "role": "p06r",
+              "label": "Red6"
+            },
+            {
+              "role": "p06g",
+              "label": "Green6"
+            },
+            {
+              "role": "p06b",
+              "label": "Blue6"
+            },
+            {
+              "role": "p07r",
+              "label": "Red7"
+            },
+            {
+              "role": "p07g",
+              "label": "Green7"
+            },
+            {
+              "role": "p07b",
+              "label": "Blue7"
+            },
+            {
+              "role": "p08r",
+              "label": "Red8"
+            },
+            {
+              "role": "p08g",
+              "label": "Green8"
+            },
+            {
+              "role": "p08b",
+              "label": "Blue8"
+            },
+            {
+              "role": "p09r",
+              "label": "Red9"
+            },
+            {
+              "role": "p09g",
+              "label": "Green9"
+            },
+            {
+              "role": "p09b",
+              "label": "Blue9"
+            },
+            {
+              "role": "p10r",
+              "label": "Red10"
+            },
+            {
+              "role": "p10g",
+              "label": "Green10"
+            },
+            {
+              "role": "p10b",
+              "label": "Blue10"
+            },
+            {
+              "role": "p11r",
+              "label": "Red11"
+            },
+            {
+              "role": "p11g",
+              "label": "Green11"
+            },
+            {
+              "role": "p11b",
+              "label": "Blue11"
+            },
+            {
+              "role": "p12r",
+              "label": "Red12"
+            },
+            {
+              "role": "p12g",
+              "label": "Green12"
+            },
+            {
+              "role": "p12b",
+              "label": "Blue12"
+            },
+            {
+              "role": "p13r",
+              "label": "Red13"
+            },
+            {
+              "role": "p13g",
+              "label": "Green13"
+            },
+            {
+              "role": "p13b",
+              "label": "Blue13"
+            },
+            {
+              "role": "p14r",
+              "label": "Red14"
+            },
+            {
+              "role": "p14g",
+              "label": "Green14"
+            },
+            {
+              "role": "p14b",
+              "label": "Blue14"
+            },
+            {
+              "role": "p15r",
+              "label": "Red15"
+            },
+            {
+              "role": "p15g",
+              "label": "Green15"
+            },
+            {
+              "role": "p15b",
+              "label": "Blue15"
+            },
+            {
+              "role": "p16r",
+              "label": "Red16"
+            },
+            {
+              "role": "p16g",
+              "label": "Green16"
+            },
+            {
+              "role": "p16b",
+              "label": "Blue16"
+            },
+            {
+              "role": "cw01",
+              "label": "White1"
+            },
+            {
+              "role": "cw02",
+              "label": "White2"
+            },
+            {
+              "role": "cw03",
+              "label": "White3"
+            },
+            {
+              "role": "cw04",
+              "label": "White4"
+            },
+            {
+              "role": "cw05",
+              "label": "White5"
+            },
+            {
+              "role": "cw06",
+              "label": "White6"
+            },
+            {
+              "role": "cw07",
+              "label": "White7"
+            },
+            {
+              "role": "cw08",
+              "label": "White8"
+            },
+            {
+              "role": "cw09",
+              "label": "White9"
+            },
+            {
+              "role": "cw10",
+              "label": "White10"
+            },
+            {
+              "role": "cw11",
+              "label": "White11"
+            },
+            {
+              "role": "cw12",
+              "label": "White12"
+            },
+            {
+              "role": "cw13",
+              "label": "White13"
+            },
+            {
+              "role": "cw14",
+              "label": "White14"
+            },
+            {
+              "role": "cw15",
+              "label": "White15"
+            },
+            {
+              "role": "cw16",
+              "label": "White16"
+            },
+            {
+              "role": "frost",
+              "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+            "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "65 Channel",
+          "note": "16 RGB + 16 W cells + frost",
+          "src": "ACME-PLIP-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "68ch",
+          "footprint": 68,
+          "channels": [
+            {
+              "role": "dimmer",
+              "label": "Dimming (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe (RGB) (000-005 no function; 006-127 strobe slow to fast; 128-130 none; 131-250 random strobe; 251-255 none)"
+            },
+            {
+              "role": "strobeW",
+              "label": "Strobe (W) (000-005 no function; 006-127 strobe slow to fast; 128-130 none; 131-250 random strobe; 251-255 none)"
+            },
+            {
+              "role": "frost",
+              "label": "Atomized glass (SMART Glass frost) (000-255)"
+            },
+            {
+              "role": "p01r",
+              "label": "Red1"
+            },
+            {
+              "role": "p01g",
+              "label": "Green1"
+            },
+            {
+              "role": "p01b",
+              "label": "Blue1"
+            },
+            {
+              "role": "p02r",
+              "label": "Red2"
+            },
+            {
+              "role": "p02g",
+              "label": "Green2"
+            },
+            {
+              "role": "p02b",
+              "label": "Blue2"
+            },
+            {
+              "role": "p03r",
+              "label": "Red3"
+            },
+            {
+              "role": "p03g",
+              "label": "Green3"
+            },
+            {
+              "role": "p03b",
+              "label": "Blue3"
+            },
+            {
+              "role": "p04r",
+              "label": "Red4"
+            },
+            {
+              "role": "p04g",
+              "label": "Green4"
+            },
+            {
+              "role": "p04b",
+              "label": "Blue4"
+            },
+            {
+              "role": "p05r",
+              "label": "Red5"
+            },
+            {
+              "role": "p05g",
+              "label": "Green5"
+            },
+            {
+              "role": "p05b",
+              "label": "Blue5"
+            },
+            {
+              "role": "p06r",
+              "label": "Red6"
+            },
+            {
+              "role": "p06g",
+              "label": "Green6"
+            },
+            {
+              "role": "p06b",
+              "label": "Blue6"
+            },
+            {
+              "role": "p07r",
+              "label": "Red7"
+            },
+            {
+              "role": "p07g",
+              "label": "Green7"
+            },
+            {
+              "role": "p07b",
+              "label": "Blue7"
+            },
+            {
+              "role": "p08r",
+              "label": "Red8"
+            },
+            {
+              "role": "p08g",
+              "label": "Green8"
+            },
+            {
+              "role": "p08b",
+              "label": "Blue8"
+            },
+            {
+              "role": "p09r",
+              "label": "Red9"
+            },
+            {
+              "role": "p09g",
+              "label": "Green9"
+            },
+            {
+              "role": "p09b",
+              "label": "Blue9"
+            },
+            {
+              "role": "p10r",
+              "label": "Red10"
+            },
+            {
+              "role": "p10g",
+              "label": "Green10"
+            },
+            {
+              "role": "p10b",
+              "label": "Blue10"
+            },
+            {
+              "role": "p11r",
+              "label": "Red11"
+            },
+            {
+              "role": "p11g",
+              "label": "Green11"
+            },
+            {
+              "role": "p11b",
+              "label": "Blue11"
+            },
+            {
+              "role": "p12r",
+              "label": "Red12"
+            },
+            {
+              "role": "p12g",
+              "label": "Green12"
+            },
+            {
+              "role": "p12b",
+              "label": "Blue12"
+            },
+            {
+              "role": "p13r",
+              "label": "Red13"
+            },
+            {
+              "role": "p13g",
+              "label": "Green13"
+            },
+            {
+              "role": "p13b",
+              "label": "Blue13"
+            },
+            {
+              "role": "p14r",
+              "label": "Red14"
+            },
+            {
+              "role": "p14g",
+              "label": "Green14"
+            },
+            {
+              "role": "p14b",
+              "label": "Blue14"
+            },
+            {
+              "role": "p15r",
+              "label": "Red15"
+            },
+            {
+              "role": "p15g",
+              "label": "Green15"
+            },
+            {
+              "role": "p15b",
+              "label": "Blue15"
+            },
+            {
+              "role": "p16r",
+              "label": "Red16"
+            },
+            {
+              "role": "p16g",
+              "label": "Green16"
+            },
+            {
+              "role": "p16b",
+              "label": "Blue16"
+            },
+            {
+              "role": "cw01",
+              "label": "White1"
+            },
+            {
+              "role": "cw02",
+              "label": "White2"
+            },
+            {
+              "role": "cw03",
+              "label": "White3"
+            },
+            {
+              "role": "cw04",
+              "label": "White4"
+            },
+            {
+              "role": "cw05",
+              "label": "White5"
+            },
+            {
+              "role": "cw06",
+              "label": "White6"
+            },
+            {
+              "role": "cw07",
+              "label": "White7"
+            },
+            {
+              "role": "cw08",
+              "label": "White8"
+            },
+            {
+              "role": "cw09",
+              "label": "White9"
+            },
+            {
+              "role": "cw10",
+              "label": "White10"
+            },
+            {
+              "role": "cw11",
+              "label": "White11"
+            },
+            {
+              "role": "cw12",
+              "label": "White12"
+            },
+            {
+              "role": "cw13",
+              "label": "White13"
+            },
+            {
+              "role": "cw14",
+              "label": "White14"
+            },
+            {
+              "role": "cw15",
+              "label": "White15"
+            },
+            {
+              "role": "cw16",
+              "label": "White16"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+            "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "68 Channel",
+          "note": "dimming, strobe RGB, strobe W, frost + 16 RGB + 16 W cells",
+          "src": "ACME-PLIP-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "117ch",
+          "footprint": 117,
+          "channels": [
+            {
+              "role": "dimmer",
+              "label": "Dimming (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobeDuration",
+              "label": "Strobe duration (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobeRate",
+              "label": "Strobe rate (000-005 no function; 006-255 slow to fast)"
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe (000-005 none; 006-050 slow open fast close; 051-100 fast open slow close; 101-150 slow open slow close; 151-200 lightning; 201-255 random strobe (use with duration/rate))"
+            },
+            {
+              "role": "frost",
+              "label": "Atomized glass (SMART Glass frost) (0-255 = 0%-100%)"
+            },
+            {
+              "role": "p01r",
+              "label": "Red1"
+            },
+            {
+              "role": "p01g",
+              "label": "Green1"
+            },
+            {
+              "role": "p01b",
+              "label": "Blue1"
+            },
+            {
+              "role": "p02r",
+              "label": "Red2"
+            },
+            {
+              "role": "p02g",
+              "label": "Green2"
+            },
+            {
+              "role": "p02b",
+              "label": "Blue2"
+            },
+            {
+              "role": "p03r",
+              "label": "Red3"
+            },
+            {
+              "role": "p03g",
+              "label": "Green3"
+            },
+            {
+              "role": "p03b",
+              "label": "Blue3"
+            },
+            {
+              "role": "p04r",
+              "label": "Red4"
+            },
+            {
+              "role": "p04g",
+              "label": "Green4"
+            },
+            {
+              "role": "p04b",
+              "label": "Blue4"
+            },
+            {
+              "role": "p05r",
+              "label": "Red5"
+            },
+            {
+              "role": "p05g",
+              "label": "Green5"
+            },
+            {
+              "role": "p05b",
+              "label": "Blue5"
+            },
+            {
+              "role": "p06r",
+              "label": "Red6"
+            },
+            {
+              "role": "p06g",
+              "label": "Green6"
+            },
+            {
+              "role": "p06b",
+              "label": "Blue6"
+            },
+            {
+              "role": "p07r",
+              "label": "Red7"
+            },
+            {
+              "role": "p07g",
+              "label": "Green7"
+            },
+            {
+              "role": "p07b",
+              "label": "Blue7"
+            },
+            {
+              "role": "p08r",
+              "label": "Red8"
+            },
+            {
+              "role": "p08g",
+              "label": "Green8"
+            },
+            {
+              "role": "p08b",
+              "label": "Blue8"
+            },
+            {
+              "role": "p09r",
+              "label": "Red9"
+            },
+            {
+              "role": "p09g",
+              "label": "Green9"
+            },
+            {
+              "role": "p09b",
+              "label": "Blue9"
+            },
+            {
+              "role": "p10r",
+              "label": "Red10"
+            },
+            {
+              "role": "p10g",
+              "label": "Green10"
+            },
+            {
+              "role": "p10b",
+              "label": "Blue10"
+            },
+            {
+              "role": "p11r",
+              "label": "Red11"
+            },
+            {
+              "role": "p11g",
+              "label": "Green11"
+            },
+            {
+              "role": "p11b",
+              "label": "Blue11"
+            },
+            {
+              "role": "p12r",
+              "label": "Red12"
+            },
+            {
+              "role": "p12g",
+              "label": "Green12"
+            },
+            {
+              "role": "p12b",
+              "label": "Blue12"
+            },
+            {
+              "role": "p13r",
+              "label": "Red13"
+            },
+            {
+              "role": "p13g",
+              "label": "Green13"
+            },
+            {
+              "role": "p13b",
+              "label": "Blue13"
+            },
+            {
+              "role": "p14r",
+              "label": "Red14"
+            },
+            {
+              "role": "p14g",
+              "label": "Green14"
+            },
+            {
+              "role": "p14b",
+              "label": "Blue14"
+            },
+            {
+              "role": "p15r",
+              "label": "Red15"
+            },
+            {
+              "role": "p15g",
+              "label": "Green15"
+            },
+            {
+              "role": "p15b",
+              "label": "Blue15"
+            },
+            {
+              "role": "p16r",
+              "label": "Red16"
+            },
+            {
+              "role": "p16g",
+              "label": "Green16"
+            },
+            {
+              "role": "p16b",
+              "label": "Blue16"
+            },
+            {
+              "role": "p17r",
+              "label": "Red17"
+            },
+            {
+              "role": "p17g",
+              "label": "Green17"
+            },
+            {
+              "role": "p17b",
+              "label": "Blue17"
+            },
+            {
+              "role": "p18r",
+              "label": "Red18"
+            },
+            {
+              "role": "p18g",
+              "label": "Green18"
+            },
+            {
+              "role": "p18b",
+              "label": "Blue18"
+            },
+            {
+              "role": "p19r",
+              "label": "Red19"
+            },
+            {
+              "role": "p19g",
+              "label": "Green19"
+            },
+            {
+              "role": "p19b",
+              "label": "Blue19"
+            },
+            {
+              "role": "p20r",
+              "label": "Red20"
+            },
+            {
+              "role": "p20g",
+              "label": "Green20"
+            },
+            {
+              "role": "p20b",
+              "label": "Blue20"
+            },
+            {
+              "role": "p21r",
+              "label": "Red21"
+            },
+            {
+              "role": "p21g",
+              "label": "Green21"
+            },
+            {
+              "role": "p21b",
+              "label": "Blue21"
+            },
+            {
+              "role": "p22r",
+              "label": "Red22"
+            },
+            {
+              "role": "p22g",
+              "label": "Green22"
+            },
+            {
+              "role": "p22b",
+              "label": "Blue22"
+            },
+            {
+              "role": "p23r",
+              "label": "Red23"
+            },
+            {
+              "role": "p23g",
+              "label": "Green23"
+            },
+            {
+              "role": "p23b",
+              "label": "Blue23"
+            },
+            {
+              "role": "p24r",
+              "label": "Red24"
+            },
+            {
+              "role": "p24g",
+              "label": "Green24"
+            },
+            {
+              "role": "p24b",
+              "label": "Blue24"
+            },
+            {
+              "role": "p25r",
+              "label": "Red25"
+            },
+            {
+              "role": "p25g",
+              "label": "Green25"
+            },
+            {
+              "role": "p25b",
+              "label": "Blue25"
+            },
+            {
+              "role": "p26r",
+              "label": "Red26"
+            },
+            {
+              "role": "p26g",
+              "label": "Green26"
+            },
+            {
+              "role": "p26b",
+              "label": "Blue26"
+            },
+            {
+              "role": "p27r",
+              "label": "Red27"
+            },
+            {
+              "role": "p27g",
+              "label": "Green27"
+            },
+            {
+              "role": "p27b",
+              "label": "Blue27"
+            },
+            {
+              "role": "p28r",
+              "label": "Red28"
+            },
+            {
+              "role": "p28g",
+              "label": "Green28"
+            },
+            {
+              "role": "p28b",
+              "label": "Blue28"
+            },
+            {
+              "role": "p29r",
+              "label": "Red29"
+            },
+            {
+              "role": "p29g",
+              "label": "Green29"
+            },
+            {
+              "role": "p29b",
+              "label": "Blue29"
+            },
+            {
+              "role": "p30r",
+              "label": "Red30"
+            },
+            {
+              "role": "p30g",
+              "label": "Green30"
+            },
+            {
+              "role": "p30b",
+              "label": "Blue30"
+            },
+            {
+              "role": "p31r",
+              "label": "Red31"
+            },
+            {
+              "role": "p31g",
+              "label": "Green31"
+            },
+            {
+              "role": "p31b",
+              "label": "Blue31"
+            },
+            {
+              "role": "p32r",
+              "label": "Red32"
+            },
+            {
+              "role": "p32g",
+              "label": "Green32"
+            },
+            {
+              "role": "p32b",
+              "label": "Blue32"
+            },
+            {
+              "role": "cw01",
+              "label": "White1"
+            },
+            {
+              "role": "cw02",
+              "label": "White2"
+            },
+            {
+              "role": "cw03",
+              "label": "White3"
+            },
+            {
+              "role": "cw04",
+              "label": "White4"
+            },
+            {
+              "role": "cw05",
+              "label": "White5"
+            },
+            {
+              "role": "cw06",
+              "label": "White6"
+            },
+            {
+              "role": "cw07",
+              "label": "White7"
+            },
+            {
+              "role": "cw08",
+              "label": "White8"
+            },
+            {
+              "role": "cw09",
+              "label": "White9"
+            },
+            {
+              "role": "cw10",
+              "label": "White10"
+            },
+            {
+              "role": "cw11",
+              "label": "White11"
+            },
+            {
+              "role": "cw12",
+              "label": "White12"
+            },
+            {
+              "role": "cw13",
+              "label": "White13"
+            },
+            {
+              "role": "cw14",
+              "label": "White14"
+            },
+            {
+              "role": "cw15",
+              "label": "White15"
+            },
+            {
+              "role": "cw16",
+              "label": "White16"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+            "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "117 Channel",
+          "note": "LARGEST. master dimmer, strobe (3 ch), frost + 32 RGB + 16 W cells",
+          "src": "ACME-PLIP-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "70ch",
+          "footprint": 70,
+          "channels": [
+            {
+              "role": "dimmer",
+              "label": "Dimming (0-255 = 0%-100%)"
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe (RGB) (000-005 no function; 006-127 strobe slow to fast; 128-130 none; 131-250 random strobe; 251-255 none)"
+            },
+            {
+              "role": "strobeW",
+              "label": "Strobe (W) (000-005 no function; 006-127 strobe slow to fast; 128-130 none; 131-250 random strobe; 251-255 none)"
+            },
+            {
+              "role": "frost",
+              "label": "Atomized glass (SMART Glass frost) (000-255)"
+            },
+            {
+              "role": "p01r",
+              "label": "Red1"
+            },
+            {
+              "role": "p01g",
+              "label": "Green1"
+            },
+            {
+              "role": "p01b",
+              "label": "Blue1"
+            },
+            {
+              "role": "p02r",
+              "label": "Red2"
+            },
+            {
+              "role": "p02g",
+              "label": "Green2"
+            },
+            {
+              "role": "p02b",
+              "label": "Blue2"
+            },
+            {
+              "role": "p03r",
+              "label": "Red3"
+            },
+            {
+              "role": "p03g",
+              "label": "Green3"
+            },
+            {
+              "role": "p03b",
+              "label": "Blue3"
+            },
+            {
+              "role": "p04r",
+              "label": "Red4"
+            },
+            {
+              "role": "p04g",
+              "label": "Green4"
+            },
+            {
+              "role": "p04b",
+              "label": "Blue4"
+            },
+            {
+              "role": "p05r",
+              "label": "Red5"
+            },
+            {
+              "role": "p05g",
+              "label": "Green5"
+            },
+            {
+              "role": "p05b",
+              "label": "Blue5"
+            },
+            {
+              "role": "p06r",
+              "label": "Red6"
+            },
+            {
+              "role": "p06g",
+              "label": "Green6"
+            },
+            {
+              "role": "p06b",
+              "label": "Blue6"
+            },
+            {
+              "role": "p07r",
+              "label": "Red7"
+            },
+            {
+              "role": "p07g",
+              "label": "Green7"
+            },
+            {
+              "role": "p07b",
+              "label": "Blue7"
+            },
+            {
+              "role": "p08r",
+              "label": "Red8"
+            },
+            {
+              "role": "p08g",
+              "label": "Green8"
+            },
+            {
+              "role": "p08b",
+              "label": "Blue8"
+            },
+            {
+              "role": "p09r",
+              "label": "Red9"
+            },
+            {
+              "role": "p09g",
+              "label": "Green9"
+            },
+            {
+              "role": "p09b",
+              "label": "Blue9"
+            },
+            {
+              "role": "p10r",
+              "label": "Red10"
+            },
+            {
+              "role": "p10g",
+              "label": "Green10"
+            },
+            {
+              "role": "p10b",
+              "label": "Blue10"
+            },
+            {
+              "role": "p11r",
+              "label": "Red11"
+            },
+            {
+              "role": "p11g",
+              "label": "Green11"
+            },
+            {
+              "role": "p11b",
+              "label": "Blue11"
+            },
+            {
+              "role": "p12r",
+              "label": "Red12"
+            },
+            {
+              "role": "p12g",
+              "label": "Green12"
+            },
+            {
+              "role": "p12b",
+              "label": "Blue12"
+            },
+            {
+              "role": "p13r",
+              "label": "Red13"
+            },
+            {
+              "role": "p13g",
+              "label": "Green13"
+            },
+            {
+              "role": "p13b",
+              "label": "Blue13"
+            },
+            {
+              "role": "p14r",
+              "label": "Red14"
+            },
+            {
+              "role": "p14g",
+              "label": "Green14"
+            },
+            {
+              "role": "p14b",
+              "label": "Blue14"
+            },
+            {
+              "role": "p15r",
+              "label": "Red15"
+            },
+            {
+              "role": "p15g",
+              "label": "Green15"
+            },
+            {
+              "role": "p15b",
+              "label": "Blue15"
+            },
+            {
+              "role": "p16r",
+              "label": "Red16"
+            },
+            {
+              "role": "p16g",
+              "label": "Green16"
+            },
+            {
+              "role": "p16b",
+              "label": "Blue16"
+            },
+            {
+              "role": "cw01",
+              "label": "White1"
+            },
+            {
+              "role": "cw02",
+              "label": "White2"
+            },
+            {
+              "role": "cw03",
+              "label": "White3"
+            },
+            {
+              "role": "cw04",
+              "label": "White4"
+            },
+            {
+              "role": "cw05",
+              "label": "White5"
+            },
+            {
+              "role": "cw06",
+              "label": "White6"
+            },
+            {
+              "role": "cw07",
+              "label": "White7"
+            },
+            {
+              "role": "cw08",
+              "label": "White8"
+            },
+            {
+              "role": "cw09",
+              "label": "White9"
+            },
+            {
+              "role": "cw10",
+              "label": "White10"
+            },
+            {
+              "role": "cw11",
+              "label": "White11"
+            },
+            {
+              "role": "cw12",
+              "label": "White12"
+            },
+            {
+              "role": "cw13",
+              "label": "White13"
+            },
+            {
+              "role": "cw14",
+              "label": "White14"
+            },
+            {
+              "role": "cw15",
+              "label": "White15"
+            },
+            {
+              "role": "cw16",
+              "label": "White16"
+            },
+            {
+              "role": "fade",
+              "label": "Fade out effect (RGB) (0%-100%)"
+            },
+            {
+              "role": "fadeW",
+              "label": "Fade out effect (W) (0%-100%)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) PIXEL LINE IP (STROBE 3 IP) (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf)",
+            "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "70 Channel",
+          "src": "ACME-PLIP-MAN",
+          "basis": "EXACT"
+        }
+      ],
+      "defaultMode": "7ch",
+      "modesOwed": false,
+      "assumedMode": null,
+      "power_w": {
+        "value": 420,
+        "src": "ACME-PLIP-MAN",
+        "basis": "EXACT",
+        "note": "manual p6; datasheet also 420 W"
+      },
+      "supply_w": null,
+      "weight_kg": {
+        "value": 8.3,
+        "src": "ACME-PLIP-MAN",
+        "basis": "EXACT",
+        "note": "manual p6 'NW 8.3 kg (not incl. clamps)'; the datasheet says 7.3 kg (omega bracket) / 8.3 kg (sliding clamp)"
+      },
+      "size_mm": {
+        "value": [
+          1000,
+          90,
+          124
+        ],
+        "src": "ACME-PLIP-DS",
+        "basis": "EXACT",
+        "order": "L x W x H",
+        "note": "datasheet 'Omega bracket version' 1,000 x 90 x 124 mm; with the sliding clamp 1,000 x 192 x 237 mm. The manual p10 says 'Fixture size 100*124*90 mm (L*W*H)' - a missing zero (100 for 1000) and W / H swapped against the datasheet; the datasheet is used"
+      },
+      "pan_tilt_deg": null,
+      "ip": {
+        "value": "IP66",
+        "src": "ACME-PLIP-MAN",
+        "basis": "EXACT",
+        "note": "manual: protection rating IP66"
+      },
+      "optics": {
+        "beam_deg": 101,
+        "zoom_deg": null,
+        "lux": 1163,
+        "at_m": 2,
+        "photometrySrc": "ACME-PLIP-DS",
+        "photometryBasis": "EXACT",
+        "note": "datasheet: 101 deg RGB 1,163 / 291 / 129 / 73 lux at 2 / 4 / 6 / 8 m"
+      },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
+      "model3d": {
+        "glb": null,
+        "sidecar": null,
+        "owed": "the bar needs an LED-bar archetype in build_fixtures.py (the par archetype draws a round can, the strobe archetype a bracket head); the 1,000 x 90 x 124 mm size is known",
+        "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+      },
+      "sources": {
+        "ACME-PLIP-DS": {
+          "url": "https://en.acmelighting.com/upload/other/20260415/19b3a847ddd50afd52b6a73d0065a1c7.pdf",
+          "what": "ACME's own datasheet for PIXEL LINE IP / STROBE 3 IP, 2 pages (2026-04); lists 13 modes, the manual copy 11",
+          "publisher": "ACME (en.acmelighting.com)",
+          "accessed": "2026-11-11"
+        },
+        "ACME-PLIP-MAN": {
+          "url": "https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf",
+          "what": "User manual of the PIXEL LINE IP (STROBE 3 IP), 27 pages; the cover shows the white-label brand 'GML Grand Master Light', no ACME name in the text; third-party host",
+          "publisher": "ACME (white-label copy, third-party host)",
+          "accessed": "2026-11-11"
+        }
+      },
+      "manifest": {
+        "file": "scripts/place/fixtures/fixtures.json",
+        "kind": "pixelLineIp",
+        "writtenAt": "2026-09-28",
+        "accessed": "2026-09-28"
+      },
+      "provenance": {
+        "identified": "exact",
+        "date": "2026-11-11",
+        "sources": [
+          "ACME-PLIP-DS",
+          "ACME-PLIP-MAN"
+        ],
+        "values": {
+          "measured": 0,
+          "tested": 0,
+          "datasheet": 28,
+          "equivalent": 0,
+          "assumed": 0,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "id": "acme-xp16r-bsw",
+      "code": "ACME-XP16R-BSW",
+      "identified": "EXACT",
+      "identifiedNote": "EXACT - ACME's XP-16R BSW III (the manual's title). The rental list says 'xp16r BWS' (sic): the revision of the rented hardware is NOT confirmed (no document read shows a 23-channel XP-16R; a 32-page web copy labelled XP-16R BSW was in fact the XP-15R SZ manual and was rejected)",
+      "maker": "ACME (Foshan Yi Feng Electric Industrial Co.)",
+      "model": "ACME-XP16R-BSW",
+      "modelledOn": null,
+      "product": "ACME XP-16R BSW III, 16R discharge beam / spot / wash moving head",
+      "makerModel": "XP-16R BSW III",
+      "manual": {
+        "url": "https://en.acmelighting.com/Uploads/download/file_material/1548730155bda9de23c5da5e98.pdf",
+        "date": "2018-02-05 (PDF metadata)",
+        "read": "2026-11-11, pdftotext + page image p6",
+        "basis": "EXACT"
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/acme-xp16r-bsw.json",
+        "modes": {
+          "19": "EXACT",
+          "21": "EXACT"
+        }
+      },
+      "category": "moving-head",
+      "modes": [
+        {
+          "name": "19ch",
+          "footprint": 19,
+          "channels": [
+            {
+              "role": "pan",
+              "label": "Pan (0-255 = 0 to 540 deg (16-bit with ch2))",
+              "default": 128
+            },
+            {
+              "role": "panFine",
+              "label": "Pan fine"
+            },
+            {
+              "role": "tilt",
+              "label": "Tilt (0-255 = 0 to 270 deg (16-bit with ch4))",
+              "default": 128
+            },
+            {
+              "role": "tiltFine",
+              "label": "Tilt fine"
+            },
+            {
+              "role": "speed",
+              "label": "Pan/Tilt speed (fast to slow)"
+            },
+            {
+              "role": "control",
+              "label": "Special function (incl. lamp on/off, resets) (000-049 none; 050 enable / 060 disable auto colour frost; 070 enable / 080 disable blackout while pan/tilt moves; 090/100 same for colour change; 110/120 same for gobo change; 130 lamp on; 140 pan/tilt reset; 150 effect reset; 160 fan quiet; 170 fan fast; 180 lamp full power; 190 lamp half power; 200 all reset; 230 lamp off (each a 10-wide band, hold ~5 s))",
+              "default": 0
+            },
+            {
+              "role": "color",
+              "label": "Colour wheel (000-002 white; Color 1..29 in 2-3 value steps (003-004 ... 061-063); 064-127 indexing; 128-189 CCW fast-slow; 190-193 stop; 194-255 CW slow-fast)"
+            },
+            {
+              "role": "gobo",
+              "label": "Gobo wheel 1 (static) (000-003 open; Gobo 1..16 in 3-value steps (004-006 ... 049-055); 056-127 shake; 128-189 CCW; 190-193 stop; 194-255 CW)"
+            },
+            {
+              "role": "gobo2",
+              "label": "Gobo wheel 2 (rotating) (000-005 open; Gobo 2-1..2-12 (006-010 ... 062-067); 068-127 shake; 128-189 CCW; 190-193 stop; 194-255 CW)"
+            },
+            {
+              "role": "gobo2Rotation",
+              "label": "Rotating gobo index/rotation (000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast)"
+            },
+            {
+              "role": "prism",
+              "label": "Prism 1 (8-facet) in/out (000-007 no prism; 008-255 prism in)",
+              "cap": {
+                "prism": true,
+                "prismIn": {
+                  "from": 8,
+                  "facets": 8,
+                  "basis": "MANUAL p26-29: 008-255 prism 1 in; 8 facets from the manual p5"
+                }
+              }
+            },
+            {
+              "role": "rotation",
+              "label": "Prism 1 rotation (000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast)",
+              "cap": {
+                "prismRotation": {
+                  "prism": 1,
+                  "index": {
+                    "from": 0,
+                    "to": 127
+                  },
+                  "basis": "MANUAL p26-29: 0-127 index; 128-189 CCW, 190-193 stop, 194-255 CW"
+                }
+              }
+            },
+            {
+              "role": "prism2",
+              "label": "Prism 2 (6-linear) in/out (000-007 no prism; 008-255 prism in)"
+            },
+            {
+              "role": "prism2Rotation",
+              "label": "Prism 2 rotation (000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast)"
+            },
+            {
+              "role": "zoom",
+              "label": "Zoom (0-255 = 100% to 0%)"
+            },
+            {
+              "role": "focus",
+              "label": "Focus (0-255 near to far)"
+            },
+            {
+              "role": "frost",
+              "label": "Frost (000-007 off; 008-255 on)",
+              "cap": {
+                "frost": {
+                  "from": 8,
+                  "to": 255,
+                  "basis": "MANUAL p26: 000-007 off; 008-255 on (an insert, not a curve)"
+                }
+              }
+            },
+            {
+              "role": "strobe",
+              "label": "Shutter/strobe (000-007 shutter off; 008-015 open; 016-131 strobe slow-fast; 132-167 slow open fast close; 168-203 fast open slow close; 204-239 slow open slow close; 240-247 random strobe; 248-255 open)",
+              "default": 255,
+              "cap": {
+                "shutter": [
+                  {
+                    "from": 0,
+                    "to": 7,
+                    "open": false
+                  },
+                  {
+                    "from": 8,
+                    "to": 15,
+                    "open": true
+                  },
+                  {
+                    "from": 248,
+                    "to": 255,
+                    "open": true
+                  }
+                ]
+              }
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimmer (0-255 = 0%-100%)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) XP-16R BSW III (https://en.acmelighting.com/Uploads/download/file_material/1548730155bda9de23c5da5e98.pdf)",
+            "url": "https://en.acmelighting.com/Uploads/download/file_material/1548730155bda9de23c5da5e98.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "Mode 1",
+          "src": "ACME-XP16-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "21ch",
+          "footprint": 21,
+          "channels": [
+            {
+              "role": "pan",
+              "label": "Pan (0-255 = 0 to 540 deg (16-bit with ch2))",
+              "default": 128
+            },
+            {
+              "role": "panFine",
+              "label": "Pan fine"
+            },
+            {
+              "role": "tilt",
+              "label": "Tilt (0-255 = 0 to 270 deg (16-bit with ch4))",
+              "default": 128
+            },
+            {
+              "role": "tiltFine",
+              "label": "Tilt fine"
+            },
+            {
+              "role": "speed",
+              "label": "Pan/Tilt speed (fast to slow)"
+            },
+            {
+              "role": "control",
+              "label": "Special function (incl. lamp on/off, resets) (000-049 none; 050 enable / 060 disable auto colour frost; 070 enable / 080 disable blackout while pan/tilt moves; 090/100 same for colour change; 110/120 same for gobo change; 130 lamp on; 140 pan/tilt reset; 150 effect reset; 160 fan quiet; 170 fan fast; 180 lamp full power; 190 lamp half power; 200 all reset; 230 lamp off (each a 10-wide band, hold ~5 s))",
+              "default": 0
+            },
+            {
+              "role": "color",
+              "label": "Colour wheel (000-002 white; Color 1..29 in 2-3 value steps (003-004 ... 061-063); 064-127 indexing; 128-189 CCW fast-slow; 190-193 stop; 194-255 CW slow-fast)"
+            },
+            {
+              "role": "gobo",
+              "label": "Gobo wheel 1 (static) (000-003 open; Gobo 1..16 in 3-value steps (004-006 ... 049-055); 056-127 shake; 128-189 CCW; 190-193 stop; 194-255 CW)"
+            },
+            {
+              "role": "gobo2",
+              "label": "Gobo wheel 2 (rotating) (000-005 open; Gobo 2-1..2-12 (006-010 ... 062-067); 068-127 shake; 128-189 CCW; 190-193 stop; 194-255 CW)"
+            },
+            {
+              "role": "gobo2Rotation",
+              "label": "Rotating gobo index/rotation (000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast)"
+            },
+            {
+              "role": "prism",
+              "label": "Prism 1 (8-facet) in/out (000-007 no prism; 008-255 prism in)",
+              "cap": {
+                "prism": true,
+                "prismIn": {
+                  "from": 8,
+                  "facets": 8,
+                  "basis": "MANUAL p26-29: 008-255 prism 1 in; 8 facets from the manual p5"
+                }
+              }
+            },
+            {
+              "role": "rotation",
+              "label": "Prism 1 rotation (000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast)",
+              "cap": {
+                "prismRotation": {
+                  "prism": 1,
+                  "index": {
+                    "from": 0,
+                    "to": 127
+                  },
+                  "basis": "MANUAL p26-29: 0-127 index; 128-189 CCW, 190-193 stop, 194-255 CW"
+                }
+              }
+            },
+            {
+              "role": "prism2",
+              "label": "Prism 2 (6-linear) in/out (000-007 no prism; 008-255 prism in)"
+            },
+            {
+              "role": "prism2Rotation",
+              "label": "Prism 2 rotation (000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast)"
+            },
+            {
+              "role": "zoom",
+              "label": "Zoom (0-255 = 100% to 0%)"
+            },
+            {
+              "role": "zoomFine",
+              "label": "Zoom fine"
+            },
+            {
+              "role": "focus",
+              "label": "Focus (near to far)"
+            },
+            {
+              "role": "focusFine",
+              "label": "Focus fine"
+            },
+            {
+              "role": "frost",
+              "label": "Frost (000-007 off; 008-255 on)",
+              "cap": {
+                "frost": {
+                  "from": 8,
+                  "to": 255,
+                  "basis": "MANUAL p29: 000-007 off; 008-255 on (an insert, not a curve)"
+                }
+              }
+            },
+            {
+              "role": "strobe",
+              "label": "Shutter/strobe (000-007 shutter off; 008-015 open; 016-131 strobe slow-fast; 132-167 slow open fast close; 168-203 fast open slow close; 204-239 slow open slow close; 240-247 random strobe; 248-255 open)",
+              "default": 255,
+              "cap": {
+                "shutter": [
+                  {
+                    "from": 0,
+                    "to": 7,
+                    "open": false
+                  },
+                  {
+                    "from": 8,
+                    "to": 15,
+                    "open": true
+                  },
+                  {
+                    "from": 248,
+                    "to": 255,
+                    "open": true
+                  }
+                ]
+              }
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimmer (0-255 = 0%-100%)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "ACME (Foshan Yi Feng Electric Industrial Co.) XP-16R BSW III (https://en.acmelighting.com/Uploads/download/file_material/1548730155bda9de23c5da5e98.pdf)",
+            "url": "https://en.acmelighting.com/Uploads/download/file_material/1548730155bda9de23c5da5e98.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "Mode 2",
+          "note": "LARGEST. adds zoom fine and focus fine",
+          "src": "ACME-XP16-MAN",
+          "basis": "EXACT"
+        }
+      ],
+      "defaultMode": "19ch",
+      "modesOwed": false,
+      "assumedMode": null,
+      "power_w": {
+        "value": 480,
+        "src": "ACME-XP16-MAN",
+        "basis": "EXACT",
+        "note": "manual p4"
+      },
+      "supply_w": null,
+      "weight_kg": {
+        "value": 21.4,
+        "src": "ACME-XP16-MAN",
+        "basis": "EXACT",
+        "note": "manual p5C"
+      },
+      "size_mm": {
+        "value": [
+          393,
+          344,
+          585
+        ],
+        "src": "ACME-XP16-MAN",
+        "basis": "EXACT",
+        "order": "W x D x H",
+        "note": "manual p5C 'Dimension 585 x 344 x 393 mm'; the drawing: 585 high, 393 wide (front), 344 deep (base with handles), 230 head thickness"
+      },
+      "pan_tilt_deg": {
+        "value": [
+          540,
+          270
+        ],
+        "src": "ACME-XP16-MAN",
+        "basis": "EXACT",
+        "note": "manual p5"
+      },
+      "ip": null,
+      "optics": {
+        "beam_deg": 3,
+        "zoom_deg": [
+          3,
+          32
+        ],
+        "lux": 810000,
+        "at_m": 5,
+        "photometrySrc": "ACME-XP16-MAN",
+        "photometryBasis": "EXACT",
+        "note": "manual p5C photometric diagram: 3 deg 810,000 / 200,000 / 90,000 / 52,000 lux at 5 / 10 / 15 / 20 m; 32 deg 9,700 / 2,100 / 950 / 900 lux"
+      },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
+      "model3d": {
+        "glb": "scripts/place/fixtures/glb/xp16r.glb",
+        "sidecar": "scripts/place/fixtures/glb/xp16r.json",
+        "builtBy": "scripts/place/fixtures/build_fixtures.py",
+        "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0.13,
+        "tiltY": 0.44,
+        "lensY": 0.578,
+        "sizeAtHome_mm": {
+          "width_x": 400,
+          "depth_z": 348,
+          "height_y": 576
+        },
+        "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+      },
+      "sources": {
+        "ACME-XP16-MAN": {
+          "url": "https://en.acmelighting.com/Uploads/download/file_material/1548730155bda9de23c5da5e98.pdf",
+          "what": "ACME user manual 'XP-16R BSW III', 36 pages, PDF metadata 2018-02-05",
+          "publisher": "ACME (en.acmelighting.com)",
+          "accessed": "2026-11-11"
+        }
+      },
+      "manifest": {
+        "file": "scripts/place/fixtures/fixtures.json",
+        "kind": "xp16r",
+        "writtenAt": "2026-09-28",
+        "accessed": "2026-09-28"
+      },
+      "provenance": {
+        "identified": "exact",
+        "date": "2026-11-11",
+        "sources": [
+          "ACME-XP16-MAN"
+        ],
+        "values": {
+          "measured": 0,
+          "tested": 0,
+          "datasheet": 10,
+          "equivalent": 0,
+          "assumed": 0,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "id": "magmatic-magma-prime",
+      "code": "MAGMATIC-MAGMA-PRIME",
+      "identified": "EXACT",
+      "identifiedNote": "EXACT - Magmatic Effects' (Elation Professional) Magma Prime, from its user manual. Which fluid the rental holds is not confirmed",
+      "maker": "Magmatic Effects (Elation Professional B.V.)",
+      "model": "MAGMATIC-MAGMA-PRIME",
+      "modelledOn": null,
+      "product": "Magmatic (Elation) Magma Prime hazer",
+      "makerModel": "Magma Prime",
+      "manual": {
+        "url": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf",
+        "date": "(no date in the file)",
+        "read": "2026-11-11, pdftotext p12, p14, p16",
+        "basis": "EXACT"
+      },
+      "makerChart": {
+        "file": "scripts/place/fixtures/charts/magmatic-magma-prime.json",
+        "modes": {
+          "1": "EXACT",
+          "3": "EXACT",
+          "5": "EXACT"
+        }
+      },
+      "category": "hazer",
+      "modes": [
+        {
+          "name": "1ch",
+          "footprint": 1,
+          "channels": [
+            {
+              "role": "volume",
+              "label": "Output volume (as laid out in the 1 CH column of the table; the table prints the '1' beside OUTPUT VOLUME) (0-255 = 0%-100%)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "Magmatic Effects (Elation Professional B.V.) Magma Prime (https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf)",
+            "url": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "1 CH",
+          "note": "Reading of the table layout, not of a sentence; confirm on the unit.",
+          "src": "MAGMA-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "3ch",
+          "footprint": 3,
+          "channels": [
+            {
+              "role": "fog",
+              "label": "Fog output (000-005 off; 006-255 on)"
+            },
+            {
+              "role": "volume",
+              "label": "Output volume (0-255 = 0%-100%)"
+            },
+            {
+              "role": "fan",
+              "label": "Fan (0-255 = 20%-100%)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "Magmatic Effects (Elation Professional B.V.) Magma Prime (https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf)",
+            "url": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "3 CH",
+          "src": "MAGMA-MAN",
+          "basis": "EXACT"
+        },
+        {
+          "name": "5ch",
+          "footprint": 5,
+          "channels": [
+            {
+              "role": "fog",
+              "label": "Fog output (000-005 off; 006-255 on)"
+            },
+            {
+              "role": "volume",
+              "label": "Output volume (0-255 = 0%-100%)"
+            },
+            {
+              "role": "fan",
+              "label": "Fan (0-255 = 20%-100%)"
+            },
+            {
+              "role": "duration",
+              "label": "Output duration (000-005 no duration; 006-255 = 1 s - 250 s)"
+            },
+            {
+              "role": "interval",
+              "label": "Interval (000-005 no interval; 006-255 = 10 s - 2500 s)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "Magmatic Effects (Elation Professional B.V.) Magma Prime (https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf)",
+            "url": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "label": "5 CH",
+          "note": "LARGEST",
+          "src": "MAGMA-MAN",
+          "basis": "EXACT"
+        }
+      ],
+      "defaultMode": "1ch",
+      "modesOwed": false,
+      "assumedMode": null,
+      "power_w": {
+        "value": 700,
+        "src": "MAGMA-MAN",
+        "basis": "EXACT",
+        "note": "manual p16 rated power; AC 120 V 60 Hz (US) or AC 230 V 50 Hz (EU) versions, breaker 9 A @ 120 V / 5 A @ 230 V"
+      },
+      "supply_w": null,
+      "weight_kg": {
+        "value": 10.2,
+        "src": "MAGMA-MAN",
+        "basis": "EXACT",
+        "note": "manual p16: 22.48 lbs"
+      },
+      "size_mm": {
+        "value": [
+          338,
+          160,
+          400
+        ],
+        "src": "MAGMA-MAN",
+        "basis": "EXACT",
+        "order": "L x W x H",
+        "note": "manual p16: 13.3 x 6.30 x 15.70 in"
+      },
+      "pan_tilt_deg": null,
+      "ip": null,
+      "optics": {
+        "beam_deg": null,
+        "zoom_deg": null,
+        "lux": null,
+        "at_m": null,
+        "photometrySrc": null,
+        "photometryBasis": null
+      },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": 50,
+      "model3d": {
+        "glb": "scripts/place/fixtures/glb/magmaPrime.glb",
+        "sidecar": "scripts/place/fixtures/glb/magmaPrime.json",
+        "builtBy": "scripts/place/fixtures/build_fixtures.py",
+        "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": null,
+        "tiltY": null,
+        "lensY": 0.145,
+        "sizeAtHome_mm": {
+          "width_x": 164,
+          "depth_z": 348,
+          "height_y": 383
+        },
+        "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+      },
+      "sources": {
+        "MAGMA-MAN": {
+          "url": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf",
+          "what": "Magma Prime user manual, 17 pages (publisher Magmatic Effects / Elation Professional B.V.)",
+          "publisher": "Magmatic Effects / Elation Professional B.V. (host: goknight.com)",
+          "accessed": "2026-11-11"
+        }
+      },
+      "manifest": {
+        "file": "scripts/place/fixtures/fixtures.json",
+        "kind": "magmaPrime",
+        "writtenAt": "2026-09-28",
+        "accessed": "2026-09-28"
+      },
+      "provenance": {
+        "identified": "exact",
+        "date": "2026-11-11",
+        "sources": [
+          "MAGMA-MAN"
+        ],
+        "values": {
+          "measured": 0,
+          "tested": 0,
+          "datasheet": 10,
+          "equivalent": 0,
+          "assumed": 0,
+          "unknown": 0
+        }
+      }
     }
   ]
 }

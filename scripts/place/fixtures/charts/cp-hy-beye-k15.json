@@ -1,0 +1,51 @@
+{
+ "kind": "hyK15",
+ "code": "CP-HY-BEYE-K15",
+ "maker": "Clay Paky S.p.A.",
+ "manual": {
+  "url": "https://goknight.com/content/documentation/HyB-EyeK15_Datasheet_01.2021.pdf",
+  "date": "01/2021",
+  "read": "2026-11-11, pdftotext p1",
+  "basis": "EXACT",
+  "note": "datasheet only; the standard K15 DMX chart was NOT obtained (claypaky.it links to e-assist.tech, login; two manual hosts refused automated reading). The K15 AQUA chart is a different variant and is NOT copied in as this lamp"
+ },
+ "howToRead": "the K15 channel lists are OWED: modes carry their footprint from the datasheet only. Nothing here is a K15 channel.",
+ "owed": [
+  "the standard K15 DMX chart (claypaky.it / e-assist.tech, login) for Standard, Shape, Standard + Freq, Shape + Freq and the Pixel engine",
+  "outer size (body)",
+  "pixel map of the 19 LEDs"
+ ],
+ "reference_only": "The K15 AQUA chart (a different variant, source CP-K15-AQUA) counts Standard 21 / Standard Freq 22 / Shape 35 / Shape Freq 36 / pixels 57 / 76. It is NOT this lamp and no channel of it is carried; it only shows why 22 and 36 are probably the Freq variants.",
+ "modes": {
+  "22": {
+   "status": "OWED",
+   "name": "Basic (22 per datasheet)",
+   "note": "From the datasheet's '22/36/57/76 DMX channels' only. CHANNEL LIST OWED: the standard K15 DMX chart sits behind the maker's login (claypaky.it -> e-assist.tech). 22 is probably Standard + Freq (the AQUA sheet counts Standard 21 / Standard Freq 22): an inference, not read.",
+   "channels": null
+  },
+  "36": {
+   "status": "OWED",
+   "name": "Shape (36 per datasheet)",
+   "note": "From the datasheet only. CHANNEL LIST OWED. Probably Shape + Freq (AQUA: Shape 35 / Shape Freq 36): an inference, not read.",
+   "channels": null
+  },
+  "57": {
+   "status": "OWED",
+   "name": "Pixel RGB",
+   "note": "From the datasheet only. CHANNEL LIST OWED. Pixel engine, own address (user menu 02.2022); pixels only, no pan / tilt / zoom - inferred from the menu structure and the K10 manual, not read for the K15.",
+   "channels": null
+  },
+  "76": {
+   "status": "OWED",
+   "name": "Pixel RGBW",
+   "note": "From the datasheet only. CHANNEL LIST OWED. Pixel engine RGBW, 19 x 4; pixels only (inferred, as above).",
+   "channels": null
+  },
+  "112": {
+   "status": "OWED",
+   "name": "Shape + Pixel RGBW",
+   "note": "The combined mode the Platina plan uses: the 36-channel basic list followed by the 76-channel pixel list = 112, two engines addressed side by side (pixel address = basic address + 36). LIST OWED with the two it is made of.",
+   "channels": null
+  }
+ }
+}

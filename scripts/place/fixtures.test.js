@@ -18,8 +18,9 @@ describe('the fixtures manifest', () => {
     it('gives every number a source it lists, or says it is an assumption', () => {
         for (const [kind, entry] of Object.entries(manifest.kinds)) {
             // UP- is the rental house's own code; EXT- a planning type for a line from another
-            // supplier (strobe, blinder, hazer: the rental list has none — RIG_BUILD.md §15).
-            expect(entry.code, kind).toMatch(/^(UP|EXT)-/)
+            // supplier (strobe, blinder, hazer: the rental list has none — RIG_BUILD.md §15); CP- / ACME- / MAGMATIC-
+            // are the Platina rental lamps (2026-11-11), coded by their makers' own model names.
+            expect(entry.code, kind).toMatch(/^(UP|EXT|CP|ACME|MAGMATIC)-/)
             if (entry.code.startsWith('EXT-')) expect(entry.identified, kind).toMatch(/another supplier/)
             for (const [field, spec] of Object.entries(entry.specs)) {
                 expect(['EXACT', 'COMPONENT', 'EQUIVALENT', 'TESTED', 'ARCHIVED', 'UNKNOWN', 'ASSUMED'], `${kind}.${field}`).toContain(spec.basis)
@@ -67,7 +68,8 @@ describe('the fixtures manifest', () => {
 })
 
 describe('the built models', () => {
-    for (const kind of Object.keys(manifest.kinds)) {
+    // a kind whose outer size is not known says so (`model.owed`) and has no body yet — it is not drawn from a guess
+    for (const kind of Object.keys(manifest.kinds).filter((k) => !manifest.kinds[k].model?.owed)) {
         it(`${kind}: was built by the current build_fixtures.py, with its parts and pivots recorded`, () => {
             const geo = readGeometry(kind)
             // A GLB built by an older script is stale: rebuild in Blender.

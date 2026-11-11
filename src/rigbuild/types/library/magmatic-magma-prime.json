@@ -1,0 +1,194 @@
+{
+  "id": "magmatic-magma-prime",
+  "code": "MAGMATIC-MAGMA-PRIME",
+  "identified": "EXACT",
+  "identifiedNote": "EXACT - Magmatic Effects' (Elation Professional) Magma Prime, from its user manual. Which fluid the rental holds is not confirmed",
+  "maker": "Magmatic Effects (Elation Professional B.V.)",
+  "model": "MAGMATIC-MAGMA-PRIME",
+  "modelledOn": null,
+  "product": "Magmatic (Elation) Magma Prime hazer",
+  "makerModel": "Magma Prime",
+  "manual": {
+    "url": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf",
+    "date": "(no date in the file)",
+    "read": "2026-11-11, pdftotext p12, p14, p16",
+    "basis": "EXACT"
+  },
+  "makerChart": {
+    "file": "scripts/place/fixtures/charts/magmatic-magma-prime.json",
+    "modes": {
+      "1": "EXACT",
+      "3": "EXACT",
+      "5": "EXACT"
+    }
+  },
+  "category": "hazer",
+  "modes": [
+    {
+      "name": "1ch",
+      "footprint": 1,
+      "channels": [
+        {
+          "role": "volume",
+          "label": "Output volume (as laid out in the 1 CH column of the table; the table prints the '1' beside OUTPUT VOLUME) (0-255 = 0%-100%)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "Magmatic Effects (Elation Professional B.V.) Magma Prime (https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf)",
+        "url": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "1 CH",
+      "note": "Reading of the table layout, not of a sentence; confirm on the unit.",
+      "src": "MAGMA-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "3ch",
+      "footprint": 3,
+      "channels": [
+        {
+          "role": "fog",
+          "label": "Fog output (000-005 off; 006-255 on)"
+        },
+        {
+          "role": "volume",
+          "label": "Output volume (0-255 = 0%-100%)"
+        },
+        {
+          "role": "fan",
+          "label": "Fan (0-255 = 20%-100%)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "Magmatic Effects (Elation Professional B.V.) Magma Prime (https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf)",
+        "url": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "3 CH",
+      "src": "MAGMA-MAN",
+      "basis": "EXACT"
+    },
+    {
+      "name": "5ch",
+      "footprint": 5,
+      "channels": [
+        {
+          "role": "fog",
+          "label": "Fog output (000-005 off; 006-255 on)"
+        },
+        {
+          "role": "volume",
+          "label": "Output volume (0-255 = 0%-100%)"
+        },
+        {
+          "role": "fan",
+          "label": "Fan (0-255 = 20%-100%)"
+        },
+        {
+          "role": "duration",
+          "label": "Output duration (000-005 no duration; 006-255 = 1 s - 250 s)"
+        },
+        {
+          "role": "interval",
+          "label": "Interval (000-005 no interval; 006-255 = 10 s - 2500 s)"
+        }
+      ],
+      "channelsSource": {
+        "fixture": "Magmatic Effects (Elation Professional B.V.) Magma Prime (https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf)",
+        "url": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf",
+        "licence": null,
+        "basis": "EXACT"
+      },
+      "label": "5 CH",
+      "note": "LARGEST",
+      "src": "MAGMA-MAN",
+      "basis": "EXACT"
+    }
+  ],
+  "defaultMode": "1ch",
+  "modesOwed": false,
+  "assumedMode": null,
+  "power_w": {
+    "value": 700,
+    "src": "MAGMA-MAN",
+    "basis": "EXACT",
+    "note": "manual p16 rated power; AC 120 V 60 Hz (US) or AC 230 V 50 Hz (EU) versions, breaker 9 A @ 120 V / 5 A @ 230 V"
+  },
+  "supply_w": null,
+  "weight_kg": {
+    "value": 10.2,
+    "src": "MAGMA-MAN",
+    "basis": "EXACT",
+    "note": "manual p16: 22.48 lbs"
+  },
+  "size_mm": {
+    "value": [
+      338,
+      160,
+      400
+    ],
+    "src": "MAGMA-MAN",
+    "basis": "EXACT",
+    "order": "L x W x H",
+    "note": "manual p16: 13.3 x 6.30 x 15.70 in"
+  },
+  "pan_tilt_deg": null,
+  "ip": null,
+  "optics": {
+    "beam_deg": null,
+    "zoom_deg": null,
+    "lux": null,
+    "at_m": null,
+    "photometrySrc": null,
+    "photometryBasis": null
+  },
+  "fluid_ml_per_min": null,
+  "nozzle_d_mm": 50,
+  "model3d": {
+    "glb": "scripts/place/fixtures/glb/magmaPrime.glb",
+    "sidecar": "scripts/place/fixtures/glb/magmaPrime.json",
+    "builtBy": "scripts/place/fixtures/build_fixtures.py",
+    "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+    "panY": null,
+    "tiltY": null,
+    "lensY": 0.145,
+    "sizeAtHome_mm": {
+      "width_x": 164,
+      "depth_z": 348,
+      "height_y": 383
+    },
+    "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+  },
+  "sources": {
+    "MAGMA-MAN": {
+      "url": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf",
+      "what": "Magma Prime user manual, 17 pages (publisher Magmatic Effects / Elation Professional B.V.)",
+      "publisher": "Magmatic Effects / Elation Professional B.V. (host: goknight.com)",
+      "accessed": "2026-11-11"
+    }
+  },
+  "manifest": {
+    "file": "scripts/place/fixtures/fixtures.json",
+    "kind": "magmaPrime",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28"
+  },
+  "provenance": {
+    "identified": "exact",
+    "date": "2026-11-11",
+    "sources": [
+      "MAGMA-MAN"
+    ],
+    "values": {
+      "measured": 0,
+      "tested": 0,
+      "datasheet": 10,
+      "equivalent": 0,
+      "assumed": 0,
+      "unknown": 0
+    }
+  }
+}
