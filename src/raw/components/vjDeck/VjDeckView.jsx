@@ -43,6 +43,8 @@ import { resetDeckValue } from '../../../perform/midi/deckBinding.js'
 import ContextMenu from '../ContextMenu.jsx'
 import EffectsPanel from './EffectsPanel.jsx'
 import DeckSeam from './DeckSeam.jsx'
+import SourceSwitch, { useSourceOff } from './SourceSwitch.jsx'
+import { cameraSourceKey, inputSourceKey, networkSourceKey } from '../../../project/tops/sourceSwitch.js'
 import useDeckLayout from './useDeckLayout.js'
 import './vjDeck.css'
 
@@ -199,19 +201,21 @@ function useNetworkSources() {
 // The row is the drag handle (type DRAG_SOURCE, the clip to make); the name is
 // the button, which puts the clip in the target slot. A row with no clip (a network
 // source the deck cannot play yet) is shown, not draggable and not placeable.
-function SourceRow({ kind, name, label, clip, editable, canPlace, onPlace, state = '', stateTone = '' }) {
+function SourceRow({ kind, name, label, clip, editable, canPlace, onPlace, state = '', stateTone = '', switchKey = '' }) {
     const playable = Boolean(clip)
+    const off = useSourceOff(switchKey)
     return (
         // The row is only a drag handle; its button is the keyboard and touch way to the same thing.
         // eslint-disable-next-line jsx-a11y/no-static-element-interactions
-        <div className={`vj-deck-source${playable ? '' : ' is-unplayable'}`} draggable={editable && playable} onDragStart={(event) => {
+        <div className={`vj-deck-source${playable ? '' : ' is-unplayable'}${switchKey ? ' has-switch' : ''}${off ? ' is-source-off' : ''}`} draggable={editable && playable} onDragStart={(event) => {
             if (!clip) { event.preventDefault(); return }
             event.dataTransfer.setData(DRAG_SOURCE, JSON.stringify(clip))
             event.dataTransfer.effectAllowed = 'copy'
         }}>
             <span className="vj-deck-source-kind">{kind}</span>
             <button type="button" className="vj-deck-button vj-deck-source-name" aria-label={label} title={name} disabled={!canPlace || !playable} onClick={() => clip && onPlace(clip)}>{name}</button>
-            {state ? <span className={`vj-deck-source-state${stateTone ? ` is-${stateTone}` : ''}`}>{state}</span> : null}
+            {off ? <span className="vj-deck-source-state is-off">Off</span> : state ? <span className={`vj-deck-source-state${stateTone ? ` is-${stateTone}` : ''}`}>{state}</span> : null}
+            {switchKey ? <SourceSwitch sourceKey={switchKey} name={name} off={off} /> : null}
         </div>
     )
 }
@@ -235,19 +239,19 @@ function SourcesPanel({ mode, editable, target, targetName, picking, onCancel, o
                 {/* Named only while a slot is being filled: the grid's own group count stays what it was. */}
                 <div role={picking ? 'group' : undefined} aria-label={picking ? 'Cameras' : undefined} className="vj-deck-source-group vj-deck-source-devices">
                     <div className="vj-deck-source-head">Devices</div>
-                    {cameras.map((camera) => row({ kind: 'Camera', name: camera.label, label: `Camera ${camera.label}`, state: liveCameras.includes(camera.label) ? 'Live' : 'Ready', stateTone: liveCameras.includes(camera.label) ? 'live' : '', clip: { kind: 'camera', camera: camera.label, device: camera.id, label: camera.label } }))}
+                    {cameras.map((camera) => row({ kind: 'Camera', name: camera.label, label: `Camera ${camera.label}`, state: liveCameras.includes(camera.label) ? 'Live' : 'Ready', stateTone: liveCameras.includes(camera.label) ? 'live' : '', clip: { kind: 'camera', camera: camera.label, device: camera.id, label: camera.label }, switchKey: cameraSourceKey(camera.label) }))}
                     {needsPermission ? <button type="button" className="vj-deck-button vj-deck-allow-cameras" onClick={allow}>Allow cameras</button> : null}
                     {!supported || (!cameras.length && !needsPermission && !error) ? <span className="vj-deck-dim vj-deck-camera-none">No camera on this machine</span> : null}
                     {error ? <span className="vj-deck-dim" role="status">{error}</span> : null}
                 </div>
                 <div className="vj-deck-source-group vj-deck-source-network">
                     <div className="vj-deck-source-head">Network</div>
-                    {network.map((source) => row({ kind: 'NDI', name: source.label, label: `NDI ${source.label}`, state: 'Not on deck yet', stateTone: 'off', clip: null }))}
+                    {network.map((source) => row({ kind: 'NDI', name: source.label, label: `NDI ${source.label}`, state: 'Not on deck yet', stateTone: 'off', clip: null, switchKey: networkSourceKey(source.label) }))}
                     {!network.length ? <span className="vj-deck-dim vj-deck-network-none">None seen</span> : null}
                 </div>
                 <div className="vj-deck-source-group vj-deck-source-inputs">
                     <div className="vj-deck-source-head">Inputs</div>
-                    {DECK_INPUTS.map((input) => row({ kind: 'Input', name: inputLabel(input), label: inputLabel(input), clip: { kind: 'input', input, label: inputLabel(input) } }))}
+                    {DECK_INPUTS.map((input) => row({ kind: 'Input', name: inputLabel(input), label: inputLabel(input), clip: { kind: 'input', input, label: inputLabel(input) }, switchKey: inputSourceKey(input) }))}
                 </div>
                 <div className="vj-deck-source-group vj-deck-source-files">
                     <div className="vj-deck-source-head">Files</div>
@@ -276,9 +280,10 @@ function SourcesPanel({ mode, editable, target, targetName, picking, onCancel, o
 // or at all, the caller's fallback text stays.
 function CameraPreview({ camera, device, className }) {
     const videoRef = useRef(null)
+    const off = useSourceOff(cameraSourceKey(camera))
     useEffect(() => {
         const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
-        if (!media?.getUserMedia || !media.enumerateDevices) return undefined
+        if (off || !media?.getUserMedia || !media.enumerateDevices) return undefined
         let cancelled = false
         let stream = null
         ;(async () => {
@@ -295,7 +300,7 @@ function CameraPreview({ camera, device, className }) {
             cancelled = true
             stream?.getTracks?.().forEach((track) => track.stop())
         }
-    }, [camera, device])
+    }, [camera, device, off])
     return <video ref={videoRef} className={className} muted playsInline aria-label={`Preview of ${camera}`} data-camera-preview="true" />
 }
 const percent = (value) => `${Math.round(value * 100)}`
