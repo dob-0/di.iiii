@@ -6021,7 +6021,7 @@
    "look": "build-ice",
    "name": "Build, rising ice",
    "fade": 12,
-   "hold": 6
+   "hold": 20
   },
   {
    "look": "drop-red",

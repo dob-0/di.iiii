@@ -97,7 +97,7 @@
  ],
  "beam_wheel_seen": {},
  "loop": true,
- "loop_s": 12143.95,
+ "loop_s": 12157.95,
  "scenes": [
   {
    "id": "work-light",
@@ -342,27 +342,27 @@
      0.35
     ],
     "pixel line tower 4 bar 1": [
-     "#a020c8",
+     "#db01a8",
      0.15
     ],
     "pixel line tower 4 bar 2": [
-     "#a020c8",
+     "#db01a8",
      0.15
     ],
     "pixel line tower 4 bar 3": [
-     "#a020c8",
+     "#db01a8",
      0.15
     ],
     "pixel line tower 5 bar 1": [
-     "#a020c8",
+     "#db01a8",
      0.15
     ],
     "pixel line tower 5 bar 2": [
-     "#a020c8",
+     "#db01a8",
      0.15
     ],
     "pixel line tower 5 bar 3": [
-     "#a020c8",
+     "#db01a8",
      0.15
     ]
    },
@@ -2231,27 +2231,27 @@
      0.15
     ],
     "pixel line tower 4 bar 1": [
-     "#a020c8",
+     "#db01a8",
      0.2
     ],
     "pixel line tower 4 bar 2": [
-     "#a020c8",
+     "#db01a8",
      0.2
     ],
     "pixel line tower 4 bar 3": [
-     "#a020c8",
+     "#db01a8",
      0.2
     ],
     "pixel line tower 5 bar 1": [
-     "#a020c8",
+     "#db01a8",
      0.2
     ],
     "pixel line tower 5 bar 2": [
-     "#a020c8",
+     "#db01a8",
      0.2
     ],
     "pixel line tower 5 bar 3": [
-     "#a020c8",
+     "#db01a8",
      0.2
     ]
    },
@@ -2422,7 +2422,7 @@
    "desk_caps": null,
    "cue": {
     "fade_s": 12,
-    "hold_s": 6
+    "hold_s": 20
    },
    "notes": "Short scene; the fade_s is the build, hold_s 6 is the total on time at full."
   },
