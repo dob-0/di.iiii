@@ -2509,6 +2509,7 @@
     "port": "A",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 1 of 4)"
    },
+   "hung": true,
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
   },
@@ -2576,6 +2577,7 @@
     "port": "A",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 2 of 4)"
    },
+   "hung": true,
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
   },
@@ -2643,6 +2645,7 @@
     "port": "A",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 3 of 4)"
    },
+   "hung": true,
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
   },
@@ -2710,6 +2713,7 @@
     "port": "A",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 4 of 4)"
    },
+   "hung": true,
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
   },
@@ -2777,6 +2781,7 @@
     "port": "B",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 1 of 4)"
    },
+   "hung": true,
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
   },
@@ -2844,6 +2849,7 @@
     "port": "B",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 2 of 4)"
    },
+   "hung": true,
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
   },
@@ -2911,6 +2917,7 @@
     "port": "B",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 3 of 4)"
    },
+   "hung": true,
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
   },
@@ -2978,6 +2985,7 @@
     "port": "B",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 4 of 4)"
    },
+   "hung": true,
    "aim_home": "straight down (pan 0 / tilt 0, hung)",
    "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
   },
@@ -3529,9 +3537,9 @@
     2.29
    ],
    "r": [
+    -0.4363,
     0,
-    0,
-    0
+    -0.5236
    ],
    "angle_rad": 0.0262,
    "size_m": [
@@ -3584,6 +3592,8 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 1 of 12)"
    },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, -30.0 deg of pan fan",
    "aim_home": "straight down",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
@@ -3600,9 +3610,9 @@
     2.29
    ],
    "r": [
+    -0.4363,
     0,
-    0,
-    0
+    -0.3491
    ],
    "angle_rad": 0.0262,
    "size_m": [
@@ -3655,6 +3665,8 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 2 of 12)"
    },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, -20.0 deg of pan fan",
    "aim_home": "straight down",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
@@ -3671,9 +3683,9 @@
     2.29
    ],
    "r": [
+    -0.4363,
     0,
-    0,
-    0
+    -0.1745
    ],
    "angle_rad": 0.0262,
    "size_m": [
@@ -3726,6 +3738,8 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 3 of 12)"
    },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, -10.0 deg of pan fan",
    "aim_home": "straight down",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
@@ -3742,9 +3756,9 @@
     2.29
    ],
    "r": [
+    -0.4363,
     0,
-    0,
-    0
+    0.0
    ],
    "angle_rad": 0.0262,
    "size_m": [
@@ -3797,6 +3811,8 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 4 of 12)"
    },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, 0.0 deg of pan fan",
    "aim_home": "straight down",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
@@ -3813,9 +3829,9 @@
     2.29
    ],
    "r": [
+    -0.4363,
     0,
-    0,
-    0
+    0.1745
    ],
    "angle_rad": 0.0262,
    "size_m": [
@@ -3868,6 +3884,8 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 5 of 12)"
    },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, 10.0 deg of pan fan",
    "aim_home": "straight down",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
@@ -3884,9 +3902,9 @@
     2.29
    ],
    "r": [
+    -0.4363,
     0,
-    0,
-    0
+    0.3491
    ],
    "angle_rad": 0.0262,
    "size_m": [
@@ -3939,6 +3957,8 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 6 of 12)"
    },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, 20.0 deg of pan fan",
    "aim_home": "straight down",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
@@ -3955,9 +3975,9 @@
     2.29
    ],
    "r": [
+    -0.4363,
     0,
-    0,
-    0
+    0.5236
    ],
    "angle_rad": 0.0262,
    "size_m": [
@@ -4010,6 +4030,8 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 7 of 12)"
    },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, 30.0 deg of pan fan",
    "aim_home": "straight down",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
@@ -4026,9 +4048,9 @@
     0.38
    ],
    "r": [
-    3.1416,
+    -2.7925,
     0,
-    0
+    -0.5236
    ],
    "angle_rad": 0.0262,
    "size_m": [
@@ -4081,6 +4103,7 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 8 of 12)"
    },
+   "aim_rest": "PROPOSED (ours): 20 deg from straight up toward the audience, -30.0 deg of pan fan",
    "aim_home": "straight up (standing on the deck)",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
@@ -4097,9 +4120,9 @@
     0.38
    ],
    "r": [
-    3.1416,
+    -2.7925,
     0,
-    0
+    -0.2618
    ],
    "angle_rad": 0.0262,
    "size_m": [
@@ -4152,6 +4175,7 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 9 of 12)"
    },
+   "aim_rest": "PROPOSED (ours): 20 deg from straight up toward the audience, -15.0 deg of pan fan",
    "aim_home": "straight up (standing on the deck)",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
@@ -4168,9 +4192,9 @@
     0.38
    ],
    "r": [
-    3.1416,
+    -2.7925,
     0,
-    0
+    0.0
    ],
    "angle_rad": 0.0262,
    "size_m": [
@@ -4223,6 +4247,7 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 10 of 12)"
    },
+   "aim_rest": "PROPOSED (ours): 20 deg from straight up toward the audience, 0.0 deg of pan fan",
    "aim_home": "straight up (standing on the deck)",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
@@ -4239,9 +4264,9 @@
     0.38
    ],
    "r": [
-    3.1416,
+    -2.7925,
     0,
-    0
+    0.2618
    ],
    "angle_rad": 0.0262,
    "size_m": [
@@ -4294,6 +4319,7 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 11 of 12)"
    },
+   "aim_rest": "PROPOSED (ours): 20 deg from straight up toward the audience, 15.0 deg of pan fan",
    "aim_home": "straight up (standing on the deck)",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
@@ -4310,9 +4336,9 @@
     0.38
    ],
    "r": [
-    3.1416,
+    -2.7925,
     0,
-    0
+    0.5236
    ],
    "angle_rad": 0.0262,
    "size_m": [
@@ -4365,6 +4391,7 @@
     "port": "K",
     "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 12 of 12)"
    },
+   "aim_rest": "PROPOSED (ours): 20 deg from straight up toward the audience, 30.0 deg of pan fan",
    "aim_home": "straight up (standing on the deck)",
    "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
    "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"

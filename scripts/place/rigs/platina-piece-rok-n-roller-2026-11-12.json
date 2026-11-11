@@ -1,0 +1,1288 @@
+{
+ "licence": "own work",
+ "screen_looks": {
+  "kept": [
+   "v3-magenta-room",
+   "v3-red-verticals",
+   "v3-ice-line",
+   "v3-cathedral",
+   "v3-white-back"
+  ],
+  "waiting_for_a_fix_no_scene_yet": [
+   "v3-magenta-flood",
+   "v3-violet-drift",
+   "v3-ice-back"
+  ]
+ },
+ "tempo_bpm": {
+  "value": [
+   79,
+   158
+  ],
+  "basis": "the 30 s piece's track, measured 2026-11-11"
+ },
+ "rules": {
+  "flash": 3,
+  "still": 0.0,
+  "no_amber": true,
+  "laser": "none on this show: every scene laser null",
+  "beams": "XP-16R white/open only; heads patterns on XP-16R only (kinds acme-xp16r-bsw)",
+  "wash": "K10/K15 colour + level only",
+  "hold": "hold_s is total time on, fade inside it, never 0",
+  "stress": "ids starting stress- are the machine's load test at the end of the cue list, never a show cue"
+ },
+ "palette": [
+  {
+   "key": "V",
+   "name": "void",
+   "hex": "#0b0420",
+   "how": "ours (deck loops/spec.json, scene-v3.json)",
+   "role": "light and screen share it",
+   "in_use_v3": true
+  },
+  {
+   "key": "M",
+   "name": "magenta",
+   "hex": "#db01a8",
+   "how": "ours (deck loops/spec.json, scene-v3.json)",
+   "role": "light and screen share it",
+   "in_use_v3": true
+  },
+  {
+   "key": "P",
+   "name": "violet",
+   "hex": "#a020c8",
+   "how": "ours (deck loops/spec.json, scene-v3.json)",
+   "role": "light and screen share it",
+   "in_use_v3": true
+  },
+  {
+   "key": "I",
+   "name": "ice blue",
+   "hex": "#4da6ff",
+   "how": "ours (deck loops/spec.json, scene-v3.json)",
+   "role": "light and screen share it",
+   "in_use_v3": true
+  },
+  {
+   "key": "D",
+   "name": "deep blue",
+   "hex": "#0a3ff0",
+   "how": "ours (deck loops/spec.json, scene-v3.json)",
+   "role": "light and screen share it",
+   "in_use_v3": true
+  },
+  {
+   "key": "R",
+   "name": "signal red",
+   "hex": "#e01020",
+   "how": "ours (deck loops/spec.json, scene-v3.json)",
+   "role": "light and screen share it",
+   "in_use_v3": true
+  },
+  {
+   "key": "W",
+   "name": "words red",
+   "hex": "#ff1a1a",
+   "how": "ours (words clip colour, owner's words)",
+   "role": "light and screen share it",
+   "in_use_v3": true
+  },
+  {
+   "key": "G",
+   "name": "grey",
+   "hex": "#808080",
+   "how": "ours (deck loops/spec.json, scene-v3.json)",
+   "role": "light and screen share it",
+   "in_use_v3": true
+  },
+  {
+   "key": "H",
+   "name": "white",
+   "hex": "#ffffff",
+   "how": "ours (deck loops/spec.json, scene-v3.json)",
+   "role": "light and screen share it",
+   "in_use_v3": true
+  },
+  {
+   "key": "K",
+   "name": "black",
+   "hex": "#000000",
+   "how": "ours (deck loops/spec.json, scene-v3.json)",
+   "role": "light and screen share it",
+   "in_use_v3": true
+  }
+ ],
+ "beam_wheel_seen": {},
+ "loop": true,
+ "what": "Platina: the 30 s light piece to the opening of the track (N3752), v3 scenes cut to the measured times",
+ "source": "scripts/place/rigs/platina-scenes-v3-2026-11-12.json + the times measured on the track (see scripts/place/platina_piece.py)",
+ "date": "2026-11-12",
+ "version": "piece-1",
+ "track": {
+  "id": "pnZ0k2q_LBE",
+  "where": "the artist's own upload",
+  "in_repo": false,
+  "seconds_used": [
+   0,
+   30.0
+  ],
+  "measured": {
+   "rise_s": 9.0,
+   "drop_s": 12.24,
+   "break_s": 24.38,
+   "back_s": 27.4,
+   "tempo_bpm": [
+    79,
+    158
+   ]
+  }
+ },
+ "loop_s": 35.05,
+ "scenes": [
+  {
+   "id": "white-back",
+   "title": "White back",
+   "act": 4,
+   "intent": "Silhouette: white from the floor row behind him, towers low, nothing from above.",
+   "parts": {
+    "K15 1 stage-floor row": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 2 stage-floor row": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 3 stage-floor row": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 4 stage-floor row": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 5 stage-floor row": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 6 stage-floor row": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 7 side stand": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 8 side stand": [
+     "#ffffff",
+     0.6
+    ],
+    "pixel line tower 1 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 1 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 1 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 2 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 2 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 2 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 3 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 3 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 3 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 4 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 4 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 4 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 5 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 5 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 5 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 6 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 6 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 6 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 7 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 7 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 7 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 8 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 8 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 8 bar 3": [
+     "#ffffff",
+     0.3
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 2.0,
+    "hold_s": 9.0
+   },
+   "notes": "0.00 s: the quiet opening: a silhouette, nothing from above",
+   "screen_look": "v3-white-back",
+   "piece_start_s": 0.0
+  },
+  {
+   "id": "freeze-hold",
+   "title": "Freeze",
+   "act": 5,
+   "intent": "The breath before a drop: the white fan alone, still.",
+   "parts": {
+    "K15 1 stage-floor row": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 2 stage-floor row": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 3 stage-floor row": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 4 stage-floor row": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 5 stage-floor row": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 6 stage-floor row": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 7 side stand": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 8 side stand": [
+     "#ffffff",
+     0.05
+    ],
+    "XP-16R 1": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 2": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 3": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 4": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 5": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 6": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 7": [
+     "#ffffff",
+     0.9
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0.5,
+    "hold_s": 3.24
+   },
+   "notes": "9.00 s: the level rises: the white fan alone, still, the breath before the drop",
+   "piece_start_s": 9.0
+  },
+  {
+   "id": "drop-hit",
+   "title": "Drop hit",
+   "act": 5,
+   "intent": "One white hit of the whole rig, a second and a half.",
+   "parts": {
+    "K10 1 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 2 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 3 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 4 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 5 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 6 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 7 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 8 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 1 stage-floor row": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 2 stage-floor row": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 3 stage-floor row": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 4 stage-floor row": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 5 stage-floor row": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 6 stage-floor row": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 7 side stand": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 8 side stand": [
+     "#ffffff",
+     0.8
+    ],
+    "pixel line tower 1 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 1 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 1 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 2 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 2 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 2 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 3 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 3 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 3 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 4 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 4 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 4 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 5 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 5 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 5 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 6 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 6 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 6 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 7 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 7 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 7 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 8 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 8 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 8 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 1": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 2": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 3": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 4": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 5": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 6": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 7": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 8": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 9": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 10": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 11": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 12": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0.05,
+    "hold_s": 0.76
+   },
+   "notes": "12.24 s: the kick enters: one white hit of the whole rig",
+   "piece_start_s": 12.24
+  },
+  {
+   "id": "drop-red",
+   "title": "Drop, red",
+   "act": 5,
+   "intent": "Drop two: red towers at double time, a fast white X.",
+   "parts": {
+    "K15 1 stage-floor row": [
+     "#e01020",
+     0.5
+    ],
+    "K15 2 stage-floor row": [
+     "#e01020",
+     0.5
+    ],
+    "K15 3 stage-floor row": [
+     "#e01020",
+     0.5
+    ],
+    "K15 4 stage-floor row": [
+     "#e01020",
+     0.5
+    ],
+    "K15 5 stage-floor row": [
+     "#e01020",
+     0.5
+    ],
+    "K15 6 stage-floor row": [
+     "#e01020",
+     0.5
+    ],
+    "K15 7 side stand": [
+     "#e01020",
+     0.5
+    ],
+    "K15 8 side stand": [
+     "#e01020",
+     0.5
+    ],
+    "pixel line tower 1 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 1 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 1 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 2 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 2 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 2 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 3 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 3 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 3 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 4 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 4 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 4 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 5 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 5 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 5 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 6 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 6 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 6 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 7 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 7 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 7 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 8 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 8 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 8 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "XP-16R 1": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 2": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 3": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 4": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 5": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 6": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 7": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 8": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 9": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 10": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 11": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 12": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 158,
+    "depth": 160,
+    "spatial": "y-",
+    "kinds": [
+     "acme-pixel-line-ip"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "cross",
+    "period_s": 5,
+    "pan_deg": 55,
+    "tilt_deg": 0,
+    "spatial": "all",
+    "kinds": [
+     "acme-xp16r-bsw"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0.1,
+    "hold_s": 11.38
+   },
+   "notes": "13.00 s: the drop: red towers at double time, the fast white X",
+   "screen_look": "v3-red-verticals",
+   "piece_start_s": 13.0
+  },
+  {
+   "id": "white-back-beams",
+   "title": "White back, rising beams",
+   "act": 4,
+   "intent": "The silhouette with the deck beams rising and falling together behind him.",
+   "parts": {
+    "K15 1 stage-floor row": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 2 stage-floor row": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 3 stage-floor row": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 4 stage-floor row": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 5 stage-floor row": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 6 stage-floor row": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 7 side stand": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 8 side stand": [
+     "#ffffff",
+     0.5
+    ],
+    "pixel line tower 1 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 1 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 1 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 2 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 2 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 2 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 3 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 3 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 3 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 4 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 4 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 4 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 5 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 5 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 5 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 6 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 6 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 6 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 7 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 7 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 7 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 8 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 8 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 8 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "XP-16R 8": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 9": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 10": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 11": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 12": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 9,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "all",
+    "kinds": [
+     "acme-xp16r-bsw"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0.3,
+    "hold_s": 3.02
+   },
+   "notes": "24.38 s: the kick leaves: the silhouette, deck beams rising behind him",
+   "screen_look": "v3-white-back",
+   "piece_start_s": 24.38
+  },
+  {
+   "id": "drop-magenta",
+   "title": "Drop, magenta",
+   "act": 5,
+   "intent": "Drop one: everything magenta, pumping on the beat outward from the centre, beams in figure eights.",
+   "parts": {
+    "K10 1 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 2 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 3 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 4 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 5 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 6 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 7 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 8 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K15 1 stage-floor row": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 2 stage-floor row": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 3 stage-floor row": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 4 stage-floor row": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 5 stage-floor row": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 6 stage-floor row": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 7 side stand": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 8 side stand": [
+     "#db01a8",
+     0.8
+    ],
+    "pixel line tower 1 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 1 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 1 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 2 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 2 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 2 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 3 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 3 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 3 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 4 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 4 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 4 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 5 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 5 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 5 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 6 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 6 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 6 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 7 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 7 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 7 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 8 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 8 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 8 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "XP-16R 1": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 2": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 3": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 4": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 5": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 6": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 7": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 8": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 9": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 10": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 11": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 12": [
+     "#ffffff",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 79,
+    "depth": 90,
+    "spatial": "radial",
+    "kinds": [
+     "acme-pixel-line-ip",
+     "cp-aleda-beye-k10",
+     "cp-hy-beye-k15"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 8,
+    "pan_deg": 40,
+    "tilt_deg": 18,
+    "spatial": "ripple",
+    "kinds": [
+     "acme-xp16r-bsw"
+    ]
+   },
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0.1,
+    "hold_s": 2.6
+   },
+   "notes": "27.40 s: the kick is back: everything magenta, pumping",
+   "screen_look": "v3-magenta-room",
+   "piece_start_s": 27.4
+  },
+  {
+   "id": "blackout",
+   "title": "Blackout",
+   "act": 7,
+   "intent": "Out.",
+   "parts": {
+    "K10 1 over the stage": [
+     "#000000",
+     0.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [],
+    "still": 0.0
+   },
+   "heads": null,
+   "laser_colour": null,
+   "desk_caps": null,
+   "cue": {
+    "fade_s": 0.0,
+    "hold_s": 2.0
+   },
+   "notes": "30.00 s: out",
+   "piece_start_s": 30.0
+  }
+ ]
+}

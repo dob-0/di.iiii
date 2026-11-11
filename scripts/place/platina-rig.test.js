@@ -42,6 +42,24 @@ describe('Platina rig plan 2026-11-11', () => {
         for (const [g, { b }] of Object.entries(blocks)) expect(seen[g]).toBe(b.units)
     })
 
+    it('the hung rows say hung, the deck row does not; every beam lamp rests leaning toward the audience, the rows fanned', () => {
+        const xp = rig.fixtures.filter((f) => /xp16r/.test(f.id))
+        const hung = xp.filter((f) => f.hung === true)
+        const deck = xp.filter((f) => f.hung !== true)
+        expect([hung.length, deck.length]).toEqual([7, 5])
+        expect(rig.fixtures.filter((f) => f.type === 'cp-aleda-beye-k10').every((f) => f.hung === true)).toBe(true)
+        expect(rig.fixtures.filter((f) => f.type === 'cp-hy-beye-k15').some((f) => f.hung)).toBe(false)
+        // the beam of rotation [rx, 0, rz] (spotLightAim.js: local forward is straight down, Rz then Rx)
+        const dir = ([rx, , rz]) => [Math.sin(rz), -Math.cos(rz) * Math.cos(rx), -Math.cos(rz) * Math.sin(rx)]
+        for (const f of hung) { const d = dir(f.r); expect(d[1], f.id).toBeLessThan(0); expect(d[2], f.id).toBeGreaterThan(0.2) }
+        for (const f of deck) { const d = dir(f.r); expect(d[1], f.id).toBeGreaterThan(0); expect(d[2], f.id).toBeGreaterThan(0.2) }
+        for (const row of [hung, deck]) {
+            const byX = [...row].sort((a, b) => a.p[0] - b.p[0])
+            expect(dir(byX[0].r)[0]).toBeLessThan(-0.3)
+            expect(dir(byX[byX.length - 1].r)[0]).toBeGreaterThan(0.3)
+        }
+    })
+
     it('says measured / from-plan-words / PROPOSED and a source for every item, PROPOSED for XP-16R and hazers', () => {
         for (const x of [...rig.fixtures, ...rig.solids]) {
             expect(x.status, x.id).toMatch(/measured|from-plan-words|PROPOSED/)

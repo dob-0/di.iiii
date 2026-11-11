@@ -372,6 +372,7 @@ export const v1Entities = (rig, { hall = null, report = null } = {}) => {
         }
         if (f.angle_rad == null) continue
         const fixture = { type: f.type, unit: 1, circuit: f.circuit || '', position: positionOf(f) }
+        if (f.hung === true) fixture.hung = true   // the rig says the lamp hangs: its body is drawn above the lens, its pan/tilt signs are a hung lamp's
         if (f.dmx) Object.assign(fixture, { universe: f.dmx.universe, address: f.dmx.address, mode: `${f.dmx.footprint}ch` })
         out.push({ id: f.id, type: 'spotLight', name: `${f.type.toUpperCase()} ${f.part} (${f.status})`, parentId: null,
             components: {

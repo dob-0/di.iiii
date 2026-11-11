@@ -205,6 +205,7 @@ def r2(v):
 
 
 XP_REST = 'deck'   # where the 5 XP-16R without a drawn point go: 'deck' (ours, no hang point) or 'truss' (--xp-rest truss)
+XP_LEAN_HUNG, XP_LEAN_DECK, XP_FAN = 25, 20, 30   # the beam lamps' rest aim, degrees (PROPOSED, ours; see the XP-16R block)
 
 
 def build(repo, M):
@@ -336,7 +337,7 @@ def build(repo, M):
     for i, x in enumerate(kx):
         g = 'k10-over-stage' if i < 4 else 'k10-over-stage-b'
         add(f'platina-k10-{i + 1:02d}', 'cp-aleda-beye-k10', g, [x, yk, zl], [0, 0, 0], 0.2618, 'measured', f'x plot-top.png glyph centroid (slot {i + 1} of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss',
-            f'K10 {i + 1} over the stage', [bk[0], bk[1], bk[2]], i if i < 4 else i - 4, {'aim_home': 'straight down (pan 0 / tilt 0, hung)', 'beam_note': 'angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60'})
+            f'K10 {i + 1} over the stage', [bk[0], bk[1], bk[2]], i if i < 4 else i - 4, {'hung': True, 'aim_home': 'straight down (pan 0 / tilt 0, hung)', 'beam_note': 'angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60'})
     # K15 floor row, 6; K15 sides, 2
     fx_ = sorted(M['k15_floor']['x_front_m']); fz = M['k15_floor']['z_side_m']
     fb = M['k15_floor']['body_front_m'] + [M['k15_floor']['body_side_m'][0]]
@@ -373,8 +374,17 @@ def build(repo, M):
             # 0.25 m in front of the K15 row: the 3 deg beam then rises 0.33 m clear of the screen face (in the row's own line it would graze it)
             p = [round(gx[i - 7], 2), round(deck + xp_h / 2, 2), round(fz + 0.25, 2)]; src = 'PROPOSED (ours, no hang point needed): standing on the deck in the 5 gaps of the K15 row, 0.25 m in front of it, beam up'
         up = i >= 7 and XP_REST != 'truss'
-        add(f'platina-xp16r-{i + 1:02d}', 'acme-xp16r-bsw', 'xp16r-proposed', p, [math.pi, 0, 0] if up else [0, 0, 0], 0.0262, 'PROPOSED', src, f'XP-16R {i + 1}', [0.35, 0.50, 0.30], i,
-            {'aim_home': 'straight up (standing on the deck)' if up else 'straight down', 'beam_note': 'angle_rad = half of the maker\'s 3 deg beam (manual photometric diagram)', 'why': 'beam heads of every drawn rig of this kind hang over the stage; no paper places them'})
+        # REST AIM (owner 2026-11-11, N3767: thin beams fanned out toward the audience, like the rental's render). A look's head
+        # pattern swings around this rest (src/rigbuild/headMotion.js). Ours, PROPOSED: the hung row leans XP_LEAN_HUNG deg from
+        # straight down toward the audience, the deck row XP_LEAN_DECK deg from straight up; each row is spread in pan, the outer
+        # lamps outward (XP_FAN deg at the ends). rotation = [rx, 0, rz]: rz turns the beam toward +x, rx leans it toward +z.
+        row = [k for k in range(12) if (k >= 7 and XP_REST != 'truss') == up and (k < 7) == (i < 7)]
+        fan = math.radians(XP_FAN) * ((2 * row.index(i) / (len(row) - 1)) - 1 if len(row) > 1 else 0)
+        lean = math.radians(XP_LEAN_DECK if up else XP_LEAN_HUNG)
+        rest = [-(math.pi - lean), 0, fan] if up else [-lean, 0, fan]
+        add(f'platina-xp16r-{i + 1:02d}', 'acme-xp16r-bsw', 'xp16r-proposed', p, rest, 0.0262, 'PROPOSED', src, f'XP-16R {i + 1}', [0.35, 0.50, 0.30], i,
+            {**({} if up else {'hung': True}), 'aim_rest': f'PROPOSED (ours): {XP_LEAN_DECK if up else XP_LEAN_HUNG} deg from straight {"up" if up else "down"} toward the audience, {round(math.degrees(fan), 1)} deg of pan fan',
+             'aim_home': 'straight up (standing on the deck)' if up else 'straight down', 'beam_note': 'angle_rad = half of the maker\'s 3 deg beam (manual photometric diagram)', 'why': 'beam heads of every drawn rig of this kind hang over the stage; no paper places them'})
     # hazers: PROPOSED
     for i, x in enumerate([-3.4, 3.4]):
         add(f'platina-hazer-{i + 1}', 'magmatic-magma-prime', 'hazer', [x, deck + 0.20, -0.55], [-math.pi / 2, 0, 0], 0.0, 'PROPOSED',
