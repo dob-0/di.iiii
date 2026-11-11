@@ -1820,3 +1820,9 @@ Symptom: after one light/laser POST failed, every later Blackout press only retr
 Cause: `toggleBlackout` (`PerformWindows.jsx`) took the "retry pending" branch whenever `pending` was non-empty and skipped the restore; `pictureOutOptions` filtered `top.out` only.
 Fix: `planBlackoutPress` (`perform/blackoutPlan.js`): a press while blacked out always restores the deck (when a level is kept); pending 'on' is dropped, pending 'off' is retried and stays named; lifting the laser never arms. `buildPictureOutOptions` (`map/pictureOutOptions.js`) is the one builder for Projection and Perform.
 Regression tests: `perform/blackoutPlan.test.js`, `map/pictureOutOptions.test.js`.
+
+## The projection output stayed black after a camera track ended (2026-11-10, owner row N3522)
+Seen live: the `/out` page showed a phone camera (v4l2loopback fed by scrcpy) through a `stream` surface; after about an hour the MediaStreamTrack went to "ended" and the output stayed black until a reload, though the camera was back.
+Cause: `MapCameraSource` called getUserMedia once per device id and nothing listened for the track ending or for a first open that failed because the feed was not up yet.
+Fix: it re-opens by itself on track `ended` / stream `inactive` and on busy/not-found class errors, with a back-off (0.5, 1, 2 s, then 3 s), stopping old tracks first; the stream lookup is asked again; no retry on NotAllowedError; timers and listeners are cleared on unmount.
+Guard: `src/map/MapSourceView.reacquire.test.jsx` (fake timers, faked mediaDevices). Not checked on a real camera.

@@ -37,4 +37,24 @@ describe('one camera, one reader per page', () => {
         await openSharedCamera(bad, dev('c'))
         expect(bad.getUserMedia).toHaveBeenCalledTimes(2)
     })
+    it('an ended stream is not served again: the retry opens the device afresh', async () => {
+        const opened = []
+        const makeStream = (isMaster = false) => {
+            const track = { readyState: 'live', stopped: false, stop() { this.stopped = true } }
+            const stream = { track, getTracks: () => [track], getVideoTracks: () => [track], clone: () => makeStream() }
+            if (isMaster) opened.push(stream)
+            return stream
+        }
+        const media = { getUserMedia: vi.fn(async () => makeStream(true)) }
+        const first = await openSharedCamera(media, dev('dropping'))
+        // the device drops: the capture ends, the view stops its clone and asks again
+        opened[0].track.readyState = 'ended'
+        first.getTracks().forEach((t) => t.stop())
+        const second = await openSharedCamera(media, dev('dropping'))
+        expect(media.getUserMedia).toHaveBeenCalledTimes(2)
+        expect(second.getVideoTracks()[0].readyState).toBe('live')
+        // another viewer still holding the dead clone stopping it must not stop the new capture
+        first.getTracks().forEach((t) => t.stop())
+        expect(opened[1].track.stopped).toBe(false)
+    })
 })

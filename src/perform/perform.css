@@ -4,7 +4,9 @@
    and (2026-11-10, owner: "we need all ui like lego and minimal") makes every
    window a BLOCK: one anatomy, one grid, one control look. The rules are in
    docs/ai/sessions/feat-perform-full.md (from di-brand SYSTEM.md section 1).
-   Every rule below is scoped under .perform-shell: Nodes is not touched. */
+   The window title bar gets the one-row dress further down (2026-11-10, owner
+   N3511 "look how place used bad"). Every rule below is scoped under
+   .perform-shell: Nodes is not touched. */
 
 /* The two sizes everything on this page is built from. A fine pointer gets
    24px; a touch screen keeps the 44px target (WCAG 2.5.8 and the platform's
@@ -840,3 +842,9 @@
     z-index: 1;
     background: transparent;
 }
+
+/* Dev's title-bar rules (#1266, owner N3511) are not repeated here: the block
+   header above ("the block: one frame, one header row") already does what they
+   did (one nowrap row, family word and "pinned" gone, no shadow, title ends in
+   an ellipsis) with a fixed --perform-head height. Its min 28px / wrap-on-touch
+   overrides would break that fixed height and the one-control-size rule. */
