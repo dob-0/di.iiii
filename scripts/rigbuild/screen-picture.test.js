@@ -27,6 +27,11 @@ describe('the picture on the LED screen', () => {
         expect(e.components.transform.position).toEqual([-0.04, 2.67, 0.055])
     })
 
+    it('never drifts: the picture says static, so walk mode gives it no idle motion (owner N3853)', () => {
+        const e = pictureEntity({ screen: { id: 's', components: { transform: { position: [0, 1, 0], scale: [4, 2.5, 0.1] } } }, assetId: 'a', px: { width: 1024, height: 640 } })
+        expect(e.components.animation.mode).toBe('static')
+    })
+
     it('level is the wall brightness, kept inside 0..1', () => {
         expect(pictureEntity({ screen, assetId: 'a', px: { width: 2, height: 1 }, level: 0.4 }).components.appearance.opacity).toBe(0.4)
         expect(pictureEntity({ screen, assetId: 'a', px: { width: 2, height: 1 }, level: 7 }).components.appearance.opacity).toBe(1)

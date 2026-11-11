@@ -1956,3 +1956,17 @@ Symptom (owner): `?render=tech` gave a pale beige screen, lamps and stage almost
 Cause: (1) `techEntities` (src/shared/renderPlan.js) dropped the group that holds `components.rigLooks` (and rigParts, venuePlan); the cue player reads the looks from the entity list it is fed (`rigLooksOf`, src/rigbuild/useRigLook.js), found none, so no driver, no chip, no scenes row, no posed lamps. (2) With no cue every lamp stood at its authored state and the Tech cone (SpotLightObject.jsx, DoubleSide, opacity 0.28, normal blending) of 50+ lamps stacked into one flat colour over the camera. (3) Stage solids (towers, wings, screen frame, stands) and the wall picture were dropped by `isShowThing`; the picture's texture would also have been swapped for grey by SchematicSurfaces. (4) The authored exposure 0.1 (a haze setting) made Tech's plain grey solids black.
 Fix: renderPlan keeps the data holders, the stage solids of a room that holds a rig, and an image/video named screen/led/wall/projection/backdrop; ImageObject marks its mesh `userData.keepTexture` and SchematicSurfaces skips it; the Tech cone is FrontSide at 0.22; Tech fixes the exposure at 1 (TECH_EXPOSURE).
 Guard: `src/shared/renderPlan.test.js` (operator-mode block), `src/objectComponents/SpotLightObject.schematic.test.js`, `src/project/viewport/renderPlanParity.test.js`. Seen on the agent screen, drop-magenta Tech.
+
+## 2026-11-12 — Beams passed through the deck, the wings and the LED wall, and ran on under the stage (Platina, owner N3835)
+- **Symptom:** in a rig room built with `--hall none`, cones crossed the stage solids and continued below the ground.
+- **Cause:** a beam stops only at a building (`svBuilding`) or at steel (`components.occluder {kind:'steel'}`, `beamReach.js`); `epic-build.mjs` flagged only trusses and towers, and with no hall there was no floor at all.
+- **Fix:** a rig solid that says `opaque: true` gets the same flag (`isSteelSolid`); `platina_rig.py` marks every solid opaque and adds `platina-floor` (size PROPOSED). Limit: no roof — a beam aimed up ends at its stored length.
+- **Guard:** `scripts/rigbuild/epic-build.test.js` "an opaque solid stops a beam"; `scripts/place/platina-rig.test.js` "every solid is opaque and there is a floor".
+- **Also (N3848):** a scene click in the room goes through Light (`serverXR/src/show/showRemote.js`, refusal `not-on-light`); a scratch room needs `patch.mjs --exact` then `epic-build.mjs … --desk-only` after every build.
+
+## 2026-11-12: the room's wall showed one still in every scene (owner N3855)
+- **Seen:** the scratch Platina room changed its lights per scene, the LED wall kept `v3-red-verticals` in all of them.
+- **Cause:** the wall picture is one `image` entity with one asset; nothing tied it to the look that is on.
+- **Fix:** `components.lookMedia.byLook` on the picture (look id to asset id), applied by `roomInLook` through `src/rigbuild/lookMedia.js`; a look the map does not name leaves the wall dark. Written by `scripts/rigbuild/screen-picture.mjs --looks <map> --looks-dir <stills>`; Platina's map `scripts/place/rigs/platina-wall-looks-v3-2026-11-12.json` (27 looks, 8 stills; 10 certain, 17 PROPOSED).
+- **Guard:** `src/rigbuild/lookMedia.test.js`.
+- **Owed:** stills only (no moving loop); the deck's live picture on the wall is the Studio's LiveScreens, not in the public room.
