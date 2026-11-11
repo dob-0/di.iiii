@@ -1838,3 +1838,10 @@ Guard: `src/shared/renderPlan.test.js` (operator-mode block), `src/objectCompone
 - **Fix:** a rig solid that says `opaque: true` gets the same flag (`isSteelSolid`); `platina_rig.py` marks every solid opaque and adds `platina-floor` (size PROPOSED). Limit: no roof — a beam aimed up ends at its stored length.
 - **Guard:** `scripts/rigbuild/epic-build.test.js` "an opaque solid stops a beam"; `scripts/place/platina-rig.test.js` "every solid is opaque and there is a floor".
 - **Also (N3848):** a scene click in the room goes through Light (`serverXR/src/show/showRemote.js`, refusal `not-on-light`); a scratch room needs `patch.mjs --exact` then `epic-build.mjs … --desk-only` after every build.
+
+## 2026-11-12: the room's wall showed one still in every scene (owner N3855)
+- **Seen:** the scratch Platina room changed its lights per scene, the LED wall kept `v3-red-verticals` in all of them.
+- **Cause:** the wall picture is one `image` entity with one asset; nothing tied it to the look that is on.
+- **Fix:** `components.lookMedia.byLook` on the picture (look id to asset id), applied by `roomInLook` through `src/rigbuild/lookMedia.js`; a look the map does not name leaves the wall dark. Written by `scripts/rigbuild/screen-picture.mjs --looks <map> --looks-dir <stills>`; Platina's map `scripts/place/rigs/platina-wall-looks-v3-2026-11-12.json` (27 looks, 8 stills; 10 certain, 17 PROPOSED).
+- **Guard:** `src/rigbuild/lookMedia.test.js`.
+- **Owed:** stills only (no moving loop); the deck's live picture on the wall is the Studio's LiveScreens, not in the public room.
