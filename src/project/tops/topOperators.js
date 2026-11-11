@@ -356,6 +356,86 @@ void main() {
 }`
     },
 
+    // Body: the person cut out as a flat shape (bodyMatte.js finds them). `a` is the
+    // picture on the stack, `b` the layer's source picture BEFORE its other
+    // effects: the model looks at `b`, the colours are painted over `a`. The
+    // engine gives it `mask` (the model's answer, top-down, 8-bit) and
+    // matte_ready (0 while the model loads or when it is not available: the
+    // shader then passes `a` through unchanged). The echo trail lives in this
+    // operator's own alpha (`self`): every operator draws alpha 1 except this one.
+    'top.matte': {
+        label: 'Body',
+        family: 'adjust',
+        inputs: ['a', 'b'],
+        matte: true,
+        animated: true,
+        params: [
+            param('soft', 'Softness', 0.3, 0, 1),
+            param('drift', 'Drift', 0, 0, 1),
+            param('echo', 'Echo', 0, 0, 1),
+            colour('colour', 'Body', '#000000'),
+            colour('back', 'Background', '#e8456b'),
+            param('shade', 'Shade', 0, 0, 1),
+            param('fill', 'Fill', 1, 0, 1),
+            toggle('invert', 'Invert')
+        ],
+        fragment: `
+uniform sampler2D self;
+uniform sampler2D mask;
+uniform float matte_ready;
+uniform float p_soft;
+uniform float p_drift;
+uniform float p_echo;
+uniform float p_shade;
+uniform float p_fill;
+uniform float p_invert;
+uniform vec3 p_colour;
+uniform vec3 p_back;
+vec3 hueTurn(vec3 c, float turns) {
+    float k = 6.2831853 * turns;
+    const vec3 w = vec3(0.57735);
+    return c * cos(k) + cross(w, c) * sin(k) + w * dot(w, c) * (1.0 - cos(k));
+}
+float person(vec2 o) {
+    vec2 q = uv + o * texel;
+    return texture2D(mask, vec2(q.x, 1.0 - q.y)).r;
+}
+float edge(float v) {
+    float w = 0.04 + p_soft * 0.42;
+    return smoothstep(0.5 - w, 0.5 + w, v);
+}
+float decay() { return p_echo * 0.985; }
+float trailAt(vec2 o) {
+    vec2 q = clamp(uv + o * texel, vec2(0.0), vec2(1.0));
+    return max(edge(person(o)), max(texture2D(self, q).a * decay() - 1.0 / 255.0, 0.0));
+}
+void main() {
+    vec3 pic = texture2D(a, uv).rgb;
+    if (matte_ready < 0.5) { gl_FragColor = vec4(pic, 0.0); return; }
+    float m = edge(person(vec2(0.0)));
+    vec3 back = clamp(hueTurn(p_back, time * p_drift * 0.125), 0.0, 1.0);
+    vec3 body = mix(p_colour, back * 0.55, p_shade);
+    float seen = p_invert > 0.5 ? 1.0 - m : m;
+    vec3 inside = mix(pic, body, p_fill);
+    vec3 outside = back;
+    if (p_invert > 0.5) { outside = mix(pic, body, p_fill); inside = back; }
+    vec3 col = mix(outside, inside, seen);
+    float t = 0.0;
+    if (p_echo > 0.001) {
+        t = trailAt(vec2(0.0));
+        float gx = trailAt(vec2(1.0, 0.0)) - trailAt(vec2(-1.0, 0.0));
+        float gy = trailAt(vec2(0.0, 1.0)) - trailAt(vec2(0.0, -1.0));
+        float grad = length(vec2(gx, gy)) * 0.5;
+        float bands = 6.0;
+        float d = abs(fract(t * bands + 0.5) - 0.5);
+        float px = d / max(grad * bands, 0.02);
+        float line = (1.0 - smoothstep(0.5, 1.5, px)) * smoothstep(0.02, 0.08, t) * (1.0 - smoothstep(0.92, 1.0, t));
+        col = mix(col, body, line * (1.0 - m));
+    }
+    gl_FragColor = vec4(col, t);
+}`
+    },
+
     'top.glitch': {
         label: 'Glitch',
         family: 'adjust',

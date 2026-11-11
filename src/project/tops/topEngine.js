@@ -18,6 +18,7 @@
 // Nothing here knows about React, the project document or the network sync.
 
 import { watchVideoFrames, hasNewFrame } from './videoFrames.js'
+import { bodyMatte, MATTE_W, MATTE_H } from './bodyMatte.js'
 import { TOP_OPERATORS, isTopType, measurePixels, resolveTopParams, hexToRgb01 } from './topOperators.js'
 
 const VERTEX = `
@@ -261,6 +262,13 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
     const videos = new Map()
     const measureTarget = makeTarget(gl, MEASURE_W, MEASURE_H)
     const measurePixelsBuffer = new Uint8Array(MEASURE_W * MEASURE_H * 4)
+    // Body: the source picture scaled down to what the model takes, read back.
+    let matteTarget = null
+    let matteFrames = 0
+    // One mask per SOURCE picture (not per Body effect): two Body effects on the same
+    // layer share one model run. Keyed by the id of the node that makes the source.
+    const matteStates = new Map()
+    let mattePixels = null
 
     let network = { nodes: [], wires: [] }
     let order = []
@@ -268,21 +276,32 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
     let inputsFor = new Map()
     let errors = new Map()
 
+    // Free what a slot owns; a Body operator also lets go of the shared segmenter.
+    const freeSlot = (slot, id) => {
+        freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history)
+        if (slot.source) gl.deleteTexture(slot.source)
+        if (slot.matte) bodyMatte().release(id)
+    }
+
     const slotFor = (node) => {
         let slot = slots.get(node.id)
         if (node.type === '__remote') {
             if (!slot || slot.type !== '__remote') {
-                if (slot) { freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history); if (slot.source) gl.deleteTexture(slot.source) }
+                if (slot) freeSlot(slot, node.id)
                 slot = { type: '__remote', now: { texture: makeTexture(gl, 2, 2) }, before: null, history: null, source: null, lastVideoTime: -1 }
                 slots.set(node.id, slot)
             }
             return slot
         }
         if (!slot || slot.type !== node.type) {
-            if (slot) { freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history); if (slot.source) gl.deleteTexture(slot.source) }
+            if (slot) freeSlot(slot, node.id)
             slot = { type: node.type, now: makeTarget(gl, width, height), before: makeTarget(gl, width, height), history: null, source: null, lastMeasure: 0, mean: null, meanBefore: null, lastVideoTime: -1 }
             if (TOP_OPERATORS[node.type].history) slot.history = makeTarget(gl, width, height)
             if (TOP_OPERATORS[node.type].source) slot.source = makeTexture(gl, 2, 2)
+            if (TOP_OPERATORS[node.type].matte) {
+                slot.matte = true
+                bodyMatte().acquire(node.id)
+            }
             slots.set(node.id, slot)
         }
         return slot
@@ -314,11 +333,12 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             if (!byId.has(wire.from) || !byId.has(wire.to)) continue
             inputsFor.get(wire.to)[wire.port || 'a'] = wire.from
         }
+        const wanted = new Set(nodes.filter((node) => TOP_OPERATORS[node.type].matte).map((node) => inputsFor.get(node.id).b).filter(Boolean))
+        for (const [id, state] of matteStates) if (!wanted.has(id)) { gl.deleteTexture(state.texture); matteStates.delete(id) }
         for (const [id, slot] of slots) {
             if (byId.has(id)) continue
             if (slot.type === '__remote') { gl.deleteTexture(slot.now.texture); slots.delete(id); continue }
-            freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history)
-            if (slot.source) gl.deleteTexture(slot.source)
+            freeSlot(slot, id)
             slots.delete(id)
         }
     }
@@ -384,8 +404,59 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         return colourParamNames.get(type)
     }
 
+    // Body: look at the layer's source picture (readSource) and refresh the node's mask.
+    // At most one model run per NEW source picture (a frame equal to the last one,
+    // pixel for pixel at 480x270, is not run again); the last mask stays in use
+    // while no new one is made, and the render loop never waits for the model to load.
+    const refreshMatte = (sourceId, readSource) => {
+        let state = matteStates.get(sourceId)
+        if (!state) {
+            const texture = gl.createTexture()
+            gl.bindTexture(gl.TEXTURE_2D, texture)
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, 1, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, new Uint8Array([0]))
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+            state = { texture, ready: false, previous: null, image: null, frame: -1 }
+            matteStates.set(sourceId, state)
+        }
+        if (state.frame === matteFrames) return state
+        state.frame = matteFrames
+        const service = bodyMatte()
+        if (service.status() !== 'ready' || !readSource) { state.ready = false; return state }
+        if (!matteTarget) {
+            matteTarget = makeTarget(gl, MATTE_W, MATTE_H)
+            mattePixels = new Uint8Array(MATTE_W * MATTE_H * 4)
+        }
+        bindTexture(present, 'a', 0, readSource)
+        draw(present, matteTarget)
+        gl.readPixels(0, 0, MATTE_W, MATTE_H, gl.RGBA, gl.UNSIGNED_BYTE, mattePixels)
+        const words = new Uint32Array(mattePixels.buffer)
+        let same = state.previous !== null
+        if (same) for (let i = 0; i < words.length; i += 1) if (words[i] !== state.previous[i]) { same = false; break }
+        if (same) return state
+        state.previous = state.previous || new Uint32Array(words.length)
+        state.previous.set(words)
+        if (!state.image) state.image = new ImageData(MATTE_W, MATTE_H)
+        const rowBytes = MATTE_W * 4
+        for (let y = 0; y < MATTE_H; y += 1) {
+            state.image.data.set(mattePixels.subarray((MATTE_H - 1 - y) * rowBytes, (MATTE_H - y) * rowBytes), y * rowBytes)
+        }
+        for (let i = 3; i < state.image.data.length; i += 4) state.image.data[i] = 255
+        const result = service.run(state.image)
+        if (!result) return state
+        gl.bindTexture(gl.TEXTURE_2D, state.texture)
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, result.width, result.height, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, result.bytes)
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4)
+        state.ready = true
+        return state
+    }
+
     const frame = (now = performance.now()) => {
         pullRemotes()
+        matteFrames += 1
         // One clock for the whole frame: every operator that reads `time`
         // (Clouds, Shape) sees the same instant a wire between them would.
         const clock = clockSecondsFor(now - createdAt)
@@ -418,6 +489,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             const inputs = inputsFor.get(node.id) || {}
             const readA = inputs.a ? latest(inputs.a) : null
             const readB = inputs.b ? latest(inputs.b) : null
+            const matteState = slot.matte && inputs.b ? refreshMatte(inputs.b, readB) : null
             let params = resolveTopParams(node.type, node.values)
             if (resolveParams) {
                 try {
@@ -429,6 +501,12 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             bindTexture(compiled, 'b', 1, readB)
             bindTexture(compiled, 'self', 2, slot.before.texture)
             if (operator.history) bindTexture(compiled, 'history', 4, slot.history.texture)
+            if (slot.matte) {
+                bindTexture(compiled, 'mask', 5, matteState?.texture || black)
+                gl.useProgram(compiled.program)
+                const readyLocation = uniform(gl, compiled, 'matte_ready')
+                if (readyLocation !== null) gl.uniform1f(readyLocation, matteState?.ready ? 1 : 0)
+            }
 
             let shift = 0
             if (operator.history && params.compensate > 0.5 && readA) {
@@ -520,15 +598,17 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         has: (nodeId) => slots.has(nodeId),
         get network() { return network },
         dispose() {
-            for (const slot of slots.values()) {
+            for (const [id, slot] of slots) {
                 if (slot.type === '__remote') { gl.deleteTexture(slot.now.texture); continue }
-                freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history)
-                if (slot.source) gl.deleteTexture(slot.source)
+                freeSlot(slot, id)
             }
             slots.clear()
             for (const entry of watchers.values()) entry.watch?.stop()
             watchers.clear()
             freeTarget(gl, measureTarget)
+            if (matteTarget) freeTarget(gl, matteTarget)
+            for (const state of matteStates.values()) gl.deleteTexture(state.texture)
+            matteStates.clear()
             for (const compiled of programs.values()) if (compiled.program) gl.deleteProgram(compiled.program)
             gl.getExtension('WEBGL_lose_context')?.loseContext()
         }

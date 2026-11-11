@@ -16,7 +16,7 @@ describe('the EFFECTS panel', () => {
         const onValues = vi.fn()
         render(<Host initialDeck={createDeck()} onValues={onValues} />)
         const add = within(panel()).getByLabelText('Add effect')
-        expect(Array.from(add.options).map((o) => o.textContent)).toEqual(['+ Add effect', 'Level', 'Tint', 'Blur', 'Edge', 'Feedback', 'Reframe', 'Freeze', 'Silhouette', 'Line art', 'Glitch', 'Blocks', 'Pixelate', 'Displace', 'Colour shift', 'Mirror', 'Key', 'Grade', 'Emboss', 'Glow'])
+        expect(Array.from(add.options).map((o) => o.textContent)).toEqual(['+ Add effect', 'Level', 'Tint', 'Blur', 'Edge', 'Feedback', 'Reframe', 'Freeze', 'Silhouette', 'Line art', 'Body', 'Glitch', 'Blocks', 'Pixelate', 'Displace', 'Colour shift', 'Mirror', 'Key', 'Grade', 'Emboss', 'Glow'])
         fireEvent.change(within(panel()).getByLabelText('Effects layer'), { target: { value: '1' } })
         fireEvent.change(add, { target: { value: 'top.blur' } })
         expect(last(onValues).layers[1].effects.map((e) => e.type)).toEqual(['top.blur'])

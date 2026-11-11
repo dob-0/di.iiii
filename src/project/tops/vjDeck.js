@@ -75,8 +75,8 @@ export const normalizeClip = (clip) => {
 // the master's). `main` is what the panel and MIDI show first: numeric params
 // become sliders, a colour param a colour input. See PROGRESS.md (the feat-deck-effects entry).
 
-// One of every effect fits on a stack (19 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
-export const MAX_EFFECTS = 19
+// One of every effect fits on a stack (20 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
+export const MAX_EFFECTS = 20
 export const EFFECT_TYPES = {
     'top.level': { main: ['gain', 'brightness', 'gamma'] },
     'top.tint': { main: ['amount', 'bright'] },
@@ -87,6 +87,7 @@ export const EFFECT_TYPES = {
     'top.freeze': { main: ['hold'] },
     'top.silhouette': { main: ['threshold', 'soft', 'invert', 'colour', 'back', 'drift', 'flash'] },
     'top.lineart': { main: ['bands', 'width', 'colour'] },
+    'top.matte': { main: ['soft', 'drift', 'echo', 'colour', 'back', 'shade', 'fill', 'invert'] },
     'top.glitch': { main: ['amount', 'speed', 'split'] },
     'top.blocks': { main: ['amount', 'size', 'rate', 'shift', 'hold'] },
     'top.pixelate': { main: ['size', 'levels', 'grey'] },
@@ -501,6 +502,9 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
             const wet = mixIdOf(effect.id)
             nodes.push({ id: fx, type: effect.type, values: { machine, ...effect.params } })
             wires.push({ from: current, to: fx, port: 'a' })
+            // Body looks for the person in what the stack started from (the layer's
+            // own picture, before its other effects), and paints over `a`.
+            if (TOP_OPERATORS[effect.type]?.matte) wires.push({ from: input, to: fx, port: 'b' })
             nodes.push({ id: wet, type: 'top.blend', values: { machine, mode: '0', mix: effect.mix } })
             wires.push({ from: current, to: wet, port: 'a' })
             wires.push({ from: fx, to: wet, port: 'b' })
