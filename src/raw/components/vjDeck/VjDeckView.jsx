@@ -36,6 +36,9 @@ import { DEFAULT_BPM } from '../../../timeline/showClock.js'
 import { clipStill } from './clipStills.js'
 import { useDeckMidi } from '../../../perform/midi/useDeckMidi.js'
 import DeckMidiControl from '../../../perform/midi/DeckMidiControl.jsx'
+import MidiMapOverlay from '../../../perform/midi/MidiMapOverlay.jsx'
+import { resetDeckValue } from '../../../perform/midi/deckBinding.js'
+import ContextMenu from '../ContextMenu.jsx'
 import EffectsPanel from './EffectsPanel.jsx'
 import './vjDeck.css'
 
@@ -357,6 +360,39 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         event.preventDefault()
         if (event.key === 'Enter' || event.key === ' ') midi.pickTarget(key)
     }
+    // Right-click (or Shift+F10 / the menu key) on any control with a MIDI target: map it,
+    // remove its map, put its value back. Anything else keeps the browser's own menu.
+    const [menu, setMenu] = useState(null) // { x, y, key, label, fromKeyboard }
+    const targetOf = (event) => event.target?.closest?.('[data-midi-target]') || null
+    const openMenu = (el, x, y, fromKeyboard) => {
+        setMenu({ x, y, key: el.getAttribute('data-midi-target'), label: el.getAttribute('aria-label') || el.textContent.trim() || el.getAttribute('data-midi-target'), fromKeyboard })
+    }
+    const onDeckContextMenu = (event) => {
+        if (!editable) return
+        const el = targetOf(event)
+        if (!el) return
+        event.preventDefault()
+        openMenu(el, event.clientX, event.clientY, false)
+    }
+    const onDeckMenuKey = (event) => {
+        if (!editable || !(event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey))) return
+        const el = targetOf(event)
+        if (!el) return
+        event.preventDefault()
+        const r = el.getBoundingClientRect()
+        openMenu(el, r.left, r.bottom, true)
+    }
+    const onResetValue = (key) => { const next = resetDeckValue(latestDeck.current, key); if (next) write(next) }
+    const onDeckKeyDown = (event) => { onDeckMenuKey(event); if (!event.defaultPrevented) onLearnKey(event) }
+    const menuItems = (() => {
+        if (!menu) return []
+        const bound = midi.bindingOf(menu.key)
+        const items = [{ heading: bound ? bound.text : 'Not mapped' }, { id: 'map', label: 'Map to MIDI', hint: 'Then move or press the control on the controller', run: () => midi.mapOnce(menu.key) }]
+        if (bound?.learned) items.push({ id: 'unmap', label: 'Remove MIDI map', run: () => midi.unmap(menu.key) })
+        else if (bound) items.push({ id: 'unmap', label: 'Remove MIDI map', kb: 'K2 default', disabled: true, hint: 'The K2 default map cannot be removed; map the control to override it' })
+        if (resetDeckValue(deck, menu.key)) items.push({ id: 'reset', label: 'Reset value', run: () => onResetValue(menu.key) })
+        return items
+    })()
     const clipUrl = (clip) => (clip?.kind === 'asset' ? resolveClipUrl(clip.asset, spaceId, { assets, projectId }) : '')
 
     const onTile = (layerIndex, column) => {
@@ -505,7 +541,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     )
 
     return (
-        <div ref={rootRef} className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-monitor-size={monitors.size} data-preview-only={previewOnly ? 'true' : 'false'} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick} onPointerDownCapture={onLearnPress} onMouseDownCapture={onLearnPress} onKeyDownCapture={onLearnKey}>
+        <div ref={rootRef} className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-monitor-size={monitors.size} data-preview-only={previewOnly ? 'true' : 'false'} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick} onPointerDownCapture={onLearnPress} onMouseDownCapture={onLearnPress} onKeyDownCapture={onDeckKeyDown} onContextMenuCapture={onDeckContextMenu}>
             <header className="vj-deck-top">
                 <div className="vj-deck-tempo">
                     <span className="vj-deck-label">BPM</span>
@@ -811,6 +847,8 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                 )}
                 <EffectsPanel deck={deck} scope={fxScope} layerIndex={fxLayer} onScope={setFxScope} onLayer={setFxPick} editable={editable} write={write} />
             </div>
+            <MidiMapOverlay rootRef={rootRef} midi={midi} layoutKey={deck} />
+            <ContextMenu open={Boolean(menu)} x={menu?.x} y={menu?.y} title={menu?.label} items={menuItems} fromKeyboard={Boolean(menu?.fromKeyboard)} onClose={() => setMenu(null)} />
         </div>
     )
 }

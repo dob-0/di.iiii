@@ -24,6 +24,8 @@ import {
     setCrossfade,
     setEffectMix,
     setEffectParam,
+    stackOf,
+    MASTER_STACK,
     setMaster,
     setOpacity,
     setSide,
@@ -258,6 +260,57 @@ export const withOverride = (stored, entry) => {
     return { bindings: [...rest, entry] }
 }
 
+/** The stored overrides without the learned binding(s) of one target; the default (if any) returns. */
+export const withoutOverride = (stored, target) => {
+    const key = actionKey(target?.action, target?.args)
+    return { bindings: normalizeOverrides(stored).filter((item) => actionKey(item.action, item.args) !== key) }
+}
+
+/** What takes a target now: { entry, learned } (learned = the user's own override), or null. */
+export const bindingFor = (defaults, overrides, target) => {
+    if (!target) return null
+    const key = actionKey(target.action, target.args)
+    const own = (overrides || []).find((item) => actionKey(item.action, item.args) === key)
+    if (own) return { entry: own, learned: true }
+    const base = effectiveMap(defaults, overrides).find((item) => actionKey(item.action, item.args) === key)
+    return base ? { entry: base, learned: false } : null
+}
+
+/** A match in plain words: "CC 4 · ch 15", "Note 36 · ch 15" (no channel = any). */
+export const describeMatch = (match) => {
+    if (!match) return ''
+    const what = match.kind === 'note' ? `Note ${match.number}` : `CC ${match.number}`
+    return match.channel ? `${what} \u00b7 ch ${match.channel}` : `${what} \u00b7 any ch`
+}
+
+/** The short form for a tag on a control: "CC 4" / "N 36". */
+export const shortMatch = (match) => (match ? `${match.kind === 'note' ? 'N' : 'CC'} ${match.number}` : '')
+
+/**
+ * The deck with one control put back to its start value, or null where the control has
+ * none (buttons, clip tiles, blend, tap). opacity -> 1, crossfade -> centre, master -> 1,
+ * effect mix -> 1, effect param -> the operator's own default.
+ */
+export const resetDeckValue = (deck, key) => {
+    const [name, a, b, c] = String(key || '').split(':')
+    const target = targetFromKey(key)
+    if (!target) return null
+    switch (name) {
+        case 'opacity': return setOpacity(deck, target.args.layer, 1)
+        case 'crossfade': return setCrossfade(deck, 0.5)
+        case 'master': return setMaster(deck, 1)
+        case 'fxmix': case 'fxp': {
+            const where = a === 'm' ? MASTER_STACK : Number(a)
+            const effect = (stackOf(deck, where) || [])[Number(b)]
+            if (!effect) return null
+            if (name === 'fxmix') return setEffectMix(deck, where, effect.id, 1)
+            const param = effectNumericParams(effect.type)[Number(c)]
+            return param && Number.isFinite(param.value) ? setEffectParam(deck, where, effect.id, param.name, param.value) : null
+        }
+        default: return null
+    }
+}
+
 // --- learn ---------------------------------------------------------------------
 
 /**
@@ -357,6 +410,22 @@ export const ledChanges = (leds, previous) => {
         changed.push(led)
     }
     return changed
+}
+
+/**
+ * LED messages that switch off every lit note the new picture no longer mentions
+ * (a button that lost its binding would otherwise keep its last colour). `sent` is the
+ * Map note -> velocity that ledChanges keeps; updates it.
+ */
+export const ledClears = (leds, sent, channel = 15) => {
+    const now = new Set(leds.map((led) => led.note))
+    const off = []
+    for (const [note, velocity] of sent) {
+        if (now.has(note) || velocity === 0) continue
+        sent.set(note, 0)
+        off.push({ channel, note, velocity: 0 })
+    }
+    return off
 }
 
 /** The raw bytes of one LED message: a note-on, velocity 0 = off. */

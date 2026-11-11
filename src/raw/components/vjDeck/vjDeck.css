@@ -16,6 +16,7 @@
     --vj-layers: 3;
     container-type: inline-size;
     container-name: vjdeck;
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: var(--di-space-2);
@@ -937,4 +938,45 @@
     .vj-deck-chip {
         padding: 0 var(--di-space-1);
     }
+}
+
+/* --- map mode (MIDI on): the Ableton look --------------------------------- */
+/* One layer over the deck, one box per mappable control, measured from the control
+   (MidiMapOverlay.jsx). It never takes the pointer, so Learn's click still lands. */
+
+.vj-deck-mapmode {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.vj-deck-mapbox {
+    position: absolute;
+    box-sizing: border-box;
+    background: var(--di-cyan-wash);
+    border: 1px solid var(--di-cyan-border);
+}
+
+.vj-deck-mapbox.is-mapped {
+    background: var(--di-cyan-dim);
+    border-color: var(--di-cyan-line);
+}
+
+.vj-deck-mapbox.is-picked {
+    background: var(--di-cyan-dim);
+    border: var(--di-space-1) solid var(--di-cyan);
+}
+
+.vj-deck-maptag {
+    position: absolute;
+    right: 0;
+    top: 0;
+    padding: 0 var(--di-space-1);
+    background: var(--di-cyan);
+    color: var(--di-bg);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-1);
+    line-height: 1.2;
+    white-space: nowrap;
 }

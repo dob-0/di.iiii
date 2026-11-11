@@ -8,7 +8,12 @@ import {
     isContinuousEntry,
     ledBytes,
     ledChanges,
+    ledClears,
     ledsFor,
+    bindingFor,
+    describeMatch,
+    shortMatch,
+    withoutOverride,
     learnEntry,
     normalizeOverrides,
     targetFromKey,
@@ -135,19 +140,21 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
 
     const [learning, setLearning] = useState(false)
     const [target, setTarget] = useState(null) // { key, action, args }
-    const learnRef = useRef({ learning, target })
-    useEffect(() => { learnRef.current = { learning, target } }, [learning, target])
+    const [once, setOnce] = useState(false) // "Map to MIDI" from the right-click menu: learn ends after its one binding
+    const learnRef = useRef({ learning, target, once })
+    useEffect(() => { learnRef.current = { learning, target, once } }, [learning, target, once])
 
     const onMessage = useCallback((message) => {
         const current = live.current
         if (!current.enabled) return
-        const { learning: isLearning, target: wanted } = learnRef.current
+        const { learning: isLearning, target: wanted, once: justOne } = learnRef.current
         if (isLearning) {
             // While learning, a message never plays the deck: it binds the picked control.
             const entry = learnEntry(wanted, message, { relative: k2IsRelative })
             if (entry) {
                 current.onPatch?.({ midiMap: withOverride(current.stored, entry) })
                 setTarget(null)
+                if (justOne) { setLearning(false); setOnce(false) }
             }
             return
         }
@@ -178,6 +185,8 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     useEffect(() => {
         if (sentKey.current !== outputKey) { sentRef.current = new Map(); sentKey.current = outputKey }
         if (!outputKey || !active || !k2Output) return
+        // a button that lost its binding goes dark first, then the new picture
+        for (const led of ledClears(leds, sentRef.current, K2_CHANNEL)) sendRef.current(k2Output.id, ledBytes(led))
         for (const led of ledChanges(leds, sentRef.current)) sendRef.current(k2Output.id, ledBytes(led))
     }, [leds, outputKey, active, k2Output])
 
@@ -186,11 +195,32 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     else if (ports.status === MIDI_STATUS.ACTIVE) state = 'listening'
     if (learning) state = 'learn'
 
-    const toggleLearn = useCallback(() => { setLearning((on) => !on); setTarget(null) }, [])
+    const toggleLearn = useCallback(() => { setLearning((on) => !on); setTarget(null); setOnce(false) }, [])
     const pickTarget = useCallback((key) => {
         const found = targetFromKey(key)
         setTarget(found ? { key, ...found } : null)
         return Boolean(found)
+    }, [])
+    // The right-click path: learn on with this control already picked; ends after its one binding.
+    const mapOnce = useCallback((key) => {
+        const found = targetFromKey(key)
+        if (!found) return false
+        setLearning(true)
+        setOnce(true)
+        setTarget({ key, ...found })
+        return true
+    }, [])
+    // What takes a control now, in words: { text, short, learned } or null.
+    const bindingOf = useCallback((key) => {
+        const found = bindingFor(defaults, overrides, targetFromKey(key))
+        return found ? { text: describeMatch(found.entry.match), short: shortMatch(found.entry.match), learned: found.learned } : null
+    }, [defaults, overrides])
+    // Remove the learned binding of one control (a default K2 binding is not removable).
+    const unmap = useCallback((key) => {
+        const found = targetFromKey(key)
+        if (!found) return false
+        live.current.onPatch?.({ midiMap: withoutOverride(live.current.stored, found) })
+        return true
     }, [])
     const reset = useCallback(() => {
         live.current.onPatch?.({ midiMap: null })
@@ -205,6 +235,9 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         bindings: overrides.length,
         toggleLearn,
         pickTarget,
+        mapOnce,
+        bindingOf,
+        unmap,
         reset,
         controlOf
     }
