@@ -10,5 +10,6 @@ Branch `feat/deck-k2-window`. The K2 panel has a Device button that opens one na
 
 - K2 (1.9) button rows now run top-down like the deck screen: A-D layer 4, E-H layer 3, I-L layer 2, M-P layer 1 (`xoneK2.js`); lights, panel, window job texts and the wiki follow; console K2 keeps top row = layer 1. Pinned by `k2ButtonRows.test.js`.
 - Not done: not yet seen in a real browser (desktop and phone) and not installed on a show tree.
-- Two review notes are open: the face text is small at the default size, and the timing of the window's asks against the silent limit while the window is hidden.
+- Review notes done: the face job text is 5.6 units (was 5.2, line height 6.0) and the readout has a fixed height (scrolls inside), so a long job text no longer moves the layout.
+- Review notes done: the window now judges the deck lost after six asks' time (LOST_MS, was three), a late tick (slowed timer of a hidden page) asks again but does not judge, and a window brought to the front asks at once. Tests in `k2Channel.test.js` ("a hidden but alive deck is not called silent"). Not changed: the deck side stops publishing 8 s after the window's last ask (SILENT_MS); a window hidden for minutes may need its Device press again.
 - This branch sits on top of the panel-resize work (feat/deck-comfort) and lands after it.

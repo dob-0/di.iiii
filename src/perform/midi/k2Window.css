@@ -1,6 +1,6 @@
 /* The controller window (K2Window.jsx). Spine tokens only, square corners, no shadow, no glow, no
    transition. The drawing is in face units and scales with the window (viewBox): at the default
-   window of 440 x 1000 the scale is about 2.4 px per unit, so the 5.2 unit job text is 12.4 px.
+   window of 440 x 1000 the scale is about 2.4 px per unit, so the 5.6 unit job text is 13.4 px.
    Light colours are the deck's own (red bypass or off, amber loaded, green playing). */
 .k2w {
     box-sizing: border-box;
@@ -18,7 +18,7 @@
 .k2w-main { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: var(--di-space-2); }
 .k2w-svg { width: 100%; height: 100%; display: block; }
 .k2w-wait { margin: 0; max-width: 28em; color: var(--di-dim); font-size: var(--di-text-3); line-height: 1.5; }
-.k2w-readout { box-sizing: border-box; margin: 0; min-height: 4.5em; padding: var(--di-space-2) var(--di-space-3); border-top: 1px solid var(--di-line); color: var(--di-ink); font-size: var(--di-text-3); line-height: 1.4; overflow-wrap: anywhere; }
+.k2w-readout { box-sizing: border-box; margin: 0; height: 6.5em; overflow-y: auto; padding: var(--di-space-2) var(--di-space-3); border-top: 1px solid var(--di-line); color: var(--di-ink); font-size: var(--di-text-3); line-height: 1.4; overflow-wrap: anywhere; }
 
 .k2w-body { fill: var(--di-surface-2); stroke: var(--di-faint); stroke-width: 0.4; }
 .k2w-plate { fill: var(--di-bg); stroke: var(--di-line); stroke-width: 0.3; }

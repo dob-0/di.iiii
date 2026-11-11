@@ -21,7 +21,9 @@ export const K2_WINDOW_CHANNEL = 'di-k2-controller-window-v1'
 export const K2_WINDOW_NAME = 'di-k2-controller-window'
 export const ASK_MS = 2000
 export const WAIT_MS = 1000
-export const LOST_MS = ASK_MS * 3
+// Browsers slow the timers of a hidden page (one tick a second, later one a minute), so the deck is called
+// lost only after six asks' time, and a late tick never judges (see createK2Feed).
+export const LOST_MS = ASK_MS * 6
 export const SILENT_MS = ASK_MS * 4
 
 const nameByKey = new Map(XONE_K2_CONTROLS.map((item) => [controlKey(item.kind, item.number), item.control]))
@@ -146,7 +148,7 @@ export const eventOf = (control) => {
  * The window side: asks, listens, calls onSnapshot / onEvents, and says lost / found.
  * onStatus('waiting' | 'live'). Recovers by itself when either page reloads: it keeps asking.
  */
-export function createK2Feed({ onSnapshot, onEvents, onStatus, makeChannel = () => new BroadcastChannel(K2_WINDOW_CHANNEL), now = () => Date.now(), setTimer = (fn, ms) => setInterval(fn, ms), clearTimer = (id) => clearInterval(id) } = {}) {
+export function createK2Feed({ onSnapshot, onEvents, onStatus, makeChannel = () => new BroadcastChannel(K2_WINDOW_CHANNEL), now = () => Date.now(), setTimer = (fn, ms) => setInterval(fn, ms), clearTimer = (id) => clearInterval(id), doc = globalThis.document } = {}) {
     const channel = makeChannel()
     let lastHeard = -Infinity
     let status = ''
@@ -157,15 +159,28 @@ export function createK2Feed({ onSnapshot, onEvents, onStatus, makeChannel = () 
         else if (data?.type === 'events' && Array.isArray(data.events)) { lastHeard = now(); onEvents?.(data.events) }
     }
     const ask = () => { try { channel.postMessage({ type: 'ask' }) } catch { /* closed */ } }
+    // silence is judged from the time of the last answer; a tick that came late (a hidden page's slowed timer)
+    // asks again but does not judge, because the answer to that very ask has not had time to arrive
     const check = () => { if (now() - lastHeard > LOST_MS) setStatus('waiting') }
+    let lastTick = now()
+    const tick = () => {
+        const late = now() - lastTick > ASK_MS * 2
+        lastTick = now()
+        ask()
+        if (!late) check()
+    }
+    // a window brought back to the front asks at once and gives the deck a fresh span to answer
+    const onVisible = () => { if (doc?.visibilityState === 'visible') { lastTick = now(); ask() } }
+    try { doc?.addEventListener?.('visibilitychange', onVisible) } catch { /* no document */ }
     ask()
     const waitTimer = setTimer(() => { if (lastHeard === -Infinity) setStatus('waiting') }, WAIT_MS)
-    const askTimer = setTimer(() => { ask(); check() }, ASK_MS)
+    const askTimer = setTimer(tick, ASK_MS)
     return {
         ask,
         close() {
             clearTimer(waitTimer)
             clearTimer(askTimer)
+            try { doc?.removeEventListener?.('visibilitychange', onVisible) } catch { /* no document */ }
             try { channel.postMessage({ type: 'bye' }) } catch { /* closed */ }
             try { channel.close() } catch { /* closed */ }
         }

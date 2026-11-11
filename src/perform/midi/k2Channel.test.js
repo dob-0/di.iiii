@@ -153,6 +153,8 @@ describe('the window feed', () => {
         deck.postMessage({ type: 'snapshot', consoleId: 'k2' })
         expect(statuses).toEqual(['waiting', 'live'])
         expect(snaps).toHaveLength(1)
+        for (let step = 1; step <= 6; step += 1) { time = 10 + step * ASK_MS; again.fn() }
+        expect(statuses.at(-1)).toBe('live')
         time = 10 + LOST_MS + 5
         again.fn()
         expect(statuses.at(-1)).toBe('waiting')
@@ -161,5 +163,61 @@ describe('the window feed', () => {
         time += 1
         deck.postMessage({ type: 'snapshot', consoleId: 'k2' })
         expect(statuses.at(-1)).toBe('live')
+    })
+})
+
+describe('a hidden but alive deck is not called silent', () => {
+    const setup = (doc) => {
+        const { make } = bus()
+        let time = 0
+        const timers = []
+        const statuses = []
+        const feed = createK2Feed({ makeChannel: make, now: () => time, setTimer: (fn, ms) => { timers.push({ fn, ms }); return timers.length - 1 }, clearTimer: () => {}, onStatus: (s) => statuses.push(s), doc })
+        const deck = make()
+        const asked = []
+        deck.onmessage = (event) => { if (event.data.type === 'ask') asked.push(time) }
+        return { feed, deck, timers, statuses, asked, at: (t) => { time = t } }
+    }
+
+    it('LOST_MS leaves room for slowed timers: more than three asks', () => {
+        expect(LOST_MS).toBeGreaterThanOrEqual(ASK_MS * 6)
+    })
+
+    it('a late tick (slowed timer of a hidden page) asks again but does not judge', () => {
+        const { deck, timers, statuses, at } = setup(null)
+        at(10)
+        deck.postMessage({ type: 'snapshot', consoleId: 'k2' })
+        expect(statuses.at(-1)).toBe('live')
+        at(10 + 60000) // one tick a minute: the answer to this very ask has not arrived yet
+        timers[1].fn()
+        expect(statuses.at(-1)).toBe('live')
+        at(10 + 60000 + 5)
+        deck.postMessage({ type: 'snapshot', consoleId: 'k2' })
+        at(10 + 60000 + ASK_MS)
+        timers[1].fn()
+        expect(statuses.at(-1)).toBe('live')
+    })
+
+    it('a deck that really stays silent is still called lost, on regular ticks', () => {
+        const { deck, timers, statuses, at } = setup(null)
+        at(10)
+        deck.postMessage({ type: 'snapshot', consoleId: 'k2' })
+        for (let step = 1; step <= 7; step += 1) { at(10 + step * ASK_MS); timers[1].fn() }
+        expect(statuses.at(-1)).toBe('waiting')
+    })
+
+    it('asks again at once when the window becomes visible', () => {
+        const listeners = {}
+        const doc = { visibilityState: 'hidden', addEventListener: (name, fn) => { listeners[name] = fn }, removeEventListener: (name) => { delete listeners[name] } }
+        const { feed, asked, at } = setup(doc)
+        expect(asked).toHaveLength(0) // the first ask went out before the test deck listened
+        at(5000)
+        listeners.visibilitychange()
+        expect(asked).toHaveLength(0) // still hidden: nothing
+        doc.visibilityState = 'visible'
+        listeners.visibilitychange()
+        expect(asked).toEqual([5000])
+        feed.close()
+        expect(listeners.visibilitychange).toBeUndefined()
     })
 })
