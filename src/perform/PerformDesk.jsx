@@ -403,6 +403,9 @@ export default function PerformDesk({
         else addWindow(kind)
     }
     const nodesHref = buildRawProjectPath(projectId, spaceId)
+    // The deck's full page: Nodes opens with this deck node entered (?enter=<node id>).
+    const deckNodeId = document?.nodes?.find?.((node) => node?.typeId === 'vj.deck')?.id || null
+    const deckFullHref = deckNodeId ? `${nodesHref}?enter=${encodeURIComponent(deckNodeId)}` : null
 
     return (
         <>
@@ -511,6 +514,7 @@ export default function PerformDesk({
                                 ))}
                             </div>
                             <div className="perform-menu-group perform-menu-sep">
+                                {deckFullHref ? <a className="perform-menu-item" role="menuitem" href={deckFullHref} onClick={(event) => navigateInApp(event, deckFullHref)}>Nodes · VJ deck, full page ›</a> : null}
                                 <a className="perform-menu-item" role="menuitem" href={nodesHref} onClick={(event) => navigateInApp(event, nodesHref)}>Nodes · the whole patch ›</a>
                             </div>
                         </div>

@@ -1,6 +1,7 @@
 /* global __APP_VERSION__ */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './kit.css'
+import DeskPerformSwitch from '../perform/DeskPerformSwitch.jsx'
 import SurfaceBar from '../components/SurfaceBar.jsx'
 import useAuthSession from '../hooks/useAuthSession.js'
 import { apiBaseUrl } from '../services/apiClient.js'
@@ -189,7 +190,9 @@ export default function KitPage({ isLocalInstall = false }) {
 
     return (
         <div className="kit">
-            <SurfaceBar here="tools" space={lastProject.space} project={lastProject.project} isLocalInstall={isLocalInstall} hidden={isEmbed} />
+            <SurfaceBar here="tools" space={lastProject.space} project={lastProject.project} isLocalInstall={isLocalInstall} hidden={isEmbed}>
+                <DeskPerformSwitch current="elsewhere" space={lastProject.space} project={lastProject.project} from="raw" />
+            </SurfaceBar>
 
             <main className="kit-page">
                 <header className="kit-intro">
