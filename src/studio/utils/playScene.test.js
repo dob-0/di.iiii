@@ -27,6 +27,15 @@ describe('goDecision: does GO load at once or ask first', () => {
         expect(goDecision({ project: 'proj-b', n: 0 }, 'proj-a')).toBe('go')
         expect(goDecision({}, 'proj-a')).toBe('go')
     })
+    it('an unnamed non-empty list asks when this project has an id, goes when it has none', () => {
+        expect(goDecision({ project: '', n: 2 }, 'proj-a')).toBe('ask')
+        expect(goDecision({ project: '', n: 2 }, undefined)).toBe('go')
+    })
+    it('compares the id the way Light stores it (first 64 characters): no false question', () => {
+        const long = 'p'.repeat(70)
+        expect(goDecision({ project: long.slice(0, 64), n: 2 }, long)).toBe('go')
+        expect(goDecision({ project: 'q'.repeat(64), n: 2 }, long)).toBe('ask')
+    })
     it('goes when Light did not answer or answered something unreadable', () => {
         expect(goDecision(null, 'proj-a')).toBe('go')
         expect(goDecision(undefined, 'proj-a')).toBe('go')
@@ -37,9 +46,19 @@ describe('goDecision: does GO load at once or ask first', () => {
 describe('playScene', () => {
     it('another project\'s list: nothing is loaded, the answer is asked', async () => {
         read.mockResolvedValue({ project: 'proj-b', n: 4, running: true })
-        expect(await playScene(doc, doc.mappingState.cues[0])).toEqual({ asked: true })
+        const answer = await playScene(doc, doc.mappingState.cues[0])
+        expect(answer).toMatchObject({ asked: true, replace: expect.any(Function) })
         expect(load).not.toHaveBeenCalled()
         expect(go).not.toHaveBeenCalled()
+    })
+    it('the answer\'s replace() loads and goes without reading Light again', async () => {
+        read.mockResolvedValue({ project: 'proj-b', n: 4 })
+        const answer = await playScene(doc, doc.mappingState.cues[2])
+        read.mockClear()
+        await answer.replace()
+        expect(read).not.toHaveBeenCalled()
+        expect(load).toHaveBeenCalledWith('proj-a', doc.mappingState.cues, false, true)
+        expect(go).toHaveBeenCalledWith(1)
     })
     it('confirmed (replace): loads this list and goes to the cue\'s place among the cues with a look', async () => {
         read.mockResolvedValue({ project: 'proj-b', n: 4 })

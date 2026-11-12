@@ -4,8 +4,8 @@ import { deskCues } from '../../rigbuild/cueRun.js'
 // this scene's cue in it. Where Light does not answer, the error says so (the editor shows it).
 //
 // Loading REPLACES the list Light was running. So before the first press loads anything, Light's state is read: if it holds the cue
-// list of ANOTHER project, nothing is loaded and the answer is `{ asked: true }` — the editor asks the person; their confirm calls
-// again with `{ replace: true }`. Light holding this project's list, holding nothing, or not answering goes at once, as it always did.
+// list of ANOTHER project, nothing is loaded and the answer is `{ asked: true, replace }` — the editor asks the person; their confirm calls
+// `replace()`, which is this same function with `{ replace: true }`. Light holding this project's list, holding nothing, or not answering goes at once, as it always did.
 
 /**
  * Whether GO may load at once. `state` is what `deskCues.read()` answered (the runner's brief: `{ project, n, running, ... }`),
@@ -15,10 +15,12 @@ import { deskCues } from '../../rigbuild/cueRun.js'
 export function goDecision(state, projectId) {
     if (!state || typeof state !== 'object') return 'go'
     const held = typeof state.project === 'string' ? state.project : ''
-    if (!held) return 'go'
     const n = Number.isFinite(state.n) ? state.n : (Array.isArray(state.list) ? state.list.length : 0)
     if (n <= 0) return 'go'
-    return held === String(projectId ?? '') ? 'go' : 'ask'
+    // Compare the way Light stores the id (a non-string becomes '', a string is cut to 64 characters), so a list with no name
+    // still counts as another list, and a long id does not ask a false question.
+    const mine = typeof projectId === 'string' ? projectId.slice(0, 64) : ''
+    return held === mine ? 'go' : 'ask'
 }
 
 export async function playScene(document, cue, { replace = false } = {}) {
@@ -30,7 +32,7 @@ export async function playScene(document, cue, { replace = false } = {}) {
     if (!replace) {
         let state = null
         try { state = await deskCues.read() } catch { state = null }
-        if (goDecision(state, projectId) === 'ask') return { asked: true }
+        if (goDecision(state, projectId) === 'ask') return { asked: true, replace: () => playScene(document, cue, { replace: true }) }
     }
     await deskCues.load(projectId, cues, document?.mappingState?.loop === true, true)
     await deskCues.go(index)

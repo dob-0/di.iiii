@@ -25,7 +25,7 @@ import useRememberedOpen from '../../utils/rememberedOpen.js'
 //
 // EDIT (2026-10-15, SceneEditor.jsx): where `onApplyOps` is given, each row has an Edit button that opens the scene's editor under it,
 // and the header offers New / Duplicate / Delete / ↑ / ↓ for the scene being edited (the cue list order).
-export default function ScenePicker({ document, current, onPick, laserTest = false, onLaserTest = null, onApplyOps = null, onPlay = null, onPlayReplace = null }) {
+export default function ScenePicker({ document, current, onPick, laserTest = false, onLaserTest = null, onApplyOps = null, onPlay = null }) {
     const [open, toggleOpen] = useRememberedOpen('studio-scenes', true)
     const [editing, setEditing] = useState(null)
     const scenes = scenesOf(document)
@@ -118,7 +118,7 @@ export default function ScenePicker({ document, current, onPick, laserTest = fal
                                             <button type="button" className={`scc-btn ${editing === s.cueId ? 'active' : ''}`} aria-expanded={editing === s.cueId} aria-label={`Edit ${s.name}`} onClick={() => setEditing(editing === s.cueId ? null : s.cueId)}>Edit</button>
                                         )}
                                         {onApplyOps && editing === s.cueId && (
-                                            <SceneEditor document={document} scene={s} onApplyOps={onApplyOps} onPlay={onPlay} onPlayReplace={onPlayReplace || undefined} onClose={() => setEditing(null)} />
+                                            <SceneEditor document={document} scene={s} onApplyOps={onApplyOps} onPlay={onPlay} onClose={() => setEditing(null)} />
                                         )}
                                     </Fragment>
                                 )

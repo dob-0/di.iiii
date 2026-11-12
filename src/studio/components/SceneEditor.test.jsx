@@ -102,21 +102,36 @@ describe('the scene editor: a change emits the ops with the rebuilt look', () =>
 
     it('Light runs another cue list: GO asks first; Cancel sends nothing, the confirm replaces', async () => {
         const doc = baseDoc()
-        const onPlay = vi.fn(async () => ({ asked: true }))
-        const onPlayReplace = vi.fn(async () => ({ asked: false }))
-        render(<ScenePicker document={doc} current={undefined} onPick={() => {}} onApplyOps={() => {}} onPlay={onPlay} onPlayReplace={onPlayReplace} />)
+        const replace = vi.fn(async () => {})
+        const onPlay = vi.fn(async () => ({ asked: true, replace }))
+        render(<ScenePicker document={doc} current={undefined} onPick={() => {}} onApplyOps={() => {}} onPlay={onPlay} />)
         fireEvent.click(screen.getByLabelText(`Edit ${scenesOf(doc)[3].name}`))
         fireEvent.click(screen.getByTestId('scene-play'))
         const q = await screen.findByTestId('go-replace-question')
         expect(q.textContent).toMatch(/Light runs another cue list\. GO replaces it\./)
         fireEvent.click(screen.getByTestId('go-replace-cancel'))
         expect(screen.queryByTestId('go-replace-question')).toBeNull()
-        expect(onPlayReplace).not.toHaveBeenCalled()
+        expect(replace).not.toHaveBeenCalled()
         fireEvent.click(screen.getByTestId('scene-play'))
         fireEvent.click(await screen.findByTestId('go-replace-confirm'))
         await screen.findByText('Light is on this scene')
-        expect(onPlayReplace).toHaveBeenCalledTimes(1)
-        expect(onPlayReplace).toHaveBeenCalledWith(expect.objectContaining({ id: doc.mappingState.cues[3].id }))
+        expect(replace).toHaveBeenCalledTimes(1)
+    })
+
+    it('an asked answer with no replace says it cannot, and shows no question', async () => {
+        const doc = baseDoc()
+        render(<ScenePicker document={doc} current={undefined} onPick={() => {}} onApplyOps={() => {}} onPlay={async () => ({ asked: true })} />)
+        fireEvent.click(screen.getByLabelText(`Edit ${scenesOf(doc)[3].name}`))
+        fireEvent.click(screen.getByTestId('scene-play'))
+        expect((await screen.findByTestId('play-state')).textContent).toBe("not sent: this GO cannot replace Light's list here")
+        expect(screen.queryByTestId('go-replace-question')).toBeNull()
+    })
+
+    it('without onPlay there is no GO on Light button', () => {
+        const doc = baseDoc()
+        render(<ScenePicker document={doc} current={undefined} onPick={() => {}} onApplyOps={() => {}} />)
+        fireEvent.click(screen.getByLabelText(`Edit ${scenesOf(doc)[3].name}`))
+        expect(screen.queryByTestId('scene-play')).toBeNull()
     })
 
     it('a failed send says so in true words', async () => {

@@ -132,7 +132,6 @@ export default function StudioControlCluster({
                             type="button"
                             className={`scc-btn scc-btn--xs ${cueKeysOn ? 'active' : ''}`}
                             data-testid="cue-keys-chip"
-                            aria-pressed={cueKeysOn}
                             title={`${keysTitle}. Press to turn them ${cueKeysOn ? 'off' : 'on'}.`}
                             onClick={() => setCueKeysOn(!cueKeysOn)}
                         >
@@ -158,11 +157,10 @@ export default function StudioControlCluster({
                             <div className="scc-section" data-testid="cue-keys-row">
                                 <div className="scc-section-label">Keys 1-9</div>
                                 <div className="scc-buttons">
-                                    <span className="scc-keys-note">fire this project's cues: the real lights, and a laser or wall look where a cue has one.</span>
+                                    <span className="scc-keys-note">fire cues: real lights, laser, wall.</span>
                                     <button
                                         type="button"
                                         className={`scc-btn ${cueKeysOn ? 'active' : ''}`}
-                                        aria-pressed={cueKeysOn}
                                         title={keysTitle}
                                         onClick={() => setCueKeysOn(!cueKeysOn)}
                                     >
