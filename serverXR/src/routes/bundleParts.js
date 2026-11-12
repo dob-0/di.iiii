@@ -148,7 +148,8 @@ const registerBundleParts = (router, {
       const proposalFields = kind === 'proposal' ? body.proposal || {} : null
       let proposalSpace = null
       if (kind === 'proposal') {
-        proposalSpace = normalizeSpaceId(String(proposalFields.spaceId ?? '').trim())
+        const named = proposalFields.spaceId
+        proposalSpace = typeof named === 'string' ? normalizeSpaceId(named.trim()) : null
         if (!proposalSpace) return res.status(400).json({ error: 'Say which space the proposal is for (proposal.spaceId).' })
       }
       const size = Number(body.size)
