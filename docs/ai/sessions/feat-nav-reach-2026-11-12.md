@@ -60,3 +60,8 @@ Fixed in the same pull request:
 Left for the next batch, each a decision and not a slip: Nodes is offered on a card even where the bar still holds it back (the bar's
 rule belongs to the top bar work); the way back differs per door (Perform's Desk and Nodes' Back do not return to the space page);
 the strips and shelf headings arrive a moment after the rows; a row without doors gives no reason.
+
+Second run on GitHub: 6 tests of `src/components/surfaceBar.embed.test.jsx` timed out on the space page lane. Its stand-in server has no
+`listCollections`, and the review round had moved the reader's name outside the promise, so reading the name threw inside the effect
+and unmounted the page ("[vitest] No "listCollections" export is defined on the ... mock"). Each read now starts inside its own
+promise, the name included. That test file is the guard: it fails again if the read moves out.

@@ -101,9 +101,16 @@ const NO_MEMBER_DATA = { status: 'none', collections: [], byId: new Map(), shelv
 // flat, with the three sure doors, and says both things did not load.
 const LOST_MEMBER_DATA = { ...NO_MEMBER_DATA, status: 'ready', shelvesFailed: true, countsFailed: true }
 
-const ask = (fn, spaceId) => new Promise((resolve) => { resolve(fn(spaceId)) })
+// Each read starts INSIDE its own promise, the reader's name included: a
+// reader that throws, or that is not there at all, becomes a failed request,
+// never an error in the effect that unmounts the page (a test's stand-in
+// server without `listCollections` did exactly that, 2026-11-12).
+const ask = (read) => new Promise((resolve) => { resolve(read()) })
 
-const askMemberData = (spaceId) => Promise.allSettled([ask(listCollections, spaceId), ask(listProjects, spaceId)])
+const askMemberData = (spaceId) => Promise.allSettled([
+    ask(() => listCollections(spaceId)),
+    ask(() => listProjects(spaceId))
+])
     .then(([shelves, members]) => {
         const collections = shelves.status === 'fulfilled' && Array.isArray(shelves.value) ? shelves.value : null
         const rows = members.status === 'fulfilled' && Array.isArray(members.value) ? members.value : null
