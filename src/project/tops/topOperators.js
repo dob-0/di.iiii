@@ -453,7 +453,12 @@ void main() {
             param('grain', 'Grain', 0.15, 0, 1),
             toggle('invert', 'Film (negative)', 0),
             param('cut', 'Two-tone', 0, 0, 1),
-            param('flash', 'Flash (Hz)', 0, 0, 15, 0.5)
+            param('flash', 'Flash (Hz)', 0, 0, 15, 0.5),
+            // 0 white-hot (grey), 1 iron (the thermal camera), 2 rainbow, 3 olive (night shot)
+            param('tone', 'Thermal colour', 0, 0, 3, 1),
+            param('hud', 'Camera frame', 0, 0, 1),
+            // a thermal sensor is small (160 x 120): the heat read on a coarse grid and blown up soft
+            param('sensor', 'Sensor blur', 0, 0, 1)
         ],
         // A camera has no depth, so this reads one out of the light: black and white, the picture of a depth
         // scanner or an x-ray plate (the references: a depth pass of two dancers, a clay relief, stepped depth
@@ -474,8 +479,39 @@ uniform float p_grain;
 uniform float p_invert;
 uniform float p_cut;
 uniform float p_flash;
+uniform float p_tone;
+uniform float p_hud;
+uniform float p_sensor;
+// The palettes of a thermal camera: heat 0..1 -> colour. Iron: black, deep blue, purple, red, orange, yellow, white.
+vec3 ds_ramp(float v, vec3 c0, vec3 c1, vec3 c2, vec3 c3, vec3 c4, vec3 c5) {
+    float s = clamp(v, 0.0, 1.0) * 5.0;
+    vec3 c = mix(c0, c1, clamp(s, 0.0, 1.0));
+    c = mix(c, c2, clamp(s - 1.0, 0.0, 1.0));
+    c = mix(c, c3, clamp(s - 2.0, 0.0, 1.0));
+    c = mix(c, c4, clamp(s - 3.0, 0.0, 1.0));
+    return mix(c, c5, clamp(s - 4.0, 0.0, 1.0));
+}
+vec3 ds_tone(float v, float tone) {
+    if (tone < 0.5) return vec3(v);
+    if (tone < 1.5) return ds_ramp(v, vec3(0.0), vec3(0.10, 0.0, 0.42), vec3(0.58, 0.04, 0.56), vec3(0.93, 0.24, 0.13), vec3(1.0, 0.72, 0.05), vec3(1.0, 1.0, 0.94));
+    if (tone < 2.5) return ds_ramp(v, vec3(0.03, 0.05, 0.50), vec3(0.0, 0.42, 0.98), vec3(0.15, 0.88, 0.30), vec3(0.99, 0.92, 0.08), vec3(1.0, 0.16, 0.28), vec3(1.0, 0.86, 0.86));
+    // olive: the army-green grade of a night shot, light end almost white
+    return mix(vec3(v * 0.58, v * 0.70, v * 0.24), vec3(v), smoothstep(0.75, 1.0, v) * 0.7);
+}
+// The frame a thermal camera draws over its picture: corner marks, a centre cross, the palette as a scale.
+float ds_hud(vec2 p, vec2 px) {
+    vec2 q = abs(p - 0.5);
+    float cross = step(q.x, px.x * 1.5) * step(0.012, q.y) * step(q.y, 0.04) + step(q.y, px.y * 1.5) * step(0.007, q.x) * step(q.x, 0.0225);
+    vec2 m = vec2(0.46, 0.44) - q;
+    float corner = step(0.0, min(m.x, m.y)) * step(min(m.x, m.y * 0.5625), 0.0018) * step(max(m.x, m.y * 0.5625), 0.03);
+    return clamp(cross + corner, 0.0, 1.0);
+}
 float ds_luma(vec2 p) { return dot(texture2D(a, p).rgb, vec3(0.299, 0.587, 0.114)); }
 float ds_hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+float ds_cell(vec2 c, vec2 cell) {
+    vec2 o = cell * 0.25;
+    return 0.25 * (ds_luma(c + vec2(o.x, o.y)) + ds_luma(c + vec2(-o.x, o.y)) + ds_luma(c + vec2(o.x, -o.y)) + ds_luma(c + vec2(-o.x, -o.y)));
+}
 void main() {
     // the scanner bar: where it is on its way down, and the tremble of the picture under it
     float sweep = fract(time * p_speed * 0.25);
@@ -520,6 +556,17 @@ void main() {
     float d = mix(c, sum / wsum, 0.6 + 0.4 * p_depth);
     // near = light, far = dark: the lows fall away, the lit body stands out
     d = pow(smoothstep(0.10, 0.80, d), 1.25);
+    if (p_sensor > 0.02) {
+        // the small sensor: brightness averaged in cells, the cells joined by a soft curve
+        vec2 cell = texel * (8.0 + p_sensor * 72.0);
+        vec2 at = p / cell - 0.5;
+        vec2 base = floor(at);
+        vec2 f = fract(at);
+        f = f * f * (3.0 - 2.0 * f);
+        float low = mix(mix(ds_cell((base + vec2(0.5, 0.5)) * cell, cell), ds_cell((base + vec2(1.5, 0.5)) * cell, cell), f.x),
+                        mix(ds_cell((base + vec2(0.5, 1.5)) * cell, cell), ds_cell((base + vec2(1.5, 1.5)) * cell, cell), f.x), f.y);
+        d = pow(smoothstep(0.04, 0.85, low), 1.1);
+    }
 
     // how the surface turns. Steep = the edge of a volume.
     float rim = smoothstep(0.05, 0.45, length(g) * 2.0);
@@ -545,7 +592,17 @@ void main() {
     // flash: negative and positive change places p_flash times a second
     float flip = p_flash > 0.05 ? step(0.5, fract(time * p_flash)) : 0.0;
     v = mix(v, 1.0 - v, abs(p_invert - flip));
-    gl_FragColor = vec4(vec3(v), 1.0);
+    float tone = floor(p_tone + 0.5);
+    vec3 col = ds_tone(v, tone);
+    if (p_hud > 0.01) {
+        // the scale at the right edge: the palette from cold (bottom) to hot (top), in a thin white frame
+        vec2 b = (uv - vec2(0.962, 0.5)) / vec2(0.006, 0.2);
+        float inBar = step(abs(b.x), 1.0) * step(abs(b.y), 1.0);
+        float frame = step(abs(b.x), 1.0 + texel.x / 0.006 * 1.5) * step(abs(b.y), 1.0 + texel.y / 0.2 * 1.5) - inBar;
+        col = mix(col, ds_tone(b.y * 0.5 + 0.5, tone), inBar * p_hud);
+        col = mix(col, vec3(1.0), clamp(frame + ds_hud(uv, texel), 0.0, 1.0) * p_hud);
+    }
+    gl_FragColor = vec4(col, 1.0);
 }`
     },
 
@@ -561,13 +618,16 @@ void main() {
             param('move', 'Reframe', 0.6, 0, 1),
             param('mirror', 'Flip', 0.3, 0, 1),
             param('flash', 'Flash frame', 0.6, 0, 1),
-            param('bars', 'Bars', 0, 0, 1)
+            param('bars', 'Bars', 0, 0, 1),
+            param('burst', 'Burst', 0, 0, 1)
         ],
         // The picture edited like a music video, live. Time is cut into SHOTS (Cuts per second); every shot is one
         // still framing, chosen once at its cut: a size (wide, medium or close: Punch-in), a place in the frame
         // (Reframe), sometimes mirrored (Flip). Nothing moves inside a shot but a slow push-in, so it reads as an
         // edit and not as a wobble. Flash frame: about half the cuts open on one negative frame, the way a cut is
         // hit in an edit. Bars: black bands above and below, the film frame.
+        // Burst: how many of the shots are a BURST, the way a music video hits a bar: two framings intercut every
+        // tenth of a second, the second one negative, for the length of the shot; then a held shot again.
         // Deterministic: every choice is a hash of the shot number.
         fragment: `
 uniform float p_rate;
@@ -576,12 +636,17 @@ uniform float p_move;
 uniform float p_mirror;
 uniform float p_flash;
 uniform float p_bars;
+uniform float p_burst;
 float ct_hash(float n) { return fract(sin(n * 127.1 + 3.7) * 43758.5453123); }
 void main() {
     float rate = max(p_rate, 0.05);
     float t = time * rate;
     float shot = mod(floor(t), 4096.0);
     float into = fract(t) / rate;
+    // a burst shot: every other tenth of a second is the B framing, in negative
+    float isBurst = step(ct_hash(shot + 101.0), p_burst);
+    float side = isBurst * mod(floor(into * 10.0), 2.0);
+    shot += side * 977.0;
     float size = floor(ct_hash(shot) * 3.0);
     float z = (1.0 + p_zoom * size * 0.45) * (1.0 + 0.04 * p_zoom * min(into, 4.0));
     vec2 room = vec2(0.5 - 0.5 / z);
@@ -589,8 +654,8 @@ void main() {
     vec2 p = (uv - 0.5) / z + c;
     if (ct_hash(shot + 71.0) < p_mirror * 0.5) p.x = 1.0 - p.x;
     vec3 col = texture2D(a, clamp(p, 0.0, 1.0)).rgb;
-    float hit = step(into, 0.05) * step(0.5, ct_hash(shot + 5.0)) * p_flash;
-    col = mix(col, 1.0 - col, hit);
+    float hit = step(into, 0.05) * step(0.5, ct_hash(shot + 5.0)) * p_flash * (1.0 - isBurst);
+    col = mix(col, 1.0 - col, max(hit, side));
     col *= step(abs(uv.y - 0.5), 0.5 - 0.13 * p_bars);
     gl_FragColor = vec4(col, 1.0);
 }`

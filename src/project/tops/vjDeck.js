@@ -99,8 +99,8 @@ export const EFFECT_TYPES = {
     'top.lookup': { main: ['shadows', 'mids', 'highs', 'amount'] },
     'top.slope': { main: ['strength', 'angle', 'size', 'keep'] },
     'top.glow': { main: ['threshold', 'radius', 'amount'] },
-    'top.depthscan': { main: ['depth', 'bands', 'scan', 'rim', 'haze', 'relief', 'speed', 'invert', 'cut', 'flash'] },
-    'top.cuts': { main: ['rate', 'zoom', 'move', 'mirror', 'flash', 'bars'] }
+    'top.depthscan': { main: ['depth', 'bands', 'scan', 'rim', 'haze', 'relief', 'speed', 'invert', 'cut', 'flash', 'tone', 'hud', 'sensor'] },
+    'top.cuts': { main: ['rate', 'zoom', 'move', 'mirror', 'flash', 'bars', 'burst'] }
 }
 export const EFFECT_TYPE_IDS = Object.keys(EFFECT_TYPES)
 export const effectLabel = (type) => TOP_OPERATORS[type]?.label || type
@@ -174,6 +174,8 @@ export const createLayer = (index = 0, columns = DEFAULT_COLUMNS) => ({
     bypass: false,
     solo: false,
     side: '',
+    // Laid on after the master's effects (a title over the finished picture).
+    over: false,
     effects: [],
     clips: Array.from({ length: columns }, () => null)
 })
