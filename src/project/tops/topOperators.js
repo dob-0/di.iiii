@@ -667,13 +667,16 @@ void main() {
             param('bars', 'Bars', 0, 0, 1),
             param('burst', 'Burst', 0, 0, 1),
             param('lens', 'Fisheye', 0, 0, 1),
+            // MULTISCREEN: the frame as a wall of 2 x 2, 3 x 3 or 4 x 4 screens, each with its own framing and cuts
+            param('tiles', 'Screens', 1, 1, 4, 1),
             // PRESS values: 1 while a key is held (the deck's fxPress action), 0 otherwise. A scene never sets them.
             param('hit', 'Press: burst', 0, 0, 1, 1),
             param('punch', 'Press: punch-in', 0, 0, 1, 1),
             param('flip', 'Press: flip', 0, 0, 1, 1),
             param('neg', 'Press: negative', 0, 0, 1, 1),
             param('strobe', 'Press: strobe', 0, 0, 1, 1),
-            param('black', 'Press: black', 0, 0, 1, 1)
+            param('black', 'Press: black', 0, 0, 1, 1),
+            param('multi', 'Press: screens', 0, 0, 1, 1)
         ],
         // The picture edited like a music video, live. Time is cut into SHOTS (Cuts per second); every shot is one
         // still framing, chosen once at its cut: a size (wide, medium or close: Punch-in), a place in the frame
@@ -698,12 +701,25 @@ uniform float p_flip;
 uniform float p_neg;
 uniform float p_strobe;
 uniform float p_black;
+uniform float p_tiles;
+uniform float p_multi;
 float ct_hash(float n) { return fract(sin(n * 127.1 + 3.7) * 43758.5453123); }
 void main() {
     float rate = max(p_rate, 0.05);
     float t = time * rate;
     float shot = mod(floor(t), 4096.0);
     float into = fract(t) / rate;
+    // multiscreen: every screen of the wall is its own little frame with its own shots
+    float wall = max(floor(p_tiles + 0.5), 1.0 + 2.0 * step(0.5, p_multi));
+    vec2 q = uv;
+    float seam = 1.0;
+    if (wall > 1.5) {
+        vec2 tile = floor(uv * wall);
+        q = fract(uv * wall);
+        shot += tile.x * 31.0 + tile.y * 57.0;
+        vec2 e = min(q, 1.0 - q) * vec2(1.7778, 1.0);
+        seam = step(0.012, min(e.x, e.y));
+    }
     // a burst shot: every other tenth of a second is the B framing, in negative
     // a held burst key is a burst too, whatever the scene: medium shot and close shot intercut
     float held = step(0.5, p_hit);
@@ -716,7 +732,7 @@ void main() {
     float z = (1.0 + zoom * size * 0.45) * (1.0 + 0.04 * zoom * min(into, 4.0)) * (1.0 + 0.8 * step(0.5, p_punch));
     vec2 room = vec2(0.5 - 0.5 / z);
     vec2 c = vec2(0.5) + (vec2(ct_hash(shot + 17.0), ct_hash(shot + 43.0)) * 2.0 - 1.0) * room * move;
-    vec2 p = (uv - 0.5) / z + c;
+    vec2 p = (q - 0.5) / z + c;
     if (ct_hash(shot + 71.0) < p_mirror * 0.5) p.x = 1.0 - p.x;
     if (p_flip > 0.5) p.x = 1.0 - p.x;
     // fisheye: the middle of the frame pushed at the viewer, the corners falling away into black
@@ -732,7 +748,7 @@ void main() {
     inv = abs(inv - step(0.5, p_strobe) * mod(floor(time * 20.0), 2.0));
     col = mix(col, 1.0 - col, inv);
     col *= step(abs(uv.y - 0.5), 0.5 - 0.13 * p_bars);
-    col *= 1.0 - step(0.5, p_black);
+    col *= seam * (1.0 - step(0.5, p_black));
     gl_FragColor = vec4(col, 1.0);
 }`
     },
@@ -751,7 +767,9 @@ void main() {
             param('angle', 'Wind', 20, -180, 180, 1),
             param('dot', 'Dot', 0.42, 0.15, 0.6),
             param('floor', 'Dark limit', 0.12, 0, 0.9),
-            param('keep', 'Picture under', 0, 0, 1)
+            param('keep', 'Picture under', 0, 0, 1),
+            // lines drawn from grain to grain where both are lit: the body as a wire mesh
+            param('lines', 'Lines', 0, 0, 1)
         ],
         // The picture as grains of dust. Every grain has a home on a grid laid along the wind and takes the
         // colour and the size of the picture there (dark = no grain, so a white body on black is a body of
@@ -769,6 +787,7 @@ uniform float p_angle;
 uniform float p_dot;
 uniform float p_floor;
 uniform float p_keep;
+uniform float p_lines;
 float pt_hash(vec2 p, float k) { return fract(sin(dot(p, vec2(127.1, 311.7)) + k * 17.31) * 43758.5453123); }
 void main() {
     // the grid of dots lies along the wind: u runs with it, v across it
@@ -805,8 +824,44 @@ void main() {
             if (m > cover) { cover = m; col = src / max(max(src.r, max(src.g, src.b)), 0.001) * max(l, 0.75); }
         }
     }
+    // LINES: the nine grains around this pixel, at home, joined to each other where both are lit and near
+    // enough. A grain that flies away leaves its line behind, so the mesh stays while the dust goes.
+    float wire = 0.0;
+    vec3 wireCol = vec3(0.0);
+    if (p_lines > 0.01) {
+        vec2 hp[9];
+        float hl[9];
+        vec3 hc[9];
+        for (int n = 0; n < 9; n++) {
+            vec2 cell = cellAt + vec2(mod(float(n), 3.0) - 1.0, floor(float(n) / 3.0) - 1.0);
+            vec2 home = cell + 0.5 + (vec2(pt_hash(cell, 1.0), pt_hash(cell, 2.0)) - 0.5) * 0.6;
+            vec2 at = clamp((wind * home.x + across * home.y) * p_size * texel, 0.0, 1.0);
+            vec3 src = texture2D(a, at).rgb;
+            float l = dot(src, vec3(0.299, 0.587, 0.114));
+            hp[n] = home;
+            hl[n] = smoothstep(p_floor, p_floor + 0.08, l);
+            hc[n] = src / max(max(src.r, max(src.g, src.b)), 0.001) * max(l, 0.75);
+        }
+        float thick = max(0.045, 0.75 / p_size);
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if (j <= i) continue;
+                float both = hl[i] * hl[j];
+                if (both < 0.02) continue;
+                vec2 ab = hp[j] - hp[i];
+                float len = length(ab);
+                if (len > 1.5) continue;
+                float t = clamp(dot(g - hp[i], ab) / (len * len), 0.0, 1.0);
+                float d = length(g - (hp[i] + ab * t));
+                float m = (1.0 - smoothstep(thick - aa * 0.5, thick + aa * 0.5, d)) * both * (1.0 - smoothstep(1.1, 1.5, len));
+                if (m > wire) { wire = m; wireCol = mix(hc[i], hc[j], t); }
+            }
+        }
+        wire *= p_lines;
+    }
     vec3 under = texture2D(a, uv).rgb * p_keep;
-    gl_FragColor = vec4(mix(under, col, cover), 1.0);
+    vec3 outc = mix(under, wireCol * 0.85, wire);
+    gl_FragColor = vec4(mix(outc, col, cover), 1.0);
 }`
     },
 
