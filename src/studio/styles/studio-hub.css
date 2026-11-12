@@ -367,9 +367,9 @@
     align-items: center;
     min-height: var(--di-target-min);
     padding: var(--di-space-1) var(--di-space-2);
-    border: 1px solid var(--di-cyan-border);
+    border: 1px solid var(--di-line);
     border-radius: var(--di-radius);
-    color: var(--di-ink);
+    color: var(--di-text-muted);
     font-family: var(--di-mono);
     font-size: var(--di-text-3);
     line-height: 1;

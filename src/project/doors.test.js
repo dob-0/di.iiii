@@ -41,6 +41,28 @@ describe('projectDoors', () => {
         }
     })
 
+    it('pins the addresses as literals, local and hosted, so a wrong shape cannot pass by agreeing with itself', () => {
+        const local = projectDoors({ space: 'lab', project: 'p1', isLocalInstall: true, allTools: true })
+        expect(Object.fromEntries(local.map(d => [d.key, d.href]))).toMatchObject({
+            studio: '/lab/studio/projects/p1',
+            raw: '/lab/raw/projects/p1',
+            map: '/lab/map/p1',
+            light: '/light/?space=lab&project=p1'
+        })
+        const hosted = projectDoors({ space: 'lab', project: 'p1', isLocalInstall: false, allTools: true })
+        expect(hosted.find(d => d.key === 'light').href).toBe('/light')
+    })
+
+    it('keeps the bar\'s clientSide flag: only the hosted Light door goes through the app', () => {
+        const flags = (isLocalInstall) => Object.fromEntries(
+            projectDoors({ space: 'lab', project: 'p1', isLocalInstall, allTools: true }).map(d => [d.key, d.clientSide])
+        )
+        expect(flags(false).light).toBe(true)
+        expect(flags(true).light).toBe(false)
+        expect(flags(false).studio).toBe(false)
+        expect(flags(false).perform).toBeUndefined()
+    })
+
     it('says where Perform came from: studio by default, raw when asked', () => {
         const hrefOf = (args) => projectDoors({ space: 'lab', project: 'p1', ...args }).find(d => d.key === 'perform').href
         expect(hrefOf({})).toBe(buildPerformPath('lab', 'p1', { from: 'studio' }))

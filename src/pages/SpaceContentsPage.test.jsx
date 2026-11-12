@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SpaceContentsPage from './SpaceContentsPage.jsx'
 import { doorsForListRow, projectDoors } from '../project/doors.js'
@@ -32,6 +32,12 @@ vi.mock('../hooks/useAuthSession.js', () => ({
 
 vi.mock('../hooks/useLocalInstall.js', () => ({
     default: () => ({ resolved: true, isLocal: false })
+}))
+
+const allToolsOn = vi.hoisted(() => ({ value: false }))
+vi.mock('../studio/utils/jamMode.js', async (importOriginal) => ({
+    ...(await importOriginal()),
+    useAllTools: () => allToolsOn.value
 }))
 
 const contents = [
@@ -321,8 +327,11 @@ describe('a space\'s contents page: doors and shelves', () => {
                 expect(door.tagName).toBe('A')
                 expect(door.getAttribute('href')).toBeTruthy()
                 expect(door.getAttribute('target')).toBeNull()
-                expect(door.getAttribute('onclick')).toBeNull()
             }
+            // A click on a door the bar opens whole is left to the browser: not prevented, not sent through the app.
+            const studio = [...strip.querySelectorAll('.sc-door')].find((door) => door.textContent === 'Studio')
+            expect(fireEvent.click(studio)).toBe(true)
+            expect(appNavigateMock).not.toHaveBeenCalled()
         })
     })
 
@@ -389,7 +398,7 @@ describe('a space\'s contents page: doors and shelves', () => {
             // An empty shelf is kept, as the Studio hub keeps it.
             expect(headings[2].nextElementSibling.tagName).toBe('P')
             expect(headings[2].nextElementSibling).toHaveClass('sc-shelf-empty')
-            expect(headings[2].nextElementSibling.textContent).toBe('Nothing on this shelf yet.')
+            expect(headings[2].nextElementSibling.textContent).toBe('Nothing on show on this shelf.')
             expect(container.querySelector('.sc-shelf-note')).toBeNull()
             // The shelves come from the same two requests the hub makes.
             expect(listCollectionsMock).toHaveBeenCalledWith('br_id_ge')
@@ -460,6 +469,8 @@ describe('a space\'s contents page: doors and shelves', () => {
                 { space: 'br_id_ge', isLocalInstall: false, from: 'studio' }
             ).find((door) => door.key === 'light')
             expect(light.getAttribute('href')).toBe(expected.href)
+            // Hosted: the app's own page, whatever the project (pinned, not worked out by the helper).
+            expect(light.getAttribute('href')).toBe('/light')
             // A project with things only has the three sure doors.
             expect(doorTexts(/One shot/)).toEqual(['Perform', 'Studio', 'Nodes'])
         })
@@ -478,7 +489,154 @@ describe('a space\'s contents page: doors and shelves', () => {
             await stripsDrawn()
             expect([...rowOf(/Notations #2/).querySelectorAll('a.sc-door')].map((door) => door.textContent))
                 .toEqual(['Perform', 'Studio', 'Nodes'])
+            // This space has no shelf, so nothing is said about shelves: only that the doors may be short.
+            expect(document.querySelector('.sc-shelf-note').textContent)
+                .toBe('What each project holds did not load, so Projection and Light doors may be missing.')
+        })
+    })
+
+    it('says both things when the space has shelves and the member list failed', async () => {
+        await asMember(async () => {
+            listSpaceContentsMock.mockResolvedValue(contents)
+            listCollectionsMock.mockResolvedValue([{ id: 'week-one', label: 'Week one' }])
+            listProjectsMock.mockRejectedValue(new Error('down'))
+            render(<SpaceContentsPage spaceId="br_id_ge" />)
+            await stripsDrawn()
+
+            expect(document.querySelectorAll('.sc-shelf')).toHaveLength(0)
+            expect(document.querySelector('.sc-shelf-note').textContent)
+                .toBe('The shelves did not load, so this list is not grouped. What each project holds did not load, so Projection and Light doors may be missing.')
+        })
+    })
+
+    // An answer nobody can read must still settle the page: flat, the three sure doors, and the line.
+    it('settles with the three sure doors when a member row cannot be read', async () => {
+        await asMember(async () => {
+            listSpaceContentsMock.mockResolvedValue(contents)
+            listProjectsMock.mockResolvedValue([null])
+            render(<SpaceContentsPage spaceId="br_id_ge" />)
+            await stripsDrawn()
+
+            expect([...rowOf(/Notations #2/).querySelectorAll('a.sc-door')].map((door) => door.textContent))
+                .toEqual(['Perform', 'Studio', 'Nodes'])
+            expect(document.querySelector('.sc-shelf-note').textContent)
+                .toBe('The shelves did not load, so this list is not grouped. What each project holds did not load, so Projection and Light doors may be missing.')
+        })
+    })
+
+    it('says nothing about missing doors when All tools offers them anyway', async () => {
+        allToolsOn.value = true
+        try {
+            await asMember(async () => {
+                listSpaceContentsMock.mockResolvedValue(contents)
+                listProjectsMock.mockRejectedValue(new Error('down'))
+                render(<SpaceContentsPage spaceId="br_id_ge" />)
+                await stripsDrawn()
+
+                expect([...rowOf(/Notations #2/).querySelectorAll('a.sc-door')].map((door) => door.textContent))
+                    .toEqual(['Perform', 'Studio', 'Nodes', 'Projection', 'Light'])
+                expect(document.querySelector('.sc-shelf-note')).toBeNull()
+            })
+        } finally {
+            allToolsOn.value = false
+        }
+    })
+
+    // A failed shelves request must not throw away the counts: the lamp project keeps its Light door.
+    it('keeps the counts, and so the Light door, when only the shelves failed', async () => {
+        await asMember(async () => {
+            listSpaceContentsMock.mockResolvedValue(contents)
+            listCollectionsMock.mockRejectedValue(new Error('The shelves are down.'))
+            listProjectsMock.mockResolvedValue([{ id: 'n2-hub', collectionId: null, layers: { things: 3, lamps: 2 } }])
+            render(<SpaceContentsPage spaceId="br_id_ge" />)
+            await stripsDrawn()
+
+            expect([...rowOf(/Notations #2/).querySelectorAll('a.sc-door')].map((door) => door.textContent))
+                .toEqual(['Perform', 'Studio', 'Nodes', 'Light'])
+            expect(document.querySelector('.sc-shelf-note').textContent).toBe('The shelves did not load, so this list is not grouped.')
+        })
+    })
+
+    it('treats a non-array answer as a failed request, not as data', async () => {
+        await asMember(async () => {
+            listSpaceContentsMock.mockResolvedValue(contents)
+            listCollectionsMock.mockResolvedValue({ error: 'nope' })
+            render(<SpaceContentsPage spaceId="br_id_ge" />)
+            await stripsDrawn()
+
+            expect(document.querySelectorAll('.sc-shelf')).toHaveLength(0)
             expect(screen.getByText('The shelves did not load, so this list is not grouped.')).toBeTruthy()
+        })
+    })
+
+    // The Light door on a hosted install is the app's own page: it goes through the app, as the bar's own link does.
+    it('sends the Light door through the app on a hosted install, and leaves a modified click to the browser', async () => {
+        await asMember(async () => {
+            listSpaceContentsMock.mockResolvedValue(contents)
+            listProjectsMock.mockResolvedValue([{ id: 'n2-hub', collectionId: null, layers: { things: 3, lamps: 2 } }])
+            render(<SpaceContentsPage spaceId="br_id_ge" />)
+            await waitFor(() => expect(rowOf(/Notations #2/).querySelectorAll('a.sc-door')).toHaveLength(4))
+
+            const light = [...rowOf(/Notations #2/).querySelectorAll('a.sc-door')].find((door) => door.textContent === 'Light')
+            expect(light.getAttribute('href')).toBe('/light')
+            expect(fireEvent.click(light, { ctrlKey: true })).toBe(true)
+            expect(appNavigateMock).not.toHaveBeenCalled()
+            expect(fireEvent.click(light)).toBe(false)
+            expect(appNavigateMock).toHaveBeenCalledWith('/light')
+        })
+    })
+
+    it('offers Projection and Light on every scene when All tools is on', async () => {
+        allToolsOn.value = true
+        try {
+            await asMember(async () => {
+                listSpaceContentsMock.mockResolvedValue(contents)
+                render(<SpaceContentsPage spaceId="br_id_ge" />)
+                await stripsDrawn()
+                expect([...rowOf(/One shot/).querySelectorAll('a.sc-door')].map((door) => door.textContent))
+                    .toEqual(['Perform', 'Studio', 'Nodes', 'Projection', 'Light'])
+            })
+        } finally {
+            allToolsOn.value = false
+        }
+    })
+
+    it('marks the way in on a member\'s grouped list too', async () => {
+        await asMember(async () => {
+            listSpaceContentsMock.mockResolvedValue(contents)
+            listCollectionsMock.mockResolvedValue([{ id: 'week-one', label: 'Week one' }])
+            listProjectsMock.mockResolvedValue([{ id: 'n2-hub', collectionId: 'week-one' }])
+            render(<SpaceContentsPage spaceId="br_id_ge" />)
+            await screen.findByRole('heading', { level: 2, name: 'Week one' })
+            expect(rowOf(/Notations #2/).querySelector('.sc-row-door').textContent).toBe('the way in')
+        })
+    })
+
+    // An embed is the flat list as it was: no member data asked, no strips.
+    it('asks for nothing more inside an embed, even for a member', async () => {
+        window.history.pushState({}, '', '/?embed=1')
+        try {
+            await asMember(async () => {
+                listSpaceContentsMock.mockResolvedValue(contents)
+                const { container } = render(<SpaceContentsPage spaceId="br_id_ge" />)
+                await screen.findByRole('link', { name: /Notations #2/ })
+                await new Promise((resolve) => setTimeout(resolve, 0))
+                expect(listCollectionsMock).not.toHaveBeenCalled()
+                expect(listProjectsMock).not.toHaveBeenCalled()
+                expect(container.querySelector('.sc-row-doors')).toBeNull()
+            })
+        } finally {
+            window.history.pushState({}, '', '/')
+        }
+    })
+
+    it('asks for nothing more of a space that only hands the visitor on to its door', async () => {
+        await asMember(async () => {
+            listSpaceContentsMock.mockResolvedValue([contents[0]])
+            render(<SpaceContentsPage spaceId="br_id_ge" />)
+            await waitFor(() => expect(appNavigateMock).toHaveBeenCalled())
+            expect(listCollectionsMock).not.toHaveBeenCalled()
+            expect(listProjectsMock).not.toHaveBeenCalled()
         })
     })
 

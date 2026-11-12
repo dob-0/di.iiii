@@ -22,7 +22,7 @@ Each word does exactly one job. If you need a second job done, use a different w
 | --- | --- |
 | **space** | A place that is yours: an address, a guest list, and everything in it. A real place is ONE space; coming back to a job continues its project, it never makes a sibling ("continue, never recreate", 2026-11-02, `docs/ai/decisions/2026-11-02-continue-never-recreate.md`). |
 | **project** | One thing you make inside a space. |
-| **shelf** | A named group of projects inside a space. It groups work without becoming a place of its own; deleting a shelf never deletes the work on it, and a project on no shelf is listed under "Not on a shelf". Made and filled in Studio, shown as a heading on a space's project pages. In the data it is a collection; the word a person reads is shelf. Added 2026-11-12. |
+| **shelf** | A named group of projects inside a space. It groups work without becoming a place of its own; deleting a shelf never deletes the work on it, and a project on no shelf is listed under "Not on a shelf". Made and filled in Studio, shown as a heading in the Studio and Nodes project lists and, for members, on the space page. In the data it is a collection; the word a person reads is shelf. Added 2026-11-12. |
 | **canvas** | The surface your nodes sit on. |
 | **node** | One card on the canvas. |
 | **object** | One thing standing in the scene. |

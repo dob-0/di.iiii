@@ -1,3 +1,6 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
     STUDIO_PAGE_SPACES,
@@ -181,6 +184,15 @@ describe('studioRouting', () => {
         // No preset in the address: a show default or the last used layout wins.
         expect(new URL(address, 'https://example.com').searchParams.has('preset')).toBe(false)
         expect(new URL(address, 'https://example.com').searchParams.get('from')).toBe('studio')
+    })
+
+    // The helper is only a promise if Studio's own door uses it: the editor
+    // used to build the address itself and force the VJ layout (2026-11-12).
+    it('is what Studio\'s own deck door opens, with no layout named beside it', () => {
+        const here = path.dirname(fileURLToPath(import.meta.url))
+        const editor = fs.readFileSync(path.join(here, '../components/StudioEditor.jsx'), 'utf8')
+        expect(editor).toMatch(/openDeck:\s*\(\)\s*=>\s*navigateToStudioPath\(buildStudioDeckPath\(resolvedSpaceId, projectId\)\)/)
+        expect(editor).not.toMatch(/preset:\s*['"]vj['"]/)
     })
 
     it('does not mistake a deeper path for the projects list', () => {

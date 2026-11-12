@@ -40,7 +40,9 @@ export const projectDoors = ({
     const destinations = surfaceDestinations({ isLocalInstall, space, project, projectLabel, layers: null })
     const door = (key) => {
         const found = destinations.find(d => d.key === key)
-        return found ? { key, label: found.label, href: found.href } : null
+        // clientSide: the top bar's own flag, kept so a door gets there as the bar does
+        // (a hosted Light path is the app's own page, not one to load whole).
+        return found ? { key, label: found.label, href: found.href, clientSide: Boolean(found.clientSide) } : null
     }
 
     const keys = [...TOOL_KEYS]

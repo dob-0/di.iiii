@@ -909,6 +909,30 @@ describe('the doors on a card, and the tool the page names', () => {
         const bar = surfaceDestinations({ space: 'lab', project: 'a', projectLabel: 'Alpha', isLocalInstall: false })
             .find(d => d.key === 'light')
         expect(light.getAttribute('href')).toBe(bar.href)
+        // Pinned, so a wrong shape cannot pass by agreeing with the helper: the hosted desk page.
+        expect(light.getAttribute('href')).toBe('/light')
+    })
+
+    it('sends the hosted Light door through the app, and leaves the other doors to the browser', async () => {
+        listProjects.mockResolvedValue([{ ...alpha, layers: { things: 12, lamps: 4, joinedLamps: 4 } }])
+
+        render(<StudioHub spaceId="lab" />)
+        const card = (await screen.findByRole('button', { name: 'Alpha' })).closest('.sh-project-card')
+        const door = (name) => [...card.querySelectorAll('a.sh-door')].find(a => a.textContent === name)
+
+        expect(fireEvent.click(door('Nodes'))).toBe(true)
+        expect(navigate).not.toHaveBeenCalled()
+        expect(fireEvent.click(door('Light'))).toBe(false)
+        expect(navigate).toHaveBeenCalledWith('/light', { replace: false })
+    })
+
+    it('says "Pick a project" only when there is a card to pick', async () => {
+        listProjects.mockResolvedValue([])
+
+        render(<StudioHub spaceId="lab" />)
+        await screen.findByText('No projects yet')
+
+        expect(document.querySelector('.sh-tool-line')).toBeNull()
     })
 
     it('a card with a wall and lamps in Nodes shows Projection and Light after Perform and Studio', async () => {

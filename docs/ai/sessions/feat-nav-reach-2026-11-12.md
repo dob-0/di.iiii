@@ -40,3 +40,23 @@ Three root causes, three fixes:
 Nothing was run on the laptop that wrote it (tests, lint and the style suites run on GitHub and a Colab box), and no
 picture was taken. Whether five doors wrap cleanly at 390 px is computed, not seen: `npm run verify:surfaces` owes
 screenshots at 1440 px and 390 px, member and visitor.
+
+### Review round (2026-11-12, after the first push)
+
+Three readers went over the batch (what it can break, the spec with brand and words, the operator's hand): 19 findings, 3 of them major.
+Fixed in the same pull request:
+
+- The member's two requests are settled separately. A failed shelves request no longer throws away the counts, so a lamp project keeps
+  its Light door; the page says what did not load in one quiet line, and nothing when "All tools" offers the doors anyway. An answer
+  nobody can read still settles the page (flat, the three sure doors, the line): it used to be able to leave a list with no doors and no word.
+- An embed stays the flat list it was, and a space that only hands the visitor on to its door asks for nothing more.
+- The hosted Light door goes through the app, as the top bar's own link does (`navigateInApp`); a click for a new tab stays with the browser.
+- "Pick a project" shows only when there is a card to pick. An empty shelf on the space page says "Nothing on show on this shelf."
+  (the page lists what is on show; the Studio list keeps "Nothing on this shelf yet.").
+- Guards added: door height under a finger (`hubTouch.test.js`), the words of the member page (`copyVocabulary.test.js` reads the page,
+  `doors.js` and `shelves.js`), addresses pinned as literals, Studio's own deck door (`studioRouting.test.js` reads the editor), and
+  `test:raw` now runs the space page test (the scope guard named it on the first run on GitHub).
+
+Left for the next batch, each a decision and not a slip: Nodes is offered on a card even where the bar still holds it back (the bar's
+rule belongs to the top bar work); the way back differs per door (Perform's Desk and Nodes' Back do not return to the space page);
+the strips and shelf headings arrive a moment after the rows; a row without doors gives no reason.

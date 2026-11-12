@@ -29,6 +29,7 @@ import { buildStudioHubPath, buildStudioProjectPath, buildSpacesPath, navigateTo
 import { getCodeSpace } from '../utils/codeSpaces.js'
 import { describeProjectLayers } from '../../project/layers.js'
 import { doorsForListRow } from '../../project/doors.js'
+import { navigateInApp } from '../../components/SurfaceBar.jsx'
 import { groupByShelf } from '../../project/shelves.js'
 import '../styles/studio-hub.css'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
@@ -478,7 +479,12 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                         onKeyDown={e => e.stopPropagation()}
                     >
                         {doors.map(door => (
-                            <a key={door.key} className="sh-door" href={door.href}>{door.label}</a>
+                            <a
+                                key={door.key}
+                                className="sh-door"
+                                href={door.href}
+                                onClick={door.clientSide ? (e) => navigateInApp(e, door.href) : undefined}
+                            >{door.label}</a>
                         ))}
                     </div>
                 )}
@@ -582,9 +588,11 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                     <div>
                         <p className="sh-space-context">Space: {spaceLabel}</p>
                         <h1 className="sh-title">projects</h1>
-                        <p className="sh-tool-line">
-                            Pick a project. A card opens it in <strong className="sh-tool-name">{tool.name}</strong>.
-                        </p>
+                        {visibleProjects.length > 0 && (
+                            <p className="sh-tool-line">
+                                Pick a project. A card opens it in <strong className="sh-tool-name">{tool.name}</strong>.
+                            </p>
+                        )}
                     </div>
                     {creatingTitle === null ? (
                         <div className="sh-top-actions">
