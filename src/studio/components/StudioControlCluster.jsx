@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { usePanelDrag } from '../../hooks/usePanelDrag.js'
 import StudioSaveLine from './StudioSaveLine.jsx'
+import { isCueKey } from '../../map/cueFiring.js'
+import { setCueKeysOn, useCueKeysOn } from '../utils/cueKeysSwitch.js'
 
 // Five scene windows, one per job: add things, edit the scene, configure the
 // world, ship it, write code — plus Projects, the space-level window for
@@ -91,6 +93,10 @@ export default function StudioControlCluster({
     allToolsHint = null,
 }) {
     const [collapsed, setCollapsed] = useState(false)
+    // The number keys 1-9 fire the cue bound to that digit, and that changes the real lights, laser and wall; this row says so and turns them off.
+    const cueKeysOn = useCueKeysOn()
+    const hasKeyedCue = Array.isArray(cues) && cues.some((cue) => isCueKey(cue?.key))
+    const keysTitle = 'Number keys 1-9 fire this project\'s cues: the real lights, and a laser or wall look where a cue has one'
 
     const initialPos = { x: typeof window !== 'undefined' ? window.innerWidth - 400 : 880, y: 90 }
     const { panelRef, dragProps, dragStyle, panelPointerProps } = usePanelDrag(initialPos, { baseZ: 1500, snapEdges })
@@ -121,6 +127,17 @@ export default function StudioControlCluster({
                             title={syncState.sceneStreamState}
                         />
                     )}
+                    {collapsed && hasKeyedCue && (
+                        <button
+                            type="button"
+                            className={`scc-btn scc-btn--xs ${cueKeysOn ? 'active' : ''}`}
+                            data-testid="cue-keys-chip"
+                            title={`${keysTitle}. Press to turn them ${cueKeysOn ? 'off' : 'on'}.`}
+                            onClick={() => setCueKeysOn(!cueKeysOn)}
+                        >
+                            {cueKeysOn ? '1-9 on' : '1-9 off'}
+                        </button>
+                    )}
                     {onUndo && (
                         <button type="button" className="scc-btn scc-undo-btn" onClick={onUndo} disabled={!canUndo} aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
                     )}
@@ -136,6 +153,22 @@ export default function StudioControlCluster({
 
                 {!collapsed && (
                     <>
+                        {hasKeyedCue && (
+                            <div className="scc-section" data-testid="cue-keys-row">
+                                <div className="scc-section-label">Keys 1-9</div>
+                                <div className="scc-buttons">
+                                    <span className="scc-keys-note">fire cues: real lights, laser, wall.</span>
+                                    <button
+                                        type="button"
+                                        className={`scc-btn ${cueKeysOn ? 'active' : ''}`}
+                                        title={keysTitle}
+                                        onClick={() => setCueKeysOn(!cueKeysOn)}
+                                    >
+                                        {cueKeysOn ? 'Turn off' : 'Turn on'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         {pageOnly ? (
                             <div className="scc-section">
                                 <div className="scc-section-label">Scene</div>
