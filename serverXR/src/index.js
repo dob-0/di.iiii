@@ -2624,7 +2624,7 @@ registerDomainRoutes(router, {
   config
 })
 
-const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceRoutes(router, {
+const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast, bundleDoor } = registerSpaceRoutes(router, {
   findPrimaryHostForSpace: domainStore.findPrimaryActiveHostForSpace,
   mapPrimaryHosts: domainStore.mapPrimaryActiveHosts,
   applySceneOps,
@@ -3305,18 +3305,21 @@ const contentProposals = createContentProposals({
 })
 contentProposals.register()
 
-router.post('/api/spaces/:spaceId/proposals', (req, res, next) => bundleUpload.single('bundle')(req, res, (error) => {
-  if (!error) return next()
-  if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'That file is larger than this di.iiii accepts.' })
-  return res.status(400).json({ error: String(error.message || 'That file could not be read.') })
-}), async (req, res, next) => {
+// A proposal names a person. Guests have no name the owner could answer. One
+// function for the multipart POST below and the chunked upload (chunkedUploads.js).
+const proposalAuthRefusal = (req) => {
+  const state = req.authState || getPublicAuthState(req)
+  if (config.requireAuth && !state.isUnrestricted && (!state.authenticated || state.type === 'guest' || isGuestSubject(state.subject))) {
+    return { status: 403, body: { error: 'Sign in with an account to send a file for this space.', code: 'auth_required' } }
+  }
+  return null
+}
+const submitProposalFile = async (req, res, next) => {
   const uploaded = req.file?.path || null
   try {
     const state = req.authState || getPublicAuthState(req)
-    // A proposal names a person. Guests have no name the owner could answer.
-    if (config.requireAuth && !state.isUnrestricted && (!state.authenticated || state.type === 'guest' || isGuestSubject(state.subject))) {
-      return res.status(403).json({ error: 'Sign in with an account to send a file for this space.', code: 'auth_required' })
-    }
+    const refusal = proposalAuthRefusal(req)
+    if (refusal) return res.status(refusal.status).json(refusal.body)
     if (!uploaded) return res.status(400).json({ error: 'No file was sent (field "bundle").' })
     const spaceId = normalizeSpaceId(req.params.spaceId)
     const flag = (value) => ['1', 'true', 'yes'].includes(String(value ?? '').toLowerCase())
@@ -3343,6 +3346,35 @@ router.post('/api/spaces/:spaceId/proposals', (req, res, next) => bundleUpload.s
   } finally {
     if (uploaded) await fs.promises.rm(uploaded, { force: true }).catch(() => {})
   }
+}
+router.post('/api/spaces/:spaceId/proposals', (req, res, next) => bundleUpload.single('bundle')(req, res, (error) => {
+  if (!error) return next()
+  if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'That file is larger than this di.iiii accepts.' })
+  return res.status(400).json({ error: String(error.message || 'That file could not be read.') })
+}), submitProposalFile)
+
+// Chunked, resumable upload for both doors above (chunkedUploads.js): Cloudflare
+// refuses a body over ~100 MB, so `di open --to` sends parts of at most 64 MB and
+// finish runs the very same handlers on the assembled file.
+const { createChunkedUploads } = require('./chunkedUploads')
+createChunkedUploads({
+  router,
+  dir: path.join(config.directories.dataDir, 'chunked-uploads'),
+  assembleDir: UPLOADS_DIR,
+  maxBytes: config.maxUploadBytes,
+  // 64 MB by default and never more; the env lets a contract test use tiny parts.
+  partBytes: Number(process.env.UPLOAD_PART_BYTES) || undefined,
+  doors: {
+    bundle: bundleDoor,
+    proposal: { authRefusal: proposalAuthRefusal, handle: submitProposalFile }
+  },
+  // The proposal door's :spaceId scope check, run for the space the upload names.
+  scopeGate: (req, res, spaceId) => new Promise((resolve) => {
+    req.requiredSpaceId = normalizeSpaceId(spaceId) || null
+    requireWriteRole('editor')(req, res, () => resolve(true))
+    res.once('finish', () => resolve(false))
+  }),
+  logger
 })
 
 // Admin sweep for the hub's collapsed sandbox row: remove guest sandboxes the

@@ -527,6 +527,45 @@ module.exports = [
     note: "multipart upload (field \"bundle\"), not a plain JSON call. Needs a real signed-in account (or admin/unrestricted). Refuses to overwrite a space id that already exists here."
   },
   {
+    route: "POST /api/space-uploads",
+    summary: "start a chunked upload of a .diiii file (for files a proxy will not take in one request)",
+    reach: "private",
+    role: "editor",
+    agent: false,
+    note: "JSON {kind: bundle|proposal, filename, size, sha256, spaceId?, fields?}. Same sign-in rules as the plain POST of that kind. Answers uploadId, partSize (at most 64 MB) and parts. See serverXR/src/chunkedUploads.js."
+  },
+  {
+    route: "GET /api/space-uploads/:id",
+    summary: "which parts of a chunked upload the server already has (for resuming)",
+    reach: "read",
+    role: "editor",
+    agent: false,
+    note: "Only the person who started the upload sees it."
+  },
+  {
+    route: "PUT /api/space-uploads/:id/parts/:n",
+    summary: "send one part of a chunked upload (raw bytes, header X-Part-Sha256)",
+    reach: "private",
+    role: "editor",
+    agent: false,
+    note: "Raw body of exactly the part's length, at most 64 MB. A wrong length or sha256 is refused and the part deleted."
+  },
+  {
+    route: "POST /api/space-uploads/:id/finish",
+    summary: "put a chunked upload together, verify it, and run the same import / proposal as the plain POST",
+    reach: "private",
+    role: "editor",
+    agent: false,
+    note: "Answers exactly what POST /api/spaces/bundle or POST /api/spaces/:spaceId/proposals would have."
+  },
+  {
+    route: "DELETE /api/space-uploads/:id",
+    summary: "abandon a chunked upload and delete its parts",
+    reach: "private",
+    role: "editor",
+    agent: false
+  },
+  {
     route: "GET /api/spaces/:spaceId/domains",
     summary: "list the space's own domains, whether each is live, and the DNS records still owed",
     reach: "read",

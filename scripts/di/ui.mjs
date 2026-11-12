@@ -389,6 +389,7 @@ export const ui = {
     openToBareToken: () => `a token on the command line is visible to every process on this machine — pipe it instead: --token -  (or set DI_TOKEN, or ${CMD} login)`,
     openToNeedsFile: () => `which file? — ${CMD} open FILE --to https://dev.diiii.xyz`,
     openToNeedsHttps: (site) => `${site} is not https — a token is never sent in clear text to another machine. use https://, or a localhost address.`,
+    openToProgress: (part, parts, sent, size) => `  part ${part}/${parts} sent (${(sent / 1048576).toFixed(0)} of ${(size / 1048576).toFixed(0)} MB)`,
     openToSending: (bytes, host) => `sending ${(bytes / 1048576).toFixed(1)} MB to ${host}…`,
     openToTimedOut: (host) => `${host} did not finish taking the file in time (a flat 30-minute cap for the whole upload, not an idle timeout — set DI_OPEN_TO_TIMEOUT_MS, in milliseconds, to change it).`,
     openToBadTimeout: (value) => `DI_OPEN_TO_TIMEOUT_MS must be a whole number of milliseconds above 0, not "${value}" (unset it for the 30-minute default).`,

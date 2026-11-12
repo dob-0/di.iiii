@@ -33,6 +33,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { CHUNK_THRESHOLD, uploadChunked } from './di/chunkedUpload.mjs'
 import { TIERS, localBase, resolveTier, isProductionTarget } from './tier-sync.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -116,22 +117,37 @@ export async function proposeBundle(argv) {
     const spaceId = args.space || await spaceIdInFile(args.file)
     if (!spaceId) fail('could not read the space id from the file; pass --space <id>')
 
-    const form = new FormData()
-    form.append('mode', args.direct ? 'auto' : 'propose')
-    if (args.from) form.append('from', args.from)
-    if (args.dryRun) form.append('dryRun', 'true')
-    if (args.overwriteNewer) form.append('overwriteNewer', 'true')
-    if (args.acceptLoss !== null) form.append('acceptLoss', args.acceptLoss)
-    form.append('bundle', new Blob([fs.readFileSync(args.file)]), path.basename(args.file).endsWith('.diiii') ? path.basename(args.file) : `${spaceId}.diiii`)
-
+    const fields = { mode: args.direct ? 'auto' : 'propose' }
+    if (args.from) fields.from = args.from
+    if (args.dryRun) fields.dryRun = 'true'
+    if (args.overwriteNewer) fields.overwriteNewer = 'true'
+    if (args.acceptLoss !== null) fields.acceptLoss = args.acceptLoss
+    const uploadName = path.basename(args.file).endsWith('.diiii') ? path.basename(args.file) : `${spaceId}.diiii`
     const url = `${base}/api/spaces/${encodeURIComponent(spaceId)}/proposals`
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-        signal: AbortSignal.timeout(TIMEOUT_MS)
-    })
-    const body = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
+    const authHeaders = { Authorization: `Bearer ${token}` }
+
+    let response = null
+    let chunkedBody = null
+    // Over ~90 MB a proxy refuses the single POST: send parts of at most 64 MB
+    // (serverXR/src/chunkedUploads.js); a server without the route gets the POST.
+    if (fs.statSync(args.file).size > CHUNK_THRESHOLD) {
+        const chunked = await uploadChunked({
+            base, headers: authHeaders, file: args.file, kind: 'proposal', spaceId, fields, filename: uploadName,
+            signal: AbortSignal.timeout(TIMEOUT_MS * 10),
+            onProgress: ({ part, parts, sent, size }) => console.log(`  part ${part}/${parts} sent (${(sent / 1048576).toFixed(0)} of ${(size / 1048576).toFixed(0)} MB)`)
+        })
+        if (!chunked.unsupported) {
+            response = { ok: chunked.status >= 200 && chunked.status < 300, status: chunked.status }
+            chunkedBody = chunked.body
+        }
+    }
+    if (!response) {
+        const form = new FormData()
+        for (const [k, v] of Object.entries(fields)) form.append(k, v)
+        form.append('bundle', new Blob([fs.readFileSync(args.file)]), uploadName)
+        response = await fetch(url, { method: 'POST', headers: authHeaders, body: form, signal: AbortSignal.timeout(TIMEOUT_MS) })
+    }
+    const body = chunkedBody || await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
     console.log(formatOutcome(response.status, body))
     return response.ok ? 0 : 1
 }

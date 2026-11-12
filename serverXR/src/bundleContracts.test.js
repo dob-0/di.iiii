@@ -1,7 +1,8 @@
 // @vitest-environment node
 
 import { execFile } from 'node:child_process'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -38,7 +39,7 @@ const makeTempDir = async (prefix) => {
     return dir
 }
 
-const startServer = async (dataRoot) => {
+const startServer = async (dataRoot, extraEnv = {}) => {
     const sandboxCwd = await makeTempDir('dii-bundle-server-cwd-')
     const { child, port } = await spawnServerUntilReady({
         entry: SERVER_ENTRY,
@@ -50,7 +51,8 @@ const startServer = async (dataRoot) => {
             DATA_ROOT: dataRoot,
             API_TOKEN: 'test-token',
             REQUIRE_AUTH: '',
-            CORS_ORIGINS: '*'
+            CORS_ORIGINS: '*',
+            ...extraEnv
         }
     })
 
@@ -200,5 +202,50 @@ describe('space bundle contracts', () => {
         const targetServer = await startServer(targetRoot)
         const metaResponse = await fetch(`${targetServer.baseUrl}/api/spaces/bundle-remapped`)
         expect(metaResponse.status).toBe(200)
+    }, 60000)
+
+    // The same file through the chunked door (Cloudflare refuses one request over
+    // ~100 MB): start, parts of 2 KB, finish, and the space is there as if it had
+    // been POSTed. Known fix: "a space file over 100 MB never reached dev" (2026-11-12).
+    it('opens a file sent in parts through POST /api/space-uploads', async () => {
+        const spaceId = 'bundle-chunked'
+        const sourceRoot = await makeTempDir('dii-bundle-data-e-')
+        const sourceServer = await startServer(sourceRoot)
+        await seedSpace(sourceServer, spaceId)
+        await sourceServer.stop()
+        const workDir = await makeTempDir('dii-bundle-out-')
+        const bundlePath = path.join(workDir, 'space.diiii')
+        await runBundleScript(['export', spaceId, '--out', bundlePath], sourceRoot)
+        const bytes = await readFile(bundlePath)
+
+        const targetRoot = await makeTempDir('dii-bundle-data-f-')
+        const server = await startServer(targetRoot, { UPLOAD_PART_BYTES: '2048' })
+        const sha256 = createHash('sha256').update(bytes).digest('hex')
+        const started = await fetch(`${server.baseUrl}/api/space-uploads`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ kind: 'bundle', filename: 'space.diiii', size: bytes.length, sha256, fields: { as: 'bundle-chunked-copy' } })
+        })
+        expect(started.status).toBe(201)
+        const { uploadId, partSize, parts } = await started.json()
+        expect(partSize).toBe(2048)
+        expect(parts).toBeGreaterThan(1)
+        for (let n = 0; n < parts; n++) {
+            const part = bytes.subarray(n * partSize, (n + 1) * partSize)
+            const res = await fetch(`${server.baseUrl}/api/space-uploads/${uploadId}/parts/${n}`, {
+                method: 'PUT',
+                headers: { 'x-part-sha256': createHash('sha256').update(part).digest('hex'), 'content-type': 'application/octet-stream' },
+                body: part
+            })
+            expect(res.status).toBe(200)
+        }
+        const done = await fetch(`${server.baseUrl}/api/space-uploads/${uploadId}/finish`, { method: 'POST' })
+        expect(done.status).toBe(201)
+        expect((await done.json()).spaceId).toBe('bundle-chunked-copy')
+        const meta = await fetch(`${server.baseUrl}/api/spaces/bundle-chunked-copy`)
+        expect(meta.status).toBe(200)
+        expect((await meta.json()).space.label).toBe('Bundle Source')
+        // finish is once: the session is gone afterwards
+        expect((await fetch(`${server.baseUrl}/api/space-uploads/${uploadId}/finish`, { method: 'POST' })).status).toBe(404)
     }, 60000)
 })

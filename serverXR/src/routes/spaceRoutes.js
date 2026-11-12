@@ -705,15 +705,29 @@ function registerSpaceRoutes(router, {
 
   // Opening a file CREATES a space, so it answers to the same rule as creating
   // one: an owning account, an admin, or a local install where auth is off.
-  router.post('/api/spaces/bundle', acceptBundleFile, async (req, res, next) => {
+  // Who may open a file here. One function for both doors that reach the
+  // import below: the multipart POST and the chunked upload's start/finish
+  // (chunkedUploads.js), so they can never disagree.
+  const bundleAuthRefusal = (req) => {
+    const state = req.authState || {}
+    const exempt = state.isUnrestricted || state.role === 'admin'
+    const sessionUserId = state.type === 'session' && !isGuestSubject(state.subject) ? state.subject : null
+    if (config.requireAuth && !exempt && !sessionUserId) {
+      return { status: 403, body: { error: 'Sign in with an account to open a file here.', code: 'auth_required' } }
+    }
+    return null
+  }
+
+  // The import itself. Reads the file from req.file.path and the form from
+  // req.body, removes the file when it is done. The multipart route and the
+  // chunked upload's finish both call exactly this.
+  const importBundleFile = async (req, res, next) => {
     const uploaded = req.file?.path || null
     try {
       const state = req.authState || {}
-      const exempt = state.isUnrestricted || state.role === 'admin'
       const sessionUserId = state.type === 'session' && !isGuestSubject(state.subject) ? state.subject : null
-      if (config.requireAuth && !exempt && !sessionUserId) {
-        return res.status(403).json({ error: 'Sign in with an account to open a file here.', code: 'auth_required' })
-      }
+      const refusal = bundleAuthRefusal(req)
+      if (refusal) return res.status(refusal.status).json(refusal.body)
       if (!uploaded) return res.status(400).json({ error: 'No file was sent.' })
 
       const args = ['import', uploaded]
@@ -786,7 +800,8 @@ function registerSpaceRoutes(router, {
     } finally {
       if (uploaded) await fsp.rm(uploaded, { force: true }).catch(() => {})
     }
-  })
+  }
+  router.post('/api/spaces/bundle', acceptBundleFile, importBundleFile)
 
   // Sends a refusal the store raised on purpose (protected space, name in the
   // trash) as its own status and code instead of a bare 500.
@@ -2055,7 +2070,7 @@ function registerSpaceRoutes(router, {
   // whole scene) go through the same locked, versioned, broadcast write path
   // instead of hand-rolling their own version bump that can desync from the
   // real op-log (see docs/ai/known-fixes.md, audit #2026-07-17).
-  return { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast }
+  return { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast, bundleDoor: { authRefusal: bundleAuthRefusal, handle: importBundleFile } }
 }
 
 module.exports = {

@@ -35,4 +35,21 @@ describe('dev tier upload limit', () => {
     it('the server lifts Node requestTimeout when the ceiling is above the default', () => {
         expect(read('serverXR/src/index.js')).toMatch(/config\.maxUploadBytes > 100 \* 1024 \* 1024\) httpServer\.requestTimeout = 0/)
     })
+
+    // Cloudflare refuses a body over ~100 MB, so a bigger file goes in parts of at
+    // most 64 MB (serverXR/src/chunkedUploads.js); nginx must take a part of that size.
+    it('nginx takes a 64 MB part on the chunked-upload part route', () => {
+        const conf = read('nginx.conf')
+        const start = conf.indexOf('location ~ ^/serverXR/api/space-uploads/')
+        expect(start).toBeGreaterThan(-1)
+        const block = conf.slice(start, conf.indexOf('}', start))
+        expect(Number(block.match(/client_max_body_size\s+(\d+)m;/)?.[1])).toBeGreaterThanOrEqual(65)
+        expect(block).toMatch(/proxy_request_buffering\s+off;/)
+    })
+
+    it('the client switches to parts above 90 MB, under the ~100 MB Cloudflare cap', () => {
+        expect(read('scripts/di/chunkedUpload.mjs')).toMatch(/CHUNK_THRESHOLD = 90 \* 1024 \* 1024/)
+        expect(read('scripts/di/cli.mjs')).toMatch(/bytes > CHUNK_THRESHOLD/)
+        expect(read('scripts/space-proposal.mjs')).toMatch(/> CHUNK_THRESHOLD/)
+    })
 })

@@ -3,6 +3,13 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## A space file over 100 MB never reached dev: Cloudflare cut the body (2026-11-12)
+
+Symptom: `di open platina.diiii --to https://dev.diiii.xyz` (843 MB) failed. A 90 MB POST to /serverXR/api/spaces/bundle reached the server (401 without a token); a 120 MB POST got "413 Payload Too Large ... cloudflare".
+Cause: dev.diiii.xyz is behind Cloudflare, which refuses request bodies over ~100 MB on our plan. PR #1272 had already lifted serverXR (MAX_UPLOAD_MB 2048) and nginx (2100m); neither is the wall.
+Fix: chunked, resumable upload. Server `serverXR/src/chunkedUploads.js` (`/api/space-uploads`: start, PUT part N <= 64 MB with its sha256, finish) assembles on disk, verifies the whole sha256 and then runs the doors' own handlers (`bundleDoor.handle` in `routes/spaceRoutes.js`, `submitProposalFile` in `index.js`), so auth, roles and MAX_UPLOAD_MB are the plain POST's. Client `scripts/di/chunkedUpload.mjs`, used by `di open --to` and `scripts/space-proposal.mjs` above 90 MB (3 retries per part, 404 falls back to the single POST). nginx: a 70m part location.
+Regression tests: `serverXR/src/chunkedUploads.test.js` (contract), `serverXR/src/bundleContracts.test.js` ("opens a file sent in parts"), `scripts/di/chunkedUpload.test.js` (200 MB in parts <= 64 MB), `scripts/uploadLimit.test.js`.
+
 ## Perform live faults: arrow over text, panels off the page, Output settings, small Out picture (2026-11-11)
 
 Symptom: (A) the caret drew over "LAYER 1" / "+ ADD EFFECT" in the Effects head (computed padding stayed `0 7px`); (B) with 6 layers the Sources / Clip / Effects row started at y=801 on an 813px page; (C) Output settings showed "Where the browser puts it" for a saved Screen 3, cut "1920" to "192", and "Match the screen" offered the tool window's screen size; (D) the Out window's picture was a ~60px thumbnail.

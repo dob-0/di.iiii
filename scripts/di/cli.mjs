@@ -65,6 +65,7 @@ import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from '
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
 import { runPost } from './post.mjs'
+import { CHUNK_THRESHOLD, uploadChunked } from './chunkedUpload.mjs'
 import { runWifi } from './wifiCmd.mjs'
 import {
     isStageMachine, joinPlan, joinStage, leaveStage, readManifest,
@@ -532,17 +533,39 @@ const openOnAnother = async (args, resolved) => {
     if (!token) { fail(ui.openToSignIn(site)); process.exitCode = 1; return }
     const name = path.basename(resolved)
     try {
-        const form = new FormData()
-        form.append('bundle', await fs.openAsBlob(resolved), name)
-        if (args.flags.as) form.append('as', String(args.flags.as))
-        say(style.dim(ui.openToSending(fs.statSync(resolved).size, host)))
-        const response = await fetch(`${base}/api/spaces/bundle`, {
-            method: 'POST',
-            headers: withUserAgent({ Authorization: `Bearer ${token}` }),
-            body: form,
-            signal: AbortSignal.timeout(Number(process.env.DI_OPEN_TO_TIMEOUT_MS) || 30 * 60 * 1000)
-        })
-        const body = await response.json().catch(() => ({}))
+        const bytes = fs.statSync(resolved).size
+        say(style.dim(ui.openToSending(bytes, host)))
+        const signal = AbortSignal.timeout(Number(process.env.DI_OPEN_TO_TIMEOUT_MS) || 30 * 60 * 1000)
+        let response = null
+        let body = {}
+        // Over ~90 MB a proxy (Cloudflare, ~100 MB) refuses the single POST, so the
+        // file goes in parts of at most 64 MB (serverXR/src/chunkedUploads.js).
+        // A server without that route falls back to the single POST below.
+        if (bytes > CHUNK_THRESHOLD) {
+            const chunked = await uploadChunked({
+                base,
+                headers: withUserAgent({ Authorization: `Bearer ${token}` }),
+                file: resolved,
+                kind: 'bundle',
+                fields: args.flags.as ? { as: String(args.flags.as) } : {},
+                filename: name,
+                signal,
+                onProgress: ({ part, parts, sent, size }) => say(style.dim(ui.openToProgress(part, parts, sent, size)))
+            })
+            if (!chunked.unsupported) { response = { ok: chunked.status >= 200 && chunked.status < 300, status: chunked.status }; body = chunked.body }
+        }
+        if (!response) {
+            const form = new FormData()
+            form.append('bundle', await fs.openAsBlob(resolved), name)
+            if (args.flags.as) form.append('as', String(args.flags.as))
+            response = await fetch(`${base}/api/spaces/bundle`, {
+                method: 'POST',
+                headers: withUserAgent({ Authorization: `Bearer ${token}` }),
+                body: form,
+                signal
+            })
+            body = await response.json().catch(() => ({}))
+        }
         if (response.ok) {
             const id = body?.spaceId || args.flags.as || name.replace(/\.diiii$|\.space-bundle\.tar\.gz$/, '')
             say(ui.opened(id, `${site}/${id}`))
