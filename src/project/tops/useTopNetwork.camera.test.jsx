@@ -172,4 +172,34 @@ describe('a Camera In opening its device', () => {
         expect(result.current.error).toBe('')
         expect(result.current.cameraError).toBe('Camera "Phone" not found.')
     })
+    it('cameraError is cleared when the camera opens after a failure', async () => {
+        devices = [{ kind: 'videoinput', deviceId: 'w1', label: 'Integrated Webcam' }]
+        setup()
+        const { doc } = cameraDoc({ device: 'x', deviceLabel: 'Phone' })
+        const { result } = renderHook(() => useTopNetwork({ network: toTopNetwork(doc) }))
+        await flush()
+        expect(result.current.cameraError).toBe('Camera "Phone" not found.')
+        devices = [{ kind: 'videoinput', deviceId: 'p1', label: 'Phone' }]
+        await act(async () => { listeners.devicechange?.() })
+        await flush()
+        expect(result.current.cameraError).toBe('')
+    })
+
+    it('two cameras: the failing one keeps its caption when the other opens, and loses it only when it opens itself', async () => {
+        devices = [{ kind: 'videoinput', deviceId: 'w1', label: 'Webcam' }]
+        setup()
+        const a = { id: 'camA', typeId: 'top.camera', values: { device: 'x', deviceLabel: 'Phone' } }
+        const b = { id: 'camB', typeId: 'top.camera', values: { device: 'w1', deviceLabel: 'Webcam' } }
+        const { result } = renderHook(() => useTopNetwork({ network: toTopNetwork({ nodes: [a, b], edges: [] }) }))
+        await flush()
+        expect(engine.setVideo).toHaveBeenCalledWith('camB', expect.anything()) // B opened (this clears only B's entry)
+        expect(engine.setVideo).not.toHaveBeenCalledWith('camA', expect.anything())
+        expect(result.current.error).toBe('')
+        expect(result.current.cameraError).toBe('Camera "Phone" not found.')
+        devices = [...devices, { kind: 'videoinput', deviceId: 'p1', label: 'Phone' }]
+        await act(async () => { listeners.devicechange?.() })
+        await flush()
+        expect(engine.setVideo).toHaveBeenCalledWith('camA', expect.anything())
+        expect(result.current.cameraError).toBe('')
+    })
 })

@@ -24,3 +24,17 @@ describe('blankRule: a camera with no picture is transparent, never a helper pic
         expect(blankRule({ type: 'top.camera', source: true, inputs: {}, blank })).toBeNull()
     })
 })
+
+import { rememberMatteRun } from './topEngine.js'
+describe('rememberMatteRun: a still source is asked again when the model run did not start', () => {
+    it('keeps the picture only after submit() returned true', () => {
+        const words = new Uint32Array([1, 2, 3])
+        const state = { previous: null }
+        rememberMatteRun(state, words, false)
+        expect(state.previous).toBeNull()
+        rememberMatteRun(state, words, true)
+        expect([...state.previous]).toEqual([1, 2, 3])
+        rememberMatteRun(state, words, false)
+        expect(state.previous).toBeNull()
+    })
+})

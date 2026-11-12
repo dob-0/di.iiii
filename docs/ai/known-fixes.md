@@ -1973,6 +1973,7 @@ Cause: (1) `techEntities` (src/shared/renderPlan.js) dropped the group that hold
 Fix: renderPlan keeps the data holders, the stage solids of a room that holds a rig, and an image/video named screen/led/wall/projection/backdrop; ImageObject marks its mesh `userData.keepTexture` and SchematicSurfaces skips it; the Tech cone is FrontSide at 0.22; Tech fixes the exposure at 1 (TECH_EXPOSURE).
 Guard: `src/shared/renderPlan.test.js` (operator-mode block), `src/objectComponents/SpotLightObject.schematic.test.js`, `src/project/viewport/renderPlanParity.test.js`. Seen on the agent screen, drop-magenta Tech.
 
+
 ## Dev refused an 843 MB space carry (2026-11-12, owner row N3847)
 Symptom: `di open platina.diiii --to https://dev.diiii.xyz` stopped with "platina.diiii is bigger than dev.diiii.xyz takes over the wire (its MAX_UPLOAD_MB)".
 Cause: three walls in series for a hosted tier: serverXR `MAX_UPLOAD_MB` default 100 (docker-compose.yml, no dev override), nginx `client_max_body_size 110m` on `/serverXR/` (nginx.conf, baked into the client image), and Node's 300 s `requestTimeout`; the CLI only reads the 413.
@@ -1998,3 +1999,27 @@ Still needed on the VPS: a dev-tier deploy (compose file + new client image), an
 Found by review, not seen live. (1) `postLaser` in `src/map/laserLink.js` had no timeout and no abort, so a laser engine that took the connection but never answered left a cue's laser look or the Perform Blackout send pending for ever. (2) `findPictureSurface` in `src/studio/utils/screenOps.js` reused the first `network` surface with any `ref`, even one naming a deck that was deleted, so "Add Screen" bound to a surface that shows nothing.
 Fix: (1) every laser POST races a 4 s timer (`LASER_POST_TIMEOUT_MS`, overridable by `timeoutMs`), aborts the fetch and answers `false`; the race answers even if a fetch ignores the signal. (2) a surface is reused only when its `ref` is a node still in the document; otherwise a new surface is made on the live deck.
 Guard: `src/map/laserLink.test.js` (fake timers, a fetch that never answers) and two cases in `src/studio/utils/screenOps.test.js`. Not checked against a real hung laser engine.
+
+## 2026-11-12 - Camera refusal said nowhere on the Map source view
+
+Symptom: a blocked or missing camera on a Pictures surface showed a blank picture with no reason.
+Cause: the refusal moved from `error` to `cameraError` (so a camera never replaces the whole picture) and nothing read `cameraError`; it was also never cleared after a later successful open.
+Fix: `MapSourceView.jsx` shows `cameraError` as a caption over the picture; `useTopNetwork.js` clears it when a camera opens.
+Guard: `MapSourceView.network.test.jsx` (caption, canvas kept), `useTopNetwork.camera.test.jsx` (cleared on open). Run by CI only; the local lane gate was closed.
+Lesson: when a value moves to a new field, grep the readers in the same change.
+
+## 2026-11-12 - Body never made a mask for a still source after a failed or skipped run
+
+Symptom: a Body effect on a still or paused source passed the picture through for the rest of the show.
+Cause: `refreshMatte` (topEngine.js) stored the picture as seen before knowing the model run started, and while the model was not ready; the same pixels then read as unchanged for ever.
+Fix: `rememberMatteRun` keeps the picture only after `submit()` returned true; the seen picture is forgotten while the model is not ready.
+Guard: `topEngine.blank.test.js` "rememberMatteRun". Run by CI only. A worker answer of type fail after an accepted submit is not covered.
+Lesson: mark work as done only after the thing that does it confirmed it started.
+
+## 2026-11-12 - One camera opening hid the reason another camera was still failing
+
+Symptom: with two Camera In nodes, camera A failed (not found or blocked) and camera B opened; the caption for A vanished although A was still failing, and came back only on A's next retry failure.
+Cause: `cameraError` in `useTopNetwork.js` was one string for the whole hook, and any camera opening set it to an empty string.
+Fix: the failures are kept per camera node id (`cameraErrors`, `withCameraError`); a camera that opens clears only its own entry, a camera switched off or removed drops its entry, and `cameraError` is the first failure still open. A camera that cannot open still never becomes `error`.
+Guard: `useTopNetwork.camera.test.jsx` "two cameras: the failing one keeps its caption..." (the GUARD test is unchanged). Run by CI only. The view shows one caption, the first open failure, not one per camera.
+Lesson: a value shared by several sources must be keyed by source before any of them may clear it.
