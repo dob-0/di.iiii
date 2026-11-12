@@ -60,6 +60,14 @@ describe('playScene', () => {
         expect(load).toHaveBeenCalledWith('proj-a', doc.mappingState.cues, false, true)
         expect(go).toHaveBeenCalledWith(1)
     })
+    it('replace(document, cue) sends what it is handed: an edit made while the question was open is what Light gets', async () => {
+        read.mockResolvedValue({ project: 'proj-b', n: 4 })
+        const answer = await playScene(doc, doc.mappingState.cues[2])
+        const edited = { ...doc, mappingState: { cues: [{ id: 'c0', lightLook: 'look-0' }, ...doc.mappingState.cues] } }
+        await answer.replace(edited, edited.mappingState.cues[3])
+        expect(load).toHaveBeenCalledWith('proj-a', edited.mappingState.cues, false, true)
+        expect(go).toHaveBeenCalledWith(2)
+    })
     it('confirmed (replace): loads this list and goes to the cue\'s place among the cues with a look', async () => {
         read.mockResolvedValue({ project: 'proj-b', n: 4 })
         expect(await playScene(doc, doc.mappingState.cues[2], { replace: true })).toEqual({ asked: false })

@@ -5,7 +5,9 @@ import { deskCues } from '../../rigbuild/cueRun.js'
 //
 // Loading REPLACES the list Light was running. So before the first press loads anything, Light's state is read: if it holds the cue
 // list of ANOTHER project, nothing is loaded and the answer is `{ asked: true, replace }` — the editor asks the person; their confirm calls
-// `replace()`, which is this same function with `{ replace: true }`. Light holding this project's list, holding nothing, or not answering goes at once, as it always did.
+// `replace(document, cue)`, which is this same function with `{ replace: true }`, handed the document and cue on screen at the confirm (an
+// edit made while the question was open is what Light gets; called bare, it uses the press's own). Light holding this project's list,
+// holding nothing, or not answering goes at once, as it always did.
 
 /**
  * Whether GO may load at once. `state` is what `deskCues.read()` answered (the runner's brief: `{ project, n, running, ... }`),
@@ -32,7 +34,7 @@ export async function playScene(document, cue, { replace = false } = {}) {
     if (!replace) {
         let state = null
         try { state = await deskCues.read() } catch { state = null }
-        if (goDecision(state, projectId) === 'ask') return { asked: true, replace: () => playScene(document, cue, { replace: true }) }
+        if (goDecision(state, projectId) === 'ask') return { asked: true, replace: (doc = document, c = cue) => playScene(doc, c, { replace: true }) }
     }
     await deskCues.load(projectId, cues, document?.mappingState?.loop === true, true)
     await deskCues.go(index)

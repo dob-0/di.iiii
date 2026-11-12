@@ -118,6 +118,39 @@ describe('the scene editor: a change emits the ops with the rebuilt look', () =>
         expect(replace).toHaveBeenCalledTimes(1)
     })
 
+    it('an edit made while the question is open is what the confirm sends', async () => {
+        const doc = baseDoc()
+        const replace = vi.fn(async () => {})
+        const props = { current: undefined, onPick: () => {}, onApplyOps: () => {}, onPlay: vi.fn(async () => ({ asked: true, replace })) }
+        const { rerender } = render(<ScenePicker document={doc} {...props} />)
+        fireEvent.click(screen.getByLabelText(`Edit ${scenesOf(doc)[3].name}`))
+        fireEvent.click(screen.getByTestId('scene-play'))
+        await screen.findByTestId('go-replace-question')
+        const edited = JSON.parse(JSON.stringify(doc))
+        edited.mappingState.cues[3].fade = 2.5
+        rerender(<ScenePicker document={edited} {...props} />)
+        fireEvent.click(screen.getByTestId('go-replace-confirm'))
+        await screen.findByText('Light is on this scene')
+        expect(replace).toHaveBeenCalledTimes(1)
+        expect(replace.mock.calls[0][0]).toBe(edited)
+        expect(replace.mock.calls[0][1]).toMatchObject({ id: doc.mappingState.cues[3].id, fade: 2.5 })
+    })
+
+    it('one GO at a time: a press while Light has not answered sends nothing', async () => {
+        const doc = baseDoc()
+        let answer = () => {}
+        const onPlay = vi.fn(() => new Promise((resolve) => { answer = resolve }))
+        render(<ScenePicker document={doc} current={undefined} onPick={() => {}} onApplyOps={() => {}} onPlay={onPlay} />)
+        fireEvent.click(screen.getByLabelText(`Edit ${scenesOf(doc)[3].name}`))
+        fireEvent.click(screen.getByTestId('scene-play'))
+        fireEvent.click(screen.getByTestId('scene-play'))
+        expect(onPlay).toHaveBeenCalledTimes(1)
+        answer({ asked: false })
+        await screen.findByText('Light is on this scene')
+        fireEvent.click(screen.getByTestId('scene-play'))
+        expect(onPlay).toHaveBeenCalledTimes(2)
+    })
+
     it('an asked answer with no replace says it cannot, and shows no question', async () => {
         const doc = baseDoc()
         render(<ScenePicker document={doc} current={undefined} onPick={() => {}} onApplyOps={() => {}} onPlay={async () => ({ asked: true })} />)
