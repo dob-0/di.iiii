@@ -22,6 +22,7 @@ import { goLaserLook, laserDeskPath, laserLooksPath, setLaserBlackout, setLaserF
 // The Projection desk's own stylesheet: its panes look here exactly as they do there.
 import '../map/mapSurface.css'
 import { WINDOW_KINDS, isKnownKind } from './presets.js'
+import RoomWindow from './RoomWindow.jsx'
 
 // What each Perform window shows. Every one is a NATIVE window — a React part
 // of this page on the same project document — or it says, dimly and in
@@ -82,7 +83,9 @@ function DeckWindow({ ctx }) {
             </div>
         )
     }
-    return <div className="perform-pane perform-pane--flush">{ctx.renderNode(deck, { placement: 'perform' })}</div>
+    // the 3D room (stage + lights) as a small third monitor under the deck's PREVIEW and OUTPUT
+    const extraMonitor = { label: 'Room 3D', content: <RoomWindow ctx={ctx} /> }
+    return <div className="perform-pane perform-pane--flush">{ctx.renderNode(deck, { placement: 'perform', extraMonitor })}</div>
 }
 
 // --- a picture: the project's Picture Out, else the deck's master ------------
@@ -244,6 +247,8 @@ function MasterWindow({ ctx }) {
     const laserUp = laser.desk?.reachable === true
     const laserBlack = laserUp && laser.desk.blackout === true
     const pendingNames = Object.keys(pending)
+    // (the stricter isBlackedOut() of blackoutPlan.js is NOT wired in: it changed what the older Perform tests expect, and the
+    // panic button is not changed 2 days before a show without a real run-through. Tested and kept ready, see audit risk 1.)
     const blackedOut = restore !== null || (lightOwn && light?.blackout === true) || lightSetHere || laserSetHere || pendingNames.length > 0
     const lightSlider = useSliderSend((raw) => setLightLooksMaster(raw / 255, { spaceId: ctx.spaceId }))
     const laserSlider = useSliderSend((level) => setLaserMaster(level))
@@ -674,7 +679,8 @@ const NATIVE = {
     surfaces: SurfacesWindow,
     cues: CuesWindow,
     machines: MachinesWindow,
-    surface: SurfaceSettingsWindow
+    surface: SurfaceSettingsWindow,
+    room: RoomWindow
 }
 
 export const isNativeKind = (kind) => Object.prototype.hasOwnProperty.call(NATIVE, kind)

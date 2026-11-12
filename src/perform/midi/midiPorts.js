@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { MIDI_STATUS, parseMidiMessage } from '../../raw/utils/midiCapture.js'
 import { pickInputId } from './xoneK2.js'
+import { APC40_CONSOLE_ID } from './apc40.js'
 
-// One Web MIDI access for the deck: the input to listen on (the K2 by name, else
+// One Web MIDI access for the deck: the input to listen on (the console's controller by name: the K2, or the APC40 mkII when the console is apc40; else
 // the first) and the outputs, behind ONE `active` switch. While `active` is false
 // requestMIDIAccess is never called (a read-only view, or a second view of a deck
 // another view already drives, must not open MIDI at all).
@@ -13,7 +14,9 @@ const portsOf = (map) => (!map ? [] : typeof map.values === 'function' ? Array.f
 const describe = (port) => ({ id: port.id, name: port.name || port.id, manufacturer: port.manufacturer || '', state: port.state || 'connected' })
 const connected = (port) => port.state !== 'disconnected'
 
-export function useMidiPorts({ active, onMessage }) {
+// `console` is the deck's console id; only apc40 changes which input is chosen (every K2 console is the same input).
+export function useMidiPorts({ active, onMessage, console: consoleId }) {
+    const family = consoleId === APC40_CONSOLE_ID ? APC40_CONSOLE_ID : ''
     const [ports, setPorts] = useState({ status: MIDI_STATUS.REQUESTING, inputs: [], outputs: [], generation: 0 })
     const onMessageRef = useRef(onMessage)
     useEffect(() => { onMessageRef.current = onMessage })
@@ -36,7 +39,7 @@ export function useMidiPorts({ active, onMessage }) {
             if (cancelled) return
             const inputs = portsOf(access.inputs).filter(connected)
             const outputs = portsOf(access.outputs).filter(connected)
-            const pick = pickInputId(inputs.map(describe))
+            const pick = pickInputId(inputs.map(describe), family)
             for (const input of portsOf(access.inputs)) {
                 const isTarget = connected(input) && input.id === pick
                 input.onmidimessage = isTarget ? handleRaw : null
@@ -74,7 +77,7 @@ export function useMidiPorts({ active, onMessage }) {
             accessRef.current = null
             setPorts({ status: MIDI_STATUS.REQUESTING, inputs: [], outputs: [], generation: 0 })
         }
-    }, [active, handleRaw])
+    }, [active, handleRaw, family])
 
     /** Write bytes to one output; true when they left. A vanished port is a hotplug fact, not a crash. */
     const send = useCallback((outputId, data) => {

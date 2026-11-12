@@ -42,6 +42,7 @@ import { useDeckMidi } from '../../../perform/midi/useDeckMidi.js'
 import DeckMidiControl from '../../../perform/midi/DeckMidiControl.jsx'
 import MidiMapOverlay from '../../../perform/midi/MidiMapOverlay.jsx'
 import K2LayoutPanel from '../../../perform/midi/K2LayoutPanel.jsx'
+import { postDeckLive } from '../../../project/tops/deckLive.js'
 import { buildK2WindowPath } from '../../../perform/midi/k2WindowRouting.js'
 import { resetDeckValue } from '../../../perform/midi/deckBinding.js'
 import ContextMenu from '../ContextMenu.jsx'
@@ -350,7 +351,7 @@ function CameraPreview({ camera, device, className }) {
 }
 const percent = (value) => `${Math.round(value * 100)}`
 
-export default function VjDeckView({ node, onPatchValues = null, assets = [], inputSources = {}, placement = 'window', onUploadFile = null, now = () => Date.now(), spaceId = '', projectId = null, cues = [], onFireCue = null, onColumnLaunch = null }) {
+export default function VjDeckView({ node, onPatchValues = null, assets = [], inputSources = {}, placement = 'window', onUploadFile = null, now = () => Date.now(), spaceId = '', projectId = null, cues = [], onFireCue = null, onColumnLaunch = null, extraMonitor = null }) {
     const deck = useMemo(() => normalizeDeck(node?.values?.deck), [node?.values?.deck])
     const deckId = node?.id || ''
     const editable = typeof onPatchValues === 'function'
@@ -436,7 +437,12 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const latestDeck = useRef(deck)
     useEffect(() => { latestDeck.current = deck }, [deck])
     const write = (nextDeck) => {
-        if (editable) { latestDeck.current = nextDeck; onPatchValues({ deck: nextDeck }) }
+        if (editable) {
+            latestDeck.current = nextDeck
+            // the wall on this machine hears it now; the op below is the record (deckLive.js)
+            postDeckLive(projectId, node?.id, nextDeck)
+            onPatchValues({ deck: nextDeck })
+        }
     }
 
     // Lights follow. ONE function reports a launched column, and only code that launches
@@ -1132,6 +1138,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                             <DeckPicture nodeId={masterNodeId(deckId)} className="vj-deck-monitor-picture" label="Deck output" width={320} height={180} />
                         </div>
                     </figure>
+                    {extraMonitor ? (
+                        // a small extra monitor the host page gives (the Perform desk: the 3D room with its lights)
+                        <figure className="vj-deck-monitor vj-deck-monitor--extra">
+                            <figcaption className="vj-deck-label vj-deck-monitor-caption">{extraMonitor.label}</figcaption>
+                            <div className="vj-deck-monitor-screen">{extraMonitor.content}</div>
+                        </figure>
+                    ) : null}
                 </aside>
                 {seam('s1', deckLayout.shown.s1s2, 'vertical', 'Resize the layer strip and the clip grid', paneId('grid'))}
                 {seam('s2', deckLayout.shown.s1s2, 'vertical', 'Resize the clip grid and the monitors', paneId('monitors'), -1)}
@@ -1175,7 +1188,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                 {seam('s6', deckLayout.shown.s56, 'vertical', 'Resize Clip and Effects', paneId('bottom'))}
             </div>
             <MidiMapOverlay rootRef={rootRef} midi={midi} layoutKey={deck} />
-            {k2Open ? <K2LayoutPanel windowPath={spaceId && projectId ? buildK2WindowPath(spaceId, projectId) : ''} publisher={midi.k2Publisher} map={midi.map} monitor={midi.k2Monitor} console={midi.k2Console} consoles={midi.consoles} onPickConsole={editable ? midi.pickConsole : undefined} fxEffect={fxIndex} onClose={() => setK2Open(false)} /> : null}
+            {k2Open ? <K2LayoutPanel deck={deck} windowPath={spaceId && projectId ? buildK2WindowPath(spaceId, projectId) : ''} publisher={midi.k2Publisher} map={midi.map} monitor={midi.k2Monitor} console={midi.k2Console} consoles={midi.consoles} onPickConsole={editable ? midi.pickConsole : undefined} fxEffect={fxIndex} onClose={() => setK2Open(false)} /> : null}
             <ContextMenu open={Boolean(menu)} x={menu?.x} y={menu?.y} title={menu?.label} items={menuItems} fromKeyboard={Boolean(menu?.fromKeyboard)} onClose={() => setMenu(null)} />
         </div>
         </DeckFoldContext.Provider>

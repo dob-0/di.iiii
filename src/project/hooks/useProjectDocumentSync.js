@@ -16,6 +16,7 @@ import {
 } from '../services/pendingOpsStore.js'
 import { generateId } from '../../shared/projectSchema.js'
 import { placeOps } from '../../shared/placement.js'
+import { dropSuperseded, nextBatchSize } from '../services/opBatch.js'
 
 // The one sentence the page shows while edits are not on the server
 // (decision 2026-10-02-local-hosting, H5). Both lanes render it as is
@@ -517,7 +518,9 @@ export function useProjectDocumentSync({
                 }
             }
             while (pendingQueueRef.current.length) {
-                const batch = pendingQueueRef.current.splice(0, pendingQueueRef.current.length)
+                // in pieces under the server body limit, never the whole queue at once (opBatch.js)
+                // and without the writes a later one in the same piece replaces (a deck's fader steps)
+                const batch = dropSuperseded(pendingQueueRef.current.splice(0, nextBatchSize(pendingQueueRef.current)))
                 inFlightRef.current = batch
                 // In the browser's store before it is on the wire.
                 await persistChainRef.current
@@ -671,6 +674,9 @@ export function useProjectDocumentSync({
         rememberSeenOps(normalizedOps)
         if (!waitingCount()) sinceVersionRef.current = versionRef.current
         pendingQueueRef.current.push(...normalizedOps)
+        // a deck's fader steps: only the newest of a run waits (opBatch.js), so the queue and its copy in the
+        // browser store stay one op long instead of growing by 16 KB thirty times a second
+        if (pendingQueueRef.current.length > 1) pendingQueueRef.current = dropSuperseded(pendingQueueRef.current)
         // Kept in the browser before it is sent (flushQueue awaits this write).
         void persistWaiting()
         dispatch?.({

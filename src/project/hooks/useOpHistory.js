@@ -1,3 +1,4 @@
+import { applyNodeValueOps, invertNodeValueOps } from '../state/nodeValueOps.js'
 import { getNodeType } from '../nodeRegistry.js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { applyProjectOps, cloneValue, invertProjectOps } from '../../shared/projectSchema.js'
@@ -138,8 +139,10 @@ export function useOpHistory({ projectId, document, applyLocalOps, ignoreTypes =
         if (opsArray.length) {
             const base = trackedDocRef.current
             const recordable = opsArray.some((op) => !ignoreTypesRef.current.has(op?.type))
-            const undoOps = recordable ? invertProjectOps(base, opsArray) : []
-            trackedDocRef.current = applyProjectOps(base, opsArray)
+            // values-only batches (a played deck, thirty a second) take the short way: nodeValueOps.js
+            const shortDoc = applyNodeValueOps(base, opsArray)
+            const undoOps = recordable ? ((shortDoc && invertNodeValueOps(base, opsArray)) || invertProjectOps(base, opsArray)) : []
+            trackedDocRef.current = shortDoc || applyProjectOps(base, opsArray)
             setEdits((n) => n + 1)
             if (undoOps.length) {
                 const sig = entrySignature(opsArray)

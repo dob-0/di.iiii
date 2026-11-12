@@ -25,7 +25,8 @@ import { useMidiPorts } from './midiPorts.js'
 import { createK2Monitor } from './k2Monitor.js'
 import { createK2Publisher, eventOf, lightsOf, namedValues } from './k2Channel.js'
 import { jobsFor, linesFor } from './k2Jobs.js'
-import { K2_CHANNEL, K2_CONSOLES, K2_NAME, XONE_K2_LEDS, consoleOf, defaultMap, isK2, k2IsRelative } from './xoneK2.js'
+import { K2_CHANNEL, CONSOLES, K2_NAME, XONE_K2_LEDS, consoleOf, defaultMap, isK2, k2IsRelative, pickInputId } from './xoneK2.js'
+import { isApc40, APC40_CONSOLE_ID, apc40LedChanges, apc40LedClears, apc40Leds } from './apc40.js'
 
 // The live half of the MIDI binding: listens on the K2 (else the first input),
 // applies messages to the deck, keeps Learn, and lights the K2's buttons.
@@ -79,7 +80,12 @@ const claim = (id, token, listener) => {
 const isOwner = (id, token) => slot(id).order[0] === token
 
 export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = true, deckId = '', console: consoleId, fxLayer = -1, fxEffect = 0, onFxLayer, onFxEffect, onColumn }) {
-    const k2Console = consoleOf(consoleId)
+    // SHOW FIX: no console chosen yet (the deck has no stored midiConsole) and an APC40 is the only controller plugged in:
+    // use the APC40 console, so the pads work the moment the page loads, with nothing to pick. A console that was chosen
+    // by hand (k2, k2-1.9, apc40) always wins, and with a K2 plugged in nothing changes.
+    const [autoConsole, setAutoConsole] = useState('')
+    const k2Console = consoleOf(consoleId || autoConsole)
+    const isApcConsole = k2Console.id === APC40_CONSOLE_ID
     const defaults = useMemo(() => defaultMap(k2Console.id), [k2Console.id])
     const overrides = useMemo(() => normalizeOverrides(stored), [stored])
     const map = useMemo(() => effectiveMap(defaults, overrides), [defaults, overrides])
@@ -104,7 +110,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const timer = useRef(null)
     const pickup = useRef(new Map())
     const live = useRef({})
-    useEffect(() => { live.current = { write, onTap, onPatch, map, stored, enabled: active, fx: { layer: fxLayer, effect: fxEffect }, onFxLayer, onFxEffect, onColumn } })
+    useEffect(() => { live.current = { write, onTap, onPatch, map, stored, isRelative: k2Console.isRelative || k2IsRelative, jump: isApcConsole, enabled: active, fx: { layer: fxLayer, effect: fxEffect }, onFxLayer, onFxEffect, onColumn } })
     const tapState = useRef({ taps: [] })
 
     const flush = useCallback(() => {
@@ -173,6 +179,9 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         } else if (k2Live.current && raw?.channel === K2_CHANNEL && heardRef.current !== K2_CHANNEL) {
             heardRef.current = K2_CHANNEL; setHeard(K2_CHANNEL)
         }
+        // APC40 mkII, generic mode: the 8 device knobs (CC 16-23) send on the channel of the selected track
+        // (1-8, master 9). The map is written for channel 1, so after a track-select press they went dead.
+        if (current.jump && raw?.kind === 'cc' && raw.cc >= 16 && raw.cc <= 23 && raw.channel >= 2 && raw.channel <= 9) message = { ...raw, channel: 1 }
         monitorRef.current?.push(message) // the K2 panel's live picture; no deck write, no render here
         // the controller window (k2Channel.js): nothing at all unless a window asked for it
         const publisher = publisherRef.current
@@ -183,7 +192,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         const { learning: isLearning, target: wanted, once: justOne } = learnRef.current
         if (isLearning) {
             // While learning, a message never plays the deck: it binds the picked control.
-            const entry = learnEntry(wanted, message, { relative: k2IsRelative })
+            const entry = learnEntry(wanted, message, { relative: current.isRelative })
             if (entry) {
                 current.onPatch?.({ midiMap: withOverride(current.stored, entry) })
                 setTarget(null)
@@ -201,7 +210,8 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
             if (press) { holdLayerRef.current = current.fx.layer; setHoldNote('') } else holdLayer = holdLayerRef.current ?? undefined
         }
         const next = applyMidi(base, message, current.map, {
-            onTap: () => current.onTap?.(), tapState: tapState.current, pickup: pickup.current, fx: current.fx, holdLayer,
+            // APC40: a fader or knob takes its value at once, as in Resolume (no soft takeover); the K2 consoles keep pickup
+            onTap: () => current.onTap?.(), tapState: tapState.current, pickup: current.jump ? undefined : pickup.current, fx: current.fx, holdLayer,
             onFxLayer: (index) => current.onFxLayer?.(index), onFxEffect: (index) => current.onFxEffect?.(index)
         })
         if (heldNow && !controlOf(message)?.press) { holdLayerRef.current = null; setHoldNote('') }
@@ -216,11 +226,25 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     }, [flush, schedule])
 
     // One MIDI access, only while this instance owns the deck.
-    const ports = useMidiPorts({ active, onMessage })
-    const device = ports.inputs[0] ? ports.inputs.find(isK2) || ports.inputs[0] : null
-    const k2Output = ports.outputs.find(isK2) || null
+    const ports = useMidiPorts({ active, onMessage, console: k2Console.id })
+    // the input the ports hook listens on: the console's controller by name, else the first (K2 consoles: as before)
+    const inputNames = ports.inputs.map((item) => String(item.name || '')).join('|')
+    useEffect(() => {
+        if (consoleId) { setAutoConsole(''); return }
+        // while MIDI is being (re)opened the input list is empty: that is not "the APC went away". Switching console
+        // reopens MIDI, so deciding on that empty list flipped the console back and forth forever.
+        if (ports.status === MIDI_STATUS.REQUESTING) return
+        const hasK2 = ports.inputs.some(isK2)
+        const hasApc = ports.inputs.some(isApc40)
+        setAutoConsole(!hasK2 && hasApc ? APC40_CONSOLE_ID : '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by the input names, not the array identity
+    }, [consoleId, inputNames, ports.status])
+    const pickedId = pickInputId(ports.inputs, k2Console.id)
+    const device = ports.inputs[0] ? ports.inputs.find((item) => item.id === pickedId) || ports.inputs[0] : null
+    // LEDs go to the console's own controller: the APC40's output for the apc40 console, the K2's for the K2 ones
+    const k2Output = ports.outputs.find(isApcConsole ? isApc40 : isK2) || null
     useEffect(() => { k2Live.current = Boolean(device) && isK2(device) })
-    const outputKey = k2Output ? `${k2Output.id}:${k2Output.state}:${ports.generation}:${heard}` : ''
+    const outputKey = k2Output ? `${k2Output.id}:${k2Output.state}:${ports.generation}:${isApcConsole ? 'apc40' : heard}` : ''
 
     // LEDs go to the K2's output only, never to another device. The "already sent" cache
     // is forgotten whenever the output goes away or its state changes, so a K2 that was
@@ -229,17 +253,22 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const sentKey = useRef('')
     const sendRef = useRef(ports.send)
     useEffect(() => { sendRef.current = ports.send })
-    const leds = useMemo(() => ledsFor(deck, map, XONE_K2_LEDS, heard, { fx: { layer: fxLayer, effect: fxEffect } }), [deck, map, heard, fxLayer, fxEffect])
+    const leds = useMemo(() => {
+        const ctx = { fx: { layer: fxLayer, effect: fxEffect } }
+        return isApcConsole ? apc40Leds(deck, map, ctx) : ledsFor(deck, map, k2Console.leds || XONE_K2_LEDS, heard, ctx)
+    }, [deck, map, heard, fxLayer, fxEffect, k2Console, isApcConsole])
     useEffect(() => {
         if (sentKey.current !== outputKey) { sentRef.current = new Map(); sentKey.current = outputKey }
         if (!outputKey || !active || !k2Output) return
         // a button that lost its binding goes dark first, then the new picture
-        for (const led of ledClears(leds, sentRef.current, heard)) sendRef.current(k2Output.id, ledBytes(led))
-        for (const led of ledChanges(leds, sentRef.current)) sendRef.current(k2Output.id, ledBytes(led))
-    }, [leds, outputKey, active, k2Output, heard])
+        const clears = isApcConsole ? apc40LedClears(leds, sentRef.current) : ledClears(leds, sentRef.current, heard)
+        for (const led of clears) sendRef.current(k2Output.id, ledBytes(led))
+        const changes = isApcConsole ? apc40LedChanges(leds, sentRef.current) : ledChanges(leds, sentRef.current)
+        for (const led of changes) sendRef.current(k2Output.id, ledBytes(led))
+    }, [leds, outputKey, active, k2Output, heard, isApcConsole])
 
     let state = 'absent'
-    if (device) state = isK2(device) ? 'k2' : 'listening'
+    if (device) state = isK2(device) ? 'k2' : isApc40(device) ? 'apc40' : 'listening'
     else if (ports.status === MIDI_STATUS.ACTIVE) state = 'listening'
     if (learning) state = 'learn'
 
@@ -272,7 +301,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     }, [])
     // Pick the K2 console: only { midiConsole } is patched; the learned midiMap stays on top of either one.
     const pickConsole = useCallback((id) => {
-        if (!K2_CONSOLES.some((item) => item.id === id)) return false
+        if (!CONSOLES.some((item) => item.id === id)) return false
         pickup.current = new Map()
         live.current.onPatch?.({ midiConsole: id })
         return true
@@ -318,7 +347,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const [k2Publisher] = useState(() => createK2Publisher({ source: () => feed.build?.() ?? null }))
     useEffect(() => {
         feed.build = () => ({
-            controller: K2_NAME,
+            controller: k2Console.controller || K2_NAME,
             consoleId: k2Console.id,
             consoleName: k2Console.name,
             labels: jobsFor(map, k2Console, fxEffect),
@@ -347,7 +376,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         unmap,
         reset,
         k2Console,
-        consoles: K2_CONSOLES,
+        consoles: CONSOLES,
         pickConsole,
         controlOf,
         map,

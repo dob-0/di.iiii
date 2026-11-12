@@ -336,3 +336,49 @@ describe('a K2 set to another MIDI channel (the owner\'s sends on 2, N3636)', ()
         expect(writes.at(-1).layers[1].opacity).toBe(0)
     })
 })
+
+describe('APC40 mkII LEDs from the hook', () => {
+    const apcAccess = () => {
+        const sent = []
+        const input = { id: 'in-apc', name: 'APC40 mkII', manufacturer: 'Akai', onmidimessage: null }
+        const output = { id: 'out-apc', name: 'APC40 mkII', manufacturer: 'Akai', state: 'connected', send: (data) => sent.push([...data]) }
+        return { sent, input, output, access: { inputs: new Map([[input.id, input]]), outputs: new Map([[output.id, output]]), onstatechange: null } }
+    }
+
+    it('with only an APC40 plugged in and no console stored, the pads light like Resolume (playing 52, loaded 33, empty 1)', async () => {
+        const fake = apcAccess()
+        install(fake)
+        renderHook(() => useDeckMidi({ deck: playedDeck(), write: () => {}, onPatch: () => {}, enabled: true, deckId: 'deck-apc' }))
+        await flushAsync()
+        await flushAsync()
+        expect(fake.sent).toContainEqual([0x90, 0, 52])  // layer 1 column 1 playing
+        expect(fake.sent).toContainEqual([0x90, 1, 33])  // layer 1 column 2 loaded
+        expect(fake.sent).toContainEqual([0x90, 16, 1])  // layer 3 has no clips: dim
+        expect(fake.sent.every((bytes) => (bytes[0] & 0xf0) === 0x90)).toBe(true)
+    })
+
+    it('a fader takes its value at once, as in Resolume: no soft takeover on the APC40', async () => {
+        const fake = apcAccess()
+        install(fake)
+        const writes = []
+        renderHook(() => useDeckMidi({ deck: playedDeck(), write: (deck) => writes.push(deck), onPatch: () => {}, enabled: true, deckId: 'deck-apc-3', console: 'apc40' }))
+        await flushAsync()
+        // layer 2 is at opacity 1; the fader sits near the bottom and has not "crossed" anything
+        act(() => fake.input.onmidimessage({ data: [0xb1, 7, 10] }))
+        act(() => { vi.advanceTimersByTime(WRITE_GAP_MS * 2) })
+        expect(writes.at(-1).layers[1].opacity).toBeCloseTo(10 / 127)
+    })
+
+    it('a pad press that plays a clip lights it at once', async () => {
+        const fake = apcAccess()
+        install(fake)
+        const view = renderHook((props) => useDeckMidi({ write: () => {}, onPatch: () => {}, enabled: true, deckId: 'deck-apc-2', console: 'apc40', ...props }), {
+            initialProps: { deck: playedDeck() }
+        })
+        await flushAsync()
+        fake.sent.length = 0
+        view.rerender({ deck: trigger(playedDeck(), 0, 2) })
+        expect(fake.sent).toContainEqual([0x90, 2, 52])
+        expect(fake.sent).toContainEqual([0x90, 0, 33])
+    })
+})

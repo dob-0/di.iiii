@@ -1,6 +1,6 @@
 // The one MIDI control in the deck's top row: device and state, Learn, Reset.
 // Existing deck classes only (vj-deck-button, vj-deck-label, vj-deck-dim).
-const STATE_TEXT = { absent: 'no controller', listening: 'listening', k2: 'K2', learn: 'learn' }
+const STATE_TEXT = { absent: 'no controller', listening: 'listening', k2: 'K2', apc40: 'APC40', learn: 'learn' }
 
 export default function DeckMidiControl({ midi, editable = true }) {
     const { state, k2Console, deviceName, learning, target, bindings, toggleLearn, reset, note } = midi
@@ -16,7 +16,7 @@ export default function DeckMidiControl({ midi, editable = true }) {
                 onClick={toggleLearn}
                 disabled={!editable}
             >MIDI</button>
-            <span className="vj-deck-dim vj-deck-midi-state" role="status">{state === 'k2' && k2Console ? k2Console.name : (STATE_TEXT[state] || state)}{learning && target ? ` · ${target.key}` : ''}{note ? ` · ${note}` : ''}</span>
+            <span className="vj-deck-dim vj-deck-midi-state" role="status">{(state === 'k2' || state === 'apc40') && k2Console ? k2Console.name : (STATE_TEXT[state] || state)}{learning && target ? ` · ${target.key}` : ''}{note ? ` · ${note}` : ''}</span>
             {learning || bindings ? (
                 <button type="button" className="vj-deck-button vj-deck-button--quiet" onClick={reset} disabled={!editable} aria-label="Reset MIDI to the default map">Reset</button>
             ) : null}

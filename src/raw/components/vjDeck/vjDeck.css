@@ -1402,3 +1402,7 @@
     line-height: 1.2;
     white-space: nowrap;
 }
+
+/* The host's extra monitor (Perform: the 3D room) under PREVIEW and OUTPUT. */
+.vj-deck-monitor--extra .vj-deck-monitor-screen { position: relative; overflow: hidden; }
+.vj-deck-monitor--extra .vj-deck-monitor-screen > .perform-pane { position: absolute; inset: 0; width: 100%; height: 100%; }

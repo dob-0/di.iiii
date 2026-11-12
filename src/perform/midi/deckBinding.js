@@ -243,7 +243,9 @@ const run = (deck, control, entry, ctx) => {
             const master = where < 0
             // no layer given = the selected stack, and then the selected effect of it (K2 encoder 6 push)
             const slot = args.effect ?? (args.layer === undefined ? ctx.fx?.effect : 0) ?? 0
-            const effect = (master ? base.effects : base.layers[where]?.effects)?.[slot]
+            const stackList = (master ? base.effects : base.layers[where]?.effects) || []
+            // the selected effect (no effect in the binding) on a shorter stack: the last one, as the panel shows it
+            const effect = stackList[args.effect === undefined ? Math.min(slot, Math.max(0, stackList.length - 1)) : slot]
             if (!effect) return deck
             const stack = master ? 'master' : where
             if (args.param === 'mix') {
