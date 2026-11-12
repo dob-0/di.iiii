@@ -16,6 +16,12 @@ import * as THREE from 'three'
 
 const G = 9.81
 
+/**
+ * Does this project offer Auto fly? A per-project switch, projectMeta.autoFly (owner 2026-11-12: "we dont have the autofly
+ * … turn off but in future we will use that"). Absent = on (every room keeps it); false = no button, no ?fly=1 start.
+ */
+export const autoFlyAllowed = (document) => document?.projectMeta?.autoFly !== false
+
 export const FLIGHT_DEFAULTS = Object.freeze({
     margin: 0.8,          // m from walls and the roof cut
     minHeight: 1.2,       // m above the floor

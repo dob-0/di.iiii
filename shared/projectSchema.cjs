@@ -1935,7 +1935,9 @@ const normalizeProjectMeta = (meta = {}) => {
     title: ensureString(source.title, 'Untitled Project'),
     createdAt: ensureNumber(source.createdAt, now),
     updatedAt: ensureNumber(source.updatedAt, now),
-    source: ensureString(source.source, 'project')
+    source: ensureString(source.source, 'project'),
+    // Auto fly switched off for this project (src/project/viewport/autoFly.js); kept only when false.
+    ...(source.autoFly === false ? { autoFly: false } : {})
   }
 }
 

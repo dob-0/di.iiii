@@ -62,7 +62,7 @@ import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
 import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
 import { classifyArchitecture, parseLayersParam } from '../../project/viewport/smartView/smartViewGeometry.js'
 import { resolveViews } from '../../project/viewport/smartView/viewData.js'
-import { tourDoors } from '../../project/viewport/autoFly.js'
+import { tourDoors, autoFlyAllowed } from '../../project/viewport/autoFly.js'
 import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { KICK_AFTER_INPUT_MS, RenderDemandProvider, useHoldFrames, useFrameloopMode, useStableDemand } from '../utils/renderDemand.jsx'
@@ -1502,7 +1502,7 @@ export default function StudioViewport({
                     layers={studioBar ? (smartView?.layers || studioLayers) : null}
                     onLayer={studioBar && !smartView?.layers ? setStudioLayer : null}
                     flying={flying}
-                    onFly={studioBar ? setFlying : null}
+                    onFly={studioBar && autoFlyAllowed(document) ? setFlying : null}
                 />
             ) : null}
             {smartOn && flying ? (

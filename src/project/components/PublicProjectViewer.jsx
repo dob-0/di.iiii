@@ -49,6 +49,7 @@ import useOutputMode from '../viewport/useOutputMode.js'
 import { renderPlan } from '../../shared/renderPlan.js'
 import useRenderMode from '../viewport/useRenderMode.js'
 import { useGraphMakesRoom } from './graphRoom.js'
+import { autoFlyAllowed } from '../viewport/autoFly.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -279,6 +280,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     }, [reloadDocument])
 
     const document = state.document
+    // Auto fly is a per-project choice (projectMeta.autoFly, autoFly.js): switched off = no button and no ?fly=1 start.
+    const flyAllowed = autoFlyAllowed(document)
+    useEffect(() => { if (!flyAllowed) setFlying(false) }, [flyAllowed])
     // A room with a rig carries the rig's steps under the bar (owner, 2026-09-28: "make
     // buttons in space that we can easy move in the workflow"). Where the bar is — a
     // di.iiii on your own machine, where the rig is made and the desk runs — never on a
@@ -638,7 +642,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // Auto fly: next to Walk / Fly (the scene bar's row) or the last line of the corner column. The flight is SmartView's;
     // any input ends it, so this button is marked data-autofly and toggles itself.
     // Only where the smart view runs: a room with a node graph is drawn by PublicGraphSurface, which has no flight yet (owed).
-    const flyButton = state.status === 'ready' && navMode === 'orbit' && walkButtons && !hasGraph ? (
+    const flyButton = state.status === 'ready' && navMode === 'orbit' && walkButtons && !hasGraph && flyAllowed ? (
                     <button
                         type="button"
                         data-autofly

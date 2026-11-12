@@ -2005,7 +2005,10 @@ export const normalizeProjectMeta = (meta = {}) => {
         title: ensureString(source.title, 'Untitled Project'),
         createdAt: ensureNumber(source.createdAt, now),
         updatedAt: ensureNumber(source.updatedAt, now),
-        source: ensureString(source.source, 'project')
+        source: ensureString(source.source, 'project'),
+        // Auto fly switched off for this project (src/project/viewport/autoFly.js autoFlyAllowed). Kept only when
+        // false, so every project that never touched it keeps its document as it was.
+        ...(source.autoFly === false ? { autoFly: false } : {})
     }
 }
 

@@ -72,3 +72,23 @@ describe('flightPath details', () => {
         expect(flightPath(null)).toBeNull()
     })
 })
+
+describe('autoFlyAllowed (per-project switch, owner 2026-11-12)', () => {
+    it('is on when the project never set it, off only when projectMeta.autoFly is false', async () => {
+        const { autoFlyAllowed } = await import('./autoFly.js')
+        expect(autoFlyAllowed(null)).toBe(true)
+        expect(autoFlyAllowed({ projectMeta: {} })).toBe(true)
+        expect(autoFlyAllowed({ projectMeta: { autoFly: true } })).toBe(true)
+        expect(autoFlyAllowed({ projectMeta: { autoFly: false } })).toBe(false)
+    })
+    it('the switch survives normalisation on both schemas, and absent stays absent', async () => {
+        const { normalizeProjectMeta } = await import('../../shared/projectSchema.js')
+        const { createRequire } = await import('node:module')
+        const cjs = createRequire(import.meta.url)('../../../shared/projectSchema.cjs')
+        for (const norm of [normalizeProjectMeta, cjs.normalizeProjectMeta]) {
+            expect(norm({ id: 'p', autoFly: false }).autoFly).toBe(false)
+            expect('autoFly' in norm({ id: 'p' })).toBe(false)
+            expect('autoFly' in norm({ id: 'p', autoFly: true })).toBe(false)
+        }
+    })
+})

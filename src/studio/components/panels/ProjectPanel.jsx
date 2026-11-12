@@ -33,6 +33,8 @@ export function ProjectPanel({
                     <label className="insp-label" htmlFor="studio-project-title">Project title</label>
                     <input id="studio-project-title" className="insp-input" value={document.projectMeta?.title || ''} onChange={(event) => onProjectMetaPatch({ title: event.target.value })} />
                 </div>
+                <ToggleField label="Auto fly button" checked={document.projectMeta?.autoFly !== false} onChange={(v) => onProjectMetaPatch({ autoFly: v })} />
+
             </CollapsibleSection>
 
             <CollapsibleSection title="Scene">
