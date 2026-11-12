@@ -23,3 +23,18 @@ Three merge commits on top of the batch 4 line, in this order (no rebase, no squ
 Checked locally: no conflict marker in any file changed against the base (grep, 0 lines); esbuild parse of the resolved and merged source files passes; `npm run start-check` ran to its end (it reports code matches dev and lists branches that exist only on this machine).
 
 Not tested yet: no look in a browser, the walk scripts (deck-round-4-walk.mjs and the platina one) were never run, no real controller, no real light desk. CI result per check is appended below once it has run.
+
+### Pull request, CI and the fixes (2026-11-12)
+
+- Pull request 1277 (draft, base dev). It sits on the deck line pull request 1275. At first no CI started: dev had moved and conflicted in docs/ai/known-fixes.md (append-only), so GitHub ran no pull_request workflow. A fourth merge, origin/dev into this branch, kept both entries; CI then started.
+- First CI run: browser-checks passed; checks, node-22-compat and all three test shards failed on 6 test files. Cause per file:
+  - arrangementStore.test.js (batch 4): clampRect trimmed the width through normalizePerformRect instead of shifting the window back; fixed in arrangementStore.js.
+  - PerformArrangement.test.jsx (batch 4): the test read left/top, but DesktopWindow places a window with a transform; the test was fixed.
+  - deckLayout.test.js (batch 4): the bottom row now stacks at 683 px, so the old 650 px case shows no seam; the test was updated.
+  - surfaceBar.embed.test.jsx (column cue): RawEditor now reads useMapApi and the mock of useMapDocument lacked it; the mock was extended.
+  - rawTestScope.test.js (source switch line): map/MapSourceView.sourceOff.test.jsx was outside the test:raw filters; one filter added in package.json.
+  - copyVocabulary.test.js (batch 4 and column cue wiki text): two uses of the word room in the deck wiki text; reworded.
+- Second CI run on the fix commits: browser-checks, build-and-test, checks, test shards 1/3, 2/3 and 3/3, and node-22-compat all passed (node-22-compat took about 16 minutes; the first run hit its 15 minute limit).
+- The fixes were made without a local test run: the lane gate answered stop (exit 2), so CI was the only runner.
+
+Not done: no look in a browser, the walk scripts were never run, no real controller, no real light desk; feat/deck-wall-live is not in this line.
