@@ -436,6 +436,111 @@ void main() {
 }`
     },
 
+    'top.depthscan': {
+        label: 'Depth scan',
+        family: 'adjust',
+        inputs: ['a'],
+        // Reads `time` (the scanner bar travels, the grain moves).
+        animated: true,
+        params: [
+            param('depth', 'Depth', 0.6, 0, 1),
+            param('bands', 'Bands', 0, 0, 12, 1),
+            param('scan', 'Scanner', 0.6, 0, 1),
+            param('rim', 'X-ray edge', 0.6, 0, 1),
+            param('haze', 'Haze', 0.35, 0, 1),
+            param('relief', 'Relief', 0.3, 0, 1),
+            param('speed', 'Scan speed', 0.5, 0, 4, 0.05),
+            param('grain', 'Grain', 0.15, 0, 1),
+            toggle('invert', 'Film (negative)', 0)
+        ],
+        // A camera has no depth, so this reads one out of the light: black and white, the picture of a depth
+        // scanner or an x-ray plate (the references: a depth pass of two dancers, a clay relief, stepped depth
+        // contours). Brightness is smoothed over a wide disc with an edge-keeping weight, so skin and cloth go
+        // smooth like clay and outlines stay sharp; the slope of that field lights the edges of every volume (the
+        // x-ray rim) and shades it like a relief; Bands reads it in steps; Haze is the milk in the air; the
+        // Scanner bar travels down the picture, trembles what is under it and leaves a glow behind.
+        // One pass, 21 taps. Deterministic: every random-looking value is a hash of the pixel and the time.
+        fragment: `
+uniform float p_depth;
+uniform float p_bands;
+uniform float p_rim;
+uniform float p_relief;
+uniform float p_haze;
+uniform float p_scan;
+uniform float p_speed;
+uniform float p_grain;
+uniform float p_invert;
+float ds_luma(vec2 p) { return dot(texture2D(a, p).rgb, vec3(0.299, 0.587, 0.114)); }
+float ds_hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+void main() {
+    // the scanner bar: where it is on its way down, and the tremble of the picture under it
+    float sweep = fract(time * p_speed * 0.25);
+    float dy = uv.y - (1.0 - sweep);
+    dy -= floor(dy + 0.5);
+    float bar = exp(-dy * dy / 0.0012);
+    vec2 px = mod(floor(uv / texel), 256.0);
+    float jit = ds_hash(vec2(mod(floor(uv.y / (texel.y * 2.0)), 512.0), mod(floor(time * 30.0), 211.0))) - 0.5;
+    vec2 p = uv + vec2(jit * 0.012 * bar * p_scan, 0.0);
+
+    // The depth field. Brightness read over a wide disc (20 taps on a golden spiral, turned by a
+    // per-pixel angle so the gaps between taps come out as fine grain, not as ghost outlines).
+    // A tap counts for more the closer its brightness is to this pixel's own, so the inside of a
+    // body goes smooth like clay while its outline stays sharp: texture goes, volume stays.
+    // The same taps, unweighted, give the slope of the field for free.
+    vec2 R = texel * (3.0 + p_depth * 26.0);
+    float turn = ds_hash(px + vec2(mod(floor(time * 24.0), 97.0) * step(0.001, p_grain), 5.0)) * 6.2832;
+    float c = ds_luma(p);
+    float sum = c;
+    float wsum = 1.0;
+    float plain = 0.0;
+    vec2 mom = vec2(0.0);
+    vec2 osum = vec2(0.0);
+    float rr = 0.0;
+    for (int i = 0; i < 20; i++) {
+        float fi = float(i);
+        float rad = sqrt((fi + 0.5) / 20.0);
+        float ang = fi * 2.399963 + turn;
+        vec2 o = vec2(cos(ang), sin(ang)) * rad;
+        float l = ds_luma(p + o * R);
+        float dl = l - c;
+        float wt = exp(-dl * dl / 0.02);
+        sum += l * wt;
+        wsum += wt;
+        plain += l;
+        mom += l * o;
+        osum += o;
+        rr += rad * rad;
+    }
+    float field = plain / 20.0;
+    vec2 g = (mom - field * osum) / rr;
+    float d = mix(c, sum / wsum, 0.6 + 0.4 * p_depth);
+    // near = light, far = dark: the lows fall away, the lit body stands out
+    d = pow(smoothstep(0.10, 0.80, d), 1.25);
+
+    // how the surface turns. Steep = the edge of a volume.
+    float rim = smoothstep(0.05, 0.45, length(g) * 2.0);
+    float shade = clamp(dot(g, vec2(-0.6, 0.8)) * 1.6, -0.35, 0.35);
+
+    float v = d + p_relief * shade * (0.3 + 0.7 * d);
+    // depth read in steps, like a scanner's contour bands
+    float nb = floor(p_bands + 0.5);
+    if (nb >= 2.0) v = mix(v, floor(v * nb + 0.5) / nb, 0.9);
+    // x-ray: the insides go a little thin, the edges of every volume light up
+    v = v * (1.0 - 0.25 * p_rim) + rim * p_rim * 0.55 * (0.25 + 0.75 * d);
+    // the milk in the air
+    v += p_haze * 0.45 * field * (1.0 - v);
+    // the bar itself: a soft band, a hard line, and the glow it leaves on what it has just read
+    float line = exp(-dy * dy / 0.000012);
+    float trail = exp(-fract(uv.y - (1.0 - sweep)) * 7.0);
+    v += p_scan * (bar * (0.12 + 0.4 * rim + 0.2 * d) + line * 0.45 + trail * 0.08 * (0.4 + d));
+    // film grain
+    v += (ds_hash(px + vec2(mod(floor(time * 24.0), 97.0), 3.0)) - 0.5) * 0.08 * p_grain;
+    v = clamp(v, 0.0, 1.0);
+    v = mix(v, 1.0 - v, p_invert);
+    gl_FragColor = vec4(vec3(v), 1.0);
+}`
+    },
+
     'top.glitch': {
         label: 'Glitch',
         family: 'adjust',

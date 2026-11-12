@@ -76,8 +76,8 @@ export const normalizeClip = (clip) => {
 // the master's). `main` is what the panel and MIDI show first: numeric params
 // become sliders, a colour param a colour input. See PROGRESS.md (the feat-deck-effects entry).
 
-// One of every effect fits on a stack (20 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
-export const MAX_EFFECTS = 20
+// One of every effect fits on a stack (21 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
+export const MAX_EFFECTS = 21
 export const EFFECT_TYPES = {
     'top.level': { main: ['gain', 'brightness', 'gamma'] },
     'top.tint': { main: ['amount', 'bright'] },
@@ -98,7 +98,8 @@ export const EFFECT_TYPES = {
     'top.key': { main: ['mode', 'colour', 'tolerance', 'soft'] },
     'top.lookup': { main: ['shadows', 'mids', 'highs', 'amount'] },
     'top.slope': { main: ['strength', 'angle', 'size', 'keep'] },
-    'top.glow': { main: ['threshold', 'radius', 'amount'] }
+    'top.glow': { main: ['threshold', 'radius', 'amount'] },
+    'top.depthscan': { main: ['depth', 'bands', 'scan', 'rim', 'haze', 'relief', 'speed', 'invert'] }
 }
 export const EFFECT_TYPE_IDS = Object.keys(EFFECT_TYPES)
 export const effectLabel = (type) => TOP_OPERATORS[type]?.label || type
