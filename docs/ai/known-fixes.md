@@ -1993,3 +1993,8 @@ Still needed on the VPS: a dev-tier deploy (compose file + new client image), an
 - **Fix:** `components.lookMedia.byLook` on the picture (look id to asset id), applied by `roomInLook` through `src/rigbuild/lookMedia.js`; a look the map does not name leaves the wall dark. Written by `scripts/rigbuild/screen-picture.mjs --looks <map> --looks-dir <stills>`; Platina's map `scripts/place/rigs/platina-wall-looks-v3-2026-11-12.json` (27 looks, 8 stills; 10 certain, 17 PROPOSED).
 - **Guard:** `src/rigbuild/lookMedia.test.js`.
 - **Owed:** stills only (no moving loop); the deck's live picture on the wall is the Studio's LiveScreens, not in the public room.
+
+## A laser send could wait for ever; a new Screen could bind to a deleted deck (code review, 2026-11-12, owner row N3876)
+Found by review, not seen live. (1) `postLaser` in `src/map/laserLink.js` had no timeout and no abort, so a laser engine that took the connection but never answered left a cue's laser look or the Perform Blackout send pending for ever. (2) `findPictureSurface` in `src/studio/utils/screenOps.js` reused the first `network` surface with any `ref`, even one naming a deck that was deleted, so "Add Screen" bound to a surface that shows nothing.
+Fix: (1) every laser POST races a 4 s timer (`LASER_POST_TIMEOUT_MS`, overridable by `timeoutMs`), aborts the fetch and answers `false`; the race answers even if a fetch ignores the signal. (2) a surface is reused only when its `ref` is a node still in the document; otherwise a new surface is made on the live deck.
+Guard: `src/map/laserLink.test.js` (fake timers, a fetch that never answers) and two cases in `src/studio/utils/screenOps.test.js`. Not checked against a real hung laser engine.
