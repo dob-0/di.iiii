@@ -3307,6 +3307,7 @@ const contentProposals = createContentProposals({
   maxOpHistory: MAX_OP_HISTORY,
   maxOpAgeMs: MAX_OP_AGE_MS,
   schemaVersion: SCHEMA_VERSION,
+  onLightShowWritten: (spaceId) => lighting.adoptShowFile(spaceId),
   logger
 })
 contentProposals.register()
