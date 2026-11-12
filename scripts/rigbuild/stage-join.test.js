@@ -48,4 +48,12 @@ describe('lookSettings (owner N3875)', () => {
         expect(before[0].payload.patch).toEqual({ toneMappingExposure: 1, atmosphere: null })
         expect(lookSettings({ source, target: source }).ops).toEqual([])
     })
+    it('carries how the room opens only with view: true', () => {
+        const source = { presentationState: { entryView: 'fixed-camera', mode: 'fixed-camera', fixedCamera: { fov: 62 } } }
+        const target = { presentationState: { entryView: 'scene', mode: 'scene', fixedCamera: { fov: 50 } } }
+        expect(lookSettings({ source, target }).ops).toEqual([])
+        const out = lookSettings({ source, target, view: true })
+        expect(out.ops[0].payload.patch).toEqual({ entryView: 'fixed-camera', mode: 'fixed-camera', fixedCamera: { fov: 62 } })
+        expect(out.before[0].payload.patch).toEqual({ entryView: 'scene', mode: 'scene', fixedCamera: { fov: 50 } })
+    })
 })

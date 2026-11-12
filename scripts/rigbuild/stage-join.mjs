@@ -4,7 +4,7 @@
  * the pictures (a VJ deck and its output surface), so one project is the deck, the lights, the stage and the output.
  *
  *   node scripts/rigbuild/stage-join.mjs --from-api <api> --from-project <id> --api <api> --project <id>
- *        [--token-file <env>] [--wall platina-screen] [--surface <id>] [--backup-dir <dir>] [--apply]
+ *        [--from-file <saved document.json>] [--view] [--token-file <env>] [--wall platina-screen] [--surface <id>] [--backup-dir <dir>] [--apply]
  *   node scripts/rigbuild/stage-join.mjs --api <api> --project <id> --undo <manifest.json> --apply
  *
  * ADDS only: every source entity the target does not have (the still `<wall>-picture` is left out: the joined wall is live),
@@ -53,9 +53,12 @@ export const planJoin = ({ source, target, wall = 'platina-screen', surface = ''
 // The room's look travels with the stage (owner N3875: the joined room was white and grey): exposure, haze, room light and
 // the saved views. Only keys that differ; `before` holds the target's own values for the undo (null = the key was absent).
 const LOOK_KEYS = { setRenderSettings: ['renderSettings', ['toneMappingExposure', 'exposure', 'atmosphere']], setWorldState: ['worldState', ['ambientLight', 'directionalLight']], setPresentationState: ['presentationState', ['viewPresets']] }
-export const lookSettings = ({ source, target }) => {
+// --view also carries how the room opens (entryView, mode, fixedCamera): the audience's front view, not the bird view (N3905).
+const VIEW_KEYS = ['entryView', 'mode', 'fixedCamera']
+export const lookSettings = ({ source, target, view = false }) => {
     const ops = [], before = []
-    for (const [type, [part, keys]] of Object.entries(LOOK_KEYS)) {
+    for (const [type, [part, base]] of Object.entries(LOOK_KEYS)) {
+        const keys = view && part === 'presentationState' ? [...base, ...VIEW_KEYS] : base
         const patch = {}, back = {}
         for (const k of keys) {
             const a = source?.[part]?.[k], b = target?.[part]?.[k]
@@ -101,10 +104,11 @@ const main = async () => {
         await post(ops, 'undo')
         return say(`${project}: undone, now ${JSON.stringify(count((await read(client, project)).document))}`)
     }
-    const fromApi = String(args['from-api'] || die('needs --from-api')).replace(/\/+$/, '')
-    const source = (await read(makeClient(fromApi, ''), String(args['from-project'] || die('needs --from-project')))).document
+    const fromApi = args['from-file'] ? '' : String(args['from-api'] || die('needs --from-api or --from-file')).replace(/\/+$/, '')
+    const source = args['from-file'] ? (({ document, ...rest }) => document || rest)(JSON.parse(fs.readFileSync(String(args['from-file']), 'utf8')))
+        : (await read(makeClient(fromApi, ''), String(args['from-project'] || die('needs --from-project')))).document
     const plan = planJoin({ source, target: before.document, wall: String(args.wall || 'platina-screen'), surface: String(args.surface || '') })
-    const look = lookSettings({ source, target: before.document })
+    const look = lookSettings({ source, target: before.document, view: Boolean(args.view) })
     plan.settings = look.ops
     say(`look settings to carry: ${look.ops.map((o) => `${o.type}(${Object.keys(o.payload.patch).join(',')})`).join(' ') || 'none'}`)
     say(`${project} version ${before.version}: now ${JSON.stringify(count(before.document))}; would add ${plan.entities.length} entities (live wall plane: ${plan.plane}${plan.why ? ', ' + plan.why : ''}, surface ${plan.surfaceId || 'none'}) and ${plan.cues.length} cues`)
