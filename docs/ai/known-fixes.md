@@ -1936,3 +1936,11 @@ Cause: the refusal moved from `error` to `cameraError` (so a camera never replac
 Fix: `MapSourceView.jsx` shows `cameraError` as a caption over the picture; `useTopNetwork.js` clears it when a camera opens.
 Guard: `MapSourceView.network.test.jsx` (caption, canvas kept), `useTopNetwork.camera.test.jsx` (cleared on open). Run by CI only; the local lane gate was closed.
 Lesson: when a value moves to a new field, grep the readers in the same change.
+
+## 2026-11-12 - Body never made a mask for a still source after a failed or skipped run
+
+Symptom: a Body effect on a still or paused source passed the picture through for the rest of the show.
+Cause: `refreshMatte` (topEngine.js) stored the picture as seen before knowing the model run started, and while the model was not ready; the same pixels then read as unchanged for ever.
+Fix: `rememberMatteRun` keeps the picture only after `submit()` returned true; the seen picture is forgotten while the model is not ready.
+Guard: `topEngine.blank.test.js` "rememberMatteRun". Run by CI only. A worker answer of type fail after an accepted submit is not covered.
+Lesson: mark work as done only after the thing that does it confirmed it started.
