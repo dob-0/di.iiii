@@ -2632,6 +2632,8 @@ registerDomainRoutes(router, {
 })
 
 const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceRoutes(router, {
+  // Lazy: contentProposals is built further down this file.
+  proposals: { precheck: (req) => proposalAccessRefusal(req), submit: (req, job) => submitProposalFile(req, job) },
   findPrimaryHostForSpace: domainStore.findPrimaryActiveHostForSpace,
   mapPrimaryHosts: domainStore.mapPrimaryActiveHosts,
   applySceneOps,
@@ -3312,6 +3314,48 @@ const contentProposals = createContentProposals({
 })
 contentProposals.register()
 
+// A proposal names a person. Guests have no name the owner could answer.
+// Shared by the one-POST route below and the parts route (a file too big for
+// one request, routes/bundleParts.js), so both refuse the same way.
+const proposalAccessRefusal = (req) => {
+  const state = req.authState || getPublicAuthState(req)
+  if (config.requireAuth && !state.isUnrestricted && (!state.authenticated || state.type === 'guest' || isGuestSubject(state.subject))) {
+    return { status: 403, body: { error: 'Sign in with an account to send a file for this space.', code: 'auth_required' } }
+  }
+  return null
+}
+
+// The one place a proposal file on disk becomes a proposal (or a dry run, or a
+// direct apply when the server says the sender is trusted). `fields` are the
+// form fields of the one POST, or the ones the parts route kept at its start.
+// Returns { status, body }; the caller removes `uploadPath`.
+const submitProposalFile = async (req, { spaceId, uploadPath, fields = {} }) => {
+  try {
+    const refusal = proposalAccessRefusal(req)
+    if (refusal) return refusal
+    if (!uploadPath) return { status: 400, body: { error: 'No file was sent (field "bundle").' } }
+    const flag = (value) => ['1', 'true', 'yes'].includes(String(value ?? '').toLowerCase())
+    const outcome = await contentProposals.submit({
+      spaceId: normalizeSpaceId(spaceId),
+      uploadPath,
+      authState: req.authState || getPublicAuthState(req),
+      mode: fields.mode === 'propose' ? 'propose' : 'auto',
+      from: fields.from || null,
+      overwriteNewer: flag(fields.overwriteNewer),
+      dryRun: flag(fields.dryRun),
+      // The exact count of media items the file removes (absent = none
+      // acknowledged; anything but a whole number never matches).
+      acceptLoss: fields.acceptLoss === undefined || fields.acceptLoss === null || fields.acceptLoss === '' ? null : (/^\d+$/.test(String(fields.acceptLoss)) ? Number(fields.acceptLoss) : NaN),
+      req
+    })
+    return { status: outcome.status === 'pending_approval' ? 202 : 200, body: outcome }
+  } catch (error) {
+    if ((error?.status && error.status < 500) || error?.status === 503) {
+      return { status: error.status, body: { error: error.message, ...(error.code ? { code: error.code } : {}), ...(error.body || {}) } }
+    }
+    throw error
+  }
+}
 router.post('/api/spaces/:spaceId/proposals', (req, res, next) => bundleUpload.single('bundle')(req, res, (error) => {
   if (!error) return next()
   if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'That file is larger than this di.iiii accepts.' })
@@ -3319,33 +3363,9 @@ router.post('/api/spaces/:spaceId/proposals', (req, res, next) => bundleUpload.s
 }), async (req, res, next) => {
   const uploaded = req.file?.path || null
   try {
-    const state = req.authState || getPublicAuthState(req)
-    // A proposal names a person. Guests have no name the owner could answer.
-    if (config.requireAuth && !state.isUnrestricted && (!state.authenticated || state.type === 'guest' || isGuestSubject(state.subject))) {
-      return res.status(403).json({ error: 'Sign in with an account to send a file for this space.', code: 'auth_required' })
-    }
-    if (!uploaded) return res.status(400).json({ error: 'No file was sent (field "bundle").' })
-    const spaceId = normalizeSpaceId(req.params.spaceId)
-    const flag = (value) => ['1', 'true', 'yes'].includes(String(value ?? '').toLowerCase())
-    const outcome = await contentProposals.submit({
-      spaceId,
-      uploadPath: uploaded,
-      authState: state,
-      mode: req.body?.mode === 'propose' ? 'propose' : 'auto',
-      from: req.body?.from || null,
-      overwriteNewer: flag(req.body?.overwriteNewer),
-      dryRun: flag(req.body?.dryRun),
-      // The exact count of media items the file removes (absent = none
-      // acknowledged; anything but a whole number never matches).
-      acceptLoss: req.body?.acceptLoss === undefined || req.body?.acceptLoss === '' ? null : (/^\d+$/.test(String(req.body.acceptLoss)) ? Number(req.body.acceptLoss) : NaN),
-      req
-    })
-    const status = outcome.status === 'pending_approval' ? 202 : 200
-    res.status(status).json(outcome)
+    const { status, body } = await submitProposalFile(req, { spaceId: req.params.spaceId, uploadPath: uploaded, fields: req.body || {} })
+    res.status(status).json(body)
   } catch (error) {
-    if ((error?.status && error.status < 500) || error?.status === 503) {
-      return res.status(error.status).json({ error: error.message, ...(error.code ? { code: error.code } : {}), ...(error.body || {}) })
-    }
     next(error)
   } finally {
     if (uploaded) await fs.promises.rm(uploaded, { force: true }).catch(() => {})
