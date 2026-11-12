@@ -149,6 +149,18 @@ const run = async () => {
                 return { url, ok: strips === 0 && shelves === 0, expected: '0 door strips, 0 shelf headings', got: `${strips} strips, ${shelves} shelf headings` }
             })
 
+            // The bar's Nodes link. On a phone the bar holds it behind "More" (Priority+), so open that first when the
+            // link is not on the bar itself. Called after the page has drawn, so the bar has been measured.
+            const barNodes = async (page) => {
+                await page.waitForTimeout(1000)
+                const onBar = page.locator('.sbar-links a.sbar-link', { hasText: /^Nodes$/ })
+                if (await onBar.count()) return onBar.first()
+                await page.locator('.sbar-more').click()
+                const inMenu = page.locator('.sbar-menu a', { hasText: /^Nodes$/ })
+                await inMenu.waitFor({ timeout: WAIT })
+                return inMenu.first()
+            }
+
             // Batch 2 (N3851.19). A member stood in alpha's Nodes; a NEW page of the same context has its own
             // sessionStorage but shares the device's localStorage, which is the point of "per device".
             await step('f', 'member', member, async (page) => {
@@ -158,10 +170,9 @@ const run = async () => {
                 await editor.locator('.sbar-where--project').waitFor({ timeout: WAIT })
                 await editor.close()
                 const url = await goto(page, `/${SPACE}/projects`)
-                const nodes = page.locator('.sbar-links a.sbar-link', { hasText: /^Nodes$/ })
-                await nodes.waitFor({ timeout: WAIT })
                 // The page waits for the space's own list before it judges a remembered project.
                 await page.locator('.sc-row-name', { hasText: /^\s*alpha\s*$/ }).waitFor({ timeout: WAIT })
+                const nodes = await barNodes(page)
                 const href = await nodes.getAttribute('href')
                 await nodes.click()
                 await page.waitForURL((u) => u.pathname === `/${SPACE}/raw/projects/scene-alpha`, { timeout: WAIT })
@@ -182,9 +193,8 @@ const run = async () => {
                     try { window.localStorage.setItem('dii.lastProjectBySpace', JSON.stringify({ [space]: 'gone-since' })) } catch { /* blocked */ }
                 }, [SPACE])
                 const url = await goto(page, `/${SPACE}/projects`)
-                const nodes = page.locator('.sbar-links a.sbar-link', { hasText: /^Nodes$/ })
-                await nodes.waitFor({ timeout: WAIT })
                 await page.locator('.sc-row-name', { hasText: /^\s*alpha\s*$/ }).waitFor({ timeout: WAIT })
+                const nodes = await barNodes(page)
                 const href = await nodes.getAttribute('href')
                 await nodes.click()
                 await page.waitForURL((u) => u.pathname === `/${SPACE}/raw/projects`, { timeout: WAIT })
