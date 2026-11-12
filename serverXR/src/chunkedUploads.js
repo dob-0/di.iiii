@@ -123,7 +123,8 @@ function createChunkedUploads({
       const kind = String(body.kind || '')
       const door = doors[kind]
       if (!door) return refuse(res, 400, 'kind must be "bundle" or "proposal".', 'bad_kind')
-      const spaceId = kind === 'proposal' && typeof body.spaceId === 'string' ? body.spaceId.trim() : ''
+      const named = body.spaceId?.trim?.()
+      const spaceId = kind === 'proposal' && named ? named : undefined
       if (kind === 'proposal' && !spaceId) return refuse(res, 400, 'A proposal names its space (spaceId).', 'bad_space')
       if (!(await gate(req, res, door, spaceId))) return
       const size = body.size
