@@ -26,8 +26,11 @@ vi.mock('../utils/appNavigate.js', () => ({
 }))
 
 const mockSessionRole = vi.hoisted(() => ({ value: 'viewer' }))
+// The rest of what the session says, for a test whose session has not answered yet or failed (useAuthSession's own
+// state then: requireAuth false, with loading or error). Each such test puts it back to {}.
+const mockSessionExtra = vi.hoisted(() => ({ value: {} }))
 vi.mock('../hooks/useAuthSession.js', () => ({
-    default: () => ({ role: mockSessionRole.value, spaces: [], openSpaceId: 'open', sandboxSpaceId: null, requireAuth: true })
+    default: () => ({ role: mockSessionRole.value, spaces: [], openSpaceId: 'open', sandboxSpaceId: null, requireAuth: true, ...mockSessionExtra.value })
 }))
 
 vi.mock('../hooks/useLocalInstall.js', () => ({
@@ -283,6 +286,68 @@ describe('a space\'s contents page: doors and shelves', () => {
         expect(listProjectsMock).not.toHaveBeenCalled()
         expect(listSpaceContentsMock).toHaveBeenCalledTimes(1)
         expect(listSpaceContentsMock).toHaveBeenCalledWith('br_id_ge')
+    })
+
+    // Review, 2026-11-12: until the session's first answer, and after a failed one, useAuthSession says requireAuth
+    // false, which canEdit reads as "nobody needs to sign in". On a server that does need it a visitor counted as a
+    // member for that moment: the member's two requests went out and the strips could flash. Neither happens now.
+    it.each([
+        ['has not answered yet', { requireAuth: false, loading: true }],
+        ['failed', { requireAuth: false, loading: false, error: 'Failed to reach server' }]
+    ])('gives no member page while the session %s', async (_, session) => {
+        mockSessionExtra.value = session
+        try {
+            listSpaceContentsMock.mockResolvedValue(contents)
+            const { container } = render(<SpaceContentsPage spaceId="br_id_ge" />)
+            await screen.findByRole('link', { name: /Notations #2/ })
+            expect(listCollectionsMock).not.toHaveBeenCalled()
+            expect(listProjectsMock).not.toHaveBeenCalled()
+            expect(container.querySelector('.sc-row-doors')).toBeNull()
+            expect(container.querySelector('.sc-shelf-note')).toBeNull()
+        } finally {
+            mockSessionExtra.value = {}
+        }
+    })
+
+    // The other side of the same guard: a member whose session answers late still gets the doors, and the late
+    // answer does not ask for the contents again.
+    it('gives a member the doors once a late session says so, without asking for the contents again', async () => {
+        mockSessionExtra.value = { requireAuth: false, loading: true }
+        try {
+            listSpaceContentsMock.mockResolvedValue(contents)
+            const { rerender } = render(<SpaceContentsPage spaceId="br_id_ge" />)
+            await screen.findByRole('link', { name: /Notations #2/ })
+            expect(listProjectsMock).not.toHaveBeenCalled()
+
+            mockSessionExtra.value = {}
+            mockSessionRole.value = 'admin'
+            rerender(<SpaceContentsPage spaceId="br_id_ge" />)
+            await stripsDrawn()
+            expect(listProjectsMock).toHaveBeenCalledTimes(1)
+            expect(listSpaceContentsMock).toHaveBeenCalledTimes(1)
+        } finally {
+            mockSessionExtra.value = {}
+            mockSessionRole.value = 'viewer'
+        }
+    })
+
+    // The page is not remounted when the address moves to another space, so for one render it still holds the last
+    // space's answer. The member's requests wait for THIS space's: listProjects creates a space that is missing
+    // (withAutoProvisionedSpace), and the next one has not said it exists yet (review, 2026-11-12).
+    it('asks nothing for the next space before that space has answered', async () => {
+        await asMember(async () => {
+            listSpaceContentsMock.mockResolvedValueOnce(contents)
+            const { rerender } = render(<SpaceContentsPage spaceId="br_id_ge" />)
+            await stripsDrawn()
+            expect(listProjectsMock).toHaveBeenCalledWith('br_id_ge')
+
+            // The next space never answers.
+            listSpaceContentsMock.mockReturnValue(new Promise(() => {}))
+            rerender(<SpaceContentsPage spaceId="elsewhere" />)
+            expect(listSpaceContentsMock).toHaveBeenLastCalledWith('elsewhere')
+            expect(listProjectsMock).not.toHaveBeenCalledWith('elsewhere')
+            expect(listCollectionsMock).not.toHaveBeenCalledWith('elsewhere')
+        })
     })
 
     it('gives a member Perform, Studio and Nodes under each scene, the addresses the helper says', async () => {

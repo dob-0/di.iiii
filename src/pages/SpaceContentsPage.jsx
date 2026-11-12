@@ -150,7 +150,10 @@ export default function SpaceContentsPage({ spaceId }) {
         ])
             .then(([projects, space]) => {
                 if (!alive) return
-                setState({ status: 'ready', projects, space, error: null })
+                // Which space this answer is for: the page is not remounted when the
+                // address moves to another space, and the member's requests below wait
+                // for THIS space's answer.
+                setState({ status: 'ready', projects, space, error: null, spaceId })
             })
             .catch((error) => {
                 if (!alive) return
@@ -221,14 +224,23 @@ export default function SpaceContentsPage({ spaceId }) {
 
     // The member's doors and shelves are for the page itself: an embed is the
     // flat list as it was, and a space about to be handed on to its door asks
-    // for nothing it will not draw.
-    const memberHere = canEdit && !isEmbed && !isOnlyTheDoor
+    // for nothing it will not draw. And only once the session has answered:
+    // until its first answer, and after a failed one, useAuthSession says
+    // requireAuth false, which canEdit reads as "nobody needs to sign in", so on
+    // a server that does need it a visitor counted as a member for that moment
+    // (review, 2026-11-12). `loading` only goes from true to false, so a later
+    // refresh does not blink the doors; a failed one leaves a visitor's page.
+    const sessionAnswered = !session.loading && !session.error
+    const memberHere = canEdit && sessionAnswered && !isEmbed && !isOnlyTheDoor
 
     // The member's own data is read in its own effect, which waits for BOTH
     // facts: the session says canEdit, and the space has answered. On a hosted
     // install canEdit flips to true when the session arrives; that must not
     // send the contents above back to loading, so it is not a dependency there.
-    const contentsReady = state.status === 'ready'
+    // The answer must be THIS space's: for one render after the address moves to
+    // another space the state still holds the last space's answer, and
+    // listProjects would go out for a space that has not answered yet.
+    const contentsReady = state.status === 'ready' && state.spaceId === spaceId
     useEffect(() => {
         let alive = true
         // Nothing of a previous space or session is kept.

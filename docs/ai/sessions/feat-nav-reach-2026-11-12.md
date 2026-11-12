@@ -14,7 +14,8 @@ Three root causes, three fixes:
   list) now says "Pick a project. A card opens it in Studio." or "...in Nodes.", and marks the card of the space's way in.
 - The space page was a visitor page with no doors or shelves. For a member (`canEdit`) `src/pages/SpaceContentsPage.jsx`
   adds the strips and, when the space has shelves, groups the rows under shelf headings (`src/project/shelves.js`). A second
-  effect loads the member data after the contents; the main load effect is as on `origin/dev`.
+  effect loads the member data after the contents; the main load effect is as on `origin/dev`, except that its answer
+  names the space it is for.
 
 ### Rules (do not break them in a later batch)
 
@@ -23,7 +24,9 @@ Three root causes, three fixes:
    `surfaceDestinations` in `src/components/SurfaceBar.jsx`, never retyped.
 2. A door never names a layout: no `preset=` in a door's address.
 3. A page-type (code) project gets no doors, on the space page and on a hub card.
-4. A visitor's page is unchanged: no strips, no headings, no extra request.
+4. A visitor's page is unchanged: no strips, no headings, no extra request. That holds while the session is still on its
+   way and after a failed answer too: the member page waits for the session (`useAuthSession` says `requireAuth: false`
+   until it answers, and `canEdit` reads that as "everyone").
 5. No address change, no bar order change, no data change. Undo is a revert of the merge commit.
 6. Rows of the project list carry counts (`layers`) and no `mode`; only the contents rows carry `mode`. Read a row only
    through `doorsForListRow`.
@@ -72,3 +75,14 @@ viewport: the door strip and the shelf order, one click from a Perform door to `
 door on the Studio and Nodes lists, and no strips or shelves for a visitor. One screenshot per step goes to artifact `reach-pictures` with `report.json`.
 It is report-only (`continue-on-error`) until after the show on 2026-11-14; remove that line then. By hand, against a stack running with REQUIRE_AUTH=true:
 `node scripts/seed-reach-check.mjs --token <tok>` then `npm run check:reach -- --base <url> --token <tok>`.
+
+### Second review (2026-11-12, one reader, after the reach check)
+
+One finding, fixed in the same pull request. On a server with REQUIRE_AUTH, `useAuthSession` starts (and stays after a failed
+answer) at `requireAuth: false`, and `canEdit` reads that as "nobody needs to sign in". If the space's contents answered before
+the session, a visitor counted as a member for that moment: `listCollections` and `listProjects` went out (refused, swallowed)
+and the strips and the note could flash. The member page now waits for the session's answer (`!session.loading && !session.error`).
+The reach check cannot catch this (its visitor step waits 3 s, long after the session); the guards are three tests in
+`src/pages/SpaceContentsPage.test.jsx`. A note of the same reader, also fixed: the page is not remounted when the address moves
+to another space, so for one render the state still held the last space's answer and `listProjects` (which creates a missing
+space) could go out for a space that had not answered. The contents' answer now names its space (`state.spaceId === spaceId`).
