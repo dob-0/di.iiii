@@ -10,7 +10,15 @@ class FakeChannel {
     close() { this.closed = true }
 }
 
-beforeEach(() => { FakeChannel.all = []; vi.stubGlobal('BroadcastChannel', FakeChannel); vi.useFakeTimers() })
+// A frame is a timer here, so fake timers drive it (one animation frame = FRAME ms).
+const FRAME = 16
+beforeEach(() => {
+    FakeChannel.all = []
+    vi.stubGlobal('BroadcastChannel', FakeChannel)
+    vi.useFakeTimers()
+    vi.stubGlobal('requestAnimationFrame', (fn) => setTimeout(fn, FRAME))
+    vi.stubGlobal('cancelAnimationFrame', (id) => clearTimeout(id))
+})
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals() })
 
 const doc = { nodes: [{ id: 'deck-1', typeId: 'vj.deck', values: { deck: { master: 1, n: 'stored' }, midiMap: { bindings: [] } } }, { id: 'other', values: {} }], edges: [] }
@@ -20,6 +28,7 @@ describe('the deck live line', () => {
         const { result } = renderHook(() => useDeckLive('live-a'))
         expect(overlayDeckLive(doc, result.current)).toBe(doc)
         act(() => { postDeckLive('live-a', 'deck-1', { master: 0.5, n: 'live' }) })
+        act(() => { vi.advanceTimersByTime(FRAME) })
         const shown = overlayDeckLive(doc, result.current)
         expect(shown.nodes[0].values.deck.n).toBe('live')
         expect(shown.nodes[0].values.midiMap).toBe(doc.nodes[0].values.midiMap)
@@ -37,6 +46,17 @@ describe('the deck live line', () => {
         act(() => { vi.advanceTimersByTime(200) })
         expect(result.current).toEqual({})
         expect(overlayDeckLive(doc, result.current)).toBe(doc)
+    })
+
+    it('many messages in one frame set the state once, with the newest', () => {
+        let renders = 0
+        const { result } = renderHook(() => { renders += 1; return useDeckLive('live-f') })
+        const before = renders
+        act(() => { for (let i = 0; i < 10; i += 1) postDeckLive('live-f', 'deck-1', { n: i }) })
+        expect(renders).toBe(before)
+        act(() => { vi.advanceTimersByTime(FRAME) })
+        expect(renders).toBe(before + 1)
+        expect(result.current['deck-1'].deck.n).toBe(9)
     })
 
     it('another project is not heard, and a missing BroadcastChannel is no error', () => {

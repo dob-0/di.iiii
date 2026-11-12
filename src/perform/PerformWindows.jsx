@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { postDeckLive } from '../project/tops/deckLive.js'
 import { flagsToForgetAfterLift, planBlackoutPress } from './blackoutPlan.js'
 import { buildPictureOutOptions } from '../map/pictureOutOptions.js'
 import MapCueList from '../map/MapCueList.jsx'
@@ -256,10 +257,14 @@ function MasterWindow({ ctx }) {
     const writeDeckMaster = useCallback((level, keep = null) => {
         if (!deckNode) return
         const { blackoutRestore: _dropped, ...rest } = deckNode.values || {}
+        const nextDeck = setMaster(deckNode.values?.deck, level)
+        // 0 is written, not left out: values merge as {...existing, ...patch}, so an omitted key would stay
         ctx.applyLocalOps({
             type: 'updateNode',
-            payload: { nodeId: deckNode.id, patch: { values: { ...rest, ...(keep ? { blackoutRestore: keep } : {}), deck: setMaster(deckNode.values?.deck, level) } } }
+            payload: { nodeId: deckNode.id, patch: { values: { ...rest, blackoutRestore: keep || 0, deck: nextDeck } } }
         })
+        // the wall on this machine hears it now; the op above is the record (deckLive.js)
+        postDeckLive(ctx.projectId, deckNode.id, nextDeck)
     }, [ctx, deckNode])
 
     // One button, everything dark: the deck's master to zero (kept, to come

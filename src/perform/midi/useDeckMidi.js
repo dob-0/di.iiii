@@ -26,7 +26,7 @@ import { createK2Monitor } from './k2Monitor.js'
 import { createK2Publisher, eventOf, lightsOf, namedValues } from './k2Channel.js'
 import { jobsFor, linesFor } from './k2Jobs.js'
 import { K2_CHANNEL, CONSOLES, K2_NAME, XONE_K2_LEDS, consoleOf, defaultMap, isK2, k2IsRelative, pickInputId } from './xoneK2.js'
-import { isApc40, APC40_CONSOLE_ID, apc40LedChanges, apc40LedClears, apc40Leds } from './apc40.js'
+import { isApc40, APC40_CONSOLE_ID, APC40_COLUMNS, apc40BankCount, apc40Banked, apc40LedChanges, apc40LedClears, apc40Leds } from './apc40.js'
 
 // The live half of the MIDI binding: listens on the K2 (else the first input),
 // applies messages to the deck, keeps Learn, and lights the K2's buttons.
@@ -88,7 +88,14 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const isApcConsole = k2Console.id === APC40_CONSOLE_ID
     const defaults = useMemo(() => defaultMap(k2Console.id), [k2Console.id])
     const overrides = useMemo(() => normalizeOverrides(stored), [stored])
-    const map = useMemo(() => effectiveMap(defaults, overrides), [defaults, overrides])
+    // APC40: which bank of 8 columns sits under the pads (the bank arrows change it, a scene step takes the pads along)
+    const [bank, setBank] = useState(0)
+    const bankCount = isApcConsole ? apc40BankCount(deck?.columns) : 1
+    const bankNow = Math.min(bank, bankCount - 1)
+    const map = useMemo(() => {
+        const plain = effectiveMap(defaults, overrides)
+        return isApcConsole ? apc40Banked(plain, bankNow) : plain
+    }, [defaults, overrides, isApcConsole, bankNow])
 
     // --- one owner per deck id ---
     const [token] = useState(() => ({}))
@@ -110,7 +117,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const timer = useRef(null)
     const pickup = useRef(new Map())
     const live = useRef({})
-    useEffect(() => { live.current = { write, onTap, onPatch, map, stored, isRelative: k2Console.isRelative || k2IsRelative, jump: isApcConsole, enabled: active, fx: { layer: fxLayer, effect: fxEffect }, onFxLayer, onFxEffect, onColumn } })
+    useEffect(() => { live.current = { write, onTap, onPatch, map, stored, isRelative: k2Console.isRelative || k2IsRelative, jump: isApcConsole, enabled: active, fx: { layer: fxLayer, effect: fxEffect }, onFxLayer, onFxEffect, onColumn, bankCount } })
     const tapState = useRef({ taps: [] })
     const abStates = useRef(new Map())
     const statefulKey = useCallback((control) => control?.kind === 'note'
@@ -217,7 +224,10 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
             if (press && !holdTargets(base, current.fx.layer).length) { setHoldNote('no Freeze effect to hold'); return }
             if (press) { holdLayerRef.current = current.fx.layer; setHoldNote('') } else holdLayer = holdLayerRef.current ?? undefined
         }
+        let stepped = null
         const next = applyMidi(base, message, current.map, {
+            onColumnStep: (to) => { stepped = to },
+            onBank: (dir) => setBank((now) => ((Math.min(now, current.bankCount - 1) + dir) % current.bankCount + current.bankCount) % current.bankCount),
             // APC40: a fader or knob takes its value at once, as in Resolume (no soft takeover); the K2 consoles keep pickup
             onTap: () => current.onTap?.(), tapState: tapState.current, pickup: current.jump ? undefined : pickup.current, fx: current.fx, holdLayer,
             // APC40 mkII, generic mode: record-arm (48) and solo (49) are toggles IN the controller (on = note-on, off =
@@ -234,6 +244,11 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         else { dirty.current = true; flush() }
         // A column launched by MIDI (the K2's encoder pushes): reported after its write, once per launch.
         if (bound?.action === 'column' && Number.isInteger(bound.args?.column)) current.onColumn?.(bound.args.column)
+        // A scene step is a column launch too, and the pads go with it to its bank.
+        if (Number.isInteger(stepped)) {
+            current.onColumn?.(stepped)
+            if (current.jump) setBank(Math.floor(stepped / APC40_COLUMNS))
+        }
     }, [flush, schedule])
 
     // One MIDI access, only while this instance owns the deck.
@@ -393,6 +408,8 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         map,
         k2Monitor,
         k2Publisher,
+        bank: bankNow,
+        bankCount,
         note: holdNote
     }
 }

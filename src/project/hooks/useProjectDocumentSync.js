@@ -522,6 +522,8 @@ export function useProjectDocumentSync({
                 // and without the writes a later one in the same piece replaces (a deck's fader steps)
                 const batch = dropSuperseded(pendingQueueRef.current.splice(0, nextBatchSize(pendingQueueRef.current)))
                 inFlightRef.current = batch
+                // the stored copy drops what was superseded too, or a reload replays it
+                void persistWaiting()
                 // In the browser's store before it is on the wire.
                 await persistChainRef.current
                 try {

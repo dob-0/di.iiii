@@ -31,6 +31,8 @@ import {
 } from '../../../project/tops/vjDeck.js'
 import { detectAssetMediaKind } from '../../../utils/mediaAssetTypes.js'
 import { resolveClipUrl } from '../../../project/tops/clipVideos.js'
+import { setClipParkBytes } from '../../../project/tops/clipSourceCache.js'
+import { useClipWarmup } from '../../../project/tops/clipWarmup.js'
 import { readNdiSources } from '../../../project/tops/machineDevices.js'
 import { isTypingTarget } from '../../../perform/windowKeys.js'
 import { useShowClockContext } from '../../../perform/useShowClock.js'
@@ -406,6 +408,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const liveCameras = deck.layers.map((layer) => layer.clips[layer.active]).filter((clip) => clip?.kind === 'camera').map((clip) => clip.camera)
     const clipName = (clip) => (clip.label || (clip.kind === 'input' ? inputLabel(clip.input) : clip.kind === 'camera' ? clip.camera : assetName(clip.asset)))
     const assetName = (id) => (assets || []).find((asset) => asset?.id === id)?.name || id
+    // The deck keeps every clip in memory, like the show wall: a launched clip starts at once in the monitors too.
+    useEffect(() => {
+        setClipParkBytes(384 * 1024 * 1024)
+        return () => setClipParkBytes(0)
+    }, [])
+    const warmDocument = useMemo(() => ({ nodes: [node], assets }), [node, assets])
+    useClipWarmup(warmDocument, { spaceId, projectId })
 
     // The newest deck this view has seen or written: an upload that finishes after a
     // long wait places its clip into THIS, never into the deck captured when the file

@@ -78,7 +78,37 @@ export const ACTIONS = {
     // The next effect of the selected stack that the pots turn (ctx.onFxEffect).
     fxNext: { args: [], button: true },
     // FREEZE while held: hold 1 on every Freeze effect of the master and the selected layer, 0 on release.
-    hold: { args: [], button: false }
+    hold: { args: [], button: false },
+    // The next / previous SCENE: the column after (before) the one playing, launched on every layer, round and round.
+    columnNext: { args: [], button: true },
+    columnPrev: { args: [], button: true },
+    // The next / previous BANK of 8 columns under the pads; the console owns that choice (ctx.onBank).
+    bankNext: { args: [], button: true },
+    bankPrev: { args: [], button: true }
+}
+
+/** The column the deck is on: the one most layers play (the lower layer wins a tie), -1 when nothing plays. */
+export const currentColumn = (deck) => {
+    const counts = new Map()
+    let best = -1
+    for (const layer of normalizeDeck(deck).layers) {
+        if (layer.active < 0) continue
+        counts.set(layer.active, (counts.get(layer.active) || 0) + 1)
+        if (best < 0 || counts.get(layer.active) > counts.get(best)) best = layer.active
+    }
+    return best
+}
+
+/** The next column with a clip, one step `dir` from the playing one, wrapping; null when the deck has no clip at all. */
+export const stepColumn = (deck, dir) => {
+    const base = normalizeDeck(deck)
+    const playing = currentColumn(base)
+    const from = playing < 0 ? (dir > 0 ? -1 : 0) : playing
+    for (let i = 1; i <= base.columns; i++) {
+        const to = ((from + dir * i) % base.columns + base.columns) % base.columns
+        if (base.layers.some((layer) => layer.clips[to])) return to
+    }
+    return null
 }
 
 /** The actions a stateful key (ctx.stateful) sets from its own state instead of toggling. */
@@ -289,6 +319,15 @@ const run = (deck, control, entry, ctx) => {
             return deck
         }
         case 'hold': return setFreezeHold(deck, ctx.holdLayer ?? ctx.fx?.layer, control.press ? 1 : 0)
+        case 'columnNext':
+        case 'columnPrev': {
+            const to = stepColumn(base, entry.action === 'columnNext' ? 1 : -1)
+            if (to === null) return deck
+            ctx.onColumnStep?.(to)
+            return triggerColumn(base, to)
+        }
+        case 'bankNext': ctx.onBank?.(1); return deck
+        case 'bankPrev': ctx.onBank?.(-1); return deck
         case 'tap': {
             // The view owns the clock (the show clock, or the deck's own taps).
             if (typeof ctx.onTap === 'function') { ctx.onTap(); return deck }
@@ -554,6 +593,10 @@ export const describeAction = (entry, ctx = {}) => {
         case 'fxLayerNext': return 'Next FX layer'
         case 'fxNext': return 'Next effect'
         case 'hold': return 'Freeze (hold)'
+        case 'columnNext': return 'Next scene'
+        case 'columnPrev': return 'Previous scene'
+        case 'bankNext': return 'Next bank'
+        case 'bankPrev': return 'Previous bank'
         case 'fx': {
             if (args.layer === undefined && args.effect === undefined && Number.isInteger(ctx.fxEffect)) {
                 const name = `FX ${ctx.fxEffect + 1}`

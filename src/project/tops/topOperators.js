@@ -451,7 +451,9 @@ void main() {
             param('relief', 'Relief', 0.3, 0, 1),
             param('speed', 'Scan speed', 0.5, 0, 4, 0.05),
             param('grain', 'Grain', 0.15, 0, 1),
-            toggle('invert', 'Film (negative)', 0)
+            toggle('invert', 'Film (negative)', 0),
+            param('cut', 'Two-tone', 0, 0, 1),
+            param('flash', 'Flash (Hz)', 0, 0, 15, 0.5)
         ],
         // A camera has no depth, so this reads one out of the light: black and white, the picture of a depth
         // scanner or an x-ray plate (the references: a depth pass of two dancers, a clay relief, stepped depth
@@ -470,6 +472,8 @@ uniform float p_scan;
 uniform float p_speed;
 uniform float p_grain;
 uniform float p_invert;
+uniform float p_cut;
+uniform float p_flash;
 float ds_luma(vec2 p) { return dot(texture2D(a, p).rgb, vec3(0.299, 0.587, 0.114)); }
 float ds_hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
 void main() {
@@ -529,6 +533,8 @@ void main() {
     v = v * (1.0 - 0.25 * p_rim) + rim * p_rim * 0.55 * (0.25 + 0.75 * d);
     // the milk in the air
     v += p_haze * 0.45 * field * (1.0 - v);
+    // two-tone: the picture cut into pure black and pure white, a silhouette
+    v = mix(v, smoothstep(0.36, 0.44, v), p_cut);
     // the bar itself: a soft band, a hard line, and the glow it leaves on what it has just read
     float line = exp(-dy * dy / 0.000012);
     float trail = exp(-fract(uv.y - (1.0 - sweep)) * 7.0);
@@ -536,8 +542,57 @@ void main() {
     // film grain
     v += (ds_hash(px + vec2(mod(floor(time * 24.0), 97.0), 3.0)) - 0.5) * 0.08 * p_grain;
     v = clamp(v, 0.0, 1.0);
-    v = mix(v, 1.0 - v, p_invert);
+    // flash: negative and positive change places p_flash times a second
+    float flip = p_flash > 0.05 ? step(0.5, fract(time * p_flash)) : 0.0;
+    v = mix(v, 1.0 - v, abs(p_invert - flip));
     gl_FragColor = vec4(vec3(v), 1.0);
+}`
+    },
+
+    'top.cuts': {
+        label: 'Cuts',
+        family: 'adjust',
+        inputs: ['a'],
+        // Reads `time` (the cuts come in time).
+        animated: true,
+        params: [
+            param('rate', 'Cuts per second', 2, 0.25, 8, 0.25),
+            param('zoom', 'Punch-in', 0.5, 0, 1),
+            param('move', 'Reframe', 0.6, 0, 1),
+            param('mirror', 'Flip', 0.3, 0, 1),
+            param('flash', 'Flash frame', 0.6, 0, 1),
+            param('bars', 'Bars', 0, 0, 1)
+        ],
+        // The picture edited like a music video, live. Time is cut into SHOTS (Cuts per second); every shot is one
+        // still framing, chosen once at its cut: a size (wide, medium or close: Punch-in), a place in the frame
+        // (Reframe), sometimes mirrored (Flip). Nothing moves inside a shot but a slow push-in, so it reads as an
+        // edit and not as a wobble. Flash frame: about half the cuts open on one negative frame, the way a cut is
+        // hit in an edit. Bars: black bands above and below, the film frame.
+        // Deterministic: every choice is a hash of the shot number.
+        fragment: `
+uniform float p_rate;
+uniform float p_zoom;
+uniform float p_move;
+uniform float p_mirror;
+uniform float p_flash;
+uniform float p_bars;
+float ct_hash(float n) { return fract(sin(n * 127.1 + 3.7) * 43758.5453123); }
+void main() {
+    float rate = max(p_rate, 0.05);
+    float t = time * rate;
+    float shot = mod(floor(t), 4096.0);
+    float into = fract(t) / rate;
+    float size = floor(ct_hash(shot) * 3.0);
+    float z = (1.0 + p_zoom * size * 0.45) * (1.0 + 0.04 * p_zoom * min(into, 4.0));
+    vec2 room = vec2(0.5 - 0.5 / z);
+    vec2 c = vec2(0.5) + (vec2(ct_hash(shot + 17.0), ct_hash(shot + 43.0)) * 2.0 - 1.0) * room * p_move;
+    vec2 p = (uv - 0.5) / z + c;
+    if (ct_hash(shot + 71.0) < p_mirror * 0.5) p.x = 1.0 - p.x;
+    vec3 col = texture2D(a, clamp(p, 0.0, 1.0)).rgb;
+    float hit = step(into, 0.05) * step(0.5, ct_hash(shot + 5.0)) * p_flash;
+    col = mix(col, 1.0 - col, hit);
+    col *= step(abs(uv.y - 0.5), 0.5 - 0.13 * p_bars);
+    gl_FragColor = vec4(col, 1.0);
 }`
     },
 

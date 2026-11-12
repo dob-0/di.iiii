@@ -83,27 +83,34 @@ export default function RoomWindowScene({ document, spaceId, projectId, followLo
         }
     }
 
+    // The opening shot is set once, before the first render that shows the surface (`aspect` keys it).
+    // eslint-disable-next-line react-hooks/refs
+    const openingView = opening.current
+    const surface = useMemo(() => (
+        <PublicProjectSceneSurface
+            projectId={projectId}
+            spaceId={spaceId}
+            document={sceneDocument}
+            posedEntities={slowLook}
+            title="Room"
+            entryView="scene"
+            navMode="orbit"
+            isPreview
+            liveScreens
+            outputMode
+            initialCameraView={openingView}
+            xrDefaultMode="off"
+            canOfferXrEntry={false}
+            viewsBar={false}
+        />
+    ), [projectId, spaceId, sceneDocument, slowLook, openingView])
+
     return (
         <div ref={boxRef} className="perform-room-box" style={{ position: 'relative', flex: '1 1 auto', width: '100%', minHeight: 0, overflow: 'hidden', background: '#05070a' }}>
             {aspect !== null ? (
                 <div style={{ position: 'absolute', inset: 0 }}>
                     <Suspense fallback={null}>
-                        <PublicProjectSceneSurface
-                            projectId={projectId}
-                            spaceId={spaceId}
-                            document={sceneDocument}
-                            posedEntities={slowLook}
-                            title="Room"
-                            entryView="scene"
-                            navMode="orbit"
-                            isPreview
-                            liveScreens
-                            outputMode
-                            initialCameraView={opening.current}
-                            xrDefaultMode="off"
-                            canOfferXrEntry={false}
-                            viewsBar={false}
-                        />
+                        {surface}
                     </Suspense>
                 </div>
             ) : null}

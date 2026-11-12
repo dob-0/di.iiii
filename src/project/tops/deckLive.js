@@ -54,10 +54,29 @@ export function useDeckLive(projectId, { holdMs = DECK_LIVE_HOLD_MS } = {}) {
         if (!projectId || typeof BroadcastChannel === 'undefined') return undefined
         const channel = new BroadcastChannel(deckLiveChannel(projectId))
         const timers = new Map()
+        // The newest message per deck waits here; the state is set once per frame, not once per message.
+        const newest = new Map()
+        let frame = null
+        const flush = () => {
+            frame = null
+            if (!newest.size) return
+            const entries = [...newest]
+            newest.clear()
+            setLive((current) => {
+                const next = { ...current }
+                for (const [nodeId, entry] of entries) next[nodeId] = entry
+                return next
+            })
+        }
         channel.onmessage = (event) => {
             const data = event?.data
             if (data?.kind !== 'deck' || typeof data.nodeId !== 'string' || !data.deck) return
-            setLive((current) => ({ ...current, [data.nodeId]: { deck: data.deck, at: data.at } }))
+            newest.set(data.nodeId, { deck: data.deck, at: data.at })
+            if (typeof requestAnimationFrame === 'function') {
+                if (frame === null) frame = requestAnimationFrame(flush)
+            } else {
+                flush()
+            }
             clearTimeout(timers.get(data.nodeId))
             timers.set(data.nodeId, setTimeout(() => {
                 timers.delete(data.nodeId)
@@ -71,6 +90,8 @@ export function useDeckLive(projectId, { holdMs = DECK_LIVE_HOLD_MS } = {}) {
         }
         return () => {
             for (const timer of timers.values()) clearTimeout(timer)
+            if (frame !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(frame)
+            newest.clear()
             channel.close()
             setLive({})
         }

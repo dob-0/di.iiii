@@ -81,5 +81,10 @@
  {"control":"scene launch note 86","kind":"note","number":86,"channel":1,"mode":"absolute","type":"button","position":"scene launch 1 (order by Resolume layer-select numbers)","verified":true,"src":"Resolume \"APC 40 MK II.xml\" /composition/layers/1/select"},
  {"control":"scene launch note 85","kind":"note","number":85,"channel":1,"mode":"absolute","type":"button","position":"scene launch 2 (order by Resolume layer-select numbers)","verified":true,"src":"Resolume \"APC 40 MK II.xml\" /composition/layers/2/select"},
  {"control":"scene launch note 84","kind":"note","number":84,"channel":1,"mode":"absolute","type":"button","position":"scene launch 3 (order by Resolume layer-select numbers)","verified":true,"src":"Resolume \"APC 40 MK II.xml\" /composition/layers/3/select"},
- {"control":"stop all clips","kind":"note","number":81,"channel":1,"mode":"absolute","type":"button","position":"stop all clips button","verified":true,"src":"Resolume \"APC 40 MK II.xml\" /composition/disconnectall"}
+ {"control":"stop all clips","kind":"note","number":81,"channel":1,"mode":"absolute","type":"button","position":"stop all clips button","verified":true,"src":"Resolume \"APC 40 MK II.xml\" /composition/disconnectall"},
+ {"control":"bank up","kind":"note","number":94,"channel":1,"mode":"absolute","type":"button","position":"bank select arrow up","verified":false,"src":"Akai APC40 mkII protocol (0x5E); not in the Resolume preset"},
+ {"control":"bank down","kind":"note","number":95,"channel":1,"mode":"absolute","type":"button","position":"bank select arrow down","verified":false,"src":"Akai APC40 mkII protocol (0x5F); not in the Resolume preset"},
+ {"control":"bank right","kind":"note","number":96,"channel":1,"mode":"absolute","type":"button","position":"bank select arrow right","verified":false,"src":"Akai APC40 mkII protocol (0x60); not in the Resolume preset"},
+ {"control":"bank left","kind":"note","number":97,"channel":1,"mode":"absolute","type":"button","position":"bank select arrow left","verified":false,"src":"Akai APC40 mkII protocol (0x61); not in the Resolume preset"},
+ {"control":"bank button","kind":"note","number":103,"channel":1,"mode":"absolute","type":"button","position":"BANK button beside the arrows","verified":false,"src":"Akai APC40 mkII protocol (0x67); not in the Resolume preset"}
 ]

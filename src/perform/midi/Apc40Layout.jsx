@@ -37,7 +37,8 @@ export const APC40_LAYOUT = [
     { id: 'solo', title: 'Track keys, note 49', cells: range(8).map((i) => at('note', 49, i + 1, `S ${i + 1}`, 'button')) },
     { id: 'bypass', title: 'Track keys, note 48', cells: range(8).map((i) => at('note', 48, i + 1, `B ${i + 1}`, 'button')) },
     { id: 'faders', title: 'Faders', cells: [...range(8).map((i) => at('cc', 7, i + 1, `fader ${i + 1}`, 'fader')), at('cc', 14, 1, 'master', 'fader')] },
-    { id: 'other', title: 'Tempo and more', cells: [at('cc', 13, 1, 'tempo', 'encoder'), at('note', 99, 1, 'tap', 'button'), at('note', 90, 1, 'resync', 'button'), at('cc', 47, 1, 'cue level', 'encoder'), at('cc', 15, 1, 'crossfader', 'fader')] }
+    { id: 'other', title: 'Tempo and more', cells: [at('cc', 13, 1, 'tempo', 'encoder'), at('note', 99, 1, 'tap', 'button'), at('note', 90, 1, 'resync', 'button'), at('cc', 47, 1, 'cue level', 'encoder'), at('cc', 15, 1, 'crossfader', 'fader')] },
+    { id: 'bank', title: 'Bank arrows', cells: [at('note', 97, 1, 'left', 'button'), at('note', 96, 1, 'right', 'button'), at('note', 94, 1, 'up', 'button'), at('note', 95, 1, 'down', 'button'), at('note', 103, 1, 'BANK', 'button')] }
 ]
 
 const sameControl = (match, item) => match && match.kind === item.kind && match.number === item.number && (match.channel || 0) === item.channel

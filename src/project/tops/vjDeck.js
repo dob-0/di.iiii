@@ -24,7 +24,7 @@ export const BLEND_MODES = ['Mix', 'Add', 'Screen', 'Multiply', 'Difference', 'S
 // Index order is what top.clip reads.
 export const CLIP_MODES = ['Loop', 'Bounce', 'Once']
 export const DEFAULT_COLUMNS = 6
-export const MAX_COLUMNS = 16
+export const MAX_COLUMNS = 32
 export const MAX_LAYERS = 8
 export const MIN_BPM = 20
 export const MAX_BPM = 300
@@ -77,7 +77,7 @@ export const normalizeClip = (clip) => {
 // become sliders, a colour param a colour input. See PROGRESS.md (the feat-deck-effects entry).
 
 // One of every effect fits on a stack (21 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
-export const MAX_EFFECTS = 21
+export const MAX_EFFECTS = 22
 export const EFFECT_TYPES = {
     'top.level': { main: ['gain', 'brightness', 'gamma'] },
     'top.tint': { main: ['amount', 'bright'] },
@@ -99,7 +99,8 @@ export const EFFECT_TYPES = {
     'top.lookup': { main: ['shadows', 'mids', 'highs', 'amount'] },
     'top.slope': { main: ['strength', 'angle', 'size', 'keep'] },
     'top.glow': { main: ['threshold', 'radius', 'amount'] },
-    'top.depthscan': { main: ['depth', 'bands', 'scan', 'rim', 'haze', 'relief', 'speed', 'invert'] }
+    'top.depthscan': { main: ['depth', 'bands', 'scan', 'rim', 'haze', 'relief', 'speed', 'invert', 'cut', 'flash'] },
+    'top.cuts': { main: ['rate', 'zoom', 'move', 'mirror', 'flash', 'bars'] }
 }
 export const EFFECT_TYPE_IDS = Object.keys(EFFECT_TYPES)
 export const effectLabel = (type) => TOP_OPERATORS[type]?.label || type
@@ -126,6 +127,39 @@ export const normalizeEffects = (raw) => {
     const taken = new Set()
     return raw.map((item) => normalizeEffect(item, taken)).filter(Boolean).slice(0, MAX_EFFECTS)
 }
+
+// A column's LOOK: what its launch also sets on the master's effects, by effect type:
+//   { 'top.depthscan': { on: true, mix: 1, params: { cut: 1, flash: 6 } } }
+// Only the named effects and the named values change; an effect type the master does not carry is skipped.
+const lookOf = (raw) => {
+    if (!isObject(raw)) return null
+    const out = {}
+    for (const [type, patch] of Object.entries(raw)) {
+        if (!Object.prototype.hasOwnProperty.call(EFFECT_TYPES, type) || !isObject(patch)) continue
+        const item = {}
+        if (typeof patch.on === 'boolean') item.on = patch.on
+        if (Number.isFinite(patch.mix)) item.mix = clamp(patch.mix, 0, 1, 1)
+        if (isObject(patch.params)) {
+            const params = Object.fromEntries(Object.entries(patch.params).filter(([, value]) => Number.isFinite(value)))
+            if (Object.keys(params).length) item.params = params
+        }
+        if (Object.keys(item).length) out[type] = item
+    }
+    return Object.keys(out).length ? out : null
+}
+
+const applyLook = (effects, look) => (look
+    ? effects.map((effect) => {
+        const patch = look[effect.type]
+        if (!patch) return effect
+        return {
+            ...effect,
+            on: patch.on ?? effect.on,
+            mix: patch.mix ?? effect.mix,
+            params: patch.params ? resolveTopParams(effect.type, { ...effect.params, ...patch.params }) : effect.params
+        }
+    })
+    : effects)
 
 const layerIdFor = (index) => `layer-${index + 1}`
 
@@ -163,6 +197,8 @@ export const createDeck = ({ layers = 3, columns = DEFAULT_COLUMNS, bpm = DEFAUL
         columns: cols,
         // The light cue (an id from the project's cues) each column also fires; '' = none.
         columnCues: Array.from({ length: cols }, () => ''),
+        // The look each column also sets when it is launched: master effects by type, null = leaves them alone.
+        columnLooks: Array.from({ length: cols }, () => null),
         layers: Array.from({ length: Math.round(clamp(layers, 1, MAX_LAYERS, 3)) }, (_, index) => createLayer(index, cols))
     }
 }
@@ -205,6 +241,7 @@ export const normalizeDeck = (raw) => {
         crossfade: clamp(raw.crossfade, 0, 1, 0.5),
         columns,
         columnCues: Array.from({ length: columns }, (_, column) => cueIdOf(Array.isArray(raw.columnCues) ? raw.columnCues[column] : '')),
+        columnLooks: Array.from({ length: columns }, (_, column) => lookOf(Array.isArray(raw.columnLooks) ? raw.columnLooks[column] : null)),
         layers: layers.length ? layers : createDeck({ columns }).layers
     }
 }
@@ -279,6 +316,7 @@ export const addColumn = (deck) => {
     if (next.columns >= MAX_COLUMNS) return next
     next.columns += 1
     next.columnCues = [...next.columnCues, '']
+    next.columnLooks = [...next.columnLooks, null]
     next.layers = next.layers.map((layer) => ({ ...layer, clips: [...layer.clips, null] }))
     return next
 }
@@ -383,6 +421,15 @@ export const triggerColumn = (deck, column) => {
     next.layers = next.layers.map((layer) => (layer.clips[column]
         ? { ...layer, active: column, trigger: layer.trigger + 1 }
         : { ...layer, active: -1 }))
+    next.effects = applyLook(next.effects, next.columnLooks[column])
+    return next
+}
+
+/** The look a column sets when it is launched (see lookOf), or null for none. A column that is not there changes nothing. */
+export const setColumnLook = (deck, column, look) => {
+    const next = normalizeDeck(deck)
+    if (!Number.isInteger(column) || column < 0 || column >= next.columns) return next
+    next.columnLooks = next.columnLooks.map((item, index) => (index === column ? lookOf(look) : item))
     return next
 }
 

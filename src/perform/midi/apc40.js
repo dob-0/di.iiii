@@ -63,9 +63,28 @@ export const APC40_MAP = [
     bind('tempo knob', 'bpm', {}, { relative: true }),
     bind('tap tempo button', 'tap'),
     bind('resync button', 'hold'),
+    // the bank arrows: right / left = next / previous scene (column), down / up = next / previous bank of 8 under the pads
+    bind('bank right', 'columnNext'),
+    bind('bank left', 'columnPrev'),
+    bind('bank down', 'bankNext'),
+    bind('bank up', 'bankPrev'),
+    bind('bank button', 'bankNext'),
     bind('device knob 1', 'fx', { param: 'mix' }),
     ...range(3).map((i) => bind(`device knob ${i + 2}`, 'fx', { param: i }))
 ]
+
+// BANKS: the deck can hold more columns than the 8 the pads show. Bank n puts columns n*8+1 .. n*8+8 under the pads
+// (clip rows and the column row alike); the track-stop keys keep their own columns.
+const isBankedPad = (entry) => entry?.match?.kind === 'note' && entry.match.number >= 0 && entry.match.number <= 39
+    && (entry.action === 'clip' || entry.action === 'column') && Number.isInteger(entry.args?.column) && entry.args.column < APC40_COLUMNS
+
+/** How many banks of pads a deck with this many columns has (at least 1). */
+export const apc40BankCount = (columns) => Math.max(1, Math.ceil((Number(columns) || 0) / APC40_COLUMNS))
+
+/** The map as bank `bank` (0-based) plays it: every pad's column moved on by 8 per bank. */
+export const apc40Banked = (map, bank) => (bank > 0
+    ? (map || []).map((entry) => (isBankedPad(entry) ? { ...entry, args: { ...entry.args, column: entry.args.column + bank * APC40_COLUMNS } } : entry))
+    : map)
 
 /** Sheet controls the map leaves unbound (free for Learn). */
 export const APC40_FREE = sheet.map((item) => item.control).filter((name) => !APC40_MAP.some((entry) => entry.control === name))
