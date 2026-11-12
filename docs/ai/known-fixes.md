@@ -1944,3 +1944,11 @@ Cause: `refreshMatte` (topEngine.js) stored the picture as seen before knowing t
 Fix: `rememberMatteRun` keeps the picture only after `submit()` returned true; the seen picture is forgotten while the model is not ready.
 Guard: `topEngine.blank.test.js` "rememberMatteRun". Run by CI only. A worker answer of type fail after an accepted submit is not covered.
 Lesson: mark work as done only after the thing that does it confirmed it started.
+
+## 2026-11-12 - One camera opening hid the reason another camera was still failing
+
+Symptom: with two Camera In nodes, camera A failed (not found or blocked) and camera B opened; the caption for A vanished although A was still failing, and came back only on A's next retry failure.
+Cause: `cameraError` in `useTopNetwork.js` was one string for the whole hook, and any camera opening set it to an empty string.
+Fix: the failures are kept per camera node id (`cameraErrors`, `withCameraError`); a camera that opens clears only its own entry, a camera switched off or removed drops its entry, and `cameraError` is the first failure still open. A camera that cannot open still never becomes `error`.
+Guard: `useTopNetwork.camera.test.jsx` "two cameras: the failing one keeps its caption..." (the GUARD test is unchanged). Run by CI only. The view shows one caption, the first open failure, not one per camera.
+Lesson: a value shared by several sources must be keyed by source before any of them may clear it.
