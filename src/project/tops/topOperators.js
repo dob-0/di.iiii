@@ -379,7 +379,10 @@ void main() {
             param('fill', 'Fill', 1, 0, 1),
             toggle('invert', 'Invert'),
             // 0 = flat background colour; 1 = the picture stays around the person, dimmed (the person stands out of the room)
-            param('keep', 'Keep room', 0, 0, 1)
+            param('keep', 'Keep room', 0, 0, 1),
+            // 0 = the model's own mask (small, soft, a little late); 1 = the mask drawn again along the
+            // edges of the live picture, at the picture's own sharpness (docs/architecture/BODY_TRACKING.md)
+            param('refine', 'Fine edge', 0, 0, 1)
         ],
         fragment: `
 uniform sampler2D self;
@@ -392,6 +395,7 @@ uniform float p_shade;
 uniform float p_fill;
 uniform float p_invert;
 uniform float p_keep;
+uniform float p_refine;
 uniform vec3 p_colour;
 uniform vec3 p_back;
 vec3 hueTurn(vec3 c, float turns) {
@@ -407,6 +411,27 @@ float edge(float v) {
     float w = 0.04 + p_soft * 0.42;
     return smoothstep(0.5 - w, 0.5 + w, v);
 }
+// Fine edge: the model answers on a small grid (256 wide inside), so its outline is blocky and a frame or
+// two behind. The live picture (b) is sharp and current. Around this pixel, the mask is averaged only over
+// the neighbours that LOOK like this pixel (same colour = same side of the outline), so the outline moves
+// onto the real edge of the body in the picture. Where the picture has no edge it is a plain smoothing.
+float fine() {
+    vec3 here = texture2D(b, uv).rgb;
+    float sum = person(vec2(0.0)) * 0.5;
+    float wsum = 0.5;
+    float reach = 3.0 + p_refine * 13.0;
+    for (int i = 0; i < 20; i++) {
+        float fi = float(i);
+        float rad = sqrt((fi + 0.5) / 20.0) * reach;
+        float ang = fi * 2.399963;
+        vec2 o = vec2(cos(ang), sin(ang)) * rad;
+        vec3 dc = texture2D(b, uv + o * texel).rgb - here;
+        float w = exp(-dot(dc, dc) / 0.01);
+        sum += person(o) * w;
+        wsum += w;
+    }
+    return sum / wsum;
+}
 float decay() { return p_echo * 0.985; }
 float trailAt(vec2 o) {
     vec2 q = clamp(uv + o * texel, vec2(0.0), vec2(1.0));
@@ -415,7 +440,7 @@ float trailAt(vec2 o) {
 void main() {
     vec3 pic = texture2D(a, uv).rgb;
     if (matte_ready < 0.5) { gl_FragColor = vec4(pic, 0.0); return; }
-    float m = edge(person(vec2(0.0)));
+    float m = edge(p_refine > 0.01 ? fine() : person(vec2(0.0)));
     vec3 back = clamp(hueTurn(p_back, time * p_drift * 0.125), 0.0, 1.0);
     back = mix(back, pic * 0.42, p_keep);
     vec3 body = mix(p_colour, back * 0.55, p_shade);
