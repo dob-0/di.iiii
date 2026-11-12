@@ -362,6 +362,7 @@ export default function SpaceContentsPage({ spaceId }) {
                 spaceAddress={address}
                 isLocalInstall={localInstall.isLocal}
                 hidden={isEmbed}
+                knownProjects={contentsReady ? projects.map((p) => p.id) : null}
             />
 
             <div className="sc-page">

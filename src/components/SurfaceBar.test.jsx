@@ -347,4 +347,49 @@ describe('SurfaceBar on a narrow window', () => {
             expect(screen.getByRole('button', { name: 'More' }).className).toContain('is-here')
         })
     })
+    describe('Nodes at space level opens the space\'s last project', () => {
+        const nodes = (args) => surfaceDestinations({ space: 'lab', ...args }).find(d => d.key === 'raw').href
+
+        it('opens it when the last project belongs to this space', () => {
+            expect(nodes({ lastProject: 'alpha' })).toBe('/lab/raw/projects/alpha')
+        })
+        it('goes to the list when nothing is remembered for this space (another space\'s memory is not passed in)', () => {
+            expect(nodes({ lastProject: null })).toBe('/lab/raw/projects')
+            expect(nodes({})).toBe('/lab/raw/projects')
+        })
+        it('goes to the list when the page knows the space\'s projects and the remembered one is gone', () => {
+            expect(nodes({ lastProject: 'alpha', knownProjects: ['beta'] })).toBe('/lab/raw/projects')
+            expect(nodes({ lastProject: 'alpha', knownProjects: [] })).toBe('/lab/raw/projects')
+        })
+        it('opens it when the page knows the projects and it is one of them, or does not know them yet', () => {
+            expect(nodes({ lastProject: 'alpha', knownProjects: ['alpha', 'beta'] })).toBe('/lab/raw/projects/alpha')
+            expect(nodes({ lastProject: 'alpha', knownProjects: null })).toBe('/lab/raw/projects/alpha')
+        })
+        it('stays on the list when you are on the Nodes surface itself', () => {
+            expect(nodes({ lastProject: 'alpha', here: 'raw' })).toBe('/lab/raw/projects')
+        })
+        it('does not change inside a project, and never changes Studio', () => {
+            expect(nodes({ project: 'p1', lastProject: 'alpha' })).toBe('/lab/raw/projects/p1')
+            expect(surfaceDestinations({ space: 'lab', lastProject: 'alpha' }).find(d => d.key === 'studio').href).toBe('/lab/studio')
+        })
+        it('reads this device\'s memory for the bar\'s own space, and for no other', () => {
+            window.localStorage.setItem('dii.lastProjectBySpace', JSON.stringify({ lab: 'alpha', other: 'zed' }))
+            try {
+                render(<SurfaceBar space="lab" />)
+                expect(hrefFor('Nodes')).toBe('/lab/raw/projects/alpha')
+                document.body.innerHTML = ''
+                render(<SurfaceBar space="fresh" />)
+                expect(hrefFor('Nodes')).toBe('/fresh/raw/projects')
+                document.body.innerHTML = ''
+                render(<SurfaceBar space="lab" knownProjects={['beta']} />)
+                expect(hrefFor('Nodes')).toBe('/lab/raw/projects')
+            } finally {
+                window.localStorage.removeItem('dii.lastProjectBySpace')
+            }
+        })
+        it('leaves Tools and Wiki as they were: they hold a project in the tab, so their Nodes opens it', () => {
+            render(<SurfaceBar here="wiki" space="lab" project="p1" />)
+            expect(hrefFor('Nodes')).toBe('/lab/raw/projects/p1')
+        })
+    })
 })
