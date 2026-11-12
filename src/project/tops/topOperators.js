@@ -666,7 +666,14 @@ void main() {
             param('flash', 'Flash frame', 0.6, 0, 1),
             param('bars', 'Bars', 0, 0, 1),
             param('burst', 'Burst', 0, 0, 1),
-            param('lens', 'Fisheye', 0, 0, 1)
+            param('lens', 'Fisheye', 0, 0, 1),
+            // PRESS values: 1 while a key is held (the deck's fxPress action), 0 otherwise. A scene never sets them.
+            param('hit', 'Press: burst', 0, 0, 1, 1),
+            param('punch', 'Press: punch-in', 0, 0, 1, 1),
+            param('flip', 'Press: flip', 0, 0, 1, 1),
+            param('neg', 'Press: negative', 0, 0, 1, 1),
+            param('strobe', 'Press: strobe', 0, 0, 1, 1),
+            param('black', 'Press: black', 0, 0, 1, 1)
         ],
         // The picture edited like a music video, live. Time is cut into SHOTS (Cuts per second); every shot is one
         // still framing, chosen once at its cut: a size (wide, medium or close: Punch-in), a place in the frame
@@ -685,6 +692,12 @@ uniform float p_flash;
 uniform float p_bars;
 uniform float p_burst;
 uniform float p_lens;
+uniform float p_hit;
+uniform float p_punch;
+uniform float p_flip;
+uniform float p_neg;
+uniform float p_strobe;
+uniform float p_black;
 float ct_hash(float n) { return fract(sin(n * 127.1 + 3.7) * 43758.5453123); }
 void main() {
     float rate = max(p_rate, 0.05);
@@ -692,15 +705,20 @@ void main() {
     float shot = mod(floor(t), 4096.0);
     float into = fract(t) / rate;
     // a burst shot: every other tenth of a second is the B framing, in negative
-    float isBurst = step(ct_hash(shot + 101.0), p_burst);
-    float side = isBurst * mod(floor(into * 10.0), 2.0);
+    // a held burst key is a burst too, whatever the scene: medium shot and close shot intercut
+    float held = step(0.5, p_hit);
+    float isBurst = max(step(ct_hash(shot + 101.0), p_burst), held);
+    float side = isBurst * mod(floor(time * 10.0), 2.0);
     shot += side * 977.0;
-    float size = floor(ct_hash(shot) * 3.0);
-    float z = (1.0 + p_zoom * size * 0.45) * (1.0 + 0.04 * p_zoom * min(into, 4.0));
+    float zoom = max(p_zoom, 0.7 * held);
+    float move = max(p_move, 0.6 * held);
+    float size = mix(floor(ct_hash(shot) * 3.0), 1.0 + side, held);
+    float z = (1.0 + zoom * size * 0.45) * (1.0 + 0.04 * zoom * min(into, 4.0)) * (1.0 + 0.8 * step(0.5, p_punch));
     vec2 room = vec2(0.5 - 0.5 / z);
-    vec2 c = vec2(0.5) + (vec2(ct_hash(shot + 17.0), ct_hash(shot + 43.0)) * 2.0 - 1.0) * room * p_move;
+    vec2 c = vec2(0.5) + (vec2(ct_hash(shot + 17.0), ct_hash(shot + 43.0)) * 2.0 - 1.0) * room * move;
     vec2 p = (uv - 0.5) / z + c;
     if (ct_hash(shot + 71.0) < p_mirror * 0.5) p.x = 1.0 - p.x;
+    if (p_flip > 0.5) p.x = 1.0 - p.x;
     // fisheye: the middle of the frame pushed at the viewer, the corners falling away into black
     vec2 fc = (p - 0.5) * vec2(1.7778, 1.0);
     float fr = dot(fc, fc) * 2.2;
@@ -708,9 +726,87 @@ void main() {
     vec3 col = texture2D(a, clamp(p, 0.0, 1.0)).rgb;
     col *= 1.0 - p_lens * smoothstep(0.62, 1.05, fr);
     float hit = step(into, 0.05) * step(0.5, ct_hash(shot + 5.0)) * p_flash * (1.0 - isBurst);
-    col = mix(col, 1.0 - col, max(hit, side));
+    // negative: a flash frame, the B side of a burst, the held negative key, the held strobe (10 times a second)
+    float inv = max(hit, side);
+    inv = abs(inv - step(0.5, p_neg));
+    inv = abs(inv - step(0.5, p_strobe) * mod(floor(time * 20.0), 2.0));
+    col = mix(col, 1.0 - col, inv);
     col *= step(abs(uv.y - 0.5), 0.5 - 0.13 * p_bars);
+    col *= 1.0 - step(0.5, p_black);
     gl_FragColor = vec4(col, 1.0);
+}`
+    },
+
+    'top.particles': {
+        label: 'Particles',
+        family: 'adjust',
+        inputs: ['a'],
+        // Reads `time` (the dots fly).
+        animated: true,
+        params: [
+            param('size', 'Grain size', 12, 5, 40, 1),
+            param('fly', 'Flying', 0.6, 0, 1),
+            param('reach', 'Reach', 10, 1, 14, 1),
+            param('speed', 'Speed', 0.6, 0.05, 3, 0.05),
+            param('angle', 'Wind', 20, -180, 180, 1),
+            param('dot', 'Dot', 0.42, 0.15, 0.6),
+            param('floor', 'Dark limit', 0.12, 0, 0.9),
+            param('keep', 'Picture under', 0, 0, 1)
+        ],
+        // The picture as grains of dust. Every grain has a home on a grid laid along the wind and takes the
+        // colour and the size of the picture there (dark = no grain, so a white body on black is a body of
+        // grains). Flying: the share of grains that leave home, slowly at first, then with the wind, getting
+        // smaller, and are born again at home. No memory of the last frame: a grain's place is worked out
+        // from the time alone, so nothing smears and a still picture gives the same dust every time.
+        // For each pixel: the grains that could be here now are the ones whose homes lie up-wind, within Reach
+        // cells, in this row or the one beside it (48 candidates; the picture is read only for the near ones).
+        fragment: `
+uniform float p_size;
+uniform float p_fly;
+uniform float p_reach;
+uniform float p_speed;
+uniform float p_angle;
+uniform float p_dot;
+uniform float p_floor;
+uniform float p_keep;
+float pt_hash(vec2 p, float k) { return fract(sin(dot(p, vec2(127.1, 311.7)) + k * 17.31) * 43758.5453123); }
+void main() {
+    // the grid of dots lies along the wind: u runs with it, v across it
+    float ang = p_angle * 0.0174533;
+    vec2 wind = vec2(cos(ang), sin(ang));
+    vec2 across = vec2(-wind.y, wind.x);
+    vec2 px = uv / texel;
+    vec2 g = vec2(dot(px, wind), dot(px, across)) / p_size;
+    vec2 cellAt = floor(g);
+    float reach = floor(p_reach + 0.5);
+    float aa = 1.2 / p_size;
+    vec3 col = vec3(0.0);
+    float cover = 0.0;
+    for (int j = -1; j <= 1; j++) {
+        for (int k = -1; k <= 14; k++) {
+            float fk = float(k);
+            if (fk > reach) break;
+            vec2 cell = cellAt + vec2(-fk, float(j));
+            // where this dot lives, and whether it is one of the dots that fly
+            vec2 home = cell + 0.5 + (vec2(pt_hash(cell, 1.0), pt_hash(cell, 2.0)) - 0.5) * 0.6;
+            float flies = step(pt_hash(cell, 3.0), p_fly);
+            float age = flies * fract(time * p_speed * (0.5 + pt_hash(cell, 4.0)) + pt_hash(cell, 5.0));
+            // it leaves slowly and gathers speed, like dust taken by the wind
+            vec2 pos = home + vec2(reach * age * age, (pt_hash(cell, 6.0) - 0.5) * 1.6 * age);
+            float d = length(g - pos);
+            if (d > 0.62) continue;
+            vec2 at = (wind * home.x + across * home.y) * p_size * texel;
+            if (at.x < 0.0 || at.x > 1.0 || at.y < 0.0 || at.y > 1.0) continue;
+            vec3 src = texture2D(a, at).rgb;
+            float l = dot(src, vec3(0.299, 0.587, 0.114));
+            float lit = smoothstep(p_floor, p_floor + 0.08, l);
+            float r = p_dot * sqrt(clamp(l, 0.0, 1.0)) * (1.0 - 0.55 * age);
+            float m = (1.0 - smoothstep(r - aa, r + aa, d)) * lit * (1.0 - age * age);
+            if (m > cover) { cover = m; col = src / max(max(src.r, max(src.g, src.b)), 0.001) * max(l, 0.75); }
+        }
+    }
+    vec3 under = texture2D(a, uv).rgb * p_keep;
+    gl_FragColor = vec4(mix(under, col, cover), 1.0);
 }`
     },
 

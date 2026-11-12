@@ -34,6 +34,7 @@ import {
     tapTempo,
     trigger,
     triggerColumn,
+    setMasterParam,
     updateClip
 } from '../../project/tops/vjDeck.js'
 
@@ -84,7 +85,10 @@ export const ACTIONS = {
     columnPrev: { args: [], button: true },
     // The next / previous BANK of 8 columns under the pads; the console owns that choice (ctx.onBank).
     bankNext: { args: [], button: true },
-    bankPrev: { args: [], button: true }
+    bankPrev: { args: [], button: true },
+    // A PRESS: while the key is held one value of a master effect is 1, on release 0 (args { type, param }).
+    // The Cuts effect has the values made for it: burst, punch-in, flip, negative, strobe, black.
+    fxPress: { args: [], button: false }
 }
 
 /** The column the deck is on: the one most layers play (the lower layer wins a tie), -1 when nothing plays. */
@@ -327,6 +331,10 @@ const run = (deck, control, entry, ctx) => {
             return triggerColumn(base, to)
         }
         case 'bankNext': ctx.onBank?.(1); return deck
+        case 'fxPress':
+            return typeof args.type === 'string' && typeof args.param === 'string'
+                ? setMasterParam(base, args.type, args.param, control.press ? 1 : 0)
+                : deck
         case 'bankPrev': ctx.onBank?.(-1); return deck
         case 'tap': {
             // The view owns the clock (the show clock, or the deck's own taps).
@@ -506,6 +514,10 @@ export const ledColour = (deck, entry, ctx = {}) => {
         case 'solo': return layer?.solo ? 'green' : null
         case 'side': return layer?.side === 'a' ? 'amber' : layer?.side === 'b' ? 'green' : null
         case 'fxLayer': return Number.isInteger(ctx.fx?.layer) && ctx.fx.layer === args.layer ? 'green' : null
+        case 'fxPress': {
+            const held = base.effects.find((effect) => effect.type === args.type)
+            return held ? (Number(held.params?.[args.param]) > 0 ? 'green' : 'amber') : null
+        }
         case 'fxToggle': {
             if (!Number.isInteger(ctx.fx?.layer) || !Number.isInteger(args.slot)) return null
             const effect = stackFor(base, ctx.fx.layer)[args.slot]
@@ -597,6 +609,7 @@ export const describeAction = (entry, ctx = {}) => {
         case 'columnPrev': return 'Previous scene'
         case 'bankNext': return 'Next bank'
         case 'bankPrev': return 'Previous bank'
+        case 'fxPress': return `Hold: ${String(args.param || '').toUpperCase()}`
         case 'fx': {
             if (args.layer === undefined && args.effect === undefined && Number.isInteger(ctx.fxEffect)) {
                 const name = `FX ${ctx.fxEffect + 1}`

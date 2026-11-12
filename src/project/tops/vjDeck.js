@@ -77,7 +77,7 @@ export const normalizeClip = (clip) => {
 // become sliders, a colour param a colour input. See PROGRESS.md (the feat-deck-effects entry).
 
 // One of every effect fits on a stack (21 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
-export const MAX_EFFECTS = 22
+export const MAX_EFFECTS = 23
 export const EFFECT_TYPES = {
     'top.level': { main: ['gain', 'brightness', 'gamma'] },
     'top.tint': { main: ['amount', 'bright'] },
@@ -100,7 +100,8 @@ export const EFFECT_TYPES = {
     'top.slope': { main: ['strength', 'angle', 'size', 'keep'] },
     'top.glow': { main: ['threshold', 'radius', 'amount'] },
     'top.depthscan': { main: ['depth', 'bands', 'scan', 'rim', 'haze', 'relief', 'speed', 'invert', 'cut', 'flash', 'tone', 'hud', 'sensor'] },
-    'top.cuts': { main: ['rate', 'zoom', 'move', 'mirror', 'flash', 'bars', 'burst', 'lens'] }
+    'top.cuts': { main: ['rate', 'zoom', 'move', 'mirror', 'flash', 'bars', 'burst', 'lens'] },
+    'top.particles': { main: ['size', 'fly', 'reach', 'speed', 'angle', 'dot', 'floor', 'keep'] }
 }
 export const EFFECT_TYPE_IDS = Object.keys(EFFECT_TYPES)
 export const effectLabel = (type) => TOP_OPERATORS[type]?.label || type
@@ -135,6 +136,20 @@ const lookOf = (raw) => {
     if (!isObject(raw)) return null
     const out = {}
     for (const [type, patch] of Object.entries(raw)) {
+        // `layers`: the level and the blend a layer takes with the scene, by layer name ("BODY"):
+        //   { layers: { BODY: { opacity: 1, blend: '4' } } }
+        if (type === 'layers' && isObject(patch)) {
+            const layers = {}
+            for (const [name, value] of Object.entries(patch)) {
+                if (!isObject(value)) continue
+                const item = {}
+                if (Number.isFinite(value.opacity)) item.opacity = clamp(value.opacity, 0, 1, 1)
+                if (value.blend !== undefined) item.blend = choiceOf(value.blend, BLEND_MODES.length)
+                if (Object.keys(item).length) layers[name] = item
+            }
+            if (Object.keys(layers).length) out.layers = layers
+            continue
+        }
         if (!Object.prototype.hasOwnProperty.call(EFFECT_TYPES, type) || !isObject(patch)) continue
         const item = {}
         if (typeof patch.on === 'boolean') item.on = patch.on
@@ -160,6 +175,9 @@ const applyLook = (effects, look) => (look
         }
     })
     : effects)
+
+// "3 CAM" -> "CAM": a look names a layer without its number.
+const plainLayerName = (name) => String(name || '').replace(/^\s*\d+\s*[.:)-]?\s+/, '').trim()
 
 const layerIdFor = (index) => `layer-${index + 1}`
 
@@ -425,7 +443,23 @@ export const triggerColumn = (deck, column) => {
     next.layers = next.layers.map((layer) => (layer.clips[column]
         ? { ...layer, active: column, trigger: layer.trigger + 1 }
         : { ...layer, active: -1 }))
-    next.effects = applyLook(next.effects, next.columnLooks[column])
+    const look = next.columnLooks[column]
+    next.effects = applyLook(next.effects, look)
+    if (look?.layers) {
+        next.layers = next.layers.map((layer) => {
+            const patch = look.layers[plainLayerName(layer.name)]
+            return patch ? { ...layer, ...patch } : layer
+        })
+    }
+    return next
+}
+
+/** One value of one master effect, by effect type (a key held on a controller sets it to 1, its release to 0). */
+export const setMasterParam = (deck, type, key, value) => {
+    const next = normalizeDeck(deck)
+    next.effects = next.effects.map((effect) => (effect.type === type
+        ? { ...effect, params: resolveTopParams(effect.type, { ...effect.params, [key]: value }) }
+        : effect))
     return next
 }
 
