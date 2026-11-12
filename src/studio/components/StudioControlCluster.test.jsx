@@ -248,7 +248,7 @@ describe('a page project (pageOnly)', () => {
     })
 })
 
-// The number keys 1-9 fire cues and change the real room; the cluster says so and turns them off.
+// The number keys 1-9 fire cues and change the real lights, laser and wall; the cluster says so and turns them off.
 describe('the Keys 1-9 row and chip', () => {
     const keyed = [{ id: 'c1', name: 'Open', key: '3' }]
     const unkeyed = [{ id: 'c2', name: 'Blackout' }, { id: 'c3', name: 'Odd', key: 'x' }]

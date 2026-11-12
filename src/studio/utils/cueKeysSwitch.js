@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 // THE NUMBER KEYS' ONE SWITCH. In Studio a bare 1-9 fires the cue bound to that digit (useStudioCues), and firing a cue changes the real
-// room: the lights, and a laser or wall look where the cue carries one. That is on by design, so this switch defaults to ON and only
+// lights, and a laser or wall look where the cue carries one. That is on by design, so this switch defaults to ON and only
 // lets a person turn it off. Kept on this device in localStorage; every storage call is guarded: a failed read means ON (today's
 // behaviour), a failed write keeps the value in memory for this page.
 export const CUE_KEYS_STORAGE_KEY = 'di-studio-cue-keys'

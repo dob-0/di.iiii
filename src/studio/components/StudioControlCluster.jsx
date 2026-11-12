@@ -93,7 +93,7 @@ export default function StudioControlCluster({
     allToolsHint = null,
 }) {
     const [collapsed, setCollapsed] = useState(false)
-    // The number keys 1-9 fire the cue bound to that digit, and that changes the real room; this row says so and turns them off.
+    // The number keys 1-9 fire the cue bound to that digit, and that changes the real lights, laser and wall; this row says so and turns them off.
     const cueKeysOn = useCueKeysOn()
     const hasKeyedCue = Array.isArray(cues) && cues.some((cue) => isCueKey(cue?.key))
     const keysTitle = 'Number keys 1-9 fire this project\'s cues: the real lights, and a laser or wall look where a cue has one'
