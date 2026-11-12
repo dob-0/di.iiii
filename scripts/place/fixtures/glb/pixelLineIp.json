@@ -1,0 +1,41 @@
+{
+  "kind": "pixelLineIp",
+  "code": "ACME-PIXEL-LINE-IP",
+  "glb": "pixelLineIp.glb",
+  "builtBy": "scripts/place/fixtures/build_fixtures.py",
+  "scriptSha256": "d24dc54e4aa3634edb1489c36d5c02c0d3d86690a4b96c6a85e8ec7b72f07e16",
+  "blender": "5.2.3 LTS",
+  "archetype": "led-bar",
+  "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+  "lensY": 0.126,
+  "motion": "none",
+  "aimedByHand": true,
+  "cells": 16,
+  "parts": [
+    "Base",
+    "Head",
+    "Lens"
+  ],
+  "sizeAtHome_mm": {
+    "width_x": 1000,
+    "depth_z": 92,
+    "height_y": 126
+  },
+  "triangles": {
+    "Base": 72,
+    "Head": 104,
+    "Lens": 192,
+    "total": 368
+  },
+  "datasheetSize_mm": [
+    1000,
+    90,
+    124
+  ],
+  "deviationFromDatasheet_pct": [
+    2.2,
+    1.6,
+    0.0
+  ],
+  "comparedParts": "all"
+}

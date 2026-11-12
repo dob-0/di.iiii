@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const barProps = []
-vi.mock('../components/SurfaceBar.jsx', () => ({ default: (props) => { barProps.push(props); return null } }))
+vi.mock('../components/SurfaceBar.jsx', () => ({ default: (props) => { barProps.push(props); return props.children ?? null } }))
 const session = { sandboxSpaceId: null }
 vi.mock('../hooks/useAuthSession.js', () => ({ default: () => session }))
 vi.mock('./kitWeights.json', () => ({
@@ -119,5 +119,16 @@ describe('the Kit page bar keeps the project', () => {
         expect(barProps.at(-1)).toMatchObject({ space: 'lab', project: 'show' })
         window.sessionStorage.clear()
     })
-})
 
+    it('G4: with a last project the bar carries Desk | Perform pointing at it; without one, nothing', () => {
+        window.sessionStorage.clear()
+        const empty = render(<KitPage />)
+        expect(empty.container.querySelector('.sbar-switch')).toBeNull()
+        empty.unmount()
+        window.sessionStorage.setItem('dii.lastProject', JSON.stringify({ space: 'lab', project: 'show' }))
+        const { container } = render(<KitPage />)
+        expect(container.querySelector('.sbar-switch a[href="/lab/perform/show?from=raw"]')).toBeTruthy()
+        expect(container.querySelector('.sbar-switch [aria-current]')).toBeNull()
+        window.sessionStorage.clear()
+    })
+})

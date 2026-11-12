@@ -1,0 +1,188 @@
+{
+ "kind": "magmaPrime",
+ "code": "MAGMATIC-MAGMA-PRIME",
+ "maker": "Magmatic Effects (Elation Professional B.V.)",
+ "model": "Magma Prime",
+ "manual": {
+  "url": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf",
+  "date": "(no date in the file)",
+  "read": "2026-11-11, pdftotext p12, p14, p16",
+  "basis": "EXACT"
+ },
+ "howToRead": "value ranges are [from, to, meaning] parsed from the maker's own text (`text` is that text, verbatim); `role` is di's role; `cap` / `default` only where the manual's range supports them (others are owed). Every mode here is read from the maker's manual (EXACT).",
+ "modes": {
+  "1": {
+   "status": "EXACT",
+   "name": "1 CH",
+   "note": "Reading of the table layout, not of a sentence; confirm on the unit.",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Output volume (as laid out in the 1 CH column of the table; the table prints the '1' beside OUTPUT VOLUME)",
+     "role": "volume",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14"
+    }
+   ],
+   "src": "magmatic-magma-prime/manual.pdf p14, p12 (DMX Mode 1/3/5)"
+  },
+  "3": {
+   "status": "EXACT",
+   "name": "3 CH",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Fog output",
+     "role": "fog",
+     "text": "000-005 off; 006-255 on",
+     "ranges": [
+      [
+       0,
+       5,
+       "off"
+      ],
+      [
+       6,
+       255,
+       "on"
+      ]
+     ],
+     "page": "p14"
+    },
+    {
+     "ch": 2,
+     "function": "Output volume",
+     "role": "volume",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14"
+    },
+    {
+     "ch": 3,
+     "function": "Fan",
+     "role": "fan",
+     "text": "0-255 = 20%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "20%-100%"
+      ]
+     ],
+     "page": "p14"
+    }
+   ],
+   "src": "magmatic-magma-prime/manual.pdf p14"
+  },
+  "5": {
+   "status": "EXACT",
+   "name": "5 CH",
+   "note": "LARGEST",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Fog output",
+     "role": "fog",
+     "text": "000-005 off; 006-255 on",
+     "ranges": [
+      [
+       0,
+       5,
+       "off"
+      ],
+      [
+       6,
+       255,
+       "on"
+      ]
+     ],
+     "page": "p14"
+    },
+    {
+     "ch": 2,
+     "function": "Output volume",
+     "role": "volume",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p14"
+    },
+    {
+     "ch": 3,
+     "function": "Fan",
+     "role": "fan",
+     "text": "0-255 = 20%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "20%-100%"
+      ]
+     ],
+     "page": "p14"
+    },
+    {
+     "ch": 4,
+     "function": "Output duration",
+     "role": "duration",
+     "text": "000-005 no duration; 006-255 = 1 s - 250 s",
+     "ranges": [
+      [
+       0,
+       5,
+       "no duration"
+      ],
+      [
+       6,
+       255,
+       "1 s - 250 s"
+      ]
+     ],
+     "page": "p14"
+    },
+    {
+     "ch": 5,
+     "function": "Interval",
+     "role": "interval",
+     "text": "000-005 no interval; 006-255 = 10 s - 2500 s",
+     "ranges": [
+      [
+       0,
+       5,
+       "no interval"
+      ],
+      [
+       6,
+       255,
+       "10 s - 2500 s"
+      ]
+     ],
+     "page": "p14"
+    }
+   ],
+   "src": "magmatic-magma-prime/manual.pdf p14"
+  }
+ },
+ "owed": [
+  "which fluid the rental holds",
+  "confirm the 1 CH function on the unit"
+ ]
+}

@@ -22,7 +22,7 @@ const KIND = { videoinput: 'camera', audioinput: 'mic', audiooutput: 'speaker' }
 // leash and every failure is swallowed. Silence here is the ordinary case.
 const NDI_TIMEOUT_MS = 1500
 
-const readNdiSources = async () => {
+export const readNdiSources = async () => {
     const controller = typeof AbortController === 'function' ? new AbortController() : null
     const timer = setTimeout(() => controller?.abort(), NDI_TIMEOUT_MS)
     try {

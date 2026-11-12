@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { TYPE_LIBRARY } from './types/index.js'
-import { keyRows, lampNotation, meaningfulColour, shapePath, symbolTable } from './plotSymbols.js'
+import { SHAPES, keyRows, lampNotation, meaningfulColour, shapePath, symbolTable } from './plotSymbols.js'
 
 const types = TYPE_LIBRARY.types
 
@@ -65,5 +65,12 @@ describe('notation and colour', () => {
         expect(keyRows({ rows, types, table }).map((k) => [k.code, k.n, k.mode, k.shape])).toEqual([
             ['UP-B380F', 1, '16ch', 'circle'], ['UP-250BSW', 2, '24ch', 'square'], ['UP-PL5403', 1, 'mode owed', 'bar']
         ])
+    })
+})
+
+describe('every outline can be drawn', () => {
+    it('each shape has its own path (none falls back to the cross)', () => {
+        const paths = SHAPES.map((sh) => shapePath(sh, 0, 0, 1))
+        expect(new Set(paths).size).toBe(SHAPES.length)
     })
 })

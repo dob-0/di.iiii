@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createTopEngine } from './topEngine.js'
 import { TOP_OPERATORS, resolveTopParams, runsHere, sendsOut } from './topOperators.js'
 import { topThumbnailGroups, topThumbnailsFor } from './topThumbnails.js'
 import { createThumbnailScheduler } from './thumbnailPlan.js'
 import { openSharedCamera } from './cameraPool.js'
+import { applySourcesOff, cameraNodeSourceKey, getSourcesOff, subscribeSourcesOff } from './sourceSwitch.js'
 import { DECK_INPUTS, VJ_DECK_TYPE, expandDecks, isPictureType } from './vjDeck.js'
 import { useClipVideos } from './useClipVideos.js'
 import { acquireMachineLink, machinesIn, runnerOn } from './machineLink.js'
@@ -127,10 +128,17 @@ const EMPTY = { nodes: [], wires: [] }
  * @param {string} [options.projectId]        the project those files belong to
  */
 export function useTopNetwork({
-    network = EMPTY, spaceId = '', canvas = null, show = null, thumbnails = false, onMeasure = null,
+    network: networkIn = EMPTY, spaceId = '', canvas = null, show = null, thumbnails = false, onMeasure = null,
     assets = null, projectId = null, width = 640, height = 360
 }) {
+    // Sources the person switched off on this computer (sourceSwitch.js): nothing off, the same network object.
+    const sourcesOff = useSyncExternalStore(subscribeSourcesOff, getSourcesOff)
+    const network = useMemo(() => applySourcesOff(networkIn, sourcesOff), [networkIn, sourcesOff])
     const [error, setError] = useState('')
+    // A camera that cannot open is NOT a fault of the picture: the output stays up and the camera's
+    // clip is transparent (topEngine.js blankRule). The reason is reported per node (reportTop) and
+    // returned here for a screen that wants to say it, never as `error`, which replaces the picture.
+    const [cameraError, setCameraError] = useState('')
     const [link, setLink] = useState(null)
     const [linkView, setLinkView] = useState({ machine: null, peers: [] })
     const engineRef = useRef(null)
@@ -386,8 +394,10 @@ export function useTopNetwork({
     const cameraKey = useMemo(
         () => JSON.stringify(split.local
             .filter((node) => TOP_OPERATORS[node.type].source === 'camera')
-            .map((node) => [node.id, node.values.device || '', node.values.deviceLabel || '', scriptsAllowed ? (node.values.__script || '') : ''])),
-        [split, scriptsAllowed]
+            // A fifth entry only for a camera that is switched off: the key of a deck with nothing off is unchanged.
+            .map((node) => [node.id, node.values.device || '', node.values.deviceLabel || '', scriptsAllowed ? (node.values.__script || '') : '',
+                ...(sourcesOff.has(cameraNodeSourceKey(node)) ? [true] : [])])),
+        [split, scriptsAllowed, sourcesOff]
     )
     // Constraints change a running camera in place — no re-open, no black frame.
     const constraintsKey = useMemo(
@@ -415,7 +425,10 @@ export function useTopNetwork({
     }, [constraintsKey])
     useEffect(() => {
         const cameras = JSON.parse(cameraKey)
-        const ids = cameras.map(([id]) => id)
+        // A camera that is off is closed by the loop below (its key changed) and never opened: it is a
+        // choice, so no error is reported for it and nothing is retried.
+        const ids = cameras.filter((camera) => camera[4] !== true).map(([id]) => id)
+        const offIds = cameras.filter((camera) => camera[4] === true).map(([id]) => id)
         // Per camera: close what is gone or changed (or whose engine was replaced and so knows
         // no video); an unchanged camera stays open and is not touched.
         const live = liveCamerasRef.current
@@ -427,12 +440,14 @@ export function useTopNetwork({
             tracksRef.current.delete(id)
             live.delete(id)
         }
+        for (const id of offIds) reportTop(id, { camera: { error: null, errorName: null, blocked: false } })
+        if (offIds.length && !ids.length) setCameraError('')
         if (!ids.length) return undefined
         const media = globalThis.navigator?.mediaDevices
         if (!media?.getUserMedia) {
             const refusal = cameraRefusal({ secure: globalThis.isSecureContext !== false, hasApi: false })
             for (const id of ids) reportTop(id, { camera: { error: refusal, blocked: true } })
-            setError(refusal)
+            setCameraError(refusal)
             return undefined
         }
         let cancelled = false
@@ -447,11 +462,12 @@ export function useTopNetwork({
         const again = new Set()
         const permission = { asked: false }
         const failed = (id, caught) => {
+            if (caught?.name === 'SourceOff') return // switched off (cameraPool.js): a choice, not a fault
             const errorName = caught?.name || 'Error'
             const camera = caught instanceof CameraNotFoundError ? caught.camera : null
             const refusal = camera ? `Camera "${camera}" not found.` : cameraRefusal({ errorName })
             reportTop(id, { camera: { error: refusal, errorName, blocked: true } })
-            setError(refusal)
+            setCameraError(refusal)
             if (!cameraRetryable(errorName)) return
             const attempt = attempts.get(id) || 0
             attempts.set(id, attempt + 1)
@@ -563,5 +579,5 @@ export function useTopNetwork({
         live.clear()
     }, [])
 
-    return { error, machine: linkView.machine, peers: linkView.peers }
+    return { error, cameraError, machine: linkView.machine, peers: linkView.peers }
 }

@@ -152,6 +152,8 @@ vi.mock('../map/useMapDocument.js', () => {
     return {
         mapChannelName: (id) => `map-${id}`,
         useMapChannelListener: noop,
+        // RawEditor reads the map's cue actions through useMapApi (a column fires its light cue).
+        useMapApi: () => ({ fireCue: noop }),
         useMapDocument: () => ({
             document, mapping, surfaces: [], syncState: null, store: {}, applyOps: noop,
             addSurface: noop, updateSurface: noop, deleteSurface: noop, reorderSurfaces: noop, setOutput: noop,

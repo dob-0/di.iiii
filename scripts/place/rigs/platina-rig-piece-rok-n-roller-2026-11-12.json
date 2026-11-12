@@ -1,0 +1,5830 @@
+{
+ "version": "3.1",
+ "title": "Platina - Live in Yerevan: the 30 s light piece",
+ "date": "2026-11-12",
+ "what": "v3.1: 7 scenes (Platina: the 30 s light piece to the opening of the track (N3752), v3 scenes cut to the measured times)",
+ "written_by": "scripts/place/rig_generate.py",
+ "generated_by": {
+  "tool": "scripts/place/platina_rig.py",
+  "plan": "scripts/place/rigs/platina-2026-11-11.patch.json",
+  "plot_dir": "/home/dob/work/di.iiii-platina/spaces/platina/assets",
+  "pictures": {
+   "front": "plot-front.png (11-10 light plot, front view, 1654x1170 px)",
+   "top": "plot-top.png (11-10 light plot, top view, 1654x1170 px)",
+   "side": "plot-side.png (11-10 light plot, side view, 1654x1170 px)"
+  }
+ },
+ "camera": {
+  "exposure": 0.1,
+  "basis": "MEASURED 2026-11-11: GPU sweep 1 / 0.3 / 0.1 / 0.03 on cues 12 and 18 against the look pictures inside the offer (PLATINA_EH-YVN_14-11-26_OFFER_2.xlsx)"
+ },
+ "schema": "the MOXIR rig schema (moxir-v2-12-2026-10-17.json: fixtures[{id,type,p,r,angle_rad,dmx,status}] + solids[{id,name,kind,p,r,s}]) plus: per item status (measured / from-plan-words / PROPOSED), source, profile (stand-in), size_m, group (the patch plan's select.group)",
+ "frame": "metres, Y up from the AUDIENCE floor (stage deck top at y = 0.6), +x = the audience's right, +z toward the audience, z = 0 the screen's middle plane, x = 0 the axis of the 8 pixel towers. Rotation three.js Euler XYZ radians: an unrotated beam points -Y (down); [pi,0,0] points up; [-pi/2,0,0] points +z. p = the middle of the lamp body; box solids base-anchored (p.y = the base), truss p = the middle of the section.",
+ "method": "scripts/place/platina_rig.py: grid pitch per picture from the light-grey lines; one square = 1 m, proved on standard parts (see calibration); colour blobs and dark-line edges against the grid; numbers rounded to 1 cm (a drawing px is 1.0-1.3 cm, the symbols are split by drawn lines: positions are good to about 0.05 m).",
+ "calibration": {
+  "px_per_m": {
+   "front_px_per_m": 100.725,
+   "top_px_per_m": 76.453125,
+   "side_px_per_m": 123.41176470588235
+  },
+  "grid_lines_used": {
+   "front": 20,
+   "top": 32,
+   "side": 17
+  },
+  "proofs_m": {
+   "front_truss_len_m": 8.11,
+   "top_truss_over_len_m": 7.98,
+   "top_truss_aud_len_m": 7.98,
+   "front_bar_stack_m": 3.03,
+   "side_bar_stack_m": 3.01,
+   "front_screen_w_m": 4.01,
+   "front_screen_h_m": 2.5,
+   "top_screen_w_m": 4.04,
+   "side_truss_section_m": 0.4,
+   "person_side_m": 1.73
+  },
+  "reading": "truss 4 x 2 m = 8.0; 3 stacked bars = 3.0; screen 4.0 x 2.5; the drawn person 1.74 m: all within 0.1 m of 1 m per square in all three views"
+ },
+ "kit": {
+  "cp-aleda-beye-k10": 8,
+  "cp-hy-beye-k15": 8,
+  "acme-xp16r-bsw": 12,
+  "acme-pixel-line-ip": 24,
+  "magmatic-magma-prime": 2
+ },
+ "kit_note": "counts of the offer (rental list scripts/rigbuild/rentals/platina-2026-11-11.json, offer of 2026-11-11); no prices are kept here",
+ "screen": {
+  "solid": "platina-screen",
+  "cabinets": "8 x 5 of 0.5 m, 128 px each = 1024 x 640 px (16:10)",
+  "status": "measured from the drawing, NOT confirmed by the Platina side (ask the screen crew)"
+ },
+ "axis_note": {
+  "screen_centre_x_m": -0.04,
+  "truss_over_centre_x_m": -0.14,
+  "why": "the plot is not exactly symmetric: the screen and the trusses sit 0.03-0.1 m left of the tower axis; kept as drawn"
+ },
+ "profiles": {
+  "library": "src/rigbuild/types/library (UP-*, EXT-*) and scripts/place/fixtures/fixtures.json kinds; none of the five Platina types has its own profile",
+  "missing": {
+   "cp-aleda-beye-k10": {
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "cp-hy-beye-k15": {
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "acme-xp16r-bsw": {
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
+   },
+   "acme-pixel-line-ip": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "magmatic-magma-prime": {
+    "library": "magmatic-magma-prime",
+    "basis": "EXACT",
+    "why": "the real hazer: fluid consumption from its manual",
+    "size_mm": [
+     338,
+     160,
+     400
+    ],
+    "weight_kg": 10.2,
+    "power_w": 700,
+    "fluid_ml_per_min": {
+     "value": 3.4,
+     "src": "MAGMA-MAN",
+     "basis": "EXACT"
+    }
+   }
+  },
+  "note": "a stand-in is only for geometry/optics in the visualiser; names and DMX modes come from the patch plan. Nothing here is invented as a maker profile."
+ },
+ "plot_only": {
+  "k10_audience_side": {
+   "count": 3,
+   "x_m": [
+    -2.68,
+    -0.02,
+    2.61
+   ],
+   "z_m": 8.17,
+   "status": "measured, NOT in the offer, not built, not patched"
+  },
+  "sharpy": {
+   "count": 7,
+   "x_m": [
+    -3.13,
+    -2.1,
+    -1.08,
+    -0.08,
+    0.93,
+    1.97,
+    2.95
+   ],
+   "status": "measured, NOT in the offer; their slots are used by 7 of the PROPOSED XP-16R"
+  }
+ },
+ "patch": {
+  "plan": "scripts/place/rigs/platina-2026-11-11.patch.json",
+  "universes": 11,
+  "units": 54,
+  "status": "PROPOSED, not confirmed by the rental side"
+ },
+ "solids": [
+  {
+   "id": "platina-screen",
+   "name": "LED screen 4.01 x 2.5 m (P3.9 cabinets 0.5 m: 8 x 5 = 1024 x 640 px; the file name says 8 x 5, the drawing gives 8 x 5 cabinets)",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    -0.04,
+    1.42,
+    0.0
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    4.01,
+    2.5,
+    0.1
+   ],
+   "source": "plot-front.png outline x 610..1014, y 438..690 on grid 1 m; plot-side.png faces x 451/463 (thickness), bottom y 741; screen-from-plot-8x5.png (same size)"
+  },
+  {
+   "id": "platina-truss-over",
+   "name": "over-stage truss 7.98 m (4 sections x 2 m), square section 0.38 m, the 11-10 plan's \"over-stage truss\"",
+   "kind": "truss",
+   "status": "measured",
+   "p": [
+    -0.14,
+    6.75,
+    2.17
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    7.98,
+    0.38,
+    0.38
+   ],
+   "sections": 4,
+   "source": "x/length plot-top.png (y 385, x 518..1128, grid 76.4 px/m), cross-check plot-front.png length; z and height plot-side.png (square at x 700..742, y 62..102)"
+  },
+  {
+   "id": "platina-truss-aud",
+   "name": "audience-side truss 7.98 m (4 sections), the 11-10 plan's \"audience-side truss\"; the plot hangs 3 K10 here that are NOT in the 11-11 offer",
+   "kind": "truss",
+   "status": "measured",
+   "p": [
+    -0.05,
+    6.75,
+    8.03
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    7.98,
+    0.38,
+    0.38
+   ],
+   "sections": 4,
+   "source": "plot-top.png y 860, x 525..1135; z and height plot-side.png (square at x 1425..1463)"
+  },
+  {
+   "id": "platina-deck",
+   "name": "stage deck 0.6 m high; bounding box, the front edge is an arc (see outline)",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    -0.04,
+    0.0,
+    2.65
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    14.0,
+    0.6,
+    7.2
+   ],
+   "outline_xz": [
+    [
+     -7.01,
+     5.34
+    ],
+    [
+     0.0,
+     6.23
+    ],
+    [
+     6.95,
+     5.34
+    ]
+   ],
+   "outline_note": "front arc through its two ends and its middle (plot-top.png y 645 at x 298/1365, y 713 at x 832)",
+   "source": "plot-front.png deck x 107..1517, deck height 0.62 m (front) / 0.59 m (side), z plot-side.png 339..1228"
+  },
+  {
+   "id": "platina-wing-l1",
+   "name": "wing panel (unlabelled tall box on the plot) L1",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    -5.33,
+    0.0,
+    0.09
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.01,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834"
+  },
+  {
+   "id": "platina-wing-r1",
+   "name": "wing panel (unlabelled tall box on the plot) R1",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    5.33,
+    0.0,
+    0.09
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.01,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked"
+  },
+  {
+   "id": "platina-wing-l2",
+   "name": "wing panel (unlabelled tall box on the plot) L2",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    -6.01,
+    0.0,
+    1.26
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.25,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834"
+  },
+  {
+   "id": "platina-wing-r2",
+   "name": "wing panel (unlabelled tall box on the plot) R2",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    6.01,
+    0.0,
+    1.26
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.25,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked"
+  },
+  {
+   "id": "platina-wing-l3",
+   "name": "wing panel (unlabelled tall box on the plot) L3",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    -6.71,
+    0.0,
+    2.82
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.28,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834"
+  },
+  {
+   "id": "platina-wing-r3",
+   "name": "wing panel (unlabelled tall box on the plot) R3",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    6.71,
+    0.0,
+    2.82
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.28,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked"
+  },
+  {
+   "id": "platina-wing-l4",
+   "name": "wing panel (unlabelled tall box on the plot) L4",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    -7.09,
+    0.0,
+    4.24
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    1.5,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834"
+  },
+  {
+   "id": "platina-wing-r4",
+   "name": "wing panel (unlabelled tall box on the plot) R4",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    7.09,
+    0.0,
+    4.24
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    1.5,
+    6.62,
+    0.35
+   ],
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked"
+  },
+  {
+   "id": "platina-riser-l",
+   "name": "platform box on the deck (unlabelled on the plot)",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    -3.71,
+    0.6,
+    5.0
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    1.99,
+    0.99,
+    1.5
+   ],
+   "source": "plot-top.png box x -4.71..-2.72 m, z; height plot-front.png y 672..772"
+  },
+  {
+   "id": "platina-riser-r",
+   "name": "platform box on the deck (unlabelled on the plot)",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    3.65,
+    0.6,
+    5.0
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    2.0,
+    0.99,
+    1.5
+   ],
+   "source": "plot-top.png box x 2.64..4.65 m, z; height plot-front.png y 672..772"
+  },
+  {
+   "id": "platina-tower-1",
+   "name": "tower 1 pole (counted from the audience's left)",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    -6.46,
+    0.0,
+    4.58
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-2",
+   "name": "tower 2 pole (counted from the audience's left)",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    -5.82,
+    0.0,
+    3.23
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-3",
+   "name": "tower 3 pole (counted from the audience's left)",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    -5.1,
+    0.0,
+    1.7
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-4",
+   "name": "tower 4 pole (counted from the audience's left)",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    -4.49,
+    0.0,
+    0.54
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-5",
+   "name": "tower 5 pole (counted from the audience's left)",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    4.47,
+    0.0,
+    0.54
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-6",
+   "name": "tower 6 pole (counted from the audience's left)",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    5.06,
+    0.0,
+    1.7
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-7",
+   "name": "tower 7 pole (counted from the audience's left)",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    5.88,
+    0.0,
+    3.23
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-tower-8",
+   "name": "tower 8 pole (counted from the audience's left)",
+   "kind": "box",
+   "anchor": "base",
+   "status": "measured",
+   "p": [
+    6.45,
+    0.0,
+    4.58
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.1,
+    1.59,
+    0.1
+   ],
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+  },
+  {
+   "id": "platina-stand-l",
+   "name": "stand pole under side K15 7",
+   "kind": "box",
+   "anchor": "base",
+   "status": "from-plan-words",
+   "p": [
+    -6.47,
+    0.6,
+    5.3
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.06,
+    2.63,
+    0.06
+   ],
+   "source": "plot-front.png draws a pole at the side K15 (height measured, the place of the pole under the lamp is ours)"
+  },
+  {
+   "id": "platina-stand-r",
+   "name": "stand pole under side K15 8",
+   "kind": "box",
+   "anchor": "base",
+   "status": "from-plan-words",
+   "p": [
+    6.38,
+    0.6,
+    5.3
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "s": [
+    0.06,
+    2.63,
+    0.06
+   ],
+   "source": "plot-front.png draws a pole at the side K15 (height measured, the place of the pole under the lamp is ours)"
+  }
+ ],
+ "owed": [
+  "Ask the Platina side: where the 12 XP-16R hang, where the 2 hazers stand, whether the 3 audience-side K10 / 7 Sharpy of the 11-10 plot are really not coming, the LED screen size (cabinets), the truss heights.",
+  "K15 output and body size are not published in the papers held (the K10 figure and the plot symbol stand in); the cells of K10/K15/Pixel Line are one cone per lamp."
+ ],
+ "checks": {
+  "geometry": {
+   "tool": "scripts/place/platina_rig.py geometry_checks (body boxes vs trusses/screen/towers, 0.03 m contact tolerance; home beam axis vs the screen)",
+   "leaks": [],
+   "k15_row_axis_clearance": [
+    {
+     "lamp": "platina-k15-01",
+     "axis_clearance_to_screen_front_m": 0.08
+    },
+    {
+     "lamp": "platina-k15-02",
+     "axis_clearance_to_screen_front_m": 0.08
+    },
+    {
+     "lamp": "platina-k15-03",
+     "axis_clearance_to_screen_front_m": 0.08
+    },
+    {
+     "lamp": "platina-k15-04",
+     "axis_clearance_to_screen_front_m": 0.08
+    },
+    {
+     "lamp": "platina-k15-05",
+     "axis_clearance_to_screen_front_m": 0.08
+    },
+    {
+     "lamp": "platina-k15-06",
+     "axis_clearance_to_screen_front_m": 0.08
+    }
+   ],
+   "physics_check_py": "NOT RUN: it needs a project document and a hall record through the API (no server this round)"
+  }
+ },
+ "head_kinds": [
+  "acme-xp16r-bsw"
+ ],
+ "defaultLook": "work-light",
+ "views": {
+  "fixedCamera": {
+   "projection": "perspective",
+   "position": [
+    -0.04,
+    1.7,
+    15.25
+   ],
+   "target": [
+    -0.04,
+    3.62,
+    0.0
+   ],
+   "fov": 62,
+   "zoom": 1,
+   "near": 0.05,
+   "far": 400,
+   "locked": false
+  },
+  "viewPresets": [
+   {
+    "id": "audience",
+    "label": "Audience",
+    "position": [
+     -0.04,
+     1.7,
+     15.25
+    ],
+    "target": [
+     -0.04,
+     3.62,
+     0.0
+    ],
+    "fov": 62,
+    "live": true
+   },
+   {
+    "id": "foh",
+    "label": "FOH",
+    "position": [
+     -0.04,
+     2.5,
+     20.25
+    ],
+    "target": [
+     -0.04,
+     3.62,
+     0.0
+    ],
+    "fov": 58,
+    "live": true
+   },
+   {
+    "id": "render",
+    "label": "Like the render",
+    "position": [
+     -0.04,
+     3.0,
+     30.25
+    ],
+    "target": [
+     -0.04,
+     3.0,
+     0.0
+    ],
+    "fov": 32,
+    "live": true
+   },
+   {
+    "id": "side",
+    "label": "Side",
+    "position": [
+     -18.04,
+     3.0,
+     2.65
+    ],
+    "target": [
+     -0.04,
+     3.0,
+     2.65
+    ],
+    "fov": 50,
+    "live": true
+   },
+   {
+    "id": "top",
+    "label": "Top",
+    "position": [
+     -0.04,
+     26.0,
+     3.15
+    ],
+    "target": [
+     -0.04,
+     0,
+     2.65
+    ],
+    "fov": 55,
+    "live": true
+   }
+  ]
+ },
+ "fixtures": [
+  {
+   "id": "platina-pixel-01",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g1",
+   "part": "pixel line tower 1 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -6.46,
+    2.09,
+    4.58
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 1, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 5,
+    "address": 1,
+    "footprint": 117,
+    "fixture": 401,
+    "mode": "117ch",
+    "port": "E",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g1 (start 1, order id-asc, unit 1 of 4)"
+   },
+   "tower": 1,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-02",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g1",
+   "part": "pixel line tower 1 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -6.46,
+    3.1,
+    4.58
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 1, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 5,
+    "address": 118,
+    "footprint": 117,
+    "fixture": 402,
+    "mode": "117ch",
+    "port": "E",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g1 (start 1, order id-asc, unit 2 of 4)"
+   },
+   "tower": 1,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-03",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g1",
+   "part": "pixel line tower 1 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -6.46,
+    4.1,
+    4.58
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 1, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 5,
+    "address": 235,
+    "footprint": 117,
+    "fixture": 403,
+    "mode": "117ch",
+    "port": "E",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g1 (start 1, order id-asc, unit 3 of 4)"
+   },
+   "tower": 1,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-04",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g1",
+   "part": "pixel line tower 2 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -5.82,
+    2.09,
+    3.23
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 2, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 5,
+    "address": 352,
+    "footprint": 117,
+    "fixture": 404,
+    "mode": "117ch",
+    "port": "E",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g1 (start 1, order id-asc, unit 4 of 4)"
+   },
+   "tower": 2,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-05",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g2",
+   "part": "pixel line tower 2 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -5.82,
+    3.1,
+    3.23
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 2, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 6,
+    "address": 1,
+    "footprint": 117,
+    "fixture": 405,
+    "mode": "117ch",
+    "port": "F",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g2 (start 1, order id-asc, unit 1 of 4)"
+   },
+   "tower": 2,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-06",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g2",
+   "part": "pixel line tower 2 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -5.82,
+    4.1,
+    3.23
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 2, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 6,
+    "address": 118,
+    "footprint": 117,
+    "fixture": 406,
+    "mode": "117ch",
+    "port": "F",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g2 (start 1, order id-asc, unit 2 of 4)"
+   },
+   "tower": 2,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-07",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g2",
+   "part": "pixel line tower 3 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -5.1,
+    2.09,
+    1.7
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 3, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 6,
+    "address": 235,
+    "footprint": 117,
+    "fixture": 407,
+    "mode": "117ch",
+    "port": "F",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g2 (start 1, order id-asc, unit 3 of 4)"
+   },
+   "tower": 3,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-08",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g2",
+   "part": "pixel line tower 3 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -5.1,
+    3.1,
+    1.7
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 3, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 6,
+    "address": 352,
+    "footprint": 117,
+    "fixture": 408,
+    "mode": "117ch",
+    "port": "F",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g2 (start 1, order id-asc, unit 4 of 4)"
+   },
+   "tower": 3,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-09",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g3",
+   "part": "pixel line tower 3 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -5.1,
+    4.1,
+    1.7
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 3, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 7,
+    "address": 1,
+    "footprint": 117,
+    "fixture": 409,
+    "mode": "117ch",
+    "port": "G",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g3 (start 1, order id-asc, unit 1 of 4)"
+   },
+   "tower": 3,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-10",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g3",
+   "part": "pixel line tower 4 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -4.49,
+    2.09,
+    0.54
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 4, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 7,
+    "address": 118,
+    "footprint": 117,
+    "fixture": 410,
+    "mode": "117ch",
+    "port": "G",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g3 (start 1, order id-asc, unit 2 of 4)"
+   },
+   "tower": 4,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-11",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g3",
+   "part": "pixel line tower 4 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -4.49,
+    3.1,
+    0.54
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 4, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 7,
+    "address": 235,
+    "footprint": 117,
+    "fixture": 411,
+    "mode": "117ch",
+    "port": "G",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g3 (start 1, order id-asc, unit 3 of 4)"
+   },
+   "tower": 4,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-12",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g3",
+   "part": "pixel line tower 4 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    -4.49,
+    4.1,
+    0.54
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 4, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 7,
+    "address": 352,
+    "footprint": 117,
+    "fixture": 412,
+    "mode": "117ch",
+    "port": "G",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g3 (start 1, order id-asc, unit 4 of 4)"
+   },
+   "tower": 4,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-13",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g4",
+   "part": "pixel line tower 5 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    4.47,
+    2.09,
+    0.54
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 5, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 8,
+    "address": 1,
+    "footprint": 117,
+    "fixture": 413,
+    "mode": "117ch",
+    "port": "H",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g4 (start 1, order id-asc, unit 1 of 4)"
+   },
+   "tower": 5,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-14",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g4",
+   "part": "pixel line tower 5 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    4.47,
+    3.1,
+    0.54
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 5, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 8,
+    "address": 118,
+    "footprint": 117,
+    "fixture": 414,
+    "mode": "117ch",
+    "port": "H",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g4 (start 1, order id-asc, unit 2 of 4)"
+   },
+   "tower": 5,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-15",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g4",
+   "part": "pixel line tower 5 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    4.47,
+    4.1,
+    0.54
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 5, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 8,
+    "address": 235,
+    "footprint": 117,
+    "fixture": 415,
+    "mode": "117ch",
+    "port": "H",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g4 (start 1, order id-asc, unit 3 of 4)"
+   },
+   "tower": 5,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-16",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g4",
+   "part": "pixel line tower 6 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    5.06,
+    2.09,
+    1.7
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 6, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 8,
+    "address": 352,
+    "footprint": 117,
+    "fixture": 416,
+    "mode": "117ch",
+    "port": "H",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g4 (start 1, order id-asc, unit 4 of 4)"
+   },
+   "tower": 6,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-17",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g5",
+   "part": "pixel line tower 6 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    5.06,
+    3.1,
+    1.7
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 6, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 9,
+    "address": 1,
+    "footprint": 117,
+    "fixture": 417,
+    "mode": "117ch",
+    "port": "I",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g5 (start 1, order id-asc, unit 1 of 4)"
+   },
+   "tower": 6,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-18",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g5",
+   "part": "pixel line tower 6 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    5.06,
+    4.1,
+    1.7
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 6, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 9,
+    "address": 118,
+    "footprint": 117,
+    "fixture": 418,
+    "mode": "117ch",
+    "port": "I",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g5 (start 1, order id-asc, unit 2 of 4)"
+   },
+   "tower": 6,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-19",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g5",
+   "part": "pixel line tower 7 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    5.88,
+    2.09,
+    3.23
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 7, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 9,
+    "address": 235,
+    "footprint": 117,
+    "fixture": 419,
+    "mode": "117ch",
+    "port": "I",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g5 (start 1, order id-asc, unit 3 of 4)"
+   },
+   "tower": 7,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-20",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g5",
+   "part": "pixel line tower 7 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    5.88,
+    3.1,
+    3.23
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 7, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 9,
+    "address": 352,
+    "footprint": 117,
+    "fixture": 420,
+    "mode": "117ch",
+    "port": "I",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g5 (start 1, order id-asc, unit 4 of 4)"
+   },
+   "tower": 7,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-21",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g6",
+   "part": "pixel line tower 7 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    5.88,
+    4.1,
+    3.23
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 7, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 10,
+    "address": 1,
+    "footprint": 117,
+    "fixture": 421,
+    "mode": "117ch",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g6 (start 1, order id-asc, unit 1 of 4)"
+   },
+   "tower": 7,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-22",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g6",
+   "part": "pixel line tower 8 bar 1",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    6.45,
+    2.09,
+    4.58
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 8, bar 1 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 10,
+    "address": 118,
+    "footprint": 117,
+    "fixture": 422,
+    "mode": "117ch",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g6 (start 1, order id-asc, unit 2 of 4)"
+   },
+   "tower": 8,
+   "bar_in_tower": 1,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-23",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g6",
+   "part": "pixel line tower 8 bar 2",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    6.45,
+    3.1,
+    4.58
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 8, bar 2 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 10,
+    "address": 235,
+    "footprint": 117,
+    "fixture": 423,
+    "mode": "117ch",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g6 (start 1, order id-asc, unit 3 of 4)"
+   },
+   "tower": 8,
+   "bar_in_tower": 2,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-pixel-24",
+   "type": "acme-pixel-line-ip",
+   "group": "pixel-line-g6",
+   "part": "pixel line tower 8 bar 3",
+   "status": "measured (x, z, height) / from-plan-words (8 towers x 3, bottom first, from the audience's left)",
+   "p": [
+    6.45,
+    4.1,
+    4.58
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.8814,
+   "size_m": [
+    0.09,
+    1.0,
+    0.12
+   ],
+   "source": "tower 8, bar 3 from the bottom: x plot-front.png, z plot-side.png/plot-top.png rows, height 3 stacked 1 m bars 1.0..4.0 m over the deck",
+   "profile": {
+    "library": "acme-pixel-line-ip",
+    "basis": "EXACT",
+    "why": "the real bar: the datasheet's 101 deg RGB figure; the bar is 1.0 x ~0.07 x ~0.11 m from the plot",
+    "draw": {
+     "penumbra": 1,
+     "haze": 0.35,
+     "reach_m": 24,
+     "basis": "ASSUMED: renderer class values for a bar, not maker data"
+    },
+    "photometry": {
+     "lux": 1163,
+     "at_m": 2,
+     "beam_deg": 101,
+     "zoom": false,
+     "src": "ACME-PLIP-DS",
+     "basis": "EXACT"
+    },
+    "size_mm": [
+     1000,
+     90,
+     124
+    ],
+    "weight_kg": 8.3,
+    "power_w": 420
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 10,
+    "address": 352,
+    "footprint": 117,
+    "fixture": 424,
+    "mode": "117ch",
+    "port": "J",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block pixel-line-g6 (start 1, order id-asc, unit 4 of 4)"
+   },
+   "tower": 8,
+   "bar_in_tower": 3,
+   "face": "+z (toward the audience), plot-side.png shows the pixel face on the audience side of the pole",
+   "aim_home": "horizontal +z",
+   "emitter": {
+    "shape": "bar",
+    "width_m": 0.09,
+    "length_m": 1.0,
+    "basis": "maker's outer size 1,000 x 90 mm (library size_mm)"
+   }
+  },
+  {
+   "id": "platina-k10-01",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage",
+   "part": "K10 1 over the stage",
+   "status": "measured",
+   "p": [
+    -3.56,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.36,
+    0.49,
+    0.25
+   ],
+   "source": "x plot-top.png glyph centroid (slot 1 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 1,
+    "address": 1,
+    "footprint": 111,
+    "fixture": 101,
+    "mode": "111ch",
+    "port": "A",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 1 of 4)"
+   },
+   "hung": true,
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-02",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage",
+   "part": "K10 2 over the stage",
+   "status": "measured",
+   "p": [
+    -2.57,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.36,
+    0.49,
+    0.25
+   ],
+   "source": "x plot-top.png glyph centroid (slot 2 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 1,
+    "address": 112,
+    "footprint": 111,
+    "fixture": 102,
+    "mode": "111ch",
+    "port": "A",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 2 of 4)"
+   },
+   "hung": true,
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-03",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage",
+   "part": "K10 3 over the stage",
+   "status": "measured",
+   "p": [
+    -1.57,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.36,
+    0.49,
+    0.25
+   ],
+   "source": "x plot-top.png glyph centroid (slot 3 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 1,
+    "address": 223,
+    "footprint": 111,
+    "fixture": 103,
+    "mode": "111ch",
+    "port": "A",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 3 of 4)"
+   },
+   "hung": true,
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-04",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage",
+   "part": "K10 4 over the stage",
+   "status": "measured",
+   "p": [
+    -0.56,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.36,
+    0.49,
+    0.25
+   ],
+   "source": "x plot-top.png glyph centroid (slot 4 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 1,
+    "address": 334,
+    "footprint": 111,
+    "fixture": 104,
+    "mode": "111ch",
+    "port": "A",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage (start 1, order id-asc, unit 4 of 4)"
+   },
+   "hung": true,
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-05",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage-b",
+   "part": "K10 5 over the stage",
+   "status": "measured",
+   "p": [
+    0.43,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.36,
+    0.49,
+    0.25
+   ],
+   "source": "x plot-top.png glyph centroid (slot 5 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 2,
+    "address": 1,
+    "footprint": 111,
+    "fixture": 105,
+    "mode": "111ch",
+    "port": "B",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 1 of 4)"
+   },
+   "hung": true,
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-06",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage-b",
+   "part": "K10 6 over the stage",
+   "status": "measured",
+   "p": [
+    1.44,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.36,
+    0.49,
+    0.25
+   ],
+   "source": "x plot-top.png glyph centroid (slot 6 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 2,
+    "address": 112,
+    "footprint": 111,
+    "fixture": 106,
+    "mode": "111ch",
+    "port": "B",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 2 of 4)"
+   },
+   "hung": true,
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-07",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage-b",
+   "part": "K10 7 over the stage",
+   "status": "measured",
+   "p": [
+    2.44,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.36,
+    0.49,
+    0.25
+   ],
+   "source": "x plot-top.png glyph centroid (slot 7 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 2,
+    "address": 223,
+    "footprint": 111,
+    "fixture": 107,
+    "mode": "111ch",
+    "port": "B",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 3 of 4)"
+   },
+   "hung": true,
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k10-08",
+   "type": "cp-aleda-beye-k10",
+   "group": "k10-over-stage-b",
+   "part": "K10 8 over the stage",
+   "status": "measured",
+   "p": [
+    3.42,
+    6.34,
+    2.29
+   ],
+   "r": [
+    0,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.36,
+    0.49,
+    0.25
+   ],
+   "source": "x plot-top.png glyph centroid (slot 8 of 8, ~1.0 m pitch); z plot-side.png; height plot-front.png/plot-side.png hung under the over-stage truss",
+   "profile": {
+    "library": "cp-aleda-beye-k10",
+    "basis": "EXACT",
+    "why": "the real lamp: zoom 4-60 deg, output from its manual",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "EXACT total output (manual, technical data: B-EYE K10 5500 lumens); candela is DERIVED as a uniform cone of the unit's beam angle, an upper bound on axis"
+    },
+    "pan_tilt_deg": [
+     540,
+     210
+    ],
+    "size_mm": [
+     358,
+     253,
+     494
+    ],
+    "weight_kg": 14.5,
+    "power_w": 450,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 2,
+    "address": 334,
+    "footprint": 111,
+    "fixture": 108,
+    "mode": "111ch",
+    "port": "B",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k10-over-stage-b (start 1, order id-asc, unit 4 of 4)"
+   },
+   "hung": true,
+   "aim_home": "straight down (pan 0 / tilt 0, hung)",
+   "beam_note": "angle_rad ASSUMED = half of 30 deg, inside the stand-in zoom 4-60"
+  },
+  {
+   "id": "platina-k15-01",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-floor",
+   "part": "K15 1 stage-floor row",
+   "status": "measured",
+   "p": [
+    -3.24,
+    0.8,
+    0.13
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.39,
+    0.44,
+    0.33
+   ],
+   "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
+   "profile": {
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 3,
+    "address": 1,
+    "footprint": 112,
+    "fixture": 201,
+    "mode": "112ch",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 1, order id-asc, unit 1 of 4)"
+   },
+   "aim_home": "straight up (pan 0 / tilt 0, standing)",
+   "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
+  },
+  {
+   "id": "platina-k15-02",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-floor",
+   "part": "K15 2 stage-floor row",
+   "status": "measured",
+   "p": [
+    -1.96,
+    0.8,
+    0.13
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.39,
+    0.44,
+    0.33
+   ],
+   "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
+   "profile": {
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 3,
+    "address": 113,
+    "footprint": 112,
+    "fixture": 202,
+    "mode": "112ch",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 1, order id-asc, unit 2 of 4)"
+   },
+   "aim_home": "straight up (pan 0 / tilt 0, standing)",
+   "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
+  },
+  {
+   "id": "platina-k15-03",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-floor",
+   "part": "K15 3 stage-floor row",
+   "status": "measured",
+   "p": [
+    -0.69,
+    0.8,
+    0.13
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.39,
+    0.44,
+    0.33
+   ],
+   "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
+   "profile": {
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 3,
+    "address": 225,
+    "footprint": 112,
+    "fixture": 203,
+    "mode": "112ch",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 1, order id-asc, unit 3 of 4)"
+   },
+   "aim_home": "straight up (pan 0 / tilt 0, standing)",
+   "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
+  },
+  {
+   "id": "platina-k15-04",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-floor",
+   "part": "K15 4 stage-floor row",
+   "status": "measured",
+   "p": [
+    0.59,
+    0.8,
+    0.13
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.39,
+    0.44,
+    0.33
+   ],
+   "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
+   "profile": {
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 3,
+    "address": 337,
+    "footprint": 112,
+    "fixture": 204,
+    "mode": "112ch",
+    "port": "C",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor (start 1, order id-asc, unit 4 of 4)"
+   },
+   "aim_home": "straight up (pan 0 / tilt 0, standing)",
+   "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
+  },
+  {
+   "id": "platina-k15-05",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-floor-b",
+   "part": "K15 5 stage-floor row",
+   "status": "measured",
+   "p": [
+    1.87,
+    0.8,
+    0.13
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.39,
+    0.44,
+    0.33
+   ],
+   "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
+   "profile": {
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 4,
+    "address": 1,
+    "footprint": 112,
+    "fixture": 205,
+    "mode": "112ch",
+    "port": "D",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor-b (start 1, order id-asc, unit 1 of 2)"
+   },
+   "aim_home": "straight up (pan 0 / tilt 0, standing)",
+   "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
+  },
+  {
+   "id": "platina-k15-06",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-floor-b",
+   "part": "K15 6 stage-floor row",
+   "status": "measured",
+   "p": [
+    3.15,
+    0.8,
+    0.13
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.39,
+    0.44,
+    0.33
+   ],
+   "source": "x plot-front.png (6 in a row, 1.27 m pitch, agrees with plot-top.png), z plot-side.png, standing on the deck",
+   "profile": {
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 4,
+    "address": 113,
+    "footprint": 112,
+    "fixture": 206,
+    "mode": "112ch",
+    "port": "D",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-floor-b (start 1, order id-asc, unit 2 of 2)"
+   },
+   "aim_home": "straight up (pan 0 / tilt 0, standing)",
+   "screen_note": "on the plot the row stands 0.1 m in front of the screen face; the beam axis clears it, a wide cone does not"
+  },
+  {
+   "id": "platina-k15-07",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-sides",
+   "part": "K15 7 side stand",
+   "status": "measured",
+   "p": [
+    -6.47,
+    3.42,
+    5.3
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.44,
+    0.39,
+    0.33
+   ],
+   "source": "x plot-front.png lamp body, z plot-side.png/plot-top.png, height plot-front.png: on a stand at the side (the plot shows a pole)",
+   "profile": {
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 4,
+    "address": 225,
+    "footprint": 112,
+    "fixture": 207,
+    "mode": "112ch",
+    "port": "D",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-sides (start 225, order id-asc, unit 1 of 2)"
+   },
+   "aim_home": "straight up",
+   "stand": "on a pole beside the body (plot-front.png)"
+  },
+  {
+   "id": "platina-k15-08",
+   "type": "cp-hy-beye-k15",
+   "group": "k15-sides",
+   "part": "K15 8 side stand",
+   "status": "measured",
+   "p": [
+    6.38,
+    3.42,
+    5.3
+   ],
+   "r": [
+    3.1416,
+    0,
+    0
+   ],
+   "angle_rad": 0.2618,
+   "size_m": [
+    0.44,
+    0.39,
+    0.33
+   ],
+   "source": "x plot-front.png lamp body, z plot-side.png/plot-top.png, height plot-front.png: on a stand at the side (the plot shows a pole)",
+   "profile": {
+    "library": "cp-hy-beye-k15",
+    "basis": "EXACT",
+    "why": "the real lamp; its output is not published in the papers held, body from the plot symbol",
+    "draw": {
+     "penumbra": 0.5,
+     "haze": 0.35,
+     "reach_m": 18,
+     "basis": "ASSUMED: renderer class values for a wash, not maker data"
+    },
+    "photometry": {
+     "lumens": 5500,
+     "src": "CP-K10-MAN",
+     "basis": "ASSUMED: the K15 datasheet and manual state no lumen or lux figure, so the K10's 5500 lumens stand in; the real K15 is brighter"
+    },
+    "pan_tilt_deg": [
+     540,
+     200
+    ],
+    "size_mm": [
+     391,
+     329,
+     438
+    ],
+    "weight_kg": 20.7,
+    "power_w": 700,
+    "zoom_deg": [
+     4,
+     60
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 4,
+    "address": 337,
+    "footprint": 112,
+    "fixture": 208,
+    "mode": "112ch",
+    "port": "D",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block k15-sides (start 225, order id-asc, unit 2 of 2)"
+   },
+   "aim_home": "straight up",
+   "stand": "on a pole beside the body (plot-front.png)"
+  },
+  {
+   "id": "platina-xp16r-01",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 1",
+   "status": "PROPOSED",
+   "p": [
+    -3.13,
+    6.22,
+    2.29
+   ],
+   "r": [
+    -0.4363,
+    0,
+    -0.5236
+   ],
+   "angle_rad": 0.0262,
+   "size_m": [
+    0.39,
+    0.58,
+    0.34
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 11,
+    "address": 1,
+    "footprint": 21,
+    "fixture": 501,
+    "mode": "21ch",
+    "port": "K",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 1 of 12)"
+   },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, -30.0 deg of pan fan",
+   "aim_home": "straight down",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-02",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 2",
+   "status": "PROPOSED",
+   "p": [
+    -2.1,
+    6.22,
+    2.29
+   ],
+   "r": [
+    -0.4363,
+    0,
+    -0.3491
+   ],
+   "angle_rad": 0.0262,
+   "size_m": [
+    0.39,
+    0.58,
+    0.34
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 11,
+    "address": 22,
+    "footprint": 21,
+    "fixture": 502,
+    "mode": "21ch",
+    "port": "K",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 2 of 12)"
+   },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, -20.0 deg of pan fan",
+   "aim_home": "straight down",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-03",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 3",
+   "status": "PROPOSED",
+   "p": [
+    -1.08,
+    6.22,
+    2.29
+   ],
+   "r": [
+    -0.4363,
+    0,
+    -0.1745
+   ],
+   "angle_rad": 0.0262,
+   "size_m": [
+    0.39,
+    0.58,
+    0.34
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 11,
+    "address": 43,
+    "footprint": 21,
+    "fixture": 503,
+    "mode": "21ch",
+    "port": "K",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 3 of 12)"
+   },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, -10.0 deg of pan fan",
+   "aim_home": "straight down",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-04",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 4",
+   "status": "PROPOSED",
+   "p": [
+    -0.08,
+    6.22,
+    2.29
+   ],
+   "r": [
+    -0.4363,
+    0,
+    0.0
+   ],
+   "angle_rad": 0.0262,
+   "size_m": [
+    0.39,
+    0.58,
+    0.34
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 11,
+    "address": 64,
+    "footprint": 21,
+    "fixture": 504,
+    "mode": "21ch",
+    "port": "K",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 4 of 12)"
+   },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, 0.0 deg of pan fan",
+   "aim_home": "straight down",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-05",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 5",
+   "status": "PROPOSED",
+   "p": [
+    0.93,
+    6.22,
+    2.29
+   ],
+   "r": [
+    -0.4363,
+    0,
+    0.1745
+   ],
+   "angle_rad": 0.0262,
+   "size_m": [
+    0.39,
+    0.58,
+    0.34
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 11,
+    "address": 85,
+    "footprint": 21,
+    "fixture": 505,
+    "mode": "21ch",
+    "port": "K",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 5 of 12)"
+   },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, 10.0 deg of pan fan",
+   "aim_home": "straight down",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-06",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 6",
+   "status": "PROPOSED",
+   "p": [
+    1.97,
+    6.22,
+    2.29
+   ],
+   "r": [
+    -0.4363,
+    0,
+    0.3491
+   ],
+   "angle_rad": 0.0262,
+   "size_m": [
+    0.39,
+    0.58,
+    0.34
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 11,
+    "address": 106,
+    "footprint": 21,
+    "fixture": 506,
+    "mode": "21ch",
+    "port": "K",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 6 of 12)"
+   },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, 20.0 deg of pan fan",
+   "aim_home": "straight down",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-07",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 7",
+   "status": "PROPOSED",
+   "p": [
+    2.95,
+    6.22,
+    2.29
+   ],
+   "r": [
+    -0.4363,
+    0,
+    0.5236
+   ],
+   "angle_rad": 0.0262,
+   "size_m": [
+    0.39,
+    0.58,
+    0.34
+   ],
+   "source": "PROPOSED: the plot's 7 Sharpy slots on the over-stage truss (the drawing's own beam-lamp hang points, positions measured from plot-top.png)",
+   "profile": {
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 11,
+    "address": 127,
+    "footprint": 21,
+    "fixture": 507,
+    "mode": "21ch",
+    "port": "K",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 7 of 12)"
+   },
+   "hung": true,
+   "aim_rest": "PROPOSED (ours): 25 deg from straight down toward the audience, 30.0 deg of pan fan",
+   "aim_home": "straight down",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-08",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 8",
+   "status": "PROPOSED",
+   "p": [
+    -2.6,
+    0.89,
+    0.38
+   ],
+   "r": [
+    -2.7925,
+    0,
+    -0.5236
+   ],
+   "angle_rad": 0.0262,
+   "size_m": [
+    0.39,
+    0.58,
+    0.34
+   ],
+   "source": "PROPOSED (ours, no hang point needed): standing on the deck in the 5 gaps of the K15 row, 0.25 m in front of it, beam up",
+   "profile": {
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 11,
+    "address": 148,
+    "footprint": 21,
+    "fixture": 508,
+    "mode": "21ch",
+    "port": "K",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 8 of 12)"
+   },
+   "aim_rest": "PROPOSED (ours): 20 deg from straight up toward the audience, -30.0 deg of pan fan",
+   "aim_home": "straight up (standing on the deck)",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-09",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 9",
+   "status": "PROPOSED",
+   "p": [
+    -1.33,
+    0.89,
+    0.38
+   ],
+   "r": [
+    -2.7925,
+    0,
+    -0.2618
+   ],
+   "angle_rad": 0.0262,
+   "size_m": [
+    0.39,
+    0.58,
+    0.34
+   ],
+   "source": "PROPOSED (ours, no hang point needed): standing on the deck in the 5 gaps of the K15 row, 0.25 m in front of it, beam up",
+   "profile": {
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 11,
+    "address": 169,
+    "footprint": 21,
+    "fixture": 509,
+    "mode": "21ch",
+    "port": "K",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 9 of 12)"
+   },
+   "aim_rest": "PROPOSED (ours): 20 deg from straight up toward the audience, -15.0 deg of pan fan",
+   "aim_home": "straight up (standing on the deck)",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-10",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 10",
+   "status": "PROPOSED",
+   "p": [
+    -0.05,
+    0.89,
+    0.38
+   ],
+   "r": [
+    -2.7925,
+    0,
+    0.0
+   ],
+   "angle_rad": 0.0262,
+   "size_m": [
+    0.39,
+    0.58,
+    0.34
+   ],
+   "source": "PROPOSED (ours, no hang point needed): standing on the deck in the 5 gaps of the K15 row, 0.25 m in front of it, beam up",
+   "profile": {
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 11,
+    "address": 190,
+    "footprint": 21,
+    "fixture": 510,
+    "mode": "21ch",
+    "port": "K",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 10 of 12)"
+   },
+   "aim_rest": "PROPOSED (ours): 20 deg from straight up toward the audience, 0.0 deg of pan fan",
+   "aim_home": "straight up (standing on the deck)",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-11",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 11",
+   "status": "PROPOSED",
+   "p": [
+    1.23,
+    0.89,
+    0.38
+   ],
+   "r": [
+    -2.7925,
+    0,
+    0.2618
+   ],
+   "angle_rad": 0.0262,
+   "size_m": [
+    0.39,
+    0.58,
+    0.34
+   ],
+   "source": "PROPOSED (ours, no hang point needed): standing on the deck in the 5 gaps of the K15 row, 0.25 m in front of it, beam up",
+   "profile": {
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 11,
+    "address": 211,
+    "footprint": 21,
+    "fixture": 511,
+    "mode": "21ch",
+    "port": "K",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 11 of 12)"
+   },
+   "aim_rest": "PROPOSED (ours): 20 deg from straight up toward the audience, 15.0 deg of pan fan",
+   "aim_home": "straight up (standing on the deck)",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-xp16r-12",
+   "type": "acme-xp16r-bsw",
+   "group": "xp16r-proposed",
+   "part": "XP-16R 12",
+   "status": "PROPOSED",
+   "p": [
+    2.51,
+    0.89,
+    0.38
+   ],
+   "r": [
+    -2.7925,
+    0,
+    0.5236
+   ],
+   "angle_rad": 0.0262,
+   "size_m": [
+    0.39,
+    0.58,
+    0.34
+   ],
+   "source": "PROPOSED (ours, no hang point needed): standing on the deck in the 5 gaps of the K15 row, 0.25 m in front of it, beam up",
+   "profile": {
+    "library": "acme-xp16r-bsw",
+    "basis": "EXACT",
+    "why": "the real lamp: the manual's photometric diagram at its 3 deg beam",
+    "draw": {
+     "penumbra": 0.1,
+     "haze": 1,
+     "reach_m": 40,
+     "basis": "ASSUMED: renderer class values for a beam, not maker data"
+    },
+    "photometry": {
+     "lux": 810000,
+     "at_m": 5,
+     "beam_deg": 3,
+     "zoom": true,
+     "src": "ACME-XP16-MAN",
+     "basis": "EXACT"
+    },
+    "pan_tilt_deg": [
+     540,
+     270
+    ],
+    "size_mm": [
+     393,
+     344,
+     585
+    ],
+    "weight_kg": 21.4,
+    "power_w": 480,
+    "zoom_deg": [
+     3,
+     32
+    ]
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 11,
+    "address": 232,
+    "footprint": 21,
+    "fixture": 512,
+    "mode": "21ch",
+    "port": "K",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block xp16r-proposed (start 1, order id-asc, unit 12 of 12)"
+   },
+   "aim_rest": "PROPOSED (ours): 20 deg from straight up toward the audience, 30.0 deg of pan fan",
+   "aim_home": "straight up (standing on the deck)",
+   "beam_note": "angle_rad = half of the maker's 3 deg beam (manual photometric diagram)",
+   "why": "beam heads of every drawn rig of this kind hang over the stage; no paper places them"
+  },
+  {
+   "id": "platina-hazer-1",
+   "type": "magmatic-magma-prime",
+   "group": "hazer",
+   "part": "hazer 1",
+   "status": "PROPOSED",
+   "p": [
+    -3.4,
+    0.8,
+    -0.55
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.0,
+   "size_m": [
+    0.16,
+    0.4,
+    0.34
+   ],
+   "source": "PROPOSED: on the deck behind the screen line, outside the screen's width, between the screen and the back wall (-0.96 m): hidden from the audience, hazes the whole stage; the list and the plot place none",
+   "profile": {
+    "library": "magmatic-magma-prime",
+    "basis": "EXACT",
+    "why": "the real hazer: fluid consumption from its manual",
+    "size_mm": [
+     338,
+     160,
+     400
+    ],
+    "weight_kg": 10.2,
+    "power_w": 700,
+    "fluid_ml_per_min": {
+     "value": 3.4,
+     "src": "MAGMA-MAN",
+     "basis": "EXACT"
+    }
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 4,
+    "address": 461,
+    "footprint": 5,
+    "fixture": 301,
+    "mode": "5ch",
+    "port": "D",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block hazer (start 461, order id-asc, unit 1 of 2)"
+   },
+   "aim_home": "horizontal +z (output toward the audience)",
+   "machine": "hazer",
+   "size_note": "the maker's 338 x 160 x 400 mm (L x W x H, manual p16)"
+  },
+  {
+   "id": "platina-hazer-2",
+   "type": "magmatic-magma-prime",
+   "group": "hazer",
+   "part": "hazer 2",
+   "status": "PROPOSED",
+   "p": [
+    3.4,
+    0.8,
+    -0.55
+   ],
+   "r": [
+    -1.5708,
+    0,
+    0
+   ],
+   "angle_rad": 0.0,
+   "size_m": [
+    0.16,
+    0.4,
+    0.34
+   ],
+   "source": "PROPOSED: on the deck behind the screen line, outside the screen's width, between the screen and the back wall (-0.96 m): hidden from the audience, hazes the whole stage; the list and the plot place none",
+   "profile": {
+    "library": "magmatic-magma-prime",
+    "basis": "EXACT",
+    "why": "the real hazer: fluid consumption from its manual",
+    "size_mm": [
+     338,
+     160,
+     400
+    ],
+    "weight_kg": 10.2,
+    "power_w": 700,
+    "fluid_ml_per_min": {
+     "value": 3.4,
+     "src": "MAGMA-MAN",
+     "basis": "EXACT"
+    }
+   },
+   "size_basis": "maker's outer size (library size_mm), oriented as drawn",
+   "dmx": {
+    "universe": 4,
+    "address": 466,
+    "footprint": 5,
+    "fixture": 302,
+    "mode": "5ch",
+    "port": "D",
+    "from": "scripts/place/rigs/platina-2026-11-11.patch.json block hazer (start 461, order id-asc, unit 2 of 2)"
+   },
+   "aim_home": "horizontal +z (output toward the audience)",
+   "machine": "hazer",
+   "size_note": "the maker's 338 x 160 x 400 mm (L x W x H, manual p16)"
+  }
+ ],
+ "looks": [
+  {
+   "id": "white-back",
+   "title": "White back",
+   "act": 4,
+   "intent": "Silhouette: white from the floor row behind him, towers low, nothing from above.",
+   "parts": {
+    "K15 1 stage-floor row": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 2 stage-floor row": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 3 stage-floor row": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 4 stage-floor row": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 5 stage-floor row": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 6 stage-floor row": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 7 side stand": [
+     "#ffffff",
+     0.6
+    ],
+    "K15 8 side stand": [
+     "#ffffff",
+     0.6
+    ],
+    "pixel line tower 1 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 1 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 1 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 2 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 2 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 2 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 3 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 3 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 3 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 4 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 4 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 4 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 5 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 5 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 5 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 6 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 6 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 6 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 7 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 7 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 7 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 8 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 8 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 8 bar 3": [
+     "#ffffff",
+     0.3
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [],
+    "still": 0.0
+   },
+   "notes": "0.00 s: the quiet opening: a silhouette, nothing from above"
+  },
+  {
+   "id": "freeze-hold",
+   "title": "Freeze",
+   "act": 5,
+   "intent": "The breath before a drop: the white fan alone, still.",
+   "parts": {
+    "K15 1 stage-floor row": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 2 stage-floor row": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 3 stage-floor row": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 4 stage-floor row": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 5 stage-floor row": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 6 stage-floor row": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 7 side stand": [
+     "#ffffff",
+     0.05
+    ],
+    "K15 8 side stand": [
+     "#ffffff",
+     0.05
+    ],
+    "XP-16R 1": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 2": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 3": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 4": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 5": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 6": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 7": [
+     "#ffffff",
+     0.9
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [],
+    "still": 0.0
+   },
+   "notes": "9.00 s: the level rises: the white fan alone, still, the breath before the drop"
+  },
+  {
+   "id": "drop-hit",
+   "title": "Drop hit",
+   "act": 5,
+   "intent": "One white hit of the whole rig, a second and a half.",
+   "parts": {
+    "K10 1 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 2 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 3 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 4 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 5 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 6 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 7 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K10 8 over the stage": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 1 stage-floor row": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 2 stage-floor row": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 3 stage-floor row": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 4 stage-floor row": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 5 stage-floor row": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 6 stage-floor row": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 7 side stand": [
+     "#ffffff",
+     0.8
+    ],
+    "K15 8 side stand": [
+     "#ffffff",
+     0.8
+    ],
+    "pixel line tower 1 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 1 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 1 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 2 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 2 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 2 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 3 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 3 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 3 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 4 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 4 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 4 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 5 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 5 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 5 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 6 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 6 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 6 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 7 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 7 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 7 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 8 bar 1": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 8 bar 2": [
+     "#ffffff",
+     0.9
+    ],
+    "pixel line tower 8 bar 3": [
+     "#ffffff",
+     0.9
+    ],
+    "XP-16R 1": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 2": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 3": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 4": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 5": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 6": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 7": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 8": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 9": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 10": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 11": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 12": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [],
+    "still": 0.0
+   },
+   "notes": "12.24 s: the kick enters: one white hit of the whole rig"
+  },
+  {
+   "id": "drop-red",
+   "title": "Drop, red",
+   "act": 5,
+   "intent": "Drop two: red towers at double time, a fast white X.",
+   "parts": {
+    "K15 1 stage-floor row": [
+     "#e01020",
+     0.5
+    ],
+    "K15 2 stage-floor row": [
+     "#e01020",
+     0.5
+    ],
+    "K15 3 stage-floor row": [
+     "#e01020",
+     0.5
+    ],
+    "K15 4 stage-floor row": [
+     "#e01020",
+     0.5
+    ],
+    "K15 5 stage-floor row": [
+     "#e01020",
+     0.5
+    ],
+    "K15 6 stage-floor row": [
+     "#e01020",
+     0.5
+    ],
+    "K15 7 side stand": [
+     "#e01020",
+     0.5
+    ],
+    "K15 8 side stand": [
+     "#e01020",
+     0.5
+    ],
+    "pixel line tower 1 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 1 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 1 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 2 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 2 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 2 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 3 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 3 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 3 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 4 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 4 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 4 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 5 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 5 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 5 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 6 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 6 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 6 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 7 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 7 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 7 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 8 bar 1": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 8 bar 2": [
+     "#e01020",
+     1.0
+    ],
+    "pixel line tower 8 bar 3": [
+     "#e01020",
+     1.0
+    ],
+    "XP-16R 1": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 2": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 3": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 4": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 5": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 6": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 7": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 8": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 9": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 10": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 11": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 12": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "chase",
+    "bpm": 158,
+    "depth": 160,
+    "spatial": "y-",
+    "kinds": [
+     "acme-pixel-line-ip"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "cross",
+    "period_s": 5,
+    "pan_deg": 55,
+    "tilt_deg": 0,
+    "spatial": "all",
+    "kinds": [
+     "acme-xp16r-bsw"
+    ]
+   },
+   "notes": "13.00 s: the drop: red towers at double time, the fast white X"
+  },
+  {
+   "id": "white-back-beams",
+   "title": "White back, rising beams",
+   "act": 4,
+   "intent": "The silhouette with the deck beams rising and falling together behind him.",
+   "parts": {
+    "K15 1 stage-floor row": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 2 stage-floor row": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 3 stage-floor row": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 4 stage-floor row": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 5 stage-floor row": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 6 stage-floor row": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 7 side stand": [
+     "#ffffff",
+     0.5
+    ],
+    "K15 8 side stand": [
+     "#ffffff",
+     0.5
+    ],
+    "pixel line tower 1 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 1 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 1 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 2 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 2 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 2 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 3 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 3 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 3 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 4 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 4 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 4 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 5 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 5 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 5 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 6 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 6 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 6 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 7 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 7 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 7 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 8 bar 1": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 8 bar 2": [
+     "#ffffff",
+     0.3
+    ],
+    "pixel line tower 8 bar 3": [
+     "#ffffff",
+     0.3
+    ],
+    "XP-16R 8": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 9": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 10": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 11": [
+     "#ffffff",
+     1.0
+    ],
+    "XP-16R 12": [
+     "#ffffff",
+     1.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "wave",
+    "period_s": 9,
+    "pan_deg": 0,
+    "tilt_deg": 20,
+    "spatial": "all",
+    "kinds": [
+     "acme-xp16r-bsw"
+    ]
+   },
+   "notes": "24.38 s: the kick leaves: the silhouette, deck beams rising behind him"
+  },
+  {
+   "id": "drop-magenta",
+   "title": "Drop, magenta",
+   "act": 5,
+   "intent": "Drop one: everything magenta, pumping on the beat outward from the centre, beams in figure eights.",
+   "parts": {
+    "K10 1 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 2 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 3 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 4 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 5 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 6 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 7 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K10 8 over the stage": [
+     "#db01a8",
+     1.0
+    ],
+    "K15 1 stage-floor row": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 2 stage-floor row": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 3 stage-floor row": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 4 stage-floor row": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 5 stage-floor row": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 6 stage-floor row": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 7 side stand": [
+     "#db01a8",
+     0.8
+    ],
+    "K15 8 side stand": [
+     "#db01a8",
+     0.8
+    ],
+    "pixel line tower 1 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 1 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 1 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 2 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 2 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 2 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 3 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 3 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 3 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 4 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 4 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 4 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 5 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 5 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 5 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 6 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 6 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 6 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 7 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 7 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 7 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 8 bar 1": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 8 bar 2": [
+     "#db01a8",
+     0.9
+    ],
+    "pixel line tower 8 bar 3": [
+     "#db01a8",
+     0.9
+    ],
+    "XP-16R 1": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 2": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 3": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 4": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 5": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 6": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 7": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 8": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 9": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 10": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 11": [
+     "#ffffff",
+     0.6
+    ],
+    "XP-16R 12": [
+     "#ffffff",
+     0.6
+    ]
+   },
+   "motion": {
+    "mode": "pump",
+    "bpm": 79,
+    "depth": 90,
+    "spatial": "radial",
+    "kinds": [
+     "acme-pixel-line-ip",
+     "cp-aleda-beye-k10",
+     "cp-hy-beye-k15"
+    ],
+    "still": 0.0
+   },
+   "heads": {
+    "pattern": "figure8",
+    "period_s": 8,
+    "pan_deg": 40,
+    "tilt_deg": 18,
+    "spatial": "ripple",
+    "kinds": [
+     "acme-xp16r-bsw"
+    ]
+   },
+   "notes": "27.40 s: the kick is back: everything magenta, pumping"
+  },
+  {
+   "id": "blackout",
+   "title": "Blackout",
+   "act": 7,
+   "intent": "Out.",
+   "parts": {
+    "K10 1 over the stage": [
+     "#000000",
+     0.0
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 60,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [],
+    "still": 0.0
+   },
+   "notes": "30.00 s: out"
+  }
+ ],
+ "cues": [
+  {
+   "look": "white-back",
+   "name": "White back",
+   "fade": 2.0,
+   "hold": 9.0
+  },
+  {
+   "look": "freeze-hold",
+   "name": "Freeze",
+   "fade": 0.5,
+   "hold": 3.24
+  },
+  {
+   "look": "drop-hit",
+   "name": "Drop hit",
+   "fade": 0.05,
+   "hold": 0.76
+  },
+  {
+   "look": "drop-red",
+   "name": "Drop, red",
+   "fade": 0.1,
+   "hold": 11.38
+  },
+  {
+   "look": "white-back-beams",
+   "name": "White back, rising beams",
+   "fade": 0.3,
+   "hold": 3.02
+  },
+  {
+   "look": "drop-magenta",
+   "name": "Drop, magenta",
+   "fade": 0.1,
+   "hold": 2.6
+  },
+  {
+   "look": "blackout",
+   "name": "Blackout",
+   "fade": 0.0,
+   "hold": 2.0
+  }
+ ],
+ "loop": true
+}

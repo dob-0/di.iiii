@@ -41,6 +41,13 @@ export const hexToLinear = (hex) => {
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => srgbToLinear(v / 255))
 }
 
+/**
+ * The kinds of a manifest that HAVE a built body. A kind whose `model.owed` is set is in the base for its chart, modes and
+ * photometry only (2026-11-11: the K15, no outer size published; the Pixel Line IP, no LED-bar archetype yet): it has no
+ * sidecar to read, and a reader that loads every kind must not fall over it.
+ */
+export const builtKinds = (manifest) => Object.keys(manifest?.kinds || {}).filter((k) => !manifest.kinds[k]?.model?.owed)
+
 /** The built model's sidecar (pivots, parts, size) for a kind. */
 export const readGeometry = (kind, dir = path.join(FIXTURE_DIR, 'glb')) => {
     const file = path.join(dir, `${kind}.json`)

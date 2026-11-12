@@ -18,6 +18,8 @@
 // Nothing here knows about React, the project document or the network sync.
 
 import { watchVideoFrames, hasNewFrame } from './videoFrames.js'
+import { bodyMatte, MATTE_W, MATTE_H } from './bodyMatte.js'
+import { pickMatteRuns } from './matteScheduler.js'
 import { TOP_OPERATORS, isTopType, measurePixels, resolveTopParams, hexToRgb01 } from './topOperators.js'
 
 const VERTEX = `
@@ -70,6 +72,36 @@ export const shaderSourceFor = (type, values = {}) => {
 
 /** The lines every operator's shader is compiled with, above its own code. */
 export const SHADER_PREAMBLE = PREAMBLE.trim()
+
+/**
+ * Does this Body operator need a fresh mask this frame? Not when the deck marked it
+ * `unseen` (its layer is silent: fader down, bypassed, not in the solo, or faded out by
+ * the crossfader). The model run is the dear part of Body (about 14 ms each on the show
+ * machine), so a layer nobody sees must not pay it.
+ */
+export const matteWanted = (node) => node?.values?.unseen !== true
+
+/**
+ * A live output never shows a helper picture. A camera with no stream is not a black
+ * picture, it is NO picture: what it feeds must leave the layers below visible.
+ *
+ *   top.blend whose `b` is blank  -> passes `a` through (nothing below: black); it is blank
+ *                                    itself only when `a` is missing or blank too
+ *   any other operator whose `a` is blank -> blank, draws black (an effect on nothing: a Body
+ *                                    on a camera without a picture must not paint)
+ *   anything else                 -> null, drawn as usual
+ *
+ * Pure: tested without a GL context (topEngine.blank.test.js).
+ */
+export const blankRule = ({ type, source = false, inputs = {}, blank = new Set() } = {}) => {
+    if (source) return null
+    if (type === 'top.blend') {
+        if (!inputs.b || !blank.has(inputs.b)) return null
+        return { pass: true, blank: !inputs.a || blank.has(inputs.a) }
+    }
+    if (inputs.a && blank.has(inputs.a)) return { pass: false, blank: true }
+    return null
+}
 
 // A paused video keeps its currentTime, so "time unchanged" alone would skip the upload
 // when a node's footage is switched to another paused file (same node id, same time,
@@ -261,6 +293,14 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
     const videos = new Map()
     const measureTarget = makeTarget(gl, MEASURE_W, MEASURE_H)
     const measurePixelsBuffer = new Uint8Array(MEASURE_W * MEASURE_H * 4)
+    // Body: the source picture scaled down to what the model takes, read back.
+    let matteTarget = null
+    let matteFrames = 0
+    // One mask per SOURCE picture (not per Body effect): two Body effects on the same
+    // layer share one model run. Keyed by the id of the node that makes the source.
+    const matteStates = new Map()
+    let matteAllowed = new Set()
+    let mattePixels = null
 
     let network = { nodes: [], wires: [] }
     let order = []
@@ -268,21 +308,32 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
     let inputsFor = new Map()
     let errors = new Map()
 
+    // Free what a slot owns; a Body operator also lets go of the shared segmenter.
+    const freeSlot = (slot, id) => {
+        freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history)
+        if (slot.source) gl.deleteTexture(slot.source)
+        if (slot.matte) bodyMatte().release(id)
+    }
+
     const slotFor = (node) => {
         let slot = slots.get(node.id)
         if (node.type === '__remote') {
             if (!slot || slot.type !== '__remote') {
-                if (slot) { freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history); if (slot.source) gl.deleteTexture(slot.source) }
+                if (slot) freeSlot(slot, node.id)
                 slot = { type: '__remote', now: { texture: makeTexture(gl, 2, 2) }, before: null, history: null, source: null, lastVideoTime: -1 }
                 slots.set(node.id, slot)
             }
             return slot
         }
         if (!slot || slot.type !== node.type) {
-            if (slot) { freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history); if (slot.source) gl.deleteTexture(slot.source) }
+            if (slot) freeSlot(slot, node.id)
             slot = { type: node.type, now: makeTarget(gl, width, height), before: makeTarget(gl, width, height), history: null, source: null, lastMeasure: 0, mean: null, meanBefore: null, lastVideoTime: -1 }
             if (TOP_OPERATORS[node.type].history) slot.history = makeTarget(gl, width, height)
             if (TOP_OPERATORS[node.type].source) slot.source = makeTexture(gl, 2, 2)
+            if (TOP_OPERATORS[node.type].matte) {
+                slot.matte = true
+                bodyMatte().acquire(node.id)
+            }
             slots.set(node.id, slot)
         }
         return slot
@@ -314,11 +365,12 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             if (!byId.has(wire.from) || !byId.has(wire.to)) continue
             inputsFor.get(wire.to)[wire.port || 'a'] = wire.from
         }
+        const wanted = new Set(nodes.filter((node) => TOP_OPERATORS[node.type].matte).map((node) => inputsFor.get(node.id).b).filter(Boolean))
+        for (const [id, state] of matteStates) if (!wanted.has(id)) { gl.deleteTexture(state.texture); matteStates.delete(id) }
         for (const [id, slot] of slots) {
             if (byId.has(id)) continue
             if (slot.type === '__remote') { gl.deleteTexture(slot.now.texture); slots.delete(id); continue }
-            freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history)
-            if (slot.source) gl.deleteTexture(slot.source)
+            freeSlot(slot, id)
             slots.delete(id)
         }
     }
@@ -384,11 +436,100 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         return colourParamNames.get(type)
     }
 
+    // Body: look at the layer's source picture (readSource) and refresh the node's mask.
+    // At most one model run per NEW source picture (a frame equal to the last one,
+    // pixel for pixel at 480x270, is not run again); the last mask stays in use
+    // while no new one is made, and the render loop never waits for the model to load.
+    const refreshMatte = (sourceId, readSource) => {
+        let state = matteStates.get(sourceId)
+        if (!state) {
+            const texture = gl.createTexture()
+            gl.bindTexture(gl.TEXTURE_2D, texture)
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, 1, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, new Uint8Array([0]))
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+            state = { texture, ready: false, previous: null, frame: -1, picked: -Infinity }
+            matteStates.set(sourceId, state)
+        }
+        if (state.frame === matteFrames) return state
+        state.frame = matteFrames
+        const service = bodyMatte()
+        if (service.status() !== 'ready' || !readSource) { state.ready = false; return state }
+        // Not this source's turn (the budget went to an older mask): it keeps the mask it has.
+        if (!matteAllowed.has(sourceId)) return state
+        if (!matteTarget) {
+            matteTarget = makeTarget(gl, MATTE_W, MATTE_H)
+            mattePixels = new Uint8Array(MATTE_W * MATTE_H * 4)
+        }
+        bindTexture(present, 'a', 0, readSource)
+        draw(present, matteTarget)
+        gl.readPixels(0, 0, MATTE_W, MATTE_H, gl.RGBA, gl.UNSIGNED_BYTE, mattePixels)
+        const words = new Uint32Array(mattePixels.buffer)
+        let same = state.previous !== null
+        if (same) for (let i = 0; i < words.length; i += 1) if (words[i] !== state.previous[i]) { same = false; break }
+        if (same) return state
+        state.previous = state.previous || new Uint32Array(words.length)
+        state.previous.set(words)
+        // A fresh array each run: it is handed to the worker (transferred), not kept.
+        const data = new Uint8ClampedArray(MATTE_W * MATTE_H * 4)
+        const rowBytes = MATTE_W * 4
+        for (let y = 0; y < MATTE_H; y += 1) {
+            data.set(mattePixels.subarray((MATTE_H - 1 - y) * rowBytes, (MATTE_H - y) * rowBytes), y * rowBytes)
+        }
+        for (let i = 3; i < data.length; i += 4) data[i] = 255
+        service.submit(sourceId, { data, width: MATTE_W, height: MATTE_H })
+        return state
+    }
+
+    // The masks the model finished since the last frame (a worker answers when it is done,
+    // never inside a frame): upload each to its source's texture. A source that went away
+    // is skipped.
+    const applyMatteAnswers = () => {
+        for (const answer of bodyMatte().poll()) {
+            const state = matteStates.get(answer.key)
+            if (!state) continue
+            gl.bindTexture(gl.TEXTURE_2D, state.texture)
+            gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, answer.width, answer.height, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, answer.bytes)
+            gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4)
+            state.ready = true
+        }
+    }
+
+    // Which sources may start a model run this frame (see matteScheduler.js).
+    const planMatteRuns = () => {
+        matteAllowed = new Set()
+        const service = bodyMatte()
+        if (service.status() !== 'ready') return
+        const seen = new Set()
+        const candidates = []
+        for (const id of order) {
+            const node = byId.get(id)
+            if (!TOP_OPERATORS[node.type].matte || !matteWanted(node)) continue
+            const source = inputsFor.get(id)?.b
+            if (!source || seen.has(source)) continue
+            seen.add(source)
+            candidates.push({ id: source, lastPicked: matteStates.get(source)?.picked ?? -Infinity })
+        }
+        for (const picked of pickMatteRuns(candidates, service.budget())) {
+            matteAllowed.add(picked)
+            const state = matteStates.get(picked)
+            if (state) state.picked = matteFrames
+        }
+    }
+
     const frame = (now = performance.now()) => {
         pullRemotes()
+        matteFrames += 1
+        applyMatteAnswers()
+        planMatteRuns()
         // One clock for the whole frame: every operator that reads `time`
         // (Clouds, Shape) sees the same instant a wire between them would.
         const clock = clockSecondsFor(now - createdAt)
+        // Nodes that have NO PICTURE this frame (a camera with no stream). See `isBlank` below.
+        const blank = new Set()
         for (let index = 0; index < order.length; index += 1) {
             const node = byId.get(order[index])
             const operator = TOP_OPERATORS[node.type]
@@ -411,13 +552,31 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
                     slot.lastVideoTime = video.currentTime
                     gl.bindTexture(gl.TEXTURE_2D, slot.source)
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video)
+                    slot.pictured = true
                 }
                 bindTexture(compiled, 'source', 3, slot.source)
+                // A camera with no stream (absent, not opened yet, lost) has NO picture: not a
+                // black picture. What it feeds treats it as transparent (see isBlank).
+                if (operator.source === 'camera' && !(video && slot.pictured === true)) blank.add(node.id)
             }
 
             const inputs = inputsFor.get(node.id) || {}
+            const blanked = blankRule({ type: node.type, source: Boolean(operator.source), inputs, blank })
+            if (blanked) {
+                // Blend: the picture below passes through untouched. Anything else fed by a
+                // blank picture is blank itself and draws black. Both draw into the node's own
+                // target, so a thumbnail and a wire read it like any other picture.
+                bindTexture(present, 'a', 0, blanked.pass && inputs.a ? latest(inputs.a) : black)
+                draw(present, slot.now)
+                if (blanked.blank) blank.add(node.id)
+                continue
+            }
             const readA = inputs.a ? latest(inputs.a) : null
             const readB = inputs.b ? latest(inputs.b) : null
+            // A Body nobody sees (a silent deck layer) keeps the mask it has: no model run.
+            const matteState = slot.matte && inputs.b
+                ? (matteWanted(node) ? refreshMatte(inputs.b, readB) : matteStates.get(inputs.b) || null)
+                : null
             let params = resolveTopParams(node.type, node.values)
             if (resolveParams) {
                 try {
@@ -429,6 +588,12 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             bindTexture(compiled, 'b', 1, readB)
             bindTexture(compiled, 'self', 2, slot.before.texture)
             if (operator.history) bindTexture(compiled, 'history', 4, slot.history.texture)
+            if (slot.matte) {
+                bindTexture(compiled, 'mask', 5, matteState?.texture || black)
+                gl.useProgram(compiled.program)
+                const readyLocation = uniform(gl, compiled, 'matte_ready')
+                if (readyLocation !== null) gl.uniform1f(readyLocation, matteState?.ready ? 1 : 0)
+            }
 
             let shift = 0
             if (operator.history && params.compensate > 0.5 && readA) {
@@ -510,7 +675,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         width,
         height,
         setNetwork,
-        setVideo: (nodeId, video) => { watch(nodeId, video); if (video) videos.set(nodeId, video); else videos.delete(nodeId) },
+        setVideo: (nodeId, video) => { const slot = slots.get(nodeId); if (slot && videos.get(nodeId) !== video) slot.pictured = false; watch(nodeId, video); if (video) videos.set(nodeId, video); else videos.delete(nodeId) },
         setRemoteVideo: (nodeId, video) => { watch(nodeId, video); if (video) remoteVideos.set(nodeId, video); else remoteVideos.delete(nodeId) },
         frame,
         show,
@@ -520,15 +685,17 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         has: (nodeId) => slots.has(nodeId),
         get network() { return network },
         dispose() {
-            for (const slot of slots.values()) {
+            for (const [id, slot] of slots) {
                 if (slot.type === '__remote') { gl.deleteTexture(slot.now.texture); continue }
-                freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history)
-                if (slot.source) gl.deleteTexture(slot.source)
+                freeSlot(slot, id)
             }
             slots.clear()
             for (const entry of watchers.values()) entry.watch?.stop()
             watchers.clear()
             freeTarget(gl, measureTarget)
+            if (matteTarget) freeTarget(gl, matteTarget)
+            for (const state of matteStates.values()) gl.deleteTexture(state.texture)
+            matteStates.clear()
             for (const compiled of programs.values()) if (compiled.program) gl.deleteProgram(compiled.program)
             gl.getExtension('WEBGL_lose_context')?.loseContext()
         }

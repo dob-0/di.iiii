@@ -51,12 +51,36 @@ sha256 is of the file as downloaded on 2026-09-06 (`sha256sum`).
 
 3.4 MB added on top of the 740 KB that was already here; 4.1 MB in all.
 
+## Body matte (VJ Deck effect `top.matte`, "Body") — added 2026-11-11
+
+Why the earlier "not here" decision changed for this one use: a live show cannot
+depend on the internet, and the Body effect is loaded by the app itself (lazily,
+only when a Body effect is first switched on, `src/project/tops/bodyMatte.js`), so
+the ~10 MB is paid only by a show that uses it and never by a page load. Copied
+from the already installed `node_modules/@mediapipe/tasks-vision` (no npm
+dependency added). Licence: Apache-2.0 (the package's `package.json`
+`license` field; copied here as `package.json.txt`). The model is Google's MediaPipe
+Selfie Segmentation model, float16 "latest" as fetched on 2026-11-11, Apache-2.0,
+model card: https://storage.googleapis.com/mediapipe-assets/Model%20Card%20MediaPipe%20Selfie%20Segmentation.pdf
+(unchecked this turn: the card URL was not opened).
+
+| file | source | version | size | sha256 |
+|---|---|---|---|---|
+| `mediapipe-tasks-vision@0.10.17/vision_bundle.mjs` | `node_modules/@mediapipe/tasks-vision/vision_bundle.mjs` | 0.10.17 (ESM) | 139,710 B | `1ada13431ea2a8ed7ea449e6c3595122d43fea2a8a4788056ed7da271469b402` |
+| `mediapipe-tasks-vision@0.10.17/wasm/vision_wasm_internal.js` | same package, `wasm/` (SIMD build) | 0.10.17 | 203,819 B | `33a4125f825b343d2d9773951a73692f40bee368c9b591af8ff652fd501af90b` |
+| `mediapipe-tasks-vision@0.10.17/wasm/vision_wasm_internal.wasm` | same | 0.10.17 | 9,514,390 B | `c88cf472dd5cab0a3954b071e5f442102ded3701dcccc987a7a02ee8f54aae85` |
+| `mediapipe-tasks-vision@0.10.17/package.json.txt` | same package's `package.json` | 0.10.17 | 592 B | n/a |
+| `mediapipe-models/selfie_segmenter.tflite` | https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite | float16, fetched 2026-11-11 | 249,537 B | `191ac9529ae506ee0beefa6b2c945a172dab9d07d1e802a290a4e4038226658b` |
+
+The non-SIMD wasm build is not shipped: every browser the deck runs on has WASM SIMD.
+
 ## What is deliberately not here
 
-- **@mediapipe/tasks-vision 0.10.14** — the wasm bundle alone is ~10 MB and the
-  models it loads come from storage.googleapis.com; `dilijan/anahit-vachagan`,
-  `dilijan/aircanvas` and `br-id-ge/newww` (the rite) keep needing the internet
-  for their camera tracking.
+- **@mediapipe/tasks-vision 0.10.14 for the published pages** — the wasm bundle
+  alone is ~10 MB and the models it loads come from storage.googleapis.com;
+  `dilijan/anahit-vachagan`, `dilijan/aircanvas` and `br-id-ge/newww` (the rite)
+  keep needing the internet for their camera tracking. (The VJ Deck's Body effect
+  is the one exception, see "Body matte" below; those pages are not rewritten to it.)
 - **Google Fonts** — a webfont CSS request, not a library. The rewrite tool
   leaves the `<link>` and reports it (offline the page falls back to its own
   face stack either way); `--drop-fonts` removes it.

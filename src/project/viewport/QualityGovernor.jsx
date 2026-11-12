@@ -3,7 +3,7 @@ import { useFrame, useStore, useThree } from '@react-three/fiber'
 import { useRenderDemand } from '../../studio/utils/renderDemand.jsx'
 import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
 import { setBloomAllowed } from '../../objectComponents/atmosphereStore.js'
-import { HITCH_MS, QUALITY_STEPS, RAISE_FPS, WARMUP_MS, WINDOW_MS, cappedDpr, mayRaiseTo, nextQuality, qualityDpr } from './qualityGovernor.js'
+import { HITCH_MS, QUALITY_STEPS, START_QUALITY, WARMUP_MS, WINDOW_MS, cappedDpr, hasRoom, mayRaiseTo, nextQuality, qualityDpr } from './qualityGovernor.js'
 
 // The frame-rate governor (qualityGovernor.js) at work in a room with a physical haze:
 // counts frames, decides a notch every WINDOW_MS, and applies it — the beams' sample
@@ -15,7 +15,7 @@ export default function QualityGovernor({ renderSettings }) {
     const { gl, viewport } = useThree()
     const store = useStore()
     const frameloop = useThree((s) => s.frameloop)
-    const level = useRef(0)
+    const level = useRef(START_QUALITY)
     const cap = useRef(Infinity)
     const tooSlowAt = useRef({})
     const win = useRef({ start: 0, frames: 0, goodSince: 0, born: 0, last: 0 })
@@ -29,8 +29,8 @@ export default function QualityGovernor({ renderSettings }) {
         store.getState().setDpr(cap.current)
         gl.domElement.dataset.quality = String(n)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, at the room's full quality
-    useEffect(() => { apply(0) }, [gl])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, at the room's starting notch (the middle one)
+    useEffect(() => { apply(START_QUALITY) }, [gl])
     // Hold R3F's own re-apply of the Canvas `dpr` under the notch (cappedDpr).
     useEffect(() => {
         const setDpr = store.getState().setDpr
@@ -77,8 +77,9 @@ export default function QualityGovernor({ renderSettings }) {
         const elapsed = now - w.start
         if (elapsed < WINDOW_MS) return
         const fps = (w.frames * 1000) / elapsed
-        if (fps > RAISE_FPS) { if (!w.goodSince) w.goodSince = now } else w.goodSince = 0
-        let next = nextQuality(level.current, fps, w.goodSince ? now - w.goodSince : 0)
+        w.peak = Math.max(w.peak || 0, fps)
+        if (hasRoom(fps, w.peak)) { if (!w.goodSince) w.goodSince = now } else w.goodSince = 0
+        let next = nextQuality(level.current, fps, w.goodSince ? now - w.goodSince : 0, w.peak)
         if (next > level.current) tooSlowAt.current[level.current] = now
         if (next < level.current && !mayRaiseTo(next, tooSlowAt.current, now)) next = level.current
         if (next !== level.current) {

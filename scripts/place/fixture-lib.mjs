@@ -129,6 +129,20 @@ export const tiltPivot = (geo, mount) => new Vector3(0, geo.tiltY ?? geo.lensY ?
 export const aimFixture = (geo, mountSpec, { target = null, dir = null }) => {
     const mount = mountMatrix(mountSpec)
     const moving = geo.motion === 'pan-tilt' || geo.motion === 'tilt'
+    if (!moving && geo.aimedByHand && (dir || target)) {
+        // A body with no motor that a hand turns to its aim (an LED bar): its window (+Y at home) faces the aim,
+        // its length (X at home) stands upright (or lies along room X when it aims straight up or down), and its
+        // lens centre stays where the standing body's lens is.
+        const up = mountSpec.orient === 'hung' ? -1 : 1
+        const lens = new Vector3(mountSpec.pos[0], mountSpec.pos[1] + up * (geo.lensY ?? 0), mountSpec.pos[2])
+        const y = new Vector3(...(dir || [target[0] - lens.x, target[1] - lens.y, target[2] - lens.z])).normalize()
+        const x = new Vector3(0, 1, 0).addScaledVector(y, -y.y)
+        if (x.lengthSq() < 1e-9) x.set(1, 0, 0)
+        x.normalize()
+        const z = new Vector3().crossVectors(x, y)
+        const turned = new Matrix4().makeBasis(x, y, z).setPosition(lens.clone().addScaledVector(y, -(geo.lensY ?? 0)))
+        return { ...poseFixture(geo, turned), pan: 0, tilt: 0, reachable: true }
+    }
     if (!moving) return { ...poseFixture(geo, mount), pan: 0, tilt: 0, reachable: true }
     const pivot = tiltPivot(geo, mount)
     const d = dir || [target[0] - pivot[0], target[1] - pivot[1], target[2] - pivot[2]]
