@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyProjectOps } from '../../shared/projectSchema.js'
+import { applyProjectOps, invertProjectOps } from '../../shared/projectSchema.js'
 import { buildScreenOps, buildVideoToScreenOps, describeSurfaceSource, findPictureSource, screenSurfaceOptions } from './screenOps.js'
 
 const doc = (extra = {}) => ({ entities: [], nodes: [], mappingState: { surfaces: [] }, ...extra })
@@ -73,6 +73,25 @@ describe('buildScreenOps', () => {
 
 describe('buildVideoToScreenOps', () => {
     const video = { id: 'e-vid', type: 'video', name: 'Loop', parentId: null, components: { transform: { position: [4, 1, 5], rotation: [0, 1, 0], scale: [2, 2, 2] }, media: { assetId: 'asset-9' } } }
+    it('moves the video children under the Screen, and undo puts them back under the video', () => {
+        const child = { id: 'e-child', type: 'box', name: 'Frame', parentId: 'e-vid', components: {} }
+        const grand = { id: 'e-grand', type: 'box', name: 'Bolt', parentId: 'e-child', components: {} }
+        const d = doc({ nodes: [deck], entities: [video, child, grand] })
+        const made = buildVideoToScreenOps(d, video)
+        expect(made.movedChildren).toBe(1)
+        const next = applyProjectOps(d, made.ops)
+        const byId = (doc, id) => doc.entities.find((e) => e.id === id)
+        expect(byId(next, 'e-vid')).toBeUndefined()
+        expect(byId(next, 'e-child').parentId).toBe(made.entity.id)
+        expect(byId(next, 'e-grand').parentId).toBe('e-child')
+        const undo = invertProjectOps(d, made.ops)
+        const back = applyProjectOps(next, undo)
+        expect(byId(back, 'e-vid')).toBeTruthy()
+        expect(byId(back, 'e-child').parentId).toBe('e-vid')
+        expect(byId(back, 'e-grand').parentId).toBe('e-child')
+        expect(byId(back, made.entity.id)).toBeUndefined()
+    })
+
     it('keeps the transform, removes the video in the same batch', () => {
         const made = buildVideoToScreenOps(doc({ nodes: [deck], entities: [video] }), video)
         expect(made.ops.map((op) => op.type)).toEqual(['createMappingSurface', 'createEntity', 'deleteEntity'])
